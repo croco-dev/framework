@@ -680,6 +680,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-routes':
+        specifier: workspace:*
+        version: link:../framework-routes
       '@croco/migration-runner':
         specifier: workspace:*
         version: link:../migration-runner

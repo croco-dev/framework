@@ -129,6 +129,12 @@ function checkSpaBeSplitStructure() {
       "contract:coverage": expect.stringMatching(
         /^croco contracts check[\s\S]*--json --out contract-graph\.coverage\.json$/,
       ),
+      "project-map:write": expect.stringMatching(
+        /^croco project map[\s\S]*--out croco\.project-map\.json$/,
+      ),
+      "project-map:check": expect.stringMatching(
+        /^croco project map[\s\S]*--check --manifest croco\.project-map\.json$/,
+      ),
       "contract:verify": expect.stringMatching(
         /^pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
@@ -251,6 +257,10 @@ function checkAdminConsoleStructure() {
     scripts: expect.objectContaining({
       "admin:smoke": expect.stringMatching(/^pnpm contract:client/),
       "contract:coverage": expect.stringMatching(/contract-graph\.coverage\.json/),
+      "project-map:write": expect.stringMatching(
+        /croco project map[\s\S]*croco\.project-map\.json/,
+      ),
+      "project-map:check": expect.stringMatching(/croco project map[\s\S]*--check/),
       "contract:verify": expect.stringMatching(/contract:diff && pnpm contract:coverage/),
       "contract:client": expect.stringMatching(
         /admin\.ts,users\.ts,problems\.ts[\s\S]*--problem-runtime frontend-problems/,
@@ -379,6 +389,12 @@ function checkSaasStructure() {
       ),
       "contract:coverage": expect.stringMatching(
         /^NODE_PATH=\.\/node_modules croco contracts check[\s\S]*--json --out contract-graph\.coverage\.json$/,
+      ),
+      "project-map:write": expect.stringMatching(
+        /^NODE_PATH=\.\/node_modules croco project map[\s\S]*--runtime-policy croco-runtime-policy\.manifest\.json[\s\S]*--provider-profile croco-saas-profile\.manifest\.json[\s\S]*--out croco\.project-map\.json$/,
+      ),
+      "project-map:check": expect.stringMatching(
+        /^NODE_PATH=\.\/node_modules croco project map[\s\S]*--runtime-policy croco-runtime-policy\.manifest\.json[\s\S]*--provider-profile croco-saas-profile\.manifest\.json[\s\S]*--check --manifest croco\.project-map\.json$/,
       ),
       "contract:verify": expect.stringMatching(
         /^pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
@@ -543,6 +559,12 @@ function checkAiSaasStructure() {
       "ai:smoke": "pnpm --filter {{scope}}/api-server ai:smoke",
       "demo:smoke": expect.stringMatching(/api-server ai:smoke$/),
       "contract:coverage": expect.stringMatching(/contract-graph\.coverage\.json/),
+      "project-map:write": expect.stringMatching(
+        /^NODE_PATH=\.\/node_modules croco project map[\s\S]*--out croco\.project-map\.json$/,
+      ),
+      "project-map:check": expect.stringMatching(
+        /^NODE_PATH=\.\/node_modules croco project map[\s\S]*--check --manifest croco\.project-map\.json$/,
+      ),
       "contract:verify": expect.stringMatching(/^pnpm contract:diff && pnpm contract:coverage/),
       "ci:contracts": "pnpm contract:verify",
       "contract:openapi": expect.stringMatching(/AI SaaS API/),
