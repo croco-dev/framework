@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 360,
+  "problemCount": 363,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -1106,6 +1106,60 @@
           "line": 11,
           "column": 5,
           "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "batch-qstash/invalid-publish-request",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#batch-qstash-invalid-publish-request",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+          "line": 18,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "batch-qstash/missing-config",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#batch-qstash-missing-config",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+          "line": 4,
+          "column": 3,
+          "kind": "problem-class"
         }
       ]
     },
@@ -4883,7 +4937,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 64,
+          "line": 78,
           "column": 3,
           "kind": "problem-class"
         }
@@ -4910,7 +4964,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 50,
+          "line": 64,
           "column": 3,
           "kind": "problem-class"
         }
@@ -4937,7 +4991,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 78,
+          "line": 92,
           "column": 3,
           "kind": "problem-class"
         }
@@ -4967,6 +5021,33 @@
           "line": 131,
           "column": 13,
           "kind": "problem-factory"
+        }
+      ]
+    },
+    {
+      "code": "metering-upstash/missing-config",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metering-upstash-missing-config",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+          "line": 4,
+          "column": 3,
+          "kind": "problem-class"
         }
       ]
     },
@@ -8852,7 +8933,7 @@
       "sources": [
         {
           "file": "packages/triggers-qstash/src/libs/QStashScheduler.ts",
-          "line": 247,
+          "line": 253,
           "column": 15,
           "kind": "problem-factory"
         }
@@ -8879,7 +8960,7 @@
       "sources": [
         {
           "file": "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          "line": 248,
+          "line": 264,
           "column": 13,
           "kind": "problem-metadata"
         }
@@ -8906,7 +8987,7 @@
       "sources": [
         {
           "file": "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          "line": 238,
+          "line": 254,
           "column": 15,
           "kind": "problem-metadata"
         }

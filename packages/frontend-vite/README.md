@@ -19,6 +19,7 @@ pnpm add @cloudflare/vite-plugin
 ```
 
 Cloudflare 통합을 사용하지 않는 Vite 설정은 `cloudflare: false`를 지정하면 `@cloudflare/vite-plugin` 없이도 패키지 엔트리포인트를 import할 수 있습니다.
+기본 설정에서 선택적 peer가 누락되면 `frontend-vite/missing-cloudflare-vite-plugin` Problem으로 실패하며, 복구 방법은 peer 설치 또는 `cloudflare: false`입니다.
 
 ## 사용법
 
@@ -117,6 +118,11 @@ export default defineConfig({
   plugins: crocoVitePlugin({ cloudflare: false }),
 });
 ```
+
+## 검증
+
+- `pnpm --filter @croco/frontend-vite test` — Vite config helper output, `cloudflare: false` peer exclusion, and missing optional Cloudflare peer diagnostics.
+- `CROCO_GENERATED_SMOKE_CASES=graphql-vite-spa-docker,meta-vite-web,meta-vite-fullstack-workers pnpm create-croco-app:smoke` — SPA browser build output plus meta-vite and fullstack generated build/smoke coverage.
 
 ## 라이선스
 

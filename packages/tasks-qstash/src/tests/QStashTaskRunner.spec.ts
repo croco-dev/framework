@@ -25,6 +25,8 @@ const QSTASH_LIVE_ENV = [
   "UPSTASH_QSTASH_TOKEN",
   "UPSTASH_QSTASH_DESTINATION_URL",
 ] as const;
+const SECRET_SAMPLE = "super-secret-token";
+const SECRET_RICH_ERROR_MESSAGE = `Authorization: Bearer ${SECRET_SAMPLE}; "token":"${SECRET_SAMPLE}"; https://qstash.upstash.io?token=${SECRET_SAMPLE}; Cookie: session=${SECRET_SAMPLE}`;
 
 function createUpstreamError(message: string, status: number): Error & { readonly status: number } {
   const error = new Error(message) as Error & { status: number };
@@ -89,15 +91,11 @@ describe("QStashTaskRunner", () => {
           }
 
           if (scenario === "retryable-upstream") {
-            mockPublishJSON.mockRejectedValue(
-              createUpstreamError("qstash timeout token=super-secret-token", 503),
-            );
+            mockPublishJSON.mockRejectedValue(createUpstreamError(SECRET_RICH_ERROR_MESSAGE, 503));
           }
 
           if (scenario === "terminal-upstream") {
-            mockPublishJSON.mockRejectedValue(
-              createUpstreamError("qstash rejected token=super-secret-token", 400),
-            );
+            mockPublishJSON.mockRejectedValue(createUpstreamError(SECRET_RICH_ERROR_MESSAGE, 400));
           }
 
           return {
@@ -116,7 +114,7 @@ describe("QStashTaskRunner", () => {
           run: runQStashLiveSmoke,
         },
         providerName: "tasks-qstash",
-        secretSamples: ["super-secret-token"],
+        secretSamples: [SECRET_SAMPLE],
       }).cases,
     )("$name", async ({ run }) => {
       await run();

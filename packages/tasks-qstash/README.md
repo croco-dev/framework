@@ -14,7 +14,7 @@ pnpm add @croco/tasks-qstash @upstash/qstash
 import { QStashTaskRunner } from "@croco/tasks-qstash";
 
 const runner = new QStashTaskRunner({
-  token: process.env.QSTASH_TOKEN!,
+  token: process.env.UPSTASH_QSTASH_TOKEN!,
   destinationUrl: "https://api.example.com/tasks/webhook",
   defaultDelay: 30,
 });

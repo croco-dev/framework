@@ -1,5 +1,11 @@
 import { crocoMetaVitePlugin } from '@croco/meta-vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 
-export default {
-  plugins: crocoMetaVitePlugin(),
-};
+export default defineConfig({
+  plugins: [react(), ...crocoMetaVitePlugin()],
+  build: {
+    manifest: 'manifest.json',
+    outDir: 'dist/client',
+  },
+});

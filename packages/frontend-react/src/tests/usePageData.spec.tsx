@@ -1,4 +1,5 @@
-import { act, createElement, type FunctionComponent, type ReactNode, useState } from "react";
+import { createElement, type FunctionComponent, type ReactNode } from "react";
+import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -15,21 +16,23 @@ interface RenderHookOptions {
 
 function renderHook<T>(hook: () => T, options?: RenderHookOptions) {
   let result: T | undefined;
+  let rendered = false;
 
   function TestComponent() {
     result = hook();
+    rendered = true;
     return null;
   }
 
   if (options?.wrapper) {
     const WrapperComponent = options.wrapper;
-    act(() => {
-      createElement(WrapperComponent, { children: createElement(TestComponent) });
-    });
+    renderToString(createElement(WrapperComponent, { children: createElement(TestComponent) }));
   } else {
-    act(() => {
-      createElement(TestComponent);
-    });
+    renderToString(createElement(TestComponent));
+  }
+
+  if (!rendered) {
+    throw new Error("Hook test component did not render");
   }
 
   return {
@@ -42,6 +45,44 @@ function renderHook<T>(hook: () => T, options?: RenderHookOptions) {
 }
 
 describe("usePageData", () => {
+  it("renders typed page data through the provider", () => {
+    type PageData = {
+      readonly message: string;
+      readonly count: number;
+    };
+
+    function Page() {
+      const data = usePageData<PageData>();
+      const meta = usePageMeta();
+
+      return (
+        <main>
+          <h1>{meta.title}</h1>
+          <p>
+            {data.message}:{data.count}:{meta.urlOriginal}
+          </p>
+        </main>
+      );
+    }
+
+    const html = renderToString(
+      <PageDataProvider
+        value={{
+          data: { count: 3, message: "Hello from page data" },
+          title: "Page Title",
+          urlOriginal: "/dashboard",
+        }}
+      >
+        <Page />
+      </PageDataProvider>,
+    );
+
+    expect(html).toContain("Page Title");
+    expect(html).toContain("Hello from page data");
+    expect(html).toContain("3");
+    expect(html).toContain("/dashboard");
+  });
+
   it("Context에서 data를 가져온다", () => {
     const wrapper: FunctionComponent<{ children: ReactNode }> = ({ children }) =>
       createElement(PageDataProvider, { value: { data: { userId: 1 } } }, children);
@@ -63,7 +104,7 @@ describe("usePageData", () => {
 
 describe("usePageMeta", () => {
   it("title과 description을 반환한다", () => {
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
+    const wrapper: FunctionComponent<{ children: ReactNode }> = ({ children }) => (
       <PageDataProvider
         value={{ title: "Test Title", description: "Test Desc", urlOriginal: "/test" }}
       >

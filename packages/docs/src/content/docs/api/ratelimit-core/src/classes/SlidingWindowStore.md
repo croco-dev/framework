@@ -14,6 +14,7 @@ title: "SlidingWindowStore"
 ## Extended by
 
 - [`SlidingWindowInMemoryStore`](/api/ratelimit-core/src/classes/slidingwindowinmemorystore/)
+- [`UpstashSlidingWindowStore`](/api/ratelimit-upstash/src/classes/upstashslidingwindowstore/)
 
 ## Constructors
 

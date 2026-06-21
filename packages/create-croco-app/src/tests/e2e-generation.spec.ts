@@ -223,6 +223,21 @@ function assertStylexNextWebApp(webDir: string): void {
   expect(pageSource).toContain("stylex.props");
 }
 
+function assertMetaViteBrowserBuildEntrypoint(packageDir: string, buildScript: string): void {
+  const packageJson = readPackageJson(join(packageDir, "package.json"));
+  const viteConfig = readFileSync(join(packageDir, "vite.config.ts"), "utf8");
+
+  expect(packageJson.scripts?.build).toBe(buildScript);
+  expect(existsSync(join(packageDir, "index.html"))).toBe(true);
+  expect(existsSync(join(packageDir, "src", "main.tsx"))).toBe(true);
+  expect(viteConfig).toContain("from '@vitejs/plugin-react'");
+  expect(viteConfig).toContain("defineConfig");
+  expect(viteConfig).toContain("react()");
+  expect(viteConfig).toContain("crocoMetaVitePlugin()");
+  expect(viteConfig).toContain("manifest: 'manifest.json'");
+  expect(viteConfig).toContain("outDir: 'dist/client'");
+}
+
 function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
   const manifests = collectFiles(projectDir)
     .filter((filePath) => basename(filePath) === "package.json")
@@ -429,8 +444,10 @@ describe("E2E: generate()", () => {
       expect(packageJson.scripts?.["presentation:smoke"]).toBe(
         "tsx src/smoke/presentationSmoke.ts",
       );
+      expect(packageJson.devDependencies?.["happy-dom"]).toBe("^20.10.6");
       expect(packageJson.devDependencies?.tsx).toBe("^4.20.3");
       expect(existsSync(join(webDir, "src", "smoke", "presentationSmoke.ts"))).toBe(true);
+      assertMetaViteBrowserBuildEntrypoint(webDir, "vite build");
       assertViteConfigImportsDeclared(webDir);
       assertSourceBareImportsDeclared(webDir);
       assertNoHandlebarsPlaceholders(testDir);
@@ -466,8 +483,13 @@ describe("E2E: generate()", () => {
       expect(ssrWorkerPackageJson.scripts?.["presentation:smoke"]).toBe(
         "tsx src/smoke/presentationSmoke.ts",
       );
+      expect(ssrWorkerPackageJson.devDependencies?.["happy-dom"]).toBe("^20.10.6");
       expect(ssrWorkerPackageJson.devDependencies?.tsx).toBe("^4.20.3");
       expect(existsSync(join(ssrWorkerDir, "src", "smoke", "presentationSmoke.ts"))).toBe(true);
+      assertMetaViteBrowserBuildEntrypoint(
+        ssrWorkerDir,
+        "vite build && vite build --ssr src/index.ts --outDir dist --emptyOutDir false",
+      );
       assertViteConfigImportsDeclared(ssrWorkerDir);
       assertSourceBareImportsDeclared(ssrWorkerDir);
       assertNoHandlebarsPlaceholders(testDir);

@@ -17,6 +17,8 @@ const UPSTASH_REDIS_LIVE_ENV = [
   "UPSTASH_REDIS_REST_URL",
   "UPSTASH_REDIS_REST_TOKEN",
 ] as const;
+const SECRET_SAMPLE = "super-secret-token";
+const SECRET_RICH_ERROR_MESSAGE = `Authorization: Bearer ${SECRET_SAMPLE}; "token":"${SECRET_SAMPLE}"; https://example.upstash.io?token=${SECRET_SAMPLE}; Cookie: session=${SECRET_SAMPLE}`;
 
 function createMockRedis(): {
   eval: ReturnType<typeof vi.fn>;
@@ -57,15 +59,11 @@ function createConformanceStore(scenario: ConformanceScenario): UpstashFixedWind
   }
 
   if (scenario === "retryable-upstream") {
-    redis.eval.mockRejectedValue(
-      createUpstreamError("redis timeout token=super-secret-token", 503),
-    );
+    redis.eval.mockRejectedValue(createUpstreamError(SECRET_RICH_ERROR_MESSAGE, 503));
   }
 
   if (scenario === "terminal-upstream") {
-    redis.eval.mockRejectedValue(
-      createUpstreamError("redis rejected token=super-secret-token", 400),
-    );
+    redis.eval.mockRejectedValue(createUpstreamError(SECRET_RICH_ERROR_MESSAGE, 400));
   }
 
   return new UpstashFixedWindowStore({ redis: redis as never });
@@ -124,7 +122,7 @@ describe("Upstash Redis rate-limit conformance", () => {
       },
       policy: createFixedWindowPolicy("conformance", 2, 1_000),
       providerName: "ratelimit-upstash",
-      secretSamples: ["super-secret-token"],
+      secretSamples: [SECRET_SAMPLE],
     }).cases,
   )("$name", async ({ run }) => {
     await run();

@@ -23,6 +23,12 @@ Detail of a single schedule sync operation.
 
 ***
 
+### code?
+
+> `readonly` `optional` **code**: `string`
+
+***
+
 ### currentExpression?
 
 > `readonly` `optional` **currentExpression**: `string`
@@ -61,8 +67,20 @@ Schedule name/ID.
 
 ***
 
+### retryable?
+
+> `readonly` `optional` **retryable**: `boolean`
+
+***
+
 ### target
 
 > `readonly` **target**: `string`
 
 Target class name.
+
+***
+
+### upstreamStatus?
+
+> `readonly` `optional` **upstreamStatus**: `number`

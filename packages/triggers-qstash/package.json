@@ -40,6 +40,7 @@
     "@upstash/qstash": "^2.9.0"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
     "vitest": "4.0.16"
   }
 }

@@ -129,9 +129,19 @@ function mapUpstreamProblemCategory(
   return ProblemCategory.InternalServerError;
 }
 
+const SENSITIVE_KEY_PATTERN =
+  "credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|connection[-_]?string|redis[-_]?url|dsn";
+
 function redactSensitiveValue(value: string): string {
-  return value.replace(
-    /(authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|connection[-_]?string|redis[-_]?url|dsn)(\s*[:=]\s*)([^,\s;]+)/gi,
-    "$1$2[Redacted]",
-  );
+  return value
+    .replace(/\b(authorization)(\s*[:=]\s*)[^,\n;]+/gi, "$1$2[Redacted]")
+    .replace(/\b(cookie)(\s*[:=]\s*)[^,\n]+/gi, "$1$2[Redacted]")
+    .replace(
+      new RegExp(
+        `(["']?)(${SENSITIVE_KEY_PATTERN})\\1(\\s*[:=]\\s*)(["']?)([^"',\\s;&}]+)\\4`,
+        "gi",
+      ),
+      "$1$2$1$3$4[Redacted]$4",
+    )
+    .replace(new RegExp(`([?&](${SENSITIVE_KEY_PATTERN})=)[^&#\\s]+`, "gi"), "$1[Redacted]");
 }

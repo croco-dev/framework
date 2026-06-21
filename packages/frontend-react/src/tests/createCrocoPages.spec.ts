@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import type { RenderMode } from "@croco/meta-vite";
+
 import { createCrocoPageConfig } from "../libs/createCrocoPages";
 
 describe("createCrocoPageConfig", () => {
@@ -26,5 +28,19 @@ describe("createCrocoPageConfig", () => {
     const config = createCrocoPageConfig({ revalidate: 60000 });
 
     expect(config.revalidateMs).toBe(60000);
+  });
+
+  it("meta-vite RenderMode 계약과 호환되는 mode를 반환한다", () => {
+    const config = createCrocoPageConfig({ ssr: false });
+    const mode: RenderMode = config.mode;
+
+    expect(mode).toBe("ssg");
+  });
+
+  it("route registration은 meta-vite 경계에 남기고 path를 config에 섞지 않는다", () => {
+    const config = createCrocoPageConfig({ path: "/dashboard", ssr: true });
+
+    expect(config.mode).toBe("ssr");
+    expect("path" in config).toBe(false);
   });
 });

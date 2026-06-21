@@ -32,6 +32,10 @@ export class RouteRegistry {
     return this.definitions.map((definition) => this.compileDefinition(definition));
   }
 
+  getPageRoutes(): PageRouteIR[] {
+    return this.definitions.map((definition) => this.toPageRouteIR(definition));
+  }
+
   private compileDefinition(definition: PageRouteDefinition): RenderRouteIR {
     const pageRoute = this.toPageRouteIR(definition);
 
@@ -47,8 +51,8 @@ export class RouteRegistry {
   private toPageRouteIR(definition: PageRouteDefinition): PageRouteIR {
     return {
       path: definition.path,
-      componentRef: definition.path,
       mode: this.resolveMode(definition.mode),
+      ...(definition.componentRef ? { componentRef: definition.componentRef } : {}),
       ...(definition.head ? { head: definition.head } : {}),
       ...(definition.revalidate !== undefined
         ? { revalidateMs: definition.revalidate * 1000 }

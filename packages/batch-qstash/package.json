@@ -34,9 +34,11 @@
   "dependencies": {
     "@croco/batch-core": "workspace:*",
     "@croco/execution-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@upstash/qstash": "^2.0.0"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
     "tsup": "^8.0.0",
     "vitest": "4.0.16"
   }

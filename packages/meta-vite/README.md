@@ -24,6 +24,7 @@ pnpm add ioredis
 - **ISR**: TTL-only incremental static regeneration via CacheStore. `InMemoryCacheStore` for local/single-process, `RedisCacheStoreAdapter` for production durable caching (extends `AbstractCacheStoreAdapter`), and runtime support diagnostics for durable production claims
 - **API Co-location**: Define API routes alongside page routes with `defineApiRoute()`. Compose pages and APIs under a single fetch handler using `createMetaFetchHandler`'s `apiRoutes` option
 - **Server Actions**: `createServerAction()` for form POST handling with Zod validation. `createServerActionRegistry()` scopes actions for tests, HMR, and multi-app runtimes, while `createServerActionHandler()` integrates with the `apiRoutes` dispatch pipeline
+- **Route Manifest**: `createMetaViteRouteManifestFromRegistry()` emits deterministic build artifacts for page routes, API routes, server actions, component references, revalidation, and runtime capability requirements
 - **Provider adapters**: Cloudflare Workers, AWS Lambda, Node.js with API-first/page-fallback composition
 - **Vite 6 plugin**: `crocoMetaVitePlugin` with client/ssr/rsc environment configuration
 
@@ -119,6 +120,33 @@ const handler = createMetaFetchHandler({
 // /api/* → API routes, /* → SSR pages
 const response = await handler(new Request("https://example.com/api/hello"));
 ```
+
+## Route Manifest
+
+Use the route manifest build helper when CI, docs, deployment tooling, or admin surfaces need a
+stable artifact instead of runtime reflection:
+
+```typescript
+import {
+  createMetaViteRouteManifestFromRegistry,
+  serializeMetaViteRouteManifest,
+} from "@croco/meta-vite";
+
+const manifest = createMetaViteRouteManifestFromRegistry({
+  routeRegistry: registry,
+  serverActionRegistry,
+});
+
+const json = serializeMetaViteRouteManifest(manifest);
+```
+
+Stable public contract fields are `schemaVersion`, page `path`, `mode`, `componentRef`,
+`revalidateMs`, page `runtimeCapabilities`, page `runtimeRequirements`, API route `path` and
+`method`, and server action `name`, `path`, `method`, declared input/output schema presence, and
+declared Problem contracts. `order` fields are diagnostic canonical-sort evidence and should not
+be used as a routing API. Handler functions, React components, and Zod schema objects are not
+serialized into the manifest. Page routes without `componentRef` fail manifest generation with
+`CROCO_META_VITE_ROUTE_MANIFEST_COMPONENT_REF_REQUIRED`.
 
 ## Route Modes
 
@@ -281,6 +309,7 @@ import { RedisCacheStoreAdapter } from "@croco/meta-vite/isr/adapters";
 | `resetServerActions`                | function | Clear all actions from the global registry by default, or from a supplied registry.                                                             |
 | `unregisterServerAction`            | function | Remove one action from the global registry by default, or from a supplied registry.                                                             |
 | `ServerActionConfig`                | type     | `{ name: string; schema?: ZodSchema<TInput>; output?: ServerActionOutputContract<TOutput>; problems?: ServerActionProblemContract[]; handler }` |
+| `ServerActionContractIR`            | type     | Serializable server action contract used by the route manifest builder.                                                                         |
 | `ServerActionResult`                | type     | Typed action result union: `{ ok: true, data }` or RFC 7807 Problem details with `{ ok: false, kind }`.                                         |
 
 Server action failures use a stable action result contract. Missing actions, invalid paths, validation
@@ -311,6 +340,19 @@ should now read the Problem result shape: `ok === false`, `kind`, RFC 7807 field
 | --------------------- | -------- | -------------------------------------------------------------------- |
 | `prerenderSsgRoutes`  | function | Filter and pre-render all `mode: 'ssg'` routes at build time.        |
 | `renderRouteToString` | function | Default render function: loads component and calls `renderToString`. |
+
+### Route Manifest
+
+| Export                                    | Type     | Description                                                                              |
+| ----------------------------------------- | -------- | ---------------------------------------------------------------------------------------- |
+| `createMetaViteRouteManifest`             | function | Build a deterministic manifest from explicit page, API, and server action IR arrays.     |
+| `createMetaViteRouteManifestFromRegistry` | function | Build a deterministic manifest from `RouteRegistry` and optional `ServerActionRegistry`. |
+| `serializeMetaViteRouteManifest`          | function | Serialize a route manifest as stable pretty JSON with a trailing newline.                |
+| `writeMetaViteRouteManifest`              | function | Write the serialized manifest to disk, creating parent directories when needed.          |
+| `MetaViteRouteManifestError`              | class    | Error thrown when route metadata cannot produce a stable manifest contract.              |
+| `MetaViteRouteManifest`                   | type     | Stable route manifest artifact shape.                                                    |
+| `MetaViteRuntimeCapability`               | type     | Runtime-neutral capability hints such as `isr-cache` and `react-server-components`.      |
+| `MetaViteRuntimeRequirement`              | type     | Build/runtime requirement codes for SSG, ISR, and RSC routes.                            |
 
 ### Vite Plugin
 
