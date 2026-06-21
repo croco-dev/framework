@@ -29,6 +29,7 @@ export function createCrocoApp() {
 
   return createApp({
     controllers: [OperationsController, JobsController, SaasController],
+    diValidation: "off",
     diagnostics: {
       providers: defaultSaasRuntime.diagnosticsCollector.getProviders(),
     },

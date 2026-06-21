@@ -25,6 +25,12 @@ title: "AppConfig"
 
 ***
 
+### diValidation?
+
+> `optional` **diValidation**: `"warn"` \| `"enforce"` \| `"off"`
+
+***
+
 ### globalFilters?
 
 > `optional` **globalFilters**: `unknown`[]
@@ -58,6 +64,12 @@ title: "AppConfig"
 ### securityValidation?
 
 > `optional` **securityValidation**: `"warn"` \| `"enforce"` \| `"off"`
+
+***
+
+### unsafeSkipDiValidation?
+
+> `optional` **unsafeSkipDiValidation**: `true`
 
 ***
 

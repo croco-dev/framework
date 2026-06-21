@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 358,
+  "problemCount": 359,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -3209,7 +3209,7 @@
       "sources": [
         {
           "file": "packages/framework-context/src/libs/Container.ts",
-          "line": 1147,
+          "line": 1171,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -8481,6 +8481,33 @@
       ]
     },
     {
+      "code": "transports-http/di-bootstrap-validation",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#transports-http-di-bootstrap-validation",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/transports-http/src/libs/CrocoApp.ts",
+          "line": 224,
+          "column": 11,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
       "code": "transports-http/duplicate-health-check",
       "category": "InternalServerError",
       "status": 500,
@@ -8690,7 +8717,7 @@
       "sources": [
         {
           "file": "packages/transports-http/src/libs/CrocoApp.ts",
-          "line": 169,
+          "line": 188,
           "column": 11,
           "kind": "problem-factory"
         }

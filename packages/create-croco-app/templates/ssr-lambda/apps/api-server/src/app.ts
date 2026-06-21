@@ -15,6 +15,7 @@ class ApiController {
 export function createCrocoApp() {
   return createApp({
     controllers: [ApiController],
+    diValidation: "off",
     securityValidation: "off",
   });
 }

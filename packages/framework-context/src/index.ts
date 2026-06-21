@@ -51,6 +51,7 @@ export { Inject } from "./libs/decorators/Inject";
  * ```
  */
 export { Container } from "./libs/Container";
+export type { ContainerValidationOptions } from "./libs/Container";
 
 export { ContainerDiagnosticsProvider } from "./libs/diagnostics/ContainerDiagnosticsProvider";
 export {

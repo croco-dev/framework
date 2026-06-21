@@ -3,13 +3,21 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import {
   Container,
+  type Constructor,
   type ILogger,
   LOGGER_TOKEN,
-  type Constructor,
   type RequestPipelineGraph,
 } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
-import { ProblemFactory } from "@croco/problems-core";
+import { Problem, ProblemFactory } from "@croco/problems-core";
+import { extractRouteIR } from "@croco/protocols-core";
+import {
+  getFilters,
+  getGuards,
+  getInterceptors,
+  getParamsMeta,
+  getPipes,
+} from "@croco/protocols-rest";
 import { Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
 import { CrocoLambdaAdapter, type LambdaHandlerOptions } from "./CrocoLambdaAdapter";
@@ -49,10 +57,18 @@ import type {
 } from "./types";
 
 type SecurityValidationMode = NonNullable<AppConfig["securityValidation"]>;
+type DiValidationMode = NonNullable<AppConfig["diValidation"]>;
 type HonoFetchExecutionContext = Parameters<Hono["fetch"]>[2];
 type FetchRuntimeOptions = {
   env?: Record<string, unknown>;
   executionContext?: HonoFetchExecutionContext;
+};
+type DiBootstrapDiagnostic = {
+  readonly code: string;
+  readonly message: string;
+  readonly provider?: string;
+  readonly usages?: readonly string[];
+  readonly causeCode?: string;
 };
 
 type RequiredSecurityMiddleware = {
@@ -119,13 +135,16 @@ export class CrocoApp {
     if (this.booted) return;
 
     this.validateSecurityMiddlewareContract();
+    const diValidationMode = this.validateDiBootstrapContract();
 
     this.registerSystemRoutes();
 
     const compiler = new RouteCompiler(this.logger, new PipelineRunner(this.errorHandler));
     this.routes = compiler.compile(this.config.controllers, {
       ...options,
-      container: options.container ?? createRouteCompileContainer(),
+      container:
+        options.container ??
+        createRouteCompileContainer({ allowImplicitConstruction: diValidationMode !== "enforce" }),
       globalGuards: this.config.globalGuards,
       globalInterceptors: this.config.globalInterceptors,
       globalFilters: this.config.globalFilters,
@@ -170,6 +189,140 @@ export class CrocoApp {
       "transports-http/security-middleware-validation",
       message,
     );
+  }
+
+  private validateDiBootstrapContract(): DiValidationMode {
+    const validationMode = this.getDiValidationMode();
+
+    if (validationMode === "off") {
+      return validationMode;
+    }
+
+    const diagnostics = this.collectDiBootstrapDiagnostics();
+
+    try {
+      Container.validate({ force: true });
+    } catch (error) {
+      diagnostics.push(this.createContainerValidationDiagnostic(error));
+    }
+
+    if (diagnostics.length === 0) {
+      return validationMode;
+    }
+
+    const message =
+      `DI bootstrap validation failed: ${diagnostics
+        .map((diagnostic) => diagnostic.message)
+        .join("; ")}. ` +
+      "Register the missing provider(s) or set diValidation: 'off' (or unsafeSkipDiValidation: true) during migration.";
+
+    if (validationMode === "warn") {
+      this.logger.warn(message);
+      return validationMode;
+    }
+
+    throw ProblemFactory.internalServerError("transports-http/di-bootstrap-validation", message, {
+      extensions: {
+        diagnostics,
+      },
+    });
+  }
+
+  private getDiValidationMode(): DiValidationMode {
+    if (this.config.unsafeSkipDiValidation) {
+      return "off";
+    }
+
+    if (this.config.diValidation) {
+      return this.config.diValidation;
+    }
+
+    const envMode = process.env.CROCO_HTTP_DI_VALIDATION;
+
+    if (envMode === "off" || envMode === "warn" || envMode === "enforce") {
+      return envMode;
+    }
+
+    return process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test"
+      ? "warn"
+      : "enforce";
+  }
+
+  private collectDiBootstrapDiagnostics(): DiBootstrapDiagnostic[] {
+    const providerUsages = new Map<Constructor, Set<string>>();
+    const addProvider = (provider: unknown, usage: string): void => {
+      if (typeof provider !== "function") {
+        return;
+      }
+
+      const constructor = provider as Constructor;
+      const usages = providerUsages.get(constructor) ?? new Set<string>();
+      usages.add(usage);
+      providerUsages.set(constructor, usages);
+    };
+
+    this.config.controllers.forEach((controller) => {
+      addProvider(controller, `controller ${controller.name || "<anonymous>"}`);
+
+      for (const routeIR of extractRouteIR(controller)) {
+        const route = `${routeIR.httpMethod.toUpperCase()} ${routeIR.path}`;
+
+        getGuards(controller, routeIR.methodName).forEach((guard) =>
+          addProvider(guard, `guard ${guard.name || "<anonymous>"} for ${route}`),
+        );
+        getInterceptors(controller, routeIR.methodName).forEach((interceptor) =>
+          addProvider(interceptor, `interceptor ${interceptor.name || "<anonymous>"} for ${route}`),
+        );
+        getFilters(controller, routeIR.methodName).forEach((filter) =>
+          addProvider(filter, `filter ${filter.name || "<anonymous>"} for ${route}`),
+        );
+        getPipes(controller, routeIR.methodName).forEach((pipe) =>
+          addProvider(pipe, `pipe ${pipe.name || "<anonymous>"} for ${route}`),
+        );
+        getParamsMeta(controller, routeIR.methodName).forEach((param) => {
+          param.pipes?.forEach((pipe) =>
+            addProvider(pipe, `parameter pipe for ${route} argument ${param.index}`),
+          );
+        });
+      }
+    });
+
+    this.config.globalGuards?.forEach((guard) => addProvider(guard, "global guard"));
+    this.config.globalInterceptors?.forEach((interceptor) =>
+      addProvider(interceptor, "global interceptor"),
+    );
+    this.config.globalFilters?.forEach((filter) => addProvider(filter, "global filter"));
+    this.config.globalPipes?.forEach((pipe) => addProvider(pipe, "global pipe"));
+
+    return Array.from(providerUsages.entries())
+      .filter(([provider]) => !this.isDiProviderRegistered(provider))
+      .map(([provider, usages]) => ({
+        code: "transports-http/di-missing-provider",
+        provider: provider.name || "<anonymous>",
+        usages: Array.from(usages).sort(),
+        message: `Provider ${provider.name || "<anonymous>"} is not registered for ${Array.from(
+          usages,
+        )
+          .sort()
+          .join(", ")}`,
+      }));
+  }
+
+  private isDiProviderRegistered(provider: Constructor): boolean {
+    return Container.getComponentMetadata(provider) !== undefined || Container.has(provider);
+  }
+
+  private createContainerValidationDiagnostic(error: unknown): DiBootstrapDiagnostic {
+    const cause = error instanceof Error ? error : undefined;
+    const causeCode = error instanceof Problem ? error.code : undefined;
+    const detail = error instanceof Problem ? error.detail : cause?.message;
+    const message = detail ?? "Container.validate() failed during HTTP bootstrap.";
+
+    return {
+      code: "transports-http/di-bootstrap-validation",
+      message,
+      ...(causeCode ? { causeCode } : {}),
+    };
   }
 
   private getSecurityValidationMode(): SecurityValidationMode {
@@ -436,9 +589,15 @@ function resolveHealthCheckRegistry(): HealthCheckRegistry {
   );
 }
 
-function createRouteCompileContainer(): NonNullable<CompileOptions["container"]> {
+function createRouteCompileContainer(options: {
+  readonly allowImplicitConstruction: boolean;
+}): NonNullable<CompileOptions["container"]> {
   return {
     get<T>(type: Constructor<T>): T {
+      if (!options.allowImplicitConstruction) {
+        return Container.get(type);
+      }
+
       return Container.getOptional(type) ?? new type();
     },
   };

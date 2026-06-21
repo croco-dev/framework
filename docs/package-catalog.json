@@ -642,6 +642,7 @@
         "runtimes": ["node", "lambda"],
         "requiredEnv": [
           "CROCO_DIAGNOSTICS_TOKEN optional",
+          "CROCO_HTTP_DI_VALIDATION optional",
           "CROCO_HTTP_SECURITY_VALIDATION optional"
         ],
         "features": [

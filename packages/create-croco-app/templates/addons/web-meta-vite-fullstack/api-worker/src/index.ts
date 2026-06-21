@@ -3,6 +3,7 @@ import { createApp } from "@croco/transports-http";
 
 const app = createApp({
   controllers: [],
+  diValidation: "off",
   securityValidation: "off",
 });
 
