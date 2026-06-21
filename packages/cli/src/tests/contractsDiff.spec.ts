@@ -156,6 +156,7 @@ function createGraph(
       path: methodName === "createUser" ? "/users" : path,
       controllerPath: "/users",
       access: { guards: [], roles: [] },
+      entitlements: [],
       params: [],
       inputSchema: null,
       inputSchemas: { body: null, path: null, query: null, headers: null },

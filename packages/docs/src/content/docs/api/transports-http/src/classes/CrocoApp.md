@@ -83,7 +83,7 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 
 ### lambdaHandler()
 
-> **lambdaHandler**(`options?`): [`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
+> **lambdaHandler**(`options?`): [`LambdaHandler`](/api/preset-lambda/src/type-aliases/lambdahandler/)
 
 #### Parameters
 
@@ -93,7 +93,7 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 
 #### Returns
 
-[`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
+[`LambdaHandler`](/api/preset-lambda/src/type-aliases/lambdahandler/)
 
 ***
 

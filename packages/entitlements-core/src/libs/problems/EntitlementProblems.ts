@@ -1,5 +1,14 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+export class EntitlementRequirementProblem extends Problem {
+  readonly code = "ENTITLEMENT_REQUIREMENT_INVALID";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(detail: string) {
+    super(undefined, undefined, detail);
+  }
+}
+
 export class EntitlementDeniedProblem extends Problem {
   readonly code = "ENTITLEMENT_DENIED";
   readonly category = ProblemCategory.Forbidden;
@@ -9,6 +18,60 @@ export class EntitlementDeniedProblem extends Problem {
       ? `Entitlement '${feature}' denied: ${reason}`
       : `Entitlement '${feature}' denied`;
     super(undefined, undefined, detail);
+  }
+}
+
+export class EntitlementMissingPlanProblem extends Problem {
+  readonly code = "ENTITLEMENT_MISSING_PLAN";
+  readonly category = ProblemCategory.Forbidden;
+
+  constructor(feature: string, tenantId: string) {
+    super(
+      undefined,
+      undefined,
+      `Tenant '${tenantId}' has no active plan for entitlement '${feature}'`,
+    );
+  }
+}
+
+export class EntitlementInactiveSubscriptionProblem extends Problem {
+  readonly code = "ENTITLEMENT_INACTIVE_SUBSCRIPTION";
+  readonly category = ProblemCategory.Forbidden;
+
+  constructor(feature: string, tenantId: string) {
+    super(
+      undefined,
+      undefined,
+      `Tenant '${tenantId}' has an inactive subscription for entitlement '${feature}'`,
+    );
+  }
+}
+
+export class EntitlementQuotaExceededProblem extends Problem {
+  readonly code = "ENTITLEMENT_QUOTA_EXCEEDED";
+  readonly category = ProblemCategory.TooManyRequests;
+
+  constructor(feature: string, usage?: number, quota?: number) {
+    const detail =
+      usage !== undefined && quota !== undefined
+        ? `Entitlement '${feature}' quota exceeded: ${usage}/${quota}`
+        : `Entitlement '${feature}' quota exceeded`;
+
+    super(undefined, undefined, detail);
+  }
+}
+
+export class EntitlementProviderUnavailableProblem extends Problem {
+  readonly code = "ENTITLEMENT_PROVIDER_UNAVAILABLE";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(feature: string, cause?: Error) {
+    super(
+      undefined,
+      undefined,
+      `Entitlement provider unavailable while checking '${feature}'`,
+      cause ? { cause } : undefined,
+    );
   }
 }
 

@@ -123,6 +123,7 @@ function createGraph(diagnostics: ContractDiagnostic[] = []): ContractGraph {
         path: "/users",
         controllerPath: "/users",
         access: { guards: [], roles: [] },
+        entitlements: [],
         params: [],
         inputSchema: null,
         inputSchemas: { body: null, path: null, query: null, headers: null },

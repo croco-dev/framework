@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { SagaExecutionStatus, SagaFailure } from "../saga/types";
 
 export class WorkflowNotFoundProblem extends Problem {
   readonly code = "workflow-core/workflow-not-found";
@@ -50,6 +51,97 @@ export class WorkflowReplayUnsupportedProblem extends Problem {
       {
         extensions: {
           retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class SagaDefinitionProblem extends Problem {
+  constructor(sagaName: string, message: string) {
+    super(
+      "workflow-core/saga-definition-invalid",
+      ProblemCategory.InternalServerError,
+      `Saga '${sagaName}' is invalid: ${message}`,
+      {
+        extensions: {
+          sagaName,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class SagaExecutionNotFoundProblem extends Problem {
+  readonly code = "workflow-core/saga-execution-not-found";
+  readonly category = ProblemCategory.NotFound;
+
+  constructor(executionId: string) {
+    super(undefined, undefined, `Saga execution not found: '${executionId}'`, {
+      extensions: {
+        executionId,
+        retryable: false,
+      },
+    });
+  }
+}
+
+export class SagaStoreConflictProblem extends Problem {
+  constructor(executionId: string, message: string) {
+    super("workflow-core/saga-store-conflict", ProblemCategory.Conflict, message, {
+      extensions: {
+        executionId,
+        retryable: false,
+      },
+    });
+  }
+}
+
+export class SagaReplayProblem extends Problem {
+  constructor(executionId: string, message: string) {
+    super(
+      "workflow-core/saga-replay-invalid",
+      ProblemCategory.InternalServerError,
+      `Saga execution '${executionId}' cannot be replayed: ${message}`,
+      {
+        extensions: {
+          executionId,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class SagaExecutionFailedProblem extends Problem {
+  constructor(
+    sagaName: string,
+    executionId: string,
+    failure: SagaFailure,
+    options: {
+      readonly status: SagaExecutionStatus;
+      readonly compensationFailures: readonly SagaFailure[];
+    },
+  ) {
+    super(
+      "workflow-core/saga-execution-failed",
+      ProblemCategory.InternalServerError,
+      `Saga '${sagaName}' failed at execution '${executionId}': ${failure.message}`,
+      {
+        extensions: {
+          sagaName,
+          executionId,
+          sagaStatus: options.status,
+          originalFailureCode: failure.code,
+          originalFailureMessage: failure.message,
+          compensationFailureCount: options.compensationFailures.length,
+          compensationFailures: options.compensationFailures.map((compensationFailure) => ({
+            code: compensationFailure.code,
+            message: compensationFailure.message,
+            retryable: compensationFailure.retryable,
+          })),
+          retryable: failure.retryable,
         },
       },
     );

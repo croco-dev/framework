@@ -18,6 +18,7 @@ export type ContractGraphConsumerRouteField =
   | "request.headers"
   | "response"
   | "problems"
+  | "entitlements"
   | "access.guards"
   | "access.roles";
 
@@ -102,6 +103,7 @@ export const DEFAULT_CONTRACT_GRAPH_CONSUMERS = [
       "request.headers",
       "response",
       "problems",
+      "entitlements",
     ],
     unsupportedRouteFields: ["access.guards", "access.roles"],
   },
@@ -121,7 +123,7 @@ export const DEFAULT_CONTRACT_GRAPH_CONSUMERS = [
       "response",
       "problems",
     ],
-    unsupportedRouteFields: ["access.guards", "access.roles"],
+    unsupportedRouteFields: ["access.guards", "access.roles", "entitlements"],
   },
 ] as const satisfies readonly ContractGraphConsumerDefinition[];
 
@@ -354,6 +356,8 @@ function createRouteFieldFingerprint(
       return schemaPresenceFingerprint(route.outputSchema);
     case "problems":
       return problemResponsesFingerprint(route.problemResponses ?? []);
+    case "entitlements":
+      return entitlementRequirementsFingerprint(route.entitlements);
     case "access.guards":
       return accessGuardsFingerprint(route.access.guards);
     case "access.roles":
@@ -389,6 +393,20 @@ function problemResponsesFingerprint(
   );
 }
 
+function entitlementRequirementsFingerprint(
+  entitlements: ContractGraphRoute["entitlements"],
+): string {
+  return JSON.stringify(
+    entitlements
+      .map((entitlement) => ({
+        feature: entitlement.feature,
+        ...(entitlement.description ? { description: entitlement.description } : {}),
+        ...(entitlement.resource ? { resource: entitlement.resource } : {}),
+      }))
+      .sort(compareEntitlementFingerprints),
+  );
+}
+
 function accessGuardsFingerprint(guards: ContractGraphRoute["access"]["guards"]): string {
   return JSON.stringify([...guards].sort((left, right) => compareStrings(left.id, right.id)));
 }
@@ -416,6 +434,17 @@ function compareProblemFingerprints(
   );
 }
 
+function compareEntitlementFingerprints(
+  left: {
+    readonly feature: string;
+  },
+  right: {
+    readonly feature: string;
+  },
+): number {
+  return compareStrings(JSON.stringify(left), JSON.stringify(right));
+}
+
 function hasRouteField(route: ContractGraphRoute, field: ContractGraphConsumerRouteField): boolean {
   switch (field) {
     case "routeId":
@@ -438,6 +467,8 @@ function hasRouteField(route: ContractGraphRoute, field: ContractGraphConsumerRo
       return route.outputSchema !== undefined;
     case "problems":
       return true;
+    case "entitlements":
+      return route.entitlements !== undefined;
     case "access.guards":
       return route.access.guards !== undefined;
     case "access.roles":
@@ -454,6 +485,8 @@ function hasUnsupportedRouteFieldValue(
       return route.access.guards.length > 0;
     case "access.roles":
       return route.access.roles.length > 0;
+    case "entitlements":
+      return route.entitlements.length > 0;
     case "routeId":
     case "operationId":
     case "httpMethod":

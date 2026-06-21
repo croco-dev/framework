@@ -5,7 +5,7 @@ prev: false
 title: "SafeDiagnosticsReport"
 ---
 
-> **SafeDiagnosticsReport** = `Omit`\<`DiagnosticsReport`, `"recentErrors"`\> & `object`
+> **SafeDiagnosticsReport** = `Omit`\<[`DiagnosticsReport`](/api/diagnostics-core/src/type-aliases/diagnosticsreport/), `"recentErrors"`\> & `object`
 
 ## Type Declaration
 

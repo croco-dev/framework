@@ -12,6 +12,8 @@ export const REST_PARAMS_KEY = Symbol.for("croco:rest:params");
 export const REST_GUARDS_KEY = Symbol.for("croco:rest:guards");
 export const REST_ROLES_KEY = Symbol.for("croco:rest:roles");
 export const PROBLEM_RESPONSES_KEY = Symbol.for("croco:rest:problemResponses");
+export const ENTITLEMENT_REQUIRED_KEY = "entitlement:required";
+export const ENTITLEMENT_REQUIREMENTS_KEY = Symbol.for("croco:entitlements:requirements");
 
 export enum ParamType {
   PARAM = "param",
@@ -66,6 +68,18 @@ export type RouteContractMetadata = {
 
 export type ProblemResponseMetadata = RouteContractProblemMetadata & {
   readonly routeContractProblems?: readonly RouteContractProblemMetadata[];
+};
+
+export type EntitlementResourceRequirementMetadata = {
+  readonly type: string;
+  readonly id?: string;
+  readonly idParam?: string;
+};
+
+export type EntitlementRequirementMetadata = {
+  readonly feature: string;
+  readonly description?: string;
+  readonly resource?: EntitlementResourceRequirementMetadata;
 };
 
 export interface ParamMetadata {

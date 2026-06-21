@@ -74,6 +74,7 @@ describe("BillingEntitlementAdminPanel", () => {
         {
           featureKey: "reports",
           granted: true,
+          status: "allowed",
           planId: "pro",
           quota: 100,
           remaining: 80,
@@ -120,6 +121,7 @@ describe("BillingEntitlementAdminPanel", () => {
           exceeded: true,
           featureKey: "api_calls",
           granted: false,
+          status: "denied",
           overagePolicy: "BLOCK",
           quota: 100,
           reason: "quota_exceeded",
@@ -149,6 +151,7 @@ describe("BillingEntitlementAdminPanel", () => {
       featureKey: "advanced_exports",
       granted: false,
       reason: "entitlement_not_found",
+      status: "denied",
       type: "boolean",
     };
 

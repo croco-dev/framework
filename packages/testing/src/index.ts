@@ -42,6 +42,18 @@ export {
   type StorageProviderUrlExpectation,
 } from "./libs/provider-conformance";
 export {
+  createProviderConformanceMatrixSuite,
+  type ProviderConformanceCapability,
+  type ProviderConformanceCapabilityManifest,
+  type ProviderConformanceCategory,
+  type ProviderConformanceMatrixCase,
+  type ProviderConformanceMatrixManifest,
+  type ProviderConformanceMatrixOptions,
+  type ProviderConformanceMatrixSuite,
+  type ProviderConformanceProfile,
+  type ProviderConformanceProfileManifest,
+} from "./libs/provider-conformance-matrix";
+export {
   createLlmProviderConformanceSuite,
   type LlmProviderConformanceCase,
   type LlmProviderConformanceOptions,

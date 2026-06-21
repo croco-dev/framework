@@ -37,6 +37,26 @@ const manager = new EntitlementManager(
 const result = await manager.check("tenant-1", "api_calls");
 ```
 
+### 라우트와 서비스 경계 강제
+
+`@RequireEntitlement`는 클래스나 메서드에 필요한 기능 키를 선언합니다. `EntitlementGuard`는 핸들러 실행 전에 tenant, user, route, resource를 명시적인 guard 입력으로 만들어 `EntitlementManager.check()`를 호출하고, 실패 시 표준 Problem을 throw합니다.
+
+```ts
+import { EntitlementGuard, RequireEntitlement } from "@croco/entitlements-core";
+
+class ReportsController {
+  @RequireEntitlement({
+    feature: "reports.export",
+    resource: { type: "report", idParam: "reportId" },
+  })
+  exportReport() {
+    return "ok";
+  }
+}
+```
+
+resource id는 `resource.id`로 고정하거나 `resource.idParam`을 통해 request params에서 가져올 수 있습니다. guard는 성공과 실패 모두 `entitlement.guard.allowed` / `entitlement.guard.denied` telemetry event를 남기며, `EntitlementAuditSink`를 컨테이너에 등록하면 동일한 evidence를 audit sink로 받을 수 있습니다.
+
 ## API 레퍼런스
 
 ### 핵심 클래스
@@ -48,22 +68,29 @@ const result = await manager.check("tenant-1", "api_calls");
 
 ### 데코레이터와 인터페이스
 
-- `@RequireEntitlement`, 엔드포인트에 필요한 기능 키를 선언합니다.
+- `@RequireEntitlement`, 클래스나 메서드에 필요한 기능 키와 resource 요구사항을 선언합니다.
 - `SubscriptionProvider`, `PlanEntitlementRegistry`, `EntitlementQuotaChecker`, `EntitlementMeterLookup`, `EntitlementEventPublisher`
+- `EntitlementAuditSink`, guard 허용/거부 evidence를 기록하는 audit sink입니다.
 
 ### 주요 타입
 
 - `EntitlementRule`, `EntitlementCheckResult`, `EntitlementQuotaStatus`
-- `EntitlementType`, `OveragePolicy`, `PlanEntitlements`
+- `EntitlementCheckStatus`, `EntitlementType`, `OveragePolicy`, `PlanEntitlements`
+- `EntitlementRequirement`, `EntitlementResourceRequirement`, `EntitlementGuardInput`
 - `UsageHistoryEntry`, `UsageHistoryPeriod`
 
 ### 이벤트와 문제 타입
 
 - 이벤트: `EntitlementDeniedEvent`, `EntitlementQuotaExceededEvent`, `EntitlementOverageAllowedEvent`
-- 문제 타입: `EntitlementDeniedProblem`, `EntitlementNotFoundProblem`
+- 문제 타입: `EntitlementDeniedProblem`, `EntitlementMissingPlanProblem`, `EntitlementInactiveSubscriptionProblem`, `EntitlementQuotaExceededProblem`, `EntitlementProviderUnavailableProblem`, `EntitlementNotFoundProblem`
+
+## Contract artifacts
+
+`@RequireEntitlement` metadata는 `ENTITLEMENT_REQUIREMENTS_KEY`로 저장되며 `@croco/protocols-core`의 contract graph snapshot에 포함됩니다. `@croco/openapi-spec`는 선언된 entitlement 요구사항을 operation-level `x-croco-entitlements` extension으로 내보냅니다. 이 필드는 OpenAPI/RPC consumer coverage에서 drift gate로 검사됩니다.
 
 ## 구현 포인트
 
 - `BLOCK`, `WARN`, `ALLOW_WITH_OVERAGE` 세 가지 overage 정책을 지원합니다.
+- `EntitlementCheckResult.status`는 `allowed`, `denied`, `soft-limit`, `overage-allowed`, `unknown` 상태를 사용해 guard/audit/telemetry evidence를 정규화합니다.
 - `meterId`를 지정하면 metering-core의 실제 사용량과 quota를 연결할 수 있습니다.
 - subscription, billing, membership 같은 패키지와 조합해 플랜 제한을 중앙에서 관리할 수 있습니다.

@@ -680,6 +680,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-routes':
+        specifier: workspace:*
+        version: link:../framework-routes
       '@croco/migration-runner':
         specifier: workspace:*
         version: link:../migration-runner
@@ -860,6 +863,9 @@ importers:
       '@croco/admin-ops':
         specifier: workspace:*
         version: link:../admin-ops
+      '@croco/analytics-core':
+        specifier: workspace:*
+        version: link:../analytics-core
       '@croco/audit-core':
         specifier: workspace:*
         version: link:../audit-core
@@ -872,18 +878,33 @@ importers:
       '@croco/dataloader-core':
         specifier: workspace:*
         version: link:../dataloader-core
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
       '@croco/events-inmemory':
         specifier: workspace:*
         version: link:../events-inmemory
+      '@croco/features-core':
+        specifier: workspace:*
+        version: link:../features-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-preset':
+        specifier: workspace:*
+        version: link:../framework-preset
+      '@croco/framework-routes':
+        specifier: workspace:*
+        version: link:../framework-routes
       '@croco/idempotency-core':
         specifier: workspace:*
         version: link:../idempotency-core
+      '@croco/integrations-posthog':
+        specifier: workspace:*
+        version: link:../integrations-posthog
       '@croco/invitation-core':
         specifier: workspace:*
         version: link:../invitation-core
@@ -905,12 +926,39 @@ importers:
       '@croco/metrics-core':
         specifier: workspace:*
         version: link:../metrics-core
+      '@croco/migration-runner':
+        specifier: workspace:*
+        version: link:../migration-runner
+      '@croco/notifications-core':
+        specifier: workspace:*
+        version: link:../notifications-core
+      '@croco/openapi-spec':
+        specifier: workspace:*
+        version: link:../openapi-spec
+      '@croco/preset-cloudflare':
+        specifier: workspace:*
+        version: link:../preset-cloudflare
+      '@croco/preset-lambda':
+        specifier: workspace:*
+        version: link:../preset-lambda
+      '@croco/preset-node':
+        specifier: workspace:*
+        version: link:../preset-node
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/protocols-core':
+        specifier: workspace:*
+        version: link:../protocols-core
+      '@croco/protocols-graphql':
+        specifier: workspace:*
+        version: link:../protocols-graphql
       '@croco/protocols-rest':
         specifier: workspace:*
         version: link:../protocols-rest
+      '@croco/protocols-trpc':
+        specifier: workspace:*
+        version: link:../protocols-trpc
       '@croco/ratelimit-core':
         specifier: workspace:*
         version: link:../ratelimit-core
@@ -920,18 +968,33 @@ importers:
       '@croco/retry-core':
         specifier: workspace:*
         version: link:../retry-core
+      '@croco/rpc-codegen':
+        specifier: workspace:*
+        version: link:../rpc-codegen
       '@croco/search-core':
         specifier: workspace:*
         version: link:../search-core
+      '@croco/storage-core':
+        specifier: workspace:*
+        version: link:../storage-core
       '@croco/telemetry-api':
         specifier: workspace:*
         version: link:../telemetry-api
       '@croco/telemetry-sdk-node':
         specifier: workspace:*
         version: link:../telemetry-sdk-node
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@croco/transports-graphql':
+        specifier: workspace:*
+        version: link:../transports-graphql
       '@croco/transports-http':
         specifier: workspace:*
         version: link:../transports-http
+      '@croco/triggers-qstash':
+        specifier: workspace:*
+        version: link:../triggers-qstash
       '@croco/tx-core':
         specifier: workspace:*
         version: link:../tx-core
@@ -941,6 +1004,9 @@ importers:
       '@playwright/test':
         specifier: 1.58.2
         version: 1.58.2
+      create-croco-app:
+        specifier: workspace:*
+        version: link:../create-croco-app
 
   packages/entitlements-core:
     dependencies:
@@ -959,6 +1025,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2

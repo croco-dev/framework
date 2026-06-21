@@ -70,7 +70,7 @@ const logger: ILogger = {
 
 ##### context?
 
-`Record`\<`string`, `unknown`\> | `Error`
+`Error` | `Record`\<`string`, `unknown`\>
 
 #### Returns
 

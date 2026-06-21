@@ -747,6 +747,10 @@ describe("E2E: generate()", () => {
       "profile:check": "pnpm --filter @test/api-server profile:check",
       "runtime-policy:check":
         "NODE_PATH=./node_modules croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
+      "project-map:write":
+        "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --out croco.project-map.json",
+      "project-map:check":
+        "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --check --manifest croco.project-map.json",
       "profile:smoke:real": "pnpm --filter @test/api-server profile:smoke:real",
       "demo:smoke":
         "pnpm profile:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
@@ -775,7 +779,7 @@ describe("E2E: generate()", () => {
       "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
     });
     expect(apiPackageJson.devDependencies?.typedi).toBe("^0.10.0");
-    expect(apiPackageJson.devDependencies?.["@croco/cli"]).toBe("^0.0.3");
+    expect(apiPackageJson.devDependencies?.["@croco/cli"]).toBe("^0.0.4");
     expect(apiPackageJson.scripts?.["ops:smoke"]).toBe("tsx src/demo/ops-smoke.ts");
     expect(existsSync(join(testDir, "apps", "api-server", "src", "saasDemo.ts"))).toBe(true);
     expect(existsSync(join(testDir, "apps", "api-server", "src", "providerProfiles.ts"))).toBe(

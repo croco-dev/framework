@@ -118,6 +118,52 @@ describe("emitOpenAPI", () => {
     });
   });
 
+  it("should emit entitlement requirements as OpenAPI operation extensions", () => {
+    const entitlementRequirementsKey = Symbol.for("croco:entitlements:requirements");
+
+    function RequiresEntitlement(): MethodDecorator {
+      return (target, propertyKey) => {
+        Reflect.defineMetadata(
+          entitlementRequirementsKey,
+          [
+            {
+              feature: "reports.export",
+              description: "Export report data.",
+              resource: { type: "report", idParam: "id" },
+            },
+          ],
+          target.constructor,
+          propertyKey,
+        );
+      };
+    }
+
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/:id")
+      @RequiresEntitlement()
+      exportReport(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([ReportsController]);
+    const spec = emitOpenAPIFromContractGraph(graph);
+
+    expect(graph.routes[0]?.entitlements).toEqual([
+      {
+        feature: "reports.export",
+        description: "Export report data.",
+        resource: { type: "report", idParam: "id" },
+      },
+    ]);
+    expect(spec.paths?.["/reports/{id}"]?.get?.["x-croco-entitlements"]).toEqual([
+      {
+        feature: "reports.export",
+        description: "Export report data.",
+        resource: { type: "report", idParam: "id" },
+      },
+    ]);
+  });
+
   it("should normalize catch-all path parameters from the canonical contract graph", () => {
     @Controller("/assets")
     class AssetsController {

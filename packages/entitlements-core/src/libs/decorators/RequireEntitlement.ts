@@ -1,18 +1,31 @@
 import "reflect-metadata";
+import type { EntitlementRequirement } from "../EntitlementRequirement";
+import {
+  appendEntitlementRequirement,
+  ENTITLEMENT_REQUIRED_KEY,
+  ENTITLEMENT_REQUIREMENTS_KEY,
+} from "../EntitlementRequirement";
 
-export const ENTITLEMENT_REQUIRED_KEY = "entitlement:required";
+export { ENTITLEMENT_REQUIRED_KEY, ENTITLEMENT_REQUIREMENTS_KEY };
+export type RequireEntitlementOptions = EntitlementRequirement;
 
-export type RequireEntitlementOptions = {
-  feature: string;
-};
-
-export function RequireEntitlement(options: RequireEntitlementOptions): MethodDecorator {
-  return (
+export function RequireEntitlement(
+  options: RequireEntitlementOptions,
+): ClassDecorator & MethodDecorator {
+  const decorator = (
     target: object,
-    propertyKey: string | symbol,
-    descriptor: PropertyDescriptor,
-  ): PropertyDescriptor => {
-    Reflect.defineMetadata(ENTITLEMENT_REQUIRED_KEY, options.feature, target, propertyKey);
+    propertyKey?: string | symbol,
+    descriptor?: PropertyDescriptor,
+  ): PropertyDescriptor | undefined => {
+    if (propertyKey === undefined) {
+      appendEntitlementRequirement(target, options);
+      return;
+    }
+
+    const metadataTarget = typeof target === "function" ? target : target.constructor;
+    appendEntitlementRequirement(metadataTarget, options, propertyKey);
     return descriptor;
   };
+
+  return decorator as ClassDecorator & MethodDecorator;
 }
