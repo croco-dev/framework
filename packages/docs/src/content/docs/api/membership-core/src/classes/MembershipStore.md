@@ -24,6 +24,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 ## Extended by
 
+- [`DrizzleMembershipStore`](/api/membership-drizzle/src/classes/drizzlemembershipstore/)
 - [`InMemoryMembershipStore`](/api/membership-core/src/classes/inmemorymembershipstore/)
 
 ## Constructors

@@ -5990,7 +5990,7 @@
       "sources": [
         {
           "file": "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          "line": 20,
+          "line": 29,
           "column": 3,
           "kind": "problem-class"
         }
@@ -6017,7 +6017,7 @@
       "sources": [
         {
           "file": "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          "line": 4,
+          "line": 7,
           "column": 3,
           "kind": "problem-class"
         }
@@ -6044,7 +6044,7 @@
       "sources": [
         {
           "file": "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          "line": 12,
+          "line": 18,
           "column": 3,
           "kind": "problem-class"
         }

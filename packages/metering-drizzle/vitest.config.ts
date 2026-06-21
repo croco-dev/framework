@@ -9,7 +9,7 @@ export default defineConfig({
       "@croco/metering-core": resolve(__dirname, "../metering-core/src/index.ts"),
       "@croco/problems-core": resolve(__dirname, "../problems-core/src/index.ts"),
       "@croco/telemetry-api": resolve(__dirname, "../telemetry-api/src/index.ts"),
-      "@croco/testing": resolve(__dirname, "../testing/src/libs/drizzle-provider-conformance.ts"),
+      "@croco/testing/drizzle": resolve(__dirname, "../testing/src/drizzle.ts"),
       "@croco/tx-core": resolve(__dirname, "../tx-core/src/index.ts"),
       "@croco/tx-drizzle": resolve(__dirname, "../tx-drizzle/src/index.ts"),
     },

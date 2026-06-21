@@ -1,3 +1,4 @@
+import { ProblemFactory } from "@croco/problems-core";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -93,7 +94,8 @@ function ensureBuilt(): void {
 
   const missingArtifacts = requiredPackageArtifacts.filter((artifact) => !existsSync(artifact));
   if (missingArtifacts.length > 0) {
-    throw new Error(
+    throw ProblemFactory.internalServerError(
+      "create-croco-app/missing-build-artifacts",
       `Missing build artifacts after build:\n${missingArtifacts.map((artifact) => `- ${artifact}`).join("\n")}`,
     );
   }
@@ -113,7 +115,10 @@ function findTarball(directory: string, prefix: string): string {
   );
 
   if (!filename) {
-    throw new Error(`Missing packed tarball with prefix ${prefix}`);
+    throw ProblemFactory.internalServerError(
+      "create-croco-app/missing-packed-tarball",
+      `Missing packed tarball with prefix ${prefix}`,
+    );
   }
 
   return join(directory, filename);
@@ -125,7 +130,10 @@ function readPackageVersion(): string {
   };
 
   if (typeof manifest.version !== "string") {
-    throw new Error("Missing package version in package.json");
+    throw ProblemFactory.internalServerError(
+      "create-croco-app/missing-package-version",
+      "Missing package version in package.json",
+    );
   }
 
   return manifest.version;
@@ -144,7 +152,8 @@ function run(
   });
 
   if (result.error || result.status !== 0) {
-    throw new Error(
+    throw ProblemFactory.internalServerError(
+      "create-croco-app/command-failed",
       [
         `${command} ${args.join(" ")} failed`,
         result.error ? `${result.error.name}: ${result.error.message}` : undefined,

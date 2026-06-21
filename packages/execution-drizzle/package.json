@@ -36,7 +36,9 @@
     "ulid": "^3.0.2"
   },
   "devDependencies": {
+    "@croco/problems-core": "workspace:*",
     "@croco/testing": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "peerDependencies": {

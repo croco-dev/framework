@@ -12,6 +12,10 @@ title: "SearchEngine"
 특정 검색 엔진 구현(Elasticsearch, OpenSearch, Typesense 등)의 추상화 계층입니다.
 Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상속받아야 합니다.
 
+## Extended by
+
+- [`DrizzleSearchEngine`](/api/search-drizzle/src/classes/drizzlesearchengine/)
+
 ## Constructors
 
 ### Constructor

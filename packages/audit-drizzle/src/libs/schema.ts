@@ -44,7 +44,7 @@ export interface AuditLogsTable {
   resourceType: string;
   resourceId: string;
   payload: unknown;
-  diff: unknown | null;
+  diff: Record<string, unknown> | null;
   metadata: unknown;
   createdAt: Date;
 }

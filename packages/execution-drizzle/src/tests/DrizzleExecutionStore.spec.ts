@@ -1,7 +1,12 @@
-import { type Execution, ExecutionProblem, type ExecutionStatus } from "@croco/execution-core";
-import { assertDrizzleProblem, createDrizzleProviderConformanceSuite } from "@croco/testing";
 import { getTableColumns } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { type Execution, ExecutionProblem, type ExecutionStatus } from "@croco/execution-core";
+import { ProblemFactory } from "@croco/problems-core";
+import {
+  assertDrizzleProblem,
+  createDrizzleProviderConformanceSuite,
+} from "@croco/testing/drizzle";
+import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { DrizzleExecutionStore } from "../libs/DrizzleExecutionStore";
 import { executions } from "../libs/schema";
 
@@ -102,6 +107,41 @@ describe("DrizzleExecutionStore", () => {
                     "checkpoints",
                     "progress",
                   ]),
+                );
+              },
+            },
+          ],
+        },
+        diagnostics: {
+          supported: true,
+          checks: [
+            {
+              name: "redacts database connection details from readiness failures",
+              run: async () => {
+                const detail =
+                  "failed postgres://execution:execution-secret@db.example/app?password=query-secret token=raw-token";
+                const indicator = new DrizzleHealthIndicator(
+                  {
+                    transaction: vi
+                      .fn()
+                      .mockRejectedValue(
+                        ProblemFactory.internalServerError(
+                          "testing/drizzle-readiness-failed",
+                          detail,
+                        ),
+                      ),
+                  } as never,
+                  { name: "execution-drizzle" },
+                );
+                const health = await indicator.check();
+                const serialized = JSON.stringify(health);
+
+                expect(health.status).toBe("down");
+                expect(serialized).not.toContain("execution-secret");
+                expect(serialized).not.toContain("query-secret");
+                expect(serialized).not.toContain("raw-token");
+                expect(health.details?.error).toBe(
+                  "failed postgres://[redacted]@db.example/app?password=[redacted] token=[redacted]",
                 );
               },
             },
@@ -372,7 +412,10 @@ describe("DrizzleExecutionStore", () => {
             returning: vi.fn(() => Promise.resolve([])),
           })),
           returning: vi.fn(() => {
-            throw new Error("insert failed");
+            throw ProblemFactory.internalServerError(
+              "testing/execution-insert-failed",
+              "insert failed",
+            );
           }),
         })),
       }));

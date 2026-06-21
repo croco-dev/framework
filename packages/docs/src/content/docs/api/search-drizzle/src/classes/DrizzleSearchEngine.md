@@ -1,0 +1,222 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "DrizzleSearchEngine"
+---
+
+PostgreSQL 검색 전략을 사용해 문서 검색을 수행하는 Drizzle 검색 엔진입니다.
+
+## Extends
+
+- [`SearchEngine`](/api/search-core/src/classes/searchengine/)
+
+## Constructors
+
+### Constructor
+
+> **new DrizzleSearchEngine**(`db`, `strategy`): `DrizzleSearchEngine`
+
+Drizzle DB와 검색 전략을 받아 검색 엔진을 초기화합니다.
+
+#### Parameters
+
+##### db
+
+`NodePgDatabase`\<`Record`\<`string`, `never`\>\>
+
+##### strategy
+
+[`SearchStrategy`](/api/search-drizzle/src/interfaces/searchstrategy/)
+
+#### Returns
+
+`DrizzleSearchEngine`
+
+#### Overrides
+
+[`SearchEngine`](/api/search-core/src/classes/searchengine/).[`constructor`](/api/search-core/src/classes/searchengine/#constructor)
+
+## Properties
+
+### token
+
+> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<[`SearchEngine`](/api/search-core/src/classes/searchengine/)\>
+
+#### Inherited from
+
+[`SearchEngine`](/api/search-core/src/classes/searchengine/).[`token`](/api/search-core/src/classes/searchengine/#token)
+
+## Accessors
+
+### capabilities
+
+#### Get Signature
+
+> **get** **capabilities**(): [`SearchEngineCapabilities`](/api/search-core/src/type-aliases/searchenginecapabilities/)
+
+현재 전략이 제공하는 검색 기능을 반환합니다.
+
+##### Returns
+
+[`SearchEngineCapabilities`](/api/search-core/src/type-aliases/searchenginecapabilities/)
+
+검색 엔진 기능 플래그
+
+#### Overrides
+
+[`SearchEngine`](/api/search-core/src/classes/searchengine/).[`capabilities`](/api/search-core/src/classes/searchengine/#capabilities)
+
+## Methods
+
+### bulkIndex()
+
+> **bulkIndex**(`index`, `documents`): `Promise`\<`void`\>
+
+여러 문서를 순차적으로 인덱싱합니다.
+
+#### Parameters
+
+##### index
+
+`string`
+
+##### documents
+
+[`SearchDocument`](/api/search-core/src/type-aliases/searchdocument/)[]
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`SearchEngine`](/api/search-core/src/classes/searchengine/).[`bulkIndex`](/api/search-core/src/classes/searchengine/#bulkindex)
+
+***
+
+### createIndex()
+
+> **createIndex**(`_config`): `Promise`\<`void`\>
+
+Drizzle 검색 엔진에서 지원하지 않는 인덱스 생성 API입니다.
+
+#### Parameters
+
+##### \_config
+
+[`IndexConfig`](/api/search-core/src/type-aliases/indexconfig/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`SearchEngine`](/api/search-core/src/classes/searchengine/).[`createIndex`](/api/search-core/src/classes/searchengine/#createindex)
+
+***
+
+### deleteDocument()
+
+> **deleteDocument**(`index`, `documentId`): `Promise`\<`void`\>
+
+문서 ID로 인덱스에서 문서를 삭제합니다.
+
+#### Parameters
+
+##### index
+
+`string`
+
+##### documentId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`SearchEngine`](/api/search-core/src/classes/searchengine/).[`deleteDocument`](/api/search-core/src/classes/searchengine/#deletedocument)
+
+***
+
+### deleteIndex()
+
+> **deleteIndex**(`_name`): `Promise`\<`void`\>
+
+Drizzle 검색 엔진에서 지원하지 않는 인덱스 삭제 API입니다.
+
+#### Parameters
+
+##### \_name
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`SearchEngine`](/api/search-core/src/classes/searchengine/).[`deleteIndex`](/api/search-core/src/classes/searchengine/#deleteindex)
+
+***
+
+### indexDocument()
+
+> **indexDocument**(`index`, `document`): `Promise`\<`void`\>
+
+단일 문서를 인덱스에 저장합니다.
+
+#### Parameters
+
+##### index
+
+`string`
+
+##### document
+
+[`SearchDocument`](/api/search-core/src/type-aliases/searchdocument/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`SearchEngine`](/api/search-core/src/classes/searchengine/).[`indexDocument`](/api/search-core/src/classes/searchengine/#indexdocument)
+
+***
+
+### search()
+
+> **search**\<`T`\>(`index`, `query`): `Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
+
+인덱스와 쿼리를 받아 검색 결과를 반환합니다.
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### index
+
+`string`
+
+##### query
+
+[`SearchQuery`](/api/search-core/src/type-aliases/searchquery/)
+
+#### Returns
+
+`Promise`\<[`SearchResult`](/api/search-core/src/type-aliases/searchresult/)\<`T`\>\>
+
+#### Overrides
+
+[`SearchEngine`](/api/search-core/src/classes/searchengine/).[`search`](/api/search-core/src/classes/searchengine/#search)

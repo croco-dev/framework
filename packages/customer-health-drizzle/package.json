@@ -37,6 +37,8 @@
     "@croco/tx-drizzle": "workspace:*"
   },
   "devDependencies": {
+    "@croco/problems-core": "workspace:*",
+    "@croco/testing": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "peerDependencies": {

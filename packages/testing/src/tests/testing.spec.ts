@@ -1165,6 +1165,7 @@ describe("@croco/testing", () => {
       const schemaCheck = supportedCheck("verifies local table columns");
       const participationCheck = supportedCheck("uses the active transaction client");
       const rollbackCheck = supportedCheck("rolls back writes after transaction failure");
+      const diagnosticsCheck = supportedCheck("redacts readiness details");
       const isolationCheck = supportedCheck("does not leak records across tenants");
       const notFoundCheck = supportedCheck("throws deterministic not-found Problem");
 
@@ -1173,6 +1174,10 @@ describe("@croco/testing", () => {
         schema: {
           supported: true,
           checks: [schemaCheck],
+        },
+        diagnostics: {
+          supported: true,
+          checks: [diagnosticsCheck],
         },
         transaction: {
           participation: {
@@ -1214,6 +1219,7 @@ describe("@croco/testing", () => {
 
       expect(suite.cases.map((testCase) => testCase.name)).toEqual([
         "drizzle-test-provider: schema and migration assumptions: verifies local table columns",
+        "drizzle-test-provider: diagnostics and readiness redaction: redacts readiness details",
         "drizzle-test-provider: transaction participation: uses the active transaction client",
         "drizzle-test-provider: transaction rollback: rolls back writes after transaction failure",
         "drizzle-test-provider: tenant isolation: does not leak records across tenants",
@@ -1229,6 +1235,7 @@ describe("@croco/testing", () => {
       }
 
       expect(schemaCheck.run).toHaveBeenCalledTimes(1);
+      expect(diagnosticsCheck.run).toHaveBeenCalledTimes(1);
       expect(participationCheck.run).toHaveBeenCalledTimes(1);
       expect(rollbackCheck.run).toHaveBeenCalledTimes(1);
       expect(isolationCheck.run).toHaveBeenCalledTimes(1);

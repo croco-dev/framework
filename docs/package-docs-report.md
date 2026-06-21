@@ -9,7 +9,7 @@
 | Public packages                |   109 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |    47 |
+| Missing generated API docs     |    35 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    41 |
 
@@ -22,25 +22,19 @@ None.
 ## Missing Generated API Docs
 
 - `@croco/access-core` (`packages/access-core`) — legacy baseline
-- `@croco/access-drizzle` (`packages/access-drizzle`) — legacy baseline
 - `@croco/admin-core` (`packages/admin-core`) — legacy baseline
 - `@croco/admin-react` (`packages/admin-react`) — legacy baseline
 - `@croco/analytics-posthog` (`packages/analytics-posthog`) — legacy baseline
 - `@croco/architecture-policy` (`packages/architecture-policy`) — legacy baseline
-- `@croco/audit-drizzle` (`packages/audit-drizzle`) — legacy baseline
-- `@croco/auth-drizzle` (`packages/auth-drizzle`) — legacy baseline
 - `@croco/batch-core` (`packages/batch-core`) — legacy baseline
 - `@croco/billing-polar` (`packages/billing-polar`) — legacy baseline
 - `@croco/cache-core` (`packages/cache-core`) — legacy baseline
 - `@croco/cli` (`packages/cli`) — legacy baseline
 - `@croco/customer-health-core` (`packages/customer-health-core`) — legacy baseline
-- `@croco/customer-health-drizzle` (`packages/customer-health-drizzle`) — legacy baseline
 - `@croco/entitlements-core` (`packages/entitlements-core`) — legacy baseline
-- `@croco/entitlements-drizzle` (`packages/entitlements-drizzle`) — legacy baseline
 - `@croco/esbuild-plugin` (`packages/esbuild-plugin`) — legacy baseline
 - `@croco/events-tx` (`packages/events-tx`) — legacy baseline
 - `@croco/execution-core` (`packages/execution-core`) — legacy baseline
-- `@croco/execution-drizzle` (`packages/execution-drizzle`) — legacy baseline
 - `@croco/features-posthog` (`packages/features-posthog`) — legacy baseline
 - `@croco/framework-config` (`packages/framework-config`) — legacy baseline
 - `@croco/framework-logger` (`packages/framework-logger`) — legacy baseline
@@ -50,18 +44,12 @@ None.
 - `@croco/governance-core` (`packages/governance-core`) — legacy baseline
 - `@croco/health-core` (`packages/health-core`) — legacy baseline
 - `@croco/impersonation-core` (`packages/impersonation-core`) — legacy baseline
-- `@croco/invitation-drizzle` (`packages/invitation-drizzle`) — legacy baseline
 - `@croco/lifecycle-core` (`packages/lifecycle-core`) — legacy baseline
-- `@croco/membership-drizzle` (`packages/membership-drizzle`) — legacy baseline
 - `@croco/meta-vite` (`packages/meta-vite`) — legacy baseline
-- `@croco/metering-drizzle` (`packages/metering-drizzle`) — legacy baseline
 - `@croco/metrics-billing` (`packages/metrics-billing`) — legacy baseline
 - `@croco/notifications-resend` (`packages/notifications-resend`) — legacy baseline
-- `@croco/onboarding-core` (`packages/onboarding-core`) — legacy baseline
-- `@croco/onboarding-drizzle` (`packages/onboarding-drizzle`) — legacy baseline
 - `@croco/pagination-core` (`packages/pagination-core`) — legacy baseline
 - `@croco/presentation-preset` (`packages/presentation-preset`) — legacy baseline
-- `@croco/search-drizzle` (`packages/search-drizzle`) — legacy baseline
 - `@croco/search-meilisearch` (`packages/search-meilisearch`) — legacy baseline
 - `@croco/storage-r2` (`packages/storage-r2`) — legacy baseline
 - `@croco/tasks-core` (`packages/tasks-core`) — legacy baseline
@@ -74,8 +62,8 @@ None.
 | Maturity            | Missing API docs |
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
-| 🟡 beta             |               29 |
-| 🔴 alpha/WIP        |               18 |
+| 🟡 beta             |               28 |
+| 🔴 alpha/WIP        |                7 |
 | ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory
@@ -98,8 +86,8 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       24 |
-| 🟡 beta             |       57 |
-| 🔴 alpha/WIP        |       28 |
+| 🟡 beta             |       68 |
+| 🔴 alpha/WIP        |       17 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix

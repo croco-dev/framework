@@ -9,6 +9,12 @@ title: "DrizzleProviderConformanceOptions"
 
 ## Properties
 
+### diagnostics?
+
+> `readonly` `optional` **diagnostics**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
+
+***
+
 ### providerName
 
 > `readonly` **providerName**: `string`

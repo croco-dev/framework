@@ -118,6 +118,7 @@ shape without forcing every provider into one repository interface. Each consume
 provider-specific operations for:
 
 - local schema or migration assumptions;
+- diagnostics/readiness output that redacts database connection details;
 - transaction participation and rollback behavior;
 - tenant-aware data isolation;
 - not-found, validation, duplicate, conflict, and retryable failure semantics.

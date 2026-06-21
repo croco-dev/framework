@@ -37,6 +37,7 @@ export type DrizzleProviderTransactionConformance = {
 export type DrizzleProviderConformanceOptions = {
   readonly providerName: string;
   readonly schema: DrizzleProviderConformanceCapability;
+  readonly diagnostics?: DrizzleProviderConformanceCapability;
   readonly transaction: DrizzleProviderTransactionConformance;
   readonly tenantIsolation: DrizzleProviderConformanceCapability;
   readonly repositoryErrors: DrizzleProviderRepositoryErrorConformance;
@@ -67,6 +68,14 @@ export function createDrizzleProviderConformanceSuite(
       label: "schema and migration assumptions",
       capability: options.schema,
     },
+    ...(options.diagnostics
+      ? [
+          {
+            label: "diagnostics and readiness redaction",
+            capability: options.diagnostics,
+          },
+        ]
+      : []),
     {
       label: "transaction participation",
       capability: options.transaction.participation,

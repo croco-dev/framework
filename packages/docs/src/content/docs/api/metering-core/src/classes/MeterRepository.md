@@ -12,6 +12,10 @@ Meter 정의 및 Usage 데이터를 DB에 저장하는 추상 클래스
 구현체는 사용자가 제공 (예: Drizzle, Prisma 등)
 metering-core는 이 추상 클래스만 의존
 
+## Extended by
+
+- [`DrizzleMeterRepository`](/api/metering-drizzle/src/classes/drizzlemeterrepository/)
+
 ## Constructors
 
 ### Constructor

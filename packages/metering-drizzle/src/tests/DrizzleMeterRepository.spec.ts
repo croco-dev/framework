@@ -1,12 +1,16 @@
-import { MeterRegistry } from "@croco/metering-core";
-import { assertDrizzleProblem, createDrizzleProviderConformanceSuite } from "@croco/testing";
-import { TxManager } from "@croco/tx-core";
-import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { type DrizzleDb, DrizzleMeterRepository } from "../libs/DrizzleMeterRepository";
 import type { ILogger } from "@croco/framework-context";
+import { MeterRegistry } from "@croco/metering-core";
+import { ProblemFactory } from "@croco/problems-core";
+import {
+  assertDrizzleProblem,
+  createDrizzleProviderConformanceSuite,
+} from "@croco/testing/drizzle";
+import { TxManager } from "@croco/tx-core";
+import { createDrizzleTxAdapter, DrizzleHealthIndicator } from "@croco/tx-drizzle";
+import { type DrizzleDb, DrizzleMeterRepository } from "../libs/DrizzleMeterRepository";
 import { metersSqlite, usageRecordsSqlite } from "../libs/schema";
 
 const createRepositoryConfig = () => ({
@@ -66,7 +70,10 @@ function createSqliteTransactionHarness(sqlite: Database.Database, db: DrizzleDb
   const transactionOperations: DrizzleOperationName[] = [];
   const fallbackClient = createObservedDrizzleClient(db, (operation) => {
     if (active) {
-      throw new Error(`fallback Drizzle client used during active transaction: ${operation}`);
+      throw ProblemFactory.internalServerError(
+        "testing/fallback-client-used",
+        `fallback Drizzle client used during active transaction: ${operation}`,
+      );
     }
   });
   const transactionClient = createObservedDrizzleClient(db, (operation) => {
@@ -208,6 +215,41 @@ describe("DrizzleMeterRepository", () => {
             },
           ],
         },
+        diagnostics: {
+          supported: true,
+          checks: [
+            {
+              name: "redacts database connection details from readiness failures",
+              run: async () => {
+                const detail =
+                  "failed postgres://metering:metering-secret@db.example/app?password=query-secret token=raw-token";
+                const indicator = new DrizzleHealthIndicator(
+                  {
+                    transaction: vi
+                      .fn()
+                      .mockRejectedValue(
+                        ProblemFactory.internalServerError(
+                          "testing/drizzle-readiness-failed",
+                          detail,
+                        ),
+                      ),
+                  } as never,
+                  { name: "metering-drizzle" },
+                );
+                const health = await indicator.check();
+                const serialized = JSON.stringify(health);
+
+                expect(health.status).toBe("down");
+                expect(serialized).not.toContain("metering-secret");
+                expect(serialized).not.toContain("query-secret");
+                expect(serialized).not.toContain("raw-token");
+                expect(health.details?.error).toBe(
+                  "failed postgres://[redacted]@db.example/app?password=[redacted] token=[redacted]",
+                );
+              },
+            },
+          ],
+        },
         transaction: {
           participation: {
             supported: true,
@@ -251,7 +293,10 @@ describe("DrizzleMeterRepository", () => {
                         meterId: "rollback_target",
                         type: "COUNT",
                       });
-                      throw new Error("force rollback");
+                      throw ProblemFactory.internalServerError(
+                        "testing/force-rollback",
+                        "force rollback",
+                      );
                     }),
                   ).rejects.toThrow("force rollback");
 

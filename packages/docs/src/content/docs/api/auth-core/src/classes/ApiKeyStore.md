@@ -7,6 +7,10 @@ title: "ApiKeyStore"
 
 API 키 저장소 토큰과 추상 저장소 계약입니다.
 
+## Extended by
+
+- [`DrizzleApiKeyStore`](/api/auth-drizzle/src/classes/drizzleapikeystore/)
+
 ## Constructors
 
 ### Constructor

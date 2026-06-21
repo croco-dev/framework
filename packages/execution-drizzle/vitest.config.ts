@@ -6,7 +6,7 @@ export default defineConfig({
     alias: {
       "@croco/execution-core": resolve(__dirname, "../execution-core/src/index.ts"),
       "@croco/problems-core": resolve(__dirname, "../problems-core/src/index.ts"),
-      "@croco/testing": resolve(__dirname, "../testing/src/libs/drizzle-provider-conformance.ts"),
+      "@croco/testing/drizzle": resolve(__dirname, "../testing/src/drizzle.ts"),
     },
   },
   test: {
