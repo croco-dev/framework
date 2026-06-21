@@ -132,6 +132,14 @@ describe("R2StorageProvider", () => {
         );
       },
     );
+
+    it("should throw MissingR2ConfigProblem with all missing keys", () => {
+      vi.mocked(configService.get).mockReturnValue(undefined);
+
+      expect(() => new R2StorageProvider(configService, logger)).toThrow(
+        "Missing required R2 configuration: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET",
+      );
+    });
   });
 
   describe("diagnostics", () => {

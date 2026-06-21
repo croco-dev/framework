@@ -35,14 +35,18 @@ describe("R2 live smoke", () => {
             },
           });
 
-          await client.send(
-            new HeadBucketCommand({
-              Bucket: config.bucket,
-            }),
-            {
-              abortSignal: signal,
-            },
-          );
+          try {
+            await client.send(
+              new HeadBucketCommand({
+                Bucket: config.bucket,
+              }),
+              {
+                abortSignal: signal,
+              },
+            );
+          } finally {
+            client.destroy();
+          }
 
           return {
             details: {

@@ -8,7 +8,9 @@ export class MissingR2ConfigProblem extends StorageProblem {
   readonly code = "STORAGE_R2_MISSING_CONFIG";
   readonly category = ProblemCategory.InternalServerError;
 
-  constructor(configKey: string) {
-    super(undefined, undefined, `Missing required R2 configuration: ${configKey}`);
+  constructor(configKeys: string | readonly string[]) {
+    const missingConfig = Array.isArray(configKeys) ? configKeys : [configKeys];
+
+    super(undefined, undefined, `Missing required R2 configuration: ${missingConfig.join(", ")}`);
   }
 }

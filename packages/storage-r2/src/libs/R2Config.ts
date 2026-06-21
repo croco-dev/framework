@@ -25,7 +25,7 @@ export function validateR2Options(config: Partial<R2Options>): R2Options {
   const missingConfig = getMissingR2ConfigKeys(config);
 
   if (missingConfig.length > 0) {
-    throw new MissingR2ConfigProblem(missingConfig[0]);
+    throw new MissingR2ConfigProblem(missingConfig);
   }
 
   return {
