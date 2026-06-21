@@ -1,0 +1,176 @@
+{
+  "schemaVersion": "croco.architecture-policy/v1",
+  "policyName": "croco-framework",
+  "packageRoots": ["packages"],
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.tsx",
+    "packages/*/src/**/*.mts",
+    "packages/*/src/**/*.cts"
+  ],
+  "ignore": [
+    "packages/*/src/**/__tests__/**",
+    "packages/*/src/**/tests/**",
+    "packages/*/src/**/*.spec.ts",
+    "packages/*/src/**/*.test.ts"
+  ],
+  "packageGroups": {
+    "framework": {
+      "description": "Build-time and runtime framework primitives without provider or transport implementations.",
+      "packages": [
+        "@croco/*-core",
+        "@croco/architecture-policy",
+        "@croco/cache-core",
+        "@croco/dataloader-core",
+        "@croco/diagnostics-core",
+        "@croco/events-core",
+        "@croco/events-inmemory",
+        "@croco/framework-*",
+        "@croco/gid-core",
+        "@croco/health-core",
+        "@croco/idempotency-core",
+        "@croco/pagination-core",
+        "@croco/problems-core",
+        "@croco/repository-core",
+        "@croco/retry-core",
+        "@croco/tenant-core",
+        "@croco/tx-core"
+      ]
+    },
+    "protocols": {
+      "description": "Protocol contracts and generated protocol artifacts.",
+      "packages": [
+        "@croco/admin-generated",
+        "@croco/openapi-spec",
+        "@croco/protocols-*",
+        "@croco/rpc-codegen"
+      ]
+    },
+    "transports": {
+      "description": "Runtime adapters that execute protocol routes.",
+      "packages": ["@croco/transports-*"]
+    },
+    "integrations": {
+      "description": "Concrete datastore, SaaS provider, and external service adapters.",
+      "packages": [
+        "@croco/*-drizzle",
+        "@croco/*-posthog",
+        "@croco/*-qstash",
+        "@croco/*-upstash",
+        "@croco/auth-better-auth",
+        "@croco/auth-clerk",
+        "@croco/billing-polar",
+        "@croco/events-tx",
+        "@croco/llm-openai",
+        "@croco/metrics-billing",
+        "@croco/notifications-resend",
+        "@croco/search-meilisearch",
+        "@croco/storage-cloudflare",
+        "@croco/storage-cloudinary",
+        "@croco/storage-r2",
+        "@croco/telemetry-sdk-node",
+        "@croco/tx-drizzle"
+      ]
+    },
+    "presentation": {
+      "description": "Frontend, SSR, and presentation adapters.",
+      "packages": [
+        "@croco/admin-react",
+        "@croco/frontend-*",
+        "@croco/meta-vite",
+        "@croco/presentation-preset"
+      ]
+    },
+    "app": {
+      "description": "Repository-owned CLIs, scaffolds, docs, and release tooling.",
+      "packages": [
+        "@croco/cli",
+        "@croco/docs",
+        "@croco/esbuild-plugin",
+        "@croco/migration-runner",
+        "@croco/oxlint-rules",
+        "@croco/preset-*",
+        "@croco/testing",
+        "create-croco-app"
+      ]
+    }
+  },
+  "rules": {
+    "forbiddenImports": [
+      {
+        "id": "framework-provider-package-boundary",
+        "description": "Framework and core packages must not depend on concrete provider/runtime implementation packages.",
+        "from": {
+          "groups": ["framework"]
+        },
+        "to": {
+          "packages": [
+            "@croco/*-drizzle",
+            "@croco/*-posthog",
+            "@croco/*-qstash",
+            "@croco/*-upstash",
+            "@croco/auth-better-auth",
+            "@croco/auth-clerk",
+            "@croco/billing-polar",
+            "@croco/events-tx",
+            "@croco/llm-openai",
+            "@croco/metrics-billing",
+            "@croco/notifications-resend",
+            "@croco/search-meilisearch",
+            "@croco/storage-cloudflare",
+            "@croco/storage-cloudinary",
+            "@croco/storage-r2",
+            "@croco/telemetry-sdk-node",
+            "@croco/transports-*",
+            "@croco/tx-drizzle"
+          ]
+        },
+        "message": "Framework/core packages cannot import provider or runtime implementation packages.",
+        "recovery": "Move provider/runtime implementation code behind an adapter package and keep the framework/core package on an explicit contract."
+      },
+      {
+        "id": "framework-provider-sdk-boundary",
+        "description": "Framework and core packages must not depend on concrete provider/runtime SDKs.",
+        "from": {
+          "groups": ["framework"]
+        },
+        "to": {
+          "specifiers": [
+            "@clerk/*",
+            "@hono/node-server",
+            "@polar-sh/*",
+            "@upstash/*",
+            "cloudinary",
+            "cloudinary/*",
+            "drizzle-orm",
+            "drizzle-orm/*",
+            "hono",
+            "hono/*",
+            "ioredis",
+            "ioredis/*"
+          ]
+        },
+        "message": "Framework/core packages cannot import provider or runtime implementation SDKs.",
+        "recovery": "Move provider/runtime implementation code behind an adapter package and keep the framework/core package on an explicit contract."
+      }
+    ],
+    "publicEntrypoints": {
+      "id": "croco-public-entrypoints",
+      "description": "Production source imports between Croco packages must use declared package exports instead of src/dist internals.",
+      "includePackages": ["@croco/*"],
+      "ignoreImports": [
+        {
+          "paths": [
+            "packages/*/src/**/__tests__/**",
+            "packages/*/src/**/tests/**",
+            "packages/*/src/**/*.spec.ts",
+            "packages/*/src/**/*.test.ts"
+          ],
+          "specifiers": ["@croco/*/src/**"]
+        }
+      ],
+      "message": "Croco packages must import declared public entrypoints instead of private package internals.",
+      "recovery": "Export the needed surface from the target package or move the test-only alias behind an explicit test/config ignore."
+    }
+  }
+}

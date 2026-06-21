@@ -858,6 +858,7 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
     "@croco/billing-core": `file:${packWorkspacePackage("@croco/billing-core", "billing-core", packDir)}`,
     "@croco/billing-polar": `file:${packWorkspacePackage("@croco/billing-polar", "billing-polar", packDir)}`,
     "@croco/cache-core": `file:${packWorkspacePackage("@croco/cache-core", "cache-core", packDir)}`,
+    "@croco/architecture-policy": `file:${packWorkspacePackage("@croco/architecture-policy", "architecture-policy", packDir)}`,
     "@croco/cli": `file:${packWorkspacePackage("@croco/cli", "cli", packDir)}`,
     "@croco/diagnostics-core": `file:${packWorkspacePackage("@croco/diagnostics-core", "diagnostics-core", packDir)}`,
     "@croco/execution-core": `file:${packWorkspacePackage("@croco/execution-core", "execution-core", packDir)}`,
@@ -912,6 +913,7 @@ function getContractSmokeRangeOverrides(): Record<string, string> {
   const packDir = join(smokeRoot, "contract-package-packs");
 
   return {
+    "@croco/architecture-policy": `file:${packWorkspacePackage("@croco/architecture-policy", "architecture-policy", packDir)}`,
     "@croco/cli": `file:${packWorkspacePackage("@croco/cli", "cli", packDir)}`,
     "@croco/diagnostics-core": `file:${packWorkspacePackage("@croco/diagnostics-core", "diagnostics-core", packDir)}`,
     "@croco/events-core": `file:${packWorkspacePackage("@croco/events-core", "events-core", packDir)}`,

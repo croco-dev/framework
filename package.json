@@ -4,10 +4,11 @@
   "scripts": {
     "architecture:check:circular": "npx --yes madge --circular --extensions ts packages",
     "architecture:check:circular:allowlist": "node --experimental-strip-types scripts/verify-circular-allowlist.mts",
+    "architecture-policy:check": "pnpm --filter @croco/architecture-policy... build && node --experimental-strip-types scripts/architecture-policy-check.mts --manifest croco.arch.json",
     "build": "turbo build",
     "setup": "pnpm install && pnpm build && pnpm typecheck && pnpm test",
     "audit:prod": "pnpm audit --audit-level high --prod",
-    "check": "pnpm package-manifests:check && pnpm docs:catalog:check && pnpm problem-registry:check && pnpm docs:examples:check && pnpm release-docs:check && pnpm architecture:check:circular:allowlist && pnpm dependency-boundaries:check && pnpm strict-contract-typecheck && pnpm static-misuse:check && pnpm public-api:check && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
+    "check": "pnpm package-manifests:check && pnpm docs:catalog:check && pnpm problem-registry:check && pnpm docs:examples:check && pnpm release-docs:check && pnpm architecture-policy:check && pnpm architecture:check:circular:allowlist && pnpm dependency-boundaries:check && pnpm strict-contract-typecheck && pnpm static-misuse:check && pnpm public-api:check && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
     "changeset": "changeset",
     "deploy": "turbo deploy",
     "dev": "turbo dev",

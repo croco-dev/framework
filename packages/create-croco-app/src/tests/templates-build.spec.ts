@@ -418,11 +418,13 @@ function checkSaasStructure() {
       ),
       "demo:seed": expect.any(String),
       "profile:check": "pnpm --filter {{scope}}/api-server profile:check",
+      "architecture-policy:check":
+        "NODE_PATH=./node_modules croco architecture-policy check --manifest croco.arch.json",
       "runtime-policy:check":
         "NODE_PATH=./node_modules croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
       "profile:smoke:real": "pnpm --filter {{scope}}/api-server profile:smoke:real",
       "demo:smoke": expect.stringMatching(
-        /profile:check[\s\S]*runtime-policy:check[\s\S]*contract:check[\s\S]*api-server demo:smoke/,
+        /profile:check[\s\S]*architecture-policy:check[\s\S]*runtime-policy:check[\s\S]*contract:check[\s\S]*api-server demo:smoke[\s\S]*api-server ops:smoke/,
       ),
       "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
       typecheck: "turbo typecheck",

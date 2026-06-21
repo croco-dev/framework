@@ -422,12 +422,10 @@ function validateDeclaredTypeDependencies(
   const declaredDependencies = new Set(installDependencyNames(packageInfo.sourceManifest));
   const declarationPath = join(packageInfo.packageDir, target.target);
   const declarationContent = stripComments(readFileSync(declarationPath, "utf-8"));
-  const importPattern = /\b(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
   const packageName = packageInfo.packageName;
   const undeclaredDependencies = new Set<string>();
 
-  for (const match of declarationContent.matchAll(importPattern)) {
-    const specifier = match[1];
+  for (const specifier of collectDeclarationImportSpecifiers(declarationContent)) {
     const dependencyName = packageNameFromSpecifier(specifier);
 
     if (
@@ -448,6 +446,25 @@ function validateDeclaredTypeDependencies(
       `${packageName}: ${target.fieldName} imports undeclared type dependency ${dependencyName}`,
     );
   }
+}
+
+function collectDeclarationImportSpecifiers(content: string): string[] {
+  const specifiers = new Set<string>();
+  const importDeclarationPattern =
+    /^\s*import(?:\s+type)?(?:\s+[^;]*?\s+from)?\s*["']([^"']+)["']/gm;
+  const exportDeclarationPattern = /^\s*export(?:\s+type)?\s+[^;]*?\s+from\s*["']([^"']+)["']/gm;
+  const importTypePattern = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
+
+  for (const pattern of [importDeclarationPattern, exportDeclarationPattern, importTypePattern]) {
+    for (const match of content.matchAll(pattern)) {
+      const specifier = match[1];
+      if (specifier) {
+        specifiers.add(specifier);
+      }
+    }
+  }
+
+  return Array.from(specifiers).sort();
 }
 
 function stripComments(content: string): string {
