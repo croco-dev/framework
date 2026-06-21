@@ -7738,6 +7738,253 @@
       ]
     },
     {
+      "packageName": "@croco/governance-core",
+      "relativeDir": "packages/governance-core",
+      "entrypoint": "packages/governance-core/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "assertDataGovernanceResourcesValid",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource",
+          "declarationKind": "function"
+        },
+        {
+          "name": "assertRetentionPolicySatisfied",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createDataMapArtifact",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createProjectMapDataGovernanceSection",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource",
+          "declarationKind": "function"
+        },
+        {
+          "name": "DATA_CLASSIFICATION_TAGS",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource",
+          "declarationKind": "const"
+        },
+        {
+          "name": "DATA_GOVERNANCE_DIAGNOSTIC_CODES",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource",
+          "declarationKind": "const"
+        },
+        {
+          "name": "DataGovernanceValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource",
+          "declarationKind": "class"
+        },
+        {
+          "name": "defineDataGovernanceResource",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource",
+          "declarationKind": "function"
+        },
+        {
+          "name": "RetentionPolicyViolationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/DataGovernanceProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "stringifyDataMapArtifact",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource",
+          "declarationKind": "function"
+        },
+        {
+          "name": "UnsupportedDataDeleteProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/DataGovernanceProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "UnsupportedDataExportProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/DataGovernanceProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "validateDataGovernanceResources",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource",
+          "declarationKind": "function"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "DataClassificationTag",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataFieldValueType",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataGovernanceAuditDescriptor",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataGovernanceDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource"
+        },
+        {
+          "name": "DataGovernanceDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource"
+        },
+        {
+          "name": "DataGovernanceDiagnosticTarget",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource"
+        },
+        {
+          "name": "DataGovernanceField",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataGovernanceProblemContract",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataGovernanceResource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataGovernanceScope",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataGovernanceValidationReport",
+          "exportKind": "named",
+          "source": "./libs/DataGovernanceResource"
+        },
+        {
+          "name": "DataMapArtifact",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataMapCapability",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataMapField",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataMapProblemContract",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataMapProjectSection",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataMapResource",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataMapSummary",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataMapVersion",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataRetentionDisposition",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataRetentionPolicy",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataSubjectCapabilityDeclaration",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataSubjectDeleteHandler",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataSubjectDeleteRequest",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataSubjectDeleteResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataSubjectExportHandler",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataSubjectExportRequest",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataSubjectExportResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataSubjectIdentity",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DataSubjectRequestAuditEvidence",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "NonEmptyArray",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "RetentionPolicyCheck",
+          "exportKind": "named",
+          "source": "./libs/types"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/health-core",
       "relativeDir": "packages/health-core",
       "entrypoint": "packages/health-core/src/index.ts",

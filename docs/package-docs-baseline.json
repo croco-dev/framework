@@ -33,6 +33,7 @@
     "frontend-react",
     "frontend-vite",
     "gid-core",
+    "governance-core",
     "health-core",
     "impersonation-core",
     "invitation-drizzle",
