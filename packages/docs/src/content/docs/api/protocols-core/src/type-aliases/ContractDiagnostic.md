@@ -15,6 +15,12 @@ title: "ContractDiagnostic"
 
 ***
 
+### contractId?
+
+> `readonly` `optional` **contractId**: `string`
+
+***
+
 ### controllerName?
 
 > `readonly` `optional` **controllerName**: `string`
@@ -48,6 +54,12 @@ title: "ContractDiagnostic"
 ### severity
 
 > `readonly` **severity**: [`ContractDiagnosticSeverity`](/api/protocols-core/src/type-aliases/contractdiagnosticseverity/)
+
+***
+
+### sourceLocation?
+
+> `readonly` `optional` **sourceLocation**: [`ContractDiagnosticSourceLocation`](/api/protocols-core/src/type-aliases/contractdiagnosticsourcelocation/)
 
 ***
 

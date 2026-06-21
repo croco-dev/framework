@@ -1,10 +1,22 @@
 import "reflect-metadata";
 import { HttpMethod as HttpMethodEnum, REST_ROUTES_KEY } from "../constants";
 import type { RouteMetadata } from "../types";
+import type { RouteContractSpec } from "../types/RouteContract";
 
-function createMethodDecorator(method: HttpMethodEnum) {
-  return (path: string = ""): MethodDecorator => {
+type RouteContractForMethod<Method extends HttpMethodEnum> = RouteContractSpec<Method>;
+
+type HttpMethodDecoratorFactory<Method extends HttpMethodEnum> = {
+  (path?: string): MethodDecorator;
+  <const TContract extends RouteContractForMethod<Method>>(contract: TContract): MethodDecorator;
+};
+
+function createMethodDecorator<const Method extends HttpMethodEnum>(
+  method: Method,
+): HttpMethodDecoratorFactory<Method> {
+  return ((pathOrContract: string | RouteContractForMethod<Method> = ""): MethodDecorator => {
     return (target: Object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
+      const contract = typeof pathOrContract === "string" ? undefined : pathOrContract;
+      const path = typeof pathOrContract === "string" ? pathOrContract : pathOrContract.path;
       const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
       const existingRoutes: RouteMetadata[] =
@@ -16,6 +28,7 @@ function createMethodDecorator(method: HttpMethodEnum) {
         method,
         path: normalizedPath === "/" ? "" : normalizedPath,
         methodName: propertyKey,
+        ...(contract ? { contract } : {}),
       };
 
       Reflect.defineMetadata(
@@ -26,7 +39,7 @@ function createMethodDecorator(method: HttpMethodEnum) {
 
       return descriptor;
     };
-  };
+  }) as HttpMethodDecoratorFactory<Method>;
 }
 
 /**

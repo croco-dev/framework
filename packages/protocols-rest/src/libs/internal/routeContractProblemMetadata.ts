@@ -1,10 +1,18 @@
-import type { ProblemResponseMetadata } from "../types";
+import type { ProblemCategory } from "@croco/problems-core";
 
 export const ROUTE_CONTRACT_PROBLEMS_KEY = Symbol.for("croco:rest:routeContractProblems");
 
+type RouteContractProblemMetadata = {
+  readonly code: string;
+  readonly category: ProblemCategory;
+  readonly status: number;
+  readonly description?: string;
+  readonly type?: string;
+};
+
 export function attachRouteContractProblems<TResponse extends object>(
   response: TResponse,
-  problems: readonly ProblemResponseMetadata[],
+  problems: readonly RouteContractProblemMetadata[],
 ): TResponse {
   Object.defineProperty(response, ROUTE_CONTRACT_PROBLEMS_KEY, {
     enumerable: false,
@@ -16,13 +24,13 @@ export function attachRouteContractProblems<TResponse extends object>(
 
 export function getRouteContractProblems(
   response: object,
-): readonly ProblemResponseMetadata[] | undefined {
+): readonly RouteContractProblemMetadata[] | undefined {
   const value = Reflect.get(response, ROUTE_CONTRACT_PROBLEMS_KEY);
 
-  return Array.isArray(value) ? value.filter(isProblemResponseMetadata) : undefined;
+  return Array.isArray(value) ? value.filter(isRouteContractProblemMetadata) : undefined;
 }
 
-function isProblemResponseMetadata(value: unknown): value is ProblemResponseMetadata {
+function isRouteContractProblemMetadata(value: unknown): value is RouteContractProblemMetadata {
   return (
     typeof value === "object" &&
     value !== null &&

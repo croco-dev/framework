@@ -221,12 +221,22 @@ function checkSpaBeSplitStructure() {
   checkFileContains(
     "spa-be-split",
     ["apps", "api-server", "src", "controllers", "UserController.ts"],
-    /@ResponseSchema/,
+    /@Get\(getUserRoute\)/,
   );
   checkFileContains(
     "spa-be-split",
     ["apps", "api-server", "src", "controllers", "UserController.ts"],
-    /@Body\(createUserInputSchema\)/,
+    /@Body\(createUserRoute\)/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "controllers", "UserController.ts"],
+    /Promise<RouteResponse<typeof listUsersRoute>>/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "controllers", "userSchemas.ts"],
+    /defineRouteContract/,
   );
   checkFileExists("spa-be-split", "pnpm-workspace.yaml");
   checkFileContains("spa-be-split", ["README.md.hbs"], /운영형 앱 스타터/);

@@ -3,8 +3,8 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 import {
   Body,
-  defineRouteProblem,
   defineRouteContract,
+  defineRouteProblem,
   Get,
   HttpMethod,
   Param,
@@ -12,12 +12,6 @@ import {
   ProblemResponse,
   Query,
   ResponseSchema,
-  routeBodySchema,
-  routeParam,
-  routeProblemResponses,
-  routeQueryParam,
-  routeQuerySchema,
-  routeResponseSchema,
   type RouteBody,
   type RouteContractHandler,
   type RouteMethodReturn,
@@ -27,6 +21,12 @@ import {
   type RouteQuery,
   type RouteQueryParam,
   type RouteResponse,
+  routeParam,
+  routeParamSchema,
+  routeProblemResponses,
+  routeQueryParam,
+  routeQuerySchema,
+  routeResponseSchema,
 } from "../index";
 
 const userSchema = z.object({
@@ -59,8 +59,11 @@ class UserForbiddenProblem extends Problem {
 
 describe("route contract types", () => {
   const getUserContract = defineRouteContract({
+    id: "users.get",
     method: HttpMethod.GET,
     path: "/users/:id",
+    operationId: "getUser",
+    sourceLocation: { path: "src/controllers/UserController.ts", line: 12 },
     params: z.object({ id: z.string() }),
     query: userQuerySchema,
     response: userSchema,
@@ -68,10 +71,18 @@ describe("route contract types", () => {
   });
 
   const createUserContract = defineRouteContract({
+    id: "users.create",
     method: HttpMethod.POST,
     path: "/users",
     body: createUserSchema,
     response: userSchema,
+  });
+
+  const listUsersContract = defineRouteContract({
+    id: "users.list",
+    method: HttpMethod.GET,
+    path: "/users",
+    response: z.array(userSchema),
   });
 
   const updateUserContract = defineRouteContract({
@@ -89,20 +100,19 @@ describe("route contract types", () => {
 
   it("connects route schemas to controller decorator migration helpers", () => {
     class UsersController {
-      @Get(getUserContract.path)
-      @ResponseSchema(routeResponseSchema(getUserContract))
+      @Get(getUserContract)
       getUser(
-        @Param(routeParam(getUserContract, "id")) id: RouteParam<typeof getUserContract, "id">,
-        @Query(routeQueryParam(getUserContract, "includePosts"))
+        @Param(getUserContract, "id") id: RouteParam<typeof getUserContract, "id">,
+        @Query(getUserContract, "includePosts")
         includePosts: RouteQueryParam<typeof getUserContract, "includePosts">,
       ): RouteMethodReturn<typeof getUserContract> {
         return { id, name: includePosts ? "Ada Lovelace" : "Ada" };
       }
 
-      @Post(createUserContract.path)
-      @ResponseSchema(routeResponseSchema(createUserContract))
+      @Post(createUserContract)
+      @ResponseSchema(createUserContract)
       createUser(
-        @Body(routeBodySchema(createUserContract)) body: RouteBody<typeof createUserContract>,
+        @Body(createUserContract) body: RouteBody<typeof createUserContract>,
       ): RouteMethodReturn<typeof createUserContract> {
         return { id: "user_1", name: body.name };
       }
@@ -112,9 +122,10 @@ describe("route contract types", () => {
       id: "user_1",
       name: "Ada Lovelace",
     });
+    expect(routeParamSchema(getUserContract, "id")).toBe(getUserContract.params.shape.id);
+    expect(routeQueryParam(getUserContract, "includePosts")).toBe("includePosts");
     expect(routeQuerySchema(getUserContract)).toBe(userQuerySchema);
     expect(routeResponseSchema(getUserContract)).toBe(userSchema);
-    expect(routeBodySchema(createUserContract)).toBe(createUserSchema);
   });
 
   it("infers request, response, and Problem types from route contracts", async () => {
@@ -126,6 +137,12 @@ describe("route contract types", () => {
     expectTypeOf<RouteBody<typeof createUserContract>>().toEqualTypeOf<{
       name: string;
     }>();
+    expectTypeOf<RouteResponse<typeof listUsersContract>>().toEqualTypeOf<
+      {
+        id: string;
+        name: string;
+      }[]
+    >();
     expectTypeOf<RouteResponse<typeof getUserContract>>().toEqualTypeOf<{
       id: string;
       name: string;
@@ -160,10 +177,27 @@ defineRouteContract({
   params: z.object({ id: z.string() }),
 });
 
+const unionParamsSchema =
+  Math.random() > 0.5 ? z.object({ id: z.string() }) : z.object({ userId: z.string() });
+
+// @ts-expect-error union params schemas still expose extra path params on paramless routes.
+defineRouteContract({
+  method: HttpMethod.GET,
+  path: "/users",
+  params: unionParamsSchema,
+});
+
 const responseContract = defineRouteContract({
   method: HttpMethod.GET,
   path: "/users/:id",
   params: z.object({ id: z.string() }),
+  response: userSchema,
+});
+
+const postContractForNegativeTest = defineRouteContract({
+  method: HttpMethod.POST,
+  path: "/users",
+  body: createUserSchema,
   response: userSchema,
 });
 
@@ -177,6 +211,22 @@ const invalidResponseHandler: RouteContractHandler<typeof responseContract> = ()
 });
 
 void invalidResponseHandler;
+
+class InvalidMethodController {
+  // @ts-expect-error @Get cannot consume a POST route contract.
+  @Get(postContractForNegativeTest)
+  invalidMethod(): void {}
+}
+
+class InvalidBodyController {
+  invalidBody(
+    // @ts-expect-error @Body(contract) requires a route contract with a body schema.
+    @Body(responseContract) _body: unknown,
+  ): void {}
+}
+
+void InvalidMethodController;
+void InvalidBodyController;
 
 defineRouteProblem(UserForbiddenProblem, {
   // @ts-expect-error typed Problem helpers preserve the subclass literal code.

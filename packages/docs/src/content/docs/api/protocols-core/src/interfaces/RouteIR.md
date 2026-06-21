@@ -64,3 +64,9 @@ title: "RouteIR"
 ### problemResponses?
 
 > `optional` **problemResponses**: readonly [`ProblemResponseIR`](/api/protocols-core/src/type-aliases/problemresponseir/)\<`string`, [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/), `number`\>[]
+
+***
+
+### routeContract
+
+> **routeContract**: [`RouteContractIR`](/api/protocols-core/src/type-aliases/routecontractir/) \| `null`

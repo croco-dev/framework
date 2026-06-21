@@ -35,13 +35,19 @@ title: "RouteContractSpec"
 
 ### Problems
 
-`Problems` *extends* readonly `RouteContractProblem`[] \| `undefined` = readonly `RouteContractProblem`[] \| `undefined`
+`Problems` *extends* readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined` = readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined`
 
 ## Properties
 
 ### body?
 
 > `readonly` `optional` **body**: `Body`
+
+***
+
+### id?
+
+> `readonly` `optional` **id**: `string`
 
 ***
 
@@ -84,3 +90,9 @@ title: "RouteContractSpec"
 ### response?
 
 > `readonly` `optional` **response**: `Response`
+
+***
+
+### sourceLocation?
+
+> `readonly` `optional` **sourceLocation**: [`RouteContractSourceLocation`](/api/protocols-rest/src/type-aliases/routecontractsourcelocation/)

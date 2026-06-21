@@ -44,6 +44,18 @@ export type ContractGraphSnapshotProblemResponse = {
   readonly type?: string;
 };
 
+export type ContractGraphSnapshotRouteContract = {
+  readonly id: string | null;
+  readonly method: string;
+  readonly path: string;
+  readonly operationId?: string;
+  readonly sourceLocation?: {
+    readonly path: string;
+    readonly line?: number;
+    readonly column?: number;
+  };
+};
+
 export type ContractGraphSnapshotEntitlementRequirement = ContractEntitlementRequirement;
 
 export type ContractGraphSnapshotRoute = {
@@ -55,6 +67,7 @@ export type ContractGraphSnapshotRoute = {
   readonly path: string;
   readonly controllerPath: string;
   readonly domain: string | null;
+  readonly routeContract: ContractGraphSnapshotRouteContract | null;
   readonly access: ContractAccessMetadata;
   readonly entitlements: readonly ContractGraphSnapshotEntitlementRequirement[];
   readonly params: readonly ContractGraphSnapshotParam[];
@@ -139,6 +152,19 @@ function toSnapshotRoute(route: ContractGraphRoute): ContractGraphSnapshotRoute 
     path: route.path,
     controllerPath: route.controllerPath,
     domain: route.domain,
+    routeContract: route.routeContract
+      ? {
+          id: route.routeContract.id,
+          method: route.routeContract.method,
+          path: route.routeContract.path,
+          ...(route.routeContract.operationId
+            ? { operationId: route.routeContract.operationId }
+            : {}),
+          ...(route.routeContract.sourceLocation
+            ? { sourceLocation: route.routeContract.sourceLocation }
+            : {}),
+        }
+      : null,
     access: {
       guards: sortGuards(route.access.guards),
       roles: [...route.access.roles].sort(compareStrings),

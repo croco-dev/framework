@@ -68,6 +68,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "listUsers",
         httpMethod: "GET",
         path: "/users",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -79,6 +80,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "createUser",
         httpMethod: "POST",
         path: "/users",
+        routeContract: null,
         params: [{ kind: "body", name: "", schema: null }],
         inputSchema: null,
         inputSchemas: BODY_INPUT_SCHEMAS,
@@ -90,6 +92,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "listOrders",
         httpMethod: "GET",
         path: "/orders",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -164,6 +167,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "health",
         httpMethod: "GET",
         path: "/health",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -175,6 +179,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "clear",
         httpMethod: "POST",
         path: "/health/cache",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -186,6 +191,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "fail",
         httpMethod: "GET",
         path: "/health/fail",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -235,6 +241,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "getUser",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [
           { kind: "path", name: "id", schema: null },
           { kind: "query", name: "includePosts", schema: null },
@@ -278,6 +285,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "getCurrentUser",
         httpMethod: "GET",
         path: "/me",
+        routeContract: null,
         params: [
           { kind: "header", name: "authorization", schema: null },
           { kind: "header", name: "x-request-id", schema: null },
@@ -314,6 +322,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "getUser",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: {
@@ -347,6 +356,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "getUser",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: {
@@ -396,6 +406,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "getUser",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: {
@@ -456,6 +467,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "getUser",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: {
@@ -515,6 +527,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "getUser",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: {
@@ -554,6 +567,7 @@ describe("rpc-codegen round trip", () => {
         methodName: "getUser",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: {

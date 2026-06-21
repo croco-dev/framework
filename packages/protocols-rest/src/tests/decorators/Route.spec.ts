@@ -1,7 +1,13 @@
 import "reflect-metadata";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
-import { HttpMethod, PROBLEM_RESPONSES_KEY, REST_ROUTES_KEY } from "../../libs/constants";
+import { z } from "zod";
+import {
+  HttpMethod,
+  PROBLEM_RESPONSES_KEY,
+  RESPONSE_SCHEMA_KEY,
+  REST_ROUTES_KEY,
+} from "../../libs/constants";
 import { Controller } from "../../libs/decorators/Controller";
 import {
   All,
@@ -14,12 +20,13 @@ import {
   Put,
 } from "../../libs/decorators/HttpMethod";
 import { ProblemResponse, ProblemResponses } from "../../libs/decorators/ProblemResponse";
+import { ResponseSchema } from "../../libs/decorators/ResponseSchema";
+import type { ProblemResponseMetadata, RouteMetadata } from "../../libs/types";
 import {
   defineRouteContract,
   defineRouteProblem,
   routeProblemResponses,
 } from "../../libs/types/RouteContract";
-import type { ProblemResponseMetadata, RouteMetadata } from "../../libs/types";
 
 class UserNotFoundProblem extends Problem {
   readonly code = "USER_NOT_FOUND";
@@ -66,6 +73,36 @@ describe("Route decorators", () => {
 
       const routes = Reflect.getMetadata(REST_ROUTES_KEY, RootController) as RouteMetadata[];
       expect(routes[0].path).toBe("");
+    });
+
+    it("should register a typed route contract while keeping route metadata controller-relative", () => {
+      const userSchema = z.object({ id: z.string(), name: z.string() });
+      const getUserContract = defineRouteContract({
+        id: "users.get",
+        method: HttpMethod.GET,
+        path: "/users/:id",
+        operationId: "getUser",
+        sourceLocation: { path: "src/controllers/UserController.ts", line: 10 },
+        params: z.object({ id: z.string() }),
+        response: userSchema,
+      });
+
+      @Controller("/users")
+      class UserController {
+        @Get(getUserContract)
+        @ResponseSchema(getUserContract)
+        getUser() {}
+      }
+
+      const routes = Reflect.getMetadata(REST_ROUTES_KEY, UserController) as RouteMetadata[];
+
+      expect(routes[0]).toMatchObject({
+        method: HttpMethod.GET,
+        path: "/:id",
+        methodName: "getUser",
+        contract: getUserContract,
+      });
+      expect(Reflect.getMetadata(RESPONSE_SCHEMA_KEY, UserController, "getUser")).toBe(userSchema);
     });
   });
 

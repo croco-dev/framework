@@ -5,16 +5,6 @@ prev: false
 title: "Put"
 ---
 
-> `const` **Put**: (`path`) => `MethodDecorator`
+> `const` **Put**: `HttpMethodDecoratorFactory`\<[`PUT`](/api/protocols-rest/src/enumerations/httpmethod/#put)\>
 
 메서드를 PUT 라우트로 등록합니다.
-
-## Parameters
-
-### path?
-
-`string` = `""`
-
-## Returns
-
-`MethodDecorator`

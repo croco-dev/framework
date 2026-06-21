@@ -6,6 +6,7 @@ export interface RouteIR {
   methodName: string;
   httpMethod: string;
   path: string;
+  routeContract: RouteContractIR | null;
   params: ParamIR[];
   inputSchema: z.ZodType | null;
   inputSchemas: RouteInputSchemas;
@@ -13,6 +14,23 @@ export interface RouteIR {
   problemResponses?: readonly ProblemResponseIR[];
   domain: string | null;
 }
+
+export type RouteContractIR = {
+  readonly id: string | null;
+  readonly method: string;
+  readonly path: string;
+  readonly operationId?: string;
+  readonly sourceLocation?: RouteContractSourceLocation;
+  readonly inputSchemas: RouteInputSchemas;
+  readonly outputSchema: z.ZodType | null;
+  readonly problemResponses: readonly ProblemResponseIR[];
+};
+
+export type RouteContractSourceLocation = {
+  readonly path: string;
+  readonly line?: number;
+  readonly column?: number;
+};
 
 export type RouteInputSchemas = {
   body: z.ZodType | null;

@@ -161,6 +161,7 @@ function createGraph(
       inputSchema: null,
       inputSchemas: { body: null, path: null, query: null, headers: null },
       outputSchema: null,
+      routeContract: null,
       domain: null,
     };
   });

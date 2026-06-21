@@ -1,11 +1,14 @@
-import { ProblemCategoryMapper, type Problem, type ProblemCategory } from "@croco/problems-core";
+import { type Problem, type ProblemCategory, ProblemCategoryMapper } from "@croco/problems-core";
 import type { z } from "zod";
-import type { HttpMethod } from "../constants";
+import { HttpMethod } from "../constants";
 import { attachRouteContractProblems } from "../internal/routeContractProblemMetadata";
-import type { ProblemResponseMetadata, ProblemResponseOptions } from "../types";
 
-type AnyZodObject = z.ZodObject<z.ZodRawShape>;
+type AnyZodObject = z.AnyZodObject;
 type EmptyObject = Record<never, never>;
+declare const noRouteParamsSchema: unique symbol;
+type NoRouteParamsSchema = {
+  readonly [noRouteParamsSchema]: never;
+};
 type RouteContractTypeError<Message extends string> = {
   readonly __routeContractError__: Message;
 };
@@ -54,7 +57,7 @@ export type RouteProblemDeclaration<
   readonly type?: string;
 };
 
-type RouteContractProblem = ProblemConstructor | RouteProblemDeclaration;
+export type RouteContractProblem = ProblemConstructor | RouteProblemDeclaration;
 type RouteProblemCode<TProblem extends Problem> = TProblem["code"] extends infer Code extends string
   ? Code
   : string;
@@ -72,14 +75,40 @@ export type RouteContractSpec<
     | readonly RouteContractProblem[]
     | undefined,
 > = {
+  readonly id?: string;
   readonly method: Method;
   readonly path: Path;
   readonly operationId?: string;
+  readonly sourceLocation?: RouteContractSourceLocation;
   readonly params?: Params;
   readonly query?: Query;
   readonly body?: Body;
   readonly response?: Response;
   readonly problems?: Problems;
+};
+
+export type AnyRouteContractSpec = RouteContractSpec;
+
+export type RouteContractWithParams = RouteContractSpec & {
+  readonly params: AnyZodObject;
+};
+
+export type RouteContractWithQuery = RouteContractSpec & {
+  readonly query: AnyZodObject;
+};
+
+export type RouteContractWithBody = RouteContractSpec & {
+  readonly body: z.ZodType;
+};
+
+export type RouteContractWithResponse = RouteContractSpec & {
+  readonly response: z.ZodType;
+};
+
+export type RouteContractSourceLocation = {
+  readonly path: string;
+  readonly line?: number;
+  readonly column?: number;
 };
 
 export type RoutePathParamName<Path extends string> = string extends Path
@@ -151,9 +180,57 @@ export type RouteQueryParam<
 > = RouteQuery<TContract>[Name];
 
 export function defineRouteContract<const TContract extends RouteContractSpec>(
-  contract: TContract & ValidateRouteContractPathParams<TContract>,
+  contract: TContract & ValidateRouteContractPathParams<NoInfer<TContract>>,
 ): TContract {
   return contract;
+}
+
+export function isRouteContractSpec(value: unknown): value is AnyRouteContractSpec {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as {
+    readonly body?: unknown;
+    readonly id?: unknown;
+    readonly method?: unknown;
+    readonly operationId?: unknown;
+    readonly params?: unknown;
+    readonly path?: unknown;
+    readonly problems?: unknown;
+    readonly query?: unknown;
+    readonly response?: unknown;
+    readonly sourceLocation?: unknown;
+  };
+
+  return (
+    isHttpMethod(candidate.method) &&
+    typeof candidate.path === "string" &&
+    isOptionalString(candidate.id) &&
+    isOptionalString(candidate.operationId) &&
+    isOptionalRouteContractSourceLocation(candidate.sourceLocation) &&
+    isOptionalZodObject(candidate.params) &&
+    isOptionalZodObject(candidate.query) &&
+    isOptionalZodType(candidate.body) &&
+    isOptionalZodType(candidate.response) &&
+    (candidate.problems === undefined || Array.isArray(candidate.problems))
+  );
+}
+
+export function hasRouteParamsContract(value: unknown): value is RouteContractWithParams {
+  return isRouteContractSpec(value) && isZodObject(value.params);
+}
+
+export function hasRouteQueryContract(value: unknown): value is RouteContractWithQuery {
+  return isRouteContractSpec(value) && isZodObject(value.query);
+}
+
+export function hasRouteBodyContract(value: unknown): value is RouteContractWithBody {
+  return isRouteContractSpec(value) && isZodType(value.body);
+}
+
+export function hasRouteResponseContract(value: unknown): value is RouteContractWithResponse {
+  return isRouteContractSpec(value) && isZodType(value.response);
 }
 
 export function defineRouteProblem<
@@ -198,6 +275,13 @@ export function routeParam<
   return name;
 }
 
+export function routeParamSchema<
+  TContract extends RouteContractWithParams,
+  Name extends RoutePathParamName<TContract["path"]> & keyof RoutePathParams<TContract> & string,
+>(contract: TContract, name: Name): z.ZodType<RoutePathParams<TContract>[Name]> {
+  return getObjectShape(contract.params)[name] as z.ZodType<RoutePathParams<TContract>[Name]>;
+}
+
 export function routeQueryParam<
   TContract extends RouteContractSpec,
   Name extends keyof RouteQuery<TContract> & string,
@@ -205,25 +289,32 @@ export function routeQueryParam<
   return name;
 }
 
-export function routePathParamsSchema<
-  TContract extends RouteContractSpec & { params: AnyZodObject },
->(contract: TContract): TContract["params"] {
+export function routeQueryParamSchema<
+  TContract extends RouteContractWithQuery,
+  Name extends keyof RouteQuery<TContract> & string,
+>(contract: TContract, name: Name): z.ZodType<RouteQuery<TContract>[Name]> {
+  return getObjectShape(contract.query)[name] as z.ZodType<RouteQuery<TContract>[Name]>;
+}
+
+export function routePathParamsSchema<TContract extends RouteContractWithParams>(
+  contract: TContract,
+): TContract["params"] {
   return contract.params;
 }
 
-export function routeQuerySchema<TContract extends RouteContractSpec & { query: AnyZodObject }>(
+export function routeQuerySchema<TContract extends RouteContractWithQuery>(
   contract: TContract,
 ): TContract["query"] {
   return contract.query;
 }
 
-export function routeBodySchema<TContract extends RouteContractSpec & { body: z.ZodType }>(
+export function routeBodySchema<TContract extends RouteContractWithBody>(
   contract: TContract,
 ): TContract["body"] {
   return contract.body;
 }
 
-export function routeResponseSchema<TContract extends RouteContractSpec & { response: z.ZodType }>(
+export function routeResponseSchema<TContract extends RouteContractWithResponse>(
   contract: TContract,
 ): TContract["response"] {
   return contract.response;
@@ -234,13 +325,16 @@ type ValidateRouteContractPathParams<TContract extends RouteContractSpec> =
     ? ContractPathParamError<Path, ContractParamsSchema<TContract>>
     : unknown;
 
-type ContractParamsSchema<TContract extends RouteContractSpec> = TContract extends {
-  readonly params: infer Params extends AnyZodObject;
-}
-  ? Params
-  : undefined;
+type ContractParamsSchema<TContract extends RouteContractSpec> = "params" extends keyof TContract
+  ? TContract["params"] extends AnyZodObject
+    ? TContract["params"]
+    : NoRouteParamsSchema
+  : NoRouteParamsSchema;
 
-type ContractPathParamError<Path extends string, Params extends AnyZodObject | undefined> =
+type ContractPathParamError<
+  Path extends string,
+  Params extends AnyZodObject | NoRouteParamsSchema,
+> =
   MissingPathParamNames<Path, Params> extends infer Missing extends string
     ? ExtraPathParamNames<Path, Params> extends infer Extra extends string
       ? [Missing] extends [never]
@@ -251,22 +345,82 @@ type ContractPathParamError<Path extends string, Params extends AnyZodObject | u
       : never
     : never;
 
-type MissingPathParamNames<Path extends string, Params extends AnyZodObject | undefined> = Exclude<
-  RoutePathParamName<Path>,
-  ZodObjectKey<Params>
->;
+type MissingPathParamNames<
+  Path extends string,
+  Params extends AnyZodObject | NoRouteParamsSchema,
+> = Exclude<RoutePathParamName<Path>, ZodObjectKey<Params>>;
 
-type ExtraPathParamNames<Path extends string, Params extends AnyZodObject | undefined> = Exclude<
-  ZodObjectKey<Params>,
-  RoutePathParamName<Path>
->;
+type ExtraPathParamNames<
+  Path extends string,
+  Params extends AnyZodObject | NoRouteParamsSchema,
+> = Exclude<ZodObjectKey<Params>, RoutePathParamName<Path>>;
 
-type ZodObjectKey<Schema extends AnyZodObject | undefined> =
+type ZodObjectKey<Schema extends AnyZodObject | NoRouteParamsSchema> =
   Schema extends z.ZodObject<infer Shape> ? Extract<keyof Shape, string> : never;
 
 type NormalizePathParamToken<Token extends string> = Token extends `...${infer Name}`
   ? Name
   : Token;
+
+function getObjectShape(schema: AnyZodObject): z.ZodRawShape {
+  return schema.shape;
+}
+
+function isHttpMethod(value: unknown): value is HttpMethod {
+  return typeof value === "string" && HTTP_METHODS.has(value);
+}
+
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === "string";
+}
+
+function isOptionalRouteContractSourceLocation(
+  value: unknown,
+): value is RouteContractSourceLocation | undefined {
+  if (value === undefined) {
+    return true;
+  }
+
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as {
+    readonly column?: unknown;
+    readonly line?: unknown;
+    readonly path?: unknown;
+  };
+
+  return (
+    typeof candidate.path === "string" &&
+    (candidate.line === undefined || typeof candidate.line === "number") &&
+    (candidate.column === undefined || typeof candidate.column === "number")
+  );
+}
+
+function isOptionalZodObject(value: unknown): value is AnyZodObject | undefined {
+  return value === undefined || isZodObject(value);
+}
+
+function isOptionalZodType(value: unknown): value is z.ZodType | undefined {
+  return value === undefined || isZodType(value);
+}
+
+function isZodObject(value: unknown): value is AnyZodObject {
+  return isZodType(value) && "shape" in value;
+}
+
+function isZodType(value: unknown): value is z.ZodType {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as { readonly safeParse?: unknown };
+
+  return typeof candidate.safeParse === "function";
+}
+
+const HTTP_METHODS = new Set<string>(Object.values(HttpMethod));
 
 type RouteProblemResponses<TProblems extends readonly RouteProblemDeclaration[]> = {
   readonly [Index in keyof TProblems]: RouteProblemResponseFor<TProblems[Index]>;
@@ -277,10 +431,35 @@ type RouteProblemResponseFor<TProblem extends RouteProblemDeclaration> = TProble
   readonly category: infer Category extends ProblemCategory;
   readonly status: infer Status extends number;
 }
-  ? ProblemResponseOptions<Code, Category, Status> & ProblemResponseMetadata<Code, Category, Status>
+  ? RouteProblemResponseOptions<Code, Category, Status> &
+      RouteProblemResponseMetadata<Code, Category, Status>
   : never;
 
-function toProblemResponseMetadata(problem: RouteProblemDeclaration): ProblemResponseMetadata {
+type RouteProblemResponseMetadata<
+  Code extends string = string,
+  Category extends ProblemCategory = ProblemCategory,
+  Status extends number = number,
+> = {
+  readonly code: Code;
+  readonly category: Category;
+  readonly status: Status;
+  readonly description?: string;
+  readonly type?: string;
+};
+
+type RouteProblemResponseOptions<
+  Code extends string = string,
+  Category extends ProblemCategory = ProblemCategory,
+  Status extends number = number,
+> = {
+  readonly code: Code;
+  readonly category: Category;
+  readonly status?: Status;
+  readonly description?: string;
+  readonly type?: string;
+};
+
+function toProblemResponseMetadata(problem: RouteProblemDeclaration): RouteProblemResponseMetadata {
   return {
     code: problem.code,
     category: problem.category,

@@ -5,20 +5,52 @@ prev: false
 title: "Query"
 ---
 
+## Contract Overload
+
+> **Query**\<`TContract`, `Name`\>(`contract`, `name`): `ParameterDecorator`
+
+쿼리스트링 값을 메서드 인자에 바인딩합니다.
+
+### Type Parameters
+
+#### TContract
+
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly query: AnyZodObject }`
+
+#### Name
+
+`Name` *extends* keyof [`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\> & `string`
+
+### Parameters
+
+#### contract
+
+`TContract`
+
+#### name
+
+`Name`
+
+### Returns
+
+`ParameterDecorator`
+
+## Schema Overload
+
 > **Query**(`name`, `schema?`): `ParameterDecorator`
 
 쿼리스트링 값을 메서드 인자에 바인딩합니다.
 
-## Parameters
+### Parameters
 
-### name
+#### name
 
 `string`
 
-### schema?
+#### schema?
 
 `ZodType`\<`any`, `ZodTypeDef`, `any`\>
 
-## Returns
+### Returns
 
 `ParameterDecorator`

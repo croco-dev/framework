@@ -179,6 +179,7 @@ describe("generateClientFiles", () => {
         methodName: "list",
         httpMethod: "GET",
         path: "/users",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -237,6 +238,7 @@ describe("generateClientFiles", () => {
           httpMethod: "GET",
           path: "/users/:id",
           controllerPath: "/users",
+          routeContract: null,
           params: [{ kind: "path", name: "id", schema: null }],
           inputSchema: null,
           inputSchemas: PATH_INPUT_SCHEMAS,
@@ -280,6 +282,7 @@ describe("generateClientFiles", () => {
         methodName: "createUser",
         httpMethod: "POST",
         path: "/users",
+        routeContract: null,
         params: [{ kind: "body", name: "", schema: null }],
         inputSchema: null,
         inputSchemas: BODY_INPUT_SCHEMAS,
@@ -334,6 +337,7 @@ describe("generateClientFiles", () => {
           httpMethod: "GET",
           path: "/users/:id",
           controllerPath: "/users",
+          routeContract: null,
           params: [{ kind: "path", name: "id", schema: null }],
           inputSchema: null,
           inputSchemas: PATH_INPUT_SCHEMAS,
@@ -351,6 +355,7 @@ describe("generateClientFiles", () => {
           httpMethod: "POST",
           path: "/users",
           controllerPath: "/users",
+          routeContract: null,
           params: [{ kind: "body", name: "", schema: null }],
           inputSchema: null,
           inputSchemas: BODY_INPUT_SCHEMAS,
@@ -368,6 +373,7 @@ describe("generateClientFiles", () => {
           httpMethod: "DELETE",
           path: "/users/:id",
           controllerPath: "/users",
+          routeContract: null,
           params: [{ kind: "path", name: "id", schema: null }],
           inputSchema: null,
           inputSchemas: PATH_INPUT_SCHEMAS,
@@ -399,6 +405,7 @@ describe("generateClientFiles", () => {
         methodName: "handleHook",
         httpMethod: "ALL",
         path: "/hooks/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: PATH_INPUT_SCHEMAS,
@@ -426,6 +433,7 @@ describe("generateClientFiles", () => {
         methodName: "createUser",
         httpMethod: "POST",
         path: "/users",
+        routeContract: null,
         params: [
           { kind: "body", name: "", schema: bodySchema },
           { kind: "body", name: "", schema: auditSchema },
@@ -450,6 +458,7 @@ describe("generateClientFiles", () => {
         methodName: "getUser",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: PATH_INPUT_SCHEMAS,
@@ -471,6 +480,7 @@ describe("generateClientFiles", () => {
         methodName: "getUser",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -492,6 +502,7 @@ describe("generateClientFiles", () => {
         methodName: "listUsers",
         httpMethod: "GET",
         path: "/users",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: PATH_INPUT_SCHEMAS,
@@ -513,6 +524,7 @@ describe("generateClientFiles", () => {
         methodName: "create",
         httpMethod: "POST",
         path: "/users",
+        routeContract: null,
         params: [{ kind: "body", name: "", schema: null }],
         inputSchema: null,
         inputSchemas: BODY_INPUT_SCHEMAS,
@@ -530,6 +542,50 @@ describe("generateClientFiles", () => {
     );
   });
 
+  it("should generate clients from contract-first route IR", () => {
+    const createUserSchema = z.object({ name: z.string() }) as unknown as RouteIR["inputSchema"];
+    const userSchema = z.object({ id: z.string(), name: z.string() }) as unknown as
+      | RouteIR["outputSchema"]
+      | NonNullable<RouteIR["routeContract"]>["outputSchema"];
+    const inputSchemas: RouteIR["inputSchemas"] = {
+      body: createUserSchema,
+      path: null,
+      query: null,
+      headers: null,
+    };
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "create",
+        httpMethod: "POST",
+        path: "/users",
+        routeContract: {
+          id: "users.create",
+          method: "POST",
+          path: "/users",
+          operationId: "createUser",
+          inputSchemas,
+          outputSchema: userSchema,
+          problemResponses: [],
+        },
+        params: [{ kind: "body", name: "", schema: createUserSchema }],
+        inputSchema: createUserSchema,
+        inputSchemas,
+        outputSchema: userSchema,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+    const content = fs.readFileSync(files[0], "utf-8");
+
+    expect(content).toContain("export type CreateInput = { name: string; };");
+    expect(content).toContain("export type CreateOutput = { id: string; name: string; };");
+    expect(content).toContain(
+      "create: (input: CreateInput): Promise<CreateOutput> => fetch('/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }).then((response) => handleJsonResponse<CreateOutput>(response)),",
+    );
+  });
+
   it("should generate one file per controller domain", () => {
     const routes: RouteIR[] = [
       {
@@ -537,6 +593,7 @@ describe("generateClientFiles", () => {
         methodName: "list",
         httpMethod: "GET",
         path: "/users",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -548,6 +605,7 @@ describe("generateClientFiles", () => {
         methodName: "list",
         httpMethod: "GET",
         path: "/orders",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -578,6 +636,7 @@ describe("generateClientFiles", () => {
         methodName: "get",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: PATH_INPUT_SCHEMAS,
@@ -589,6 +648,7 @@ describe("generateClientFiles", () => {
         methodName: "getResult",
         httpMethod: "GET",
         path: "/users/:id/result",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: PATH_INPUT_SCHEMAS,
@@ -611,6 +671,7 @@ describe("generateClientFiles", () => {
           methodName: "get",
           httpMethod: "GET",
           path: "/users/:id",
+          routeContract: null,
           params: [{ kind: "path", name: "id", schema: null }],
           inputSchema: null,
           inputSchemas: PATH_INPUT_SCHEMAS,
@@ -624,6 +685,7 @@ describe("generateClientFiles", () => {
           methodName: "get",
           httpMethod: "GET",
           path: "/orders/:id",
+          routeContract: null,
           params: [{ kind: "path", name: "id", schema: null }],
           inputSchema: null,
           inputSchemas: PATH_INPUT_SCHEMAS,
@@ -648,6 +710,7 @@ describe("generateClientFiles", () => {
         methodName: "create",
         httpMethod: "POST",
         path: "/users",
+        routeContract: null,
         params: [{ kind: "body", name: "", schema: null }],
         inputSchema: null,
         inputSchemas: BODY_INPUT_SCHEMAS,
@@ -680,6 +743,7 @@ describe("generateClientFiles", () => {
           methodName: "list",
           httpMethod: "GET",
           path: "/users",
+          routeContract: null,
           params: [{ kind: "query", name: "page", schema: null }],
           inputSchema: null,
           inputSchemas: QUERY_INPUT_SCHEMAS,
@@ -691,6 +755,7 @@ describe("generateClientFiles", () => {
           methodName: "create",
           httpMethod: "POST",
           path: "/users",
+          routeContract: null,
           params: [{ kind: "body", name: "", schema: null }],
           inputSchema: null,
           inputSchemas: BODY_INPUT_SCHEMAS,
@@ -738,6 +803,7 @@ void createInvalidationRouteId;
         methodName: "list",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [
           { kind: "path", name: "id", schema: null },
           { kind: "query", name: "page", schema: null },
@@ -812,6 +878,7 @@ void createInvalidationRouteId;
         methodName: "list",
         httpMethod: "GET",
         path: "/users",
+        routeContract: null,
         params: [{ kind: "query", name: "page", schema: null }],
         inputSchema: null,
         inputSchemas: QUERY_INPUT_SCHEMAS,
@@ -833,6 +900,7 @@ void createInvalidationRouteId;
         methodName: "get",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: PATH_INPUT_SCHEMAS,
@@ -854,6 +922,7 @@ void createInvalidationRouteId;
         methodName: "get",
         httpMethod: "GET",
         path: "/users",
+        routeContract: null,
         params: [
           { kind: "header", name: "authorization", schema: null },
           { kind: "header", name: "x-tenant-id", schema: null },
@@ -880,6 +949,7 @@ void createInvalidationRouteId;
         methodName: "update",
         httpMethod: "PATCH",
         path: "/users/:id",
+        routeContract: null,
         params: [
           { kind: "path", name: "id", schema: null },
           { kind: "query", name: "filter", schema: null },
@@ -936,6 +1006,7 @@ void createInvalidationRouteId;
         methodName: "createUser",
         httpMethod: "POST",
         path: "/users",
+        routeContract: null,
         params: [{ kind: "body", name: "", schema: bodySchema }],
         inputSchema: bodySchema,
         inputSchemas: {
@@ -968,6 +1039,7 @@ void createInvalidationRouteId;
         methodName: "get",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: PATH_INPUT_SCHEMAS,
@@ -994,6 +1066,7 @@ void createInvalidationRouteId;
           methodName: "get",
           httpMethod: "GET",
           path: "/users/:id",
+          routeContract: null,
           params: [{ kind: "path", name: "id", schema: null }],
           inputSchema: null,
           inputSchemas: PATH_INPUT_SCHEMAS,
@@ -1110,6 +1183,7 @@ void handleMissingProblemBranch;
         methodName: "list",
         httpMethod: "GET",
         path: "/users",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -1132,6 +1206,7 @@ void handleMissingProblemBranch;
         methodName: "get",
         httpMethod: "GET",
         path: "/status",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -1160,6 +1235,7 @@ void handleMissingProblemBranch;
         methodName: "get",
         httpMethod: "GET",
         path: "/status",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -1188,6 +1264,7 @@ void handleMissingProblemBranch;
         methodName: "get",
         httpMethod: "GET",
         path: "/status",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -1211,6 +1288,7 @@ void handleMissingProblemBranch;
         methodName: "list",
         httpMethod: "GET",
         path: "/alpha",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -1222,6 +1300,7 @@ void handleMissingProblemBranch;
         methodName: "get",
         httpMethod: "GET",
         path: "/zeta",
+        routeContract: null,
         params: [],
         inputSchema: null,
         inputSchemas: EMPTY_INPUT_SCHEMAS,
@@ -1248,6 +1327,7 @@ void handleMissingProblemBranch;
         methodName: "create",
         httpMethod: "POST",
         path: "/users",
+        routeContract: null,
         params: [{ kind: "body", name: "", schema: null }],
         inputSchema: null,
         inputSchemas: {
@@ -1274,6 +1354,7 @@ void handleMissingProblemBranch;
         methodName: "get",
         httpMethod: "GET",
         path: "/users/:id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: PATH_INPUT_SCHEMAS,
@@ -1300,6 +1381,7 @@ void handleMissingProblemBranch;
         methodName: "compare",
         httpMethod: "GET",
         path: "/pairs/:id/:id2",
+        routeContract: null,
         params: [
           { kind: "path", name: "id", schema: null },
           { kind: "path", name: "id2", schema: null },
@@ -1335,6 +1417,7 @@ void handleMissingProblemBranch;
         methodName: "get",
         httpMethod: "GET",
         path: "/users/:user-id",
+        routeContract: null,
         params: [{ kind: "path", name: "user-id", schema: null }],
         inputSchema: null,
         inputSchemas: {
@@ -1365,6 +1448,7 @@ void handleMissingProblemBranch;
         methodName: "get",
         httpMethod: "GET",
         path: "/assets/:...id",
+        routeContract: null,
         params: [{ kind: "path", name: "id", schema: null }],
         inputSchema: null,
         inputSchemas: PATH_INPUT_SCHEMAS,
@@ -1388,6 +1472,7 @@ void handleMissingProblemBranch;
         methodName: "list",
         httpMethod: "GET",
         path: "/users",
+        routeContract: null,
         params: [{ kind: "query", name: "page", schema: null }],
         inputSchema: null,
         inputSchemas: QUERY_INPUT_SCHEMAS,
@@ -1422,6 +1507,7 @@ void handleMissingProblemBranch;
         methodName: "get",
         httpMethod: "GET",
         path: "/users",
+        routeContract: null,
         params: [
           { kind: "header", name: "authorization", schema: null },
           { kind: "header", name: "x-tenant-id", schema: null },
@@ -1452,6 +1538,7 @@ void handleMissingProblemBranch;
         methodName: "create",
         httpMethod: "POST",
         path: "/users",
+        routeContract: null,
         params: [
           { kind: "body", name: "", schema: null },
           { kind: "header", name: "x-request-id", schema: null },
@@ -1483,6 +1570,7 @@ void handleMissingProblemBranch;
           methodName: "get",
           httpMethod: "GET",
           path: "/users/:id",
+          routeContract: null,
           params: [
             { kind: "path", name: "id", schema: null },
             { kind: "query", name: "page", schema: null },
@@ -1508,6 +1596,7 @@ void handleMissingProblemBranch;
           methodName: "create",
           httpMethod: "POST",
           path: "/users",
+          routeContract: null,
           params: [
             { kind: "body", name: "", schema: null },
             { kind: "header", name: "x-request-id", schema: null },
@@ -1631,6 +1720,7 @@ void createResultHook;
           methodName: "list",
           httpMethod: "GET",
           path: "/users",
+          routeContract: null,
           params: [
             { kind: "query", name: "page", schema: null },
             { kind: "query", name: "active", schema: null },
@@ -1677,6 +1767,7 @@ void resultBranch;
           methodName: "get",
           httpMethod: "GET",
           path: "/users",
+          routeContract: null,
           params: [
             { kind: "header", name: "authorization", schema: null },
             { kind: "header", name: "x-tenant-id", schema: null },
@@ -1710,6 +1801,7 @@ void result;
           methodName: "create",
           httpMethod: "POST",
           path: "/users",
+          routeContract: null,
           params: [{ kind: "body", name: "", schema: null }],
           inputSchema: null,
           inputSchemas: {
@@ -1821,6 +1913,7 @@ void submitCreateForm;
           methodName: "update",
           httpMethod: "PUT",
           path: "/users/:id",
+          routeContract: null,
           params: [
             { kind: "path", name: "id", schema: null },
             { kind: "body", name: "", schema: null },
@@ -1865,6 +1958,7 @@ void updateResult;
         methodName: "create",
         httpMethod: "POST",
         path: "/users",
+        routeContract: null,
         params: [{ kind: "body", name: "", schema: null }],
         inputSchema: null,
         inputSchemas: {
@@ -1901,6 +1995,7 @@ void updateResult;
         methodName: "create",
         httpMethod: "POST",
         path: "/users",
+        routeContract: null,
         params: [{ kind: "body", name: "", schema: null }],
         inputSchema: null,
         inputSchemas: {
@@ -1946,6 +2041,7 @@ void updateResult;
           methodName: "create",
           httpMethod: "POST",
           path: "/users",
+          routeContract: null,
           params: [{ kind: "body", name: "", schema: null }],
           inputSchema: null,
           inputSchemas: {
@@ -1979,6 +2075,7 @@ void updateResult;
         methodName: "update",
         httpMethod: "PATCH",
         path: "/users/:id",
+        routeContract: null,
         params: [
           { kind: "path", name: "id", schema: null },
           { kind: "query", name: "filter", schema: null },

@@ -3,6 +3,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractRouteIR } from "../libs/extractRouteIR";
+import { REST_ROUTES_KEY, type RouteMetadata } from "../libs/sharedTypes";
 import {
   Body,
   Controller,
@@ -101,8 +102,8 @@ describe("extractRouteIR", () => {
     expect(routes).toHaveLength(1);
     expect(routes[0]?.inputSchemas.body).toBeNull();
     expect(routes[0]?.inputSchemas.path).toBeTruthy();
-    expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape).toHaveProperty("id");
-    expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape.id).toBeInstanceOf(z.ZodString);
+    expect((routes[0]?.inputSchemas.path as z.AnyZodObject).shape).toHaveProperty("id");
+    expect((routes[0]?.inputSchemas.path as z.AnyZodObject).shape.id).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchemas.query).toBeNull();
     expect(routes[0]?.inputSchemas.headers).toBeNull();
     expect(routes[0]?.params).toEqual([{ kind: "path", name: "id", schema: null }]);
@@ -143,9 +144,9 @@ describe("extractRouteIR", () => {
     expect(routes).toHaveLength(1);
     expect(routes[0]?.inputSchemas.body).toBe(updateItemSchema);
     expect(routes[0]?.inputSchemas.path).toBeTruthy();
-    expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape.id).toBeInstanceOf(z.ZodString);
+    expect((routes[0]?.inputSchemas.path as z.AnyZodObject).shape.id).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchemas.query).toBeTruthy();
-    expect((routes[0]?.inputSchemas.query as z.ZodObject<any>).shape.filter).toBeInstanceOf(
+    expect((routes[0]?.inputSchemas.query as z.AnyZodObject).shape.filter).toBeInstanceOf(
       z.ZodString,
     );
     expect(routes[0]?.inputSchema).toBe(updateItemSchema);
@@ -165,9 +166,9 @@ describe("extractRouteIR", () => {
     expect(routes[0]?.inputSchemas.path).toBeNull();
     expect(routes[0]?.inputSchemas.query).toBeNull();
     expect(routes[0]?.inputSchemas.headers).toBeTruthy();
-    expect(
-      (routes[0]?.inputSchemas.headers as z.ZodObject<any>).shape["x-tenant-id"],
-    ).toBeInstanceOf(z.ZodString);
+    expect((routes[0]?.inputSchemas.headers as z.AnyZodObject).shape["x-tenant-id"]).toBeInstanceOf(
+      z.ZodString,
+    );
     expect(routes[0]?.params).toEqual([{ kind: "header", name: "x-tenant-id", schema: null }]);
   });
 
@@ -185,6 +186,92 @@ describe("extractRouteIR", () => {
 
     expect(routes).toHaveLength(1);
     expect(routes[0]?.outputSchema).toBe(userSchema);
+  });
+
+  it("should extract path, input, and output schemas from route contract metadata", () => {
+    const userIdSchema = z.string().uuid();
+    const includePostsSchema = z.boolean().optional();
+    const tenantIdSchema = z.string().uuid();
+    const paramsSchema = z.object({ id: userIdSchema });
+    const querySchema = z.object({ includePosts: includePostsSchema });
+    const userSchema = z.object({ id: z.string(), name: z.string() });
+
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      getUser(
+        @Param("id", userIdSchema) _id: string,
+        @Query("includePosts", includePostsSchema) _includePosts: boolean | undefined,
+        @Header("x-tenant-id", tenantIdSchema) _tenantId: string,
+      ): void {}
+    }
+
+    attachRouteContract(UsersController, "getUser", {
+      id: "users.get",
+      method: "GET",
+      path: "/users/:id",
+      operationId: "getUser",
+      sourceLocation: { path: "src/controllers/UserController.ts", line: 12 },
+      params: paramsSchema,
+      query: querySchema,
+      response: userSchema,
+    });
+
+    const routes = extractRouteIR(UsersController);
+
+    expect(routes).toHaveLength(1);
+    expect(routes[0]).toMatchObject({
+      path: "/users/:id",
+      routeContract: {
+        id: "users.get",
+        method: "GET",
+        path: "/users/:id",
+        operationId: "getUser",
+        sourceLocation: { path: "src/controllers/UserController.ts", line: 12 },
+      },
+    });
+    expect(routes[0]?.inputSchemas.path).toBe(paramsSchema);
+    expect(routes[0]?.inputSchemas.query).toBe(querySchema);
+    expect((routes[0]?.inputSchemas.headers as z.AnyZodObject).shape["x-tenant-id"]).toBe(
+      tenantIdSchema,
+    );
+    expect(routes[0]?.outputSchema).toBe(userSchema);
+    expect(routes[0]?.params).toEqual([
+      { kind: "path", name: "id", schema: userIdSchema },
+      { kind: "query", name: "includePosts", schema: includePostsSchema },
+      { kind: "header", name: "x-tenant-id", schema: tenantIdSchema },
+    ]);
+  });
+
+  it("should extract route contract Problem responses from contract metadata", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    attachRouteContract(UsersController, "getUser", {
+      method: "GET",
+      path: "/users/:id",
+      problems: [
+        {
+          code: "USER_NOT_FOUND",
+          category: ProblemCategory.NotFound,
+          description: "The requested user does not exist.",
+        },
+      ],
+    });
+
+    const routes = extractRouteIR(UsersController);
+
+    expect(routes[0]?.routeContract?.problemResponses).toEqual([
+      {
+        code: "USER_NOT_FOUND",
+        category: ProblemCategory.NotFound,
+        description: "The requested user does not exist.",
+        status: 404,
+      },
+    ]);
   });
 
   it("should set outputSchema to null when response schema metadata is missing", () => {
@@ -232,3 +319,17 @@ describe("extractRouteIR", () => {
     expect(extractRouteIR(PlainClass)).toEqual([]);
   });
 });
+
+function attachRouteContract(
+  controller: Function,
+  methodName: string,
+  contract: NonNullable<RouteMetadata["contract"]>,
+): void {
+  const routes = Reflect.getMetadata(REST_ROUTES_KEY, controller) as RouteMetadata[];
+
+  Reflect.defineMetadata(
+    REST_ROUTES_KEY,
+    routes.map((route) => (route.methodName === methodName ? { ...route, contract } : route)),
+    controller,
+  );
+}

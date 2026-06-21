@@ -103,6 +103,12 @@ title: "ContractGraphSnapshotRoute"
 
 ***
 
+### routeContract
+
+> `readonly` **routeContract**: [`ContractGraphSnapshotRouteContract`](/api/protocols-core/src/type-aliases/contractgraphsnapshotroutecontract/) \| `null`
+
+***
+
 ### routeId
 
 > `readonly` **routeId**: `string`
