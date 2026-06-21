@@ -6,7 +6,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/auth-drizzle": "^0.0.2",
   "@croco/billing-core": "^0.0.2",
   "@croco/billing-polar": "^0.0.2",
-  "@croco/cli": "^0.0.3",
+  "@croco/cli": "^0.0.4",
   "@croco/diagnostics-core": "^0.0.2",
   "@croco/entitlements-core": "^0.0.2",
   "@croco/execution-core": "^0.0.2",

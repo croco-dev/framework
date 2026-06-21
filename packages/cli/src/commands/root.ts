@@ -67,6 +67,11 @@ export function createCrocoCommand() {
         "Inspect and recover Croco background jobs",
         async () => (await import("./jobs.js")).jobs as LoadedCommand,
       ),
+      project: lazyCommand(
+        "project",
+        "Inspect Croco project artifacts",
+        async () => (await import("./project.js")).project as LoadedCommand,
+      ),
     },
   });
 }
