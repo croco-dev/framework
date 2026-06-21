@@ -11,7 +11,7 @@ title: "AdminGeneratedResourceOperation"
 
 ### access
 
-> `readonly` **access**: `ContractAccessMetadata`
+> `readonly` **access**: [`ContractAccessMetadata`](/api/protocols-core/src/type-aliases/contractaccessmetadata/)
 
 ***
 

@@ -4134,6 +4134,12 @@
       "entrypoint": "packages/entitlements-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "EntitlementAuditSink",
+          "exportKind": "declaration",
+          "source": "./libs/interfaces",
+          "declarationKind": "class"
+        },
+        {
           "name": "EntitlementEventPublisher",
           "exportKind": "declaration",
           "source": "./libs/interfaces",
@@ -4164,6 +4170,30 @@
           "declarationKind": "class"
         },
         {
+          "name": "appendEntitlementRequirement",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineEntitlementRequirement",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement",
+          "declarationKind": "function"
+        },
+        {
+          "name": "ENTITLEMENT_REQUIRED_KEY",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement",
+          "declarationKind": "const"
+        },
+        {
+          "name": "ENTITLEMENT_REQUIREMENTS_KEY",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement",
+          "declarationKind": "const"
+        },
+        {
           "name": "EntitlementDeniedEvent",
           "exportKind": "named",
           "source": "./libs/events",
@@ -4182,9 +4212,21 @@
           "declarationKind": "class"
         },
         {
+          "name": "EntitlementInactiveSubscriptionProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EntitlementProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "EntitlementManager",
           "exportKind": "named",
           "source": "./libs/EntitlementManager",
+          "declarationKind": "class"
+        },
+        {
+          "name": "EntitlementMissingPlanProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EntitlementProblems",
           "declarationKind": "class"
         },
         {
@@ -4200,10 +4242,34 @@
           "declarationKind": "class"
         },
         {
+          "name": "EntitlementProviderUnavailableProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EntitlementProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "EntitlementQuotaExceededEvent",
           "exportKind": "named",
           "source": "./libs/events",
           "declarationKind": "class"
+        },
+        {
+          "name": "EntitlementQuotaExceededProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EntitlementProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "EntitlementRequirementProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EntitlementProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "getEntitlementRequirements",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement",
+          "declarationKind": "function"
         },
         {
           "name": "InMemoryPlanEntitlementRegistry",
@@ -4229,6 +4295,36 @@
           "name": "EntitlementCheckResult",
           "exportKind": "declaration",
           "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementCheckStatus",
+          "exportKind": "declaration",
+          "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementFailureReason",
+          "exportKind": "declaration",
+          "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementGuardAuditEvent",
+          "exportKind": "declaration",
+          "source": "./libs/interfaces",
+          "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementGuardAuditResource",
+          "exportKind": "declaration",
+          "source": "./libs/interfaces",
+          "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementGuardAuditRoute",
+          "exportKind": "declaration",
+          "source": "./libs/interfaces",
           "declarationKind": "type"
         },
         {
@@ -4272,6 +4368,46 @@
           "exportKind": "declaration",
           "source": "./libs/types",
           "declarationKind": "type"
+        },
+        {
+          "name": "EntitlementGuardInput",
+          "exportKind": "named",
+          "source": "./libs/EntitlementGuard"
+        },
+        {
+          "name": "EntitlementGuardResource",
+          "exportKind": "named",
+          "source": "./libs/EntitlementGuard"
+        },
+        {
+          "name": "EntitlementGuardRoute",
+          "exportKind": "named",
+          "source": "./libs/EntitlementGuard"
+        },
+        {
+          "name": "EntitlementGuardSubject",
+          "exportKind": "named",
+          "source": "./libs/EntitlementGuard"
+        },
+        {
+          "name": "EntitlementRequirement",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement"
+        },
+        {
+          "name": "EntitlementRequirementMetadata",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement"
+        },
+        {
+          "name": "EntitlementResourceRequirement",
+          "exportKind": "named",
+          "source": "./libs/EntitlementRequirement"
+        },
+        {
+          "name": "RouteExecutionContext",
+          "exportKind": "named",
+          "source": "./libs/EntitlementGuard"
         }
       ]
     },
@@ -11425,6 +11561,16 @@
           "source": "./libs/ContractGraph"
         },
         {
+          "name": "ContractEntitlementRequirement",
+          "exportKind": "named",
+          "source": "./libs/ContractGraph"
+        },
+        {
+          "name": "ContractEntitlementResourceRequirement",
+          "exportKind": "named",
+          "source": "./libs/ContractGraph"
+        },
+        {
           "name": "ContractGraph",
           "exportKind": "named",
           "source": "./libs/ContractGraph"
@@ -11506,6 +11652,11 @@
         },
         {
           "name": "ContractGraphSnapshotController",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractGraphSnapshotEntitlementRequirement",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot"
         },
@@ -11603,6 +11754,16 @@
           "name": "DefinedRouteSchema",
           "exportKind": "named",
           "source": "./libs/RouteSchema"
+        },
+        {
+          "name": "EntitlementRequirementMetadata",
+          "exportKind": "named",
+          "source": "./libs/sharedTypes"
+        },
+        {
+          "name": "EntitlementResourceRequirementMetadata",
+          "exportKind": "named",
+          "source": "./libs/sharedTypes"
         },
         {
           "name": "InferRouteSchemaRequest",
@@ -14757,6 +14918,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createProviderConformanceMatrixSuite",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix",
+          "declarationKind": "function"
+        },
+        {
           "name": "createQStashTaskConformanceSuite",
           "exportKind": "named",
           "source": "./libs/serverless-provider-conformance",
@@ -15009,6 +15176,51 @@
           "name": "ProblemResponseExpectation",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "ProviderConformanceCapability",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceCapabilityManifest",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceCategory",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceMatrixCase",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceMatrixManifest",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceMatrixOptions",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceMatrixSuite",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceProfile",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceProfileManifest",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
         },
         {
           "name": "QStashTaskConformanceHarness",
@@ -16395,6 +16607,48 @@
           "declarationKind": "class"
         },
         {
+          "name": "InMemorySagaStore",
+          "exportKind": "named",
+          "source": "./libs/saga/InMemorySagaStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaDefinitionProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WorkflowProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaExecutionFailedProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WorkflowProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaExecutionNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WorkflowProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaReplayProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WorkflowProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaRunner",
+          "exportKind": "named",
+          "source": "./libs/saga/SagaRunner",
+          "declarationKind": "class"
+        },
+        {
+          "name": "SagaStoreConflictProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/WorkflowProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "WORKFLOW_METADATA_KEY",
           "exportKind": "named",
           "source": "./libs/decorators/Workflow",
@@ -16444,6 +16698,151 @@
         }
       ],
       "typeExports": [
+        {
+          "name": "CreateSagaExecutionParams",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "ListSagaExecutionsOptions",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "ReplaySagaParams",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaCompensationContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaCompensationHandler",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaDefinition",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaExecution",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaExecutionStatus",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaFailure",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaIdempotencyContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaIdempotencyResolver",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaOutboxMessage",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaOutboxPublishContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaOutboxPublisher",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaOutboxRecord",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaRetryContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaRetryPolicy",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaRunResult",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepDefinition",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepExecutionRecord",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepHandler",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepIdempotencyContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepIdempotencyResolver",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepInputContext",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepInputResolver",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepResult",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStepStatus",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
+        {
+          "name": "SagaStore",
+          "exportKind": "named",
+          "source": "./libs/saga/types"
+        },
         {
           "name": "WorkflowDefinition",
           "exportKind": "named",

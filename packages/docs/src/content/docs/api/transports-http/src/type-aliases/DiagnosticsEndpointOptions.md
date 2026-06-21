@@ -11,7 +11,7 @@ title: "DiagnosticsEndpointOptions"
 
 ### collector?
 
-> `readonly` `optional` **collector**: `DiagnosticsCollector`
+> `readonly` `optional` **collector**: [`DiagnosticsCollector`](/api/diagnostics-core/src/classes/diagnosticscollector/)
 
 ***
 
@@ -35,7 +35,7 @@ title: "DiagnosticsEndpointOptions"
 
 ### providers?
 
-> `readonly` `optional` **providers**: readonly `DiagnosticsProvider`[]
+> `readonly` `optional` **providers**: readonly [`DiagnosticsProvider`](/api/diagnostics-core/src/interfaces/diagnosticsprovider/)[]
 
 ***
 

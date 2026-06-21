@@ -27,6 +27,7 @@ import {
   createDrizzleProviderConformanceSuite,
   createEventTestingHarness,
   createLlmProviderConformanceSuite,
+  createProviderConformanceMatrixSuite,
   createQStashTaskConformanceSuite,
   createStorageProviderConformanceSuite,
   createUpstashRedisRateLimitConformanceSuite,
@@ -738,6 +739,225 @@ describe("@croco/testing", () => {
       }).cases,
     )("$name", async ({ run }) => {
       await run();
+    });
+  });
+
+  describe("provider conformance matrix", () => {
+    it("creates profile cases and a manifest for supported and optional capabilities", async () => {
+      const suite = createProviderConformanceMatrixSuite({
+        profiles: [
+          {
+            packageName: "@croco/storage-r2",
+            providerName: "r2-storage",
+            category: "storage",
+            capabilities: [
+              {
+                name: "object roundtrip",
+                required: true,
+                supported: true,
+                suite: "createStorageProviderConformanceSuite",
+                methods: ["put", "get", "getStream", "delete", "exists"],
+                evidence: ["packages/storage-r2/src/tests/R2StorageProvider.spec.ts"],
+              },
+              {
+                name: "object listing",
+                required: false,
+                supported: false,
+                methods: ["list"],
+                reason: "StorageProvider does not expose list() in the public contract.",
+              },
+            ],
+          },
+          {
+            packageName: "@croco/tasks-qstash",
+            providerName: "qstash-task-runner",
+            category: "tasks",
+            capabilities: [
+              {
+                name: "task publishing",
+                required: true,
+                supported: true,
+                suite: "createQStashTaskConformanceSuite",
+                methods: ["execute"],
+                evidence: ["packages/tasks-qstash/src/tests/QStashTaskRunner.spec.ts"],
+              },
+            ],
+          },
+          {
+            packageName: "@croco/telemetry-sdk-node",
+            providerName: "otel-node-sdk",
+            category: "telemetry",
+            capabilities: [
+              {
+                name: "shutdown flush",
+                required: false,
+                supported: false,
+                methods: ["forceFlush"],
+                reason:
+                  "Telemetry SDK tests cover forceFlush directly until a telemetry provider suite exists.",
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(suite.cases.map((testCase) => testCase.name)).toEqual([
+        "provider conformance matrix: declares at least one provider profile",
+        "@croco/storage-r2 storage provider profile: declares provider identity",
+        "@croco/storage-r2: storage/object roundtrip (put, get, getStream, delete, exists): supported by createStorageProviderConformanceSuite",
+        "@croco/storage-r2: storage/object listing (list): documents unsupported optional capability",
+        "@croco/tasks-qstash tasks provider profile: declares provider identity",
+        "@croco/tasks-qstash: tasks/task publishing (execute): supported by createQStashTaskConformanceSuite",
+        "@croco/telemetry-sdk-node telemetry provider profile: declares provider identity",
+        "@croco/telemetry-sdk-node: telemetry/shutdown flush (forceFlush): documents unsupported optional capability",
+      ]);
+
+      for (const testCase of suite.cases) {
+        await testCase.run();
+      }
+
+      expect(suite.manifest).toEqual({
+        version: "croco.provider-conformance.manifest.v1",
+        profiles: [
+          {
+            packageName: "@croco/storage-r2",
+            providerName: "r2-storage",
+            category: "storage",
+            capabilities: [
+              {
+                name: "object roundtrip",
+                required: true,
+                supported: true,
+                methods: ["put", "get", "getStream", "delete", "exists"],
+                suite: "createStorageProviderConformanceSuite",
+                evidence: ["packages/storage-r2/src/tests/R2StorageProvider.spec.ts"],
+              },
+              {
+                name: "object listing",
+                required: false,
+                supported: false,
+                methods: ["list"],
+                reason: "StorageProvider does not expose list() in the public contract.",
+              },
+            ],
+          },
+          {
+            packageName: "@croco/tasks-qstash",
+            providerName: "qstash-task-runner",
+            category: "tasks",
+            capabilities: [
+              {
+                name: "task publishing",
+                required: true,
+                supported: true,
+                methods: ["execute"],
+                suite: "createQStashTaskConformanceSuite",
+                evidence: ["packages/tasks-qstash/src/tests/QStashTaskRunner.spec.ts"],
+              },
+            ],
+          },
+          {
+            packageName: "@croco/telemetry-sdk-node",
+            providerName: "otel-node-sdk",
+            category: "telemetry",
+            capabilities: [
+              {
+                name: "shutdown flush",
+                required: false,
+                supported: false,
+                methods: ["forceFlush"],
+                reason:
+                  "Telemetry SDK tests cover forceFlush directly until a telemetry provider suite exists.",
+              },
+            ],
+          },
+        ],
+      });
+    });
+
+    it("fails required unsupported capabilities with package, category, capability, and methods", async () => {
+      const suite = createProviderConformanceMatrixSuite({
+        profiles: [
+          {
+            packageName: "@croco/auth-clerk",
+            providerName: "clerk-auth-provider",
+            category: "auth",
+            capabilities: [
+              {
+                name: "session verification",
+                required: true,
+                supported: false,
+                methods: ["verifySession"],
+                reason: "Auth conformance suite has not been wired into this provider.",
+              },
+            ],
+          },
+        ],
+      });
+
+      await expect(suite.cases[2]?.run()).rejects.toThrow(
+        "@croco/auth-clerk must support required auth/session verification (verifySession): Auth conformance suite has not been wired into this provider.",
+      );
+    });
+
+    it("requires supported capabilities to name contract methods and suites", async () => {
+      const suite = createProviderConformanceMatrixSuite({
+        profiles: [
+          {
+            packageName: "@croco/search-meilisearch",
+            providerName: "meilisearch-provider",
+            category: "search",
+            capabilities: [
+              {
+                name: "document indexing",
+                required: true,
+                supported: true,
+                suite: "",
+                methods: [],
+              },
+            ],
+          },
+        ],
+      });
+
+      await expect(suite.cases[2]?.run()).rejects.toThrow(
+        "@croco/search-meilisearch search/document indexing requires a conformance suite name.",
+      );
+    });
+
+    it("requires optional unsupported capabilities to document the manifest reason", async () => {
+      const suite = createProviderConformanceMatrixSuite({
+        profiles: [
+          {
+            packageName: "@croco/cache-core",
+            providerName: "cache-reference",
+            category: "cache",
+            capabilities: [
+              {
+                name: "tag invalidation",
+                required: false,
+                supported: false,
+                methods: ["invalidateTag"],
+                reason: "",
+              },
+            ],
+          },
+        ],
+      });
+
+      await expect(suite.cases[2]?.run()).rejects.toThrow(
+        "@croco/cache-core must document why cache/tag invalidation is unsupported.",
+      );
+    });
+
+    it("fails empty matrices instead of producing a silent zero-case suite", async () => {
+      const suite = createProviderConformanceMatrixSuite({
+        profiles: [],
+      });
+
+      await expect(suite.cases[0]?.run()).rejects.toThrow(
+        "Provider conformance matrix requires at least one provider profile.",
+      );
     });
   });
 

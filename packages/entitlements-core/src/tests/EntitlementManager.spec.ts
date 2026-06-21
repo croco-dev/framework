@@ -107,6 +107,7 @@ describe("EntitlementManager", () => {
 
     expect(result).toEqual({
       granted: true,
+      status: "allowed",
       featureKey: "advanced_support",
       type: "boolean",
       planId: "pro",
@@ -120,6 +121,7 @@ describe("EntitlementManager", () => {
 
     expect(result).toEqual({
       granted: true,
+      status: "allowed",
       featureKey: "team_members",
       type: "static",
       value: 10,
@@ -148,6 +150,7 @@ describe("EntitlementManager", () => {
 
     expect(result).toEqual({
       granted: true,
+      status: "allowed",
       featureKey: "api_calls",
       type: "metered",
       quota: 50,
@@ -173,6 +176,7 @@ describe("EntitlementManager", () => {
 
     expect(result).toEqual({
       granted: true,
+      status: "allowed",
       featureKey: "storage",
       type: "metered",
       quota: 250,
@@ -194,6 +198,7 @@ describe("EntitlementManager", () => {
 
     expect(result).toEqual({
       granted: false,
+      status: "denied",
       featureKey: "advanced_support",
       type: "boolean",
       reason: "no_subscription",
@@ -207,6 +212,7 @@ describe("EntitlementManager", () => {
 
     expect(result).toEqual({
       granted: false,
+      status: "denied",
       featureKey: "audit_logs",
       type: "boolean",
       reason: "not_entitled",
@@ -223,6 +229,7 @@ describe("EntitlementManager", () => {
 
     expect(result).toEqual({
       granted: false,
+      status: "denied",
       featureKey: "events",
       type: "metered",
       reason: "no_quota_defined",
@@ -245,6 +252,7 @@ describe("EntitlementManager", () => {
 
     expect(result).toEqual({
       granted: false,
+      status: "denied",
       featureKey: "reports",
       type: "metered",
       quota: 3,
@@ -280,6 +288,7 @@ describe("EntitlementManager", () => {
     const result = await manager.check("tenant-1", "reports");
 
     expect(result.granted).toBe(true);
+    expect(result.status).toBe("soft-limit");
     expect(result.overagePolicy).toBe("WARN");
     expect(result.exceeded).toBe(true);
     expect(eventPublisher.publish).toHaveBeenCalledWith(
@@ -301,6 +310,7 @@ describe("EntitlementManager", () => {
     const result = await manager.check("tenant-1", "reports");
 
     expect(result.granted).toBe(true);
+    expect(result.status).toBe("overage-allowed");
     expect(result.overagePolicy).toBe("ALLOW_WITH_OVERAGE");
     expect(eventPublisher.publish).toHaveBeenNthCalledWith(
       1,

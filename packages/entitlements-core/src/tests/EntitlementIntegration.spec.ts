@@ -174,6 +174,7 @@ describe("EntitlementIntegration", () => {
 
       expect(result).toEqual({
         granted: true,
+        status: "allowed",
         featureKey: "api_calls",
         type: "metered",
         quota: 100,
@@ -201,6 +202,7 @@ describe("EntitlementIntegration", () => {
 
       expect(result).toEqual({
         granted: false,
+        status: "denied",
         featureKey: "api_calls",
         type: "metered",
         quota: 100,
@@ -232,6 +234,7 @@ describe("EntitlementIntegration", () => {
 
       expect(result).toEqual({
         granted: true,
+        status: "soft-limit",
         featureKey: "api_calls",
         type: "metered",
         quota: 100,
@@ -262,6 +265,7 @@ describe("EntitlementIntegration", () => {
 
       expect(result).toEqual({
         granted: true,
+        status: "overage-allowed",
         featureKey: "api_calls",
         type: "metered",
         quota: 100,
@@ -299,6 +303,7 @@ describe("EntitlementIntegration", () => {
 
       expect(result).toEqual({
         granted: true,
+        status: "allowed",
         featureKey: "storage",
         type: "metered",
         quota: 500,
@@ -327,6 +332,7 @@ describe("EntitlementIntegration", () => {
 
       expect(result).toEqual({
         granted: false,
+        status: "denied",
         featureKey: "events",
         type: "metered",
         reason: "no_quota_defined",

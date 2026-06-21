@@ -11,6 +11,8 @@
     "contract:snapshot": "croco contracts check --controllers 'apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}' --json --out contract-graph.snapshot.json",
     "contract:diff": "croco contracts diff --baseline contract-graph.snapshot.json --controllers 'apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}'",
     "contract:coverage": "croco contracts check --controllers 'apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}' --json --out contract-graph.coverage.json",
+    "project-map:write": "croco project map --controllers 'apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}' --out croco.project-map.json",
+    "project-map:check": "croco project map --controllers 'apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}' --check --manifest croco.project-map.json",
     "contract:verify": "pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter {{scope}}/provider-rpc typecheck",
     "ci:contracts": "pnpm contract:verify",
     "contract:openapi": "pnpm contract:check && croco-openapi-spec --controllers 'apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}' --out openapi.json --title '{{projectName}} API' --version 0.1.0 --server http://localhost:3000",

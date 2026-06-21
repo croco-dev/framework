@@ -25,7 +25,7 @@ title: "InvitationManager"
 
 ##### notificationService
 
-`NotificationService`
+[`NotificationService`](/api/notifications-core/src/classes/notificationservice/)
 
 ##### eventPublisher
 

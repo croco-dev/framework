@@ -1459,6 +1459,10 @@ function generateDocsReport(
     "",
     ...formatMissingApiDocs(coverage.missingApiDocs, baseline),
     "",
+    "## Generated API Docs Backlog By Maturity",
+    "",
+    ...formatApiDocsBacklogByMaturity(state, coverage.missingApiDocs),
+    "",
     "## Missing Test Directory",
     "",
     ...formatMissingPackages(coverage.missingTests, baseline.allowedMissingTests),
@@ -1585,6 +1589,26 @@ function formatMissingApiDocs(packages: readonly PackageRecord[], baseline: Base
 
     return `- \`${pkg.name}\` (\`packages/${pkg.dir}\`) — ${status}`;
   });
+}
+
+function formatApiDocsBacklogByMaturity(
+  state: CatalogState,
+  packages: readonly PackageRecord[],
+): string[] {
+  const lines = ["| Maturity | Missing API docs |", "| --- | ---: |"];
+
+  for (const maturity of maturityOrder) {
+    const config = state.maturity.get(maturity);
+    if (!config) {
+      continue;
+    }
+
+    lines.push(
+      `| ${config.label} | ${packages.filter((pkg) => pkg.maturity === maturity).length} |`,
+    );
+  }
+
+  return lines;
 }
 
 function formatRuntimeSupport(pkg: ExtensionRecord, runtime: RuntimeKey): string {

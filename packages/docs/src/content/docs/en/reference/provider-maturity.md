@@ -31,6 +31,20 @@ Provider maturity is a release signal. A provider can have package tests and sti
 
 ## Current Harnesses
 
+### Provider conformance matrix
+
+`@croco/testing` exports `createProviderConformanceMatrixSuite()` for provider profile manifests.
+The matrix is the shared inventory layer above category-specific suites:
+
+- required capabilities must be marked supported and name the reusable conformance suite plus the
+  public contract methods under test;
+- optional unsupported capabilities must remain visible with a manifest reason instead of being
+  skipped silently;
+- failures include the package, category, capability, and method list so contract drift points to a
+  concrete provider surface;
+- supported categories currently include auth, billing, metering, storage, cache, tasks, search,
+  telemetry, rate-limit, batch, triggers, Drizzle-backed providers, and LLM providers.
+
 ### Storage provider conformance
 
 `@croco/testing` exports `createStorageProviderConformanceSuite()` for `@croco/storage-core` providers. The suite checks:

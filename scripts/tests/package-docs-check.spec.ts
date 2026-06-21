@@ -2,11 +2,13 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 const scriptPath = resolve(__dirname, "../package-docs-check.mts");
 const scriptTestTimeout = 30_000;
 const tempRoots: string[] = [];
+
+vi.setConfig({ testTimeout: scriptTestTimeout });
 
 type ScriptResult = {
   readonly stdout: string;
@@ -15,83 +17,81 @@ type ScriptResult = {
 };
 
 describe("package-docs-check.mts", () => {
+  afterAll(() => {
+    vi.resetConfig();
+  });
+
   afterEach(() => {
     for (const root of tempRoots.splice(0)) {
       rmSync(root, { force: true, recursive: true });
     }
   });
 
-  it(
-    "writes the README package catalog and documentation report from package manifests",
-    () => {
-      const root = createTempRoot();
-      writePackage(root, "alpha", { name: "@croco/alpha" });
-      writePackage(root, "beta", { name: "@croco/beta" });
-      writeCatalogMetadata(root, ["alpha", "beta"]);
-      writeDocsBaseline(root, {
-        allowedMissingApiDocs: ["alpha", "beta"],
-        allowedMissingReadme: [],
-        allowedMissingTests: [],
-      });
+  it("writes the README package catalog and documentation report from package manifests", () => {
+    const root = createTempRoot();
+    writePackage(root, "alpha", { name: "@croco/alpha" });
+    writePackage(root, "beta", { name: "@croco/beta" });
+    writeCatalogMetadata(root, ["alpha", "beta"]);
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["alpha", "beta"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
 
-      const result = runScript(root, "--write");
-      const readme = readFileSync(join(root, "README.md"), "utf-8");
-      const report = readFileSync(join(root, "docs", "package-docs-report.md"), "utf-8");
-      const matrix = readFileSync(
-        join(
-          root,
-          "packages",
-          "docs",
-          "src",
-          "content",
-          "docs",
-          "en",
-          "reference",
-          "extension-matrix.md",
-        ),
-        "utf-8",
-      );
+    const result = runScript(root, "--write");
+    const readme = readFileSync(join(root, "README.md"), "utf-8");
+    const report = readFileSync(join(root, "docs", "package-docs-report.md"), "utf-8");
+    const matrix = readFileSync(
+      join(
+        root,
+        "packages",
+        "docs",
+        "src",
+        "content",
+        "docs",
+        "en",
+        "reference",
+        "extension-matrix.md",
+      ),
+      "utf-8",
+    );
 
-      expect(result.status).toBe(0);
-      expect(readme).toContain("<!-- CROCO:PACKAGE-CATALOG:START -->");
-      expect(readme).toContain("현재 카탈로그는 **2개 public package**");
-      expect(readme).toContain("Extension & Adapter Matrix");
-      expect(readme).toContain("Adapter Ecosystem");
-      expect(readme).toContain("compatibility certification checklist");
-      expect(readme).toContain("certified compatibility");
-      expect(readme).toContain("`@croco/alpha`");
-      expect(report).toContain("Missing generated API docs");
-      expect(report).toContain("Extension Matrix");
-      expect(matrix).toContain("title: Extension Matrix");
-      expect(matrix).toContain("Adapter Ecosystem");
-      expect(matrix).toContain("certification checklist");
-      expect(matrix).toContain("compatibility certification claim");
-      expect(matrix).toContain("`@croco/alpha`");
-    },
-    scriptTestTimeout,
-  );
+    expect(result.status).toBe(0);
+    expect(readme).toContain("<!-- CROCO:PACKAGE-CATALOG:START -->");
+    expect(readme).toContain("현재 카탈로그는 **2개 public package**");
+    expect(readme).toContain("Extension & Adapter Matrix");
+    expect(readme).toContain("Adapter Ecosystem");
+    expect(readme).toContain("compatibility certification checklist");
+    expect(readme).toContain("certified compatibility");
+    expect(readme).toContain("`@croco/alpha`");
+    expect(report).toContain("Missing generated API docs");
+    expect(report).toContain("Generated API Docs Backlog By Maturity");
+    expect(report).toContain("| beta             |                2 |");
+    expect(report).toContain("Extension Matrix");
+    expect(matrix).toContain("title: Extension Matrix");
+    expect(matrix).toContain("Adapter Ecosystem");
+    expect(matrix).toContain("certification checklist");
+    expect(matrix).toContain("compatibility certification claim");
+    expect(matrix).toContain("`@croco/alpha`");
+  });
 
-  it(
-    "fails check mode when the README catalog was not regenerated",
-    () => {
-      const root = createTempRoot();
-      writePackage(root, "alpha", { name: "@croco/alpha" });
-      writeCatalogMetadata(root, ["alpha"]);
-      writeDocsBaseline(root, {
-        allowedMissingApiDocs: ["alpha"],
-        allowedMissingReadme: [],
-        allowedMissingTests: [],
-      });
+  it("fails check mode when the README catalog was not regenerated", () => {
+    const root = createTempRoot();
+    writePackage(root, "alpha", { name: "@croco/alpha" });
+    writeCatalogMetadata(root, ["alpha"]);
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["alpha"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
 
-      const result = runScript(root, "--check");
+    const result = runScript(root, "--check");
 
-      expect(result.status).toBe(1);
-      expect(result.stdout).toContain("README.md package catalog drift detected");
-      expect(result.stdout).toContain("reference/extension-matrix.md drift detected");
-      expect(result.stdout).toContain("docs/package-docs-report.md drift detected");
-    },
-    scriptTestTimeout,
-  );
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("README.md package catalog drift detected");
+    expect(result.stdout).toContain("reference/extension-matrix.md drift detected");
+    expect(result.stdout).toContain("docs/package-docs-report.md drift detected");
+  });
 
   it("fails when metadata references a package that no longer exists", () => {
     const root = createTempRoot();

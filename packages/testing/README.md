@@ -11,26 +11,27 @@ const response = await app.get("/users");
 
 ## API
 
-| Helper                                                | Purpose                                                                                                         |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `createTestingApp(config)`                            | Creates an isolated `CrocoApp` with seeded test defaults and HTTP request helpers.                              |
-| `createTestingHarness(app)`                           | Wraps an existing `CrocoApp` with the same request and contract helpers.                                        |
-| `createEventTestingHarness(config)`                   | Creates an isolated in-memory event bus and dispatches decorated handlers.                                      |
-| `createTestingRequestContext(config)`                 | Builds a deterministic request/runtime context for service tests.                                               |
-| `runWithTestingContext(fn, config)`                   | Runs code inside Croco `Context` and clears AsyncLocalStorage state when execution completes.                   |
-| `createTestingTransactionContext(config)`             | Provides explicit in-transaction and after-commit hook behavior for tests.                                      |
-| `resetCrocoTestingContext()`                          | Resets the Croco DI container and seeds test logger/error/health defaults.                                      |
-| `installTestingTelemetryCapture()`                    | Captures spans in memory without starting an SDK exporter.                                                      |
-| `assertProblemResponse(response, expected)`           | Verifies an RFC 7807 Problem Details response without depending on a test runner.                               |
-| `assertOpenAPIRoute(controllersOrSpec, expected)`     | Verifies generated OpenAPI route metadata and response contracts.                                               |
-| `createRpcTestFetch(app)`                             | Returns a fetch-compatible function that routes generated RPC clients into the in-memory app.                   |
-| `createStorageProviderConformanceSuite(config)`       | Reusable storage provider contract cases for default no-credential CI.                                          |
-| `createLlmProviderConformanceSuite(config)`           | Reusable LLM provider contract cases for mocked or live provider fixtures.                                      |
-| `createBillingProviderConformanceSuite(config)`       | Builds runner-neutral billing gateway and webhook conformance cases for provider packages.                      |
-| `createUpstashRedisRateLimitConformanceSuite(config)` | Reusable Upstash Redis rate-limit cases for config, errors, refund idempotency, and live-smoke gating.          |
-| `createQStashTaskConformanceSuite(config)`            | Reusable QStash task publish cases for config, validation, idempotency, upstream errors, and live-smoke gating. |
-| `createDrizzleProviderConformanceSuite(config)`       | Builds reusable Drizzle provider cases for schema, transaction, tenant, and error contracts.                    |
-| `assertDrizzleProblem(operation, expected)`           | Verifies Drizzle provider failures surface stable Croco Problem codes, categories, or status.                   |
+| Helper                                                | Purpose                                                                                                            |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `createTestingApp(config)`                            | Creates an isolated `CrocoApp` with seeded test defaults and HTTP request helpers.                                 |
+| `createTestingHarness(app)`                           | Wraps an existing `CrocoApp` with the same request and contract helpers.                                           |
+| `createEventTestingHarness(config)`                   | Creates an isolated in-memory event bus and dispatches decorated handlers.                                         |
+| `createTestingRequestContext(config)`                 | Builds a deterministic request/runtime context for service tests.                                                  |
+| `runWithTestingContext(fn, config)`                   | Runs code inside Croco `Context` and clears AsyncLocalStorage state when execution completes.                      |
+| `createTestingTransactionContext(config)`             | Provides explicit in-transaction and after-commit hook behavior for tests.                                         |
+| `resetCrocoTestingContext()`                          | Resets the Croco DI container and seeds test logger/error/health defaults.                                         |
+| `installTestingTelemetryCapture()`                    | Captures spans in memory without starting an SDK exporter.                                                         |
+| `assertProblemResponse(response, expected)`           | Verifies an RFC 7807 Problem Details response without depending on a test runner.                                  |
+| `assertOpenAPIRoute(controllersOrSpec, expected)`     | Verifies generated OpenAPI route metadata and response contracts.                                                  |
+| `createRpcTestFetch(app)`                             | Returns a fetch-compatible function that routes generated RPC clients into the in-memory app.                      |
+| `createStorageProviderConformanceSuite(config)`       | Reusable storage provider contract cases for default no-credential CI.                                             |
+| `createProviderConformanceMatrixSuite(config)`        | Validates provider profile manifests for required capabilities, optional unsupported reasons, and method evidence. |
+| `createLlmProviderConformanceSuite(config)`           | Reusable LLM provider contract cases for mocked or live provider fixtures.                                         |
+| `createBillingProviderConformanceSuite(config)`       | Builds runner-neutral billing gateway and webhook conformance cases for provider packages.                         |
+| `createUpstashRedisRateLimitConformanceSuite(config)` | Reusable Upstash Redis rate-limit cases for config, errors, refund idempotency, and live-smoke gating.             |
+| `createQStashTaskConformanceSuite(config)`            | Reusable QStash task publish cases for config, validation, idempotency, upstream errors, and live-smoke gating.    |
+| `createDrizzleProviderConformanceSuite(config)`       | Builds reusable Drizzle provider cases for schema, transaction, tenant, and error contracts.                       |
+| `assertDrizzleProblem(operation, expected)`           | Verifies Drizzle provider failures surface stable Croco Problem codes, categories, or status.                      |
 
 ## Isolation Contract
 
@@ -78,6 +79,13 @@ Provider conformance helpers return named cases so packages can wire them into t
 runners with `it.each(...)`. Default cases use mocks or package-local fixtures and must not require
 provider credentials. Optional live-smoke cases are represented by an explicit environment gate, so
 CI skips them unless the provider package intentionally enables real backend credentials.
+
+`createProviderConformanceMatrixSuite()` gives provider packages a shared profile manifest shape for
+auth, billing, metering, storage, cache, tasks, search, telemetry, and adjacent provider categories.
+Supported required capabilities must name the reusable suite plus the public contract methods under
+test. Unsupported optional capabilities are passing documentation cases only when they include a
+reason in the manifest. Unsupported required capabilities fail with a package/category/capability
+message that includes the affected methods.
 
 The billing provider helper currently covers:
 

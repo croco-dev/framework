@@ -5,7 +5,7 @@ prev: false
 title: "LambdaEventWithAuthorizer"
 ---
 
-> **LambdaEventWithAuthorizer**\<`TAuthorizer`\> = [`LambdaEvent`](/api/transports-http/src/type-aliases/lambdaevent/)\<[`LambdaRequestContextWithAuthorizer`](/api/transports-http/src/type-aliases/lambdarequestcontextwithauthorizer/)\<`TAuthorizer`\>\>
+> **LambdaEventWithAuthorizer**\<`TAuthorizer`\> = [`LambdaEvent`](/api/preset-lambda/src/type-aliases/lambdaevent/)\<[`LambdaRequestContextWithAuthorizer`](/api/transports-http/src/type-aliases/lambdarequestcontextwithauthorizer/)\<`TAuthorizer`\>\>
 
 ## Type Parameters
 

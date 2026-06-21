@@ -8,6 +8,7 @@ const workspacePackages = [
   "diagnostics-core",
   "events-core",
   "events-inmemory",
+  "framework-config",
   "framework-context",
   "framework-logger",
   "health-core",
@@ -42,6 +43,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/tests/**/*.spec.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**"],
   },
 });
