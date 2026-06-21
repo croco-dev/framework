@@ -17,7 +17,8 @@ describe("CI package quality dashboard", () => {
       "- name: Test",
       "run: pnpm turbo run test --summarize --continue=always",
       "- name: Production-ready package gate",
-      "pnpm production-ready:check -- --require-task-summaries",
+      "production_ready_args+=(--require-task-summaries)",
+      'pnpm production-ready:check -- "${production_ready_args[@]}"',
       "- name: Publish package quality dashboard",
       "pnpm package-quality:report",
       "- name: Upload package quality dashboard",
@@ -49,6 +50,7 @@ describe("CI package quality dashboard", () => {
     const workflow = readCiWorkflow();
 
     expect(workflow).toContain("ci-reports/package-quality/production-ready.md");
+    expect(workflow).toContain('if [ "${{ steps.build.outcome }}" != "skipped" ]');
     expect(workflow).toContain(
       'cat ci-reports/package-quality/production-ready.md >> "$GITHUB_STEP_SUMMARY"',
     );

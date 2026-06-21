@@ -7,6 +7,7 @@ import {
   buildProductionReadyMarkdown,
   createProductionReadyReport,
   hasProductionReadyFailures,
+  parseArgs,
   writeProductionReadyReport,
 } from "../production-ready-check.mts";
 
@@ -145,6 +146,15 @@ describe("production-ready-check.mts", () => {
 
     expect(hasProductionReadyFailures(report)).toBe(true);
     expect(markdown).toContain("build status is not-collected");
+  });
+
+  it("accepts the pnpm CLI separator before CI-only options", () => {
+    const repo = createTempRepo();
+
+    const options = parseArgs(["--", "--root", repo, "--require-task-summaries"]);
+
+    expect(options.rootDir).toBe(repo);
+    expect(options.requireTaskSummaries).toBe(true);
   });
 
   it("requires adapter and provider maturity evidence in reference docs for production packages", () => {

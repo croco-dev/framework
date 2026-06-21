@@ -820,7 +820,7 @@ export function writeProductionReadyReport(
   return markdownPath;
 }
 
-function parseArgs(args: readonly string[]): Options {
+export function parseArgs(args: readonly string[]): Options {
   let rootDir = process.cwd();
   let outputDir = join(rootDir, reportDirectory);
   let summaryDir = join(rootDir, turboRunsDirectory);
@@ -828,6 +828,10 @@ function parseArgs(args: readonly string[]): Options {
 
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
+
+    if (arg === "--") {
+      continue;
+    }
 
     if (arg === "--root") {
       const value = args[index + 1];

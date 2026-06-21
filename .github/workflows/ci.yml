@@ -169,8 +169,12 @@ jobs:
         if: always()
         shell: bash
         run: |
+          production_ready_args=()
+          if [ "${{ steps.build.outcome }}" != "skipped" ] && [ "${{ steps.typecheck.outcome }}" != "skipped" ] && [ "${{ steps.test.outcome }}" != "skipped" ]; then
+            production_ready_args+=(--require-task-summaries)
+          fi
           set +e
-          pnpm production-ready:check -- --require-task-summaries
+          pnpm production-ready:check -- "${production_ready_args[@]}"
           status=$?
           set -e
           if [ -f ci-reports/package-quality/production-ready.md ]; then
