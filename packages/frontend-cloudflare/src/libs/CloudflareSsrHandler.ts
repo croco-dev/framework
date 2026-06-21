@@ -1,6 +1,10 @@
 import type { CrocoFetchHandler, RenderServer, RuntimeContext } from "@croco/meta-vite";
 import type { SsrHandlerOptions, SsrWorkerEnv } from "./types";
 
+type CloudflareSsrHandlerOptions = SsrHandlerOptions & { renderServer?: RenderServer };
+
+const DEFAULT_API_BINDING_NAME = "API_WORKER";
+
 /**
  * Creates a Cloudflare Workers SSR handler using meta-vite's RenderServer.
  *
@@ -8,58 +12,17 @@ import type { SsrHandlerOptions, SsrWorkerEnv } from "./types";
  * @param options.apiBindingName - Service Binding name for API worker (default: 'API_WORKER')
  */
 export function createSsrHandler(
-  options: SsrHandlerOptions & { renderServer?: RenderServer } = {},
+  options: CloudflareSsrHandlerOptions = {},
 ): (request: Request, env: SsrWorkerEnv, ctx: ExecutionContext) => Promise<Response> {
-  const { renderServer, apiBindingName = "API_WORKER" } = options;
-
-  return async (request, env, _ctx): Promise<Response> => {
-    const url = new URL(request.url);
-
-    // ASSETS static fallback
-    if (env.ASSETS) {
-      try {
-        const assetResponse = await env.ASSETS.fetch(request);
-        if (assetResponse && assetResponse.status !== 404) {
-          return assetResponse;
-        }
-      } catch {
-        // ASSETS fetch 실패 시 렌더링 계속
-      }
-    }
-
-    // Service Binding API fetch
-    const apiWorker = (env as SsrWorkerEnv & Record<string, Fetcher | undefined>)[apiBindingName];
-
-    if (apiWorker && url.pathname.startsWith("/api/")) {
-      try {
-        const apiResponse = await apiWorker.fetch(request);
-        if (apiResponse) {
-          return apiResponse;
-        }
-      } catch {
-        return new Response("API request failed", { status: 500 });
-      }
-    }
-
-    // SSR page rendering via meta-vite RenderServer
-    if (renderServer) {
-      const ctx: RuntimeContext = {
+  return async (request, env, executionContext): Promise<Response> => {
+    return handleSsrRequest(request, options, {
+      env,
+      runtimeContext: {
         platform: "cloudflare",
         env,
-        executionContext: _ctx,
-      };
-
-      try {
-        return await renderServer.handle(request, ctx);
-      } catch (error) {
-        // frontend-cloudflare has no DI container dependency (it is an edge runtime package).
-        // eslint-disable-next-line no-console
-        console.error("SSR rendering error:", error);
-        return new Response("Internal server error", { status: 500 });
-      }
-    }
-
-    return new Response("No render server configured", { status: 500 });
+        executionContext,
+      },
+    });
   };
 }
 
@@ -68,52 +31,89 @@ export function createSsrHandler(
  * This is the internal handler used by the Cloudflare Workers exported fetch.
  */
 export function createSsrHandlerAsFetchHandler(
-  options: SsrHandlerOptions & { renderServer?: RenderServer } = {},
+  options: CloudflareSsrHandlerOptions = {},
 ): CrocoFetchHandler {
-  const { renderServer, apiBindingName = "API_WORKER" } = options;
-
   return async (request: Request, context?: RuntimeContext): Promise<Response> => {
-    const url = new URL(request.url);
-    const env = context?.env as SsrWorkerEnv | undefined;
-
-    // ASSETS static fallback
-    if (env?.ASSETS) {
-      try {
-        const assetResponse = await env.ASSETS.fetch(request);
-        if (assetResponse && assetResponse.status !== 404) {
-          return assetResponse;
-        }
-      } catch {
-        // ASSETS fetch 실패 시 렌더링 계속
-      }
-    }
-
-    // Service Binding API fetch
-    const apiWorker = (env as SsrWorkerEnv & Record<string, Fetcher | undefined>)?.[apiBindingName];
-
-    if (apiWorker && url.pathname.startsWith("/api/")) {
-      try {
-        const apiResponse = await apiWorker.fetch(request);
-        if (apiResponse) {
-          return apiResponse;
-        }
-      } catch {
-        return new Response("API request failed", { status: 500 });
-      }
-    }
-
-    // SSR page rendering via meta-vite RenderServer
-    if (renderServer) {
-      try {
-        return await renderServer.handle(request, context);
-      } catch (error) {
-        // frontend-cloudflare has no DI container dependency (it is an edge runtime package).
-        // eslint-disable-next-line no-console
-        console.error("SSR rendering error:", error);
-        return new Response("Internal server error", { status: 500 });
-      }
-    }
-
-    return new Response("No render server configured", { status: 500 });
+    return handleSsrRequest(request, options, {
+      env: context?.env as SsrWorkerEnv | undefined,
+      runtimeContext: context,
+    });
   };
+}
+
+async function handleSsrRequest(
+  request: Request,
+  options: CloudflareSsrHandlerOptions,
+  context: { readonly env?: SsrWorkerEnv; readonly runtimeContext?: RuntimeContext },
+): Promise<Response> {
+  const { renderServer, apiBindingName = DEFAULT_API_BINDING_NAME } = options;
+  const url = new URL(request.url);
+  const { env } = context;
+
+  if (env?.ASSETS) {
+    try {
+      const assetResponse = await env.ASSETS.fetch(request);
+      if (assetResponse.status !== 404) {
+        return assetResponse;
+      }
+    } catch (error) {
+      warnBoundaryFailure("ASSETS binding", error);
+    }
+  }
+
+  const apiWorker = getFetcherBinding(env, apiBindingName);
+
+  if (apiWorker && url.pathname.startsWith("/api/")) {
+    try {
+      return await apiWorker.fetch(request);
+    } catch {
+      return new Response("API request failed", { status: 500 });
+    }
+  }
+
+  if (renderServer) {
+    try {
+      return await renderServer.handle(request, context.runtimeContext);
+    } catch (error) {
+      // frontend-cloudflare has no DI container dependency (it is an edge runtime package).
+      // eslint-disable-next-line no-console
+      console.error("SSR rendering error:", error);
+      return new Response("Internal server error", { status: 500 });
+    }
+  }
+
+  return new Response("No render server configured", { status: 500 });
+}
+
+function getFetcherBinding(
+  env: SsrWorkerEnv | undefined,
+  bindingName: string,
+): Fetcher | undefined {
+  const binding = env?.[bindingName];
+
+  if (isFetcher(binding)) {
+    return binding;
+  }
+
+  return undefined;
+}
+
+function isFetcher(value: unknown): value is Fetcher {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "fetch" in value &&
+    typeof (value as { readonly fetch?: unknown }).fetch === "function"
+  );
+}
+
+function warnBoundaryFailure(boundary: string, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+
+  // frontend-cloudflare has no DI container dependency (it is an edge runtime package).
+  // eslint-disable-next-line no-console
+  console.warn(
+    `@croco/frontend-cloudflare ${boundary} failed; continuing to API or SSR fallback.`,
+    message,
+  );
 }

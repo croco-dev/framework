@@ -3,7 +3,7 @@
  *
  * API 및 정적 자산에 대한 Fetcher 바인딩을 제공합니다.
  */
-export type SsrWorkerEnv = {
+export type SsrWorkerEnv = Record<string, unknown> & {
   /** API 서비스 Worker 바인딩 */
   API_WORKER?: Fetcher;
   /** 정적 자산 제공 Worker 바인딩 */

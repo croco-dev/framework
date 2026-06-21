@@ -82,8 +82,8 @@ None.
 | Maturity            | Missing API docs |
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
-| 🟡 beta             |               31 |
-| 🔴 alpha/WIP        |               24 |
+| 🟡 beta             |               32 |
+| 🔴 alpha/WIP        |               23 |
 | ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory
@@ -106,8 +106,8 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       24 |
-| 🟡 beta             |       54 |
-| 🔴 alpha/WIP        |       31 |
+| 🟡 beta             |       55 |
+| 🔴 alpha/WIP        |       30 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix

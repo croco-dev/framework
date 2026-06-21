@@ -197,6 +197,7 @@
         "execution-core",
         "features-core",
         "features-posthog",
+        "frontend-cloudflare",
         "framework-config",
         "framework-logger",
         "framework-module",
@@ -253,7 +254,6 @@
         "customer-health-drizzle",
         "entitlements-drizzle",
         "execution-drizzle",
-        "frontend-cloudflare",
         "frontend-problems",
         "invitation-drizzle",
         "membership-drizzle",
@@ -406,10 +406,12 @@
         "runtimes": ["cloudflare-workers"],
         "requiredEnv": ["API_WORKER binding optional", "ASSETS binding optional"],
         "features": [
-          "SSR fetch handler",
-          "service binding routing",
-          "asset fallback",
-          "streaming response smoke"
+          "Worker SSR request handling",
+          "service binding API routing",
+          "ASSETS fallback",
+          "streaming Response preservation",
+          "RuntimeContext env propagation",
+          "generated Worker smoke"
         ]
       },
       "frontend-problems": {
