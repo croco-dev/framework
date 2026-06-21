@@ -24,6 +24,20 @@ export type ServerActionOutputContract<TOutput = unknown> = {
   readonly schema?: unknown;
 };
 
+export type ServerActionContractIR = {
+  readonly name: string;
+  readonly path: string;
+  readonly method: "POST";
+  readonly input: {
+    readonly schema: "declared" | "none";
+  };
+  readonly output: {
+    readonly schema: "declared" | "none";
+    readonly description?: string;
+  };
+  readonly problems: readonly ServerActionProblemContract[];
+};
+
 export type ServerActionSuccessResult<TOutput = unknown> = {
   readonly ok: true;
   readonly data: TOutput;
@@ -150,6 +164,10 @@ export class ServerActionRegistry {
     this.actions.clear();
   }
 
+  getActions(): ServerActionContractIR[] {
+    return Array.from(this.actions.values(), toServerActionContract);
+  }
+
   /**
    * Dispatch a registered server action by name.
    * - Validates input against the registered schema (if any)
@@ -200,6 +218,39 @@ export class ServerActionRegistry {
       throw error;
     }
   }
+}
+
+function toServerActionContract(
+  config: ServerActionConfig<unknown, unknown>,
+): ServerActionContractIR {
+  return {
+    name: config.name,
+    path: `/api/action/${config.name}`,
+    method: "POST",
+    input: { schema: config.schema ? "declared" : "none" },
+    output: normalizeServerActionOutputContract(config.output),
+    problems: (config.problems ?? []).map(normalizeServerActionProblemContract),
+  };
+}
+
+function normalizeServerActionOutputContract(
+  output: ServerActionOutputContract<unknown> | undefined,
+): ServerActionContractIR["output"] {
+  return {
+    schema: output?.schema ? "declared" : "none",
+    ...(output?.description ? { description: output.description } : {}),
+  };
+}
+
+function normalizeServerActionProblemContract(
+  problem: ServerActionProblemContract,
+): ServerActionProblemContract {
+  return {
+    code: problem.code,
+    ...(problem.status !== undefined ? { status: problem.status } : {}),
+    ...(problem.description ? { description: problem.description } : {}),
+    ...(problem.type ? { type: problem.type } : {}),
+  };
 }
 
 /**

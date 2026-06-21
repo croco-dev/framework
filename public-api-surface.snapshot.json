@@ -10050,6 +10050,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "createMetaViteRouteManifest",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createMetaViteRouteManifestFromRegistry",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest",
+          "declarationKind": "function"
+        },
+        {
           "name": "createNodeComposedHandler",
           "exportKind": "named",
           "source": "./libs/providers/node",
@@ -10128,6 +10140,24 @@
           "declarationKind": "function"
         },
         {
+          "name": "META_VITE_ROUTE_MANIFEST_COMPONENT_REF_REQUIRED",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest",
+          "declarationKind": "const"
+        },
+        {
+          "name": "META_VITE_ROUTE_MANIFEST_SCHEMA_VERSION",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest",
+          "declarationKind": "const"
+        },
+        {
+          "name": "MetaViteRouteManifestError",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest",
+          "declarationKind": "class"
+        },
+        {
           "name": "prerenderSsgRoutes",
           "exportKind": "named",
           "source": "./libs/build/ssgPrerender",
@@ -10164,6 +10194,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "serializeMetaViteRouteManifest",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest",
+          "declarationKind": "function"
+        },
+        {
           "name": "ServerActionInvalidPathProblem",
           "exportKind": "named",
           "source": "./libs/actions/serverActions",
@@ -10191,6 +10227,12 @@
           "name": "unregisterServerAction",
           "exportKind": "named",
           "source": "./libs/actions/serverActions",
+          "declarationKind": "function"
+        },
+        {
+          "name": "writeMetaViteRouteManifest",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest",
           "declarationKind": "function"
         }
       ],
@@ -10311,6 +10353,61 @@
           "source": "./libs/output/outputContract"
         },
         {
+          "name": "MetaViteApiRouteManifestEntry",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaVitePageRouteManifestEntry",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaViteRouteManifest",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaViteRouteManifestRegistryOptions",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaViteRouteManifestSource",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaViteRouteRegistryManifestSource",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaViteRuntimeCapability",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaViteRuntimeRequirement",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaViteRuntimeRequirementCode",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaViteServerActionManifestEntry",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaViteServerActionRegistryManifestSource",
+          "exportKind": "named",
+          "source": "./libs/build/routeManifest"
+        },
+        {
           "name": "PageRouteDefinition",
           "exportKind": "named",
           "source": "./libs/routes/types"
@@ -10342,6 +10439,11 @@
         },
         {
           "name": "ServerActionConfig",
+          "exportKind": "named",
+          "source": "./libs/actions/serverActions"
+        },
+        {
+          "name": "ServerActionContractIR",
           "exportKind": "named",
           "source": "./libs/actions/serverActions"
         },

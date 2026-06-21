@@ -60,8 +60,8 @@ describe("published @croco/meta-vite contract", () => {
         writeFileSync(
           join(rootConsumerRoot, "index.ts"),
           [
-            "import type { ServerActionConfig } from '@croco/meta-vite';",
-            "import { createServerActionSuccess, type ServerActionResult } from '@croco/meta-vite';",
+            "import type { MetaViteRouteManifest, ServerActionConfig } from '@croco/meta-vite';",
+            "import { createMetaViteRouteManifest, createServerActionSuccess, serializeMetaViteRouteManifest, type ServerActionResult } from '@croco/meta-vite';",
             "",
             "export const action: ServerActionConfig<{ email: string }, { accepted: boolean }> = {",
             "  name: 'signup',",
@@ -71,6 +71,10 @@ describe("published @croco/meta-vite contract", () => {
             "};",
             "",
             "export const result: ServerActionResult<{ accepted: boolean }> = createServerActionSuccess({ accepted: true });",
+            "export const manifest: MetaViteRouteManifest = createMetaViteRouteManifest({",
+            "  pages: [{ path: '/', componentRef: 'src/pages/Home.tsx#HomePage', mode: 'ssr' }],",
+            "});",
+            "export const manifestJson = serializeMetaViteRouteManifest(manifest);",
             "",
           ].join("\n"),
         );
