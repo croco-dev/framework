@@ -869,20 +869,20 @@ describe("CloudinaryProvider", () => {
     it("should throw Problem when ttlInSeconds is zero or negative", async () => {
       await expect(provider.getUploadIntent("test-key", { ttlInSeconds: 0 })).rejects.toMatchObject(
         {
-          code: "storage/invalid-upload-intent-ttl",
+          code: "storage-cloudinary/invalid-upload-intent-ttl",
         },
       );
       await expect(
         provider.getUploadIntent("test-key", { ttlInSeconds: -1 }),
       ).rejects.toMatchObject({
-        code: "storage/invalid-upload-intent-ttl",
+        code: "storage-cloudinary/invalid-upload-intent-ttl",
       });
     });
 
     it("should throw Problem when ttlInSeconds is not a finite integer", async () => {
       for (const ttlInSeconds of [Number.NaN, Number.POSITIVE_INFINITY, 1.5]) {
         await expect(provider.getUploadIntent("test-key", { ttlInSeconds })).rejects.toMatchObject({
-          code: "storage/invalid-upload-intent-ttl",
+          code: "storage-cloudinary/invalid-upload-intent-ttl",
         });
       }
     });

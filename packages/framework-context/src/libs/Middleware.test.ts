@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Context, type LifecycleHooks, type Middleware } from "../index";
+import { MiddlewareProblem } from "./problems/ContextProblems";
 
 describe("MiddlewareChain", () => {
   describe("Onion pattern execution", () => {
@@ -135,6 +136,12 @@ describe("MiddlewareChain", () => {
   });
 
   describe("Error handling", () => {
+    it("should expose package-scoped middleware Problem code", () => {
+      expect(new MiddlewareProblem().code).toBe(
+        "framework-context/context-middleware-execution-error",
+      );
+    });
+
     it("should propagate errors from handler", async () => {
       const middleware: Middleware = async (_ctx, next) => {
         await next();

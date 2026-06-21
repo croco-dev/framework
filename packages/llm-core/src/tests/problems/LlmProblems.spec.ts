@@ -110,7 +110,7 @@ describe("LlmProblems", () => {
     it("should create problem with retry info", () => {
       const problem = new LlmRateLimitProblem(60, "2024-01-01T12:00:00Z");
 
-      expect(problem.code).toBe("RATE_LIMIT_EXCEEDED");
+      expect(problem.code).toBe("llm-core/rate-limit-exceeded");
       expect(problem.category).toBe(ProblemCategory.TooManyRequests);
       expect(problem.status).toBe(429);
       expect(problem.detail).toContain("60");

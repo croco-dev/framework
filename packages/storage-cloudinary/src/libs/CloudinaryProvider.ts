@@ -394,7 +394,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     const ttl = options?.ttlInSeconds ?? this.ttl;
     if (!Number.isFinite(ttl) || !Number.isInteger(ttl) || ttl <= 0) {
       throw ProblemFactory.invalidArgument(
-        "storage/invalid-upload-intent-ttl",
+        "storage-cloudinary/invalid-upload-intent-ttl",
         "ttlInSeconds must be a positive finite integer",
       );
     }

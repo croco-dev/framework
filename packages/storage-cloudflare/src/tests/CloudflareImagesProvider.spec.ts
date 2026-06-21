@@ -514,8 +514,12 @@ describe("CloudflareImagesProvider", () => {
       };
 
       mockFetch.mockResolvedValueOnce(mockResponse);
+      const metadata = provider.getMetadata("test-image-id");
 
-      await expect(provider.getMetadata("test-image-id")).rejects.toThrow();
+      await expect(metadata).rejects.toThrow();
+      await expect(metadata).rejects.toMatchObject({
+        code: "cloudflare/images-null-result",
+      });
     });
   });
 
@@ -813,10 +817,12 @@ describe("CloudflareImagesProvider", () => {
       };
 
       mockFetch.mockResolvedValueOnce(mockResponse);
+      const intent = provider.getUploadIntent("new-image.jpg");
 
-      await expect(provider.getUploadIntent("new-image.jpg")).rejects.toThrow(
-        "Cloudflare Images API returned null result",
-      );
+      await expect(intent).rejects.toThrow("Cloudflare Images API returned null result");
+      await expect(intent).rejects.toMatchObject({
+        code: "cloudflare/images-upload-intent-null-result",
+      });
     });
   });
 });

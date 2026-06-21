@@ -119,7 +119,7 @@ export class TriggerRegistry {
       if (entry.propertyKey) {
         if (map.has(entry.propertyKey)) {
           throw ProblemFactory.internalServerError(
-            "triggers-core/duplicate-trigger-metadata",
+            "triggers-core/duplicate-trigger-metadata-entry",
             `Multiple trigger metadata entries are registered for method '${String(entry.propertyKey)}'`,
           );
         }

@@ -15,7 +15,7 @@ export class BadRequestProblem extends Problem {
 export class ForbiddenProblem extends Problem {
   constructor(detail = "Forbidden", decisionId?: string) {
     super(
-      "FORBIDDEN",
+      "access-core/forbidden",
       ProblemCategory.Forbidden,
       detail,
       decisionId ? { extensions: { decisionId } } : undefined,

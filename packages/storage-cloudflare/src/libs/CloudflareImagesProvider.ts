@@ -265,7 +265,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
 
     if (!result.result) {
       throw ProblemFactory.internalServerError(
-        "cloudflare/images-null-result",
+        "cloudflare/images-upload-intent-null-result",
         "Cloudflare Images API returned null result",
       );
     }

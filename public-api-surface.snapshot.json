@@ -11355,9 +11355,39 @@
       "entrypoint": "packages/problems-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "assertProblemCodeRegistryValid",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertProblemExhaustive",
           "exportKind": "named",
           "source": "./libs/Problem",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createProblemCodeRegistry",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getProblemCodeRegistryValidationErrors",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getProblemCookbookPath",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getProblemRecoveryMetadata",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
           "declarationKind": "function"
         },
         {
@@ -11397,10 +11427,22 @@
           "declarationKind": "const"
         },
         {
+          "name": "ProblemRegistryValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "class"
+        },
+        {
           "name": "ProblemSerializer",
           "exportKind": "named",
           "source": "./libs/ProblemSerializer",
           "declarationKind": "const"
+        },
+        {
+          "name": "slugifyProblemCode",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
         },
         {
           "name": "toHttpStatus",
@@ -11423,6 +11465,41 @@
       ],
       "typeExports": [
         {
+          "name": "CreateProblemCodeRegistryOptions",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemCodeDiscovery",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemCodeRegistry",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemCodeRegistryEntry",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemCodeRegistryVersion",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemCodeSource",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemCodeSourceKind",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
           "name": "ProblemDetails",
           "exportKind": "named",
           "source": "./libs/Problem"
@@ -11436,6 +11513,31 @@
           "name": "ProblemOptions",
           "exportKind": "named",
           "source": "./libs/Problem"
+        },
+        {
+          "name": "ProblemRecoveryMetadata",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemRedactionPolicy",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemRetryability",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemTelemetryMapping",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemTelemetrySeverity",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
         },
         {
           "name": "TypedProblemDetails",

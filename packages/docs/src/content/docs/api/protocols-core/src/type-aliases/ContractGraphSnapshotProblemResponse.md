@@ -21,6 +21,12 @@ title: "ContractGraphSnapshotProblemResponse"
 
 ***
 
+### cookbookPath?
+
+> `readonly` `optional` **cookbookPath**: `string`
+
+***
+
 ### description?
 
 > `readonly` `optional` **description**: `string`

@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { Container, MetadataStorage } from "@croco/framework-context";
+import { Problem } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GRAPHQL_GUARDS_KEY, GRAPHQL_ROLES_KEY, RESOLVERS_KEY } from "../libs/constants";
 import { GraphQLResolver } from "../libs/decorators";
@@ -41,7 +42,23 @@ describe("GraphQLAuthGuard", () => {
       context: { headers: {} },
     });
 
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(Problem);
     await expect(guard.canActivate(context)).rejects.toThrow("Missing authorization header");
+    await expect(guard.canActivate(context)).rejects.toMatchObject({
+      status: 401,
+      code: "protocols-graphql/auth-missing-header",
+    });
+  });
+
+  it("should throw error when request context headers are unavailable", async () => {
+    const guard = new GraphQLAuthGuard({
+      verifier: (token) => ({ id: "1", token }),
+    });
+
+    await expect(guard.canActivate(createMockContext())).rejects.toMatchObject({
+      status: 400,
+      code: "protocols-graphql/auth-invalid-request",
+    });
   });
 
   it("should throw error when token format is invalid", async () => {
@@ -54,6 +71,41 @@ describe("GraphQLAuthGuard", () => {
     });
 
     await expect(guard.canActivate(context)).rejects.toThrow("Invalid authorization header format");
+    await expect(guard.canActivate(context)).rejects.toMatchObject({
+      status: 400,
+      code: "protocols-graphql/auth-invalid-header-format",
+    });
+  });
+
+  it("should throw error when token verification fails", async () => {
+    const tokenError = Object.assign(new Error("Token expired"), { name: "ERR_JWT_EXPIRED" });
+    const guard = new GraphQLAuthGuard({
+      verifier: vi.fn().mockRejectedValue(tokenError),
+    });
+
+    const context = createMockContext({
+      context: { headers: { authorization: "Bearer invalid-token" } },
+    });
+
+    await expect(guard.canActivate(context)).rejects.toMatchObject({
+      status: 401,
+      code: "protocols-graphql/auth-invalid-token",
+    });
+  });
+
+  it("should surface verifier outages separately from invalid tokens", async () => {
+    const guard = new GraphQLAuthGuard({
+      verifier: vi.fn().mockRejectedValue(new Error("ECONNRESET")),
+    });
+
+    const context = createMockContext({
+      context: { headers: { authorization: "Bearer service-token" } },
+    });
+
+    await expect(guard.canActivate(context)).rejects.toMatchObject({
+      status: 500,
+      code: "protocols-graphql/auth-verifier-unavailable",
+    });
   });
 
   it("should set user on context when token is valid", async () => {
