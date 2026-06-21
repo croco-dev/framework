@@ -13,6 +13,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ## Extended by
 
+- [`AdminGeneratedContractProblem`](/api/admin-generated/src/classes/admingeneratedcontractproblem/)
 - [`AuditableDecoratorProblem`](/api/audit-core/src/classes/auditabledecoratorproblem/)
 - [`ApiKeyCreationFailedProblem`](/api/auth-core/src/classes/apikeycreationfailedproblem/)
 - [`ApiKeyExpiredProblem`](/api/auth-core/src/classes/apikeyexpiredproblem/)
@@ -74,6 +75,14 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`LlmStructuredOutputProblem`](/api/llm-core/src/classes/llmstructuredoutputproblem/)
 - [`LlmToolExecutionProblem`](/api/llm-core/src/classes/llmtoolexecutionproblem/)
 - [`ModelNotFoundError`](/api/llm-core/src/classes/modelnotfounderror/)
+- [`OpenAiAbortProblem`](/api/llm-openai/src/classes/openaiabortproblem/)
+- [`OpenAiAuthenticationProblem`](/api/llm-openai/src/classes/openaiauthenticationproblem/)
+- [`OpenAiInvalidResponseProblem`](/api/llm-openai/src/classes/openaiinvalidresponseproblem/)
+- [`OpenAiMissingConfigProblem`](/api/llm-openai/src/classes/openaimissingconfigproblem/)
+- [`OpenAiRateLimitProblem`](/api/llm-openai/src/classes/openairatelimitproblem/)
+- [`OpenAiRetryableUpstreamProblem`](/api/llm-openai/src/classes/openairetryableupstreamproblem/)
+- [`OpenAiTerminalUpstreamProblem`](/api/llm-openai/src/classes/openaiterminalupstreamproblem/)
+- [`OpenAiValidationProblem`](/api/llm-openai/src/classes/openaivalidationproblem/)
 - [`LlmCostLimitExceededProblem`](/api/llm-metering/src/classes/llmcostlimitexceededproblem/)
 - [`LlmMeteringRecordFailedProblem`](/api/llm-metering/src/classes/llmmeteringrecordfailedproblem/)
 - [`LlmQuotaExceededProblem`](/api/llm-metering/src/classes/llmquotaexceededproblem/)
@@ -102,6 +111,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ResponseValidationProblem`](/api/protocols-rest/src/classes/responsevalidationproblem/)
 - [`ValidationProblem`](/api/protocols-rest/src/classes/validationproblem/)
 - [`RateLimitKeyBuilderProblem`](/api/ratelimit-core/src/classes/ratelimitkeybuilderproblem/)
+- [`RateLimitRefundUnsupportedProblem`](/api/ratelimit-core/src/classes/ratelimitrefundunsupportedproblem/)
 - [`RateLimitWindowProblem`](/api/ratelimit-core/src/classes/ratelimitwindowproblem/)
 - [`RateLimitExceededProblem`](/api/ratelimit-core/src/classes/ratelimitexceededproblem/)
 - [`BatchLoaderFactoryNotRegisteredProblem`](/api/repository-core/src/classes/batchloaderfactorynotregisteredproblem/)

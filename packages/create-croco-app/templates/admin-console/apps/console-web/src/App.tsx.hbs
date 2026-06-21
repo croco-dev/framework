@@ -1,0 +1,410 @@
+import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react';
+import { adminClient, type adminRpc } from '{{scope}}/provider-rpc';
+
+type AdminUser = adminRpc.ListUsersOutput[number];
+type AdminOperation = adminRpc.ListOperationsOutput[number];
+type AdminRole = adminRpc.CreateUserInput['role'];
+
+type ProblemState = {
+  readonly code: string;
+  readonly detail: string;
+  readonly recovery: string;
+};
+
+const tenants = [
+  { id: 'tenant_acme', label: 'Acme Operations' },
+  { id: 'tenant_globex', label: 'Globex Support' },
+] as const;
+
+const pageStyle: CSSProperties = {
+  minHeight: '100vh',
+  margin: 0,
+  background: '#f7f8f5',
+  color: '#1f2933',
+  fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+};
+
+const shellStyle: CSSProperties = {
+  width: 'min(1180px, calc(100% - 32px))',
+  margin: '0 auto',
+  padding: '28px 0 36px',
+};
+
+const headerStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 16,
+  alignItems: 'flex-end',
+  flexWrap: 'wrap',
+  borderBottom: '1px solid #d9ded7',
+  paddingBottom: 18,
+};
+
+const titleStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 28,
+  lineHeight: 1.1,
+};
+
+const gridStyle: CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
+  gap: 20,
+  marginTop: 22,
+};
+
+const panelStyle: CSSProperties = {
+  background: '#ffffff',
+  border: '1px solid #d9ded7',
+  borderRadius: 8,
+  padding: 18,
+  boxShadow: '0 1px 2px rgba(31, 41, 51, 0.06)',
+};
+
+const panelHeaderStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: 12,
+  alignItems: 'center',
+  marginBottom: 14,
+};
+
+const tableStyle: CSSProperties = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  tableLayout: 'fixed',
+};
+
+const thStyle: CSSProperties = {
+  padding: '10px 8px',
+  textAlign: 'left',
+  color: '#60706a',
+  borderBottom: '1px solid #d9ded7',
+  fontSize: 13,
+  fontWeight: 700,
+};
+
+const tdStyle: CSSProperties = {
+  padding: '12px 8px',
+  borderBottom: '1px solid #edf0ea',
+  overflowWrap: 'anywhere',
+  verticalAlign: 'top',
+};
+
+const inputStyle: CSSProperties = {
+  width: '100%',
+  minHeight: 38,
+  boxSizing: 'border-box',
+  border: '1px solid #b9c2bd',
+  borderRadius: 6,
+  padding: '8px 10px',
+  font: 'inherit',
+};
+
+const buttonStyle: CSSProperties = {
+  minHeight: 38,
+  border: '1px solid #314d63',
+  borderRadius: 6,
+  padding: '8px 12px',
+  background: '#314d63',
+  color: '#ffffff',
+  font: 'inherit',
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const secondaryButtonStyle: CSSProperties = {
+  ...buttonStyle,
+  background: '#ffffff',
+  color: '#314d63',
+};
+
+const alertStyle: CSSProperties = {
+  marginTop: 14,
+  padding: 12,
+  border: '1px solid #d97706',
+  borderRadius: 6,
+  background: '#fff7ed',
+  color: '#7c2d12',
+};
+
+const timelineItemStyle: CSSProperties = {
+  borderLeft: '3px solid #4f7b63',
+  padding: '0 0 18px 12px',
+};
+
+const eyebrowStyle: CSSProperties = {
+  margin: '0 0 6px',
+  color: '#4f7b63',
+  fontWeight: 700,
+};
+
+const tenantLabelStyle: CSSProperties = {
+  display: 'grid',
+  gap: 6,
+  minWidth: 220,
+};
+
+const fieldLabelStyle: CSSProperties = {
+  fontSize: 13,
+  color: '#60706a',
+  fontWeight: 700,
+};
+
+const alertDetailStyle: CSSProperties = {
+  margin: '6px 0',
+};
+
+const noMarginStyle: CSSProperties = {
+  margin: 0,
+};
+
+const panelTitleStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 20,
+};
+
+const sectionTitleStyle: CSSProperties = {
+  marginTop: 0,
+  fontSize: 20,
+};
+
+const loadingTextStyle: CSSProperties = {
+  color: '#60706a',
+};
+
+const asideStyle: CSSProperties = {
+  display: 'grid',
+  gap: 20,
+  alignContent: 'start',
+};
+
+const formGridStyle: CSSProperties = {
+  display: 'grid',
+  gap: 10,
+};
+
+const successTextStyle: CSSProperties = {
+  color: '#166534',
+  fontWeight: 700,
+};
+
+const timelineListStyle: CSSProperties = {
+  display: 'grid',
+};
+
+const timelineSummaryStyle: CSSProperties = {
+  margin: '4px 0',
+};
+
+export default function App() {
+  const [selectedTenantId, setSelectedTenantId] = useState<(typeof tenants)[number]['id']>('tenant_acme');
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [operations, setOperations] = useState<AdminOperation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [problem, setProblem] = useState<ProblemState | null>(null);
+  const [actionStatus, setActionStatus] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<AdminRole>('viewer');
+
+  const refresh = useCallback(async (tenantId: string) => {
+    setLoading(true);
+
+    try {
+      const [nextUsers, nextOperations] = await Promise.all([
+        adminClient.listUsers({ query: { tenantId } }),
+        adminClient.listOperations({ query: { tenantId } }),
+      ]);
+
+      setUsers([...nextUsers]);
+      setOperations([...nextOperations]);
+    } catch (caught) {
+      setProblem({
+        code: 'admin-console/api-unavailable',
+        detail: caught instanceof Error ? caught.message : 'Admin API request failed.',
+        recovery: 'Start the API server or check the Vite /admin proxy target.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh(selectedTenantId);
+  }, [refresh, selectedTenantId]);
+
+  async function handleInvite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setActionStatus(null);
+    setProblem(null);
+
+    try {
+      await adminClient.createUser({
+        tenantId: selectedTenantId,
+        name: name.trim(),
+        email: email.trim(),
+        role,
+      });
+      setName('');
+      setEmail('');
+      setRole('viewer');
+      setActionStatus('Invite queued for review.');
+      await refresh(selectedTenantId);
+    } catch (caught) {
+      setProblem({
+        code: 'admin-console/invite-failed',
+        detail: caught instanceof Error ? caught.message : 'Invite request failed.',
+        recovery: 'Keep the form values, check the API server, and submit again.',
+      });
+    }
+  }
+
+  async function probeMissingUser() {
+    setActionStatus(null);
+    const result = await adminClient.getUserResult({
+      path: { id: 'missing-user' },
+      query: { tenantId: selectedTenantId },
+    });
+
+    if (result.ok) {
+      setProblem({
+        code: 'admin-console/unexpected-user-found',
+        detail: `Unexpected user ${result.data.id} was returned.`,
+        recovery: 'Refresh the resource table and check seed data.',
+      });
+    } else if (result.kind === 'problem') {
+      setProblem({
+        code: result.code,
+        detail: result.problem.detail ?? result.problem.title,
+        recovery: 'Refresh the table or invite the user again.',
+      });
+    } else {
+      setProblem({
+        code: 'admin-console/external-failure',
+        detail: result.error.message,
+        recovery: 'Check the API server logs and retry the operation.',
+      });
+    }
+
+    await refresh(selectedTenantId);
+  }
+
+  return (
+    <main style={pageStyle}>
+      <div style={shellStyle}>
+        <header style={headerStyle}>
+          <div>
+            <p style={eyebrowStyle}>Croco Admin</p>
+            <h1 style={titleStyle}>{{projectName}}</h1>
+          </div>
+          <label style={tenantLabelStyle}>
+            <span style={fieldLabelStyle}>Tenant</span>
+            <select
+              value={selectedTenantId}
+              onChange={(event) => setSelectedTenantId(event.target.value as (typeof tenants)[number]['id'])}
+              style={inputStyle}
+            >
+              {tenants.map((tenant) => (
+                <option key={tenant.id} value={tenant.id}>
+                  {tenant.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </header>
+
+        {problem ? (
+          <section style={alertStyle} role="alert">
+            <strong>{problem.code}</strong>
+            <p style={alertDetailStyle}>{problem.detail}</p>
+            <p style={noMarginStyle}>{problem.recovery}</p>
+          </section>
+        ) : null}
+
+        <div style={gridStyle}>
+          <section style={panelStyle}>
+            <div style={panelHeaderStyle}>
+              <h2 style={panelTitleStyle}>Users</h2>
+              <button type="button" onClick={() => void refresh(selectedTenantId)} style={secondaryButtonStyle}>
+                Refresh
+              </button>
+            </div>
+
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Name</th>
+                  <th style={thStyle}>Email</th>
+                  <th style={thStyle}>Role</th>
+                  <th style={thStyle}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id}>
+                    <td style={tdStyle}>{user.name}</td>
+                    <td style={tdStyle}>{user.email}</td>
+                    <td style={tdStyle}>{user.role}</td>
+                    <td style={tdStyle}>{user.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {loading ? <p style={loadingTextStyle}>Loading admin resources...</p> : null}
+          </section>
+
+          <aside style={asideStyle}>
+            <section style={panelStyle}>
+              <h2 style={sectionTitleStyle}>Invite User</h2>
+              <form onSubmit={handleInvite} style={formGridStyle}>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Name"
+                  required
+                  style={inputStyle}
+                />
+                <input
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="Email"
+                  required
+                  type="email"
+                  style={inputStyle}
+                />
+                <select value={role} onChange={(event) => setRole(event.target.value as AdminRole)} style={inputStyle}>
+                  <option value="viewer">Viewer</option>
+                  <option value="admin">Admin</option>
+                  <option value="owner">Owner</option>
+                </select>
+                <button type="submit" style={buttonStyle}>
+                  Invite
+                </button>
+              </form>
+              {actionStatus ? <p style={successTextStyle}>{actionStatus}</p> : null}
+              <button type="button" onClick={() => void probeMissingUser()} style={secondaryButtonStyle}>
+                Probe Missing User
+              </button>
+            </section>
+
+            <section style={panelStyle}>
+              <h2 style={sectionTitleStyle}>Operations</h2>
+              <div style={timelineListStyle}>
+                {operations.map((operation) => (
+                  <article key={operation.id} style={timelineItemStyle}>
+                    <strong>{operation.action}</strong>
+                    <p style={timelineSummaryStyle}>{operation.summary}</p>
+                    <small>
+                      {operation.status} | {operation.actor} | {operation.occurredAt}
+                    </small>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </aside>
+        </div>
+      </div>
+    </main>
+  );
+}

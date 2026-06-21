@@ -5,6 +5,7 @@ const generationModuleImports = vi.hoisted(() => ({
   generateClientFiles: 0,
   loadRoutes: 0,
   loadContractGraph: 0,
+  lastGenerateOptions: null as null | Record<string, unknown>,
   graph: {
     version: "croco.contract-graph.v1",
     controllers: [
@@ -29,11 +30,14 @@ vi.mock("../libs/generate", () => {
       generationModuleImports.generateClientFiles += 1;
       throw new Error("generateClientFiles should not run for help or invalid arguments");
     },
-    generateClientFilesFromContractGraph: () => {
+    generateClientFilesFromContractGraph: (
+      _graph: unknown,
+      _outDir: string,
+      options: Record<string, unknown>,
+    ) => {
       generationModuleImports.generateClientFiles += 1;
-      throw new Error(
-        "generateClientFilesFromContractGraph should not run for check or invalid contract graphs",
-      );
+      generationModuleImports.lastGenerateOptions = options;
+      return ["client/user.ts"];
     },
   };
 });
@@ -68,6 +72,7 @@ describe("rpc-codegen CLI", () => {
     generationModuleImports.generateClientFiles = 0;
     generationModuleImports.loadRoutes = 0;
     generationModuleImports.loadContractGraph = 0;
+    generationModuleImports.lastGenerateOptions = null;
     generationModuleImports.graph = {
       version: "croco.contract-graph.v1",
       controllers: [
@@ -96,6 +101,7 @@ describe("rpc-codegen CLI", () => {
       generateClientFiles: 0,
       loadRoutes: 0,
       loadContractGraph: 0,
+      lastGenerateOptions: null,
       graph: generationModuleImports.graph,
     });
   });
@@ -104,6 +110,14 @@ describe("rpc-codegen CLI", () => {
     ["no arguments", []],
     ["missing controllers", ["--out", "client"]],
     ["missing output", ["--controllers", "src/controllers/**/*.ts"]],
+    [
+      "invalid Problem runtime",
+      ["--controllers", "src/controllers/**/*.ts", "--out", "client", "--problem-runtime", "other"],
+    ],
+    [
+      "missing Problem runtime value",
+      ["--controllers", "src/controllers/**/*.ts", "--out", "client", "--problem-runtime"],
+    ],
   ])("exits with failure for %s without loading generation modules", async (_name, args) => {
     const exitCode = await runCli(args, {
       stdout: (message) => stdout.push(message),
@@ -116,6 +130,7 @@ describe("rpc-codegen CLI", () => {
       generateClientFiles: 0,
       loadRoutes: 0,
       loadContractGraph: 0,
+      lastGenerateOptions: null,
       graph: generationModuleImports.graph,
     });
   });
@@ -196,5 +211,24 @@ describe("rpc-codegen CLI", () => {
     expect(generationModuleImports.generate).toBe(0);
     expect(generationModuleImports.generateClientFiles).toBe(0);
     expect(generationModuleImports.loadContractGraph).toBe(1);
+  });
+
+  it("passes the selected frontend Problem runtime to client generation", async () => {
+    const exitCode = await runCli(
+      ["--controllers", "src/**/*.ts", "--out", "client", "--problem-runtime", "frontend-problems"],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toEqual(["client/user.ts"]);
+    expect(generationModuleImports.generate).toBe(1);
+    expect(generationModuleImports.generateClientFiles).toBe(1);
+    expect(generationModuleImports.loadContractGraph).toBe(1);
+    expect(generationModuleImports.lastGenerateOptions).toEqual({
+      problemRuntime: "frontend-problems",
+      reactQuery: false,
+    });
   });
 });

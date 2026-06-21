@@ -1,9 +1,11 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
   createServerActionRegistry,
   createServerAction,
   createServerActionHandler,
+  createServerActionSuccess,
   dispatchServerAction,
   resetServerActions,
   unregisterServerAction,
@@ -17,6 +19,17 @@ function createExecutionContext(): ExecutionContext {
     waitUntil: () => {},
     passThroughOnException: () => {},
   };
+}
+
+class SignupClosedProblem extends Problem {
+  readonly code = "test/signup-closed";
+  readonly category = ProblemCategory.BusinessRuleViolation;
+
+  constructor() {
+    super("test/signup-closed", ProblemCategory.BusinessRuleViolation, "Signup is closed", {
+      extensions: { recoveryAction: "join_waitlist" },
+    });
+  }
 }
 
 describe("Server Actions", () => {
@@ -68,7 +81,7 @@ describe("Server Actions", () => {
     expect(body.received.count).toBe(42);
   });
 
-  it("returns 400 when Zod validation fails", async () => {
+  it("returns Problem result when Zod validation fails", async () => {
     const schema = z.object({ email: z.string().email() });
 
     createServerAction({
@@ -78,20 +91,89 @@ describe("Server Actions", () => {
     });
 
     const response = await dispatchServerAction("validate-email", { email: "not-an-email" });
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(422);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
 
     const body = await response.json();
-    expect(body.code).toBe("VALIDATION_ERROR");
-    expect(body.fields).toHaveProperty("email");
+    expect(body).toMatchObject({
+      ok: false,
+      kind: "validation",
+      type: "about:blank",
+      title: "Validation Error",
+      status: 422,
+      code: "meta-vite/server-action-validation-failed",
+      detail: "Server action input validation failed",
+      fields: {
+        email: expect.arrayContaining([expect.any(String)]),
+      },
+    });
   });
 
-  it("returns 404 when action is not registered", async () => {
+  it("returns Problem result when action is not registered", async () => {
     const response = await dispatchServerAction("nonexistent-action", {});
     expect(response.status).toBe(404);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
 
     const body = await response.json();
-    expect(body.code).toBe("ACTION_NOT_FOUND");
-    expect(body.name).toBe("nonexistent-action");
+    expect(body).toMatchObject({
+      ok: false,
+      kind: "action_not_found",
+      type: "about:blank",
+      title: "Not Found",
+      status: 404,
+      code: "meta-vite/server-action-not-found",
+      detail: "Server action 'nonexistent-action' is not registered",
+      actionName: "nonexistent-action",
+    });
+  });
+
+  it("normalizes typed success results from action handlers", async () => {
+    createServerAction({
+      name: "typed-greet",
+      output: {
+        description: "Greeting payload",
+        example: { message: "Hello, World!" },
+      },
+      problems: [{ code: "test/signup-closed", status: 422 }],
+      handler: async (data) =>
+        createServerActionSuccess({
+          message: `Hello, ${(data as { name: string }).name}!`,
+        }),
+    });
+
+    const response = await dispatchServerAction("typed-greet", { name: "World" });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("application/json");
+
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      data: { message: "Hello, World!" },
+    });
+  });
+
+  it("normalizes domain Problems thrown by action handlers", async () => {
+    createServerAction({
+      name: "domain-problem",
+      problems: [{ code: "test/signup-closed", status: 422 }],
+      handler: async () => {
+        throw new SignupClosedProblem();
+      },
+    });
+
+    const response = await dispatchServerAction("domain-problem", {});
+    expect(response.status).toBe(422);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "domain_problem",
+      type: "about:blank",
+      title: "Business Rule Violation",
+      status: 422,
+      code: "test/signup-closed",
+      detail: "Signup is closed",
+      recoveryAction: "join_waitlist",
+    });
   });
 
   it("throws when registering duplicate action name", () => {
@@ -324,7 +406,7 @@ describe("Server Action HTTP Integration", () => {
     });
   });
 
-  it("returns 404 for unregistered action via HTTP", async () => {
+  it("returns Problem result for unregistered action via HTTP", async () => {
     const handler = createMetaFetchHandler({
       apiRoutes: [createServerActionHandler()],
     });
@@ -337,11 +419,17 @@ describe("Server Action HTTP Integration", () => {
     );
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
     const body = await response.json();
-    expect(body.code).toBe("ACTION_NOT_FOUND");
+    expect(body).toMatchObject({
+      ok: false,
+      kind: "action_not_found",
+      code: "meta-vite/server-action-not-found",
+      actionName: "nonexistent",
+    });
   });
 
-  it("returns 400 for validation failure via HTTP", async () => {
+  it("returns Problem result for validation failure via HTTP", async () => {
     const schema = z.object({ email: z.string().email() });
 
     createServerAction({
@@ -368,10 +456,40 @@ describe("Server Action HTTP Integration", () => {
       }),
     );
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(422);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
     const body = await response.json();
-    expect(body.code).toBe("VALIDATION_ERROR");
-    expect(body.fields).toHaveProperty("email");
+    expect(body).toMatchObject({
+      ok: false,
+      kind: "validation",
+      code: "meta-vite/server-action-validation-failed",
+      fields: {
+        email: expect.arrayContaining([expect.any(String)]),
+      },
+    });
+  });
+
+  it("returns Problem result for invalid action paths", async () => {
+    const route = createServerActionHandler();
+
+    const response = await route.handler(
+      new Request("http://localhost/api/action/signup/extra", {
+        method: "POST",
+        body: new FormData(),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "invalid_path",
+      title: "Bad Request",
+      status: 400,
+      code: "meta-vite/server-action-invalid-path",
+      detail: "Invalid server action path",
+      path: "/api/action/signup/extra",
+    });
   });
 
   it("returns 405 for non-POST method on action endpoint", async () => {

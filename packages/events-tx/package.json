@@ -33,7 +33,10 @@
   },
   "dependencies": {
     "@croco/events-core": "workspace:*",
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
+    "@croco/tx-core": "workspace:*",
+    "drizzle-orm": "catalog:"
   },
   "devDependencies": {}
 }

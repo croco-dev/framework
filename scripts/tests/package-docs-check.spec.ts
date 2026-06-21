@@ -217,6 +217,77 @@ describe("package-docs-check.mts", () => {
     );
   });
 
+  it("fails when presentation-preset claims a runtime without generated profile evidence", () => {
+    const root = createTempRoot();
+    writePackage(root, "presentation-preset", { name: "@croco/presentation-preset" });
+    writePresentationRuntimeProfileCatalog(root, ["node"]);
+    writeCatalogMetadata(root, ["presentation-preset"], {
+      extensionRuntimesByPackage: {
+        "presentation-preset": ["node", "browser"],
+      },
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["presentation-preset"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "packages/presentation-preset/runtime-profiles.json: Catalog runtime claim 'browser' has no generated runtime profile evidence",
+    );
+  });
+
+  it("accepts presentation-preset runtime claims with generated profile evidence", () => {
+    const root = createTempRoot();
+    writePackage(root, "presentation-preset", { name: "@croco/presentation-preset" });
+    writePresentationRuntimeProfileCatalog(root, ["node", "browser"]);
+    writeCatalogMetadata(root, ["presentation-preset"], {
+      extensionRuntimesByPackage: {
+        "presentation-preset": ["node", "browser"],
+      },
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["presentation-preset"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "package-docs-check: package catalog and documentation report are in sync.",
+    );
+  });
+
+  it("fails when presentation-preset runtime metadata is defined as a non-object value", () => {
+    const root = createTempRoot();
+    writePackage(root, "presentation-preset", { name: "@croco/presentation-preset" });
+    writePresentationRuntimeProfileCatalog(root, ["node"], {
+      runtimeMetadata: "node20",
+    });
+    writeCatalogMetadata(root, ["presentation-preset"], {
+      extensionRuntimesByPackage: {
+        "presentation-preset": ["node"],
+      },
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["presentation-preset"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "packages/presentation-preset/runtime-profiles.json: Generated runtime profile 'node-fixture' runtime must be an object when provided",
+    );
+  });
+
   it("fails when public architecture docs use stale layer text or missing package names", () => {
     const root = createTempRoot();
     writePackage(root, "alpha", { name: "@croco/alpha" });
@@ -345,6 +416,7 @@ function writeCatalogMetadata(
   options: {
     readonly extensionGroups?: readonly string[];
     readonly extensionPackages?: readonly string[];
+    readonly extensionRuntimesByPackage?: Record<string, readonly string[]>;
     readonly groupName?: string;
     readonly productionPackages?: readonly string[];
   } = {},
@@ -392,11 +464,50 @@ function writeCatalogMetadata(
             domain: "Fixture",
             features: ["Fixture feature"],
             requiredEnv: ["none"],
-            runtimes: ["node"],
+            runtimes: options.extensionRuntimesByPackage?.[packageName] ?? ["node"],
           },
         ]),
       ),
     },
+  });
+}
+
+function writePresentationRuntimeProfileCatalog(
+  root: string,
+  runtimes: readonly string[],
+  options: { readonly runtimeMetadata?: unknown } = {},
+): void {
+  writeJson(join(root, "packages", "presentation-preset", "runtime-profiles.json"), {
+    schemaVersion: 1,
+    validationCommand: "pnpm --filter @croco/presentation-preset test",
+    profiles: runtimes.map((runtime) => ({
+      name: `${runtime}-fixture`,
+      runtime,
+      packageTestName: `validates ${runtime}`,
+      generatedAppSmokeCase: `${runtime}-smoke`,
+      generatedAppSmokeCommand: `CROCO_GENERATED_SMOKE_CASES=${runtime}-smoke pnpm create-croco-app:smoke`,
+      target: {
+        target: runtime,
+        requiredEnvVars: [],
+        ...(options.runtimeMetadata !== undefined ? { runtime: options.runtimeMetadata } : {}),
+        output: {
+          presetName: `presentation-preset/${runtime}-fixture`,
+          buildTime: "2026-01-01T00:00:00.000Z",
+          format: "esm",
+          artifacts: [
+            { path: `${runtime}/index.js`, format: "esm", type: "code" },
+            { path: `${runtime}/index.d.ts`, format: "neutral", type: "types" },
+          ],
+          entries: [
+            {
+              exportName: ".",
+              main: `${runtime}/index.js`,
+              types: `${runtime}/index.d.ts`,
+            },
+          ],
+        },
+      },
+    })),
   });
 }
 

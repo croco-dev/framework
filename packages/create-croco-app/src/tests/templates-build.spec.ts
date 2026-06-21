@@ -102,7 +102,7 @@ function checkSpaBeSplitStructure() {
   checkFileContains(
     "spa-be-split",
     ["apps", "console-web", "src", "api", "client.ts"],
-    /ApiProblemError/,
+    /handleJsonResponse/,
   );
 
   for (const directory of ["service", "domain", "datasource", "feature", "page", "ui"]) {
@@ -126,12 +126,17 @@ function checkSpaBeSplitStructure() {
       "contract:diff": expect.stringMatching(
         /^croco contracts diff --baseline contract-graph\.snapshot\.json[\s\S]*--controllers/,
       ),
+      "contract:coverage": expect.stringMatching(
+        /^croco contracts check[\s\S]*--json --out contract-graph\.coverage\.json$/,
+      ),
       "contract:verify": expect.stringMatching(
-        /^pnpm contract:diff && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
+        /^pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
       "ci:contracts": "pnpm contract:verify",
       "contract:openapi": expect.stringMatching(/^pnpm contract:check &&[\s\S]*croco-openapi-spec/),
-      "contract:client": expect.stringMatching(/^pnpm contract:check &&[\s\S]*croco-rpc-codegen/),
+      "contract:client": expect.stringMatching(
+        /^pnpm contract:check &&[\s\S]*croco-rpc-codegen[\s\S]*--problem-runtime frontend-problems/,
+      ),
       codegen: expect.any(String),
       lint: "biome lint .",
       test: "turbo test",
@@ -170,6 +175,7 @@ function checkSpaBeSplitStructure() {
   );
   expect(consolePackageJson).toMatchObject({
     dependencies: expect.objectContaining({
+      "@croco/frontend-problems": "workspace:*",
       "{{scope}}/provider-rpc": "workspace:*",
     }),
   });
@@ -187,6 +193,7 @@ function checkSpaBeSplitStructure() {
       typecheck: "tsc --noEmit",
     }),
     dependencies: expect.objectContaining({
+      "@croco/frontend-problems": "workspace:*",
       "@tanstack/react-query": expect.any(String),
     }),
   });
@@ -230,6 +237,80 @@ function checkSpaBeSplitStructure() {
   checkFileContains("spa-be-split", ["README.md.hbs"], /비범위/);
   checkFileContains("spa-be-split", ["README.md.hbs"], /HttpExceptionFilter/);
   checkFileContains("spa-be-split", ["README.md.hbs"], /TelemetryRuntime\.forceFlush/);
+}
+
+function checkAdminConsoleStructure() {
+  checkFileExists("admin-console", "package.json.hbs");
+  checkFileExists("admin-console", "README.md.hbs");
+  checkFileExists("admin-console", "apps", "api-server", "src", "admin.ts");
+  checkFileExists("admin-console", "apps", "api-server", "src", "app.ts.hbs");
+  checkFileExists(
+    "admin-console",
+    "apps",
+    "api-server",
+    "src",
+    "controllers",
+    "AdminController.ts",
+  );
+  checkFileExists("admin-console", "apps", "api-server", "src", "controllers", "adminSchemas.ts");
+  checkFileExists("admin-console", "apps", "api-server", "src", "tests", "AdminConsole.spec.ts");
+  checkFileExists("admin-console", "apps", "console-web", "src", "App.tsx.hbs");
+
+  const rootPackageJson = readJsonTemplate("admin-console", "package.json.hbs");
+  expect(rootPackageJson).toMatchObject({
+    scripts: expect.objectContaining({
+      "admin:smoke": expect.stringMatching(/^pnpm contract:client/),
+      "contract:coverage": expect.stringMatching(/contract-graph\.coverage\.json/),
+      "contract:verify": expect.stringMatching(/contract:diff && pnpm contract:coverage/),
+      "contract:client": expect.stringMatching(
+        /admin\.ts,users\.ts,problems\.ts[\s\S]*--problem-runtime frontend-problems/,
+      ),
+      typecheck: "pnpm contract:client && turbo typecheck",
+      build: "pnpm contract:client && turbo build",
+    }),
+  });
+
+  const apiPackageJson = readJsonTemplate(
+    "admin-console",
+    "apps",
+    "api-server",
+    "package.json.hbs",
+  );
+  expect(apiPackageJson).toMatchObject({
+    scripts: expect.objectContaining({
+      "admin:smoke": "tsx src/dev-smoke.ts",
+    }),
+  });
+
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "controllers", "AdminController.ts"],
+    /@ProblemResponse/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "controllers", "AdminController.ts"],
+    /admin-console\/user-not-found/,
+  );
+  checkFileContains("admin-console", ["apps", "console-web", "src", "App.tsx.hbs"], /adminClient/);
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "App.tsx.hbs"],
+    /query: \{ tenantId: selectedTenantId \}/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "App.tsx.hbs"],
+    /admin-console\/invite-failed/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "App.tsx.hbs"],
+    /Probe Missing User/,
+  );
+  checkFileContains("admin-console", ["apps", "console-web", "src", "App.tsx.hbs"], /Operations/);
+  checkFileContains("admin-console", ["README.md.hbs"], /operations timeline/);
+  checkFileContains("admin-console", ["README.md.hbs"], /not a marketing landing page/);
 }
 
 function checkSsrLambdaStructure() {
@@ -284,6 +365,7 @@ function checkSaasStructure() {
   checkFileExists("saas", "apps", "api-server", "package.json.hbs");
   checkFileExists("saas", "apps", "api-server", "src", "saasDemo.ts");
   checkFileExists("saas", "apps", "api-server", "src", "providerProfiles.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "provider-profile-check.ts");
   checkFileExists("saas", "apps", "api-server", "src", "demo", "saasSmokeContract.ts");
   checkFileExists("saas", "apps", "api-server", "src", "inMemoryAdapters.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "SaasController.ts");
@@ -305,8 +387,11 @@ function checkSaasStructure() {
       "contract:diff": expect.stringMatching(
         /^NODE_PATH=\.\/node_modules croco contracts diff --baseline contract-graph\.snapshot\.json[\s\S]*--controllers/,
       ),
+      "contract:coverage": expect.stringMatching(
+        /^NODE_PATH=\.\/node_modules croco contracts check[\s\S]*--json --out contract-graph\.coverage\.json$/,
+      ),
       "contract:verify": expect.stringMatching(
-        /^pnpm contract:diff && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
+        /^pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
       "ci:contracts": "pnpm contract:verify",
       "contract:client": expect.stringMatching(
@@ -316,7 +401,13 @@ function checkSaasStructure() {
         /^pnpm contract:check && NODE_PATH=\.\/node_modules croco-openapi-spec[\s\S]*--out openapi\.json/,
       ),
       "demo:seed": expect.any(String),
-      "demo:smoke": expect.stringMatching(/contract:check[\s\S]*api-server demo:smoke/),
+      "profile:check": "pnpm --filter {{scope}}/api-server profile:check",
+      "runtime-policy:check":
+        "NODE_PATH=./node_modules croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
+      "profile:smoke:real": "pnpm --filter {{scope}}/api-server profile:smoke:real",
+      "demo:smoke": expect.stringMatching(
+        /profile:check[\s\S]*runtime-policy:check[\s\S]*contract:check[\s\S]*api-server demo:smoke/,
+      ),
       "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
       typecheck: "turbo typecheck",
       build: "turbo build",
@@ -335,6 +426,8 @@ function checkSaasStructure() {
       "demo:seed": "tsx src/demo/seed.ts",
       "demo:smoke": "tsx src/demo/smoke.ts",
       "ops:smoke": "tsx src/demo/ops-smoke.ts",
+      "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
+      "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
       test: "vitest run",
     }),
     dependencies: expect.objectContaining({
@@ -386,7 +479,23 @@ function checkSaasStructure() {
     ["apps", "api-server", "src", "providerProfiles.ts"],
     /drizzle-polar-upstash/,
   );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "providerProfiles.ts"],
+    /saas-node-postgres/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "provider-profile-check.ts"],
+    /CROCO_SAAS_PROFILE_ENV_MISSING/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "provider-profile-check.ts"],
+    /CROCO_SAAS_PROFILE_PACKAGE_MISSING/,
+  );
   checkFileContains("saas", ["README.md.hbs"], /SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter/);
+  checkFileContains("saas", ["README.md.hbs"], /croco-saas-profile\.manifest\.json/);
   checkFileContains("saas", ["README.md.hbs"], /@croco\/billing-polar/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /billing-sync/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LifecycleRuleEvaluator/);
@@ -443,7 +552,8 @@ function checkAiSaasStructure() {
     scripts: expect.objectContaining({
       "ai:smoke": "pnpm --filter {{scope}}/api-server ai:smoke",
       "demo:smoke": expect.stringMatching(/api-server ai:smoke$/),
-      "contract:verify": expect.stringMatching(/^pnpm contract:diff && pnpm contract:openapi/),
+      "contract:coverage": expect.stringMatching(/contract-graph\.coverage\.json/),
+      "contract:verify": expect.stringMatching(/^pnpm contract:diff && pnpm contract:coverage/),
       "ci:contracts": "pnpm contract:verify",
       "contract:openapi": expect.stringMatching(/AI SaaS API/),
     }),
@@ -481,31 +591,40 @@ function checkAiSaasStructure() {
   checkFileContains("ai-saas", ["README.md.hbs"], /Do not expose provider API keys/);
 }
 
-describe.each(["spa-be-split", "ssr-lambda", "container-fullstack", "saas", "ai-saas"])(
-  "Template: %s",
-  (template) => {
-    it("should have required structure", () => {
-      if (template === "spa-be-split") {
-        checkSpaBeSplitStructure();
-        return;
-      }
+describe.each([
+  "spa-be-split",
+  "ssr-lambda",
+  "container-fullstack",
+  "saas",
+  "ai-saas",
+  "admin-console",
+])("Template: %s", (template) => {
+  it("should have required structure", () => {
+    if (template === "spa-be-split") {
+      checkSpaBeSplitStructure();
+      return;
+    }
 
-      if (template === "ssr-lambda") {
-        checkSsrLambdaStructure();
-        return;
-      }
+    if (template === "ssr-lambda") {
+      checkSsrLambdaStructure();
+      return;
+    }
 
-      if (template === "saas") {
-        checkSaasStructure();
-        return;
-      }
+    if (template === "saas") {
+      checkSaasStructure();
+      return;
+    }
 
-      if (template === "ai-saas") {
-        checkAiSaasStructure();
-        return;
-      }
+    if (template === "ai-saas") {
+      checkAiSaasStructure();
+      return;
+    }
 
-      checkContainerFullstackStructure();
-    });
-  },
-);
+    if (template === "admin-console") {
+      checkAdminConsoleStructure();
+      return;
+    }
+
+    checkContainerFullstackStructure();
+  });
+});

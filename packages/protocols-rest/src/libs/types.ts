@@ -34,9 +34,11 @@ export type ProblemResponseMetadata<
 export type ProblemResponseOptions<
   Code extends string = string,
   Category extends ProblemCategory = ProblemCategory,
+  Status extends number = number,
 > = {
   readonly code: Code;
   readonly category: Category;
+  readonly status?: Status;
   readonly description?: string;
   readonly type?: string;
 };

@@ -61,6 +61,10 @@ type ExecutionDb = {
   delete(table: unknown): DeleteQuery;
 };
 
+function hasUpdateField(data: Partial<Execution>, key: keyof Execution): boolean {
+  return Object.prototype.hasOwnProperty.call(data, key);
+}
+
 /**
  * 실행 요청을 Drizzle 테이블에 저장하는 구현체입니다.
  */
@@ -175,11 +179,11 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
       ...(data.status !== undefined ? { status: data.status } : {}),
       ...(data.payload !== undefined ? { payload: data.payload } : {}),
       ...(data.result !== undefined ? { result: data.result } : {}),
-      ...(data.error !== undefined ? { error: data.error } : {}),
+      ...(hasUpdateField(data, "error") ? { error: data.error ?? null } : {}),
       ...(data.attempts !== undefined ? { attempts: data.attempts } : {}),
       ...(data.maxAttempts !== undefined ? { maxAttempts: data.maxAttempts } : {}),
       ...(data.startedAt !== undefined ? { startedAt: data.startedAt } : {}),
-      ...(data.completedAt !== undefined ? { completedAt: data.completedAt } : {}),
+      ...(hasUpdateField(data, "completedAt") ? { completedAt: data.completedAt ?? null } : {}),
       ...(data.scheduledFor !== undefined ? { scheduledFor: data.scheduledFor } : {}),
       ...(data.timeout !== undefined ? { timeout: data.timeout } : {}),
       ...(data.replayOf !== undefined ? { replayOf: data.replayOf } : {}),

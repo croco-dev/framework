@@ -6,6 +6,8 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
+    "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
     "demo:seed": "tsx src/demo/seed.ts",
     "demo:smoke": "tsx src/demo/smoke.ts",
     "ops:smoke": "tsx src/demo/ops-smoke.ts",

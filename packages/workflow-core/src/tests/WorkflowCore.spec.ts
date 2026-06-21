@@ -8,6 +8,7 @@ import {
   ExecutionProblems,
   ExecutionStore,
   type ListExecutionsOptions,
+  createExecutionJobsOperations,
 } from "@croco/execution-core";
 import { Component, Container, MetadataStorage } from "@croco/framework-context";
 import { trace } from "@opentelemetry/api";
@@ -326,16 +327,73 @@ describe("workflow-core", () => {
         status: "completed",
         maxAttempts: 2,
         timeout: 10_000,
+        idempotencyKey: `workflow-step:${result.executionId}:0:billing.fetch-subscription`,
       }),
       expect.objectContaining({
         type: "billing.sync-entitlements",
         parentId: result.executionId,
         status: "completed",
+        idempotencyKey: `workflow-step:${result.executionId}:1:sync-entitlements`,
         metadata: expect.objectContaining({
           workflowName: "billing-sync",
           workflowExecutionId: result.executionId,
           workflowStep: "sync-entitlements",
         }),
+      }),
+    ]);
+  });
+
+  it("does not collapse repeated workflow steps with the same step name", async () => {
+    let handledCount = 0;
+
+    @Component()
+    class RepeatedStepTasks {
+      @Task({ name: "billing.repeat-step" })
+      handle(): { attempt: number } {
+        handledCount += 1;
+        return { attempt: handledCount };
+      }
+    }
+
+    @Component()
+    class RepeatedStepWorkflows {
+      @Workflow({
+        name: "billing-repeat-steps",
+        steps: ["billing.repeat-step", "billing.repeat-step"],
+      })
+      repeat(): void {}
+    }
+
+    Container.set(RepeatedStepTasks, new RepeatedStepTasks());
+    Container.set(RepeatedStepWorkflows, new RepeatedStepWorkflows());
+    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    const result = await runner.execute("billing-repeat-steps", {});
+    const childExecutions = await manager.list({ parentId: result.executionId });
+
+    expect(handledCount).toBe(2);
+    expect(result.steps).toEqual([
+      expect.objectContaining({
+        step: "billing.repeat-step",
+        task: "billing.repeat-step",
+        result: { attempt: 1 },
+      }),
+      expect.objectContaining({
+        step: "billing.repeat-step",
+        task: "billing.repeat-step",
+        result: { attempt: 2 },
+      }),
+    ]);
+    expect(childExecutions).toEqual([
+      expect.objectContaining({
+        type: "billing.repeat-step",
+        status: "completed",
+        idempotencyKey: `workflow-step:${result.executionId}:0:billing.repeat-step`,
+      }),
+      expect.objectContaining({
+        type: "billing.repeat-step",
+        status: "completed",
+        idempotencyKey: `workflow-step:${result.executionId}:1:billing.repeat-step`,
       }),
     ]);
   });
@@ -561,12 +619,17 @@ describe("workflow-core", () => {
         type: "billing.retry-webhook",
         status: "retrying",
         parentId: retryingWorkflow.id,
+        attempts: 1,
+        idempotencyKey: `workflow-step:${retryingWorkflow.id}:0:billing.retry-webhook`,
       }),
     ]);
 
     const retried = await runner.execute("billing-retry-webhook", { subscriptionId: "sub_123" });
     const completedWorkflow = await manager.get(retryingWorkflow.id);
     const childExecutions = await manager.list({ parentId: retryingWorkflow.id });
+    const childJobs = await createExecutionJobsOperations(manager).list({
+      parentId: retryingWorkflow.id,
+    });
 
     expect(retried).toEqual(
       expect.objectContaining({
@@ -583,16 +646,167 @@ describe("workflow-core", () => {
     expect(childExecutions).toEqual([
       expect.objectContaining({
         type: "billing.retry-webhook",
-        status: "retrying",
-        parentId: retryingWorkflow.id,
-      }),
-      expect.objectContaining({
-        type: "billing.retry-webhook",
         status: "completed",
         parentId: retryingWorkflow.id,
+        attempts: 2,
+        error: undefined,
+        idempotencyKey: `workflow-step:${retryingWorkflow.id}:0:billing.retry-webhook`,
       }),
     ]);
+    expect(childJobs).toEqual(
+      expect.objectContaining({
+        summary: "healthy",
+        attentionCount: 0,
+        total: 1,
+        jobs: [
+          expect.objectContaining({
+            status: "completed",
+            errorMessage: undefined,
+          }),
+        ],
+      }),
+    );
     expect(handledSubscriptions).toEqual(["sub_123:1", "sub_123:2"]);
+  });
+
+  it("reuses completed prior step results when retrying a later workflow step", async () => {
+    let fetchAttempts = 0;
+    let syncAttempts = 0;
+
+    class RetryableEntitlementProviderProblem extends Problem {
+      readonly retryable = true;
+
+      constructor() {
+        super(
+          "workflow-core/test-retryable-entitlement-provider",
+          ProblemCategory.InternalServerError,
+          "entitlement provider retryable outage",
+        );
+      }
+    }
+
+    @Component()
+    class MultiStepBillingTasks {
+      @Task({ name: "billing.retry-fetch-subscription", maxAttempts: 2 })
+      fetchSubscription(payload: unknown): { subscriptionId: string; plan: string } {
+        fetchAttempts += 1;
+        return { subscriptionId: getSubscriptionId(payload), plan: "pro" };
+      }
+
+      @Task({ name: "billing.retry-sync-entitlements", maxAttempts: 2 })
+      syncEntitlements(payload: unknown): { synced: string; attempt: number } {
+        syncAttempts += 1;
+
+        if (syncAttempts === 1) {
+          throw new RetryableEntitlementProviderProblem();
+        }
+
+        return {
+          synced: getSubscriptionId(payload),
+          attempt: syncAttempts,
+        };
+      }
+    }
+
+    @Component()
+    class MultiStepBillingWorkflows {
+      @OnWebhook("/webhooks/billing", "POST", { auth: true })
+      @Workflow({
+        name: "billing-retry-entitlements",
+        steps: [
+          "billing.retry-fetch-subscription",
+          {
+            name: "sync-entitlements",
+            task: "billing.retry-sync-entitlements",
+            input: ({ previousResults }) => previousResults[0]?.result,
+          },
+        ],
+        maxAttempts: 2,
+        idempotencyKey: ({ payload }) => `billing-entitlements:${getSubscriptionId(payload)}`,
+      })
+      webhook(): void {}
+    }
+
+    Container.set(MultiStepBillingTasks, new MultiStepBillingTasks());
+    Container.set(MultiStepBillingWorkflows, new MultiStepBillingWorkflows());
+    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(
+      runner.execute("billing-retry-entitlements", { subscriptionId: "sub_123" }),
+    ).rejects.toThrow("entitlement provider retryable outage");
+
+    const [retryingWorkflow] = await manager.list({ type: "workflow" });
+    const retryingChildren = await manager.list({ parentId: retryingWorkflow.id });
+
+    expect(retryingChildren).toEqual([
+      expect.objectContaining({
+        type: "billing.retry-fetch-subscription",
+        status: "completed",
+        attempts: 1,
+        result: { subscriptionId: "sub_123", plan: "pro" },
+      }),
+      expect.objectContaining({
+        type: "billing.retry-sync-entitlements",
+        status: "retrying",
+        attempts: 1,
+      }),
+    ]);
+
+    const retried = await runner.execute("billing-retry-entitlements", {
+      subscriptionId: "sub_123",
+    });
+    const completedWorkflow = await manager.get(retryingWorkflow.id);
+    const completedChildren = await manager.list({ parentId: retryingWorkflow.id });
+    const childJobs = await createExecutionJobsOperations(manager).list({
+      parentId: retryingWorkflow.id,
+    });
+
+    expect(retried).toEqual(
+      expect.objectContaining({
+        executionId: retryingWorkflow.id,
+        reused: false,
+        steps: [
+          expect.objectContaining({
+            task: "billing.retry-fetch-subscription",
+            result: { subscriptionId: "sub_123", plan: "pro" },
+          }),
+          expect.objectContaining({
+            task: "billing.retry-sync-entitlements",
+            result: { synced: "sub_123", attempt: 2 },
+          }),
+        ],
+      }),
+    );
+    expect(completedWorkflow).toEqual(
+      expect.objectContaining({
+        status: "completed",
+        attempts: 2,
+      }),
+    );
+    expect(completedChildren).toEqual([
+      expect.objectContaining({
+        type: "billing.retry-fetch-subscription",
+        status: "completed",
+        attempts: 1,
+        idempotencyKey: `workflow-step:${retryingWorkflow.id}:0:billing.retry-fetch-subscription`,
+      }),
+      expect.objectContaining({
+        type: "billing.retry-sync-entitlements",
+        status: "completed",
+        attempts: 2,
+        error: undefined,
+        idempotencyKey: `workflow-step:${retryingWorkflow.id}:1:sync-entitlements`,
+      }),
+    ]);
+    expect(childJobs).toEqual(
+      expect.objectContaining({
+        summary: "healthy",
+        attentionCount: 0,
+        total: 2,
+      }),
+    );
+    expect(fetchAttempts).toBe(1);
+    expect(syncAttempts).toBe(2);
   });
 
   it("does not resume a retrying execution from a different workflow with the same idempotency key", async () => {

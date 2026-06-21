@@ -5,7 +5,7 @@ prev: false
 title: "ProblemResponseOptions"
 ---
 
-> **ProblemResponseOptions**\<`Code`, `Category`\> = `object`
+> **ProblemResponseOptions**\<`Code`, `Category`, `Status`\> = `object`
 
 ## Type Parameters
 
@@ -16,6 +16,10 @@ title: "ProblemResponseOptions"
 ### Category
 
 `Category` *extends* [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+
+### Status
+
+`Status` *extends* `number` = `number`
 
 ## Properties
 
@@ -34,6 +38,12 @@ title: "ProblemResponseOptions"
 ### description?
 
 > `readonly` `optional` **description**: `string`
+
+***
+
+### status?
+
+> `readonly` `optional` **status**: `Status`
 
 ***
 

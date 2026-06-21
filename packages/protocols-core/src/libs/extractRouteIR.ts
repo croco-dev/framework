@@ -80,7 +80,7 @@ function extractRouteContract(contract: RouteContractMetadata | undefined): Rout
   const path = normalizeFullPath(contract.path);
 
   return {
-    id: contract.id ?? contract.operationId ?? null,
+    id: contract.id ?? null,
     method: contract.method,
     path,
     ...(contract.operationId ? { operationId: contract.operationId } : {}),
@@ -92,6 +92,7 @@ function extractRouteContract(contract: RouteContractMetadata | undefined): Rout
       headers: null,
     },
     outputSchema: contract.response ?? null,
+    problemResponses: extractContractProblemResponses(contract.problems),
   };
 }
 
@@ -114,14 +115,45 @@ function extractProblemResponses(value: unknown): ProblemResponseIR[] {
 
   return value
     .filter(isProblemResponseMetadata)
-    .map((response) => ({
-      code: response.code,
-      category: response.category,
-      status: ProblemCategoryMapper.toHttpStatus(response.category),
-      ...(response.description ? { description: response.description } : {}),
-      ...(response.type ? { type: response.type } : {}),
-    }))
+    .map(toProblemResponseIR)
     .sort(compareProblemResponses);
+}
+
+function extractContractProblemResponses(value: unknown): ProblemResponseIR[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isProblemResponseMetadata)
+    .map(toContractProblemResponseIR)
+    .sort(compareProblemResponses);
+}
+
+function toProblemResponseIR(response: ProblemResponseMetadata): ProblemResponseIR {
+  const routeContractProblems = response.routeContractProblems
+    ?.filter(isProblemResponseMetadata)
+    .map(toContractProblemResponseIR)
+    .sort(compareProblemResponses);
+
+  return {
+    code: response.code,
+    category: response.category,
+    status: getProblemResponseStatus(response),
+    ...(response.description ? { description: response.description } : {}),
+    ...(response.type ? { type: response.type } : {}),
+    ...(routeContractProblems ? { routeContractProblems } : {}),
+  };
+}
+
+function toContractProblemResponseIR(response: ProblemResponseMetadata): ProblemResponseIR {
+  return {
+    code: response.code,
+    category: response.category,
+    status: getProblemResponseStatus(response),
+    ...(response.description ? { description: response.description } : {}),
+    ...(response.type ? { type: response.type } : {}),
+  };
 }
 
 function isProblemResponseMetadata(value: unknown): value is ProblemResponseMetadata {
@@ -132,8 +164,13 @@ function isProblemResponseMetadata(value: unknown): value is ProblemResponseMeta
     "category" in value &&
     typeof value.code === "string" &&
     value.code.length > 0 &&
-    typeof value.category === "string"
+    typeof value.category === "string" &&
+    (!("status" in value) || typeof value.status === "number")
   );
+}
+
+function getProblemResponseStatus(response: ProblemResponseMetadata): number {
+  return response.status ?? ProblemCategoryMapper.toHttpStatus(response.category);
 }
 
 function compareProblemResponses(left: ProblemResponseIR, right: ProblemResponseIR): number {

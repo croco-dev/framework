@@ -1,6 +1,14 @@
 import { execSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
+import { validateResolvedGoalOptions, writeGoalManifest } from "./goals.js";
 import { mergeInto } from "./helpers/fs.js";
 import { rewriteExternalCrocoWorkspaceRanges } from "./helpers/manifest-normalizer.js";
 import {
@@ -19,10 +27,23 @@ import {
   installWebTrpc,
 } from "./installers/index.js";
 import { DirectoryNotEmptyProblem } from "./libs/problems/DirectoryNotEmptyProblem.js";
+import {
+  DEFAULT_SAAS_PROVIDER_PROFILE,
+  assertSaasProviderProfileCapabilities,
+  createSaasProviderProfileManifest,
+  getSaasProviderProfileDefinition,
+  getSaasProviderPackageDependencyRange,
+  renderSaasDeployNotes,
+  renderSaasEnvExample,
+  renderSaasSecretsChecklist,
+} from "./saas-provider-profiles.js";
 import { TEMPLATES_DIR } from "./template-path.js";
 import type { GeneratorOptions } from "./types.js";
+import type { SaasProviderProfileManifest } from "./saas-provider-profiles.js";
 
 export async function generate(targetDir: string, options: GeneratorOptions): Promise<void> {
+  validateResolvedGoalOptions(options);
+
   const vars = { projectName: options.projectName, scope: options.scope };
   const isVikeFullstackPreset = options.preset === "ddd-vike-fullstack";
 
@@ -41,6 +62,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
     if (options.preset === "ai-saas") {
       mergeInto(join(TEMPLATES_DIR, "ai-saas"), resolvedTarget, vars);
     }
+    writeSaasProviderProfileArtifacts(resolvedTarget, options);
     if (options.agentRules) {
       installAgentRules(resolvedTarget, vars);
     }
@@ -48,8 +70,11 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
     return;
   }
 
-  if (options.preset === "production-app") {
+  if (options.preset === "production-app" || options.preset === "admin-console") {
     mergeInto(join(TEMPLATES_DIR, "spa-be-split"), resolvedTarget, vars);
+    if (options.preset === "admin-console") {
+      mergeInto(join(TEMPLATES_DIR, "admin-console"), resolvedTarget, vars);
+    }
     if (options.agentRules) {
       installAgentRules(resolvedTarget, vars);
     }
@@ -159,8 +184,74 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   await finalize(resolvedTarget, options);
 }
 
+function writeSaasProviderProfileArtifacts(targetDir: string, options: GeneratorOptions): void {
+  const profile = getSaasProviderProfileDefinition(
+    options.saasProviderProfile ?? DEFAULT_SAAS_PROVIDER_PROFILE,
+  );
+  assertSaasProviderProfileCapabilities(profile);
+
+  const manifest = createSaasProviderProfileManifest(profile);
+  const docsDir = join(targetDir, "docs");
+  const apiServerSrcDir = join(targetDir, "apps", "api-server", "src");
+
+  mkdirSync(docsDir, { recursive: true });
+  writeFileSync(
+    join(targetDir, "croco-saas-profile.manifest.json"),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(targetDir, "croco-runtime-policy.manifest.json"),
+    `${JSON.stringify(createRuntimePolicyManifest(manifest), null, 2)}\n`,
+  );
+  writeFileSync(join(targetDir, ".env.example"), renderSaasEnvExample(manifest));
+  writeFileSync(join(docsDir, "provider-profile.md"), renderSaasDeployNotes(manifest));
+  writeFileSync(join(docsDir, "secrets-checklist.md"), renderSaasSecretsChecklist(manifest));
+  writeFileSync(
+    join(apiServerSrcDir, "generatedSaasProviderProfile.ts"),
+    `export const generatedSaasProviderProfileManifest = ${JSON.stringify(manifest, null, 2)} as const;\n`,
+  );
+  writeSaasProviderPackageDependencies(targetDir, manifest);
+}
+
+function createRuntimePolicyManifest(
+  manifest: SaasProviderProfileManifest,
+): Record<string, unknown> {
+  return {
+    schemaVersion: "croco.runtime-policy/v1",
+    runtime: {
+      platform: manifest.profile.runtimeTarget,
+      source: {
+        file: "croco-saas-profile.manifest.json",
+        symbol: manifest.profile.name,
+      },
+    },
+    table: {
+      plans: [],
+    },
+  };
+}
+
+function writeSaasProviderPackageDependencies(
+  targetDir: string,
+  manifest: SaasProviderProfileManifest,
+): void {
+  const packageJsonPath = join(targetDir, "apps", "api-server", "package.json");
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+    dependencies?: Record<string, string>;
+  };
+  const dependencies = packageJson.dependencies ?? {};
+
+  for (const packageName of manifest.packages) {
+    dependencies[packageName] ??= getSaasProviderPackageDependencyRange(packageName);
+  }
+
+  packageJson.dependencies = dependencies;
+  writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+}
+
 async function finalize(targetDir: string, options: GeneratorOptions): Promise<void> {
   rewriteExternalCrocoWorkspaceRanges(targetDir);
+  writeGoalManifest(targetDir, options);
 
   // Step 10: .env.example → .env 복사
   const envExample = join(targetDir, ".env.example");

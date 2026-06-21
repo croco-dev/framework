@@ -3,6 +3,8 @@ import { basename, extname, join, relative } from "node:path";
 import { preProcessFile } from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
+import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
+import { normalizeNonInteractiveOptions, parseCliOptions } from "../options.js";
 import type { GeneratorOptions } from "../types.js";
 
 const DEPENDENCY_FIELDS = [
@@ -285,6 +287,34 @@ describe("E2E: generate()", () => {
     expect(existsSync(join(testDir, "tsconfig.json"))).toBe(true);
   });
 
+  it("rejects mismatched goal generator options before creating the target directory", async () => {
+    const options: GeneratorOptions = {
+      projectName: "mismatched-goal",
+      scope: "@test",
+      goal: "saas-api",
+      preset: "production-app",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    let error: unknown;
+    try {
+      await generate(testDir, options);
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(InvalidGoalOptionProblem);
+    expect(error).toMatchObject({
+      code: "create-croco-app/invalid-goal-option",
+    });
+    expect(existsSync(testDir)).toBe(false);
+  });
+
   it(
     "generates ddd-fullstack with graphql standalone + docker + postgres",
     { timeout: 120_000 },
@@ -543,6 +573,12 @@ describe("E2E: generate()", () => {
 
       const rootPackageJson = readPackageJson(join(testDir, "package.json"));
       const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+      const consolePackageJson = readPackageJson(
+        join(testDir, "apps", "console-web", "package.json"),
+      );
+      const rpcPackageJson = readPackageJson(
+        join(testDir, "libs", "shared", "provider-rpc", "package.json"),
+      );
       const readme = readFileSync(join(testDir, "README.md"), "utf8");
       const apiUsersSource = readFileSync(
         join(testDir, "apps", "api-server", "src", "users.ts"),
@@ -565,6 +601,9 @@ describe("E2E: generate()", () => {
         test: "turbo test",
         typecheck: "turbo typecheck",
       });
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain(
+        "--problem-runtime frontend-problems",
+      );
       expect(apiPackageJson.scripts).toMatchObject({
         "dev:smoke": "tsx src/dev-smoke.ts",
         build: "tsup src/index.ts src/lambda.ts --format cjs --clean",
@@ -581,6 +620,12 @@ describe("E2E: generate()", () => {
         "@croco/telemetry-sdk-node": "^0.0.2",
         "@croco/transports-http": "^0.0.2",
       });
+      expect(consolePackageJson.dependencies).toMatchObject({
+        "@croco/frontend-problems": "^0.1.0",
+      });
+      expect(rpcPackageJson.dependencies).toMatchObject({
+        "@croco/frontend-problems": "^0.1.0",
+      });
       expect(existsSync(join(testDir, "apps", "api-server", "src", "lambda.ts"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "env.ts"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "problems.ts"))).toBe(true);
@@ -593,11 +638,82 @@ describe("E2E: generate()", () => {
       expect(apiUsersSource).toContain("Repository");
       expect(apiAppSource).toContain("HttpExceptionFilter");
       expect(apiAppSource).toContain("globalFilters: [HttpExceptionFilter]");
-      expect(clientSource).toContain("ApiProblemError");
+      expect(clientSource).toContain("handleJsonResponse");
       expect(readme).toContain("운영형 앱 스타터");
       expect(readme).toContain("비범위");
       expect(readme).toContain("HttpExceptionFilter");
       expect(readme).toContain("TelemetryRuntime.forceFlush");
+      assertNoHandlebarsPlaceholders(testDir);
+      assertNoExternalCrocoWorkspaceRanges(testDir);
+      assertAllSourceBareImportsDeclared(testDir);
+    },
+  );
+
+  it(
+    "generates admin console preset with generated-client workflow",
+    { timeout: 120_000 },
+    async () => {
+      const options: GeneratorOptions = {
+        projectName: "my-admin-console",
+        scope: "@test",
+        preset: "admin-console",
+        webApps: [],
+        apiHosting: "standalone",
+        db: [],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      };
+
+      await generate(testDir, options);
+
+      const rootPackageJson = readPackageJson(join(testDir, "package.json"));
+      const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+      const readme = readFileSync(join(testDir, "README.md"), "utf8");
+      const appSource = readFileSync(join(testDir, "apps", "api-server", "src", "app.ts"), "utf8");
+      const webSource = readFileSync(
+        join(testDir, "apps", "console-web", "src", "App.tsx"),
+        "utf8",
+      );
+      const viteConfig = readFileSync(
+        join(testDir, "apps", "console-web", "vite.config.ts"),
+        "utf8",
+      );
+
+      expect(rootPackageJson.scripts).toMatchObject({
+        "admin:smoke":
+          "pnpm contract:client && pnpm --filter @test/api-server admin:smoke && pnpm --filter @test/console-web admin:smoke",
+        typecheck: "pnpm contract:client && turbo typecheck",
+        build: "pnpm contract:client && turbo build",
+        "contract:client": expect.stringContaining(
+          "apps/api-server/src/{controllers/**/*.ts,admin.ts,users.ts,problems.ts}",
+        ),
+      });
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain(
+        "--problem-runtime frontend-problems",
+      );
+      expect(apiPackageJson.scripts).toMatchObject({
+        "admin:smoke": "tsx src/dev-smoke.ts",
+      });
+      expect(appSource).toContain("AdminController");
+      expect(viteConfig).toContain("'/admin': 'http://localhost:3000'");
+      expect(webSource).toContain("import { adminClient, type adminRpc }");
+      expect(webSource).toContain("adminClient");
+      expect(webSource).toContain("adminRpc.ListUsersOutput");
+      expect(webSource).toContain("query: { tenantId: selectedTenantId }");
+      expect(webSource).toContain("admin-console/invite-failed");
+      expect(webSource).toContain("Probe Missing User");
+      expect(webSource).toContain("Operations");
+      expect(existsSync(join(testDir, "apps", "api-server", "src", "admin.ts"))).toBe(true);
+      expect(
+        existsSync(join(testDir, "apps", "api-server", "src", "controllers", "AdminController.ts")),
+      ).toBe(true);
+      expect(
+        existsSync(join(testDir, "apps", "api-server", "src", "tests", "AdminConsole.spec.ts")),
+      ).toBe(true);
+      expect(readme).toContain("Croco admin console starter");
+      expect(readme).toContain("Recovery States");
+      expect(readme).toContain("not a marketing landing page");
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);
       assertAllSourceBareImportsDeclared(testDir);
@@ -609,6 +725,7 @@ describe("E2E: generate()", () => {
       projectName: "my-saas",
       scope: "@test",
       preset: "saas",
+      saasProviderProfile: "saas-cloudflare",
       webApps: [],
       apiHosting: "standalone",
       db: [],
@@ -627,8 +744,12 @@ describe("E2E: generate()", () => {
       build: "turbo build",
       test: "turbo test",
       "demo:seed": "pnpm --filter @test/api-server demo:seed",
+      "profile:check": "pnpm --filter @test/api-server profile:check",
+      "runtime-policy:check":
+        "NODE_PATH=./node_modules croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
+      "profile:smoke:real": "pnpm --filter @test/api-server profile:smoke:real",
       "demo:smoke":
-        "pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+        "pnpm profile:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
       "ops:smoke": "pnpm --filter @test/api-server ops:smoke",
     });
     expect(apiPackageJson.dependencies).toMatchObject({
@@ -649,6 +770,10 @@ describe("E2E: generate()", () => {
       "@croco/telemetry-api": "^0.0.2",
       "@croco/telemetry-sdk-node": "^0.0.2",
     });
+    expect(apiPackageJson.scripts).toMatchObject({
+      "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
+      "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
+    });
     expect(apiPackageJson.devDependencies?.typedi).toBe("^0.10.0");
     expect(apiPackageJson.devDependencies?.["@croco/cli"]).toBe("^0.0.3");
     expect(apiPackageJson.scripts?.["ops:smoke"]).toBe("tsx src/demo/ops-smoke.ts");
@@ -656,6 +781,95 @@ describe("E2E: generate()", () => {
     expect(existsSync(join(testDir, "apps", "api-server", "src", "providerProfiles.ts"))).toBe(
       true,
     );
+    expect(
+      existsSync(join(testDir, "apps", "api-server", "src", "provider-profile-check.ts")),
+    ).toBe(true);
+    expect(
+      existsSync(join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts")),
+    ).toBe(true);
+    expect(existsSync(join(testDir, "croco-saas-profile.manifest.json"))).toBe(true);
+    expect(existsSync(join(testDir, "croco-runtime-policy.manifest.json"))).toBe(true);
+    expect(existsSync(join(testDir, ".env.example"))).toBe(true);
+    expect(existsSync(join(testDir, "docs", "provider-profile.md"))).toBe(true);
+    expect(existsSync(join(testDir, "docs", "secrets-checklist.md"))).toBe(true);
+    const profileManifest = JSON.parse(
+      readFileSync(join(testDir, "croco-saas-profile.manifest.json"), "utf8"),
+    );
+    const runtimePolicyManifest = JSON.parse(
+      readFileSync(join(testDir, "croco-runtime-policy.manifest.json"), "utf8"),
+    );
+    const envExample = readFileSync(join(testDir, ".env.example"), "utf8");
+    const providerProfileDocs = readFileSync(join(testDir, "docs", "provider-profile.md"), "utf8");
+    const generatedProfileSource = readFileSync(
+      join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts"),
+      "utf8",
+    );
+
+    expect(profileManifest).toMatchObject({
+      schemaVersion: "croco.saas-provider-profile/v1",
+      profile: {
+        name: "saas-cloudflare",
+        runtimeTarget: "cloudflare-workers",
+      },
+      smoke: {
+        zeroCredential: "pnpm demo:smoke",
+        realProviderOptIn: "SAAS_PROVIDER_PROFILE=saas-cloudflare pnpm profile:smoke:real",
+      },
+    });
+    expect(runtimePolicyManifest).toMatchObject({
+      schemaVersion: "croco.runtime-policy/v1",
+      runtime: {
+        platform: "cloudflare-workers",
+        source: {
+          file: "croco-saas-profile.manifest.json",
+          symbol: "saas-cloudflare",
+        },
+      },
+      table: {
+        plans: [],
+      },
+    });
+    expect(profileManifest.packages).toEqual(
+      expect.arrayContaining([
+        "@croco/transports-cloudflare-workers",
+        "@croco/auth-clerk",
+        "@croco/billing-polar",
+        "@croco/metering-upstash",
+        "@croco/storage-r2",
+        "@croco/tasks-qstash",
+      ]),
+    );
+    for (const packageName of profileManifest.packages as string[]) {
+      expect(apiPackageJson.dependencies?.[packageName], packageName).toEqual(expect.any(String));
+    }
+    expect(apiPackageJson.dependencies).toMatchObject({
+      "@croco/preset-cloudflare": "^0.0.2",
+      "@croco/auth-clerk": "^0.0.2",
+      "@croco/billing-polar": "^0.0.2",
+      "@croco/metering-upstash": "^0.0.2",
+      "@croco/storage-r2": "^0.0.2",
+      "@croco/tasks-qstash": "^0.0.2",
+      "@croco/triggers-qstash": "^0.0.2",
+      "@clerk/backend": "^1.0.0",
+      "@polar-sh/sdk": "^0.32.2",
+      "@upstash/qstash": "^2.9.0",
+      "@upstash/redis": "^1.34.0",
+    });
+    expect(profileManifest.compatibility.requiredCapabilities).toEqual([
+      "runtime",
+      "auth",
+      "billing",
+      "metering",
+      "storage",
+      "tasks",
+      "telemetry",
+      "webhookVerification",
+    ]);
+    expect(envExample).toContain("SAAS_PROVIDER_PROFILE=saas-cloudflare");
+    expect(envExample).toContain("CLOUDFLARE_ACCOUNT_ID=<secret>");
+    expect(providerProfileDocs).toContain("Capability Matrix");
+    expect(providerProfileDocs).toContain("QStash");
+    expect(generatedProfileSource).toContain("saas-cloudflare");
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "demo", "saasSmokeContract.ts")),
     ).toBe(true);
@@ -681,6 +895,77 @@ describe("E2E: generate()", () => {
     assertNoExternalCrocoWorkspaceRanges(testDir);
     assertAllSourceBareImportsDeclared(testDir);
   });
+
+  it(
+    "generates a goal-first SaaS API app with manifest evidence",
+    { timeout: 120_000 },
+    async () => {
+      const options = normalizeNonInteractiveOptions(
+        parseCliOptions("my-saas-api", {
+          goal: "saas-api",
+          scope: "@test",
+          install: false,
+          git: false,
+          agentRules: false,
+        }),
+      );
+
+      await generate(testDir, options);
+
+      const rootPackageJson = readPackageJson(join(testDir, "package.json"));
+      const manifest = JSON.parse(readFileSync(join(testDir, "croco.app.json"), "utf8")) as {
+        schemaVersion?: unknown;
+        projectName?: unknown;
+        scope?: unknown;
+        goal?: unknown;
+        preset?: unknown;
+        runtimeTarget?: unknown;
+        protocol?: unknown;
+        providers?: unknown;
+        storage?: unknown;
+        auth?: unknown;
+        billing?: unknown;
+        telemetry?: unknown;
+        deploymentPreset?: unknown;
+        qualityGates?: unknown;
+      };
+
+      expect(rootPackageJson.scripts).toMatchObject({
+        typecheck: "turbo typecheck",
+        build: "turbo build",
+        test: "turbo test",
+        "contract:verify":
+          "pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
+        "demo:smoke":
+          "pnpm profile:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+      });
+      expect(manifest).toMatchObject({
+        schemaVersion: 1,
+        projectName: "my-saas-api",
+        scope: "@test",
+        goal: "saas-api",
+        preset: "saas",
+        runtimeTarget: "node",
+        protocol: "rest",
+        providers: [
+          "in-memory-tenant",
+          "in-memory-auth",
+          "in-memory-billing",
+          "in-memory-metering",
+          "in-memory-events",
+        ],
+        storage: ["in-memory-demo"],
+        auth: "tenant-demo",
+        billing: "demo",
+        telemetry: "opentelemetry-otlp",
+        deploymentPreset: "node-api",
+        qualityGates: ["install", "typecheck", "build", "test", "contract:verify", "demo:smoke"],
+      });
+      assertNoHandlebarsPlaceholders(testDir);
+      assertNoExternalCrocoWorkspaceRanges(testDir);
+      assertAllSourceBareImportsDeclared(testDir);
+    },
+  );
 
   it(
     "generates AI SaaS preset with tenant-metered AI smoke commands",

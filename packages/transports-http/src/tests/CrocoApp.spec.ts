@@ -27,6 +27,11 @@ import {
 import { serve } from "@hono/node-server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
+import {
+  getLambdaContext,
+  getLambdaEvent,
+  type LambdaExecutionContext,
+} from "../libs/CrocoLambdaAdapter";
 import { toLambdaHandler } from "../libs/adapters/LambdaAdapter";
 import { CrocoRouteRegistrar } from "../libs/CrocoRouteRegistrar";
 import { ErrorHandler } from "../libs/ErrorHandler";
@@ -35,7 +40,7 @@ import { bodyLimitMiddleware, mb } from "../libs/middleware/BodyLimitMiddleware"
 import { corsMiddleware } from "../libs/middleware/CorsMiddleware";
 import { rateLimitHttpMiddleware } from "../libs/middleware/RateLimitMiddleware";
 import { securityHeadersMiddleware } from "../libs/middleware/SecurityHeadersMiddleware";
-import type { LambdaContext, LambdaEvent } from "../libs/types";
+import type { LambdaContext, LambdaEvent, MiddlewareFunction } from "../libs/types";
 
 vi.mock("@hono/node-server", () => ({
   serve: vi.fn((_options: unknown, callback?: () => void) => {
@@ -166,6 +171,19 @@ describe("CrocoApp", () => {
       };
     }
 
+    @Get("/helper-metadata")
+    getHelperMetadata(@Raw() raw: unknown) {
+      const lambdaRaw = raw as LambdaExecutionContext;
+      const event = getLambdaEvent(lambdaRaw);
+      const context = getLambdaContext(lambdaRaw);
+
+      return {
+        stage: event?.requestContext?.stage ?? null,
+        cookies: event?.cookies ?? [],
+        awsRequestId: context?.awsRequestId ?? null,
+      };
+    }
+
     @Get("/runtime-context")
     getRuntimeContext() {
       const runtime = FrameworkContext.getRuntimeContext();
@@ -284,6 +302,15 @@ describe("CrocoApp", () => {
         policy: createSlidingWindowPolicy("test", 100, 60000),
       }),
     ];
+  }
+
+  function hideMiddlewareSource(middleware: MiddlewareFunction): MiddlewareFunction {
+    Object.defineProperty(middleware, "toString", {
+      configurable: true,
+      value: () => "async()=>{}",
+    });
+
+    return middleware;
   }
 
   async function createStaticFixture(files: Record<string, string>): Promise<string> {
@@ -488,6 +515,18 @@ describe("CrocoApp", () => {
     const app = createApp({
       controllers: [TestController],
       middlewares: createRequiredSecurityMiddlewares(),
+      securityValidation: "enforce",
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+
+    expect(response.status).toBe(200);
+  });
+
+  it("should bootstrap when packaged security middleware source is minified", async () => {
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: createRequiredSecurityMiddlewares().map(hideMiddlewareSource),
       securityValidation: "enforce",
     });
 
@@ -1071,6 +1110,49 @@ describe("CrocoApp", () => {
           scopes: ["read:users"],
         },
       },
+      awsRequestId: "req-123",
+    });
+  });
+
+  it("should expose lambda event and context through exported helpers", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        version: "2.0",
+        routeKey: "GET /lambda/helper-metadata",
+        rawPath: "/lambda/helper-metadata",
+        rawQueryString: "",
+        cookies: ["helper=event"],
+        headers: { "content-type": "application/json" },
+        requestContext: {
+          accountId: "123456789012",
+          apiId: "api-123",
+          domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+          domainPrefix: "example",
+          http: {
+            method: "GET",
+            path: "/lambda/helper-metadata",
+            protocol: "HTTP/1.1",
+            sourceIp: "127.0.0.1",
+            userAgent: "vitest",
+          },
+          requestId: "gateway-req-123",
+          routeKey: "GET /lambda/helper-metadata",
+          stage: "$default",
+          time: "17/Mar/2026:12:00:00 +0000",
+          timeEpoch: 1710676800000,
+        },
+        isBase64Encoded: false,
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "{}")).toEqual({
+      stage: "$default",
+      cookies: ["helper=event"],
       awsRequestId: "req-123",
     });
   });

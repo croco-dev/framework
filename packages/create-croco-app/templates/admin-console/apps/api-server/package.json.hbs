@@ -1,0 +1,39 @@
+{
+  "name": "{{scope}}/api-server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "dev:smoke": "tsx src/dev-smoke.ts",
+    "admin:smoke": "tsx src/dev-smoke.ts",
+    "build": "tsup src/index.ts src/lambda.ts --format cjs --clean",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/events-core": "workspace:*",
+    "@croco/events-inmemory": "workspace:*",
+    "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/protocols-core": "workspace:*",
+    "@croco/protocols-rest": "workspace:*",
+    "@croco/ratelimit-core": "workspace:*",
+    "@croco/repository-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
+    "@croco/telemetry-sdk-node": "workspace:*",
+    "@croco/transports-http": "workspace:*",
+    "reflect-metadata": "0.2.2",
+    "typedi": "^0.10.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "tsup": "^8.5.1",
+    "tsx": "^4.0.0",
+    "typescript": "^5.8.0",
+    "vitest": "^4.0.16"
+  }
+}

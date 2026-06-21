@@ -5,7 +5,7 @@ prev: false
 title: "MiddlewareFunction"
 ---
 
-> **MiddlewareFunction** = (`ctx`, `next`) => `Promise`\<`void`\> \| `void`
+> **MiddlewareFunction** = (`ctx`, `next`) => `Promise`\<`Response` \| `void`\> \| `Response` \| `void`
 
 ## Parameters
 
@@ -15,8 +15,8 @@ title: "MiddlewareFunction"
 
 ### next
 
-() => `Promise`\<`void`\>
+() => `Promise`\<`Response` \| `void`\>
 
 ## Returns
 
-`Promise`\<`void`\> \| `void`
+`Promise`\<`Response` \| `void`\> \| `Response` \| `void`

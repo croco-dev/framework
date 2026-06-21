@@ -6,6 +6,7 @@ import type { DatabaseClient } from "./libs/db-types";
 import { MigrationRunner } from "./libs/MigrationRunner";
 import { DatabaseUrlRequiredProblem } from "./libs/problems/DatabaseUrlRequiredProblem";
 import { UnsupportedDialectProblem } from "./libs/problems/UnsupportedDialectProblem";
+import { parseMigrationCount } from "./libs/validateMigrationCount";
 import { getPackageVersion } from "./package-version";
 
 const program = new Command();
@@ -67,11 +68,11 @@ export async function runDown(options: DownOptions): Promise<void> {
   let pool: Pool | undefined;
   let exitCode = 0;
   try {
+    const count = options.target ? undefined : parseMigrationCount(options.count);
     const { db, pool: dbPool } = await createDbClient(options.connection, options.dialect);
     pool = dbPool;
     const runner = new MigrationRunner(db as unknown as DatabaseClient, options.dir, options.table);
 
-    const count = options.target ? undefined : parseInt(options.count, 10);
     const reverted = await runner.down(options.target, count);
 
     if (reverted.length === 0) {

@@ -76,6 +76,12 @@ type ExtensionMatrixState = {
   readonly packages: readonly ExtensionRecord[];
 };
 
+type RuntimeProfileCatalog = {
+  readonly schemaVersion?: unknown;
+  readonly validationCommand?: unknown;
+  readonly profiles?: unknown;
+};
+
 type DocsBaseline = {
   readonly schemaVersion?: unknown;
   readonly allowedMissingApiDocs?: unknown;
@@ -113,6 +119,11 @@ const docsDirName = "docs";
 const catalogMetadataPath = join(docsDirName, "package-catalog.json");
 const docsBaselinePath = join(docsDirName, "package-docs-baseline.json");
 const docsReportPath = join(docsDirName, "package-docs-report.md");
+const presentationRuntimeProfilesPath = join(
+  "packages",
+  "presentation-preset",
+  "runtime-profiles.json",
+);
 const publicDocsRootPath = join("packages", "docs", "src", "content", "docs", "en");
 const architectureGuidePath = join(publicDocsRootPath, "guides", "architecture.mdx");
 const extensionMatrixDocsPath = join(
@@ -128,6 +139,8 @@ const extensionMatrixDocsPath = join(
 const readmePath = "README.md";
 const maturityOrder = ["production", "beta", "alpha", "deprecated"] as const;
 const runtimeOrder = ["node", "lambda", "cloudflare-workers", "browser"] as const;
+const artifactFormatOrder = ["esm", "cjs", "dual", "neutral"] as const;
+const artifactTypeOrder = ["code", "types", "config", "asset"] as const;
 const scriptRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
 type MaturityKey = (typeof maturityOrder)[number];
@@ -162,6 +175,7 @@ function run(options: Options): string[] {
   const baseline = loadDocsBaseline(options.rootDir, state.packages, violations);
   const coverage = getCoverageSet(state.packages);
   validateCoverageBaseline(coverage, baseline, violations);
+  validatePresentationPresetRuntimeEvidence(options.rootDir, state, violations);
 
   const generatedCatalog = formatMarkdown(readmePath, generateReadmeCatalog(state));
   const generatedExtensionMatrixDocs = formatMarkdown(
@@ -755,6 +769,373 @@ function validateCoverageBaseline(
   );
 }
 
+function validatePresentationPresetRuntimeEvidence(
+  rootDir: string,
+  state: CatalogState,
+  violations: string[],
+): void {
+  const presentationPreset = state.extensionMatrix.packages.find(
+    (pkg) => pkg.shortName === "presentation-preset",
+  );
+  if (!presentationPreset) {
+    return;
+  }
+
+  const profileCatalogPath = join(rootDir, presentationRuntimeProfilesPath);
+  if (!existsSync(profileCatalogPath)) {
+    violations.push(
+      `${presentationRuntimeProfilesPath}: must exist to prove @croco/presentation-preset runtime claims`,
+    );
+    return;
+  }
+
+  const profileCatalog = readJsonFile<RuntimeProfileCatalog>(profileCatalogPath);
+  validateRuntimeProfileCatalog(profileCatalog, presentationPreset.extension.runtimes, violations);
+}
+
+function validateRuntimeProfileCatalog(
+  profileCatalog: RuntimeProfileCatalog,
+  claimedRuntimes: readonly RuntimeKey[],
+  violations: string[],
+): void {
+  if (profileCatalog.schemaVersion !== 1) {
+    addRuntimeProfileViolation(
+      violations,
+      "Generated runtime profile catalog schemaVersion must be 1",
+    );
+  }
+  if (
+    typeof profileCatalog.validationCommand !== "string" ||
+    profileCatalog.validationCommand.length === 0
+  ) {
+    addRuntimeProfileViolation(
+      violations,
+      "Generated runtime profile catalog validationCommand is required",
+    );
+  }
+
+  const profiles = Array.isArray(profileCatalog.profiles) ? profileCatalog.profiles : [];
+  if (profiles.length === 0) {
+    addRuntimeProfileViolation(
+      violations,
+      "Generated runtime profile catalog must define at least one profile",
+    );
+  }
+
+  const profileNames = new Set<string>();
+  const profileRuntimes = new Set<string>();
+  for (const [index, profileValue] of profiles.entries()) {
+    if (!isRecord(profileValue)) {
+      addRuntimeProfileViolation(violations, `profiles[${index}] must be an object`);
+      continue;
+    }
+
+    validateRuntimeProfile(index, profileValue, profileNames, profileRuntimes, violations);
+  }
+
+  for (const runtime of claimedRuntimes) {
+    if (!profileRuntimes.has(runtime)) {
+      addRuntimeProfileViolation(
+        violations,
+        `Catalog runtime claim '${runtime}' has no generated runtime profile evidence`,
+      );
+    }
+  }
+}
+
+function validateRuntimeProfile(
+  index: number,
+  profile: Readonly<Record<string, unknown>>,
+  profileNames: Set<string>,
+  profileRuntimes: Set<string>,
+  violations: string[],
+): void {
+  const name = readRuntimeProfileString(profile, "name", index, violations);
+  const runtime = readRuntimeProfileString(profile, "runtime", index, violations);
+  readRuntimeProfileString(profile, "packageTestName", index, violations);
+  const smokeCase = readRuntimeProfileString(profile, "generatedAppSmokeCase", index, violations);
+  const smokeCommand = readRuntimeProfileString(
+    profile,
+    "generatedAppSmokeCommand",
+    index,
+    violations,
+  );
+
+  if (name) {
+    if (profileNames.has(name)) {
+      addRuntimeProfileViolation(violations, `Generated runtime profile '${name}' is duplicated`);
+    }
+    profileNames.add(name);
+  }
+  if (runtime) {
+    if (!runtimeOrder.includes(runtime as RuntimeKey)) {
+      addRuntimeProfileViolation(
+        violations,
+        `Generated runtime profile '${name}' has unsupported runtime '${runtime}'`,
+      );
+    } else {
+      profileRuntimes.add(runtime);
+    }
+  }
+  if (smokeCase && smokeCommand && !smokeCommand.includes(smokeCase)) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${name}' smoke command must include case '${smokeCase}'`,
+    );
+  }
+
+  const target = profile.target;
+  if (!isRecord(target)) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${name || index}' must include deploy target metadata`,
+    );
+    return;
+  }
+
+  validateRuntimeProfileTarget(name || String(index), runtime, target, violations);
+}
+
+function validateRuntimeProfileTarget(
+  profileName: string,
+  runtime: string,
+  target: Readonly<Record<string, unknown>>,
+  violations: string[],
+): void {
+  const targetName = readRequiredRuntimeProfileString(
+    target.target,
+    `Generated runtime profile '${profileName}' deploy target is required`,
+    violations,
+  );
+  if (targetName && runtime && targetName !== runtime) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${profileName}' target '${targetName}' does not match runtime '${runtime}'`,
+    );
+  }
+
+  if (target.requiredEnvVars !== undefined && !isStringArray(target.requiredEnvVars)) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${profileName}' requiredEnvVars must be a string array`,
+    );
+  }
+
+  if (target.runtime !== undefined && !isRecord(target.runtime)) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${profileName}' runtime must be an object when provided`,
+    );
+  }
+
+  if (isRecord(target.runtime)) {
+    const nodeVersion = target.runtime.nodeVersion;
+    const memory = target.runtime.memory;
+    const timeout = target.runtime.timeout;
+    if (
+      nodeVersion !== undefined &&
+      (typeof nodeVersion !== "string" || nodeVersion.length === 0)
+    ) {
+      addRuntimeProfileViolation(
+        violations,
+        `Generated runtime profile '${profileName}' runtime.nodeVersion must be non-empty when provided`,
+      );
+    }
+    if (memory !== undefined && (typeof memory !== "number" || memory <= 0)) {
+      addRuntimeProfileViolation(
+        violations,
+        `Generated runtime profile '${profileName}' runtime.memory must be greater than 0 when provided`,
+      );
+    }
+    if (timeout !== undefined && (typeof timeout !== "number" || timeout <= 0)) {
+      addRuntimeProfileViolation(
+        violations,
+        `Generated runtime profile '${profileName}' runtime.timeout must be greater than 0 when provided`,
+      );
+    }
+  }
+
+  if (!isRecord(target.output)) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${profileName}' deploy target output is required`,
+    );
+    return;
+  }
+
+  validateRuntimeProfileOutput(profileName, target.output, violations);
+}
+
+function validateRuntimeProfileOutput(
+  profileName: string,
+  output: Readonly<Record<string, unknown>>,
+  violations: string[],
+): void {
+  readRequiredRuntimeProfileString(
+    output.presetName,
+    `Generated runtime profile '${profileName}' output presetName is required`,
+    violations,
+  );
+  readRequiredRuntimeProfileString(
+    output.buildTime,
+    `Generated runtime profile '${profileName}' output buildTime is required`,
+    violations,
+  );
+
+  const format = readRequiredRuntimeProfileString(
+    output.format,
+    `Generated runtime profile '${profileName}' output format is required`,
+    violations,
+  );
+  if (format && !artifactFormatOrder.includes(format as (typeof artifactFormatOrder)[number])) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${profileName}' output format '${format}' is not supported`,
+    );
+  }
+
+  const artifactPaths = new Set<string>();
+  const artifacts = Array.isArray(output.artifacts) ? output.artifacts : [];
+  if (artifacts.length === 0) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${profileName}' output must define artifacts`,
+    );
+  }
+  for (const [index, artifact] of artifacts.entries()) {
+    if (!isRecord(artifact)) {
+      addRuntimeProfileViolation(
+        violations,
+        `Generated runtime profile '${profileName}' artifact[${index}] must be an object`,
+      );
+      continue;
+    }
+    validateRuntimeProfileArtifact(profileName, index, artifact, artifactPaths, violations);
+  }
+
+  const entries = Array.isArray(output.entries) ? output.entries : [];
+  if (entries.length === 0) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${profileName}' output must define entries`,
+    );
+  }
+  for (const [index, entry] of entries.entries()) {
+    if (!isRecord(entry)) {
+      addRuntimeProfileViolation(
+        violations,
+        `Generated runtime profile '${profileName}' entry[${index}] must be an object`,
+      );
+      continue;
+    }
+    validateRuntimeProfileEntry(profileName, index, entry, artifactPaths, violations);
+  }
+}
+
+function validateRuntimeProfileArtifact(
+  profileName: string,
+  index: number,
+  artifact: Readonly<Record<string, unknown>>,
+  artifactPaths: Set<string>,
+  violations: string[],
+): void {
+  const path = readRequiredRuntimeProfileString(
+    artifact.path,
+    `Generated runtime profile '${profileName}' artifact[${index}].path is required`,
+    violations,
+  );
+  const format = readRequiredRuntimeProfileString(
+    artifact.format,
+    `Generated runtime profile '${profileName}' artifact[${index}].format is required`,
+    violations,
+  );
+  const type = readRequiredRuntimeProfileString(
+    artifact.type,
+    `Generated runtime profile '${profileName}' artifact[${index}].type is required`,
+    violations,
+  );
+
+  if (path) {
+    artifactPaths.add(path);
+  }
+  if (format && !artifactFormatOrder.includes(format as (typeof artifactFormatOrder)[number])) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${profileName}' artifact '${path}' has unsupported format '${format}'`,
+    );
+  }
+  if (type && !artifactTypeOrder.includes(type as (typeof artifactTypeOrder)[number])) {
+    addRuntimeProfileViolation(
+      violations,
+      `Generated runtime profile '${profileName}' artifact '${path}' has unsupported type '${type}'`,
+    );
+  }
+}
+
+function validateRuntimeProfileEntry(
+  profileName: string,
+  index: number,
+  entry: Readonly<Record<string, unknown>>,
+  artifactPaths: ReadonlySet<string>,
+  violations: string[],
+): void {
+  readRequiredRuntimeProfileString(
+    entry.exportName,
+    `Generated runtime profile '${profileName}' entry[${index}].exportName is required`,
+    violations,
+  );
+  const main = readRequiredRuntimeProfileString(
+    entry.main,
+    `Generated runtime profile '${profileName}' entry[${index}].main is required`,
+    violations,
+  );
+  const types = readRequiredRuntimeProfileString(
+    entry.types,
+    `Generated runtime profile '${profileName}' entry[${index}].types is required`,
+    violations,
+  );
+  const cjs = typeof entry.cjs === "string" ? entry.cjs : "";
+
+  for (const referencedPath of [main, cjs, types].filter(Boolean)) {
+    if (!artifactPaths.has(referencedPath)) {
+      addRuntimeProfileViolation(
+        violations,
+        `Generated runtime profile '${profileName}' entry references '${referencedPath}' but no matching artifact exists`,
+      );
+    }
+  }
+}
+
+function readRuntimeProfileString(
+  profile: Readonly<Record<string, unknown>>,
+  key: string,
+  index: number,
+  violations: string[],
+): string {
+  return readRequiredRuntimeProfileString(
+    profile[key],
+    `Generated runtime profile profiles[${index}].${key} is required`,
+    violations,
+  );
+}
+
+function readRequiredRuntimeProfileString(
+  value: unknown,
+  message: string,
+  violations: string[],
+): string {
+  if (typeof value !== "string" || value.length === 0) {
+    addRuntimeProfileViolation(violations, message);
+    return "";
+  }
+
+  return value;
+}
+
+function addRuntimeProfileViolation(violations: string[], message: string): void {
+  violations.push(`${presentationRuntimeProfilesPath}: ${message}`);
+}
+
 function validateProductionApiDocsBaseline(
   missingApiDocs: readonly PackageRecord[],
   baseline: Baseline,
@@ -1318,4 +1699,8 @@ function readRequiredFile(filePath: string): string {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

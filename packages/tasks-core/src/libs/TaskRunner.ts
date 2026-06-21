@@ -16,6 +16,21 @@ const noopLogger: ILogger = {
   child: () => noopLogger,
 };
 
+function resolveExecutionIdempotencyKey(
+  taskIdempotencyKey?: string,
+  executionIdempotencyKey?: string,
+): string | undefined {
+  if (executionIdempotencyKey === undefined) {
+    return taskIdempotencyKey;
+  }
+
+  if (taskIdempotencyKey === undefined) {
+    return executionIdempotencyKey;
+  }
+
+  return `${executionIdempotencyKey}:task:${taskIdempotencyKey}`;
+}
+
 export class TaskRunner {
   constructor(
     private executionManager: ExecutionManager,
@@ -39,10 +54,17 @@ export class TaskRunner {
       payload,
       maxAttempts: taskOptions.maxAttempts,
       timeout: taskOptions.timeout,
-      idempotencyKey: taskOptions.idempotencyKey,
+      idempotencyKey: resolveExecutionIdempotencyKey(
+        taskOptions.idempotencyKey,
+        options.idempotencyKey,
+      ),
       ...(options.parentId !== undefined ? { parentId: options.parentId } : {}),
       ...(options.metadata !== undefined ? { metadata: options.metadata } : {}),
     });
+
+    if (execution.status === "completed") {
+      return execution.result;
+    }
 
     await this.executionManager.start(execution.id);
 

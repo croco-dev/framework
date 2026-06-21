@@ -13,7 +13,7 @@ title: "ResponseSchema"
 
 #### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `object`
+`TContract` *extends* [`RouteContractWithResponse`](/api/protocols-rest/src/type-aliases/routecontractwithresponse/)
 
 ### Parameters
 

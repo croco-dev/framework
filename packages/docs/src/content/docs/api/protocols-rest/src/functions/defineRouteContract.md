@@ -11,7 +11,7 @@ title: "defineRouteContract"
 
 ### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)\<[`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/), `string`, `AnyZodObject` \| `undefined`, `AnyZodObject` \| `undefined`, `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `undefined`, `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `undefined`, readonly [`ProblemConstructor`](/api/protocols-rest/src/type-aliases/problemconstructor/)\<[`Problem`](/api/problems-core/src/classes/problem/)\>[] \| `undefined`\>
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)\<[`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/), `string`, `AnyZodObject` \| `undefined`, `AnyZodObject` \| `undefined`, `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `undefined`, `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `undefined`, readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined`\>
 
 ## Parameters
 

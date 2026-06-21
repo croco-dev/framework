@@ -1,0 +1,785 @@
+import {
+  DefaultEventSerializer,
+  type DomainEvent,
+  type EventBus,
+  type EventSerializer,
+  type EventTraceContext,
+  type SerializedEvent,
+} from "@croco/events-core";
+import { getActiveTraceInfo, recordError, recordEvent, withSpan } from "@croco/telemetry-api";
+import type { TxManager } from "@croco/tx-core";
+import {
+  OutboxPublishExhaustedProblem,
+  OutboxTransactionRequiredProblem,
+} from "./problems/EventsTxProblems";
+
+export type OutboxMessageStatus =
+  | "pending"
+  | "publishing"
+  | "published"
+  | "retrying"
+  | "poisoned"
+  | "dead_lettered";
+
+export type InboxMessageStatus = "processing" | "processed" | "failed";
+
+export type TransactionalEventDiagnostic = {
+  code: string;
+  message: string;
+  at: Date;
+  details?: Record<string, unknown>;
+};
+
+export type TransactionalEventError = {
+  name: string;
+  message: string;
+  stack?: string;
+  code?: string;
+};
+
+export type TransactionalOutboxMessage = {
+  id: string;
+  eventId: string;
+  eventType: string;
+  aggregateId?: string;
+  idempotencyKey: string;
+  payload: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  traceContext?: EventTraceContext;
+  attempts: number;
+  maxAttempts: number;
+  status: OutboxMessageStatus;
+  visibleAt: Date;
+  occurredAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  lockedUntil?: Date;
+  publishedAt?: Date;
+  lastError?: TransactionalEventError;
+  deadLetteredAt?: Date;
+  deadLetterReason?: string;
+  diagnostics: TransactionalEventDiagnostic[];
+};
+
+export type TransactionalInboxRecord = {
+  consumerId: string;
+  messageId: string;
+  inboxKey: string;
+  eventType: string;
+  status: InboxMessageStatus;
+  attempts: number;
+  createdAt: Date;
+  updatedAt: Date;
+  processedAt?: Date;
+  failedAt?: Date;
+  lastError?: TransactionalEventError;
+  failureReason?: string;
+  metadata: Record<string, unknown>;
+  diagnostics: TransactionalEventDiagnostic[];
+};
+
+export type AppendOutboxMessageInput = {
+  id: string;
+  eventId: string;
+  eventType: string;
+  aggregateId?: string;
+  idempotencyKey: string;
+  payload: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  traceContext?: EventTraceContext;
+  maxAttempts: number;
+  visibleAt: Date;
+  occurredAt: Date;
+  diagnostics?: TransactionalEventDiagnostic[];
+};
+
+export type OutboxAppendOptions = {
+  id?: string;
+  aggregateId?: string;
+  idempotencyKey?: string;
+  maxAttempts?: number;
+  visibleAt?: Date;
+  metadata?: Record<string, unknown>;
+};
+
+export type OutboxClaimOptions = {
+  limit: number;
+  now: Date;
+  visibilityTimeoutMs: number;
+};
+
+export type OutboxCompletionInput = {
+  id: string;
+  expectedAttempts: number;
+  now: Date;
+};
+
+export type OutboxFailureInput = OutboxCompletionInput & {
+  error: TransactionalEventError;
+  nextVisibleAt: Date;
+  diagnostic: TransactionalEventDiagnostic;
+};
+
+export type OutboxDeadLetterInput = OutboxCompletionInput & {
+  reason: string;
+  diagnostic: TransactionalEventDiagnostic;
+};
+
+export type InboxStartInput = {
+  consumerId: string;
+  messageId: string;
+  inboxKey: string;
+  eventType: string;
+  now: Date;
+  metadata?: Record<string, unknown>;
+};
+
+export type InboxStartResult =
+  | {
+      status: "started";
+      record: TransactionalInboxRecord;
+    }
+  | {
+      status: "duplicate";
+      record: TransactionalInboxRecord;
+    };
+
+export type InboxCompletionInput = {
+  consumerId: string;
+  inboxKey: string;
+  now: Date;
+  diagnostic?: TransactionalEventDiagnostic;
+};
+
+export type InboxFailureInput = InboxCompletionInput & {
+  error: TransactionalEventError;
+  reason: string;
+};
+
+export type ListOutboxMessagesOptions = {
+  status?: OutboxMessageStatus;
+  limit?: number;
+};
+
+export type ListInboxRecordsOptions = {
+  consumerId?: string;
+  status?: InboxMessageStatus;
+  limit?: number;
+};
+
+export type TransactionalEventStoreContext<TClient = unknown> = {
+  client?: TClient;
+};
+
+export interface TransactionalEventStore<TClient = unknown> {
+  appendOutbox(
+    input: AppendOutboxMessageInput,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalOutboxMessage>;
+
+  findOutboxById(
+    id: string,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalOutboxMessage | null>;
+
+  findOutboxByIdempotencyKey(
+    idempotencyKey: string,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalOutboxMessage | null>;
+
+  claimOutboxBatch(
+    options: OutboxClaimOptions,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalOutboxMessage[]>;
+
+  markOutboxPublished(
+    input: OutboxCompletionInput,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalOutboxMessage | null>;
+
+  markOutboxFailed(
+    input: OutboxFailureInput,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalOutboxMessage | null>;
+
+  markOutboxDeadLettered(
+    input: OutboxDeadLetterInput,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalOutboxMessage | null>;
+
+  listOutboxMessages(
+    options?: ListOutboxMessagesOptions,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalOutboxMessage[]>;
+
+  startInboxProcessing(
+    input: InboxStartInput,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<InboxStartResult>;
+
+  markInboxProcessed(
+    input: InboxCompletionInput,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalInboxRecord>;
+
+  markInboxFailed(
+    input: InboxFailureInput,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalInboxRecord>;
+
+  findInboxRecord(
+    consumerId: string,
+    inboxKey: string,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalInboxRecord | null>;
+
+  listInboxRecords(
+    options?: ListInboxRecordsOptions,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<TransactionalInboxRecord[]>;
+}
+
+export type TransactionalOutboxConfig<TClient> = {
+  store: TransactionalEventStore<TClient>;
+  txManager: Pick<TxManager<TClient>, "getClient" | "isInTransaction">;
+  serializer?: EventSerializer;
+  maxAttempts?: number;
+  now?: () => Date;
+  idFactory?: () => string;
+};
+
+export type OutboxRelayRetryPolicy = {
+  baseDelayMs: number;
+  multiplier: number;
+  maxDelayMs: number;
+};
+
+export type OutboxRelayConfig<TClient> = {
+  store: TransactionalEventStore<TClient>;
+  publish: (message: TransactionalOutboxMessage) => Promise<void>;
+  deadLetter?: (message: TransactionalOutboxMessage) => Promise<void>;
+  txManager?: Pick<TxManager<TClient>, "getClient">;
+  batchSize?: number;
+  visibilityTimeoutMs?: number;
+  retry?: Partial<OutboxRelayRetryPolicy>;
+  now?: () => Date;
+};
+
+export type OutboxRelayMessageResult =
+  | {
+      status: "published";
+      message: TransactionalOutboxMessage;
+    }
+  | {
+      status: "scheduled_retry";
+      message: TransactionalOutboxMessage;
+      error: TransactionalEventError;
+    }
+  | {
+      status: "poisoned" | "dead_lettered";
+      message: TransactionalOutboxMessage;
+      error: TransactionalEventError;
+      problem: OutboxPublishExhaustedProblem;
+    }
+  | {
+      status: "stale_claim";
+      message: TransactionalOutboxMessage;
+      diagnostic: TransactionalEventDiagnostic;
+    };
+
+export type OutboxRelayBatchResult = {
+  claimed: number;
+  published: number;
+  scheduledRetry: number;
+  poisoned: number;
+  deadLettered: number;
+  staleClaimed: number;
+  results: OutboxRelayMessageResult[];
+};
+
+export type TransactionalInboxConsumerConfig<TClient> = {
+  store: TransactionalEventStore<TClient>;
+  consumerId: string;
+  txManager?: Pick<TxManager<TClient>, "getClient">;
+  now?: () => Date;
+  throwOnError?: boolean;
+};
+
+export type InboxConsumerResult =
+  | {
+      status: "processed";
+      record: TransactionalInboxRecord;
+    }
+  | {
+      status: "duplicate";
+      record: TransactionalInboxRecord;
+    }
+  | {
+      status: "failed";
+      record: TransactionalInboxRecord;
+      error: TransactionalEventError;
+    };
+
+const DEFAULT_MAX_ATTEMPTS = 3;
+const DEFAULT_BATCH_SIZE = 25;
+const DEFAULT_VISIBILITY_TIMEOUT_MS = 30_000;
+const DEFAULT_RETRY_POLICY: OutboxRelayRetryPolicy = {
+  baseDelayMs: 1_000,
+  multiplier: 2,
+  maxDelayMs: 30_000,
+};
+
+function defaultNow(): Date {
+  return new Date();
+}
+
+function defaultIdFactory(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function normalizeTransactionalEventError(error: unknown): TransactionalEventError {
+  if (error instanceof Error) {
+    const code = "code" in error && typeof error.code === "string" ? error.code : undefined;
+    return {
+      name: error.name,
+      message: error.message,
+      ...(error.stack ? { stack: error.stack } : {}),
+      ...(code ? { code } : {}),
+    };
+  }
+
+  return {
+    name: "Error",
+    message: String(error),
+  };
+}
+
+export function createTransactionalEventDiagnostic(
+  code: string,
+  message: string,
+  at: Date,
+  details?: Record<string, unknown>,
+): TransactionalEventDiagnostic {
+  return {
+    code,
+    message,
+    at,
+    ...(details ? { details } : {}),
+  };
+}
+
+function buildSerializedEvent(message: TransactionalOutboxMessage): SerializedEvent {
+  return {
+    eventType: message.eventType,
+    eventId: message.eventId,
+    occurredAt: message.occurredAt.toISOString(),
+    aggregateId: message.aggregateId,
+    payload: message.payload,
+  };
+}
+
+function calculateRetryDelayMs(attempts: number, retry: OutboxRelayRetryPolicy): number {
+  const exponent = Math.max(attempts - 1, 0);
+  const delay = retry.baseDelayMs * retry.multiplier ** exponent;
+  return Math.min(delay, retry.maxDelayMs);
+}
+
+function addMs(date: Date, ms: number): Date {
+  return new Date(date.getTime() + ms);
+}
+
+/**
+ * Appends serialized domain events to a transactional outbox using the active `tx-core` client.
+ */
+export class TransactionalOutbox<TClient = unknown> {
+  private readonly serializer: EventSerializer;
+  private readonly maxAttempts: number;
+  private readonly now: () => Date;
+  private readonly idFactory: () => string;
+
+  constructor(private readonly config: TransactionalOutboxConfig<TClient>) {
+    this.serializer = config.serializer ?? new DefaultEventSerializer();
+    this.maxAttempts = config.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+    this.now = config.now ?? defaultNow;
+    this.idFactory = config.idFactory ?? defaultIdFactory;
+  }
+
+  async append(
+    event: DomainEvent,
+    options: OutboxAppendOptions = {},
+  ): Promise<TransactionalOutboxMessage> {
+    if (!this.config.txManager.isInTransaction()) {
+      throw new OutboxTransactionRequiredProblem();
+    }
+
+    const client = this.config.txManager.getClient();
+    if (!client) {
+      throw new OutboxTransactionRequiredProblem();
+    }
+
+    const serialized = this.serializer.serialize(event);
+    const now = this.now();
+    const traceContext = event.metadata.traceContext ?? getActiveTraceInfo();
+
+    return withSpan(
+      async () => {
+        const message = await this.config.store.appendOutbox(
+          {
+            id: options.id ?? this.idFactory(),
+            eventId: serialized.eventId,
+            eventType: serialized.eventType,
+            aggregateId: options.aggregateId ?? serialized.aggregateId,
+            idempotencyKey: options.idempotencyKey ?? serialized.eventId,
+            payload: serialized.payload,
+            metadata: {
+              ...event.metadata,
+              ...options.metadata,
+            },
+            traceContext,
+            maxAttempts: options.maxAttempts ?? this.maxAttempts,
+            visibleAt: options.visibleAt ?? now,
+            occurredAt: new Date(serialized.occurredAt),
+            diagnostics: [
+              createTransactionalEventDiagnostic(
+                "events-tx/outbox-appended",
+                "Outbox message appended.",
+                now,
+                {
+                  eventType: serialized.eventType,
+                },
+              ),
+            ],
+          },
+          { client },
+        );
+
+        recordEvent("events-tx.outbox.appended", {
+          "events-tx.message_id": message.id,
+          "events-tx.event_type": message.eventType,
+        });
+
+        return message;
+      },
+      {
+        name: "events-tx.outbox.append",
+        attributes: {
+          "events-tx.event_type": serialized.eventType,
+        },
+      },
+    );
+  }
+}
+
+/**
+ * Claims visible outbox messages and publishes them in deterministic batches.
+ */
+export class TransactionalOutboxRelay<TClient = unknown> {
+  private readonly batchSize: number;
+  private readonly visibilityTimeoutMs: number;
+  private readonly retry: OutboxRelayRetryPolicy;
+  private readonly now: () => Date;
+
+  constructor(private readonly config: OutboxRelayConfig<TClient>) {
+    this.batchSize = config.batchSize ?? DEFAULT_BATCH_SIZE;
+    this.visibilityTimeoutMs = config.visibilityTimeoutMs ?? DEFAULT_VISIBILITY_TIMEOUT_MS;
+    this.retry = {
+      ...DEFAULT_RETRY_POLICY,
+      ...config.retry,
+    };
+    this.now = config.now ?? defaultNow;
+  }
+
+  async publishBatch(options: Partial<OutboxClaimOptions> = {}): Promise<OutboxRelayBatchResult> {
+    const now = options.now ?? this.now();
+    const claimed = await this.config.store.claimOutboxBatch(
+      {
+        limit: options.limit ?? this.batchSize,
+        now,
+        visibilityTimeoutMs: options.visibilityTimeoutMs ?? this.visibilityTimeoutMs,
+      },
+      this.context(),
+    );
+    const results: OutboxRelayMessageResult[] = [];
+
+    for (const message of claimed) {
+      results.push(await this.publishOne(message));
+    }
+
+    return {
+      claimed: claimed.length,
+      published: results.filter((result) => result.status === "published").length,
+      scheduledRetry: results.filter((result) => result.status === "scheduled_retry").length,
+      poisoned: results.filter((result) => result.status === "poisoned").length,
+      deadLettered: results.filter((result) => result.status === "dead_lettered").length,
+      staleClaimed: results.filter((result) => result.status === "stale_claim").length,
+      results,
+    };
+  }
+
+  private async publishOne(message: TransactionalOutboxMessage): Promise<OutboxRelayMessageResult> {
+    return withSpan(
+      async () => {
+        try {
+          await this.config.publish(message);
+          const published = await this.config.store.markOutboxPublished(
+            {
+              id: message.id,
+              expectedAttempts: message.attempts,
+              now: this.now(),
+            },
+            this.context(),
+          );
+          if (!published) {
+            return this.createStaleClaimResult(message, "events-tx/outbox-publish-stale-claim");
+          }
+          recordEvent("events-tx.outbox.published", {
+            "events-tx.message_id": message.id,
+            "events-tx.event_type": message.eventType,
+          });
+          return { status: "published", message: published };
+        } catch (error) {
+          const normalized = normalizeTransactionalEventError(error);
+          recordError(error);
+          return this.handlePublishFailure(message, normalized);
+        }
+      },
+      {
+        name: "events-tx.outbox.publish",
+        attributes: {
+          "events-tx.message_id": message.id,
+          "events-tx.event_type": message.eventType,
+        },
+      },
+    );
+  }
+
+  private async handlePublishFailure(
+    message: TransactionalOutboxMessage,
+    error: TransactionalEventError,
+  ): Promise<OutboxRelayMessageResult> {
+    const now = this.now();
+    const failed = await this.config.store.markOutboxFailed(
+      {
+        id: message.id,
+        expectedAttempts: message.attempts,
+        error,
+        now,
+        nextVisibleAt: addMs(now, calculateRetryDelayMs(message.attempts, this.retry)),
+        diagnostic: createTransactionalEventDiagnostic(
+          "events-tx/outbox-publish-failed",
+          error.message,
+          now,
+          {
+            eventType: message.eventType,
+            attempts: message.attempts,
+          },
+        ),
+      },
+      this.context(),
+    );
+
+    if (!failed) {
+      return this.createStaleClaimResult(message, "events-tx/outbox-fail-stale-claim");
+    }
+
+    if (failed.status !== "poisoned") {
+      return {
+        status: "scheduled_retry",
+        message: failed,
+        error,
+      };
+    }
+
+    const problem = new OutboxPublishExhaustedProblem(
+      failed.id,
+      failed.attempts,
+      new Error(error.message),
+    );
+
+    if (!this.config.deadLetter) {
+      return {
+        status: "poisoned",
+        message: failed,
+        error,
+        problem,
+      };
+    }
+
+    await this.config.deadLetter(failed);
+    const deadLettered = await this.config.store.markOutboxDeadLettered(
+      {
+        id: failed.id,
+        expectedAttempts: failed.attempts,
+        now: this.now(),
+        reason: problem.detail ?? problem.message,
+        diagnostic: createTransactionalEventDiagnostic(
+          "events-tx/outbox-dead-lettered",
+          problem.detail ?? problem.message,
+          this.now(),
+          {
+            eventType: failed.eventType,
+            attempts: failed.attempts,
+          },
+        ),
+      },
+      this.context(),
+    );
+
+    if (!deadLettered) {
+      return this.createStaleClaimResult(failed, "events-tx/outbox-dead-letter-stale-claim");
+    }
+
+    return {
+      status: "dead_lettered",
+      message: deadLettered,
+      error,
+      problem,
+    };
+  }
+
+  private createStaleClaimResult(
+    message: TransactionalOutboxMessage,
+    code: string,
+  ): OutboxRelayMessageResult {
+    const diagnostic = createTransactionalEventDiagnostic(
+      code,
+      "Outbox message claim was already completed or superseded.",
+      this.now(),
+      {
+        eventType: message.eventType,
+        attempts: message.attempts,
+      },
+    );
+    recordEvent("events-tx.outbox.stale_claim", {
+      "events-tx.message_id": message.id,
+      "events-tx.event_type": message.eventType,
+      "events-tx.attempts": message.attempts,
+    });
+    return {
+      status: "stale_claim",
+      message,
+      diagnostic,
+    };
+  }
+
+  private context(): TransactionalEventStoreContext<TClient> | undefined {
+    const client = this.config.txManager?.getClient();
+    return client ? { client } : undefined;
+  }
+}
+
+/**
+ * Provides inbox idempotency for at-least-once event consumers.
+ */
+export class TransactionalInboxConsumer<TClient = unknown> {
+  private readonly now: () => Date;
+  private readonly throwOnError: boolean;
+
+  constructor(private readonly config: TransactionalInboxConsumerConfig<TClient>) {
+    this.now = config.now ?? defaultNow;
+    this.throwOnError = config.throwOnError ?? true;
+  }
+
+  async handle(
+    message: TransactionalOutboxMessage,
+    handler: (message: TransactionalOutboxMessage) => Promise<void>,
+  ): Promise<InboxConsumerResult> {
+    const now = this.now();
+    const inboxKey = message.idempotencyKey || message.eventId || message.id;
+    const start = await this.config.store.startInboxProcessing(
+      {
+        consumerId: this.config.consumerId,
+        messageId: message.id,
+        inboxKey,
+        eventType: message.eventType,
+        now,
+        metadata: {
+          aggregateId: message.aggregateId,
+        },
+      },
+      this.context(),
+    );
+
+    if (start.status === "duplicate") {
+      return {
+        status: "duplicate",
+        record: start.record,
+      };
+    }
+
+    try {
+      await handler(message);
+      const processed = await this.config.store.markInboxProcessed(
+        {
+          consumerId: this.config.consumerId,
+          inboxKey,
+          now: this.now(),
+          diagnostic: createTransactionalEventDiagnostic(
+            "events-tx/inbox-processed",
+            "Inbox message processed.",
+            this.now(),
+            {
+              eventType: message.eventType,
+            },
+          ),
+        },
+        this.context(),
+      );
+
+      return {
+        status: "processed",
+        record: processed,
+      };
+    } catch (error) {
+      const normalized = normalizeTransactionalEventError(error);
+      const failed = await this.config.store.markInboxFailed(
+        {
+          consumerId: this.config.consumerId,
+          inboxKey,
+          now: this.now(),
+          error: normalized,
+          reason: normalized.message,
+          diagnostic: createTransactionalEventDiagnostic(
+            "events-tx/inbox-failed",
+            normalized.message,
+            this.now(),
+            {
+              eventType: message.eventType,
+            },
+          ),
+        },
+        this.context(),
+      );
+
+      if (this.throwOnError) {
+        throw error;
+      }
+
+      return {
+        status: "failed",
+        record: failed,
+        error: normalized,
+      };
+    }
+  }
+
+  private context(): TransactionalEventStoreContext<TClient> | undefined {
+    const client = this.config.txManager?.getClient();
+    return client ? { client } : undefined;
+  }
+}
+
+export function createEventBusOutboxPublisher(
+  eventBus: EventBus,
+  serializer: EventSerializer = new DefaultEventSerializer(),
+): (message: TransactionalOutboxMessage) => Promise<void> {
+  return async (message) => {
+    const event = serializer.deserialize(buildSerializedEvent(message));
+    event.metadata = {
+      ...event.metadata,
+      ...message.metadata,
+      ...(message.traceContext ? { traceContext: message.traceContext } : {}),
+    };
+    await eventBus.publish(event);
+  };
+}

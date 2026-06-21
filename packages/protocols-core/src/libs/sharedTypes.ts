@@ -43,6 +43,14 @@ export type RouteContractSourceLocation = {
   readonly column?: number;
 };
 
+export type RouteContractProblemMetadata = {
+  readonly code: string;
+  readonly category: ProblemCategory;
+  readonly status?: number;
+  readonly description?: string;
+  readonly type?: string;
+};
+
 export type RouteContractMetadata = {
   readonly id?: string;
   readonly method: string;
@@ -53,14 +61,11 @@ export type RouteContractMetadata = {
   readonly query?: z.AnyZodObject;
   readonly body?: z.ZodType;
   readonly response?: z.ZodType;
+  readonly problems?: readonly RouteContractProblemMetadata[];
 };
 
-export type ProblemResponseMetadata = {
-  readonly code: string;
-  readonly category: ProblemCategory;
-  readonly status?: number;
-  readonly description?: string;
-  readonly type?: string;
+export type ProblemResponseMetadata = RouteContractProblemMetadata & {
+  readonly routeContractProblems?: readonly RouteContractProblemMetadata[];
 };
 
 export interface ParamMetadata {

@@ -2,8 +2,20 @@
   "exclude": ["node_modules"],
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "module": "esnext",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "outDir": "./dist",
+    "paths": {
+      "@croco/diagnostics-core": ["../diagnostics-core/src/index.ts"],
+      "@croco/events-core": ["../events-core/src/index.ts"],
+      "@croco/framework-config": ["../framework-config/src/index.ts"],
+      "@croco/framework-context": ["../framework-context/src/index.ts"],
+      "@croco/framework-logger": ["../framework-logger/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/telemetry-api": ["../telemetry-api/src/index.ts"],
+      "@croco/tx-core": ["../tx-core/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts"]
 }

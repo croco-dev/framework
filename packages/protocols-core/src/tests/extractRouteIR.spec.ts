@@ -102,8 +102,8 @@ describe("extractRouteIR", () => {
     expect(routes).toHaveLength(1);
     expect(routes[0]?.inputSchemas.body).toBeNull();
     expect(routes[0]?.inputSchemas.path).toBeTruthy();
-    expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape).toHaveProperty("id");
-    expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape.id).toBeInstanceOf(z.ZodString);
+    expect((routes[0]?.inputSchemas.path as z.AnyZodObject).shape).toHaveProperty("id");
+    expect((routes[0]?.inputSchemas.path as z.AnyZodObject).shape.id).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchemas.query).toBeNull();
     expect(routes[0]?.inputSchemas.headers).toBeNull();
     expect(routes[0]?.params).toEqual([{ kind: "path", name: "id", schema: null }]);
@@ -144,9 +144,9 @@ describe("extractRouteIR", () => {
     expect(routes).toHaveLength(1);
     expect(routes[0]?.inputSchemas.body).toBe(updateItemSchema);
     expect(routes[0]?.inputSchemas.path).toBeTruthy();
-    expect((routes[0]?.inputSchemas.path as z.ZodObject<any>).shape.id).toBeInstanceOf(z.ZodString);
+    expect((routes[0]?.inputSchemas.path as z.AnyZodObject).shape.id).toBeInstanceOf(z.ZodString);
     expect(routes[0]?.inputSchemas.query).toBeTruthy();
-    expect((routes[0]?.inputSchemas.query as z.ZodObject<any>).shape.filter).toBeInstanceOf(
+    expect((routes[0]?.inputSchemas.query as z.AnyZodObject).shape.filter).toBeInstanceOf(
       z.ZodString,
     );
     expect(routes[0]?.inputSchema).toBe(updateItemSchema);
@@ -166,9 +166,9 @@ describe("extractRouteIR", () => {
     expect(routes[0]?.inputSchemas.path).toBeNull();
     expect(routes[0]?.inputSchemas.query).toBeNull();
     expect(routes[0]?.inputSchemas.headers).toBeTruthy();
-    expect(
-      (routes[0]?.inputSchemas.headers as z.ZodObject<any>).shape["x-tenant-id"],
-    ).toBeInstanceOf(z.ZodString);
+    expect((routes[0]?.inputSchemas.headers as z.AnyZodObject).shape["x-tenant-id"]).toBeInstanceOf(
+      z.ZodString,
+    );
     expect(routes[0]?.params).toEqual([{ kind: "header", name: "x-tenant-id", schema: null }]);
   });
 
@@ -232,7 +232,7 @@ describe("extractRouteIR", () => {
     });
     expect(routes[0]?.inputSchemas.path).toBe(paramsSchema);
     expect(routes[0]?.inputSchemas.query).toBe(querySchema);
-    expect((routes[0]?.inputSchemas.headers as z.ZodObject<any>).shape["x-tenant-id"]).toBe(
+    expect((routes[0]?.inputSchemas.headers as z.AnyZodObject).shape["x-tenant-id"]).toBe(
       tenantIdSchema,
     );
     expect(routes[0]?.outputSchema).toBe(userSchema);
@@ -240,6 +240,37 @@ describe("extractRouteIR", () => {
       { kind: "path", name: "id", schema: userIdSchema },
       { kind: "query", name: "includePosts", schema: includePostsSchema },
       { kind: "header", name: "x-tenant-id", schema: tenantIdSchema },
+    ]);
+  });
+
+  it("should extract route contract Problem responses from contract metadata", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    attachRouteContract(UsersController, "getUser", {
+      method: "GET",
+      path: "/users/:id",
+      problems: [
+        {
+          code: "USER_NOT_FOUND",
+          category: ProblemCategory.NotFound,
+          description: "The requested user does not exist.",
+        },
+      ],
+    });
+
+    const routes = extractRouteIR(UsersController);
+
+    expect(routes[0]?.routeContract?.problemResponses).toEqual([
+      {
+        code: "USER_NOT_FOUND",
+        category: ProblemCategory.NotFound,
+        description: "The requested user does not exist.",
+        status: 404,
+      },
     ]);
   });
 
@@ -256,7 +287,7 @@ describe("extractRouteIR", () => {
     expect(routes[0]?.outputSchema).toBeNull();
   });
 
-  it("should extract declared Problem responses with category-derived HTTP status", () => {
+  it("should extract declared Problem responses with explicit HTTP status", () => {
     @Controller("/users")
     class UsersController {
       @Get("/:id")
@@ -277,7 +308,7 @@ describe("extractRouteIR", () => {
         code: "USER_NOT_FOUND",
         category: ProblemCategory.NotFound,
         description: "The user id does not exist.",
-        status: 404,
+        status: 500,
       },
     ]);
   });

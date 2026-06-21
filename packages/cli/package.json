@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.9.1",
+    "@croco/framework-context": "workspace:*",
     "@croco/migration-runner": "workspace:*",
     "@croco/openapi-spec": "workspace:*",
     "@croco/problems-core": "workspace:*",

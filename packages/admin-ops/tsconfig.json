@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig/tsconfig.react.json",
+  "compilerOptions": {
+    "paths": {
+      "@croco/diagnostics-core": ["../diagnostics-core/src/index.ts"],
+      "@croco/execution-core": ["../execution-core/src/index.ts"],
+      "@croco/lifecycle-core": ["../lifecycle-core/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
+}

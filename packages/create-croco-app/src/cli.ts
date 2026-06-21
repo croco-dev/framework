@@ -1,6 +1,15 @@
 import { intro, outro } from "@clack/prompts";
 import { Command } from "commander";
+import {
+  createFailureResult,
+  createSuccessResult,
+  formatHumanFailure,
+  formatHumanSuccess,
+  formatJsonResult,
+} from "./cli-result.js";
+import { InvalidCliOptionProblem } from "./libs/problems/InvalidCliOptionProblem.js";
 import { getPackageVersion } from "./package-version.js";
+import { formatSaasProviderProfileChoices } from "./saas-provider-profiles.js";
 import type { GeneratorOptions } from "./types.js";
 
 export function createProgram(): Command {
@@ -12,10 +21,18 @@ export function createProgram(): Command {
     .version(getPackageVersion())
     .argument("[directory]", "Target directory")
     .option(
+      "--goal <goal>",
+      "App goal (saas-api|spa-backend-split|worker|internal-tool). Chooses the supported stack and writes croco.app.json",
+    )
+    .option(
       "--preset <preset>",
-      "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|saas|ai-saas)",
+      "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|admin-console|saas|ai-saas)",
     )
     .option("--scope <scope>", "Package scope (e.g. @myorg)")
+    .option(
+      "--saas-profile <profile>",
+      `Production SaaS provider profile (${formatSaasProviderProfileChoices()})`,
+    )
     .option("--api <api>", "API type (graphql|trpc)")
     .option("--api-hosting <hosting>", "API hosting (standalone|nextjs)")
     .option("--web-apps <apps>", "Comma-separated web app names")
@@ -28,9 +45,14 @@ export function createProgram(): Command {
     .option("--no-agent-rules", "Skip agent rules")
     .option("--no-install", "Skip pnpm dependency installation")
     .option("--no-git", "Skip git initialization")
+    .option("--json", "Print a machine-readable JSON result")
     .action(async (directory: string | undefined, rawOptions: Record<string, string | boolean>) => {
+      const outputJson = rawOptions.json === true;
+
       try {
-        intro("create-croco-app");
+        if (!outputJson) {
+          intro("create-croco-app");
+        }
 
         const {
           isNonInteractiveOptions,
@@ -41,6 +63,14 @@ export function createProgram(): Command {
         } = await import("./options.js");
         const cliOptions = parseCliOptions(directory, rawOptions);
         validateCliOptions(cliOptions);
+
+        if (outputJson && !isNonInteractiveOptions(cliOptions)) {
+          throw new InvalidCliOptionProblem(
+            "--json requires noninteractive create-croco-app options.",
+            "Pass a target directory, --scope, and either --goal or --preset, or remove --json.",
+            "--json",
+          );
+        }
 
         let options: GeneratorOptions;
 
@@ -57,10 +87,15 @@ export function createProgram(): Command {
         const { generate } = await import("./generator.js");
         await generate(targetDir, options);
 
-        outro(`Project created in ${targetDir} 🎉`);
+        const result = createSuccessResult(targetDir, options);
+        if (outputJson) {
+          console.log(formatJsonResult(result));
+        } else {
+          outro(formatHumanSuccess(result));
+        }
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        console.error(`\nError: ${message}`);
+        const result = createFailureResult(err);
+        console.error(outputJson ? formatJsonResult(result) : formatHumanFailure(result));
         process.exit(1);
       }
     });

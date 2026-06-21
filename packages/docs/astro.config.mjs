@@ -36,6 +36,8 @@ export default defineConfig({
       plugins: [
         starlightTypeDoc({
           entryPoints: [
+            "../admin-generated/src/index.ts",
+            "../admin-ops/src/index.ts",
             "../audit-core/src/index.ts",
             "../auth-core/src/index.ts",
             "../billing-core/src/index.ts",
@@ -43,8 +45,10 @@ export default defineConfig({
             "../events-core/src/index.ts",
             "../events-inmemory/src/index.ts",
             "../framework-context/src/index.ts",
+            "../idempotency-core/src/index.ts",
             "../invitation-core/src/index.ts",
             "../llm-core/src/index.ts",
+            "../llm-openai/src/index.ts",
             "../llm-metering/src/index.ts",
             "../membership-core/src/index.ts",
             "../metering-core/src/index.ts",
@@ -67,6 +71,7 @@ export default defineConfig({
             disableSources: true,
             excludeInternal: true,
             excludePrivate: true,
+            excludeReferences: true,
             skipErrorChecking: true,
           },
           sidebar: {

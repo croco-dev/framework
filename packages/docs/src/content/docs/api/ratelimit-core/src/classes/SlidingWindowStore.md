@@ -177,6 +177,34 @@ title: "SlidingWindowStore"
 
 ***
 
+### refund()
+
+> **refund**(`_key`, `_policy`, `_receipt?`): `Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+#### Parameters
+
+##### \_key
+
+`string`
+
+##### \_policy
+
+[`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
+
+##### \_receipt?
+
+[`RateLimitRefundReceipt`](/api/ratelimit-core/src/type-aliases/ratelimitrefundreceipt/)
+
+#### Returns
+
+`Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+#### Overrides
+
+[`DistributedRateLimitStore`](/api/ratelimit-core/src/classes/distributedratelimitstore/).[`refund`](/api/ratelimit-core/src/classes/distributedratelimitstore/#refund)
+
+***
+
 ### reset()
 
 > `abstract` **reset**(`key`): `Promise`\<`void`\>

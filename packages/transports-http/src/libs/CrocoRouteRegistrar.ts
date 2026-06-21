@@ -108,7 +108,7 @@ export class CrocoRouteRegistrar {
               count: middlewares.length,
             },
           });
-          const response = await this.executeMiddlewares(ctx, middlewares, async () => {
+          let response = await this.executeMiddlewares(ctx, middlewares, async () => {
             const handlerStartedAt = Date.now();
             this.recordInspectionEvent(inspector, {
               kind: "handler.start",
@@ -136,6 +136,7 @@ export class CrocoRouteRegistrar {
 
             return handlerResponse;
           });
+          response = this.withContextResponseHeaders(ctx, response);
           const responseOutcome = response.status >= 400 ? "failed" : "succeeded";
           this.recordInspectionEvent(inspector, {
             kind: "middleware.end",
@@ -169,7 +170,10 @@ export class CrocoRouteRegistrar {
           }
 
           this.recordRouteError(inspector, error);
-          const response = this.errorHandler.handleError(error, ctx);
+          const response = this.withContextResponseHeaders(
+            ctx,
+            this.errorHandler.handleError(error, ctx),
+          );
           this.finishInspection(inspector, inspection?.id, response, "failed", ctx, error);
           return response;
         }
@@ -226,7 +230,7 @@ export class CrocoRouteRegistrar {
     let index = -1;
     let response: Response | undefined;
 
-    const dispatch = async (nextIndex: number): Promise<void> => {
+    const dispatch = async (nextIndex: number): Promise<Response> => {
       if (nextIndex <= index) {
         throw ProblemFactory.internalServerError(
           "transports-http/middleware-next-called-multiple-times",
@@ -239,20 +243,38 @@ export class CrocoRouteRegistrar {
       const middleware = middlewares[nextIndex];
       if (!middleware) {
         response = await terminal();
-        return;
+        return response;
       }
 
-      await middleware(ctx, () => dispatch(nextIndex + 1));
+      let downstreamResponse: Response | undefined;
+      const middlewareResponse = await middleware(ctx, async () => {
+        downstreamResponse = await dispatch(nextIndex + 1);
+        return downstreamResponse;
+      });
+      if (middlewareResponse instanceof Response) {
+        if (downstreamResponse && middlewareResponse !== downstreamResponse) {
+          ctx.clearBufferedResponseBody();
+        }
+
+        response = middlewareResponse;
+        return middlewareResponse;
+      }
+
+      if (response) {
+        return response;
+      }
+
+      response = this.toShortCircuitResponse(ctx);
+      return response;
     };
 
-    await dispatch(0);
-
-    return response ?? this.toShortCircuitResponse(ctx);
+    return dispatch(0);
   }
 
   private toResponse(ctx: HttpContext, result: unknown): Response {
     if (result instanceof Response) {
       ctx.res.status = result.status;
+      ctx.clearBufferedResponseBody();
       return result;
     }
 
@@ -276,6 +298,31 @@ export class CrocoRouteRegistrar {
     return new Response(null, {
       status: 204,
       headers: ctx.raw.res.headers,
+    });
+  }
+
+  private withContextResponseHeaders(ctx: HttpContext, response: Response): Response {
+    const headers = new Headers(response.headers);
+    let hasContextHeaders = false;
+
+    ctx.raw.res.headers.forEach((value, key) => {
+      headers.set(key, value);
+      hasContextHeaders = true;
+    });
+
+    for (const [key, value] of Object.entries(ctx.res.headers)) {
+      headers.set(key, value);
+      hasContextHeaders = true;
+    }
+
+    if (!hasContextHeaders) {
+      return response;
+    }
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
     });
   }
 

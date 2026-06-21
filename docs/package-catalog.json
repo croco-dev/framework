@@ -18,6 +18,7 @@
         "framework-routes",
         "gid-core",
         "health-core",
+        "idempotency-core",
         "pagination-core",
         "problems-core",
         "repository-core",
@@ -31,6 +32,8 @@
       "description": "Business-domain APIs and package-level abstractions",
       "packages": [
         "access-core",
+        "admin-core",
+        "admin-ops",
         "analytics-core",
         "audit-core",
         "auth-core",
@@ -72,6 +75,7 @@
         "entitlements-drizzle",
         "execution-drizzle",
         "invitation-drizzle",
+        "llm-openai",
         "membership-drizzle",
         "metering-drizzle",
         "metering-upstash",
@@ -101,6 +105,7 @@
     "Protocol": {
       "description": "API protocol definitions and code generation",
       "packages": [
+        "admin-generated",
         "openapi-spec",
         "protocols-core",
         "protocols-graphql",
@@ -116,7 +121,9 @@
     "Presentation": {
       "description": "Frontend, SSR, and presentation-layer adapters",
       "packages": [
+        "admin-react",
         "frontend-cloudflare",
+        "frontend-problems",
         "frontend-react",
         "frontend-vite",
         "meta-vite",
@@ -170,6 +177,8 @@
       "label": "🟡 beta",
       "packages": [
         "access-core",
+        "admin-core",
+        "admin-ops",
         "billing-polar",
         "cache-core",
         "cli",
@@ -190,9 +199,11 @@
         "framework-routes",
         "gid-core",
         "health-core",
+        "idempotency-core",
         "impersonation-core",
         "integrations-posthog",
         "lifecycle-core",
+        "llm-openai",
         "meta-vite",
         "notifications-core",
         "onboarding-core",
@@ -220,6 +231,8 @@
       "label": "🔴 alpha/WIP",
       "packages": [
         "access-drizzle",
+        "admin-generated",
+        "admin-react",
         "analytics-core",
         "analytics-posthog",
         "audit-drizzle",
@@ -232,6 +245,7 @@
         "entitlements-drizzle",
         "execution-drizzle",
         "frontend-cloudflare",
+        "frontend-problems",
         "frontend-react",
         "frontend-vite",
         "invitation-drizzle",
@@ -260,6 +274,24 @@
   "extensionMatrix": {
     "groups": ["Provider", "Integration", "Transport", "Presentation"],
     "packages": {
+      "admin-react": {
+        "domain": "Admin React",
+        "adapter": "Billing and tenant admin primitives",
+        "runtimes": ["browser", "node"],
+        "requiredEnv": ["none"],
+        "features": [
+          "billing panel contract",
+          "contract-aware DataTable",
+          "entitlement status primitives",
+          "pagination and search adapters",
+          "usage quota meters",
+          "provider failure state",
+          "tenant switcher",
+          "impersonation banner",
+          "permission inspector",
+          "Problem-preserving console failures"
+        ]
+      },
       "access-drizzle": {
         "domain": "Access control",
         "adapter": "Drizzle repository",
@@ -368,12 +400,29 @@
           "streaming response smoke"
         ]
       },
+      "frontend-problems": {
+        "domain": "Frontend Problems",
+        "adapter": "Problem-aware client runtime",
+        "runtimes": ["browser", "cloudflare-workers"],
+        "requiredEnv": ["none"],
+        "features": [
+          "Problem Details parsing",
+          "Problem-aware fetch results",
+          "declared Problem unions",
+          "form Problem mapping"
+        ]
+      },
       "frontend-react": {
         "domain": "Frontend React",
         "adapter": "React integration helpers",
         "runtimes": ["browser", "node"],
         "requiredEnv": ["none"],
-        "features": ["React bindings", "meta-vite integration"]
+        "features": [
+          "React bindings",
+          "meta-vite integration",
+          "auth gate primitives",
+          "tenant and entitlement bridge"
+        ]
       },
       "frontend-vite": {
         "domain": "Frontend Vite",
@@ -400,6 +449,21 @@
         "requiredEnv": ["database connection supplied by app"],
         "features": ["invitation persistence", "transaction-aware repository"]
       },
+      "llm-openai": {
+        "domain": "LLM",
+        "adapter": "OpenAI Responses provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["OPENAI_API_KEY"],
+        "features": [
+          "Responses text generation",
+          "SSE streaming",
+          "JSON Schema structured output",
+          "function tool calls",
+          "single and batch embeddings",
+          "usage and telemetry mapping",
+          "Problem normalization"
+        ]
+      },
       "membership-drizzle": {
         "domain": "Membership",
         "adapter": "Drizzle repository",
@@ -420,6 +484,8 @@
           "server actions",
           "SSR/RSC streaming",
           "ISR v1 exact-key TTL",
+          "Node/Lambda durable ISR smoke",
+          "Workers ISR boundary smoke",
           "generated page/API/action/ISR smoke"
         ]
       },
@@ -475,7 +541,14 @@
         "adapter": "Upstash Redis rate-limit store",
         "runtimes": ["node", "lambda", "cloudflare-workers"],
         "requiredEnv": ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
-        "features": ["sliding window", "token bucket", "fixed window", "Lua atomicity"]
+        "features": [
+          "sliding window",
+          "token bucket",
+          "fixed window",
+          "Lua atomicity",
+          "shared conformance",
+          "redacted upstream Problems"
+        ]
       },
       "search-drizzle": {
         "domain": "Search",
@@ -516,8 +589,15 @@
         "domain": "Tasks",
         "adapter": "QStash task runner",
         "runtimes": ["node", "lambda", "cloudflare-workers"],
-        "requiredEnv": ["QSTASH_TOKEN", "destination webhook URL"],
-        "features": ["task publish", "delay override", "custom headers"]
+        "requiredEnv": ["UPSTASH_QSTASH_TOKEN", "UPSTASH_QSTASH_DESTINATION_URL"],
+        "features": [
+          "task publish",
+          "delay override",
+          "custom headers",
+          "deduplication id",
+          "shared conformance",
+          "redacted upstream Problems"
+        ]
       },
       "telemetry-api": {
         "domain": "Telemetry",

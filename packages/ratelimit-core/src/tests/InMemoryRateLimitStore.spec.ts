@@ -76,6 +76,41 @@ describe("InMemoryRateLimitStore", () => {
     expect(result.remaining).toBe(2);
   });
 
+  it("should refund sliding window quota and stats", async () => {
+    const check = await store.check("user:1", policy);
+
+    const refund = await store.refund("user:1", policy, check.refundReceipt);
+    const duplicateRefund = await store.refund("user:1", policy, check.refundReceipt);
+
+    expect(refund.refunded).toBe(true);
+    expect(refund.remaining).toBe(3);
+    expect(duplicateRefund.refunded).toBe(false);
+    expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
+
+    const result = await store.check("user:1", policy);
+    expect(result.success).toBe(true);
+    expect(result.remaining).toBe(2);
+  });
+
+  it("should refund the original sliding window receipt for out-of-order completions", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+    const first = await store.check("user:1", policy);
+    vi.advanceTimersByTime(1);
+    const second = await store.check("user:1", policy);
+
+    const firstRefund = await store.refund("user:1", policy, first.refundReceipt);
+    const secondRefund = await store.refund("user:1", policy, second.refundReceipt);
+
+    expect(firstRefund.refunded).toBe(true);
+    expect(secondRefund.refunded).toBe(true);
+    expect(secondRefund.remaining).toBe(3);
+    expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
+
+    vi.useRealTimers();
+  });
+
   it("should prune expired buckets without new checks", async () => {
     vi.useFakeTimers();
 
@@ -141,6 +176,57 @@ describe("InMemoryRateLimitStore", () => {
     vi.useRealTimers();
   });
 
+  it("should refund fixed window quota and stats", async () => {
+    const fixedPolicy: FixedWindowPolicy = {
+      name: "fixed-refund",
+      algorithm: "fixed",
+      limit: 1,
+      windowMs: 60000,
+    };
+    const fixedStore = new FixedWindowInMemoryStore({ pruneIntervalMs: 0 });
+
+    const check = await fixedStore.check("user:1", fixedPolicy);
+    const refund = await fixedStore.refund("user:1", fixedPolicy, check.refundReceipt);
+    const duplicateRefund = await fixedStore.refund("user:1", fixedPolicy, check.refundReceipt);
+    const result = await fixedStore.check("user:1", fixedPolicy);
+
+    expect(refund.refunded).toBe(true);
+    expect(refund.remaining).toBe(1);
+    expect(duplicateRefund.refunded).toBe(false);
+    expect(result.success).toBe(true);
+    expect(result.remaining).toBe(0);
+    expect(await fixedStore.getStats()).toEqual({ allowed: 1, denied: 0, total: 1 });
+
+    fixedStore.close();
+  });
+
+  it("should not refund a stale fixed window receipt into a newer window", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+    const fixedPolicy: FixedWindowPolicy = {
+      name: "fixed-stale-refund",
+      algorithm: "fixed",
+      limit: 1,
+      windowMs: 1000,
+    };
+    const fixedStore = new FixedWindowInMemoryStore({ pruneIntervalMs: 0 });
+
+    const staleCheck = await fixedStore.check("user:1", fixedPolicy);
+    vi.advanceTimersByTime(1001);
+    const currentCheck = await fixedStore.check("user:1", fixedPolicy);
+    const staleRefund = await fixedStore.refund("user:1", fixedPolicy, staleCheck.refundReceipt);
+    const blocked = await fixedStore.check("user:1", fixedPolicy);
+
+    expect(currentCheck.success).toBe(true);
+    expect(staleRefund.refunded).toBe(false);
+    expect(blocked.success).toBe(false);
+    expect(await fixedStore.getStats()).toEqual({ allowed: 2, denied: 1, total: 3 });
+
+    fixedStore.close();
+    vi.useRealTimers();
+  });
+
   it("should automatically prune expired token bucket entries", async () => {
     vi.useFakeTimers();
     const tokenPolicy: TokenBucketPolicy = {
@@ -163,6 +249,31 @@ describe("InMemoryRateLimitStore", () => {
 
     tokenStore.close();
     vi.useRealTimers();
+  });
+
+  it("should refund token bucket quota and stats", async () => {
+    const tokenPolicy: TokenBucketPolicy = {
+      name: "token-refund",
+      algorithm: "token-bucket",
+      capacity: 1,
+      refillRate: 1,
+      refillIntervalMs: 1000,
+    };
+    const tokenStore = new TokenBucketInMemoryStore({ pruneIntervalMs: 0 });
+
+    const check = await tokenStore.check("user:1", tokenPolicy);
+    const refund = await tokenStore.refund("user:1", tokenPolicy, check.refundReceipt);
+    const duplicateRefund = await tokenStore.refund("user:1", tokenPolicy, check.refundReceipt);
+    const result = await tokenStore.check("user:1", tokenPolicy);
+
+    expect(refund.refunded).toBe(true);
+    expect(refund.remaining).toBe(1);
+    expect(duplicateRefund.refunded).toBe(false);
+    expect(result.success).toBe(true);
+    expect(result.remaining).toBe(0);
+    expect(await tokenStore.getStats()).toEqual({ allowed: 1, denied: 0, total: 1 });
+
+    tokenStore.close();
   });
 
   describe("SlidingWindowInMemoryStore custom windowMs", () => {

@@ -21,7 +21,7 @@ pnpm add ioredis
 - **SSR**: Server-side rendering with React 19, head metadata injection, XSS-safe HTML shell
 - **RSC**: React Server Components with Flight payload embedding and browser hydration
 - **SSG**: Static site generation at build time (`prerenderSsgRoutes`)
-- **ISR**: TTL-only incremental static regeneration via CacheStore. `InMemoryCacheStore` for local/single-process, `RedisCacheStoreAdapter` for production durable caching (extends `AbstractCacheStoreAdapter`)
+- **ISR**: TTL-only incremental static regeneration via CacheStore. `InMemoryCacheStore` for local/single-process, `RedisCacheStoreAdapter` for production durable caching (extends `AbstractCacheStoreAdapter`), and runtime support diagnostics for durable production claims
 - **API Co-location**: Define API routes alongside page routes with `defineApiRoute()`. Compose pages and APIs under a single fetch handler using `createMetaFetchHandler`'s `apiRoutes` option
 - **Server Actions**: `createServerAction()` for form POST handling with Zod validation. `createServerActionRegistry()` scopes actions for tests, HMR, and multi-app runtimes, while `createServerActionHandler()` integrates with the `apiRoutes` dispatch pipeline
 - **Provider adapters**: Cloudflare Workers, AWS Lambda, Node.js with API-first/page-fallback composition
@@ -150,6 +150,10 @@ Detailed promotion gates live in [Presentation Runtime Support](../docs/src/cont
 | Streaming         | Fetch `Response` streams are preserved by the fetch surface.                                                  | Not supported by this adapter; responses are buffered.                                                    | Supported for streaming `Response` bodies.                                                              |
 | Cache persistence | In-memory is local/single-process only; Redis is the shipped durable adapter.                                 | In-memory is warm-container only; Redis is the shipped durable adapter.                                   | No shipped durable Worker cache adapter. Supply a Worker-safe store before claiming durable ISR.        |
 
+Smoke evidence: `pnpm --filter @croco/meta-vite test` covers durable Node and Lambda ISR through
+`RedisCacheStoreAdapter`, Workers durable-claim boundaries, in-memory local-only behavior, cacheable
+request rules, `2xx`-only response caching, and `getOrSet()` singleflight behavior.
+
 ## ISR v1 Contract
 
 `@croco/meta-vite` intentionally keeps ISR v1 as exact-key TTL caching:
@@ -159,7 +163,39 @@ Detailed promotion gates live in [Presentation Runtime Support](../docs/src/cont
 - concurrent same-key misses rely on the cache store's `getOrSet()` singleflight behavior;
 - `InMemoryCacheStore` is for local, development, or single-process deployments only;
 - `RedisCacheStoreAdapter` is the shipped durable adapter for Node and Lambda;
+- `createDurableIsrCacheProfile()` only reports non-local stores as durable; known `InMemoryCacheStore`
+  instances remain local and produce durable-claim diagnostics;
+- `evaluateIsrRuntimeSupport()` returns deterministic diagnostics before a deployment claims durable ISR;
 - pattern invalidation is available only through durable adapters that explicitly expose it, such as the Redis adapter.
+
+### Durable ISR Readiness
+
+Use runtime support profiles before enabling production durable ISR:
+
+```typescript
+import { RedisCacheStoreAdapter } from "@croco/meta-vite/isr/adapters";
+import { createDurableIsrCacheProfile, evaluateIsrRuntimeSupport } from "@croco/meta-vite";
+
+const cache = createDurableIsrCacheProfile(new RedisCacheStoreAdapter(redis), {
+  label: "RedisCacheStoreAdapter",
+});
+const report = evaluateIsrRuntimeSupport({
+  runtime: "node",
+  cache,
+  requireDurable: true,
+});
+
+if (!report.supported) {
+  throw new Error(report.diagnostics.map((diagnostic) => diagnostic.code).join(", "));
+}
+```
+
+Recovery diagnostics:
+
+| Code                                      | Meaning                                                                                | Recovery                                                                                    |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `CROCO_META_VITE_ISR_LOCAL_CACHE_ONLY`    | The configured cache is local to one process, warm container, or Worker isolate.       | Use `RedisCacheStoreAdapter` on Node/Lambda, or a durable runtime-safe store for Workers.   |
+| `CROCO_META_VITE_ISR_WORKER_STORE_UNSAFE` | A durable Workers ISR claim was requested with a store that is not marked Worker-safe. | Supply a Worker-safe `IsrCacheStore` backed by Worker-compatible bindings and mark it safe. |
 
 ## Limitations (v1)
 
@@ -176,6 +212,7 @@ Common errors and their diagnostics:
 - **Server-only leakage**: Importing `node:fs` or other server-only modules from a `'use client'` boundary produces an explicit error with the module path. This validation scans imported module specifiers and reports which server-only modules leaked across a client boundary.
 - **Invalid route**: Route without a `component` field or with an unsupported mode produces an error. The route path is included in the diagnostic.
 - **Invalid ISR revalidate**: `revalidate` without `mode: 'isr'` is silently ignored. A `revalidate` value that is not a positive integer produces a validation warning.
+- **Missing durable ISR configuration**: `evaluateIsrRuntimeSupport({ requireDurable: true })` reports `CROCO_META_VITE_ISR_LOCAL_CACHE_ONLY` for local-only stores and `CROCO_META_VITE_ISR_WORKER_STORE_UNSAFE` for Workers stores that are not explicitly Worker-safe.
 - **RSC rendering failure**: Returns a JSON diagnostic `{ error: 'RSC rendering failed', route: string, detail: string }` with status 500. The `detail` field contains the original error message from the React render call.
 - **Render error (SSR)**: SSR rendering errors fall back to a generic `500 Internal Server Error` HTML response. Error details are not included in the HTML to prevent server-side information leakage.
 - **Route not found**: Unmatched routes return a `404 Not Found` HTML response.
@@ -207,14 +244,19 @@ Redis adapter exports are published from `@croco/meta-vite/isr/adapters`:
 import { RedisCacheStoreAdapter } from "@croco/meta-vite/isr/adapters";
 ```
 
-| Export                      | Type     | Description                                                                                                                          |
-| --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `createIsrMiddleware`       | function | CacheStore-backed ISR middleware wrapping a fetch-style render function.                                                             |
-| `createIsrHandler`          | function | Legacy ISR handler with string-based API and `IsrCacheAdapter`.                                                                      |
-| `IsrCacheAdapter`           | type     | Cache adapter contract with `getOrSet` and `invalidate`.                                                                             |
-| `IsrCacheStore`             | type     | `CacheStore<string, Response>` subset for ISR middleware.                                                                            |
-| `AbstractCacheStoreAdapter` | class    | Subpath export. Abstract base class implementing `IsrCacheStore.getOrSet`. Subclasses implement `_get`, `_set`, `_delete`.           |
-| `RedisCacheStoreAdapter`    | class    | Subpath export. Redis-backed ISR cache adapter extending `AbstractCacheStoreAdapter`. Requires `ioredis`, supports TTL and patterns. |
+| Export                         | Type     | Description                                                                                                                          |
+| ------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `createIsrMiddleware`          | function | CacheStore-backed ISR middleware wrapping a fetch-style render function.                                                             |
+| `createIsrHandler`             | function | Legacy ISR handler with string-based API and `IsrCacheAdapter`.                                                                      |
+| `createLocalIsrCacheProfile`   | function | Marks an `IsrCacheStore` as local-only for runtime support reporting.                                                                |
+| `createDurableIsrCacheProfile` | function | Builds a durable profile for non-local stores; known in-memory stores remain local for runtime support reporting.                    |
+| `evaluateIsrRuntimeSupport`    | function | Returns deterministic support diagnostics before a deployment claims durable ISR.                                                    |
+| `IsrCacheAdapter`              | type     | Cache adapter contract with `getOrSet` and `invalidate`.                                                                             |
+| `IsrCacheStore`                | type     | `CacheStore<string, Response>` subset for ISR middleware.                                                                            |
+| `IsrCacheStoreProfile`         | type     | Runtime support profile for local or durable ISR cache stores.                                                                       |
+| `IsrRuntimeSupportReport`      | type     | Runtime ISR support result with durable claim status and diagnostics.                                                                |
+| `AbstractCacheStoreAdapter`    | class    | Subpath export. Abstract base class implementing `IsrCacheStore.getOrSet`. Subclasses implement `_get`, `_set`, `_delete`.           |
+| `RedisCacheStoreAdapter`       | class    | Subpath export. Redis-backed ISR cache adapter extending `AbstractCacheStoreAdapter`. Requires `ioredis`, supports TTL and patterns. |
 
 ### API Routes
 
@@ -227,16 +269,41 @@ import { RedisCacheStoreAdapter } from "@croco/meta-vite/isr/adapters";
 
 ### Server Actions
 
-| Export                       | Type     | Description                                                                                                                                     |
-| ---------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ServerActionRegistry`       | class    | Isolated action registry with `register`, `unregister`, `clear`, and `dispatch` methods for app, test, or HMR lifecycle scoping.                |
-| `createServerActionRegistry` | function | Create an isolated `ServerActionRegistry` instance.                                                                                             |
-| `createServerAction`         | function | Register a server action with name, optional Zod schema, and handler. Defaults to the global registry and throws on duplicate name.             |
-| `createServerActionHandler`  | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Accepts a registry instance and integrates with `apiRoutes`.        |
-| `dispatchServerAction`       | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Returns 404 or 400 JSON on failure. |
-| `resetServerActions`         | function | Clear all actions from the global registry by default, or from a supplied registry.                                                             |
-| `unregisterServerAction`     | function | Remove one action from the global registry by default, or from a supplied registry.                                                             |
-| `ServerActionConfig`         | type     | `{ name: string; schema?: ZodSchema<T>; handler: (data: T, context?: RuntimeContext) => Promise<Response> \| Response }`                        |
+| Export                              | Type     | Description                                                                                                                                     |
+| ----------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ServerActionRegistry`              | class    | Isolated action registry with `register`, `unregister`, `clear`, and `dispatch` methods for app, test, or HMR lifecycle scoping.                |
+| `createServerActionRegistry`        | function | Create an isolated `ServerActionRegistry` instance.                                                                                             |
+| `createServerAction`                | function | Register a server action with name, optional Zod schema, and handler. Defaults to the global registry and throws on duplicate name.             |
+| `createServerActionHandler`         | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Accepts a registry instance and integrates with `apiRoutes`.        |
+| `createServerActionSuccess`         | function | Build a typed success result body, `{ ok: true, data }`, for handlers that want the action result contract instead of a custom `Response`.      |
+| `createServerActionSuccessResponse` | function | Build an `application/json` response containing a typed success result.                                                                         |
+| `dispatchServerAction`              | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Failures return Problem JSON.       |
+| `resetServerActions`                | function | Clear all actions from the global registry by default, or from a supplied registry.                                                             |
+| `unregisterServerAction`            | function | Remove one action from the global registry by default, or from a supplied registry.                                                             |
+| `ServerActionConfig`                | type     | `{ name: string; schema?: ZodSchema<TInput>; output?: ServerActionOutputContract<TOutput>; problems?: ServerActionProblemContract[]; handler }` |
+| `ServerActionResult`                | type     | Typed action result union: `{ ok: true, data }` or RFC 7807 Problem details with `{ ok: false, kind }`.                                         |
+
+Server action failures use a stable action result contract. Missing actions, invalid paths, validation
+failures, and thrown Croco `Problem` instances return `application/problem+json` with top-level RFC 7807
+fields plus `ok: false` and `kind`.
+
+```typescript
+import { createServerAction, createServerActionSuccess } from "@croco/meta-vite";
+import { z } from "zod";
+
+createServerAction({
+  name: "signup",
+  schema: z.object({ email: z.string().email() }),
+  output: { description: "Signup result" },
+  problems: [{ code: "auth/signup-closed", status: 422 }],
+  handler: async (data) => createServerActionSuccess({ email: data.email }),
+});
+```
+
+Migration note: handlers that already return `Response` still work for successful actions. Consumers that
+previously read failure bodies as `{ code: "ACTION_NOT_FOUND" }` or `{ code: "VALIDATION_ERROR", fields }`
+should now read the Problem result shape: `ok === false`, `kind`, RFC 7807 fields (`type`, `title`,
+`status`, `code`, `detail`), and validation `fields` when `kind === "validation"`.
 
 ### SSG
 

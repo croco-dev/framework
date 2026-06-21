@@ -5,7 +5,7 @@ prev: false
 title: "isRouteContractSpec"
 ---
 
-> **isRouteContractSpec**(`value`): value is RouteContractSpec\<HttpMethod, string, AnyZodObject \| undefined, AnyZodObject \| undefined, ZodType\<any, ZodTypeDef, any\> \| undefined, ZodType\<any, ZodTypeDef, any\> \| undefined, readonly ProblemConstructor\<Problem\>\[\] \| undefined\>
+> **isRouteContractSpec**(`value`): `value is AnyRouteContractSpec`
 
 ## Parameters
 
@@ -15,4 +15,4 @@ title: "isRouteContractSpec"
 
 ## Returns
 
-value is RouteContractSpec\<HttpMethod, string, AnyZodObject \| undefined, AnyZodObject \| undefined, ZodType\<any, ZodTypeDef, any\> \| undefined, ZodType\<any, ZodTypeDef, any\> \| undefined, readonly ProblemConstructor\<Problem\>\[\] \| undefined\>
+`value is AnyRouteContractSpec`

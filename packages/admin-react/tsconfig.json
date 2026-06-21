@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../../tsconfig/tsconfig.react.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@croco/billing-core": ["../billing-core/src/types.ts"],
+      "@croco/entitlements-core": ["../entitlements-core/src/libs/types.ts"],
+      "@croco/impersonation-core": ["../impersonation-core/src/libs/types.ts"],
+      "@croco/metering-core": ["../metering-core/src/libs/types.ts"],
+      "@croco/pagination-core": ["../pagination-core/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/search-core": ["../search-core/src/index.ts"],
+      "@croco/tenant-core": ["../tenant-core/src/libs/types.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

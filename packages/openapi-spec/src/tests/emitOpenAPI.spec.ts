@@ -4,7 +4,10 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
-import { buildContractGraph } from "@croco/protocols-core";
+import {
+  buildContractGraph,
+  CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+} from "@croco/protocols-core";
 import {
   All,
   Body,
@@ -61,18 +64,58 @@ describe("emitOpenAPI", () => {
   });
 
   it("should consume the canonical contract graph as its source of truth", () => {
+    const userSchema = z.object({ id: z.string() });
+
     @Controller("/users")
     class UsersController {
       @Get("/:id")
-      getUser(@Param("id") _id: string): void {}
+      @ResponseSchema(userSchema)
+      @ProblemResponse({
+        code: "USER_NOT_FOUND",
+        category: ProblemCategory.NotFound,
+        description: "User id is missing.",
+      })
+      getUser(@Param("id") _id: string): z.infer<typeof userSchema> {
+        return { id: "user_1" };
+      }
     }
 
     const graph = buildContractGraph([UsersController]);
     const spec = emitOpenAPIFromContractGraph(graph);
+    const operation = spec.paths?.["/users/{id}"]?.get;
 
     expect(graph.routes[0]?.routeId).toBe("UsersController.getUser");
-    expect(spec.paths?.["/users/{id}"]?.get?.operationId).toBe("UsersController_getUser");
-    expect(spec.paths?.["/users/{id}"]?.get?.summary).toBe("UsersController.getUser");
+    expect(operation?.operationId).toBe("UsersController_getUser");
+    expect(operation?.summary).toBe("UsersController.getUser");
+    expect(operation?.parameters).toEqual([
+      {
+        in: "path",
+        name: "id",
+        required: true,
+        schema: { type: "string" },
+      },
+    ]);
+    expect(operation?.responses?.[200]).toMatchObject({
+      content: {
+        "application/json": {
+          schema: {
+            properties: { id: { type: "string" } },
+            required: ["id"],
+            type: "object",
+          },
+        },
+      },
+    });
+    expect(operation?.responses?.[404]).toMatchObject({
+      "x-croco-problems": [
+        {
+          category: "NotFound",
+          code: "USER_NOT_FOUND",
+          description: "User id is missing.",
+          status: 404,
+        },
+      ],
+    });
   });
 
   it("should normalize catch-all path parameters from the canonical contract graph", () => {
@@ -617,7 +660,7 @@ describe("emitOpenAPI", () => {
     });
   });
 
-  it("should handle Zod refined and transformed schemas without crashing", () => {
+  it("should unwrap Zod refined schemas without crashing", () => {
     const refinedObjectSchema = z
       .object({ name: z.string().min(1) })
       .refine((body) => body.name.length > 2);
@@ -637,9 +680,6 @@ describe("emitOpenAPI", () => {
 
       @Post("/object")
       createObject(@Body(refinedObjectSchema) _body: z.infer<typeof refinedObjectSchema>): void {}
-
-      @Post("/transform")
-      createTransform(@Body(z.string().transform((value) => value.trim())) _body: string): void {}
     }
 
     const spec = emitOpenAPI([ZodEffectsController]);
@@ -664,14 +704,26 @@ describe("emitOpenAPI", () => {
         },
       },
     });
-    expect(spec.paths?.["/zod-effects/transform"]?.post?.requestBody).toMatchObject({
-      required: true,
-      content: {
-        "application/json": {
-          schema: { type: "string" },
-        },
-      },
-    });
+  });
+
+  it("should reject JSON-unsafe schemas with the shared schema diagnostic code", () => {
+    @Controller("/zod-unsafe")
+    class ZodUnsafeController {
+      @Post("/")
+      createUnsafe(
+        @Body(
+          z.object({
+            checkedAt: z.date(),
+            trimmed: z.string().transform((value) => value.trim()),
+          }),
+        )
+        _body: unknown,
+      ): void {}
+    }
+
+    expect(() => emitOpenAPI([ZodUnsafeController])).toThrow(
+      CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+    );
   });
 
   it(

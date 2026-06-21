@@ -29,6 +29,12 @@ title: "RateLimitResult"
 
 ***
 
+### refundReceipt?
+
+> `optional` **refundReceipt**: [`RateLimitRefundReceipt`](/api/ratelimit-core/src/type-aliases/ratelimitrefundreceipt/)
+
+***
+
 ### remaining
 
 > **remaining**: `number`

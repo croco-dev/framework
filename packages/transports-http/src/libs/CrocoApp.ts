@@ -34,6 +34,10 @@ import {
   sanitizeDiagnosticsReport,
 } from "./operationalEndpoints";
 
+import {
+  isSecurityMiddleware,
+  type SecurityMiddlewareExportName,
+} from "./middleware/SecurityMiddlewareMarker";
 import { type CompileOptions, RouteCompiler } from "./RouteCompiler";
 import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
 import type {
@@ -52,26 +56,35 @@ type FetchRuntimeOptions = {
 };
 
 type RequiredSecurityMiddleware = {
-  readonly exportName: string;
+  readonly exportName: SecurityMiddlewareExportName;
   readonly matches: (middleware: MiddlewareFunction) => boolean;
 };
 
 const REQUIRED_SECURITY_MIDDLEWARES: readonly RequiredSecurityMiddleware[] = [
   {
     exportName: "securityHeadersMiddleware",
-    matches: (middleware) => middleware.toString().includes("X-Content-Type-Options"),
+    matches: (middleware) =>
+      isSecurityMiddleware(middleware, "securityHeadersMiddleware") ||
+      middleware.toString().includes("X-Content-Type-Options"),
   },
   {
     exportName: "corsMiddleware",
-    matches: (middleware) => middleware.toString().includes("Access-Control-Allow-Origin"),
+    matches: (middleware) =>
+      isSecurityMiddleware(middleware, "corsMiddleware") ||
+      middleware.toString().includes("Access-Control-Allow-Origin"),
   },
   {
     exportName: "bodyLimitMiddleware",
-    matches: (middleware) => middleware.toString().includes("content-length"),
+    matches: (middleware) =>
+      isSecurityMiddleware(middleware, "bodyLimitMiddleware") ||
+      middleware.toString().includes("content-length"),
   },
   {
     exportName: "rateLimitHttpMiddleware",
-    matches: (middleware) => middleware.toString().includes("rateLimitHeaders"),
+    matches: (middleware) =>
+      isSecurityMiddleware(middleware, "rateLimitHttpMiddleware") ||
+      middleware.toString().includes("rateLimitHeaders") ||
+      middleware.toString().includes("applyRateLimitHeaders"),
   },
 ] as const;
 

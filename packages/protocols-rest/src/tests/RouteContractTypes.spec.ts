@@ -4,14 +4,14 @@ import { z } from "zod";
 import {
   Body,
   defineRouteContract,
+  defineRouteProblem,
   Get,
   HttpMethod,
   Param,
   Post,
+  ProblemResponse,
   Query,
   ResponseSchema,
-  routeParam,
-  routeParamSchema,
   type RouteBody,
   type RouteContractHandler,
   type RouteMethodReturn,
@@ -21,6 +21,12 @@ import {
   type RouteQuery,
   type RouteQueryParam,
   type RouteResponse,
+  routeParam,
+  routeParamSchema,
+  routeProblemResponses,
+  routeQueryParam,
+  routeQuerySchema,
+  routeResponseSchema,
 } from "../index";
 
 const userSchema = z.object({
@@ -39,6 +45,15 @@ const userQuerySchema = z.object({
 class UserNotFoundProblem extends Problem {
   constructor(id: string) {
     super("users/not-found", ProblemCategory.NotFound, `User '${id}' was not found.`);
+  }
+}
+
+class UserForbiddenProblem extends Problem {
+  readonly code = "USER_FORBIDDEN";
+  readonly category = ProblemCategory.Forbidden;
+
+  constructor() {
+    super("USER_FORBIDDEN", ProblemCategory.Forbidden);
   }
 }
 
@@ -70,6 +85,19 @@ describe("route contract types", () => {
     response: z.array(userSchema),
   });
 
+  const updateUserContract = defineRouteContract({
+    method: HttpMethod.POST,
+    path: "/users/:id",
+    params: z.object({ id: z.string() }),
+    response: userSchema,
+    problems: [
+      defineRouteProblem(UserForbiddenProblem, {
+        code: "USER_FORBIDDEN",
+        category: ProblemCategory.Forbidden,
+      }),
+    ],
+  });
+
   it("connects route schemas to controller decorator migration helpers", () => {
     class UsersController {
       @Get(getUserContract)
@@ -95,6 +123,9 @@ describe("route contract types", () => {
       name: "Ada Lovelace",
     });
     expect(routeParamSchema(getUserContract, "id")).toBe(getUserContract.params.shape.id);
+    expect(routeQueryParam(getUserContract, "includePosts")).toBe("includePosts");
+    expect(routeQuerySchema(getUserContract)).toBe(userQuerySchema);
+    expect(routeResponseSchema(getUserContract)).toBe(userSchema);
   });
 
   it("infers request, response, and Problem types from route contracts", async () => {
@@ -117,6 +148,8 @@ describe("route contract types", () => {
       name: string;
     }>();
     expectTypeOf<RouteProblem<typeof getUserContract>>().toEqualTypeOf<UserNotFoundProblem>();
+    expectTypeOf<RouteProblem<typeof updateUserContract>>().toEqualTypeOf<UserForbiddenProblem>();
+    expectTypeOf(routeProblemResponses(updateUserContract)[0]?.status).toEqualTypeOf<403>();
 
     const handler: RouteContractHandler<typeof createUserContract> = async ({ body }) => ({
       id: "user_1",
@@ -194,3 +227,22 @@ class InvalidBodyController {
 
 void InvalidMethodController;
 void InvalidBodyController;
+
+defineRouteProblem(UserForbiddenProblem, {
+  // @ts-expect-error typed Problem helpers preserve the subclass literal code.
+  code: "USER_NOT_FOUND",
+  category: ProblemCategory.Forbidden,
+});
+
+defineRouteProblem(UserForbiddenProblem, {
+  code: "USER_FORBIDDEN",
+  // @ts-expect-error typed Problem helpers preserve the subclass literal category.
+  category: ProblemCategory.NotFound,
+});
+
+ProblemResponse({
+  code: "USER_FORBIDDEN",
+  category: ProblemCategory.Forbidden,
+  // @ts-expect-error route contract provenance is attached only by routeProblemResponses(contract).
+  routeContractProblems: [],
+});

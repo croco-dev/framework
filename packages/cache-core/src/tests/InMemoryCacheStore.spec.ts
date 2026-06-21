@@ -8,6 +8,11 @@ describe("InMemoryCacheStore", () => {
     cache = new InMemoryCacheStore<string>({ maxEntries: 1000 });
   });
 
+  async function waitForInFlightLoader(): Promise<void> {
+    await Promise.resolve();
+    await Promise.resolve();
+  }
+
   describe("get and set", () => {
     it("stores and retrieves a value", async () => {
       await cache.set("key1", "value1");
@@ -267,7 +272,7 @@ describe("InMemoryCacheStore", () => {
         cache.getOrSet("key1", loader),
       ]);
 
-      await Promise.resolve();
+      await waitForInFlightLoader();
 
       expect(loader).toHaveBeenCalledTimes(1);
 
@@ -288,57 +293,171 @@ describe("InMemoryCacheStore", () => {
     });
 
     it("clear() during getOrSet load: loader completes but value not stored", async () => {
-      const loader = vi.fn(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        return "loaded-value";
-      });
+      let resolveLoader!: (value: string) => void;
+      const loader = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveLoader = resolve;
+          }),
+      );
 
       const pendingPromise = cache.getOrSet("key1", loader, { ttlMs: 1000 }) as Promise<string>;
 
-      await Promise.resolve();
+      await waitForInFlightLoader();
 
       await cache.clear();
+      resolveLoader("loaded-value");
 
       const result = await pendingPromise;
 
       // clear() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
       expect(result).toBeUndefined();
+      expect(await cache.get("key1")).toBeUndefined();
     });
 
     it("delete() during getOrSet load: loader completes but value not stored", async () => {
-      const loader = vi.fn(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        return "loaded-value";
-      });
+      let resolveLoader!: (value: string) => void;
+      const loader = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveLoader = resolve;
+          }),
+      );
 
       const pendingPromise = cache.getOrSet("key1", loader, { ttlMs: 1000 }) as Promise<string>;
 
-      await Promise.resolve();
+      await waitForInFlightLoader();
 
       await cache.delete("key1");
+      resolveLoader("loaded-value");
 
       const result = await pendingPromise;
 
       // delete() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
       expect(result).toBeUndefined();
+      expect(await cache.get("key1")).toBeUndefined();
     });
 
     it("invalidatePattern() during getOrSet load: loader completes but value not stored", async () => {
-      const loader = vi.fn(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-        return "loaded-value";
-      });
+      let resolveLoader!: (value: string) => void;
+      const loader = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveLoader = resolve;
+          }),
+      );
 
       const pendingPromise = cache.getOrSet("key1", loader, { ttlMs: 1000 }) as Promise<string>;
 
-      await Promise.resolve();
+      await waitForInFlightLoader();
 
       await cache.invalidatePattern("key1");
+      resolveLoader("loaded-value");
 
       const result = await pendingPromise;
 
       // invalidatePattern() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
       expect(result).toBeUndefined();
+      expect(await cache.get("key1")).toBeUndefined();
+    });
+
+    it("delete() for an unrelated key does not suppress an in-flight getOrSet result", async () => {
+      let resolveLoader!: (value: string) => void;
+      const loader = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveLoader = resolve;
+          }),
+      );
+
+      const pendingPromise = cache.getOrSet("target", loader, { ttlMs: 1000 }) as Promise<string>;
+
+      await waitForInFlightLoader();
+
+      await cache.delete("other");
+      resolveLoader("loaded-value");
+
+      await expect(pendingPromise).resolves.toBe("loaded-value");
+      expect(await cache.get("target")).toBe("loaded-value");
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("unmatched invalidatePattern() does not suppress an in-flight getOrSet result", async () => {
+      let resolveLoader!: (value: string) => void;
+      const loader = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveLoader = resolve;
+          }),
+      );
+
+      const pendingPromise = cache.getOrSet("target", loader, { ttlMs: 1000 }) as Promise<string>;
+
+      await waitForInFlightLoader();
+
+      const deleted = await cache.invalidatePattern("other:*");
+      resolveLoader("loaded-value");
+
+      expect(deleted).toBe(0);
+      await expect(pendingPromise).resolves.toBe("loaded-value");
+      expect(await cache.get("target")).toBe("loaded-value");
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("delete() from the loader prevents stale restoration", async () => {
+      const loader = vi.fn(async () => {
+        await cache.delete("key1");
+        return "loaded-value";
+      });
+
+      const result = await cache.getOrSet("key1", loader, { ttlMs: 1000 });
+
+      expect(result).toBeUndefined();
+      expect(await cache.get("key1")).toBeUndefined();
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("clear() from the loader prevents stale restoration", async () => {
+      await cache.set("other", "other-value");
+
+      const loader = vi.fn(async () => {
+        await cache.clear();
+        return "loaded-value";
+      });
+
+      const result = await cache.getOrSet("key1", loader, { ttlMs: 1000 });
+
+      expect(result).toBeUndefined();
+      expect(await cache.get("key1")).toBeUndefined();
+      expect(await cache.get("other")).toBeUndefined();
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("matching invalidatePattern() from the loader prevents stale restoration", async () => {
+      const loader = vi.fn(async () => {
+        await cache.invalidatePattern("key1");
+        return "loaded-value";
+      });
+
+      const result = await cache.getOrSet("key1", loader, { ttlMs: 1000 });
+
+      expect(result).toBeUndefined();
+      expect(await cache.get("key1")).toBeUndefined();
+      expect(loader).toHaveBeenCalledTimes(1);
+    });
+
+    it("removes in-flight state after a loader throws synchronously", async () => {
+      const failingLoader = vi.fn((): Promise<string> => {
+        throw new Error("loader failed");
+      });
+      const recoveryLoader = vi.fn(async () => "recovered");
+
+      await expect(cache.getOrSet("key1", failingLoader)).rejects.toThrow("loader failed");
+
+      await expect(cache.getOrSet("key1", recoveryLoader)).resolves.toBe("recovered");
+      expect(failingLoader).toHaveBeenCalledTimes(1);
+      expect(recoveryLoader).toHaveBeenCalledTimes(1);
+      expect(await cache.get("key1")).toBe("recovered");
     });
 
     it("getOrSet stale overwrite: set before loader completes", async () => {

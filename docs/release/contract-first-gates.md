@@ -25,8 +25,8 @@ pnpm contract:verify
 ```
 
 Generated `create-croco-app` REST templates expose `contract:verify` and `ci:contracts` scripts.
-They compare the committed snapshot against current controllers first, then regenerate OpenAPI and
-RPC client artifacts from the accepted contract.
+They compare the committed snapshot against current controllers first, write a consumer coverage
+report, then regenerate OpenAPI and RPC client artifacts from the accepted contract.
 
 `contract:diff` compares the committed snapshot with current controllers and fails on current graph
 errors or breaking contract drift. Removed controllers, removed routes, HTTP method/path changes,
@@ -37,9 +37,14 @@ reported as non-breaking.
 `contract:openapi` and `contract:client` should run after the check and diff gates so generated
 artifacts are produced only from an accepted contract graph.
 
-The committed baseline is `contract-graph.snapshot.json`. `openapi.json` and generated RPC client
-files may be committed when consumers need checked-in artifacts, but CI should regenerate them from
-the server controllers rather than treating hand-edited generated output as authoritative.
+`contract:coverage` writes `contract-graph.coverage.json` with the same route graph plus consumer
+coverage diagnostics. Unsupported graph fields are reported explicitly so generator omissions do not
+look like successful consumption.
+
+The committed baseline is `contract-graph.snapshot.json`. `contract-graph.coverage.json`,
+`openapi.json`, and generated RPC client files may be committed when consumers need checked-in
+artifacts, but CI should regenerate them from the server controllers rather than treating
+hand-edited generated output as authoritative.
 
 ## Typed RPC clients
 
@@ -54,11 +59,27 @@ instead of widening the contract to an implicit fallback type. RFC 7807 response
 `RpcClientProblemError` rejections with `RpcProblemDetails`, so Problem responses are not returned as
 successful response values.
 
+## JSON-safe Zod support matrix
+
+ContractGraph snapshots, OpenAPI generation, and RPC codegen share the
+`JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX` exported by `@croco/protocols-core`. Unsupported schemas fail
+with `contract-schema-json-unsafe` before generator-specific output is written.
+
+| Zod schema                                                                                                                                                       | Contract behavior                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `ZodString`, `ZodNumber`, `ZodBoolean`, `ZodNull`                                                                                                                | Supported as JSON primitives.                                                                                         |
+| `ZodLiteral`, `ZodEnum`, `ZodNativeEnum`                                                                                                                         | Supported for string, number, boolean, and null values.                                                               |
+| `ZodObject`, `ZodArray`, `ZodRecord`, `ZodUnion`, `ZodDiscriminatedUnion`                                                                                        | Supported when nested schemas are JSON-safe.                                                                          |
+| `ZodOptional`, `ZodNullable`, `ZodDefault`, `ZodBranded`, `ZodReadonly`                                                                                          | Supported through the shared inner-schema descriptor.                                                                 |
+| `ZodEffects` refinements                                                                                                                                         | Supported through the inner schema with `contract-schema-zod-effects-unwrapped` warning.                              |
+| `ZodEffects` transforms/preprocessors, `ZodDate`, `ZodBigInt`, `ZodFunction`, `ZodMap`, `ZodSet`, `ZodPromise`, `ZodSymbol`, `ZodNaN`, `ZodVoid`, `ZodUndefined` | Unsupported; use a JSON boundary schema such as an ISO string, plain object, array, or omitted empty response schema. |
+
 ## Direct CLI usage
 
 ```bash
 croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts'
 croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts' --json --out contract-graph.snapshot.json
+croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts' --json --out contract-graph.coverage.json
 croco contracts diff --baseline contract-graph.snapshot.json --controllers 'apps/api-server/src/controllers/**/*.ts'
 ```
 

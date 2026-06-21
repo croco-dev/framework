@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "validationCommand": "pnpm --filter @croco/presentation-preset test",
+  "profiles": [
+    {
+      "name": "node-server",
+      "runtime": "node",
+      "packageTestName": "validates the node-server generated runtime profile",
+      "generatedAppSmokeCase": "production-app-starter",
+      "generatedAppSmokeCommand": "CROCO_GENERATED_SMOKE_CASES=production-app-starter pnpm create-croco-app:smoke",
+      "target": {
+        "target": "node",
+        "requiredEnvVars": [],
+        "runtime": {
+          "nodeVersion": ">=20"
+        },
+        "output": {
+          "presetName": "presentation-preset/node-server",
+          "buildTime": "2026-01-01T00:00:00.000Z",
+          "format": "dual",
+          "artifacts": [
+            { "path": "apps/api-server/dist/index.mjs", "format": "esm", "type": "code" },
+            { "path": "apps/api-server/dist/index.cjs", "format": "cjs", "type": "code" },
+            { "path": "apps/api-server/dist/index.d.ts", "format": "neutral", "type": "types" },
+            { "path": "contract-graph.snapshot.json", "format": "neutral", "type": "asset" },
+            { "path": "openapi.json", "format": "neutral", "type": "asset" }
+          ],
+          "entries": [
+            {
+              "exportName": ".",
+              "main": "apps/api-server/dist/index.mjs",
+              "cjs": "apps/api-server/dist/index.cjs",
+              "types": "apps/api-server/dist/index.d.ts"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "lambda-function",
+      "runtime": "lambda",
+      "packageTestName": "validates the lambda-function generated runtime profile",
+      "generatedAppSmokeCase": "graphql-lambda-api",
+      "generatedAppSmokeCommand": "CROCO_GENERATED_SMOKE_CASES=graphql-lambda-api pnpm create-croco-app:smoke",
+      "target": {
+        "target": "lambda",
+        "requiredEnvVars": [],
+        "runtime": {
+          "nodeVersion": ">=20",
+          "memory": 512,
+          "timeout": 30
+        },
+        "output": {
+          "presetName": "presentation-preset/lambda-function",
+          "buildTime": "2026-01-01T00:00:00.000Z",
+          "format": "dual",
+          "artifacts": [
+            { "path": "apps/api-server/dist/lambda.mjs", "format": "esm", "type": "code" },
+            { "path": "apps/api-server/dist/lambda.cjs", "format": "cjs", "type": "code" },
+            { "path": "apps/api-server/dist/lambda.d.ts", "format": "neutral", "type": "types" },
+            { "path": "apps/api-server/template.yaml", "format": "neutral", "type": "config" },
+            { "path": "contract-graph.snapshot.json", "format": "neutral", "type": "asset" }
+          ],
+          "entries": [
+            {
+              "exportName": "./lambda",
+              "main": "apps/api-server/dist/lambda.mjs",
+              "cjs": "apps/api-server/dist/lambda.cjs",
+              "types": "apps/api-server/dist/lambda.d.ts"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "cloudflare-worker",
+      "runtime": "cloudflare-workers",
+      "packageTestName": "validates the cloudflare-worker generated runtime profile",
+      "generatedAppSmokeCase": "meta-vite-fullstack-workers",
+      "generatedAppSmokeCommand": "CROCO_GENERATED_SMOKE_CASES=meta-vite-fullstack-workers pnpm create-croco-app:smoke",
+      "target": {
+        "target": "cloudflare-workers",
+        "requiredEnvVars": [],
+        "output": {
+          "presetName": "presentation-preset/cloudflare-worker",
+          "buildTime": "2026-01-01T00:00:00.000Z",
+          "format": "esm",
+          "artifacts": [
+            { "path": "ssr-worker/dist/index.mjs", "format": "esm", "type": "code" },
+            { "path": "ssr-worker/dist/index.d.ts", "format": "neutral", "type": "types" },
+            { "path": "ssr-worker/wrangler.toml", "format": "neutral", "type": "config" },
+            { "path": "ssr-worker/dist/client/manifest.json", "format": "neutral", "type": "asset" }
+          ],
+          "entries": [
+            {
+              "exportName": "./worker",
+              "main": "ssr-worker/dist/index.mjs",
+              "types": "ssr-worker/dist/index.d.ts"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "browser-vite-spa",
+      "runtime": "browser",
+      "packageTestName": "validates the browser-vite-spa generated runtime profile",
+      "generatedAppSmokeCase": "meta-vite-web",
+      "generatedAppSmokeCommand": "CROCO_GENERATED_SMOKE_CASES=meta-vite-web pnpm create-croco-app:smoke",
+      "target": {
+        "target": "browser",
+        "requiredEnvVars": [],
+        "output": {
+          "presetName": "presentation-preset/browser-vite-spa",
+          "buildTime": "2026-01-01T00:00:00.000Z",
+          "format": "esm",
+          "artifacts": [
+            { "path": "apps/web/dist/index.html", "format": "neutral", "type": "asset" },
+            { "path": "apps/web/dist/assets/main.js", "format": "esm", "type": "code" },
+            { "path": "apps/web/dist/assets/main.css", "format": "neutral", "type": "asset" },
+            { "path": "apps/web/src/vite-env.d.ts", "format": "neutral", "type": "types" }
+          ],
+          "entries": [
+            {
+              "exportName": "./browser",
+              "main": "apps/web/dist/assets/main.js",
+              "types": "apps/web/src/vite-env.d.ts"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

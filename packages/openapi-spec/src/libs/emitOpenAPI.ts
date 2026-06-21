@@ -6,12 +6,16 @@ import {
 } from "@asteasolutions/zod-to-openapi";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
+  assertContractGraphConsumerRouteCoverage,
   assertContractGraphHasNoErrors,
   buildContractGraph,
   type ContractGraph,
+  type ContractGraphConsumerRouteField,
+  type ContractGraphObservedConsumerRoute,
   type ContractGraphRoute,
   getContractPathParams,
   type ParamIR,
+  unwrapZodEffectsSchema,
 } from "@croco/protocols-core";
 import { type ZodType, z } from "zod";
 
@@ -110,14 +114,17 @@ export function emitOpenAPIFromContractGraph(
   });
 
   const generator = new OpenApiGeneratorV31(registry.definitions);
-
-  return generator.generateDocument({
+  const document = generator.generateDocument({
     openapi: "3.1.0",
     info: { ...DEFAULT_INFO, ...options.info },
     servers: options.servers ?? DEFAULT_SERVERS,
     security: options.security ?? [],
     tags: options.tags ?? toTags(routes),
   });
+
+  assertContractGraphConsumerRouteCoverage(graph, "openapi", collectOpenAPICoveredRoutes(document));
+
+  return document;
 }
 
 function registerProblemDetailsSchema(registry: OpenAPIRegistry): OpenAPIReference {
@@ -227,7 +234,7 @@ function toResponseConfig(
   defaultResponses: RouteResponses,
   problemDetailsRef: OpenAPIReference,
 ): RouteResponses {
-  const outputSchema = unwrapZodEffects(route.outputSchema);
+  const outputSchema = unwrapZodEffectsSchema(route.outputSchema);
 
   return {
     ...defaultResponses,
@@ -314,7 +321,7 @@ function toRequestConfig(route: ContractGraphRoute): RouteConfig["request"] {
   const params = toZodObject(route.params.filter((param) => param.kind === "path"));
   const query = toZodObject(route.params.filter((param) => param.kind === "query"));
   const headers = toZodObject(route.params.filter((param) => param.kind === "header"));
-  const bodySchema = unwrapZodEffects(
+  const bodySchema = unwrapZodEffectsSchema(
     route.inputSchema ?? route.params.find((param) => param.kind === "body")?.schema,
   );
 
@@ -350,7 +357,7 @@ function toZodObject(params: ParamIR[]): z.ZodObject<Record<string, ZodType>> | 
 }
 
 function withParameterMetadata(param: ParamIR): ZodType {
-  const schema = unwrapZodEffects(param.schema) ?? z.string();
+  const schema = unwrapZodEffectsSchema(param.schema) ?? z.string();
   const location = toOpenAPIParamLocation(param.kind);
 
   return schema.openapi({
@@ -360,14 +367,6 @@ function withParameterMetadata(param: ParamIR): ZodType {
       required: param.kind === "path",
     },
   });
-}
-
-function unwrapZodEffects(schema: ZodType | null | undefined): ZodType | null | undefined {
-  if (!schema || !(schema instanceof z.ZodEffects)) {
-    return schema;
-  }
-
-  return unwrapZodEffects(schema.innerType());
 }
 
 function toOpenAPIParamLocation(kind: ParamIR["kind"]): OpenAPIParamLocation {
@@ -410,4 +409,134 @@ function toHttpMethod(route: ContractGraphRoute): HttpMethod {
 
 function formatRoute(route: ContractGraphRoute): string {
   return `${route.controllerName}.${route.methodName} (${route.path})`;
+}
+
+function collectOpenAPICoveredRoutes(
+  document: OpenAPIDocument,
+): ContractGraphObservedConsumerRoute[] {
+  const coveredRoutes: ContractGraphObservedConsumerRoute[] = [];
+
+  for (const [path, pathItem] of Object.entries(document.paths ?? {})) {
+    if (!isRecord(pathItem)) {
+      continue;
+    }
+
+    for (const method of HTTP_METHODS) {
+      const operation = pathItem[method];
+
+      if (!isRecord(operation) || typeof operation.summary !== "string") {
+        continue;
+      }
+
+      const operationId =
+        typeof operation.operationId === "string" ? operation.operationId : undefined;
+
+      coveredRoutes.push({
+        routeId: operation.summary,
+        ...(operationId ? { operationId } : {}),
+        consumedFields: collectOpenAPIConsumedFields(operation),
+        fieldFingerprints: {
+          routeId: operation.summary,
+          ...(operationId ? { operationId } : {}),
+          httpMethod: method.toUpperCase(),
+          path: toContractComparablePath(path),
+          "request.body": hasOpenAPIRequestBody(operation) ? "present" : "absent",
+          "request.path": hasOpenAPIParameters(operation, "path") ? "present" : "absent",
+          "request.query": hasOpenAPIParameters(operation, "query") ? "present" : "absent",
+          "request.headers": hasOpenAPIParameters(operation, "header") ? "present" : "absent",
+          response: hasOpenAPIJsonSuccessResponse(operation) ? "present" : "absent",
+          problems: openAPIProblemsFingerprint(operation),
+        },
+      });
+    }
+  }
+
+  return coveredRoutes;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function collectOpenAPIConsumedFields(
+  operation: Record<string, unknown>,
+): ContractGraphConsumerRouteField[] {
+  return [
+    "routeId",
+    ...(typeof operation.operationId === "string" ? (["operationId"] as const) : []),
+    "httpMethod",
+    "path",
+    "request.body",
+    "request.path",
+    "request.query",
+    "request.headers",
+    "response",
+    "problems",
+  ];
+}
+
+function toContractComparablePath(path: string): string {
+  return path.replace(/\{([^}]+)\}/g, ":$1");
+}
+
+function hasOpenAPIRequestBody(operation: Record<string, unknown>): boolean {
+  return isRecord(operation.requestBody);
+}
+
+function hasOpenAPIParameters(
+  operation: Record<string, unknown>,
+  location: OpenAPIParamLocation,
+): boolean {
+  const parameters = Array.isArray(operation.parameters) ? operation.parameters : [];
+
+  return parameters
+    .filter(isRecord)
+    .some((parameter) => parameter.in === location && typeof parameter.name === "string");
+}
+
+function hasOpenAPIJsonSuccessResponse(operation: Record<string, unknown>): boolean {
+  const responses = isRecord(operation.responses) ? operation.responses : {};
+  const successResponse = responses["200"];
+
+  if (!isRecord(successResponse) || !isRecord(successResponse.content)) {
+    return false;
+  }
+
+  const jsonContent = successResponse.content["application/json"];
+
+  return isRecord(jsonContent) && isRecord(jsonContent.schema);
+}
+
+function openAPIProblemsFingerprint(operation: Record<string, unknown>): string {
+  const responses = isRecord(operation.responses) ? operation.responses : {};
+  const problems = Object.values(responses).flatMap((response) => {
+    if (!isRecord(response) || !Array.isArray(response["x-croco-problems"])) {
+      return [];
+    }
+
+    return response["x-croco-problems"].filter(isRecord).map(toOpenAPIProblemFingerprint);
+  });
+
+  return JSON.stringify(problems.sort(compareOpenAPIProblemFingerprints));
+}
+
+function toOpenAPIProblemFingerprint(problem: Record<string, unknown>): DeclaredProblemOpenAPI {
+  return {
+    code: String(problem.code),
+    category: String(problem.category),
+    status: typeof problem.status === "number" ? problem.status : Number(problem.status),
+    ...(typeof problem.description === "string" ? { description: problem.description } : {}),
+    ...(typeof problem.type === "string" ? { type: problem.type } : {}),
+  };
+}
+
+function compareOpenAPIProblemFingerprints(
+  left: DeclaredProblemOpenAPI,
+  right: DeclaredProblemOpenAPI,
+): number {
+  return (
+    left.code.localeCompare(right.code) ||
+    left.category.localeCompare(right.category) ||
+    left.status - right.status
+  );
 }

@@ -5,6 +5,7 @@ import { MigrationTransactionRequiredProblem } from "./problems/MigrationTransac
 import { MissingDownFunctionProblem } from "./problems/MissingDownFunctionProblem";
 import { MissingUpFunctionProblem } from "./problems/MissingUpFunctionProblem";
 import type { MigrationFile, MigrationStatus } from "./types";
+import { assertValidMigrationCount } from "./validateMigrationCount";
 
 export class MigrationRunner {
   private readonly scanner: MigrationScanner;
@@ -64,6 +65,10 @@ export class MigrationRunner {
   }
 
   async down(targetId?: string, count?: number): Promise<string[]> {
+    if (!targetId && count !== undefined) {
+      assertValidMigrationCount(count);
+    }
+
     await this.init();
 
     const files = await this.scanner.scan();
@@ -82,7 +87,7 @@ export class MigrationRunner {
     let toRevert: MigrationFile[];
     if (targetId) {
       toRevert = runFiles.filter((f) => f.id >= targetId).reverse();
-    } else if (count) {
+    } else if (count !== undefined) {
       toRevert = runFiles.slice(-count).reverse();
     } else {
       toRevert = runFiles.slice(-1).reverse();

@@ -3,8 +3,12 @@ import type { z } from "zod";
 import { ParamType, REST_PARAMS_KEY } from "../constants";
 import type { ParamMetadata } from "../types";
 import {
-  isRouteContractSpec,
-  type RouteContractSpec,
+  hasRouteBodyContract,
+  hasRouteParamsContract,
+  hasRouteQueryContract,
+  type RouteContractWithBody,
+  type RouteContractWithParams,
+  type RouteContractWithQuery,
   type RoutePathParamName,
   type RoutePathParams,
   type RouteQuery,
@@ -45,15 +49,15 @@ function createParamDecorator(type: ParamType) {
  * 경로 파라미터를 메서드 인자에 바인딩합니다.
  */
 export function Param<
-  TContract extends RouteContractSpec & { params: AnyZodObject },
+  TContract extends RouteContractWithParams,
   Name extends RoutePathParamName<TContract["path"]> & keyof RoutePathParams<TContract> & string,
 >(contract: TContract, name: Name): ParameterDecorator;
 export function Param(name: string, schema?: z.ZodType): ParameterDecorator;
 export function Param(
-  nameOrContract: string | (RouteContractSpec & { params: AnyZodObject }),
+  nameOrContract: string | RouteContractWithParams,
   schemaOrName?: z.ZodType | string,
 ): ParameterDecorator {
-  if (isRouteContractSpec(nameOrContract)) {
+  if (hasRouteParamsContract(nameOrContract)) {
     const name = schemaOrName as keyof RoutePathParams<typeof nameOrContract> & string;
 
     return createParamDecorator(ParamType.PARAM)(name, getObjectShape(nameOrContract.params)[name]);
@@ -66,15 +70,15 @@ export function Param(
  * 쿼리스트링 값을 메서드 인자에 바인딩합니다.
  */
 export function Query<
-  TContract extends RouteContractSpec & { query: AnyZodObject },
+  TContract extends RouteContractWithQuery,
   Name extends keyof RouteQuery<TContract> & string,
 >(contract: TContract, name: Name): ParameterDecorator;
 export function Query(name: string, schema?: z.ZodType): ParameterDecorator;
 export function Query(
-  nameOrContract: string | (RouteContractSpec & { query: AnyZodObject }),
+  nameOrContract: string | RouteContractWithQuery,
   schemaOrName?: z.ZodType | string,
 ): ParameterDecorator {
-  if (isRouteContractSpec(nameOrContract)) {
+  if (hasRouteQueryContract(nameOrContract)) {
     const name = schemaOrName as keyof RouteQuery<typeof nameOrContract> & string;
 
     return createParamDecorator(ParamType.QUERY)(name, getObjectShape(nameOrContract.query)[name]);
@@ -92,12 +96,12 @@ export const Header = (name: string, schema?: z.ZodType) =>
 /**
  * 요청 본문 전체를 메서드 인자에 바인딩합니다.
  */
-export function Body<TContract extends RouteContractSpec & { body: z.ZodType }>(
+export function Body<TContract extends RouteContractWithBody>(
   contract: TContract,
 ): ParameterDecorator;
 export function Body(schema?: z.ZodType): ParameterDecorator;
-export function Body(schemaOrContract?: z.ZodType | (RouteContractSpec & { body: z.ZodType })) {
-  const schema = isRouteContractSpec(schemaOrContract) ? schemaOrContract.body : schemaOrContract;
+export function Body(schemaOrContract?: z.ZodType | RouteContractWithBody) {
+  const schema = hasRouteBodyContract(schemaOrContract) ? schemaOrContract.body : schemaOrContract;
 
   return createParamDecorator(ParamType.BODY)(undefined, schema);
 }

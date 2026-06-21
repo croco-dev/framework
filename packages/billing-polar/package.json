@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "@croco/billing-core": "workspace:*",
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/events-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
@@ -48,6 +49,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
     "tsup": "^8.0.0",
     "typescript": "^5.7.0",
     "vitest": "4.0.16"

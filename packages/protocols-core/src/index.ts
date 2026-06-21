@@ -1,4 +1,5 @@
 export type {
+  BuildContractGraphOptions,
   ContractAccessMetadata,
   ContractDiagnostic,
   ContractDiagnosticSeverity,
@@ -22,6 +23,23 @@ export {
   getContractPathParamNames,
   getContractPathParams,
 } from "./libs/ContractGraph";
+export type {
+  ContractGraphConsumerCoverage,
+  ContractGraphConsumerCoverageReport,
+  ContractGraphConsumerCoverageVersion,
+  ContractGraphConsumerDefinition,
+  ContractGraphConsumerId,
+  ContractGraphConsumerRouteCoverage,
+  ContractGraphConsumerRouteFieldFingerprints,
+  ContractGraphConsumerRouteField,
+  ContractGraphObservedConsumerRoute,
+} from "./libs/ContractGraphConsumerCoverage";
+export {
+  assertContractGraphConsumerRouteCoverage,
+  createContractGraphConsumerCoverage,
+  DEFAULT_CONTRACT_GRAPH_CONSUMERS,
+  getContractGraphConsumerRouteCoverageDiagnostics,
+} from "./libs/ContractGraphConsumerCoverage";
 export type {
   DefinedRouteSchema,
   InferRouteSchemaRequest,
@@ -54,6 +72,30 @@ export {
   snapshotZodSchema,
   stringifyContractGraphSnapshot,
 } from "./libs/ContractGraphSnapshot";
+export type {
+  ContractSchemaDescriptor,
+  ContractSchemaDiagnostic,
+  ContractSchemaDiagnosticSeverity,
+  ContractSchemaFieldDescriptor,
+  ContractSchemaJsonSafeStatus,
+  ContractSchemaPrimitiveValue,
+  ContractSchemaSupportMatrixEntry,
+} from "./libs/SchemaDescriptor";
+export {
+  CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
+  CONTRACT_SCHEMA_ZOD_EFFECTS_UNWRAPPED_DIAGNOSTIC_CODE,
+  describeZodSchema,
+  formatSchemaDiagnostic,
+  getSchemaDescriptorDiagnostics,
+  getZodArrayElementSchema,
+  getZodDefaultValue,
+  getZodInnerSchema,
+  getZodObjectShape,
+  getZodObjectUnsupportedDynamicKeyMode,
+  getZodSchemaTypeName,
+  JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX,
+  unwrapZodEffectsSchema,
+} from "./libs/SchemaDescriptor";
 export {
   discoverControllerConstructors,
   isControllerConstructor,

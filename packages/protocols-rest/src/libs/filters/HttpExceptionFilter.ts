@@ -1,10 +1,9 @@
+import { Problem, ProblemSerializer } from "@croco/problems-core";
+import type { ProblemDetails } from "@croco/problems-core";
 import type { ExceptionFilter } from "../interfaces/ExceptionFilter";
 import type { ExecutionContext } from "../interfaces/ExecutionContext";
 
-export type ProblemLike = {
-  status: number;
-  toJSON(): Record<string, unknown>;
-};
+export type ProblemLike = Problem | ProblemDetails;
 
 export type HttpExceptionFilterResponse = {
   status: number;
@@ -12,15 +11,16 @@ export type HttpExceptionFilterResponse = {
   body: Record<string, unknown>;
 };
 
-function isProblem(error: unknown): error is ProblemLike {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "status" in error &&
-    typeof (error as ProblemLike).status === "number" &&
-    "toJSON" in error &&
-    typeof (error as ProblemLike).toJSON === "function"
-  );
+function parseProblemDetails(exception: unknown): ProblemDetails | undefined {
+  if (exception instanceof Problem) {
+    return exception.toJSON();
+  }
+
+  try {
+    return ProblemSerializer.fromJson(exception);
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -28,11 +28,13 @@ function isProblem(error: unknown): error is ProblemLike {
  */
 export class HttpExceptionFilter implements ExceptionFilter<unknown, ExecutionContext> {
   catch(exception: unknown, _context: ExecutionContext): HttpExceptionFilterResponse {
-    if (isProblem(exception)) {
+    const problem = parseProblemDetails(exception);
+
+    if (problem) {
       return {
-        status: exception.status,
+        status: problem.status,
         headers: { "Content-Type": "application/problem+json" },
-        body: exception.toJSON(),
+        body: problem,
       };
     }
 

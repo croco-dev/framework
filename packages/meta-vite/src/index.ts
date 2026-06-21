@@ -12,15 +12,30 @@
 // - ISR types: CacheStore integration for TTL-only ISR
 // - head(): minimal metadata API helper
 
-export type { ServerActionConfig } from "./libs/actions/serverActions";
+export type {
+  ServerActionConfig,
+  ServerActionFailureResult,
+  ServerActionHandlerResult,
+  ServerActionOutputContract,
+  ServerActionProblemContract,
+  ServerActionProblemKind,
+  ServerActionResult,
+  ServerActionSuccessResult,
+  ServerActionValidationFields,
+} from "./libs/actions/serverActions";
 // Server actions
 export {
   createServerActionRegistry,
   createServerAction,
   createServerActionHandler,
+  createServerActionSuccess,
+  createServerActionSuccessResponse,
   dispatchServerAction,
   resetServerActions,
+  ServerActionInvalidPathProblem,
+  ServerActionNotFoundProblem,
   ServerActionRegistry,
+  ServerActionValidationProblem,
   unregisterServerAction,
 } from "./libs/actions/serverActions";
 export type { SsgRenderedArtifact, SsgRenderFunction } from "./libs/build/ssgPrerender";
@@ -28,7 +43,23 @@ export type { SsgRenderedArtifact, SsgRenderFunction } from "./libs/build/ssgPre
 export { prerenderSsgRoutes, renderRouteToString } from "./libs/build/ssgPrerender";
 export { createIsrHandler } from "./libs/isr/createIsrHandler";
 export { createIsrMiddleware } from "./libs/isr/isrMiddleware";
+export {
+  createDurableIsrCacheProfile,
+  createLocalIsrCacheProfile,
+  evaluateIsrRuntimeSupport,
+} from "./libs/isr/runtimeSupport";
 // ISR
+export type {
+  DurableIsrCacheStoreProfileOptions,
+  IsrCacheDurability,
+  IsrCacheStoreProfile,
+  IsrRuntime,
+  IsrRuntimeDiagnostic,
+  IsrRuntimeDiagnosticCode,
+  IsrRuntimeDiagnosticSeverity,
+  IsrRuntimeSupportOptions,
+  IsrRuntimeSupportReport,
+} from "./libs/isr/runtimeSupport";
 export type {
   IsrCacheAdapter,
   IsrCacheStore,

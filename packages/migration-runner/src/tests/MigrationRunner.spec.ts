@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseClient } from "../libs/db-types";
 import { MigrationRunner } from "../libs/MigrationRunner";
+import { InvalidMigrationCountProblem } from "../libs/problems/InvalidMigrationCountProblem";
 import { MigrationTransactionRequiredProblem } from "../libs/problems/MigrationTransactionRequiredProblem";
 
 describe("MigrationRunner", () => {
@@ -98,6 +99,32 @@ describe("MigrationRunner", () => {
   });
 
   describe("down", () => {
+    it.each([
+      ["zero", 0],
+      ["negative", -1],
+      ["NaN", Number.NaN],
+      ["non-integer", 1.5],
+    ])(
+      "should reject %s rollback count before executing migration bodies",
+      async (_label, count) => {
+        const migrationsDir = createMigrationDir();
+        const { bodyCalls, db } = createConcurrentDb({
+          initialExecuted: [["20260615000001", "create_accounts"]],
+          selectBarrierSize: 1,
+        });
+        runner = new MigrationRunner(db, migrationsDir, "_migrations");
+
+        try {
+          await expect(runner.down(undefined, count)).rejects.toBeInstanceOf(
+            InvalidMigrationCountProblem,
+          );
+          expect(bodyCalls).toEqual([]);
+        } finally {
+          rmSync(migrationsDir, { force: true, recursive: true });
+        }
+      },
+    );
+
     it("should reject clients without transaction support", async () => {
       let executeCount = 0;
       mockDb = {

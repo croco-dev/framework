@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |    99 |
+| Public packages                |   106 |
 | Private packages skipped       |     2 |
-| Missing package README         |    22 |
-| Missing generated API docs     |    74 |
+| Missing package README         |    20 |
+| Missing generated API docs     |    77 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    38 |
+| Extension matrix packages      |    41 |
 
 New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`. Production-ready packages must have generated API docs unless they have a short-lived justification in `temporaryProductionApiDocExceptions`.
 
@@ -20,7 +20,6 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/analytics-core` (`packages/analytics-core`) — legacy baseline
 - `create-croco-app` (`packages/create-croco-app`) — legacy baseline
 - `@croco/diagnostics-core` (`packages/diagnostics-core`) — legacy baseline
-- `@croco/events-tx` (`packages/events-tx`) — legacy baseline
 - `@croco/features-core` (`packages/features-core`) — legacy baseline
 - `@croco/framework-preset` (`packages/framework-preset`) — legacy baseline
 - `@croco/framework-routes` (`packages/framework-routes`) — legacy baseline
@@ -28,7 +27,6 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/migration-runner` (`packages/migration-runner`) — legacy baseline
 - `@croco/notifications-core` (`packages/notifications-core`) — legacy baseline
 - `@croco/openapi-spec` (`packages/openapi-spec`) — legacy baseline
-- `@croco/presentation-preset` (`packages/presentation-preset`) — legacy baseline
 - `@croco/preset-cloudflare` (`packages/preset-cloudflare`) — legacy baseline
 - `@croco/preset-lambda` (`packages/preset-lambda`) — legacy baseline
 - `@croco/preset-node` (`packages/preset-node`) — legacy baseline
@@ -44,6 +42,8 @@ New public packages must not add missing README, API docs, or test coverage unle
 
 - `@croco/access-core` (`packages/access-core`) — legacy baseline
 - `@croco/access-drizzle` (`packages/access-drizzle`) — legacy baseline
+- `@croco/admin-core` (`packages/admin-core`) — legacy baseline
+- `@croco/admin-react` (`packages/admin-react`) — legacy baseline
 - `@croco/analytics-core` (`packages/analytics-core`) — legacy baseline
 - `@croco/analytics-posthog` (`packages/analytics-posthog`) — legacy baseline
 - `@croco/audit-drizzle` (`packages/audit-drizzle`) — legacy baseline
@@ -73,6 +73,7 @@ New public packages must not add missing README, API docs, or test coverage unle
 - `@croco/framework-preset` (`packages/framework-preset`) — legacy baseline
 - `@croco/framework-routes` (`packages/framework-routes`) — legacy baseline
 - `@croco/frontend-cloudflare` (`packages/frontend-cloudflare`) — legacy baseline
+- `@croco/frontend-problems` (`packages/frontend-problems`) — legacy baseline
 - `@croco/frontend-react` (`packages/frontend-react`) — legacy baseline
 - `@croco/frontend-vite` (`packages/frontend-vite`) — legacy baseline
 - `@croco/gid-core` (`packages/gid-core`) — legacy baseline
@@ -125,20 +126,20 @@ None.
 
 | Group        | Packages |
 | ------------ | -------: |
-| Core         |       21 |
-| Domain       |       26 |
-| Provider     |       25 |
+| Core         |       22 |
+| Domain       |       28 |
+| Provider     |       26 |
 | Integration  |        5 |
-| Protocol     |        6 |
+| Protocol     |        7 |
 | Transport    |        3 |
-| Presentation |        5 |
+| Presentation |        7 |
 | Tooling      |        8 |
 
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
-| 🟡 beta             |       45 |
-| 🔴 alpha/WIP        |       31 |
+| 🟡 beta             |       49 |
+| 🔴 alpha/WIP        |       34 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix
@@ -147,7 +148,7 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 
 | Group        | Packages | Without package tests |
 | ------------ | -------: | --------------------: |
-| Provider     |       25 |                     0 |
+| Provider     |       26 |                     0 |
 | Integration  |        5 |                     0 |
 | Transport    |        3 |                     0 |
-| Presentation |        5 |                     0 |
+| Presentation |        7 |                     0 |

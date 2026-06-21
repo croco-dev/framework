@@ -35,7 +35,7 @@ title: "SlidingWindowInMemoryStore"
 
 ### check()
 
-> **check**(`key`, `policy`): `Promise`\<\{ `limit`: `number`; `remaining`: `number`; `resetAtMs`: `number`; `success`: `boolean`; \}\>
+> **check**(`key`, `policy`): `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
 #### Parameters
 
@@ -49,7 +49,7 @@ title: "SlidingWindowInMemoryStore"
 
 #### Returns
 
-`Promise`\<\{ `limit`: `number`; `remaining`: `number`; `resetAtMs`: `number`; `success`: `boolean`; \}\>
+`Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
 #### Overrides
 
@@ -168,6 +168,34 @@ title: "SlidingWindowInMemoryStore"
 #### Overrides
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/slidingwindowstore/#pruneexpired)
+
+***
+
+### refund()
+
+> **refund**(`key`, `policy`, `receipt?`): `Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### policy
+
+[`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
+
+##### receipt?
+
+[`RateLimitRefundReceipt`](/api/ratelimit-core/src/type-aliases/ratelimitrefundreceipt/)
+
+#### Returns
+
+`Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
+
+#### Overrides
+
+[`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`refund`](/api/ratelimit-core/src/classes/slidingwindowstore/#refund)
 
 ***
 

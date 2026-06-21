@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertPolicyTableRuntimeCapabilities,
   assertPolicyRuntimeCapabilities,
+  checkPolicyTableRuntimeCapabilities,
   compilePolicyTable,
+  compilePolicyTableForRuntime,
   createPolicyTarget,
+  definePolicyForRuntime,
   definePolicy,
+  defineRuntimePolicyPreset,
+  formatPolicyCapabilityDiagnostic,
   getPolicyExecutionPlan,
+  POLICY_CAPABILITY_UNAVAILABLE_CODE,
   PolicyCapabilityProblem,
   PolicyConflictProblem,
   PolicyDefinitionProblem,
@@ -135,6 +142,94 @@ describe("RuntimePolicy", () => {
     expect(() => assertPolicyRuntimeCapabilities(plan, { ...capabilities, trace: false })).toThrow(
       PolicyCapabilityProblem,
     );
+  });
+
+  it("should fail when a compiled policy requires any unavailable runtime capability", () => {
+    const target = createPolicyTarget("route", "WorkersController", { operation: "create" });
+    const table = compilePolicyTable([
+      definePolicy(
+        target,
+        { kind: "retry", maxAttempts: 3 },
+        { requiredCapabilities: ["nodeApi"] },
+      ),
+    ]);
+    const plan = getPolicyExecutionPlan(table, target, capabilities);
+
+    expect(plan?.entries[0]?.requiredCapabilities).toEqual(["nodeApi"]);
+    expect(plan).toBeDefined();
+    if (!plan) {
+      return;
+    }
+    expect(() =>
+      assertPolicyRuntimeCapabilities(plan, { ...capabilities, nodeApi: false }),
+    ).toThrow(PolicyCapabilityProblem);
+  });
+
+  it("should report policy capability diagnostics for a target runtime preset", () => {
+    const preset = defineRuntimePolicyPreset({
+      platform: "cloudflare-workers",
+      source: { file: "croco.runtime.ts", symbol: "workerPreset" },
+    });
+    const target = createPolicyTarget("route", "WorkersController", {
+      operation: "create",
+      source: { file: "src/workers.ts", symbol: "WorkersController.create" },
+    });
+    const table = compilePolicyTable([
+      definePolicyForRuntime(
+        preset,
+        target,
+        { kind: "retry", maxAttempts: 3 },
+        { requiredCapabilities: ["nodeApi"] as never },
+      ),
+    ]);
+
+    const [diagnostic] = checkPolicyTableRuntimeCapabilities(table, preset);
+
+    expect(diagnostic).toMatchObject({
+      code: POLICY_CAPABILITY_UNAVAILABLE_CODE,
+      severity: "error",
+      policyKind: "retry",
+      targetRuntime: "cloudflare-workers",
+      capability: "nodeApi",
+      source: { file: "src/workers.ts", symbol: "WorkersController.create" },
+      runtimeSource: { file: "croco.runtime.ts", symbol: "workerPreset" },
+    });
+    expect(diagnostic?.message).toContain("Target runtime 'cloudflare-workers'");
+    expect(diagnostic ? formatPolicyCapabilityDiagnostic(diagnostic) : "").toContain(
+      "policySource=src/workers.ts#WorkersController.create runtimeSource=croco.runtime.ts#workerPreset",
+    );
+  });
+
+  it("should fail build-time policy table checks for Lambda shutdown requirements", () => {
+    const preset = defineRuntimePolicyPreset({ platform: "lambda" });
+    const target = createPolicyTarget("event-handler", "CleanupHandler");
+    const table = compilePolicyTable([
+      definePolicyForRuntime(
+        preset,
+        target,
+        { kind: "timeout", timeoutMs: 1000 },
+        { requiredCapabilities: ["shutdown"] as never },
+      ),
+    ]);
+
+    expect(() => assertPolicyTableRuntimeCapabilities(table, preset)).toThrow(
+      PolicyCapabilityProblem,
+    );
+  });
+
+  it("should compile runtime policy tables only when all required capabilities match", () => {
+    const preset = defineRuntimePolicyPreset({ platform: "lambda" });
+    const target = createPolicyTarget("event-handler", "InvoiceCreatedHandler");
+    const table = compilePolicyTableForRuntime(preset, [
+      definePolicyForRuntime(
+        preset,
+        target,
+        { kind: "retry", maxAttempts: 2 },
+        { requiredCapabilities: ["waitUntil", "flush"] },
+      ),
+    ]);
+
+    expect(table.plans[0]?.entries[0]?.requiredCapabilities).toEqual(["waitUntil", "flush"]);
   });
 
   it("should enforce runtime capabilities through the primary plan resolver", () => {

@@ -3,12 +3,133 @@ import {
   createSlidingWindowPolicy,
   createTokenBucketPolicy,
 } from "@croco/ratelimit-core";
+import { createUpstashRedisRateLimitConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   UpstashFixedWindowStore,
   UpstashSlidingWindowStore,
   UpstashTokenBucketStore,
 } from "../libs/UpstashRateLimitStore";
+
+type ConformanceScenario = "allow" | "deny" | "retryable-upstream" | "terminal-upstream";
+const UPSTASH_REDIS_LIVE_ENV = [
+  "CROCO_LIVE_UPSTASH_REDIS",
+  "UPSTASH_REDIS_REST_URL",
+  "UPSTASH_REDIS_REST_TOKEN",
+] as const;
+
+function createMockRedis(): {
+  eval: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  set: ReturnType<typeof vi.fn>;
+  del: ReturnType<typeof vi.fn>;
+  keys: ReturnType<typeof vi.fn>;
+  expire: ReturnType<typeof vi.fn>;
+} {
+  return {
+    eval: vi.fn(),
+    get: vi.fn(),
+    set: vi.fn(),
+    del: vi.fn(),
+    keys: vi.fn(),
+    expire: vi.fn(),
+  };
+}
+
+function createUpstreamError(message: string, status: number): Error & { readonly status: number } {
+  const error = new Error(message) as Error & { status: number };
+  error.status = status;
+  return error;
+}
+
+function createConformanceStore(scenario: ConformanceScenario): UpstashFixedWindowStore {
+  const redis = createMockRedis();
+
+  if (scenario === "allow") {
+    redis.eval
+      .mockResolvedValueOnce([1, 1, 1])
+      .mockResolvedValueOnce([1, 0, 2])
+      .mockResolvedValueOnce([0, 0, 2]);
+  }
+
+  if (scenario === "deny") {
+    redis.eval.mockResolvedValueOnce([0, 2, 0]);
+  }
+
+  if (scenario === "retryable-upstream") {
+    redis.eval.mockRejectedValue(
+      createUpstreamError("redis timeout token=super-secret-token", 503),
+    );
+  }
+
+  if (scenario === "terminal-upstream") {
+    redis.eval.mockRejectedValue(
+      createUpstreamError("redis rejected token=super-secret-token", 400),
+    );
+  }
+
+  return new UpstashFixedWindowStore({ redis: redis as never });
+}
+
+function isTruthyEnv(name: string): boolean {
+  const value = process.env[name]?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+function readRequiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} is required for Upstash Redis live smoke.`);
+  }
+
+  return value;
+}
+
+async function runUpstashRedisLiveSmoke(): Promise<void> {
+  const { Redis } = await import("@upstash/redis");
+  const redis = new Redis({
+    token: readRequiredEnv("UPSTASH_REDIS_REST_TOKEN"),
+    url: readRequiredEnv("UPSTASH_REDIS_REST_URL"),
+  });
+  const key = `smoke:${Date.now()}`;
+  const store = new UpstashFixedWindowStore({
+    prefix: `croco:ratelimit-upstash:${Date.now()}`,
+    redis,
+  });
+  const policy = createFixedWindowPolicy("live-smoke", 2, 1_000);
+
+  const result = await store.check(key, policy);
+  expect(result.success).toBe(true);
+  expect(result.refundReceipt?.algorithm).toBe("fixed");
+
+  if (result.refundReceipt?.algorithm === "fixed") {
+    await store.refund(key, policy, result.refundReceipt);
+  }
+
+  await store.reset(key);
+}
+
+describe("Upstash Redis rate-limit conformance", () => {
+  it.each(
+    createUpstashRedisRateLimitConformanceSuite({
+      createMissingConfig: () => new UpstashFixedWindowStore({ redis: undefined as never }),
+      createStore: createConformanceStore,
+      invalidPolicy: createSlidingWindowPolicy("invalid", 2, 1_000),
+      liveSmoke: {
+        isEnabled: () =>
+          isTruthyEnv("CROCO_LIVE_UPSTASH_REDIS") &&
+          UPSTASH_REDIS_LIVE_ENV.every((name) => Boolean(process.env[name])),
+        requiredEnv: UPSTASH_REDIS_LIVE_ENV,
+        run: runUpstashRedisLiveSmoke,
+      },
+      policy: createFixedWindowPolicy("conformance", 2, 1_000),
+      providerName: "ratelimit-upstash",
+      secretSamples: ["super-secret-token"],
+    }).cases,
+  )("$name", async ({ run }) => {
+    await run();
+  });
+});
 
 describe("UpstashFixedWindowStore", () => {
   let store!: UpstashFixedWindowStore;
@@ -66,6 +187,34 @@ describe("UpstashFixedWindowStore", () => {
     expect(stats.denied).toBe(0);
   });
 
+  it("should refund quota and stats", async () => {
+    mockRedis.eval
+      .mockResolvedValueOnce([1, 1, 9])
+      .mockResolvedValueOnce([1, 0, 10])
+      .mockResolvedValueOnce([0, 0, 10]);
+
+    const policy = createFixedWindowPolicy("test", 10, 60000);
+    const check = await store.check("test-key", policy);
+    const receipt = check.refundReceipt;
+    expect(receipt?.algorithm).toBe("fixed");
+    if (!receipt || receipt.algorithm !== "fixed") {
+      throw new Error("expected fixed window refund receipt");
+    }
+
+    const refund = await store.refund("test-key", policy, receipt);
+    const duplicateRefund = await store.refund("test-key", policy, receipt);
+
+    expect(refund.refunded).toBe(true);
+    expect(refund.remaining).toBe(10);
+    expect(duplicateRefund.refunded).toBe(false);
+    expect(mockRedis.eval).toHaveBeenLastCalledWith(
+      expect.any(String),
+      ["ratelimit:fixed:test-key", "ratelimit:fixed:test-key:receipts"],
+      [10, 60, receipt.windowStart, receipt.id],
+    );
+    expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
+  });
+
   it("should use custom prefix", async () => {
     mockRedis.eval.mockResolvedValue([1, 1, 9]);
 
@@ -79,8 +228,8 @@ describe("UpstashFixedWindowStore", () => {
 
     expect(mockRedis.eval).toHaveBeenCalledWith(
       expect.any(String),
-      ["custom:test-key"],
-      [10, 60, expect.any(Number)],
+      ["custom:test-key", "custom:test-key:receipts"],
+      [10, 60, expect.any(Number), expect.any(String)],
     );
   });
 
@@ -99,6 +248,7 @@ describe("UpstashFixedWindowStore", () => {
 
     expect(mockRedis.keys).not.toHaveBeenCalled();
     expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:fixed:test-key");
+    expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:fixed:test-key:receipts");
   });
 
   it("should handle getCount", async () => {
@@ -203,6 +353,29 @@ describe("UpstashSlidingWindowStore", () => {
     expect(stats.denied).toBe(0);
   });
 
+  it("should refund quota and stats", async () => {
+    mockRedis.eval
+      .mockResolvedValueOnce([1, 1, 9])
+      .mockResolvedValueOnce([1, 0, 10])
+      .mockResolvedValueOnce([0, 0, 10]);
+
+    const policy = createSlidingWindowPolicy("test", 10, 60000);
+    const check = await store.check("test-key", policy);
+    const receipt = check.refundReceipt;
+    const refund = await store.refund("test-key", policy, receipt);
+    const duplicateRefund = await store.refund("test-key", policy, receipt);
+
+    expect(refund.refunded).toBe(true);
+    expect(refund.remaining).toBe(10);
+    expect(duplicateRefund.refunded).toBe(false);
+    expect(mockRedis.eval).toHaveBeenLastCalledWith(
+      expect.any(String),
+      ["ratelimit:sliding:test-key"],
+      [expect.any(Number), 10, receipt?.id, 61],
+    );
+    expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
+  });
+
   it("should throw error for invalid policy", async () => {
     const policy = createFixedWindowPolicy("test", 10, 60000);
 
@@ -302,6 +475,72 @@ describe("UpstashTokenBucketStore", () => {
     expect(stats.denied).toBe(0);
   });
 
+  it("should refund quota and stats", async () => {
+    mockRedis.eval
+      .mockResolvedValueOnce([1, 9, 9])
+      .mockResolvedValueOnce([1, 10, 10])
+      .mockResolvedValueOnce([0, 10, 10]);
+
+    const policy = createTokenBucketPolicy("test", 10, 1, 1000);
+    const check = await store.check("test-key", policy);
+    const receipt = check.refundReceipt;
+    expect(receipt?.algorithm).toBe("token-bucket");
+    if (!receipt || receipt.algorithm !== "token-bucket") {
+      throw new Error("expected token bucket refund receipt");
+    }
+
+    const refund = await store.refund("test-key", policy, check.refundReceipt);
+    const duplicateRefund = await store.refund("test-key", policy, check.refundReceipt);
+
+    expect(refund.refunded).toBe(true);
+    expect(refund.remaining).toBe(10);
+    expect(duplicateRefund.refunded).toBe(false);
+    expect(mockRedis.eval).toHaveBeenNthCalledWith(
+      1,
+      expect.any(String),
+      ["ratelimit:bucket:test-key", "ratelimit:bucket:test-key:receipts"],
+      [expect.any(Number), 10, 1000, 1, 11, receipt.id, receipt.expiresAtMs],
+    );
+    expect(mockRedis.eval).toHaveBeenLastCalledWith(
+      expect.any(String),
+      ["ratelimit:bucket:test-key", "ratelimit:bucket:test-key:receipts"],
+      [expect.any(Number), 10, 1000, 1, 11, receipt.id],
+    );
+    expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
+  });
+
+  it("should not roll stats back when an expired token bucket receipt is rejected", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    mockRedis.eval
+      .mockResolvedValueOnce([1, 9, 9])
+      .mockResolvedValueOnce([1, 9, 9])
+      .mockResolvedValueOnce([0, 9, 9]);
+
+    const policy = createTokenBucketPolicy("test", 10, 1, 1000);
+    const staleCheck = await store.check("test-key", policy);
+    const staleReceipt = staleCheck.refundReceipt;
+    expect(staleReceipt?.algorithm).toBe("token-bucket");
+    if (!staleReceipt || staleReceipt.algorithm !== "token-bucket") {
+      throw new Error("expected token bucket refund receipt");
+    }
+
+    vi.advanceTimersByTime(11000);
+    await store.check("test-key", policy);
+    const refund = await store.refund("test-key", policy, staleReceipt);
+
+    expect(refund.refunded).toBe(false);
+    expect(mockRedis.eval).toHaveBeenNthCalledWith(
+      3,
+      expect.any(String),
+      ["ratelimit:bucket:test-key", "ratelimit:bucket:test-key:receipts"],
+      [expect.any(Number), 10, 1000, 1, 11, staleReceipt.id],
+    );
+    expect(await store.getStats()).toEqual({ allowed: 2, denied: 0, total: 2 });
+
+    vi.useRealTimers();
+  });
+
   it("should throw error for invalid policy", async () => {
     const policy = createFixedWindowPolicy("test", 10, 60000);
 
@@ -314,6 +553,7 @@ describe("UpstashTokenBucketStore", () => {
     await store.reset("test-key");
 
     expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:bucket:test-key");
+    expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:bucket:test-key:receipts");
   });
 
   it("should handle pruneExpired", async () => {

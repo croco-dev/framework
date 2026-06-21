@@ -57,6 +57,30 @@ describe("rpc-codegen contract check CLI", () => {
     },
     CONTRACT_CHECK_TIMEOUT_MS,
   );
+
+  it(
+    "prints strict Problem response diagnostics without failing warnings",
+    async () => {
+      fs.writeFileSync(path.join(sourceDir, "AssetsController.ts"), getCatchAllController());
+      const stdout: string[] = [];
+
+      const exitCode = await runCli(
+        ["--controllers", path.join(sourceDir, "*.ts"), "--check", "--strict-problems"],
+        {
+          stdout: (message) => stdout.push(message),
+        },
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain(
+        "WARNING contract-route-missing-problem-response-contract AssetsController.getAsset: Strict Problem contract mode could not find declared route failures. Keep the generated client failure union as never only when this public route cannot throw Croco Problems; otherwise declare failures with routeProblemResponses(contract).",
+      );
+      expect(stdout).toContain(
+        "Contract graph check passed for 1 route(s) across 1 controller(s).",
+      );
+    },
+    CONTRACT_CHECK_TIMEOUT_MS,
+  );
 });
 
 function getCatchAllController(): string {
@@ -65,6 +89,11 @@ function getCatchAllController(): string {
 const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
 const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
 const REST_PARAMS_KEY = Symbol.for('croco:rest:params');
+
+declare namespace Reflect {
+  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
+  function getMetadata(metadataKey: unknown, target: object): unknown;
+}
 
 enum ParamType {
   PARAM = 'param',
@@ -115,11 +144,15 @@ export class AssetsController {
 
 function getMultipleBodyController(): string {
   return `import 'reflect-metadata';
-import { z } from 'zod';
 
 const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
 const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
 const REST_PARAMS_KEY = Symbol.for('croco:rest:params');
+
+declare namespace Reflect {
+  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
+  function getMetadata(metadataKey: unknown, target: object): unknown;
+}
 
 enum ParamType {
   BODY = 'body',
@@ -164,8 +197,8 @@ function Body(schema: unknown): ParameterDecorator {
 export class UsersController {
   @Post('/')
   createUser(
-    @Body(z.object({ name: z.string() })) _body: { name: string },
-    @Body(z.object({ auditId: z.string() })) _audit: { auditId: string },
+    @Body(null) _body: { name: string },
+    @Body(null) _audit: { auditId: string },
   ): void {}
 }
 `;

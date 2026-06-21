@@ -3,8 +3,9 @@
  * - 'esm': ECMAScript Module (.mjs or .js with "type": "module")
  * - 'cjs': CommonJS (.cjs or .js with "type": "commonjs")
  * - 'dual': Both ESM and CJS formats
+ * - 'neutral': Runtime-independent config, type, or static asset
  */
-export type ArtifactFormat = "esm" | "cjs" | "dual";
+export type ArtifactFormat = "esm" | "cjs" | "dual" | "neutral";
 
 /**
  * Type of build artifact
@@ -79,4 +80,27 @@ export type DeployTarget = {
   };
   /** Output contract this target uses */
   readonly output: OutputContract;
+};
+
+export type PresentationRuntime = "node" | "lambda" | "cloudflare-workers" | "browser";
+
+export type GeneratedRuntimeProfile = {
+  /** Stable generated profile name used in tests and docs */
+  readonly name: string;
+  /** Runtime claim this generated profile proves for the package catalog */
+  readonly runtime: PresentationRuntime;
+  /** Named package test that validates this profile contract */
+  readonly packageTestName: string;
+  /** create-croco-app generated smoke case that exercises this profile */
+  readonly generatedAppSmokeCase: string;
+  /** Focused command for re-running the generated smoke evidence */
+  readonly generatedAppSmokeCommand: string;
+  /** Runtime target metadata and expected output contract for the profile */
+  readonly target: DeployTarget;
+};
+
+export type GeneratedRuntimeProfileCatalog = {
+  readonly schemaVersion: 1;
+  readonly validationCommand: string;
+  readonly profiles: readonly GeneratedRuntimeProfile[];
 };

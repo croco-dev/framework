@@ -5,6 +5,8 @@ import type { IsrCacheStore } from "../types";
  * Implements getOrSet delegation pattern; subclasses implement _get/_set/_delete.
  */
 export abstract class AbstractCacheStoreAdapter implements IsrCacheStore {
+  private readonly inFlightLoads = new Map<string, Promise<Response>>();
+
   abstract _get(key: string): Promise<Response | undefined>;
 
   abstract _set(key: string, value: Response, ttlMs?: number): Promise<void>;
@@ -20,8 +22,26 @@ export abstract class AbstractCacheStoreAdapter implements IsrCacheStore {
     if (cached) {
       return cached.clone();
     }
-    const value = await fetcher();
-    await this._set(key, value.clone(), options?.ttlMs);
-    return value;
+
+    const inFlight = this.inFlightLoads.get(key);
+    if (inFlight) {
+      return (await inFlight).clone();
+    }
+
+    const loadPromise = (async () => {
+      const value = await fetcher();
+      await this._set(key, value.clone(), options?.ttlMs);
+      return value;
+    })();
+
+    this.inFlightLoads.set(key, loadPromise);
+
+    try {
+      return await loadPromise;
+    } finally {
+      if (this.inFlightLoads.get(key) === loadPromise) {
+        this.inFlightLoads.delete(key);
+      }
+    }
   }
 }

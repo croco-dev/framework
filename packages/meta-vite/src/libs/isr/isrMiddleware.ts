@@ -40,7 +40,7 @@ export function createIsrMiddleware(options: IsrMiddlewareOptions): IsrMiddlewar
       return response.clone();
     } catch (error) {
       if (error instanceof NonCacheableResponseError) {
-        return error.response;
+        return error.response.clone();
       }
 
       throw error;

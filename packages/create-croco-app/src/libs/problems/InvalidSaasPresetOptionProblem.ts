@@ -5,6 +5,11 @@ export class InvalidSaasPresetOptionProblem extends Problem {
   readonly category = ProblemCategory.ValidationError;
 
   constructor(detail: string) {
-    super(undefined, undefined, detail);
+    super(undefined, undefined, detail, {
+      extensions: {
+        recovery:
+          "Remove the unsupported SaaS option or choose a non-SaaS preset that supports it.",
+      },
+    });
   }
 }
