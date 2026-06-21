@@ -15,6 +15,7 @@ export type RenderMode = "ssr" | "ssg" | "isr" | "rsc";
  */
 export type PageRouteDefinition = {
   path: string;
+  componentRef?: string;
   component: React.ComponentType<RenderRouteComponentProps>;
   mode?: RenderMode;
   revalidate?: number;
@@ -27,7 +28,7 @@ export type PageRouteDefinition = {
  */
 export type PageRouteIR = {
   path: string;
-  componentRef: string;
+  componentRef?: string;
   mode: RenderMode;
   revalidateMs?: number;
   head?: () => HeadMetadata;

@@ -16,6 +16,7 @@ export type {
   ServerActionConfig,
   ServerActionFailureResult,
   ServerActionHandlerResult,
+  ServerActionContractIR,
   ServerActionOutputContract,
   ServerActionProblemContract,
   ServerActionProblemKind,
@@ -41,6 +42,28 @@ export {
 export type { SsgRenderedArtifact, SsgRenderFunction } from "./libs/build/ssgPrerender";
 // Build helpers
 export { prerenderSsgRoutes, renderRouteToString } from "./libs/build/ssgPrerender";
+export {
+  createMetaViteRouteManifest,
+  createMetaViteRouteManifestFromRegistry,
+  META_VITE_ROUTE_MANIFEST_COMPONENT_REF_REQUIRED,
+  META_VITE_ROUTE_MANIFEST_SCHEMA_VERSION,
+  MetaViteRouteManifestError,
+  serializeMetaViteRouteManifest,
+  writeMetaViteRouteManifest,
+} from "./libs/build/routeManifest";
+export type {
+  MetaViteApiRouteManifestEntry,
+  MetaVitePageRouteManifestEntry,
+  MetaViteRouteManifest,
+  MetaViteRouteManifestRegistryOptions,
+  MetaViteRouteManifestSource,
+  MetaViteRouteRegistryManifestSource,
+  MetaViteRuntimeCapability,
+  MetaViteRuntimeRequirement,
+  MetaViteRuntimeRequirementCode,
+  MetaViteServerActionManifestEntry,
+  MetaViteServerActionRegistryManifestSource,
+} from "./libs/build/routeManifest";
 export { createIsrHandler } from "./libs/isr/createIsrHandler";
 export { createIsrMiddleware } from "./libs/isr/isrMiddleware";
 export {

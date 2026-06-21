@@ -11,6 +11,14 @@ describe("@croco/meta-vite", () => {
     expect(mod.createIsrHandler).toBeDefined();
     expect(mod.createIsrMiddleware).toBeDefined();
     expect(mod.createMetaFetchHandler).toBeDefined();
+    expect(mod.createMetaViteRouteManifest).toBeDefined();
+    expect(mod.createMetaViteRouteManifestFromRegistry).toBeDefined();
+    expect(mod.MetaViteRouteManifestError).toBeDefined();
+    expect(mod.META_VITE_ROUTE_MANIFEST_COMPONENT_REF_REQUIRED).toBe(
+      "CROCO_META_VITE_ROUTE_MANIFEST_COMPONENT_REF_REQUIRED",
+    );
+    expect(mod.serializeMetaViteRouteManifest).toBeDefined();
+    expect(mod.writeMetaViteRouteManifest).toBeDefined();
     expect(mod.head).toBeDefined();
   });
 
@@ -20,6 +28,8 @@ describe("@croco/meta-vite", () => {
     expect(typeof mod.defineRoute).toBe("function");
     expect(typeof mod.crocoMetaVitePlugin).toBe("function");
     expect(typeof mod.createMetaFetchHandler).toBe("function");
+    expect(typeof mod.createMetaViteRouteManifest).toBe("function");
+    expect(typeof mod.serializeMetaViteRouteManifest).toBe("function");
     expect(typeof mod.head).toBe("function");
   });
 
