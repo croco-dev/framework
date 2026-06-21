@@ -5,4 +5,4 @@ prev: false
 title: "SafeDiagnosticsErrorRecord"
 ---
 
-> **SafeDiagnosticsErrorRecord** = `Omit`\<`ErrorRecord`, `"cause"`\>
+> **SafeDiagnosticsErrorRecord** = `Omit`\<[`ErrorRecord`](/api/diagnostics-core/src/type-aliases/errorrecord/), `"cause"`\>

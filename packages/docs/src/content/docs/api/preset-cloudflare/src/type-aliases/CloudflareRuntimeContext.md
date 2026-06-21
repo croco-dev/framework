@@ -1,0 +1,86 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "CloudflareRuntimeContext"
+---
+
+> **CloudflareRuntimeContext** = `object`
+
+## Properties
+
+### capabilities
+
+> `readonly` **capabilities**: `object`
+
+#### env
+
+> `readonly` **env**: `true`
+
+#### filesystem
+
+> `readonly` **filesystem**: `false`
+
+#### flush
+
+> `readonly` **flush**: `false`
+
+#### nodeApi
+
+> `readonly` **nodeApi**: `false`
+
+#### requestLifecycle
+
+> `readonly` **requestLifecycle**: `true`
+
+#### shutdown
+
+> `readonly` **shutdown**: `false`
+
+#### waitUntil
+
+> `readonly` **waitUntil**: `true`
+
+***
+
+### env
+
+> `readonly` **env**: `Record`\<`string`, `unknown`\>
+
+***
+
+### native
+
+> `readonly` **native**: `object`
+
+#### executionContext
+
+> `readonly` **executionContext**: `ExecutionContext`
+
+***
+
+### platform
+
+> `readonly` **platform**: `"cloudflare-workers"`
+
+***
+
+### requestId?
+
+> `readonly` `optional` **requestId**: `string`
+
+***
+
+### waitUntil()
+
+> `readonly` **waitUntil**: (`promise`) => `void`
+
+#### Parameters
+
+##### promise
+
+`Promise`\<`unknown`\>
+
+#### Returns
+
+`void`

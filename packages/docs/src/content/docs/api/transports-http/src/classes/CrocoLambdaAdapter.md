@@ -27,7 +27,7 @@ Hono 앱을 API Gateway v2 형태의 AWS Lambda 핸들러로 연결하는 어댑
 
 ### createHandler()
 
-> **createHandler**(`options?`): [`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
+> **createHandler**(`options?`): [`LambdaHandler`](/api/preset-lambda/src/type-aliases/lambdahandler/)
 
 #### Parameters
 
@@ -37,7 +37,7 @@ Hono 앱을 API Gateway v2 형태의 AWS Lambda 핸들러로 연결하는 어댑
 
 #### Returns
 
-[`LambdaHandler`](/api/transports-http/src/type-aliases/lambdahandler/)
+[`LambdaHandler`](/api/preset-lambda/src/type-aliases/lambdahandler/)
 
 ***
 
