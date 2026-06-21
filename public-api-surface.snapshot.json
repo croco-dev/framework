@@ -14757,6 +14757,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createProviderConformanceMatrixSuite",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix",
+          "declarationKind": "function"
+        },
+        {
           "name": "createQStashTaskConformanceSuite",
           "exportKind": "named",
           "source": "./libs/serverless-provider-conformance",
@@ -15009,6 +15015,51 @@
           "name": "ProblemResponseExpectation",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "ProviderConformanceCapability",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceCapabilityManifest",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceCategory",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceMatrixCase",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceMatrixManifest",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceMatrixOptions",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceMatrixSuite",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceProfile",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
+        },
+        {
+          "name": "ProviderConformanceProfileManifest",
+          "exportKind": "named",
+          "source": "./libs/provider-conformance-matrix"
         },
         {
           "name": "QStashTaskConformanceHarness",
