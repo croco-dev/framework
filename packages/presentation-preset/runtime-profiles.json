@@ -105,25 +105,23 @@
       "name": "browser-vite-spa",
       "runtime": "browser",
       "packageTestName": "validates the browser-vite-spa generated runtime profile",
-      "generatedAppSmokeCase": "meta-vite-web",
-      "generatedAppSmokeCommand": "CROCO_GENERATED_SMOKE_CASES=meta-vite-web pnpm create-croco-app:smoke",
+      "generatedAppSmokeCase": "graphql-vite-spa-docker",
+      "generatedAppSmokeCommand": "CROCO_GENERATED_SMOKE_CASES=graphql-vite-spa-docker pnpm create-croco-app:smoke",
       "target": {
         "target": "browser",
         "requiredEnvVars": [],
         "output": {
           "presetName": "presentation-preset/browser-vite-spa",
           "buildTime": "2026-01-01T00:00:00.000Z",
-          "format": "esm",
+          "format": "neutral",
           "artifacts": [
             { "path": "apps/web/dist/index.html", "format": "neutral", "type": "asset" },
-            { "path": "apps/web/dist/assets/main.js", "format": "esm", "type": "code" },
-            { "path": "apps/web/dist/assets/main.css", "format": "neutral", "type": "asset" },
             { "path": "apps/web/src/vite-env.d.ts", "format": "neutral", "type": "types" }
           ],
           "entries": [
             {
               "exportName": "./browser",
-              "main": "apps/web/dist/assets/main.js",
+              "main": "apps/web/dist/index.html",
               "types": "apps/web/src/vite-env.d.ts"
             }
           ]

@@ -391,8 +391,8 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | 상태                | 의미                                | 패키지 수 |
 | ------------------- | ----------------------------------- | --------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |        24 |
-| 🟡 beta             | 기능 완성, 실사용 검증 중           |        53 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        32 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |        54 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        31 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |         0 |
 
 ### Extension & Adapter Matrix
@@ -461,7 +461,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/frontend-react`      | Frontend React      | React integration helpers           | yes  | -      | -       | yes      | none                                                                                                       | @croco/meta-vite<br>react<br>react-dom       | React bindings<br>meta-vite integration<br>browser hydration smoke<br>page data hydration flow<br>generated meta-vite fullstack smoke<br>auth gate primitives<br>tenant and entitlement bridge                                                                                  | 🟡 beta      | has package tests |
 | `@croco/meta-vite`           | Frontend routing    | Meta Vite runtime                   | yes  | yes    | yes     | yes      | optional Redis-compatible ISR adapter config<br>Worker-safe IsrCacheStore required for durable Workers ISR | ioredis<br>react<br>react-dom<br>vite<br>zod | route registry<br>server actions<br>SSR/RSC streaming<br>ISR v1 exact-key TTL<br>Node/Lambda durable ISR smoke<br>Workers ISR boundary smoke<br>generated page/API/action/ISR smoke                                                                                             | 🟡 beta      | has package tests |
 | `@croco/frontend-cloudflare` | Frontend SSR        | Cloudflare SSR handler              | -    | -      | yes     | -        | API_WORKER binding optional<br>ASSETS binding optional                                                     | -                                            | SSR fetch handler<br>service binding routing<br>asset fallback<br>streaming response smoke                                                                                                                                                                                      | 🔴 alpha/WIP | has package tests |
-| `@croco/frontend-vite`       | Frontend Vite       | Vite integration helpers            | yes  | -      | yes     | yes      | none                                                                                                       | @cloudflare/vite-plugin<br>vite              | Vite config helpers<br>Cloudflare Vite compatibility<br>generated smoke profile                                                                                                                                                                                                 | 🔴 alpha/WIP | has package tests |
+| `@croco/frontend-vite`       | Frontend Vite       | Vite integration helpers            | yes  | -      | yes     | yes      | none                                                                                                       | @cloudflare/vite-plugin<br>vite              | Vite config helpers<br>Cloudflare Vite compatibility<br>optional Cloudflare peer diagnostics<br>SPA browser build smoke<br>meta-vite generated build smoke                                                                                                                      | 🟡 beta      | has package tests |
 | `@croco/presentation-preset` | Presentation preset | Backend/frontend preset composition | yes  | yes    | yes     | yes      | none                                                                                                       | -                                            | preset composition<br>contract wiring<br>generated app support<br>output contract validation                                                                                                                                                                                    | 🟡 beta      | has package tests |
 
 ### 🟢 production-ready
@@ -531,6 +531,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/features-posthog`     | Integration  | `packages/features-posthog`     | README, tests      |
 | `@croco/integrations-posthog` | Integration  | `packages/integrations-posthog` | README, API, tests |
 | `@croco/frontend-react`       | Presentation | `packages/frontend-react`       | README, tests      |
+| `@croco/frontend-vite`        | Presentation | `packages/frontend-vite`        | README, tests      |
 | `@croco/meta-vite`            | Presentation | `packages/meta-vite`            | README, tests      |
 | `@croco/presentation-preset`  | Presentation | `packages/presentation-preset`  | README, tests      |
 | `@croco/openapi-spec`         | Protocol     | `packages/openapi-spec`         | README, API, tests |
@@ -561,7 +562,6 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/admin-react`                   | Presentation | `packages/admin-react`                   | README, tests      |
 | `@croco/frontend-cloudflare`           | Presentation | `packages/frontend-cloudflare`           | README, tests      |
 | `@croco/frontend-problems`             | Presentation | `packages/frontend-problems`             | README, tests      |
-| `@croco/frontend-vite`                 | Presentation | `packages/frontend-vite`                 | README, tests      |
 | `@croco/admin-generated`               | Protocol     | `packages/admin-generated`               | README, API, tests |
 | `@croco/access-drizzle`                | Provider     | `packages/access-drizzle`                | README, tests      |
 | `@croco/audit-drizzle`                 | Provider     | `packages/audit-drizzle`                 | README, tests      |

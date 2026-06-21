@@ -56,6 +56,24 @@ describe("crocoVitePlugin", () => {
     expect(problem.cause).toBe(cause);
   });
 
+  it("should fail clearly when the optional cloudflare peer is missing", async () => {
+    vi.resetModules();
+    vi.doMock("@cloudflare/vite-plugin", () => ({
+      cloudflare: () => {
+        throw Object.assign(
+          new Error(
+            "Cannot find package '@cloudflare/vite-plugin' imported from /consumer/app/vite.config.mjs",
+          ),
+          { code: "ERR_MODULE_NOT_FOUND" },
+        );
+      },
+    }));
+
+    await expect(Promise.all(crocoVitePlugin())).rejects.toBeInstanceOf(
+      MissingCloudflareVitePluginProblem,
+    );
+  });
+
   it("should preserve nested module resolution errors from the cloudflare plugin", async () => {
     vi.resetModules();
     vi.doMock("@cloudflare/vite-plugin", () => ({

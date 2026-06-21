@@ -203,6 +203,7 @@
         "framework-preset",
         "framework-routes",
         "frontend-react",
+        "frontend-vite",
         "gid-core",
         "governance-core",
         "health-core",
@@ -254,7 +255,6 @@
         "execution-drizzle",
         "frontend-cloudflare",
         "frontend-problems",
-        "frontend-vite",
         "invitation-drizzle",
         "membership-drizzle",
         "metering-drizzle",
@@ -441,7 +441,9 @@
         "features": [
           "Vite config helpers",
           "Cloudflare Vite compatibility",
-          "generated smoke profile"
+          "optional Cloudflare peer diagnostics",
+          "SPA browser build smoke",
+          "meta-vite generated build smoke"
         ]
       },
       "integrations-posthog": {
