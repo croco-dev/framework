@@ -4,7 +4,9 @@
 
 export { EmptyR2BodyProblem } from "./libs/problems/EmptyR2BodyProblem";
 export { MissingR2ConfigProblem } from "./libs/problems/MissingR2ConfigProblem";
+export { R2ReadinessProblem } from "./libs/problems/R2ReadinessProblem";
 export { R2ObjectTooLargeProblem } from "./libs/problems/R2ObjectTooLargeProblem";
+export { R2StorageDiagnosticsProvider } from "./libs/R2StorageDiagnosticsProvider";
 export { R2StorageProvider } from "./libs/R2StorageProvider";
 
 /**
@@ -16,3 +18,8 @@ export { R2_OPTIONS } from "./libs/tokens";
  * R2 제공자 구성에 필요한 공개 옵션 타입입니다.
  */
 export type { R2Options } from "./libs/types";
+export type {
+  R2ReadinessCheckContext,
+  R2ReadinessCheckResult,
+  R2StorageDiagnosticsOptions,
+} from "./libs/R2StorageDiagnosticsProvider";

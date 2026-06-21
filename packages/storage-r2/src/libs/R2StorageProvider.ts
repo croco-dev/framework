@@ -9,8 +9,8 @@ import { RetryTemplate } from "@croco/retry-core";
 import type { ObjectMetadata, PutOptions, SignedUrlOptions } from "@croco/storage-core";
 import { BaseStorageProvider } from "@croco/storage-core";
 import { EmptyR2BodyProblem } from "./problems/EmptyR2BodyProblem";
-import { MissingR2ConfigProblem } from "./problems/MissingR2ConfigProblem";
 import { R2ObjectTooLargeProblem } from "./problems/R2ObjectTooLargeProblem";
+import { validateR2Options } from "./R2Config";
 import type { R2Options } from "./types";
 
 const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
@@ -170,25 +170,19 @@ export class R2StorageProvider extends BaseStorageProvider {
     },
     retryPolicy: R2_RETRY_POLICY,
   });
-  private static readonly REQUIRED_CONFIG_KEYS = [
-    "R2_ACCOUNT_ID",
-    "R2_ACCESS_KEY_ID",
-    "R2_SECRET_ACCESS_KEY",
-    "R2_BUCKET",
-  ] as const;
 
   constructor(
     private readonly config: ConfigService,
     readonly _logger: Logger,
   ) {
     super();
-    this.options = {
-      accountId: this.validateRequiredConfig("R2_ACCOUNT_ID"),
-      accessKeyId: this.validateRequiredConfig("R2_ACCESS_KEY_ID"),
-      secretAccessKey: this.validateRequiredConfig("R2_SECRET_ACCESS_KEY"),
-      bucket: this.validateRequiredConfig("R2_BUCKET"),
+    this.options = validateR2Options({
+      accountId: this.config.get("R2_ACCOUNT_ID"),
+      accessKeyId: this.config.get("R2_ACCESS_KEY_ID"),
+      secretAccessKey: this.config.get("R2_SECRET_ACCESS_KEY"),
+      bucket: this.config.get("R2_BUCKET"),
       publicUrlBase: this.config.get("R2_PUBLIC_URL_BASE"),
-    };
+    });
 
     this.client = new S3Client({
       region: "auto",
@@ -198,18 +192,6 @@ export class R2StorageProvider extends BaseStorageProvider {
         secretAccessKey: this.options.secretAccessKey,
       },
     });
-  }
-
-  private validateRequiredConfig(
-    configKey: (typeof R2StorageProvider.REQUIRED_CONFIG_KEYS)[number],
-  ): string {
-    const value = this.config.get(configKey);
-
-    if (!value) {
-      throw new MissingR2ConfigProblem(configKey);
-    }
-
-    return value;
   }
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {

@@ -8,7 +8,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EmptyR2BodyProblem } from "../libs/problems/EmptyR2BodyProblem";
 import { MissingR2ConfigProblem } from "../libs/problems/MissingR2ConfigProblem";
 import { R2ObjectTooLargeProblem } from "../libs/problems/R2ObjectTooLargeProblem";
+import { R2StorageDiagnosticsProvider } from "../libs/R2StorageDiagnosticsProvider";
 import { R2StorageProvider } from "../libs/R2StorageProvider";
+import type { R2Options } from "../libs/types";
 
 const mockSend = vi.fn();
 
@@ -65,6 +67,12 @@ describe("R2StorageProvider", () => {
     R2_ACCESS_KEY_ID: "test-access-key",
     R2_SECRET_ACCESS_KEY: "test-secret-key",
     R2_BUCKET: "test-bucket",
+  };
+  const defaultOptions: R2Options = {
+    accountId: defaultEnvs.R2_ACCOUNT_ID,
+    accessKeyId: defaultEnvs.R2_ACCESS_KEY_ID,
+    secretAccessKey: defaultEnvs.R2_SECRET_ACCESS_KEY,
+    bucket: defaultEnvs.R2_BUCKET,
   };
 
   beforeEach(() => {
@@ -124,6 +132,128 @@ describe("R2StorageProvider", () => {
         );
       },
     );
+
+    it("should throw MissingR2ConfigProblem with all missing keys", () => {
+      vi.mocked(configService.get).mockReturnValue(undefined);
+
+      expect(() => new R2StorageProvider(configService, logger)).toThrow(
+        "Missing required R2 configuration: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET",
+      );
+    });
+  });
+
+  describe("diagnostics", () => {
+    it("reports missing required configuration without leaking secret values", async () => {
+      const diagnostics = new R2StorageDiagnosticsProvider({
+        accountId: "test-account-id",
+        accessKeyId: "test-access-key",
+        secretAccessKey: "test-secret-key",
+        bucket: "",
+      });
+
+      const health = await diagnostics.getHealth();
+
+      expect(health).toMatchObject({
+        status: "unhealthy",
+        component: "storage-r2",
+        details: expect.objectContaining({
+          provider: "cloudflare-r2",
+          hasAccountId: true,
+          hasAccessKeyId: true,
+          hasSecretAccessKey: true,
+          hasBucket: false,
+          missingConfig: ["R2_BUCKET"],
+          liveCheck: "not_started",
+          problemCode: "STORAGE_R2_MISSING_CONFIG",
+        }),
+      });
+      expect(JSON.stringify(health)).not.toContain("test-access-key");
+      expect(JSON.stringify(health)).not.toContain("test-secret-key");
+    });
+
+    it("reports healthy readiness when required config exists and no live check is configured", async () => {
+      const diagnostics = new R2StorageDiagnosticsProvider(defaultOptions);
+
+      const health = await diagnostics.getHealth();
+
+      expect(health).toMatchObject({
+        status: "healthy",
+        component: "storage-r2",
+        details: expect.objectContaining({
+          provider: "cloudflare-r2",
+          hasAccountId: true,
+          hasAccessKeyId: true,
+          hasSecretAccessKey: true,
+          hasBucket: true,
+          missingConfig: [],
+          liveCheck: "not_configured",
+        }),
+      });
+      expect(JSON.stringify(health)).not.toContain(defaultOptions.accessKeyId);
+      expect(JSON.stringify(health)).not.toContain(defaultOptions.secretAccessKey);
+    });
+
+    it("sanitizes live readiness details before returning diagnostics", async () => {
+      const controller = new AbortController();
+      const diagnostics = new R2StorageDiagnosticsProvider(defaultOptions, {
+        readinessCheck: async ({ config, signal }) => {
+          expect(config.bucket).toBe(defaultOptions.bucket);
+          expect(signal).toBe(controller.signal);
+
+          return {
+            details: {
+              accessKeyId: "leaked-access-key",
+              nested: {
+                secretAccessKey: "leaked-secret-key",
+                bucket: "visible-bucket",
+              },
+            },
+          };
+        },
+      });
+
+      const health = await diagnostics.getHealth(controller.signal);
+
+      expect(health.status).toBe("healthy");
+      expect(health.details).toMatchObject({
+        liveCheck: "passed",
+        readiness: {
+          accessKeyId: "[redacted]",
+          nested: {
+            secretAccessKey: "[redacted]",
+            bucket: "visible-bucket",
+          },
+        },
+      });
+      expect(JSON.stringify(health)).not.toContain("leaked-access-key");
+      expect(JSON.stringify(health)).not.toContain("leaked-secret-key");
+    });
+
+    it("reports upstream readiness failures as degraded instead of falling back to healthy", async () => {
+      const diagnostics = new R2StorageDiagnosticsProvider(defaultOptions, {
+        readinessCheck: async () => {
+          throw {
+            $metadata: { httpStatusCode: 503 },
+            message: `R2 unavailable for ${defaultOptions.secretAccessKey}`,
+            name: "ServiceUnavailable",
+          };
+        },
+      });
+
+      const health = await diagnostics.getHealth();
+
+      expect(health).toMatchObject({
+        status: "degraded",
+        component: "storage-r2",
+        details: expect.objectContaining({
+          liveCheck: "failed",
+          problemCode: "STORAGE_R2_READINESS_FAILED",
+          upstreamCode: "ServiceUnavailable",
+          upstreamStatus: 503,
+        }),
+      });
+      expect(JSON.stringify(health)).not.toContain(defaultOptions.secretAccessKey);
+    });
   });
 
   describe("getPublicUrl", () => {
