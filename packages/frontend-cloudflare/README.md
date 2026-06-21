@@ -22,6 +22,20 @@ Cloudflare `RuntimeContext` 전달을 패키지 테스트와 생성 앱 smoke로
   - 생성된 Cloudflare SSR Worker가 실제 Worker export를 통해 assets, service binding API,
     streaming response, SSR page, env/context propagation을 검증
 
+## 런타임 증거
+
+이 패키지의 beta runtime claim은 package-level Worker handler test와 zero-credential
+generated-app smoke가 함께 검증합니다.
+
+- `pnpm --filter @croco/frontend-cloudflare test`는 Worker SSR handler의 service-binding API
+  routing, ASSETS fallback, streaming response body preservation, env/context propagation, and
+  clear failure responses를 검증합니다.
+- `pnpm create-croco-app:smoke meta-vite-fullstack-workers`는 generated `ssr-worker`가
+  `@croco/frontend-cloudflare` handler로 asset fallback, service-bound API routing, SSR page data
+  flow, Worker env/context propagation, and streaming preservation을 Cloudflare credential 없이
+  검증합니다.
+- API reference는 `packages/docs/src/content/docs/api/frontend-cloudflare/`에서 생성됩니다.
+
 ## 설치
 
 ```bash

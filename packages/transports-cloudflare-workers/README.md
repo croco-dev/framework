@@ -2,6 +2,20 @@
 
 Croco HTTP 앱을 Cloudflare Workers `fetch` handler로 노출하는 transport adapter입니다.
 
+## 런타임 증거
+
+이 패키지의 beta runtime claim은 Worker request bridge와 published type surface를 함께
+검증합니다.
+
+- `pnpm --filter @croco/transports-cloudflare-workers test`는 `toWorkersHandler()` fetch dispatch,
+  optional raw env injection, `Context.getRuntimeContext()` env/waitUntil propagation, and published
+  Worker declaration import를 검증합니다.
+- `pnpm create-croco-app:smoke meta-vite-fullstack-workers`는 generated `ssr-worker`의 Vite config,
+  `dist/client` build output, presentation smoke, `ASSETS` fallback, and `API_WORKER` service binding
+  call을 zero-credential fixture로 검증합니다.
+- API reference는 `packages/docs/src/content/docs/api/transports-cloudflare-workers/`에서
+  생성됩니다.
+
 ## 설치
 
 ```bash

@@ -24,6 +24,7 @@
     "exports": {
       ".": {
         "import": "./dist/worker.js",
+        "require": "./dist/worker.cjs",
         "types": "./dist/worker.d.ts"
       }
     },

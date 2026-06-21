@@ -3,7 +3,7 @@ import type { ExecutionContext } from "@cloudflare/workers-types";
 export type CloudflareEnv = Record<string, unknown>;
 
 export type WorkersHandlerOptions = {
-  /** env를 FrameworkContext에 주입할지 여부 (기본: false) */
+  /** Whether to inject Cloudflare `env` into FrameworkContext. Default: false. */
   injectEnv?: boolean;
 };
 

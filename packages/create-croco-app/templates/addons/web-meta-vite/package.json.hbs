@@ -4,14 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "build": "vite build --outDir dist/client",
+    "preview": "vite preview --outDir dist/client",
     "presentation:smoke": "tsx src/smoke/presentationSmoke.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@croco/frontend-react": "workspace:*",
     "@croco/meta-vite": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

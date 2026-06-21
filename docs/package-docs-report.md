@@ -9,7 +9,7 @@
 | Public packages                |   109 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |    55 |
+| Missing generated API docs     |    51 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    41 |
 
@@ -47,10 +47,7 @@ None.
 - `@croco/framework-config` (`packages/framework-config`) — legacy baseline
 - `@croco/framework-logger` (`packages/framework-logger`) — legacy baseline
 - `@croco/framework-module` (`packages/framework-module`) — legacy baseline
-- `@croco/frontend-cloudflare` (`packages/frontend-cloudflare`) — legacy baseline
 - `@croco/frontend-problems` (`packages/frontend-problems`) — legacy baseline
-- `@croco/frontend-react` (`packages/frontend-react`) — legacy baseline
-- `@croco/frontend-vite` (`packages/frontend-vite`) — legacy baseline
 - `@croco/gid-core` (`packages/gid-core`) — legacy baseline
 - `@croco/governance-core` (`packages/governance-core`) — legacy baseline
 - `@croco/health-core` (`packages/health-core`) — legacy baseline
@@ -73,7 +70,6 @@ None.
 - `@croco/storage-r2` (`packages/storage-r2`) — legacy baseline
 - `@croco/tasks-core` (`packages/tasks-core`) — legacy baseline
 - `@croco/tenant-core` (`packages/tenant-core`) — legacy baseline
-- `@croco/transports-cloudflare-workers` (`packages/transports-cloudflare-workers`) — legacy baseline
 - `@croco/triggers-core` (`packages/triggers-core`) — legacy baseline
 - `@croco/workflow-core` (`packages/workflow-core`) — legacy baseline
 
@@ -82,8 +78,8 @@ None.
 | Maturity            | Missing API docs |
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
-| 🟡 beta             |               32 |
-| 🔴 alpha/WIP        |               23 |
+| 🟡 beta             |               29 |
+| 🔴 alpha/WIP        |               22 |
 | ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory
@@ -106,8 +102,8 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       24 |
-| 🟡 beta             |       55 |
-| 🔴 alpha/WIP        |       30 |
+| 🟡 beta             |       56 |
+| 🔴 alpha/WIP        |       29 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix

@@ -5,6 +5,10 @@ const DETAIL = [
   'Install "@cloudflare/vite-plugin" or call crocoVitePlugin({ cloudflare: false }).',
 ].join(" ");
 
+/**
+ * Validation problem thrown when Cloudflare support is enabled but the optional
+ * `@cloudflare/vite-plugin` package cannot be resolved.
+ */
 export class MissingCloudflareVitePluginProblem extends Problem {
   public constructor(cause?: Error) {
     super(

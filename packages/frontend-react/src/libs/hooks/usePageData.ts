@@ -7,8 +7,31 @@ type PageDataContextValue = {
   urlOriginal?: string;
 };
 
+/**
+ * Internal React context that carries SSR page data and page metadata from the
+ * generated entrypoint to Croco page hooks.
+ *
+ * App code normally wraps the root component with `PageDataProvider` instead of
+ * reading this context directly. Advanced integrations can provide the same
+ * shape when they bridge a custom renderer into `usePageData()` or
+ * `usePageMeta()`.
+ */
 export const PageDataContext = createContext<PageDataContextValue>({});
 
+/**
+ * React provider for the Croco page data pattern.
+ *
+ * Place this provider at the browser hydration or SSR entrypoint so descendants
+ * can call `usePageData<T>()` for route data and `usePageMeta()` for title,
+ * description, and original URL metadata.
+ *
+ * @example
+ * ```tsx
+ * <PageDataProvider value={{ data: { message: "ready" }, title: "Home" }}>
+ *   <Page />
+ * </PageDataProvider>
+ * ```
+ */
 export const PageDataProvider = PageDataContext.Provider;
 
 /**
