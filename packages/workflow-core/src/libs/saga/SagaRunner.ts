@@ -1,0 +1,677 @@
+import { withSpan } from "@croco/telemetry-api";
+import {
+  SagaDefinitionProblem,
+  SagaExecutionFailedProblem,
+  SagaExecutionNotFoundProblem,
+  SagaReplayProblem,
+} from "../problems/WorkflowProblems";
+import { InMemorySagaStore } from "./InMemorySagaStore";
+import type {
+  ListSagaExecutionsOptions,
+  ReplaySagaParams,
+  SagaDefinition,
+  SagaExecution,
+  SagaFailure,
+  SagaOutboxRecord,
+  SagaRunResult,
+  SagaStepContext,
+  SagaStepDefinition,
+  SagaStepExecutionRecord,
+  SagaStepIdempotencyContext,
+  SagaStepResult,
+  SagaStore,
+} from "./types";
+
+type TelemetryAttributeValue = string | number | boolean;
+
+type SagaTelemetrySpan = {
+  setAttribute(name: string, value: TelemetryAttributeValue): void;
+  addEvent(name: string, attributes?: Record<string, TelemetryAttributeValue>): void;
+};
+
+type ExecuteOptions = {
+  readonly replayOf?: string;
+  readonly metadata?: Record<string, unknown>;
+};
+
+type StepExecutionResult = {
+  readonly record: SagaStepExecutionRecord;
+  readonly result: SagaStepResult;
+};
+
+function toSagaFailure(error: unknown): SagaFailure {
+  const candidate = error as { readonly code?: unknown; readonly retryable?: unknown };
+  return {
+    message: error instanceof Error ? error.message : String(error),
+    retryable: Boolean(candidate.retryable),
+    ...(typeof candidate.code === "string" ? { code: candidate.code } : {}),
+    ...(error instanceof Error && error.stack !== undefined ? { stack: error.stack } : {}),
+  };
+}
+
+function isRetryableError(error: unknown): boolean {
+  return Boolean((error as { readonly retryable?: unknown }).retryable);
+}
+
+function getMaxAttempts(step: SagaStepDefinition): number {
+  return step.retry?.maxAttempts ?? 1;
+}
+
+function isReplayableSagaStatus(status: SagaExecution["status"]): boolean {
+  return status === "failed" || status === "compensated";
+}
+
+function createSagaInvocationId(sagaName: string): string {
+  return `${sagaName}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+}
+
+function getStepRecordAttributes(
+  definition: SagaDefinition,
+  executionId: string,
+  step: SagaStepDefinition,
+): Record<string, TelemetryAttributeValue> {
+  return {
+    "saga.name": definition.name,
+    "saga.execution.id": executionId,
+    "saga.step.id": step.id,
+  };
+}
+
+export class SagaRunner {
+  constructor(private readonly store: SagaStore = new InMemorySagaStore()) {}
+
+  async execute(definition: SagaDefinition, payload: unknown): Promise<SagaRunResult> {
+    this.assertValidDefinition(definition);
+
+    return withSpan((span) => this.executeWithTelemetry(definition, payload, span), {
+      name: `saga:${definition.name}`,
+      attributes: {
+        "saga.name": definition.name,
+      },
+    });
+  }
+
+  async replay(
+    definition: SagaDefinition,
+    executionId: string,
+    params: ReplaySagaParams = {},
+  ): Promise<SagaRunResult> {
+    this.assertValidDefinition(definition);
+
+    const execution = await this.getExecution(executionId);
+    if (execution.sagaName !== definition.name) {
+      throw new SagaReplayProblem(
+        executionId,
+        `execution belongs to saga '${execution.sagaName}', not '${definition.name}'`,
+      );
+    }
+    if (!isReplayableSagaStatus(execution.status)) {
+      throw new SagaReplayProblem(
+        executionId,
+        `execution in '${execution.status}' status is not replayable`,
+      );
+    }
+
+    const replayedAt = new Date().toISOString();
+    const metadata = {
+      ...execution.metadata,
+      ...params.metadata,
+      replayOf: execution.id,
+      replayedAt,
+      ...(params.reason !== undefined ? { replayReason: params.reason } : {}),
+    };
+    const payload = params.payload !== undefined ? params.payload : execution.payload;
+
+    return withSpan(
+      (span) =>
+        this.executeWithTelemetry(definition, payload, span, {
+          replayOf: execution.id,
+          metadata,
+        }),
+      {
+        name: `saga:${definition.name}:replay`,
+        attributes: {
+          "saga.name": definition.name,
+          "saga.replay_of": execution.id,
+        },
+      },
+    );
+  }
+
+  async getExecution(executionId: string): Promise<SagaExecution> {
+    const execution = await this.store.findById(executionId);
+    if (!execution) {
+      throw new SagaExecutionNotFoundProblem(executionId);
+    }
+
+    return execution;
+  }
+
+  async listExecutions(options?: ListSagaExecutionsOptions): Promise<SagaExecution[]> {
+    return this.store.list(options);
+  }
+
+  private async executeWithTelemetry(
+    definition: SagaDefinition,
+    payload: unknown,
+    span: SagaTelemetrySpan,
+    options: ExecuteOptions = {},
+  ): Promise<SagaRunResult> {
+    const idempotencyKey =
+      options.replayOf === undefined
+        ? this.resolveSagaIdempotencyKey(definition, payload)
+        : undefined;
+    const invocationId =
+      idempotencyKey !== undefined ? createSagaInvocationId(definition.name) : undefined;
+
+    if (idempotencyKey !== undefined) {
+      const existing = await this.store.findByIdempotencyKey(definition.name, idempotencyKey);
+      if (existing) {
+        return this.reuseExistingExecution(definition, existing, span);
+      }
+    }
+
+    const created = await this.store.create({
+      sagaName: definition.name,
+      payload,
+      idempotencyKey,
+      replayOf: options.replayOf,
+      metadata: {
+        ...definition.metadata,
+        ...options.metadata,
+        ...(invocationId !== undefined ? { sagaInvocationId: invocationId } : {}),
+      },
+    });
+    if (idempotencyKey !== undefined && created.metadata?.sagaInvocationId !== invocationId) {
+      return this.reuseExistingExecution(definition, created, span);
+    }
+
+    span.setAttribute("saga.execution.id", created.id);
+    span.setAttribute("saga.idempotent", idempotencyKey !== undefined);
+    span.setAttribute("saga.reused", false);
+    span.addEvent("saga.execution.created", {
+      "saga.name": definition.name,
+      "saga.execution.id": created.id,
+      "saga.execution.status": created.status,
+    });
+
+    const running = await this.store.update(created.id, {
+      status: "running",
+      startedAt: new Date(),
+    });
+
+    return this.runSteps(definition, running, span);
+  }
+
+  private reuseExistingExecution(
+    definition: SagaDefinition,
+    execution: SagaExecution,
+    span: SagaTelemetrySpan,
+  ): SagaRunResult {
+    if (execution.status === "failed" || execution.status === "compensated") {
+      this.throwStoredExecutionFailure(definition.name, execution);
+    }
+
+    span.setAttribute("saga.reused", true);
+    span.addEvent("saga.execution.reused", {
+      "saga.name": definition.name,
+      "saga.execution.id": execution.id,
+      "saga.execution.status": execution.status,
+    });
+
+    return {
+      executionId: execution.id,
+      definition,
+      execution,
+      steps: this.toStepResults(execution),
+      result: execution.result,
+      reused: true,
+    };
+  }
+
+  private async runSteps(
+    definition: SagaDefinition,
+    execution: SagaExecution,
+    span: SagaTelemetrySpan,
+  ): Promise<SagaRunResult> {
+    let current = execution;
+    const previousResults: SagaStepResult[] = [];
+
+    try {
+      for (const step of definition.steps) {
+        const executed = await this.runStep(definition, current, step, previousResults);
+        await this.replaceStepRecord(current.id, executed.record);
+        current = await this.getExecution(current.id);
+        previousResults.push(executed.result);
+      }
+
+      const result = {
+        sagaName: definition.name,
+        steps: previousResults,
+      };
+      const completed = await this.store.update(current.id, {
+        status: "completed",
+        result,
+        completedAt: new Date(),
+      });
+      span.addEvent("saga.execution.completed", {
+        "saga.name": definition.name,
+        "saga.execution.id": completed.id,
+        "saga.execution.status": completed.status,
+      });
+
+      return {
+        executionId: completed.id,
+        definition,
+        execution: completed,
+        steps: previousResults,
+        result,
+        reused: false,
+      };
+    } catch (error) {
+      const failure = toSagaFailure(error);
+      const compensated = await this.compensateCompletedSteps(definition, current.id, failure);
+      const finalStatus =
+        compensated.compensatedStepCount > 0 && compensated.compensationFailures.length === 0
+          ? "compensated"
+          : "failed";
+      const failed = await this.store.update(current.id, {
+        status: finalStatus,
+        error: failure,
+        compensationFailures: compensated.compensationFailures,
+        completedAt: new Date(),
+      });
+      span.addEvent("saga.execution.failed", {
+        "saga.name": definition.name,
+        "saga.execution.id": failed.id,
+        "saga.execution.status": failed.status,
+        "saga.error.message": failure.message,
+        "saga.compensation.failure_count": compensated.compensationFailures.length,
+      });
+
+      throw new SagaExecutionFailedProblem(definition.name, failed.id, failure, {
+        status: failed.status,
+        compensationFailures: compensated.compensationFailures,
+      });
+    }
+  }
+
+  private async runStep(
+    definition: SagaDefinition,
+    execution: SagaExecution,
+    step: SagaStepDefinition,
+    previousResults: readonly SagaStepResult[],
+  ): Promise<StepExecutionResult> {
+    const maxAttempts = getMaxAttempts(step);
+    let stepInput: unknown;
+    let idempotencyKey: string | undefined;
+    let record: SagaStepExecutionRecord = {
+      id: step.id,
+      status: "pending",
+      attempts: 0,
+      maxAttempts,
+      input: undefined,
+      outboxMessages: [],
+    };
+    await this.appendStepRecord(execution.id, record);
+
+    try {
+      stepInput = this.resolveStepInput(definition, execution, step, previousResults);
+      record = await this.replaceStepRecord(execution.id, {
+        ...record,
+        input: stepInput,
+      });
+      idempotencyKey = this.resolveStepIdempotencyKey(
+        definition,
+        execution.id,
+        execution.payload,
+        step,
+        stepInput,
+        previousResults,
+      );
+
+      if (idempotencyKey !== undefined) {
+        record = await this.replaceStepRecord(execution.id, {
+          ...record,
+          idempotencyKey,
+        });
+      }
+    } catch (error) {
+      await this.replaceStepRecord(execution.id, {
+        ...record,
+        status: "failed",
+        error: toSagaFailure(error),
+        completedAt: new Date(),
+      });
+      throw error;
+    }
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      record = await this.replaceStepRecord(execution.id, {
+        ...record,
+        status: "running",
+        attempts: attempt,
+        startedAt: record.startedAt ?? new Date(),
+      });
+
+      const outboxMessages: SagaOutboxRecord[] = [];
+      const context: SagaStepContext = {
+        saga: definition,
+        executionId: execution.id,
+        payload: execution.payload,
+        step,
+        previousResults,
+        stepInput,
+        attempt,
+        ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
+        enqueueOutbox: (message) => {
+          outboxMessages.push({
+            ...message,
+            stepId: step.id,
+            publishedAt: new Date().toISOString(),
+          });
+        },
+      };
+
+      try {
+        const result = await withSpan(() => step.run(stepInput, context), {
+          name: `saga:${definition.name}:step:${step.id}`,
+          attributes: getStepRecordAttributes(definition, execution.id, step),
+        });
+        await this.publishOutboxMessages(definition, execution.id, step, outboxMessages);
+
+        return {
+          record: {
+            ...record,
+            status: "completed",
+            result,
+            outboxMessages,
+            completedAt: new Date(),
+          },
+          result: {
+            stepId: step.id,
+            result,
+          },
+        };
+      } catch (error) {
+        const failure = toSagaFailure(error);
+        record = await this.replaceStepRecord(execution.id, {
+          ...record,
+          status: "running",
+          error: failure,
+        });
+
+        if (
+          attempt < maxAttempts &&
+          (await this.shouldRetryStep(definition, execution.id, step, attempt, error))
+        ) {
+          continue;
+        }
+
+        await this.replaceStepRecord(execution.id, {
+          ...record,
+          status: "failed",
+          attempts: attempt,
+          error: failure,
+          completedAt: new Date(),
+        });
+        throw error;
+      }
+    }
+
+    throw new SagaDefinitionProblem(
+      definition.name,
+      `step '${step.id}' retry policy is unreachable`,
+    );
+  }
+
+  private async compensateCompletedSteps(
+    definition: SagaDefinition,
+    executionId: string,
+    failure: SagaFailure,
+  ): Promise<{ compensationFailures: SagaFailure[]; compensatedStepCount: number }> {
+    const execution = await this.getExecution(executionId);
+    const compensationFailures: SagaFailure[] = [];
+    let compensatedStepCount = 0;
+
+    for (const record of [...execution.steps].reverse()) {
+      if (record.status !== "completed") {
+        continue;
+      }
+
+      const step = definition.steps.find((candidate) => candidate.id === record.id);
+      if (!step?.compensate) {
+        continue;
+      }
+
+      compensatedStepCount += 1;
+      await this.replaceStepRecord(executionId, {
+        ...record,
+        status: "compensating",
+        compensationStartedAt: new Date(),
+      });
+
+      try {
+        const outboxMessages: SagaOutboxRecord[] = [];
+        const result = await withSpan(
+          () =>
+            step.compensate?.(record.input, {
+              saga: definition,
+              executionId,
+              payload: execution.payload,
+              step,
+              previousResults: this.toStepResults(execution),
+              stepInput: record.input,
+              attempt: record.attempts,
+              failure,
+              stepResult: record,
+              ...(record.idempotencyKey !== undefined
+                ? { idempotencyKey: record.idempotencyKey }
+                : {}),
+              enqueueOutbox: (message) => {
+                outboxMessages.push({
+                  ...message,
+                  stepId: step.id,
+                  publishedAt: new Date().toISOString(),
+                });
+              },
+            }),
+          {
+            name: `saga:${definition.name}:compensate:${step.id}`,
+            attributes: getStepRecordAttributes(definition, executionId, step),
+          },
+        );
+        await this.publishOutboxMessages(definition, executionId, step, outboxMessages);
+
+        await this.replaceStepRecord(executionId, {
+          ...record,
+          status: "compensated",
+          compensationResult: result,
+          outboxMessages: [...record.outboxMessages, ...outboxMessages],
+          compensationStartedAt: record.compensationStartedAt ?? new Date(),
+          compensationCompletedAt: new Date(),
+        });
+      } catch (error) {
+        const compensationFailure = toSagaFailure(error);
+        compensationFailures.push(compensationFailure);
+        await this.replaceStepRecord(executionId, {
+          ...record,
+          status: "compensation_failed",
+          compensationError: compensationFailure,
+          compensationStartedAt: record.compensationStartedAt ?? new Date(),
+          compensationCompletedAt: new Date(),
+        });
+      }
+    }
+
+    return { compensationFailures, compensatedStepCount };
+  }
+
+  private resolveSagaIdempotencyKey(
+    definition: SagaDefinition,
+    payload: unknown,
+  ): string | undefined {
+    const resolver = definition.idempotencyKey;
+    if (typeof resolver === "function") {
+      return resolver({ saga: definition, payload });
+    }
+
+    return resolver;
+  }
+
+  private resolveStepInput(
+    definition: SagaDefinition,
+    execution: SagaExecution,
+    step: SagaStepDefinition,
+    previousResults: readonly SagaStepResult[],
+  ): unknown {
+    if (!step.input) {
+      return execution.payload;
+    }
+
+    return step.input({
+      saga: definition,
+      executionId: execution.id,
+      payload: execution.payload,
+      step,
+      previousResults,
+    });
+  }
+
+  private resolveStepIdempotencyKey(
+    definition: SagaDefinition,
+    executionId: string,
+    payload: unknown,
+    step: SagaStepDefinition,
+    stepInput: unknown,
+    previousResults: readonly SagaStepResult[],
+  ): string | undefined {
+    const resolver = step.idempotencyKey;
+    if (typeof resolver === "function") {
+      const context: SagaStepIdempotencyContext = {
+        saga: definition,
+        executionId,
+        payload,
+        step,
+        previousResults,
+        stepInput,
+      };
+      return resolver(context);
+    }
+
+    return resolver;
+  }
+
+  private async shouldRetryStep(
+    definition: SagaDefinition,
+    executionId: string,
+    step: SagaStepDefinition,
+    attempt: number,
+    error: unknown,
+  ): Promise<boolean> {
+    if (!step.retry?.shouldRetry) {
+      return isRetryableError(error);
+    }
+
+    return step.retry.shouldRetry({
+      saga: definition,
+      executionId,
+      step,
+      attempt,
+      error,
+    });
+  }
+
+  private async publishOutboxMessages(
+    definition: SagaDefinition,
+    executionId: string,
+    step: SagaStepDefinition,
+    messages: readonly SagaOutboxRecord[],
+  ): Promise<void> {
+    if (!definition.outbox) {
+      return;
+    }
+
+    for (const message of messages) {
+      await definition.outbox.publish(message, {
+        saga: definition,
+        executionId,
+        step,
+        message,
+      });
+    }
+  }
+
+  private throwStoredExecutionFailure(sagaName: string, execution: SagaExecution): never {
+    const failure = execution.error ?? {
+      message: `Saga execution '${execution.id}' is in '${execution.status}' status`,
+      retryable: false,
+    };
+
+    throw new SagaExecutionFailedProblem(sagaName, execution.id, failure, {
+      status: execution.status,
+      compensationFailures: execution.compensationFailures,
+    });
+  }
+
+  private async appendStepRecord(
+    executionId: string,
+    record: SagaStepExecutionRecord,
+  ): Promise<SagaExecution> {
+    const execution = await this.getExecution(executionId);
+    return this.store.update(executionId, {
+      steps: [...execution.steps, record],
+    });
+  }
+
+  private async replaceStepRecord(
+    executionId: string,
+    record: SagaStepExecutionRecord,
+  ): Promise<SagaStepExecutionRecord> {
+    const execution = await this.getExecution(executionId);
+    const steps = execution.steps.map((current) => (current.id === record.id ? record : current));
+    await this.store.update(executionId, { steps });
+
+    return record;
+  }
+
+  private toStepResults(execution: SagaExecution): SagaStepResult[] {
+    return execution.steps
+      .filter((step) => step.status === "completed" || step.status === "compensated")
+      .map((step) => ({
+        stepId: step.id,
+        result: step.result,
+      }));
+  }
+
+  private assertValidDefinition(definition: SagaDefinition): void {
+    if (definition.name.length === 0) {
+      throw new SagaDefinitionProblem(definition.name, "saga name must not be empty");
+    }
+
+    if (definition.steps.length === 0) {
+      throw new SagaDefinitionProblem(definition.name, "saga must declare at least one step");
+    }
+
+    const stepIds = new Set<string>();
+    for (const step of definition.steps) {
+      if (step.id.length === 0) {
+        throw new SagaDefinitionProblem(definition.name, "saga step id must not be empty");
+      }
+
+      if (stepIds.has(step.id)) {
+        throw new SagaDefinitionProblem(definition.name, `duplicate saga step id '${step.id}'`);
+      }
+
+      stepIds.add(step.id);
+
+      const maxAttempts = getMaxAttempts(step);
+      if (!Number.isInteger(maxAttempts) || maxAttempts < 1) {
+        throw new SagaDefinitionProblem(
+          definition.name,
+          `step '${step.id}' retry maxAttempts must be a positive integer`,
+        );
+      }
+    }
+  }
+}
