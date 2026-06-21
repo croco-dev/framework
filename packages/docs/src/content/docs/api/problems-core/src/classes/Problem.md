@@ -13,6 +13,9 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ## Extended by
 
+- [`QStashBatchConfigProblem`](/api/batch-qstash/src/classes/qstashbatchconfigproblem/)
+- [`QStashBatchValidationProblem`](/api/batch-qstash/src/classes/qstashbatchvalidationproblem/)
+- [`QStashBatchPublishProblem`](/api/batch-qstash/src/classes/qstashbatchpublishproblem/)
 - [`NotificationProviderNotConfiguredProblem`](/api/notifications-core/src/classes/notificationprovidernotconfiguredproblem/)
 - [`NotificationProviderNotRegisteredProblem`](/api/notifications-core/src/classes/notificationprovidernotregisteredproblem/)
 - [`NotificationProviderAlreadyRegisteredProblem`](/api/notifications-core/src/classes/notificationprovideralreadyregisteredproblem/)
@@ -111,6 +114,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidMeterProblem`](/api/metering-core/src/classes/invalidmeterproblem/)
 - [`QuotaExceededProblem`](/api/metering-core/src/classes/quotaexceededproblem/)
 - [`RedisProblem`](/api/metering-core/src/classes/redisproblem/)
+- [`MissingUpstashMeteringConfigProblem`](/api/metering-upstash/src/classes/missingupstashmeteringconfigproblem/)
+- [`UpstashMeteringUpstreamProblem`](/api/metering-upstash/src/classes/upstashmeteringupstreamproblem/)
 - [`CarryingCapacitySimulationProblem`](/api/metrics-core/src/classes/carryingcapacitysimulationproblem/)
 - [`CarryingCapacityTenantRequiredProblem`](/api/metrics-core/src/classes/carryingcapacitytenantrequiredproblem/)
 - [`GrossMarginRequiredProblem`](/api/metrics-core/src/classes/grossmarginrequiredproblem/)
@@ -139,6 +144,9 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`RateLimitRefundUnsupportedProblem`](/api/ratelimit-core/src/classes/ratelimitrefundunsupportedproblem/)
 - [`RateLimitWindowProblem`](/api/ratelimit-core/src/classes/ratelimitwindowproblem/)
 - [`RateLimitExceededProblem`](/api/ratelimit-core/src/classes/ratelimitexceededproblem/)
+- [`InvalidRateLimitPolicyProblem`](/api/ratelimit-upstash/src/classes/invalidratelimitpolicyproblem/)
+- [`MissingUpstashRateLimitConfigProblem`](/api/ratelimit-upstash/src/classes/missingupstashratelimitconfigproblem/)
+- [`UpstashRateLimitUpstreamProblem`](/api/ratelimit-upstash/src/classes/upstashratelimitupstreamproblem/)
 - [`BatchLoaderFactoryNotRegisteredProblem`](/api/repository-core/src/classes/batchloaderfactorynotregisteredproblem/)
 - [`BatchLoaderFactoryResolutionProblem`](/api/repository-core/src/classes/batchloaderfactoryresolutionproblem/)
 - [`CircuitBreakerOpenProblem`](/api/retry-core/src/classes/circuitbreakeropenproblem/)
@@ -155,6 +163,9 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`StorageProblem`](/api/storage-core/src/classes/storageproblem/)
 - [`OtlpEndpointRequiredProblem`](/api/telemetry-sdk-node/src/classes/otlpendpointrequiredproblem/)
 - [`SamplerProblem`](/api/telemetry-sdk-node/src/classes/samplerproblem/)
+- [`QStashTaskConfigProblem`](/api/tasks-qstash/src/classes/qstashtaskconfigproblem/)
+- [`QStashTaskPublishProblem`](/api/tasks-qstash/src/classes/qstashtaskpublishproblem/)
+- [`QStashTaskValidationProblem`](/api/tasks-qstash/src/classes/qstashtaskvalidationproblem/)
 - [`GraphQLRequestBodyAbortedProblem`](/api/transports-graphql/src/classes/graphqlrequestbodyabortedproblem/)
 - [`GraphQLRequestBodyTooLargeProblem`](/api/transports-graphql/src/classes/graphqlrequestbodytoolargeproblem/)
 - [`GraphQLResolversNotConfiguredProblem`](/api/transports-graphql/src/classes/graphqlresolversnotconfiguredproblem/)

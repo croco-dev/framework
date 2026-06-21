@@ -14,6 +14,7 @@ title: "FixedWindowStore"
 ## Extended by
 
 - [`FixedWindowInMemoryStore`](/api/ratelimit-core/src/classes/fixedwindowinmemorystore/)
+- [`UpstashFixedWindowStore`](/api/ratelimit-upstash/src/classes/upstashfixedwindowstore/)
 
 ## Constructors
 

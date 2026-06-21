@@ -15,7 +15,11 @@ class DefaultServiceResolverError extends Error {
 }
 
 const GENERIC_EXECUTION_ERROR_CODE = "triggers-qstash/execution-failed";
+const INVALID_PAYLOAD_ERROR_CODE = "triggers-qstash/invalid-payload";
+const INVALID_SIGNATURE_ERROR_CODE = "triggers-qstash/invalid-signature";
+const METHOD_NOT_FOUND_ERROR_CODE = "triggers-qstash/method-not-found";
 const SERVICE_RESOLUTION_ERROR_CODE = "triggers-qstash/service-resolution-failed";
+const TARGET_NOT_FOUND_ERROR_CODE = "triggers-qstash/target-not-found";
 
 /**
  * Configuration options for QStashTriggerHandler.
@@ -111,7 +115,7 @@ export type HandleResult = {
 };
 
 type ErrorResponse = {
-  readonly error: "Execution failed";
+  readonly error: string;
   readonly code: string;
   readonly category: ProblemCategory;
 };
@@ -182,7 +186,11 @@ export class QStashTriggerHandler {
       return {
         success: false,
         statusCode: 401,
-        body: { error: "Invalid signature" },
+        body: createErrorResponse(
+          "Invalid signature",
+          INVALID_SIGNATURE_ERROR_CODE,
+          ProblemCategory.Unauthorized,
+        ),
       };
     }
 
@@ -194,7 +202,11 @@ export class QStashTriggerHandler {
       return {
         success: false,
         statusCode: 400,
-        body: { error: "Invalid JSON payload" },
+        body: createErrorResponse(
+          "Invalid JSON payload",
+          INVALID_PAYLOAD_ERROR_CODE,
+          ProblemCategory.BadRequest,
+        ),
       };
     }
 
@@ -204,7 +216,11 @@ export class QStashTriggerHandler {
       return {
         success: false,
         statusCode: 400,
-        body: { error: validationError },
+        body: createErrorResponse(
+          validationError,
+          INVALID_PAYLOAD_ERROR_CODE,
+          ProblemCategory.BadRequest,
+        ),
       };
     }
 
@@ -300,7 +316,11 @@ export class QStashTriggerHandler {
       return {
         success: false,
         statusCode: 404,
-        body: { error: `Target not found for trigger: ${this.formatTriggerKey(payload)}` },
+        body: createErrorResponse(
+          `Target not found for trigger: ${this.formatTriggerKey(payload)}`,
+          TARGET_NOT_FOUND_ERROR_CODE,
+          ProblemCategory.NotFound,
+        ),
       };
     }
 
@@ -310,7 +330,11 @@ export class QStashTriggerHandler {
       return {
         success: false,
         statusCode: 400,
-        body: { error: `Method not found for trigger: ${this.formatTriggerKey(payload)}` },
+        body: createErrorResponse(
+          `Method not found for trigger: ${this.formatTriggerKey(payload)}`,
+          METHOD_NOT_FOUND_ERROR_CODE,
+          ProblemCategory.BadRequest,
+        ),
       };
     }
 
@@ -505,4 +529,16 @@ export class QStashTriggerHandler {
       };
     };
   }
+}
+
+function createErrorResponse(
+  error: string,
+  code: string,
+  category: ProblemCategory,
+): ErrorResponse {
+  return {
+    category,
+    code,
+    error,
+  };
 }

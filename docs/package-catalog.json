@@ -351,9 +351,15 @@
       "batch-qstash": {
         "domain": "Batch",
         "adapter": "QStash chunk executor",
-        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "runtimes": ["node", "lambda"],
         "requiredEnv": ["QSTASH_TOKEN", "public webhook URL"],
-        "features": ["chunk scheduling", "checkpoint resume", "idempotent publish"]
+        "features": [
+          "chunk scheduling",
+          "checkpoint resume",
+          "idempotent publish",
+          "shared conformance",
+          "redacted upstream Problems"
+        ]
       },
       "billing-polar": {
         "domain": "Billing",
@@ -510,9 +516,14 @@
       "metering-upstash": {
         "domain": "Metering",
         "adapter": "Upstash Redis client adapter",
-        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "runtimes": ["node", "lambda"],
         "requiredEnv": ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
-        "features": ["Redis command adapter", "serverless usage storage"]
+        "features": [
+          "Redis command adapter",
+          "serverless usage storage",
+          "shared conformance",
+          "redacted upstream Problems"
+        ]
       },
       "metrics-billing": {
         "domain": "Metrics",
@@ -550,7 +561,7 @@
       "ratelimit-upstash": {
         "domain": "Rate limiting",
         "adapter": "Upstash Redis rate-limit store",
-        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "runtimes": ["node", "lambda"],
         "requiredEnv": ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
         "features": [
           "sliding window",
@@ -606,7 +617,7 @@
       "tasks-qstash": {
         "domain": "Tasks",
         "adapter": "QStash task runner",
-        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "runtimes": ["node", "lambda"],
         "requiredEnv": ["UPSTASH_QSTASH_TOKEN", "UPSTASH_QSTASH_DESTINATION_URL"],
         "features": [
           "task publish",
@@ -667,9 +678,16 @@
       "triggers-qstash": {
         "domain": "Triggers",
         "adapter": "QStash scheduler and webhook handler",
-        "runtimes": ["node", "lambda", "cloudflare-workers"],
+        "runtimes": ["node", "lambda"],
         "requiredEnv": ["QSTASH_TOKEN", "public webhook URL"],
-        "features": ["schedule publish", "webhook verification", "trigger dispatch"]
+        "features": [
+          "schedule publish",
+          "webhook verification",
+          "trigger dispatch",
+          "shared conformance",
+          "redacted schedule diagnostics",
+          "diagnostic-coded webhook failures"
+        ]
       }
     }
   }

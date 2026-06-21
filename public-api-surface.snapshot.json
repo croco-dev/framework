@@ -2916,6 +2916,30 @@
       "entrypoint": "packages/batch-qstash/src/index.ts",
       "runtimeExports": [
         {
+          "name": "isRetryableQStashBatchError",
+          "exportKind": "declaration",
+          "source": "./libs/problems/QStashBatchProblems",
+          "declarationKind": "function"
+        },
+        {
+          "name": "QStashBatchConfigProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/QStashBatchProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "QStashBatchPublishProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/QStashBatchProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "QStashBatchValidationProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/QStashBatchProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "QStashChunkExecutor",
           "exportKind": "declaration",
           "source": "./libs/QStashChunkExecutor",
@@ -10834,13 +10858,43 @@
           "declarationKind": "function"
         },
         {
+          "name": "createUpstashRedisClientFromEnv",
+          "exportKind": "named",
+          "source": "./libs/UpstashRedisClient",
+          "declarationKind": "function"
+        },
+        {
+          "name": "isRetryableUpstashMeteringError",
+          "exportKind": "named",
+          "source": "./libs/problems/UpstashMeteringProblems",
+          "declarationKind": "function"
+        },
+        {
+          "name": "MissingUpstashMeteringConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/UpstashMeteringProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "UpstashMeteringUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/UpstashMeteringProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "UpstashRedisClient",
           "exportKind": "named",
           "source": "./libs/UpstashRedisClient",
           "declarationKind": "class"
         }
       ],
-      "typeExports": []
+      "typeExports": [
+        {
+          "name": "UpstashRedisClientEnv",
+          "exportKind": "named",
+          "source": "./libs/UpstashRedisClient"
+        }
+      ]
     },
     {
       "packageName": "@croco/metrics-billing",
@@ -15805,7 +15859,19 @@
           "declarationKind": "function"
         },
         {
+          "name": "createQStashBatchConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
           "name": "createQStashTaskConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createQStashTriggerConformanceSuite",
           "exportKind": "named",
           "source": "./libs/serverless-provider-conformance",
           "declarationKind": "function"
@@ -15844,6 +15910,12 @@
           "name": "createTestingTransactionContext",
           "exportKind": "named",
           "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createUpstashRedisMeteringConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance",
           "declarationKind": "function"
         },
         {
@@ -16104,6 +16176,36 @@
           "source": "./libs/provider-conformance-matrix"
         },
         {
+          "name": "QStashBatchChunkExecutor",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashBatchConformanceHarness",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashBatchConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashBatchConformanceScenario",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashBatchPublishRecord",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashBatchStep",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
           "name": "QStashTaskConformanceHarness",
           "exportKind": "named",
           "source": "./libs/serverless-provider-conformance"
@@ -16130,6 +16232,51 @@
         },
         {
           "name": "QStashTaskPublishRecord",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTriggerConformanceHarness",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTriggerConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTriggerConformanceScenario",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTriggerHandler",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTriggerHandleResult",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTriggerScheduler",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTriggerScheduleRecord",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTriggerSyncDetail",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "QStashTriggerSyncResult",
           "exportKind": "named",
           "source": "./libs/serverless-provider-conformance"
         },
@@ -16212,6 +16359,21 @@
           "name": "TestLogger",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "UpstashRedisMeteringClient",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "UpstashRedisMeteringConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
+        },
+        {
+          "name": "UpstashRedisMeteringConformanceScenario",
+          "exportKind": "named",
+          "source": "./libs/serverless-provider-conformance"
         },
         {
           "name": "UpstashRedisRateLimitConformanceOptions",

@@ -1,7 +1,13 @@
 import { createStepExecutionError } from "@croco/batch-core";
 import type { Checkpointable, Step } from "@croco/batch-core";
 import type { ExecutionManager } from "@croco/execution-core";
+import { Problem } from "@croco/problems-core";
 import type { Client } from "@upstash/qstash";
+import {
+  QStashBatchConfigProblem,
+  QStashBatchPublishProblem,
+  QStashBatchValidationProblem,
+} from "./problems/QStashBatchProblems";
 
 function isCheckpointable(obj: unknown): obj is Checkpointable {
   return (
@@ -33,7 +39,11 @@ export class QStashChunkExecutor {
   constructor(
     private executionManager: ExecutionManager,
     private options: QStashExecutorOptions,
-  ) {}
+  ) {
+    validateExecutionManager(executionManager);
+    validateQStashClient(options.qstashClient);
+    validateWebhookUrl(options.webhookUrl);
+  }
 
   async executeChunk<I, O>(
     executionId: string,
@@ -208,15 +218,64 @@ export class QStashChunkExecutor {
       processedCount,
     );
 
-    await this.options.qstashClient.publishJSON({
-      url: this.options.webhookUrl,
-      body: {
-        executionId,
-        stepName,
-      },
-      headers: {
-        "Idempotency-Key": idempotencyKey,
-      },
-    });
+    await runQStashBatchOperation("publishJSON", () =>
+      this.options.qstashClient.publishJSON({
+        url: this.options.webhookUrl,
+        body: {
+          executionId,
+          stepName,
+        },
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+        },
+      }),
+    );
+  }
+}
+
+function validateExecutionManager(value: ExecutionManager): void {
+  if (!value) {
+    throw new QStashBatchConfigProblem("executionManager");
+  }
+}
+
+function validateQStashClient(value: Client): void {
+  const candidate = value as { readonly publishJSON?: unknown } | undefined;
+  if (!candidate || typeof candidate.publishJSON !== "function") {
+    throw new QStashBatchConfigProblem("qstashClient");
+  }
+}
+
+function validateWebhookUrl(value: string): void {
+  if (!value || value.trim().length === 0) {
+    throw new QStashBatchConfigProblem("webhookUrl");
+  }
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      throw new QStashBatchValidationProblem("QStash batch webhookUrl must use http or https.");
+    }
+  } catch (error) {
+    if (error instanceof QStashBatchValidationProblem) {
+      throw error;
+    }
+
+    throw new QStashBatchValidationProblem("QStash batch webhookUrl must be a valid URL.");
+  }
+}
+
+async function runQStashBatchOperation<T>(
+  operation: string,
+  action: () => Promise<T> | T,
+): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    if (error instanceof Problem) {
+      throw error;
+    }
+
+    throw new QStashBatchPublishProblem(operation, error);
   }
 }
