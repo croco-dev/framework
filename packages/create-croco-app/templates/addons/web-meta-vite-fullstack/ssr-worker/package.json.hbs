@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build --ssr src/index.ts --outDir dist --emptyOutDir false",
-    "preview": "vite preview",
+    "build": "vite build --outDir dist/client && vite build --ssr src/index.ts --outDir dist --emptyOutDir false",
+    "preview": "vite preview --outDir dist/client",
     "presentation:smoke": "tsx src/smoke/presentationSmoke.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -14,6 +14,7 @@
     "@croco/meta-vite": "workspace:*",
     "@croco/frontend-react": "workspace:*",
     "@croco/frontend-cloudflare": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

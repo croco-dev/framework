@@ -4,11 +4,11 @@ export default defineConfig({
   entry: {
     worker: "src/index.ts",
   },
-  format: ["esm"],
+  format: ["esm", "cjs"],
   platform: "neutral",
 
   clean: true,
   dts: true,
   minify: true,
-  outExtension: () => ({ js: ".js" }),
+  outExtension: ({ format }) => ({ js: format === "cjs" ? ".cjs" : ".js" }),
 });

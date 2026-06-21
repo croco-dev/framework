@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 363,
+  "problemCount": 365,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -2028,6 +2028,60 @@
       ]
     },
     {
+      "code": "create-croco-app/web-meta-vite-fullstack-missing-hydration-root",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#create-croco-app-web-meta-vite-fullstack-missing-hydration-root",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/create-croco-app/templates/addons/web-meta-vite-fullstack/ssr-worker/src/client.tsx",
+          "line": 11,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "create-croco-app/web-meta-vite-missing-hydration-root",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#create-croco-app-web-meta-vite-missing-hydration-root",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/create-croco-app/templates/addons/web-meta-vite/src/client.tsx",
+          "line": 11,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
       "code": "dataloader-core/batch-result-length-mismatch",
       "category": "InternalServerError",
       "status": 500,
@@ -3452,7 +3506,7 @@
       "sources": [
         {
           "file": "packages/frontend-vite/src/libs/problems/MissingCloudflareVitePluginProblem.ts",
-          "line": 10,
+          "line": 14,
           "column": 5,
           "kind": "problem-constructor"
         }

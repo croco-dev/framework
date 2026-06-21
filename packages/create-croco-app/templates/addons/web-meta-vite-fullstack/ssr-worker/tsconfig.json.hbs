@@ -2,8 +2,9 @@
   "extends": "../tsconfig.json",
   "include": ["src"],
   "compilerOptions": {
+    "jsx": "react-jsx",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "types": ["@cloudflare/workers-types"]
+    "types": ["@cloudflare/workers-types", "vite/client"]
   }
 }

@@ -1,7 +1,10 @@
 import { Window } from "happy-dom";
 import { act, createElement } from "react";
+import type { ReactElement } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
+
+import { createSsrHandler } from "@croco/frontend-cloudflare";
 import type { SsrWorkerEnv } from "@croco/frontend-cloudflare";
 import { PageDataProvider, usePageData, usePageMeta } from "@croco/frontend-react";
 import {
@@ -48,9 +51,43 @@ function assert(condition: unknown, message: string): asserts condition {
   }
 }
 
-async function expectText(response: Response, expected: string): Promise<void> {
+function createStream(payload: string): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(payload));
+      controller.close();
+    },
+  });
+}
+
+async function expectText(response: Response, expected: string): Promise<string> {
   const text = await response.text();
   assert(text.includes(expected), `Expected response text to include '${expected}', got '${text}'`);
+
+  return text;
+}
+
+function readRuntimeEnvValue(context: RuntimeContext | undefined, key: string): string {
+  if (!context?.env || typeof context.env !== "object" || !(key in context.env)) {
+    return "none";
+  }
+
+  return String((context.env as Record<string, unknown>)[key]);
+}
+
+function SmokePage(): ReactElement {
+  const data = usePageData<{
+    readonly envValue: string;
+    readonly message: string;
+    readonly platform: string;
+  }>();
+  const meta = usePageMeta();
+
+  return createElement(
+    "main",
+    { "data-croco-page-title": meta.title },
+    `page-data:${data.message}:${data.platform}:${data.envValue}:${meta.urlOriginal ?? "none"}`,
+  );
 }
 
 type HydrationPageData = {
@@ -178,15 +215,6 @@ function createExecutionContext(): ExecutionContext {
   };
 }
 
-function createStream(payload: string): ReadableStream<Uint8Array> {
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(new TextEncoder().encode(payload));
-      controller.close();
-    },
-  });
-}
-
 async function readFirstChunk(response: Response): Promise<string> {
   const reader = response.body?.getReader();
   assert(reader, "Expected response to expose a readable stream body");
@@ -207,9 +235,19 @@ async function main(): Promise<void> {
       mode: "ssr",
       component: ({ request, context }) =>
         createElement(
-          "main",
-          null,
-          `page:${new URL(request.url).pathname}:${context?.platform ?? "none"}`,
+          PageDataProvider,
+          {
+            value: {
+              data: {
+                envValue: readRuntimeEnvValue(context, "SMOKE_FLAG"),
+                message: "hydrated",
+                platform: context?.platform ?? "none",
+              },
+              title: "Presentation Smoke",
+              urlOriginal: new URL(request.url).pathname,
+            },
+          },
+          createElement(SmokePage),
         ),
     }),
   );
@@ -267,9 +305,24 @@ async function main(): Promise<void> {
     },
   });
 
+  const pageResponse = await handler(new Request("https://presentation.test/"), {
+    env: { SMOKE_FLAG: "node-env" },
+    platform: "node",
+  });
+  const pageHtml = await pageResponse.text();
+  assert(pageHtml.includes('id="root"'), "Generated page response is missing hydration root");
+  assert(
+    pageHtml.includes('data-croco-page-title="Presentation Smoke"'),
+    "Generated page response is missing PageDataProvider meta flow",
+  );
+  assert(
+    pageHtml.includes("page-data:hydrated:node:node-env:/"),
+    `Generated page data flow did not render through usePageData, got '${pageHtml}'`,
+  );
+
   await expectText(
     await handler(new Request("https://presentation.test/"), { platform: "node" }),
-    "page:/:node",
+    "page-data:hydrated:node:none:/",
   );
 
   const apiResponse = await handler(new Request("https://presentation.test/api/ping"), {
@@ -350,13 +403,16 @@ async function main(): Promise<void> {
     "Generated Worker did not preserve the service-binding streaming response body",
   );
 
-  const pageResponse = await worker.fetch(
+  const workerPageResponse = await worker.fetch(
     new Request("https://presentation.test/"),
     workerEnv,
     createExecutionContext(),
   );
-  assert(pageResponse.status === 200, `Expected Worker SSR status 200, got ${pageResponse.status}`);
-  const pageText = normalizeRenderedHtml(await pageResponse.text());
+  assert(
+    workerPageResponse.status === 200,
+    `Expected Worker SSR status 200, got ${workerPageResponse.status}`,
+  );
+  const pageText = normalizeRenderedHtml(await workerPageResponse.text());
   assert(pageText.includes("Welcome to"), "Generated Worker SSR page did not render");
   assert(
     pageText.includes("Runtime: cloudflare"),
@@ -389,6 +445,85 @@ async function main(): Promise<void> {
 
   await assertBrowserHydrationSmoke();
   await assertHydrationMismatchIsVisible();
+
+  const workerHandler = createSsrHandler({ renderServer: server });
+  const apiWorker = {
+    fetch: async (request: Request) =>
+      Response.json({ ok: true, pathname: new URL(request.url).pathname }),
+  };
+  const assets = {
+    fetch: async (request: Request) => {
+      const pathname = new URL(request.url).pathname;
+
+      if (pathname === "/assets/app.js") {
+        return new Response("asset:app", { status: 200 });
+      }
+
+      return new Response("missing", { status: 404 });
+    },
+  };
+  const executionContext = {
+    passThroughOnException() {},
+    waitUntil(_promise: Promise<unknown>) {},
+  };
+
+  await expectText(
+    await workerHandler(
+      new Request("https://presentation.test/assets/app.js"),
+      {
+        API_WORKER: apiWorker,
+        ASSETS: assets,
+        SMOKE_FLAG: "worker-env",
+      },
+      executionContext,
+    ),
+    "asset:app",
+  );
+
+  const workerApiResponse = await workerHandler(
+    new Request("https://presentation.test/api/ping"),
+    {
+      API_WORKER: apiWorker,
+      ASSETS: assets,
+      SMOKE_FLAG: "worker-env",
+    },
+    executionContext,
+  );
+  assert(
+    workerApiResponse.status === 200,
+    `Expected Worker API status 200, got ${workerApiResponse.status}`,
+  );
+  assert(
+    JSON.stringify(await workerApiResponse.json()) ===
+      JSON.stringify({ ok: true, pathname: "/api/ping" }),
+    "Generated Worker service binding returned an unexpected payload",
+  );
+
+  await expectText(
+    await workerHandler(
+      new Request("https://presentation.test/"),
+      { API_WORKER: apiWorker, ASSETS: assets, SMOKE_FLAG: "worker-env" },
+      executionContext,
+    ),
+    "page-data:hydrated:cloudflare:worker-env:/",
+  );
+
+  const streamingHandler = createSsrHandler({
+    renderServer: {
+      handle: async () => new Response(createStream("streamed worker page")),
+    },
+  });
+  const workerStreamingResponse = await streamingHandler(
+    new Request("https://presentation.test/stream"),
+    {},
+    executionContext,
+  );
+  const streamChunk = await workerStreamingResponse.body?.getReader().read();
+  assert(streamChunk?.done === false, "Generated Worker SSR stream ended before the first chunk");
+  assert(
+    new TextDecoder().decode(streamChunk.value) === "streamed worker page",
+    "Generated Worker SSR stream did not preserve the response body",
+  );
 
   console.log("meta-vite presentation smoke passed");
 }

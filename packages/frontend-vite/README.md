@@ -6,6 +6,21 @@ Cloudflare Workers + Vite + Vike 통합 플러그인 패키지입니다.
 
 이 패키지는 Cloudflare Workers 환경에서 Vite와 Vike를 함께 사용하기 위한 플러그인을 제공합니다.
 
+## 런타임 증거
+
+이 패키지의 beta runtime claim은 Vite config helper와 generated browser output을 함께
+검증합니다.
+
+- `pnpm --filter @croco/frontend-vite test`는 `crocoSpaViteConfig()`,
+  `createCrocoSpaViteConfig()`, `crocoVitePlugin()`, 그리고 optional
+  `@cloudflare/vite-plugin` diagnostic을 검증합니다.
+- `pnpm package-entrypoints:smoke`는 `cloudflare: false` 경로가 Cloudflare optional peer 없이
+  import 가능하고, 기본 Cloudflare 경로의 누락 peer가 Croco Problem으로 실패하는지 검증합니다.
+- `pnpm create-croco-app:smoke graphql-vite-spa-docker meta-vite-web meta-vite-fullstack-workers`
+  는 SPA, meta-vite, fullstack Worker generated app의 Vite config load와 browser build output을
+  검증합니다.
+- API reference는 `packages/docs/src/content/docs/api/frontend-vite/`에서 생성됩니다.
+
 ## 설치
 
 ```bash

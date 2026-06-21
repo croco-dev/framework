@@ -225,11 +225,15 @@ function assertStylexNextWebApp(webDir: string): void {
 
 function assertMetaViteBrowserBuildEntrypoint(packageDir: string, buildScript: string): void {
   const packageJson = readPackageJson(join(packageDir, "package.json"));
+  const indexHtml = readFileSync(join(packageDir, "index.html"), "utf8");
   const viteConfig = readFileSync(join(packageDir, "vite.config.ts"), "utf8");
 
   expect(packageJson.scripts?.build).toBe(buildScript);
   expect(existsSync(join(packageDir, "index.html"))).toBe(true);
-  expect(existsSync(join(packageDir, "src", "main.tsx"))).toBe(true);
+  expect(indexHtml).toContain('src="/src/client.tsx"');
+  expect(indexHtml).toContain("data-croco-hydration-root");
+  expect(existsSync(join(packageDir, "src", "client.tsx"))).toBe(true);
+  expect(existsSync(join(packageDir, "src", "main.tsx"))).toBe(false);
   expect(viteConfig).toContain("from '@vitejs/plugin-react'");
   expect(viteConfig).toContain("defineConfig");
   expect(viteConfig).toContain("react()");
@@ -458,13 +462,16 @@ describe("E2E: generate()", () => {
       const packageJson = readPackageJson(join(webDir, "package.json"));
 
       expect(packageJson.dependencies?.["@croco/meta-vite"]).toBe("^0.0.2");
+      expect(packageJson.dependencies?.["@croco/problems-core"]).toBe("^0.0.2");
+      expect(packageJson.scripts?.build).toBe("vite build --outDir dist/client");
+      expect(packageJson.scripts?.preview).toBe("vite preview --outDir dist/client");
       expect(packageJson.scripts?.["presentation:smoke"]).toBe(
         "tsx src/smoke/presentationSmoke.ts",
       );
       expect(packageJson.devDependencies?.["happy-dom"]).toBe("^20.10.6");
       expect(packageJson.devDependencies?.tsx).toBe("^4.20.3");
       expect(existsSync(join(webDir, "src", "smoke", "presentationSmoke.ts"))).toBe(true);
-      assertMetaViteBrowserBuildEntrypoint(webDir, "vite build");
+      assertMetaViteBrowserBuildEntrypoint(webDir, "vite build --outDir dist/client");
       assertViteConfigImportsDeclared(webDir);
       assertSourceBareImportsDeclared(webDir);
       assertNoHandlebarsPlaceholders(testDir);
@@ -497,6 +504,11 @@ describe("E2E: generate()", () => {
 
       expect(workerContent).toContain('securityValidation: "off"');
       expect(ssrWorkerPackageJson.dependencies?.["@croco/meta-vite"]).toBe("^0.0.2");
+      expect(ssrWorkerPackageJson.dependencies?.["@croco/problems-core"]).toBe("^0.0.2");
+      expect(ssrWorkerPackageJson.scripts?.build).toBe(
+        "vite build --outDir dist/client && vite build --ssr src/index.ts --outDir dist --emptyOutDir false",
+      );
+      expect(ssrWorkerPackageJson.scripts?.preview).toBe("vite preview --outDir dist/client");
       expect(ssrWorkerPackageJson.scripts?.["presentation:smoke"]).toBe(
         "tsx src/smoke/presentationSmoke.ts",
       );
@@ -505,7 +517,7 @@ describe("E2E: generate()", () => {
       expect(existsSync(join(ssrWorkerDir, "src", "smoke", "presentationSmoke.ts"))).toBe(true);
       assertMetaViteBrowserBuildEntrypoint(
         ssrWorkerDir,
-        "vite build && vite build --ssr src/index.ts --outDir dist --emptyOutDir false",
+        "vite build --outDir dist/client && vite build --ssr src/index.ts --outDir dist --emptyOutDir false",
       );
       assertViteConfigImportsDeclared(ssrWorkerDir);
       assertSourceBareImportsDeclared(ssrWorkerDir);

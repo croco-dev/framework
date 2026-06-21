@@ -29,10 +29,7 @@
     "framework-config",
     "framework-logger",
     "framework-module",
-    "frontend-cloudflare",
     "frontend-problems",
-    "frontend-react",
-    "frontend-vite",
     "gid-core",
     "governance-core",
     "health-core",
@@ -58,7 +55,6 @@
     "tasks-core",
     "tasks-qstash",
     "tenant-core",
-    "transports-cloudflare-workers",
     "triggers-core",
     "workflow-core"
   ],

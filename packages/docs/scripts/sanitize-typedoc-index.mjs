@@ -23,6 +23,39 @@ const routePathParamsLink =
 const routeQueryLink = "[`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)";
 const paramsNameConstraint = `${routePathParamNameLink}\\<\`TContract\`\\[\`"path"\`\\]\\> & keyof ${routePathParamsLink}\\<\`TContract\`\\> & \`string\``;
 const queryNameConstraint = `keyof ${routeQueryLink}\\<\`TContract\`\\> & \`string\``;
+const frontendReactDocs = [
+  {
+    path: apiDocsPath("frontend-react/src/classes/ProblemBoundary.md"),
+    replacements: [
+      [
+        "### Constructor\n\n> **new ProblemBoundary**(`props`, `context`): `ProblemBoundary`",
+        "### Constructor With Context\n\n> **new ProblemBoundary**(`props`, `context`): `ProblemBoundary`",
+      ],
+    ],
+  },
+  {
+    path: apiDocsPath("frontend-react/src/functions/useEntitlements.md"),
+    replacements: [
+      [
+        "## Call Signature\n\n> **useEntitlements**(): [`FrontendEntitlementState`](/api/frontend-react/src/type-aliases/frontendentitlementstate/)",
+        "## Current Entitlements Signature\n\n> **useEntitlements**(): [`FrontendEntitlementState`](/api/frontend-react/src/type-aliases/frontendentitlementstate/)",
+      ],
+      [
+        "## Call Signature\n\n> **useEntitlements**(`entitlements`, `options?`): [`FrontendAuthGateState`](/api/frontend-react/src/type-aliases/frontendauthgatestate/)",
+        "## Gate Evaluation Signature\n\n> **useEntitlements**(`entitlements`, `options?`): [`FrontendAuthGateState`](/api/frontend-react/src/type-aliases/frontendauthgatestate/)",
+      ],
+    ],
+  },
+  {
+    path: apiDocsPath("frontend-react/src/type-aliases/ProblemBoundaryFallback.md"),
+    replacements: [
+      [
+        "> **ProblemBoundaryFallback** = `ReactNode` \\| (`state`) => `ReactNode`",
+        "> **ProblemBoundaryFallback** = `ReactNode` \\| (`state`: [`ProblemBoundaryFallbackState`](/api/frontend-react/src/type-aliases/problemboundaryfallbackstate/)) => `ReactNode`",
+      ],
+    ],
+  },
+];
 const routeContractDocs = [
   {
     path: apiDocsPath("protocols-rest/src/functions/Body.md"),
@@ -169,6 +202,7 @@ export async function sanitizeTypeDocIndex() {
   await sanitizeApiIndex();
   await sanitizePolicyExecutionPlan();
   await sanitizeRestRouteContractDocs();
+  await sanitizeFrontendReactDocs();
 }
 
 async function sanitizeApiIndex() {
@@ -206,6 +240,12 @@ async function sanitizePolicyExecutionPlan() {
 async function sanitizeRestRouteContractDocs() {
   await Promise.all(
     routeContractDocs.map(({ path, replacements }) => sanitizeMarkdown(path, replacements)),
+  );
+}
+
+async function sanitizeFrontendReactDocs() {
+  await Promise.all(
+    frontendReactDocs.map(({ path, replacements }) => sanitizeMarkdown(path, replacements)),
   );
 }
 

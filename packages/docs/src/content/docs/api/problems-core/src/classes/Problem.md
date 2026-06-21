@@ -64,6 +64,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`PipelineGraphProblem`](/api/framework-context/src/classes/pipelinegraphproblem/)
 - [`ShutdownConfigurationConflictProblem`](/api/framework-context/src/classes/shutdownconfigurationconflictproblem/)
 - [`ShutdownTimeoutProblem`](/api/framework-context/src/classes/shutdowntimeoutproblem/)
+- [`MissingCloudflareVitePluginProblem`](/api/frontend-vite/src/classes/missingcloudflarevitepluginproblem/)
 - [`PostHogConfigProblem`](/api/integrations-posthog/src/classes/posthogconfigproblem/)
 - [`BatchSizeExceededProblem`](/api/invitation-core/src/classes/batchsizeexceededproblem/)
 - [`InvalidAutoJoinRoleProblem`](/api/invitation-core/src/classes/invalidautojoinroleproblem/)

@@ -933,6 +933,15 @@ importers:
       '@croco/framework-routes':
         specifier: workspace:*
         version: link:../framework-routes
+      '@croco/frontend-cloudflare':
+        specifier: workspace:*
+        version: link:../frontend-cloudflare
+      '@croco/frontend-react':
+        specifier: workspace:*
+        version: link:../frontend-react
+      '@croco/frontend-vite':
+        specifier: workspace:*
+        version: link:../frontend-vite
       '@croco/idempotency-core':
         specifier: workspace:*
         version: link:../idempotency-core
@@ -1029,6 +1038,9 @@ importers:
       '@croco/testing':
         specifier: workspace:*
         version: link:../testing
+      '@croco/transports-cloudflare-workers':
+        specifier: workspace:*
+        version: link:../transports-cloudflare-workers
       '@croco/transports-graphql':
         specifier: workspace:*
         version: link:../transports-graphql

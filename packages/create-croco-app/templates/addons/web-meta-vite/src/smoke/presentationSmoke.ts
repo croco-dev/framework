@@ -1,7 +1,9 @@
 import { Window } from "happy-dom";
 import { act, createElement } from "react";
+import type { ReactElement } from "react";
 import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
+
 import { PageDataProvider, usePageData, usePageMeta } from "@croco/frontend-react";
 import {
   createIsrMiddleware,
@@ -49,6 +51,29 @@ function assert(condition: unknown, message: string): asserts condition {
 async function expectText(response: Response, expected: string): Promise<void> {
   const text = await response.text();
   assert(text.includes(expected), `Expected response text to include '${expected}', got '${text}'`);
+}
+
+function readRuntimeEnvValue(context: RuntimeContext | undefined, key: string): string {
+  if (!context?.env || typeof context.env !== "object" || !(key in context.env)) {
+    return "none";
+  }
+
+  return String((context.env as Record<string, unknown>)[key]);
+}
+
+function SmokePage(): ReactElement {
+  const data = usePageData<{
+    readonly envValue: string;
+    readonly message: string;
+    readonly platform: string;
+  }>();
+  const meta = usePageMeta();
+
+  return createElement(
+    "main",
+    { "data-croco-page-title": meta.title },
+    `page-data:${data.message}:${data.platform}:${data.envValue}:${meta.urlOriginal ?? "none"}`,
+  );
 }
 
 type HydrationPageData = {
@@ -175,9 +200,19 @@ async function main(): Promise<void> {
       mode: "ssr",
       component: ({ request, context }) =>
         createElement(
-          "main",
-          null,
-          `page:${new URL(request.url).pathname}:${context?.platform ?? "none"}`,
+          PageDataProvider,
+          {
+            value: {
+              data: {
+                envValue: readRuntimeEnvValue(context, "SMOKE_FLAG"),
+                message: "hydrated",
+                platform: context?.platform ?? "none",
+              },
+              title: "Presentation Smoke",
+              urlOriginal: new URL(request.url).pathname,
+            },
+          },
+          createElement(SmokePage),
         ),
     }),
   );
@@ -235,9 +270,24 @@ async function main(): Promise<void> {
     },
   });
 
+  const pageResponse = await handler(new Request("https://presentation.test/"), {
+    env: { SMOKE_FLAG: "node-env" },
+    platform: "node",
+  });
+  const pageHtml = await pageResponse.text();
+  assert(pageHtml.includes('id="root"'), "Generated page response is missing hydration root");
+  assert(
+    pageHtml.includes('data-croco-page-title="Presentation Smoke"'),
+    "Generated page response is missing PageDataProvider meta flow",
+  );
+  assert(
+    pageHtml.includes("page-data:hydrated:node:node-env:/"),
+    `Generated page data flow did not render through usePageData, got '${pageHtml}'`,
+  );
+
   await expectText(
     await handler(new Request("https://presentation.test/"), { platform: "node" }),
-    "page:/:node",
+    "page-data:hydrated:node:none:/",
   );
 
   const apiResponse = await handler(new Request("https://presentation.test/api/ping"), {

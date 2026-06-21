@@ -213,7 +213,7 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
       },
       {
-        label: "apps/web browser build",
+        label: "apps/web browser build output",
         packagePath: ["apps", "web"],
         args: ["build"],
         paths: ["dist/index.html", "src/vite-env.d.ts"],
@@ -246,10 +246,10 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
       },
       {
-        label: "apps/web meta-vite build",
+        label: "apps/web meta-vite build output",
         packagePath: ["apps", "web"],
         args: ["build"],
-        paths: ["dist/client/manifest.json"],
+        paths: ["dist/client", "dist/client/manifest.json"],
       },
       {
         label: "apps/web presentation smoke",
@@ -279,10 +279,10 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
       },
       {
-        label: "ssr-worker meta-vite build",
+        label: "ssr-worker meta-vite build output",
         packagePath: ["ssr-worker"],
         args: ["build"],
-        paths: ["dist/client/manifest.json"],
+        paths: ["dist/client", "dist/client/manifest.json"],
       },
       {
         label: "ssr-worker presentation smoke",

@@ -43,14 +43,6 @@ describe("published migrate CLI", () => {
         expect(packedManifest.dependencies?.pg).toBe("^8.11.0");
         expect(packedManifest.devDependencies?.pg).toBeUndefined();
 
-        const packageVersion = readPackageVersion();
-        const builtVersion = run(
-          "node",
-          [join(packageDir, "dist", "cli.js"), "--version"],
-          rootDir,
-        );
-        expect(builtVersion.stdout.trim()).toBe(packageVersion);
-
         writeFileSync(
           join(consumerRoot, "package.json"),
           `${JSON.stringify(
@@ -74,6 +66,7 @@ describe("published migrate CLI", () => {
         const help = run("pnpm", ["exec", "migrate", "--help"], consumerRoot);
         expect(help.stdout).toContain("Drizzle migration runner");
 
+        const packageVersion = readPackageVersion();
         const installedVersion = run("pnpm", ["exec", "migrate", "--version"], consumerRoot);
         expect(installedVersion.stdout.trim()).toBe(packageVersion);
       } finally {

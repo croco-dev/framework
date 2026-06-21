@@ -8,6 +8,17 @@ React 앱에서 Croco의 SSR 기능을 사용하기 위한 유틸리티 패키�
 또한 generated client나 앱별 auth provider가 반환한 세션, 테넌트, 권한, 엔터틀먼트 상태를
 React에서 명시적으로 표현하는 provider-neutral bridge를 제공합니다.
 
+## 런타임 증거
+
+이 패키지의 beta runtime claim은 package test와 generated-app smoke가 함께 검증합니다.
+
+- `pnpm --filter @croco/frontend-react test`는 `PageDataProvider`, `usePageData`, `usePageMeta`,
+  auth bridge, Problem UI primitive를 React render path에서 검증합니다.
+- `pnpm create-croco-app:smoke meta-vite-web meta-vite-fullstack-workers`는 generated
+  meta-vite 앱에서 `PageDataProvider`/`usePageData` 데이터 흐름, meta 전달, hydration root,
+  그리고 Cloudflare Worker fullstack smoke를 검증합니다.
+- API reference는 `packages/docs/src/content/docs/api/frontend-react/`에서 생성됩니다.
+
 ## 설치
 
 ```bash
