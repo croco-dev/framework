@@ -47,8 +47,6 @@
     "ratelimit-upstash",
     "search-drizzle",
     "search-meilisearch",
-    "storage-cloudflare",
-    "storage-cloudinary",
     "storage-r2",
     "tasks-core",
     "tasks-qstash",

@@ -9,7 +9,7 @@
 | Public packages                |   109 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |    49 |
+| Missing generated API docs     |    47 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    41 |
 
@@ -63,8 +63,6 @@ None.
 - `@croco/presentation-preset` (`packages/presentation-preset`) — legacy baseline
 - `@croco/search-drizzle` (`packages/search-drizzle`) — legacy baseline
 - `@croco/search-meilisearch` (`packages/search-meilisearch`) — legacy baseline
-- `@croco/storage-cloudflare` (`packages/storage-cloudflare`) — legacy baseline
-- `@croco/storage-cloudinary` (`packages/storage-cloudinary`) — legacy baseline
 - `@croco/storage-r2` (`packages/storage-r2`) — legacy baseline
 - `@croco/tasks-core` (`packages/tasks-core`) — legacy baseline
 - `@croco/tenant-core` (`packages/tenant-core`) — legacy baseline
@@ -77,7 +75,7 @@ None.
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
 | 🟡 beta             |               29 |
-| 🔴 alpha/WIP        |               20 |
+| 🔴 alpha/WIP        |               18 |
 | ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory
@@ -100,8 +98,8 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       24 |
-| 🟡 beta             |       56 |
-| 🔴 alpha/WIP        |       29 |
+| 🟡 beta             |       57 |
+| 🔴 alpha/WIP        |       28 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix

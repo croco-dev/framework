@@ -7,6 +7,11 @@ title: "BaseStorageProvider"
 
 스토리지 제공자 구현을 위한 기본 추상 클래스입니다.
 
+## Extended by
+
+- [`CloudflareImagesProvider`](/api/storage-cloudflare/src/classes/cloudflareimagesprovider/)
+- [`CloudinaryProvider`](/api/storage-cloudinary/src/classes/cloudinaryprovider/)
+
 ## Implements
 
 - [`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/)
@@ -45,7 +50,7 @@ title: "BaseStorageProvider"
 
 `StorageProvider.delete`
 
-***
+---
 
 ### exists()
 
@@ -69,7 +74,7 @@ title: "BaseStorageProvider"
 
 `StorageProvider.exists`
 
-***
+---
 
 ### get()
 
@@ -99,7 +104,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.get`
 
-***
+---
 
 ### getMetadata()
 
@@ -129,7 +134,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getMetadata`
 
-***
+---
 
 ### getPublicUrl()
 
@@ -155,7 +160,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getPublicUrl`
 
-***
+---
 
 ### getSignedUrl()
 
@@ -187,7 +192,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getSignedUrl`
 
-***
+---
 
 ### getStream()
 
@@ -217,7 +222,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getStream`
 
-***
+---
 
 ### put()
 

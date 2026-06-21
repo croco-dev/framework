@@ -70,6 +70,8 @@
     "@croco/retry-core": "workspace:*",
     "@croco/rpc-codegen": "workspace:*",
     "@croco/search-core": "workspace:*",
+    "@croco/storage-cloudflare": "workspace:*",
+    "@croco/storage-cloudinary": "workspace:*",
     "@croco/storage-core": "workspace:*",
     "@croco/tasks-qstash": "workspace:*",
     "@croco/telemetry-api": "workspace:*",

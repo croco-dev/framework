@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 367,
+  "problemCount": 375,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -1859,7 +1859,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          "line": 44,
+          "line": 48,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -1886,7 +1886,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          "line": 206,
+          "line": 256,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -1913,7 +1913,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          "line": 267,
+          "line": 331,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -7887,6 +7887,114 @@
       ]
     },
     {
+      "code": "storage-cloudflare/missing-config",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#storage-cloudflare-missing-config",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts",
+          "line": 37,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "storage-cloudflare/retryable-upstream",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#storage-cloudflare-retryable-upstream",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts",
+          "line": 70,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "storage-cloudflare/terminal-upstream",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#storage-cloudflare-terminal-upstream",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts",
+          "line": 86,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "storage-cloudflare/validation-failed",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#storage-cloudflare-validation-failed",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/storage-cloudflare/src/libs/CloudflareImagesDiagnosticsProvider.ts",
+          "line": 57,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
       "code": "storage-cloudinary/invalid-upload-intent-ttl",
       "category": "BadRequest",
       "status": 400,
@@ -7907,9 +8015,117 @@
       "sources": [
         {
           "file": "packages/storage-cloudinary/src/libs/CloudinaryProvider.ts",
-          "line": 396,
+          "line": 331,
           "column": 13,
           "kind": "problem-factory"
+        }
+      ]
+    },
+    {
+      "code": "storage-cloudinary/missing-config",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#storage-cloudinary-missing-config",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/storage-cloudinary/src/libs/CloudinaryDiagnosticsProvider.ts",
+          "line": 51,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "storage-cloudinary/retryable-upstream",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#storage-cloudinary-retryable-upstream",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/storage-cloudinary/src/libs/CloudinaryDiagnosticsProvider.ts",
+          "line": 84,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "storage-cloudinary/terminal-upstream",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#storage-cloudinary-terminal-upstream",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/storage-cloudinary/src/libs/CloudinaryDiagnosticsProvider.ts",
+          "line": 100,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "storage-cloudinary/validation-failed",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#storage-cloudinary-validation-failed",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/storage-cloudinary/src/libs/CloudinaryDiagnosticsProvider.ts",
+          "line": 71,
+          "column": 5,
+          "kind": "problem-constructor"
         }
       ]
     },
@@ -7934,7 +8150,7 @@
       "sources": [
         {
           "file": "packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts",
-          "line": 233,
+          "line": 283,
           "column": 13,
           "kind": "problem-factory"
         }

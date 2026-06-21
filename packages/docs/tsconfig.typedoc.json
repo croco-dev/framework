@@ -59,6 +59,8 @@
     "../retry-core/src/index.ts",
     "../rpc-codegen/src/index.ts",
     "../search-core/src/index.ts",
+    "../storage-cloudflare/src/index.ts",
+    "../storage-cloudinary/src/index.ts",
     "../storage-core/src/index.ts",
     "../telemetry-api/src/index.ts",
     "../telemetry-sdk-node/src/index.ts",

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +10,13 @@ const __dirname = dirname(__filename);
 const packageDir = resolve(__dirname, "../..");
 const rootDir = resolve(packageDir, "../..");
 const spawnTimeoutMs = 180_000;
+// These tarballs cover the packed CLI's local Croco runtime dependency graph, including transitive deps.
+const packedRuntimeWorkspacePackages = ["problems-core", "diagnostics-core", "telemetry-sdk-node"];
+const requiredPackageArtifacts = [
+  ...packedRuntimeWorkspacePackages.flatMap((packageName) => requiredLibraryArtifacts(packageName)),
+  join(packageDir, "dist", "index.js"),
+  join(packageDir, "dist", "index.d.ts"),
+];
 
 describe("published create-croco-app CLI", () => {
   it(
@@ -20,21 +27,7 @@ describe("published create-croco-app CLI", () => {
 
       try {
         ensureBuilt();
-        run(
-          "pnpm",
-          ["--filter", "@croco/problems-core", "pack", "--pack-destination", packRoot],
-          rootDir,
-        );
-        run(
-          "pnpm",
-          ["--filter", "@croco/diagnostics-core", "pack", "--pack-destination", packRoot],
-          rootDir,
-        );
-        run(
-          "pnpm",
-          ["--filter", "@croco/telemetry-sdk-node", "pack", "--pack-destination", packRoot],
-          rootDir,
-        );
+        packRuntimeWorkspacePackages(packRoot);
         run(
           "pnpm",
           ["--filter", "create-croco-app", "pack", "--pack-destination", packRoot],
@@ -81,17 +74,37 @@ describe("published create-croco-app CLI", () => {
   );
 });
 
+function packRuntimeWorkspacePackages(packRoot: string): void {
+  for (const packageName of packedRuntimeWorkspacePackages) {
+    run(
+      "pnpm",
+      ["--filter", `@croco/${packageName}`, "pack", "--pack-destination", packRoot],
+      rootDir,
+    );
+  }
+}
+
 function ensureBuilt(): void {
-  if (
-    existsSync(join(rootDir, "packages", "problems-core", "dist", "index.js")) &&
-    existsSync(join(rootDir, "packages", "diagnostics-core", "dist", "index.js")) &&
-    existsSync(join(rootDir, "packages", "telemetry-sdk-node", "dist", "index.js")) &&
-    existsSync(join(packageDir, "dist", "index.js"))
-  ) {
+  if (requiredPackageArtifacts.every((artifact) => existsSync(artifact))) {
     return;
   }
 
   run("pnpm", ["--filter", "create-croco-app...", "build"], rootDir);
+
+  const missingArtifacts = requiredPackageArtifacts.filter((artifact) => !existsSync(artifact));
+  if (missingArtifacts.length > 0) {
+    throw new Error(
+      `Missing build artifacts after build:\n${missingArtifacts.map((artifact) => `- ${artifact}`).join("\n")}`,
+    );
+  }
+}
+
+function requiredLibraryArtifacts(packageName: string): string[] {
+  const distDir = join(rootDir, "packages", packageName, "dist");
+
+  return ["index.js", "index.mjs", "index.d.ts", "index.d.mts"].map((filename) =>
+    join(distDir, filename),
+  );
 }
 
 function findTarball(directory: string, prefix: string): string {

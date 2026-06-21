@@ -15123,10 +15123,58 @@
           "declarationKind": "const"
         },
         {
+          "name": "CloudflareImagesDiagnosticsProvider",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
+          "name": "CloudflareImagesMissingConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
           "name": "CloudflareImagesProvider",
           "exportKind": "named",
           "source": "./libs/CloudflareImagesProvider",
           "declarationKind": "class"
+        },
+        {
+          "name": "CloudflareImagesRetryableUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
+          "name": "CloudflareImagesTerminalUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
+          "name": "CloudflareImagesValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
+          "name": "createCloudflareImagesResponseProblem",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeCloudflareImagesError",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider",
+          "declarationKind": "function"
+        },
+        {
+          "name": "validateCloudflareImagesOptions",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
@@ -15136,9 +15184,34 @@
           "source": "./libs/types"
         },
         {
+          "name": "CloudflareImagesConfigKey",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider"
+        },
+        {
+          "name": "CloudflareImagesDiagnosticsOptions",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider"
+        },
+        {
+          "name": "CloudflareImagesErrorContext",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider"
+        },
+        {
           "name": "CloudflareImagesOptions",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "CloudflareImagesReadinessCheckContext",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider"
+        },
+        {
+          "name": "CloudflareImagesReadinessCheckResult",
+          "exportKind": "named",
+          "source": "./libs/CloudflareImagesDiagnosticsProvider"
         },
         {
           "name": "CloudflareTransformOptions",
@@ -15164,10 +15237,64 @@
           "declarationKind": "const"
         },
         {
+          "name": "CloudinaryDiagnosticsProvider",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
+          "name": "CloudinaryMissingConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
           "name": "CloudinaryProvider",
           "exportKind": "named",
           "source": "./libs/CloudinaryProvider",
           "declarationKind": "class"
+        },
+        {
+          "name": "CloudinaryRetryableUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
+          "name": "CloudinaryTerminalUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
+          "name": "CloudinaryValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
+          "name": "getCloudinaryErrorMessage",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider",
+          "declarationKind": "function"
+        },
+        {
+          "name": "isRetryableCloudinaryStorageError",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider",
+          "declarationKind": "function"
+        },
+        {
+          "name": "normalizeCloudinaryStorageError",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider",
+          "declarationKind": "function"
+        },
+        {
+          "name": "validateCloudinaryConfig",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
@@ -15175,6 +15302,31 @@
           "name": "CloudinaryConfig",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "CloudinaryConfigKey",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider"
+        },
+        {
+          "name": "CloudinaryDiagnosticsOptions",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider"
+        },
+        {
+          "name": "CloudinaryReadinessCheckContext",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider"
+        },
+        {
+          "name": "CloudinaryReadinessCheckResult",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider"
+        },
+        {
+          "name": "CloudinaryStorageErrorContext",
+          "exportKind": "named",
+          "source": "./libs/CloudinaryDiagnosticsProvider"
         },
         {
           "name": "CloudinaryTransformOptions",
