@@ -1,9 +1,102 @@
 import type { ItemReader } from "@croco/batch-core";
 import { Step } from "@croco/batch-core";
 import type { ExecutionManager } from "@croco/execution-core";
+import { createQStashBatchConformanceSuite } from "@croco/testing";
 import type { Client } from "@upstash/qstash";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QStashChunkExecutor } from "../libs/QStashChunkExecutor";
+
+type ConformanceScenario = "success" | "retryable-upstream" | "terminal-upstream";
+
+const QSTASH_BATCH_LIVE_ENV = [
+  "CROCO_LIVE_QSTASH",
+  "QSTASH_TOKEN",
+  "QSTASH_BATCH_WEBHOOK_URL",
+] as const;
+const SECRET_SAMPLE = "super-secret-token";
+const SECRET_RICH_ERROR_MESSAGE = `Authorization: Bearer ${SECRET_SAMPLE}; "token":"${SECRET_SAMPLE}"; https://qstash.upstash.io?token=${SECRET_SAMPLE}; Cookie: session=${SECRET_SAMPLE}`;
+
+function createUpstreamError(message: string, status: number): Error & { readonly status: number } {
+  const error = new Error(message) as Error & { status: number };
+  error.status = status;
+  return error;
+}
+
+function createBatchConformanceHarness(scenario: ConformanceScenario) {
+  const failures: unknown[] = [];
+  const publishJSON = vi.fn().mockResolvedValue({ messageId: "msg-conformance" });
+
+  if (scenario === "retryable-upstream") {
+    publishJSON.mockRejectedValue(createUpstreamError(SECRET_RICH_ERROR_MESSAGE, 503));
+  }
+
+  if (scenario === "terminal-upstream") {
+    publishJSON.mockRejectedValue(createUpstreamError(SECRET_RICH_ERROR_MESSAGE, 400));
+  }
+
+  const executionManager = {
+    checkpoint: vi.fn().mockResolvedValue({}),
+    complete: vi.fn().mockResolvedValue({}),
+    fail: vi.fn().mockImplementation(async (_executionId: string, failure: unknown) => {
+      failures.push(failure);
+    }),
+    start: vi.fn().mockResolvedValue({ id: "exec-conformance", checkpoints: {} }),
+    updateProgress: vi.fn().mockResolvedValue({}),
+  } as unknown as ExecutionManager;
+
+  const executor = new QStashChunkExecutor(executionManager, {
+    qstashClient: { publishJSON } as unknown as Client,
+    webhookUrl: "https://example.com/batch/conformance",
+  });
+
+  return {
+    executor: executor as never,
+    getExecutionFailures: () => failures,
+    getPublishedMessages: () => publishJSON.mock.calls.map((call) => call[0]),
+  };
+}
+
+function isTruthyEnv(name: string): boolean {
+  const value = process.env[name]?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+function readRequiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} is required for QStash batch live smoke.`);
+  }
+
+  return value;
+}
+
+async function runQStashBatchLiveSmoke(): Promise<void> {
+  const { Client } = await import("@upstash/qstash");
+  const executionManager = {
+    checkpoint: vi.fn().mockResolvedValue({}),
+    complete: vi.fn().mockResolvedValue({}),
+    fail: vi.fn().mockResolvedValue({}),
+    start: vi.fn().mockResolvedValue({ id: "exec-live-smoke", checkpoints: {} }),
+    updateProgress: vi.fn().mockResolvedValue({}),
+  } as unknown as ExecutionManager;
+  const executor = new QStashChunkExecutor(executionManager, {
+    qstashClient: new Client({ token: readRequiredEnv("QSTASH_TOKEN") }),
+    webhookUrl: readRequiredEnv("QSTASH_BATCH_WEBHOOK_URL"),
+  });
+  const step = new Step<number, number>({
+    chunkSize: 1,
+    name: "qstash-batch-live-smoke",
+    reader: {
+      read: vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(2),
+    },
+    writer: {
+      write: vi.fn().mockResolvedValue(undefined),
+    },
+  });
+
+  const result = await executor.executeChunk("exec-live-smoke", step);
+  expect(result.hasMore).toBe(true);
+}
 
 describe("QStashChunkExecutor", () => {
   let startMock!: ReturnType<typeof vi.fn>;
@@ -31,6 +124,25 @@ describe("QStashChunkExecutor", () => {
     executor = new QStashChunkExecutor(executionManager, {
       qstashClient: qstashClient as unknown as Client,
       webhookUrl: "https://example.com/webhook",
+    });
+  });
+
+  describe("QStash batch conformance", () => {
+    it.each(
+      createQStashBatchConformanceSuite({
+        createExecutor: createBatchConformanceHarness,
+        liveSmoke: {
+          isEnabled: () =>
+            isTruthyEnv("CROCO_LIVE_QSTASH") &&
+            QSTASH_BATCH_LIVE_ENV.every((name) => Boolean(process.env[name])),
+          requiredEnv: QSTASH_BATCH_LIVE_ENV,
+          run: runQStashBatchLiveSmoke,
+        },
+        providerName: "batch-qstash",
+        secretSamples: [SECRET_SAMPLE],
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
     });
   });
 

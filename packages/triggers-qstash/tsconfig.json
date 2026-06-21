@@ -1,8 +1,14 @@
 {
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "outDir": "./dist",
-    "rootDir": "./src"
+    "paths": {
+      "@croco/execution-core": ["../execution-core/src/index.ts"],
+      "@croco/framework-context": ["../framework-context/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/triggers-core": ["../triggers-core/src/index.ts"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts"]

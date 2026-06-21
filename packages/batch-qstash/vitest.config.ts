@@ -10,6 +10,10 @@ export default defineConfig({
       "@croco/batch-core": resolve(currentDir, "../batch-core/src/index.ts"),
       "@croco/execution-core": resolve(currentDir, "../execution-core/src/index.ts"),
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
+      "@croco/testing": resolve(
+        currentDir,
+        "../testing/src/libs/serverless-provider-conformance.ts",
+      ),
     },
   },
   test: {

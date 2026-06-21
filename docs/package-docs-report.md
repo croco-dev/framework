@@ -9,7 +9,7 @@
 | Public packages                |   109 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |    59 |
+| Missing generated API docs     |    55 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    41 |
 
@@ -32,7 +32,6 @@ None.
 - `@croco/auth-clerk` (`packages/auth-clerk`) — legacy baseline
 - `@croco/auth-drizzle` (`packages/auth-drizzle`) — legacy baseline
 - `@croco/batch-core` (`packages/batch-core`) — legacy baseline
-- `@croco/batch-qstash` (`packages/batch-qstash`) — legacy baseline
 - `@croco/billing-polar` (`packages/billing-polar`) — legacy baseline
 - `@croco/cache-core` (`packages/cache-core`) — legacy baseline
 - `@croco/cli` (`packages/cli`) — legacy baseline
@@ -61,21 +60,18 @@ None.
 - `@croco/membership-drizzle` (`packages/membership-drizzle`) — legacy baseline
 - `@croco/meta-vite` (`packages/meta-vite`) — legacy baseline
 - `@croco/metering-drizzle` (`packages/metering-drizzle`) — legacy baseline
-- `@croco/metering-upstash` (`packages/metering-upstash`) — legacy baseline
 - `@croco/metrics-billing` (`packages/metrics-billing`) — legacy baseline
 - `@croco/notifications-resend` (`packages/notifications-resend`) — legacy baseline
 - `@croco/onboarding-core` (`packages/onboarding-core`) — legacy baseline
 - `@croco/onboarding-drizzle` (`packages/onboarding-drizzle`) — legacy baseline
 - `@croco/pagination-core` (`packages/pagination-core`) — legacy baseline
 - `@croco/presentation-preset` (`packages/presentation-preset`) — legacy baseline
-- `@croco/ratelimit-upstash` (`packages/ratelimit-upstash`) — legacy baseline
 - `@croco/search-drizzle` (`packages/search-drizzle`) — legacy baseline
 - `@croco/search-meilisearch` (`packages/search-meilisearch`) — legacy baseline
 - `@croco/storage-cloudflare` (`packages/storage-cloudflare`) — legacy baseline
 - `@croco/storage-cloudinary` (`packages/storage-cloudinary`) — legacy baseline
 - `@croco/storage-r2` (`packages/storage-r2`) — legacy baseline
 - `@croco/tasks-core` (`packages/tasks-core`) — legacy baseline
-- `@croco/tasks-qstash` (`packages/tasks-qstash`) — legacy baseline
 - `@croco/tenant-core` (`packages/tenant-core`) — legacy baseline
 - `@croco/transports-cloudflare-workers` (`packages/transports-cloudflare-workers`) — legacy baseline
 - `@croco/triggers-core` (`packages/triggers-core`) — legacy baseline
@@ -87,7 +83,7 @@ None.
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
 | 🟡 beta             |               31 |
-| 🔴 alpha/WIP        |               28 |
+| 🔴 alpha/WIP        |               24 |
 | ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory

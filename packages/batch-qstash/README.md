@@ -1,37 +1,80 @@
 # @croco/batch-qstash
 
-배치 Step을 청크 단위로 실행하고 다음 청크를 QStash로 예약하는 실행기입니다.
+QStash-backed chunk executor for Croco batch steps.
 
-## 설치
+## Install
 
 ```bash
 pnpm add @croco/batch-qstash @upstash/qstash
 ```
 
-## 사용법
+## Usage
 
 ```typescript
-import { Client } from "@upstash/qstash";
 import { QStashChunkExecutor } from "@croco/batch-qstash";
+import { Client } from "@upstash/qstash";
 
 const executor = new QStashChunkExecutor(executionManager, {
-  qstashClient: new Client({ token: process.env.QSTASH_TOKEN! }),
+  qstashClient: new Client({ token: process.env.QSTASH_TOKEN }),
   webhookUrl: "https://api.example.com/batch/next",
 });
 
 const result = await executor.executeChunk("execution-1", step);
 ```
 
-## API 레퍼런스
+`executeChunk()` starts the execution, processes up to `step.chunkSize` records, checkpoints
+checkpointable readers, publishes the next chunk only when more input remains, and completes the
+execution when the step reaches the end of input.
 
-| API                     | 설명                                                     |
-| ----------------------- | -------------------------------------------------------- |
-| `QStashChunkExecutor`   | 청크 실행, 체크포인트 저장, 다음 청크 예약을 수행합니다. |
-| `QStashExecutorOptions` | `qstashClient`, `webhookUrl`을 받는 옵션 타입입니다.     |
+## Public API
 
-## 동작 메모
+| API                             | Description                                                             |
+| ------------------------------- | ----------------------------------------------------------------------- |
+| `QStashChunkExecutor`           | Executes a batch chunk and schedules the next chunk through QStash.     |
+| `QStashExecutorOptions`         | Requires `qstashClient` and a public `webhookUrl`.                      |
+| `QStashBatchConfigProblem`      | Terminal Problem for missing execution manager, client, or webhook URL. |
+| `QStashBatchValidationProblem`  | Terminal Problem for malformed publish URLs.                            |
+| `QStashBatchPublishProblem`     | Redacted QStash publish failure with retryability and status evidence.  |
+| `isRetryableQStashBatchError()` | Classifies transient QStash publish failures for diagnostics/tests.     |
 
-- 체크포인트 가능한 reader면 마지막 위치를 저장하고 복구합니다.
-- peek 지원 reader면 다음 아이템 존재 여부를 비소모 방식으로 확인합니다.
-- 다음 청크 메시지는 step 이름과 checkpoint 기준 idempotency key를 붙여 발행합니다.
-- `Step.classifyFailure`가 있으면 로컬 청크 실행기와 동일하게 재시도 가능 여부와 실패 코드를 보존합니다.
+## Failure Modes
+
+- Missing execution manager, QStash client, or webhook URL throws `QStashBatchConfigProblem`.
+- Non-HTTP(S) webhook URLs throw `QStashBatchValidationProblem`.
+- Next-chunk publish failures throw `QStashBatchPublishProblem`.
+- Upstream status `408`, `429`, and `5xx` are marked retryable. Terminal upstream failures are marked
+  non-retryable.
+- Error detail is redacted for token, secret, and credential-like values before it reaches the
+  Problem detail.
+- If `Step.classifyFailure` is present, local chunk execution failure records preserve its retryable
+  and code classification before the original error is rethrown.
+
+## Conformance
+
+`@croco/testing` provides `createQStashBatchConformanceSuite()` and this package runs it in the
+package test suite. Default CI uses a mocked QStash client only, so no QStash credential is required.
+
+Current conformance coverage:
+
+- terminal chunk completion;
+- next-chunk publish envelope and idempotency key evidence;
+- execution failure retryability preservation;
+- retryable and terminal upstream Problem classification;
+- no-credential live-smoke gate skip.
+
+Optional live smoke is gated by all of these env vars:
+
+- `CROCO_LIVE_QSTASH=true`
+- `QSTASH_TOKEN`
+- `QSTASH_BATCH_WEBHOOK_URL`
+
+```bash
+pnpm --filter @croco/batch-qstash test
+pnpm --filter @croco/batch-qstash typecheck
+```
+
+## Maturity
+
+This package remains alpha. It has no-credential conformance coverage and documented opt-in live
+smoke, but beta/production promotion still requires safe diagnostics/readiness evidence and recorded
+real-backend and Worker smoke evidence.

@@ -87,32 +87,45 @@ The first consumer is:
 
 ### Upstash and QStash provider conformance
 
-`@croco/testing` exports two serverless provider suites for the first Upstash/QStash promotion
-wave:
+`@croco/testing` exports serverless provider suites for the first Upstash/QStash promotion wave:
 
+- `createUpstashRedisMeteringConformanceSuite()` for Upstash Redis-backed metering stores. It checks
+  missing configuration, Redis usage write/read behavior, duplicate idempotency, redacted retryable
+  upstream failures, redacted terminal upstream failures, and no-credential live-smoke gates.
 - `createUpstashRedisRateLimitConformanceSuite()` for Upstash Redis-backed rate-limit stores. It
   checks missing configuration, unsupported policies, allow/deny stats, refund idempotency,
   redacted retryable upstream failures, redacted terminal upstream failures, and no-credential
+  live-smoke gates.
+- `createQStashBatchConformanceSuite()` for QStash batch chunk executors. It checks terminal chunk
+  completion, next-chunk publish envelopes, idempotency key evidence, execution failure
+  retryability preservation, redacted retryable and terminal upstream failures, and no-credential
   live-smoke gates.
 - `createQStashTaskConformanceSuite()` for QStash task publishers. It checks missing
   configuration, task envelope shape, delay/header/deduplication evidence, invalid task input,
   redacted retryable upstream failures, redacted terminal upstream failures, and no-credential
   live-smoke gates.
+- `createQStashTriggerConformanceSuite()` for QStash schedule and webhook handlers. It checks
+  schedule sync payload evidence, invalid signature pre-dispatch behavior, verified webhook
+  dispatch behavior, redacted schedule failure diagnostics, and no-credential live-smoke gates.
 
 The first consumers are:
 
-| Package                    | Harness evidence                                                                                                                        | Promotion result                                                                                                                                         |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@croco/ratelimit-upstash` | Runs the Upstash Redis rate-limit conformance suite with a mocked Redis/Lua fixture and an opt-in real-backend live-smoke gate.         | Remains alpha. Conformance now covers the rate-limit domain, but diagnostics/readiness and broader real Upstash backend smoke remain promotion blockers. |
-| `@croco/tasks-qstash`      | Runs the QStash task conformance suite with a mocked QStash client, deduplication evidence, and an opt-in real-backend live-smoke gate. | Remains alpha. Conformance now covers task publishing, but webhook/schedule verification and diagnostics/readiness remain blockers.                      |
+| Package                    | Harness evidence                                                                                                                                   | Promotion result                                                                                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@croco/metering-upstash`  | Runs the Upstash Redis metering conformance suite with mocked usage and idempotency behavior plus an opt-in real-backend live-smoke gate.          | Remains alpha. Conformance now covers the metering domain, but diagnostics/readiness and broader real Upstash backend smoke remain promotion blockers.   |
+| `@croco/ratelimit-upstash` | Runs the Upstash Redis rate-limit conformance suite with a mocked Redis/Lua fixture and an opt-in real-backend live-smoke gate.                    | Remains alpha. Conformance now covers the rate-limit domain, but diagnostics/readiness and broader real Upstash backend smoke remain promotion blockers. |
+| `@croco/batch-qstash`      | Runs the QStash batch conformance suite with a mocked publish client, execution failure evidence, and an opt-in real-backend live-smoke gate.      | Remains alpha. Conformance now covers chunk publish and failure classification, but diagnostics/readiness and broader real QStash smoke remain blockers. |
+| `@croco/tasks-qstash`      | Runs the QStash task conformance suite with a mocked QStash client, deduplication evidence, and an opt-in real-backend live-smoke gate.            | Remains alpha. Conformance now covers task publishing, but webhook/schedule verification and diagnostics/readiness remain blockers.                      |
+| `@croco/triggers-qstash`   | Runs the QStash trigger conformance suite with mocked schedule sync, signature verification, dispatch, and an opt-in real-backend live-smoke gate. | Remains alpha. Conformance now covers schedule/webhook behavior, but diagnostics/readiness and broader real QStash Worker smoke remain blockers.         |
 
-Remaining Upstash/QStash domains before beta promotion:
+Remaining Upstash/QStash blockers before beta or production promotion:
 
-- `@croco/metering-upstash` needs a Redis usage-storage conformance consumer.
-- `@croco/batch-qstash` needs a QStash batch/chunk scheduling conformance consumer.
-- `@croco/triggers-qstash` needs QStash schedule and webhook verification conformance.
-- All five providers still need safe diagnostics/readiness evidence and documented broader
-  real-backend live smoke commands.
+- All five providers still need safe diagnostics/readiness evidence through
+  `@croco/diagnostics-core` or a documented readiness hook.
+- Cloudflare Worker readiness claims still need generated Worker smoke evidence.
+- Broader real-backend smoke evidence must be recorded before any maturity promotion.
+- QStash trigger webhook response codes are response diagnostics unless they originate from a thrown
+  Croco `Problem`; only thrown Problems are expected in the generated Problem registry.
 
 ### Drizzle provider conformance
 
@@ -139,11 +152,11 @@ The current consumers are:
 
 No provider is promoted to production-ready by intent alone.
 
-| Candidate                | Current maturity | Evidence                                                                                                                                                                      | Gate result                                                                                                                                                              |
-| ------------------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@croco/storage-r2`      | Beta             | README, package tests, generated catalog entry, reusable storage conformance coverage with mocked R2 behavior, safe diagnostics/readiness, and env-gated optional live smoke. | Production gate still fails until optional live R2 smoke evidence with real credentials is recorded and reviewed.                                                        |
-| `@croco/billing-polar`   | Beta             | README, package tests, generated catalog entry, reusable billing conformance coverage with mocked Polar behavior, stable Problem mapping, and safe diagnostics/readiness.     | Production gate still fails until optional live Polar smoke evidence with real credentials is recorded and reviewed.                                                     |
-| Upstash/QStash providers | Alpha            | Shared conformance now covers `@croco/ratelimit-upstash` and `@croco/tasks-qstash`; package tests and catalog entries also exist for metering, batch, and triggers providers. | Beta gate fails until metering/batch/triggers consume reusable conformance and all providers expose diagnostics/readiness plus broader real-backend live smoke evidence. |
-| Drizzle SaaS providers   | Alpha            | Package tests, catalog entries, and initial shared conformance consumers exist for `@croco/metering-drizzle` and `@croco/execution-drizzle`.                                  | Beta gate fails until the remaining Drizzle providers adopt the shared suite and close their unsupported transaction, tenant, and error-semantic gates.                  |
+| Candidate                | Current maturity | Evidence                                                                                                                                                                      | Gate result                                                                                                                                             |
+| ------------------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@croco/storage-r2`      | Beta             | README, package tests, generated catalog entry, reusable storage conformance coverage with mocked R2 behavior, safe diagnostics/readiness, and env-gated optional live smoke. | Production gate still fails until optional live R2 smoke evidence with real credentials is recorded and reviewed.                                       |
+| `@croco/billing-polar`   | Beta             | README, package tests, generated catalog entry, reusable billing conformance coverage with mocked Polar behavior, stable Problem mapping, and safe diagnostics/readiness.     | Production gate still fails until optional live Polar smoke evidence with real credentials is recorded and reviewed.                                    |
+| Upstash/QStash providers | Alpha            | Shared conformance now covers `@croco/metering-upstash`, `@croco/ratelimit-upstash`, `@croco/batch-qstash`, `@croco/tasks-qstash`, and `@croco/triggers-qstash`.              | Beta gate fails until all providers expose diagnostics/readiness and recorded real-backend plus Worker smoke evidence.                                  |
+| Drizzle SaaS providers   | Alpha            | Package tests, catalog entries, and initial shared conformance consumers exist for `@croco/metering-drizzle` and `@croco/execution-drizzle`.                                  | Beta gate fails until the remaining Drizzle providers adopt the shared suite and close their unsupported transaction, tenant, and error-semantic gates. |
 
 This page should be updated whenever a provider changes maturity in `docs/package-catalog.json`.

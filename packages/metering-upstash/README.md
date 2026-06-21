@@ -1,38 +1,91 @@
 # @croco/metering-upstash
 
-`@upstash/redis`를 `@croco/metering-core`에서 요구하는 RedisClient 인터페이스로 연결하는 어댑터입니다.
+Upstash Redis adapter for the `@croco/metering-core` Redis usage-storage contract.
 
-## 설치
+## Install
 
 ```bash
 pnpm add @croco/metering-upstash @upstash/redis
 ```
 
-## 사용법
+## Usage
 
 ```typescript
-import { Redis } from "@upstash/redis";
-import { createUpstashRedisClient } from "@croco/metering-upstash";
 import { IdempotencyManager, RedisUsageStorage } from "@croco/metering-core";
+import { createUpstashRedisClientFromEnv } from "@croco/metering-upstash";
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+const client = createUpstashRedisClientFromEnv({
+  UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+  UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
-const client = createUpstashRedisClient(redis);
 const usageStorage = new RedisUsageStorage(client);
 const idempotency = new IdempotencyManager(client);
 ```
 
-## API 레퍼런스
+If the application already owns an `@upstash/redis` instance, wrap it directly:
 
-| API                          | 설명                                                                          |
-| ---------------------------- | ----------------------------------------------------------------------------- |
-| `UpstashRedisClient`         | `zadd`, `zrangebyscore`, `set`, `eval`을 metering-core 시그니처로 제공합니다. |
-| `createUpstashRedisClient()` | Upstash Redis 인스턴스를 빠르게 어댑터로 감쌉니다.                            |
+```typescript
+import { Redis } from "@upstash/redis";
+import { createUpstashRedisClient } from "@croco/metering-upstash";
 
-## 동작 메모
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
-- 서버리스 환경에서 쓰기 쉬운 HTTP 기반 Upstash SDK를 그대로 사용합니다.
-- 반환값이 없는 `zadd`는 0으로 정규화합니다.
+const client = createUpstashRedisClient(redis);
+```
+
+## Public API
+
+| API                                   | Description                                                                 |
+| ------------------------------------- | --------------------------------------------------------------------------- |
+| `UpstashRedisClient`                  | Implements `zadd`, `zrangebyscore`, `set`, and `eval` for metering storage. |
+| `createUpstashRedisClient()`          | Wraps an existing Upstash Redis SDK instance.                               |
+| `createUpstashRedisClientFromEnv()`   | Builds a Redis SDK instance from explicit Upstash REST env values.          |
+| `UpstashRedisClientEnv`               | Environment shape accepted by the env factory.                              |
+| `MissingUpstashMeteringConfigProblem` | Terminal Problem for missing Redis client, URL, or token configuration.     |
+| `UpstashMeteringUpstreamProblem`      | Redacted upstream Redis failure with retryability and status evidence.      |
+| `isRetryableUpstashMeteringError()`   | Classifies transient Upstash Redis failures for diagnostics/tests.          |
+
+## Failure Modes
+
+- Missing Redis client, REST URL, or REST token throws `MissingUpstashMeteringConfigProblem` with
+  `extensions.retryable: false`.
+- Redis command failures throw `UpstashMeteringUpstreamProblem`.
+- Upstream status `408`, `429`, and `5xx` are marked retryable. Terminal upstream failures are marked
+  non-retryable.
+- Error detail is redacted for token, secret, and credential-like values before it reaches the
+  Problem detail.
+
+## Conformance
+
+`@croco/testing` provides `createUpstashRedisMeteringConformanceSuite()` and this package runs it in
+the package test suite. Default CI uses mocked Redis behavior only, so no Upstash credential is
+required.
+
+Current conformance coverage:
+
+- missing configuration Problems;
+- Redis usage write/read round trip;
+- idempotency duplicate behavior;
+- retryable and terminal upstream Problem classification;
+- no-credential live-smoke gate skip.
+
+Optional live smoke is gated by all of these env vars:
+
+- `CROCO_LIVE_UPSTASH_REDIS=true`
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+
+```bash
+pnpm --filter @croco/metering-upstash test
+pnpm --filter @croco/metering-upstash typecheck
+```
+
+## Maturity
+
+This package remains alpha. It has no-credential conformance coverage and documented opt-in live
+smoke, but beta/production promotion still requires safe diagnostics/readiness evidence and recorded
+real-backend and Worker smoke evidence.

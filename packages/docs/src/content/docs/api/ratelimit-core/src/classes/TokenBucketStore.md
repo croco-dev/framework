@@ -14,6 +14,7 @@ title: "TokenBucketStore"
 ## Extended by
 
 - [`TokenBucketInMemoryStore`](/api/ratelimit-core/src/classes/tokenbucketinmemorystore/)
+- [`UpstashTokenBucketStore`](/api/ratelimit-upstash/src/classes/upstashtokenbucketstore/)
 
 ## Constructors
 
