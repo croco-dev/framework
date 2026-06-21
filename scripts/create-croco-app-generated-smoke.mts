@@ -12,7 +12,15 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getExternalCrocoPackageRange } from "../packages/create-croco-app/src/helpers/croco-ranges.ts";
+import {
+  createWorkspacePackageIndex,
+  resolveLocalCrocoPackagesForGeneratedProject,
+  rewriteExternalCrocoRanges,
+  type DependencyField,
+  type ExternalCrocoRangeException,
+  type PackageJson,
+  type WorkspacePackage,
+} from "./create-croco-app-generated-smoke-support.mts";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../packages/create-croco-app/src/supported-options.ts";
 
 type SmokeValidation = {
@@ -49,17 +57,10 @@ const loadViteConfigScript = [
   'const result = await loadConfigFromFile({ command: "build", mode: "production" }, join(process.cwd(), "vite.config.ts"));',
   'if (!result) throw new Error("vite.config.ts did not load");',
 ].join(" ");
-const dependencyFields = [
-  "dependencies",
-  "devDependencies",
-  "peerDependencies",
-  "optionalDependencies",
-] as const;
-
-type DependencyField = (typeof dependencyFields)[number];
-type PackageJson = {
-  name?: unknown;
-} & Partial<Record<DependencyField, unknown>>;
+const generatedSmokeExternalCrocoRangeExceptions = {} satisfies Record<
+  string,
+  ExternalCrocoRangeException
+>;
 
 const smokeCases: readonly SmokeCase[] = [
   {
@@ -560,18 +561,34 @@ try {
   );
   assertExists(cliPath, "create-croco-app dist CLI is missing after build");
 
-  const generatedSmokeRangeOverrides = getGeneratedSmokeRangeOverrides();
+  const workspacePackageIndex = createWorkspacePackageIndex(rootDir);
+  const packedWorkspacePackages = new Map<string, string>();
+  const builtWorkspacePackageNames = new Set<string>();
 
   for (const smokeCase of selectedSmokeCases) {
     const projectDir = join(smokeRoot, smokeCase.name);
 
     run("node", [cliPath, projectDir, ...smokeCase.args], rootDir);
-    rewriteExternalCrocoRanges(projectDir, generatedSmokeRangeOverrides);
+    const generatedSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
+      projectDir,
+      join(smokeRoot, "generated-package-packs"),
+      workspacePackageIndex,
+      packedWorkspacePackages,
+      builtWorkspacePackageNames,
+    );
+    rewriteExternalCrocoRanges(
+      projectDir,
+      generatedSmokeRangeOverrides,
+      generatedSmokeExternalCrocoRangeExceptions,
+    );
     writePnpmOverrides(projectDir, generatedSmokeRangeOverrides);
     run("pnpm", ["install"], projectDir);
-    assertExists(
-      join(projectDir, "pnpm-lock.yaml"),
-      `${smokeCase.name} did not create a pnpm lockfile`,
+    const lockfilePath = join(projectDir, "pnpm-lock.yaml");
+    assertExists(lockfilePath, `${smokeCase.name} did not create a pnpm lockfile`);
+    assertPnpmLockfileUsesLocalTarballOverrides(
+      lockfilePath,
+      smokeCase.name,
+      generatedSmokeRangeOverrides,
     );
     assertExists(
       join(projectDir, "node_modules"),
@@ -584,7 +601,11 @@ try {
   }
 
   if (!isFilteredRun) {
-    runSpaBeSplitContractSmoke();
+    runSpaBeSplitContractSmoke(
+      workspacePackageIndex,
+      packedWorkspacePackages,
+      builtWorkspacePackageNames,
+    );
   }
 
   console.log("create-croco-app-generated-smoke: all generated app smoke cases passed");
@@ -814,7 +835,11 @@ function assertCovers(
   }
 }
 
-function runSpaBeSplitContractSmoke(): void {
+function runSpaBeSplitContractSmoke(
+  workspacePackageIndex: ReadonlyMap<string, WorkspacePackage>,
+  packedWorkspacePackages: Map<string, string>,
+  builtWorkspacePackageNames: Set<string>,
+): void {
   const projectDir = join(smokeRoot, "rest-spa-contracts");
   const templateDir = join(rootDir, "packages", "create-croco-app", "templates", "spa-be-split");
 
@@ -822,16 +847,31 @@ function runSpaBeSplitContractSmoke(): void {
     projectName: "rest-spa-contracts",
     scope: "@smoke",
   });
-  const contractSmokeRangeOverrides = getContractSmokeRangeOverrides();
-  rewriteExternalCrocoRanges(projectDir, contractSmokeRangeOverrides);
-  writePnpmOverrides(projectDir, contractSmokeRangeOverrides);
   removeDependency(
     join(projectDir, "apps", "api-server", "package.json"),
     "devDependencies",
     "@croco/testing",
   );
+  const contractSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
+    projectDir,
+    join(smokeRoot, "contract-package-packs"),
+    workspacePackageIndex,
+    packedWorkspacePackages,
+    builtWorkspacePackageNames,
+  );
+  rewriteExternalCrocoRanges(
+    projectDir,
+    contractSmokeRangeOverrides,
+    generatedSmokeExternalCrocoRangeExceptions,
+  );
+  writePnpmOverrides(projectDir, contractSmokeRangeOverrides);
 
   run("pnpm", ["install"], projectDir);
+  assertPnpmLockfileUsesLocalTarballOverrides(
+    join(projectDir, "pnpm-lock.yaml"),
+    "rest-spa-contracts",
+    contractSmokeRangeOverrides,
+  );
   run("pnpm", ["contract:check"], projectDir);
   run("pnpm", ["contract:snapshot"], projectDir);
   assertExists(
@@ -864,122 +904,75 @@ function runSpaBeSplitContractSmoke(): void {
   console.log("create-croco-app-generated-smoke: rest-spa-contracts contract commands passed");
 }
 
-function getGeneratedSmokeRangeOverrides(): Record<string, string> {
-  const packDir = join(smokeRoot, "generated-package-packs");
+function getGeneratedSmokeRangeOverrides(
+  projectDir: string,
+  packDir: string,
+  workspacePackageIndex: ReadonlyMap<string, WorkspacePackage>,
+  packedWorkspacePackages: Map<string, string>,
+  builtWorkspacePackageNames: Set<string>,
+): Record<string, string> {
+  const workspacePackages = resolveLocalCrocoPackagesForGeneratedProject(
+    projectDir,
+    workspacePackageIndex,
+    generatedSmokeExternalCrocoRangeExceptions,
+  );
 
-  return {
-    "@croco/access-core": `file:${packWorkspacePackage("@croco/access-core", "access-core", packDir)}`,
-    "@croco/auth-better-auth": `file:${packWorkspacePackage("@croco/auth-better-auth", "auth-better-auth", packDir)}`,
-    "@croco/auth-clerk": `file:${packWorkspacePackage("@croco/auth-clerk", "auth-clerk", packDir)}`,
-    "@croco/auth-core": `file:${packWorkspacePackage("@croco/auth-core", "auth-core", packDir)}`,
-    "@croco/auth-drizzle": `file:${packWorkspacePackage("@croco/auth-drizzle", "auth-drizzle", packDir)}`,
-    "@croco/billing-core": `file:${packWorkspacePackage("@croco/billing-core", "billing-core", packDir)}`,
-    "@croco/billing-polar": `file:${packWorkspacePackage("@croco/billing-polar", "billing-polar", packDir)}`,
-    "@croco/cache-core": `file:${packWorkspacePackage("@croco/cache-core", "cache-core", packDir)}`,
-    "@croco/architecture-policy": `file:${packWorkspacePackage("@croco/architecture-policy", "architecture-policy", packDir)}`,
-    "@croco/cli": `file:${packWorkspacePackage("@croco/cli", "cli", packDir)}`,
-    "@croco/diagnostics-core": `file:${packWorkspacePackage("@croco/diagnostics-core", "diagnostics-core", packDir)}`,
-    "@croco/execution-core": `file:${packWorkspacePackage("@croco/execution-core", "execution-core", packDir)}`,
-    "@croco/events-core": `file:${packWorkspacePackage("@croco/events-core", "events-core", packDir)}`,
-    "@croco/events-inmemory": `file:${packWorkspacePackage("@croco/events-inmemory", "events-inmemory", packDir)}`,
-    "@croco/framework-config": `file:${packWorkspacePackage("@croco/framework-config", "framework-config", packDir)}`,
-    "@croco/framework-context": `file:${packWorkspacePackage("@croco/framework-context", "framework-context", packDir)}`,
-    "@croco/framework-logger": `file:${packWorkspacePackage("@croco/framework-logger", "framework-logger", packDir)}`,
-    "@croco/framework-preset": `file:${packWorkspacePackage("@croco/framework-preset", "framework-preset", packDir)}`,
-    "@croco/framework-routes": `file:${packWorkspacePackage("@croco/framework-routes", "framework-routes", packDir)}`,
-    "@croco/frontend-cloudflare": `file:${packWorkspacePackage("@croco/frontend-cloudflare", "frontend-cloudflare", packDir)}`,
-    "@croco/frontend-problems": `file:${packWorkspacePackage("@croco/frontend-problems", "frontend-problems", packDir)}`,
-    "@croco/frontend-react": `file:${packWorkspacePackage("@croco/frontend-react", "frontend-react", packDir)}`,
-    "@croco/frontend-vite": `file:${packWorkspacePackage("@croco/frontend-vite", "frontend-vite", packDir)}`,
-    "@croco/health-core": `file:${packWorkspacePackage("@croco/health-core", "health-core", packDir)}`,
-    "@croco/lifecycle-core": `file:${packWorkspacePackage("@croco/lifecycle-core", "lifecycle-core", packDir)}`,
-    "@croco/llm-core": `file:${packWorkspacePackage("@croco/llm-core", "llm-core", packDir)}`,
-    "@croco/llm-metering": `file:${packWorkspacePackage("@croco/llm-metering", "llm-metering", packDir)}`,
-    "@croco/meta-vite": `file:${packWorkspacePackage("@croco/meta-vite", "meta-vite", packDir)}`,
-    "@croco/metering-drizzle": `file:${packWorkspacePackage("@croco/metering-drizzle", "metering-drizzle", packDir)}`,
-    "@croco/metering-core": `file:${packWorkspacePackage("@croco/metering-core", "metering-core", packDir)}`,
-    "@croco/metering-upstash": `file:${packWorkspacePackage("@croco/metering-upstash", "metering-upstash", packDir)}`,
-    "@croco/migration-runner": `file:${packWorkspacePackage("@croco/migration-runner", "migration-runner", packDir)}`,
-    "@croco/openapi-spec": `file:${packWorkspacePackage("@croco/openapi-spec", "openapi-spec", packDir)}`,
-    "@croco/presentation-preset": `file:${packWorkspacePackage("@croco/presentation-preset", "presentation-preset", packDir)}`,
-    "@croco/preset-cloudflare": `file:${packWorkspacePackage("@croco/preset-cloudflare", "preset-cloudflare", packDir)}`,
-    "@croco/preset-lambda": `file:${packWorkspacePackage("@croco/preset-lambda", "preset-lambda", packDir)}`,
-    "@croco/problems-core": `file:${packWorkspacePackage("@croco/problems-core", "problems-core", packDir)}`,
-    "@croco/protocols-core": `file:${packWorkspacePackage("@croco/protocols-core", "protocols-core", packDir)}`,
-    "@croco/protocols-rest": `file:${packWorkspacePackage("@croco/protocols-rest", "protocols-rest", packDir)}`,
-    "@croco/ratelimit-core": `file:${packWorkspacePackage("@croco/ratelimit-core", "ratelimit-core", packDir)}`,
-    "@croco/repository-core": `file:${packWorkspacePackage("@croco/repository-core", "repository-core", packDir)}`,
-    "@croco/retry-core": `file:${packWorkspacePackage("@croco/retry-core", "retry-core", packDir)}`,
-    "@croco/rpc-codegen": `file:${packWorkspacePackage("@croco/rpc-codegen", "rpc-codegen", packDir)}`,
-    "@croco/storage-cloudinary": `file:${packWorkspacePackage("@croco/storage-cloudinary", "storage-cloudinary", packDir)}`,
-    "@croco/storage-core": `file:${packWorkspacePackage("@croco/storage-core", "storage-core", packDir)}`,
-    "@croco/storage-r2": `file:${packWorkspacePackage("@croco/storage-r2", "storage-r2", packDir)}`,
-    "@croco/tasks-core": `file:${packWorkspacePackage("@croco/tasks-core", "tasks-core", packDir)}`,
-    "@croco/tasks-qstash": `file:${packWorkspacePackage("@croco/tasks-qstash", "tasks-qstash", packDir)}`,
-    "@croco/telemetry-api": `file:${packWorkspacePackage("@croco/telemetry-api", "telemetry-api", packDir)}`,
-    "@croco/telemetry-sdk-node": `file:${packWorkspacePackage("@croco/telemetry-sdk-node", "telemetry-sdk-node", packDir)}`,
-    "@croco/tenant-core": `file:${packWorkspacePackage("@croco/tenant-core", "tenant-core", packDir)}`,
-    "@croco/transports-http": `file:${packWorkspacePackage("@croco/transports-http", "transports-http", packDir)}`,
-    "@croco/triggers-core": `file:${packWorkspacePackage("@croco/triggers-core", "triggers-core", packDir)}`,
-    "@croco/triggers-qstash": `file:${packWorkspacePackage("@croco/triggers-qstash", "triggers-qstash", packDir)}`,
-    "@croco/tx-core": `file:${packWorkspacePackage("@croco/tx-core", "tx-core", packDir)}`,
-    "@croco/tx-drizzle": `file:${packWorkspacePackage("@croco/tx-drizzle", "tx-drizzle", packDir)}`,
-  };
+  buildWorkspacePackages(
+    workspacePackages.map(({ name }) => name),
+    builtWorkspacePackageNames,
+  );
+
+  return Object.fromEntries(
+    workspacePackages.map((workspacePackage) => [
+      workspacePackage.name,
+      `file:${packWorkspacePackage(workspacePackage, packDir, packedWorkspacePackages)}`,
+    ]),
+  );
 }
 
-function getContractSmokeRangeOverrides(): Record<string, string> {
-  const packDir = join(smokeRoot, "contract-package-packs");
+function buildWorkspacePackages(
+  packageNames: readonly string[],
+  builtWorkspacePackageNames: Set<string>,
+): void {
+  const packageNamesToBuild = [...new Set(packageNames)]
+    .filter((packageName) => !builtWorkspacePackageNames.has(packageName))
+    .sort();
 
-  return {
-    "@croco/architecture-policy": `file:${packWorkspacePackage("@croco/architecture-policy", "architecture-policy", packDir)}`,
-    "@croco/cli": `file:${packWorkspacePackage("@croco/cli", "cli", packDir)}`,
-    "@croco/diagnostics-core": `file:${packWorkspacePackage("@croco/diagnostics-core", "diagnostics-core", packDir)}`,
-    "@croco/events-core": `file:${packWorkspacePackage("@croco/events-core", "events-core", packDir)}`,
-    "@croco/events-inmemory": `file:${packWorkspacePackage("@croco/events-inmemory", "events-inmemory", packDir)}`,
-    "@croco/framework-config": `file:${packWorkspacePackage("@croco/framework-config", "framework-config", packDir)}`,
-    "@croco/framework-context": `file:${packWorkspacePackage("@croco/framework-context", "framework-context", packDir)}`,
-    "@croco/framework-logger": `file:${packWorkspacePackage("@croco/framework-logger", "framework-logger", packDir)}`,
-    "@croco/framework-routes": `file:${packWorkspacePackage("@croco/framework-routes", "framework-routes", packDir)}`,
-    "@croco/frontend-problems": `file:${packWorkspacePackage("@croco/frontend-problems", "frontend-problems", packDir)}`,
-    "@croco/frontend-vite": `file:${packWorkspacePackage("@croco/frontend-vite", "frontend-vite", packDir)}`,
-    "@croco/health-core": `file:${packWorkspacePackage("@croco/health-core", "health-core", packDir)}`,
-    "@croco/migration-runner": `file:${packWorkspacePackage("@croco/migration-runner", "migration-runner", packDir)}`,
-    "@croco/openapi-spec": `file:${packWorkspacePackage("@croco/openapi-spec", "openapi-spec", packDir)}`,
-    "@croco/problems-core": `file:${packWorkspacePackage("@croco/problems-core", "problems-core", packDir)}`,
-    "@croco/protocols-core": `file:${packWorkspacePackage("@croco/protocols-core", "protocols-core", packDir)}`,
-    "@croco/protocols-rest": `file:${packWorkspacePackage("@croco/protocols-rest", "protocols-rest", packDir)}`,
-    "@croco/ratelimit-core": `file:${packWorkspacePackage("@croco/ratelimit-core", "ratelimit-core", packDir)}`,
-    "@croco/repository-core": `file:${packWorkspacePackage("@croco/repository-core", "repository-core", packDir)}`,
-    "@croco/retry-core": `file:${packWorkspacePackage("@croco/retry-core", "retry-core", packDir)}`,
-    "@croco/rpc-codegen": `file:${packWorkspacePackage("@croco/rpc-codegen", "rpc-codegen", packDir)}`,
-    "@croco/telemetry-api": `file:${packWorkspacePackage("@croco/telemetry-api", "telemetry-api", packDir)}`,
-    "@croco/telemetry-sdk-node": `file:${packWorkspacePackage("@croco/telemetry-sdk-node", "telemetry-sdk-node", packDir)}`,
-    "@croco/transports-http": `file:${packWorkspacePackage("@croco/transports-http", "transports-http", packDir)}`,
-  };
+  if (packageNamesToBuild.length === 0) {
+    return;
+  }
+
+  run(
+    process.execPath,
+    [turboPath, "build", ...packageNamesToBuild.map((packageName) => `--filter=${packageName}...`)],
+    rootDir,
+  );
+
+  for (const packageName of packageNamesToBuild) {
+    builtWorkspacePackageNames.add(packageName);
+  }
 }
 
 function packWorkspacePackage(
-  packageName: string,
-  packageDirName: string,
+  workspacePackage: WorkspacePackage,
   packDir: string,
+  packedWorkspacePackages: Map<string, string>,
 ): string {
-  mkdirSync(packDir, { recursive: true });
-  run("pnpm", ["--filter", packageName, "pack", "--pack-destination", packDir], rootDir);
-
-  const packageJson = JSON.parse(
-    readFileSync(join(rootDir, "packages", packageDirName, "package.json"), "utf8"),
-  ) as {
-    version?: unknown;
-  };
-
-  if (typeof packageJson.version !== "string") {
-    throw new Error(`${packageName} package.json is missing a string version`);
+  const cachedTarballPath = packedWorkspacePackages.get(workspacePackage.name);
+  if (cachedTarballPath) {
+    return cachedTarballPath;
   }
 
-  return join(
+  mkdirSync(packDir, { recursive: true });
+  run("pnpm", ["--filter", workspacePackage.name, "pack", "--pack-destination", packDir], rootDir);
+
+  const tarballPath = join(
     packDir,
-    `${packageName.replace(/^@/, "").replace("/", "-")}-${packageJson.version}.tgz`,
+    `${workspacePackage.name.replace(/^@/, "").replace("/", "-")}-${workspacePackage.version}.tgz`,
   );
+  packedWorkspacePackages.set(workspacePackage.name, tarballPath);
+
+  return tarballPath;
 }
 
 function writePnpmOverrides(projectDir: string, rangeOverrides: Record<string, string>): void {
@@ -997,6 +990,23 @@ function writePnpmOverrides(projectDir: string, rangeOverrides: Record<string, s
   };
 
   writeFileSync(manifestPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+}
+
+function assertPnpmLockfileUsesLocalTarballOverrides(
+  lockfilePath: string,
+  label: string,
+  rangeOverrides: Record<string, string>,
+): void {
+  const lockfile = readFileSync(lockfilePath, "utf8");
+  const missingLocalTarballPackages = Object.entries(rangeOverrides)
+    .filter(([, range]) => !lockfile.includes(range))
+    .map(([packageName]) => packageName);
+
+  if (missingLocalTarballPackages.length > 0) {
+    throw new Error(
+      `${label} pnpm lockfile is missing local tarball references for ${missingLocalTarballPackages.join(", ")}`,
+    );
+  }
 }
 
 function renderTemplate(sourceDir: string, targetDir: string, vars: Record<string, string>): void {
@@ -1033,56 +1043,6 @@ function renderText(content: string, vars: Record<string, string>): string {
   );
 }
 
-function rewriteExternalCrocoRanges(
-  projectDir: string,
-  rangeOverrides: Record<string, string> = {},
-): void {
-  const manifests = findPackageJsonFiles(projectDir).map((path) => ({
-    path,
-    packageJson: JSON.parse(readFileSync(path, "utf8")) as PackageJson,
-  }));
-  const generatedPackageNames = new Set(
-    manifests
-      .map(({ packageJson }) => packageJson.name)
-      .filter((name): name is string => typeof name === "string"),
-  );
-
-  for (const manifest of manifests) {
-    let changed = false;
-
-    for (const field of dependencyFields) {
-      const dependencies = manifest.packageJson[field];
-
-      if (!isDependencyMap(dependencies)) {
-        continue;
-      }
-
-      for (const [packageName, range] of Object.entries(dependencies)) {
-        if (!packageName.startsWith("@croco/") || generatedPackageNames.has(packageName)) {
-          continue;
-        }
-
-        const rangeOverride = rangeOverrides[packageName];
-        if (!range.startsWith("workspace:") && rangeOverride === undefined) {
-          continue;
-        }
-
-        const publishedRange = rangeOverride ?? getExternalCrocoPackageRange(packageName);
-        if (publishedRange === undefined) {
-          throw new Error(`No published range configured for generated dependency ${packageName}`);
-        }
-
-        dependencies[packageName] = publishedRange;
-        changed = true;
-      }
-    }
-
-    if (changed) {
-      writeFileSync(manifest.path, `${JSON.stringify(manifest.packageJson, null, 2)}\n`);
-    }
-  }
-}
-
 function removeDependency(path: string, field: DependencyField, packageName: string): void {
   const packageJson = JSON.parse(readFileSync(path, "utf8")) as PackageJson;
   const dependencies = packageJson[field];
@@ -1093,18 +1053,6 @@ function removeDependency(path: string, field: DependencyField, packageName: str
 
   delete dependencies[packageName];
   writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
-}
-
-function findPackageJsonFiles(directory: string): string[] {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = join(directory, entry.name);
-
-    if (entry.isDirectory()) {
-      return findPackageJsonFiles(entryPath);
-    }
-
-    return entry.name === "package.json" ? [entryPath] : [];
-  });
 }
 
 function isDependencyMap(value: unknown): value is Record<string, string> {
