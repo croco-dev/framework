@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build --ssr src/index.ts --outDir dist --emptyOutDir false",
     "preview": "vite preview",
     "presentation:smoke": "tsx src/smoke/presentationSmoke.ts",
     "typecheck": "tsc --noEmit"

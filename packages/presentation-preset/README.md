@@ -14,7 +14,7 @@ case that proves the claim.
 | `node-server`       | `node`               | `CROCO_GENERATED_SMOKE_CASES=production-app-starter pnpm create-croco-app:smoke`      |
 | `lambda-function`   | `lambda`             | `CROCO_GENERATED_SMOKE_CASES=graphql-lambda-api pnpm create-croco-app:smoke`          |
 | `cloudflare-worker` | `cloudflare-workers` | `CROCO_GENERATED_SMOKE_CASES=meta-vite-fullstack-workers pnpm create-croco-app:smoke` |
-| `browser-vite-spa`  | `browser`            | `CROCO_GENERATED_SMOKE_CASES=meta-vite-web pnpm create-croco-app:smoke`               |
+| `browser-vite-spa`  | `browser`            | `CROCO_GENERATED_SMOKE_CASES=graphql-vite-spa-docker pnpm create-croco-app:smoke`     |
 
 ## Verification
 

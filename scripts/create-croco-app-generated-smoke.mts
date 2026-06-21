@@ -210,6 +210,12 @@ const smokeCases: readonly SmokeCase[] = [
         packagePath: ["apps", "web"],
         args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
       },
+      {
+        label: "apps/web browser build",
+        packagePath: ["apps", "web"],
+        args: ["build"],
+        paths: ["dist/index.html", "src/vite-env.d.ts"],
+      },
       { label: "vite SPA Dockerfile", paths: ["web/Dockerfile.vite-spa"] },
     ],
   },
@@ -238,6 +244,12 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
       },
       {
+        label: "apps/web meta-vite build",
+        packagePath: ["apps", "web"],
+        args: ["build"],
+        paths: ["dist/client/manifest.json"],
+      },
+      {
         label: "apps/web presentation smoke",
         packagePath: ["apps", "web"],
         args: ["presentation:smoke"],
@@ -263,6 +275,12 @@ const smokeCases: readonly SmokeCase[] = [
         label: "ssr-worker vite config load",
         packagePath: ["ssr-worker"],
         args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
+      },
+      {
+        label: "ssr-worker meta-vite build",
+        packagePath: ["ssr-worker"],
+        args: ["build"],
+        paths: ["dist/client/manifest.json"],
       },
       {
         label: "ssr-worker presentation smoke",

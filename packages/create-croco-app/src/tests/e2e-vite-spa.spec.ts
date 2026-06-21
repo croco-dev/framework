@@ -45,6 +45,7 @@ describe("E2E Vite SPA: generate()", () => {
       expect(existsSync(join(appDir, "src", "main.tsx"))).toBe(true);
       expect(existsSync(join(appDir, "src", "App.tsx"))).toBe(true);
       expect(existsSync(join(appDir, "src", "api", "client.ts"))).toBe(true);
+      expect(existsSync(join(appDir, "src", "vite-env.d.ts"))).toBe(true);
       expect(existsSync(join(appDir, "index.html"))).toBe(true);
 
       expect(clientContent).toContain("VITE_API_URL");
