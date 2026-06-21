@@ -5,6 +5,7 @@ import type { AccessEngine } from "../libs/AccessEngine";
 import { Access } from "../libs/decorators/Access";
 import { AccessGuard, BadRequestProblem, ForbiddenProblem } from "../libs/guards/AccessGuard";
 import type { AccessExecutionContext } from "../libs/interfaces/Guard";
+import { createPolicyDecisionTrace } from "../libs/PolicyDecisionTrace";
 
 describe("AccessGuard", () => {
   let accessGuard!: AccessGuard;
@@ -128,11 +129,40 @@ describe("AccessGuard", () => {
     vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: false });
 
     await expect(accessGuard.canActivate(context)).rejects.toThrow(ForbiddenProblem);
-    expect(mockAccessEngine.check).toHaveBeenCalledWith({
+    expect(mockAccessEngine.check).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: mockTenantId,
+        subject: `user:${mockUser.id}`,
+        relation: "editor",
+        object: "document:doc-1",
+        ruleId: "access:document:editor",
+      }),
+    );
+  });
+
+  it("should include the decision id when access check fails", async () => {
+    class TestController {
+      @Access("document", "editor")
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController, "protectedMethod", mockUser, mockTenantId, {
+      id: "doc-1",
+    });
+    const trace = createPolicyDecisionTrace({
+      policyKind: "access",
+      result: "deny",
+      ruleId: "access:document:editor",
+      subjectRef: `user:${mockUser.id}`,
+      resourceRef: "document:doc-1",
       tenantId: mockTenantId,
-      subject: `user:${mockUser.id}`,
-      relation: "editor",
-      object: "document:doc-1",
+    });
+
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ allowed: false, trace });
+
+    await expect(accessGuard.canActivate(context)).rejects.toMatchObject({
+      extensions: {
+        decisionId: trace.decisionId,
+      },
     });
   });
 
@@ -149,12 +179,15 @@ describe("AccessGuard", () => {
 
     const result = await accessGuard.canActivate(context);
     expect(result).toBe(true);
-    expect(mockAccessEngine.check).toHaveBeenCalledWith({
-      tenantId: mockTenantId,
-      subject: `user:${mockUser.id}`,
-      relation: "editor",
-      object: "document:doc-1",
-    });
+    expect(mockAccessEngine.check).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: mockTenantId,
+        subject: `user:${mockUser.id}`,
+        relation: "editor",
+        object: "document:doc-1",
+        ruleId: "access:document:editor",
+      }),
+    );
   });
 
   it("should extract objectId from params.{objectType}Id pattern", async () => {
@@ -170,12 +203,15 @@ describe("AccessGuard", () => {
 
     const result = await accessGuard.canActivate(context);
     expect(result).toBe(true);
-    expect(mockAccessEngine.check).toHaveBeenCalledWith({
-      tenantId: mockTenantId,
-      subject: `user:${mockUser.id}`,
-      relation: "viewer",
-      object: "document:doc-123",
-    });
+    expect(mockAccessEngine.check).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: mockTenantId,
+        subject: `user:${mockUser.id}`,
+        relation: "viewer",
+        object: "document:doc-123",
+        ruleId: "access:document:viewer",
+      }),
+    );
   });
 
   it("should prioritize params.id over params.{objectType}Id", async () => {
@@ -192,12 +228,15 @@ describe("AccessGuard", () => {
 
     const result = await accessGuard.canActivate(context);
     expect(result).toBe(true);
-    expect(mockAccessEngine.check).toHaveBeenCalledWith({
-      tenantId: mockTenantId,
-      subject: `user:${mockUser.id}`,
-      relation: "viewer",
-      object: "document:doc-from-id",
-    });
+    expect(mockAccessEngine.check).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: mockTenantId,
+        subject: `user:${mockUser.id}`,
+        relation: "viewer",
+        object: "document:doc-from-id",
+        ruleId: "access:document:viewer",
+      }),
+    );
   });
 
   it("should throw when AccessEngine.check throws an error", async () => {
@@ -230,12 +269,15 @@ describe("AccessGuard", () => {
 
     const result = await accessGuard.canActivate(context);
     expect(result).toBe(true);
-    expect(mockAccessEngine.check).toHaveBeenCalledWith({
-      tenantId: mockTenantId,
-      subject: `user:${mockUser.id}`,
-      relation: "viewer",
-      object: "document:doc-from-http",
-    });
+    expect(mockAccessEngine.check).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: mockTenantId,
+        subject: `user:${mockUser.id}`,
+        relation: "viewer",
+        object: "document:doc-from-http",
+        ruleId: "access:document:viewer",
+      }),
+    );
   });
 
   it("should resolve tenantId from http context store when missing on request", async () => {
@@ -254,12 +296,15 @@ describe("AccessGuard", () => {
 
     const result = await accessGuard.canActivate(context);
     expect(result).toBe(true);
-    expect(mockAccessEngine.check).toHaveBeenCalledWith({
-      tenantId: "tenant-from-context",
-      subject: `user:${mockUser.id}`,
-      relation: "viewer",
-      object: "document:doc-ctx-tenant",
-    });
+    expect(mockAccessEngine.check).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-from-context",
+        subject: `user:${mockUser.id}`,
+        relation: "viewer",
+        object: "document:doc-ctx-tenant",
+        ruleId: "access:document:viewer",
+      }),
+    );
   });
 
   it("should resolve tenantId from request context fallback when request and http context lack tenantId", async () => {
@@ -280,12 +325,15 @@ describe("AccessGuard", () => {
       expect(result).toBe(true);
     });
 
-    expect(mockAccessEngine.check).toHaveBeenCalledWith({
-      tenantId: "tenant-from-request-context",
-      subject: `user:${mockUser.id}`,
-      relation: "viewer",
-      object: "document:doc-context-fallback",
-    });
+    expect(mockAccessEngine.check).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-from-request-context",
+        subject: `user:${mockUser.id}`,
+        relation: "viewer",
+        object: "document:doc-context-fallback",
+        ruleId: "access:document:viewer",
+      }),
+    );
   });
 
   it("should throw BadRequestProblem when tenantId cannot be resolved", async () => {

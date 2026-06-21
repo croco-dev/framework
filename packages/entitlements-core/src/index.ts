@@ -41,6 +41,7 @@ export type {
  * 플랜 규칙과 quota를 조합해 entitlement 결과를 계산하는 핵심 서비스입니다.
  */
 export { EntitlementManager } from "./libs/EntitlementManager";
+export type { EntitlementManagerOptions } from "./libs/EntitlementManager";
 
 /**
  * entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입니다.

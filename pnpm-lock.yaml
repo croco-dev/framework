@@ -172,6 +172,9 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -1013,6 +1016,9 @@ importers:
 
   packages/entitlements-core:
     dependencies:
+      '@croco/access-core':
+        specifier: workspace:*
+        version: link:../access-core
       '@croco/auth-core':
         specifier: workspace:*
         version: link:../auth-core
@@ -2605,6 +2611,9 @@ importers:
 
   packages/tenant-core:
     dependencies:
+      '@croco/access-core':
+        specifier: workspace:*
+        version: link:../access-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context

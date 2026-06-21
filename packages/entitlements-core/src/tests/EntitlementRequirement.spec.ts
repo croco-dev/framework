@@ -31,6 +31,7 @@ describe("EntitlementRequirement", () => {
       {
         feature: "reports.read",
         resource: { type: "report", idParam: "id" },
+        ruleId: "entitlement:reports.read",
       },
     ]);
   });

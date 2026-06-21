@@ -1,3 +1,5 @@
+import type { PolicyDecisionSourceLocation, PolicyDecisionTrace } from "@croco/access-core";
+
 export type EntitlementType = "boolean" | "metered" | "static";
 
 export type OveragePolicy = "BLOCK" | "WARN" | "ALLOW_WITH_OVERAGE";
@@ -63,4 +65,12 @@ export type EntitlementCheckResult = {
   planId?: string;
   reason?: EntitlementFailureReason;
   overagePolicy?: OveragePolicy;
+  trace?: PolicyDecisionTrace;
+};
+
+export type EntitlementCheckOptions = {
+  readonly subjectRef?: string;
+  readonly ruleId?: string;
+  readonly sourceLocation?: PolicyDecisionSourceLocation;
+  readonly inputs?: Record<string, unknown>;
 };

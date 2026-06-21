@@ -1,3 +1,4 @@
+import { createPolicyDecisionTrace } from "@croco/access-core";
 import { Container } from "@croco/framework-context";
 import * as telemetry from "@croco/telemetry-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,7 +15,7 @@ import {
   EntitlementProviderUnavailableProblem,
   EntitlementQuotaExceededProblem,
 } from "../libs/problems/EntitlementProblems";
-import type { EntitlementCheckResult } from "../libs/types";
+import type { EntitlementCheckOptions, EntitlementCheckResult } from "../libs/types";
 
 class MockEntitlementManager {
   checkResult: EntitlementCheckResult = {
@@ -26,7 +27,11 @@ class MockEntitlementManager {
   };
   error: Error | null = null;
 
-  async check(_tenantId: string, _featureKey: string): Promise<EntitlementCheckResult> {
+  async check(
+    _tenantId: string,
+    _featureKey: string,
+    _options?: EntitlementCheckOptions,
+  ): Promise<EntitlementCheckResult> {
     if (this.error) {
       throw this.error;
     }
@@ -155,10 +160,20 @@ describe("EntitlementGuard", () => {
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
 
-    expect(checkSpy).toHaveBeenCalledWith("tenant-123", "reports.export");
+    expect(checkSpy).toHaveBeenCalledWith(
+      "tenant-123",
+      "reports.export",
+      expect.objectContaining({
+        ruleId: "entitlement:reports.export",
+        sourceLocation: expect.objectContaining({
+          file: expect.stringContaining("EntitlementGuard.spec.ts"),
+        }),
+        subjectRef: "user:user-1",
+      }),
+    );
   });
 
-  it("should throw EntitlementDeniedProblem when entitlement is denied", async () => {
+  it("should throw EntitlementDeniedProblem with decision id when entitlement is denied", async () => {
     class TestController {
       testMethod() {}
     }
@@ -170,12 +185,21 @@ describe("EntitlementGuard", () => {
       "testMethod",
     );
 
+    const trace = createPolicyDecisionTrace({
+      policyKind: "entitlement",
+      result: "deny",
+      ruleId: "entitlement:test_feature",
+      subjectRef: "user:user-1",
+      resourceRef: "entitlement:test_feature",
+      tenantId: "tenant-123",
+    });
     mockManager.checkResult = {
       granted: false,
       status: "denied",
       featureKey: "test_feature",
       type: "boolean",
       reason: "limit_exceeded",
+      trace,
     };
 
     const context = createContext({
@@ -188,6 +212,11 @@ describe("EntitlementGuard", () => {
 
     await expect(guard.canActivate(context)).rejects.toThrow(EntitlementDeniedProblem);
     await expect(guard.canActivate(context)).rejects.toThrow("Entitlement");
+    await expect(guard.canActivate(context)).rejects.toMatchObject({
+      extensions: {
+        decisionId: trace.decisionId,
+      },
+    });
   });
 
   it("should throw EntitlementDeniedProblem when tenantId is missing", async () => {
@@ -326,7 +355,13 @@ describe("EntitlementGuard", () => {
 
     await guard.canActivate(context);
 
-    expect(checkSpy).toHaveBeenCalledWith("tenant-from-request", "test_feature");
+    expect(checkSpy).toHaveBeenCalledWith(
+      "tenant-from-request",
+      "test_feature",
+      expect.objectContaining({
+        ruleId: "entitlement:test_feature",
+      }),
+    );
   });
 
   it("should fallback to user.tenantId when request.tenantId is missing", async () => {
@@ -359,7 +394,14 @@ describe("EntitlementGuard", () => {
 
     await guard.canActivate(context);
 
-    expect(checkSpy).toHaveBeenCalledWith("tenant-from-user", "test_feature");
+    expect(checkSpy).toHaveBeenCalledWith(
+      "tenant-from-user",
+      "test_feature",
+      expect.objectContaining({
+        ruleId: "entitlement:test_feature",
+        subjectRef: "user:user-1",
+      }),
+    );
   });
 
   it("should expose route requirement, tenant, user, resource, telemetry, and audit evidence", async () => {
@@ -385,7 +427,20 @@ describe("EntitlementGuard", () => {
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
 
-    expect(checkSpy).toHaveBeenCalledWith("tenant-123", "reports.export");
+    expect(checkSpy).toHaveBeenCalledWith(
+      "tenant-123",
+      "reports.export",
+      expect.objectContaining({
+        ruleId: "entitlement:reports.export",
+        subjectRef: "user:user-1",
+        inputs: expect.objectContaining({
+          userId: "user-1",
+          resourceType: "report",
+          resourceId: "report-1",
+          routeId: "TestController.testMethod",
+        }),
+      }),
+    );
     expect(recordEventSpy).toHaveBeenCalledWith(
       "entitlement.guard.allowed",
       expect.objectContaining({
@@ -415,7 +470,7 @@ describe("EntitlementGuard", () => {
     ]);
   });
 
-  it("should map missing plan and quota denial results to standard Problems", async () => {
+  it("should map missing plan and quota denial results to standard Problems with decision ids", async () => {
     class TestController {
       @RequireEntitlement({ feature: "reports.export" })
       testMethod() {}
@@ -428,6 +483,12 @@ describe("EntitlementGuard", () => {
         user: createUser("tenant-123"),
       },
     });
+    const missingPlanTrace = createPolicyDecisionTrace({
+      policyKind: "entitlement",
+      result: "deny",
+      ruleId: "entitlement:reports.export",
+      tenantId: "tenant-123",
+    });
 
     mockManager.checkResult = {
       granted: false,
@@ -435,10 +496,22 @@ describe("EntitlementGuard", () => {
       featureKey: "reports.export",
       type: "boolean",
       reason: "no_subscription",
+      trace: missingPlanTrace,
     };
 
     await expect(guard.canActivate(context)).rejects.toThrow(EntitlementMissingPlanProblem);
+    await expect(guard.canActivate(context)).rejects.toMatchObject({
+      extensions: {
+        decisionId: missingPlanTrace.decisionId,
+      },
+    });
 
+    const quotaTrace = createPolicyDecisionTrace({
+      policyKind: "entitlement",
+      result: "deny",
+      ruleId: "entitlement:reports.export",
+      tenantId: "tenant-123",
+    });
     mockManager.checkResult = {
       granted: false,
       status: "denied",
@@ -450,9 +523,15 @@ describe("EntitlementGuard", () => {
       exceeded: true,
       remaining: -1,
       overagePolicy: "BLOCK",
+      trace: quotaTrace,
     };
 
     await expect(guard.canActivate(context)).rejects.toThrow(EntitlementQuotaExceededProblem);
+    await expect(guard.canActivate(context)).rejects.toMatchObject({
+      extensions: {
+        decisionId: quotaTrace.decisionId,
+      },
+    });
   });
 
   it("should record denied evidence when the entitlement provider is unavailable", async () => {

@@ -37,10 +37,28 @@
           "declarationKind": "class"
         },
         {
+          "name": "addPolicyDecisionIdExtension",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js",
+          "declarationKind": "function"
+        },
+        {
           "name": "BadRequestProblem",
           "exportKind": "named",
           "source": "./libs/guards/AccessGuard.js",
           "declarationKind": "class"
+        },
+        {
+          "name": "capturePolicyDecisionSourceLocation",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createPolicyDecisionTrace",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js",
+          "declarationKind": "function"
         },
         {
           "name": "ForbiddenProblem",
@@ -53,9 +71,50 @@
           "exportKind": "named",
           "source": "./libs/constants.js",
           "declarationKind": "const"
+        },
+        {
+          "name": "POLICY_DECISION_REDACTED_VALUE",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js",
+          "declarationKind": "const"
+        },
+        {
+          "name": "POLICY_DECISION_TELEMETRY_EVENT",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js",
+          "declarationKind": "const"
+        },
+        {
+          "name": "POLICY_DECISION_TRACE_VERSION",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js",
+          "declarationKind": "const"
+        },
+        {
+          "name": "POLICY_DECISION_TRUNCATED_VALUE",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js",
+          "declarationKind": "const"
+        },
+        {
+          "name": "recordPolicyDecisionTrace",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js",
+          "declarationKind": "function"
+        },
+        {
+          "name": "toPolicyDecisionTelemetryAttributes",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
+        {
+          "name": "AccessEngineOptions",
+          "exportKind": "named",
+          "source": "./libs/AccessEngine.js"
+        },
         {
           "name": "AccessExecutionContext",
           "exportKind": "named",
@@ -70,6 +129,11 @@
           "name": "AccessProvider",
           "exportKind": "named",
           "source": "./libs/interfaces/AccessProvider.js"
+        },
+        {
+          "name": "AccessRuleMetadata",
+          "exportKind": "named",
+          "source": "./libs/types.js"
         },
         {
           "name": "CheckRequest",
@@ -90,6 +154,56 @@
           "name": "ListRequest",
           "exportKind": "named",
           "source": "./libs/types.js"
+        },
+        {
+          "name": "PolicyDecisionRedactionOptions",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js"
+        },
+        {
+          "name": "PolicyDecisionResult",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js"
+        },
+        {
+          "name": "PolicyDecisionSourceLocation",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js"
+        },
+        {
+          "name": "PolicyDecisionTrace",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js"
+        },
+        {
+          "name": "PolicyDecisionTraceInput",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js"
+        },
+        {
+          "name": "PolicyDecisionTraceInputs",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js"
+        },
+        {
+          "name": "PolicyDecisionTraceRedaction",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js"
+        },
+        {
+          "name": "PolicyDecisionTraceSink",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js"
+        },
+        {
+          "name": "PolicyDecisionTraceValue",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js"
+        },
+        {
+          "name": "RecordPolicyDecisionTraceOptions",
+          "exportKind": "named",
+          "source": "./libs/PolicyDecisionTrace.js"
         },
         {
           "name": "RelationTuple",
@@ -4292,6 +4406,12 @@
       ],
       "typeExports": [
         {
+          "name": "EntitlementCheckOptions",
+          "exportKind": "declaration",
+          "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
           "name": "EntitlementCheckResult",
           "exportKind": "declaration",
           "source": "./libs/types",
@@ -4388,6 +4508,11 @@
           "name": "EntitlementGuardSubject",
           "exportKind": "named",
           "source": "./libs/EntitlementGuard"
+        },
+        {
+          "name": "EntitlementManagerOptions",
+          "exportKind": "named",
+          "source": "./libs/EntitlementManager"
         },
         {
           "name": "EntitlementRequirement",

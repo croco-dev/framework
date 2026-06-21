@@ -49,6 +49,14 @@ describe("AccessEngine", () => {
       const result = await accessEngine.check(request);
 
       expect(result.allowed).toBe(false);
+      expect(result.trace).toMatchObject({
+        policyKind: "access",
+        result: "deny",
+        ruleId: "access:document:viewer",
+        subjectRef: "user:user-1",
+        resourceRef: "document:document-1",
+        tenantId: "tenant-1",
+      });
       expect(mockProvider.check).toHaveBeenCalledWith(request);
     });
 
@@ -64,6 +72,10 @@ describe("AccessEngine", () => {
       const result = await accessEngine.check(request);
 
       expect(result.allowed).toBe(true);
+      expect(result.trace).toMatchObject({
+        policyKind: "access",
+        result: "allow",
+      });
       expect(mockProvider.check).toHaveBeenCalledWith(request);
     });
 
@@ -96,6 +108,47 @@ describe("AccessEngine", () => {
       const result = await accessEngine.check(request);
 
       expect(result.allowed).toBe(false);
+      expect(result.decision).toBe("abstain");
+      expect(result.trace).toMatchObject({
+        policyKind: "access",
+        result: "abstain",
+        reason: "Provider business error",
+      });
+    });
+
+    it("should record a trace through the configured audit sink", async () => {
+      const request: CheckRequest = {
+        tenantId: "tenant-1",
+        subject: "user:user-1",
+        relation: "viewer",
+        object: "document:document-1",
+        ruleId: "access:document:viewer",
+        sourceLocation: {
+          file: "routes/documents.ts",
+          line: 10,
+        },
+        inputs: {
+          authorization: "Bearer secret-token",
+        },
+      };
+      const traceSink = {
+        recordPolicyDecisionTrace: vi.fn(async () => undefined),
+      };
+      accessEngine = new AccessEngine(mockProvider, { traceSink });
+      vi.mocked(mockProvider.check).mockResolvedValue({ allowed: false });
+
+      const result = await accessEngine.check(request);
+
+      expect(result.trace).toMatchObject({
+        result: "deny",
+        ruleId: "access:document:viewer",
+        sourceLocation: {
+          file: "routes/documents.ts",
+          line: 10,
+        },
+      });
+      expect(result.trace?.inputs.authorization).toBe("[Redacted]");
+      expect(traceSink.recordPolicyDecisionTrace).toHaveBeenCalledWith(result.trace);
     });
 
     it("should re-throw on provider system problem", async () => {

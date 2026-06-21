@@ -62,6 +62,12 @@ describe("TenantIsolationEnforcer", () => {
         type: "tenant-isolation.denied",
         operation: "orders.findById",
         problemCode: "tenant-core/isolation-context-missing",
+        decisionId: expect.stringMatching(/^pdt_[a-z0-9]+$/),
+        policyDecisionTrace: expect.objectContaining({
+          policyKind: "tenant-isolation",
+          result: "deny",
+          ruleId: "tenant-isolation:repository-read:orders.findById",
+        }),
       }),
     ]);
     expect(recordEventSpy).toHaveBeenCalledWith(
@@ -69,8 +75,66 @@ describe("TenantIsolationEnforcer", () => {
       expect.objectContaining({
         "tenant.operation": "orders.findById",
         "tenant.problem_code": "tenant-core/isolation-context-missing",
+        "tenant.policy_decision_id": expect.stringMatching(/^pdt_[a-z0-9]+$/),
       }),
     );
+  });
+
+  it("redacts policy decision inputs and attaches the decision id to tenant denial Problems", async () => {
+    activeTenantId = null;
+    const traceEvents: NonNullable<TenantIsolationAuditEvent["policyDecisionTrace"]>[] = [];
+    const operation = markTenantScopedOperation({
+      name: "orders.findById",
+      kind: "repository-read",
+      sourceLocation: {
+        file: "src/orders.ts",
+        line: 15,
+      },
+      inputs: {
+        authorization: "Bearer tenant-secret",
+      },
+      metadata: {
+        route: "orders.show",
+      },
+    });
+    const enforcer = createTenantIsolationEnforcer({
+      contextProvider: {
+        getTenantId: () => activeTenantId,
+      },
+      auditSink: {
+        recordTenantIsolation: (event) => {
+          auditEvents.push(event);
+        },
+      },
+      policyDecisionTraceSink: {
+        recordPolicyDecisionTrace: (trace) => {
+          traceEvents.push(trace);
+        },
+      },
+    });
+
+    await expect(enforcer.enforce(operation, () => "unreachable")).rejects.toMatchObject({
+      extensions: {
+        decisionId: expect.stringMatching(/^pdt_[a-z0-9]+$/),
+      },
+    });
+
+    expect(auditEvents[0]).toMatchObject({
+      type: "tenant-isolation.denied",
+      decisionId: traceEvents[0]?.decisionId,
+      policyDecisionTrace: {
+        policyKind: "tenant-isolation",
+        result: "deny",
+        sourceLocation: {
+          file: "src/orders.ts",
+          line: 15,
+        },
+        inputs: {
+          authorization: "[Redacted]",
+        },
+      },
+    });
+    expect(traceEvents).toEqual([auditEvents[0]?.policyDecisionTrace]);
   });
 
   it("rejects unsafe default tenant fallback before executing repository work", async () => {
@@ -135,6 +199,11 @@ describe("TenantIsolationEnforcer", () => {
       expect.objectContaining({
         type: "tenant-isolation.bypassed",
         reason: "support ticket T-100",
+        policyDecisionTrace: expect.objectContaining({
+          policyKind: "tenant-isolation",
+          result: "allow",
+          subjectRef: "actor:admin-1",
+        }),
       }),
     ]);
   });

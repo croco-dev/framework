@@ -850,6 +850,7 @@ function getGeneratedSmokeRangeOverrides(): Record<string, string> {
   const packDir = join(smokeRoot, "generated-package-packs");
 
   return {
+    "@croco/access-core": `file:${packWorkspacePackage("@croco/access-core", "access-core", packDir)}`,
     "@croco/auth-better-auth": `file:${packWorkspacePackage("@croco/auth-better-auth", "auth-better-auth", packDir)}`,
     "@croco/auth-clerk": `file:${packWorkspacePackage("@croco/auth-clerk", "auth-clerk", packDir)}`,
     "@croco/auth-core": `file:${packWorkspacePackage("@croco/auth-core", "auth-core", packDir)}`,

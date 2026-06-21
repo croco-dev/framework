@@ -1,3 +1,9 @@
+import type {
+  PolicyDecisionResult,
+  PolicyDecisionSourceLocation,
+  PolicyDecisionTrace,
+} from "./PolicyDecisionTrace.js";
+
 export type ResourceObject = `${string}:${string}`;
 
 export type Subject = `user:${string}` | `role:${string}` | `group:${string}`;
@@ -15,10 +21,16 @@ export interface CheckRequest {
   subject: Subject;
   relation: Relation;
   object: ResourceObject;
+  ruleId?: string;
+  sourceLocation?: PolicyDecisionSourceLocation;
+  inputs?: Record<string, unknown>;
 }
 
 export interface CheckResult {
   allowed: boolean;
+  decision?: PolicyDecisionResult;
+  reason?: string;
+  trace?: PolicyDecisionTrace;
 }
 
 export interface GrantRequest {
@@ -37,3 +49,10 @@ export interface ListRequest {
   subject?: Subject;
   relation?: Relation;
 }
+
+export type AccessRuleMetadata = {
+  readonly objectType: string;
+  readonly relation: Relation;
+  readonly ruleId: string;
+  readonly sourceLocation?: PolicyDecisionSourceLocation;
+};

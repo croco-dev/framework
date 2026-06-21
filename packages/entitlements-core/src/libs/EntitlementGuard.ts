@@ -110,7 +110,17 @@ export class EntitlementGuard implements Guard<RouteExecutionContext> {
       let result: EntitlementCheckResult;
 
       try {
-        result = await this.entitlementManager.check(input.tenantId, input.requirement.feature);
+        result = await this.entitlementManager.check(input.tenantId, input.requirement.feature, {
+          ruleId: input.requirement.ruleId ?? `entitlement:${input.requirement.feature}`,
+          sourceLocation: input.requirement.sourceLocation,
+          subjectRef: input.subject ? `${input.subject.type}:${input.subject.id}` : undefined,
+          inputs: {
+            userId: input.subject?.id,
+            resourceType: input.resource?.type,
+            resourceId: input.resource?.id,
+            routeId: input.route.routeId,
+          },
+        });
       } catch (error) {
         const problem = new EntitlementProviderUnavailableProblem(
           input.requirement.feature,
@@ -363,21 +373,36 @@ function toEntitlementProblem(
     return null;
   }
 
+  const decisionId = result.trace?.decisionId;
+
   switch (result.reason) {
     case "no_subscription":
-      return new EntitlementMissingPlanProblem(input.requirement.feature, input.tenantId);
+      return new EntitlementMissingPlanProblem(
+        input.requirement.feature,
+        input.tenantId,
+        decisionId,
+      );
     case "inactive_subscription":
-      return new EntitlementInactiveSubscriptionProblem(input.requirement.feature, input.tenantId);
+      return new EntitlementInactiveSubscriptionProblem(
+        input.requirement.feature,
+        input.tenantId,
+        decisionId,
+      );
     case "quota_exceeded":
       return new EntitlementQuotaExceededProblem(
         input.requirement.feature,
         result.usage,
         result.quota,
+        decisionId,
       );
     case "provider_unavailable":
-      return new EntitlementProviderUnavailableProblem(input.requirement.feature);
+      return new EntitlementProviderUnavailableProblem(
+        input.requirement.feature,
+        undefined,
+        decisionId,
+      );
     default:
-      return new EntitlementDeniedProblem(input.requirement.feature, result.reason);
+      return new EntitlementDeniedProblem(input.requirement.feature, result.reason, decisionId);
   }
 }
 

@@ -4,7 +4,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { AccessEngine } from "../AccessEngine";
 import { ACCESS_METADATA_KEY } from "../constants";
 import type { AccessExecutionContext, Guard } from "../interfaces/Guard";
-import type { ResourceObject } from "../types";
+import type { AccessRuleMetadata, ResourceObject } from "../types";
 
 export class BadRequestProblem extends Problem {
   constructor(detail = "Bad request") {
@@ -13,8 +13,13 @@ export class BadRequestProblem extends Problem {
 }
 
 export class ForbiddenProblem extends Problem {
-  constructor(detail = "Forbidden") {
-    super("FORBIDDEN", ProblemCategory.Forbidden, detail);
+  constructor(detail = "Forbidden", decisionId?: string) {
+    super(
+      "FORBIDDEN",
+      ProblemCategory.Forbidden,
+      detail,
+      decisionId ? { extensions: { decisionId } } : undefined,
+    );
   }
 }
 
@@ -47,7 +52,9 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
     const target = context.getClass();
     const handler = context.getHandler();
 
-    const metadata = Reflect.getMetadata(ACCESS_METADATA_KEY, target, handler);
+    const metadata = Reflect.getMetadata(ACCESS_METADATA_KEY, target, handler) as
+      | AccessRuleMetadata
+      | undefined;
 
     if (!metadata) {
       return true;
@@ -75,10 +82,12 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
       subject: `user:${user.id}`,
       relation: metadata.relation,
       object: objectId,
+      ruleId: metadata.ruleId,
+      sourceLocation: metadata.sourceLocation,
     });
 
     if (!result.allowed) {
-      throw new ForbiddenProblem(`Access denied to ${objectId}`);
+      throw new ForbiddenProblem(`Access denied to ${objectId}`, result.trace?.decisionId);
     }
 
     return true;
