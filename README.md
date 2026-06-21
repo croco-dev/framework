@@ -369,13 +369,13 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **106개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **107개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Package Groups
 
 | 그룹         | 역할                                                                                       | 패키지 수 |
 | ------------ | ------------------------------------------------------------------------------------------ | --------: |
-| Core         | Framework primitives, context, reliability, transactions, and cross-cutting core utilities |        22 |
+| Core         | Framework primitives, context, reliability, transactions, and cross-cutting core utilities |        23 |
 | Domain       | Business-domain APIs and package-level abstractions                                        |        28 |
 | Provider     | Concrete datastore, SaaS provider, and external service adapters                           |        26 |
 | Integration  | Analytics, feature-flag, and observability integrations                                    |         5 |
@@ -391,7 +391,7 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | 상태                | 의미                                | 패키지 수 |
 | ------------------- | ----------------------------------- | --------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |        23 |
-| 🟡 beta             | 기능 완성, 실사용 검증 중           |        49 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |        50 |
 | 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        34 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |         0 |
 
@@ -510,6 +510,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/idempotency-core`     | Core         | `packages/idempotency-core`     | README, API, tests |
 | `@croco/pagination-core`      | Core         | `packages/pagination-core`      | README, tests      |
 | `@croco/tenant-core`          | Core         | `packages/tenant-core`          | README, tests      |
+| `@croco/webhooks-core`        | Core         | `packages/webhooks-core`        | README, API, tests |
 | `@croco/access-core`          | Domain       | `packages/access-core`          | README, tests      |
 | `@croco/admin-core`           | Domain       | `packages/admin-core`           | README, tests      |
 | `@croco/admin-ops`            | Domain       | `packages/admin-ops`            | README, API, tests |

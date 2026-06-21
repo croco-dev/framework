@@ -85,6 +85,7 @@ export default defineConfig({
             "../triggers-qstash/src/index.ts",
             "../tx-core/src/index.ts",
             "../tx-drizzle/src/index.ts",
+            "../webhooks-core/src/index.ts",
           ],
           tsconfig: "./tsconfig.typedoc.json",
           typeDoc: {

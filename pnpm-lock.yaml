@@ -1001,6 +1001,9 @@ importers:
       '@croco/tx-drizzle':
         specifier: workspace:*
         version: link:../tx-drizzle
+      '@croco/webhooks-core':
+        specifier: workspace:*
+        version: link:../webhooks-core
       '@playwright/test':
         specifier: 1.58.2
         version: 1.58.2
@@ -2857,6 +2860,19 @@ importers:
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
+
+  packages/webhooks-core:
+    dependencies:
+      '@croco/idempotency-core':
+        specifier: workspace:*
+        version: link:../idempotency-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
 
   packages/workflow-core:
     dependencies:

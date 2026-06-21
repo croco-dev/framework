@@ -59,6 +59,7 @@
     "../transports-http/src/index.ts",
     "../triggers-qstash/src/index.ts",
     "../tx-core/src/index.ts",
-    "../tx-drizzle/src/index.ts"
+    "../tx-drizzle/src/index.ts",
+    "../webhooks-core/src/index.ts"
   ]
 }
