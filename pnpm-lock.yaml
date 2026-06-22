@@ -198,6 +198,15 @@ importers:
         specifier: workspace:*
         version: link:../framework-context
     devDependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@croco/tx-drizzle':
+        specifier: workspace:*
+        version: link:../tx-drizzle
       '@types/better-sqlite3':
         specifier: 7.6.13
         version: 7.6.13
@@ -441,6 +450,9 @@ importers:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
     devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -574,6 +586,12 @@ importers:
         specifier: workspace:*
         version: link:../problems-core
     devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@croco/tx-drizzle':
+        specifier: workspace:*
+        version: link:../tx-drizzle
       '@types/better-sqlite3':
         specifier: 7.6.13
         version: 7.6.13
@@ -838,6 +856,12 @@ importers:
         specifier: workspace:*
         version: link:../tx-drizzle
     devDependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
@@ -900,6 +924,9 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@croco/access-drizzle':
+        specifier: workspace:*
+        version: link:../access-drizzle
       '@croco/admin-generated':
         specifier: workspace:*
         version: link:../admin-generated
@@ -912,6 +939,9 @@ importers:
       '@croco/audit-core':
         specifier: workspace:*
         version: link:../audit-core
+      '@croco/audit-drizzle':
+        specifier: workspace:*
+        version: link:../audit-drizzle
       '@croco/auth-better-auth':
         specifier: workspace:*
         version: link:../auth-better-auth
@@ -921,24 +951,36 @@ importers:
       '@croco/auth-core':
         specifier: workspace:*
         version: link:../auth-core
+      '@croco/auth-drizzle':
+        specifier: workspace:*
+        version: link:../auth-drizzle
       '@croco/batch-qstash':
         specifier: workspace:*
         version: link:../batch-qstash
       '@croco/billing-core':
         specifier: workspace:*
         version: link:../billing-core
+      '@croco/customer-health-drizzle':
+        specifier: workspace:*
+        version: link:../customer-health-drizzle
       '@croco/dataloader-core':
         specifier: workspace:*
         version: link:../dataloader-core
       '@croco/diagnostics-core':
         specifier: workspace:*
         version: link:../diagnostics-core
+      '@croco/entitlements-drizzle':
+        specifier: workspace:*
+        version: link:../entitlements-drizzle
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
       '@croco/events-inmemory':
         specifier: workspace:*
         version: link:../events-inmemory
+      '@croco/execution-drizzle':
+        specifier: workspace:*
+        version: link:../execution-drizzle
       '@croco/features-core':
         specifier: workspace:*
         version: link:../features-core
@@ -969,6 +1011,9 @@ importers:
       '@croco/invitation-core':
         specifier: workspace:*
         version: link:../invitation-core
+      '@croco/invitation-drizzle':
+        specifier: workspace:*
+        version: link:../invitation-drizzle
       '@croco/llm-core':
         specifier: workspace:*
         version: link:../llm-core
@@ -981,9 +1026,15 @@ importers:
       '@croco/membership-core':
         specifier: workspace:*
         version: link:../membership-core
+      '@croco/membership-drizzle':
+        specifier: workspace:*
+        version: link:../membership-drizzle
       '@croco/metering-core':
         specifier: workspace:*
         version: link:../metering-core
+      '@croco/metering-drizzle':
+        specifier: workspace:*
+        version: link:../metering-drizzle
       '@croco/metering-upstash':
         specifier: workspace:*
         version: link:../metering-upstash
@@ -996,6 +1047,12 @@ importers:
       '@croco/notifications-core':
         specifier: workspace:*
         version: link:../notifications-core
+      '@croco/onboarding-core':
+        specifier: workspace:*
+        version: link:../onboarding-core
+      '@croco/onboarding-drizzle':
+        specifier: workspace:*
+        version: link:../onboarding-drizzle
       '@croco/openapi-spec':
         specifier: workspace:*
         version: link:../openapi-spec
@@ -1041,6 +1098,9 @@ importers:
       '@croco/search-core':
         specifier: workspace:*
         version: link:../search-core
+      '@croco/search-drizzle':
+        specifier: workspace:*
+        version: link:../search-drizzle
       '@croco/storage-cloudflare':
         specifier: workspace:*
         version: link:../storage-cloudflare
@@ -1142,6 +1202,12 @@ importers:
         specifier: workspace:*
         version: link:../tx-drizzle
     devDependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
@@ -1228,9 +1294,15 @@ importers:
         specifier: ^3.0.2
         version: 3.0.2
     devDependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/testing':
         specifier: workspace:*
         version: link:../testing
+      '@croco/tx-drizzle':
+        specifier: workspace:*
+        version: link:../tx-drizzle
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
@@ -1601,6 +1673,12 @@ importers:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
     devDependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -1775,6 +1853,12 @@ importers:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
     devDependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -2116,6 +2200,12 @@ importers:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
     devDependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -2487,6 +2577,12 @@ importers:
         specifier: workspace:*
         version: link:../search-core
     devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@croco/tx-drizzle':
+        specifier: workspace:*
+        version: link:../tx-drizzle
       '@types/node':
         specifier: ^22
         version: 22.19.3

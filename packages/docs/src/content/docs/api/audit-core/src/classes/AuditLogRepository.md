@@ -7,6 +7,10 @@ title: "AuditLogRepository"
 
 감사 로그 저장소 추상 계약입니다.
 
+## Extended by
+
+- [`DrizzleAuditLogRepository`](/api/audit-drizzle/src/classes/drizzleauditlogrepository/)
+
 ## Constructors
 
 ### Constructor

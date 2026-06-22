@@ -9,6 +9,7 @@ title: "DomainPolicyStore"
 
 ## Extended by
 
+- [`DrizzleDomainPolicyStore`](/api/invitation-drizzle/src/classes/drizzledomainpolicystore/)
 - [`InMemoryDomainPolicyStore`](/api/invitation-core/src/classes/inmemorydomainpolicystore/)
 
 ## Constructors

@@ -8,6 +8,7 @@ import { runCreatePage } from "../commands/createPage.js";
 
 const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TEST_DIR, "../../../..");
+const COMPILER_CONTRACT_TEST_TIMEOUT_MS = 30_000;
 const DEPENDENCY_FIELDS = [
   "dependencies",
   "devDependencies",
@@ -42,25 +43,27 @@ describe("runCreatePage", () => {
     expect(routeContent).toContain("path: '/dashboard'");
   });
 
-  it("should typecheck the generated SSR route against the meta-vite contract", async () => {
-    const cwd = await createWorkspace();
+  it(
+    "should typecheck the generated SSR route against the meta-vite contract",
+    async () => {
+      const cwd = await createWorkspace();
 
-    await runCreatePage("Dashboard", { cwd, mode: "ssr" });
-    const pageDir = path.join(cwd, "apps", "console-web", "pages", "dashboard");
-    const pagePath = path.join(pageDir, "Page.tsx");
-    const routePath = path.join(pageDir, "route.ts");
+      await runCreatePage("Dashboard", { cwd, mode: "ssr" });
+      const pageDir = path.join(cwd, "apps", "console-web", "pages", "dashboard");
+      const pagePath = path.join(pageDir, "Page.tsx");
+      const routePath = path.join(pageDir, "route.ts");
 
-    const project = new Project({
-      useInMemoryFileSystem: true,
-      compilerOptions: {
-        jsx: ts.JsxEmit.Preserve,
-        strict: true,
-        target: ts.ScriptTarget.ES2022,
-      },
-    });
-    project.createSourceFile(
-      "/types/jsx.d.ts",
-      `declare namespace JSX {
+      const project = new Project({
+        useInMemoryFileSystem: true,
+        compilerOptions: {
+          jsx: ts.JsxEmit.Preserve,
+          strict: true,
+          target: ts.ScriptTarget.ES2022,
+        },
+      });
+      project.createSourceFile(
+        "/types/jsx.d.ts",
+        `declare namespace JSX {
   type Element = unknown;
 
   interface IntrinsicElements {
@@ -70,10 +73,10 @@ describe("runCreatePage", () => {
   }
 }
 `,
-    );
-    project.createSourceFile(
-      "/types/meta-vite.d.ts",
-      `declare module '@croco/meta-vite' {
+      );
+      project.createSourceFile(
+        "/types/meta-vite.d.ts",
+        `declare module '@croco/meta-vite' {
   export type RenderRouteComponentProps = {
     readonly request: Request;
     readonly context?: unknown;
@@ -88,14 +91,16 @@ describe("runCreatePage", () => {
   export function defineRoute(route: PageRouteDefinition): PageRouteDefinition;
 }
 `,
-    );
-    project.createSourceFile(pagePath, await fs.readFile(pagePath, "utf-8"));
-    project.createSourceFile(routePath, await fs.readFile(routePath, "utf-8"));
+      );
+      project.createSourceFile(pagePath, await fs.readFile(pagePath, "utf-8"));
+      project.createSourceFile(routePath, await fs.readFile(routePath, "utf-8"));
 
-    const diagnostics = project.getPreEmitDiagnostics();
+      const diagnostics = project.getPreEmitDiagnostics();
 
-    expect(project.formatDiagnosticsWithColorAndContext(diagnostics)).toBe("");
-  });
+      expect(project.formatDiagnosticsWithColorAndContext(diagnostics)).toBe("");
+    },
+    COMPILER_CONTRACT_TEST_TIMEOUT_MS,
+  );
 
   it("should create an explicit SPA legacy frontend-vite page file set", async () => {
     const cwd = await createWorkspace({

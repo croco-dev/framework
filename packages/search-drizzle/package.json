@@ -41,6 +41,8 @@
     "@croco/search-core": "workspace:*"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*",
     "@types/node": "^22",
     "drizzle-orm": "catalog:",
     "tsup": "8.5.1",

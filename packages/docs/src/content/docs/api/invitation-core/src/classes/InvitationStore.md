@@ -9,6 +9,7 @@ title: "InvitationStore"
 
 ## Extended by
 
+- [`DrizzleInvitationStore`](/api/invitation-drizzle/src/classes/drizzleinvitationstore/)
 - [`InMemoryInvitationStore`](/api/invitation-core/src/classes/inmemoryinvitationstore/)
 
 ## Constructors

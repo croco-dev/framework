@@ -40,7 +40,7 @@ export type RouteInputSchemas = {
 };
 
 export interface ParamIR {
-  kind: "path" | "query" | "body" | "header" | "ctx";
+  kind: "body" | "query" | "path" | "header" | "ctx";
   name: string;
   schema: z.ZodType | null;
 }
