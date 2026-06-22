@@ -11,24 +11,24 @@ title: "DevInspectorEndpointOptions"
 
 ### allowProduction?
 
-> `readonly` `optional` **allowProduction**: `boolean`
+> `readonly` `optional` **allowProduction?**: `boolean`
 
 ### exposure?
 
-> `readonly` `optional` **exposure**: [`DevInspectorExposureMode`](/api/transports-http/src/type-aliases/devinspectorexposuremode/)
+> `readonly` `optional` **exposure?**: [`DevInspectorExposureMode`](/api/transports-http/src/type-aliases/devinspectorexposuremode/)
 
 ### guard?
 
-> `readonly` `optional` **guard**: [`DiagnosticsGuard`](/api/transports-http/src/type-aliases/diagnosticsguard/)
+> `readonly` `optional` **guard?**: [`DiagnosticsGuard`](/api/transports-http/src/type-aliases/diagnosticsguard/)
 
 ### inspector?
 
-> `readonly` `optional` **inspector**: [`RuntimeInspector`](/api/framework-context/src/classes/runtimeinspector/)
+> `readonly` `optional` **inspector?**: [`RuntimeInspector`](/api/framework-context/src/classes/runtimeinspector/)
 
 ### token?
 
-> `readonly` `optional` **token**: `string`
+> `readonly` `optional` **token?**: `string`
 
 ### tokenHeader?
 
-> `readonly` `optional` **tokenHeader**: `string`
+> `readonly` `optional` **tokenHeader?**: `string`

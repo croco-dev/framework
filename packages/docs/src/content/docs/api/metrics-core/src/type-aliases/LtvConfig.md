@@ -15,19 +15,19 @@ LTV 계산에 사용하는 입력 설정 타입입니다.
 
 > **arpa**: [`Money`](/api/metrics-core/src/type-aliases/money/)
 
-***
+---
 
 ### grossMargin?
 
-> `optional` **grossMargin**: `number`
+> `optional` **grossMargin?**: `number`
 
-***
+---
 
 ### includeMargin?
 
-> `optional` **includeMargin**: `boolean`
+> `optional` **includeMargin?**: `boolean`
 
-***
+---
 
 ### monthlyChurnRate
 

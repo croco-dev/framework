@@ -57,17 +57,17 @@ title: "WebhookReporterProblem"
 
 `WebhookProblem.category`
 
-***
+---
 
 ### cause?
 
-> `readonly` `optional` **cause**: `Error`
+> `readonly` `optional` **cause?**: `Error`
 
 #### Inherited from
 
 `WebhookProblem.cause`
 
-***
+---
 
 ### code
 
@@ -77,37 +77,37 @@ title: "WebhookReporterProblem"
 
 `WebhookProblem.code`
 
-***
+---
 
 ### detail?
 
-> `readonly` `optional` **detail**: `string`
+> `readonly` `optional` **detail?**: `string`
 
 #### Inherited from
 
 `WebhookProblem.detail`
 
-***
+---
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+> `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
 #### Inherited from
 
 `WebhookProblem.extensions`
 
-***
+---
 
 ### instance?
 
-> `readonly` `optional` **instance**: `string`
+> `readonly` `optional` **instance?**: `string`
 
 #### Inherited from
 
 `WebhookProblem.instance`
 
-***
+---
 
 ### message
 
@@ -117,7 +117,7 @@ title: "WebhookReporterProblem"
 
 `WebhookProblem.message`
 
-***
+---
 
 ### name
 
@@ -127,17 +127,17 @@ title: "WebhookReporterProblem"
 
 `WebhookProblem.name`
 
-***
+---
 
 ### stack?
 
-> `optional` **stack**: `string`
+> `optional` **stack?**: `string`
 
 #### Inherited from
 
 `WebhookProblem.stack`
 
-***
+---
 
 ### type
 
@@ -147,7 +147,7 @@ title: "WebhookReporterProblem"
 
 `WebhookProblem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -183,7 +183,7 @@ not capture any frames.
 
 `WebhookProblem.status`
 
-***
+---
 
 ### title
 
@@ -213,7 +213,7 @@ not capture any frames.
 
 `WebhookProblem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -226,7 +226,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -281,7 +281,7 @@ a();
 
 `WebhookProblem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

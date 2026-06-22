@@ -11,4 +11,4 @@ title: "DrizzleHealthIndicatorOptions"
 
 ### name?
 
-> `optional` **name**: `string`
+> `optional` **name?**: `string`

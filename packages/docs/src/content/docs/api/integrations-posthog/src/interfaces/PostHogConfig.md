@@ -13,8 +13,8 @@ title: "PostHogConfig"
 
 > **apiKey**: `string`
 
-***
+---
 
 ### host?
 
-> `optional` **host**: `string`
+> `optional` **host?**: `string`

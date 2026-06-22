@@ -5,4 +5,4 @@ prev: false
 title: "StorageProviderUrlExpectation"
 ---
 
-> **StorageProviderUrlExpectation** = `string` \| `RegExp` \| (`url`, `context`) => `void`
+> **StorageProviderUrlExpectation** = `string` \| `RegExp` \| ((`url`, `context`) => `void`)

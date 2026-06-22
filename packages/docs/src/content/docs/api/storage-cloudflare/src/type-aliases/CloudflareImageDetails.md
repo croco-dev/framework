@@ -33,45 +33,49 @@ Cloudflare Images 상세 조회 응답 구조입니다.
 
 이미지 상세 정보
 
-#### Type Declaration
+#### Union Members
+
+##### Type Literal
 
 \{ `filename`: `string`; `id`: `string`; `requireSignedURLs`: `boolean`; `size?`: `number`; `uploaded`: `string`; `variants`: `string`[]; \}
 
-#### filename
+##### filename
 
 > **filename**: `string`
 
 원본 파일명
 
-#### id
+##### id
 
 > **id**: `string`
 
 이미지 ID
 
-#### requireSignedURLs
+##### requireSignedURLs
 
 > **requireSignedURLs**: `boolean`
 
 서명된 URL 필요 여부
 
-#### size?
+##### size?
 
-> `optional` **size**: `number`
+> `optional` **size?**: `number`
 
 이미지 크기 (bytes)
 
-#### uploaded
+##### uploaded
 
 > **uploaded**: `string`
 
 업로드 시간
 
-#### variants
+##### variants
 
 > **variants**: `string`[]
 
 가능한 변성(variants) URL 목록
+
+---
 
 `null`
 

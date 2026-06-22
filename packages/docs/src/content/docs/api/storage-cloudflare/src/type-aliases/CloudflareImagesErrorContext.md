@@ -13,7 +13,7 @@ Cloudflare Images 제공자 구성과 API 응답에 필요한 공개 타입들�
 
 ### key?
 
-> `readonly` `optional` **key**: `string`
+> `readonly` `optional` **key?**: `string`
 
 ---
 
@@ -31,16 +31,16 @@ Cloudflare Images 제공자 구성과 API 응답에 필요한 공개 타입들�
 
 ### retryable?
 
-> `readonly` `optional` **retryable**: `boolean`
+> `readonly` `optional` **retryable?**: `boolean`
 
 ---
 
 ### status?
 
-> `readonly` `optional` **status**: `number`
+> `readonly` `optional` **status?**: `number`
 
 ---
 
 ### upstreamCode?
 
-> `readonly` `optional` **upstreamCode**: `string`
+> `readonly` `optional` **upstreamCode?**: `string`

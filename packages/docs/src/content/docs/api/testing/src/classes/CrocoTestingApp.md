@@ -31,7 +31,7 @@ title: "CrocoTestingApp"
 
 > `readonly` **app**: [`CrocoApp`](/api/transports-http/src/classes/crocoapp/)
 
-***
+---
 
 ### baseUrl
 
@@ -57,7 +57,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>
 
-***
+---
 
 ### delete()
 
@@ -67,7 +67,7 @@ title: "CrocoTestingApp"
 
 ##### path
 
-`string` | `URL`
+`string` \| `URL`
 
 ##### options?
 
@@ -77,7 +77,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
-***
+---
 
 ### get()
 
@@ -87,7 +87,7 @@ title: "CrocoTestingApp"
 
 ##### path
 
-`string` | `URL`
+`string` \| `URL`
 
 ##### options?
 
@@ -97,7 +97,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
-***
+---
 
 ### patch()
 
@@ -107,7 +107,7 @@ title: "CrocoTestingApp"
 
 ##### path
 
-`string` | `URL`
+`string` \| `URL`
 
 ##### options?
 
@@ -117,7 +117,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
-***
+---
 
 ### post()
 
@@ -127,7 +127,7 @@ title: "CrocoTestingApp"
 
 ##### path
 
-`string` | `URL`
+`string` \| `URL`
 
 ##### options?
 
@@ -137,7 +137,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
-***
+---
 
 ### put()
 
@@ -147,7 +147,7 @@ title: "CrocoTestingApp"
 
 ##### path
 
-`string` | `URL`
+`string` \| `URL`
 
 ##### options?
 
@@ -157,7 +157,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
-***
+---
 
 ### readJson()
 
@@ -179,7 +179,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`T`\>
 
-***
+---
 
 ### readProblem()
 
@@ -195,7 +195,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>
 
-***
+---
 
 ### request()
 
@@ -205,7 +205,7 @@ title: "CrocoTestingApp"
 
 ##### path
 
-`string` | `Request` | `URL`
+`string` \| `Request` \| `URL`
 
 ##### options?
 
@@ -215,7 +215,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
-***
+---
 
 ### rpcFetch()
 
@@ -231,7 +231,7 @@ title: "CrocoTestingApp"
 
 ###### input
 
-`URL` | `RequestInfo`
+`URL` \| `RequestInfo`
 
 ###### init?
 
@@ -249,7 +249,7 @@ title: "CrocoTestingApp"
 
 ###### input
 
-`string` | `Request` | `URL`
+`string` \| `Request` \| `URL`
 
 ###### init?
 

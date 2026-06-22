@@ -13,9 +13,9 @@ Clerk 인증 제공자 생성 옵션입니다.
 
 ### publishableKey?
 
-> `optional` **publishableKey**: `string`
+> `optional` **publishableKey?**: `string`
 
-***
+---
 
 ### secretKey
 

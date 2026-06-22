@@ -11,9 +11,9 @@ title: "AuthProviderWebhookConformance"
 
 ### invalidPayload?
 
-> `readonly` `optional` **invalidPayload**: [`AuthProviderProblemExpectation`](/api/testing/src/type-aliases/authproviderproblemexpectation/)
+> `readonly` `optional` **invalidPayload?**: [`AuthProviderProblemExpectation`](/api/testing/src/type-aliases/authproviderproblemexpectation/)
 
-***
+---
 
 ### invalidSignature
 

@@ -11,34 +11,34 @@ title: "AuthProviderTenantMappingEvidence"
 
 ### expectedTenantId?
 
-> `readonly` `optional` **expectedTenantId**: `string`
+> `readonly` `optional` **expectedTenantId?**: `string`
 
-***
+---
 
 ### expectedUserMetadata?
 
-> `readonly` `optional` **expectedUserMetadata**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **expectedUserMetadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### externalOrgId
 
 > `readonly` **externalOrgId**: `string`
 
-***
+---
 
 ### resolvedTenantId?
 
-> `readonly` `optional` **resolvedTenantId**: `string` \| `null`
+> `readonly` `optional` **resolvedTenantId?**: `string` \| `null`
 
-***
+---
 
 ### unknownResolvedTenantId?
 
-> `readonly` `optional` **unknownResolvedTenantId**: `string` \| `null`
+> `readonly` `optional` **unknownResolvedTenantId?**: `string` \| `null`
 
-***
+---
 
 ### userMetadata?
 
-> `readonly` `optional` **userMetadata**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **userMetadata?**: `Record`\<`string`, `unknown`\>

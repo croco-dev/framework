@@ -17,7 +17,7 @@ title: "TamperProofAuditLog"
 
 ### parentHash?
 
-> `optional` **parentHash**: `string`
+> `optional` **parentHash?**: `string`
 
 ### sequence
 

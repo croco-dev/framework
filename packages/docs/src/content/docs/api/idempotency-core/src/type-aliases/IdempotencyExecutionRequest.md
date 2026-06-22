@@ -13,14 +13,14 @@ title: "IdempotencyExecutionRequest"
 
 > `readonly` **key**: [`DerivedIdempotencyKey`](/api/idempotency-core/src/type-aliases/derivedidempotencykey/)
 
-***
+---
 
 ### metadata?
 
-> `readonly` `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### ttlMs?
 
-> `readonly` `optional` **ttlMs**: `number`
+> `readonly` `optional` **ttlMs?**: `number`

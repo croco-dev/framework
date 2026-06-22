@@ -13,11 +13,12 @@ title: "MembershipRemovedEvent"
 
 ## Example
 
+**이벤트 핸들러 등록**
+
 ```typescript
 @RegisterEventHandler(MembershipRemovedEvent)
 class Handler implements EventHandler<MembershipRemovedEvent> {
-  async handle(event: MembershipRemovedEvent) {
-  }
+  async handle(event: MembershipRemovedEvent) {}
 }
 ```
 
@@ -51,7 +52,7 @@ class Handler implements EventHandler<MembershipRemovedEvent> {
 
 > `readonly` **data**: `MembershipRemovedEventData`
 
-***
+---
 
 ### eventId
 
@@ -61,7 +62,7 @@ class Handler implements EventHandler<MembershipRemovedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -71,7 +72,7 @@ class Handler implements EventHandler<MembershipRemovedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### metadata
 
@@ -81,7 +82,7 @@ class Handler implements EventHandler<MembershipRemovedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### timestamp
 
@@ -91,7 +92,7 @@ class Handler implements EventHandler<MembershipRemovedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

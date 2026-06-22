@@ -10,7 +10,7 @@ title: "LifecycleHooks"
 ## Example
 
 ```typescript
-import type { LifecycleHooks } from '@croco/framework-context';
+import type { LifecycleHooks } from "@croco/framework-context";
 
 const hooks: LifecycleHooks = {
   onRequestStart: async (ctx) => {
@@ -27,9 +27,9 @@ const hooks: LifecycleHooks = {
 
 ## Properties
 
-### onRequestEnd()?
+### onRequestEnd?
 
-> `optional` **onRequestEnd**: (`ctx`, `result?`) => `void` \| `Promise`\<`void`\>
+> `optional` **onRequestEnd?**: (`ctx`, `result?`) => `void` \| `Promise`\<`void`\>
 
 요청 성공 종료 시 호출됩니다.
 
@@ -47,11 +47,11 @@ const hooks: LifecycleHooks = {
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
-### onRequestError()?
+### onRequestError?
 
-> `optional` **onRequestError**: (`ctx`, `error`) => `void` \| `Promise`\<`void`\>
+> `optional` **onRequestError?**: (`ctx`, `error`) => `void` \| `Promise`\<`void`\>
 
 요청 에러 발생 시 호출됩니다.
 
@@ -69,11 +69,11 @@ const hooks: LifecycleHooks = {
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
-### onRequestStart()?
+### onRequestStart?
 
-> `optional` **onRequestStart**: (`ctx`) => `void` \| `Promise`\<`void`\>
+> `optional` **onRequestStart?**: (`ctx`) => `void` \| `Promise`\<`void`\>
 
 요청 시작 시 호출됩니다.
 

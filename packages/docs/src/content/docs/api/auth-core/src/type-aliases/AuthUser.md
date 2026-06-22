@@ -13,27 +13,27 @@ title: "AuthUser"
 
 ### email?
 
-> `optional` **email**: `string`
+> `optional` **email?**: `string`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### permissions
 
 > **permissions**: `string`[]
 
-***
+---
 
 ### roles
 

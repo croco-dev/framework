@@ -17,7 +17,7 @@ title: "getLlmMetadata"
 
 ### propertyKey
 
-`string` | `symbol`
+`string` \| `symbol`
 
 ## Returns
 

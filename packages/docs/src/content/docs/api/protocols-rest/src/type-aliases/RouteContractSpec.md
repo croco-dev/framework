@@ -11,88 +11,88 @@ title: "RouteContractSpec"
 
 ### Method
 
-`Method` *extends* [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/) = [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/)
+`Method` _extends_ [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/) = [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/)
 
 ### Path
 
-`Path` *extends* `string` = `string`
+`Path` _extends_ `string` = `string`
 
 ### Params
 
-`Params` *extends* `AnyZodObject` \| `undefined` = `AnyZodObject` \| `undefined`
+`Params` _extends_ `AnyZodObject` \| `undefined` = `AnyZodObject` \| `undefined`
 
 ### Query
 
-`Query` *extends* `AnyZodObject` \| `undefined` = `AnyZodObject` \| `undefined`
+`Query` _extends_ `AnyZodObject` \| `undefined` = `AnyZodObject` \| `undefined`
 
 ### Body
 
-`Body` *extends* `z.ZodType` \| `undefined` = `z.ZodType` \| `undefined`
+`Body` _extends_ `z.ZodType` \| `undefined` = `z.ZodType` \| `undefined`
 
 ### Response
 
-`Response` *extends* `z.ZodType` \| `undefined` = `z.ZodType` \| `undefined`
+`Response` _extends_ `z.ZodType` \| `undefined` = `z.ZodType` \| `undefined`
 
 ### Problems
 
-`Problems` *extends* readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined` = readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined`
+`Problems` _extends_ readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined` = readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined`
 
 ## Properties
 
 ### body?
 
-> `readonly` `optional` **body**: `Body`
+> `readonly` `optional` **body?**: `Body`
 
-***
+---
 
 ### id?
 
-> `readonly` `optional` **id**: `string`
+> `readonly` `optional` **id?**: `string`
 
-***
+---
 
 ### method
 
 > `readonly` **method**: `Method`
 
-***
+---
 
 ### operationId?
 
-> `readonly` `optional` **operationId**: `string`
+> `readonly` `optional` **operationId?**: `string`
 
-***
+---
 
 ### params?
 
-> `readonly` `optional` **params**: `Params`
+> `readonly` `optional` **params?**: `Params`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `Path`
 
-***
+---
 
 ### problems?
 
-> `readonly` `optional` **problems**: `Problems`
+> `readonly` `optional` **problems?**: `Problems`
 
-***
+---
 
 ### query?
 
-> `readonly` `optional` **query**: `Query`
+> `readonly` `optional` **query?**: `Query`
 
-***
+---
 
 ### response?
 
-> `readonly` `optional` **response**: `Response`
+> `readonly` `optional` **response?**: `Response`
 
-***
+---
 
 ### sourceLocation?
 
-> `readonly` `optional` **sourceLocation**: [`RouteContractSourceLocation`](/api/protocols-rest/src/type-aliases/routecontractsourcelocation/)
+> `readonly` `optional` **sourceLocation?**: [`RouteContractSourceLocation`](/api/protocols-rest/src/type-aliases/routecontractsourcelocation/)

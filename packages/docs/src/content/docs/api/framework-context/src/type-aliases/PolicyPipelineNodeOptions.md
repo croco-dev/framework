@@ -11,10 +11,10 @@ title: "PolicyPipelineNodeOptions"
 
 ### idPrefix?
 
-> `readonly` `optional` **idPrefix**: `string`
+> `readonly` `optional` **idPrefix?**: `string`
 
-***
+---
 
 ### orderOffset?
 
-> `readonly` `optional` **orderOffset**: `number`
+> `readonly` `optional` **orderOffset?**: `number`

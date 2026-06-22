@@ -15,12 +15,12 @@ title: "usePageMeta"
 
 ### description?
 
-> `optional` **description**: `string`
+> `optional` **description?**: `string`
 
 ### title?
 
-> `optional` **title**: `string`
+> `optional` **title?**: `string`
 
 ### urlOriginal?
 
-> `optional` **urlOriginal**: `string`
+> `optional` **urlOriginal?**: `string`

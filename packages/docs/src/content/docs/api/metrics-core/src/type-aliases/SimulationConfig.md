@@ -13,19 +13,19 @@ Configuration for Carrying Capacity simulation.
 
 ### churnChange?
 
-> `optional` **churnChange**: `number`
+> `optional` **churnChange?**: `number`
 
 Percentage change in churn rate (-100 to +100, e.g., -20 = -20% churn)
 
-***
+---
 
 ### inflowChange?
 
-> `optional` **inflowChange**: `number`
+> `optional` **inflowChange?**: `number`
 
 Percentage change in daily inflow (-100 to +∞, e.g., 20 = +20%)
 
-***
+---
 
 ### tenantId
 

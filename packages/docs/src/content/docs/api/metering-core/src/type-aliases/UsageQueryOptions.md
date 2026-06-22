@@ -13,27 +13,27 @@ Usage 조회 옵션
 
 ### endDate?
 
-> `optional` **endDate**: `Date`
+> `optional` **endDate?**: `Date`
 
-***
+---
 
 ### meterId
 
 > **meterId**: `string`
 
-***
+---
 
 ### period
 
 > **period**: [`AggregationPeriod`](/api/metering-core/src/type-aliases/aggregationperiod/)
 
-***
+---
 
 ### startDate?
 
-> `optional` **startDate**: `Date`
+> `optional` **startDate?**: `Date`
 
-***
+---
 
 ### tenantId
 

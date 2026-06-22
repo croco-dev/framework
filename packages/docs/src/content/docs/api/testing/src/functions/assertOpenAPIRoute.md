@@ -11,7 +11,7 @@ title: "assertOpenAPIRoute"
 
 ### controllersOrDocument
 
-readonly `TestingConstructor`\<`unknown`\>[] | `OpenAPIDocumentLike`
+readonly `TestingConstructor`\<`unknown`\>[] \| `OpenAPIDocumentLike`
 
 ### expected
 

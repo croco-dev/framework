@@ -11,11 +11,11 @@ Options for emitting a log record.
 
 ### attributes?
 
-> `optional` **attributes**: `Attributes`
+> `optional` **attributes?**: `Attributes`
 
 Additional attributes
 
-***
+---
 
 ### body
 
@@ -23,15 +23,15 @@ Additional attributes
 
 The log message body (string or structured object)
 
-***
+---
 
 ### context?
 
-> `optional` **context**: `Context`
+> `optional` **context?**: `Context`
 
 Context for trace correlation
 
-***
+---
 
 ### severity
 

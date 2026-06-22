@@ -11,15 +11,15 @@ title: "ContractEntitlementResourceRequirement"
 
 ### id?
 
-> `readonly` `optional` **id**: `string`
+> `readonly` `optional` **id?**: `string`
 
-***
+---
 
 ### idParam?
 
-> `readonly` `optional` **idParam**: `string`
+> `readonly` `optional` **idParam?**: `string`
 
-***
+---
 
 ### type
 

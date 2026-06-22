@@ -20,7 +20,7 @@ used for historical analysis and trend calculation.
 
 Number of active customers contributing to MRR
 
-***
+---
 
 ### date
 
@@ -28,15 +28,15 @@ Number of active customers contributing to MRR
 
 Snapshot date
 
-***
+---
 
 ### movement?
 
-> `optional` **movement**: [`MRRMovement`](/api/metrics-core/src/type-aliases/mrrmovement/)
+> `optional` **movement?**: [`MRRMovement`](/api/metrics-core/src/type-aliases/mrrmovement/)
 
 Optional: MRR movement breakdown for this period
 
-***
+---
 
 ### totalMRR
 

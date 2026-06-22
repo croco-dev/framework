@@ -17,22 +17,4 @@ Creates a Cloudflare Workers SSR handler using meta-vite's RenderServer.
 
 ## Returns
 
-> (`request`, `env`, `ctx`): `Promise`\<`Response`\>
-
-### Parameters
-
-#### request
-
-`Request`
-
-#### env
-
-[`SsrWorkerEnv`](/api/frontend-cloudflare/src/type-aliases/ssrworkerenv/)
-
-#### ctx
-
-`ExecutionContext`
-
-### Returns
-
-`Promise`\<`Response`\>
+(`request`, `env`, `ctx`) => `Promise`\<`Response`\>

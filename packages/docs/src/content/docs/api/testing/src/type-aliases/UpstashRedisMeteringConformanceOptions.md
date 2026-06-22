@@ -9,7 +9,7 @@ title: "UpstashRedisMeteringConformanceOptions"
 
 ## Properties
 
-### createClient()
+### createClient
 
 > `readonly` **createClient**: (`scenario`) => [`UpstashRedisMeteringClient`](/api/testing/src/type-aliases/upstashredismeteringclient/) \| `Promise`\<[`UpstashRedisMeteringClient`](/api/testing/src/type-aliases/upstashredismeteringclient/)\>
 
@@ -23,36 +23,36 @@ title: "UpstashRedisMeteringConformanceOptions"
 
 [`UpstashRedisMeteringClient`](/api/testing/src/type-aliases/upstashredismeteringclient/) \| `Promise`\<[`UpstashRedisMeteringClient`](/api/testing/src/type-aliases/upstashredismeteringclient/)\>
 
-***
+---
 
-### createMissingConfig()?
+### createMissingConfig?
 
-> `readonly` `optional` **createMissingConfig**: () => `unknown` \| `Promise`\<`unknown`\>
+> `readonly` `optional` **createMissingConfig?**: () => `unknown` \| `Promise`\<`unknown`\>
 
 #### Returns
 
 `unknown` \| `Promise`\<`unknown`\>
 
-***
+---
 
 ### keyPrefix?
 
-> `readonly` `optional` **keyPrefix**: `string`
+> `readonly` `optional` **keyPrefix?**: `string`
 
-***
+---
 
 ### liveSmoke?
 
-> `readonly` `optional` **liveSmoke**: [`ServerlessProviderLiveSmokeGate`](/api/testing/src/type-aliases/serverlessproviderlivesmokegate/)
+> `readonly` `optional` **liveSmoke?**: [`ServerlessProviderLiveSmokeGate`](/api/testing/src/type-aliases/serverlessproviderlivesmokegate/)
 
-***
+---
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
-***
+---
 
 ### secretSamples?
 
-> `readonly` `optional` **secretSamples**: readonly `string`[]
+> `readonly` `optional` **secretSamples?**: readonly `string`[]

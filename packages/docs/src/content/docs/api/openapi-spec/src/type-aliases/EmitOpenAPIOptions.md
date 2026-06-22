@@ -11,40 +11,40 @@ title: "EmitOpenAPIOptions"
 
 ### defaultResponses?
 
-> `readonly` `optional` **defaultResponses**: `RouteResponses`
+> `readonly` `optional` **defaultResponses?**: `RouteResponses`
 
-***
+---
 
 ### info?
 
-> `readonly` `optional` **info**: `Partial`\<`OpenAPIConfig`\[`"info"`\]\>
+> `readonly` `optional` **info?**: `Partial`\<`OpenAPIConfig`\[`"info"`\]\>
 
-***
+---
 
 ### problemResponses?
 
-> `readonly` `optional` **problemResponses**: readonly [`ProblemResponseConfig`](/api/openapi-spec/src/type-aliases/problemresponseconfig/)[]
+> `readonly` `optional` **problemResponses?**: readonly [`ProblemResponseConfig`](/api/openapi-spec/src/type-aliases/problemresponseconfig/)[]
 
-***
+---
 
 ### security?
 
-> `readonly` `optional` **security**: `OpenAPIConfig`\[`"security"`\]
+> `readonly` `optional` **security?**: `OpenAPIConfig`\[`"security"`\]
 
-***
+---
 
 ### securitySchemes?
 
-> `readonly` `optional` **securitySchemes**: `OpenAPIComponents`\[`"securitySchemes"`\]
+> `readonly` `optional` **securitySchemes?**: `OpenAPIComponents`\[`"securitySchemes"`\]
 
-***
+---
 
 ### servers?
 
-> `readonly` `optional` **servers**: `OpenAPIConfig`\[`"servers"`\]
+> `readonly` `optional` **servers?**: `OpenAPIConfig`\[`"servers"`\]
 
-***
+---
 
 ### tags?
 
-> `readonly` `optional` **tags**: `OpenAPIConfig`\[`"tags"`\]
+> `readonly` `optional` **tags?**: `OpenAPIConfig`\[`"tags"`\]

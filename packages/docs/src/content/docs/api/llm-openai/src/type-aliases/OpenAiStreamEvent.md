@@ -11,22 +11,22 @@ title: "OpenAiStreamEvent"
 
 ### delta?
 
-> `readonly` `optional` **delta**: `string`
+> `readonly` `optional` **delta?**: `string`
 
-***
+---
 
 ### error?
 
-> `readonly` `optional` **error**: `unknown`
+> `readonly` `optional` **error?**: `unknown`
 
-***
+---
 
 ### response?
 
-> `readonly` `optional` **response**: [`OpenAiResponse`](/api/llm-openai/src/type-aliases/openairesponse/)
+> `readonly` `optional` **response?**: [`OpenAiResponse`](/api/llm-openai/src/type-aliases/openairesponse/)
 
-***
+---
 
 ### type?
 
-> `readonly` `optional` **type**: `string`
+> `readonly` `optional` **type?**: `string`

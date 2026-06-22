@@ -21,7 +21,7 @@ title: "useEntitlements"
 
 #### entitlements
 
-`string` | readonly `string`[]
+`string` \| readonly `string`[]
 
 #### options?
 

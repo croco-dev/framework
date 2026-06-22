@@ -13,26 +13,26 @@ title: "RetryConsoleAuditDescriptor"
 
 > `readonly` **actorId**: `string`
 
-***
+---
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: `string`
 
-***
+---
 
 ### metadata?
 
-> `readonly` `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### reason
 
 > `readonly` **reason**: `string`
 
-***
+---
 
 ### ticketId?
 
-> `readonly` `optional` **ticketId**: `string`
+> `readonly` `optional` **ticketId?**: `string`

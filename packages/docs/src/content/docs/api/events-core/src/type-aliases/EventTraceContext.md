@@ -13,22 +13,22 @@ title: "EventTraceContext"
 
 ### isValid?
 
-> `optional` **isValid**: `boolean`
+> `optional` **isValid?**: `boolean`
 
-***
+---
 
 ### spanId?
 
-> `optional` **spanId**: `string`
+> `optional` **spanId?**: `string`
 
-***
+---
 
 ### traceFlags?
 
-> `optional` **traceFlags**: `number`
+> `optional` **traceFlags?**: `number`
 
-***
+---
 
 ### traceId?
 
-> `optional` **traceId**: `string`
+> `optional` **traceId?**: `string`

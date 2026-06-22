@@ -53,17 +53,17 @@ readonly `string`[]
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
-***
+---
 
 ### cause?
 
-> `readonly` `optional` **cause**: `Error`
+> `readonly` `optional` **cause?**: `Error`
 
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`cause`](/api/problems-core/src/classes/problem/#cause)
 
-***
+---
 
 ### code
 
@@ -73,37 +73,37 @@ readonly `string`[]
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
-***
+---
 
 ### detail?
 
-> `readonly` `optional` **detail**: `string`
+> `readonly` `optional` **detail?**: `string`
 
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
 
-***
+---
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+> `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
 
-***
+---
 
 ### instance?
 
-> `readonly` `optional` **instance**: `string`
+> `readonly` `optional` **instance?**: `string`
 
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
 
-***
+---
 
 ### message
 
@@ -113,7 +113,7 @@ readonly `string`[]
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
 
-***
+---
 
 ### name
 
@@ -123,23 +123,23 @@ readonly `string`[]
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
 
-***
+---
 
 ### stack?
 
-> `optional` **stack**: `string`
+> `optional` **stack?**: `string`
 
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
 
-***
+---
 
 ### trace
 
 > `readonly` **trace**: [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
 
-***
+---
 
 ### type
 
@@ -149,7 +149,7 @@ readonly `string`[]
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`type`](/api/problems-core/src/classes/problem/#type)
 
-***
+---
 
 ### stackTraceLimit
 
@@ -185,7 +185,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 
-***
+---
 
 ### title
 
@@ -215,7 +215,7 @@ not capture any frames.
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`toJSON`](/api/problems-core/src/classes/problem/#tojson)
 
-***
+---
 
 ### captureStackTrace()
 
@@ -228,7 +228,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -283,7 +283,7 @@ a();
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`captureStackTrace`](/api/problems-core/src/classes/problem/#capturestacktrace)
 
-***
+---
 
 ### prepareStackTrace()
 

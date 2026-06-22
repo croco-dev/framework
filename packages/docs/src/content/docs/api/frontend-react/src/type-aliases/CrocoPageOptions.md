@@ -16,9 +16,9 @@ createCrocoPageConfig 함수을 제공한다.
 
 ## Properties
 
-### head()?
+### head?
 
-> `optional` **head**: () => `object`
+> `optional` **head?**: () => `object`
 
 head 메타데이터 반환 함수
 
@@ -28,32 +28,32 @@ head 메타데이터 반환 함수
 
 ##### description?
 
-> `optional` **description**: `string`
+> `optional` **description?**: `string`
 
 ##### title?
 
-> `optional` **title**: `string`
+> `optional` **title?**: `string`
 
-***
+---
 
 ### path?
 
-> `optional` **path**: `string`
+> `optional` **path?**: `string`
 
 페이지 경로
 
-***
+---
 
 ### revalidate?
 
-> `optional` **revalidate**: `number`
+> `optional` **revalidate?**: `number`
 
 ISR revalidate 시간(ms)
 
-***
+---
 
 ### ssr?
 
-> `optional` **ssr**: `boolean`
+> `optional` **ssr?**: `boolean`
 
 SSR 렌더링 여부 (default: true)

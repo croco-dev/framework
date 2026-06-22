@@ -19,7 +19,7 @@ Backoff 구현체의 추가 옵션 타입
 
 ### options?
 
-> `readonly` `optional` **options**: `T`
+> `readonly` `optional` **options?**: `T`
 
 Backoff 구현체의 추가 옵션 (구현체에 따라 다름)
 
@@ -41,7 +41,7 @@ Calculate delay for the given attempt (0-based)
 
 `number`
 
-***
+---
 
 ### reset()
 
@@ -53,7 +53,7 @@ Reset internal state if any
 
 `void`
 
-***
+---
 
 ### wait()
 

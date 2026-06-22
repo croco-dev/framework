@@ -9,7 +9,7 @@ title: "CompileOptions"
 
 ### container?
 
-> `optional` **container**: `object`
+> `optional` **container?**: `object`
 
 #### get()
 
@@ -31,26 +31,26 @@ title: "CompileOptions"
 
 `T`
 
-***
+---
 
 ### globalFilters?
 
-> `optional` **globalFilters**: `unknown`[]
+> `optional` **globalFilters?**: `unknown`[]
 
-***
+---
 
 ### globalGuards?
 
-> `optional` **globalGuards**: `unknown`[]
+> `optional` **globalGuards?**: `unknown`[]
 
-***
+---
 
 ### globalInterceptors?
 
-> `optional` **globalInterceptors**: `unknown`[]
+> `optional` **globalInterceptors?**: `unknown`[]
 
-***
+---
 
 ### globalPipes?
 
-> `optional` **globalPipes**: `unknown`[]
+> `optional` **globalPipes?**: `unknown`[]

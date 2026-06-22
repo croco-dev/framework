@@ -16,38 +16,38 @@ Currently disabled by default in Lambda environments.
 
 ### enabled?
 
-> `optional` **enabled**: `boolean`
+> `optional` **enabled?**: `boolean`
 
 Whether metrics collection is enabled. Default: false
 
-***
+---
 
 ### exporterHeaders?
 
-> `optional` **exporterHeaders**: `Record`\<`string`, `string`\>
+> `optional` **exporterHeaders?**: `Record`\<`string`, `string`\>
 
 Additional HTTP headers for the exporter
 
-***
+---
 
 ### exporterUrl?
 
-> `optional` **exporterUrl**: `string`
+> `optional` **exporterUrl?**: `string`
 
 OTLP metrics exporter URL
 
-***
+---
 
 ### exportIntervalMillis?
 
-> `optional` **exportIntervalMillis**: `number`
+> `optional` **exportIntervalMillis?**: `number`
 
 Export interval in milliseconds
 
-***
+---
 
 ### exportTimeoutMillis?
 
-> `optional` **exportTimeoutMillis**: `number`
+> `optional` **exportTimeoutMillis?**: `number`
 
 Export timeout in milliseconds

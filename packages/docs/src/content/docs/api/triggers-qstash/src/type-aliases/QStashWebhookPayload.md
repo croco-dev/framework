@@ -13,11 +13,11 @@ Webhook request payload from QStash.
 
 ### className?
 
-> `readonly` `optional` **className**: `string`
+> `readonly` `optional` **className?**: `string`
 
 Target class name to execute.
 
-***
+---
 
 ### cronExpression
 
@@ -25,7 +25,7 @@ Target class name to execute.
 
 Cron expression for this schedule.
 
-***
+---
 
 ### methodName
 
@@ -33,35 +33,35 @@ Cron expression for this schedule.
 
 Target method name to execute.
 
-***
+---
 
 ### options?
 
-> `readonly` `optional` **options**: `object`
+> `readonly` `optional` **options?**: `object`
 
 Additional options from the
 
 #### description?
 
-> `readonly` `optional` **description**: `string`
+> `readonly` `optional` **description?**: `string`
 
 #### enabled?
 
-> `readonly` `optional` **enabled**: `boolean`
+> `readonly` `optional` **enabled?**: `boolean`
 
 #### name?
 
-> `readonly` `optional` **name**: `string`
+> `readonly` `optional` **name?**: `string`
 
 #### timezone?
 
-> `readonly` `optional` **timezone**: `string`
+> `readonly` `optional` **timezone?**: `string`
 
 #### Cron
 
 decorator.
 
-***
+---
 
 ### scheduleId
 
@@ -69,7 +69,7 @@ decorator.
 
 Schedule ID that triggered this webhook.
 
-***
+---
 
 ### timestamp
 
@@ -77,8 +77,8 @@ Schedule ID that triggered this webhook.
 
 Timestamp when the webhook was triggered.
 
-***
+---
 
 ### triggerName?
 
-> `readonly` `optional` **triggerName**: `string`
+> `readonly` `optional` **triggerName?**: `string`

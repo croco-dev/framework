@@ -151,7 +151,7 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 
 `T`
 
-***
+---
 
 ### getMany()
 
@@ -270,7 +270,7 @@ Used when service defined with multiple: true flag.
 
 `T`[]
 
-***
+---
 
 ### has()
 
@@ -343,7 +343,7 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 
 `boolean`
 
-***
+---
 
 ### remove()
 
@@ -355,13 +355,13 @@ Removes services with a given service identifiers.
 
 ##### identifierOrIdentifierArray
 
-`ServiceIdentifier` | `ServiceIdentifier`[]
+`ServiceIdentifier` \| `ServiceIdentifier`[]
 
 #### Returns
 
 `this`
 
-***
+---
 
 ### reset()
 
@@ -381,7 +381,7 @@ Completely resets the container by removing all previously registered services f
 
 `this`
 
-***
+---
 
 ### set()
 

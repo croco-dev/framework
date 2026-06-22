@@ -13,11 +13,11 @@ title: "GenerateResult"
 
 ### metadata?
 
-> `optional` **metadata**: [`LlmMetadata`](/api/llm-core/src/type-aliases/llmmetadata/)
+> `optional` **metadata?**: [`LlmMetadata`](/api/llm-core/src/type-aliases/llmmetadata/)
 
 메타데이터
 
-***
+---
 
 ### text
 
@@ -25,7 +25,7 @@ title: "GenerateResult"
 
 생성된 텍스트
 
-***
+---
 
 ### usage
 

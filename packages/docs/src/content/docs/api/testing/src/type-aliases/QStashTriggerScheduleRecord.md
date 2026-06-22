@@ -11,34 +11,34 @@ title: "QStashTriggerScheduleRecord"
 
 ### body?
 
-> `readonly` `optional` **body**: `string`
+> `readonly` `optional` **body?**: `string`
 
-***
+---
 
 ### cron?
 
-> `readonly` `optional` **cron**: `string`
+> `readonly` `optional` **cron?**: `string`
 
-***
+---
 
 ### destination?
 
-> `readonly` `optional` **destination**: `string`
+> `readonly` `optional` **destination?**: `string`
 
-***
+---
 
 ### headers?
 
-> `readonly` `optional` **headers**: `Record`\<`string`, `string`\>
+> `readonly` `optional` **headers?**: `Record`\<`string`, `string`\>
 
-***
+---
 
 ### method?
 
-> `readonly` `optional` **method**: `string`
+> `readonly` `optional` **method?**: `string`
 
-***
+---
 
 ### scheduleId?
 
-> `readonly` `optional` **scheduleId**: `string`
+> `readonly` `optional` **scheduleId?**: `string`

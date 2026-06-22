@@ -16,15 +16,15 @@ Options for configuring retry behavior.
 
 ### maxAttempts?
 
-> `optional` **maxAttempts**: `number`
+> `optional` **maxAttempts?**: `number`
 
 Maximum attempts (default: 3)
 
-***
+---
 
 ### noRetryFor?
 
-> `optional` **noRetryFor**: (`message?`) => `Error`[]
+> `optional` **noRetryFor?**: (`message?`) => `Error`[]
 
 Exception classes to never retry
 
@@ -38,11 +38,11 @@ Exception classes to never retry
 
 `Error`
 
-***
+---
 
 ### retryFor?
 
-> `optional` **retryFor**: (`message?`) => `Error`[]
+> `optional` **retryFor?**: (`message?`) => `Error`[]
 
 Exception classes to retry (empty = retry all except noRetryFor)
 
@@ -56,10 +56,10 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 `Error`
 
-***
+---
 
 ### retryForCategories?
 
-> `optional` **retryForCategories**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
+> `optional` **retryForCategories?**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
 
 ProblemCategory values to retry (croco integration)

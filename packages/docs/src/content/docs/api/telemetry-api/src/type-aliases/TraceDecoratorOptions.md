@@ -13,14 +13,14 @@ title: "TraceDecoratorOptions"
 
 ### attributes?
 
-> `optional` **attributes**: `Attributes`
+> `optional` **attributes?**: `Attributes`
 
 Span에 추가할 속성 집합입니다.
 
-***
+---
 
 ### name?
 
-> `optional` **name**: `string`
+> `optional` **name?**: `string`
 
 Span 이름입니다. 기본값은 메서드 이름입니다.

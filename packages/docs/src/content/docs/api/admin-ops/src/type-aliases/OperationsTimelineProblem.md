@@ -11,28 +11,28 @@ title: "OperationsTimelineProblem"
 
 ### category?
 
-> `readonly` `optional` **category**: `string`
+> `readonly` `optional` **category?**: `string`
 
-***
+---
 
 ### code?
 
-> `readonly` `optional` **code**: `string`
+> `readonly` `optional` **code?**: `string`
 
-***
+---
 
 ### details?
 
-> `readonly` `optional` **details**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### message?
 
-> `readonly` `optional` **message**: `string`
+> `readonly` `optional` **message?**: `string`
 
-***
+---
 
 ### retryable?
 
-> `readonly` `optional` **retryable**: `boolean`
+> `readonly` `optional` **retryable?**: `boolean`

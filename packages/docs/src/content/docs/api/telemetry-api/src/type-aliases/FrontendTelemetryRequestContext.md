@@ -13,58 +13,58 @@ title: "FrontendTelemetryRequestContext"
 
 ### attempt?
 
-> `readonly` `optional` **attempt**: `number`
+> `readonly` `optional` **attempt?**: `number`
 
-***
+---
 
 ### correlationId?
 
-> `readonly` `optional` **correlationId**: `string`
+> `readonly` `optional` **correlationId?**: `string`
 
-***
+---
 
 ### interactionId?
 
-> `readonly` `optional` **interactionId**: `string`
+> `readonly` `optional` **interactionId?**: `string`
 
-***
+---
 
 ### method
 
 > `readonly` **method**: `string`
 
-***
+---
 
 ### methodName
 
 > `readonly` **methodName**: `string`
 
-***
+---
 
 ### operationId
 
 > `readonly` **operationId**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### routeId
 
 > `readonly` **routeId**: `string`
 
-***
+---
 
 ### routeKind
 
 > `readonly` **routeKind**: [`FrontendTelemetryRouteKind`](/api/telemetry-api/src/type-aliases/frontendtelemetryroutekind/)
 
-***
+---
 
 ### traceparent?
 
-> `readonly` `optional` **traceparent**: `string`
+> `readonly` `optional` **traceparent?**: `string`

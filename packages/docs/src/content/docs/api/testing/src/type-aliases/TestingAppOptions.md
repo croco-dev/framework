@@ -11,7 +11,7 @@ title: "TestingAppOptions"
 
 ### autoRegisterControllers?
 
-> `readonly` `optional` **autoRegisterControllers**: `boolean`
+> `readonly` `optional` **autoRegisterControllers?**: `boolean`
 
 ### controllers
 
@@ -19,16 +19,16 @@ title: "TestingAppOptions"
 
 ### logger?
 
-> `readonly` `optional` **logger**: [`TestLogger`](/api/testing/src/type-aliases/testlogger/)
+> `readonly` `optional` **logger?**: [`TestLogger`](/api/testing/src/type-aliases/testlogger/)
 
 ### providers?
 
-> `readonly` `optional` **providers**: readonly [`TestingProvider`](/api/testing/src/type-aliases/testingprovider/)[]
+> `readonly` `optional` **providers?**: readonly [`TestingProvider`](/api/testing/src/type-aliases/testingprovider/)[]
 
 ### resetContainer?
 
-> `readonly` `optional` **resetContainer**: `boolean`
+> `readonly` `optional` **resetContainer?**: `boolean`
 
 ### transactionContext?
 
-> `readonly` `optional` **transactionContext**: [`TestingTransactionContext`](/api/testing/src/classes/testingtransactioncontext/) \| [`TestingTransactionContextOptions`](/api/testing/src/type-aliases/testingtransactioncontextoptions/) \| `false`
+> `readonly` `optional` **transactionContext?**: [`TestingTransactionContext`](/api/testing/src/classes/testingtransactioncontext/) \| [`TestingTransactionContextOptions`](/api/testing/src/type-aliases/testingtransactioncontextoptions/) \| `false`

@@ -17,7 +17,7 @@ title: "getGuards"
 
 ### methodName?
 
-`string` | `symbol`
+`string` \| `symbol`
 
 ## Returns
 

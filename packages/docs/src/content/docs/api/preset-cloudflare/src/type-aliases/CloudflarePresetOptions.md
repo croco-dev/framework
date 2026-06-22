@@ -11,10 +11,10 @@ title: "CloudflarePresetOptions"
 
 ### entry?
 
-> `readonly` `optional` **entry**: `string`
+> `readonly` `optional` **entry?**: `string`
 
-***
+---
 
 ### name?
 
-> `readonly` `optional` **name**: `string`
+> `readonly` `optional` **name?**: `string`

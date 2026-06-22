@@ -11,39 +11,39 @@ title: "ProviderConformanceCapabilityManifest"
 
 ### evidence?
 
-> `readonly` `optional` **evidence**: readonly `string`[]
+> `readonly` `optional` **evidence?**: readonly `string`[]
 
-***
+---
 
 ### methods
 
 > `readonly` **methods**: readonly `string`[]
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### reason?
 
-> `readonly` `optional` **reason**: `string`
+> `readonly` `optional` **reason?**: `string`
 
-***
+---
 
 ### required
 
 > `readonly` **required**: `boolean`
 
-***
+---
 
 ### suite?
 
-> `readonly` `optional` **suite**: `string`
+> `readonly` `optional` **suite?**: `string`
 
-***
+---
 
 ### supported
 

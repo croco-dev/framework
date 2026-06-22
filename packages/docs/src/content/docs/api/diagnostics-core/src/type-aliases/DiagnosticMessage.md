@@ -13,50 +13,50 @@ title: "DiagnosticMessage"
 
 > `readonly` **action**: `string`
 
-***
+---
 
 ### category
 
 > `readonly` **category**: [`DiagnosticCategory`](/api/diagnostics-core/src/type-aliases/diagnosticcategory/)
 
-***
+---
 
 ### cause
 
 > `readonly` **cause**: `string`
 
-***
+---
 
 ### code
 
 > `readonly` **code**: [`DiagnosticCode`](/api/diagnostics-core/src/type-aliases/diagnosticcode/)
 
-***
+---
 
 ### docs?
 
-> `readonly` `optional` **docs**: `string`
+> `readonly` `optional` **docs?**: `string`
 
-***
+---
 
 ### location?
 
-> `readonly` `optional` **location**: [`DiagnosticSourceLocation`](/api/diagnostics-core/src/type-aliases/diagnosticsourcelocation/) \| `null`
+> `readonly` `optional` **location?**: [`DiagnosticSourceLocation`](/api/diagnostics-core/src/type-aliases/diagnosticsourcelocation/) \| `null`
 
-***
+---
 
 ### searchKeywords?
 
-> `readonly` `optional` **searchKeywords**: readonly `string`[]
+> `readonly` `optional` **searchKeywords?**: readonly `string`[]
 
-***
+---
 
 ### severity
 
 > `readonly` **severity**: [`DiagnosticSeverity`](/api/diagnostics-core/src/type-aliases/diagnosticseverity/)
 
-***
+---
 
 ### title?
 
-> `readonly` `optional` **title**: `string`
+> `readonly` `optional` **title?**: `string`

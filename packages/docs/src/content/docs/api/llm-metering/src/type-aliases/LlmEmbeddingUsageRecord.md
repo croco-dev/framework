@@ -13,45 +13,45 @@ title: "LlmEmbeddingUsageRecord"
 
 ### accuracy?
 
-> `optional` **accuracy**: [`UsageAccuracy`](/api/llm-metering/src/type-aliases/usageaccuracy/)
+> `optional` **accuracy?**: [`UsageAccuracy`](/api/llm-metering/src/type-aliases/usageaccuracy/)
 
-***
+---
 
 ### costUsd
 
 > **costUsd**: `number`
 
-***
+---
 
 ### embeddingTokens
 
 > **embeddingTokens**: `number`
 
-***
+---
 
 ### idempotencyKey
 
 > **idempotencyKey**: `string`
 
-***
+---
 
 ### modelId
 
 > **modelId**: `string`
 
-***
+---
 
 ### provider
 
 > **provider**: `string`
 
-***
+---
 
 ### tenantId
 
 > **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 

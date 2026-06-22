@@ -13,20 +13,20 @@ title: "RetryConsolePermissionDescriptor"
 
 > `readonly` **action**: `string`
 
-***
+---
 
 ### reason?
 
-> `readonly` `optional` **reason**: `string`
+> `readonly` `optional` **reason?**: `string`
 
-***
+---
 
 ### resource
 
 > `readonly` **resource**: `string`
 
-***
+---
 
 ### scope?
 
-> `readonly` `optional` **scope**: `string`
+> `readonly` `optional` **scope?**: `string`

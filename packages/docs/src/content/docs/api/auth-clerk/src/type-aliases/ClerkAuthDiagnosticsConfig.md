@@ -13,4 +13,4 @@ Clerk 인증 readiness diagnostics provider입니다.
 
 ### webhookSecret?
 
-> `readonly` `optional` **webhookSecret**: `string`
+> `readonly` `optional` **webhookSecret?**: `string`

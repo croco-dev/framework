@@ -17,7 +17,7 @@ title: "getAiMeteredMetadata"
 
 ### propertyKey
 
-`string` | `symbol`
+`string` \| `symbol`
 
 ## Returns
 

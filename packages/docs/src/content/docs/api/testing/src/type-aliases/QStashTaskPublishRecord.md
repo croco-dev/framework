@@ -11,28 +11,28 @@ title: "QStashTaskPublishRecord"
 
 ### body?
 
-> `readonly` `optional` **body**: `unknown`
+> `readonly` `optional` **body?**: `unknown`
 
-***
+---
 
 ### deduplicationId?
 
-> `readonly` `optional` **deduplicationId**: `string`
+> `readonly` `optional` **deduplicationId?**: `string`
 
-***
+---
 
 ### delay?
 
-> `readonly` `optional` **delay**: `number`
+> `readonly` `optional` **delay?**: `number`
 
-***
+---
 
 ### headers?
 
-> `readonly` `optional` **headers**: `Record`\<`string`, `string`\>
+> `readonly` `optional` **headers?**: `Record`\<`string`, `string`\>
 
-***
+---
 
 ### url?
 
-> `readonly` `optional` **url**: `string`
+> `readonly` `optional` **url?**: `string`

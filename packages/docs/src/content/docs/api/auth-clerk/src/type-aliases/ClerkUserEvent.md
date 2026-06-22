@@ -11,62 +11,62 @@ Clerk 웹훅과 인증 요청에 필요한 공개 타입입니다.
 
 ## Indexable
 
-\[`key`: `string`\]: `unknown`
+> \[`key`: `string`\]: `unknown`
 
 ## Properties
 
-### created\_at?
+### created_at?
 
-> `optional` **created\_at**: `number`
+> `optional` **created_at?**: `number`
 
-***
+---
 
-### email\_addresses
+### email_addresses
 
-> **email\_addresses**: `object`[]
+> **email_addresses**: `object`[]
 
-#### email\_address
+#### email_address
 
-> **email\_address**: `string`
+> **email_address**: `string`
 
 #### id?
 
-> `optional` **id**: `string`
+> `optional` **id?**: `string`
 
 #### verification?
 
-> `optional` **verification**: `object`
+> `optional` **verification?**: `object`
 
 ##### verification.status
 
 > **status**: `string`
 
-***
+---
 
-### first\_name
+### first_name
 
-> **first\_name**: `string` \| `null`
+> **first_name**: `string` \| `null`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
-### last\_name
+### last_name
 
-> **last\_name**: `string` \| `null`
+> **last_name**: `string` \| `null`
 
-***
+---
 
-### primary\_email\_address\_id?
+### primary_email_address_id?
 
-> `optional` **primary\_email\_address\_id**: `string`
+> `optional` **primary_email_address_id?**: `string`
 
-***
+---
 
-### updated\_at?
+### updated_at?
 
-> `optional` **updated\_at**: `number`
+> `optional` **updated_at?**: `number`

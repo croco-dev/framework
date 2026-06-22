@@ -9,15 +9,15 @@ title: "ArgumentMetadata"
 
 ### metatype?
 
-> `optional` **metatype**: `Function`
+> `optional` **metatype?**: `Function`
 
-***
+---
 
 ### name?
 
-> `optional` **name**: `string`
+> `optional` **name?**: `string`
 
-***
+---
 
 ### type
 

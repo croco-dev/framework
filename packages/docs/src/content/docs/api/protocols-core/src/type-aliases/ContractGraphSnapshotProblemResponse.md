@@ -13,32 +13,32 @@ title: "ContractGraphSnapshotProblemResponse"
 
 > `readonly` **category**: `string`
 
-***
+---
 
 ### code
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### cookbookPath?
 
-> `readonly` `optional` **cookbookPath**: `string`
+> `readonly` `optional` **cookbookPath?**: `string`
 
-***
+---
 
 ### description?
 
-> `readonly` `optional` **description**: `string`
+> `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### status
 
 > `readonly` **status**: `number`
 
-***
+---
 
 ### type?
 
-> `readonly` `optional` **type**: `string`
+> `readonly` `optional` **type?**: `string`

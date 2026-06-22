@@ -11,7 +11,7 @@ title: "SearchDocument"
 
 ## Indexable
 
-\[`key`: `string`\]: `unknown`
+> \[`key`: `string`\]: `unknown`
 
 ## Properties
 
@@ -19,7 +19,7 @@ title: "SearchDocument"
 
 > **id**: `string`
 
-***
+---
 
 ### tenantId
 

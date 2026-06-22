@@ -15,7 +15,7 @@ title: "IdempotencyFailedRecord"
 
 ### problem?
 
-> `readonly` `optional` **problem**: `object`
+> `readonly` `optional` **problem?**: `object`
 
 #### problem.code
 
@@ -23,11 +23,11 @@ title: "IdempotencyFailedRecord"
 
 #### problem.detail?
 
-> `readonly` `optional` **detail**: `string`
+> `readonly` `optional` **detail?**: `string`
 
 #### problem.status?
 
-> `readonly` `optional` **status**: `number`
+> `readonly` `optional` **status?**: `number`
 
 ### retryable
 

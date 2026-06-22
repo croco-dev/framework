@@ -17,10 +17,10 @@ title: "StreamChunk"
 
 증분 텍스트
 
-***
+---
 
 ### usage?
 
-> `optional` **usage**: `Partial`\<[`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)\>
+> `optional` **usage?**: `Partial`\<[`LlmUsage`](/api/llm-core/src/type-aliases/llmusage/)\>
 
 토큰 사용량 (선택적, 마지막 청크에 포함)

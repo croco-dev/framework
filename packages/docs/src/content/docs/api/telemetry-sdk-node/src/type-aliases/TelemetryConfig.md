@@ -16,13 +16,13 @@ It combines service metadata with trace, metrics, and logs configurations.
 
 ```typescript
 const config: TelemetryConfig = {
-  serviceName: 'my-service',
-  serviceVersion: '1.0.0',
-  environment: 'production',
+  serviceName: "my-service",
+  serviceVersion: "1.0.0",
+  environment: "production",
   enabled: true,
   trace: {
     enabled: true,
-    exporterUrl: 'http://localhost:4318/v1/traces',
+    exporterUrl: "http://localhost:4318/v1/traces",
   },
   metrics: { enabled: false },
   logs: { enabled: false },
@@ -33,43 +33,43 @@ const config: TelemetryConfig = {
 
 ### enabled?
 
-> `optional` **enabled**: `boolean`
+> `optional` **enabled?**: `boolean`
 
 Whether telemetry is globally enabled. Default: true
 
-***
+---
 
 ### environment?
 
-> `optional` **environment**: `string`
+> `optional` **environment?**: `string`
 
 Deployment environment. Default: 'development'
 
-***
+---
 
 ### logs?
 
-> `optional` **logs**: [`LogsConfig`](/api/telemetry-sdk-node/src/type-aliases/logsconfig/)
+> `optional` **logs?**: [`LogsConfig`](/api/telemetry-sdk-node/src/type-aliases/logsconfig/)
 
 Logs configuration
 
-***
+---
 
 ### metrics?
 
-> `optional` **metrics**: [`MetricsConfig`](/api/telemetry-sdk-node/src/type-aliases/metricsconfig/)
+> `optional` **metrics?**: [`MetricsConfig`](/api/telemetry-sdk-node/src/type-aliases/metricsconfig/)
 
 Metrics configuration
 
-***
+---
 
 ### resourceAttributes?
 
-> `optional` **resourceAttributes**: `Record`\<`string`, `string` \| `number` \| `boolean`\>
+> `optional` **resourceAttributes?**: `Record`\<`string`, `string` \| `number` \| `boolean`\>
 
 Additional resource attributes
 
-***
+---
 
 ### serviceName
 
@@ -77,18 +77,18 @@ Additional resource attributes
 
 Service name (required)
 
-***
+---
 
 ### serviceVersion?
 
-> `optional` **serviceVersion**: `string`
+> `optional` **serviceVersion?**: `string`
 
 Service version. Default: '0.0.0'
 
-***
+---
 
 ### trace?
 
-> `optional` **trace**: [`TraceConfig`](/api/telemetry-sdk-node/src/type-aliases/traceconfig/)
+> `optional` **trace?**: [`TraceConfig`](/api/telemetry-sdk-node/src/type-aliases/traceconfig/)
 
 Trace configuration

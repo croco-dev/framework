@@ -45,17 +45,17 @@ title: "FileNotFoundProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`category`](/api/storage-core/src/classes/storageproblem/#category)
 
-***
+---
 
 ### cause?
 
-> `readonly` `optional` **cause**: `Error`
+> `readonly` `optional` **cause?**: `Error`
 
 #### Inherited from
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`cause`](/api/storage-core/src/classes/storageproblem/#cause)
 
-***
+---
 
 ### code
 
@@ -65,37 +65,37 @@ title: "FileNotFoundProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`code`](/api/storage-core/src/classes/storageproblem/#code)
 
-***
+---
 
 ### detail?
 
-> `readonly` `optional` **detail**: `string`
+> `readonly` `optional` **detail?**: `string`
 
 #### Inherited from
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`detail`](/api/storage-core/src/classes/storageproblem/#detail)
 
-***
+---
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+> `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
 #### Inherited from
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`extensions`](/api/storage-core/src/classes/storageproblem/#extensions)
 
-***
+---
 
 ### instance?
 
-> `readonly` `optional` **instance**: `string`
+> `readonly` `optional` **instance?**: `string`
 
 #### Inherited from
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`instance`](/api/storage-core/src/classes/storageproblem/#instance)
 
-***
+---
 
 ### message
 
@@ -105,7 +105,7 @@ title: "FileNotFoundProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`message`](/api/storage-core/src/classes/storageproblem/#message)
 
-***
+---
 
 ### name
 
@@ -115,17 +115,17 @@ title: "FileNotFoundProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`name`](/api/storage-core/src/classes/storageproblem/#name)
 
-***
+---
 
 ### stack?
 
-> `optional` **stack**: `string`
+> `optional` **stack?**: `string`
 
 #### Inherited from
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`stack`](/api/storage-core/src/classes/storageproblem/#stack)
 
-***
+---
 
 ### type
 
@@ -135,7 +135,7 @@ title: "FileNotFoundProblem"
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`type`](/api/storage-core/src/classes/storageproblem/#type)
 
-***
+---
 
 ### stackTraceLimit
 
@@ -171,7 +171,7 @@ not capture any frames.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`status`](/api/storage-core/src/classes/storageproblem/#status)
 
-***
+---
 
 ### title
 
@@ -201,7 +201,7 @@ not capture any frames.
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`toJSON`](/api/storage-core/src/classes/storageproblem/#tojson)
 
-***
+---
 
 ### captureStackTrace()
 
@@ -214,7 +214,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -269,7 +269,7 @@ a();
 
 [`StorageProblem`](/api/storage-core/src/classes/storageproblem/).[`captureStackTrace`](/api/storage-core/src/classes/storageproblem/#capturestacktrace)
 
-***
+---
 
 ### prepareStackTrace()
 

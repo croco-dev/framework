@@ -25,7 +25,7 @@ The value type
 
 ## Properties
 
-### batchFn()
+### batchFn
 
 > **batchFn**: (`keys`) => `Promise`\<`ReadonlyArray`\<`V` \| `Error` \| `null`\>\>
 
@@ -45,7 +45,7 @@ The keys to load
 
 Array of values (may contain nulls or Errors for partial failures)
 
-***
+---
 
 ### name
 

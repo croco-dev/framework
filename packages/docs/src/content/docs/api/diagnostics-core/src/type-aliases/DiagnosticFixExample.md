@@ -11,28 +11,28 @@ title: "DiagnosticFixExample"
 
 ### after?
 
-> `readonly` `optional` **after**: `string`
+> `readonly` `optional` **after?**: `string`
 
-***
+---
 
 ### before?
 
-> `readonly` `optional` **before**: `string`
+> `readonly` `optional` **before?**: `string`
 
-***
+---
 
 ### command?
 
-> `readonly` `optional` **command**: `string`
+> `readonly` `optional` **command?**: `string`
 
-***
+---
 
 ### label
 
 > `readonly` **label**: `string`
 
-***
+---
 
 ### note?
 
-> `readonly` `optional` **note**: `string`
+> `readonly` `optional` **note?**: `string`

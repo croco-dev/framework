@@ -13,31 +13,31 @@ title: "GraphQLContractSnapshotOperation"
 
 > `readonly` **args**: readonly [`GraphQLContractSnapshotArgument`](/api/protocols-graphql/src/type-aliases/graphqlcontractsnapshotargument/)[]
 
-***
+---
 
 ### deprecationReason?
 
-> `readonly` `optional` **deprecationReason**: `string`
+> `readonly` `optional` **deprecationReason?**: `string`
 
-***
+---
 
 ### description?
 
-> `readonly` `optional` **description**: `string`
+> `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: [`GraphQLContractOperationKind`](/api/protocols-graphql/src/type-aliases/graphqlcontractoperationkind/)
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### type
 

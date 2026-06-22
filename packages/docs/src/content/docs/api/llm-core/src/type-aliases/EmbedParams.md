@@ -13,11 +13,11 @@ title: "EmbedParams"
 
 ### modelId?
 
-> `optional` **modelId**: `string`
+> `optional` **modelId?**: `string`
 
 모델 ID (선택)
 
-***
+---
 
 ### text
 

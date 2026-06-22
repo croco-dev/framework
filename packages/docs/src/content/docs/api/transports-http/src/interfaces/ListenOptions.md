@@ -9,10 +9,10 @@ title: "ListenOptions"
 
 ### spaFallback?
 
-> `optional` **spaFallback**: `boolean`
+> `optional` **spaFallback?**: `boolean`
 
-***
+---
 
 ### staticDir?
 
-> `optional` **staticDir**: `string`
+> `optional` **staticDir?**: `string`

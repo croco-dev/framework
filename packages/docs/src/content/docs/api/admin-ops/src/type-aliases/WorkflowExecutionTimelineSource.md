@@ -11,23 +11,23 @@ title: "WorkflowExecutionTimelineSource"
 
 ### completedAt?
 
-> `readonly` `optional` **completedAt**: `Date` \| `string`
+> `readonly` `optional` **completedAt?**: `Date` \| `string`
 
-***
+---
 
 ### createdAt
 
 > `readonly` **createdAt**: `Date` \| `string`
 
-***
+---
 
 ### error?
 
-> `readonly` `optional` **error**: `object`
+> `readonly` `optional` **error?**: `object`
 
 #### code?
 
-> `readonly` `optional` **code**: `string`
+> `readonly` `optional` **code?**: `string`
 
 #### message
 
@@ -35,45 +35,45 @@ title: "WorkflowExecutionTimelineSource"
 
 #### retryable?
 
-> `readonly` `optional` **retryable**: `boolean`
+> `readonly` `optional` **retryable?**: `boolean`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### metadata?
 
-> `readonly` `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### startedAt?
 
-> `readonly` `optional` **startedAt**: `Date` \| `string`
+> `readonly` `optional` **startedAt?**: `Date` \| `string`
 
-***
+---
 
 ### status?
 
-> `readonly` `optional` **status**: `string`
+> `readonly` `optional` **status?**: `string`
 
-***
+---
 
 ### steps?
 
-> `readonly` `optional` **steps**: readonly `object`[]
+> `readonly` `optional` **steps?**: readonly `object`[]
 
-***
+---
 
 ### tenantId?
 
-> `readonly` `optional` **tenantId**: `string`
+> `readonly` `optional` **tenantId?**: `string`
 
-***
+---
 
 ### workflow
 

@@ -13,30 +13,30 @@ title: "OrderingPolicy"
 
 ### bufferSize?
 
-> `optional` **bufferSize**: `number`
+> `optional` **bufferSize?**: `number`
 
 순서 보장을 위한 버퍼 크기입니다.
 버퍼가 꽉 차면 강제로 flush됩니다.
 
-***
+---
 
 ### flushTimeoutMs?
 
-> `optional` **flushTimeoutMs**: `number`
+> `optional` **flushTimeoutMs?**: `number`
 
 버퍼 flush 타임아웃 (ms)입니다.
 이 시간이 지나면 버퍼가 자동으로 flush됩니다.
 
-***
+---
 
 ### maxConcurrency?
 
-> `optional` **maxConcurrency**: `number`
+> `optional` **maxConcurrency?**: `number`
 
 최대 동시 처리 수입니다.
 같은 파티션 내에서도 이 개수만큼 병렬로 처리됩니다.
 
-***
+---
 
 ### partitionKeyExtractor
 

@@ -13,9 +13,9 @@ title: "CrocoPreset"
 
 > `readonly` **config**: `Readonly`\<[`CrocoPresetConfig`](/api/framework-preset/src/type-aliases/crocopresetconfig/)\>
 
-***
+---
 
-### extend()
+### extend
 
 > `readonly` **extend**: (`partial`) => `CrocoPreset`
 
@@ -29,13 +29,13 @@ title: "CrocoPreset"
 
 `CrocoPreset`
 
-***
+---
 
 ### hooks
 
 > `readonly` **hooks**: `Readonly`\<[`HookMap`](/api/framework-preset/src/type-aliases/hookmap/)\>
 
-***
+---
 
 ### name
 

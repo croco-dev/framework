@@ -11,6 +11,6 @@ title: "WorkersHandlerOptions"
 
 ### injectEnv?
 
-> `optional` **injectEnv**: `boolean`
+> `optional` **injectEnv?**: `boolean`
 
 Whether to inject Cloudflare `env` into FrameworkContext. Default: false.

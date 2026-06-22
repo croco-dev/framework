@@ -11,17 +11,17 @@ title: "BillingWebhookConformanceAssertions"
 
 ### TResult
 
-`TResult` *extends* [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/) = [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/)
+`TResult` _extends_ [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/) = [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/)
 
 ### THandler
 
-`THandler` *extends* [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\> = [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\>
+`THandler` _extends_ [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\> = [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\>
 
 ## Properties
 
-### idempotency()?
+### idempotency?
 
-> `readonly` `optional` **idempotency**: (`results`, `context`) => `void` \| `Promise`\<`void`\>
+> `readonly` `optional` **idempotency?**: (`results`, `context`) => `void` \| `Promise`\<`void`\>
 
 #### Parameters
 
@@ -47,27 +47,11 @@ readonly \[`TResult`, `TResult`\]
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
-### invalidPayload()?
+### invalidPayload?
 
-> `readonly` `optional` **invalidPayload**: (`problem`) => `void` \| `Promise`\<`void`\>
-
-#### Parameters
-
-##### problem
-
-[`Problem`](/api/problems-core/src/classes/problem/)
-
-#### Returns
-
-`void` \| `Promise`\<`void`\>
-
-***
-
-### invalidSignature()?
-
-> `readonly` `optional` **invalidSignature**: (`problem`) => `void` \| `Promise`\<`void`\>
+> `readonly` `optional` **invalidPayload?**: (`problem`) => `void` \| `Promise`\<`void`\>
 
 #### Parameters
 
@@ -79,11 +63,27 @@ readonly \[`TResult`, `TResult`\]
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
-### order()?
+### invalidSignature?
 
-> `readonly` `optional` **order**: (`result`, `context`) => `void` \| `Promise`\<`void`\>
+> `readonly` `optional` **invalidSignature?**: (`problem`) => `void` \| `Promise`\<`void`\>
+
+#### Parameters
+
+##### problem
+
+[`Problem`](/api/problems-core/src/classes/problem/)
+
+#### Returns
+
+`void` \| `Promise`\<`void`\>
+
+---
+
+### order?
+
+> `readonly` `optional` **order?**: (`result`, `context`) => `void` \| `Promise`\<`void`\>
 
 #### Parameters
 
@@ -109,11 +109,11 @@ readonly \[`TResult`, `TResult`\]
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
-### subscription()?
+### subscription?
 
-> `readonly` `optional` **subscription**: (`result`, `context`) => `void` \| `Promise`\<`void`\>
+> `readonly` `optional` **subscription?**: (`result`, `context`) => `void` \| `Promise`\<`void`\>
 
 #### Parameters
 

@@ -10,10 +10,10 @@ title: "ComponentOptions"
 ## Example
 
 ```typescript
-import type { ComponentOptions } from '@croco/framework-context';
+import type { ComponentOptions } from "@croco/framework-context";
 
 const options: ComponentOptions = {
-  scope: 'request',
+  scope: "request",
 };
 ```
 
@@ -21,6 +21,6 @@ const options: ComponentOptions = {
 
 ### scope?
 
-> `optional` **scope**: [`Scope`](/api/framework-context/src/type-aliases/scope/)
+> `optional` **scope?**: [`Scope`](/api/framework-context/src/type-aliases/scope/)
 
 컴포넌트 생명주기 범위입니다.

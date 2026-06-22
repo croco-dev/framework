@@ -21,7 +21,7 @@ title: "runWithTestingContext"
 
 ### options?
 
-[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/) | [`TestingRequestContextOptions`](/api/testing/src/type-aliases/testingrequestcontextoptions/)
+[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/) \| [`TestingRequestContextOptions`](/api/testing/src/type-aliases/testingrequestcontextoptions/)
 
 ## Returns
 

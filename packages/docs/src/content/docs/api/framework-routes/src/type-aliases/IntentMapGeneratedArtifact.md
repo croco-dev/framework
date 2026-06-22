@@ -13,25 +13,25 @@ title: "IntentMapGeneratedArtifact"
 
 > `readonly` **description**: `string`
 
-***
+---
 
 ### gitIgnored
 
 > `readonly` **gitIgnored**: `boolean`
 
-***
+---
 
 ### gitIgnoreRule?
 
-> `readonly` `optional` **gitIgnoreRule**: `string`
+> `readonly` `optional` **gitIgnoreRule?**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: [`IntentMapGeneratedArtifactKind`](/api/framework-routes/src/type-aliases/intentmapgeneratedartifactkind/)
 
-***
+---
 
 ### path
 

@@ -13,19 +13,19 @@ QStash 태스크 러너 옵션 타입을 내보냅니다.
 
 ### defaultDelay?
 
-> `optional` **defaultDelay**: `number`
+> `optional` **defaultDelay?**: `number`
 
 메시지 전달 전 기본 지연 시간입니다.
 
-***
+---
 
 ### defaultHeaders?
 
-> `optional` **defaultHeaders**: `Record`\<`string`, `string`\>
+> `optional` **defaultHeaders?**: `Record`\<`string`, `string`\>
 
 모든 요청에 공통으로 포함할 기본 헤더입니다.
 
-***
+---
 
 ### destinationUrl
 
@@ -33,7 +33,7 @@ QStash 태스크 러너 옵션 타입을 내보냅니다.
 
 태스크 웹훅을 수신할 목적지 URL입니다.
 
-***
+---
 
 ### token
 

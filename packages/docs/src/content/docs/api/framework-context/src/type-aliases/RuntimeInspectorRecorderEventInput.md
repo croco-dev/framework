@@ -11,40 +11,40 @@ title: "RuntimeInspectorRecorderEventInput"
 
 ### details?
 
-> `readonly` `optional` **details**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### durationMs?
 
-> `readonly` `optional` **durationMs**: `number`
+> `readonly` `optional` **durationMs?**: `number`
 
-***
+---
 
 ### inspectionId?
 
-> `readonly` `optional` **inspectionId**: `string`
+> `readonly` `optional` **inspectionId?**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `string`
 
-***
+---
 
 ### name?
 
-> `readonly` `optional` **name**: `string`
+> `readonly` `optional` **name?**: `string`
 
-***
+---
 
 ### outcome?
 
-> `readonly` `optional` **outcome**: `"started"` \| `"succeeded"` \| `"failed"` \| `"skipped"`
+> `readonly` `optional` **outcome?**: `"started"` \| `"succeeded"` \| `"failed"` \| `"skipped"`
 
-***
+---
 
 ### requestId?
 
-> `readonly` `optional` **requestId**: `string`
+> `readonly` `optional` **requestId?**: `string`

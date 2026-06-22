@@ -37,7 +37,7 @@ Cloudinary 클라우드 이름
 
 ### secure?
 
-> `optional` **secure**: `boolean`
+> `optional` **secure?**: `boolean`
 
 HTTPS 사용 여부 (기본값: true)
 
@@ -45,7 +45,7 @@ HTTPS 사용 여부 (기본값: true)
 
 ### ttl?
 
-> `optional` **ttl**: `number`
+> `optional` **ttl?**: `number`
 
 Upload Intent TTL (초 단위, 기본값: 3600)
 
@@ -53,4 +53,4 @@ Upload Intent TTL (초 단위, 기본값: 3600)
 
 ### uploadBaseUrl?
 
-> `optional` **uploadBaseUrl**: `string`
+> `optional` **uploadBaseUrl?**: `string`

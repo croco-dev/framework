@@ -13,9 +13,9 @@ title: "AiMeteredMetadata"
 
 ## Properties
 
-### embeddingUsageExtractor()?
+### embeddingUsageExtractor?
 
-> `optional` **embeddingUsageExtractor**: (`args`, `result`) => \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `tokens`: `number`; \} \| `null`
+> `optional` **embeddingUsageExtractor?**: (`args`, `result`) => \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `tokens`: `number`; \} \| `null`
 
 #### Parameters
 
@@ -31,11 +31,11 @@ title: "AiMeteredMetadata"
 
 \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `tokens`: `number`; \} \| `null`
 
-***
+---
 
-### idempotencyKeyExtractor()?
+### idempotencyKeyExtractor?
 
-> `optional` **idempotencyKeyExtractor**: (`args`) => `string` \| `undefined`
+> `optional` **idempotencyKeyExtractor?**: (`args`) => `string` \| `undefined`
 
 #### Parameters
 
@@ -47,11 +47,11 @@ title: "AiMeteredMetadata"
 
 `string` \| `undefined`
 
-***
+---
 
-### metadataExtractor()?
+### metadataExtractor?
 
-> `optional` **metadataExtractor**: (`args`, `result`) => `Record`\<`string`, `unknown`\> \| `undefined`
+> `optional` **metadataExtractor?**: (`args`, `result`) => `Record`\<`string`, `unknown`\> \| `undefined`
 
 #### Parameters
 
@@ -67,17 +67,17 @@ title: "AiMeteredMetadata"
 
 `Record`\<`string`, `unknown`\> \| `undefined`
 
-***
+---
 
 ### tenantId?
 
-> `optional` **tenantId**: `string`
+> `optional` **tenantId?**: `string`
 
-***
+---
 
-### usageExtractor()?
+### usageExtractor?
 
-> `optional` **usageExtractor**: (`args`, `result`) => \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `completionTokens`: `number`; `promptTokens`: `number`; \} \| `null`
+> `optional` **usageExtractor?**: (`args`, `result`) => \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `completionTokens`: `number`; `promptTokens`: `number`; \} \| `null`
 
 #### Parameters
 

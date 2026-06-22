@@ -16,9 +16,9 @@ createCrocoPageConfig 함수을 제공한다.
 
 ## Properties
 
-### head()?
+### head?
 
-> `optional` **head**: () => `object`
+> `optional` **head?**: () => `object`
 
 #### Returns
 
@@ -26,20 +26,20 @@ createCrocoPageConfig 함수을 제공한다.
 
 ##### description?
 
-> `optional` **description**: `string`
+> `optional` **description?**: `string`
 
 ##### title?
 
-> `optional` **title**: `string`
+> `optional` **title?**: `string`
 
-***
+---
 
 ### mode
 
 > **mode**: `RenderMode`
 
-***
+---
 
 ### revalidateMs?
 
-> `optional` **revalidateMs**: `number`
+> `optional` **revalidateMs?**: `number`

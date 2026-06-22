@@ -11,7 +11,7 @@ title: "FrontendTelemetrySink"
 
 ## Properties
 
-### record()
+### record
 
 > `readonly` **record**: (`event`) => `void` \| `Promise`\<`void`\>
 

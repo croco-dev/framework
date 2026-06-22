@@ -11,34 +11,34 @@ Clerk 웹훅과 인증 요청에 필요한 공개 타입입니다.
 
 ## Indexable
 
-\[`key`: `string`\]: `unknown`
+> \[`key`: `string`\]: `unknown`
 
 ## Properties
 
-### created\_at?
+### created_at?
 
-> `optional` **created\_at**: `number`
+> `optional` **created_at?**: `number`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### name
 
 > **name**: `string`
 
-***
+---
 
 ### slug
 
 > **slug**: `string`
 
-***
+---
 
-### updated\_at?
+### updated_at?
 
-> `optional` **updated\_at**: `number`
+> `optional` **updated_at?**: `number`

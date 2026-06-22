@@ -11,7 +11,7 @@ title: "resolveDevInspectorEndpointPolicy"
 
 ### options
 
-[`DevInspectorEndpointOptions`](/api/transports-http/src/type-aliases/devinspectorendpointoptions/) | `undefined`
+[`DevInspectorEndpointOptions`](/api/transports-http/src/type-aliases/devinspectorendpointoptions/) \| `undefined`
 
 ### env?
 

@@ -13,17 +13,17 @@ title: "ProblemPanelProps"
 
 > `readonly` **problem**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-***
+---
 
 ### recoveryActions?
 
-> `readonly` `optional` **recoveryActions**: readonly [`ProblemRecoveryAction`](/api/frontend-react/src/type-aliases/problemrecoveryaction/)[]
+> `readonly` `optional` **recoveryActions?**: readonly [`ProblemRecoveryAction`](/api/frontend-react/src/type-aliases/problemrecoveryaction/)[]
 
-***
+---
 
-### renderProblem()?
+### renderProblem?
 
-> `readonly` `optional` **renderProblem**: (`problem`) => `ReactNode`
+> `readonly` `optional` **renderProblem?**: (`problem`) => `ReactNode`
 
 #### Parameters
 
@@ -35,11 +35,11 @@ title: "ProblemPanelProps"
 
 `ReactNode`
 
-***
+---
 
-### renderRecoveryAction()?
+### renderRecoveryAction?
 
-> `readonly` `optional` **renderRecoveryAction**: (`action`, `problem`) => `ReactNode`
+> `readonly` `optional` **renderRecoveryAction?**: (`action`, `problem`) => `ReactNode`
 
 #### Parameters
 
@@ -55,8 +55,8 @@ title: "ProblemPanelProps"
 
 `ReactNode`
 
-***
+---
 
 ### titleLevel?
 
-> `readonly` `optional` **titleLevel**: `2` \| `3` \| `4` \| `5` \| `6`
+> `readonly` `optional` **titleLevel?**: `2` \| `3` \| `4` \| `5` \| `6`

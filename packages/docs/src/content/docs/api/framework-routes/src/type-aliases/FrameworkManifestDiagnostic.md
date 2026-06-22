@@ -13,26 +13,26 @@ title: "FrameworkManifestDiagnostic"
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### entityKind?
 
-> `readonly` `optional` **entityKind**: [`FrameworkManifestEntityKind`](/api/framework-routes/src/type-aliases/frameworkmanifestentitykind/)
+> `readonly` `optional` **entityKind?**: [`FrameworkManifestEntityKind`](/api/framework-routes/src/type-aliases/frameworkmanifestentitykind/)
 
-***
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### severity
 
 > `readonly` **severity**: [`FrameworkManifestDiagnosticSeverity`](/api/framework-routes/src/type-aliases/frameworkmanifestdiagnosticseverity/)
 
-***
+---
 
 ### sourcePath?
 
-> `readonly` `optional` **sourcePath**: `string`
+> `readonly` `optional` **sourcePath?**: `string`

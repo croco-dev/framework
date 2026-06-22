@@ -11,22 +11,22 @@ title: "RetryConsoleTimestamps"
 
 ### completedAt?
 
-> `readonly` `optional` **completedAt**: `string`
+> `readonly` `optional` **completedAt?**: `string`
 
-***
+---
 
 ### createdAt?
 
-> `readonly` `optional` **createdAt**: `string`
+> `readonly` `optional` **createdAt?**: `string`
 
-***
+---
 
 ### startedAt?
 
-> `readonly` `optional` **startedAt**: `string`
+> `readonly` `optional` **startedAt?**: `string`
 
-***
+---
 
 ### updatedAt?
 
-> `readonly` `optional` **updatedAt**: `string`
+> `readonly` `optional` **updatedAt?**: `string`

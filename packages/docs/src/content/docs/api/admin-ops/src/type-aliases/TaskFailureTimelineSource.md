@@ -11,29 +11,29 @@ title: "TaskFailureTimelineSource"
 
 ### attempts?
 
-> `readonly` `optional` **attempts**: `number`
+> `readonly` `optional` **attempts?**: `number`
 
-***
+---
 
 ### completedAt?
 
-> `readonly` `optional` **completedAt**: `Date` \| `string`
+> `readonly` `optional` **completedAt?**: `Date` \| `string`
 
-***
+---
 
 ### createdAt
 
 > `readonly` **createdAt**: `Date` \| `string`
 
-***
+---
 
 ### error?
 
-> `readonly` `optional` **error**: `object`
+> `readonly` `optional` **error?**: `object`
 
 #### code?
 
-> `readonly` `optional` **code**: `string`
+> `readonly` `optional` **code?**: `string`
 
 #### message
 
@@ -41,49 +41,49 @@ title: "TaskFailureTimelineSource"
 
 #### retryable?
 
-> `readonly` `optional` **retryable**: `boolean`
+> `readonly` `optional` **retryable?**: `boolean`
 
 #### stack?
 
-> `readonly` `optional` **stack**: `string`
+> `readonly` `optional` **stack?**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### maxAttempts?
 
-> `readonly` `optional` **maxAttempts**: `number`
+> `readonly` `optional` **maxAttempts?**: `number`
 
-***
+---
 
 ### metadata?
 
-> `readonly` `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### parentId?
 
-> `readonly` `optional` **parentId**: `string`
+> `readonly` `optional` **parentId?**: `string`
 
-***
+---
 
 ### startedAt?
 
-> `readonly` `optional` **startedAt**: `Date` \| `string`
+> `readonly` `optional` **startedAt?**: `Date` \| `string`
 
-***
+---
 
 ### status?
 
-> `readonly` `optional` **status**: `string`
+> `readonly` `optional` **status?**: `string`
 
-***
+---
 
 ### type
 

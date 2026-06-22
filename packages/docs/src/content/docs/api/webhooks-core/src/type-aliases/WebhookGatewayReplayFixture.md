@@ -11,15 +11,15 @@ title: "WebhookGatewayReplayFixture"
 
 ### eventId?
 
-> `readonly` `optional` **eventId**: `string`
+> `readonly` `optional` **eventId?**: `string`
 
 ### eventType?
 
-> `readonly` `optional` **eventType**: `string`
+> `readonly` `optional` **eventType?**: `string`
 
 ### name?
 
-> `readonly` `optional` **name**: `string`
+> `readonly` `optional` **name?**: `string`
 
 ### provider
 

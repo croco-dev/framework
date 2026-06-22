@@ -11,52 +11,52 @@ title: "OpenAiLlmModelConfig"
 
 ### apiKey?
 
-> `readonly` `optional` **apiKey**: `string`
+> `readonly` `optional` **apiKey?**: `string`
 
-***
+---
 
 ### apiKeyEnvName?
 
-> `readonly` `optional` **apiKeyEnvName**: `string`
+> `readonly` `optional` **apiKeyEnvName?**: `string`
 
-***
+---
 
 ### baseUrl?
 
-> `readonly` `optional` **baseUrl**: `string`
+> `readonly` `optional` **baseUrl?**: `string`
 
-***
+---
 
 ### embeddingModelId?
 
-> `readonly` `optional` **embeddingModelId**: `string`
+> `readonly` `optional` **embeddingModelId?**: `string`
 
-***
+---
 
 ### env?
 
-> `readonly` `optional` **env**: [`OpenAiEnvironment`](/api/llm-openai/src/type-aliases/openaienvironment/)
+> `readonly` `optional` **env?**: [`OpenAiEnvironment`](/api/llm-openai/src/type-aliases/openaienvironment/)
 
-***
+---
 
 ### modelId
 
 > `readonly` **modelId**: `string`
 
-***
+---
 
 ### structuredOutputName?
 
-> `readonly` `optional` **structuredOutputName**: `string`
+> `readonly` `optional` **structuredOutputName?**: `string`
 
-***
+---
 
 ### timeout?
 
-> `readonly` `optional` **timeout**: `number`
+> `readonly` `optional` **timeout?**: `number`
 
-***
+---
 
 ### transport?
 
-> `readonly` `optional` **transport**: [`OpenAiTransport`](/api/llm-openai/src/type-aliases/openaitransport/)
+> `readonly` `optional` **transport?**: [`OpenAiTransport`](/api/llm-openai/src/type-aliases/openaitransport/)

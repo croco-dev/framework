@@ -17,9 +17,9 @@ title: "IdempotencyCoordinatorOptions"
 
 ### auditSink?
 
-> `readonly` `optional` **auditSink**: [`IdempotencyAuditSink`](/api/idempotency-core/src/type-aliases/idempotencyauditsink/)
+> `readonly` `optional` **auditSink?**: [`IdempotencyAuditSink`](/api/idempotency-core/src/type-aliases/idempotencyauditsink/)
 
-***
+---
 
 ### store
 

@@ -21,13 +21,13 @@ title: "LlmProviderConformancePromptSet"
 
 #### expectedDimensions?
 
-> `readonly` `optional` **expectedDimensions**: `number`
+> `readonly` `optional` **expectedDimensions?**: `number`
 
 #### text
 
 > `readonly` **text**: `string`
 
-***
+---
 
 ### embedMany
 
@@ -35,13 +35,13 @@ title: "LlmProviderConformancePromptSet"
 
 #### expectedDimensions?
 
-> `readonly` `optional` **expectedDimensions**: `number`
+> `readonly` `optional` **expectedDimensions?**: `number`
 
 #### texts
 
 > `readonly` **texts**: readonly `string`[]
 
-***
+---
 
 ### generate
 
@@ -49,21 +49,21 @@ title: "LlmProviderConformancePromptSet"
 
 #### expectedText?
 
-> `readonly` `optional` **expectedText**: `string` \| `RegExp`
+> `readonly` `optional` **expectedText?**: `string` \| `RegExp`
 
 #### prompt
 
 > `readonly` **prompt**: `string`
 
-***
+---
 
 ### object
 
 > `readonly` **object**: `object`
 
-#### assertObject()?
+#### assertObject?
 
-> `readonly` `optional` **assertObject**: (`value`) => `void`
+> `readonly` `optional` **assertObject?**: (`value`) => `void`
 
 ##### Parameters
 
@@ -83,7 +83,7 @@ title: "LlmProviderConformancePromptSet"
 
 > `readonly` **schema**: [`GenerateObjectParams`](/api/llm-core/src/type-aliases/generateobjectparams/)\<`TObject`\>\[`"schema"`\]
 
-***
+---
 
 ### stream
 
@@ -91,21 +91,21 @@ title: "LlmProviderConformancePromptSet"
 
 #### minimumChunks?
 
-> `readonly` `optional` **minimumChunks**: `number`
+> `readonly` `optional` **minimumChunks?**: `number`
 
 #### prompt
 
 > `readonly` **prompt**: `string`
 
-***
+---
 
 ### tool
 
 > `readonly` **tool**: `object`
 
-#### assertToolResult()?
+#### assertToolResult?
 
-> `readonly` `optional` **assertToolResult**: (`result`) => `void`
+> `readonly` `optional` **assertToolResult?**: (`result`) => `void`
 
 ##### Parameters
 

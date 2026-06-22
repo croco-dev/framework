@@ -315,9 +315,9 @@ CDN에서 실시간으로 이미지를 변환하고 반환합니다.
 
 ##### data
 
-파일 데이터 (Buffer 또는 Readable 스트림)
+`Readable` \| `Buffer`\<`ArrayBufferLike`\>
 
-`Readable` | `Buffer`\<`ArrayBufferLike`\>
+파일 데이터 (Buffer 또는 Readable 스트림)
 
 ##### options?
 

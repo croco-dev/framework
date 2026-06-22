@@ -11,7 +11,7 @@ title: "getSchemaDescriptorDiagnostics"
 
 ### descriptor
 
-[`ContractSchemaDescriptor`](/api/protocols-core/src/type-aliases/contractschemadescriptor/) | `null`
+[`ContractSchemaDescriptor`](/api/protocols-core/src/type-aliases/contractschemadescriptor/) \| `null`
 
 ## Returns
 

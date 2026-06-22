@@ -11,33 +11,33 @@ title: "FrontendTenant"
 
 ### metadata?
 
-> `readonly` `optional` **metadata**: `Readonly`\<`Record`\<`string`, `unknown`\>\>
+> `readonly` `optional` **metadata?**: `Readonly`\<`Record`\<`string`, `unknown`\>\>
 
-***
+---
 
 ### name?
 
-> `readonly` `optional` **name**: `string`
+> `readonly` `optional` **name?**: `string`
 
-***
+---
 
 ### slug?
 
-> `readonly` `optional` **slug**: `string`
+> `readonly` `optional` **slug?**: `string`
 
-***
+---
 
 ### source?
 
-> `readonly` `optional` **source**: [`FrontendAuthBridgeSource`](/api/frontend-react/src/type-aliases/frontendauthbridgesource/)
+> `readonly` `optional` **source?**: [`FrontendAuthBridgeSource`](/api/frontend-react/src/type-aliases/frontendauthbridgesource/)
 
-***
+---
 
 ### status?
 
-> `readonly` `optional` **status**: `string`
+> `readonly` `optional` **status?**: `string`
 
-***
+---
 
 ### tenantId
 

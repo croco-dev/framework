@@ -13,15 +13,15 @@ title: "FrontendTelemetryEvent"
 
 ### durationMs?
 
-> `readonly` `optional` **durationMs**: `number`
+> `readonly` `optional` **durationMs?**: `number`
 
 ### errorMessage?
 
-> `readonly` `optional` **errorMessage**: `string`
+> `readonly` `optional` **errorMessage?**: `string`
 
 ### errorName?
 
-> `readonly` `optional` **errorName**: `string`
+> `readonly` `optional` **errorName?**: `string`
 
 ### kind
 
@@ -29,11 +29,11 @@ title: "FrontendTelemetryEvent"
 
 ### problem?
 
-> `readonly` `optional` **problem**: [`FrontendTelemetryProblemSummary`](/api/telemetry-api/src/type-aliases/frontendtelemetryproblemsummary/)
+> `readonly` `optional` **problem?**: [`FrontendTelemetryProblemSummary`](/api/telemetry-api/src/type-aliases/frontendtelemetryproblemsummary/)
 
 ### status?
 
-> `readonly` `optional` **status**: `number`
+> `readonly` `optional` **status?**: `number`
 
 ### timestamp
 

@@ -13,11 +13,11 @@ title: "ToolCallParams"
 
 ### modelId?
 
-> `optional` **modelId**: `string`
+> `optional` **modelId?**: `string`
 
 모델 ID
 
-***
+---
 
 ### prompt
 
@@ -25,15 +25,15 @@ title: "ToolCallParams"
 
 사용자 프롬프트
 
-***
+---
 
 ### systemPrompt?
 
-> `optional` **systemPrompt**: `string`
+> `optional` **systemPrompt?**: `string`
 
 시스템 프롬프트
 
-***
+---
 
 ### tools
 

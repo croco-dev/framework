@@ -33,7 +33,7 @@ title: "LlmCostBudgetExceededEvent"
 
 ##### period
 
-`"daily"` | `"monthly"`
+`"daily"` \| `"monthly"`
 
 #### Returns
 
@@ -49,7 +49,7 @@ title: "LlmCostBudgetExceededEvent"
 
 > `readonly` **currentCost**: `number`
 
-***
+---
 
 ### eventId
 
@@ -59,7 +59,7 @@ title: "LlmCostBudgetExceededEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -69,13 +69,13 @@ title: "LlmCostBudgetExceededEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### limit
 
 > `readonly` **limit**: `number`
 
-***
+---
 
 ### metadata
 
@@ -85,19 +85,19 @@ title: "LlmCostBudgetExceededEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### period
 
 > `readonly` **period**: `"daily"` \| `"monthly"`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -107,7 +107,7 @@ title: "LlmCostBudgetExceededEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

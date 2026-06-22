@@ -11,4 +11,4 @@ title: "GraphQLContractSnapshotOptions"
 
 ### resolvers?
 
-> `readonly` `optional` **resolvers**: readonly `Function`[]
+> `readonly` `optional` **resolvers?**: readonly `Function`[]

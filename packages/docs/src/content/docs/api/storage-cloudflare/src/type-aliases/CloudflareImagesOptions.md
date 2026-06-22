@@ -37,7 +37,7 @@ Cloudflare API Token (Images API 권한 필요)
 
 ### customDomain?
 
-> `optional` **customDomain**: `string`
+> `optional` **customDomain?**: `string`
 
 커스텀 도메인 (선택)
 설정된 경우 커스텀 도메인을 통해 이미지 제공
@@ -46,7 +46,7 @@ Cloudflare API Token (Images API 권한 필요)
 
 ### defaultVariant?
 
-> `optional` **defaultVariant**: `string`
+> `optional` **defaultVariant?**: `string`
 
 기본 변형 (variant)
 기본값: 'public'
@@ -55,18 +55,18 @@ Cloudflare API Token (Images API 권한 필요)
 
 ### maxUploadBytes?
 
-> `optional` **maxUploadBytes**: `number`
+> `optional` **maxUploadBytes?**: `number`
 
 ---
 
 ### signingKey?
 
-> `optional` **signingKey**: `string`
+> `optional` **signingKey?**: `string`
 
 ---
 
 ### ttl?
 
-> `optional` **ttl**: `number`
+> `optional` **ttl?**: `number`
 
 Upload Intent TTL (초 단위, 기본값: 3600)

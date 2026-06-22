@@ -13,13 +13,13 @@ title: "RateLimitDecoratorOptions"
 
 ### algorithm?
 
-> `optional` **algorithm**: [`RateLimitAlgorithm`](/api/ratelimit-core/src/type-aliases/ratelimitalgorithm/)
+> `optional` **algorithm?**: [`RateLimitAlgorithm`](/api/ratelimit-core/src/type-aliases/ratelimitalgorithm/)
 
-***
+---
 
-### key()?
+### key?
 
-> `optional` **key**: (`context`) => `string`
+> `optional` **key?**: (`context`) => `string`
 
 #### Parameters
 
@@ -31,20 +31,20 @@ title: "RateLimitDecoratorOptions"
 
 `string`
 
-***
+---
 
 ### limit?
 
-> `optional` **limit**: `number`
+> `optional` **limit?**: `number`
 
-***
+---
 
 ### policy?
 
-> `optional` **policy**: `string`
+> `optional` **policy?**: `string`
 
-***
+---
 
 ### window?
 
-> `optional` **window**: `string`
+> `optional` **window?**: `string`

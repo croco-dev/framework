@@ -13,7 +13,7 @@ title: "RegisterEventHandler"
 
 ### TArgs
 
-`TArgs` *extends* `unknown`[]
+`TArgs` _extends_ `unknown`[]
 
 ## Parameters
 
@@ -29,20 +29,4 @@ title: "RegisterEventHandler"
 
 ## Returns
 
-> \<`T`\>(`f`): `void`
-
-### Type Parameters
-
-#### T
-
-`T` *extends* [`EventHandlerClass`](/api/events-core/src/type-aliases/eventhandlerclass/)\<[`DomainEvent`](/api/events-core/src/classes/domainevent/)\>
-
-### Parameters
-
-#### f
-
-`T`
-
-### Returns
-
-`void`
+\<`T`\>(`f`) => `void`

@@ -13,15 +13,15 @@ title: "AcceptInvitationInput"
 
 ### email?
 
-> `optional` **email**: `string`
+> `optional` **email?**: `string`
 
-***
+---
 
 ### token
 
 > **token**: `string`
 
-***
+---
 
 ### userId
 

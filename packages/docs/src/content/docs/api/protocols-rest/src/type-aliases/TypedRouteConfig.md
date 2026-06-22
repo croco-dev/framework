@@ -11,58 +11,58 @@ title: "TypedRouteConfig"
 
 ### Body
 
-`Body` *extends* `z.ZodType` \| `undefined` = `undefined`
+`Body` _extends_ `z.ZodType` \| `undefined` = `undefined`
 
 ### Query
 
-`Query` *extends* `z.ZodType` \| `undefined` = `undefined`
+`Query` _extends_ `z.ZodType` \| `undefined` = `undefined`
 
 ### Params
 
-`Params` *extends* `z.ZodType` \| `undefined` = `undefined`
+`Params` _extends_ `z.ZodType` \| `undefined` = `undefined`
 
 ### Response
 
-`Response` *extends* `z.ZodType` \| `undefined` = `undefined`
+`Response` _extends_ `z.ZodType` \| `undefined` = `undefined`
 
 ## Properties
 
 ### body?
 
-> `optional` **body**: `Body`
+> `optional` **body?**: `Body`
 
-***
+---
 
 ### inputSchemas?
 
-> `optional` **inputSchemas**: `RouteInputSchemas`
+> `optional` **inputSchemas?**: `RouteInputSchemas`
 
-***
+---
 
 ### method
 
 > **method**: [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/)
 
-***
+---
 
 ### params?
 
-> `optional` **params**: `Params`
+> `optional` **params?**: `Params`
 
-***
+---
 
 ### path
 
 > **path**: `string`
 
-***
+---
 
 ### query?
 
-> `optional` **query**: `Query`
+> `optional` **query?**: `Query`
 
-***
+---
 
 ### response?
 
-> `optional` **response**: `Response`
+> `optional` **response?**: `Response`

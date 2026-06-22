@@ -11,7 +11,7 @@ title: "createRpcTestFetch"
 
 ### app
 
-[`CrocoTestingApp`](/api/testing/src/classes/crocotestingapp/) | [`CrocoApp`](/api/transports-http/src/classes/crocoapp/)
+[`CrocoTestingApp`](/api/testing/src/classes/crocotestingapp/) \| [`CrocoApp`](/api/transports-http/src/classes/crocoapp/)
 
 ### options?
 
@@ -27,7 +27,7 @@ title: "createRpcTestFetch"
 
 #### input
 
-`URL` | `RequestInfo`
+`URL` \| `RequestInfo`
 
 #### init?
 
@@ -45,7 +45,7 @@ title: "createRpcTestFetch"
 
 #### input
 
-`string` | `Request` | `URL`
+`string` \| `Request` \| `URL`
 
 #### init?
 

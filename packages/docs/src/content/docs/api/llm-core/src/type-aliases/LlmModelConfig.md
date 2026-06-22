@@ -13,19 +13,19 @@ LLM 모델 설정
 
 ### apiKey?
 
-> `optional` **apiKey**: `string`
+> `optional` **apiKey?**: `string`
 
 API 키
 
-***
+---
 
 ### baseUrl?
 
-> `optional` **baseUrl**: `string`
+> `optional` **baseUrl?**: `string`
 
 기본 URL
 
-***
+---
 
 ### modelId
 
@@ -33,10 +33,10 @@ API 키
 
 모델 ID
 
-***
+---
 
 ### timeout?
 
-> `optional` **timeout**: `number`
+> `optional` **timeout?**: `number`
 
 타임아웃 (ms)

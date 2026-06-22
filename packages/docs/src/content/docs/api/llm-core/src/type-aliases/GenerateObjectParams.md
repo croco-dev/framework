@@ -13,7 +13,7 @@ title: "GenerateObjectParams"
 
 ### mode?
 
-> `optional` **mode**: `"json"` \| `"tool"`
+> `optional` **mode?**: `"json"` \| `"tool"`
 
 생성 모드
 

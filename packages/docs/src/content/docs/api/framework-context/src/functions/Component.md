@@ -17,14 +17,4 @@ title: "Component"
 
 ## Returns
 
-> (`target`): `void`
-
-### Parameters
-
-#### target
-
-[`Constructor`](/api/framework-context/src/type-aliases/constructor/)
-
-### Returns
-
-`void`
+(`target`) => `void`

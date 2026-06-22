@@ -13,10 +13,10 @@ title: "RomanizedOptions"
 
 ### locale?
 
-> `optional` **locale**: `string`
+> `optional` **locale?**: `string`
 
-***
+---
 
 ### system?
 
-> `optional` **system**: `string`
+> `optional` **system?**: `string`

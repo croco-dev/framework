@@ -11,28 +11,28 @@ title: "RetryPolicyDefinition"
 
 ### backoffMs?
 
-> `readonly` `optional` **backoffMs**: `number`
+> `readonly` `optional` **backoffMs?**: `number`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: `"retry"`
 
-***
+---
 
 ### maxAttempts
 
 > `readonly` **maxAttempts**: `number`
 
-***
+---
 
 ### onExhausted?
 
-> `readonly` `optional` **onExhausted**: `"throw-last-error"` \| `"throw-problem"`
+> `readonly` `optional` **onExhausted?**: `"throw-last-error"` \| `"throw-problem"`
 
-***
+---
 
 ### retryOn?
 
-> `readonly` `optional` **retryOn**: readonly `string`[]
+> `readonly` `optional` **retryOn?**: readonly `string`[]

@@ -9,7 +9,7 @@ title: "DatabaseClient"
 
 ## Properties
 
-### execute()
+### execute
 
 > **execute**: (`query`) => `Promise`\<`unknown`\>
 
@@ -23,11 +23,11 @@ title: "DatabaseClient"
 
 `Promise`\<`unknown`\>
 
-***
+---
 
-### transaction()?
+### transaction?
 
-> `optional` **transaction**: \<`T`\>(`fn`) => `Promise`\<`T`\>
+> `optional` **transaction?**: \<`T`\>(`fn`) => `Promise`\<`T`\>
 
 #### Type Parameters
 

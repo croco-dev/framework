@@ -13,19 +13,19 @@ title: "QStashBatchConformanceHarness"
 
 > `readonly` **executor**: [`QStashBatchChunkExecutor`](/api/testing/src/type-aliases/qstashbatchchunkexecutor/)
 
-***
+---
 
-### getExecutionFailures()?
+### getExecutionFailures?
 
-> `readonly` `optional` **getExecutionFailures**: () => readonly `unknown`[]
+> `readonly` `optional` **getExecutionFailures?**: () => readonly `unknown`[]
 
 #### Returns
 
 readonly `unknown`[]
 
-***
+---
 
-### getPublishedMessages()
+### getPublishedMessages
 
 > `readonly` **getPublishedMessages**: () => readonly [`QStashBatchPublishRecord`](/api/testing/src/type-aliases/qstashbatchpublishrecord/)[]
 

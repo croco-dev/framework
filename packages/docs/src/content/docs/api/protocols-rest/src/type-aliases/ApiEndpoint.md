@@ -11,60 +11,60 @@ title: "ApiEndpoint"
 
 ### Method
 
-`Method` *extends* [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/) = [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/)
+`Method` _extends_ [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/) = [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/)
 
 ### Path
 
-`Path` *extends* `string` = `string`
+`Path` _extends_ `string` = `string`
 
 ### Body
 
-`Body` *extends* `z.ZodType` \| `undefined` = `undefined`
+`Body` _extends_ `z.ZodType` \| `undefined` = `undefined`
 
 ### Query
 
-`Query` *extends* `z.ZodType` \| `undefined` = `undefined`
+`Query` _extends_ `z.ZodType` \| `undefined` = `undefined`
 
 ### Params
 
-`Params` *extends* `z.ZodType` \| `undefined` = `undefined`
+`Params` _extends_ `z.ZodType` \| `undefined` = `undefined`
 
 ### Response
 
-`Response` *extends* `z.ZodType` \| `undefined` = `undefined`
+`Response` _extends_ `z.ZodType` \| `undefined` = `undefined`
 
 ## Properties
 
 ### body?
 
-> `optional` **body**: `Body`
+> `optional` **body?**: `Body`
 
-***
+---
 
 ### method
 
 > **method**: `Method`
 
-***
+---
 
 ### params?
 
-> `optional` **params**: `Params`
+> `optional` **params?**: `Params`
 
-***
+---
 
 ### path
 
 > **path**: `Path`
 
-***
+---
 
 ### query?
 
-> `optional` **query**: `Query`
+> `optional` **query?**: `Query`
 
-***
+---
 
 ### response?
 
-> `optional` **response**: `Response`
+> `optional` **response?**: `Response`

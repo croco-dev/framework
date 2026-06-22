@@ -17,7 +17,7 @@ title: "getInterceptors"
 
 ### methodName?
 
-`string` | `symbol`
+`string` \| `symbol`
 
 ## Returns
 

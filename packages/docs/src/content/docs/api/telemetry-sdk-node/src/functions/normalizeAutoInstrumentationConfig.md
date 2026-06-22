@@ -14,15 +14,15 @@ Filters out unavailable modules and applies defaults.
 
 ### config
 
-User-provided configuration
+[`AutoInstrumentationConfig`](/api/telemetry-sdk-node/src/interfaces/autoinstrumentationconfig/) \| `undefined`
 
-[`AutoInstrumentationConfig`](/api/telemetry-sdk-node/src/interfaces/autoinstrumentationconfig/) | `undefined`
+User-provided configuration
 
 ### environment
 
-Target environment ('lambda' | 'node')
+`"node"` \| `"lambda"`
 
-`"node"` | `"lambda"`
+Target environment ('lambda' | 'node')
 
 ## Returns
 

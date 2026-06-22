@@ -45,7 +45,7 @@ title: "NotificationService"
 
 `void`
 
-***
+---
 
 ### send()
 
@@ -69,7 +69,7 @@ back to the caller.
 
 ##### options?
 
-`string` | `NotificationSendServiceOptions`
+`string` \| `NotificationSendServiceOptions`
 
 #### Returns
 

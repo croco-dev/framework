@@ -11,19 +11,23 @@ PostgreSQL의 RLS 정책과 테넌트별 격리를 지원합니다.
 
 ## Param
 
+**db**
+
 Drizzle DB 인스턴스
 
 ## Param
+
+**tenantProvider**
 
 테넌트 ID를 제공하는 함수
 
 ## Example
 
 ```typescript
-import { createRlsTxAdapter } from '@croco/tx-drizzle';
+import { createRlsTxAdapter } from "@croco/tx-drizzle";
 
 const adapter = createRlsTxAdapter(db, {
-  getTenantId: () => Context.get('tenantId')
+  getTenantId: () => Context.get("tenantId"),
 });
 ```
 
@@ -31,22 +35,22 @@ const adapter = createRlsTxAdapter(db, {
 
 ### adminRoles?
 
-> `optional` **adminRoles**: `string`[]
+> `optional` **adminRoles?**: `string`[]
 
-***
+---
 
 ### configKey?
 
-> `optional` **configKey**: `string`
+> `optional` **configKey?**: `string`
 
-***
+---
 
 ### tableName
 
 > **tableName**: `string`
 
-***
+---
 
 ### tenantColumn?
 
-> `optional` **tenantColumn**: `string`
+> `optional` **tenantColumn?**: `string`

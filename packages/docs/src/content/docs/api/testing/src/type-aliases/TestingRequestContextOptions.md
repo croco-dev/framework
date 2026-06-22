@@ -11,4 +11,4 @@ title: "TestingRequestContextOptions"
 
 ### runtime?
 
-> `readonly` `optional` **runtime**: `Partial`\<[`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/)\> \| `false`
+> `readonly` `optional` **runtime?**: `Partial`\<[`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/)\> \| `false`

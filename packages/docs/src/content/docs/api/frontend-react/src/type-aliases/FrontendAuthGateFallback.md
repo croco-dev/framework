@@ -5,4 +5,4 @@ prev: false
 title: "FrontendAuthGateFallback"
 ---
 
-> **FrontendAuthGateFallback** = `ReactNode` \| (`state`) => `ReactNode`
+> **FrontendAuthGateFallback** = `ReactNode` \| ((`state`) => `ReactNode`)

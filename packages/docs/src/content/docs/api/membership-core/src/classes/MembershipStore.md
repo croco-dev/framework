@@ -13,6 +13,8 @@ title: "MembershipStore"
 
 ## Example
 
+**커스텀 저장소 구현**
+
 ```typescript
 class PostgresMembershipStore extends MembershipStore {
   async findByTenantAndUser(tenantId: string, userId: string) {
@@ -52,7 +54,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### countByRole()
 
@@ -72,7 +74,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### delete()
 
@@ -92,7 +94,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### findAllByTenant()
 
@@ -108,7 +110,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
-***
+---
 
 ### findAllByUser()
 
@@ -124,7 +126,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
-***
+---
 
 ### findByTenantAndUser()
 
@@ -144,7 +146,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/) \| `null`\>
 
-***
+---
 
 ### save()
 

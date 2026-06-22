@@ -14,7 +14,7 @@ Call this at the start of your Lambda handler.
 
 ### context
 
-[`LambdaContext`](/api/retry-core/src/interfaces/lambdacontext/) | `null`
+[`LambdaContext`](/api/retry-core/src/interfaces/lambdacontext/) \| `null`
 
 ## Returns
 

@@ -15,8 +15,8 @@ title: "AuditSequenceConfig"
 
 > **enableOrdering**: `boolean`
 
-***
+---
 
 ### sequenceField?
 
-> `optional` **sequenceField**: `string`
+> `optional` **sequenceField?**: `string`

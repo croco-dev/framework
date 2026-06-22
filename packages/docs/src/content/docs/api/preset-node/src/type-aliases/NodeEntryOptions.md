@@ -11,10 +11,10 @@ title: "NodeEntryOptions"
 
 ### hostname?
 
-> `readonly` `optional` **hostname**: `string`
+> `readonly` `optional` **hostname?**: `string`
 
-***
+---
 
 ### port?
 
-> `readonly` `optional` **port**: `number`
+> `readonly` `optional` **port?**: `number`

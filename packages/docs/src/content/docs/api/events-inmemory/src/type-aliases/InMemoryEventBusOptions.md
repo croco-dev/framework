@@ -13,16 +13,16 @@ title: "InMemoryEventBusOptions"
 
 ### backpressureStrategy?
 
-> `optional` **backpressureStrategy**: [`BackpressureStrategy`](/api/events-inmemory/src/type-aliases/backpressurestrategy/)
+> `optional` **backpressureStrategy?**: [`BackpressureStrategy`](/api/events-inmemory/src/type-aliases/backpressurestrategy/)
 
-***
+---
 
 ### backpressureTimeoutMs?
 
-> `optional` **backpressureTimeoutMs**: `number`
+> `optional` **backpressureTimeoutMs?**: `number`
 
-***
+---
 
 ### maxConcurrency?
 
-> `optional` **maxConcurrency**: `number`
+> `optional` **maxConcurrency?**: `number`

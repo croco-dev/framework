@@ -11,43 +11,43 @@ title: "ProblemRecoveryAction"
 
 ### ariaLabel?
 
-> `readonly` `optional` **ariaLabel**: `string`
+> `readonly` `optional` **ariaLabel?**: `string`
 
-***
+---
 
 ### disabled?
 
-> `readonly` `optional` **disabled**: `boolean`
+> `readonly` `optional` **disabled?**: `boolean`
 
-***
+---
 
 ### href?
 
-> `readonly` `optional` **href**: `string`
+> `readonly` `optional` **href?**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### kind?
 
-> `readonly` `optional` **kind**: [`ProblemRecoveryActionKind`](/api/frontend-react/src/type-aliases/problemrecoveryactionkind/)
+> `readonly` `optional` **kind?**: [`ProblemRecoveryActionKind`](/api/frontend-react/src/type-aliases/problemrecoveryactionkind/)
 
-***
+---
 
 ### label
 
 > `readonly` **label**: `string`
 
-***
+---
 
-### onRecover()?
+### onRecover?
 
-> `readonly` `optional` **onRecover**: (`problem`) => `void` \| `Promise`\<`void`\>
+> `readonly` `optional` **onRecover?**: (`problem`) => `void` \| `Promise`\<`void`\>
 
 #### Parameters
 
@@ -59,8 +59,8 @@ title: "ProblemRecoveryAction"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### problemCodes?
 
-> `readonly` `optional` **problemCodes**: readonly `string`[]
+> `readonly` `optional` **problemCodes?**: readonly `string`[]

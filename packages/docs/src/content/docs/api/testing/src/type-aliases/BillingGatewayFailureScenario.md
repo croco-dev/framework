@@ -11,13 +11,13 @@ title: "BillingGatewayFailureScenario"
 
 ### TGateway
 
-`TGateway` *extends* [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
+`TGateway` _extends_ [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
 
 ## Properties
 
-### assertProblem()?
+### assertProblem?
 
-> `readonly` `optional` **assertProblem**: (`problem`) => `void` \| `Promise`\<`void`\>
+> `readonly` `optional` **assertProblem?**: (`problem`) => `void` \| `Promise`\<`void`\>
 
 #### Parameters
 
@@ -29,25 +29,25 @@ title: "BillingGatewayFailureScenario"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
-### createGateway()?
+### createGateway?
 
-> `readonly` `optional` **createGateway**: () => `TGateway` \| `Promise`\<`TGateway`\>
+> `readonly` `optional` **createGateway?**: () => `TGateway` \| `Promise`\<`TGateway`\>
 
 #### Returns
 
 `TGateway` \| `Promise`\<`TGateway`\>
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
-### run()
+### run
 
 > `readonly` **run**: (`gateway`) => `Promise`\<`unknown`\>
 

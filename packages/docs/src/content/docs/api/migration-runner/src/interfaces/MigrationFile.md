@@ -7,7 +7,7 @@ title: "MigrationFile"
 
 ## Properties
 
-### down()
+### down
 
 > **down**: (`db`) => `Promise`\<`void`\>
 
@@ -21,27 +21,27 @@ title: "MigrationFile"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### name
 
 > **name**: `string`
 
-***
+---
 
 ### path
 
 > **path**: `string`
 
-***
+---
 
-### up()
+### up
 
 > **up**: (`db`) => `Promise`\<`void`\>
 

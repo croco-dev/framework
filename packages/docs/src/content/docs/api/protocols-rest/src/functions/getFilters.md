@@ -17,7 +17,7 @@ title: "getFilters"
 
 ### methodName?
 
-`string` | `symbol`
+`string` \| `symbol`
 
 ## Returns
 

@@ -11,28 +11,28 @@ title: "OpenAPIRouteExpectation"
 
 ### contentType?
 
-> `readonly` `optional` **contentType**: `string`
+> `readonly` `optional` **contentType?**: `string`
 
-***
+---
 
 ### method
 
 > `readonly` **method**: `HttpMethod` \| `Uppercase`\<`HttpMethod`\>
 
-***
+---
 
 ### operationId?
 
-> `readonly` `optional` **operationId**: `string`
+> `readonly` `optional` **operationId?**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### status?
 
-> `readonly` `optional` **status**: `number` \| `` `${number}` `` \| `"default"`
+> `readonly` `optional` **status?**: `number` \| `` `${number}` `` \| `"default"`

@@ -17,15 +17,15 @@ title: "LlmCostBudget"
 
 하루 동안 허용되는 최대 비용입니다.
 
-***
+---
 
 ### monthlyLimit?
 
-> `optional` **monthlyLimit**: `number`
+> `optional` **monthlyLimit?**: `number`
 
 한 달 동안 허용되는 최대 비용입니다.
 
-***
+---
 
 ### tenantId
 

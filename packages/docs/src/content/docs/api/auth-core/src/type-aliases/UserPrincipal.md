@@ -13,7 +13,7 @@ title: "UserPrincipal"
 
 ### email?
 
-> `optional` **email**: `string`
+> `optional` **email?**: `string`
 
 ### roles
 

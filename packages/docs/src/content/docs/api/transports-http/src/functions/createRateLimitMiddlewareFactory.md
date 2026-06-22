@@ -17,14 +17,4 @@ title: "createRateLimitMiddlewareFactory"
 
 ## Returns
 
-> (`policyOverride?`): [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)
-
-### Parameters
-
-#### policyOverride?
-
-[`RateLimitPolicy`](/api/ratelimit-core/src/type-aliases/ratelimitpolicy/)
-
-### Returns
-
-[`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)
+(`policyOverride?`) => [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)

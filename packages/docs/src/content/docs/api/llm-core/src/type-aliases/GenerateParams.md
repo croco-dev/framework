@@ -13,27 +13,27 @@ title: "GenerateParams"
 
 ### maxTokens?
 
-> `optional` **maxTokens**: `number`
+> `optional` **maxTokens?**: `number`
 
 최대 생성 토큰 수
 
-***
+---
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
 메타데이터
 
-***
+---
 
 ### modelId?
 
-> `optional` **modelId**: `string`
+> `optional` **modelId?**: `string`
 
 모델 ID
 
-***
+---
 
 ### prompt
 
@@ -41,26 +41,26 @@ title: "GenerateParams"
 
 사용자 프롬프트
 
-***
+---
 
 ### stopSequences?
 
-> `optional` **stopSequences**: `string`[]
+> `optional` **stopSequences?**: `string`[]
 
 정지 시퀀스 목록
 
-***
+---
 
 ### systemPrompt?
 
-> `optional` **systemPrompt**: `string`
+> `optional` **systemPrompt?**: `string`
 
 시스템 프롬프트
 
-***
+---
 
 ### temperature?
 
-> `optional` **temperature**: `number`
+> `optional` **temperature?**: `number`
 
 샘플링 온도 (0-2)

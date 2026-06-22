@@ -11,16 +11,16 @@ title: "OpenAiEmbeddingResponse"
 
 ### data?
 
-> `readonly` `optional` **data**: readonly `OpenAiEmbeddingVector`[]
+> `readonly` `optional` **data?**: readonly `OpenAiEmbeddingVector`[]
 
-***
+---
 
 ### model?
 
-> `readonly` `optional` **model**: `string`
+> `readonly` `optional` **model?**: `string`
 
-***
+---
 
 ### usage?
 
-> `readonly` `optional` **usage**: [`OpenAiUsage`](/api/llm-openai/src/type-aliases/openaiusage/) \| `null`
+> `readonly` `optional` **usage?**: [`OpenAiUsage`](/api/llm-openai/src/type-aliases/openaiusage/) \| `null`

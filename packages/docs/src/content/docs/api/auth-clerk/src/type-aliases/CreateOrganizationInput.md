@@ -15,32 +15,32 @@ Clerk 조직 관리에 필요한 공개 타입입니다.
 
 > **createdBy**: `string`
 
-***
+---
 
 ### maxAllowedMemberships?
 
-> `optional` **maxAllowedMemberships**: `number`
+> `optional` **maxAllowedMemberships?**: `number`
 
-***
+---
 
 ### name
 
 > **name**: `string`
 
-***
+---
 
 ### privateMetadata?
 
-> `optional` **privateMetadata**: `Record`\<`string`, `unknown`\>
+> `optional` **privateMetadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### publicMetadata?
 
-> `optional` **publicMetadata**: `Record`\<`string`, `unknown`\>
+> `optional` **publicMetadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### slug?
 
-> `optional` **slug**: `string`
+> `optional` **slug?**: `string`

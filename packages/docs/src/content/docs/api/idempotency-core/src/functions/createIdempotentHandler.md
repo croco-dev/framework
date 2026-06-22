@@ -33,14 +33,4 @@ title: "createIdempotentHandler"
 
 ## Returns
 
-> (`context`): `Promise`\<[`IdempotencyExecutionResult`](/api/idempotency-core/src/type-aliases/idempotencyexecutionresult/)\<`TResult`\>\>
-
-### Parameters
-
-#### context
-
-`TContext`
-
-### Returns
-
-`Promise`\<[`IdempotencyExecutionResult`](/api/idempotency-core/src/type-aliases/idempotencyexecutionresult/)\<`TResult`\>\>
+(`context`) => `Promise`\<[`IdempotencyExecutionResult`](/api/idempotency-core/src/type-aliases/idempotencyexecutionresult/)\<`TResult`\>\>

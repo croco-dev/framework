@@ -9,28 +9,28 @@ title: "RouteMetadata"
 
 ### contract?
 
-> `optional` **contract**: [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)
+> `optional` **contract?**: [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/)
 
-***
+---
 
 ### method
 
 > **method**: [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/)
 
-***
+---
 
 ### methodName
 
 > **methodName**: `string` \| `symbol`
 
-***
+---
 
 ### path
 
 > **path**: `string`
 
-***
+---
 
 ### statusCode?
 
-> `optional` **statusCode**: `number`
+> `optional` **statusCode?**: `number`

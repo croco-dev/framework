@@ -45,21 +45,21 @@ title: "PricingTable"
 
 ### effectiveDate?
 
-> `readonly` `optional` **effectiveDate**: `string`
+> `readonly` `optional` **effectiveDate?**: `string`
 
-***
+---
 
 ### notes?
 
-> `readonly` `optional` **notes**: `string`
+> `readonly` `optional` **notes?**: `string`
 
-***
+---
 
 ### source?
 
-> `readonly` `optional` **source**: `string`
+> `readonly` `optional` **source?**: `string`
 
-***
+---
 
 ### version
 
@@ -105,7 +105,7 @@ title: "PricingTable"
 
 `number`
 
-***
+---
 
 ### getPrice()
 
@@ -125,7 +125,7 @@ title: "PricingTable"
 
 [`ModelPricing`](/api/llm-metering/src/type-aliases/modelpricing/) \| `null`
 
-***
+---
 
 ### setPrice()
 
@@ -149,7 +149,7 @@ title: "PricingTable"
 
 `void`
 
-***
+---
 
 ### toRegistry()
 
@@ -159,7 +159,7 @@ title: "PricingTable"
 
 [`PricingRegistryDefinition`](/api/llm-metering/src/type-aliases/pricingregistrydefinition/)
 
-***
+---
 
 ### fromRegistry()
 

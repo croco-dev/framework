@@ -13,69 +13,69 @@ title: "LifecycleRunTimelineSource"
 
 > `readonly` **actionResults**: readonly `object`[]
 
-***
+---
 
 ### completedAt
 
 > `readonly` **completedAt**: `Date` \| `string`
 
-***
+---
 
 ### error?
 
-> `readonly` `optional` **error**: `object`
+> `readonly` `optional` **error?**: `object`
 
 #### code?
 
-> `readonly` `optional` **code**: `string`
+> `readonly` `optional` **code?**: `string`
 
 #### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### ruleId
 
 > `readonly` **ruleId**: `string`
 
-***
+---
 
 ### severity
 
 > `readonly` **severity**: `"info"` \| `"low"` \| `"medium"` \| `"high"` \| `"critical"` \| `string` & `object`
 
-***
+---
 
 ### signalId?
 
-> `readonly` `optional` **signalId**: `string`
+> `readonly` `optional` **signalId?**: `string`
 
-***
+---
 
 ### signalType
 
 > `readonly` **signalType**: `string`
 
-***
+---
 
 ### startedAt
 
 > `readonly` **startedAt**: `Date` \| `string`
 
-***
+---
 
 ### status
 
 > `readonly` **status**: `string`
 
-***
+---
 
 ### tenantId
 

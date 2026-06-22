@@ -19,31 +19,31 @@ decorator.
 
 ### backoff?
 
-> `optional` **backoff**: [`BackoffOptions`](/api/retry-core/src/interfaces/backoffoptions/)
+> `optional` **backoff?**: [`BackoffOptions`](/api/retry-core/src/interfaces/backoffoptions/)
 
 Backoff configuration
 
-***
+---
 
 ### backoffPolicy?
 
-> `optional` **backoffPolicy**: [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/)\<`unknown`\>
+> `optional` **backoffPolicy?**: [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/)\<`unknown`\>
 
 Custom backoff policy
 
-***
+---
 
 ### circuitBreaker?
 
-> `optional` **circuitBreaker**: [`CircuitBreakerConfig`](/api/retry-core/src/interfaces/circuitbreakerconfig/)
+> `optional` **circuitBreaker?**: [`CircuitBreakerConfig`](/api/retry-core/src/interfaces/circuitbreakerconfig/)
 
 CircuitBreaker options
 
-***
+---
 
-### circuitIdResolver()?
+### circuitIdResolver?
 
-> `optional` **circuitIdResolver**: (`context`) => `string`
+> `optional` **circuitIdResolver?**: (`context`) => `string`
 
 Custom circuit ID resolver
 
@@ -57,27 +57,27 @@ Custom circuit ID resolver
 
 `string`
 
-***
+---
 
 ### lambdaTimeoutReserveMs?
 
-> `optional` **lambdaTimeoutReserveMs**: `number`
+> `optional` **lambdaTimeoutReserveMs?**: `number`
 
 Reserve time for Lambda timeout (ms)
 
-***
+---
 
 ### listeners?
 
-> `optional` **listeners**: [`RetryListener`](/api/retry-core/src/interfaces/retrylistener/)[]
+> `optional` **listeners?**: [`RetryListener`](/api/retry-core/src/interfaces/retrylistener/)[]
 
 Custom retry listeners
 
-***
+---
 
 ### maxAttempts?
 
-> `optional` **maxAttempts**: `number`
+> `optional` **maxAttempts?**: `number`
 
 Maximum attempts (default: 3)
 
@@ -85,11 +85,11 @@ Maximum attempts (default: 3)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`maxAttempts`](/api/retry-core/src/interfaces/retrypolicyoptions/#maxattempts)
 
-***
+---
 
 ### noRetryFor?
 
-> `optional` **noRetryFor**: (`message?`) => `Error`[]
+> `optional` **noRetryFor?**: (`message?`) => `Error`[]
 
 Exception classes to never retry
 
@@ -107,19 +107,19 @@ Exception classes to never retry
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`noRetryFor`](/api/retry-core/src/interfaces/retrypolicyoptions/#noretryfor)
 
-***
+---
 
 ### recover?
 
-> `optional` **recover**: `string`
+> `optional` **recover?**: `string`
 
 Recovery method name on the same class
 
-***
+---
 
 ### retryFor?
 
-> `optional` **retryFor**: (`message?`) => `Error`[]
+> `optional` **retryFor?**: (`message?`) => `Error`[]
 
 Exception classes to retry (empty = retry all except noRetryFor)
 
@@ -137,11 +137,11 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`retryFor`](/api/retry-core/src/interfaces/retrypolicyoptions/#retryfor)
 
-***
+---
 
 ### retryForCategories?
 
-> `optional` **retryForCategories**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
+> `optional` **retryForCategories?**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
 
 ProblemCategory values to retry (croco integration)
 
@@ -149,26 +149,26 @@ ProblemCategory values to retry (croco integration)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`retryForCategories`](/api/retry-core/src/interfaces/retrypolicyoptions/#retryforcategories)
 
-***
+---
 
 ### retryPolicy?
 
-> `optional` **retryPolicy**: [`RetryPolicy`](/api/retry-core/src/interfaces/retrypolicy/)
+> `optional` **retryPolicy?**: [`RetryPolicy`](/api/retry-core/src/interfaces/retrypolicy/)
 
 Custom retry policy
 
-***
+---
 
 ### trace?
 
-> `optional` **trace**: `boolean`
+> `optional` **trace?**: `boolean`
 
 Disable telemetry (default: true)
 
-***
+---
 
 ### wrapExhausted?
 
-> `optional` **wrapExhausted**: `boolean`
+> `optional` **wrapExhausted?**: `boolean`
 
 Wrap exhausted error instead of re-throwing last error

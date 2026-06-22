@@ -49,7 +49,7 @@ Problem raised when Cloudflare Images storage is used without a required configu
 
 ### cause?
 
-> `readonly` `optional` **cause**: `Error`
+> `readonly` `optional` **cause?**: `Error`
 
 #### Inherited from
 
@@ -69,7 +69,7 @@ Problem raised when Cloudflare Images storage is used without a required configu
 
 ### detail?
 
-> `readonly` `optional` **detail**: `string`
+> `readonly` `optional` **detail?**: `string`
 
 #### Inherited from
 
@@ -79,7 +79,7 @@ Problem raised when Cloudflare Images storage is used without a required configu
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+> `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
 #### Inherited from
 
@@ -89,7 +89,7 @@ Problem raised when Cloudflare Images storage is used without a required configu
 
 ### instance?
 
-> `readonly` `optional` **instance**: `string`
+> `readonly` `optional` **instance?**: `string`
 
 #### Inherited from
 
@@ -119,7 +119,7 @@ Problem raised when Cloudflare Images storage is used without a required configu
 
 ### stack?
 
-> `optional` **stack**: `string`
+> `optional` **stack?**: `string`
 
 #### Inherited from
 

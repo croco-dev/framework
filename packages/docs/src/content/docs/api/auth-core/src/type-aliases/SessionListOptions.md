@@ -13,28 +13,28 @@ title: "SessionListOptions"
 
 ### clientId?
 
-> `optional` **clientId**: `string`
+> `optional` **clientId?**: `string`
 
-***
+---
 
 ### limit?
 
-> `optional` **limit**: `number`
+> `optional` **limit?**: `number`
 
-***
+---
 
 ### offset?
 
-> `optional` **offset**: `number`
+> `optional` **offset?**: `number`
 
-***
+---
 
 ### status?
 
-> `optional` **status**: [`Session`](/api/auth-core/src/type-aliases/session/)\[`"status"`\]
+> `optional` **status?**: [`Session`](/api/auth-core/src/type-aliases/session/)\[`"status"`\]
 
-***
+---
 
 ### userId?
 
-> `optional` **userId**: `string`
+> `optional` **userId?**: `string`

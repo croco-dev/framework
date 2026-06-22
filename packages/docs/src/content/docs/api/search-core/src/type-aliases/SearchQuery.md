@@ -13,31 +13,31 @@ title: "SearchQuery"
 
 ### filters?
 
-> `optional` **filters**: `Record`\<`string`, `unknown`\>
+> `optional` **filters?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### limit?
 
-> `optional` **limit**: `number`
+> `optional` **limit?**: `number`
 
-***
+---
 
 ### offset?
 
-> `optional` **offset**: `number`
+> `optional` **offset?**: `number`
 
-***
+---
 
 ### query
 
 > **query**: `string`
 
-***
+---
 
 ### sort?
 
-> `optional` **sort**: `object`[]
+> `optional` **sort?**: `object`[]
 
 #### field
 

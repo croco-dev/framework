@@ -17,12 +17,12 @@ Better Auth 사용자 정보를 확장한 인증 사용자 타입입니다.
 
 #### metadata.emailVerified?
 
-> `optional` **emailVerified**: `boolean`
+> `optional` **emailVerified?**: `boolean`
 
 #### metadata.image?
 
-> `optional` **image**: `string`
+> `optional` **image?**: `string`
 
 #### metadata.name?
 
-> `optional` **name**: `string`
+> `optional` **name?**: `string`

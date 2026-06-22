@@ -13,35 +13,35 @@ title: "WebhookGatewayOptions"
 
 > `readonly` **adapter**: [`WebhookProviderAdapter`](/api/webhooks-core/src/type-aliases/webhookprovideradapter/)
 
-***
+---
 
 ### idempotencyNamespace?
 
-> `readonly` `optional` **idempotencyNamespace**: `string`
+> `readonly` `optional` **idempotencyNamespace?**: `string`
 
-***
+---
 
 ### idempotencyStore
 
 > `readonly` **idempotencyStore**: [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>
 
-***
+---
 
 ### idempotencyTtlMs?
 
-> `readonly` `optional` **idempotencyTtlMs**: `number`
+> `readonly` `optional` **idempotencyTtlMs?**: `number`
 
-***
+---
 
-### now()?
+### now?
 
-> `readonly` `optional` **now**: () => `Date`
+> `readonly` `optional` **now?**: () => `Date`
 
 #### Returns
 
 `Date`
 
-***
+---
 
 ### router
 
@@ -79,14 +79,14 @@ title: "WebhookGatewayOptions"
 
 `boolean`
 
-***
+---
 
 ### unknownEventPolicy
 
 > `readonly` **unknownEventPolicy**: [`UnknownEventPolicy`](/api/webhooks-core/src/type-aliases/unknowneventpolicy/)
 
-***
+---
 
 ### unknownEventReporter?
 
-> `readonly` `optional` **unknownEventReporter**: [`WebhookUnknownEventReporter`](/api/webhooks-core/src/type-aliases/webhookunknowneventreporter/)
+> `readonly` `optional` **unknownEventReporter?**: [`WebhookUnknownEventReporter`](/api/webhooks-core/src/type-aliases/webhookunknowneventreporter/)
