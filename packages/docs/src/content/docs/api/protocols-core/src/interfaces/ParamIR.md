@@ -9,7 +9,7 @@ title: "ParamIR"
 
 ### kind
 
-> **kind**: `"path"` \| `"query"` \| `"body"` \| `"header"` \| `"ctx"`
+> **kind**: `"body"` \| `"query"` \| `"path"` \| `"header"` \| `"ctx"`
 
 ***
 

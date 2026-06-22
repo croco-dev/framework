@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -12,25 +13,97 @@ const spawnTimeoutMs = 180_000;
 
 describe("published create-croco-app CLI", () => {
   it(
-    "prints the package manifest version from the built binary",
+    "prints the package manifest version from the installed package",
     () => {
-      ensureBuilt();
+      const packRoot = mkdtempSync(join(tmpdir(), "croco-create-app-pack-"));
+      const consumerRoot = mkdtempSync(join(tmpdir(), "croco-create-app-consumer-"));
 
-      const packageVersion = readPackageVersion();
-      const version = run("node", [join(packageDir, "dist", "index.js"), "--version"], rootDir);
+      try {
+        ensureBuilt();
+        run(
+          "pnpm",
+          ["--filter", "@croco/problems-core", "pack", "--pack-destination", packRoot],
+          rootDir,
+        );
+        run(
+          "pnpm",
+          ["--filter", "@croco/diagnostics-core", "pack", "--pack-destination", packRoot],
+          rootDir,
+        );
+        run(
+          "pnpm",
+          ["--filter", "@croco/telemetry-sdk-node", "pack", "--pack-destination", packRoot],
+          rootDir,
+        );
+        run(
+          "pnpm",
+          ["--filter", "create-croco-app", "pack", "--pack-destination", packRoot],
+          rootDir,
+        );
 
-      expect(version.stdout.trim()).toBe(packageVersion);
+        const problemsCoreTarball = findTarball(packRoot, "croco-problems-core-");
+        const diagnosticsCoreTarball = findTarball(packRoot, "croco-diagnostics-core-");
+        const telemetrySdkNodeTarball = findTarball(packRoot, "croco-telemetry-sdk-node-");
+        const createCrocoAppTarball = findTarball(packRoot, "create-croco-app-");
+
+        writeFileSync(
+          join(consumerRoot, "package.json"),
+          `${JSON.stringify(
+            {
+              name: "create-croco-app-consumer",
+              private: true,
+              pnpm: {
+                overrides: {
+                  "@croco/problems-core": `file:${problemsCoreTarball}`,
+                  "@croco/diagnostics-core": `file:${diagnosticsCoreTarball}`,
+                  "@croco/telemetry-sdk-node": `file:${telemetrySdkNodeTarball}`,
+                },
+              },
+              type: "module",
+            },
+            null,
+            2,
+          )}\n`,
+        );
+
+        run("pnpm", ["add", "--prod", createCrocoAppTarball, "--ignore-scripts"], consumerRoot);
+
+        const packageVersion = readPackageVersion();
+        const version = run("pnpm", ["exec", "create-croco-app", "--version"], consumerRoot);
+
+        expect(version.stdout.trim()).toBe(packageVersion);
+      } finally {
+        rmSync(packRoot, { force: true, recursive: true });
+        rmSync(consumerRoot, { force: true, recursive: true });
+      }
     },
     spawnTimeoutMs,
   );
 });
 
 function ensureBuilt(): void {
-  if (existsSync(join(packageDir, "dist", "index.js"))) {
+  if (
+    existsSync(join(rootDir, "packages", "problems-core", "dist", "index.js")) &&
+    existsSync(join(rootDir, "packages", "diagnostics-core", "dist", "index.js")) &&
+    existsSync(join(rootDir, "packages", "telemetry-sdk-node", "dist", "index.js")) &&
+    existsSync(join(packageDir, "dist", "index.js"))
+  ) {
     return;
   }
 
   run("pnpm", ["--filter", "create-croco-app...", "build"], rootDir);
+}
+
+function findTarball(directory: string, prefix: string): string {
+  const filename = readdirSync(directory).find(
+    (entry) => entry.startsWith(prefix) && entry.endsWith(".tgz"),
+  );
+
+  if (!filename) {
+    throw new Error(`Missing packed tarball with prefix ${prefix}`);
+  }
+
+  return join(directory, filename);
 }
 
 function readPackageVersion(): string {

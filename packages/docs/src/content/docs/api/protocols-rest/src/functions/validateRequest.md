@@ -27,7 +27,7 @@ title: "validateRequest"
 
 ### source
 
-`"headers"` | `"query"` | `"body"` | `"params"`
+`"body"` | `"query"` | `"params"` | `"headers"`
 
 ## Returns
 

@@ -328,7 +328,14 @@
           "BETTER_AUTH_SECRET",
           "BETTER_AUTH_WEBHOOK_SECRET optional"
         ],
-        "features": ["session auth", "webhooks", "Drizzle schema"]
+        "features": [
+          "session auth",
+          "webhooks",
+          "Drizzle schema",
+          "shared auth conformance",
+          "readiness diagnostics",
+          "optional live smoke"
+        ]
       },
       "auth-clerk": {
         "domain": "Auth",
@@ -339,7 +346,15 @@
           "CLERK_PUBLISHABLE_KEY optional",
           "CLERK_WEBHOOK_SECRET optional"
         ],
-        "features": ["token auth", "session management", "organizations", "webhooks"]
+        "features": [
+          "token auth",
+          "session management",
+          "organizations",
+          "webhooks",
+          "shared auth conformance",
+          "readiness diagnostics",
+          "optional live smoke"
+        ]
       },
       "auth-drizzle": {
         "domain": "Auth",

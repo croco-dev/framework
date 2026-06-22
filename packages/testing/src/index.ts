@@ -34,6 +34,20 @@ export {
   type CapturedSpanException,
 } from "./libs/telemetry-testing";
 export {
+  createAuthProviderConformanceSuite,
+  type AuthProviderAuthConformance,
+  type AuthProviderConformanceCase,
+  type AuthProviderConformanceOptions,
+  type AuthProviderConformanceSuite,
+  type AuthProviderCredentialFailureExpectation,
+  type AuthProviderLiveSmokeGate,
+  type AuthProviderProblemExpectation,
+  type AuthProviderReadinessConformance,
+  type AuthProviderTenantMappingConformance,
+  type AuthProviderTenantMappingEvidence,
+  type AuthProviderWebhookConformance,
+} from "./libs/auth-provider-conformance";
+export {
   createStorageProviderConformanceSuite,
   type StorageProviderConformanceCase,
   type StorageProviderConformanceOptions,

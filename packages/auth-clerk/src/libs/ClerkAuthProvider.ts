@@ -2,7 +2,7 @@ import { verifyToken } from "@clerk/backend";
 import type { AuthProvider, AuthUser } from "@croco/auth-core";
 import {
   ClerkMalformedClaimProblem,
-  ClerkTokenVerificationProblem,
+  createClerkTokenVerificationProblem,
 } from "./problems/ClerkProblems";
 import type { AuthorizationHeaderCarrier } from "./types";
 
@@ -57,8 +57,16 @@ export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrie
 
     try {
       const verified = await verifyToken(token, { secretKey: this.options.secretKey });
-      const userId = verified.sub;
-      const payload = isObjectRecord(verified) ? verified : {};
+      if (!isObjectRecord(verified)) {
+        throw new ClerkMalformedClaimProblem("sub");
+      }
+
+      const userId = getStringClaim(verified, "sub");
+      if (!userId) {
+        throw new ClerkMalformedClaimProblem("sub");
+      }
+
+      const payload = verified;
 
       const orgRole = getStringClaim(payload, "org_role");
       const roles: string[] = orgRole ? [orgRole] : [];
@@ -82,7 +90,7 @@ export class ClerkAuthProvider implements AuthProvider<AuthorizationHeaderCarrie
         throw error;
       }
 
-      throw new ClerkTokenVerificationProblem(error instanceof Error ? error.message : undefined);
+      throw createClerkTokenVerificationProblem(error);
     }
   }
 }

@@ -24,6 +24,7 @@ const response = await app.get("/users");
 | `assertProblemResponse(response, expected)`           | Verifies an RFC 7807 Problem Details response without depending on a test runner.                                  |
 | `assertOpenAPIRoute(controllersOrSpec, expected)`     | Verifies generated OpenAPI route metadata and response contracts.                                                  |
 | `createRpcTestFetch(app)`                             | Returns a fetch-compatible function that routes generated RPC clients into the in-memory app.                      |
+| `createAuthProviderConformanceSuite(config)`          | Reusable auth provider cases for token/session auth, webhooks, tenant mapping, readiness, and live-smoke gating.   |
 | `createStorageProviderConformanceSuite(config)`       | Reusable storage provider contract cases for default no-credential CI.                                             |
 | `createProviderConformanceMatrixSuite(config)`        | Validates provider profile manifests for required capabilities, optional unsupported reasons, and method evidence. |
 | `createLlmProviderConformanceSuite(config)`           | Reusable LLM provider contract cases for mocked or live provider fixtures.                                         |
@@ -93,6 +94,13 @@ The billing provider helper currently covers:
   creation, customer portal access, subscription cancel/resume lifecycle behavior, optional
   provider failure scenarios, signed webhook handling, webhook idempotency, and invalid webhook
   rejection as Croco `Problem` instances.
+
+The auth provider helper currently covers:
+
+- `createAuthProviderConformanceSuite()` for `@croco/auth-core` providers: valid auth, missing and
+  invalid credentials, malformed provider payloads, redacted upstream auth failures, signed webhook
+  success/failure, malformed webhook payloads, provider organization to Croco tenant evidence,
+  missing/ready diagnostics output, and explicit no-credential live-smoke gates.
 
 The serverless provider helpers currently cover:
 

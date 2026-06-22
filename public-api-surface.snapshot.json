@@ -2053,6 +2053,18 @@
           "declarationKind": "const"
         },
         {
+          "name": "BetterAuthAuthenticationProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/BetterAuthAuthenticationProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "BetterAuthDiagnosticsProvider",
+          "exportKind": "declaration",
+          "source": "./libs/BetterAuthDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
           "name": "BetterAuthFactory",
           "exportKind": "declaration",
           "source": "./libs/BetterAuthFactory",
@@ -2125,6 +2137,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "isRetryableBetterAuthError",
+          "exportKind": "declaration",
+          "source": "./libs/problems/BetterAuthAuthenticationProblem",
+          "declarationKind": "function"
+        },
+        {
           "name": "session",
           "exportKind": "declaration",
           "source": "./libs/schema",
@@ -2149,6 +2167,30 @@
           "exportKind": "declaration",
           "source": "./libs/BetterAuthFactory",
           "declarationKind": "interface"
+        },
+        {
+          "name": "BetterAuthDiagnosticsConfig",
+          "exportKind": "declaration",
+          "source": "./libs/BetterAuthDiagnosticsProvider",
+          "declarationKind": "type"
+        },
+        {
+          "name": "BetterAuthDiagnosticsOptions",
+          "exportKind": "declaration",
+          "source": "./libs/BetterAuthDiagnosticsProvider",
+          "declarationKind": "type"
+        },
+        {
+          "name": "BetterAuthReadinessCheckContext",
+          "exportKind": "declaration",
+          "source": "./libs/BetterAuthDiagnosticsProvider",
+          "declarationKind": "type"
+        },
+        {
+          "name": "BetterAuthReadinessCheckResult",
+          "exportKind": "declaration",
+          "source": "./libs/BetterAuthDiagnosticsProvider",
+          "declarationKind": "type"
         },
         {
           "name": "BetterAuthSession",
@@ -2214,6 +2256,12 @@
       "entrypoint": "packages/auth-clerk/src/index.ts",
       "runtimeExports": [
         {
+          "name": "ClerkAuthDiagnosticsProvider",
+          "exportKind": "named",
+          "source": "./libs/ClerkAuthDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
           "name": "ClerkAuthProvider",
           "exportKind": "named",
           "source": "./libs/ClerkAuthProvider",
@@ -2262,6 +2310,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "ClerkTokenVerificationUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/ClerkProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "ClerkUserService",
           "exportKind": "named",
           "source": "./libs/ClerkUserService",
@@ -2272,6 +2326,12 @@
           "exportKind": "named",
           "source": "./libs/ClerkWebhookHandler",
           "declarationKind": "class"
+        },
+        {
+          "name": "createClerkTokenVerificationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/ClerkProblems",
+          "declarationKind": "function"
         },
         {
           "name": "DuplicateTenantMappingProblem",
@@ -2299,9 +2359,29 @@
           "source": "./libs/types"
         },
         {
+          "name": "ClerkAuthDiagnosticsConfig",
+          "exportKind": "named",
+          "source": "./libs/ClerkAuthDiagnosticsProvider"
+        },
+        {
+          "name": "ClerkAuthDiagnosticsOptions",
+          "exportKind": "named",
+          "source": "./libs/ClerkAuthDiagnosticsProvider"
+        },
+        {
           "name": "ClerkAuthOptions",
           "exportKind": "named",
           "source": "./libs/ClerkAuthProvider"
+        },
+        {
+          "name": "ClerkAuthReadinessCheckContext",
+          "exportKind": "named",
+          "source": "./libs/ClerkAuthDiagnosticsProvider"
+        },
+        {
+          "name": "ClerkAuthReadinessCheckResult",
+          "exportKind": "named",
+          "source": "./libs/ClerkAuthDiagnosticsProvider"
         },
         {
           "name": "ClerkMembershipEvent",
@@ -2332,6 +2412,11 @@
           "name": "ClerkTenantRequest",
           "exportKind": "named",
           "source": "./libs/ClerkTenantMapper"
+        },
+        {
+          "name": "ClerkTokenVerificationOperation",
+          "exportKind": "named",
+          "source": "./libs/problems/ClerkProblems"
         },
         {
           "name": "ClerkUser",
@@ -16003,6 +16088,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createAuthProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
           "name": "createBillingProviderConformanceSuite",
           "exportKind": "named",
           "source": "./libs/billing-provider-conformance",
@@ -16154,6 +16245,61 @@
         }
       ],
       "typeExports": [
+        {
+          "name": "AuthProviderAuthConformance",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
+        {
+          "name": "AuthProviderConformanceCase",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
+        {
+          "name": "AuthProviderConformanceOptions",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
+        {
+          "name": "AuthProviderConformanceSuite",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
+        {
+          "name": "AuthProviderCredentialFailureExpectation",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
+        {
+          "name": "AuthProviderLiveSmokeGate",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
+        {
+          "name": "AuthProviderProblemExpectation",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
+        {
+          "name": "AuthProviderReadinessConformance",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
+        {
+          "name": "AuthProviderTenantMappingConformance",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
+        {
+          "name": "AuthProviderTenantMappingEvidence",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
+        {
+          "name": "AuthProviderWebhookConformance",
+          "exportKind": "named",
+          "source": "./libs/auth-provider-conformance"
+        },
         {
           "name": "BillingGatewayConformanceAssertions",
           "exportKind": "named",

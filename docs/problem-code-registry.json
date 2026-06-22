@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 365,
+  "problemCount": 367,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -624,6 +624,33 @@
       ]
     },
     {
+      "code": "auth-better-auth/authentication-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#auth-better-auth-authentication-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+          "line": 8,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "auth-better-auth/invalid-session-payload",
       "category": "InternalServerError",
       "status": 500,
@@ -833,7 +860,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 40,
+          "line": 94,
           "column": 3,
           "kind": "problem-class"
         }
@@ -860,7 +887,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 61,
+          "line": 121,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -888,8 +915,8 @@
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
           "line": 19,
-          "column": 5,
-          "kind": "problem-constructor"
+          "column": 3,
+          "kind": "problem-class"
         }
       ]
     },
@@ -914,7 +941,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 32,
+          "line": 83,
           "column": 3,
           "kind": "problem-class"
         }
@@ -941,7 +968,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 52,
+          "line": 109,
           "column": 3,
           "kind": "problem-class"
         }
@@ -968,7 +995,34 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 24,
+          "line": 36,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "auth-clerk/token-verification-upstream-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#auth-clerk-token-verification-upstream-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+          "line": 60,
           "column": 3,
           "kind": "problem-class"
         }
@@ -995,7 +1049,7 @@
       "sources": [
         {
           "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
-          "line": 5,
+          "line": 8,
           "column": 3,
           "kind": "problem-class"
         }

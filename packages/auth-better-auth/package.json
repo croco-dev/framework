@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@croco/auth-core": "workspace:*",
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
@@ -48,6 +49,7 @@
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
