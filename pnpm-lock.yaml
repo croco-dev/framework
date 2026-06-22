@@ -1041,6 +1041,12 @@ importers:
       '@croco/search-core':
         specifier: workspace:*
         version: link:../search-core
+      '@croco/storage-cloudflare':
+        specifier: workspace:*
+        version: link:../storage-cloudflare
+      '@croco/storage-cloudinary':
+        specifier: workspace:*
+        version: link:../storage-cloudinary
       '@croco/storage-core':
         specifier: workspace:*
         version: link:../storage-core
@@ -2530,6 +2536,9 @@ importers:
 
   packages/storage-cloudflare:
     dependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
@@ -2546,6 +2555,9 @@ importers:
 
   packages/storage-cloudinary:
     dependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
@@ -2561,6 +2573,10 @@ importers:
       cloudinary:
         specifier: ^2.10.0
         version: 2.10.0
+    devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
 
   packages/storage-core:
     dependencies:

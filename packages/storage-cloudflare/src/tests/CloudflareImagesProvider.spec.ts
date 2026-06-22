@@ -1,5 +1,5 @@
 import { Container } from "@croco/framework-context";
-import { DeleteFailedProblem, FileNotFoundProblem, UploadFailedProblem } from "@croco/storage-core";
+import { FileNotFoundProblem, UploadFailedProblem } from "@croco/storage-core";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CloudflareImagesProvider } from "../libs/CloudflareImagesProvider";
@@ -162,7 +162,7 @@ describe("CloudflareImagesProvider", () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it("should throw UploadFailedProblem when API returns error", async () => {
+    it("should throw terminal provider Problem when API returns error", async () => {
       const mockBuffer = Buffer.from("test-image-data");
       const mockResponse = {
         ok: false,
@@ -171,10 +171,12 @@ describe("CloudflareImagesProvider", () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.put("test.jpg", mockBuffer)).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.put("test.jpg", mockBuffer)).rejects.toMatchObject({
+        code: "storage-cloudflare/terminal-upstream",
+      });
     });
 
-    it("should throw UploadFailedProblem when response success is false", async () => {
+    it("should throw validation provider Problem when response success is false", async () => {
       const mockBuffer = Buffer.from("test-image-data");
       const mockResponse = {
         ok: true,
@@ -186,7 +188,9 @@ describe("CloudflareImagesProvider", () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.put("test.jpg", mockBuffer)).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.put("test.jpg", mockBuffer)).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+      });
     });
   });
 
@@ -283,7 +287,7 @@ describe("CloudflareImagesProvider", () => {
       );
     });
 
-    it("should throw DeleteFailedProblem when delete fails", async () => {
+    it("should throw terminal provider Problem when delete fails", async () => {
       const mockResponse = {
         ok: false,
         text: async () => "Not found",
@@ -291,10 +295,12 @@ describe("CloudflareImagesProvider", () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.delete("test-image-id")).rejects.toThrow(DeleteFailedProblem);
+      await expect(provider.delete("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/terminal-upstream",
+      });
     });
 
-    it("should throw DeleteFailedProblem when response success is false", async () => {
+    it("should throw validation provider Problem when response success is false", async () => {
       const mockResponse = {
         ok: true,
         json: async () => ({
@@ -305,7 +311,9 @@ describe("CloudflareImagesProvider", () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.delete("test-image-id")).rejects.toThrow(DeleteFailedProblem);
+      await expect(provider.delete("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+      });
     });
   });
 
@@ -342,7 +350,9 @@ describe("CloudflareImagesProvider", () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.exists("test-image-id")).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.exists("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/retryable-upstream",
+      });
     });
   });
 
@@ -416,7 +426,7 @@ describe("CloudflareImagesProvider", () => {
       expect(url).toContain("cdn.example.com");
     });
 
-    it("should throw UploadFailedProblem when signingKey is missing", async () => {
+    it("should throw validation provider Problem when signingKey is missing", async () => {
       const providerWithoutSigningKey = new CloudflareImagesProvider({
         accountId: "test-account-id",
         apiToken: "test-api-token",
@@ -426,7 +436,9 @@ describe("CloudflareImagesProvider", () => {
 
       await expect(
         providerWithoutSigningKey.getSignedUrl("test-image-id", { expiresIn: 3600 }),
-      ).rejects.toThrow(UploadFailedProblem);
+      ).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+      });
     });
   });
 
@@ -469,7 +481,7 @@ describe("CloudflareImagesProvider", () => {
       await expect(provider.getMetadata("non-existent-id")).rejects.toThrow(FileNotFoundProblem);
     });
 
-    it("should throw UploadFailedProblem when API returns error", async () => {
+    it("should throw terminal provider Problem when API returns error", async () => {
       const mockResponse = {
         ok: false,
         text: async () => "Unauthorized",
@@ -477,7 +489,9 @@ describe("CloudflareImagesProvider", () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.getMetadata("test-image-id")).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.getMetadata("test-image-id")).rejects.toMatchObject({
+        code: "storage-cloudflare/terminal-upstream",
+      });
     });
 
     it("should handle missing size field", async () => {
@@ -730,7 +744,7 @@ describe("CloudflareImagesProvider", () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it("should throw UploadFailedProblem when API returns error", async () => {
+    it("should throw terminal provider Problem when API returns error", async () => {
       const mockResponse = {
         ok: false,
         text: async () => "Unauthorized",
@@ -738,10 +752,12 @@ describe("CloudflareImagesProvider", () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.getUploadIntent("new-image.jpg")).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.getUploadIntent("new-image.jpg")).rejects.toMatchObject({
+        code: "storage-cloudflare/terminal-upstream",
+      });
     });
 
-    it("should throw UploadFailedProblem when response success is false", async () => {
+    it("should throw validation provider Problem when response success is false", async () => {
       const mockResponse = {
         ok: true,
         json: async () => ({
@@ -752,7 +768,9 @@ describe("CloudflareImagesProvider", () => {
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
-      await expect(provider.getUploadIntent("new-image.jpg")).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.getUploadIntent("new-image.jpg")).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+      });
     });
 
     it("should use custom domain for publicUrl when configured", async () => {

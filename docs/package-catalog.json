@@ -226,6 +226,7 @@
         "protocols-graphql",
         "protocols-trpc",
         "rpc-codegen",
+        "storage-cloudinary",
         "storage-core",
         "storage-r2",
         "tasks-core",
@@ -267,7 +268,6 @@
         "search-drizzle",
         "search-meilisearch",
         "storage-cloudflare",
-        "storage-cloudinary",
         "tasks-qstash",
         "triggers-qstash"
       ]
@@ -608,14 +608,30 @@
         "adapter": "Cloudflare Images provider",
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_HASH"],
-        "features": ["image upload", "transform URLs", "upload intents", "signed URLs"]
+        "features": [
+          "image upload",
+          "transform URLs",
+          "upload intents",
+          "signed URLs",
+          "storage conformance",
+          "diagnostics",
+          "optional live smoke"
+        ]
       },
       "storage-cloudinary": {
         "domain": "Storage",
         "adapter": "Cloudinary provider",
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"],
-        "features": ["file upload", "transform URLs", "upload intents", "retry"]
+        "features": [
+          "file upload",
+          "transform URLs",
+          "upload intents",
+          "retry",
+          "storage conformance",
+          "diagnostics",
+          "optional live smoke"
+        ]
       },
       "storage-r2": {
         "domain": "Storage",

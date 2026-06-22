@@ -1,3 +1,4 @@
+import { PassThrough } from "node:stream";
 import { Container } from "@croco/framework-context";
 import type {
   ObjectMetadata,
@@ -6,17 +7,19 @@ import type {
   TransformOptions,
   UploadIntent,
 } from "@croco/storage-core";
-import {
-  DeleteFailedProblem,
-  FileNotFoundProblem,
-  InvalidKeyProblem,
-  UploadFailedProblem,
-} from "@croco/storage-core";
+import { FileNotFoundProblem, InvalidKeyProblem } from "@croco/storage-core";
+import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { v2 as cloudinary } from "cloudinary";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CloudinaryProvider } from "../libs/CloudinaryProvider";
 
 type UploadStream = typeof cloudinary.uploader.upload_stream;
+type StoredCloudinaryObject = {
+  readonly context?: string;
+  readonly createdAt: string;
+  readonly data: Buffer;
+  readonly etag: string;
+};
 
 // Cloudinary SDK 모킹
 vi.mock("cloudinary", () => ({
@@ -51,6 +54,27 @@ describe("CloudinaryProvider", () => {
     vi.clearAllMocks();
 
     provider = new CloudinaryProvider(mockConfig);
+  });
+
+  describe("storage provider conformance", () => {
+    it.each(
+      createStorageProviderConformanceSuite({
+        createProvider: () => {
+          useInMemoryCloudinaryBackend();
+          return provider;
+        },
+        keyPrefix: "cloudinary-conformance",
+        metadata: {
+          contentType: "unsupported",
+          customMetadata: "required",
+        },
+        providerName: "storage-cloudinary",
+        publicUrl: "https://res.cloudinary.com/test-cloud/image/upload/",
+        signedUrl: /s=mock-signature/,
+      }).cases,
+    )("$name", async ({ run }) => {
+      await run();
+    });
   });
 
   it("should not mutate global cloudinary config during construction", () => {
@@ -242,7 +266,7 @@ describe("CloudinaryProvider", () => {
       );
     });
 
-    it("should throw UploadFailedProblem on upload error", async () => {
+    it("should throw terminal provider Problem on upload error", async () => {
       const mockError = new Error("Upload failed");
       const mockUploadStream = vi.fn(
         (_options: unknown, callback: (error: Error | undefined, result: unknown) => void) => {
@@ -259,7 +283,9 @@ describe("CloudinaryProvider", () => {
 
       const buffer = Buffer.from("test data");
 
-      await expect(provider.put("test-key", buffer)).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.put("test-key", buffer)).rejects.toMatchObject({
+        code: "storage-cloudinary/terminal-upstream",
+      });
     });
 
     it("should retry transient upload errors before succeeding", async () => {
@@ -317,17 +343,17 @@ describe("CloudinaryProvider", () => {
       expect(cloudinary.uploader.upload_stream).toHaveBeenCalledTimes(3);
     });
 
-    it("should throw UploadFailedProblem when upload stream creation throws", async () => {
+    it("should throw terminal provider Problem when upload stream creation throws", async () => {
       vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(() => {
         throw new Error("Cloudinary SDK error");
       });
 
-      await expect(provider.put("test-key", Buffer.from("test data"))).rejects.toThrow(
-        UploadFailedProblem,
-      );
+      await expect(provider.put("test-key", Buffer.from("test data"))).rejects.toMatchObject({
+        code: "storage-cloudinary/terminal-upstream",
+      });
     });
 
-    it("should throw UploadFailedProblem when source stream emits error", async () => {
+    it("should throw terminal provider Problem when source stream emits error", async () => {
       const { PassThrough } = await import("node:stream");
       const destination = new PassThrough();
 
@@ -340,7 +366,9 @@ describe("CloudinaryProvider", () => {
 
       source.emit("error", new Error("Stream broken"));
 
-      await expect(putPromise).rejects.toThrow(UploadFailedProblem);
+      await expect(putPromise).rejects.toMatchObject({
+        code: "storage-cloudinary/terminal-upstream",
+      });
     });
 
     it("should not retry readable stream uploads on transient callback errors", async () => {
@@ -367,7 +395,9 @@ describe("CloudinaryProvider", () => {
 
       await expect(
         provider.put("test-key", Readable.from(Buffer.from("test data"))),
-      ).rejects.toThrow(UploadFailedProblem);
+      ).rejects.toMatchObject({
+        code: "storage-cloudinary/retryable-upstream",
+      });
       expect(cloudinary.uploader.upload_stream).toHaveBeenCalledTimes(1);
     });
 
@@ -424,7 +454,7 @@ describe("CloudinaryProvider", () => {
       await expect(provider.get("test-key")).rejects.toThrow(FileNotFoundProblem);
     });
 
-    it("should throw UploadFailedProblem on non-404 HTTP error", async () => {
+    it("should throw retryable provider Problem on retryable HTTP error", async () => {
       const mockResponse = {
         ok: false,
         status: 500,
@@ -432,13 +462,17 @@ describe("CloudinaryProvider", () => {
 
       vi.mocked(global.fetch).mockResolvedValue(mockResponse as unknown as Response);
 
-      await expect(provider.get("test-key")).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.get("test-key")).rejects.toMatchObject({
+        code: "storage-cloudinary/retryable-upstream",
+      });
     });
 
-    it("should throw UploadFailedProblem on fetch error", async () => {
+    it("should throw retryable provider Problem on fetch error", async () => {
       vi.mocked(global.fetch).mockRejectedValue(new Error("Network error"));
 
-      await expect(provider.get("test-key")).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.get("test-key")).rejects.toMatchObject({
+        code: "storage-cloudinary/retryable-upstream",
+      });
     });
 
     it("should retry transient fetch failures before succeeding", async () => {
@@ -500,10 +534,12 @@ describe("CloudinaryProvider", () => {
       await expect(provider.delete("test-key")).resolves.not.toThrow();
     });
 
-    it("should throw DeleteFailedProblem on delete failure", async () => {
+    it("should throw terminal provider Problem on delete failure", async () => {
       vi.mocked(cloudinary.uploader.destroy).mockResolvedValue({ result: "error" });
 
-      await expect(provider.delete("test-key")).rejects.toThrow(DeleteFailedProblem);
+      await expect(provider.delete("test-key")).rejects.toMatchObject({
+        code: "storage-cloudinary/terminal-upstream",
+      });
     });
 
     it("should retry transient delete failures before succeeding", async () => {
@@ -683,13 +719,15 @@ describe("CloudinaryProvider", () => {
       await expect(provider.getMetadata("test-key")).rejects.toThrow(FileNotFoundProblem);
     });
 
-    it("should throw UploadFailedProblem for non-404 metadata errors", async () => {
+    it("should throw validation provider Problem for non-404 metadata validation errors", async () => {
       vi.mocked(cloudinary.api.resource).mockRejectedValue({
         http_code: 403,
         message: "Forbidden",
       });
 
-      await expect(provider.getMetadata("test-key")).rejects.toThrow(UploadFailedProblem);
+      await expect(provider.getMetadata("test-key")).rejects.toMatchObject({
+        code: "storage-cloudinary/validation-failed",
+      });
     });
 
     it("should retry transient metadata failures before succeeding", async () => {
@@ -1091,3 +1129,114 @@ describe("CloudinaryProvider", () => {
     });
   });
 });
+
+function useInMemoryCloudinaryBackend(): void {
+  const objects = new Map<string, StoredCloudinaryObject>();
+
+  vi.mocked(cloudinary.uploader.upload_stream).mockImplementation(((
+    options: unknown,
+    callback: (error: Error | undefined, result: unknown) => void,
+  ) => {
+    const uploadOptions = options as {
+      readonly context?: string;
+      readonly public_id?: string;
+    };
+    const destination = new PassThrough();
+    const chunks: Buffer[] = [];
+
+    destination.on("data", (chunk: Buffer | Uint8Array | string) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    destination.on("error", (error) => callback(error, undefined));
+    destination.on("finish", () => {
+      if (!uploadOptions.public_id) {
+        callback(new Error("public_id is required"), undefined);
+        return;
+      }
+
+      objects.set(uploadOptions.public_id, {
+        context: uploadOptions.context,
+        createdAt: "2026-01-01T00:00:00Z",
+        data: Buffer.concat(chunks),
+        etag: `${uploadOptions.public_id}:etag`,
+      });
+      callback(undefined, { public_id: uploadOptions.public_id });
+    });
+
+    return destination;
+  }) as unknown as UploadStream);
+
+  vi.mocked(cloudinary.uploader.destroy).mockImplementation(async (key: string) => {
+    const existed = objects.delete(key);
+    return { result: existed ? "ok" : "not found" };
+  });
+
+  vi.mocked(cloudinary.api.resource).mockImplementation(async (key: string) => {
+    const object = objects.get(key);
+    if (!object) {
+      throw { http_code: 404, message: "Resource not found" };
+    }
+
+    return {
+      bytes: object.data.length,
+      context: object.context,
+      created_at: object.createdAt,
+      etag: object.etag,
+    };
+  });
+
+  vi.mocked(cloudinary.url).mockImplementation((key: string, options?: unknown) => {
+    const optionRecord = typeof options === "object" && options !== null ? options : undefined;
+    const cloudNameValue = optionRecord ? Reflect.get(optionRecord, "cloud_name") : undefined;
+    const secureValue = optionRecord ? Reflect.get(optionRecord, "secure") : undefined;
+    const transformationValue = optionRecord
+      ? Reflect.get(optionRecord, "transformation")
+      : undefined;
+    const signUrlValue = optionRecord ? Reflect.get(optionRecord, "sign_url") : undefined;
+    const cloudName = typeof cloudNameValue === "string" ? cloudNameValue : "test-cloud";
+    const protocol = secureValue === false ? "http" : "https";
+    const transformation =
+      typeof transformationValue === "string" && transformationValue.length > 0
+        ? `${transformationValue}/`
+        : "";
+    const query = signUrlValue ? "?expires=60&s=mock-signature" : "";
+
+    return `${protocol}://res.cloudinary.com/${cloudName}/image/upload/${transformation}${key}${query}`;
+  });
+
+  vi.mocked(global.fetch).mockImplementation(async (input: string | URL | Request) => {
+    const key = parseCloudinaryDeliveryKey(String(input), "test-cloud");
+    if (!key) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    const object = objects.get(key);
+    if (!object) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    return new Response(new Uint8Array(object.data));
+  });
+}
+
+function parseCloudinaryDeliveryKey(url: string, cloudName: string): string | null {
+  const parsed = new URL(url);
+  const marker = `/${cloudName}/image/upload/`;
+  const markerIndex = parsed.pathname.indexOf(marker);
+
+  if (markerIndex === -1) {
+    return null;
+  }
+
+  const rawKey = parsed.pathname.slice(markerIndex + marker.length);
+  if (rawKey.length === 0) {
+    return null;
+  }
+
+  const segments = rawKey.split("/");
+  if (segments[0]?.includes("_") && segments.length > 1) {
+    segments.shift();
+  }
+
+  return segments.map(decodeURIComponent).join("/");
+}

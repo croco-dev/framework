@@ -1,5 +1,11 @@
 {
   "exclude": ["node_modules"],
   "extends": "../../tsconfig/tsconfig.node.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@croco/testing": ["../testing/src/libs/provider-conformance.ts"]
+    }
+  },
   "include": ["src/**/*.ts"]
 }

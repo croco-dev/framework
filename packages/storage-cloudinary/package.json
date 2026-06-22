@@ -40,11 +40,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/retry-core": "workspace:*",
     "@croco/storage-core": "workspace:*",
     "cloudinary": "^2.10.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@croco/testing": "workspace:*"
+  }
 }

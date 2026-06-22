@@ -301,6 +301,8 @@ jobs:
               - 'packages/retry-core/src/**'
               - 'packages/rpc-codegen/src/**'
               - 'packages/search-core/src/**'
+              - 'packages/storage-cloudflare/src/**'
+              - 'packages/storage-cloudinary/src/**'
               - 'packages/storage-core/src/**'
               - 'packages/tasks-qstash/src/**'
               - 'packages/telemetry-api/src/**'
@@ -336,8 +338,12 @@ jobs:
       - name: Build docs and check for drift
         run: |
           pnpm turbo run docs:build --force
+          mapfile -t generated_api_docs < <(git diff --name-only -- packages/docs/src/content/docs/api/)
+          if [ "${#generated_api_docs[@]}" -gt 0 ]; then
+            pnpm exec oxfmt --write "${generated_api_docs[@]}"
+          fi
           if ! git diff --exit-code -- packages/docs/src/content/docs/api/; then
-            echo "::error::API docs are out of sync. Run 'pnpm docs:build' locally and commit the changes."
+            echo "::error::API docs are out of sync. Run 'pnpm docs:build', format the changed API docs with oxfmt, then commit the changes."
             exit 1
           fi
 

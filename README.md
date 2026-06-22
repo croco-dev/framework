@@ -388,12 +388,12 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 
 Adapter 경계와 공식 우선순위, compatibility certification checklist는 [Adapter Ecosystem](packages/docs/src/content/docs/en/reference/adapter-ecosystem.md)에 정의되어 있습니다. 성숙도 승급 기준은 [Provider Maturity Gates](packages/docs/src/content/docs/en/reference/provider-maturity.md)와 [Presentation Runtime Support](packages/docs/src/content/docs/en/reference/presentation-runtime-support.md)에 정의되어 있으며, package test 존재 여부만으로 production-ready나 certified compatibility를 의미하지 않습니다.
 
-| 상태                | 의미                                | 패키지 수 |
-| ------------------- | ----------------------------------- | --------: |
-| 🟢 production-ready | 안정화, 적극 사용 권장              |        24 |
-| 🟡 beta             | 기능 완성, 실사용 검증 중           |        56 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |        29 |
-| ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |         0 |
+| 상태                | 의미                                | 전체 public 패키지 수 |
+| ------------------- | ----------------------------------- | --------------------: |
+| 🟢 production-ready | 안정화, 적극 사용 권장              |                    24 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |                    57 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    28 |
+| ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |                     0 |
 
 ### Extension & Adapter Matrix
 
@@ -428,8 +428,8 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/ratelimit-upstash`       | Rate limiting   | Upstash Redis rate-limit store       | yes  | yes    | -       | -        | UPSTASH_REDIS_REST_URL<br>UPSTASH_REDIS_REST_TOKEN                                  | @upstash/redis                                                  | sliding window<br>token bucket<br>fixed window<br>Lua atomicity<br>shared conformance<br>redacted upstream Problems                                                                       | 🔴 alpha/WIP | has package tests |
 | `@croco/search-drizzle`          | Search          | Drizzle search index                 | yes  | yes    | -       | -        | database connection supplied by app                                                 | drizzle-orm                                                     | search document persistence<br>tenant-aware lookup                                                                                                                                        | 🔴 alpha/WIP | has package tests |
 | `@croco/search-meilisearch`      | Search          | Meilisearch engine                   | yes  | yes    | -       | -        | MEILISEARCH_HOST<br>MEILISEARCH_API_KEY                                             | -                                                               | indexing<br>search<br>tenant tokens                                                                                                                                                       | 🔴 alpha/WIP | has package tests |
-| `@croco/storage-cloudflare`      | Storage         | Cloudflare Images provider           | yes  | yes    | -       | -        | CLOUDFLARE_ACCOUNT_ID<br>CLOUDFLARE_API_TOKEN<br>CLOUDFLARE_ACCOUNT_HASH            | -                                                               | image upload<br>transform URLs<br>upload intents<br>signed URLs                                                                                                                           | 🔴 alpha/WIP | has package tests |
-| `@croco/storage-cloudinary`      | Storage         | Cloudinary provider                  | yes  | yes    | -       | -        | CLOUDINARY_CLOUD_NAME<br>CLOUDINARY_API_KEY<br>CLOUDINARY_API_SECRET                | -                                                               | file upload<br>transform URLs<br>upload intents<br>retry                                                                                                                                  | 🔴 alpha/WIP | has package tests |
+| `@croco/storage-cloudflare`      | Storage         | Cloudflare Images provider           | yes  | yes    | -       | -        | CLOUDFLARE_ACCOUNT_ID<br>CLOUDFLARE_API_TOKEN<br>CLOUDFLARE_ACCOUNT_HASH            | -                                                               | image upload<br>transform URLs<br>upload intents<br>signed URLs<br>storage conformance<br>diagnostics<br>optional live smoke                                                              | 🔴 alpha/WIP | has package tests |
+| `@croco/storage-cloudinary`      | Storage         | Cloudinary provider                  | yes  | yes    | -       | -        | CLOUDINARY_CLOUD_NAME<br>CLOUDINARY_API_KEY<br>CLOUDINARY_API_SECRET                | -                                                               | file upload<br>transform URLs<br>upload intents<br>retry<br>storage conformance<br>diagnostics<br>optional live smoke                                                                     | 🟡 beta      | has package tests |
 | `@croco/storage-r2`              | Storage         | Cloudflare R2 S3-compatible provider | yes  | yes    | -       | -        | R2_ACCOUNT_ID<br>R2_ACCESS_KEY_ID<br>R2_SECRET_ACCESS_KEY<br>R2_BUCKET              | -                                                               | put/get/delete<br>signed URLs<br>stream reads<br>retry<br>safe diagnostics<br>env-gated live smoke                                                                                        | 🟡 beta      | has package tests |
 | `@croco/tasks-qstash`            | Tasks           | QStash task runner                   | yes  | yes    | -       | -        | UPSTASH_QSTASH_TOKEN<br>UPSTASH_QSTASH_DESTINATION_URL                              | -                                                               | task publish<br>delay override<br>custom headers<br>deduplication id<br>shared conformance<br>redacted upstream Problems                                                                  | 🔴 alpha/WIP | has package tests |
 | `@croco/triggers-qstash`         | Triggers        | QStash scheduler and webhook handler | yes  | yes    | -       | -        | QSTASH_TOKEN<br>public webhook URL                                                  | -                                                               | schedule publish<br>webhook verification<br>trigger dispatch<br>shared conformance<br>redacted schedule diagnostics<br>diagnostic-coded webhook failures                                  | 🔴 alpha/WIP | has package tests |
@@ -542,6 +542,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/rpc-codegen`                   | Protocol     | `packages/rpc-codegen`                   | README, API, tests |
 | `@croco/billing-polar`                 | Provider     | `packages/billing-polar`                 | README, tests      |
 | `@croco/llm-openai`                    | Provider     | `packages/llm-openai`                    | README, API, tests |
+| `@croco/storage-cloudinary`            | Provider     | `packages/storage-cloudinary`            | README, API, tests |
 | `@croco/storage-r2`                    | Provider     | `packages/storage-r2`                    | README, tests      |
 | `@croco/architecture-policy`           | Tooling      | `packages/architecture-policy`           | README, tests      |
 | `@croco/cli`                           | Tooling      | `packages/cli`                           | README, tests      |
@@ -583,8 +584,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/ratelimit-upstash`       | Provider     | `packages/ratelimit-upstash`       | README, API, tests |
 | `@croco/search-drizzle`          | Provider     | `packages/search-drizzle`          | README, tests      |
 | `@croco/search-meilisearch`      | Provider     | `packages/search-meilisearch`      | README, tests      |
-| `@croco/storage-cloudflare`      | Provider     | `packages/storage-cloudflare`      | README, tests      |
-| `@croco/storage-cloudinary`      | Provider     | `packages/storage-cloudinary`      | README, tests      |
+| `@croco/storage-cloudflare`      | Provider     | `packages/storage-cloudflare`      | README, API, tests |
 | `@croco/tasks-qstash`            | Provider     | `packages/tasks-qstash`            | README, API, tests |
 | `@croco/triggers-qstash`         | Provider     | `packages/triggers-qstash`         | README, API, tests |
 

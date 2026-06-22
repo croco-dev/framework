@@ -32,6 +32,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/storage-core": "workspace:*"

@@ -1357,7 +1357,7 @@ function generateReadmeCatalog(state: CatalogState): string {
     "",
     "Adapter 경계와 공식 우선순위, compatibility certification checklist는 [Adapter Ecosystem](packages/docs/src/content/docs/en/reference/adapter-ecosystem.md)에 정의되어 있습니다. 성숙도 승급 기준은 [Provider Maturity Gates](packages/docs/src/content/docs/en/reference/provider-maturity.md)와 [Presentation Runtime Support](packages/docs/src/content/docs/en/reference/presentation-runtime-support.md)에 정의되어 있으며, package test 존재 여부만으로 production-ready나 certified compatibility를 의미하지 않습니다.",
     "",
-    "| 상태 | 의미 | 패키지 수 |",
+    "| 상태 | 의미 | 전체 public 패키지 수 |",
     "| --- | --- | ---: |",
   );
 

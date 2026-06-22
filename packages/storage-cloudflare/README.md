@@ -47,18 +47,63 @@ const transformUrl = provider.getTransformUrl("avatars/user-1.jpg", {
 
 ## API 레퍼런스
 
-| API                                                  | 설명                                                                    |
-| ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| `CloudflareImagesProvider`                           | 이미지 업로드, 다운로드, 삭제, 메타데이터 조회를 처리합니다.            |
-| `getTransformUrl()`                                  | width, height, fit, format, quality를 Cloudflare 파라미터로 변환합니다. |
-| `getUploadIntent()`                                  | 클라이언트 직접 업로드용 URL과 만료 시간을 돌려줍니다.                  |
-| `CLOUDFLARE_IMAGES_OPTIONS`                          | DI 등록용 토큰입니다.                                                   |
-| `CloudflareImagesOptions`                            | 제공자 설정 타입입니다.                                                 |
-| `CloudflareUploadResponse`, `CloudflareImageDetails` | Cloudflare 응답 구조 타입입니다.                                        |
-| `CloudflareTransformOptions`                         | Cloudflare 고유 변환 옵션 타입입니다.                                   |
+| API                                                  | 설명                                                                          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `CloudflareImagesProvider`                           | 이미지 업로드, 다운로드, 삭제, 메타데이터 조회를 처리합니다.                  |
+| `CloudflareImagesDiagnosticsProvider`                | 안전한 설정 상태와 선택적 readiness check 결과를 `HealthStatus`로 노출합니다. |
+| `getTransformUrl()`                                  | width, height, fit, format, quality를 Cloudflare 파라미터로 변환합니다.       |
+| `getUploadIntent()`                                  | 클라이언트 직접 업로드용 URL과 만료 시간을 돌려줍니다.                        |
+| `CLOUDFLARE_IMAGES_OPTIONS`                          | DI 등록용 토큰입니다.                                                         |
+| `validateCloudflareImagesOptions()`                  | 필수 설정과 양수 정수 옵션을 검증합니다.                                      |
+| `normalizeCloudflareImagesError()`                   | Cloudflare/fetch 실패를 provider 전용 `Problem`으로 정규화합니다.             |
+| `CloudflareImagesOptions`                            | 제공자 설정 타입입니다.                                                       |
+| `CloudflareUploadResponse`, `CloudflareImageDetails` | Cloudflare 응답 구조 타입입니다.                                              |
+| `CloudflareTransformOptions`                         | Cloudflare 고유 변환 옵션 타입입니다.                                         |
+
+## 진단과 readiness
+
+```typescript
+import { CloudflareImagesDiagnosticsProvider } from "@croco/storage-cloudflare";
+
+const diagnostics = new CloudflareImagesDiagnosticsProvider({
+  accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+  apiToken: process.env.CLOUDFLARE_API_TOKEN,
+  accountHash: process.env.CLOUDFLARE_ACCOUNT_HASH,
+});
+
+const health = await diagnostics.getHealth();
+```
+
+- 필수 설정이 빠지면 `unhealthy` 상태와 `storage-cloudflare/missing-config` 코드가 반환됩니다.
+- `readinessCheck`를 넘기지 않으면 외부 API를 호출하지 않고 설정 존재 여부만 `healthy`로 보고합니다.
+- `readinessCheck`가 실패하면 `degraded` 상태와 정규화된 provider Problem 코드가 반환됩니다.
+- 진단 detail은 토큰, secret, authorization 값을 redaction 처리합니다.
+
+## 실패 코드
+
+| 코드                                    | 의미                                                          |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `storage-cloudflare/missing-config`     | `accountId`, `apiToken`, `accountHash` 중 하나가 없음         |
+| `storage-cloudflare/validation-failed`  | 4xx 응답, 잘못된 TTL, 서명 키 누락 등 복구 불가능한 입력 실패 |
+| `storage-cloudflare/retryable-upstream` | 408, 425, 429, 5xx 또는 네트워크 계열 재시도 가능 실패        |
+| `storage-cloudflare/terminal-upstream`  | 재시도 대상으로 분류되지 않는 Cloudflare/fetch 실패           |
+
+## 선택적 live smoke
+
+기본 테스트는 실제 Cloudflare 자격 증명을 요구하지 않습니다. 실제 backend readiness를 확인하려면 아래 환경 변수를 모두 설정한 뒤 live smoke를 opt-in 합니다.
+
+```bash
+CROCO_LIVE_CLOUDFLARE_IMAGES=1 \
+CLOUDFLARE_ACCOUNT_ID=... \
+CLOUDFLARE_API_TOKEN=... \
+CLOUDFLARE_ACCOUNT_HASH=... \
+pnpm --filter @croco/storage-cloudflare test -- CloudflareImagesLiveSmoke
+```
 
 ## 동작 메모
 
 - Cloudflare Images는 이미지 전용 서비스입니다.
+- `StorageProvider`의 `list()` 계약은 아직 존재하지 않으므로 provider도 목록 조회를 제공하지 않습니다.
+- `put()`의 `contentType`은 업로드 파일 MIME으로만 전달됩니다. `getMetadata()`는 현재 size와 upload time만 반환하며, content type과 custom metadata 보존은 지원하지 않습니다.
 - 서명 URL은 `signingKey`가 없으면 생성할 수 없습니다.
 - `inside`는 `scale-down`, `outside`는 `cover`로 매핑합니다.
