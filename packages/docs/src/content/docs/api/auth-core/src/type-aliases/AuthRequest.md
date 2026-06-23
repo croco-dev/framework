@@ -13,12 +13,12 @@ title: "AuthRequest"
 
 ### apiKey?
 
-> `optional` **apiKey**: [`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/)
+> `optional` **apiKey?**: [`ApiKeyPrincipal`](/api/auth-core/src/type-aliases/apikeyprincipal/)
 
 ### principal?
 
-> `optional` **principal**: [`Principal`](/api/auth-core/src/type-aliases/principal/)
+> `optional` **principal?**: [`Principal`](/api/auth-core/src/type-aliases/principal/)
 
 ### user?
 
-> `optional` **user**: [`AuthUser`](/api/auth-core/src/type-aliases/authuser/)
+> `optional` **user?**: [`AuthUser`](/api/auth-core/src/type-aliases/authuser/)

@@ -13,10 +13,10 @@ title: "SearchableOptions"
 
 ### autoSync?
 
-> `optional` **autoSync**: `boolean`
+> `optional` **autoSync?**: `boolean`
 
-***
+---
 
 ### index?
 
-> `optional` **index**: `string`
+> `optional` **index?**: `string`

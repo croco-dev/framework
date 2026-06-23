@@ -11,16 +11,16 @@ title: "RuntimeTraceContext"
 
 ### spanId?
 
-> `optional` **spanId**: `string`
+> `optional` **spanId?**: `string`
 
-***
+---
 
 ### traceFlags?
 
-> `optional` **traceFlags**: `string` \| `number`
+> `optional` **traceFlags?**: `string` \| `number`
 
-***
+---
 
 ### traceId?
 
-> `optional` **traceId**: `string`
+> `optional` **traceId?**: `string`

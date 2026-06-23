@@ -11,7 +11,7 @@ title: "formatDiagnosticSourceLocation"
 
 ### location?
 
-[`DiagnosticSourceLocation`](/api/diagnostics-core/src/type-aliases/diagnosticsourcelocation/) | `null`
+[`DiagnosticSourceLocation`](/api/diagnostics-core/src/type-aliases/diagnosticsourcelocation/) \| `null`
 
 ## Returns
 

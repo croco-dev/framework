@@ -9,7 +9,7 @@ title: "NodeEntry"
 
 ## Properties
 
-### close()
+### close
 
 > `readonly` **close**: () => `Promise`\<`void`\>
 
@@ -17,15 +17,15 @@ title: "NodeEntry"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### server
 
 > `readonly` **server**: `HTTPServer` \| `null`
 
-***
+---
 
-### start()
+### start
 
 > `readonly` **start**: () => `Promise`\<`void`\>
 

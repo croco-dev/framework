@@ -11,40 +11,40 @@ title: "OperationsTimelineQuery"
 
 ### customerId?
 
-> `readonly` `optional` **customerId**: `string`
+> `readonly` `optional` **customerId?**: `string`
 
-***
+---
 
 ### entity?
 
-> `readonly` `optional` **entity**: [`OperationsTimelineEntity`](/api/admin-ops/src/type-aliases/operationstimelineentity/)
+> `readonly` `optional` **entity?**: [`OperationsTimelineEntity`](/api/admin-ops/src/type-aliases/operationstimelineentity/)
 
-***
+---
 
 ### limit?
 
-> `readonly` `optional` **limit**: `number`
+> `readonly` `optional` **limit?**: `number`
 
-***
+---
 
 ### order?
 
-> `readonly` `optional` **order**: [`TimelineOrder`](/api/admin-ops/src/type-aliases/timelineorder/)
+> `readonly` `optional` **order?**: [`TimelineOrder`](/api/admin-ops/src/type-aliases/timelineorder/)
 
-***
+---
 
 ### severities?
 
-> `readonly` `optional` **severities**: readonly [`OperationsTimelineSeverity`](/api/admin-ops/src/type-aliases/operationstimelineseverity/)[]
+> `readonly` `optional` **severities?**: readonly [`OperationsTimelineSeverity`](/api/admin-ops/src/type-aliases/operationstimelineseverity/)[]
 
-***
+---
 
 ### sources?
 
-> `readonly` `optional` **sources**: readonly [`OperationsTimelineSource`](/api/admin-ops/src/type-aliases/operationstimelinesource/)[]
+> `readonly` `optional` **sources?**: readonly [`OperationsTimelineSource`](/api/admin-ops/src/type-aliases/operationstimelinesource/)[]
 
-***
+---
 
 ### tenantId?
 
-> `readonly` `optional` **tenantId**: `string`
+> `readonly` `optional` **tenantId?**: `string`

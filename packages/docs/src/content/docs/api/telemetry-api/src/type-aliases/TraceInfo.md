@@ -13,22 +13,22 @@ Span 생성 옵션과 현재 활성 Trace 정보를 표현하는 타입입니다
 
 ### isValid?
 
-> `optional` **isValid**: `boolean`
+> `optional` **isValid?**: `boolean`
 
-***
+---
 
 ### spanId?
 
-> `optional` **spanId**: `string`
+> `optional` **spanId?**: `string`
 
-***
+---
 
 ### traceFlags?
 
-> `optional` **traceFlags**: `number`
+> `optional` **traceFlags?**: `number`
 
-***
+---
 
 ### traceId?
 
-> `optional` **traceId**: `string`
+> `optional` **traceId?**: `string`

@@ -13,8 +13,8 @@ title: "BetterAuthReadinessCheckContext"
 
 > `readonly` **config**: [`BetterAuthConfig`](/api/auth-better-auth/src/interfaces/betterauthconfig/)
 
-***
+---
 
 ### signal?
 
-> `readonly` `optional` **signal**: `AbortSignal`
+> `readonly` `optional` **signal?**: `AbortSignal`

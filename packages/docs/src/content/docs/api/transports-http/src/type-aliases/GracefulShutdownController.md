@@ -11,7 +11,7 @@ graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
 
 ## Properties
 
-### getActiveRequestCount()
+### getActiveRequestCount
 
 > **getActiveRequestCount**: () => `number`
 
@@ -19,9 +19,9 @@ graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
 
 `number`
 
-***
+---
 
-### isShuttingDown()
+### isShuttingDown
 
 > **isShuttingDown**: () => `boolean`
 
@@ -29,15 +29,15 @@ graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
 
 `boolean`
 
-***
+---
 
 ### middleware
 
 > **middleware**: [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)
 
-***
+---
 
-### reset()
+### reset
 
 > **reset**: () => `void`
 
@@ -45,9 +45,9 @@ graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
 
 `void`
 
-***
+---
 
-### shutdown()
+### shutdown
 
 > **shutdown**: () => `Promise`\<`void`\>
 

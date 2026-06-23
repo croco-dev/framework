@@ -13,22 +13,22 @@ Clerk 조직 관리에 필요한 공개 타입입니다.
 
 ### limit?
 
-> `optional` **limit**: `number`
+> `optional` **limit?**: `number`
 
-***
+---
 
 ### offset?
 
-> `optional` **offset**: `number`
+> `optional` **offset?**: `number`
 
-***
+---
 
 ### orderBy?
 
-> `optional` **orderBy**: `"-created_at"` \| `"created_at"` \| `"-updated_at"` \| `"updated_at"`
+> `optional` **orderBy?**: `"-created_at"` \| `"created_at"` \| `"-updated_at"` \| `"updated_at"`
 
-***
+---
 
 ### query?
 
-> `optional` **query**: `string`
+> `optional` **query?**: `string`

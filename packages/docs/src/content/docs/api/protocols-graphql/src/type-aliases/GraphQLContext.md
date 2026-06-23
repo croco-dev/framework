@@ -9,16 +9,16 @@ title: "GraphQLContext"
 
 ## Indexable
 
-\[`key`: `string`\]: `unknown`
+> \[`key`: `string`\]: `unknown`
 
 ## Properties
 
 ### requestId?
 
-> `optional` **requestId**: `string`
+> `optional` **requestId?**: `string`
 
-***
+---
 
 ### userId?
 
-> `optional` **userId**: `string`
+> `optional` **userId?**: `string`

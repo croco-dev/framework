@@ -11,41 +11,41 @@ title: "RuntimeContext"
 
 > **capabilities**: [`RuntimeCapabilities`](/api/framework-context/src/type-aliases/runtimecapabilities/)
 
-***
+---
 
 ### env?
 
-> `optional` **env**: `Record`\<`string`, `unknown`\>
+> `optional` **env?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### logger?
 
-> `optional` **logger**: [`ILogger`](/api/framework-context/src/interfaces/ilogger/)
+> `optional` **logger?**: [`ILogger`](/api/framework-context/src/interfaces/ilogger/)
 
-***
+---
 
 ### native?
 
-> `optional` **native**: [`RuntimeNativeContext`](/api/framework-context/src/type-aliases/runtimenativecontext/)
+> `optional` **native?**: [`RuntimeNativeContext`](/api/framework-context/src/type-aliases/runtimenativecontext/)
 
-***
+---
 
 ### platform
 
 > **platform**: [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
 
-***
+---
 
 ### requestId
 
 > **requestId**: `string`
 
-***
+---
 
 ### trace?
 
-> `optional` **trace**: [`RuntimeTraceContext`](/api/framework-context/src/type-aliases/runtimetracecontext/)
+> `optional` **trace?**: [`RuntimeTraceContext`](/api/framework-context/src/type-aliases/runtimetracecontext/)
 
 ## Methods
 
@@ -57,7 +57,7 @@ title: "RuntimeContext"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### shutdown()
 
@@ -67,7 +67,7 @@ title: "RuntimeContext"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### waitUntil()
 

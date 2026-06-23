@@ -11,46 +11,46 @@ title: "DiagnosticsEndpointOptions"
 
 ### collector?
 
-> `readonly` `optional` **collector**: [`DiagnosticsCollector`](/api/diagnostics-core/src/classes/diagnosticscollector/)
+> `readonly` `optional` **collector?**: [`DiagnosticsCollector`](/api/diagnostics-core/src/classes/diagnosticscollector/)
 
-***
+---
 
 ### exposure?
 
-> `readonly` `optional` **exposure**: [`DiagnosticsExposureMode`](/api/transports-http/src/type-aliases/diagnosticsexposuremode/)
+> `readonly` `optional` **exposure?**: [`DiagnosticsExposureMode`](/api/transports-http/src/type-aliases/diagnosticsexposuremode/)
 
-***
+---
 
 ### guard?
 
-> `readonly` `optional` **guard**: [`DiagnosticsGuard`](/api/transports-http/src/type-aliases/diagnosticsguard/)
+> `readonly` `optional` **guard?**: [`DiagnosticsGuard`](/api/transports-http/src/type-aliases/diagnosticsguard/)
 
-***
+---
 
 ### messageLimit?
 
-> `readonly` `optional` **messageLimit**: `number`
+> `readonly` `optional` **messageLimit?**: `number`
 
-***
+---
 
 ### providers?
 
-> `readonly` `optional` **providers**: readonly [`DiagnosticsProvider`](/api/diagnostics-core/src/interfaces/diagnosticsprovider/)[]
+> `readonly` `optional` **providers?**: readonly [`DiagnosticsProvider`](/api/diagnostics-core/src/interfaces/diagnosticsprovider/)[]
 
-***
+---
 
 ### recentErrorLimit?
 
-> `readonly` `optional` **recentErrorLimit**: `number`
+> `readonly` `optional` **recentErrorLimit?**: `number`
 
-***
+---
 
 ### token?
 
-> `readonly` `optional` **token**: `string`
+> `readonly` `optional` **token?**: `string`
 
-***
+---
 
 ### tokenHeader?
 
-> `readonly` `optional` **tokenHeader**: `string`
+> `readonly` `optional` **tokenHeader?**: `string`

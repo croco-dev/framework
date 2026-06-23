@@ -13,15 +13,15 @@ Authorization 및 역할 기반 접근 제어 Guard 서브-barrel입니다.
 
 ### headerName?
 
-> `optional` **headerName**: `string`
+> `optional` **headerName?**: `string`
 
-***
+---
 
 ### scheme?
 
-> `optional` **scheme**: `string`
+> `optional` **scheme?**: `string`
 
-***
+---
 
 ### verifier
 

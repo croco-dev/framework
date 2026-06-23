@@ -11,10 +11,10 @@ title: "IdempotencyReserveOptions"
 
 ### metadata?
 
-> `readonly` `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### ttlMs?
 
-> `readonly` `optional` **ttlMs**: `number`
+> `readonly` `optional` **ttlMs?**: `number`

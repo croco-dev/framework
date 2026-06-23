@@ -13,33 +13,33 @@ CORS 응답 헤더를 설정하는 미들웨어입니다.
 
 ### allowedHeaders?
 
-> `optional` **allowedHeaders**: `string`[]
+> `optional` **allowedHeaders?**: `string`[]
 
-***
+---
 
 ### credentials?
 
-> `optional` **credentials**: `boolean`
+> `optional` **credentials?**: `boolean`
 
-***
+---
 
 ### exposedHeaders?
 
-> `optional` **exposedHeaders**: `string`[]
+> `optional` **exposedHeaders?**: `string`[]
 
-***
+---
 
 ### maxAge?
 
-> `optional` **maxAge**: `number`
+> `optional` **maxAge?**: `number`
 
-***
+---
 
 ### methods?
 
-> `optional` **methods**: `string`[]
+> `optional` **methods?**: `string`[]
 
-***
+---
 
 ### origins
 

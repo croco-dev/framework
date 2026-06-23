@@ -17,23 +17,23 @@ Result of handling a QStash webhook.
 
 Response body.
 
-***
+---
 
 ### error?
 
-> `readonly` `optional` **error**: `string`
+> `readonly` `optional` **error?**: `string`
 
 Error message if handling failed.
 
-***
+---
 
 ### executionId?
 
-> `readonly` `optional` **executionId**: `string`
+> `readonly` `optional` **executionId?**: `string`
 
 Execution ID if an execution was created.
 
-***
+---
 
 ### statusCode
 
@@ -41,7 +41,7 @@ Execution ID if an execution was created.
 
 HTTP status code to return.
 
-***
+---
 
 ### success
 

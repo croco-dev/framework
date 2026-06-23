@@ -15,6 +15,6 @@ Cloudflare Workers 환경에서 SSR 동작을 제어합니다.
 
 ### apiBindingName?
 
-> `optional` **apiBindingName**: `string`
+> `optional` **apiBindingName?**: `string`
 
 API 서비스 Worker의 바인딩 이름 (기본값: 'API_WORKER')

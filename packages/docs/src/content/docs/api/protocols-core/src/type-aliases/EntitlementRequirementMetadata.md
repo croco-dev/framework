@@ -11,16 +11,16 @@ title: "EntitlementRequirementMetadata"
 
 ### description?
 
-> `readonly` `optional` **description**: `string`
+> `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### feature
 
 > `readonly` **feature**: `string`
 
-***
+---
 
 ### resource?
 
-> `readonly` `optional` **resource**: [`EntitlementResourceRequirementMetadata`](/api/protocols-core/src/type-aliases/entitlementresourcerequirementmetadata/)
+> `readonly` `optional` **resource?**: [`EntitlementResourceRequirementMetadata`](/api/protocols-core/src/type-aliases/entitlementresourcerequirementmetadata/)

@@ -13,28 +13,28 @@ Clerk 사용자 관리에 필요한 공개 타입입니다.
 
 ### emailAddress?
 
-> `optional` **emailAddress**: `string`[]
+> `optional` **emailAddress?**: `string`[]
 
-***
+---
 
 ### limit?
 
-> `optional` **limit**: `number`
+> `optional` **limit?**: `number`
 
-***
+---
 
 ### offset?
 
-> `optional` **offset**: `number`
+> `optional` **offset?**: `number`
 
-***
+---
 
 ### orderBy?
 
-> `optional` **orderBy**: `"-created_at"` \| `"created_at"` \| `"-updated_at"` \| `"updated_at"`
+> `optional` **orderBy?**: `"-created_at"` \| `"created_at"` \| `"-updated_at"` \| `"updated_at"`
 
-***
+---
 
 ### query?
 
-> `optional` **query**: `string`
+> `optional` **query?**: `string`

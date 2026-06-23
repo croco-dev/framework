@@ -13,7 +13,7 @@ Cloudflare 고유 변환 옵션입니다.
 
 ### blur?
 
-> `optional` **blur**: `number`
+> `optional` **blur?**: `number`
 
 블러 (1-1000)
 
@@ -21,7 +21,7 @@ Cloudflare 고유 변환 옵션입니다.
 
 ### dpr?
 
-> `optional` **dpr**: `number`
+> `optional` **dpr?**: `number`
 
 Device Pixel Ratio
 
@@ -29,7 +29,7 @@ Device Pixel Ratio
 
 ### fit?
 
-> `optional` **fit**: `"scale-down"` \| `"contain"` \| `"cover"` \| `"fill"`
+> `optional` **fit?**: `"scale-down"` \| `"contain"` \| `"cover"` \| `"fill"`
 
 맞춤 방식
 
@@ -42,7 +42,7 @@ Device Pixel Ratio
 
 ### format?
 
-> `optional` **format**: `"webp"` \| `"avif"` \| `"jpeg"` \| `"png"` \| `"gif"`
+> `optional` **format?**: `"webp"` \| `"avif"` \| `"jpeg"` \| `"png"` \| `"gif"`
 
 출력 형식
 
@@ -50,7 +50,7 @@ Device Pixel Ratio
 
 ### grayscale?
 
-> `optional` **grayscale**: `boolean`
+> `optional` **grayscale?**: `boolean`
 
 그레이스케일 변환
 
@@ -58,7 +58,7 @@ Device Pixel Ratio
 
 ### height?
 
-> `optional` **height**: `number`
+> `optional` **height?**: `number`
 
 높이 (px)
 
@@ -66,7 +66,7 @@ Device Pixel Ratio
 
 ### invert?
 
-> `optional` **invert**: `boolean`
+> `optional` **invert?**: `boolean`
 
 반전
 
@@ -74,7 +74,7 @@ Device Pixel Ratio
 
 ### quality?
 
-> `optional` **quality**: `number`
+> `optional` **quality?**: `number`
 
 품질 (1-100)
 
@@ -82,7 +82,7 @@ Device Pixel Ratio
 
 ### rotate?
 
-> `optional` **rotate**: `number`
+> `optional` **rotate?**: `number`
 
 회전 (0-359)
 
@@ -90,7 +90,7 @@ Device Pixel Ratio
 
 ### sharpen?
 
-> `optional` **sharpen**: `number`
+> `optional` **sharpen?**: `number`
 
 선명화 (1-10)
 
@@ -98,6 +98,6 @@ Device Pixel Ratio
 
 ### width?
 
-> `optional` **width**: `number`
+> `optional` **width?**: `number`
 
 너비 (px)

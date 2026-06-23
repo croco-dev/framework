@@ -15,8 +15,8 @@ Clerk 인증 readiness diagnostics provider입니다.
 
 > `readonly` **config**: [`ClerkAuthOptions`](/api/auth-clerk/src/type-aliases/clerkauthoptions/)
 
-***
+---
 
 ### signal?
 
-> `readonly` `optional` **signal**: `AbortSignal`
+> `readonly` `optional` **signal?**: `AbortSignal`

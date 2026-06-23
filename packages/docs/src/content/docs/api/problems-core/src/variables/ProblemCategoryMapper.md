@@ -11,7 +11,7 @@ ProblemCategory를 HTTP 상태 코드와 제목으로 매핑하는 유틸리티�
 
 ## Type Declaration
 
-### toHttpStatus()
+### toHttpStatus
 
 > **toHttpStatus**: (`category`) => `number`
 
@@ -25,7 +25,7 @@ ProblemCategory를 HTTP 상태 코드와 제목으로 매핑하는 유틸리티�
 
 `number`
 
-### toTitle()
+### toTitle
 
 > **toTitle**: (`category`) => `string`
 

@@ -11,21 +11,21 @@ title: "BillingWebhookConformanceOptions"
 
 ### TResult
 
-`TResult` *extends* [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/) = [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/)
+`TResult` _extends_ [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/) = [`BillingWebhookResult`](/api/testing/src/type-aliases/billingwebhookresult/)
 
 ### THandler
 
-`THandler` *extends* [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\> = [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\>
+`THandler` _extends_ [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\> = [`BillingWebhookHandlerContract`](/api/testing/src/type-aliases/billingwebhookhandlercontract/)\<`TResult`\>
 
 ## Properties
 
 ### assertions?
 
-> `readonly` `optional` **assertions**: [`BillingWebhookConformanceAssertions`](/api/testing/src/type-aliases/billingwebhookconformanceassertions/)\<`TResult`, `THandler`\>
+> `readonly` `optional` **assertions?**: [`BillingWebhookConformanceAssertions`](/api/testing/src/type-aliases/billingwebhookconformanceassertions/)\<`TResult`, `THandler`\>
 
-***
+---
 
-### createHandler()
+### createHandler
 
 > `readonly` **createHandler**: () => `THandler` \| `Promise`\<`THandler`\>
 
@@ -33,7 +33,7 @@ title: "BillingWebhookConformanceOptions"
 
 `THandler` \| `Promise`\<`THandler`\>
 
-***
+---
 
 ### fixtures
 
@@ -41,7 +41,7 @@ title: "BillingWebhookConformanceOptions"
 
 #### invalidPayload?
 
-> `readonly` `optional` **invalidPayload**: [`BillingWebhookFixture`](/api/testing/src/type-aliases/billingwebhookfixture/)
+> `readonly` `optional` **invalidPayload?**: [`BillingWebhookFixture`](/api/testing/src/type-aliases/billingwebhookfixture/)
 
 #### invalidSignature
 

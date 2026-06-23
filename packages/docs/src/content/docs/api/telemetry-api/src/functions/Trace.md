@@ -13,7 +13,7 @@ title: "Trace"
 
 ### Args
 
-`Args` *extends* `unknown`[] = `unknown`[]
+`Args` _extends_ `unknown`[] = `unknown`[]
 
 ### ReturnType
 
@@ -27,22 +27,4 @@ title: "Trace"
 
 ## Returns
 
-> (`_target`, `propertyKey`, `descriptor`): `PropertyDescriptor` \| `undefined`
-
-### Parameters
-
-#### \_target
-
-`object`
-
-#### propertyKey
-
-`string` | `symbol`
-
-#### descriptor
-
-`PropertyDescriptor`
-
-### Returns
-
-`PropertyDescriptor` \| `undefined`
+(`_target`, `propertyKey`, `descriptor`) => `PropertyDescriptor` \| `undefined`

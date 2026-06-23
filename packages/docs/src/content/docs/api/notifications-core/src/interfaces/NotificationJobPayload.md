@@ -19,49 +19,49 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`content`](/api/notifications-core/src/interfaces/notificationpayload/#content)
 
-***
+---
 
 ### idempotencyKey?
 
-> `optional` **idempotencyKey**: `string`
+> `optional` **idempotencyKey?**: `string`
 
-***
+---
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
 #### Inherited from
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`metadata`](/api/notifications-core/src/interfaces/notificationpayload/#metadata)
 
-***
+---
 
 ### providerName
 
 > **providerName**: `string`
 
-***
+---
 
 ### subject?
 
-> `optional` **subject**: `string`
+> `optional` **subject?**: `string`
 
 #### Inherited from
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`subject`](/api/notifications-core/src/interfaces/notificationpayload/#subject)
 
-***
+---
 
 ### templateId?
 
-> `optional` **templateId**: `string`
+> `optional` **templateId?**: `string`
 
 #### Inherited from
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`templateId`](/api/notifications-core/src/interfaces/notificationpayload/#templateid)
 
-***
+---
 
 ### to
 
@@ -71,11 +71,11 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`to`](/api/notifications-core/src/interfaces/notificationpayload/#to)
 
-***
+---
 
 ### variables?
 
-> `optional` **variables**: `Record`\<`string`, `unknown`\>
+> `optional` **variables?**: `Record`\<`string`, `unknown`\>
 
 #### Inherited from
 

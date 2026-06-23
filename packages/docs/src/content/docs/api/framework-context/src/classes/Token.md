@@ -36,4 +36,4 @@ Token name, optional and only used for debugging purposes.
 
 ### name?
 
-> `optional` **name**: `string`
+> `optional` **name?**: `string`

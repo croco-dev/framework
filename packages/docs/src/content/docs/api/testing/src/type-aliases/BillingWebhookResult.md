@@ -11,15 +11,15 @@ title: "BillingWebhookResult"
 
 ### error?
 
-> `readonly` `optional` **error**: `string`
+> `readonly` `optional` **error?**: `string`
 
-***
+---
 
 ### eventId?
 
-> `readonly` `optional` **eventId**: `string`
+> `readonly` `optional` **eventId?**: `string`
 
-***
+---
 
 ### success
 

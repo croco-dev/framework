@@ -11,34 +11,34 @@ title: "ProblemResponseExpectation"
 
 ### code?
 
-> `readonly` `optional` **code**: `string`
+> `readonly` `optional` **code?**: `string`
 
-***
+---
 
 ### detailIncludes?
 
-> `readonly` `optional` **detailIncludes**: `string` \| readonly `string`[]
+> `readonly` `optional` **detailIncludes?**: `string` \| readonly `string`[]
 
-***
+---
 
 ### instance?
 
-> `readonly` `optional` **instance**: `string`
+> `readonly` `optional` **instance?**: `string`
 
-***
+---
 
 ### status?
 
-> `readonly` `optional` **status**: `number`
+> `readonly` `optional` **status?**: `number`
 
-***
+---
 
 ### title?
 
-> `readonly` `optional` **title**: `string`
+> `readonly` `optional` **title?**: `string`
 
-***
+---
 
 ### type?
 
-> `readonly` `optional` **type**: `string`
+> `readonly` `optional` **type?**: `string`

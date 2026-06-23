@@ -11,4 +11,4 @@ title: "LambdaRequestContext"
 
 ### authorizer?
 
-> `optional` **authorizer**: `Record`\<`string`, `unknown`\>
+> `optional` **authorizer?**: `Record`\<`string`, `unknown`\>

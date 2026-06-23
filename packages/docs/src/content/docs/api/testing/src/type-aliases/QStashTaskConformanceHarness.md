@@ -9,7 +9,7 @@ title: "QStashTaskConformanceHarness"
 
 ## Properties
 
-### getPublishedMessages()
+### getPublishedMessages
 
 > `readonly` **getPublishedMessages**: () => readonly [`QStashTaskPublishRecord`](/api/testing/src/type-aliases/qstashtaskpublishrecord/)[]
 
@@ -17,7 +17,7 @@ title: "QStashTaskConformanceHarness"
 
 readonly [`QStashTaskPublishRecord`](/api/testing/src/type-aliases/qstashtaskpublishrecord/)[]
 
-***
+---
 
 ### publisher
 

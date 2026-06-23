@@ -13,51 +13,51 @@ title: "LlmUsageRecord"
 
 ### accuracy?
 
-> `optional` **accuracy**: [`UsageAccuracy`](/api/llm-metering/src/type-aliases/usageaccuracy/)
+> `optional` **accuracy?**: [`UsageAccuracy`](/api/llm-metering/src/type-aliases/usageaccuracy/)
 
-***
+---
 
 ### completionTokens
 
 > **completionTokens**: `number`
 
-***
+---
 
 ### costUsd
 
 > **costUsd**: `number`
 
-***
+---
 
 ### idempotencyKey
 
 > **idempotencyKey**: `string`
 
-***
+---
 
 ### modelId
 
 > **modelId**: `string`
 
-***
+---
 
 ### promptTokens
 
 > **promptTokens**: `number`
 
-***
+---
 
 ### provider
 
 > **provider**: `string`
 
-***
+---
 
 ### tenantId
 
 > **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 

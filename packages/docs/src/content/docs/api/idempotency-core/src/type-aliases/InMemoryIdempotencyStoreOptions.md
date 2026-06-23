@@ -11,4 +11,4 @@ title: "InMemoryIdempotencyStoreOptions"
 
 ### now?
 
-> `readonly` `optional` **now**: `Clock`
+> `readonly` `optional` **now?**: `Clock`

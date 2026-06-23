@@ -17,7 +17,7 @@ title: "getMeteredMetadata"
 
 ### propertyKey
 
-`string` | `symbol`
+`string` \| `symbol`
 
 ## Returns
 

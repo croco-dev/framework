@@ -9,7 +9,7 @@ title: "ProblemToastAdapterProps"
 
 ## Properties
 
-### children()
+### children
 
 > `readonly` **children**: (`payload`) => `ReactNode`
 
@@ -23,14 +23,14 @@ title: "ProblemToastAdapterProps"
 
 `ReactNode`
 
-***
+---
 
 ### problem
 
 > `readonly` **problem**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
-***
+---
 
 ### recoveryActions?
 
-> `readonly` `optional` **recoveryActions**: readonly [`ProblemRecoveryAction`](/api/frontend-react/src/type-aliases/problemrecoveryaction/)[]
+> `readonly` `optional` **recoveryActions?**: readonly [`ProblemRecoveryAction`](/api/frontend-react/src/type-aliases/problemrecoveryaction/)[]

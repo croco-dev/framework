@@ -11,10 +11,10 @@ title: "BetterAuthReadinessCheckResult"
 
 ### details?
 
-> `readonly` `optional` **details**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### message?
 
-> `readonly` `optional` **message**: `string`
+> `readonly` `optional` **message?**: `string`

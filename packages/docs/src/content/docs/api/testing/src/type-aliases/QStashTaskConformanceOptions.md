@@ -9,17 +9,17 @@ title: "QStashTaskConformanceOptions"
 
 ## Properties
 
-### createMissingConfig()?
+### createMissingConfig?
 
-> `readonly` `optional` **createMissingConfig**: () => `unknown` \| `Promise`\<`unknown`\>
+> `readonly` `optional` **createMissingConfig?**: () => `unknown` \| `Promise`\<`unknown`\>
 
 #### Returns
 
 `unknown` \| `Promise`\<`unknown`\>
 
-***
+---
 
-### createPublisher()
+### createPublisher
 
 > `readonly` **createPublisher**: (`scenario`) => [`QStashTaskConformanceHarness`](/api/testing/src/type-aliases/qstashtaskconformanceharness/) \| `Promise`\<[`QStashTaskConformanceHarness`](/api/testing/src/type-aliases/qstashtaskconformanceharness/)\>
 
@@ -33,20 +33,20 @@ title: "QStashTaskConformanceOptions"
 
 [`QStashTaskConformanceHarness`](/api/testing/src/type-aliases/qstashtaskconformanceharness/) \| `Promise`\<[`QStashTaskConformanceHarness`](/api/testing/src/type-aliases/qstashtaskconformanceharness/)\>
 
-***
+---
 
 ### liveSmoke?
 
-> `readonly` `optional` **liveSmoke**: [`ServerlessProviderLiveSmokeGate`](/api/testing/src/type-aliases/serverlessproviderlivesmokegate/)
+> `readonly` `optional` **liveSmoke?**: [`ServerlessProviderLiveSmokeGate`](/api/testing/src/type-aliases/serverlessproviderlivesmokegate/)
 
-***
+---
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
-***
+---
 
 ### secretSamples?
 
-> `readonly` `optional` **secretSamples**: readonly `string`[]
+> `readonly` `optional` **secretSamples?**: readonly `string`[]

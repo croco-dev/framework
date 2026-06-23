@@ -11,10 +11,10 @@ title: "IdempotencyScope"
 
 ### namespace?
 
-> `readonly` `optional` **namespace**: `string`
+> `readonly` `optional` **namespace?**: `string`
 
-***
+---
 
 ### tenantId?
 
-> `readonly` `optional` **tenantId**: `string` \| `null`
+> `readonly` `optional` **tenantId?**: `string` \| `null`

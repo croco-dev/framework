@@ -11,27 +11,27 @@ title: "CreateProjectIntentMapOptions"
 
 ### contractGraph?
 
-> `readonly` `optional` **contractGraph**: [`ContractGraph`](/api/protocols-core/src/type-aliases/contractgraph/)
+> `readonly` `optional` **contractGraph?**: [`ContractGraph`](/api/protocols-core/src/type-aliases/contractgraph/)
 
-***
+---
 
 ### generatedArtifacts?
 
-> `readonly` `optional` **generatedArtifacts**: readonly [`IntentMapGeneratedArtifact`](/api/framework-routes/src/type-aliases/intentmapgeneratedartifact/)[]
+> `readonly` `optional` **generatedArtifacts?**: readonly [`IntentMapGeneratedArtifact`](/api/framework-routes/src/type-aliases/intentmapgeneratedartifact/)[]
 
-***
+---
 
 ### projectRoot
 
 > `readonly` **projectRoot**: `string`
 
-***
+---
 
 ### routeRegistrationTable?
 
-> `readonly` `optional` **routeRegistrationTable**: `IntentMapRouteRegistrationTable`
+> `readonly` `optional` **routeRegistrationTable?**: `IntentMapRouteRegistrationTable`
 
-***
+---
 
 ### sourcePaths
 

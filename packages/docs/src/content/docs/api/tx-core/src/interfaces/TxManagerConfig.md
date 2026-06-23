@@ -11,10 +11,10 @@ title: "TxManagerConfig"
 
 ### defaultNesting?
 
-> `optional` **defaultNesting**: [`NestingStrategy`](/api/tx-core/src/type-aliases/nestingstrategy/)
+> `optional` **defaultNesting?**: [`NestingStrategy`](/api/tx-core/src/type-aliases/nestingstrategy/)
 
-***
+---
 
 ### defaultTimeout?
 
-> `optional` **defaultTimeout**: `number`
+> `optional` **defaultTimeout?**: `number`

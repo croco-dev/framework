@@ -15,31 +15,31 @@ Options for RetryTemplate.
 
 ### backoff?
 
-> `optional` **backoff**: [`BackoffOptions`](/api/retry-core/src/interfaces/backoffoptions/)
+> `optional` **backoff?**: [`BackoffOptions`](/api/retry-core/src/interfaces/backoffoptions/)
 
 Backoff configuration
 
-***
+---
 
 ### backoffPolicy?
 
-> `optional` **backoffPolicy**: [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/)\<`unknown`\>
+> `optional` **backoffPolicy?**: [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/)\<`unknown`\>
 
 Custom backoff policy (overrides backoff options)
 
-***
+---
 
 ### listeners?
 
-> `optional` **listeners**: [`RetryListener`](/api/retry-core/src/interfaces/retrylistener/)[]
+> `optional` **listeners?**: [`RetryListener`](/api/retry-core/src/interfaces/retrylistener/)[]
 
 Retry listeners for lifecycle hooks
 
-***
+---
 
 ### maxAttempts?
 
-> `optional` **maxAttempts**: `number`
+> `optional` **maxAttempts?**: `number`
 
 Maximum attempts (default: 3)
 
@@ -47,11 +47,11 @@ Maximum attempts (default: 3)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`maxAttempts`](/api/retry-core/src/interfaces/retrypolicyoptions/#maxattempts)
 
-***
+---
 
 ### noRetryFor?
 
-> `optional` **noRetryFor**: (`message?`) => `Error`[]
+> `optional` **noRetryFor?**: (`message?`) => `Error`[]
 
 Exception classes to never retry
 
@@ -69,11 +69,11 @@ Exception classes to never retry
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`noRetryFor`](/api/retry-core/src/interfaces/retrypolicyoptions/#noretryfor)
 
-***
+---
 
 ### retryFor?
 
-> `optional` **retryFor**: (`message?`) => `Error`[]
+> `optional` **retryFor?**: (`message?`) => `Error`[]
 
 Exception classes to retry (empty = retry all except noRetryFor)
 
@@ -91,11 +91,11 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`retryFor`](/api/retry-core/src/interfaces/retrypolicyoptions/#retryfor)
 
-***
+---
 
 ### retryForCategories?
 
-> `optional` **retryForCategories**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
+> `optional` **retryForCategories?**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
 
 ProblemCategory values to retry (croco integration)
 
@@ -103,18 +103,18 @@ ProblemCategory values to retry (croco integration)
 
 [`RetryPolicyOptions`](/api/retry-core/src/interfaces/retrypolicyoptions/).[`retryForCategories`](/api/retry-core/src/interfaces/retrypolicyoptions/#retryforcategories)
 
-***
+---
 
 ### retryPolicy?
 
-> `optional` **retryPolicy**: [`RetryPolicy`](/api/retry-core/src/interfaces/retrypolicy/)
+> `optional` **retryPolicy?**: [`RetryPolicy`](/api/retry-core/src/interfaces/retrypolicy/)
 
 Custom retry policy (overrides retryFor/noRetryFor)
 
-***
+---
 
 ### wrapExhausted?
 
-> `optional` **wrapExhausted**: `boolean`
+> `optional` **wrapExhausted?**: `boolean`
 
 Wrap exhausted error instead of re-throwing last error

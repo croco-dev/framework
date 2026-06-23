@@ -25,7 +25,7 @@ title: "createValidator"
 
 `object`
 
-### parse()
+### parse
 
 > **parse**: (`data`) => `T`
 
@@ -39,7 +39,7 @@ title: "createValidator"
 
 `T`
 
-### parseAsync()
+### parseAsync
 
 > **parseAsync**: (`data`) => `Promise`\<`T`\>
 
@@ -53,7 +53,7 @@ title: "createValidator"
 
 `Promise`\<`T`\>
 
-### safeParse()
+### safeParse
 
 > **safeParse**: (`data`) => \{ `data`: `T`; `success`: `true`; \} \| \{ `error`: [`ValidationIssue`](/api/protocols-rest/src/type-aliases/validationissue/)[]; `success`: `false`; \}
 

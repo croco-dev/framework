@@ -11,19 +11,19 @@ title: "ProblemBoundaryProps"
 
 ### children?
 
-> `readonly` `optional` **children**: `ReactNode`
+> `readonly` `optional` **children?**: `ReactNode`
 
-***
+---
 
 ### fallback?
 
-> `readonly` `optional` **fallback**: [`ProblemBoundaryFallback`](/api/frontend-react/src/type-aliases/problemboundaryfallback/)
+> `readonly` `optional` **fallback?**: [`ProblemBoundaryFallback`](/api/frontend-react/src/type-aliases/problemboundaryfallback/)
 
-***
+---
 
-### onProblem()?
+### onProblem?
 
-> `readonly` `optional` **onProblem**: (`problem`, `error`, `errorInfo?`) => `void`
+> `readonly` `optional` **onProblem?**: (`problem`, `error`, `errorInfo?`) => `void`
 
 #### Parameters
 
@@ -43,11 +43,11 @@ title: "ProblemBoundaryProps"
 
 `void`
 
-***
+---
 
-### onReset()?
+### onReset?
 
-> `readonly` `optional` **onReset**: (`problem`) => `void`
+> `readonly` `optional` **onReset?**: (`problem`) => `void`
 
 #### Parameters
 
@@ -59,14 +59,14 @@ title: "ProblemBoundaryProps"
 
 `void`
 
-***
+---
 
 ### recoveryActions?
 
-> `readonly` `optional` **recoveryActions**: readonly [`ProblemRecoveryAction`](/api/frontend-react/src/type-aliases/problemrecoveryaction/)[]
+> `readonly` `optional` **recoveryActions?**: readonly [`ProblemRecoveryAction`](/api/frontend-react/src/type-aliases/problemrecoveryaction/)[]
 
-***
+---
 
 ### resetKeys?
 
-> `readonly` `optional` **resetKeys**: readonly `unknown`[]
+> `readonly` `optional` **resetKeys?**: readonly `unknown`[]

@@ -11,10 +11,10 @@ title: "DefineRuntimePolicyOptions"
 
 ### requiredCapabilities?
 
-> `readonly` `optional` **requiredCapabilities**: readonly [`SupportedRuntimeCapabilityName`](/api/framework-context/src/type-aliases/supportedruntimecapabilityname/)\<`TPlatform`\>[]
+> `readonly` `optional` **requiredCapabilities?**: readonly [`SupportedRuntimeCapabilityName`](/api/framework-context/src/type-aliases/supportedruntimecapabilityname/)\<`TPlatform`\>[]
 
 ## Type Parameters
 
 ### TPlatform
 
-`TPlatform` *extends* [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
+`TPlatform` _extends_ [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)

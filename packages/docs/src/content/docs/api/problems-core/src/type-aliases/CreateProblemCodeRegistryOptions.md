@@ -11,4 +11,4 @@ title: "CreateProblemCodeRegistryOptions"
 
 ### cookbookBasePath?
 
-> `readonly` `optional` **cookbookBasePath**: `string`
+> `readonly` `optional` **cookbookBasePath?**: `string`

@@ -11,15 +11,15 @@ title: "ExplicitIdempotencyKeySource"
 
 ### fingerprint?
 
-> `readonly` `optional` **fingerprint**: `string`
+> `readonly` `optional` **fingerprint?**: `string`
 
-***
+---
 
 ### key
 
 > `readonly` **key**: `string`
 
-***
+---
 
 ### kind
 

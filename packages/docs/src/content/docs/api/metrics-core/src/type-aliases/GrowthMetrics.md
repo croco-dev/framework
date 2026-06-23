@@ -21,18 +21,18 @@ Quick Ratio = (New MRR + Expansion MRR) / (Churned MRR + Contraction MRR)
 
 New + Expansion / (Churned + Contraction). >1 means growing, <1 means shrinking
 
-***
+---
 
 ### revenueCC?
 
-> `optional` **revenueCC**: [`CCResult`](/api/metrics-core/src/type-aliases/ccresult/)
+> `optional` **revenueCC?**: [`CCResult`](/api/metrics-core/src/type-aliases/ccresult/)
 
 Optional: Revenue-based cohort capacity analysis
 
-***
+---
 
 ### userCC?
 
-> `optional` **userCC**: [`CCResult`](/api/metrics-core/src/type-aliases/ccresult/)
+> `optional` **userCC?**: [`CCResult`](/api/metrics-core/src/type-aliases/ccresult/)
 
 Optional: User-based cohort capacity analysis

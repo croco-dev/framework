@@ -37,7 +37,7 @@ title: "SearchAutoSync"
 
 ##### event
 
-[`DocumentIndexedEvent`](/api/search-core/src/classes/documentindexedevent/) | [`DocumentDeletedEvent`](/api/search-core/src/classes/documentdeletedevent/)
+[`DocumentIndexedEvent`](/api/search-core/src/classes/documentindexedevent/) \| [`DocumentDeletedEvent`](/api/search-core/src/classes/documentdeletedevent/)
 
 #### Returns
 

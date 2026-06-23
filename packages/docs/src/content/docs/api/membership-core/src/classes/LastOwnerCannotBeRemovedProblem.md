@@ -13,9 +13,11 @@ title: "LastOwnerCannotBeRemovedProblem"
 
 ## Example
 
+**에러 처리**
+
 ```typescript
 try {
-  await service.removeMember('tenant-1', 'last-owner');
+  await service.removeMember("tenant-1", "last-owner");
 } catch (err) {
   if (err instanceof LastOwnerCannotBeRemovedProblem) {
   }
@@ -60,17 +62,17 @@ try {
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`category`](/api/membership-core/src/classes/membershipconstraintproblem/#category)
 
-***
+---
 
 ### cause?
 
-> `readonly` `optional` **cause**: `Error`
+> `readonly` `optional` **cause?**: `Error`
 
 #### Inherited from
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`cause`](/api/membership-core/src/classes/membershipconstraintproblem/#cause)
 
-***
+---
 
 ### code
 
@@ -80,37 +82,37 @@ try {
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`code`](/api/membership-core/src/classes/membershipconstraintproblem/#code)
 
-***
+---
 
 ### detail?
 
-> `readonly` `optional` **detail**: `string`
+> `readonly` `optional` **detail?**: `string`
 
 #### Inherited from
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`detail`](/api/membership-core/src/classes/membershipconstraintproblem/#detail)
 
-***
+---
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+> `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
 #### Inherited from
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`extensions`](/api/membership-core/src/classes/membershipconstraintproblem/#extensions)
 
-***
+---
 
 ### instance?
 
-> `readonly` `optional` **instance**: `string`
+> `readonly` `optional` **instance?**: `string`
 
 #### Inherited from
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`instance`](/api/membership-core/src/classes/membershipconstraintproblem/#instance)
 
-***
+---
 
 ### message
 
@@ -120,7 +122,7 @@ try {
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`message`](/api/membership-core/src/classes/membershipconstraintproblem/#message)
 
-***
+---
 
 ### name
 
@@ -130,17 +132,17 @@ try {
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`name`](/api/membership-core/src/classes/membershipconstraintproblem/#name)
 
-***
+---
 
 ### stack?
 
-> `optional` **stack**: `string`
+> `optional` **stack?**: `string`
 
 #### Inherited from
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`stack`](/api/membership-core/src/classes/membershipconstraintproblem/#stack)
 
-***
+---
 
 ### type
 
@@ -150,7 +152,7 @@ try {
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`type`](/api/membership-core/src/classes/membershipconstraintproblem/#type)
 
-***
+---
 
 ### stackTraceLimit
 
@@ -186,7 +188,7 @@ not capture any frames.
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`status`](/api/membership-core/src/classes/membershipconstraintproblem/#status)
 
-***
+---
 
 ### title
 
@@ -216,7 +218,7 @@ not capture any frames.
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`toJSON`](/api/membership-core/src/classes/membershipconstraintproblem/#tojson)
 
-***
+---
 
 ### captureStackTrace()
 
@@ -229,7 +231,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -284,7 +286,7 @@ a();
 
 [`MembershipConstraintProblem`](/api/membership-core/src/classes/membershipconstraintproblem/).[`captureStackTrace`](/api/membership-core/src/classes/membershipconstraintproblem/#capturestacktrace)
 
-***
+---
 
 ### prepareStackTrace()
 

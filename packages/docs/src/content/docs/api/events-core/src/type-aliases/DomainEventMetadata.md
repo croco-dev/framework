@@ -11,10 +11,10 @@ title: "DomainEventMetadata"
 
 ## Indexable
 
-\[`key`: `string`\]: `unknown`
+> \[`key`: `string`\]: `unknown`
 
 ## Properties
 
 ### traceContext?
 
-> `optional` **traceContext**: [`EventTraceContext`](/api/events-core/src/type-aliases/eventtracecontext/)
+> `optional` **traceContext?**: [`EventTraceContext`](/api/events-core/src/type-aliases/eventtracecontext/)

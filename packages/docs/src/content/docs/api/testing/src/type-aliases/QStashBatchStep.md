@@ -13,11 +13,11 @@ title: "QStashBatchStep"
 
 > `readonly` **chunkSize**: `number`
 
-***
+---
 
-### classifyFailure()?
+### classifyFailure?
 
-> `readonly` `optional` **classifyFailure**: (`error`, `context`) => `boolean` \| \{ `code?`: `string`; `retryable`: `boolean`; \}
+> `readonly` `optional` **classifyFailure?**: (`error`, `context`) => `boolean` \| \{ `code?`: `string`; `retryable`: `boolean`; \}
 
 #### Parameters
 
@@ -39,17 +39,17 @@ title: "QStashBatchStep"
 
 `boolean` \| \{ `code?`: `string`; `retryable`: `boolean`; \}
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### processor?
 
-> `readonly` `optional` **processor**: `object`
+> `readonly` `optional` **processor?**: `object`
 
 #### process()
 
@@ -65,7 +65,7 @@ title: "QStashBatchStep"
 
 `unknown`
 
-***
+---
 
 ### reader
 
@@ -109,7 +109,7 @@ title: "QStashBatchStep"
 
 `void`
 
-***
+---
 
 ### writer
 

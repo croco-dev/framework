@@ -17,7 +17,7 @@ Configuration options for QStashTriggerHandler.
 
 Execution manager for dispatching executions.
 
-***
+---
 
 ### receiver
 
@@ -25,11 +25,11 @@ Execution manager for dispatching executions.
 
 QStash receiver instance for verifying webhook signatures.
 
-***
+---
 
 ### serviceResolver?
 
-> `readonly` `optional` **serviceResolver**: `ServiceResolver`
+> `readonly` `optional` **serviceResolver?**: `ServiceResolver`
 
 Optional service resolver for getting target instances.
 If not provided, uses the framework Container with constructor fallback.

@@ -17,8 +17,4 @@ title: "setupGracefulShutdown"
 
 ## Returns
 
-> (): `Promise`\<`void`\>
-
-### Returns
-
-`Promise`\<`void`\>
+() => `Promise`\<`void`\>

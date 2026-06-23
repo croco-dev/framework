@@ -11,22 +11,22 @@ title: "OperationsTimelineRetry"
 
 ### attempt?
 
-> `readonly` `optional` **attempt**: `number`
+> `readonly` `optional` **attempt?**: `number`
 
-***
+---
 
 ### maxAttempts?
 
-> `readonly` `optional` **maxAttempts**: `number`
+> `readonly` `optional` **maxAttempts?**: `number`
 
-***
+---
 
 ### nextRetryAt?
 
-> `readonly` `optional` **nextRetryAt**: `Date`
+> `readonly` `optional` **nextRetryAt?**: `Date`
 
-***
+---
 
 ### retryable?
 
-> `readonly` `optional` **retryable**: `boolean`
+> `readonly` `optional` **retryable?**: `boolean`

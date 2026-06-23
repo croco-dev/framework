@@ -11,27 +11,27 @@ title: "ResolverMetadata"
 
 ### args?
 
-> `optional` **args**: `Record`\<`string`, `unknown`\>
+> `optional` **args?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### methodName
 
 > **methodName**: `string`
 
-***
+---
 
 ### returnType?
 
-> `optional` **returnType**: `unknown`
+> `optional` **returnType?**: `unknown`
 
-***
+---
 
 ### target
 
 > **target**: `object`
 
-***
+---
 
 ### type
 

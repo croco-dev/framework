@@ -9,9 +9,9 @@ title: "BetterAuthDiagnosticsOptions"
 
 ## Properties
 
-### readinessCheck()?
+### readinessCheck?
 
-> `readonly` `optional` **readinessCheck**: (`context`) => `Promise`\<[`BetterAuthReadinessCheckResult`](/api/auth-better-auth/src/type-aliases/betterauthreadinesscheckresult/) \| `void`\>
+> `readonly` `optional` **readinessCheck?**: (`context`) => `Promise`\<[`BetterAuthReadinessCheckResult`](/api/auth-better-auth/src/type-aliases/betterauthreadinesscheckresult/) \| `void`\>
 
 #### Parameters
 

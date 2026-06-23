@@ -11,4 +11,4 @@ title: "NotificationSendOptions"
 
 ### idempotencyKey?
 
-> `optional` **idempotencyKey**: `string`
+> `optional` **idempotencyKey?**: `string`

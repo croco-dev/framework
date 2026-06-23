@@ -11,15 +11,15 @@ title: "RoleDefinition"
 
 ### inherits?
 
-> `optional` **inherits**: `string`[]
+> `optional` **inherits?**: `string`[]
 
-***
+---
 
 ### name
 
 > **name**: `string`
 
-***
+---
 
 ### permissions
 

@@ -13,10 +13,10 @@ title: "AuditIntegrityConfig"
 
 ### algorithm?
 
-> `optional` **algorithm**: `"sha256"`
+> `optional` **algorithm?**: `"sha256"`
 
-***
+---
 
 ### secretKey?
 
-> `optional` **secretKey**: `string`
+> `optional` **secretKey?**: `string`

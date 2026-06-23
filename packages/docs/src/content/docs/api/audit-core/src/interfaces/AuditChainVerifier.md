@@ -25,7 +25,7 @@ title: "AuditChainVerifier"
 
 ##### brokenAt?
 
-> `optional` **brokenAt**: `number`
+> `optional` **brokenAt?**: `number`
 
 ##### valid
 

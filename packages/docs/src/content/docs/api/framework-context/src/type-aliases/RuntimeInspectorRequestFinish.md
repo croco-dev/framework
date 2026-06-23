@@ -11,28 +11,28 @@ title: "RuntimeInspectorRequestFinish"
 
 ### details?
 
-> `readonly` `optional` **details**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### inspectionId?
 
-> `readonly` `optional` **inspectionId**: `string`
+> `readonly` `optional` **inspectionId?**: `string`
 
-***
+---
 
 ### outcome
 
 > `readonly` **outcome**: `Exclude`\<[`RuntimeInspectionOutcome`](/api/framework-context/src/type-aliases/runtimeinspectionoutcome/), `"running"`\>
 
-***
+---
 
 ### requestId?
 
-> `readonly` `optional` **requestId**: `string`
+> `readonly` `optional` **requestId?**: `string`
 
-***
+---
 
 ### status?
 
-> `readonly` `optional` **status**: `number`
+> `readonly` `optional` **status?**: `number`

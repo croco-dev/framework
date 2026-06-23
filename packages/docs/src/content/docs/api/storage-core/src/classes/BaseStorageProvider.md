@@ -240,9 +240,9 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 ##### data
 
-파일 데이터 (Buffer 또는 Readable 스트림)
+`Readable` \| `Buffer`\<`ArrayBufferLike`\>
 
-`Readable` | `Buffer`\<`ArrayBufferLike`\>
+파일 데이터 (Buffer 또는 Readable 스트림)
 
 ##### options?
 

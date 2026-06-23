@@ -11,68 +11,68 @@ title: "AppConfig"
 
 > **controllers**: [`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)[]
 
-***
+---
 
 ### devInspector?
 
-> `optional` **devInspector**: [`DevInspectorEndpointOptions`](/api/transports-http/src/type-aliases/devinspectorendpointoptions/)
+> `optional` **devInspector?**: [`DevInspectorEndpointOptions`](/api/transports-http/src/type-aliases/devinspectorendpointoptions/)
 
-***
+---
 
 ### diagnostics?
 
-> `optional` **diagnostics**: [`DiagnosticsEndpointOptions`](/api/transports-http/src/type-aliases/diagnosticsendpointoptions/)
+> `optional` **diagnostics?**: [`DiagnosticsEndpointOptions`](/api/transports-http/src/type-aliases/diagnosticsendpointoptions/)
 
-***
+---
 
 ### diValidation?
 
-> `optional` **diValidation**: `"warn"` \| `"enforce"` \| `"off"`
+> `optional` **diValidation?**: `"warn"` \| `"enforce"` \| `"off"`
 
-***
+---
 
 ### globalFilters?
 
-> `optional` **globalFilters**: `unknown`[]
+> `optional` **globalFilters?**: `unknown`[]
 
-***
+---
 
 ### globalGuards?
 
-> `optional` **globalGuards**: `unknown`[]
+> `optional` **globalGuards?**: `unknown`[]
 
-***
+---
 
 ### globalInterceptors?
 
-> `optional` **globalInterceptors**: `unknown`[]
+> `optional` **globalInterceptors?**: `unknown`[]
 
-***
+---
 
 ### globalPipes?
 
-> `optional` **globalPipes**: `unknown`[]
+> `optional` **globalPipes?**: `unknown`[]
 
-***
+---
 
 ### middlewares?
 
-> `optional` **middlewares**: [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)[]
+> `optional` **middlewares?**: [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)[]
 
-***
+---
 
 ### securityValidation?
 
-> `optional` **securityValidation**: `"warn"` \| `"enforce"` \| `"off"`
+> `optional` **securityValidation?**: `"warn"` \| `"enforce"` \| `"off"`
 
-***
+---
 
 ### unsafeSkipDiValidation?
 
-> `optional` **unsafeSkipDiValidation**: `true`
+> `optional` **unsafeSkipDiValidation?**: `true`
 
-***
+---
 
 ### unsafeSkipSecurityValidation?
 
-> `optional` **unsafeSkipSecurityValidation**: `true`
+> `optional` **unsafeSkipSecurityValidation?**: `true`

@@ -17,17 +17,7 @@ title: "GuardContext"
 
 #### Returns
 
-> (...`args`): `unknown`
-
-##### Parameters
-
-###### args
-
-...`unknown`[]
-
-##### Returns
-
-`unknown`
+(...`args`) => `unknown`
 
 ### set()
 

@@ -13,4 +13,4 @@ Clerk tenant 매핑에 필요한 공개 타입입니다.
 
 ### user?
 
-> `optional` **user**: [`AuthUser`](/api/auth-core/src/type-aliases/authuser/)
+> `optional` **user?**: [`AuthUser`](/api/auth-core/src/type-aliases/authuser/)

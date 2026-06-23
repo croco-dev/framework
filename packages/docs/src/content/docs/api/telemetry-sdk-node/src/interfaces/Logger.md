@@ -13,9 +13,9 @@ Provides methods to emit logs at different severity levels.
 ```typescript
 const logger = TelemetryRuntime.getInstance().getLogger();
 
-logger.info('Application started');
-logger.error('Failed to connect', { error: err.message });
-logger.debug('Processing request', { requestId: 'abc123' });
+logger.info("Application started");
+logger.error("Failed to connect", { error: err.message });
+logger.debug("Processing request", { requestId: "abc123" });
 ```
 
 ## Methods
@@ -30,9 +30,9 @@ Logs a message at DEBUG level.
 
 ##### body
 
-The log message or structured data
+`string` \| `Record`\<`string`, `unknown`\>
 
-`string` | `Record`\<`string`, `unknown`\>
+The log message or structured data
 
 ##### attributes?
 
@@ -44,7 +44,7 @@ Additional attributes
 
 `void`
 
-***
+---
 
 ### emit()
 
@@ -64,7 +64,7 @@ Log record options
 
 `void`
 
-***
+---
 
 ### error()
 
@@ -76,9 +76,9 @@ Logs a message at ERROR level.
 
 ##### body
 
-The log message or structured data
+`string` \| `Record`\<`string`, `unknown`\>
 
-`string` | `Record`\<`string`, `unknown`\>
+The log message or structured data
 
 ##### attributes?
 
@@ -90,7 +90,7 @@ Additional attributes
 
 `void`
 
-***
+---
 
 ### fatal()
 
@@ -102,9 +102,9 @@ Logs a message at FATAL level.
 
 ##### body
 
-The log message or structured data
+`string` \| `Record`\<`string`, `unknown`\>
 
-`string` | `Record`\<`string`, `unknown`\>
+The log message or structured data
 
 ##### attributes?
 
@@ -116,7 +116,7 @@ Additional attributes
 
 `void`
 
-***
+---
 
 ### info()
 
@@ -128,9 +128,9 @@ Logs a message at INFO level.
 
 ##### body
 
-The log message or structured data
+`string` \| `Record`\<`string`, `unknown`\>
 
-`string` | `Record`\<`string`, `unknown`\>
+The log message or structured data
 
 ##### attributes?
 
@@ -142,7 +142,7 @@ Additional attributes
 
 `void`
 
-***
+---
 
 ### trace()
 
@@ -154,9 +154,9 @@ Logs a message at TRACE level.
 
 ##### body
 
-The log message or structured data
+`string` \| `Record`\<`string`, `unknown`\>
 
-`string` | `Record`\<`string`, `unknown`\>
+The log message or structured data
 
 ##### attributes?
 
@@ -168,7 +168,7 @@ Additional attributes
 
 `void`
 
-***
+---
 
 ### warn()
 
@@ -180,9 +180,9 @@ Logs a message at WARN level.
 
 ##### body
 
-The log message or structured data
+`string` \| `Record`\<`string`, `unknown`\>
 
-`string` | `Record`\<`string`, `unknown`\>
+The log message or structured data
 
 ##### attributes?
 

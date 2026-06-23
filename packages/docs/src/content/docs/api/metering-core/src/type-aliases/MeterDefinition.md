@@ -13,51 +13,51 @@ Meter 정의 (DB 저장)
 
 ### allowOverQuota?
 
-> `optional` **allowOverQuota**: `boolean`
+> `optional` **allowOverQuota?**: `boolean`
 
-***
+---
 
 ### createdAt
 
 > **createdAt**: `Date`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### meterId
 
 > **meterId**: `string`
 
-***
+---
 
 ### quota?
 
-> `optional` **quota**: `number`
+> `optional` **quota?**: `number`
 
-***
+---
 
 ### tenantId
 
 > **tenantId**: `string`
 
-***
+---
 
 ### type
 
 > **type**: [`MeterType`](/api/metering-core/src/type-aliases/metertype/)
 
-***
+---
 
 ### updatedAt
 

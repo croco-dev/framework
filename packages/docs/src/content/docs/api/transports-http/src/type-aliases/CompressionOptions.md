@@ -13,10 +13,10 @@ title: "CompressionOptions"
 
 ### encodings?
 
-> `optional` **encodings**: [`CompressionEncoding`](/api/transports-http/src/type-aliases/compressionencoding/)[]
+> `optional` **encodings?**: [`CompressionEncoding`](/api/transports-http/src/type-aliases/compressionencoding/)[]
 
-***
+---
 
 ### threshold?
 
-> `optional` **threshold**: `number`
+> `optional` **threshold?**: `number`

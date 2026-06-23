@@ -15,32 +15,32 @@ title: "NotificationPayload"
 
 > **content**: `string`
 
-***
+---
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### subject?
 
-> `optional` **subject**: `string`
+> `optional` **subject?**: `string`
 
-***
+---
 
 ### templateId?
 
-> `optional` **templateId**: `string`
+> `optional` **templateId?**: `string`
 
-***
+---
 
 ### to
 
 > **to**: `string`
 
-***
+---
 
 ### variables?
 
-> `optional` **variables**: `Record`\<`string`, `unknown`\>
+> `optional` **variables?**: `Record`\<`string`, `unknown`\>

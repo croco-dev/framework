@@ -15,44 +15,44 @@ title: "GenerateInvoiceParams"
 
 > **billingAccountId**: `string`
 
-***
+---
 
 ### currency
 
 > **currency**: `string`
 
-***
+---
 
 ### dueAt?
 
-> `optional` **dueAt**: `Date`
+> `optional` **dueAt?**: `Date`
 
-***
+---
 
 ### externalInvoiceId?
 
-> `optional` **externalInvoiceId**: `string`
+> `optional` **externalInvoiceId?**: `string`
 
-***
+---
 
 ### invoiceId
 
 > **invoiceId**: `string`
 
-***
+---
 
 ### issuedAt
 
 > **issuedAt**: `Date`
 
-***
+---
 
 ### lineItems
 
 > **lineItems**: [`InvoiceLineItem`](/api/billing-core/src/type-aliases/invoicelineitem/)[]
 
-***
+---
 
 ### status?
 
-> `optional` **status**: [`InvoiceStatus`](/api/billing-core/src/type-aliases/invoicestatus/)
+> `optional` **status?**: [`InvoiceStatus`](/api/billing-core/src/type-aliases/invoicestatus/)

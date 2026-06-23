@@ -13,46 +13,46 @@ title: "SecurityHeadersOptions"
 
 ### contentSecurityPolicy?
 
-> `optional` **contentSecurityPolicy**: `boolean` \| `string`
+> `optional` **contentSecurityPolicy?**: `boolean` \| `string`
 
-***
+---
 
 ### contentTypeOptions?
 
-> `optional` **contentTypeOptions**: `boolean`
+> `optional` **contentTypeOptions?**: `boolean`
 
-***
+---
 
 ### frameOptions?
 
-> `optional` **frameOptions**: `boolean` \| `"DENY"` \| `"SAMEORIGIN"` \| `"ALLOW-FROM"`
+> `optional` **frameOptions?**: `boolean` \| `"DENY"` \| `"SAMEORIGIN"` \| `"ALLOW-FROM"`
 
-***
+---
 
 ### frameOptionsAllowFrom?
 
-> `optional` **frameOptionsAllowFrom**: `string`
+> `optional` **frameOptionsAllowFrom?**: `string`
 
-***
+---
 
 ### permissionsPolicy?
 
-> `optional` **permissionsPolicy**: `boolean` \| `string`
+> `optional` **permissionsPolicy?**: `boolean` \| `string`
 
-***
+---
 
 ### referrerPolicy?
 
-> `optional` **referrerPolicy**: `boolean` \| `ReferrerPolicyValue`
+> `optional` **referrerPolicy?**: `boolean` \| `ReferrerPolicyValue`
 
-***
+---
 
 ### strictTransportSecurity?
 
-> `optional` **strictTransportSecurity**: `boolean` \| \{ `includeSubDomains?`: `boolean`; `maxAge`: `number`; \}
+> `optional` **strictTransportSecurity?**: `boolean` \| \{ `includeSubDomains?`: `boolean`; `maxAge`: `number`; \}
 
-***
+---
 
 ### xssProtection?
 
-> `optional` **xssProtection**: `boolean`
+> `optional` **xssProtection?**: `boolean`

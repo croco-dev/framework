@@ -11,8 +11,8 @@ title: "BetterAuthDiagnosticsConfig"
 
 ### databaseConfigured?
 
-> `readonly` `optional` **databaseConfigured**: `boolean`
+> `readonly` `optional` **databaseConfigured?**: `boolean`
 
 ### webhookSecret?
 
-> `readonly` `optional` **webhookSecret**: `string`
+> `readonly` `optional` **webhookSecret?**: `string`

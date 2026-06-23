@@ -11,11 +11,11 @@ Options for creating a Gauge instrument.
 
 ### description?
 
-> `optional` **description**: `string`
+> `optional` **description?**: `string`
 
 Optional description of the gauge
 
-***
+---
 
 ### name
 
@@ -23,10 +23,10 @@ Optional description of the gauge
 
 The name of the gauge
 
-***
+---
 
 ### unit?
 
-> `optional` **unit**: `string`
+> `optional` **unit?**: `string`
 
 Optional unit of measurement

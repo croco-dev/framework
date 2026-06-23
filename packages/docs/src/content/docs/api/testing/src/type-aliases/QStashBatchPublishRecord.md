@@ -11,16 +11,16 @@ title: "QStashBatchPublishRecord"
 
 ### body?
 
-> `readonly` `optional` **body**: `unknown`
+> `readonly` `optional` **body?**: `unknown`
 
-***
+---
 
 ### headers?
 
-> `readonly` `optional` **headers**: `Record`\<`string`, `string`\>
+> `readonly` `optional` **headers?**: `Record`\<`string`, `string`\>
 
-***
+---
 
 ### url?
 
-> `readonly` `optional` **url**: `string`
+> `readonly` `optional` **url?**: `string`

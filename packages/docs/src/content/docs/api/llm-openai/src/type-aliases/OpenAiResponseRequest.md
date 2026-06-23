@@ -13,66 +13,66 @@ title: "OpenAiResponseRequest"
 
 > `readonly` **input**: `string` \| readonly [`OpenAiInputMessage`](/api/llm-openai/src/type-aliases/openaiinputmessage/)[]
 
-***
+---
 
 ### instructions?
 
-> `readonly` `optional` **instructions**: `string`
+> `readonly` `optional` **instructions?**: `string`
 
-***
+---
 
-### max\_output\_tokens?
+### max_output_tokens?
 
-> `readonly` `optional` **max\_output\_tokens**: `number`
+> `readonly` `optional` **max_output_tokens?**: `number`
 
-***
+---
 
 ### model
 
 > `readonly` **model**: `string`
 
-***
+---
 
 ### stop?
 
-> `readonly` `optional` **stop**: readonly `string`[]
+> `readonly` `optional` **stop?**: readonly `string`[]
 
-***
+---
 
 ### store?
 
-> `readonly` `optional` **store**: `boolean`
+> `readonly` `optional` **store?**: `boolean`
 
-***
+---
 
 ### stream?
 
-> `readonly` `optional` **stream**: `boolean`
+> `readonly` `optional` **stream?**: `boolean`
 
-***
+---
 
 ### temperature?
 
-> `readonly` `optional` **temperature**: `number`
+> `readonly` `optional` **temperature?**: `number`
 
-***
+---
 
 ### text?
 
-> `readonly` `optional` **text**: `object`
+> `readonly` `optional` **text?**: `object`
 
 #### format
 
 > `readonly` **format**: `OpenAiTextFormat`
 
-***
+---
 
-### tool\_choice?
+### tool_choice?
 
-> `readonly` `optional` **tool\_choice**: `"auto"`
+> `readonly` `optional` **tool_choice?**: `"auto"`
 
-***
+---
 
 ### tools?
 
-> `readonly` `optional` **tools**: readonly `OpenAiFunctionTool`[]
+> `readonly` `optional` **tools?**: readonly `OpenAiFunctionTool`[]

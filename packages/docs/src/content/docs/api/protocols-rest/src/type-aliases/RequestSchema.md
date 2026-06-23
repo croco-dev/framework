@@ -11,22 +11,22 @@ title: "RequestSchema"
 
 ### body?
 
-> `optional` **body**: `z.ZodType`
+> `optional` **body?**: `z.ZodType`
 
-***
+---
 
 ### headers?
 
-> `optional` **headers**: `z.ZodType`
+> `optional` **headers?**: `z.ZodType`
 
-***
+---
 
 ### params?
 
-> `optional` **params**: `z.ZodType`
+> `optional` **params?**: `z.ZodType`
 
-***
+---
 
 ### query?
 
-> `optional` **query**: `z.ZodType`
+> `optional` **query?**: `z.ZodType`

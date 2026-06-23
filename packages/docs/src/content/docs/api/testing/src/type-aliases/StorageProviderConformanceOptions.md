@@ -9,7 +9,7 @@ title: "StorageProviderConformanceOptions"
 
 ## Properties
 
-### createProvider()
+### createProvider
 
 > `readonly` **createProvider**: () => [`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/) \| `Promise`\<[`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/)\>
 
@@ -17,40 +17,40 @@ title: "StorageProviderConformanceOptions"
 
 [`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/) \| `Promise`\<[`StorageProvider`](/api/storage-core/src/type-aliases/storageprovider/)\>
 
-***
+---
 
 ### keyPrefix?
 
-> `readonly` `optional` **keyPrefix**: `string`
+> `readonly` `optional` **keyPrefix?**: `string`
 
-***
+---
 
 ### metadata?
 
-> `readonly` `optional` **metadata**: `object`
+> `readonly` `optional` **metadata?**: `object`
 
 #### contentType?
 
-> `readonly` `optional` **contentType**: [`StorageProviderOptionalMetadataExpectation`](/api/testing/src/type-aliases/storageprovideroptionalmetadataexpectation/)
+> `readonly` `optional` **contentType?**: [`StorageProviderOptionalMetadataExpectation`](/api/testing/src/type-aliases/storageprovideroptionalmetadataexpectation/)
 
 #### customMetadata?
 
-> `readonly` `optional` **customMetadata**: [`StorageProviderOptionalMetadataExpectation`](/api/testing/src/type-aliases/storageprovideroptionalmetadataexpectation/)
+> `readonly` `optional` **customMetadata?**: [`StorageProviderOptionalMetadataExpectation`](/api/testing/src/type-aliases/storageprovideroptionalmetadataexpectation/)
 
-***
+---
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
-***
+---
 
 ### publicUrl?
 
-> `readonly` `optional` **publicUrl**: [`StorageProviderUrlExpectation`](/api/testing/src/type-aliases/storageproviderurlexpectation/)
+> `readonly` `optional` **publicUrl?**: [`StorageProviderUrlExpectation`](/api/testing/src/type-aliases/storageproviderurlexpectation/)
 
-***
+---
 
 ### signedUrl?
 
-> `readonly` `optional` **signedUrl**: [`StorageProviderUrlExpectation`](/api/testing/src/type-aliases/storageproviderurlexpectation/)
+> `readonly` `optional` **signedUrl?**: [`StorageProviderUrlExpectation`](/api/testing/src/type-aliases/storageproviderurlexpectation/)

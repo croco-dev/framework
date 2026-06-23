@@ -11,7 +11,7 @@ title: "createLambdaHandler"
 
 ### honoApp
 
-`Hono`\<`BlankEnv`, `BlankSchema`, `"/"`\> | \{ `fetch`: (`req`) => `Promise`\<`Response`\>; \}
+`Hono`\<`BlankEnv`, `BlankSchema`, `"/"`\> \| \{ `fetch`: (`req`) => `Promise`\<`Response`\>; \}
 
 ## Returns
 

@@ -13,34 +13,34 @@ Cloudinary 변환 파라미터 타입입니다.
 
 ### crop?
 
-> `optional` **crop**: `"scale"` \| `"fit"` \| `"fill"` \| `"limit"` \| `"pad"` \| `"crop"` \| `"thumb"`
+> `optional` **crop?**: `"scale"` \| `"fit"` \| `"fill"` \| `"limit"` \| `"pad"` \| `"crop"` \| `"thumb"`
 
 ---
 
 ### dpr?
 
-> `optional` **dpr**: `number`
+> `optional` **dpr?**: `number`
 
 ---
 
 ### format?
 
-> `optional` **format**: `string`
+> `optional` **format?**: `string`
 
 ---
 
 ### height?
 
-> `optional` **height**: `number`
+> `optional` **height?**: `number`
 
 ---
 
 ### quality?
 
-> `optional` **quality**: `number`
+> `optional` **quality?**: `number`
 
 ---
 
 ### width?
 
-> `optional` **width**: `number`
+> `optional` **width?**: `number`

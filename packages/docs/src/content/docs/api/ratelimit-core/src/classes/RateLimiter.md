@@ -27,7 +27,7 @@ title: "RateLimiter"
 
 ##### keyBuilder
 
-[`RateLimiterKeyBuilder`](/api/ratelimit-core/src/type-aliases/ratelimiterkeybuilder/)\<`TContext`\> | [`RateLimitKeyBuilder`](/api/ratelimit-core/src/classes/ratelimitkeybuilder/)
+[`RateLimiterKeyBuilder`](/api/ratelimit-core/src/type-aliases/ratelimiterkeybuilder/)\<`TContext`\> \| [`RateLimitKeyBuilder`](/api/ratelimit-core/src/classes/ratelimitkeybuilder/)
 
 ##### options?
 
@@ -63,7 +63,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-***
+---
 
 ### checkWithKey()
 
@@ -83,7 +83,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-***
+---
 
 ### getStats()
 
@@ -99,7 +99,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitStats`](/api/ratelimit-core/src/type-aliases/ratelimitstats/)\>
 
-***
+---
 
 ### refund()
 
@@ -123,7 +123,7 @@ title: "RateLimiter"
 
 `Promise`\<[`RateLimitRefundResult`](/api/ratelimit-core/src/type-aliases/ratelimitrefundresult/)\>
 
-***
+---
 
 ### refundWithKey()
 

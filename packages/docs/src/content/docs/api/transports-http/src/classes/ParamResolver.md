@@ -41,7 +41,7 @@ title: "ParamResolver"
 
 ##### methodName
 
-`string` | `symbol`
+`string` \| `symbol`
 
 #### Returns
 

@@ -13,34 +13,34 @@ LLM 데코레이터, 메타데이터 조회, 전역 서비스 바인딩 유틸�
 
 ### maxTokens?
 
-> `optional` **maxTokens**: `number`
+> `optional` **maxTokens?**: `number`
 
-***
+---
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### modelId?
 
-> `optional` **modelId**: `string`
+> `optional` **modelId?**: `string`
 
-***
+---
 
 ### stopSequences?
 
-> `optional` **stopSequences**: `string`[]
+> `optional` **stopSequences?**: `string`[]
 
-***
+---
 
 ### systemPrompt?
 
-> `optional` **systemPrompt**: `string`
+> `optional` **systemPrompt?**: `string`
 
-***
+---
 
 ### temperature?
 
-> `optional` **temperature**: `number`
+> `optional` **temperature?**: `number`

@@ -17,52 +17,52 @@ same-slot node must precede another for semantic correctness.
 
 ### dependsOn?
 
-> `readonly` `optional` **dependsOn**: readonly `string`[]
+> `readonly` `optional` **dependsOn?**: readonly `string`[]
 
-***
+---
 
 ### failurePropagation?
 
-> `readonly` `optional` **failurePropagation**: [`RequestPipelineFailurePropagation`](/api/framework-context/src/type-aliases/requestpipelinefailurepropagation/)
+> `readonly` `optional` **failurePropagation?**: [`RequestPipelineFailurePropagation`](/api/framework-context/src/type-aliases/requestpipelinefailurepropagation/)
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: [`RequestPipelineNodeKind`](/api/framework-context/src/type-aliases/requestpipelinenodekind/)
 
-***
+---
 
 ### label?
 
-> `readonly` `optional` **label**: `string`
+> `readonly` `optional` **label?**: `string`
 
-***
+---
 
 ### order?
 
-> `readonly` `optional` **order**: `number`
+> `readonly` `optional` **order?**: `number`
 
-***
+---
 
 ### phase
 
 > `readonly` **phase**: [`RequestPipelinePhase`](/api/framework-context/src/type-aliases/requestpipelinephase/)
 
-***
+---
 
 ### policyKind?
 
-> `readonly` `optional` **policyKind**: [`PolicyKind`](/api/framework-context/src/type-aliases/policykind/)
+> `readonly` `optional` **policyKind?**: [`PolicyKind`](/api/framework-context/src/type-aliases/policykind/)
 
-***
+---
 
 ### source?
 
-> `readonly` `optional` **source**: [`PolicySource`](/api/framework-context/src/type-aliases/policysource/)
+> `readonly` `optional` **source?**: [`PolicySource`](/api/framework-context/src/type-aliases/policysource/)

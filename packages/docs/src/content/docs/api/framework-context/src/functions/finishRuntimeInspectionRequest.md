@@ -11,7 +11,7 @@ title: "finishRuntimeInspectionRequest"
 
 ### inspector
 
-[`RuntimeInspector`](/api/framework-context/src/classes/runtimeinspector/) | `undefined`
+[`RuntimeInspector`](/api/framework-context/src/classes/runtimeinspector/) \| `undefined`
 
 ### input
 

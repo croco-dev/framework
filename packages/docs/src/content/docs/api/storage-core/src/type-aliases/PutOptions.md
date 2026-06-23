@@ -13,30 +13,30 @@ title: "PutOptions"
 
 ### cacheControl?
 
-> `optional` **cacheControl**: `string`
+> `optional` **cacheControl?**: `string`
 
 Cache-Control 헤더
 
-***
+---
 
 ### contentType?
 
-> `optional` **contentType**: `string`
+> `optional` **contentType?**: `string`
 
 Content-Type (MIME type)
 
-***
+---
 
 ### isPublic?
 
-> `optional` **isPublic**: `boolean`
+> `optional` **isPublic?**: `boolean`
 
 공개 액세스 여부
 
-***
+---
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `string`\>
+> `optional` **metadata?**: `Record`\<`string`, `string`\>
 
 메타데이터

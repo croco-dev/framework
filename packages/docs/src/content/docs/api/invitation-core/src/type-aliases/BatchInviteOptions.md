@@ -13,10 +13,10 @@ title: "BatchInviteOptions"
 
 ### expiresInDays?
 
-> `optional` **expiresInDays**: `number`
+> `optional` **expiresInDays?**: `number`
 
-***
+---
 
 ### maxBatchSize?
 
-> `optional` **maxBatchSize**: `number`
+> `optional` **maxBatchSize?**: `number`

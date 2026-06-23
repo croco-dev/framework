@@ -10,11 +10,11 @@ title: "RequestContext"
 ## Example
 
 ```typescript
-import type { RequestContext } from '@croco/framework-context';
+import type { RequestContext } from "@croco/framework-context";
 
 const ctx: RequestContext = {
-  requestId: 'req-123',
-  tenantId: 'tenant-a',
+  requestId: "req-123",
+  tenantId: "tenant-a",
 };
 ```
 
@@ -22,9 +22,9 @@ const ctx: RequestContext = {
 
 ### inspectionId?
 
-> `optional` **inspectionId**: `string`
+> `optional` **inspectionId?**: `string`
 
-***
+---
 
 ### requestId
 
@@ -32,50 +32,50 @@ const ctx: RequestContext = {
 
 요청 고유 식별자입니다.
 
-***
+---
 
 ### runtime?
 
-> `optional` **runtime**: [`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/)
+> `optional` **runtime?**: [`RuntimeContext`](/api/framework-context/src/interfaces/runtimecontext/)
 
-***
+---
 
 ### runtimeInspector?
 
-> `optional` **runtimeInspector**: [`RuntimeInspectorRecorder`](/api/framework-context/src/interfaces/runtimeinspectorrecorder/)
+> `optional` **runtimeInspector?**: [`RuntimeInspectorRecorder`](/api/framework-context/src/interfaces/runtimeinspectorrecorder/)
 
-***
+---
 
 ### spanId?
 
-> `optional` **spanId**: `string`
+> `optional` **spanId?**: `string`
 
-***
+---
 
 ### tenantId?
 
-> `optional` **tenantId**: `string`
+> `optional` **tenantId?**: `string`
 
 멀티 테넌트 식별자입니다.
 
-***
+---
 
 ### traceFlags?
 
-> `optional` **traceFlags**: `string` \| `number`
+> `optional` **traceFlags?**: `string` \| `number`
 
-***
+---
 
 ### traceId?
 
-> `optional` **traceId**: `string`
+> `optional` **traceId?**: `string`
 
 분산 추적 식별자입니다.
 
-***
+---
 
 ### user?
 
-> `optional` **user**: `UserContext`
+> `optional` **user?**: `UserContext`
 
 현재 사용자 정보입니다.

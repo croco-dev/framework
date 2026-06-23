@@ -45,7 +45,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### cause?
 
-> `readonly` `optional` **cause**: `Error`
+> `readonly` `optional` **cause?**: `Error`
 
 #### Inherited from
 
@@ -65,7 +65,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### detail?
 
-> `readonly` `optional` **detail**: `string`
+> `readonly` `optional` **detail?**: `string`
 
 #### Inherited from
 
@@ -75,7 +75,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+> `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
 #### Inherited from
 
@@ -85,7 +85,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### instance?
 
-> `readonly` `optional` **instance**: `string`
+> `readonly` `optional` **instance?**: `string`
 
 #### Inherited from
 
@@ -115,7 +115,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### stack?
 
-> `optional` **stack**: `string`
+> `optional` **stack?**: `string`
 
 #### Inherited from
 

@@ -9,9 +9,9 @@ Dependency injection for testability.
 
 ## Properties
 
-### random()?
+### random?
 
-> `optional` **random**: () => `number`
+> `optional` **random?**: () => `number`
 
 Random function (default: Math.random)
 
@@ -19,11 +19,11 @@ Random function (default: Math.random)
 
 `number`
 
-***
+---
 
-### sleep()?
+### sleep?
 
-> `optional` **sleep**: (`ms`) => `Promise`\<`void`\>
+> `optional` **sleep?**: (`ms`) => `Promise`\<`void`\>
 
 Sleep function (default: setTimeout-based)
 

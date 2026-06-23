@@ -11,4 +11,4 @@ title: "CreateFrameworkManifestFromIntentMapOptions"
 
 ### requiredEntityKinds?
 
-> `readonly` `optional` **requiredEntityKinds**: readonly [`FrameworkManifestEntityKind`](/api/framework-routes/src/type-aliases/frameworkmanifestentitykind/)[]
+> `readonly` `optional` **requiredEntityKinds?**: readonly [`FrameworkManifestEntityKind`](/api/framework-routes/src/type-aliases/frameworkmanifestentitykind/)[]

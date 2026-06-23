@@ -13,10 +13,10 @@ title: "AuditParamMetadata"
 
 ### payloadIndex?
 
-> `optional` **payloadIndex**: `number`
+> `optional` **payloadIndex?**: `number`
 
-***
+---
 
 ### resourceIdIndex?
 
-> `optional` **resourceIdIndex**: `number`
+> `optional` **resourceIdIndex?**: `number`

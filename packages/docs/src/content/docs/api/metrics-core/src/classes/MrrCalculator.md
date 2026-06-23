@@ -46,7 +46,7 @@ Active subscriptions to calculate MRR from
 
 Total MRR as Money value
 
-***
+---
 
 ### classifyMRRMovement()
 
@@ -70,9 +70,9 @@ Whether previous subscription was churned
 
 ##### previousAmount
 
-Previous plan amount (if any)
+`number` \| `null`
 
-`number` | `null`
+Previous plan amount (if any)
 
 ##### newAmount
 
@@ -86,7 +86,7 @@ New plan amount
 
 MRR movement type
 
-***
+---
 
 ### normalizeMRR()
 
@@ -104,9 +104,9 @@ Plan amount in minor units
 
 ##### interval
 
-Plan interval (month or year)
+`"month"` \| `"year"`
 
-`"month"` | `"year"`
+Plan interval (month or year)
 
 ##### intervalCount
 

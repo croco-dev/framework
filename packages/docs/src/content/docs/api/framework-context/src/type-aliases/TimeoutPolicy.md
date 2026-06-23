@@ -13,19 +13,19 @@ title: "TimeoutPolicy"
 
 > `readonly` **kind**: `"timeout"`
 
-***
+---
 
 ### onTimeout?
 
-> `readonly` `optional` **onTimeout**: `"abort"` \| `"fail"`
+> `readonly` `optional` **onTimeout?**: `"abort"` \| `"fail"`
 
-***
+---
 
 ### scope?
 
-> `readonly` `optional` **scope**: `"operation"` \| `"attempt"`
+> `readonly` `optional` **scope?**: `"operation"` \| `"attempt"`
 
-***
+---
 
 ### timeoutMs
 

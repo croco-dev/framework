@@ -11,10 +11,10 @@ title: "RetryConsoleSourceRecoveryResult"
 
 ### item?
 
-> `readonly` `optional` **item**: [`RetryConsoleItem`](/api/admin-ops/src/type-aliases/retryconsoleitem/)
+> `readonly` `optional` **item?**: [`RetryConsoleItem`](/api/admin-ops/src/type-aliases/retryconsoleitem/)
 
-***
+---
 
 ### providerResult?
 
-> `readonly` `optional` **providerResult**: `unknown`
+> `readonly` `optional` **providerResult?**: `unknown`

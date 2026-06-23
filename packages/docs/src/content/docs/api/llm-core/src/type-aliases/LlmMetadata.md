@@ -11,7 +11,7 @@ title: "LlmMetadata"
 
 ## Indexable
 
-\[`key`: `string`\]: `unknown`
+> \[`key`: `string`\]: `unknown`
 
 추가 메타데이터
 
@@ -19,11 +19,11 @@ title: "LlmMetadata"
 
 ### finishReason?
 
-> `optional` **finishReason**: `string`
+> `optional` **finishReason?**: `string`
 
 완료 이유
 
-***
+---
 
 ### modelId
 

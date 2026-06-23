@@ -11,11 +11,11 @@ Options for creating a Counter instrument.
 
 ### description?
 
-> `optional` **description**: `string`
+> `optional` **description?**: `string`
 
 Optional description of the counter
 
-***
+---
 
 ### name
 
@@ -23,10 +23,10 @@ Optional description of the counter
 
 The name of the counter
 
-***
+---
 
 ### unit?
 
-> `optional` **unit**: `string`
+> `optional` **unit?**: `string`
 
 Optional unit of measurement

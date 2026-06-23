@@ -11,4 +11,4 @@ title: "WorkerFetchHandlerOptions"
 
 ### mode?
 
-> `readonly` `optional` **mode**: `"runtime"` \| `"raw-hono"`
+> `readonly` `optional` **mode?**: `"runtime"` \| `"raw-hono"`

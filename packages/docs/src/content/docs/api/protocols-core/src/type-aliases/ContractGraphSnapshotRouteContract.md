@@ -13,37 +13,37 @@ title: "ContractGraphSnapshotRouteContract"
 
 > `readonly` **id**: `string` \| `null`
 
-***
+---
 
 ### method
 
 > `readonly` **method**: `string`
 
-***
+---
 
 ### operationId?
 
-> `readonly` `optional` **operationId**: `string`
+> `readonly` `optional` **operationId?**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### sourceLocation?
 
-> `readonly` `optional` **sourceLocation**: `object`
+> `readonly` `optional` **sourceLocation?**: `object`
 
 #### column?
 
-> `readonly` `optional` **column**: `number`
+> `readonly` `optional` **column?**: `number`
 
 #### line?
 
-> `readonly` `optional` **line**: `number`
+> `readonly` `optional` **line?**: `number`
 
 #### path
 

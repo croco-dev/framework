@@ -13,19 +13,19 @@ title: "ObjectMetadata"
 
 ### contentType?
 
-> `optional` **contentType**: `string`
+> `optional` **contentType?**: `string`
 
 Content-Type
 
-***
+---
 
 ### etag?
 
-> `optional` **etag**: `string`
+> `optional` **etag?**: `string`
 
 ETag
 
-***
+---
 
 ### lastModified
 
@@ -33,15 +33,15 @@ ETag
 
 마지막 수정 시간
 
-***
+---
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `string`\>
+> `optional` **metadata?**: `Record`\<`string`, `string`\>
 
 사용자 정의 메타데이터
 
-***
+---
 
 ### size
 

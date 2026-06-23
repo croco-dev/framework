@@ -13,16 +13,16 @@ Redis 기반 분산 서킷 브레이커 상태 저장소 옵션입니다.
 
 ### onStoreError?
 
-> `optional` **onStoreError**: [`OnStoreError`](/api/retry-core/src/type-aliases/onstoreerror/)
+> `optional` **onStoreError?**: [`OnStoreError`](/api/retry-core/src/type-aliases/onstoreerror/)
 
-***
+---
 
 ### redis
 
 > **redis**: `UpstashRedisLike`
 
-***
+---
 
 ### ttlSeconds?
 
-> `optional` **ttlSeconds**: `number`
+> `optional` **ttlSeconds?**: `number`

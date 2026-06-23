@@ -9,12 +9,14 @@ title: "ShutdownManager"
 
 ## Param
 
+**hook**
+
 `manager.register(hook)`로 등록할 shutdown 훅입니다.
 
 ## Example
 
 ```typescript
-import { ShutdownManager } from '@croco/framework-context';
+import { ShutdownManager } from "@croco/framework-context";
 
 const manager = ShutdownManager.getInstance();
 manager.register({
@@ -39,7 +41,7 @@ manager.listen();
 
 `void`
 
-***
+---
 
 ### listen()
 
@@ -49,7 +51,7 @@ manager.listen();
 
 `void`
 
-***
+---
 
 ### register()
 
@@ -65,7 +67,7 @@ manager.listen();
 
 `void`
 
-***
+---
 
 ### shutdown()
 
@@ -75,7 +77,7 @@ manager.listen();
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getInstance()
 
@@ -91,7 +93,7 @@ manager.listen();
 
 `ShutdownManager`
 
-***
+---
 
 ### reset()
 

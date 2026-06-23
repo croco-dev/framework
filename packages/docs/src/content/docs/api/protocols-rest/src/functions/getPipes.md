@@ -17,7 +17,7 @@ title: "getPipes"
 
 ### methodName?
 
-`string` | `symbol`
+`string` \| `symbol`
 
 ## Returns
 

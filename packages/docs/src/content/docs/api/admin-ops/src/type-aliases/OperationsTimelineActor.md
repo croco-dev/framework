@@ -11,16 +11,16 @@ title: "OperationsTimelineActor"
 
 ### displayName?
 
-> `readonly` `optional` **displayName**: `string`
+> `readonly` `optional` **displayName?**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### type?
 
-> `readonly` `optional` **type**: `string`
+> `readonly` `optional` **type?**: `string`

@@ -9,21 +9,21 @@ title: "NotificationResult"
 
 ### error?
 
-> `optional` **error**: `Error`
+> `optional` **error?**: `Error`
 
-***
+---
 
 ### messageId?
 
-> `optional` **messageId**: `string`
+> `optional` **messageId?**: `string`
 
-***
+---
 
 ### providerResponse?
 
-> `optional` **providerResponse**: `unknown`
+> `optional` **providerResponse?**: `unknown`
 
-***
+---
 
 ### success
 

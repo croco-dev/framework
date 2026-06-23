@@ -13,51 +13,51 @@ title: "Session"
 
 ### abandonedAt?
 
-> `optional` **abandonedAt**: `Date`
+> `optional` **abandonedAt?**: `Date`
 
-***
+---
 
 ### clientId
 
 > **clientId**: `string`
 
-***
+---
 
 ### createdAt
 
 > **createdAt**: `Date`
 
-***
+---
 
 ### expireAt?
 
-> `optional` **expireAt**: `Date`
+> `optional` **expireAt?**: `Date`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### lastActiveAt?
 
-> `optional` **lastActiveAt**: `Date`
+> `optional` **lastActiveAt?**: `Date`
 
-***
+---
 
 ### status
 
 > **status**: `"abandoned"` \| `"active"` \| `"pending"` \| `"ended"` \| `"expired"` \| `"removed"` \| `"replaced"` \| `"revoked"`
 
-***
+---
 
 ### updatedAt
 
 > **updatedAt**: `Date`
 
-***
+---
 
 ### userId
 

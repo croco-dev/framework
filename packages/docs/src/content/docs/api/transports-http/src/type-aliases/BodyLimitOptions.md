@@ -13,16 +13,16 @@ title: "BodyLimitOptions"
 
 ### limit?
 
-> `optional` **limit**: `number`
+> `optional` **limit?**: `number`
 
-***
+---
 
 ### message?
 
-> `optional` **message**: `string`
+> `optional` **message?**: `string`
 
-***
+---
 
 ### statusCode?
 
-> `optional` **statusCode**: `number`
+> `optional` **statusCode?**: `number`

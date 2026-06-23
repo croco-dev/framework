@@ -17,7 +17,7 @@ title: "getParamsMeta"
 
 ### methodName
 
-`string` | `symbol`
+`string` \| `symbol`
 
 ## Returns
 

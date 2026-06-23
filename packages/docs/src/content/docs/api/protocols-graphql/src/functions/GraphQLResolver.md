@@ -11,13 +11,13 @@ title: "GraphQLResolver"
 
 ### T
 
-`T` *extends* `object` = `object`
+`T` _extends_ `object` = `object`
 
 ## Parameters
 
 ### objectFunc?
 
-[`GraphQLResolverOptions`](/api/protocols-graphql/src/type-aliases/graphqlresolveroptions/) | [`ClassType`](/api/protocols-graphql/src/type-aliases/classtype/)\<`T`\>
+[`GraphQLResolverOptions`](/api/protocols-graphql/src/type-aliases/graphqlresolveroptions/) \| [`ClassType`](/api/protocols-graphql/src/type-aliases/classtype/)\<`T`\>
 
 ## Returns
 

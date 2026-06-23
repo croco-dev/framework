@@ -11,22 +11,22 @@ title: "PolicySource"
 
 ### decorator?
 
-> `readonly` `optional` **decorator**: `string`
+> `readonly` `optional` **decorator?**: `string`
 
-***
+---
 
 ### file?
 
-> `readonly` `optional` **file**: `string`
+> `readonly` `optional` **file?**: `string`
 
-***
+---
 
 ### packageName?
 
-> `readonly` `optional` **packageName**: `string`
+> `readonly` `optional` **packageName?**: `string`
 
-***
+---
 
 ### symbol?
 
-> `readonly` `optional` **symbol**: `string`
+> `readonly` `optional` **symbol?**: `string`

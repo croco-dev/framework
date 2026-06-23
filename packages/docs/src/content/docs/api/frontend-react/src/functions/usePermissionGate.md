@@ -11,7 +11,7 @@ title: "usePermissionGate"
 
 ### permissions
 
-`string` | readonly `string`[]
+`string` \| readonly `string`[]
 
 ### options?
 

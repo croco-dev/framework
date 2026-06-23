@@ -11,4 +11,4 @@ title: "HttpPipelineGraphConfig"
 
 ### middlewares?
 
-> `readonly` `optional` **middlewares**: readonly [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)[]
+> `readonly` `optional` **middlewares?**: readonly [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)[]

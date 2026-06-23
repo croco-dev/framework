@@ -11,4 +11,4 @@ title: "TestingTransactionContextOptions"
 
 ### inTransaction?
 
-> `readonly` `optional` **inTransaction**: `boolean`
+> `readonly` `optional` **inTransaction?**: `boolean`

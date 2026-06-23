@@ -13,44 +13,44 @@ title: "RouteContractIR"
 
 > `readonly` **id**: `string` \| `null`
 
-***
+---
 
 ### inputSchemas
 
 > `readonly` **inputSchemas**: `RouteInputSchemas`
 
-***
+---
 
 ### method
 
 > `readonly` **method**: `string`
 
-***
+---
 
 ### operationId?
 
-> `readonly` `optional` **operationId**: `string`
+> `readonly` `optional` **operationId?**: `string`
 
-***
+---
 
 ### outputSchema
 
 > `readonly` **outputSchema**: `z.ZodType` \| `null`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### problemResponses
 
 > `readonly` **problemResponses**: readonly [`ProblemResponseIR`](/api/protocols-core/src/type-aliases/problemresponseir/)[]
 
-***
+---
 
 ### sourceLocation?
 
-> `readonly` `optional` **sourceLocation**: [`RouteContractSourceLocation`](/api/protocols-core/src/type-aliases/routecontractsourcelocation/)
+> `readonly` `optional` **sourceLocation?**: [`RouteContractSourceLocation`](/api/protocols-core/src/type-aliases/routecontractsourcelocation/)

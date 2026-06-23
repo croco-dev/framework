@@ -9,12 +9,14 @@ title: "Inject"
 
 ## Param
 
+**token**
+
 선택적 주입 식별자입니다. 생략하면 타입 메타데이터를 사용합니다.
 
 ## Example
 
 ```typescript
-import { Inject } from '@croco/framework-context';
+import { Inject } from "@croco/framework-context";
 
 class Repository {}
 

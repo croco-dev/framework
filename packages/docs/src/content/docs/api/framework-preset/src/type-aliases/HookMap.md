@@ -9,9 +9,9 @@ title: "HookMap"
 
 ## Properties
 
-### build:after()?
+### build:after?
 
-> `readonly` `optional` **build:after**: (`result`) => `Promise`\<`void`\> \| `void`
+> `readonly` `optional` **build:after?**: (`result`) => `Promise`\<`void`\> \| `void`
 
 #### Parameters
 
@@ -29,11 +29,11 @@ title: "HookMap"
 
 `Promise`\<`void`\> \| `void`
 
-***
+---
 
-### build:before()?
+### build:before?
 
-> `readonly` `optional` **build:before**: (`config`) => `Promise`\<[`CrocoPresetConfig`](/api/framework-preset/src/type-aliases/crocopresetconfig/)\> \| [`CrocoPresetConfig`](/api/framework-preset/src/type-aliases/crocopresetconfig/)
+> `readonly` `optional` **build:before?**: (`config`) => `Promise`\<[`CrocoPresetConfig`](/api/framework-preset/src/type-aliases/crocopresetconfig/)\> \| [`CrocoPresetConfig`](/api/framework-preset/src/type-aliases/crocopresetconfig/)
 
 #### Parameters
 
@@ -45,11 +45,11 @@ title: "HookMap"
 
 `Promise`\<[`CrocoPresetConfig`](/api/framework-preset/src/type-aliases/crocopresetconfig/)\> \| [`CrocoPresetConfig`](/api/framework-preset/src/type-aliases/crocopresetconfig/)
 
-***
+---
 
-### dev:start()?
+### dev:start?
 
-> `readonly` `optional` **dev:start**: () => `Promise`\<`void`\> \| `void`
+> `readonly` `optional` **dev:start?**: () => `Promise`\<`void`\> \| `void`
 
 #### Returns
 

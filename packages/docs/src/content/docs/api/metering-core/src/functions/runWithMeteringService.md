@@ -19,7 +19,7 @@ Metered 메서드 데코레이터와 서비스 바인딩 헬퍼입니다.
 
 ### service
 
-[`MeteringService`](/api/metering-core/src/classes/meteringservice/) | `null`
+[`MeteringService`](/api/metering-core/src/classes/meteringservice/) \| `null`
 
 ### fn
 
@@ -38,14 +38,14 @@ Metered 메서드 데코레이터와 서비스 바인딩 헬퍼입니다.
 ```typescript
 // 데코레이터 사용
 class ApiService {
-  @Metered({ meterId: 'api_calls' })
+  @Metered({ meterId: "api_calls" })
   async handleRequest(req: Request): Promise<Response> {
     return { status: 200 };
   }
 
   // 커스텀 value 추출
   @Metered({
-    meterId: 'data_transfer',
+    meterId: "data_transfer",
     valueExtractor: (args, result) => result.size,
   })
   async uploadFile(file: Buffer): Promise<{ size: number }> {

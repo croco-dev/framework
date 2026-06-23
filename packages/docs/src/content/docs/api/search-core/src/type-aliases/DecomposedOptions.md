@@ -13,10 +13,10 @@ title: "DecomposedOptions"
 
 ### form?
 
-> `optional` **form**: `"nfd"` \| `"nfkd"` \| `"jamo"`
+> `optional` **form?**: `"nfd"` \| `"nfkd"` \| `"jamo"`
 
-***
+---
 
 ### locale?
 
-> `optional` **locale**: `string`
+> `optional` **locale?**: `string`

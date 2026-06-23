@@ -13,38 +13,38 @@ title: "IntentMapRoute"
 
 > `readonly` **controllerId**: `string`
 
-***
+---
 
 ### description
 
 > `readonly` **description**: `string`
 
-***
+---
 
 ### handlerName
 
 > `readonly` **handlerName**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### method
 
 > `readonly` **method**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: `string`
 
-***
+---
 
 ### source?
 
-> `readonly` `optional` **source**: [`IntentMapSourceLocation`](/api/framework-routes/src/type-aliases/intentmapsourcelocation/)
+> `readonly` `optional` **source?**: [`IntentMapSourceLocation`](/api/framework-routes/src/type-aliases/intentmapsourcelocation/)

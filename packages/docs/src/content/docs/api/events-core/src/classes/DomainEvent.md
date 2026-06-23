@@ -53,26 +53,26 @@ title: "DomainEvent"
 
 > `readonly` **eventId**: `string`
 
-***
+---
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
-***
+---
 
 ### metadata
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
 
-***
+---
 
 ### timestamp
 
 > `readonly` **timestamp**: `Date`
 
-***
+---
 
 ### eventName?
 
-> `static` `optional` **eventName**: `string`
+> `static` `optional` **eventName?**: `string`

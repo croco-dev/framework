@@ -13,10 +13,12 @@ entitlements-core와 연동하여 테넌트의 좌석 제한을 체크하는 인
 
 ## Example
 
+**구현**
+
 ```typescript
 class EntitlementSeatLimitChecker extends SeatLimitChecker {
   async checkSeatAvailability(tenantId: string): Promise<EntitlementQuotaStatus> {
-    return this.entitlementManager.check(tenantId, 'seats');
+    return this.entitlementManager.check(tenantId, "seats");
   }
   // 다른 메서드 구현...
 }
@@ -48,7 +50,7 @@ class EntitlementSeatLimitChecker extends SeatLimitChecker {
 
 `Promise`\<`EntitlementQuotaStatus`\>
 
-***
+---
 
 ### getCurrentMemberCount()
 
@@ -64,7 +66,7 @@ class EntitlementSeatLimitChecker extends SeatLimitChecker {
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### getMaxSeats()
 

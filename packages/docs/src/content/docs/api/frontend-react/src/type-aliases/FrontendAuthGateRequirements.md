@@ -11,16 +11,16 @@ title: "FrontendAuthGateRequirements"
 
 ### entitlements?
 
-> `readonly` `optional` **entitlements**: `string` \| readonly `string`[]
+> `readonly` `optional` **entitlements?**: `string` \| readonly `string`[]
 
-***
+---
 
 ### permissions?
 
-> `readonly` `optional` **permissions**: `string` \| readonly `string`[]
+> `readonly` `optional` **permissions?**: `string` \| readonly `string`[]
 
-***
+---
 
 ### tenantRequired?
 
-> `readonly` `optional` **tenantRequired**: `boolean`
+> `readonly` `optional` **tenantRequired?**: `boolean`

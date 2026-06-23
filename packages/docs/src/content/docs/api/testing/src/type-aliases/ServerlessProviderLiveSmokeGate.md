@@ -9,25 +9,25 @@ title: "ServerlessProviderLiveSmokeGate"
 
 ## Properties
 
-### isEnabled()?
+### isEnabled?
 
-> `readonly` `optional` **isEnabled**: () => `boolean`
+> `readonly` `optional` **isEnabled?**: () => `boolean`
 
 #### Returns
 
 `boolean`
 
-***
+---
 
 ### requiredEnv
 
 > `readonly` **requiredEnv**: readonly `string`[]
 
-***
+---
 
-### run()?
+### run?
 
-> `readonly` `optional` **run**: () => `Promise`\<`void`\>
+> `readonly` `optional` **run?**: () => `Promise`\<`void`\>
 
 #### Returns
 

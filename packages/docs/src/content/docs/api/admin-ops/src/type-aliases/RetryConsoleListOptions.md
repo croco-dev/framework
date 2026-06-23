@@ -11,16 +11,16 @@ title: "RetryConsoleListOptions"
 
 ### includeSucceeded?
 
-> `readonly` `optional` **includeSucceeded**: `boolean`
+> `readonly` `optional` **includeSucceeded?**: `boolean`
 
-***
+---
 
 ### sourceKinds?
 
-> `readonly` `optional` **sourceKinds**: readonly [`RetryConsoleSourceKind`](/api/admin-ops/src/type-aliases/retryconsolesourcekind/)[]
+> `readonly` `optional` **sourceKinds?**: readonly [`RetryConsoleSourceKind`](/api/admin-ops/src/type-aliases/retryconsolesourcekind/)[]
 
-***
+---
 
 ### states?
 
-> `readonly` `optional` **states**: readonly [`RetryConsoleItemState`](/api/admin-ops/src/type-aliases/retryconsoleitemstate/)[]
+> `readonly` `optional` **states?**: readonly [`RetryConsoleItemState`](/api/admin-ops/src/type-aliases/retryconsoleitemstate/)[]

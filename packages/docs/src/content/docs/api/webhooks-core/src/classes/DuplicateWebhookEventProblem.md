@@ -57,7 +57,7 @@ title: "DuplicateWebhookEventProblem"
 
 ### cause?
 
-> `readonly` `optional` **cause**: `Error`
+> `readonly` `optional` **cause?**: `Error`
 
 #### Inherited from
 
@@ -77,7 +77,7 @@ title: "DuplicateWebhookEventProblem"
 
 ### detail?
 
-> `readonly` `optional` **detail**: `string`
+> `readonly` `optional` **detail?**: `string`
 
 #### Inherited from
 
@@ -87,7 +87,7 @@ title: "DuplicateWebhookEventProblem"
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+> `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
 #### Inherited from
 
@@ -97,7 +97,7 @@ title: "DuplicateWebhookEventProblem"
 
 ### instance?
 
-> `readonly` `optional` **instance**: `string`
+> `readonly` `optional` **instance?**: `string`
 
 #### Inherited from
 
@@ -127,7 +127,7 @@ title: "DuplicateWebhookEventProblem"
 
 ### stack?
 
-> `optional` **stack**: `string`
+> `optional` **stack?**: `string`
 
 #### Inherited from
 

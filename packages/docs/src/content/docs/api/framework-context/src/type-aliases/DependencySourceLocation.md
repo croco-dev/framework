@@ -11,16 +11,16 @@ title: "DependencySourceLocation"
 
 ### column?
 
-> `readonly` `optional` **column**: `number`
+> `readonly` `optional` **column?**: `number`
 
-***
+---
 
 ### file
 
 > `readonly` **file**: `string`
 
-***
+---
 
 ### line?
 
-> `readonly` `optional` **line**: `number`
+> `readonly` `optional` **line?**: `number`

@@ -15,43 +15,43 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 
 > **description**: `string`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### periodEnd?
 
-> `optional` **periodEnd**: `Date`
+> `optional` **periodEnd?**: `Date`
 
-***
+---
 
 ### periodStart?
 
-> `optional` **periodStart**: `Date`
+> `optional` **periodStart?**: `Date`
 
-***
+---
 
 ### quantity
 
 > **quantity**: `number`
 
-***
+---
 
 ### total
 
 > **total**: [`Money`](/api/billing-core/src/classes/money/)
 
-***
+---
 
 ### type
 
 > **type**: [`InvoiceLineItemType`](/api/billing-core/src/type-aliases/invoicelineitemtype/)
 
-***
+---
 
 ### unitPrice
 

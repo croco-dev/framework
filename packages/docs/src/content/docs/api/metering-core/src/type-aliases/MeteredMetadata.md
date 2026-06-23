@@ -15,9 +15,9 @@ Metered 메서드 데코레이터의 메타데이터 타입입니다.
 
 ## Properties
 
-### idempotencyKeyExtractor()?
+### idempotencyKeyExtractor?
 
-> `optional` **idempotencyKeyExtractor**: (`args`) => `string` \| `undefined`
+> `optional` **idempotencyKeyExtractor?**: (`args`) => `string` \| `undefined`
 
 #### Parameters
 
@@ -29,11 +29,11 @@ Metered 메서드 데코레이터의 메타데이터 타입입니다.
 
 `string` \| `undefined`
 
-***
+---
 
-### metadataExtractor()?
+### metadataExtractor?
 
-> `optional` **metadataExtractor**: (`args`, `result`) => `Record`\<`string`, `unknown`\> \| `undefined`
+> `optional` **metadataExtractor?**: (`args`, `result`) => `Record`\<`string`, `unknown`\> \| `undefined`
 
 #### Parameters
 
@@ -49,15 +49,15 @@ Metered 메서드 데코레이터의 메타데이터 타입입니다.
 
 `Record`\<`string`, `unknown`\> \| `undefined`
 
-***
+---
 
 ### meterId
 
 > **meterId**: `string`
 
-***
+---
 
-### valueExtractor()
+### valueExtractor
 
 > **valueExtractor**: (`args`, `result`) => `number`
 

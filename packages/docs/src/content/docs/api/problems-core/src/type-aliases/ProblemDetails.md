@@ -15,11 +15,11 @@ title: "ProblemDetails"
 
 ### detail?
 
-> `optional` **detail**: `string`
+> `optional` **detail?**: `string`
 
 ### instance?
 
-> `optional` **instance**: `string`
+> `optional` **instance?**: `string`
 
 ### status
 

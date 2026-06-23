@@ -17,22 +17,22 @@ Meter 클래스 데코레이터의 메타데이터 타입입니다.
 
 ### allowOverQuota?
 
-> `optional` **allowOverQuota**: `boolean`
+> `optional` **allowOverQuota?**: `boolean`
 
-***
+---
 
 ### meterId
 
 > **meterId**: `string`
 
-***
+---
 
 ### quota?
 
-> `optional` **quota**: `number`
+> `optional` **quota?**: `number`
 
-***
+---
 
 ### type?
 
-> `optional` **type**: [`MeterType`](/api/metering-core/src/type-aliases/metertype/)
+> `optional` **type?**: [`MeterType`](/api/metering-core/src/type-aliases/metertype/)

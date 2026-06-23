@@ -11,19 +11,19 @@ title: "PolicyDefinition"
 
 ### order?
 
-> `readonly` `optional` **order**: `number`
+> `readonly` `optional` **order?**: `number`
 
 ### override?
 
-> `readonly` `optional` **override**: `boolean`
+> `readonly` `optional` **override?**: `boolean`
 
 ### requiredCapabilities?
 
-> `readonly` `optional` **requiredCapabilities**: readonly [`PolicyRuntimeCapability`](/api/framework-context/src/type-aliases/policyruntimecapability/)[]
+> `readonly` `optional` **requiredCapabilities?**: readonly [`PolicyRuntimeCapability`](/api/framework-context/src/type-aliases/policyruntimecapability/)[]
 
 ### source?
 
-> `readonly` `optional` **source**: [`PolicySource`](/api/framework-context/src/type-aliases/policysource/)
+> `readonly` `optional` **source?**: [`PolicySource`](/api/framework-context/src/type-aliases/policysource/)
 
 ### target
 
@@ -33,4 +33,4 @@ title: "PolicyDefinition"
 
 ### TPolicy
 
-`TPolicy` *extends* [`RuntimePolicy`](/api/framework-context/src/type-aliases/runtimepolicy/) = [`RuntimePolicy`](/api/framework-context/src/type-aliases/runtimepolicy/)
+`TPolicy` _extends_ [`RuntimePolicy`](/api/framework-context/src/type-aliases/runtimepolicy/) = [`RuntimePolicy`](/api/framework-context/src/type-aliases/runtimepolicy/)

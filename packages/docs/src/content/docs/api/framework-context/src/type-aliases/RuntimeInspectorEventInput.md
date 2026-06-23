@@ -11,40 +11,40 @@ title: "RuntimeInspectorEventInput"
 
 ### details?
 
-> `readonly` `optional` **details**: `Record`\<`string`, `unknown`\>
+> `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### durationMs?
 
-> `readonly` `optional` **durationMs**: `number`
+> `readonly` `optional` **durationMs?**: `number`
 
-***
+---
 
 ### inspectionId?
 
-> `readonly` `optional` **inspectionId**: `string`
+> `readonly` `optional` **inspectionId?**: `string`
 
-***
+---
 
 ### kind
 
 > `readonly` **kind**: [`RuntimeInspectorEventKind`](/api/framework-context/src/type-aliases/runtimeinspectoreventkind/)
 
-***
+---
 
 ### name?
 
-> `readonly` `optional` **name**: `string`
+> `readonly` `optional` **name?**: `string`
 
-***
+---
 
 ### outcome?
 
-> `readonly` `optional` **outcome**: [`RuntimeInspectorEventOutcome`](/api/framework-context/src/type-aliases/runtimeinspectoreventoutcome/)
+> `readonly` `optional` **outcome?**: [`RuntimeInspectorEventOutcome`](/api/framework-context/src/type-aliases/runtimeinspectoreventoutcome/)
 
-***
+---
 
 ### requestId?
 
-> `readonly` `optional` **requestId**: `string`
+> `readonly` `optional` **requestId?**: `string`

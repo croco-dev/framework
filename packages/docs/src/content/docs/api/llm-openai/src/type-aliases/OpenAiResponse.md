@@ -11,46 +11,46 @@ title: "OpenAiResponse"
 
 ### error?
 
-> `readonly` `optional` **error**: `unknown`
+> `readonly` `optional` **error?**: `unknown`
 
-***
+---
 
-### incomplete\_details?
+### incomplete_details?
 
-> `readonly` `optional` **incomplete\_details**: `unknown`
+> `readonly` `optional` **incomplete_details?**: `unknown`
 
-***
+---
 
 ### model?
 
-> `readonly` `optional` **model**: `string`
+> `readonly` `optional` **model?**: `string`
 
-***
+---
 
 ### output?
 
-> `readonly` `optional` **output**: readonly `OpenAiOutputItem`[]
+> `readonly` `optional` **output?**: readonly `OpenAiOutputItem`[]
 
-***
+---
 
-### output\_parsed?
+### output_parsed?
 
-> `readonly` `optional` **output\_parsed**: `unknown`
+> `readonly` `optional` **output_parsed?**: `unknown`
 
-***
+---
 
-### output\_text?
+### output_text?
 
-> `readonly` `optional` **output\_text**: `string`
+> `readonly` `optional` **output_text?**: `string`
 
-***
+---
 
 ### status?
 
-> `readonly` `optional` **status**: `string` \| `null`
+> `readonly` `optional` **status?**: `string` \| `null`
 
-***
+---
 
 ### usage?
 
-> `readonly` `optional` **usage**: [`OpenAiUsage`](/api/llm-openai/src/type-aliases/openaiusage/) \| `null`
+> `readonly` `optional` **usage?**: [`OpenAiUsage`](/api/llm-openai/src/type-aliases/openaiusage/) \| `null`

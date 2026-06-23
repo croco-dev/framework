@@ -11,11 +11,11 @@ Options for creating a Logger instance.
 
 ### attributes?
 
-> `optional` **attributes**: `Attributes`
+> `optional` **attributes?**: `Attributes`
 
 Optional attributes to include with all logs
 
-***
+---
 
 ### name
 
@@ -23,18 +23,18 @@ Optional attributes to include with all logs
 
 The name of the logger
 
-***
+---
 
 ### schemaUrl?
 
-> `optional` **schemaUrl**: `string`
+> `optional` **schemaUrl?**: `string`
 
 Optional schema URL for the logger
 
-***
+---
 
 ### version?
 
-> `optional` **version**: `string`
+> `optional` **version?**: `string`
 
 Optional version of the logger

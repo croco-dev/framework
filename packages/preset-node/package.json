@@ -38,7 +38,7 @@
   "dependencies": {
     "@croco/framework-preset": "workspace:*",
     "@hono/node-server": "^1.19.10",
-    "hono": "^4.12.15"
+    "hono": "^4.12.26"
   },
   "devDependencies": {
     "tsup": "8.5.1",

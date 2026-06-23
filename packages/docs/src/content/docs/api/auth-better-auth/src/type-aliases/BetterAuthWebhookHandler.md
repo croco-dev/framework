@@ -11,25 +11,9 @@ Better Auth 이벤트 타입별 웹훅 핸들러 맵입니다.
 
 ## Properties
 
-### session.created()?
+### session.created?
 
-> `optional` **session.created**: (`data`) => `Promise`\<`void`\>
-
-#### Parameters
-
-##### data
-
-`Record`\<`string`, `unknown`\>
-
-#### Returns
-
-`Promise`\<`void`\>
-
-***
-
-### session.revoked()?
-
-> `optional` **session.revoked**: (`data`) => `Promise`\<`void`\>
+> `optional` **session.created?**: (`data`) => `Promise`\<`void`\>
 
 #### Parameters
 
@@ -41,27 +25,11 @@ Better Auth 이벤트 타입별 웹훅 핸들러 맵입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
-### user.created()?
+### session.revoked?
 
-> `optional` **user.created**: (`data`) => `Promise`\<`void`\>
-
-#### Parameters
-
-##### data
-
-`Record`\<`string`, `unknown`\>
-
-#### Returns
-
-`Promise`\<`void`\>
-
-***
-
-### user.deleted()?
-
-> `optional` **user.deleted**: (`data`) => `Promise`\<`void`\>
+> `optional` **session.revoked?**: (`data`) => `Promise`\<`void`\>
 
 #### Parameters
 
@@ -73,11 +41,43 @@ Better Auth 이벤트 타입별 웹훅 핸들러 맵입니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
-### user.updated()?
+### user.created?
 
-> `optional` **user.updated**: (`data`) => `Promise`\<`void`\>
+> `optional` **user.created?**: (`data`) => `Promise`\<`void`\>
+
+#### Parameters
+
+##### data
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### user.deleted?
+
+> `optional` **user.deleted?**: (`data`) => `Promise`\<`void`\>
+
+#### Parameters
+
+##### data
+
+`Record`\<`string`, `unknown`\>
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### user.updated?
+
+> `optional` **user.updated?**: (`data`) => `Promise`\<`void`\>
 
 #### Parameters
 

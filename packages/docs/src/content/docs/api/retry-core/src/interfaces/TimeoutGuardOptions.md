@@ -9,9 +9,9 @@ Options for timeout guard.
 
 ## Properties
 
-### getRemainingTime()?
+### getRemainingTime?
 
-> `optional` **getRemainingTime**: () => `number`
+> `optional` **getRemainingTime?**: () => `number`
 
 Custom timeout checker (for testing)
 
@@ -19,10 +19,10 @@ Custom timeout checker (for testing)
 
 `number`
 
-***
+---
 
 ### reserveTimeMs?
 
-> `optional` **reserveTimeMs**: `number`
+> `optional` **reserveTimeMs?**: `number`
 
 Minimum time to reserve for cleanup (ms). Default: 5000

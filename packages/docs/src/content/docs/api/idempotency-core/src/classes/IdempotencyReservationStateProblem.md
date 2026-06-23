@@ -53,17 +53,17 @@ title: "IdempotencyReservationStateProblem"
 
 `IdempotencyProblem.category`
 
-***
+---
 
 ### cause?
 
-> `readonly` `optional` **cause**: `Error`
+> `readonly` `optional` **cause?**: `Error`
 
 #### Inherited from
 
 `IdempotencyProblem.cause`
 
-***
+---
 
 ### code
 
@@ -73,37 +73,37 @@ title: "IdempotencyReservationStateProblem"
 
 `IdempotencyProblem.code`
 
-***
+---
 
 ### detail?
 
-> `readonly` `optional` **detail**: `string`
+> `readonly` `optional` **detail?**: `string`
 
 #### Inherited from
 
 `IdempotencyProblem.detail`
 
-***
+---
 
 ### extensions?
 
-> `readonly` `optional` **extensions**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+> `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
 #### Inherited from
 
 `IdempotencyProblem.extensions`
 
-***
+---
 
 ### instance?
 
-> `readonly` `optional` **instance**: `string`
+> `readonly` `optional` **instance?**: `string`
 
 #### Inherited from
 
 `IdempotencyProblem.instance`
 
-***
+---
 
 ### message
 
@@ -113,7 +113,7 @@ title: "IdempotencyReservationStateProblem"
 
 `IdempotencyProblem.message`
 
-***
+---
 
 ### name
 
@@ -123,17 +123,17 @@ title: "IdempotencyReservationStateProblem"
 
 `IdempotencyProblem.name`
 
-***
+---
 
 ### stack?
 
-> `optional` **stack**: `string`
+> `optional` **stack?**: `string`
 
 #### Inherited from
 
 `IdempotencyProblem.stack`
 
-***
+---
 
 ### type
 
@@ -143,7 +143,7 @@ title: "IdempotencyReservationStateProblem"
 
 `IdempotencyProblem.type`
 
-***
+---
 
 ### stackTraceLimit
 
@@ -179,7 +179,7 @@ not capture any frames.
 
 `IdempotencyProblem.status`
 
-***
+---
 
 ### title
 
@@ -209,7 +209,7 @@ not capture any frames.
 
 `IdempotencyProblem.toJSON`
 
-***
+---
 
 ### captureStackTrace()
 
@@ -222,7 +222,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack;  // Similar to `new Error().stack`
+myObject.stack; // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -277,7 +277,7 @@ a();
 
 `IdempotencyProblem.captureStackTrace`
 
-***
+---
 
 ### prepareStackTrace()
 

@@ -11,34 +11,34 @@ title: "CreateDiagnosticMessageOptions"
 
 ### action?
 
-> `readonly` `optional` **action**: `string`
+> `readonly` `optional` **action?**: `string`
 
-***
+---
 
 ### cause?
 
-> `readonly` `optional` **cause**: `string`
+> `readonly` `optional` **cause?**: `string`
 
-***
+---
 
 ### docs?
 
-> `readonly` `optional` **docs**: `string`
+> `readonly` `optional` **docs?**: `string`
 
-***
+---
 
 ### location?
 
-> `readonly` `optional` **location**: [`DiagnosticSourceLocation`](/api/diagnostics-core/src/type-aliases/diagnosticsourcelocation/) \| `null`
+> `readonly` `optional` **location?**: [`DiagnosticSourceLocation`](/api/diagnostics-core/src/type-aliases/diagnosticsourcelocation/) \| `null`
 
-***
+---
 
 ### searchKeywords?
 
-> `readonly` `optional` **searchKeywords**: readonly `string`[]
+> `readonly` `optional` **searchKeywords?**: readonly `string`[]
 
-***
+---
 
 ### title?
 
-> `readonly` `optional` **title**: `string`
+> `readonly` `optional` **title?**: `string`

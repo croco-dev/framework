@@ -9,21 +9,21 @@ title: "LambdaResponse"
 
 ### body?
 
-> `optional` **body**: `string`
+> `optional` **body?**: `string`
 
-***
+---
 
 ### headers?
 
-> `optional` **headers**: `Record`\<`string`, `string`\>
+> `optional` **headers?**: `Record`\<`string`, `string`\>
 
-***
+---
 
 ### isBase64Encoded?
 
-> `optional` **isBase64Encoded**: `boolean`
+> `optional` **isBase64Encoded?**: `boolean`
 
-***
+---
 
 ### statusCode
 

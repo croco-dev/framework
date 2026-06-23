@@ -11,27 +11,27 @@ title: "FrontendSessionPrincipal"
 
 ### email?
 
-> `readonly` `optional` **email**: `string`
+> `readonly` `optional` **email?**: `string`
 
-***
+---
 
 ### label?
 
-> `readonly` `optional` **label**: `string`
+> `readonly` `optional` **label?**: `string`
 
-***
+---
 
 ### metadata?
 
-> `readonly` `optional` **metadata**: `Readonly`\<`Record`\<`string`, `unknown`\>\>
+> `readonly` `optional` **metadata?**: `Readonly`\<`Record`\<`string`, `unknown`\>\>
 
-***
+---
 
 ### roles?
 
-> `readonly` `optional` **roles**: readonly `string`[]
+> `readonly` `optional` **roles?**: readonly `string`[]
 
-***
+---
 
 ### userId
 

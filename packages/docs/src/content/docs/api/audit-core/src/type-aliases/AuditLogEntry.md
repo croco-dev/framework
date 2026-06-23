@@ -15,73 +15,73 @@ title: "AuditLogEntry"
 
 > **action**: `string`
 
-***
+---
 
 ### actorId
 
 > **actorId**: `string`
 
-***
+---
 
 ### createdAt
 
 > **createdAt**: `Date`
 
-***
+---
 
 ### diff
 
 > **diff**: `Record`\<`string`, `unknown`\> \| `null`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### integrityHash?
 
-> `optional` **integrityHash**: `string`
+> `optional` **integrityHash?**: `string`
 
-***
+---
 
 ### metadata
 
 > **metadata**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### parentHash?
 
-> `optional` **parentHash**: `string`
+> `optional` **parentHash?**: `string`
 
-***
+---
 
 ### payload
 
 > **payload**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### resourceId
 
 > **resourceId**: `string`
 
-***
+---
 
 ### resourceType
 
 > **resourceType**: `string`
 
-***
+---
 
 ### sequence?
 
-> `optional` **sequence**: `number`
+> `optional` **sequence?**: `number`
 
-***
+---
 
 ### tenantId
 

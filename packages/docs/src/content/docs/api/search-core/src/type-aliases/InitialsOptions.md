@@ -13,4 +13,4 @@ title: "InitialsOptions"
 
 ### locale?
 
-> `optional` **locale**: `string`
+> `optional` **locale?**: `string`

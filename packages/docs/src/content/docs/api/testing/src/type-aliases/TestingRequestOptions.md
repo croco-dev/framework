@@ -11,12 +11,12 @@ title: "TestingRequestOptions"
 
 ### body?
 
-> `readonly` `optional` **body**: `BodyInit` \| `null`
+> `readonly` `optional` **body?**: `BodyInit` \| `null`
 
 ### json?
 
-> `readonly` `optional` **json**: `unknown`
+> `readonly` `optional` **json?**: `unknown`
 
 ### query?
 
-> `readonly` `optional` **query**: `Record`\<`string`, `QueryValue`\>
+> `readonly` `optional` **query?**: `Record`\<`string`, `QueryValue`\>

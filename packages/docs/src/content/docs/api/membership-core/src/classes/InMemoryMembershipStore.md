@@ -13,15 +13,17 @@ title: "InMemoryMembershipStore"
 
 ## Example
 
+**저장소 생성 및 사용**
+
 ```typescript
-import { InMemoryMembershipStore } from '@croco/membership-core';
+import { InMemoryMembershipStore } from "@croco/membership-core";
 
 const store = new InMemoryMembershipStore();
 const membership = await store.save({
-  id: 'mem-1',
-  tenantId: 'tenant-1',
-  userId: 'user-1',
-  role: 'admin'
+  id: "mem-1",
+  tenantId: "tenant-1",
+  userId: "user-1",
+  role: "admin",
 });
 ```
 
@@ -63,7 +65,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countAll`](/api/membership-core/src/classes/membershipstore/#countall)
 
-***
+---
 
 ### countByRole()
 
@@ -87,7 +89,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countByRole`](/api/membership-core/src/classes/membershipstore/#countbyrole)
 
-***
+---
 
 ### delete()
 
@@ -111,7 +113,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`delete`](/api/membership-core/src/classes/membershipstore/#delete)
 
-***
+---
 
 ### findAllByTenant()
 
@@ -131,7 +133,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findAllByTenant`](/api/membership-core/src/classes/membershipstore/#findallbytenant)
 
-***
+---
 
 ### findAllByUser()
 
@@ -151,7 +153,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findAllByUser`](/api/membership-core/src/classes/membershipstore/#findallbyuser)
 
-***
+---
 
 ### findByTenantAndUser()
 
@@ -175,7 +177,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findByTenantAndUser`](/api/membership-core/src/classes/membershipstore/#findbytenantanduser)
 
-***
+---
 
 ### save()
 

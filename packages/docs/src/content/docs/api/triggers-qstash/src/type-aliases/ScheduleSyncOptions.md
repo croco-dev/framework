@@ -13,6 +13,6 @@ Scheduler configuration and synchronization result types.
 
 ### mode?
 
-> `readonly` `optional` **mode**: [`ScheduleSyncMode`](/api/triggers-qstash/src/type-aliases/schedulesyncmode/)
+> `readonly` `optional` **mode?**: [`ScheduleSyncMode`](/api/triggers-qstash/src/type-aliases/schedulesyncmode/)
 
 Whether sync should only return the diff or also apply it to QStash.

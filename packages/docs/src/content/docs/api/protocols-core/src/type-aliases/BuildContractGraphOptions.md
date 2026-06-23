@@ -11,4 +11,4 @@ title: "BuildContractGraphOptions"
 
 ### strictProblemResponses?
 
-> `readonly` `optional` **strictProblemResponses**: `boolean`
+> `readonly` `optional` **strictProblemResponses?**: `boolean`

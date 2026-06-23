@@ -7,7 +7,7 @@ title: "HealthCheckResult"
 
 ## Indexable
 
-\[`key`: `string`\]: `unknown`
+> \[`key`: `string`\]: `unknown`
 
 ## Properties
 

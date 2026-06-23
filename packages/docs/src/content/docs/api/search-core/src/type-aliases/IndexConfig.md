@@ -13,28 +13,28 @@ title: "IndexConfig"
 
 ### filterableFields?
 
-> `optional` **filterableFields**: `string`[]
+> `optional` **filterableFields?**: `string`[]
 
-***
+---
 
 ### name
 
 > **name**: `string`
 
-***
+---
 
 ### primaryKey?
 
-> `optional` **primaryKey**: `string`
+> `optional` **primaryKey?**: `string`
 
-***
+---
 
 ### searchableFields?
 
-> `optional` **searchableFields**: `string`[]
+> `optional` **searchableFields?**: `string`[]
 
-***
+---
 
 ### sortableFields?
 
-> `optional` **sortableFields**: `string`[]
+> `optional` **sortableFields?**: `string`[]

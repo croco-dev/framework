@@ -13,9 +13,9 @@ title: "AiMeteredOptions"
 
 ## Properties
 
-### embeddingUsageExtractor()?
+### embeddingUsageExtractor?
 
-> `optional` **embeddingUsageExtractor**: (`args`, `result`) => \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `tokens`: `number`; \} \| `null`
+> `optional` **embeddingUsageExtractor?**: (`args`, `result`) => \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `tokens`: `number`; \} \| `null`
 
 메서드에서 embedding usage를 추출하는 함수
 
@@ -33,11 +33,11 @@ title: "AiMeteredOptions"
 
 \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `tokens`: `number`; \} \| `null`
 
-***
+---
 
-### idempotencyKeyExtractor()?
+### idempotencyKeyExtractor?
 
-> `optional` **idempotencyKeyExtractor**: (`args`) => `string` \| `undefined`
+> `optional` **idempotencyKeyExtractor?**: (`args`) => `string` \| `undefined`
 
 idempotencyKey 추출기
 
@@ -51,11 +51,11 @@ idempotencyKey 추출기
 
 `string` \| `undefined`
 
-***
+---
 
-### metadataExtractor()?
+### metadataExtractor?
 
-> `optional` **metadataExtractor**: (`args`, `result`) => `Record`\<`string`, `unknown`\> \| `undefined`
+> `optional` **metadataExtractor?**: (`args`, `result`) => `Record`\<`string`, `unknown`\> \| `undefined`
 
 추가 메타데이터 추출기
 
@@ -73,19 +73,19 @@ idempotencyKey 추출기
 
 `Record`\<`string`, `unknown`\> \| `undefined`
 
-***
+---
 
 ### tenantId?
 
-> `optional` **tenantId**: `string`
+> `optional` **tenantId?**: `string`
 
 LlmMeteringService에서 자동으로 추출하므로 생략 가능
 
-***
+---
 
-### usageExtractor()?
+### usageExtractor?
 
-> `optional` **usageExtractor**: (`args`, `result`) => \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `completionTokens`: `number`; `promptTokens`: `number`; \} \| `null`
+> `optional` **usageExtractor?**: (`args`, `result`) => \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `completionTokens`: `number`; `promptTokens`: `number`; \} \| `null`
 
 메서드에서 usage를 추출하는 함수
 

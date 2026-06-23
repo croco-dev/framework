@@ -13,8 +13,8 @@ Structured logging interface for consistent log output.
 ```typescript
 logger.emit({
   severity: LogSeverity.INFO,
-  body: 'User logged in',
-  attributes: { userId: '123' }
+  body: "User logged in",
+  attributes: { userId: "123" },
 });
 ```
 
@@ -22,11 +22,11 @@ logger.emit({
 
 ### attributes?
 
-> `optional` **attributes**: `Attributes`
+> `optional` **attributes?**: `Attributes`
 
 Additional attributes associated with the log
 
-***
+---
 
 ### body
 
@@ -34,43 +34,43 @@ Additional attributes associated with the log
 
 The log message body
 
-***
+---
 
 ### observedTimestamp?
 
-> `optional` **observedTimestamp**: `number`
+> `optional` **observedTimestamp?**: `number`
 
 The observed timestamp (when the event was observed)
 
-***
+---
 
 ### severity?
 
-> `optional` **severity**: [`LogSeverity`](/api/telemetry-sdk-node/src/enumerations/logseverity/)
+> `optional` **severity?**: [`LogSeverity`](/api/telemetry-sdk-node/src/enumerations/logseverity/)
 
 Severity level of the log
 
-***
+---
 
 ### severityText?
 
-> `optional` **severityText**: `string`
+> `optional` **severityText?**: `string`
 
 Severity text (e.g., 'INFO', 'ERROR')
 
-***
+---
 
 ### timestamp?
 
-> `optional` **timestamp**: `number`
+> `optional` **timestamp?**: `number`
 
 The timestamp when the log was emitted
 
-***
+---
 
 ### traceContext?
 
-> `optional` **traceContext**: `object`
+> `optional` **traceContext?**: `object`
 
 Trace context for correlation with traces
 

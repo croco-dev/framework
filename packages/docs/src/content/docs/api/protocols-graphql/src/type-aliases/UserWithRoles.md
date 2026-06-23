@@ -11,4 +11,4 @@ title: "UserWithRoles"
 
 ### roles?
 
-> `optional` **roles**: `string`[]
+> `optional` **roles?**: `string`[]

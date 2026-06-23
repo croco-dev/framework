@@ -13,9 +13,9 @@ decorated methods.
 
 ## Properties
 
-### exceptionType()?
+### exceptionType?
 
-> `optional` **exceptionType**: (...`args`) => `Error`
+> `optional` **exceptionType?**: (...`args`) => `Error`
 
 #### Parameters
 
@@ -27,7 +27,7 @@ decorated methods.
 
 `Error`
 
-***
+---
 
 ### methodName
 

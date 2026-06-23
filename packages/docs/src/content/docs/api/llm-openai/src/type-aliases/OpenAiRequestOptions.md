@@ -11,4 +11,4 @@ title: "OpenAiRequestOptions"
 
 ### signal?
 
-> `readonly` `optional` **signal**: `AbortSignal`
+> `readonly` `optional` **signal?**: `AbortSignal`

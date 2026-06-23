@@ -11,13 +11,13 @@ title: "BillingGatewayConformanceAssertions"
 
 ### TGateway
 
-`TGateway` *extends* [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
+`TGateway` _extends_ [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
 
 ## Properties
 
-### checkout()?
+### checkout?
 
-> `readonly` `optional` **checkout**: (`result`, `context`) => `void` \| `Promise`\<`void`\>
+> `readonly` `optional` **checkout?**: (`result`, `context`) => `void` \| `Promise`\<`void`\>
 
 #### Parameters
 
@@ -43,11 +43,11 @@ title: "BillingGatewayConformanceAssertions"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
-### customerPortal()?
+### customerPortal?
 
-> `readonly` `optional` **customerPortal**: (`portalUrl`, `context`) => `void` \| `Promise`\<`void`\>
+> `readonly` `optional` **customerPortal?**: (`portalUrl`, `context`) => `void` \| `Promise`\<`void`\>
 
 #### Parameters
 
@@ -77,11 +77,11 @@ title: "BillingGatewayConformanceAssertions"
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
-### subscriptionLifecycle()?
+### subscriptionLifecycle?
 
-> `readonly` `optional` **subscriptionLifecycle**: (`context`) => `void` \| `Promise`\<`void`\>
+> `readonly` `optional` **subscriptionLifecycle?**: (`context`) => `void` \| `Promise`\<`void`\>
 
 #### Parameters
 

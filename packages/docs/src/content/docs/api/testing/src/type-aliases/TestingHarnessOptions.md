@@ -11,4 +11,4 @@ title: "TestingHarnessOptions"
 
 ### baseUrl?
 
-> `readonly` `optional` **baseUrl**: `string`
+> `readonly` `optional` **baseUrl?**: `string`

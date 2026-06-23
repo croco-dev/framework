@@ -11,19 +11,19 @@ Options for creating a Histogram instrument.
 
 ### boundaries?
 
-> `optional` **boundaries**: `number`[]
+> `optional` **boundaries?**: `number`[]
 
 Optional explicit bucket boundaries
 
-***
+---
 
 ### description?
 
-> `optional` **description**: `string`
+> `optional` **description?**: `string`
 
 Optional description of the histogram
 
-***
+---
 
 ### name
 
@@ -31,10 +31,10 @@ Optional description of the histogram
 
 The name of the histogram
 
-***
+---
 
 ### unit?
 
-> `optional` **unit**: `string`
+> `optional` **unit?**: `string`
 
 Optional unit of measurement

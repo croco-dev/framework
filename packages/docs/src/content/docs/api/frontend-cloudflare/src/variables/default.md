@@ -9,7 +9,7 @@ title: "default"
 
 ## Type Declaration
 
-### fetch()
+### fetch
 
 > **fetch**: (`request`, `env`, `ctx`) => `Promise`\<`Response`\>
 

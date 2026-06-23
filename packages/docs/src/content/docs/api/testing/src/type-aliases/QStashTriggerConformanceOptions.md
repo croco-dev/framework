@@ -9,7 +9,7 @@ title: "QStashTriggerConformanceOptions"
 
 ## Properties
 
-### createHarness()
+### createHarness
 
 > `readonly` **createHarness**: (`scenario`) => [`QStashTriggerConformanceHarness`](/api/testing/src/type-aliases/qstashtriggerconformanceharness/) \| `Promise`\<[`QStashTriggerConformanceHarness`](/api/testing/src/type-aliases/qstashtriggerconformanceharness/)\>
 
@@ -23,20 +23,20 @@ title: "QStashTriggerConformanceOptions"
 
 [`QStashTriggerConformanceHarness`](/api/testing/src/type-aliases/qstashtriggerconformanceharness/) \| `Promise`\<[`QStashTriggerConformanceHarness`](/api/testing/src/type-aliases/qstashtriggerconformanceharness/)\>
 
-***
+---
 
 ### liveSmoke?
 
-> `readonly` `optional` **liveSmoke**: [`ServerlessProviderLiveSmokeGate`](/api/testing/src/type-aliases/serverlessproviderlivesmokegate/)
+> `readonly` `optional` **liveSmoke?**: [`ServerlessProviderLiveSmokeGate`](/api/testing/src/type-aliases/serverlessproviderlivesmokegate/)
 
-***
+---
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
-***
+---
 
 ### secretSamples?
 
-> `readonly` `optional` **secretSamples**: readonly `string`[]
+> `readonly` `optional` **secretSamples?**: readonly `string`[]

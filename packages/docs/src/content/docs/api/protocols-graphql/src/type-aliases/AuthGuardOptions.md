@@ -11,15 +11,15 @@ title: "AuthGuardOptions"
 
 ### headerName?
 
-> `optional` **headerName**: `string`
+> `optional` **headerName?**: `string`
 
-***
+---
 
 ### scheme?
 
-> `optional` **scheme**: `string`
+> `optional` **scheme?**: `string`
 
-***
+---
 
 ### verifier
 

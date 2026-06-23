@@ -13,4 +13,4 @@ title: "AuditPayload"
 
 ### diff?
 
-> `optional` **diff**: `Record`\<`string`, `unknown`\>
+> `optional` **diff?**: `Record`\<`string`, `unknown`\>

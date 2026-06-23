@@ -13,50 +13,50 @@ title: "PolicyCapabilityDiagnostic"
 
 > `readonly` **capability**: [`PolicyRuntimeCapability`](/api/framework-context/src/type-aliases/policyruntimecapability/)
 
-***
+---
 
 ### code
 
-> `readonly` **code**: *typeof* [`POLICY_CAPABILITY_UNAVAILABLE_CODE`](/api/framework-context/src/variables/policy_capability_unavailable_code/)
+> `readonly` **code**: _typeof_ [`POLICY_CAPABILITY_UNAVAILABLE_CODE`](/api/framework-context/src/variables/policy_capability_unavailable_code/)
 
-***
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### policyKind
 
 > `readonly` **policyKind**: [`PolicyKind`](/api/framework-context/src/type-aliases/policykind/)
 
-***
+---
 
 ### runtimeSource?
 
-> `readonly` `optional` **runtimeSource**: [`PolicySource`](/api/framework-context/src/type-aliases/policysource/)
+> `readonly` `optional` **runtimeSource?**: [`PolicySource`](/api/framework-context/src/type-aliases/policysource/)
 
-***
+---
 
 ### severity
 
 > `readonly` **severity**: `"error"`
 
-***
+---
 
 ### source?
 
-> `readonly` `optional` **source**: [`PolicySource`](/api/framework-context/src/type-aliases/policysource/)
+> `readonly` `optional` **source?**: [`PolicySource`](/api/framework-context/src/type-aliases/policysource/)
 
-***
+---
 
 ### target
 
 > `readonly` **target**: [`PolicyTarget`](/api/framework-context/src/type-aliases/policytarget/)
 
-***
+---
 
 ### targetRuntime?
 
-> `readonly` `optional` **targetRuntime**: [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)
+> `readonly` `optional` **targetRuntime?**: [`RuntimePlatform`](/api/framework-context/src/type-aliases/runtimeplatform/)

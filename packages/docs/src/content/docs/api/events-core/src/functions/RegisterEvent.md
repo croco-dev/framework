@@ -11,20 +11,4 @@ title: "RegisterEvent"
 
 ## Returns
 
-> \<`T`\>(`target`): `EventClass`\<`T`\>
-
-### Type Parameters
-
-#### T
-
-`T` *extends* [`DomainEvent`](/api/events-core/src/classes/domainevent/)
-
-### Parameters
-
-#### target
-
-`EventClass`\<`T`\>
-
-### Returns
-
-`EventClass`\<`T`\>
+\<`T`\>(`target`) => `EventClass`\<`T`\>

@@ -13,4 +13,4 @@ title: "InMemoryRateLimitStoreOptions"
 
 ### pruneIntervalMs?
 
-> `optional` **pruneIntervalMs**: `number`
+> `optional` **pruneIntervalMs?**: `number`

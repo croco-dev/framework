@@ -11,4 +11,4 @@ title: "GraphQLResolverOptions"
 
 ### scope?
 
-> `optional` **scope**: [`Scope`](/api/framework-context/src/type-aliases/scope/)
+> `optional` **scope?**: [`Scope`](/api/framework-context/src/type-aliases/scope/)

@@ -11,21 +11,21 @@ title: "GraphQLContractSnapshotArgument"
 
 ### defaultValue?
 
-> `readonly` `optional` **defaultValue**: `string`
+> `readonly` `optional` **defaultValue?**: `string`
 
-***
+---
 
 ### description?
 
-> `readonly` `optional` **description**: `string`
+> `readonly` `optional` **description?**: `string`
 
-***
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### type
 

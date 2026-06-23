@@ -9,11 +9,11 @@ title: "CompiledRoute"
 
 ### controllerInstance?
 
-> `optional` **controllerInstance**: `unknown`
+> `optional` **controllerInstance?**: `unknown`
 
-***
+---
 
-### handler()
+### handler
 
 > **handler**: (`ctx`) => `Promise`\<`unknown`\>
 
@@ -27,32 +27,32 @@ title: "CompiledRoute"
 
 `Promise`\<`unknown`\>
 
-***
+---
 
 ### method
 
 > **method**: `string`
 
-***
+---
 
 ### methodName
 
 > **methodName**: `string` \| `symbol`
 
-***
+---
 
 ### path
 
 > **path**: `string`
 
-***
+---
 
 ### pipelineGraph?
 
-> `optional` **pipelineGraph**: [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/requestpipelinegraph/)
+> `optional` **pipelineGraph?**: [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/requestpipelinegraph/)
 
-***
+---
 
 ### pipelineGraphConfig?
 
-> `optional` **pipelineGraphConfig**: [`CompiledRoutePipelineGraphConfig`](/api/transports-http/src/type-aliases/compiledroutepipelinegraphconfig/)
+> `optional` **pipelineGraphConfig?**: [`CompiledRoutePipelineGraphConfig`](/api/transports-http/src/type-aliases/compiledroutepipelinegraphconfig/)

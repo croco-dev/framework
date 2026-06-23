@@ -15,17 +15,17 @@ title: "IdempotencyStoreConformanceOptions"
 
 ## Properties
 
-### createResponse()?
+### createResponse?
 
-> `readonly` `optional` **createResponse**: () => `TResult`
+> `readonly` `optional` **createResponse?**: () => `TResult`
 
 #### Returns
 
 `TResult`
 
-***
+---
 
-### createStore()
+### createStore
 
 > `readonly` **createStore**: () => [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<`TResult`\> \| `Promise`\<[`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<`TResult`\>\>
 

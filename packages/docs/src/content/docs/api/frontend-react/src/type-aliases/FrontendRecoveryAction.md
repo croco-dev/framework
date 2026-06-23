@@ -11,32 +11,32 @@ title: "FrontendRecoveryAction"
 
 ### href?
 
-> `readonly` `optional` **href**: `string`
+> `readonly` `optional` **href?**: `string`
 
-***
+---
 
 ### id
 
 > `readonly` **id**: `string`
 
-***
+---
 
 ### label
 
 > `readonly` **label**: `string`
 
-***
+---
 
-### onRecover()?
+### onRecover?
 
-> `readonly` `optional` **onRecover**: () => `void` \| `Promise`\<`void`\>
+> `readonly` `optional` **onRecover?**: () => `void` \| `Promise`\<`void`\>
 
 #### Returns
 
 `void` \| `Promise`\<`void`\>
 
-***
+---
 
 ### problemCodes?
 
-> `readonly` `optional` **problemCodes**: readonly `string`[]
+> `readonly` `optional` **problemCodes?**: readonly `string`[]

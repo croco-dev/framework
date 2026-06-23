@@ -11,9 +11,9 @@ title: "RateLimitMetadata"
 
 ## Properties
 
-### customKey()?
+### customKey?
 
-> `optional` **customKey**: (`context`) => `string`
+> `optional` **customKey?**: (`context`) => `string`
 
 #### Parameters
 
@@ -25,7 +25,7 @@ title: "RateLimitMetadata"
 
 `string`
 
-***
+---
 
 ### policy
 

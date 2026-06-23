@@ -11,8 +11,8 @@ title: "MigrationRunnerConfig"
 
 > **migrationsDir**: `string`
 
-***
+---
 
 ### tableName?
 
-> `optional` **tableName**: `string`
+> `optional` **tableName?**: `string`

@@ -13,11 +13,11 @@ title: "LlmUsage"
 
 ### accuracy?
 
-> `optional` **accuracy**: [`UsageAccuracy`](/api/llm-core/src/type-aliases/usageaccuracy/)
+> `optional` **accuracy?**: [`UsageAccuracy`](/api/llm-core/src/type-aliases/usageaccuracy/)
 
 정확도
 
-***
+---
 
 ### completionTokens
 
@@ -25,7 +25,7 @@ title: "LlmUsage"
 
 출력 토큰 수
 
-***
+---
 
 ### promptTokens
 
@@ -33,7 +33,7 @@ title: "LlmUsage"
 
 입력 토큰 수
 
-***
+---
 
 ### totalTokens
 

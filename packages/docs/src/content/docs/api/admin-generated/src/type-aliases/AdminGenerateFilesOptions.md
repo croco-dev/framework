@@ -11,4 +11,4 @@ title: "AdminGenerateFilesOptions"
 
 ### resourceFileName?
 
-> `readonly` `optional` **resourceFileName**: `string`
+> `readonly` `optional` **resourceFileName?**: `string`

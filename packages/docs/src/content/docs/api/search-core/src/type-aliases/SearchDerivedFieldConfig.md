@@ -13,27 +13,27 @@ derive() 결과 필드 설정
 
 ### as?
 
-> `optional` **as**: `string`
+> `optional` **as?**: `string`
 
-***
+---
 
 ### filterable?
 
-> `optional` **filterable**: `boolean`
+> `optional` **filterable?**: `boolean`
 
-***
+---
 
 ### options?
 
-> `optional` **options**: `Record`\<`string`, `unknown`\>
+> `optional` **options?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### sortable?
 
-> `optional` **sortable**: `boolean`
+> `optional` **sortable?**: `boolean`
 
-***
+---
 
 ### transformId
 

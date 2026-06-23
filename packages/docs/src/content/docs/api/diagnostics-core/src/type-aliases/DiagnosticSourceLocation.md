@@ -11,28 +11,28 @@ title: "DiagnosticSourceLocation"
 
 ### column?
 
-> `readonly` `optional` **column**: `number`
+> `readonly` `optional` **column?**: `number`
 
-***
+---
 
 ### file?
 
-> `readonly` `optional` **file**: `string`
+> `readonly` `optional` **file?**: `string`
 
-***
+---
 
 ### line?
 
-> `readonly` `optional` **line**: `number`
+> `readonly` `optional` **line?**: `number`
 
-***
+---
 
 ### packageName?
 
-> `readonly` `optional` **packageName**: `string`
+> `readonly` `optional` **packageName?**: `string`
 
-***
+---
 
 ### symbol?
 
-> `readonly` `optional` **symbol**: `string`
+> `readonly` `optional` **symbol?**: `string`

@@ -13,11 +13,11 @@ title: "PartitionStatus"
 
 ### lastProcessedAt?
 
-> `optional` **lastProcessedAt**: `Date`
+> `optional` **lastProcessedAt?**: `Date`
 
 마지막 처리 시간
 
-***
+---
 
 ### lastSequence
 
@@ -25,7 +25,7 @@ title: "PartitionStatus"
 
 마지막 시퀀스 번호
 
-***
+---
 
 ### partitionKey
 
@@ -33,7 +33,7 @@ title: "PartitionStatus"
 
 파티션 키
 
-***
+---
 
 ### pendingCount
 
@@ -41,7 +41,7 @@ title: "PartitionStatus"
 
 대기 중인 이벤트 수
 
-***
+---
 
 ### processingCount
 

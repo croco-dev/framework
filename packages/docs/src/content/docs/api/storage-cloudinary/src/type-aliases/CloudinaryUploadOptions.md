@@ -13,7 +13,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 ### context?
 
-> `optional` **context**: `Record`\<`string`, `string`\>
+> `optional` **context?**: `Record`\<`string`, `string`\>
 
 컨텍스트 메타데이터 (key-value 쌍)
 
@@ -21,7 +21,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 ### eager?
 
-> `optional` **eager**: `unknown`[]
+> `optional` **eager?**: `unknown`[]
 
 업로드 시 적용할 변환 (eager transformations)
 
@@ -29,7 +29,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 ### folder?
 
-> `optional` **folder**: `string`
+> `optional` **folder?**: `string`
 
 업로드할 폴더 경로
 
@@ -37,7 +37,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 ### publicId?
 
-> `optional` **publicId**: `string`
+> `optional` **publicId?**: `string`
 
 사용자 정의 public ID (key)
 
@@ -45,7 +45,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 ### resourceType?
 
-> `optional` **resourceType**: `"image"` \| `"video"` \| `"raw"`
+> `optional` **resourceType?**: `"image"` \| `"video"` \| `"raw"`
 
 리소스 타입
 
@@ -53,6 +53,6 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 ### tags?
 
-> `optional` **tags**: `string`[]
+> `optional` **tags?**: `string`[]
 
 태그 목록

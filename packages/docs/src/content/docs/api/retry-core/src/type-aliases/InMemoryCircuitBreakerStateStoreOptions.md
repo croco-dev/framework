@@ -11,10 +11,10 @@ title: "InMemoryCircuitBreakerStateStoreOptions"
 
 ### idleTtlMs?
 
-> `optional` **idleTtlMs**: `number`
+> `optional` **idleTtlMs?**: `number`
 
-***
+---
 
 ### maxEntries?
 
-> `optional` **maxEntries**: `number`
+> `optional` **maxEntries?**: `number`

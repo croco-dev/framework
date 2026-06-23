@@ -13,7 +13,7 @@ Cloudinary 제공자 구성과 확장 옵션에 필요한 공개 타입들입니
 
 ### key?
 
-> `readonly` `optional` **key**: `string`
+> `readonly` `optional` **key?**: `string`
 
 ---
 
@@ -31,16 +31,16 @@ Cloudinary 제공자 구성과 확장 옵션에 필요한 공개 타입들입니
 
 ### retryable?
 
-> `readonly` `optional` **retryable**: `boolean`
+> `readonly` `optional` **retryable?**: `boolean`
 
 ---
 
 ### status?
 
-> `readonly` `optional` **status**: `number`
+> `readonly` `optional` **status?**: `number`
 
 ---
 
 ### upstreamCode?
 
-> `readonly` `optional` **upstreamCode**: `string`
+> `readonly` `optional` **upstreamCode?**: `string`

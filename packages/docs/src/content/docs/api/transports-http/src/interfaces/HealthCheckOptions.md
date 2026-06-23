@@ -13,7 +13,7 @@ title: "HealthCheckOptions"
 
 ### timeout?
 
-> `optional` **timeout**: `number`
+> `optional` **timeout?**: `number`
 
 #### Inherited from
 

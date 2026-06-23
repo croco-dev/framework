@@ -13,26 +13,26 @@ title: "QStashTriggerSyncDetail"
 
 > `readonly` **action**: `string`
 
-***
+---
 
 ### applied
 
 > `readonly` **applied**: `boolean`
 
-***
+---
 
 ### code?
 
-> `readonly` `optional` **code**: `string`
+> `readonly` `optional` **code?**: `string`
 
-***
+---
 
 ### error?
 
-> `readonly` `optional` **error**: `string`
+> `readonly` `optional` **error?**: `string`
 
-***
+---
 
 ### retryable?
 
-> `readonly` `optional` **retryable**: `boolean`
+> `readonly` `optional` **retryable?**: `boolean`
