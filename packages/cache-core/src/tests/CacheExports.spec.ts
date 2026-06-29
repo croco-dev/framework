@@ -18,13 +18,15 @@ import {
   invalidateCacheTag,
   InMemoryCacheStore,
   serializeCacheInvalidationManifest,
-  type CacheGetOrSetOptions,
-  type CacheInvalidationAdapter,
-  type CacheInvalidationManifest,
-  type CachePattern,
-  type CacheStats,
-  type CacheWarmupEntry,
-  type DistributedCacheLock,
+} from "../index";
+import type {
+  CacheGetOrSetOptions,
+  CacheInvalidationAdapter,
+  CacheInvalidationManifest,
+  CachePattern,
+  CacheStats,
+  CacheWarmupEntry,
+  DistributedCacheLock,
 } from "../index";
 
 class RootCache extends Cache<string, string> {

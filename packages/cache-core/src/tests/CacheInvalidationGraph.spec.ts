@@ -3,6 +3,7 @@ import {
   assertCacheInvalidatesForEvent,
   assertCacheInvalidationGraphValid,
   CacheInvalidationFailedProblem,
+  CacheInvalidationGraphProblem,
   createCacheAdapterCapabilityManifest,
   createCacheInvalidationManifest,
   createCacheStoreInvalidationAdapter,
@@ -113,8 +114,40 @@ describe("Cache Invalidation Graph", () => {
       "cache-invalidation/unknown-event-reference",
     ]);
     expect(() => assertCacheInvalidationGraphValid(manifest)).toThrow(
-      "Cache invalidation graph has 3 diagnostic(s).",
+      CacheInvalidationGraphProblem,
     );
+  });
+
+  it("keeps distinct invalidations when ids and keys contain separator characters", () => {
+    const manifest = assertCacheInvalidationGraphValid(
+      createCacheInvalidationManifest(
+        defineCacheInvalidationGraph({
+          events: [defineCacheInvalidationEvent({ eventName: "user.updated" })],
+          keys: [
+            defineCacheKey({ id: "tenant", key: "key:a" }),
+            defineCacheKey({ id: "tenant:key", key: "a" }),
+          ],
+          rules: [
+            defineCacheInvalidationRule({
+              eventName: "user.updated",
+              invalidates: [invalidateCacheKey("tenant"), invalidateCacheKey("tenant:key")],
+            }),
+          ],
+        }),
+      ),
+    );
+
+    expect(manifest.events[0]?.invalidates).toHaveLength(2);
+    expect(manifest.events[0]?.invalidates).toContainEqual({
+      id: "tenant",
+      key: "key:a",
+      kind: "key",
+    });
+    expect(manifest.events[0]?.invalidates).toContainEqual({
+      id: "tenant:key",
+      key: "a",
+      kind: "key",
+    });
   });
 
   it("invalidates event-declared cache entries and prevents stale reads", async () => {
@@ -162,7 +195,9 @@ describe("Cache Invalidation Graph", () => {
       name: "limited-cache",
     };
     const telemetry = {
-      recordError: vi.fn(),
+      recordError: vi.fn(() => {
+        throw new Error("telemetry unavailable");
+      }),
       recordEvent: vi.fn(),
     };
 
@@ -184,6 +219,38 @@ describe("Cache Invalidation Graph", () => {
       }),
     );
     expect(telemetry.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it("does not let telemetry event failures change successful invalidation", async () => {
+    const cache = new InMemoryCacheStore<string>({ maxEntries: 1000 });
+    const manifest = assertCacheInvalidationGraphValid(
+      createCacheInvalidationManifest(createUserInvalidationGraph()),
+    );
+    const telemetry = {
+      recordEvent: vi.fn(() => {
+        throw new Error("telemetry unavailable");
+      }),
+    };
+
+    await cache.set("user:123", "stale-detail");
+    await cache.set("users:list", "stale-list");
+
+    await expect(
+      invalidateCacheForEvent({
+        adapter: createCacheStoreInvalidationAdapter(cache),
+        event: "user.updated",
+        manifest,
+        telemetry,
+      }),
+    ).resolves.toEqual({
+      eventName: "user.updated",
+      operations: [
+        { affectedCount: 1, id: "user-by-id", kind: "pattern", pattern: "user:*" },
+        { id: "user-list", key: "users:list", kind: "key" },
+      ],
+    });
+    expect(await cache.get("user:123")).toBeUndefined();
+    expect(await cache.get("users:list")).toBeUndefined();
   });
 
   it("describes cache adapter invalidation capabilities", () => {

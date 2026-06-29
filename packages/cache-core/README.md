@@ -82,10 +82,8 @@ import {
   defineCacheInvalidationGraph,
   defineCacheInvalidationRule,
   defineCacheKey,
-  defineCacheTag,
   invalidateCacheForEvent,
   invalidateCacheKey,
-  invalidateCacheTag,
   InMemoryCacheStore,
 } from "@croco/cache-core";
 
@@ -97,15 +95,10 @@ const graph = defineCacheInvalidationGraph({
     defineCacheKey({ id: "user-by-id", pattern: "user:*" }),
     defineCacheKey({ id: "user-list", key: "users:list" }),
   ],
-  tags: [defineCacheTag({ id: "tenant-users", tag: "tenant:users" })],
   rules: [
     defineCacheInvalidationRule({
       eventName: "user.updated",
-      invalidates: [
-        invalidateCacheKey("user-by-id"),
-        invalidateCacheKey("user-list"),
-        invalidateCacheTag("tenant-users"),
-      ],
+      invalidates: [invalidateCacheKey("user-by-id"), invalidateCacheKey("user-list")],
     }),
   ],
 });

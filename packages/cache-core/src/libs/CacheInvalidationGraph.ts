@@ -2,11 +2,11 @@ import type { CachePattern, CacheStore } from "./CacheStore";
 import {
   CacheInvalidationAssertionProblem,
   CacheInvalidationFailedProblem,
-  type CacheInvalidationDiagnostic,
   CacheInvalidationGraphProblem,
   UnknownCacheInvalidationEventProblem,
   UnsupportedCacheInvalidationCapabilityProblem,
 } from "./problems/CacheDecoratorProblems";
+import type { CacheInvalidationDiagnostic } from "./problems/CacheDecoratorProblems";
 
 export const CACHE_INVALIDATION_MANIFEST_SCHEMA_VERSION =
   "croco.cache-invalidation-graph.manifest.v1" as const;
@@ -313,14 +313,14 @@ export async function invalidateCacheForEvent(
     try {
       const appliedOperation = await applyInvalidationOperation(options.adapter, operation);
       operations.push(appliedOperation);
-      options.telemetry?.recordEvent?.({
+      recordTelemetryEvent(options.telemetry, {
         ...context,
         ...affectedCountObject(appliedOperation.affectedCount),
         kind: "cache.invalidation.applied",
       });
     } catch (cause) {
       const problem = new CacheInvalidationFailedProblem(eventName, adapterName, operation, cause);
-      options.telemetry?.recordError?.(problem, context);
+      recordTelemetryError(options.telemetry, problem, context);
       throw problem;
     }
   }
@@ -645,7 +645,15 @@ function compareOperations(
 }
 
 function operationKey(operation: CacheInvalidationManifestOperation): string {
-  return `${operation.id}:${formatOperation(operation)}`;
+  if (operation.kind === "key") {
+    return JSON.stringify([operation.id, "key", operation.key]);
+  }
+
+  if (operation.kind === "pattern") {
+    return JSON.stringify([operation.id, "pattern", operation.pattern]);
+  }
+
+  return JSON.stringify([operation.id, "tag", operation.tag]);
 }
 
 function formatOperation(operation: CacheInvalidationManifestOperation): string {
@@ -664,6 +672,29 @@ function affectedCountObject(affectedCount: number | undefined): {
   readonly affectedCount?: number;
 } {
   return affectedCount === undefined ? {} : { affectedCount };
+}
+
+function recordTelemetryEvent(
+  telemetry: CacheInvalidationTelemetrySink | undefined,
+  event: CacheInvalidationTelemetryEvent,
+): void {
+  try {
+    telemetry?.recordEvent?.(event);
+  } catch {
+    // Telemetry is best-effort and must not replace the cache invalidation outcome.
+  }
+}
+
+function recordTelemetryError(
+  telemetry: CacheInvalidationTelemetrySink | undefined,
+  problem: CacheInvalidationFailedProblem,
+  context: CacheInvalidationTelemetryContext,
+): void {
+  try {
+    telemetry?.recordError?.(problem, context);
+  } catch {
+    // Telemetry is best-effort and must not replace the adapter failure evidence.
+  }
 }
 
 function isNonEmpty(value: string | undefined): value is string {
