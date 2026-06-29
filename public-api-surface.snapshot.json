@@ -16228,6 +16228,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "assertFailureDrillResult",
+          "exportKind": "named",
+          "source": "./libs/failure-drill",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertOpenAPIRoute",
           "exportKind": "named",
           "source": "./libs/testing",
@@ -16261,6 +16267,12 @@
           "name": "createEventTestingHarness",
           "exportKind": "named",
           "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFailureDrillCatalog",
+          "exportKind": "named",
+          "source": "./libs/failure-drill",
           "declarationKind": "function"
         },
         {
@@ -16354,6 +16366,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "FAILURE_DRILL_SCENARIO_IDS",
+          "exportKind": "named",
+          "source": "./libs/failure-drill",
+          "declarationKind": "const"
+        },
+        {
           "name": "installTestingTelemetryCapture",
           "exportKind": "named",
           "source": "./libs/telemetry-testing",
@@ -16375,6 +16393,18 @@
           "name": "resetCrocoTestingContext",
           "exportKind": "named",
           "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "runFailureDrills",
+          "exportKind": "named",
+          "source": "./libs/failure-drill",
+          "declarationKind": "function"
+        },
+        {
+          "name": "runFailureDrillScenario",
+          "exportKind": "named",
+          "source": "./libs/failure-drill",
           "declarationKind": "function"
         },
         {
@@ -16571,6 +16601,71 @@
           "name": "EventTestingHarnessOptions",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "FailureDrillAttributeValue",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillCatalogOverrides",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillEvidenceExpectation",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillEvidenceKind",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillEvidenceRecord",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillExpectedOutcome",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillProblemExpectation",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillReport",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillResult",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillRunOutput",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillScenario",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillScenarioId",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
+        },
+        {
+          "name": "FailureDrillScenarioOverride",
+          "exportKind": "named",
+          "source": "./libs/failure-drill"
         },
         {
           "name": "LlmProviderConformanceCase",

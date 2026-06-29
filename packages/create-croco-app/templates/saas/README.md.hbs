@@ -17,9 +17,11 @@ CLI smoke는 서버를 시작하지 않으며, in-memory provider profile만 사
 
 ```bash
 pnpm ops:smoke
+pnpm failure-drill:smoke
 ```
 
 `ops:smoke`는 diagnostics를 token mode로 켜고 unauthenticated 요청이 `403`으로 거부되는지 확인한 뒤, `croco ops check` contract로 `/health`, `/ready`, `/diagnostics`를 검증합니다.
+`failure-drill:smoke`는 credential 없이 provider timeout, duplicate delivery, outbox relay crash, telemetry exporter failure, tenant context missing, quota exceeded drill을 실행합니다. 각 drill은 기대 Problem code, recovery action, telemetry evidence, audit evidence가 없으면 실패합니다.
 
 ## Usage Dashboard
 
@@ -102,10 +104,13 @@ SAAS_PROVIDER_PROFILE=in-memory pnpm demo:smoke
 
 ```bash
 pnpm profile:check
+pnpm failure-drill:smoke
 SAAS_PROVIDER_PROFILE=<generated-profile> pnpm profile:smoke:real
+SAAS_PROVIDER_PROFILE=<generated-profile> pnpm failure-drill:integration
 ```
 
 `profile:smoke:real`은 실제 외부 provider를 호출하기 전에 manifest와 required env를 검사합니다. 누락된 값은 `CROCO_SAAS_PROFILE_ENV_MISSING` diagnostic으로 실패합니다.
+`failure-drill:integration`은 같은 real-provider preflight 경계를 사용하므로 credential이 준비된 환경에서만 명시적으로 실행합니다.
 
 Provider-backed profile seam은 기존 `drizzle-polar-upstash`와 신규 production profiles로 문서화되어 있습니다. 실제 adapter wiring을 추가할 때 다음 package와 env contract를 사용합니다.
 
@@ -144,6 +149,7 @@ pnpm build
 pnpm test
 pnpm demo:smoke
 pnpm ops:smoke
+pnpm failure-drill:smoke
 ```
 
 이 preset은 실행 가능한 local/in-memory provider만 포함합니다. production auth provider, persistent storage migration, external billing webhook routing, provider-backed LLM adapter wiring, multi-region deployment 자동화는 명시적으로 포함하지 않습니다.

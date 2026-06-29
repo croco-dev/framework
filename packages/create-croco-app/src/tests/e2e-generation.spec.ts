@@ -803,6 +803,10 @@ describe("E2E: generate()", () => {
 
     const rootPackageJson = readPackageJson(join(testDir, "package.json"));
     const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+    const failureDrillSource = readFileSync(
+      join(testDir, "apps", "api-server", "src", "demo", "failure-drill-smoke.ts"),
+      "utf8",
+    );
 
     expect(rootPackageJson.scripts).toMatchObject({
       typecheck: "turbo typecheck",
@@ -822,6 +826,8 @@ describe("E2E: generate()", () => {
       "demo:smoke":
         "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
       "ops:smoke": "pnpm --filter @test/api-server ops:smoke",
+      "failure-drill:smoke": "pnpm --filter @test/api-server failure-drill:smoke",
+      "failure-drill:integration": "pnpm --filter @test/api-server failure-drill:integration",
     });
     expect(apiPackageJson.dependencies).toMatchObject({
       "@croco/tenant-core": "^0.0.2",
@@ -841,13 +847,21 @@ describe("E2E: generate()", () => {
       "@croco/telemetry-api": "^0.0.2",
       "@croco/telemetry-sdk-node": "^0.0.2",
     });
+    expect(apiPackageJson.dependencies?.["@croco/testing"]).toBeUndefined();
     expect(apiPackageJson.scripts).toMatchObject({
       "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
       "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
     });
     expect(apiPackageJson.devDependencies?.typedi).toBe("^0.10.0");
     expect(apiPackageJson.devDependencies?.["@croco/cli"]).toMatch(/^\^[0-9]+\.[0-9]+\.[0-9]+$/);
+    expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
     expect(apiPackageJson.scripts?.["ops:smoke"]).toBe("tsx src/demo/ops-smoke.ts");
+    expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
+      "tsx src/demo/failure-drill-smoke.ts",
+    );
+    expect(apiPackageJson.scripts?.["failure-drill:integration"]).toBe(
+      "tsx src/provider-profile-check.ts --mode=real-provider",
+    );
     expect(existsSync(join(testDir, "apps", "api-server", "src", "saasDemo.ts"))).toBe(true);
     expect(existsSync(join(testDir, "apps", "api-server", "src", "providerProfiles.ts"))).toBe(
       true,
@@ -855,6 +869,7 @@ describe("E2E: generate()", () => {
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "provider-profile-check.ts")),
     ).toBe(true);
+    expect(failureDrillSource).toContain("assertSaasSmokeContract(snapshot)");
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts")),
     ).toBe(true);
@@ -1050,7 +1065,15 @@ describe("E2E: generate()", () => {
         billing: "demo",
         telemetry: "opentelemetry-otlp",
         deploymentPreset: "node-api",
-        qualityGates: ["install", "typecheck", "build", "test", "contract:verify", "demo:smoke"],
+        qualityGates: [
+          "install",
+          "typecheck",
+          "build",
+          "test",
+          "contract:verify",
+          "demo:smoke",
+          "failure-drill:smoke",
+        ],
       });
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);
@@ -1079,11 +1102,17 @@ describe("E2E: generate()", () => {
       const rootPackageJson = readPackageJson(join(testDir, "package.json"));
       const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
       const appSource = readFileSync(join(testDir, "apps", "api-server", "src", "app.ts"), "utf8");
+      const failureDrillSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "demo", "failure-drill-smoke.ts"),
+        "utf8",
+      );
 
       expect(rootPackageJson.scripts).toMatchObject({
         "ai:smoke": "pnpm --filter @test/api-server ai:smoke",
         "demo:smoke":
           "pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server ai:smoke",
+        "failure-drill:smoke": "pnpm --filter @test/api-server failure-drill:smoke",
+        "failure-drill:integration": "pnpm --filter @test/api-server failure-drill:integration",
       });
       expect(apiPackageJson.dependencies).toMatchObject({
         "@croco/llm-core": "^0.0.2",
@@ -1095,7 +1124,13 @@ describe("E2E: generate()", () => {
         "@croco/telemetry-api": "^0.0.2",
         "@croco/tenant-core": "^0.0.2",
       });
+      expect(apiPackageJson.dependencies?.["@croco/testing"]).toBeUndefined();
+      expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
       expect(apiPackageJson.scripts?.["ai:smoke"]).toBe("tsx src/demo/ai-smoke.ts");
+      expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
+        "tsx src/demo/failure-drill-smoke.ts",
+      );
+      expect(failureDrillSource).toContain("assertSaasSmokeContract(snapshot)");
       expect(appSource).toMatch(/AiController/);
       expect(appSource).toMatch(
         /\[OperationsController, JobsController, SaasController, AiController\]/,
