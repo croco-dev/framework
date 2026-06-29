@@ -151,7 +151,13 @@ Background job inspection is available through the operations routes:
 
 ```bash
 croco jobs list --url http://localhost:3000/ops
+croco jobs show exec_1 --url http://localhost:3000/ops
+croco jobs logs exec_1 --url http://localhost:3000/ops
+croco jobs cancel exec_2 --url http://localhost:3000/ops --reason "operator stop"
+croco jobs replay exec_3 --url http://localhost:3000/ops --reason "provider restored"
 ```
+
+`list`와 `show`는 failed/timed-out/retry-exhausted job처럼 operator attention이 필요한 상태를 발견하면 non-zero exit code를 반환합니다. `replay`는 원본 execution을 재사용하지 않고 `replayOf`가 원본 id를 가리키는 새 pending execution을 만들며, 원본 idempotency key를 복사하지 않습니다. 로컬 검증은 `pnpm jobs:smoke`로 실행합니다.
 
 ## Validation
 
@@ -161,6 +167,7 @@ pnpm build
 pnpm test
 pnpm demo:smoke
 pnpm ops:smoke
+pnpm jobs:smoke
 pnpm failure-drill:smoke
 ```
 

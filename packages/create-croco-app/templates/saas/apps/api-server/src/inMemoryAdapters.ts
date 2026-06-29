@@ -10,6 +10,8 @@ import type {
 import type {
   CreateExecutionParams,
   Execution,
+  ExecutionLogEntry,
+  ExecutionLogStore,
   ExecutionStore,
   ListExecutionsOptions,
 } from "@croco/execution-core";
@@ -345,7 +347,7 @@ export class InMemoryRedisClient implements RedisClient {
   }
 }
 
-export class InMemoryExecutionStore implements ExecutionStore {
+export class InMemoryExecutionStore implements ExecutionStore, ExecutionLogStore {
   private readonly executions = new Map<string, Execution>();
   private idCounter = 0;
 
@@ -367,6 +369,8 @@ export class InMemoryExecutionStore implements ExecutionStore {
       timeout: params.timeout,
       scheduledFor: params.scheduledFor,
       idempotencyKey: params.idempotencyKey,
+      replayOf: params.replayOf,
+      logs: params.logs,
       parentId: params.parentId,
       metadata: params.metadata,
       createdAt: new Date(),
@@ -409,9 +413,23 @@ export class InMemoryExecutionStore implements ExecutionStore {
     if (options.parentId !== undefined) {
       executions = executions.filter((execution) => execution.parentId === options.parentId);
     }
+    if (options.replayOf !== undefined) {
+      executions = executions.filter((execution) => execution.replayOf === options.replayOf);
+    }
 
     const offset = options.offset ?? 0;
     return executions.slice(offset, options.limit ? offset + options.limit : undefined);
+  }
+
+  async appendLog(id: string, entry: ExecutionLogEntry): Promise<Execution> {
+    const execution = await this.findById(id);
+    if (!execution) {
+      throw new Error(`Execution with id '${id}' not found`);
+    }
+
+    return this.update(id, {
+      logs: [...(execution.logs ?? []), entry],
+    });
   }
 
   async delete(id: string): Promise<void> {

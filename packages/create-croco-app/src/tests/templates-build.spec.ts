@@ -424,9 +424,10 @@ function checkSaasStructure() {
         "NODE_PATH=./node_modules croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
       "profile:smoke:real": "pnpm --filter {{scope}}/api-server profile:smoke:real",
       "demo:smoke": expect.stringMatching(
-        /profile:check[\s\S]*architecture-policy:check[\s\S]*runtime-policy:check[\s\S]*contract:check[\s\S]*api-server demo:smoke[\s\S]*api-server ops:smoke/,
+        /profile:check[\s\S]*architecture-policy:check[\s\S]*runtime-policy:check[\s\S]*contract:check[\s\S]*api-server demo:smoke[\s\S]*api-server ops:smoke[\s\S]*api-server jobs:smoke/,
       ),
       "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
+      "jobs:smoke": "pnpm --filter {{scope}}/api-server jobs:smoke",
       "failure-drill:smoke": "pnpm --filter {{scope}}/api-server failure-drill:smoke",
       "failure-drill:integration": "pnpm --filter {{scope}}/api-server failure-drill:integration",
       typecheck: "turbo typecheck",
@@ -446,6 +447,7 @@ function checkSaasStructure() {
       "demo:seed": "tsx src/demo/seed.ts",
       "demo:smoke": "tsx src/demo/smoke.ts",
       "ops:smoke": "tsx src/demo/ops-smoke.ts",
+      "jobs:smoke": "tsx src/demo/jobs-smoke.ts",
       "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
       "failure-drill:integration": "tsx src/provider-profile-check.ts --mode=real-provider",
       "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
@@ -564,6 +566,17 @@ function checkSaasStructure() {
     /\/ops\/jobs/,
   );
   checkFileContains("saas", ["apps", "api-server", "src", "demo", "ops-smoke.ts"], /runOpsCheck/);
+  checkFileContains("saas", ["apps", "api-server", "src", "demo", "jobs-smoke.ts"], /runJobsList/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "jobs-smoke.ts"],
+    /@croco\/cli\/jobs/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "jobs-smoke.ts"],
+    /replayExecution\.idempotencyKey/,
+  );
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "demo", "failure-drill-smoke.ts"],

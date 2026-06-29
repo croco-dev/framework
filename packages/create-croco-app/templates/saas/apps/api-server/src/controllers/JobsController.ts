@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, ResponseSchema } from "@croco/protocols-rest";
-import type { JobStatus } from "../jobs";
+import type { ExecutionStatus } from "@croco/execution-core";
 import type { JobActionDto } from "./schemas";
 import {
   JOB_ID_SCHEMA,
@@ -12,7 +12,7 @@ import {
   jobLogEntrySchema,
 } from "./schemas";
 
-const JOB_STATUSES = new Set<JobStatus>([
+const JOB_STATUSES = new Set<ExecutionStatus>([
   "pending",
   "running",
   "completed",
@@ -27,16 +27,18 @@ async function invalidJobsQuery(name: string, value: string): Promise<never> {
   throw new InvalidJobsQueryProblem(name, value);
 }
 
-async function parseOptionalJobStatus(value: string | undefined): Promise<JobStatus | undefined> {
+async function parseOptionalJobStatus(
+  value: string | undefined,
+): Promise<ExecutionStatus | undefined> {
   if (value === undefined || value.length === 0) {
     return undefined;
   }
 
-  if (!JOB_STATUSES.has(value as JobStatus)) {
+  if (!JOB_STATUSES.has(value as ExecutionStatus)) {
     return invalidJobsQuery("status", value);
   }
 
-  return value as JobStatus;
+  return value as ExecutionStatus;
 }
 
 async function parseOptionalJobsInteger(
@@ -62,6 +64,7 @@ export class JobsController {
   async list(
     @Query("status", OPTIONAL_JOB_STATUS_QUERY_SCHEMA) status?: string,
     @Query("type", OPTIONAL_JOB_TYPE_QUERY_SCHEMA) type?: string,
+    @Query("replayOf", OPTIONAL_JOB_TYPE_QUERY_SCHEMA) replayOf?: string,
     @Query("limit", OPTIONAL_JOBS_INTEGER_QUERY_SCHEMA) limit?: string,
     @Query("offset", OPTIONAL_JOBS_INTEGER_QUERY_SCHEMA) offset?: string,
   ) {
@@ -70,6 +73,7 @@ export class JobsController {
     return defaultSaasRuntime.jobs.list({
       status: await parseOptionalJobStatus(status),
       type: type && type.length > 0 ? type : undefined,
+      replayOf: replayOf && replayOf.length > 0 ? replayOf : undefined,
       limit: await parseOptionalJobsInteger("limit", limit),
       offset: await parseOptionalJobsInteger("offset", offset),
     });

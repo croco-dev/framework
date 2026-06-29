@@ -26,6 +26,10 @@
       "./ops": {
         "import": "./dist/ops.js",
         "types": "./dist/ops.d.ts"
+      },
+      "./jobs": {
+        "import": "./dist/jobs.js",
+        "types": "./dist/jobs.d.ts"
       }
     },
     "access": "public"

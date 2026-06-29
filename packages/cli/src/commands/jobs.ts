@@ -154,6 +154,10 @@ const list = defineCommand({
       type: "string",
       description: "Filter by execution type",
     },
+    replayOf: {
+      type: "string",
+      description: "Filter by source execution ID for replayed jobs",
+    },
     limit: {
       type: "string",
       description: "Maximum jobs to return",
@@ -173,6 +177,7 @@ const list = defineCommand({
       {
         status: readOptionalString(args.status),
         type: readOptionalString(args.type),
+        replayOf: readOptionalString(args.replayOf),
         limit: parseOptionalInteger("limit", args.limit),
         offset: parseOptionalInteger("offset", args.offset),
       },
