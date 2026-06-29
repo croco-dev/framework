@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 388,
+  "problemCount": 393,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -6321,6 +6321,141 @@
       ]
     },
     {
+      "code": "notifications-resend/idempotency-conflict",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-resend-idempotency-conflict",
+      "recovery": {
+        "cause": "Resend rejected reuse of an idempotency key for a different send request.",
+        "userAction": "Replay the original payload with the same key or use a new key for a changed send intent.",
+        "operatorAction": "Audit callers so each business send intent has one stable idempotency key.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
+          "line": 54,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-resend/missing-config",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-resend-missing-config",
+      "recovery": {
+        "cause": "Required Resend configuration is absent or blank before provider readiness can be proven.",
+        "userAction": "Configure RESEND_API_KEY and a verified default sender, then rerun diagnostics.",
+        "operatorAction": "Check deployment env/config injection and verify diagnostics do not expose the raw key.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
+          "line": 19,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-resend/retryable-upstream",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-resend-retryable-upstream",
+      "recovery": {
+        "cause": "Resend returned a transient status, rate limit, or network timeout.",
+        "userAction": "Retry with the same idempotency key when the send intent is unchanged.",
+        "operatorAction": "Check Resend status, rate limits, and retry-after/upstream status in telemetry.",
+        "retryability": "retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
+          "line": 65,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-resend/terminal-upstream",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-resend-terminal-upstream",
+      "recovery": {
+        "cause": "Resend rejected the request with a non-retryable upstream failure.",
+        "userAction": "Do not retry unchanged input; correct the API key, domain, sender verification, or request content.",
+        "operatorAction": "Inspect redacted upstream code/status and fix provider configuration before retrying.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
+          "line": 76,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-resend/validation-failed",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-resend-validation-failed",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
+          "line": 40,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
       "code": "onboarding/context-required",
       "category": "Unauthorized",
       "status": 401,
@@ -7340,7 +7475,7 @@
       "sources": [
         {
           "file": "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          "line": 5,
+          "line": 87,
           "column": 5,
           "kind": "problem-constructor"
         }

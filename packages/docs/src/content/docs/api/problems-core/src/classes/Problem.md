@@ -214,7 +214,12 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`MissingUpFunctionProblem`](/api/migration-runner/src/classes/missingupfunctionproblem/)
 - [`UnsupportedDialectProblem`](/api/migration-runner/src/classes/unsupporteddialectproblem/)
 - [`UnsupportedMigrationQueryResultProblem`](/api/migration-runner/src/classes/unsupportedmigrationqueryresultproblem/)
+- [`ResendIdempotencyConflictProblem`](/api/notifications-resend/src/classes/resendidempotencyconflictproblem/)
+- [`ResendMissingConfigProblem`](/api/notifications-resend/src/classes/resendmissingconfigproblem/)
 - [`ResendNotificationProblem`](/api/notifications-resend/src/classes/resendnotificationproblem/)
+- [`ResendRetryableUpstreamProblem`](/api/notifications-resend/src/classes/resendretryableupstreamproblem/)
+- [`ResendTerminalUpstreamProblem`](/api/notifications-resend/src/classes/resendterminalupstreamproblem/)
+- [`ResendValidationProblem`](/api/notifications-resend/src/classes/resendvalidationproblem/)
 - [`OnboardingContextRequiredProblem`](/api/onboarding-core/src/classes/onboardingcontextrequiredproblem/)
 - [`OnboardingDefinitionNotFoundProblem`](/api/onboarding-core/src/classes/onboardingdefinitionnotfoundproblem/)
 - [`OnboardingStepNotFoundProblem`](/api/onboarding-core/src/classes/onboardingstepnotfoundproblem/)
@@ -304,7 +309,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
----
+***
 
 ### cause?
 
@@ -314,31 +319,31 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.cause`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### detail?
 
 > `readonly` `optional` **detail?**: `string`
 
----
+***
 
 ### extensions?
 
 > `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
----
+***
 
 ### instance?
 
 > `readonly` `optional` **instance?**: `string`
 
----
+***
 
 ### message
 
@@ -348,7 +353,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.message`
 
----
+***
 
 ### name
 
@@ -358,7 +363,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.name`
 
----
+***
 
 ### stack?
 
@@ -368,13 +373,13 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.stack`
 
----
+***
 
 ### type
 
 > `readonly` **type**: `string`
 
----
+***
 
 ### stackTraceLimit
 
@@ -406,7 +411,7 @@ not capture any frames.
 
 `number`
 
----
+***
 
 ### title
 
@@ -428,7 +433,7 @@ not capture any frames.
 
 [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### captureStackTrace()
 
@@ -441,7 +446,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -496,7 +501,7 @@ a();
 
 `Error.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

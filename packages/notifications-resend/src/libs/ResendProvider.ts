@@ -9,54 +9,20 @@ import {
   type NotificationResult,
   type NotificationSendOptions,
 } from "@croco/notifications-core";
+import type { Problem } from "@croco/problems-core";
 import { type RetryPolicy, RetryTemplate } from "@croco/retry-core";
+import { recordError, recordEvent } from "@croco/telemetry-api";
 import { type CreateEmailOptions, type CreateEmailResponse, Resend } from "resend";
-import { ResendNotificationProblem } from "./problems/ResendNotificationProblem";
+import { isResendEmailAddress, validateResendConfig, type ResendConfig } from "./ResendConfig";
+import {
+  createResendErrorContext,
+  isRetryableResendError,
+  normalizeResendError,
+  normalizeResendProblem,
+} from "./ResendProblemMapping";
+import { ResendValidationProblem } from "./problems/ResendNotificationProblem";
 
-const TRANSIENT_HTTP_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 const RESEND_BATCH_CONCURRENCY_LIMIT = 5;
-const TRANSIENT_ERROR_NAMES = new Set([
-  "application_error",
-  "concurrent_idempotent_requests",
-  "internal_server_error",
-  "rate_limit_exceeded",
-]);
-const TRANSIENT_ERROR_CODES = new Set([
-  "ECONNABORTED",
-  "ECONNREFUSED",
-  "ECONNRESET",
-  "EAI_AGAIN",
-  "ENETDOWN",
-  "ENETRESET",
-  "ENETUNREACH",
-  "ENOTFOUND",
-  "ETIMEDOUT",
-  "UND_ERR_BODY_TIMEOUT",
-  "UND_ERR_CONNECT_TIMEOUT",
-  "UND_ERR_HEADERS_TIMEOUT",
-  "UND_ERR_SOCKET",
-]);
-
-const RESEND_ERROR_STATUS_BY_NAME: Record<string, number> = {
-  application_error: 500,
-  concurrent_idempotent_requests: 409,
-  internal_server_error: 500,
-  invalid_api_key: 403,
-  invalid_api_Key: 403,
-  invalid_idempotent_request: 409,
-  invalid_parameter: 400,
-  invalid_region: 422,
-  invalid_smtp_configuration: 422,
-  not_found: 404,
-  rate_limit_exceeded: 429,
-};
-
-type ResendError = Error & {
-  code?: string;
-  providerResponse?: CreateEmailResponse;
-  retryAfter?: string;
-  status?: number;
-};
 
 const RESEND_RETRY_POLICY: RetryPolicy = {
   shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
@@ -68,100 +34,12 @@ const RESEND_RETRY_POLICY: RetryPolicy = {
   },
 };
 
-function getErrorStatus(error: unknown): number | undefined {
-  if (!(error instanceof Error)) {
-    return undefined;
-  }
-
-  const resendError = error as ResendError;
-  if (resendError.status !== undefined) {
-    return resendError.status;
-  }
-
-  return resendError.code ? RESEND_ERROR_STATUS_BY_NAME[resendError.code] : undefined;
-}
-
-function getErrorCode(error: unknown): string | undefined {
-  if (!(error instanceof Error)) {
-    return undefined;
-  }
-
-  return (error as ResendError).code;
-}
-
-function normalizeResendError(
-  error: unknown,
-  fallbackMessage: string,
-  providerResponse?: CreateEmailResponse,
-): ResendError {
-  if (error instanceof Error) {
-    const resendError = error as ResendError;
-
-    if (resendError.code && resendError.status === undefined) {
-      resendError.status = RESEND_ERROR_STATUS_BY_NAME[resendError.code];
-    }
-
-    if (providerResponse) {
-      resendError.providerResponse = providerResponse;
-    }
-
-    return resendError;
-  }
-
-  const errorRecord =
-    typeof error === "object" && error !== null ? (error as Record<string, unknown>) : undefined;
-  const message = typeof errorRecord?.message === "string" ? errorRecord.message : fallbackMessage;
-  const resendError = new Error(message) as ResendError;
-
-  if (typeof errorRecord?.name === "string") {
-    resendError.code = errorRecord.name;
-  }
-
-  if (typeof errorRecord?.statusCode === "number") {
-    resendError.status = errorRecord.statusCode;
-  } else if (typeof errorRecord?.status === "number") {
-    resendError.status = errorRecord.status;
-  } else if (typeof errorRecord?.name === "string") {
-    resendError.status = RESEND_ERROR_STATUS_BY_NAME[errorRecord.name];
-  }
-
-  if (typeof errorRecord?.retryAfter === "string") {
-    resendError.retryAfter = errorRecord.retryAfter;
-  }
-
-  if (providerResponse) {
-    resendError.providerResponse = providerResponse;
-  }
-
-  return resendError;
-}
-
-function isRetryableResendError(error: unknown): boolean {
-  const code = getErrorCode(error);
-  if (code !== undefined && TRANSIENT_ERROR_NAMES.has(code)) {
-    return true;
-  }
-
-  const status = getErrorStatus(error);
-  if (status !== undefined && TRANSIENT_HTTP_STATUSES.has(status)) {
-    return true;
-  }
-
-  if (code === undefined) {
-    return false;
-  }
-
-  return TRANSIENT_ERROR_CODES.has(code);
-}
-
-export interface ResendConfig {
-  apiKey: string;
-  from: string;
-}
+type ResendIdempotencyKeySource = "generated" | "not_created" | "provided";
 
 @Component()
 export class ResendProvider implements NotificationProvider {
-  private client: Resend;
+  private readonly client: Resend;
+  private readonly config: ResendConfig;
   private readonly retryTemplate = new RetryTemplate({
     maxAttempts: 3,
     backoff: {
@@ -173,8 +51,9 @@ export class ResendProvider implements NotificationProvider {
     retryPolicy: RESEND_RETRY_POLICY,
   });
 
-  constructor(private config: ResendConfig) {
-    this.client = new Resend(config.apiKey);
+  constructor(config: ResendConfig) {
+    this.config = validateResendConfig(config);
+    this.client = new Resend(this.config.apiKey);
   }
 
   getName(): string {
@@ -200,11 +79,24 @@ export class ResendProvider implements NotificationProvider {
     payload: NotificationPayload,
     options?: NotificationSendOptions,
   ): Promise<NotificationResult> {
-    try {
-      const { to, subject, content } = payload;
-      // 직접 호출에서 안정 키가 없을 때의 호환 경로이며, retry-dedupe를 보장하지 않는다.
-      const idempotencyKey = options?.idempotencyKey ?? `resend-${randomUUID()}`;
+    const validationProblem = validateResendPayload(payload);
 
+    if (validationProblem !== undefined) {
+      recordResendFailure(payload, getIdempotencyKeySource(options), validationProblem);
+
+      return {
+        success: false,
+        error: validationProblem,
+      };
+    }
+
+    const { to, subject, content } = payload;
+    const idempotencyKey = options?.idempotencyKey ?? `resend-${randomUUID()}`;
+    const idempotencyKeySource: ResendIdempotencyKeySource =
+      options?.idempotencyKey === undefined ? "generated" : "provided";
+    const redactionValues = getResendProblemRedactionValues(payload, idempotencyKey);
+
+    try {
       const emailOptions: CreateEmailOptions = {
         from: this.config.from,
         to,
@@ -213,7 +105,19 @@ export class ResendProvider implements NotificationProvider {
       };
 
       const data = await this.retryTemplate.execute(async () => {
-        const response = await this.client.emails.send(emailOptions, { idempotencyKey });
+        let response: CreateEmailResponse;
+
+        try {
+          response = await this.client.emails.send(emailOptions, { idempotencyKey });
+        } catch (error) {
+          const resendError = normalizeResendError(error, "Unknown Resend error");
+
+          if (isRetryableResendError(resendError)) {
+            recordResendRetryableFailure(payload, idempotencyKeySource, resendError);
+          }
+
+          throw resendError;
+        }
 
         if (response.error) {
           const resendError = normalizeResendError(
@@ -223,6 +127,7 @@ export class ResendProvider implements NotificationProvider {
           );
 
           if (isRetryableResendError(resendError)) {
+            recordResendRetryableFailure(payload, idempotencyKeySource, resendError);
             throw resendError;
           }
         }
@@ -231,12 +136,17 @@ export class ResendProvider implements NotificationProvider {
       });
 
       if (data.error) {
+        const problem = normalizeResendProblem(data.error, "send", data, { redactionValues });
+        recordResendFailure(payload, idempotencyKeySource, problem);
+
         return {
           success: false,
-          error: new ResendNotificationProblem(data.error.message),
+          error: problem,
           providerResponse: data,
         };
       }
+
+      recordResendAccepted(payload, idempotencyKeySource);
 
       return {
         success: true,
@@ -245,10 +155,15 @@ export class ResendProvider implements NotificationProvider {
       };
     } catch (error: unknown) {
       const cause = normalizeResendError(error, "Unknown Resend error");
+      const problem = normalizeResendProblem(cause, "send", cause.providerResponse, {
+        redactionValues,
+      });
+
+      recordResendFailure(payload, idempotencyKeySource, problem);
 
       return {
         success: false,
-        error: new ResendNotificationProblem(cause.message, cause),
+        error: problem,
         providerResponse: cause.providerResponse,
       };
     }
@@ -280,4 +195,105 @@ export class ResendProvider implements NotificationProvider {
 
     return results;
   }
+}
+
+function getResendProblemRedactionValues(
+  payload: NotificationPayload,
+  idempotencyKey: string,
+): readonly string[] {
+  return [
+    payload.to,
+    payload.subject,
+    payload.content,
+    toTextContent(payload.content),
+    idempotencyKey,
+  ].filter(isNonEmptyString);
+}
+
+function toTextContent(content: string): string {
+  return content
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getIdempotencyKeySource(
+  options: NotificationSendOptions | undefined,
+): ResendIdempotencyKeySource {
+  return options?.idempotencyKey === undefined ? "not_created" : "provided";
+}
+
+function validateResendPayload(payload: NotificationPayload): Problem | undefined {
+  if (!isResendEmailAddress(payload.to)) {
+    return new ResendValidationProblem(
+      {
+        provider: "resend",
+        operation: "send",
+        upstreamCode: "invalid-recipient",
+      },
+      "Resend recipient must be an email address or name-address value",
+    );
+  }
+
+  return undefined;
+}
+
+function recordResendAccepted(
+  payload: NotificationPayload,
+  idempotencyKeySource: ResendIdempotencyKeySource,
+): void {
+  recordEvent("notifications.resend.send.accepted", {
+    ...toResendTelemetryAttributes(payload, idempotencyKeySource),
+  });
+}
+
+function recordResendRetryableFailure(
+  payload: NotificationPayload,
+  idempotencyKeySource: ResendIdempotencyKeySource,
+  error: Error,
+): void {
+  const context = createResendErrorContext(error, "send");
+
+  recordEvent("notifications.resend.send.retryable_failure", {
+    ...toResendTelemetryAttributes(payload, idempotencyKeySource),
+    ...(context.status === undefined ? {} : { "resend.upstream.status": context.status }),
+    ...(context.upstreamCode === undefined ? {} : { "resend.upstream.code": context.upstreamCode }),
+  });
+}
+
+function recordResendFailure(
+  payload: NotificationPayload,
+  idempotencyKeySource: ResendIdempotencyKeySource,
+  problem: Problem,
+): void {
+  recordEvent("notifications.resend.send.failed", {
+    ...toResendTelemetryAttributes(payload, idempotencyKeySource),
+    "problem.code": problem.code,
+    "problem.category": problem.category,
+  });
+  recordError(toResendTelemetryError(problem));
+}
+
+function toResendTelemetryAttributes(
+  payload: NotificationPayload,
+  idempotencyKeySource: ResendIdempotencyKeySource,
+): Record<string, string | number | boolean> {
+  return {
+    "notification.provider": "resend",
+    "notification.channel": NotificationChannel.EMAIL,
+    "notification.idempotency_key.present": idempotencyKeySource !== "not_created",
+    "notification.idempotency_key.source": idempotencyKeySource,
+    "notification.template.present": payload.templateId !== undefined,
+  };
+}
+
+function toResendTelemetryError(problem: Problem): Error {
+  const telemetryError = new Error(`Resend notification failure: ${problem.code}`);
+  telemetryError.name = "ResendNotificationTelemetryError";
+
+  return telemetryError;
+}
+
+function isNonEmptyString(value: string | undefined): value is string {
+  return value !== undefined && value.trim().length > 0;
 }

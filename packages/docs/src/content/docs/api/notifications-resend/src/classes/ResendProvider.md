@@ -21,7 +21,7 @@ Resend를 사용해 이메일 알림을 전송하는 NotificationProvider 구현
 
 ##### config
 
-[`ResendConfig`](/api/notifications-resend/src/interfaces/resendconfig/)
+[`ResendConfig`](/api/notifications-resend/src/type-aliases/resendconfig/)
 
 #### Returns
 

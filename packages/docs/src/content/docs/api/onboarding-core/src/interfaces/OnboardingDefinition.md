@@ -11,13 +11,13 @@ title: "OnboardingDefinition"
 
 > **id**: `string`
 
----
+***
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### steps
 

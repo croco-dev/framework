@@ -1,9 +1,16 @@
 import { Container } from "@croco/framework-context";
 import type { NotificationPayload } from "@croco/notifications-core";
 import { NotificationChannel } from "@croco/notifications-core";
+import { recordError, recordEvent } from "@croco/telemetry-api";
 import type { CreateEmailResponse, Resend } from "resend";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ResendNotificationProblem } from "../libs/problems/ResendNotificationProblem";
+import {
+  ResendIdempotencyConflictProblem,
+  ResendMissingConfigProblem,
+  ResendTerminalUpstreamProblem,
+  ResendValidationProblem,
+} from "../libs/problems/ResendNotificationProblem";
+import { ResendDiagnosticsProvider } from "../libs/ResendDiagnosticsProvider";
 import { ResendProvider } from "../libs/ResendProvider";
 
 type MockResendClient = InstanceType<typeof Resend>;
@@ -11,13 +18,18 @@ type MockResendClient = InstanceType<typeof Resend>;
 // Mock resend package
 vi.mock("resend", () => {
   const emailsSendMock = vi.fn();
-  class MockResend {
-    emails = {
+  const MockResend = vi.fn(function MockResend(this: { emails: { send: typeof emailsSendMock } }) {
+    this.emails = {
       send: emailsSendMock,
     };
-  }
+  });
   return { Resend: MockResend };
 });
+
+vi.mock("@croco/telemetry-api", () => ({
+  recordError: vi.fn(),
+  recordEvent: vi.fn(),
+}));
 
 describe("ResendProvider", () => {
   let provider!: ResendProvider;
@@ -37,6 +49,187 @@ describe("ResendProvider", () => {
     // Get mock instance
     const { Resend } = await import("resend");
     mockResendClient = new Resend();
+  });
+
+  describe("constructor", () => {
+    it("should throw stable missing config Problems before creating a client", async () => {
+      const { Resend } = await import("resend");
+      vi.mocked(Resend).mockClear();
+
+      expect(() => new ResendProvider({ apiKey: "", from: "" })).toThrow(
+        ResendMissingConfigProblem,
+      );
+      expect(() => new ResendProvider({ apiKey: "", from: "" })).toThrow(
+        "Resend notification configuration is missing required value 'apiKey, from'",
+      );
+      expect(Resend).not.toHaveBeenCalled();
+    });
+
+    it("should reject invalid default sender addresses", () => {
+      expect(() => new ResendProvider({ apiKey: "re_test-key", from: "not-an-email" })).toThrow(
+        ResendValidationProblem,
+      );
+    });
+  });
+
+  describe("diagnostics", () => {
+    it("should report missing required configuration without leaking secrets", async () => {
+      const diagnostics = new ResendDiagnosticsProvider({
+        apiKey: "re_test-key",
+        from: "",
+      });
+
+      const health = await diagnostics.getHealth();
+
+      expect(health).toMatchObject({
+        status: "unhealthy",
+        component: "notifications-resend",
+        details: expect.objectContaining({
+          provider: "resend",
+          hasApiKey: true,
+          hasDefaultFrom: false,
+          missingConfig: ["default from address"],
+          liveCheck: "not_started",
+          problemCode: "notifications-resend/missing-config",
+        }),
+      });
+      expect(JSON.stringify(health)).not.toContain("re_test-key");
+    });
+
+    it("should report healthy readiness when config exists and live check is not configured", async () => {
+      const diagnostics = new ResendDiagnosticsProvider(mockConfig);
+
+      const health = await diagnostics.getHealth();
+
+      expect(health).toMatchObject({
+        status: "healthy",
+        component: "notifications-resend",
+        details: expect.objectContaining({
+          provider: "resend",
+          hasApiKey: true,
+          hasDefaultFrom: true,
+          defaultFromDomain: "example.com",
+          missingConfig: [],
+          liveCheck: "not_configured",
+        }),
+      });
+      expect(JSON.stringify(health)).not.toContain(mockConfig.apiKey);
+      expect(JSON.stringify(health)).not.toContain(mockConfig.from);
+    });
+
+    it("should sanitize live readiness details before returning diagnostics", async () => {
+      const controller = new AbortController();
+      const diagnostics = new ResendDiagnosticsProvider(mockConfig, {
+        readinessCheck: async ({ config, signal }) => {
+          expect(config.from).toBe(mockConfig.from);
+          expect(signal).toBe(controller.signal);
+
+          return {
+            details: {
+              apiKey: "re_leaked-key",
+              nested: {
+                token: "secret-token",
+                senderDomain: "example.com",
+              },
+            },
+          };
+        },
+      });
+
+      const health = await diagnostics.getHealth(controller.signal);
+
+      expect(health.status).toBe("healthy");
+      expect(health.details).toMatchObject({
+        liveCheck: "passed",
+        readiness: {
+          apiKey: "[redacted]",
+          nested: {
+            token: "[redacted]",
+            senderDomain: "example.com",
+          },
+        },
+      });
+      expect(JSON.stringify(health)).not.toContain("re_leaked-key");
+      expect(JSON.stringify(health)).not.toContain("secret-token");
+    });
+
+    it("should sanitize live readiness success messages before returning diagnostics", async () => {
+      const diagnostics = new ResendDiagnosticsProvider(mockConfig, {
+        readinessCheck: async () => ({
+          message: "checked apiKey=re_leaked-key token=secret-token recipient@example.com",
+        }),
+      });
+
+      const health = await diagnostics.getHealth();
+
+      expect(health.status).toBe("healthy");
+      expect(health.message).toBe("checked apiKey=[redacted] token=[redacted] [redacted-email]");
+      expect(JSON.stringify(health)).not.toContain("re_leaked-key");
+      expect(JSON.stringify(health)).not.toContain("secret-token");
+      expect(JSON.stringify(health)).not.toContain("recipient@example.com");
+    });
+
+    it("should report live readiness failures as degraded with upstream taxonomy", async () => {
+      const diagnostics = new ResendDiagnosticsProvider(mockConfig, {
+        readinessCheck: async () => {
+          throw { message: "rate limit for re_test-key", name: "rate_limit_exceeded" };
+        },
+      });
+
+      const health = await diagnostics.getHealth();
+
+      expect(health).toMatchObject({
+        status: "degraded",
+        component: "notifications-resend",
+        details: expect.objectContaining({
+          liveCheck: "failed",
+          problemCode: "notifications-resend/retryable-upstream",
+          upstreamCode: "rate_limit_exceeded",
+          status: 429,
+          retryable: true,
+        }),
+      });
+      expect(JSON.stringify(health)).not.toContain("re_test-key");
+    });
+
+    it("should sanitize thrown Problem messages and extensions in live readiness failures", async () => {
+      const diagnostics = new ResendDiagnosticsProvider(mockConfig, {
+        readinessCheck: async () => {
+          const problem = new ResendTerminalUpstreamProblem(
+            {
+              provider: "resend",
+              operation: "readiness",
+              retryable: false,
+            },
+            "failed with apiKey=re_leaked-key",
+          );
+
+          Object.assign(problem.extensions as Record<string, unknown>, {
+            apiKey: "re_leaked-key",
+            nested: {
+              token: "secret-token",
+              safe: "kept",
+            },
+          });
+
+          throw problem;
+        },
+      });
+
+      const health = await diagnostics.getHealth();
+
+      expect(health.message).toBe("failed with apiKey=[redacted]");
+      expect(health.details).toMatchObject({
+        apiKey: "[redacted]",
+        nested: {
+          token: "[redacted]",
+          safe: "kept",
+        },
+        provider: "resend",
+      });
+      expect(JSON.stringify(health)).not.toContain("re_leaked-key");
+      expect(JSON.stringify(health)).not.toContain("secret-token");
+    });
   });
 
   describe("getName()", () => {
@@ -121,6 +314,15 @@ describe("ResendProvider", () => {
         },
         { idempotencyKey: "fixed-key" },
       );
+      expect(recordEvent).toHaveBeenCalledWith(
+        "notifications.resend.send.accepted",
+        expect.objectContaining({
+          "notification.idempotency_key.present": true,
+          "notification.idempotency_key.source": "provided",
+          "notification.provider": "resend",
+        }),
+      );
+      expect(JSON.stringify(vi.mocked(recordEvent).mock.calls)).not.toContain("fixed-key");
     });
 
     it("should use generated resend idempotency key without options", async () => {
@@ -198,10 +400,25 @@ describe("ResendProvider", () => {
       const result = await provider.send(payload);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(ResendNotificationProblem);
+      expect(result.error).toBeInstanceOf(ResendTerminalUpstreamProblem);
       expect(result.error?.message).toBe("Invalid API key");
       expect(result.providerResponse).toEqual(mockErrorResponse);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(1);
+      expect(recordEvent).toHaveBeenCalledWith(
+        "notifications.resend.send.failed",
+        expect.objectContaining({
+          "notification.provider": "resend",
+          "problem.code": "notifications-resend/terminal-upstream",
+        }),
+      );
+      expect(recordEvent).not.toHaveBeenCalledWith(
+        "notifications.resend.send.accepted",
+        expect.any(Object),
+      );
+      expect(recordError).toHaveBeenCalledWith(expect.any(Error));
+      expect(getRecordedErrorMessages()).toContain(
+        "ResendNotificationTelemetryError:Resend notification failure: notifications-resend/terminal-upstream",
+      );
     });
 
     it("should retry transient API error responses with the same idempotency key", async () => {
@@ -231,6 +448,45 @@ describe("ResendProvider", () => {
 
       expect(firstCallOptions?.idempotencyKey).toMatch(/^resend-/);
       expect(secondCallOptions?.idempotencyKey).toBe(firstCallOptions?.idempotencyKey);
+
+      const eventNames = vi.mocked(recordEvent).mock.calls.map(([name]) => name);
+      expect(eventNames).toContain("notifications.resend.send.retryable_failure");
+      expect(eventNames).toContain("notifications.resend.send.accepted");
+    });
+
+    it("should retry concurrent idempotency conflicts before succeeding", async () => {
+      const concurrentIdempotencyResponse: CreateEmailResponse = {
+        data: null,
+        error: {
+          message: "Concurrent idempotent request",
+          name: "concurrent_idempotent_requests",
+        },
+      };
+
+      vi.mocked(mockResendClient.emails.send)
+        .mockResolvedValueOnce(concurrentIdempotencyResponse)
+        .mockResolvedValueOnce(mockSuccessResponse);
+
+      const payload: NotificationPayload = {
+        to: "recipient@example.com",
+        subject: "Retry Subject",
+        content: "<h1>Retry Content</h1>",
+      };
+
+      const result = await provider.send(payload, { idempotencyKey: "fixed-key" });
+
+      expect(result.success).toBe(true);
+      expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(mockResendClient.emails.send).mock.calls[0]?.[1]).toEqual({
+        idempotencyKey: "fixed-key",
+      });
+      expect(vi.mocked(mockResendClient.emails.send).mock.calls[1]?.[1]).toEqual({
+        idempotencyKey: "fixed-key",
+      });
+
+      const eventNames = vi.mocked(recordEvent).mock.calls.map(([name]) => name);
+      expect(eventNames).toContain("notifications.resend.send.retryable_failure");
+      expect(eventNames).toContain("notifications.resend.send.accepted");
     });
 
     it("should retry transient thrown errors before succeeding", async () => {
@@ -272,10 +528,16 @@ describe("ResendProvider", () => {
       const result = await provider.send(payload);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(ResendNotificationProblem);
+      expect(result.error).toBeInstanceOf(ResendIdempotencyConflictProblem);
       expect(result.error?.message).toBe("Invalid idempotency key reuse");
       expect(result.providerResponse).toEqual(invalidIdempotentRequestResponse);
       expect(mockResendClient.emails.send).toHaveBeenCalledTimes(1);
+      expect(recordEvent).toHaveBeenCalledWith(
+        "notifications.resend.send.failed",
+        expect.objectContaining({
+          "problem.code": "notifications-resend/idempotency-conflict",
+        }),
+      );
     });
 
     it("should handle network error", async () => {
@@ -291,14 +553,142 @@ describe("ResendProvider", () => {
       const result = await provider.send(payload);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(ResendNotificationProblem);
+      expect(result.error).toBeInstanceOf(ResendTerminalUpstreamProblem);
       expect(result.error?.message).toBe("Network connection failed");
+      expect(recordEvent).toHaveBeenCalledWith(
+        "notifications.resend.send.failed",
+        expect.objectContaining({
+          "notification.idempotency_key.present": true,
+          "notification.idempotency_key.source": "generated",
+          "problem.code": "notifications-resend/terminal-upstream",
+        }),
+      );
+      expect(recordError).toHaveBeenCalledWith(expect.any(Error));
+    });
 
-      if (!(result.error instanceof ResendNotificationProblem)) {
-        throw new Error("Expected ResendNotificationProblem");
-      }
+    it("should reject invalid recipients before calling Resend", async () => {
+      const payload: NotificationPayload = {
+        to: "not-an-email",
+        subject: "Test Subject",
+        content: "<h1>Test Content</h1>",
+      };
 
-      expect(result.error.cause).toBe(networkError);
+      const result = await provider.send(payload, { idempotencyKey: "fixed-key" });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeInstanceOf(ResendValidationProblem);
+      expect(result.error?.message).toBe(
+        "Resend recipient must be an email address or name-address value",
+      );
+      expect(mockResendClient.emails.send).not.toHaveBeenCalled();
+      expect(recordEvent).toHaveBeenCalledWith(
+        "notifications.resend.send.failed",
+        expect.objectContaining({
+          "notification.idempotency_key.source": "provided",
+          "problem.code": "notifications-resend/validation-failed",
+        }),
+      );
+      expect(JSON.stringify(vi.mocked(recordEvent).mock.calls)).not.toContain("not-an-email");
+    });
+
+    it("should redact payload and idempotency values from upstream Problems and telemetry errors", async () => {
+      const sensitiveErrorResponse: CreateEmailResponse = {
+        data: null,
+        error: {
+          message:
+            "Rejected recipient@example.com with subject Secret Subject and body Secret Body using idempotency-key=fixed-key and apiKey=re_leaked-key",
+          name: "invalid_parameter",
+        },
+      };
+
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(sensitiveErrorResponse);
+
+      const payload: NotificationPayload = {
+        to: "recipient@example.com",
+        subject: "Secret Subject",
+        content: "<h1>Secret Body</h1>",
+      };
+
+      const result = await provider.send(payload, { idempotencyKey: "fixed-key" });
+      const serializedTelemetry = JSON.stringify(vi.mocked(recordEvent).mock.calls);
+      const recordedErrors = getRecordedErrorMessages();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeInstanceOf(ResendValidationProblem);
+      expect(result.error?.message).toBe(
+        "Rejected [redacted] with subject [redacted] and body [redacted] using idempotency-key=[redacted] and apiKey=[redacted]",
+      );
+      expect(serializedTelemetry).not.toContain("recipient@example.com");
+      expect(serializedTelemetry).not.toContain("Secret Subject");
+      expect(serializedTelemetry).not.toContain("Secret Body");
+      expect(serializedTelemetry).not.toContain("fixed-key");
+      expect(serializedTelemetry).not.toContain("re_leaked-key");
+      expect(recordedErrors).not.toContain("recipient@example.com");
+      expect(recordedErrors).not.toContain("Secret Subject");
+      expect(recordedErrors).not.toContain("Secret Body");
+      expect(recordedErrors).not.toContain("fixed-key");
+      expect(recordedErrors).not.toContain("re_leaked-key");
+    });
+
+    it("should not report an idempotency key for validation failures before key creation", async () => {
+      const payload: NotificationPayload = {
+        to: "not-an-email",
+        subject: "Test Subject",
+        content: "<h1>Test Content</h1>",
+      };
+
+      const result = await provider.send(payload);
+
+      expect(result.success).toBe(false);
+      expect(mockResendClient.emails.send).not.toHaveBeenCalled();
+      expect(recordEvent).toHaveBeenCalledWith(
+        "notifications.resend.send.failed",
+        expect.objectContaining({
+          "notification.idempotency_key.present": false,
+          "notification.idempotency_key.source": "not_created",
+          "problem.code": "notifications-resend/validation-failed",
+        }),
+      );
+    });
+
+    it("should pass duplicate accepted sends through Resend with the same idempotency key", async () => {
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue({
+        data: { id: "msg-duplicate" },
+        error: null,
+      });
+
+      const payload: NotificationPayload = {
+        to: "recipient@example.com",
+        subject: "Replay Subject",
+        content: "<h1>Replay Content</h1>",
+      };
+
+      const firstResult = await provider.send(payload, { idempotencyKey: "fixed-key" });
+      const secondResult = await provider.send(payload, { idempotencyKey: "fixed-key" });
+
+      expect(firstResult.success).toBe(true);
+      expect(secondResult.success).toBe(true);
+      expect(firstResult.messageId).toBe("msg-duplicate");
+      expect(secondResult.messageId).toBe("msg-duplicate");
+      expect(mockResendClient.emails.send).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(mockResendClient.emails.send).mock.calls[0]?.[1]).toEqual({
+        idempotencyKey: "fixed-key",
+      });
+      expect(vi.mocked(mockResendClient.emails.send).mock.calls[1]?.[1]).toEqual({
+        idempotencyKey: "fixed-key",
+      });
+      expect(vi.mocked(recordEvent).mock.calls).toEqual(
+        expect.arrayContaining([
+          [
+            "notifications.resend.send.accepted",
+            expect.objectContaining({
+              "notification.idempotency_key.present": true,
+              "notification.idempotency_key.source": "provided",
+            }),
+          ],
+        ]),
+      );
+      expect(JSON.stringify(vi.mocked(recordEvent).mock.calls)).not.toContain("fixed-key");
     });
 
     it("should include providerResponse in success result", async () => {
@@ -414,7 +804,7 @@ describe("ResendProvider", () => {
       const result = await provider.send(payload);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeInstanceOf(ResendNotificationProblem);
+      expect(result.error).toBeInstanceOf(ResendValidationProblem);
       expect(result.error?.message).toBe("Missing variable: name");
       expect(result.providerResponse).toEqual(templateErrorResponse);
     });
@@ -667,3 +1057,12 @@ describe("ResendProvider", () => {
     });
   });
 });
+
+function getRecordedErrorMessages(): string {
+  return vi
+    .mocked(recordError)
+    .mock.calls.map(([error]) =>
+      error instanceof Error ? `${error.name}:${error.message}` : String(error),
+    )
+    .join("\n");
+}

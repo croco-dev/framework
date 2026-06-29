@@ -554,7 +554,15 @@
         "adapter": "Resend email provider",
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["RESEND_API_KEY", "default from address"],
-        "features": ["email send", "template send", "retry", "idempotency key"]
+        "features": [
+          "email send",
+          "rendered template send",
+          "retry",
+          "idempotency key",
+          "safe diagnostics",
+          "redacted upstream Problems",
+          "optional live smoke"
+        ]
       },
       "onboarding-drizzle": {
         "domain": "Onboarding",
