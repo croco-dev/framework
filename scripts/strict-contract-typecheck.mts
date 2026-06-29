@@ -113,6 +113,7 @@ export function collectStrictContractDiagnostics(
     }
 
     if (isIgnorableToolingDiagnostic(trimmedLine)) {
+      previousLineWasFileDiagnostic = false;
       continue;
     }
 

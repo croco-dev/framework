@@ -24,6 +24,7 @@ import {
   runJobsShow,
 } from "../commands/jobs.js";
 import type { JobsCommandClient, JobsStatusFetch } from "../commands/jobs.js";
+import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
 class TestExecutionStore implements ExecutionStore, ExecutionLogStore {
   private readonly executions = new Map<string, Execution>();
@@ -275,7 +276,10 @@ describe("jobs command", () => {
 
   it("surfaces invalid targets and HTTP failures as Problem details", async () => {
     await expect(runJobsList("not-a-url")).rejects.toMatchObject({
-      code: "cli/invalid-jobs-target-url",
+      code: CLI_DIAGNOSTIC_CODES.jobsInvalidTargetUrl,
+      extensions: {
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.jobsInvalidTargetUrl,
+      },
       status: 400,
     });
 
@@ -284,8 +288,23 @@ describe("jobs command", () => {
         fetch: async () => Response.json({ detail: "missing job" }, { status: 404 }),
       }),
     ).rejects.toMatchObject({
-      code: "cli/jobs-http-error",
+      code: CLI_DIAGNOSTIC_CODES.jobsEndpointNotFound,
+      extensions: {
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.jobsEndpointNotFound,
+      },
       status: 404,
+    });
+
+    await expect(
+      runJobsShow("unavailable", "https://api.example.test", {
+        fetch: async () => Response.json({ detail: "jobs unavailable" }, { status: 503 }),
+      }),
+    ).rejects.toMatchObject({
+      code: CLI_DIAGNOSTIC_CODES.jobsHttpError,
+      extensions: {
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.jobsHttpError,
+      },
+      status: 409,
     });
   });
 });

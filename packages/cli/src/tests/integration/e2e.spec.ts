@@ -382,12 +382,25 @@ declare module 'typedi' {
 }
 
 declare module '@croco/problems-core' {
+  export type ProblemDetails = {
+    readonly type: string;
+    readonly title: string;
+    readonly status: number;
+    readonly detail?: string;
+    readonly instance?: string;
+    readonly code: string;
+  } & Record<string, unknown>;
+
   export type ProblemOptions = {
+    readonly type?: string;
+    readonly instance?: string;
+    readonly extensions?: Record<string, unknown>;
     readonly cause?: Error;
   };
 
   export abstract class Problem extends Error {
     constructor(code?: string, category?: ProblemCategory, detail?: string, options?: ProblemOptions);
+    toJSON(): ProblemDetails;
   }
 
   export enum ProblemCategory {

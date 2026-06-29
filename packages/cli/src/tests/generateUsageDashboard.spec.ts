@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { runGenerateUsageDashboard } from "../commands/generateUsageDashboard.js";
+import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
 type GeneratedUsageDashboardService = {
   getSnapshot(tenantIdInput: string | null | undefined): Promise<unknown>;
@@ -81,7 +82,22 @@ describe("runGenerateUsageDashboard", () => {
     expect(serviceContent).not.toContain("externalSubscriptionId");
     expect(problemsContent).toContain("UsageDashboardTenantRequiredProblem");
     expect(problemsContent).toContain("UsageDashboardProviderUnavailableProblem");
-    expect(problemsContent).toContain("type ProblemOptions");
+    expect(problemsContent).toContain(
+      'import { Problem, ProblemCategory } from "@croco/problems-core";',
+    );
+    expect(problemsContent).toContain(
+      'import type { ProblemDetails, ProblemOptions } from "@croco/problems-core";',
+    );
+    expect(problemsContent).not.toContain("type ProblemDetails, type ProblemOptions");
+    expect(problemsContent).toContain(CLI_DIAGNOSTIC_CODES.usageDashboardProviderUnavailable);
+    expect(problemsContent).toContain(
+      CLI_LEGACY_DIAGNOSTIC_CODES.usageDashboardProviderUnavailable,
+    );
+    expect(problemsContent).toContain("type UsageDashboardProblemJson = ProblemDetails");
+    expect(problemsContent).toContain("options?: ProblemOptions");
+    expect(problemsContent).toContain("toJSON(): UsageDashboardProblemJson");
+    expect(problemsContent).toContain("return { ...super.toJSON(), legacyCode: this.legacyCode };");
+    expect(problemsContent).not.toContain("usageDashboardProblemMetadata");
     expect(runtimeContent).toContain("formatRuntimeImportError(error)");
     expect(runtimeContent).toContain("{ cause: error }");
     expect(appContent).toContain(
@@ -273,8 +289,15 @@ describe("runGenerateUsageDashboard", () => {
 
       expect(caught).toMatchObject({
         name: "UsageDashboardProviderUnavailableProblem",
-        code: "usage-dashboard/provider-unavailable",
+        code: CLI_DIAGNOSTIC_CODES.usageDashboardProviderUnavailable,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.usageDashboardProviderUnavailable,
         detail: expect.stringContaining("meter registry is unavailable: registry down"),
+      });
+      expect(typeof (caught as { toJSON?: unknown }).toJSON).toBe("function");
+      expect((caught as { toJSON: () => unknown }).toJSON()).toMatchObject({
+        code: CLI_DIAGNOSTIC_CODES.usageDashboardProviderUnavailable,
+        status: 500,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.usageDashboardProviderUnavailable,
       });
     } finally {
       await fs.rm(cwd, { force: true, recursive: true });

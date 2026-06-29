@@ -5,6 +5,7 @@ import { renderUsage } from "citty";
 import { afterEach, describe, expect, it } from "vitest";
 import { doctor, formatDoctorReport, getDoctorExitCode, runDoctor } from "../commands/doctor.js";
 import { createCrocoCommand } from "../commands/root.js";
+import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
 const tempRepos: string[] = [];
 
@@ -22,7 +23,8 @@ describe("doctor", () => {
     expect(report.summary).toBe("issues_detected");
     expect(report.diagnostics).toEqual([
       expect.objectContaining({
-        code: "doctor/workspace-not-found",
+        code: CLI_DIAGNOSTIC_CODES.doctorWorkspaceNotFound,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorWorkspaceNotFound,
         severity: "error",
         action: expect.stringContaining("--cwd"),
       }),
@@ -87,7 +89,8 @@ describe("doctor", () => {
     expect(report.summary).toBe("issues_detected");
     expect(report.diagnostics).toEqual([
       expect.objectContaining({
-        code: "doctor/workspace-packages-empty",
+        code: CLI_DIAGNOSTIC_CODES.doctorWorkspacePackagesEmpty,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorWorkspacePackagesEmpty,
         location: expect.objectContaining({ file: "pnpm-workspace.yaml" }),
       }),
     ]);
@@ -102,7 +105,8 @@ describe("doctor", () => {
     expect(report.summary).toBe("issues_detected");
     expect(report.diagnostics).toEqual([
       expect.objectContaining({
-        code: "doctor/workspace-package-invalid",
+        code: CLI_DIAGNOSTIC_CODES.doctorWorkspacePackageInvalid,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorWorkspacePackageInvalid,
         location: expect.objectContaining({ file: "packages/api/package.json" }),
         action: expect.stringContaining("valid JSON"),
       }),
@@ -124,7 +128,8 @@ describe("doctor", () => {
     expect(report.summary).toBe("issues_detected");
     expect(report.diagnostics).toEqual([
       expect.objectContaining({
-        code: "doctor/repository-core-drizzle-boundary",
+        code: CLI_DIAGNOSTIC_CODES.doctorRepositoryCoreDrizzleBoundary,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorRepositoryCoreDrizzleBoundary,
         location: expect.objectContaining({
           file: "packages/repository-core/src/index.ts",
           line: 1,
@@ -159,7 +164,8 @@ describe("doctor", () => {
     expect(report.summary).toBe("issues_detected");
     expect(report.diagnostics).toEqual([
       expect.objectContaining({
-        code: "doctor/lambda-telemetry-flush-missing",
+        code: CLI_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
         location: expect.objectContaining({
           file: "packages/api/src/handler.ts",
           line: 1,
@@ -196,7 +202,8 @@ describe("doctor", () => {
 
     expect(report.diagnostics).toEqual([
       expect.objectContaining({
-        code: "doctor/lambda-telemetry-flush-missing",
+        code: CLI_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
       }),
     ]);
   });

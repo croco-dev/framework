@@ -25,6 +25,11 @@ describe("DiagnosticCodes", () => {
       expect(definition.action.length).toBeGreaterThan(0);
       expect(definition.searchKeywords).toContain(definition.code);
       expect(definition.fixExamples.length).toBeGreaterThan(0);
+      const legacyCodes = "legacyCodes" in definition ? definition.legacyCodes : [];
+      for (const legacyCode of legacyCodes ?? []) {
+        expect(isDiagnosticCode(legacyCode)).toBe(false);
+        expect(definition.searchKeywords).toContain(legacyCode);
+      }
       codes.add(definition.code);
     }
   });
@@ -65,6 +70,12 @@ describe("DiagnosticCodes", () => {
     expect(isDiagnosticCode("CROCO_ROUTE_4")).toBe(false);
     expect(isDiagnosticCode("CROCO_ROUTE_004")).toBe(true);
     expect(getDiagnosticCodeDefinition("CROCO_DI_001")?.category).toBe("dependency-injection");
+    expect(getDiagnosticCodeDefinition("CROCO_CLI_DOCTOR_001")?.legacyCodes).toEqual([
+      "doctor/workspace-not-found",
+    ]);
+    expect(getDiagnosticCodeDefinition("CROCO_CLI_USAGE_DASHBOARD_004")?.legacyCodes).toEqual([
+      "usage-dashboard/provider-unavailable",
+    ]);
     expect(getDiagnosticCodeDefinition("CROCO_UNKNOWN_999")).toBeUndefined();
   });
 

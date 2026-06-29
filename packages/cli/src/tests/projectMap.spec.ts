@@ -8,6 +8,7 @@ import {
   stringifyProjectMapManifest,
 } from "../commands/projectMap.js";
 import type { ProjectMapDirent, ProjectMapIo, ProjectMapPackage } from "../commands/projectMap.js";
+import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
 describe("projectMap", () => {
   it("writes a deterministic Project Map manifest snapshot", async () => {
@@ -132,13 +133,30 @@ describe("projectMap", () => {
     });
 
     expect(exitCode).toBe(1);
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: CLI_DIAGNOSTIC_CODES.projectMapContractGraphDiagnostic,
+          legacyCode: "project-map/contract-graph-contract-route-missing-path-param",
+          sourceCode: "contract-route-missing-path-param",
+        }),
+        expect.objectContaining({
+          code: CLI_DIAGNOSTIC_CODES.projectMapPackageManifestConflict,
+          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapPackageManifestConflict,
+        }),
+        expect.objectContaining({
+          code: CLI_DIAGNOSTIC_CODES.projectMapRuntimeCapabilityConflict,
+          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapRuntimeCapabilityConflict,
+        }),
+      ]),
+    );
     expect(stdout).toEqual(
       expect.arrayContaining([
+        expect.stringContaining(`ERROR ${CLI_DIAGNOSTIC_CODES.projectMapContractGraphDiagnostic}`),
+        expect.stringContaining(`ERROR ${CLI_DIAGNOSTIC_CODES.projectMapPackageManifestConflict}`),
         expect.stringContaining(
-          "ERROR project-map/contract-graph-contract-route-missing-path-param",
+          `ERROR ${CLI_DIAGNOSTIC_CODES.projectMapRuntimeCapabilityConflict}`,
         ),
-        expect.stringContaining("ERROR project-map/package-manifest-conflict"),
-        expect.stringContaining("ERROR project-map/runtime-capability-conflict"),
         "Project Map check failed with 3 error(s).",
       ]),
     );
@@ -167,7 +185,7 @@ describe("projectMap", () => {
 
     expect(exitCode).toBe(1);
     expect(stdout).toEqual([
-      "ERROR project-map/runtime-target-unsupported artifact=croco-runtime-policy.manifest.json: Runtime policy manifest uses unsupported target runtime 'edge-runtime'.",
+      `ERROR ${CLI_DIAGNOSTIC_CODES.projectMapRuntimeTargetUnsupported} artifact=croco-runtime-policy.manifest.json: Runtime policy manifest uses unsupported target runtime 'edge-runtime'.`,
       "Project Map check failed with 1 error(s).",
     ]);
   });
@@ -266,7 +284,7 @@ describe("projectMap", () => {
 
     expect(exitCode).toBe(1);
     expect(stdout).toEqual([
-      "ERROR project-map/manifest-drift artifact=/workspace/app/croco.project-map.json: Project Map manifest '/workspace/app/croco.project-map.json' is stale. Regenerate it with croco project map --out croco.project-map.json.",
+      `ERROR ${CLI_DIAGNOSTIC_CODES.projectMapManifestDrift} artifact=/workspace/app/croco.project-map.json: Project Map manifest '/workspace/app/croco.project-map.json' is stale. Regenerate it with croco project map --out croco.project-map.json.`,
       "Project Map check failed with 1 error(s).",
     ]);
   });

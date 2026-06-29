@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseDiCheckArgs, runDiCheck } from "../commands/diCheck.js";
 import type { DiCheckIo } from "../commands/diCheck.js";
+import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
 describe("diCheck", () => {
   it("fails manifests with graph diagnostics", async () => {
@@ -77,6 +78,164 @@ describe("diCheck", () => {
       version: "croco.di-check.report.v1",
       manifestVersion: "croco.di-graph.manifest.v1",
       status: "passed",
+    });
+  });
+
+  it("wraps invalid manifests with stable CLI diagnostic codes", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const exitCode = await runDiCheck(["di-graph.json", "--json"], {
+      io: createIo("{ not json", stdout, stderr),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(stdout[0] ?? "{}")).toMatchObject({
+      status: "failed",
+      diagnostics: [
+        {
+          code: CLI_DIAGNOSTIC_CODES.diCheckManifestInvalid,
+          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckManifestInvalid,
+        },
+      ],
+    });
+  });
+
+  it("uses stable fallback codes for malformed manifest diagnostics", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const manifest = {
+      version: "croco.di-graph.manifest.v1",
+      status: "failed",
+      diagnostics: [{ severity: "error", message: "Missing provider." }],
+    };
+
+    const exitCode = await runDiCheck(["di-graph.json", "--json"], {
+      io: createIo(JSON.stringify(manifest), stdout, stderr),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(stdout[0] ?? "{}")).toMatchObject({
+      diagnostics: [
+        {
+          code: CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          message: "Missing provider.",
+        },
+      ],
+    });
+  });
+
+  it("normalizes legacy manifest diagnostic codes to stable CLI codes", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const manifest = {
+      version: "croco.di-graph.manifest.v1",
+      status: "failed",
+      diagnostics: [
+        {
+          code: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          severity: "error",
+          message: "Legacy DI diagnostic.",
+        },
+      ],
+    };
+
+    const exitCode = await runDiCheck(["di-graph.json", "--json"], {
+      io: createIo(JSON.stringify(manifest), stdout, stderr),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(stdout[0] ?? "{}")).toMatchObject({
+      diagnostics: [
+        {
+          code: CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          message: "Legacy DI diagnostic.",
+        },
+      ],
+    });
+  });
+
+  it("keeps unmapped CLI slash-form diagnostics as legacy evidence", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const manifest = {
+      version: "croco.di-graph.manifest.v1",
+      status: "failed",
+      diagnostics: [
+        {
+          code: "cli/generated-helper-returned-code",
+          legacyCode: "cli/explicit-legacy-code",
+          severity: "error",
+          message: "Generated helper returned a legacy code.",
+        },
+        {
+          code: "di-check/generated-helper-returned-code",
+          severity: "error",
+          message: "DI check helper returned a legacy code.",
+        },
+        {
+          code: "jobs/generated-helper-returned-code",
+          severity: "error",
+          message: "Jobs helper returned a legacy code.",
+        },
+        {
+          code: "ops/generated-helper-returned-code",
+          severity: "error",
+          message: "Ops helper returned a legacy code.",
+        },
+        {
+          code: "project-map/generated-helper-returned-code",
+          severity: "error",
+          message: "Project Map helper returned a legacy code.",
+        },
+        {
+          code: "usage-dashboard/generated-helper-returned-code",
+          severity: "error",
+          message: "Usage dashboard helper returned a legacy code.",
+        },
+      ],
+    };
+
+    const exitCode = await runDiCheck(["di-graph.json", "--json"], {
+      io: createIo(JSON.stringify(manifest), stdout, stderr),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(stdout[0] ?? "{}")).toMatchObject({
+      diagnostics: [
+        {
+          code: CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          legacyCode: "cli/generated-helper-returned-code",
+          message: "Generated helper returned a legacy code.",
+        },
+        {
+          code: CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          legacyCode: "di-check/generated-helper-returned-code",
+          message: "DI check helper returned a legacy code.",
+        },
+        {
+          code: CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          legacyCode: "jobs/generated-helper-returned-code",
+          message: "Jobs helper returned a legacy code.",
+        },
+        {
+          code: CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          legacyCode: "ops/generated-helper-returned-code",
+          message: "Ops helper returned a legacy code.",
+        },
+        {
+          code: CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          legacyCode: "project-map/generated-helper-returned-code",
+          message: "Project Map helper returned a legacy code.",
+        },
+        {
+          code: CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
+          legacyCode: "usage-dashboard/generated-helper-returned-code",
+          message: "Usage dashboard helper returned a legacy code.",
+        },
+      ],
     });
   });
 

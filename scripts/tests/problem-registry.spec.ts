@@ -197,6 +197,53 @@ describe("problem-registry.mts", () => {
     ]);
   });
 
+  it("discovers relative imported constant Problem codes", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/codes.ts",
+      [
+        "export const PROBLEM_CODES = {",
+        '  direct: "alpha/imported-direct",',
+        '  aliased: "alpha/imported-aliased",',
+        '  metadata: "alpha/imported-metadata",',
+        "} as const;",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        'import { PROBLEM_CODES as CODES } from "./codes.js";',
+        "export class ImportedDirectProblem extends Problem {",
+        "  constructor() {",
+        '    super(CODES.direct, ProblemCategory.BadRequest, "direct");',
+        "  }",
+        "}",
+        "export class ImportedAliasedProblem extends Problem {",
+        "  readonly code = CODES.aliased;",
+        "  readonly category = ProblemCategory.Forbidden;",
+        "  constructor() {",
+        '    super(undefined, undefined, "aliased");',
+        "  }",
+        "}",
+        "export const importedMetadata = {",
+        "  code: CODES.metadata,",
+        "  category: ProblemCategory.Conflict,",
+        "} as const;",
+        "",
+      ].join("\n"),
+    );
+
+    expect(discoverProblemCodes(repo).map((discovery) => discovery.code)).toEqual([
+      "alpha/imported-aliased",
+      "alpha/imported-direct",
+      "alpha/imported-metadata",
+    ]);
+  });
+
   it("discovers enum-backed Problem wrapper factory codes", () => {
     const repo = createTempRepo();
     writeFile(
