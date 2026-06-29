@@ -7,6 +7,18 @@ title: "NotificationProvider"
 
 ## Methods
 
+### getCapabilities()?
+
+> `optional` **getCapabilities**(): [`NotificationProviderCapabilities`](/api/notifications-core/src/type-aliases/notificationprovidercapabilities/)
+
+Provider capability contract used by the dispatch layer.
+
+#### Returns
+
+[`NotificationProviderCapabilities`](/api/notifications-core/src/type-aliases/notificationprovidercapabilities/)
+
+***
+
 ### getChannel()
 
 > **getChannel**(): [`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)

@@ -29,6 +29,22 @@ Resend를 사용해 이메일 알림을 전송하는 NotificationProvider 구현
 
 ## Methods
 
+### getCapabilities()
+
+> **getCapabilities**(): [`NotificationProviderCapabilities`](/api/notifications-core/src/type-aliases/notificationprovidercapabilities/)
+
+Provider capability contract used by the dispatch layer.
+
+#### Returns
+
+[`NotificationProviderCapabilities`](/api/notifications-core/src/type-aliases/notificationprovidercapabilities/)
+
+#### Implementation of
+
+[`NotificationProvider`](/api/notifications-core/src/interfaces/notificationprovider/).[`getCapabilities`](/api/notifications-core/src/interfaces/notificationprovider/#getcapabilities)
+
+***
+
 ### getChannel()
 
 > **getChannel**(): [`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)

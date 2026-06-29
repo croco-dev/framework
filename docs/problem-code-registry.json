@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 375,
+  "problemCount": 383,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -5774,7 +5774,7 @@
       "sources": [
         {
           "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          "line": 54,
+          "line": 80,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -5801,7 +5801,142 @@
       "sources": [
         {
           "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          "line": 126,
+          "line": 152,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-core/idempotency-key-required",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-core-idempotency-key-required",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          "line": 224,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-core/outbox-idempotency-mismatch",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-core-outbox-idempotency-mismatch",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          "line": 240,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-core/preference-channel-mismatch",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-core-preference-channel-mismatch",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          "line": 207,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-core/preference-context-required",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-core-preference-context-required",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          "line": 191,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-core/preference-denied",
+      "category": "BusinessRuleViolation",
+      "status": 422,
+      "title": "Business Rule Violation",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-core-preference-denied",
+      "recovery": {
+        "cause": "The request is syntactically valid but violates a domain rule.",
+        "userAction": "Change the workflow state or request values so the business rule is satisfied.",
+        "operatorAction": "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          "line": 169,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -5828,7 +5963,7 @@
       "sources": [
         {
           "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          "line": 38,
+          "line": 64,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -5855,7 +5990,7 @@
       "sources": [
         {
           "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          "line": 76,
+          "line": 102,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -5882,7 +6017,7 @@
       "sources": [
         {
           "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          "line": 6,
+          "line": 32,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -5909,7 +6044,7 @@
       "sources": [
         {
           "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          "line": 94,
+          "line": 120,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -5936,7 +6071,7 @@
       "sources": [
         {
           "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          "line": 22,
+          "line": 48,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -5963,7 +6098,88 @@
       "sources": [
         {
           "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          "line": 110,
+          "line": 136,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-core/template-already-registered",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-core-template-already-registered",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          "line": 256,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-core/template-not-found",
+      "category": "NotFound",
+      "status": 404,
+      "title": "Not Found",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-core-template-not-found",
+      "recovery": {
+        "cause": "The requested resource or route-visible record does not exist.",
+        "userAction": "Verify the identifier and refresh the resource list before retrying.",
+        "operatorAction": "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          "line": 274,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "notifications-core/template-variables-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#notifications-core-template-variables-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          "line": 293,
           "column": 5,
           "kind": "problem-constructor"
         }

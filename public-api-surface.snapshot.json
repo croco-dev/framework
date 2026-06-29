@@ -11339,6 +11339,48 @@
       "entrypoint": "packages/notifications-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "createNotificationDispatchRequest",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationDispatch",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createNotificationIdempotencyKey",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationDispatch",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createNotificationPreferenceContextFixture",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationPreferences",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createNotificationPreferenceEvaluationKey",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationPreferences",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createNotificationTemplateFixture",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createNotificationTemplateKey",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getNotificationProviderCapabilities",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationDispatch",
+          "declarationKind": "function"
+        },
+        {
           "name": "NotificationChannel",
           "exportKind": "declaration",
           "source": "./libs/types",
@@ -11354,6 +11396,42 @@
           "name": "NotificationDeliveryFailedProblem",
           "exportKind": "declaration",
           "source": "./libs/problems/NotificationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "NotificationIdempotencyKeyRequiredProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/NotificationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "NotificationOutboxIdempotencyMismatchProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/NotificationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "NotificationPreferenceChannelMismatchProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/NotificationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "NotificationPreferenceContextRequiredProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/NotificationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "NotificationPreferenceDeniedProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/NotificationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "NotificationPreferenceEvaluator",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationPreferences",
           "declarationKind": "class"
         },
         {
@@ -11399,18 +11477,72 @@
           "declarationKind": "class"
         },
         {
+          "name": "NotificationTemplateAlreadyRegisteredProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/NotificationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "NotificationTemplateNotFoundProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/NotificationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "NotificationTemplateRegistry",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "class"
+        },
+        {
+          "name": "NotificationTemplateVariablesInvalidProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/NotificationProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "previewNotificationTemplate",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "function"
+        },
+        {
           "name": "SendNotificationTask",
           "exportKind": "declaration",
           "source": "./libs/SendNotificationTask",
           "declarationKind": "class"
+        },
+        {
+          "name": "toNotificationJobPayload",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationDispatch",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
+        {
+          "name": "NotificationDispatchRequest",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationDispatch",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationIdempotencyKeyInput",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationDispatch",
+          "declarationKind": "type"
+        },
         {
           "name": "NotificationJobPayload",
           "exportKind": "declaration",
           "source": "./libs/types",
           "declarationKind": "interface"
+        },
+        {
+          "name": "NotificationOutboxReference",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationDispatch",
+          "declarationKind": "type"
         },
         {
           "name": "NotificationPayload",
@@ -11419,10 +11551,46 @@
           "declarationKind": "interface"
         },
         {
+          "name": "NotificationPreferenceContext",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationPreferences",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationPreferenceDecision",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationPreferences",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationPreferenceEvaluatorOptions",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationPreferences",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationPreferenceRule",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationPreferences",
+          "declarationKind": "type"
+        },
+        {
           "name": "NotificationProvider",
           "exportKind": "declaration",
           "source": "./libs/types",
           "declarationKind": "interface"
+        },
+        {
+          "name": "NotificationProviderCapabilities",
+          "exportKind": "declaration",
+          "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationProviderOutboxIntegration",
+          "exportKind": "declaration",
+          "source": "./libs/types",
+          "declarationKind": "type"
         },
         {
           "name": "NotificationResult",
@@ -11431,9 +11599,93 @@
           "declarationKind": "interface"
         },
         {
+          "name": "NotificationSendContractOptions",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationService",
+          "declarationKind": "type"
+        },
+        {
           "name": "NotificationSendOptions",
           "exportKind": "declaration",
           "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationSendServiceOptions",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationService",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplate",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplatePreviewRequest",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplatePreviewResult",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplateRef",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplateRenderRequest",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplateRenderResult",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplateSendRequest",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplateVariableDefinition",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplateVariableEscaping",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplateVariablesSchema",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "NotificationTemplateVariableType",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationTemplates",
+          "declarationKind": "type"
+        },
+        {
+          "name": "UnsafeNotificationSendOptions",
+          "exportKind": "declaration",
+          "source": "./libs/NotificationService",
           "declarationKind": "type"
         }
       ]

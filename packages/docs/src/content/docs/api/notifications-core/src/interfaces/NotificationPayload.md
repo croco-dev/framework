@@ -17,6 +17,12 @@ title: "NotificationPayload"
 
 ***
 
+### locale?
+
+> `optional` **locale?**: `string`
+
+***
+
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
@@ -32,6 +38,12 @@ title: "NotificationPayload"
 ### templateId?
 
 > `optional` **templateId?**: `string`
+
+***
+
+### templateVersion?
+
+> `optional` **templateVersion?**: `string`
 
 ***
 

@@ -9,17 +9,39 @@
  *
  * @example
  * ```typescript
- * import { NotificationService, NotificationChannel } from '@croco/notifications-core';
+ * import {
+ *   createNotificationIdempotencyKey,
+ *   NotificationChannel,
+ *   NotificationService,
+ * } from '@croco/notifications-core';
  *
  * // Register a provider as default for a channel
  * service.registerProvider(emailProvider, true);
  *
+ * const preferenceContext = {
+ *   tenantId: 'tenant-1',
+ *   userId: 'user-1',
+ *   channel: NotificationChannel.EMAIL,
+ *   topic: 'account.welcome',
+ * };
+ *
  * // Send notification via default provider
- * await service.send(NotificationChannel.EMAIL, {
- *   to: 'user@example.com',
- *   subject: 'Welcome',
- *   content: '<h1>Hello!</h1>'
- * });
+ * await service.send(
+ *   NotificationChannel.EMAIL,
+ *   {
+ *     to: 'user@example.com',
+ *     subject: 'Welcome',
+ *     content: '<h1>Hello!</h1>',
+ *   },
+ *   {
+ *     idempotencyKey: createNotificationIdempotencyKey({
+ *       ...preferenceContext,
+ *       recipient: 'user@example.com',
+ *       semanticKey: 'welcome-v1',
+ *     }),
+ *     preferenceContext,
+ *   },
+ * );
  * ```
  */
 
@@ -37,15 +59,33 @@
  *   constructor(private notificationService: NotificationService) {}
  *
  *   async notifyUser(userId: string) {
+ *     const preferenceContext = {
+ *       tenantId: 'tenant-1',
+ *       userId,
+ *       channel: NotificationChannel.EMAIL,
+ *       topic: 'account.alert',
+ *     };
+ *
  *     await this.notificationService.send(
  *       NotificationChannel.EMAIL,
- *       { to: 'user@example.com', subject: 'Alert', content: 'Message' }
+ *       { to: 'user@example.com', subject: 'Alert', content: 'Message' },
+ *       {
+ *         idempotencyKey: createNotificationIdempotencyKey({
+ *           ...preferenceContext,
+ *           recipient: 'user@example.com',
+ *           semanticKey: 'alert-v1',
+ *         }),
+ *         preferenceContext,
+ *       },
  *     );
  *   }
  * }
  * ```
  */
+export * from "./libs/NotificationDispatch";
+export * from "./libs/NotificationPreferences";
 export * from "./libs/NotificationService";
+export * from "./libs/NotificationTemplates";
 export * from "./libs/problems/NotificationProblems";
 /**
  * SendNotificationTask - Task handler for notification delivery processing.

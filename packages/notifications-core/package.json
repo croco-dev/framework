@@ -44,7 +44,8 @@
     "@croco/execution-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
-    "@croco/tasks-core": "workspace:*"
+    "@croco/tasks-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*"
   },
   "devDependencies": {
     "reflect-metadata": "^0.2.2",
