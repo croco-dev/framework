@@ -20,4 +20,11 @@ export abstract class AnalyticsManager {
    * Essential for B2B SaaS analytics.
    */
   abstract group(groupType: string, groupKey: string, properties?: Record<string, unknown>): void;
+
+  /**
+   * Flush buffered analytics events before a runtime boundary such as Lambda return or shutdown.
+   */
+  flush(): Promise<void> {
+    return Promise.resolve();
+  }
 }

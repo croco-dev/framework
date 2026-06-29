@@ -1698,13 +1698,64 @@
       "entrypoint": "packages/analytics-posthog/src/index.ts",
       "runtimeExports": [
         {
+          "name": "POSTHOG_ANALYTICS_MANAGER_OPTIONS",
+          "exportKind": "named",
+          "source": "./libs/PostHogAnalyticsManager",
+          "declarationKind": "const"
+        },
+        {
+          "name": "PostHogAnalyticsCaptureProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PostHogAnalyticsProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PostHogAnalyticsDiagnosticsProvider",
+          "exportKind": "named",
+          "source": "./libs/PostHogAnalyticsDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
+          "name": "PostHogAnalyticsFlushProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PostHogAnalyticsProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "PostHogAnalyticsManager",
           "exportKind": "named",
           "source": "./libs/PostHogAnalyticsManager",
           "declarationKind": "class"
+        },
+        {
+          "name": "PostHogAnalyticsReadinessProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/PostHogAnalyticsProblems",
+          "declarationKind": "class"
         }
       ],
-      "typeExports": []
+      "typeExports": [
+        {
+          "name": "PostHogAnalyticsDiagnosticsOptions",
+          "exportKind": "named",
+          "source": "./libs/PostHogAnalyticsDiagnosticsProvider"
+        },
+        {
+          "name": "PostHogAnalyticsManagerOptions",
+          "exportKind": "named",
+          "source": "./libs/PostHogAnalyticsManager"
+        },
+        {
+          "name": "PostHogAnalyticsReadinessCheckContext",
+          "exportKind": "named",
+          "source": "./libs/PostHogAnalyticsDiagnosticsProvider"
+        },
+        {
+          "name": "PostHogAnalyticsReadinessCheckResult",
+          "exportKind": "named",
+          "source": "./libs/PostHogAnalyticsDiagnosticsProvider"
+        }
+      ]
     },
     {
       "packageName": "@croco/architecture-policy",
@@ -11247,9 +11298,37 @@
           "exportKind": "named",
           "source": "./libs/BillingEventHandler",
           "declarationKind": "class"
+        },
+        {
+          "name": "BillingMetricDroppedProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/BillingMetricsProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "BillingMetricRecordingProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/BillingMetricsProblems",
+          "declarationKind": "class"
         }
       ],
-      "typeExports": []
+      "typeExports": [
+        {
+          "name": "BillingMetricDroppedProblemOptions",
+          "exportKind": "named",
+          "source": "./libs/problems/BillingMetricsProblems"
+        },
+        {
+          "name": "BillingMetricDropReason",
+          "exportKind": "named",
+          "source": "./libs/problems/BillingMetricsProblems"
+        },
+        {
+          "name": "BillingMetricRecordingProblemOptions",
+          "exportKind": "named",
+          "source": "./libs/problems/BillingMetricsProblems"
+        }
+      ]
     },
     {
       "packageName": "@croco/metrics-core",

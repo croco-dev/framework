@@ -75,6 +75,74 @@ this.analytics.group("tenant", "tenant-456", {
 2. Context의 `tenantId`가 있으면 `{ tenant: tenantId }` 사용
 3. 그 외에는 undefined
 
+## Flush / Lambda lifecycle
+
+`PostHogAnalyticsManager.flush()`는 내부 `PostHogClient.shutdown()`을 호출해 SDK 버퍼를
+drain합니다. Lambda나 서버리스 핸들러에서는 응답 직전 `finally` 블록에서 호출하세요.
+flush 실패는 `PostHogAnalyticsFlushProblem`으로 다시 throw되며 로그에는
+`analytics-posthog/flush-failed` 코드가 남습니다.
+
+```typescript
+try {
+  this.analytics.capture("order.created", { orderId: "order-123" });
+} finally {
+  await this.analytics.flush();
+}
+```
+
+## Disabled mode
+
+테스트, 로컬 개발, 임시 운영 차단처럼 이벤트 전송을 명시적으로 꺼야 할 때 세 번째
+생성자 인자 대신 `POSTHOG_ANALYTICS_MANAGER_OPTIONS` 토큰을 등록합니다. 이 모드에서는
+`capture`, `identify`, `group`, `flush`가 PostHog SDK를 호출하지 않고 `info` 로그에
+skipped operation evidence를 남깁니다.
+
+```typescript
+import {
+  POSTHOG_ANALYTICS_MANAGER_OPTIONS,
+  PostHogAnalyticsManager,
+} from "@croco/analytics-posthog";
+import { Container } from "@croco/framework-context";
+
+Container.set(POSTHOG_ANALYTICS_MANAGER_OPTIONS, { enabled: false });
+const analytics = Container.get(PostHogAnalyticsManager);
+```
+
+## Diagnostics / Readiness
+
+`PostHogAnalyticsDiagnosticsProvider`는 `@croco/diagnostics-core`의
+`DiagnosticsProvider`로 안전한 설정 상태와 선택적 upstream readiness를 제공합니다.
+기본 diagnostics는 PostHog에 네트워크 요청을 보내지 않습니다. live readiness가 필요하면
+`readinessCheck`를 주입합니다.
+
+```typescript
+import { PostHogAnalyticsDiagnosticsProvider } from "@croco/analytics-posthog";
+
+const diagnostics = new PostHogAnalyticsDiagnosticsProvider({
+  apiKey: process.env.POSTHOG_API_KEY,
+  host: process.env.POSTHOG_HOST,
+});
+
+const health = await diagnostics.getHealth();
+```
+
+반환 details는 `hasApiKey`, `hasHost`, `hostSource`, `liveCheck`처럼 secret 값을 노출하지
+않는 boolean/source evidence만 포함합니다. `authorization`, `token`, `secret`,
+`apiKey` 이름을 가진 readiness details는 redacted 처리됩니다.
+
+### Recovery actions
+
+- `integrations-posthog/missing-config`: `POSTHOG_API_KEY`와 data residency에 맞는
+  `POSTHOG_HOST`를 설정하거나 생성자 config에 `host`를 명시합니다.
+- `analytics-posthog/capture-failed`: `capture()` 호출이 PostHog SDK로 전달되었지만
+  provider가 거부했습니다. 로그의 event name과 provider 상태를 확인하고 필요하면 같은
+  business event를 재전송합니다.
+- `analytics-posthog/readiness-failed`: injected readiness check가 upstream 장애를 감지한
+  상태입니다. health details의 `upstreamCode`/`upstreamStatus`를 확인하고 provider 복구
+  후 재시도합니다.
+- `analytics-posthog/flush-failed`: 서버리스 반환 전 flush가 실패했습니다. 이벤트가
+  durable하게 전송되었다고 간주하지 말고 재시도 또는 dead-letter 경로를 사용합니다.
+
 ## API Reference
 
 ### `PostHogAnalyticsManager`
@@ -93,8 +161,18 @@ this.analytics.group("tenant", "tenant-456", {
 - **`group(groupType: string, groupKey: string, properties?: Record<string, unknown>): void`**
   - 사용자를 그룹과 연결합니다.
 
+- **`flush(): Promise<void>`**
+  - PostHog SDK 버퍼를 drain합니다.
+
+### `PostHogAnalyticsDiagnosticsProvider`
+
+PostHog analytics 설정, disabled mode, optional readiness check를 안전한 health status로
+노출합니다.
+
 ## 의존성
 
 - `@croco/analytics-core`
+- `@croco/diagnostics-core`
 - `@croco/framework-context`
 - `@croco/integrations-posthog`
+- `@croco/problems-core`

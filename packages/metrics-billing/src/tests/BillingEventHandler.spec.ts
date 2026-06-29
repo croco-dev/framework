@@ -3,6 +3,10 @@ import { OrderPaidEvent, PlanChangedEvent, SubscriptionCanceledEvent } from "@cr
 import type { MetricsRepository, MRRMovement } from "@croco/metrics-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BillingEventHandler } from "../libs/BillingEventHandler";
+import {
+  BillingMetricDroppedProblem,
+  BillingMetricRecordingProblem,
+} from "../libs/problems/BillingMetricsProblems";
 
 describe("BillingEventHandler", () => {
   let handler!: BillingEventHandler;
@@ -47,18 +51,33 @@ describe("BillingEventHandler", () => {
     lastSyncedAt: new Date(),
   };
 
+  const primaryEventKey = (event: { readonly eventName: string; readonly eventId: string }) =>
+    `${event.eventName}_${event.eventId}`;
+
+  const legacyTimestampEventKey = (event: {
+    readonly eventName: string;
+    readonly timestamp: Date;
+  }) => `${event.eventName}_${event.timestamp.getTime()}`;
+
   const createMetricsRepository = (): MetricsRepository => {
     const processedEventKeys = new Set<string>();
 
     return {
       recordMRRMovement: vi.fn(
-        async (_tenantId: string, _movement: MRRMovement, _timestamp: Date, eventKey?: string) => {
-          if (eventKey) {
-            if (processedEventKeys.has(eventKey)) {
-              return;
-            }
+        async (
+          _tenantId: string,
+          _movement: MRRMovement,
+          _timestamp: Date,
+          eventKey?: string,
+          dedupeEventKeys: readonly string[] = [],
+        ) => {
+          const eventKeys = eventKey ? [eventKey, ...dedupeEventKeys] : [];
+          if (eventKeys.some((key) => processedEventKeys.has(key))) {
+            return;
+          }
 
-            processedEventKeys.add(eventKey);
+          for (const key of eventKeys) {
+            processedEventKeys.add(key);
           }
         },
       ),
@@ -115,7 +134,8 @@ describe("BillingEventHandler", () => {
         "tenant-1",
         expectedMovement,
         event.timestamp,
-        `billing.order_paid_${event.timestamp.getTime()}`,
+        primaryEventKey(event),
+        [legacyTimestampEventKey(event)],
       );
     });
 
@@ -152,18 +172,103 @@ describe("BillingEventHandler", () => {
 
       expect(metricsRepository.recordMRRMovement).toHaveBeenCalledTimes(2);
       const calls = vi.mocked(metricsRepository.recordMRRMovement).mock.calls;
-      expect(calls[0]?.[3]).toBe(`billing.order_paid_${event.timestamp.getTime()}`);
-      expect(calls[1]?.[3]).toBe(`billing.order_paid_${event.timestamp.getTime()}`);
+      expect(calls[0]?.[3]).toBe(primaryEventKey(event));
+      expect(calls[0]?.[4]).toEqual([legacyTimestampEventKey(event)]);
+      expect(calls[1]?.[3]).toBe(primaryEventKey(event));
+      expect(calls[1]?.[4]).toEqual([legacyTimestampEventKey(event)]);
     });
 
-    it("should skip if account not found", async () => {
+    it("should preserve distinct metrics for events with the same millisecond timestamp", async () => {
+      const timestamp = new Date("2026-01-01T00:00:00.000Z");
+      vi.useFakeTimers();
+      vi.setSystemTime(timestamp);
+
+      try {
+        const firstEvent = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
+        const secondEvent = new OrderPaidEvent("tenant-1", "order-2", 2900, "USD");
+
+        vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
+        vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
+        vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
+
+        await handler.handle(firstEvent);
+        await handler.handle(secondEvent);
+
+        const calls = vi.mocked(metricsRepository.recordMRRMovement).mock.calls;
+        expect(calls).toHaveLength(2);
+        expect(calls[0]?.[2]).toEqual(timestamp);
+        expect(calls[1]?.[2]).toEqual(timestamp);
+        expect(calls[0]?.[3]).toBe(primaryEventKey(firstEvent));
+        expect(calls[1]?.[3]).toBe(primaryEventKey(secondEvent));
+        expect(calls[0]?.[4]).toEqual([legacyTimestampEventKey(firstEvent)]);
+        expect(calls[1]?.[4]).toEqual([legacyTimestampEventKey(secondEvent)]);
+        expect(calls[0]?.[4]).toEqual(calls[1]?.[4]);
+        expect(calls[0]?.[3]).not.toBe(calls[1]?.[3]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("should surface dropped metric evidence if account is not found", async () => {
       const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(null);
 
-      await handler.handle(event);
+      await expect(handler.handle(event)).rejects.toMatchObject({
+        code: "metrics-billing/metric-dropped",
+        extensions: expect.objectContaining({
+          reason: "account_not_found",
+          resourceId: "tenant-1",
+        }),
+      });
 
       expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
+    });
+
+    it("should surface dropped metric evidence if subscription is not found", async () => {
+      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
+
+      vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
+      vi.mocked(billingStore.findSubscription).mockResolvedValue(null);
+
+      const result = handler.handle(event);
+
+      await expect(result).rejects.toBeInstanceOf(BillingMetricDroppedProblem);
+      await expect(result).rejects.toMatchObject({
+        extensions: expect.objectContaining({
+          reason: "subscription_not_found",
+          resourceId: "account-1",
+        }),
+      });
+
+      expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
+    });
+
+    it("should surface repository failures as stable recording Problems", async () => {
+      const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD");
+
+      vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
+      vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
+      vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
+      vi.mocked(metricsRepository.recordMRRMovement).mockRejectedValueOnce(
+        new BillingMetricRecordingProblem({
+          eventName: "metrics.repository",
+          tenantId: "tenant-1",
+          eventKey: "repository-write",
+        }),
+      );
+
+      const result = handler.handle(event);
+
+      await expect(result).rejects.toBeInstanceOf(BillingMetricRecordingProblem);
+      await expect(result).rejects.toMatchObject({
+        code: "metrics-billing/recording-failed",
+        extensions: expect.objectContaining({
+          eventName: "billing.order_paid",
+          tenantId: "tenant-1",
+          eventKey: primaryEventKey(event),
+        }),
+      });
     });
   });
 
@@ -252,7 +357,8 @@ describe("BillingEventHandler", () => {
         "tenant-1",
         expect.any(Object),
         event.timestamp,
-        `billing.plan_changed_${event.timestamp.getTime()}`,
+        primaryEventKey(event),
+        [legacyTimestampEventKey(event)],
       );
     });
 
@@ -290,6 +396,29 @@ describe("BillingEventHandler", () => {
         net: { amount: 0, currency: "USD" },
       });
     });
+
+    it("should surface missing plan evidence without recording a metric", async () => {
+      const event = new PlanChangedEvent("tenant-1", "plan-basic", "plan-pro", "sub-stripe");
+
+      vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
+      vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
+      vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
+        if (id === "plan-basic") return Promise.resolve(null);
+        if (id === "plan-pro") return Promise.resolve(mockPlan);
+        return Promise.resolve(null);
+      });
+
+      await expect(handler.handle(event)).rejects.toMatchObject({
+        code: "metrics-billing/metric-dropped",
+        extensions: expect.objectContaining({
+          reason: "plan_not_found",
+          resourceId: "plan-basic",
+          tenantId: "tenant-1",
+          eventKey: primaryEventKey(event),
+        }),
+      });
+      expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
+    });
   });
 
   describe("SubscriptionCanceledEvent", () => {
@@ -314,7 +443,8 @@ describe("BillingEventHandler", () => {
         "tenant-1",
         expectedMovement,
         event.timestamp,
-        `billing.subscription_canceled_${event.timestamp.getTime()}`,
+        primaryEventKey(event),
+        [legacyTimestampEventKey(event)],
       );
     });
 
@@ -330,16 +460,23 @@ describe("BillingEventHandler", () => {
         "tenant-1",
         expect.any(Object),
         event.timestamp,
-        `billing.subscription_canceled_${event.timestamp.getTime()}`,
+        primaryEventKey(event),
+        [legacyTimestampEventKey(event)],
       );
     });
 
-    it("should skip if subscription not found", async () => {
+    it("should surface dropped metric evidence if subscription is not found", async () => {
       const event = new SubscriptionCanceledEvent("tenant-1", "sub-stripe", false);
 
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(null);
 
-      await handler.handle(event);
+      await expect(handler.handle(event)).rejects.toMatchObject({
+        code: "metrics-billing/metric-dropped",
+        extensions: expect.objectContaining({
+          reason: "subscription_not_found",
+          resourceId: "sub-stripe",
+        }),
+      });
 
       expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
     });

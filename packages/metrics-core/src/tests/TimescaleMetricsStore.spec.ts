@@ -54,6 +54,41 @@ describe("TimescaleMetricsStore", () => {
     ]);
   });
 
+  it("should check compatibility event keys before inserting a new primary key", async () => {
+    await store.recordMRRMovement(
+      "tenant-1",
+      movement,
+      new Date("2026-03-02T00:00:00.000Z"),
+      "event-key-v2",
+      ["event-key-v1"],
+    );
+
+    expect(db.query).toHaveBeenCalledTimes(1);
+    const [sql, params] = vi.mocked(db.query).mock.calls[0] ?? [];
+
+    expect(sql).toContain("WHERE NOT EXISTS");
+    expect(sql).toContain("event_key = ANY($16::text[])");
+    expect(sql).toContain("ON CONFLICT (tenant_id, event_key) DO NOTHING");
+    expect(params).toEqual([
+      "tenant-1",
+      "event-key-v2",
+      new Date("2026-03-02T00:00:00.000Z"),
+      1000,
+      "USD",
+      0,
+      "USD",
+      0,
+      "USD",
+      0,
+      "USD",
+      0,
+      "USD",
+      1000,
+      "USD",
+      ["event-key-v2", "event-key-v1"],
+    ]);
+  });
+
   it("should keep legacy insert path when event key is omitted", async () => {
     await store.recordMRRMovement("tenant-1", movement, new Date("2026-03-02T00:00:00.000Z"));
 

@@ -2,7 +2,15 @@ import type { BillingStore, PlanRegistry } from "@croco/billing-core";
 import { OrderPaidEvent, PlanChangedEvent, SubscriptionCanceledEvent } from "@croco/billing-core";
 import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croco/events-core";
 import type { MetricsRepository, Money, PlanProvider } from "@croco/metrics-core";
+import type { MRRMovement } from "@croco/metrics-core";
 import { MrrCalculator } from "@croco/metrics-core";
+import {
+  BillingMetricDroppedProblem,
+  BillingMetricRecordingProblem,
+} from "./problems/BillingMetricsProblems";
+import type { BillingMetricDropReason } from "./problems/BillingMetricsProblems";
+
+type BillingMetricEvent = OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent;
 
 @RegisterEventHandler(OrderPaidEvent)
 @RegisterEventHandler(PlanChangedEvent)
@@ -54,48 +62,51 @@ export class BillingEventHandler
   private async handleOrderPaid(event: OrderPaidEvent): Promise<void> {
     const account = await this.billingStore.findAccountByTenantId(event.tenantId);
     if (account === null) {
-      return;
+      throw this.createDroppedProblem(event, "account_not_found", event.tenantId);
     }
 
     const subscription = await this.billingStore.findSubscription(account.id);
     if (subscription === null) {
-      return;
+      throw this.createDroppedProblem(event, "subscription_not_found", account.id);
     }
 
     const plan = await this.getPlan(subscription.planId);
     if (plan === null) {
-      return;
+      throw this.createDroppedProblem(event, "plan_not_found", subscription.planId);
     }
 
     const mrrAmount = this.calculator.normalizeMRR(plan.amount, plan.interval, plan.intervalCount);
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
     const movement = this.createMRRMovement(mrr, "new");
 
-    await this.metricsRepository.recordMRRMovement(
-      event.tenantId,
-      movement,
-      event.timestamp,
-      this.getEventId(event),
-    );
+    await this.recordMRRMovement(event, movement);
   }
 
   private async handlePlanChanged(event: PlanChangedEvent): Promise<void> {
     const account = await this.billingStore.findAccountByTenantId(event.tenantId);
     if (account === null) {
-      return;
+      throw this.createDroppedProblem(event, "account_not_found", event.tenantId);
     }
 
     const subscription = await this.billingStore.findSubscriptionByExternalId(
       event.externalSubscriptionId,
     );
     if (subscription === null) {
-      return;
+      throw this.createDroppedProblem(
+        event,
+        "subscription_not_found",
+        event.externalSubscriptionId,
+      );
     }
 
     const previousPlan = await this.getPlan(event.previousPlanId);
     const newPlan = await this.getPlan(event.newPlanId);
     if (previousPlan === null || newPlan === null) {
-      return;
+      throw this.createDroppedProblem(
+        event,
+        "plan_not_found",
+        previousPlan === null ? event.previousPlanId : event.newPlanId,
+      );
     }
 
     const previousMrrAmount = this.calculator.normalizeMRR(
@@ -119,12 +130,7 @@ export class BillingEventHandler
     const mrr: Money = { amount: mrrDiff, currency: newPlan.currency };
     const movement = this.createMRRMovement(mrr, movementType);
 
-    await this.metricsRepository.recordMRRMovement(
-      event.tenantId,
-      movement,
-      event.timestamp,
-      this.getEventId(event),
-    );
+    await this.recordMRRMovement(event, movement);
   }
 
   private async handleSubscriptionCanceled(event: SubscriptionCanceledEvent): Promise<void> {
@@ -132,24 +138,23 @@ export class BillingEventHandler
       event.externalSubscriptionId,
     );
     if (subscription === null) {
-      return;
+      throw this.createDroppedProblem(
+        event,
+        "subscription_not_found",
+        event.externalSubscriptionId,
+      );
     }
 
     const plan = await this.getPlan(subscription.planId);
     if (plan === null) {
-      return;
+      throw this.createDroppedProblem(event, "plan_not_found", subscription.planId);
     }
 
     const mrrAmount = this.calculator.normalizeMRR(plan.amount, plan.interval, plan.intervalCount);
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
     const movement = this.createMRRMovement(mrr, "churned");
 
-    await this.metricsRepository.recordMRRMovement(
-      event.tenantId,
-      movement,
-      event.timestamp,
-      this.getEventId(event),
-    );
+    await this.recordMRRMovement(event, movement);
   }
 
   private createMRRMovement(
@@ -216,7 +221,47 @@ export class BillingEventHandler
     }
   }
 
-  private getEventId(event: DomainEvent): string {
+  private getEventKey(event: DomainEvent): string {
+    return `${event.eventName}_${event.eventId}`;
+  }
+
+  private getLegacyTimestampEventKey(event: DomainEvent): string {
     return `${event.eventName}_${event.timestamp.getTime()}`;
+  }
+
+  private async recordMRRMovement(event: BillingMetricEvent, movement: MRRMovement): Promise<void> {
+    const eventKey = this.getEventKey(event);
+    const legacyEventKeys = [this.getLegacyTimestampEventKey(event)];
+
+    try {
+      await this.metricsRepository.recordMRRMovement(
+        event.tenantId,
+        movement,
+        event.timestamp,
+        eventKey,
+        legacyEventKeys,
+      );
+    } catch (error) {
+      throw new BillingMetricRecordingProblem({
+        eventName: event.eventName,
+        tenantId: event.tenantId,
+        eventKey,
+        cause: error instanceof Error ? error : undefined,
+      });
+    }
+  }
+
+  private createDroppedProblem(
+    event: BillingMetricEvent,
+    reason: BillingMetricDropReason,
+    resourceId: string,
+  ): BillingMetricDroppedProblem {
+    return new BillingMetricDroppedProblem({
+      eventName: event.eventName,
+      tenantId: event.tenantId,
+      eventKey: this.getEventKey(event),
+      reason,
+      resourceId,
+    });
   }
 }

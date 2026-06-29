@@ -72,7 +72,7 @@ MRR 변동 데이터 배열
 
 [`MetricsRepository`](/api/metrics-core/src/classes/metricsrepository/).[`getMRRHistory`](/api/metrics-core/src/classes/metricsrepository/#getmrrhistory)
 
-***
+---
 
 ### getRetentionMetrics()
 
@@ -104,7 +104,7 @@ MRR 변동 데이터 배열
 
 [`MetricsRepository`](/api/metrics-core/src/classes/metricsrepository/).[`getRetentionMetrics`](/api/metrics-core/src/classes/metricsrepository/#getretentionmetrics)
 
-***
+---
 
 ### getSnapshot()
 
@@ -136,11 +136,11 @@ MRR 변동 데이터 배열
 
 [`MetricsRepository`](/api/metrics-core/src/classes/metricsrepository/).[`getSnapshot`](/api/metrics-core/src/classes/metricsrepository/#getsnapshot)
 
-***
+---
 
 ### recordMRRMovement()
 
-> **recordMRRMovement**(`tenantId`, `movement`, `timestamp`, `eventKey?`): `Promise`\<`void`\>
+> **recordMRRMovement**(`tenantId`, `movement`, `timestamp`, `eventKey?`, `dedupeEventKeys?`): `Promise`\<`void`\>
 
 MRR 변동 이력 기록
 
@@ -170,6 +170,12 @@ MRR 변동 데이터
 
 이벤트 기반 멱등성 키 (선택)
 
+##### dedupeEventKeys?
+
+readonly `string`[] = `[]`
+
+이전 버전이나 외부 시스템에서 이미 저장했을 수 있는 호환 멱등성 키
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -178,7 +184,7 @@ MRR 변동 데이터
 
 [`MetricsRepository`](/api/metrics-core/src/classes/metricsrepository/).[`recordMRRMovement`](/api/metrics-core/src/classes/metricsrepository/#recordmrrmovement)
 
-***
+---
 
 ### recordSnapshot()
 

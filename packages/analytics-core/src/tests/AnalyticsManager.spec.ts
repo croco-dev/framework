@@ -121,6 +121,27 @@ describe("AnalyticsManager", () => {
     });
   });
 
+  describe("flush", () => {
+    it("should provide a default no-op flush contract", async () => {
+      await expect(analyticsManager.flush()).resolves.toBeUndefined();
+    });
+
+    it("should allow providers to override flush", async () => {
+      class FlushableAnalyticsManager extends AnalyticsManager {
+        capture(): void {}
+        identify(): void {}
+        group(): void {}
+        flush = vi.fn().mockResolvedValue(undefined);
+      }
+
+      const flushable = new FlushableAnalyticsManager();
+
+      await flushable.flush();
+
+      expect(flushable.flush).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("token", () => {
     it("should have a static token for DI", () => {
       expect(AnalyticsManager.token.name).toBe("AnalyticsManager");

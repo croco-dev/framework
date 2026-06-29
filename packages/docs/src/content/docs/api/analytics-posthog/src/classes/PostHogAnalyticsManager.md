@@ -15,17 +15,13 @@ Croco Context 정보를 활용해 PostHog 이벤트와 그룹 정보를 전송�
 
 ### Constructor
 
-> **new PostHogAnalyticsManager**(`posthogClient`, `logger`): `PostHogAnalyticsManager`
+> **new PostHogAnalyticsManager**(`posthogClient`): `PostHogAnalyticsManager`
 
 #### Parameters
 
 ##### posthogClient
 
 [`PostHogClient`](/api/integrations-posthog/src/classes/posthogclient/)
-
-##### logger
-
-[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
 
 #### Returns
 
@@ -71,6 +67,22 @@ Capture an event.
 #### Overrides
 
 [`AnalyticsManager`](/api/analytics-core/src/classes/analyticsmanager/).[`capture`](/api/analytics-core/src/classes/analyticsmanager/#capture)
+
+***
+
+### flush()
+
+> **flush**(): `Promise`\<`void`\>
+
+Flush buffered analytics events before a runtime boundary such as Lambda return or shutdown.
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`AnalyticsManager`](/api/analytics-core/src/classes/analyticsmanager/).[`flush`](/api/analytics-core/src/classes/analyticsmanager/#flush)
 
 ***
 

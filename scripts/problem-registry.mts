@@ -1013,6 +1013,17 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "metrics-billing/metric-dropped": recovery({
+    cause:
+      "Billing metrics could not be recorded because the referenced account, subscription, or plan evidence was missing.",
+    userAction:
+      "Restore the missing billing state identified by reason/resourceId, then replay the same billing event with the same event key.",
+    operatorAction:
+      "Use extensions.reason, tenantId, resourceId, and eventKey to rebuild the missing account, subscription, or plan before replay.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "notifications-resend/idempotency-conflict": recovery({
     cause: "Resend rejected reuse of an idempotency key for a different send request.",
     userAction:

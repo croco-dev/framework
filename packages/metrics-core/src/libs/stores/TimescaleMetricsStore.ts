@@ -45,9 +45,29 @@ export class TimescaleMetricsStore extends MetricsRepository {
     movement: MRRMovement,
     timestamp: Date,
     eventKey?: string,
+    dedupeEventKeys: readonly string[] = [],
   ): Promise<void> {
+    const hasDedupeAliases = eventKey !== undefined && dedupeEventKeys.length > 0;
     const sql = eventKey
-      ? `
+      ? hasDedupeAliases
+        ? `
+      INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE} (
+        tenant_id, event_key, timestamp,
+        new_mrr_amount, new_mrr_currency,
+        expansion_mrr_amount, expansion_mrr_currency,
+        contraction_mrr_amount, contraction_mrr_currency,
+        churned_mrr_amount, churned_mrr_currency,
+        reactivation_mrr_amount, reactivation_mrr_currency,
+        net_mrr_amount, net_mrr_currency
+      )
+      SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+      WHERE NOT EXISTS (
+        SELECT 1 FROM ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE}
+        WHERE tenant_id = $1 AND event_key = ANY($16::text[])
+      )
+      ON CONFLICT (tenant_id, event_key) DO NOTHING
+    `
+        : `
       INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE} (
         tenant_id, event_key, timestamp,
         new_mrr_amount, new_mrr_currency,
@@ -71,40 +91,29 @@ export class TimescaleMetricsStore extends MetricsRepository {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     `;
 
+    const movementParams = [
+      movement.new.amount,
+      movement.new.currency,
+      movement.expansion.amount,
+      movement.expansion.currency,
+      movement.contraction.amount,
+      movement.contraction.currency,
+      movement.churned.amount,
+      movement.churned.currency,
+      movement.reactivation.amount,
+      movement.reactivation.currency,
+      movement.net.amount,
+      movement.net.currency,
+    ];
     const params = eventKey
       ? [
           tenantId,
           eventKey,
           timestamp,
-          movement.new.amount,
-          movement.new.currency,
-          movement.expansion.amount,
-          movement.expansion.currency,
-          movement.contraction.amount,
-          movement.contraction.currency,
-          movement.churned.amount,
-          movement.churned.currency,
-          movement.reactivation.amount,
-          movement.reactivation.currency,
-          movement.net.amount,
-          movement.net.currency,
+          ...movementParams,
+          ...(hasDedupeAliases ? [[eventKey, ...dedupeEventKeys]] : []),
         ]
-      : [
-          tenantId,
-          timestamp,
-          movement.new.amount,
-          movement.new.currency,
-          movement.expansion.amount,
-          movement.expansion.currency,
-          movement.contraction.amount,
-          movement.contraction.currency,
-          movement.churned.amount,
-          movement.churned.currency,
-          movement.reactivation.amount,
-          movement.reactivation.currency,
-          movement.net.amount,
-          movement.net.currency,
-        ];
+      : [tenantId, timestamp, ...movementParams];
 
     await this.db.query(sql, params);
   }

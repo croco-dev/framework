@@ -69,13 +69,36 @@ Container.register(BillingEventHandler, {
 이벤트 키를 기반으로 멱등성을 보장합니다:
 
 ```
-eventKey = `${eventName}_${timestamp.getTime()}`
+eventKey = `${eventName}_${event.eventId}`
 ```
 
 동일한 이벤트 키로 중복 호출되면 TimescaleMetricsStore의 `ON CONFLICT DO NOTHING`이 처리합니다.
+서로 다른 billing event는 같은 millisecond에 발생해도 `DomainEvent.eventId`가 다르므로
+별도 metric으로 기록됩니다.
+
+이전 버전은 `${eventName}_${timestamp.getTime()}` 형식의 timestamp 기반 키를 사용했습니다.
+`BillingEventHandler`는 primary key로 `eventId` 기반 키를 전달하고, timestamp 기반 키를
+compatibility dedupe alias로 함께 전달합니다. TimescaleMetricsStore는 alias가 이미 저장된
+row를 발견하면 새 primary key insert를 건너뛰어 배포 전후 replay가 중복 MRR을 만들지 않게 합니다.
+
+## Failure semantics
+
+billing 이벤트가 metric으로 기록되지 못하는 경우를 성공처럼 숨기지 않습니다.
+`BillingEventHandler`는 필요한 account, subscription, plan evidence가 없으면
+`BillingMetricDroppedProblem`을 throw합니다. repository 기록이 실패하면
+`BillingMetricRecordingProblem`을 throw합니다.
+
+| Problem                         | Code                               | Recovery                                                                                                                        |
+| ------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `BillingMetricDroppedProblem`   | `metrics-billing/metric-dropped`   | `extensions.reason`, `tenantId`, `resourceId`, `eventKey`로 누락된 billing state를 복구한 뒤 같은 billing event를 재처리합니다. |
+| `BillingMetricRecordingProblem` | `metrics-billing/recording-failed` | metrics repository 장애를 복구한 뒤 `eventKey` 기반으로 같은 이벤트를 재시도합니다.                                             |
+
+문제 extensions에는 raw billing payload나 secret이 아니라 event name, tenant id, idempotency
+event key, drop reason, resource id만 포함됩니다.
 
 ## Dependencies
 
 - `@croco/billing-core` - Billing 도메인 이벤트
 - `@croco/events-core` - EventHandler 인터페이스
 - `@croco/metrics-core` - Metrics 계산 및 저장
+- `@croco/problems-core` - dropped/recording failure Problem
