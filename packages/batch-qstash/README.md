@@ -48,6 +48,9 @@ execution when the step reaches the end of input.
   Problem detail.
 - If `Step.classifyFailure` is present, local chunk execution failure records preserve its retryable
   and code classification before the original error is rethrown.
+- If `Step.classifyFailure` itself throws, the original error is rethrown and execution failure
+  metadata uses `batch-core/failure-classification-failed` so operators can distinguish processing
+  failure from classifier failure.
 
 ## Conformance
 

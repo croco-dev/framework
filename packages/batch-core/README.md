@@ -111,3 +111,47 @@ const importStep = new Step({
 await chunkExecutor.execute(executionId, extractStep, { completeExecution: false });
 await chunkExecutor.execute(executionId, loadStep, { startExecution: false });
 ```
+
+## 운영 경계와 복구 절차
+
+`ChunkExecutor`는 `@croco/execution-core`의 실행 상태를 사용해 체크포인트, 진행률, 실패 메타데이터를
+남깁니다. 운영자는 실패한 실행을 조회해 `status`, `error`, `progress`, `checkpoints`를 확인한 뒤 같은
+실행 ID로 다시 실행할 수 있습니다.
+
+- 성공한 청크는 writer가 완료된 뒤에만 `step.name.cursor` 체크포인트를 갱신합니다.
+- 재시도 가능한 실패는 `execution-core`가 실행을 `retrying` 상태로 남기며, 다음 `execute()` 호출은 마지막
+  체크포인트를 reader에 복원합니다.
+- 재시도 중 진행률은 기존 `progress.current`에서 이어집니다. 체크포인트 이후 남은 청크만 처리해도 완료
+  결과의 `processedCount`는 전체 실행 기준으로 유지됩니다.
+- writer가 실패한 청크는 체크포인트를 갱신하지 않습니다. 같은 청크가 재전달될 수 있으므로 writer는
+  실행 ID, 스텝 이름, 입력 키, 또는 애플리케이션 idempotency key로 중복 쓰기를 흡수해야 합니다.
+- `classifyFailure`가 실패하면 원래 오류 메시지는 유지하되 `batch-core/failure-classification-failed` 코드로
+  실행 실패 메타데이터에 남깁니다. 분류기 오류가 실제 처리 실패를 성공처럼 숨기지 않습니다.
+
+운영 재시도 예:
+
+```typescript
+const execution = await manager.create({
+  type: "batch",
+  maxAttempts: 2,
+  idempotencyKey: "import-users:2026-06-29",
+});
+
+try {
+  await chunkExecutor.execute(execution.id, importStep);
+} catch {
+  const current = await manager.get(execution.id);
+  if (current.status === "retrying") {
+    await chunkExecutor.execute(execution.id, importStep);
+  }
+}
+```
+
+## 검증 명령
+
+```bash
+pnpm --filter @croco/batch-core test
+pnpm --filter @croco/batch-core typecheck
+pnpm docs:catalog:check
+pnpm public-api:check
+```

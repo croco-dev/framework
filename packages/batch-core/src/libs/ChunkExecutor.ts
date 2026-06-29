@@ -31,14 +31,14 @@ export class ChunkExecutor {
 
     // 2. Restore checkpoint if available
     const checkpointKey = `${step.name}.cursor`;
-    if (execution.checkpoints?.[checkpointKey]) {
-      if (isCheckpointable(step.reader)) {
-        step.reader.restoreCheckpoint(execution.checkpoints[checkpointKey]);
-      }
+    let restoredCheckpoint = false;
+    if (this.hasCheckpoint(execution, checkpointKey) && isCheckpointable(step.reader)) {
+      step.reader.restoreCheckpoint(execution.checkpoints[checkpointKey]);
+      restoredCheckpoint = true;
     }
 
     let items: O[] = [];
-    let processedCount = 0;
+    let processedCount = this.resolveProcessedCount(execution, restoredCheckpoint);
     const totalCount = execution.progress?.total;
 
     // 3. Read - Process - Write loop
@@ -136,6 +136,22 @@ export class ChunkExecutor {
 
   private hasValidTotal(total: number | undefined): total is number {
     return typeof total === "number" && Number.isFinite(total) && total > 0;
+  }
+
+  private hasCheckpoint(
+    execution: Execution,
+    checkpointKey: string,
+  ): execution is Execution & { checkpoints: Record<string, unknown> } {
+    return Object.prototype.hasOwnProperty.call(execution.checkpoints ?? {}, checkpointKey);
+  }
+
+  private resolveProcessedCount(execution: Execution, restoredCheckpoint: boolean): number {
+    if (!restoredCheckpoint) {
+      return 0;
+    }
+
+    const current = execution.progress?.current;
+    return typeof current === "number" && Number.isFinite(current) && current > 0 ? current : 0;
   }
 
   private async resolveExecution(
