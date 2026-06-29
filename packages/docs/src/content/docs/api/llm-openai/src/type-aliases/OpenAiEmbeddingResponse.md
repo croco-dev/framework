@@ -13,13 +13,13 @@ title: "OpenAiEmbeddingResponse"
 
 > `readonly` `optional` **data?**: readonly `OpenAiEmbeddingVector`[]
 
----
+***
 
 ### model?
 
 > `readonly` `optional` **model?**: `string`
 
----
+***
 
 ### usage?
 

@@ -15,31 +15,31 @@ Clerk 사용자 관리에 필요한 공개 타입입니다.
 
 > **emailAddress**: `string`[]
 
----
+***
 
 ### firstName?
 
 > `optional` **firstName?**: `string`
 
----
+***
 
 ### lastName?
 
 > `optional` **lastName?**: `string`
 
----
+***
 
 ### password?
 
 > `optional` **password?**: `string`
 
----
+***
 
 ### privateMetadata?
 
 > `optional` **privateMetadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### publicMetadata?
 

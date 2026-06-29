@@ -11,6 +11,8 @@
     "demo:seed": "tsx src/demo/seed.ts",
     "demo:smoke": "tsx src/demo/smoke.ts",
     "ops:smoke": "tsx src/demo/ops-smoke.ts",
+    "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
+    "failure-drill:integration": "tsx src/provider-profile-check.ts --mode=real-provider",
     "build": "tsup src/index.ts --format esm,cjs --clean --dts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -45,6 +47,7 @@
   },
   "devDependencies": {
     "@croco/cli": "workspace:*",
+    "@croco/testing": "workspace:*",
     "@types/node": "^22",
     "tsup": "^8.5.1",
     "tsx": "^4.0.0",

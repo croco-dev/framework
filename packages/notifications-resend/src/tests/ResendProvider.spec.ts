@@ -51,6 +51,19 @@ describe("ResendProvider", () => {
     });
   });
 
+  describe("getCapabilities()", () => {
+    it("should declare rendered-template email dispatch capabilities", () => {
+      expect(provider.getCapabilities()).toEqual({
+        providerName: "resend",
+        channels: [NotificationChannel.EMAIL],
+        supportsIdempotencyKey: true,
+        supportsProviderTemplates: false,
+        supportsRenderedTemplates: true,
+        outboxIntegration: "consumer-managed",
+      });
+    });
+  });
+
   describe("send()", () => {
     const mockSuccessResponse: CreateEmailResponse = {
       data: { id: "msg-123" },

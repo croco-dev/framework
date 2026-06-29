@@ -34,6 +34,26 @@ export {
   type CapturedSpanException,
 } from "./libs/telemetry-testing";
 export {
+  assertFailureDrillResult,
+  createFailureDrillCatalog,
+  FAILURE_DRILL_SCENARIO_IDS,
+  runFailureDrillScenario,
+  runFailureDrills,
+  type FailureDrillAttributeValue,
+  type FailureDrillCatalogOverrides,
+  type FailureDrillEvidenceExpectation,
+  type FailureDrillEvidenceKind,
+  type FailureDrillEvidenceRecord,
+  type FailureDrillExpectedOutcome,
+  type FailureDrillProblemExpectation,
+  type FailureDrillReport,
+  type FailureDrillResult,
+  type FailureDrillRunOutput,
+  type FailureDrillScenario,
+  type FailureDrillScenarioId,
+  type FailureDrillScenarioOverride,
+} from "./libs/failure-drill";
+export {
   createAuthProviderConformanceSuite,
   type AuthProviderAuthConformance,
   type AuthProviderConformanceCase,

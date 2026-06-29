@@ -9,30 +9,30 @@ title: "OpenAiUsage"
 
 ## Properties
 
-### completion_tokens?
+### completion\_tokens?
 
-> `readonly` `optional` **completion_tokens?**: `number`
+> `readonly` `optional` **completion\_tokens?**: `number`
 
----
+***
 
-### input_tokens?
+### input\_tokens?
 
-> `readonly` `optional` **input_tokens?**: `number`
+> `readonly` `optional` **input\_tokens?**: `number`
 
----
+***
 
-### output_tokens?
+### output\_tokens?
 
-> `readonly` `optional` **output_tokens?**: `number`
+> `readonly` `optional` **output\_tokens?**: `number`
 
----
+***
 
-### prompt_tokens?
+### prompt\_tokens?
 
-> `readonly` `optional` **prompt_tokens?**: `number`
+> `readonly` `optional` **prompt\_tokens?**: `number`
 
----
+***
 
-### total_tokens?
+### total\_tokens?
 
-> `readonly` `optional` **total_tokens?**: `number`
+> `readonly` `optional` **total\_tokens?**: `number`

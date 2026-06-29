@@ -20,7 +20,7 @@ Currently disabled by default in Lambda environments.
 
 Whether logs collection is enabled. Default: false
 
----
+***
 
 ### exporterHeaders?
 
@@ -28,7 +28,7 @@ Whether logs collection is enabled. Default: false
 
 Additional HTTP headers for the exporter
 
----
+***
 
 ### exporterUrl?
 
@@ -36,7 +36,7 @@ Additional HTTP headers for the exporter
 
 OTLP logs exporter URL
 
----
+***
 
 ### maxExportBatchSize?
 
@@ -44,7 +44,7 @@ OTLP logs exporter URL
 
 Maximum batch size for export
 
----
+***
 
 ### maxQueueSize?
 

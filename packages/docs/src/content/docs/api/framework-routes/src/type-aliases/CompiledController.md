@@ -13,13 +13,13 @@ title: "CompiledController"
 
 > `readonly` **basePath**: `string`
 
----
+***
 
 ### className?
 
 > `readonly` `optional` **className?**: `string`
 
----
+***
 
 ### routes
 

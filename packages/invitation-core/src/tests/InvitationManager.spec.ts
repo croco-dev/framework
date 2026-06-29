@@ -1,7 +1,11 @@
 import "reflect-metadata";
 import type { EventPublisher } from "@croco/events-core";
 import type { Membership, MembershipManager } from "@croco/membership-core";
-import { NotificationChannel, type NotificationService } from "@croco/notifications-core";
+import {
+  createNotificationIdempotencyKey,
+  NotificationChannel,
+  type NotificationService,
+} from "@croco/notifications-core";
 import type { TxManager } from "@croco/tx-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -98,6 +102,17 @@ describe("InvitationManager", () => {
     const invitation = await store.findByTenantAndEmail("tenant-1", "member@croco.dev");
 
     expect(invitation).not.toBeNull();
+    if (invitation === null) {
+      throw new Error("Invitation was not created");
+    }
+
+    const preferenceContext = {
+      tenantId: "tenant-1",
+      userId: "member@croco.dev",
+      channel: NotificationChannel.EMAIL,
+      topic: "invitation.created",
+    };
+
     expect(invitation?.tokenHash).toBe(hashToken(token));
     expect(invitation?.tokenHash).not.toBe(token);
     expect(send).toHaveBeenCalledWith(
@@ -105,6 +120,14 @@ describe("InvitationManager", () => {
       expect.objectContaining({
         to: "member@croco.dev",
       }),
+      {
+        idempotencyKey: createNotificationIdempotencyKey({
+          ...preferenceContext,
+          recipient: "member@croco.dev",
+          semanticKey: invitation.id,
+        }),
+        preferenceContext,
+      },
     );
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));
   });
@@ -352,12 +375,31 @@ describe("InvitationManager", () => {
 
     expect(oldInvitation?.status).toBe("revoked");
     expect(newInvitation).not.toBeNull();
-    expect(newInvitation?.id).not.toBe("inv-old");
+    if (newInvitation === null) {
+      throw new Error("Resent invitation was not created");
+    }
+
+    const preferenceContext = {
+      tenantId: "tenant-1",
+      userId: "member@croco.dev",
+      channel: NotificationChannel.EMAIL,
+      topic: "invitation.created",
+    };
+
+    expect(newInvitation.id).not.toBe("inv-old");
     expect(send).toHaveBeenCalledWith(
       NotificationChannel.EMAIL,
       expect.objectContaining({
         to: "member@croco.dev",
       }),
+      {
+        idempotencyKey: createNotificationIdempotencyKey({
+          ...preferenceContext,
+          recipient: "member@croco.dev",
+          semanticKey: newInvitation.id,
+        }),
+        preferenceContext,
+      },
     );
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationRevokedEvent));
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));

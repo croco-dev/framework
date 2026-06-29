@@ -13,13 +13,13 @@ title: "CompileRequestPipelineGraphOptions"
 
 > `readonly` `optional` **policyPlan?**: [`PolicyExecutionPlan`](/api/framework-context/src/type-aliases/policyexecutionplan/)
 
----
+***
 
 ### requireHandler?
 
 > `readonly` `optional` **requireHandler?**: `boolean`
 
----
+***
 
 ### target?
 

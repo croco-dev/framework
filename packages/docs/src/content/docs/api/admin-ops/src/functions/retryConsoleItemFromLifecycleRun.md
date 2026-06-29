@@ -11,7 +11,7 @@ title: "retryConsoleItemFromLifecycleRun"
 
 ### run
 
-`LifecycleRun`
+[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/)
 
 ### recover?
 

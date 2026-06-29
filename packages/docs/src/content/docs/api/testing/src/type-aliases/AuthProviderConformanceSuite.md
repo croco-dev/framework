@@ -13,7 +13,7 @@ title: "AuthProviderConformanceSuite"
 
 > `readonly` **cases**: readonly [`AuthProviderConformanceCase`](/api/testing/src/type-aliases/authproviderconformancecase/)[]
 
----
+***
 
 ### liveSmoke?
 

@@ -15,13 +15,13 @@ title: "RateLimitMiddlewareOptions"
 
 > `optional` **failOpen?**: `boolean`
 
----
+***
 
 ### keySegments?
 
 > `optional` **keySegments?**: `KeySegment`[]
 
----
+***
 
 ### policy
 

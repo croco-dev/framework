@@ -17,7 +17,7 @@ Configuration for Carrying Capacity simulation.
 
 Percentage change in churn rate (-100 to +100, e.g., -20 = -20% churn)
 
----
+***
 
 ### inflowChange?
 
@@ -25,7 +25,7 @@ Percentage change in churn rate (-100 to +100, e.g., -20 = -20% churn)
 
 Percentage change in daily inflow (-100 to +∞, e.g., 20 = +20%)
 
----
+***
 
 ### tenantId
 

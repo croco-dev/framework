@@ -42,7 +42,7 @@ decorated methods
 
 ### getCronTrigger()
 
-> **getCronTrigger**(`target`, `methodName`): `CronTriggerMetadata` \| `undefined`
+> **getCronTrigger**(`target`, `methodName`): [`CronTriggerMetadata`](/api/triggers-core/src/type-aliases/crontriggermetadata/) \| `undefined`
 
 Get a single cron trigger by class and method name.
 
@@ -60,7 +60,7 @@ Useful for testing and debugging.
 
 #### Returns
 
-`CronTriggerMetadata` \| `undefined`
+[`CronTriggerMetadata`](/api/triggers-core/src/type-aliases/crontriggermetadata/) \| `undefined`
 
 ***
 

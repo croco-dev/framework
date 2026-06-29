@@ -9,7 +9,7 @@ title: "DrizzleExecutionStore"
 
 ## Extends
 
-- `ExecutionStore`
+- [`ExecutionStore`](/api/execution-core/src/classes/executionstore/)
 
 ## Type Parameters
 
@@ -19,7 +19,7 @@ title: "DrizzleExecutionStore"
 
 ## Implements
 
-- `ExecutionLogStore`
+- [`ExecutionLogStore`](/api/execution-core/src/interfaces/executionlogstore/)
 
 ## Constructors
 
@@ -41,13 +41,13 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 #### Overrides
 
-`ExecutionStore.constructor`
+[`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`constructor`](/api/execution-core/src/classes/executionstore/#constructor)
 
 ## Methods
 
 ### appendLog()
 
-> **appendLog**(`id`, `entry`): `Promise`\<`Execution`\>
+> **appendLog**(`id`, `entry`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
 실행 로그를 원자적으로 추가합니다.
 
@@ -59,21 +59,21 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 ##### entry
 
-`ExecutionLogEntry`
+[`ExecutionLogEntry`](/api/execution-core/src/interfaces/executionlogentry/)
 
 #### Returns
 
-`Promise`\<`Execution`\>
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
 #### Implementation of
 
-`ExecutionLogStore.appendLog`
+[`ExecutionLogStore`](/api/execution-core/src/interfaces/executionlogstore/).[`appendLog`](/api/execution-core/src/interfaces/executionlogstore/#appendlog)
 
 ***
 
 ### create()
 
-> **create**(`params`): `Promise`\<`Execution`\>
+> **create**(`params`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
 새 실행을 생성합니다. idempotencyKey가 있으면 중복 생성을 방지합니다.
 
@@ -81,15 +81,15 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 ##### params
 
-`CreateExecutionParams`
+[`CreateExecutionParams`](/api/execution-core/src/interfaces/createexecutionparams/)
 
 #### Returns
 
-`Promise`\<`Execution`\>
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
 #### Overrides
 
-`ExecutionStore.create`
+[`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`create`](/api/execution-core/src/classes/executionstore/#create)
 
 ***
 
@@ -111,13 +111,13 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 #### Overrides
 
-`ExecutionStore.delete`
+[`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`delete`](/api/execution-core/src/classes/executionstore/#delete)
 
 ***
 
 ### findById()
 
-> **findById**(`id`): `Promise`\<`Execution` \| `null`\>
+> **findById**(`id`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
 
 실행 ID로 단일 실행을 조회합니다.
 
@@ -129,17 +129,17 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 #### Returns
 
-`Promise`\<`Execution` \| `null`\>
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
 
 #### Overrides
 
-`ExecutionStore.findById`
+[`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`findById`](/api/execution-core/src/classes/executionstore/#findbyid)
 
 ***
 
 ### findByIdempotencyKey()
 
-> **findByIdempotencyKey**(`key`): `Promise`\<`Execution` \| `null`\>
+> **findByIdempotencyKey**(`key`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
 
 idempotencyKey로 기존 실행을 조회합니다.
 
@@ -151,17 +151,17 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 #### Returns
 
-`Promise`\<`Execution` \| `null`\>
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
 
 #### Overrides
 
-`ExecutionStore.findByIdempotencyKey`
+[`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`findByIdempotencyKey`](/api/execution-core/src/classes/executionstore/#findbyidempotencykey)
 
 ***
 
 ### list()
 
-> **list**(`options?`): `Promise`\<`Execution`[]\>
+> **list**(`options?`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)[]\>
 
 상태, 타입, 부모 실행 조건으로 실행 목록을 조회합니다.
 
@@ -169,21 +169,21 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 ##### options?
 
-`ListExecutionsOptions` = `{}`
+[`ListExecutionsOptions`](/api/execution-core/src/interfaces/listexecutionsoptions/) = `{}`
 
 #### Returns
 
-`Promise`\<`Execution`[]\>
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)[]\>
 
 #### Overrides
 
-`ExecutionStore.list`
+[`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`list`](/api/execution-core/src/classes/executionstore/#list)
 
 ***
 
 ### update()
 
-> **update**(`id`, `data`): `Promise`\<`Execution`\>
+> **update**(`id`, `data`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
 실행 상태와 메타데이터를 부분 업데이트합니다.
 
@@ -195,12 +195,12 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 ##### data
 
-`Partial`\<`Execution`\>
+`Partial`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
 #### Returns
 
-`Promise`\<`Execution`\>
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
 #### Overrides
 
-`ExecutionStore.update`
+[`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`update`](/api/execution-core/src/classes/executionstore/#update)

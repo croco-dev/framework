@@ -15,37 +15,37 @@ title: "RateLimitResult"
 
 > `optional` **degraded?**: `boolean`
 
----
+***
 
 ### limit
 
 > **limit**: `number`
 
----
+***
 
 ### policyName?
 
 > `optional` **policyName?**: `string`
 
----
+***
 
 ### refundReceipt?
 
 > `optional` **refundReceipt?**: [`RateLimitRefundReceipt`](/api/ratelimit-core/src/type-aliases/ratelimitrefundreceipt/)
 
----
+***
 
 ### remaining
 
 > **remaining**: `number`
 
----
+***
 
 ### resetAtMs
 
 > **resetAtMs**: `number`
 
----
+***
 
 ### success
 

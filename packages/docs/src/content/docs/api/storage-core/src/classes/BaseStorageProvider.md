@@ -11,6 +11,7 @@ title: "BaseStorageProvider"
 
 - [`CloudflareImagesProvider`](/api/storage-cloudflare/src/classes/cloudflareimagesprovider/)
 - [`CloudinaryProvider`](/api/storage-cloudinary/src/classes/cloudinaryprovider/)
+- [`R2StorageProvider`](/api/storage-r2/src/classes/r2storageprovider/)
 
 ## Implements
 
@@ -50,7 +51,7 @@ title: "BaseStorageProvider"
 
 `StorageProvider.delete`
 
----
+***
 
 ### exists()
 
@@ -74,7 +75,7 @@ title: "BaseStorageProvider"
 
 `StorageProvider.exists`
 
----
+***
 
 ### get()
 
@@ -104,7 +105,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.get`
 
----
+***
 
 ### getMetadata()
 
@@ -134,7 +135,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getMetadata`
 
----
+***
 
 ### getPublicUrl()
 
@@ -160,7 +161,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getPublicUrl`
 
----
+***
 
 ### getSignedUrl()
 
@@ -192,7 +193,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getSignedUrl`
 
----
+***
 
 ### getStream()
 
@@ -222,7 +223,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 `StorageProvider.getStream`
 
----
+***
 
 ### put()
 
@@ -240,7 +241,7 @@ FileNotFoundProblem - 파일이 존재하지 않을 때
 
 ##### data
 
-`Readable` \| `Buffer`\<`ArrayBufferLike`\>
+`Buffer`\<`ArrayBufferLike`\> \| `Readable`
 
 파일 데이터 (Buffer 또는 Readable 스트림)
 

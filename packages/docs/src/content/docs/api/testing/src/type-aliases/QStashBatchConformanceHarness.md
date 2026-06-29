@@ -13,7 +13,7 @@ title: "QStashBatchConformanceHarness"
 
 > `readonly` **executor**: [`QStashBatchChunkExecutor`](/api/testing/src/type-aliases/qstashbatchchunkexecutor/)
 
----
+***
 
 ### getExecutionFailures?
 
@@ -23,7 +23,7 @@ title: "QStashBatchConformanceHarness"
 
 readonly `unknown`[]
 
----
+***
 
 ### getPublishedMessages
 

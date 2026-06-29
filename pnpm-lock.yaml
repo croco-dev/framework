@@ -78,7 +78,7 @@ importers:
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3)
       turbo:
         specifier: latest
-        version: 2.9.18
+        version: 2.10.0
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -926,18 +926,33 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@croco/access-core':
+        specifier: workspace:*
+        version: link:../access-core
       '@croco/access-drizzle':
         specifier: workspace:*
         version: link:../access-drizzle
+      '@croco/admin-core':
+        specifier: workspace:*
+        version: link:../admin-core
       '@croco/admin-generated':
         specifier: workspace:*
         version: link:../admin-generated
       '@croco/admin-ops':
         specifier: workspace:*
         version: link:../admin-ops
+      '@croco/admin-react':
+        specifier: workspace:*
+        version: link:../admin-react
       '@croco/analytics-core':
         specifier: workspace:*
         version: link:../analytics-core
+      '@croco/analytics-posthog':
+        specifier: workspace:*
+        version: link:../analytics-posthog
+      '@croco/architecture-policy':
+        specifier: workspace:*
+        version: link:../architecture-policy
       '@croco/audit-core':
         specifier: workspace:*
         version: link:../audit-core
@@ -956,12 +971,27 @@ importers:
       '@croco/auth-drizzle':
         specifier: workspace:*
         version: link:../auth-drizzle
+      '@croco/batch-core':
+        specifier: workspace:*
+        version: link:../batch-core
       '@croco/batch-qstash':
         specifier: workspace:*
         version: link:../batch-qstash
       '@croco/billing-core':
         specifier: workspace:*
         version: link:../billing-core
+      '@croco/billing-polar':
+        specifier: workspace:*
+        version: link:../billing-polar
+      '@croco/cache-core':
+        specifier: workspace:*
+        version: link:../cache-core
+      '@croco/cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@croco/customer-health-core':
+        specifier: workspace:*
+        version: link:../customer-health-core
       '@croco/customer-health-drizzle':
         specifier: workspace:*
         version: link:../customer-health-drizzle
@@ -971,24 +1001,48 @@ importers:
       '@croco/diagnostics-core':
         specifier: workspace:*
         version: link:../diagnostics-core
+      '@croco/entitlements-core':
+        specifier: workspace:*
+        version: link:../entitlements-core
       '@croco/entitlements-drizzle':
         specifier: workspace:*
         version: link:../entitlements-drizzle
+      '@croco/esbuild-plugin':
+        specifier: workspace:*
+        version: link:../esbuild-plugin
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
       '@croco/events-inmemory':
         specifier: workspace:*
         version: link:../events-inmemory
+      '@croco/events-tx':
+        specifier: workspace:*
+        version: link:../events-tx
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
       '@croco/execution-drizzle':
         specifier: workspace:*
         version: link:../execution-drizzle
       '@croco/features-core':
         specifier: workspace:*
         version: link:../features-core
+      '@croco/features-posthog':
+        specifier: workspace:*
+        version: link:../features-posthog
+      '@croco/framework-config':
+        specifier: workspace:*
+        version: link:../framework-config
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
       '@croco/framework-preset':
         specifier: workspace:*
         version: link:../framework-preset
@@ -998,15 +1052,30 @@ importers:
       '@croco/frontend-cloudflare':
         specifier: workspace:*
         version: link:../frontend-cloudflare
+      '@croco/frontend-problems':
+        specifier: workspace:*
+        version: link:../frontend-problems
       '@croco/frontend-react':
         specifier: workspace:*
         version: link:../frontend-react
       '@croco/frontend-vite':
         specifier: workspace:*
         version: link:../frontend-vite
+      '@croco/gid-core':
+        specifier: workspace:*
+        version: link:../gid-core
+      '@croco/governance-core':
+        specifier: workspace:*
+        version: link:../governance-core
+      '@croco/health-core':
+        specifier: workspace:*
+        version: link:../health-core
       '@croco/idempotency-core':
         specifier: workspace:*
         version: link:../idempotency-core
+      '@croco/impersonation-core':
+        specifier: workspace:*
+        version: link:../impersonation-core
       '@croco/integrations-posthog':
         specifier: workspace:*
         version: link:../integrations-posthog
@@ -1016,6 +1085,9 @@ importers:
       '@croco/invitation-drizzle':
         specifier: workspace:*
         version: link:../invitation-drizzle
+      '@croco/lifecycle-core':
+        specifier: workspace:*
+        version: link:../lifecycle-core
       '@croco/llm-core':
         specifier: workspace:*
         version: link:../llm-core
@@ -1031,6 +1103,9 @@ importers:
       '@croco/membership-drizzle':
         specifier: workspace:*
         version: link:../membership-drizzle
+      '@croco/meta-vite':
+        specifier: workspace:*
+        version: link:../meta-vite
       '@croco/metering-core':
         specifier: workspace:*
         version: link:../metering-core
@@ -1040,6 +1115,9 @@ importers:
       '@croco/metering-upstash':
         specifier: workspace:*
         version: link:../metering-upstash
+      '@croco/metrics-billing':
+        specifier: workspace:*
+        version: link:../metrics-billing
       '@croco/metrics-core':
         specifier: workspace:*
         version: link:../metrics-core
@@ -1049,6 +1127,9 @@ importers:
       '@croco/notifications-core':
         specifier: workspace:*
         version: link:../notifications-core
+      '@croco/notifications-resend':
+        specifier: workspace:*
+        version: link:../notifications-resend
       '@croco/onboarding-core':
         specifier: workspace:*
         version: link:../onboarding-core
@@ -1058,6 +1139,12 @@ importers:
       '@croco/openapi-spec':
         specifier: workspace:*
         version: link:../openapi-spec
+      '@croco/pagination-core':
+        specifier: workspace:*
+        version: link:../pagination-core
+      '@croco/presentation-preset':
+        specifier: workspace:*
+        version: link:../presentation-preset
       '@croco/preset-cloudflare':
         specifier: workspace:*
         version: link:../preset-cloudflare
@@ -1103,6 +1190,9 @@ importers:
       '@croco/search-drizzle':
         specifier: workspace:*
         version: link:../search-drizzle
+      '@croco/search-meilisearch':
+        specifier: workspace:*
+        version: link:../search-meilisearch
       '@croco/storage-cloudflare':
         specifier: workspace:*
         version: link:../storage-cloudflare
@@ -1112,6 +1202,12 @@ importers:
       '@croco/storage-core':
         specifier: workspace:*
         version: link:../storage-core
+      '@croco/storage-r2':
+        specifier: workspace:*
+        version: link:../storage-r2
+      '@croco/tasks-core':
+        specifier: workspace:*
+        version: link:../tasks-core
       '@croco/tasks-qstash':
         specifier: workspace:*
         version: link:../tasks-qstash
@@ -1121,6 +1217,9 @@ importers:
       '@croco/telemetry-sdk-node':
         specifier: workspace:*
         version: link:../telemetry-sdk-node
+      '@croco/tenant-core':
+        specifier: workspace:*
+        version: link:../tenant-core
       '@croco/testing':
         specifier: workspace:*
         version: link:../testing
@@ -1133,6 +1232,9 @@ importers:
       '@croco/transports-http':
         specifier: workspace:*
         version: link:../transports-http
+      '@croco/triggers-core':
+        specifier: workspace:*
+        version: link:../triggers-core
       '@croco/triggers-qstash':
         specifier: workspace:*
         version: link:../triggers-qstash
@@ -1145,6 +1247,9 @@ importers:
       '@croco/webhooks-core':
         specifier: workspace:*
         version: link:../webhooks-core
+      '@croco/workflow-core':
+        specifier: workspace:*
+        version: link:../workflow-core
       '@playwright/test':
         specifier: 1.58.2
         version: 1.58.2
@@ -2114,6 +2219,9 @@ importers:
       '@croco/tasks-core':
         specifier: workspace:*
         version: link:../tasks-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
     devDependencies:
       reflect-metadata:
         specifier: ^0.2.2
@@ -5891,33 +5999,33 @@ packages:
   '@ts-morph/common@0.25.0':
     resolution: {integrity: sha512-kMnZz+vGGHi4GoHnLmMhGNjm44kGtKUXGnOvrKmMwAuvNjM/PgKVGfUnL7IDvK7Jb2QQ82jq3Zmp04Gy+r3Dkg==}
 
-  '@turbo/darwin-64@2.9.18':
-    resolution: {integrity: sha512-9f27peFu16ur8c0v9nUFUEyBnbKuuFsUTjHFWfmwGfzySBXbHwzU44QhZon6Mznz0cHsIr3984NQj/bVrnGSRw==}
+  '@turbo/darwin-64@2.10.0':
+    resolution: {integrity: sha512-EwvHThXzpY0KGd1/NAmuewI5D+aVa3Rl/OlxE36yfjUKb/+ySrfJrSlEFt8aD1OXwnnaHnQnPKHFndor0Zxlsg==}
     cpu: [x64]
     os: [darwin]
 
-  '@turbo/darwin-arm64@2.9.18':
-    resolution: {integrity: sha512-9A6TMRq/Ib+QnbhLlgkhOm+624wO4pzSQ/yQviQfWHOlFvaYxdnIAYmu2H6TS6y7kSVL0DvzNe04NbESTOzFVQ==}
+  '@turbo/darwin-arm64@2.10.0':
+    resolution: {integrity: sha512-9d2fTyyG0lf5Wq1bwJA9qUaeecViMkLcdctWaMMmCkxZ/JqypmqOwK3W6vmejeKVgkr06gSoiX8bD+xN5Jpxcg==}
     cpu: [arm64]
     os: [darwin]
 
-  '@turbo/linux-64@2.9.18':
-    resolution: {integrity: sha512-zCdIDtz69AnbYh913elJRRoF3QY5aa2HNnf+4rAkc7bQ+tWujiDkCNV7stazOUPggaDvhKIf2Z87qHftTeXSkw==}
+  '@turbo/linux-64@2.10.0':
+    resolution: {integrity: sha512-sZBtjMuufitanjzi6UssoUpJMnnPlLMcdcJj3m3ptNsSq31Xh7MnjhwA5nWvLDTfEFg8GPcbYFXMo8vSdKRfqQ==}
     cpu: [x64]
     os: [linux]
 
-  '@turbo/linux-arm64@2.9.18':
-    resolution: {integrity: sha512-Va1kXI04naMgYwqv/5Dfa36dTDx8015U7oaQAjrXa45ua9OoFjSV4OmvkML4EmXvUclQHCiBRbY8bvd0jV7eAg==}
+  '@turbo/linux-arm64@2.10.0':
+    resolution: {integrity: sha512-vkq/Z8R+1DQ+kifWFa810IjRy2NNBVvha3cg9sWA3nFh6nnGrHSMnnJKrzH7c/No9kq4Jb55Ru44YKsCSBgrKg==}
     cpu: [arm64]
     os: [linux]
 
-  '@turbo/windows-64@2.9.18':
-    resolution: {integrity: sha512-m0kDhZANxSNz9ck1ybogFscHabriAsp4eDFNrN/1H5WrgTF7b3VlcPZnhuO3v2+E2KnCbeAc+UUT10BZZHdDKw==}
+  '@turbo/windows-64@2.10.0':
+    resolution: {integrity: sha512-CRUEguLWxFQHptYZS7HjPhNhAFawfea07iR+xAQ5e4klgLrPCMdexBkXwSCwOxqTFknJ7RZFN3gOaADsw+Gttg==}
     cpu: [x64]
     os: [win32]
 
-  '@turbo/windows-arm64@2.9.18':
-    resolution: {integrity: sha512-nUdR8WqoomUys9iIQmG45TMiizJ+5BV8egSeLLZba/AWblyp3fVBcIH1kSE58OtK4g2YzbMJEth6Ttv9w5rqMA==}
+  '@turbo/windows-arm64@2.10.0':
+    resolution: {integrity: sha512-dVHGaf9F8twzgibcBqKoADT/LLqf9++jDb+hq/LPWWaOmRpp4M+/pVOm7vy4z9D++xg8eaxWLT0+wQxFwhYu9A==}
     cpu: [arm64]
     os: [win32]
 
@@ -9208,8 +9316,8 @@ packages:
   turbo-stream@3.2.0:
     resolution: {integrity: sha512-EK+bZ9UVrVh7JLslVFOV0GEMsociOqVOvEMTAd4ixMyffN5YNIEdLZWXUx5PJqDbTxSIBWw04HS9gCY4frYQDQ==}
 
-  turbo@2.9.18:
-    resolution: {integrity: sha512-bwabv6PupzeavybzEoArBAkwq5fnzwf8OFnRtpHwnviFWuwJPFxtyH+aVp36TmIqK3aYYgtTJ3J0m2ysxxSzQg==}
+  turbo@2.10.0:
+    resolution: {integrity: sha512-o016H9PPtuH2deb3mh3Vci3Avfi9UYgM/RONQisY7HnloupP0IFSbFS3gFYJgFJP8nwBrByHWFQIDa8T2zIXPw==}
     hasBin: true
 
   type-fest@4.41.0:
@@ -12698,22 +12806,22 @@ snapshots:
       path-browserify: 1.0.1
       tinyglobby: 0.2.15
 
-  '@turbo/darwin-64@2.9.18':
+  '@turbo/darwin-64@2.10.0':
     optional: true
 
-  '@turbo/darwin-arm64@2.9.18':
+  '@turbo/darwin-arm64@2.10.0':
     optional: true
 
-  '@turbo/linux-64@2.9.18':
+  '@turbo/linux-64@2.10.0':
     optional: true
 
-  '@turbo/linux-arm64@2.9.18':
+  '@turbo/linux-arm64@2.10.0':
     optional: true
 
-  '@turbo/windows-64@2.9.18':
+  '@turbo/windows-64@2.10.0':
     optional: true
 
-  '@turbo/windows-arm64@2.9.18':
+  '@turbo/windows-arm64@2.10.0':
     optional: true
 
   '@types/aws-lambda@8.10.150': {}
@@ -16686,14 +16794,14 @@ snapshots:
 
   turbo-stream@3.2.0: {}
 
-  turbo@2.9.18:
+  turbo@2.10.0:
     optionalDependencies:
-      '@turbo/darwin-64': 2.9.18
-      '@turbo/darwin-arm64': 2.9.18
-      '@turbo/linux-64': 2.9.18
-      '@turbo/linux-arm64': 2.9.18
-      '@turbo/windows-64': 2.9.18
-      '@turbo/windows-arm64': 2.9.18
+      '@turbo/darwin-64': 2.10.0
+      '@turbo/darwin-arm64': 2.10.0
+      '@turbo/linux-64': 2.10.0
+      '@turbo/linux-arm64': 2.10.0
+      '@turbo/windows-64': 2.10.0
+      '@turbo/windows-arm64': 2.10.0
 
   type-fest@4.41.0: {}
 

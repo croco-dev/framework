@@ -427,6 +427,8 @@ function checkSaasStructure() {
         /profile:check[\s\S]*architecture-policy:check[\s\S]*runtime-policy:check[\s\S]*contract:check[\s\S]*api-server demo:smoke[\s\S]*api-server ops:smoke/,
       ),
       "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
+      "failure-drill:smoke": "pnpm --filter {{scope}}/api-server failure-drill:smoke",
+      "failure-drill:integration": "pnpm --filter {{scope}}/api-server failure-drill:integration",
       typecheck: "turbo typecheck",
       build: "turbo build",
       test: "turbo test",
@@ -444,6 +446,8 @@ function checkSaasStructure() {
       "demo:seed": "tsx src/demo/seed.ts",
       "demo:smoke": "tsx src/demo/smoke.ts",
       "ops:smoke": "tsx src/demo/ops-smoke.ts",
+      "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
+      "failure-drill:integration": "tsx src/provider-profile-check.ts --mode=real-provider",
       "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
       "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
       test: "vitest run",
@@ -471,9 +475,11 @@ function checkSaasStructure() {
     }),
     devDependencies: expect.objectContaining({
       "@croco/cli": "workspace:*",
+      "@croco/testing": "workspace:*",
       typedi: "^0.10.0",
     }),
   });
+  expect(apiPackageJson.dependencies).not.toHaveProperty("@croco/testing");
   const rpcPackageJson = readJsonTemplate(
     "saas",
     "libs",
@@ -543,6 +549,21 @@ function checkSaasStructure() {
   checkFileContains("saas", ["apps", "api-server", "src", "demo", "ops-smoke.ts"], /runOpsCheck/);
   checkFileContains(
     "saas",
+    ["apps", "api-server", "src", "demo", "failure-drill-smoke.ts"],
+    /createFailureDrillCatalog/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "failure-drill-smoke.ts"],
+    /assertSaasSmokeContract/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "failure-drill-smoke.ts"],
+    /llm-metering\/quota-exceeded/,
+  );
+  checkFileContains(
+    "saas",
     ["apps", "api-server", "src", "demo", "ops-smoke.ts"],
     /@croco\/cli\/ops/,
   );
@@ -570,6 +591,8 @@ function checkAiSaasStructure() {
     scripts: expect.objectContaining({
       "ai:smoke": "pnpm --filter {{scope}}/api-server ai:smoke",
       "demo:smoke": expect.stringMatching(/api-server ai:smoke$/),
+      "failure-drill:smoke": "pnpm --filter {{scope}}/api-server failure-drill:smoke",
+      "failure-drill:integration": "pnpm --filter {{scope}}/api-server failure-drill:integration",
       "contract:coverage": expect.stringMatching(/contract-graph\.coverage\.json/),
       "project-map:write": expect.stringMatching(
         /^NODE_PATH=\.\/node_modules croco project map[\s\S]*--out croco\.project-map\.json$/,
@@ -588,6 +611,8 @@ function checkAiSaasStructure() {
     scripts: expect.objectContaining({
       "ai:smoke": "tsx src/demo/ai-smoke.ts",
       "ops:smoke": "tsx src/demo/ops-smoke.ts",
+      "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
+      "failure-drill:integration": "tsx src/provider-profile-check.ts --mode=real-provider",
       test: "vitest run",
     }),
     dependencies: expect.objectContaining({
@@ -599,7 +624,11 @@ function checkAiSaasStructure() {
       "@croco/telemetry-api": "workspace:*",
       "@croco/tenant-core": "workspace:*",
     }),
+    devDependencies: expect.objectContaining({
+      "@croco/testing": "workspace:*",
+    }),
   });
+  expect(apiPackageJson.dependencies).not.toHaveProperty("@croco/testing");
 
   checkFileContains("ai-saas", ["apps", "api-server", "src", "app.ts.hbs"], /AiController/);
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /PROMPT_TOKENS/);

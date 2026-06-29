@@ -11,7 +11,7 @@ title: "retryConsoleItemFromExecution"
 
 ### execution
 
-`Execution`
+[`Execution`](/api/execution-core/src/interfaces/execution/)
 
 ### options
 

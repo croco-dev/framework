@@ -9,7 +9,7 @@ title: "DrizzleHealthScoreStore"
 
 ## Extends
 
-- `HealthScoreStore`
+- [`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/)
 
 ## Constructors
 
@@ -31,23 +31,23 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 #### Overrides
 
-`HealthScoreStore.constructor`
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`constructor`](/api/customer-health-core/src/classes/healthscorestore/#constructor)
 
 ## Properties
 
 ### token
 
-> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`HealthScoreStore`\>
+> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/)\>
 
 #### Inherited from
 
-`HealthScoreStore.token`
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`token`](/api/customer-health-core/src/classes/healthscorestore/#token)
 
 ## Methods
 
 ### findHistory()
 
-> **findHistory**(`tenantId`, `limit`): `Promise`\<`TenantHealthScore`[]\>
+> **findHistory**(`tenantId`, `limit`): `Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)[]\>
 
 테넌트의 건강 점수 이력을 최신순으로 조회합니다.
 
@@ -63,17 +63,17 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 #### Returns
 
-`Promise`\<`TenantHealthScore`[]\>
+`Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)[]\>
 
 #### Overrides
 
-`HealthScoreStore.findHistory`
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`findHistory`](/api/customer-health-core/src/classes/healthscorestore/#findhistory)
 
 ***
 
 ### findHistoryByPeriod()
 
-> **findHistoryByPeriod**(`tenantId`, `_period`, `startDate`, `endDate`): `Promise`\<`TenantHealthScore`[]\>
+> **findHistoryByPeriod**(`tenantId`, `_period`, `startDate`, `endDate`): `Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)[]\>
 
 기간 범위에 포함되는 건강 점수 이력을 조회합니다.
 
@@ -85,7 +85,7 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 ##### \_period
 
-`TrendPeriod`
+[`TrendPeriod`](/api/customer-health-core/src/type-aliases/trendperiod/)
 
 ##### startDate
 
@@ -97,17 +97,17 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 #### Returns
 
-`Promise`\<`TenantHealthScore`[]\>
+`Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)[]\>
 
 #### Overrides
 
-`HealthScoreStore.findHistoryByPeriod`
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`findHistoryByPeriod`](/api/customer-health-core/src/classes/healthscorestore/#findhistorybyperiod)
 
 ***
 
 ### findLatest()
 
-> **findLatest**(`tenantId`): `Promise`\<`TenantHealthScore` \| `null`\>
+> **findLatest**(`tenantId`): `Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`\>
 
 테넌트의 최신 건강 점수를 조회합니다.
 
@@ -119,11 +119,11 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 #### Returns
 
-`Promise`\<`TenantHealthScore` \| `null`\>
+`Promise`\<[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`\>
 
 #### Overrides
 
-`HealthScoreStore.findLatest`
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`findLatest`](/api/customer-health-core/src/classes/healthscorestore/#findlatest)
 
 ***
 
@@ -137,7 +137,7 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 ##### score
 
-`TenantHealthScore`
+[`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/)
 
 #### Returns
 
@@ -145,4 +145,4 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 #### Overrides
 
-`HealthScoreStore.save`
+[`HealthScoreStore`](/api/customer-health-core/src/classes/healthscorestore/).[`save`](/api/customer-health-core/src/classes/healthscorestore/#save)

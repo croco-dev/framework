@@ -13,43 +13,43 @@ title: "OpenAiResponse"
 
 > `readonly` `optional` **error?**: `unknown`
 
----
+***
 
-### incomplete_details?
+### incomplete\_details?
 
-> `readonly` `optional` **incomplete_details?**: `unknown`
+> `readonly` `optional` **incomplete\_details?**: `unknown`
 
----
+***
 
 ### model?
 
 > `readonly` `optional` **model?**: `string`
 
----
+***
 
 ### output?
 
 > `readonly` `optional` **output?**: readonly `OpenAiOutputItem`[]
 
----
+***
 
-### output_parsed?
+### output\_parsed?
 
-> `readonly` `optional` **output_parsed?**: `unknown`
+> `readonly` `optional` **output\_parsed?**: `unknown`
 
----
+***
 
-### output_text?
+### output\_text?
 
-> `readonly` `optional` **output_text?**: `string`
+> `readonly` `optional` **output\_text?**: `string`
 
----
+***
 
 ### status?
 
 > `readonly` `optional` **status?**: `string` \| `null`
 
----
+***
 
 ### usage?
 

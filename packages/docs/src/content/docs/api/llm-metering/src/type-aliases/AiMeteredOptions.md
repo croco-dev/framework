@@ -33,7 +33,7 @@ title: "AiMeteredOptions"
 
 \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `tokens`: `number`; \} \| `null`
 
----
+***
 
 ### idempotencyKeyExtractor?
 
@@ -51,7 +51,7 @@ idempotencyKey 추출기
 
 `string` \| `undefined`
 
----
+***
 
 ### metadataExtractor?
 
@@ -73,7 +73,7 @@ idempotencyKey 추출기
 
 `Record`\<`string`, `unknown`\> \| `undefined`
 
----
+***
 
 ### tenantId?
 
@@ -81,7 +81,7 @@ idempotencyKey 추출기
 
 LlmMeteringService에서 자동으로 추출하므로 생략 가능
 
----
+***
 
 ### usageExtractor?
 

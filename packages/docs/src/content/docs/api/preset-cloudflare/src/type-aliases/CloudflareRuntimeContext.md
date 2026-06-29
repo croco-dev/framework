@@ -41,13 +41,13 @@ title: "CloudflareRuntimeContext"
 
 > `readonly` **waitUntil**: `true`
 
----
+***
 
 ### env
 
 > `readonly` **env**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### native
 
@@ -57,19 +57,19 @@ title: "CloudflareRuntimeContext"
 
 > `readonly` **executionContext**: `ExecutionContext`
 
----
+***
 
 ### platform
 
 > `readonly` **platform**: `"cloudflare-workers"`
 
----
+***
 
 ### requestId?
 
 > `readonly` `optional` **requestId?**: `string`
 
----
+***
 
 ### waitUntil
 

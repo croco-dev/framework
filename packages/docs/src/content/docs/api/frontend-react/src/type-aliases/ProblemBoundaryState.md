@@ -13,7 +13,7 @@ title: "ProblemBoundaryState"
 
 > `readonly` `optional` **error?**: `unknown`
 
----
+***
 
 ### problem?
 

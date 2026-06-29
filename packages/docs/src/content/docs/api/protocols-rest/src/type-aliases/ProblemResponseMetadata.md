@@ -11,15 +11,15 @@ title: "ProblemResponseMetadata"
 
 ### Code
 
-`Code` _extends_ `string` = `string`
+`Code` *extends* `string` = `string`
 
 ### Category
 
-`Category` _extends_ [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+`Category` *extends* [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
 ### Status
 
-`Status` _extends_ `number` = `number`
+`Status` *extends* `number` = `number`
 
 ## Properties
 
@@ -27,25 +27,25 @@ title: "ProblemResponseMetadata"
 
 > `readonly` **category**: `Category`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `Code`
 
----
+***
 
 ### description?
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### status
 
 > `readonly` **status**: `Status`
 
----
+***
 
 ### type?
 

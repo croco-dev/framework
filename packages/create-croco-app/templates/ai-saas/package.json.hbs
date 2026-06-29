@@ -19,6 +19,8 @@
     "demo:smoke": "pnpm contract:check && pnpm --filter {{scope}}/api-server demo:smoke && pnpm --filter {{scope}}/api-server ops:smoke && pnpm --filter {{scope}}/api-server ai:smoke",
     "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
     "ai:smoke": "pnpm --filter {{scope}}/api-server ai:smoke",
+    "failure-drill:smoke": "pnpm --filter {{scope}}/api-server failure-drill:smoke",
+    "failure-drill:integration": "pnpm --filter {{scope}}/api-server failure-drill:integration",
     "build": "turbo build",
     "test": "turbo test",
     "typecheck": "turbo typecheck"

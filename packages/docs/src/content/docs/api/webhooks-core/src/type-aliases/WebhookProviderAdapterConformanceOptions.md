@@ -11,7 +11,7 @@ title: "WebhookProviderAdapterConformanceOptions"
 
 ### TEvent
 
-`TEvent` _extends_ [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/) = [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/)
+`TEvent` *extends* [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/) = [`WebhookEvent`](/api/webhooks-core/src/type-aliases/webhookevent/)
 
 ## Properties
 
@@ -23,7 +23,7 @@ title: "WebhookProviderAdapterConformanceOptions"
 
 `Promise`\<[`WebhookProviderAdapter`](/api/webhooks-core/src/type-aliases/webhookprovideradapter/)\<`TEvent`\>\> \| [`WebhookProviderAdapter`](/api/webhooks-core/src/type-aliases/webhookprovideradapter/)\<`TEvent`\>
 
----
+***
 
 ### createIdempotencyStore?
 
@@ -33,7 +33,7 @@ title: "WebhookProviderAdapterConformanceOptions"
 
 `Promise`\<[`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>\> \| [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>
 
----
+***
 
 ### expectedEvent
 
@@ -51,13 +51,13 @@ title: "WebhookProviderAdapterConformanceOptions"
 
 > `readonly` **type**: `TEvent`\[`"type"`\] & `string`
 
----
+***
 
 ### invalidSignatureRequest
 
 > `readonly` **invalidSignatureRequest**: [`WebhookGatewayRequest`](/api/webhooks-core/src/type-aliases/webhookgatewayrequest/)
 
----
+***
 
 ### validRequest
 

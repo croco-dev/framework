@@ -15,25 +15,25 @@ record() 메서드 옵션
 
 > `optional` **idempotencyKey?**: `string`
 
----
+***
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### meterId
 
 > **meterId**: `string`
 
----
+***
 
 ### tenantId
 
 > **tenantId**: `string`
 
----
+***
 
 ### value?
 

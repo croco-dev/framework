@@ -82,7 +82,7 @@ declare context: React.ContextType<typeof MyContext>
 
 `Component.context`
 
----
+***
 
 ### props
 
@@ -92,7 +92,7 @@ declare context: React.ContextType<typeof MyContext>
 
 `Component.props`
 
----
+***
 
 ### state
 
@@ -102,7 +102,7 @@ declare context: React.ContextType<typeof MyContext>
 
 `Component.state`
 
----
+***
 
 ### contextType?
 
@@ -133,7 +133,7 @@ class Foo extends React.Component {
 
 `Component.contextType`
 
----
+***
 
 ### ~~propTypes?~~
 
@@ -176,7 +176,7 @@ the entire component tree to unmount.
 
 `Component.componentDidCatch`
 
----
+***
 
 ### componentDidMount()?
 
@@ -192,7 +192,7 @@ Called immediately after a component is mounted. Setting state here will trigger
 
 `Component.componentDidMount`
 
----
+***
 
 ### componentDidUpdate()
 
@@ -216,7 +216,7 @@ The snapshot is only present if [getSnapshotBeforeUpdate](/api/frontend-react/sr
 
 `Component.componentDidUpdate`
 
----
+***
 
 ### ~~componentWillMount()?~~
 
@@ -239,14 +239,14 @@ this from being invoked.
 
 #### See
 
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#initializing-state](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#initializing-state)
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#initializing-state](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#initializing-state)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
 
 #### Inherited from
 
 `Component.componentWillMount`
 
----
+***
 
 ### ~~componentWillReceiveProps()?~~
 
@@ -282,14 +282,14 @@ this from being invoked.
 
 #### See
 
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#updating-state-based-on-props](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#updating-state-based-on-props)
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#updating-state-based-on-props](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#updating-state-based-on-props)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
 
 #### Inherited from
 
 `Component.componentWillReceiveProps`
 
----
+***
 
 ### componentWillUnmount()?
 
@@ -306,7 +306,7 @@ cancelled network requests, or cleaning up any DOM elements created in `componen
 
 `Component.componentWillUnmount`
 
----
+***
 
 ### ~~componentWillUpdate()?~~
 
@@ -344,14 +344,14 @@ this from being invoked.
 
 #### See
 
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#reading-dom-properties-before-an-update](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#reading-dom-properties-before-an-update)
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#reading-dom-properties-before-an-update](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#reading-dom-properties-before-an-update)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
 
 #### Inherited from
 
 `Component.componentWillUpdate`
 
----
+***
 
 ### forceUpdate()
 
@@ -371,7 +371,7 @@ this from being invoked.
 
 `Component.forceUpdate`
 
----
+***
 
 ### getSnapshotBeforeUpdate()?
 
@@ -402,7 +402,7 @@ lifecycle events from running.
 
 `Component.getSnapshotBeforeUpdate`
 
----
+***
 
 ### render()
 
@@ -416,7 +416,7 @@ lifecycle events from running.
 
 `Component.render`
 
----
+***
 
 ### setState()
 
@@ -426,7 +426,7 @@ lifecycle events from running.
 
 ##### K
 
-`K` _extends_ keyof [`ProblemBoundaryState`](/api/frontend-react/src/type-aliases/problemboundarystate/)
+`K` *extends* keyof [`ProblemBoundaryState`](/api/frontend-react/src/type-aliases/problemboundarystate/)
 
 #### Parameters
 
@@ -446,7 +446,7 @@ lifecycle events from running.
 
 `Component.setState`
 
----
+***
 
 ### shouldComponentUpdate()?
 
@@ -483,11 +483,11 @@ and `componentDidUpdate` will not be called.
 
 `Component.shouldComponentUpdate`
 
----
+***
 
-### ~~UNSAFE_componentWillMount()?~~
+### ~~UNSAFE\_componentWillMount()?~~
 
-> `optional` **UNSAFE_componentWillMount**(): `void`
+> `optional` **UNSAFE\_componentWillMount**(): `void`
 
 Called immediately before mounting occurs, and before Component.render.
 Avoid introducing any side-effects or subscriptions in this method.
@@ -508,18 +508,18 @@ this from being invoked.
 
 #### See
 
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#initializing-state](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#initializing-state)
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#initializing-state](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#initializing-state)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
 
 #### Inherited from
 
 `Component.UNSAFE_componentWillMount`
 
----
+***
 
-### ~~UNSAFE_componentWillReceiveProps()?~~
+### ~~UNSAFE\_componentWillReceiveProps()?~~
 
-> `optional` **UNSAFE_componentWillReceiveProps**(`nextProps`, `nextContext`): `void`
+> `optional` **UNSAFE\_componentWillReceiveProps**(`nextProps`, `nextContext`): `void`
 
 Called when the component may be receiving new props.
 React may call this even if props have not changed, so be sure to compare new and existing
@@ -553,18 +553,18 @@ this from being invoked.
 
 #### See
 
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#updating-state-based-on-props](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#updating-state-based-on-props)
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#updating-state-based-on-props](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#updating-state-based-on-props)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
 
 #### Inherited from
 
 `Component.UNSAFE_componentWillReceiveProps`
 
----
+***
 
-### ~~UNSAFE_componentWillUpdate()?~~
+### ~~UNSAFE\_componentWillUpdate()?~~
 
-> `optional` **UNSAFE_componentWillUpdate**(`nextProps`, `nextState`, `nextContext`): `void`
+> `optional` **UNSAFE\_componentWillUpdate**(`nextProps`, `nextState`, `nextContext`): `void`
 
 Called immediately before rendering when new props or state is received. Not called for the initial render.
 
@@ -600,14 +600,14 @@ this from being invoked.
 
 #### See
 
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#reading-dom-properties-before-an-update](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#reading-dom-properties-before-an-update)
-- [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#reading-dom-properties-before-an-update](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#reading-dom-properties-before-an-update)
+ - [https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path](https://legacy.reactjs.org/blog/2018/03/27/update-on-async-rendering.html#gradual-migration-path)
 
 #### Inherited from
 
 `Component.UNSAFE_componentWillUpdate`
 
----
+***
 
 ### getDerivedStateFromError()
 

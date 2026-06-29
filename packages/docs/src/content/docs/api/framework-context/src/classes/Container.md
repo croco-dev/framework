@@ -35,7 +35,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 [`DependencyGraphManifest`](/api/framework-context/src/type-aliases/dependencygraphmanifest/)
 
----
+***
 
 ### get()
 
@@ -57,7 +57,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `T`
 
----
+***
 
 ### getComponentMetadata()
 
@@ -73,7 +73,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 [`ComponentMetadata`](/api/framework-context/src/interfaces/componentmetadata/) \| `undefined`
 
----
+***
 
 ### getDiagnosticsSnapshot()
 
@@ -99,7 +99,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 > **scopes**: `string`[]
 
----
+***
 
 ### getLastResolutionTrace()
 
@@ -109,7 +109,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/) \| `undefined`
 
----
+***
 
 ### getMany()
 
@@ -131,7 +131,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `T`[]
 
----
+***
 
 ### getOptional()
 
@@ -153,7 +153,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `T` \| `undefined`
 
----
+***
 
 ### getResolutionTrace()
 
@@ -175,7 +175,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
 
----
+***
 
 ### has()
 
@@ -197,7 +197,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `boolean`
 
----
+***
 
 ### register()
 
@@ -223,7 +223,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `void`
 
----
+***
 
 ### registerAsync()
 
@@ -249,7 +249,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `Promise`\<`T`\>
 
----
+***
 
 ### registerLazy()
 
@@ -275,7 +275,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `void`
 
----
+***
 
 ### remove()
 
@@ -297,7 +297,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `void`
 
----
+***
 
 ### reset()
 
@@ -307,7 +307,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `void`
 
----
+***
 
 ### set()
 
@@ -333,7 +333,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `T`
 
----
+***
 
 ### validate()
 

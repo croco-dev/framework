@@ -19,13 +19,93 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`content`](/api/notifications-core/src/interfaces/notificationpayload/#content)
 
----
+***
+
+### dispatchContext?
+
+> `optional` **dispatchContext?**: `object`
+
+#### channel
+
+> **channel**: [`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
+
+#### preferenceDecision?
+
+> `optional` **preferenceDecision?**: `object`
+
+##### preferenceDecision.allowed
+
+> **allowed**: `boolean`
+
+##### preferenceDecision.context
+
+> **context**: `object`
+
+##### preferenceDecision.context.channel
+
+> **channel**: [`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
+
+##### preferenceDecision.context.tenantId
+
+> **tenantId**: `string`
+
+##### preferenceDecision.context.topic
+
+> **topic**: `string`
+
+##### preferenceDecision.context.userId
+
+> **userId**: `string`
+
+##### preferenceDecision.evaluationKey
+
+> **evaluationKey**: `string`
+
+##### preferenceDecision.reason
+
+> **reason**: `string`
+
+##### preferenceDecision.ruleId?
+
+> `optional` **ruleId?**: `string`
+
+#### providerCapabilities
+
+> **providerCapabilities**: [`NotificationProviderCapabilities`](/api/notifications-core/src/type-aliases/notificationprovidercapabilities/)
+
+#### template?
+
+> `optional` **template?**: `object`
+
+##### template.id
+
+> **id**: `string`
+
+##### template.locale
+
+> **locale**: `string`
+
+##### template.version
+
+> **version**: `string`
+
+***
 
 ### idempotencyKey?
 
 > `optional` **idempotencyKey?**: `string`
 
----
+***
+
+### locale?
+
+> `optional` **locale?**: `string`
+
+#### Inherited from
+
+[`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`locale`](/api/notifications-core/src/interfaces/notificationpayload/#locale)
+
+***
 
 ### metadata?
 
@@ -35,13 +115,27 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`metadata`](/api/notifications-core/src/interfaces/notificationpayload/#metadata)
 
----
+***
+
+### outbox?
+
+> `optional` **outbox?**: `object`
+
+#### idempotencyKey
+
+> **idempotencyKey**: `string`
+
+#### outboxMessageId?
+
+> `optional` **outboxMessageId?**: `string`
+
+***
 
 ### providerName
 
 > **providerName**: `string`
 
----
+***
 
 ### subject?
 
@@ -51,7 +145,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`subject`](/api/notifications-core/src/interfaces/notificationpayload/#subject)
 
----
+***
 
 ### templateId?
 
@@ -61,7 +155,17 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`templateId`](/api/notifications-core/src/interfaces/notificationpayload/#templateid)
 
----
+***
+
+### templateVersion?
+
+> `optional` **templateVersion?**: `string`
+
+#### Inherited from
+
+[`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`templateVersion`](/api/notifications-core/src/interfaces/notificationpayload/#templateversion)
+
+***
 
 ### to
 
@@ -71,7 +175,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`to`](/api/notifications-core/src/interfaces/notificationpayload/#to)
 
----
+***
 
 ### variables?
 

@@ -19,19 +19,19 @@ Meter 클래스 데코레이터의 메타데이터 타입입니다.
 
 > `optional` **allowOverQuota?**: `boolean`
 
----
+***
 
 ### meterId
 
 > **meterId**: `string`
 
----
+***
 
 ### quota?
 
 > `optional` **quota?**: `number`
 
----
+***
 
 ### type?
 

@@ -13,4 +13,4 @@ title: "HealthCheckResult"
 
 ### status
 
-> **status**: `HealthStatus`
+> **status**: [`HealthStatus`](/api/health-core/src/type-aliases/healthstatus/)

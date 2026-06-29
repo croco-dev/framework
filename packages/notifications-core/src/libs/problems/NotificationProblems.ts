@@ -1,6 +1,32 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { NotificationChannel } from "../types";
 
+type NotificationPreferenceProblemDecision = {
+  readonly context: {
+    readonly tenantId: string;
+    readonly userId: string;
+    readonly channel: NotificationChannel;
+    readonly topic: string;
+  };
+  readonly reason: string;
+  readonly ruleId?: string;
+  readonly evaluationKey: string;
+};
+
+type NotificationTemplateProblemRef = {
+  readonly id: string;
+  readonly version: string;
+  readonly locale: string;
+};
+
+type NotificationTemplateRenderProblemRequest = NotificationTemplateProblemRef & {
+  readonly channel: NotificationChannel;
+};
+
+type NotificationTemplateProblemContract = NotificationTemplateProblemRef & {
+  readonly channel: NotificationChannel;
+};
+
 export class NotificationProviderNotConfiguredProblem extends Problem {
   constructor(channel: NotificationChannel) {
     super(
@@ -122,15 +148,160 @@ export class NotificationSendMaxAttemptsInvalidProblem extends Problem {
 }
 
 export class NotificationDeliveryFailedProblem extends Problem {
-  constructor(providerName: string) {
+  constructor(providerName: string, cause?: Error) {
     super(
       "notifications-core/delivery-failed",
       ProblemCategory.InternalServerError,
-      "Notification failed without error details",
+      cause?.message ?? "Notification failed without error details",
       {
+        cause,
         extensions: {
           providerName,
           retryable: true,
+        },
+      },
+    );
+  }
+}
+
+export class NotificationPreferenceDeniedProblem extends Problem {
+  constructor(decision: NotificationPreferenceProblemDecision) {
+    super(
+      "notifications-core/preference-denied",
+      ProblemCategory.BusinessRuleViolation,
+      `Notification preference denied topic ${decision.context.topic} on channel ${decision.context.channel}`,
+      {
+        extensions: {
+          tenantId: decision.context.tenantId,
+          userId: decision.context.userId,
+          channel: decision.context.channel,
+          topic: decision.context.topic,
+          reason: decision.reason,
+          ruleId: decision.ruleId,
+          evaluationKey: decision.evaluationKey,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class NotificationPreferenceContextRequiredProblem extends Problem {
+  constructor(channel: NotificationChannel) {
+    super(
+      "notifications-core/preference-context-required",
+      ProblemCategory.ValidationError,
+      `Notification preference context is required before sending on channel ${channel}`,
+      {
+        extensions: {
+          channel,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class NotificationPreferenceChannelMismatchProblem extends Problem {
+  constructor(requestedChannel: NotificationChannel, contextChannel: NotificationChannel) {
+    super(
+      "notifications-core/preference-channel-mismatch",
+      ProblemCategory.ValidationError,
+      `Notification preference context channel ${contextChannel} does not match requested channel ${requestedChannel}`,
+      {
+        extensions: {
+          requestedChannel,
+          contextChannel,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class NotificationIdempotencyKeyRequiredProblem extends Problem {
+  constructor(channel: NotificationChannel) {
+    super(
+      "notifications-core/idempotency-key-required",
+      ProblemCategory.ValidationError,
+      `Notification idempotency key is required before sending on channel ${channel}`,
+      {
+        extensions: {
+          channel,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class NotificationOutboxIdempotencyMismatchProblem extends Problem {
+  constructor(channel: NotificationChannel) {
+    super(
+      "notifications-core/outbox-idempotency-mismatch",
+      ProblemCategory.ValidationError,
+      `Notification outbox idempotency key must match the dispatch idempotency key for channel ${channel}`,
+      {
+        extensions: {
+          channel,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class NotificationTemplateAlreadyRegisteredProblem extends Problem {
+  constructor(template: NotificationTemplateProblemRef) {
+    super(
+      "notifications-core/template-already-registered",
+      ProblemCategory.Conflict,
+      `Notification template ${template.id}@${template.version} for ${template.locale} is already registered`,
+      {
+        extensions: {
+          templateId: template.id,
+          templateVersion: template.version,
+          locale: template.locale,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class NotificationTemplateNotFoundProblem extends Problem {
+  constructor(request: NotificationTemplateRenderProblemRequest) {
+    super(
+      "notifications-core/template-not-found",
+      ProblemCategory.NotFound,
+      `Notification template ${request.id}@${request.version} for ${request.locale} and channel ${request.channel} was not found`,
+      {
+        extensions: {
+          templateId: request.id,
+          templateVersion: request.version,
+          locale: request.locale,
+          channel: request.channel,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+export class NotificationTemplateVariablesInvalidProblem extends Problem {
+  constructor(template: NotificationTemplateProblemContract, issues: readonly string[]) {
+    super(
+      "notifications-core/template-variables-invalid",
+      ProblemCategory.ValidationError,
+      `Notification template ${template.id}@${template.version} variables are invalid`,
+      {
+        extensions: {
+          templateId: template.id,
+          templateVersion: template.version,
+          locale: template.locale,
+          channel: template.channel,
+          issues,
+          retryable: false,
         },
       },
     );

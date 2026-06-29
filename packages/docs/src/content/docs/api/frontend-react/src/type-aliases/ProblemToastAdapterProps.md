@@ -23,13 +23,13 @@ title: "ProblemToastAdapterProps"
 
 `ReactNode`
 
----
+***
 
 ### problem
 
 > `readonly` **problem**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### recoveryActions?
 

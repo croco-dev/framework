@@ -13,13 +13,13 @@ title: "RetryConsoleListOptions"
 
 > `readonly` `optional` **includeSucceeded?**: `boolean`
 
----
+***
 
 ### sourceKinds?
 
 > `readonly` `optional` **sourceKinds?**: readonly [`RetryConsoleSourceKind`](/api/admin-ops/src/type-aliases/retryconsolesourcekind/)[]
 
----
+***
 
 ### states?
 

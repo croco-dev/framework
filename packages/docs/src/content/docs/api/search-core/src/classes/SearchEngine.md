@@ -15,6 +15,7 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 ## Extended by
 
 - [`DrizzleSearchEngine`](/api/search-drizzle/src/classes/drizzlesearchengine/)
+- [`MeilisearchEngine`](/api/search-meilisearch/src/classes/meilisearchengine/)
 
 ## Constructors
 

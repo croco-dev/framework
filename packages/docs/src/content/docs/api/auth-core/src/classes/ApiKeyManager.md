@@ -33,7 +33,7 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 ##### logger?
 
-`Logger`
+[`Logger`](/api/framework-logger/src/classes/logger/)
 
 #### Returns
 

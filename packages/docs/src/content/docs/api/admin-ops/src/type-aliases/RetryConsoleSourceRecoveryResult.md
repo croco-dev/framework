@@ -13,7 +13,7 @@ title: "RetryConsoleSourceRecoveryResult"
 
 > `readonly` `optional` **item?**: [`RetryConsoleItem`](/api/admin-ops/src/type-aliases/retryconsoleitem/)
 
----
+***
 
 ### providerResult?
 

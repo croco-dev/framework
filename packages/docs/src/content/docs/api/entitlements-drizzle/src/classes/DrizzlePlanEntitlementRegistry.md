@@ -9,7 +9,7 @@ title: "DrizzlePlanEntitlementRegistry"
 
 ## Extends
 
-- `PlanEntitlementRegistry`
+- [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/)
 
 ## Constructors
 
@@ -31,23 +31,23 @@ Drizzle 클라이언트를 받아 권한 레지스트리를 초기화합니다.
 
 #### Overrides
 
-`PlanEntitlementRegistry.constructor`
+[`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`constructor`](/api/entitlements-core/src/classes/planentitlementregistry/#constructor)
 
 ## Properties
 
 ### token
 
-> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`PlanEntitlementRegistry`\>
+> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<[`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/)\>
 
 #### Inherited from
 
-`PlanEntitlementRegistry.token`
+[`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`token`](/api/entitlements-core/src/classes/planentitlementregistry/#token)
 
 ## Methods
 
 ### findRule()
 
-> **findRule**(`planId`, `featureKey`): `Promise`\<`EntitlementRule` \| `null`\>
+> **findRule**(`planId`, `featureKey`): `Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
 
 플랜에서 특정 기능 키의 규칙을 조회합니다.
 
@@ -63,17 +63,17 @@ Drizzle 클라이언트를 받아 권한 레지스트리를 초기화합니다.
 
 #### Returns
 
-`Promise`\<`EntitlementRule` \| `null`\>
+`Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
 
 #### Overrides
 
-`PlanEntitlementRegistry.findRule`
+[`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`findRule`](/api/entitlements-core/src/classes/planentitlementregistry/#findrule)
 
 ***
 
 ### getEntitlements()
 
-> **getEntitlements**(`planId`): `Promise`\<`EntitlementRule`[]\>
+> **getEntitlements**(`planId`): `Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
 
 플랜에 연결된 모든 권한 규칙을 반환합니다.
 
@@ -85,8 +85,8 @@ Drizzle 클라이언트를 받아 권한 레지스트리를 초기화합니다.
 
 #### Returns
 
-`Promise`\<`EntitlementRule`[]\>
+`Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
 
 #### Overrides
 
-`PlanEntitlementRegistry.getEntitlements`
+[`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`getEntitlements`](/api/entitlements-core/src/classes/planentitlementregistry/#getentitlements)

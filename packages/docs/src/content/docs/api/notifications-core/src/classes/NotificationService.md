@@ -15,7 +15,7 @@ title: "NotificationService"
 
 ##### taskRunner
 
-`TaskRunner`
+[`TaskRunner`](/api/tasks-core/src/classes/taskrunner/)
 
 ##### registry
 
@@ -26,6 +26,22 @@ title: "NotificationService"
 `NotificationService`
 
 ## Methods
+
+### registerPreferenceRule()
+
+> **registerPreferenceRule**(`rule`): `void`
+
+#### Parameters
+
+##### rule
+
+[`NotificationPreferenceRule`](/api/notifications-core/src/type-aliases/notificationpreferencerule/)
+
+#### Returns
+
+`void`
+
+***
 
 ### registerProvider()
 
@@ -45,11 +61,43 @@ title: "NotificationService"
 
 `void`
 
----
+***
+
+### registerTemplate()
+
+> **registerTemplate**(`template`): `void`
+
+#### Parameters
+
+##### template
+
+[`NotificationTemplate`](/api/notifications-core/src/type-aliases/notificationtemplate/)
+
+#### Returns
+
+`void`
+
+***
+
+### renderTemplate()
+
+> **renderTemplate**(`request`): [`NotificationTemplateRenderResult`](/api/notifications-core/src/type-aliases/notificationtemplaterenderresult/)
+
+#### Parameters
+
+##### request
+
+[`NotificationTemplateRenderRequest`](/api/notifications-core/src/type-aliases/notificationtemplaterenderrequest/)
+
+#### Returns
+
+[`NotificationTemplateRenderResult`](/api/notifications-core/src/type-aliases/notificationtemplaterenderresult/)
+
+***
 
 ### send()
 
-> **send**(`channel`, `payload`, `options?`): `Promise`\<`void`\>
+> **send**(`channel`, `payload`, `options`): `Promise`\<`void`\>
 
 Send a notification via task execution.
 
@@ -67,9 +115,33 @@ back to the caller.
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/)
 
-##### options?
+##### options
 
-`string` \| `NotificationSendServiceOptions`
+[`NotificationSendServiceOptions`](/api/notifications-core/src/type-aliases/notificationsendserviceoptions/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
+### sendTemplate()
+
+> **sendTemplate**(`channel`, `request`, `options`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### channel
+
+[`NotificationChannel`](/api/notifications-core/src/enumerations/notificationchannel/)
+
+##### request
+
+[`NotificationTemplateSendRequest`](/api/notifications-core/src/type-aliases/notificationtemplatesendrequest/)
+
+##### options
+
+[`NotificationSendServiceOptions`](/api/notifications-core/src/type-aliases/notificationsendserviceoptions/)
 
 #### Returns
 

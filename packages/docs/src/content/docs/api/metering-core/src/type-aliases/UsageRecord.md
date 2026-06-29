@@ -15,37 +15,37 @@ title: "UsageRecord"
 
 > **id**: `string`
 
----
+***
 
 ### idempotencyKey
 
 > **idempotencyKey**: `string`
 
----
+***
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### meterId
 
 > **meterId**: `string`
 
----
+***
 
 ### tenantId
 
 > **tenantId**: `string`
 
----
+***
 
 ### timestamp
 
 > **timestamp**: `Date`
 
----
+***
 
 ### value
 

@@ -13,19 +13,19 @@ title: "RetryConsolePermissionGrant"
 
 > `readonly` `optional` **checkedAt?**: `string`
 
----
+***
 
 ### deniedReason?
 
 > `readonly` `optional` **deniedReason?**: `string`
 
----
+***
 
 ### descriptor?
 
 > `readonly` `optional` **descriptor?**: [`RetryConsolePermissionDescriptor`](/api/admin-ops/src/type-aliases/retryconsolepermissiondescriptor/)
 
----
+***
 
 ### granted
 

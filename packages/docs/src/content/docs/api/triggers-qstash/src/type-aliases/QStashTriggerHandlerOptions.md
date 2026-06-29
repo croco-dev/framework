@@ -13,11 +13,11 @@ Configuration options for QStashTriggerHandler.
 
 ### executionManager
 
-> `readonly` **executionManager**: `ExecutionManager`
+> `readonly` **executionManager**: [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/)
 
 Execution manager for dispatching executions.
 
----
+***
 
 ### receiver
 
@@ -25,7 +25,7 @@ Execution manager for dispatching executions.
 
 QStash receiver instance for verifying webhook signatures.
 
----
+***
 
 ### serviceResolver?
 

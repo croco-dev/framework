@@ -21,13 +21,13 @@ title: "SearchHit"
 
 > **document**: `T`
 
----
+***
 
 ### highlights?
 
 > `optional` **highlights?**: `Record`\<`string`, `string`[]\>
 
----
+***
 
 ### score?
 

@@ -5,6 +5,10 @@ prev: false
 title: "AnalyticsManager"
 ---
 
+## Extended by
+
+- [`PostHogAnalyticsManager`](/api/analytics-posthog/src/classes/posthoganalyticsmanager/)
+
 ## Constructors
 
 ### Constructor

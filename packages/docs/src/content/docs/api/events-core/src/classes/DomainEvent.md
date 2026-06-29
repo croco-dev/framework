@@ -18,6 +18,13 @@ title: "DomainEvent"
 - [`SubscriptionCanceledEvent`](/api/billing-core/src/classes/subscriptioncanceledevent/)
 - [`SubscriptionPastDueEvent`](/api/billing-core/src/classes/subscriptionpastdueevent/)
 - [`SubscriptionRevokedEvent`](/api/billing-core/src/classes/subscriptionrevokedevent/)
+- [`HealthScoreDroppedEvent`](/api/customer-health-core/src/classes/healthscoredroppedevent/)
+- [`HealthStatusChangedEvent`](/api/customer-health-core/src/classes/healthstatuschangedevent/)
+- [`EntitlementDeniedEvent`](/api/entitlements-core/src/classes/entitlementdeniedevent/)
+- [`EntitlementOverageAllowedEvent`](/api/entitlements-core/src/classes/entitlementoverageallowedevent/)
+- [`EntitlementQuotaExceededEvent`](/api/entitlements-core/src/classes/entitlementquotaexceededevent/)
+- [`ImpersonationEndedEvent`](/api/impersonation-core/src/classes/impersonationendedevent/)
+- [`ImpersonationStartedEvent`](/api/impersonation-core/src/classes/impersonationstartedevent/)
 - [`DomainAutoJoinedEvent`](/api/invitation-core/src/classes/domainautojoinedevent/)
 - [`DomainPolicyAddedEvent`](/api/invitation-core/src/classes/domainpolicyaddedevent/)
 - [`DomainPolicyRemovedEvent`](/api/invitation-core/src/classes/domainpolicyremovedevent/)
@@ -53,25 +60,25 @@ title: "DomainEvent"
 
 > `readonly` **eventId**: `string`
 
----
+***
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
----
+***
 
 ### metadata
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
 
----
+***
 
 ### timestamp
 
 > `readonly` **timestamp**: `Date`
 
----
+***
 
 ### eventName?
 

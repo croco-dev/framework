@@ -13,37 +13,37 @@ title: "ProblemRecoveryAction"
 
 > `readonly` `optional` **ariaLabel?**: `string`
 
----
+***
 
 ### disabled?
 
 > `readonly` `optional` **disabled?**: `boolean`
 
----
+***
 
 ### href?
 
 > `readonly` `optional` **href?**: `string`
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### kind?
 
 > `readonly` `optional` **kind?**: [`ProblemRecoveryActionKind`](/api/frontend-react/src/type-aliases/problemrecoveryactionkind/)
 
----
+***
 
 ### label
 
 > `readonly` **label**: `string`
 
----
+***
 
 ### onRecover?
 
@@ -59,7 +59,7 @@ title: "ProblemRecoveryAction"
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### problemCodes?
 

@@ -1,0 +1,57 @@
+name: PR Review Companion
+
+on:
+  pull_request:
+    branches:
+      - trunk
+  workflow_dispatch:
+
+concurrency:
+  group: pr-review-companion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  companion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate companion report
+        run: |
+          base_ref="${GITHUB_BASE_REF:-trunk}"
+          git fetch origin "$base_ref"
+          pnpm pr-review-companion -- --base "origin/${base_ref}" --head HEAD --run-required-checks --github-annotations
+
+      - name: Publish companion summary
+        if: always()
+        run: |
+          if [ -f ci-reports/pr-review-companion/report.md ]; then
+            cat ci-reports/pr-review-companion/report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "PR Review Companion report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload companion report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-review-companion-report
+          path: ci-reports/pr-review-companion
+          if-no-files-found: warn

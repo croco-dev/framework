@@ -39,19 +39,19 @@ readonly [`FrameworkManifestDiagnostic`](/api/framework-routes/src/type-aliases/
 
 `Error.cause`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `"framework-manifest-diagnostics"` = `"framework-manifest-diagnostics"`
 
----
+***
 
 ### diagnostics
 
 > `readonly` **diagnostics**: readonly [`FrameworkManifestDiagnostic`](/api/framework-routes/src/type-aliases/frameworkmanifestdiagnostic/)[]
 
----
+***
 
 ### message
 
@@ -61,7 +61,7 @@ readonly [`FrameworkManifestDiagnostic`](/api/framework-routes/src/type-aliases/
 
 `Error.message`
 
----
+***
 
 ### name
 
@@ -71,7 +71,7 @@ readonly [`FrameworkManifestDiagnostic`](/api/framework-routes/src/type-aliases/
 
 `Error.name`
 
----
+***
 
 ### stack?
 
@@ -81,7 +81,7 @@ readonly [`FrameworkManifestDiagnostic`](/api/framework-routes/src/type-aliases/
 
 `Error.stack`
 
----
+***
 
 ### stackTraceLimit
 
@@ -114,7 +114,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -169,7 +169,7 @@ a();
 
 `Error.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

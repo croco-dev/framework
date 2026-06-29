@@ -17,7 +17,7 @@ title: "GenerateParams"
 
 최대 생성 토큰 수
 
----
+***
 
 ### metadata?
 
@@ -25,7 +25,7 @@ title: "GenerateParams"
 
 메타데이터
 
----
+***
 
 ### modelId?
 
@@ -33,7 +33,7 @@ title: "GenerateParams"
 
 모델 ID
 
----
+***
 
 ### prompt
 
@@ -41,7 +41,7 @@ title: "GenerateParams"
 
 사용자 프롬프트
 
----
+***
 
 ### stopSequences?
 
@@ -49,7 +49,7 @@ title: "GenerateParams"
 
 정지 시퀀스 목록
 
----
+***
 
 ### systemPrompt?
 
@@ -57,7 +57,7 @@ title: "GenerateParams"
 
 시스템 프롬프트
 
----
+***
 
 ### temperature?
 
