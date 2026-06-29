@@ -94,6 +94,7 @@ const smokeCases: readonly SmokeCase[] = [
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "test", args: ["test"] },
+      { label: "failure drill smoke", args: ["failure-drill:smoke"] },
     ],
   },
   {
@@ -417,6 +418,7 @@ const smokeCases: readonly SmokeCase[] = [
       },
       { label: "demo seed", args: ["demo:seed"] },
       { label: "demo flow", args: ["demo:smoke"] },
+      { label: "failure drill smoke", args: ["failure-drill:smoke"] },
     ],
   },
   {
@@ -498,6 +500,7 @@ const smokeCases: readonly SmokeCase[] = [
       },
       { label: "AI demo flow", args: ["ai:smoke"] },
       { label: "full demo flow", args: ["demo:smoke"] },
+      { label: "failure drill smoke", args: ["failure-drill:smoke"] },
     ],
   },
 ];

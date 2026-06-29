@@ -22,6 +22,8 @@
     "demo:seed": "pnpm --filter {{scope}}/api-server demo:seed",
     "demo:smoke": "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter {{scope}}/api-server demo:smoke && pnpm --filter {{scope}}/api-server ops:smoke",
     "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
+    "failure-drill:smoke": "pnpm --filter {{scope}}/api-server failure-drill:smoke",
+    "failure-drill:integration": "pnpm --filter {{scope}}/api-server failure-drill:integration",
     "build": "turbo build",
     "test": "turbo test",
     "typecheck": "turbo typecheck"

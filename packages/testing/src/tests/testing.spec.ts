@@ -21,6 +21,7 @@ import { recordEvent, withSpan } from "@croco/telemetry-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertDrizzleProblem,
+  createFailureDrillCatalog,
   assertOpenAPIRoute,
   assertProblemResponse,
   createAuthProviderConformanceSuite,
@@ -36,7 +37,11 @@ import {
   createTestingRequestContext,
   createTestingTransactionContext,
   createUpstashRedisRateLimitConformanceSuite,
+  FAILURE_DRILL_SCENARIO_IDS,
   installTestingTelemetryCapture,
+  runFailureDrillScenario,
+  runFailureDrills,
+  type FailureDrillScenario,
   type QStashTaskConformanceScenario,
   type QStashTaskExecuteOptions,
   type QStashTaskPublisher,
@@ -1306,6 +1311,113 @@ describe("@croco/testing", () => {
       );
 
       expect(problem.code).toBe("testing/drizzle-missing-row");
+    });
+  });
+
+  describe("failure drills", () => {
+    function getFirstFailureDrillScenario(): FailureDrillScenario {
+      const scenario = createFailureDrillCatalog()[0];
+      if (!scenario) {
+        throw ProblemFactory.internalServerError(
+          "testing/failure-drill-fixture-missing",
+          "Failure drill fixture was not initialized.",
+        );
+      }
+      return scenario;
+    }
+
+    it("runs the deterministic no-credential failure drill catalog", async () => {
+      const catalog = createFailureDrillCatalog();
+      const report = await runFailureDrills(catalog);
+
+      expect(catalog.map((scenario) => scenario.id)).toEqual([...FAILURE_DRILL_SCENARIO_IDS]);
+      expect(report).toMatchObject({
+        results: expect.arrayContaining([
+          expect.objectContaining({
+            problem: expect.objectContaining({ code: "testing/provider-timeout" }),
+            scenarioId: "provider-timeout",
+          }),
+          expect.objectContaining({
+            problem: expect.objectContaining({ code: "testing/quota-exceeded" }),
+            scenarioId: "quota-exceeded",
+          }),
+        ]),
+        status: "passed",
+      });
+      expect(report.results).toHaveLength(FAILURE_DRILL_SCENARIO_IDS.length);
+    });
+
+    it("rejects failure drills that lack Problem, telemetry, or audit evidence", async () => {
+      const scenario = getFirstFailureDrillScenario();
+
+      await expect(
+        runFailureDrillScenario({
+          ...scenario,
+          run: () => ({
+            evidence: [
+              { kind: "telemetry", name: "failure_drill.provider_timeout.failed" },
+              { kind: "audit", name: "failure_drill.provider_timeout.audit" },
+            ],
+            recoveryAction: scenario.expected.recoveryAction,
+          }),
+        }),
+      ).rejects.toThrow("did not return a Problem");
+
+      await expect(
+        runFailureDrillScenario({
+          ...scenario,
+          run: () => ({
+            evidence: [],
+            problem: ProblemFactory.internalServerError(
+              "testing/provider-timeout",
+              "provider timeout",
+            ),
+            recoveryAction: scenario.expected.recoveryAction,
+          }),
+        }),
+      ).rejects.toThrow("expected telemetry evidence");
+    });
+
+    it("supports app-backed scenario overrides with the same evidence contract", async () => {
+      const catalog = createFailureDrillCatalog({
+        "quota-exceeded": {
+          expected: {
+            evidence: {
+              audit: "saas.metering.quota_rejected",
+              telemetry: "saas.llm.quota_exceeded",
+            },
+            problem: {
+              code: "llm-metering/quota-exceeded",
+              status: 403,
+              title: "Forbidden",
+            },
+            recoveryAction: "Reject the request and direct the tenant to reduce usage or upgrade.",
+          },
+          run: () => ({
+            evidence: [
+              { kind: "telemetry", name: "saas.llm.quota_exceeded" },
+              { kind: "audit", name: "saas.metering.quota_rejected" },
+            ],
+            problem: ProblemFactory.forbidden("llm-metering/quota-exceeded", "LLM quota exceeded"),
+            recoveryAction: "Reject the request and direct the tenant to reduce usage or upgrade.",
+          }),
+        },
+      });
+      const scenario = catalog.find((candidate) => candidate.id === "quota-exceeded");
+      if (!scenario) {
+        throw ProblemFactory.internalServerError(
+          "testing/failure-drill-override-missing",
+          "Failure drill override was not initialized.",
+        );
+      }
+
+      const result = await runFailureDrillScenario(scenario);
+
+      expect(result).toMatchObject({
+        problem: { code: "llm-metering/quota-exceeded", status: 403 },
+        recoveryAction: "Reject the request and direct the tenant to reduce usage or upgrade.",
+        scenarioId: "quota-exceeded",
+      });
     });
   });
 

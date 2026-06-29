@@ -57,7 +57,15 @@ export const GOAL_SPECS = {
       billing: "demo",
       telemetry: "opentelemetry-otlp",
       deploymentPreset: "node-api",
-      qualityGates: ["install", "typecheck", "build", "test", "contract:verify", "demo:smoke"],
+      qualityGates: [
+        "install",
+        "typecheck",
+        "build",
+        "test",
+        "contract:verify",
+        "demo:smoke",
+        "failure-drill:smoke",
+      ],
     },
   },
   "spa-backend-split": {
