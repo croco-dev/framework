@@ -7,6 +7,49 @@ export {
   type CacheWarmupEntry,
 } from "./libs/CacheStore";
 export {
+  assertCacheInvalidatesForEvent,
+  assertCacheInvalidationGraphValid,
+  CACHE_ADAPTER_CAPABILITY_MANIFEST_SCHEMA_VERSION,
+  CACHE_INVALIDATION_MANIFEST_SCHEMA_VERSION,
+  type CacheAdapterCapabilityManifest,
+  type CacheAdapterCapabilityManifestSchemaVersion,
+  type CacheInvalidationAdapter,
+  type CacheInvalidationAdapterCapabilities,
+  type CacheInvalidationAdapterOperationResult,
+  type CacheInvalidationAppliedOperation,
+  type CacheInvalidationEventDeclaration,
+  type CacheInvalidationEventLike,
+  type CacheInvalidationGraphDefinition,
+  type CacheInvalidationManifest,
+  type CacheInvalidationManifestEvent,
+  type CacheInvalidationManifestOperation,
+  type CacheInvalidationManifestSchemaVersion,
+  type CacheInvalidationManifestStatus,
+  type CacheInvalidationReference,
+  type CacheInvalidationResult,
+  type CacheInvalidationRule,
+  type CacheInvalidationTelemetryContext,
+  type CacheInvalidationTelemetryEvent,
+  type CacheInvalidationTelemetrySink,
+  type CacheKeyDeclaration,
+  type CacheStoreInvalidationAdapterOptions,
+  type CacheTagDeclaration,
+  type AssertCacheInvalidatesForEventOptions,
+  type InvalidateCacheForEventOptions,
+  createCacheAdapterCapabilityManifest,
+  createCacheInvalidationManifest,
+  createCacheStoreInvalidationAdapter,
+  defineCacheInvalidationEvent,
+  defineCacheInvalidationGraph,
+  defineCacheInvalidationRule,
+  defineCacheKey,
+  defineCacheTag,
+  invalidateCacheForEvent,
+  invalidateCacheKey,
+  invalidateCacheTag,
+  serializeCacheInvalidationManifest,
+} from "./libs/CacheInvalidationGraph";
+export {
   type DistributedCacheLock,
   type DistributedCacheSetOptions,
   DistributedCacheStore,
@@ -14,4 +57,12 @@ export {
 export { Cacheable, type CacheableOptions } from "./libs/decorators/Cacheable";
 export { CacheEvict, type CacheEvictOptions } from "./libs/decorators/CacheEvict";
 export { InMemoryCacheStore, type InMemoryCacheStoreOptions } from "./libs/InMemoryCacheStore";
-export { CacheDecoratorConfigProblem } from "./libs/problems/CacheDecoratorProblems";
+export {
+  CacheDecoratorConfigProblem,
+  CacheInvalidationAssertionProblem,
+  CacheInvalidationFailedProblem,
+  type CacheInvalidationDiagnostic,
+  CacheInvalidationGraphProblem,
+  UnknownCacheInvalidationEventProblem,
+  UnsupportedCacheInvalidationCapabilityProblem,
+} from "./libs/problems/CacheDecoratorProblems";

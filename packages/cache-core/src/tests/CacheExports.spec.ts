@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
+  assertCacheInvalidatesForEvent,
+  assertCacheInvalidationGraphValid,
   Cache,
   CacheStore,
+  createCacheAdapterCapabilityManifest,
+  createCacheInvalidationManifest,
+  createCacheStoreInvalidationAdapter,
+  defineCacheInvalidationEvent,
+  defineCacheInvalidationGraph,
+  defineCacheInvalidationRule,
+  defineCacheKey,
+  defineCacheTag,
   DistributedCacheStore,
+  invalidateCacheForEvent,
+  invalidateCacheKey,
+  invalidateCacheTag,
   InMemoryCacheStore,
+  serializeCacheInvalidationManifest,
   type CacheGetOrSetOptions,
+  type CacheInvalidationAdapter,
+  type CacheInvalidationManifest,
   type CachePattern,
   type CacheStats,
   type CacheWarmupEntry,
@@ -79,5 +95,42 @@ describe("cache-core public exports", () => {
     expect(DistributedCacheStore.prototype).toBeInstanceOf(CacheStore);
     expect(new InMemoryCacheStore<string>()).toBeInstanceOf(CacheStore);
     expect(distributedLock).toBeUndefined();
+  });
+
+  it("exports cache invalidation graph contracts from the package root", () => {
+    const cache = new InMemoryCacheStore<string>();
+    const adapter: CacheInvalidationAdapter = createCacheStoreInvalidationAdapter(cache);
+    const manifest: CacheInvalidationManifest = assertCacheInvalidationGraphValid(
+      createCacheInvalidationManifest(
+        defineCacheInvalidationGraph({
+          events: [defineCacheInvalidationEvent({ eventName: "user.updated" })],
+          keys: [defineCacheKey({ id: "users", pattern: "user:*" })],
+          rules: [
+            defineCacheInvalidationRule({
+              eventName: "user.updated",
+              invalidates: [invalidateCacheKey("users")],
+            }),
+          ],
+          tags: [defineCacheTag({ id: "tenant-users", tag: "tenant:users" })],
+        }),
+      ),
+    );
+
+    expect(adapter.capabilities.pattern).toBe(true);
+    expect(createCacheAdapterCapabilityManifest(adapter).schemaVersion).toBe(
+      "croco.cache-adapter-capabilities.v1",
+    );
+    expect(serializeCacheInvalidationManifest(manifest)).toContain(
+      "croco.cache-invalidation-graph.manifest.v1",
+    );
+    expect(() =>
+      assertCacheInvalidatesForEvent({
+        eventName: "user.updated",
+        expectedInvalidations: [{ id: "users", kind: "pattern", pattern: "user:*" }],
+        manifest,
+      }),
+    ).not.toThrow();
+    expect(typeof invalidateCacheForEvent).toBe("function");
+    expect(invalidateCacheTag("tenant-users")).toEqual({ id: "tenant-users", kind: "tag" });
   });
 });

@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 375,
+  "problemCount": 380,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -1670,7 +1670,142 @@
       "sources": [
         {
           "file": "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          "line": 4,
+          "line": 12,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "cache-core/invalidation-assertion-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#cache-core-invalidation-assertion-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
+          "line": 102,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "cache-core/invalidation-capability-unsupported",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#cache-core-invalidation-capability-unsupported",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
+          "line": 55,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "cache-core/invalidation-event-unknown",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#cache-core-invalidation-event-unknown",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
+          "line": 41,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "cache-core/invalidation-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#cache-core-invalidation-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
+          "line": 72,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "cache-core/invalidation-graph-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#cache-core-invalidation-graph-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
+          "line": 27,
           "column": 3,
           "kind": "problem-class"
         }
