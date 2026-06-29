@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "TenantTokenNotConfiguredProblem"
+title: "MeilisearchIndexNotFoundProblem"
 ---
 
-테넌트 토큰 옵션 없이 토큰 발급을 시도할 때 발생하는 문제입니다.
+요청한 Meilisearch 인덱스를 찾을 수 없을 때 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,11 +15,17 @@ title: "TenantTokenNotConfiguredProblem"
 
 ### Constructor
 
-> **new TenantTokenNotConfiguredProblem**(): `TenantTokenNotConfiguredProblem`
+> **new MeilisearchIndexNotFoundProblem**(`context`): `MeilisearchIndexNotFoundProblem`
+
+#### Parameters
+
+##### context
+
+`MeilisearchErrorContext`
 
 #### Returns
 
-`TenantTokenNotConfiguredProblem`
+`MeilisearchIndexNotFoundProblem`
 
 #### Overrides
 

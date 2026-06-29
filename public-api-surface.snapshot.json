@@ -15592,10 +15592,58 @@
       "entrypoint": "packages/search-meilisearch/src/index.ts",
       "runtimeExports": [
         {
+          "name": "MeilisearchDiagnosticsProvider",
+          "exportKind": "declaration",
+          "source": "./libs/MeilisearchDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
           "name": "MeilisearchEngine",
           "exportKind": "declaration",
           "source": "./libs/MeilisearchEngine",
           "declarationKind": "class"
+        },
+        {
+          "name": "isRetryableMeilisearchError",
+          "exportKind": "named",
+          "source": "./libs/problems/MeilisearchProblems",
+          "declarationKind": "function"
+        },
+        {
+          "name": "MeilisearchIndexNotFoundProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/MeilisearchProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "MeilisearchInvalidRequestProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/MeilisearchProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "MeilisearchRetryableUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/MeilisearchProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "MeilisearchTerminalUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/MeilisearchProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "MissingMeilisearchConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/MeilisearchProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "normalizeMeilisearchError",
+          "exportKind": "named",
+          "source": "./libs/problems/MeilisearchProblems",
+          "declarationKind": "function"
         },
         {
           "name": "TenantTokenNotConfiguredProblem",
@@ -15606,7 +15654,31 @@
       ],
       "typeExports": [
         {
+          "name": "MeilisearchDiagnosticsOptions",
+          "exportKind": "declaration",
+          "source": "./libs/MeilisearchDiagnosticsProvider",
+          "declarationKind": "type"
+        },
+        {
           "name": "MeilisearchEngineOptions",
+          "exportKind": "declaration",
+          "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "MeilisearchReadinessCheckContext",
+          "exportKind": "declaration",
+          "source": "./libs/MeilisearchDiagnosticsProvider",
+          "declarationKind": "type"
+        },
+        {
+          "name": "MeilisearchReadinessCheckResult",
+          "exportKind": "declaration",
+          "source": "./libs/MeilisearchDiagnosticsProvider",
+          "declarationKind": "type"
+        },
+        {
+          "name": "MeilisearchTaskWaitOptions",
           "exportKind": "declaration",
           "source": "./libs/types",
           "declarationKind": "type"

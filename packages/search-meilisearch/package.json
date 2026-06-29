@@ -36,6 +36,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/search-core": "workspace:*",

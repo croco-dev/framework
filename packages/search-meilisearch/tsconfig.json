@@ -1,10 +1,16 @@
 {
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "outDir": "dist",
-    "rootDir": "src",
     "moduleResolution": "bundler",
-    "module": "esnext"
+    "module": "esnext",
+    "paths": {
+      "@croco/diagnostics-core": ["../diagnostics-core/src/index.ts"],
+      "@croco/framework-context": ["../framework-context/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/search-core": ["../search-core/src/index.ts"]
+    }
   },
   "include": ["src"]
 }

@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "TenantTokenNotConfiguredProblem"
+title: "MissingMeilisearchConfigProblem"
 ---
 
-테넌트 토큰 옵션 없이 토큰 발급을 시도할 때 발생하는 문제입니다.
+필수 Meilisearch 설정이 누락되었을 때 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,11 +15,21 @@ title: "TenantTokenNotConfiguredProblem"
 
 ### Constructor
 
-> **new TenantTokenNotConfiguredProblem**(): `TenantTokenNotConfiguredProblem`
+> **new MissingMeilisearchConfigProblem**(`configKey`, `operation?`): `MissingMeilisearchConfigProblem`
+
+#### Parameters
+
+##### configKey
+
+`MeilisearchConfigKey`
+
+##### operation?
+
+`string` = `"configuration"`
 
 #### Returns
 
-`TenantTokenNotConfiguredProblem`
+`MissingMeilisearchConfigProblem`
 
 #### Overrides
 
