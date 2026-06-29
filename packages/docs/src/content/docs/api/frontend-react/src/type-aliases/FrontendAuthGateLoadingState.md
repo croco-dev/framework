@@ -13,19 +13,19 @@ title: "FrontendAuthGateLoadingState"
 
 > `readonly` **kind**: `"loading"`
 
----
+***
 
 ### recoveryActions?
 
 > `readonly` `optional` **recoveryActions?**: readonly [`FrontendRecoveryAction`](/api/frontend-react/src/type-aliases/frontendrecoveryaction/)[]
 
----
+***
 
 ### requiredEntitlements
 
 > `readonly` **requiredEntitlements**: readonly `string`[]
 
----
+***
 
 ### requiredPermissions
 

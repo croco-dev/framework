@@ -18,11 +18,11 @@ caching behavior, and scoping options.
 
 ```typescript
 const options: BatchLoaderOptions<string, User> = {
-  name: "users",
+  name: 'users',
   batchFn: async (ids) => await fetchUsers(ids),
   maxBatchSize: 100,
   cache: true,
-  scope: "tenant-123",
+  scope: 'tenant-123',
 };
 ```
 
@@ -48,7 +48,7 @@ The type of loaded values
 
 Function that batches multiple keys into a single load operation
 
----
+***
 
 ### cache?
 
@@ -56,7 +56,7 @@ Function that batches multiple keys into a single load operation
 
 Optional flag to enable/disable result caching (default: true)
 
----
+***
 
 ### maxBatchSize?
 
@@ -64,7 +64,7 @@ Optional flag to enable/disable result caching (default: true)
 
 Optional maximum number of items per batch (default: Infinity)
 
----
+***
 
 ### name
 
@@ -72,7 +72,7 @@ Optional maximum number of items per batch (default: Infinity)
 
 Unique identifier for caching the loader in request context
 
----
+***
 
 ### resolveScope?
 
@@ -84,7 +84,7 @@ Optional function for dynamic scope resolution (e.g., transaction ID)
 
 `string` \| `null` \| `undefined`
 
----
+***
 
 ### scope?
 

@@ -17,16 +17,16 @@ Configuration options for QStashScheduler.
 
 QStash HTTP client instance.
 
----
+***
 
 ### executionManager?
 
-> `readonly` `optional` **executionManager?**: `ExecutionManager`
+> `readonly` `optional` **executionManager?**: [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/)
 
 Optional execution manager for dispatching executions.
 If provided, the scheduler can create executions when syncing schedules.
 
----
+***
 
 ### mode?
 
@@ -34,7 +34,7 @@ If provided, the scheduler can create executions when syncing schedules.
 
 Default sync mode. Defaults to 'apply' for backwards compatibility.
 
----
+***
 
 ### schedulePrefix?
 
@@ -45,7 +45,7 @@ Defaults to 'croco-trigger'.
 
 Used to uniquely identify schedules created by this scheduler.
 
----
+***
 
 ### webhookUrl
 

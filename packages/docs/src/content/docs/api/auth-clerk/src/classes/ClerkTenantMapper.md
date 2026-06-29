@@ -10,7 +10,7 @@ Clerk 조직 ID와 Croco tenant ID를 매핑하는 매퍼입니다.
 ## Implements
 
 - [`TenantMappingProvider`](/api/auth-core/src/interfaces/tenantmappingprovider/)
-- `TenantResolver`\<[`ClerkTenantRequest`](/api/auth-clerk/src/type-aliases/clerktenantrequest/)\>
+- [`TenantResolver`](/api/tenant-core/src/interfaces/tenantresolver/)\<[`ClerkTenantRequest`](/api/auth-clerk/src/type-aliases/clerktenantrequest/)\>
 
 ## Constructors
 
@@ -52,7 +52,7 @@ Clerk 조직 ID와 Croco tenant ID를 매핑하는 매퍼입니다.
 
 [`TenantMappingProvider`](/api/auth-core/src/interfaces/tenantmappingprovider/).[`register`](/api/auth-core/src/interfaces/tenantmappingprovider/#register)
 
----
+***
 
 ### remove()
 
@@ -72,11 +72,13 @@ Clerk 조직 ID와 Croco tenant ID를 매핑하는 매퍼입니다.
 
 [`TenantMappingProvider`](/api/auth-core/src/interfaces/tenantmappingprovider/).[`remove`](/api/auth-core/src/interfaces/tenantmappingprovider/#remove)
 
----
+***
 
 ### resolve()
 
 > **resolve**(`requestOrOrgId`): `Promise`\<`string` \| `null`\>
+
+Resolve the tenant ID from the given request.
 
 #### Parameters
 
@@ -84,10 +86,14 @@ Clerk 조직 ID와 Croco tenant ID를 매핑하는 매퍼입니다.
 
 `string` \| [`ClerkTenantRequest`](/api/auth-clerk/src/type-aliases/clerktenantrequest/)
 
+The incoming request object
+
 #### Returns
 
 `Promise`\<`string` \| `null`\>
 
+The tenant ID if found, null otherwise
+
 #### Implementation of
 
-[`TenantMappingProvider`](/api/auth-core/src/interfaces/tenantmappingprovider/).[`resolve`](/api/auth-core/src/interfaces/tenantmappingprovider/#resolve)
+[`TenantResolver`](/api/tenant-core/src/interfaces/tenantresolver/).[`resolve`](/api/tenant-core/src/interfaces/tenantresolver/#resolve)

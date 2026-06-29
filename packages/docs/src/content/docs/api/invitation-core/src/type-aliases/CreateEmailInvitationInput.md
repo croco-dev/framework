@@ -15,25 +15,25 @@ title: "CreateEmailInvitationInput"
 
 > **email**: `string`
 
----
+***
 
 ### expiresInDays?
 
 > `optional` **expiresInDays?**: `number`
 
----
+***
 
 ### inviterId
 
 > **inviterId**: `string`
 
----
+***
 
 ### role
 
 > **role**: [`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
 
----
+***
 
 ### tenantId
 

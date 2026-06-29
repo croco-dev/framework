@@ -15,25 +15,25 @@ title: "CreateCheckoutParams"
 
 > **billingAccountId**: `string`
 
----
+***
 
 ### cancelUrl?
 
 > `optional` **cancelUrl?**: `string`
 
----
+***
 
 ### email
 
 > **email**: `string`
 
----
+***
 
 ### productId
 
 > **productId**: `string`
 
----
+***
 
 ### successUrl
 

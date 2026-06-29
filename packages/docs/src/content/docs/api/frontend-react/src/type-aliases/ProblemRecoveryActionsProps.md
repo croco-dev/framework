@@ -13,13 +13,13 @@ title: "ProblemRecoveryActionsProps"
 
 > `readonly` **actions**: readonly [`ProblemRecoveryAction`](/api/frontend-react/src/type-aliases/problemrecoveryaction/)[]
 
----
+***
 
 ### problem
 
 > `readonly` **problem**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### renderRecoveryAction?
 

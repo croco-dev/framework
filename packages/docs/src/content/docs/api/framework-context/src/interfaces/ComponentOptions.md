@@ -10,10 +10,10 @@ title: "ComponentOptions"
 ## Example
 
 ```typescript
-import type { ComponentOptions } from "@croco/framework-context";
+import type { ComponentOptions } from '@croco/framework-context';
 
 const options: ComponentOptions = {
-  scope: "request",
+  scope: 'request',
 };
 ```
 

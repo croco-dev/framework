@@ -17,7 +17,7 @@ title: "QStashChunkExecutor"
 
 ##### executionManager
 
-`ExecutionManager`
+[`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/)
 
 ##### options
 
@@ -51,7 +51,7 @@ title: "QStashChunkExecutor"
 
 ##### step
 
-`Step`\<`I`, `O`\>
+[`Step`](/api/batch-core/src/classes/step/)\<`I`, `O`\>
 
 #### Returns
 

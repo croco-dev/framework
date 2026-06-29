@@ -15,25 +15,25 @@ title: "FrontendTelemetryBridgeOptions"
 
 > `readonly` `optional` **correlationId?**: `string`
 
----
+***
 
 ### headerNames?
 
 > `readonly` `optional` **headerNames?**: [`FrontendTelemetryHeaderNames`](/api/telemetry-api/src/type-aliases/frontendtelemetryheadernames/)
 
----
+***
 
 ### interactionId?
 
 > `readonly` `optional` **interactionId?**: `string`
 
----
+***
 
 ### sink?
 
 > `readonly` `optional` **sink?**: [`FrontendTelemetrySink`](/api/telemetry-api/src/type-aliases/frontendtelemetrysink/)
 
----
+***
 
 ### traceparent?
 

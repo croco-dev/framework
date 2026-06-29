@@ -9,7 +9,7 @@ title: "DrizzleAccessProvider"
 
 ## Implements
 
-- `AccessProvider`
+- [`AccessProvider`](/api/access-core/src/interfaces/accessprovider/)
 
 ## Constructors
 
@@ -33,7 +33,7 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 ### check()
 
-> **check**(`request`): `Promise`\<`CheckResult`\>
+> **check**(`request`): `Promise`\<[`CheckResult`](/api/access-core/src/interfaces/checkresult/)\>
 
 요청한 관계가 직접 또는 재귀 관계를 통해 허용되는지 확인합니다.
 
@@ -41,15 +41,15 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 ##### request
 
-`CheckRequest`
+[`CheckRequest`](/api/access-core/src/interfaces/checkrequest/)
 
 #### Returns
 
-`Promise`\<`CheckResult`\>
+`Promise`\<[`CheckResult`](/api/access-core/src/interfaces/checkresult/)\>
 
 #### Implementation of
 
-`AccessProvider.check`
+[`AccessProvider`](/api/access-core/src/interfaces/accessprovider/).[`check`](/api/access-core/src/interfaces/accessprovider/#check)
 
 ***
 
@@ -63,7 +63,7 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 ##### request
 
-`GrantRequest`
+[`GrantRequest`](/api/access-core/src/interfaces/grantrequest/)
 
 #### Returns
 
@@ -71,13 +71,13 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 #### Implementation of
 
-`AccessProvider.grant`
+[`AccessProvider`](/api/access-core/src/interfaces/accessprovider/).[`grant`](/api/access-core/src/interfaces/accessprovider/#grant)
 
 ***
 
 ### list()
 
-> **list**(`request`): `Promise`\<`RelationTuple`[]\>
+> **list**(`request`): `Promise`\<[`RelationTuple`](/api/access-core/src/interfaces/relationtuple/)[]\>
 
 조건에 맞는 관계 튜플 목록을 조회합니다.
 
@@ -85,15 +85,15 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 ##### request
 
-`ListRequest`
+[`ListRequest`](/api/access-core/src/interfaces/listrequest/)
 
 #### Returns
 
-`Promise`\<`RelationTuple`[]\>
+`Promise`\<[`RelationTuple`](/api/access-core/src/interfaces/relationtuple/)[]\>
 
 #### Implementation of
 
-`AccessProvider.list`
+[`AccessProvider`](/api/access-core/src/interfaces/accessprovider/).[`list`](/api/access-core/src/interfaces/accessprovider/#list)
 
 ***
 
@@ -107,7 +107,7 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 ##### request
 
-`RevokeRequest`
+[`RevokeRequest`](/api/access-core/src/interfaces/revokerequest/)
 
 #### Returns
 
@@ -115,4 +115,4 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 #### Implementation of
 
-`AccessProvider.revoke`
+[`AccessProvider`](/api/access-core/src/interfaces/accessprovider/).[`revoke`](/api/access-core/src/interfaces/accessprovider/#revoke)

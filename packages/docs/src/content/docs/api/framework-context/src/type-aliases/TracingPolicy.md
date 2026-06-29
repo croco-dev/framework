@@ -13,19 +13,19 @@ title: "TracingPolicy"
 
 > `readonly` `optional` **attributes?**: `Readonly`\<`Record`\<`string`, `string` \| `number` \| `boolean`\>\>
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"tracing"`
 
----
+***
 
 ### recordErrors?
 
 > `readonly` `optional` **recordErrors?**: `boolean`
 
----
+***
 
 ### spanName?
 

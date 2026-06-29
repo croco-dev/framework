@@ -15,17 +15,17 @@ Clerk 웹훅과 인증 요청에 필요한 공개 타입입니다.
 
 ## Properties
 
-### created_at?
+### created\_at?
 
-> `optional` **created_at?**: `number`
+> `optional` **created\_at?**: `number`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### organization
 
@@ -39,32 +39,32 @@ Clerk 웹훅과 인증 요청에 필요한 공개 타입입니다.
 
 > `optional` **name?**: `string`
 
----
+***
 
-### public_user_data
+### public\_user\_data
 
-> **public_user_data**: `object`
+> **public\_user\_data**: `object`
 
-#### first_name?
+#### first\_name?
 
-> `optional` **first_name?**: `string` \| `null`
+> `optional` **first\_name?**: `string` \| `null`
 
-#### last_name?
+#### last\_name?
 
-> `optional` **last_name?**: `string` \| `null`
+> `optional` **last\_name?**: `string` \| `null`
 
-#### user_id
+#### user\_id
 
-> **user_id**: `string`
+> **user\_id**: `string`
 
----
+***
 
 ### role
 
 > **role**: `string`
 
----
+***
 
-### updated_at?
+### updated\_at?
 
-> `optional` **updated_at?**: `number`
+> `optional` **updated\_at?**: `number`

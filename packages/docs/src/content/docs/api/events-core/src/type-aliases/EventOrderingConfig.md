@@ -17,7 +17,7 @@ title: "EventOrderingConfig"
 
 버퍼 크기 (buffered 전략에서 사용)
 
----
+***
 
 ### flushTimeoutMs?
 
@@ -25,7 +25,7 @@ title: "EventOrderingConfig"
 
 Flush 타임아웃 (buffered 전략에서 사용)
 
----
+***
 
 ### maxConcurrency?
 
@@ -33,7 +33,7 @@ Flush 타임아웃 (buffered 전략에서 사용)
 
 최대 동시 처리 수 (parallel 전략에서 사용)
 
----
+***
 
 ### partitionKeyExtractor?
 
@@ -41,7 +41,7 @@ Flush 타임아웃 (buffered 전략에서 사용)
 
 파티션 키 추출기
 
----
+***
 
 ### strategy
 

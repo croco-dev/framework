@@ -11,31 +11,31 @@ title: "RouteContractSpec"
 
 ### Method
 
-`Method` _extends_ [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/) = [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/)
+`Method` *extends* [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/) = [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/)
 
 ### Path
 
-`Path` _extends_ `string` = `string`
+`Path` *extends* `string` = `string`
 
 ### Params
 
-`Params` _extends_ `AnyZodObject` \| `undefined` = `AnyZodObject` \| `undefined`
+`Params` *extends* `AnyZodObject` \| `undefined` = `AnyZodObject` \| `undefined`
 
 ### Query
 
-`Query` _extends_ `AnyZodObject` \| `undefined` = `AnyZodObject` \| `undefined`
+`Query` *extends* `AnyZodObject` \| `undefined` = `AnyZodObject` \| `undefined`
 
 ### Body
 
-`Body` _extends_ `z.ZodType` \| `undefined` = `z.ZodType` \| `undefined`
+`Body` *extends* `z.ZodType` \| `undefined` = `z.ZodType` \| `undefined`
 
 ### Response
 
-`Response` _extends_ `z.ZodType` \| `undefined` = `z.ZodType` \| `undefined`
+`Response` *extends* `z.ZodType` \| `undefined` = `z.ZodType` \| `undefined`
 
 ### Problems
 
-`Problems` _extends_ readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined` = readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined`
+`Problems` *extends* readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined` = readonly [`RouteContractProblem`](/api/protocols-rest/src/type-aliases/routecontractproblem/)[] \| `undefined`
 
 ## Properties
 
@@ -43,55 +43,55 @@ title: "RouteContractSpec"
 
 > `readonly` `optional` **body?**: `Body`
 
----
+***
 
 ### id?
 
 > `readonly` `optional` **id?**: `string`
 
----
+***
 
 ### method
 
 > `readonly` **method**: `Method`
 
----
+***
 
 ### operationId?
 
 > `readonly` `optional` **operationId?**: `string`
 
----
+***
 
 ### params?
 
 > `readonly` `optional` **params?**: `Params`
 
----
+***
 
 ### path
 
 > `readonly` **path**: `Path`
 
----
+***
 
 ### problems?
 
 > `readonly` `optional` **problems?**: `Problems`
 
----
+***
 
 ### query?
 
 > `readonly` `optional` **query?**: `Query`
 
----
+***
 
 ### response?
 
 > `readonly` `optional` **response?**: `Response`
 
----
+***
 
 ### sourceLocation?
 

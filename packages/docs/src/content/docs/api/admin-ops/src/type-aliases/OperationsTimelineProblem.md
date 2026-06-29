@@ -13,25 +13,25 @@ title: "OperationsTimelineProblem"
 
 > `readonly` `optional` **category?**: `string`
 
----
+***
 
 ### code?
 
 > `readonly` `optional` **code?**: `string`
 
----
+***
 
 ### details?
 
 > `readonly` `optional` **details?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### message?
 
 > `readonly` `optional` **message?**: `string`
 
----
+***
 
 ### retryable?
 

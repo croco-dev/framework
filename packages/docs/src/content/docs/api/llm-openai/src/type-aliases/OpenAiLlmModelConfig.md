@@ -13,49 +13,49 @@ title: "OpenAiLlmModelConfig"
 
 > `readonly` `optional` **apiKey?**: `string`
 
----
+***
 
 ### apiKeyEnvName?
 
 > `readonly` `optional` **apiKeyEnvName?**: `string`
 
----
+***
 
 ### baseUrl?
 
 > `readonly` `optional` **baseUrl?**: `string`
 
----
+***
 
 ### embeddingModelId?
 
 > `readonly` `optional` **embeddingModelId?**: `string`
 
----
+***
 
 ### env?
 
 > `readonly` `optional` **env?**: [`OpenAiEnvironment`](/api/llm-openai/src/type-aliases/openaienvironment/)
 
----
+***
 
 ### modelId
 
 > `readonly` **modelId**: `string`
 
----
+***
 
 ### structuredOutputName?
 
 > `readonly` `optional` **structuredOutputName?**: `string`
 
----
+***
 
 ### timeout?
 
 > `readonly` `optional` **timeout?**: `number`
 
----
+***
 
 ### transport?
 

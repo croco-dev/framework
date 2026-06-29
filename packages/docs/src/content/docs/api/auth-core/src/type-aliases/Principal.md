@@ -15,25 +15,25 @@ title: "Principal"
 
 > **id**: `string`
 
----
+***
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### permissions
 
 > **permissions**: `string`[]
 
----
+***
 
 ### tenantId?
 
 > `optional` **tenantId?**: `string`
 
----
+***
 
 ### type
 

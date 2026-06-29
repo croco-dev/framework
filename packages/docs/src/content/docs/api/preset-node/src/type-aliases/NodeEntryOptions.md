@@ -13,7 +13,7 @@ title: "NodeEntryOptions"
 
 > `readonly` `optional` **hostname?**: `string`
 
----
+***
 
 ### port?
 

@@ -9,7 +9,7 @@ title: "DrizzleHealthSignalRegistry"
 
 ## Extends
 
-- `HealthSignalRegistry`
+- [`HealthSignalRegistry`](/api/customer-health-core/src/classes/healthsignalregistry/)
 
 ## Constructors
 
@@ -35,30 +35,30 @@ title: "DrizzleHealthSignalRegistry"
 
 #### Overrides
 
-`HealthSignalRegistry.constructor`
+[`HealthSignalRegistry`](/api/customer-health-core/src/classes/healthsignalregistry/).[`constructor`](/api/customer-health-core/src/classes/healthsignalregistry/#constructor)
 
 ## Properties
 
 ### token
 
-> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`HealthSignalRegistry`\>
+> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<[`HealthSignalRegistry`](/api/customer-health-core/src/classes/healthsignalregistry/)\>
 
 #### Inherited from
 
-`HealthSignalRegistry.token`
+[`HealthSignalRegistry`](/api/customer-health-core/src/classes/healthsignalregistry/).[`token`](/api/customer-health-core/src/classes/healthsignalregistry/#token)
 
 ## Methods
 
 ### getProviders()
 
-> **getProviders**(): `SignalProvider`[]
+> **getProviders**(): [`SignalProvider`](/api/customer-health-core/src/classes/signalprovider/)[]
 
 건강 점수 계산에 사용할 신호 제공자 목록을 반환합니다.
 
 #### Returns
 
-`SignalProvider`[]
+[`SignalProvider`](/api/customer-health-core/src/classes/signalprovider/)[]
 
 #### Overrides
 
-`HealthSignalRegistry.getProviders`
+[`HealthSignalRegistry`](/api/customer-health-core/src/classes/healthsignalregistry/).[`getProviders`](/api/customer-health-core/src/classes/healthsignalregistry/#getproviders)

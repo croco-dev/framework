@@ -18,7 +18,8 @@ title: "MembershipCreatedEvent"
 ```typescript
 @RegisterEventHandler(MembershipCreatedEvent)
 class Handler implements EventHandler<MembershipCreatedEvent> {
-  async handle(event: MembershipCreatedEvent) {}
+  async handle(event: MembershipCreatedEvent) {
+  }
 }
 ```
 
@@ -52,7 +53,7 @@ class Handler implements EventHandler<MembershipCreatedEvent> {
 
 > `readonly` **data**: `MembershipCreatedEventData`
 
----
+***
 
 ### eventId
 
@@ -62,7 +63,7 @@ class Handler implements EventHandler<MembershipCreatedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
----
+***
 
 ### eventName
 
@@ -72,7 +73,7 @@ class Handler implements EventHandler<MembershipCreatedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
----
+***
 
 ### metadata
 
@@ -82,7 +83,7 @@ class Handler implements EventHandler<MembershipCreatedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
----
+***
 
 ### timestamp
 
@@ -92,7 +93,7 @@ class Handler implements EventHandler<MembershipCreatedEvent> {
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
----
+***
 
 ### eventName
 

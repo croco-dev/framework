@@ -15,7 +15,7 @@ title: "AuditIntegrityConfig"
 
 > `optional` **algorithm?**: `"sha256"`
 
----
+***
 
 ### secretKey?
 

@@ -15,19 +15,19 @@ title: "CreateLinkInvitationInput"
 
 > `optional` **expiresInDays?**: `number`
 
----
+***
 
 ### inviterId
 
 > **inviterId**: `string`
 
----
+***
 
 ### role
 
 > **role**: [`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
 
----
+***
 
 ### tenantId
 

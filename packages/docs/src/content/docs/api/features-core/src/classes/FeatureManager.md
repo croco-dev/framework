@@ -72,6 +72,10 @@ class RecommendationService {
 }
 ```
 
+## Extended by
+
+- [`PostHogFeatureManager`](/api/features-posthog/src/classes/posthogfeaturemanager/)
+
 ## Constructors
 
 ### Constructor

@@ -15,7 +15,7 @@ title: "BatchInviteOptions"
 
 > `optional` **expiresInDays?**: `number`
 
----
+***
 
 ### maxBatchSize?
 

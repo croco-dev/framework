@@ -17,7 +17,7 @@ title: "OrderedEventResult"
 
 에러 (실패한 경우)
 
----
+***
 
 ### eventId
 
@@ -25,7 +25,7 @@ title: "OrderedEventResult"
 
 처리된 이벤트 ID
 
----
+***
 
 ### processedAt
 
@@ -33,7 +33,7 @@ title: "OrderedEventResult"
 
 처리 시간
 
----
+***
 
 ### sequence
 
@@ -41,7 +41,7 @@ title: "OrderedEventResult"
 
 처리 순서 (파티션 내에서의 순서)
 
----
+***
 
 ### success
 

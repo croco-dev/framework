@@ -13,19 +13,19 @@ title: "OperationsTimelineRetry"
 
 > `readonly` `optional` **attempt?**: `number`
 
----
+***
 
 ### maxAttempts?
 
 > `readonly` `optional` **maxAttempts?**: `number`
 
----
+***
 
 ### nextRetryAt?
 
 > `readonly` `optional` **nextRetryAt?**: `Date`
 
----
+***
 
 ### retryable?
 

@@ -13,25 +13,25 @@ title: "DiagnosticFixExample"
 
 > `readonly` `optional` **after?**: `string`
 
----
+***
 
 ### before?
 
 > `readonly` `optional` **before?**: `string`
 
----
+***
 
 ### command?
 
 > `readonly` `optional` **command?**: `string`
 
----
+***
 
 ### label
 
 > `readonly` **label**: `string`
 
----
+***
 
 ### note?
 

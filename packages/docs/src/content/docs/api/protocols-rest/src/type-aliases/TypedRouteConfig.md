@@ -11,19 +11,19 @@ title: "TypedRouteConfig"
 
 ### Body
 
-`Body` _extends_ `z.ZodType` \| `undefined` = `undefined`
+`Body` *extends* `z.ZodType` \| `undefined` = `undefined`
 
 ### Query
 
-`Query` _extends_ `z.ZodType` \| `undefined` = `undefined`
+`Query` *extends* `z.ZodType` \| `undefined` = `undefined`
 
 ### Params
 
-`Params` _extends_ `z.ZodType` \| `undefined` = `undefined`
+`Params` *extends* `z.ZodType` \| `undefined` = `undefined`
 
 ### Response
 
-`Response` _extends_ `z.ZodType` \| `undefined` = `undefined`
+`Response` *extends* `z.ZodType` \| `undefined` = `undefined`
 
 ## Properties
 
@@ -31,37 +31,37 @@ title: "TypedRouteConfig"
 
 > `optional` **body?**: `Body`
 
----
+***
 
 ### inputSchemas?
 
 > `optional` **inputSchemas?**: `RouteInputSchemas`
 
----
+***
 
 ### method
 
 > **method**: [`HttpMethod`](/api/protocols-rest/src/enumerations/httpmethod/)
 
----
+***
 
 ### params?
 
 > `optional` **params?**: `Params`
 
----
+***
 
 ### path
 
 > **path**: `string`
 
----
+***
 
 ### query?
 
 > `optional` **query?**: `Query`
 
----
+***
 
 ### response?
 

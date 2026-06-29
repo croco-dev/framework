@@ -13,13 +13,13 @@ title: "ProblemPanelProps"
 
 > `readonly` **problem**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### recoveryActions?
 
 > `readonly` `optional` **recoveryActions?**: readonly [`ProblemRecoveryAction`](/api/frontend-react/src/type-aliases/problemrecoveryaction/)[]
 
----
+***
 
 ### renderProblem?
 
@@ -35,7 +35,7 @@ title: "ProblemPanelProps"
 
 `ReactNode`
 
----
+***
 
 ### renderRecoveryAction?
 
@@ -55,7 +55,7 @@ title: "ProblemPanelProps"
 
 `ReactNode`
 
----
+***
 
 ### titleLevel?
 

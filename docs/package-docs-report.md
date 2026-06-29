@@ -9,7 +9,7 @@
 | Public packages                |   109 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |    35 |
+| Missing generated API docs     |     0 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    41 |
 
@@ -21,49 +21,15 @@ None.
 
 ## Missing Generated API Docs
 
-- `@croco/access-core` (`packages/access-core`) — legacy baseline
-- `@croco/admin-core` (`packages/admin-core`) — legacy baseline
-- `@croco/admin-react` (`packages/admin-react`) — legacy baseline
-- `@croco/analytics-posthog` (`packages/analytics-posthog`) — legacy baseline
-- `@croco/architecture-policy` (`packages/architecture-policy`) — legacy baseline
-- `@croco/batch-core` (`packages/batch-core`) — legacy baseline
-- `@croco/billing-polar` (`packages/billing-polar`) — legacy baseline
-- `@croco/cache-core` (`packages/cache-core`) — legacy baseline
-- `@croco/cli` (`packages/cli`) — legacy baseline
-- `@croco/customer-health-core` (`packages/customer-health-core`) — legacy baseline
-- `@croco/entitlements-core` (`packages/entitlements-core`) — legacy baseline
-- `@croco/esbuild-plugin` (`packages/esbuild-plugin`) — legacy baseline
-- `@croco/events-tx` (`packages/events-tx`) — legacy baseline
-- `@croco/execution-core` (`packages/execution-core`) — legacy baseline
-- `@croco/features-posthog` (`packages/features-posthog`) — legacy baseline
-- `@croco/framework-config` (`packages/framework-config`) — legacy baseline
-- `@croco/framework-logger` (`packages/framework-logger`) — legacy baseline
-- `@croco/framework-module` (`packages/framework-module`) — legacy baseline
-- `@croco/frontend-problems` (`packages/frontend-problems`) — legacy baseline
-- `@croco/gid-core` (`packages/gid-core`) — legacy baseline
-- `@croco/governance-core` (`packages/governance-core`) — legacy baseline
-- `@croco/health-core` (`packages/health-core`) — legacy baseline
-- `@croco/impersonation-core` (`packages/impersonation-core`) — legacy baseline
-- `@croco/lifecycle-core` (`packages/lifecycle-core`) — legacy baseline
-- `@croco/meta-vite` (`packages/meta-vite`) — legacy baseline
-- `@croco/metrics-billing` (`packages/metrics-billing`) — legacy baseline
-- `@croco/notifications-resend` (`packages/notifications-resend`) — legacy baseline
-- `@croco/pagination-core` (`packages/pagination-core`) — legacy baseline
-- `@croco/presentation-preset` (`packages/presentation-preset`) — legacy baseline
-- `@croco/search-meilisearch` (`packages/search-meilisearch`) — legacy baseline
-- `@croco/storage-r2` (`packages/storage-r2`) — legacy baseline
-- `@croco/tasks-core` (`packages/tasks-core`) — legacy baseline
-- `@croco/tenant-core` (`packages/tenant-core`) — legacy baseline
-- `@croco/triggers-core` (`packages/triggers-core`) — legacy baseline
-- `@croco/workflow-core` (`packages/workflow-core`) — legacy baseline
+None.
 
 ## Generated API Docs Backlog By Maturity
 
 | Maturity            | Missing API docs |
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
-| 🟡 beta             |               28 |
-| 🔴 alpha/WIP        |                7 |
+| 🟡 beta             |                0 |
+| 🔴 alpha/WIP        |                0 |
 | ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory

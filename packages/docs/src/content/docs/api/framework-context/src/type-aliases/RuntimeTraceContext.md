@@ -13,13 +13,13 @@ title: "RuntimeTraceContext"
 
 > `optional` **spanId?**: `string`
 
----
+***
 
 ### traceFlags?
 
 > `optional` **traceFlags?**: `string` \| `number`
 
----
+***
 
 ### traceId?
 

@@ -15,7 +15,7 @@ Configuration for backoff behavior.
 
 Initial delay in milliseconds (default: 1000)
 
----
+***
 
 ### jitter?
 
@@ -23,7 +23,7 @@ Initial delay in milliseconds (default: 1000)
 
 Enable Full Jitter randomization (default: true)
 
----
+***
 
 ### maxDelay?
 
@@ -31,7 +31,7 @@ Enable Full Jitter randomization (default: true)
 
 Maximum delay cap in milliseconds (default: 30000)
 
----
+***
 
 ### multiplier?
 

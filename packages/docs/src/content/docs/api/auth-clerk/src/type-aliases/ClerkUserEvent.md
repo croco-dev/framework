@@ -15,19 +15,19 @@ Clerk 웹훅과 인증 요청에 필요한 공개 타입입니다.
 
 ## Properties
 
-### created_at?
+### created\_at?
 
-> `optional` **created_at?**: `number`
+> `optional` **created\_at?**: `number`
 
----
+***
 
-### email_addresses
+### email\_addresses
 
-> **email_addresses**: `object`[]
+> **email\_addresses**: `object`[]
 
-#### email_address
+#### email\_address
 
-> **email_address**: `string`
+> **email\_address**: `string`
 
 #### id?
 
@@ -41,32 +41,32 @@ Clerk 웹훅과 인증 요청에 필요한 공개 타입입니다.
 
 > **status**: `string`
 
----
+***
 
-### first_name
+### first\_name
 
-> **first_name**: `string` \| `null`
+> **first\_name**: `string` \| `null`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
-### last_name
+### last\_name
 
-> **last_name**: `string` \| `null`
+> **last\_name**: `string` \| `null`
 
----
+***
 
-### primary_email_address_id?
+### primary\_email\_address\_id?
 
-> `optional` **primary_email_address_id?**: `string`
+> `optional` **primary\_email\_address\_id?**: `string`
 
----
+***
 
-### updated_at?
+### updated\_at?
 
-> `optional` **updated_at?**: `number`
+> `optional` **updated\_at?**: `number`

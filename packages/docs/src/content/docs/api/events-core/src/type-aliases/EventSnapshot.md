@@ -17,7 +17,7 @@ title: "EventSnapshot"
 
 스냅샷 생성 시간
 
----
+***
 
 ### eventCount
 
@@ -25,7 +25,7 @@ title: "EventSnapshot"
 
 이벤트 수
 
----
+***
 
 ### eventRange
 
@@ -41,7 +41,7 @@ title: "EventSnapshot"
 
 > **to**: `Date`
 
----
+***
 
 ### metadata?
 
@@ -49,7 +49,7 @@ title: "EventSnapshot"
 
 메타데이터
 
----
+***
 
 ### snapshotId
 

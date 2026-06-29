@@ -13,37 +13,37 @@ title: "AuditLogFilter"
 
 ### action?
 
-> `optional` **action**: `string`
+> `optional` **action?**: `string`
 
 ***
 
 ### actorId?
 
-> `optional` **actorId**: `string`
+> `optional` **actorId?**: `string`
 
 ***
 
 ### endDate?
 
-> `optional` **endDate**: `Date`
+> `optional` **endDate?**: `Date`
 
 ***
 
 ### resourceId?
 
-> `optional` **resourceId**: `string`
+> `optional` **resourceId?**: `string`
 
 ***
 
 ### resourceType?
 
-> `optional` **resourceType**: `string`
+> `optional` **resourceType?**: `string`
 
 ***
 
 ### startDate?
 
-> `optional` **startDate**: `Date`
+> `optional` **startDate?**: `Date`
 
 ***
 

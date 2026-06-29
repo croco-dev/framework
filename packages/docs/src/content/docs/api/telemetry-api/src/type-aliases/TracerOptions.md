@@ -15,7 +15,7 @@ Tracer 인스턴스를 만들 때 사용하는 옵션 타입입니다.
 
 > `optional` **name?**: `string`
 
----
+***
 
 ### version?
 

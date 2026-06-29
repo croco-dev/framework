@@ -13,19 +13,19 @@ title: "GraphQLContractSnapshotDiagnostic"
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### operationName?
 
 > `readonly` `optional` **operationName?**: `string`
 
----
+***
 
 ### resolverName?
 

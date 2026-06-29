@@ -17,7 +17,7 @@ Cloudflare 고유 변환 옵션입니다.
 
 블러 (1-1000)
 
----
+***
 
 ### dpr?
 
@@ -25,20 +25,19 @@ Cloudflare 고유 변환 옵션입니다.
 
 Device Pixel Ratio
 
----
+***
 
 ### fit?
 
 > `optional` **fit?**: `"scale-down"` \| `"contain"` \| `"cover"` \| `"fill"`
 
 맞춤 방식
-
 - scale-down: 비율 유지하며 지정 크기 내에서 축소
 - contain: 비율 유지하며 지정 크기에 맞춤 (여백 있음)
 - cover: 비율 유지하며 지정 크기 채움 (자름)
 - fill: 비율 무시하고 지정 크기 채움
 
----
+***
 
 ### format?
 
@@ -46,7 +45,7 @@ Device Pixel Ratio
 
 출력 형식
 
----
+***
 
 ### grayscale?
 
@@ -54,7 +53,7 @@ Device Pixel Ratio
 
 그레이스케일 변환
 
----
+***
 
 ### height?
 
@@ -62,7 +61,7 @@ Device Pixel Ratio
 
 높이 (px)
 
----
+***
 
 ### invert?
 
@@ -70,7 +69,7 @@ Device Pixel Ratio
 
 반전
 
----
+***
 
 ### quality?
 
@@ -78,7 +77,7 @@ Device Pixel Ratio
 
 품질 (1-100)
 
----
+***
 
 ### rotate?
 
@@ -86,7 +85,7 @@ Device Pixel Ratio
 
 회전 (0-359)
 
----
+***
 
 ### sharpen?
 
@@ -94,7 +93,7 @@ Device Pixel Ratio
 
 선명화 (1-10)
 
----
+***
 
 ### width?
 

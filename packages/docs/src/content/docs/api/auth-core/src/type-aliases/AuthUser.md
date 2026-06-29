@@ -15,25 +15,25 @@ title: "AuthUser"
 
 > `optional` **email?**: `string`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### metadata?
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### permissions
 
 > **permissions**: `string`[]
 
----
+***
 
 ### roles
 

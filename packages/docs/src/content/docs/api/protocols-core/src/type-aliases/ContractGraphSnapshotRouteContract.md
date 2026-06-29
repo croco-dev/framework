@@ -13,25 +13,25 @@ title: "ContractGraphSnapshotRouteContract"
 
 > `readonly` **id**: `string` \| `null`
 
----
+***
 
 ### method
 
 > `readonly` **method**: `string`
 
----
+***
 
 ### operationId?
 
 > `readonly` `optional` **operationId?**: `string`
 
----
+***
 
 ### path
 
 > `readonly` **path**: `string`
 
----
+***
 
 ### sourceLocation?
 

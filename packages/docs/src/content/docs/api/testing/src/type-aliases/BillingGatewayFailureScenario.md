@@ -11,7 +11,7 @@ title: "BillingGatewayFailureScenario"
 
 ### TGateway
 
-`TGateway` _extends_ [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
+`TGateway` *extends* [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
 
 ## Properties
 
@@ -29,7 +29,7 @@ title: "BillingGatewayFailureScenario"
 
 `void` \| `Promise`\<`void`\>
 
----
+***
 
 ### createGateway?
 
@@ -39,13 +39,13 @@ title: "BillingGatewayFailureScenario"
 
 `TGateway` \| `Promise`\<`TGateway`\>
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### run
 

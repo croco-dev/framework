@@ -13,19 +13,19 @@ title: "RuntimeInspectorOptions"
 
 > `readonly` `optional` **maxEventsPerRequest?**: `number`
 
----
+***
 
 ### maxRequests?
 
 > `readonly` `optional` **maxRequests?**: `number`
 
----
+***
 
 ### maxStringLength?
 
 > `readonly` `optional` **maxStringLength?**: `number`
 
----
+***
 
 ### sensitiveKeyPattern?
 

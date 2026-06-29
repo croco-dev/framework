@@ -15,13 +15,13 @@ title: "FrontendTelemetryHeaderNames"
 
 > `readonly` `optional` **correlationId?**: `string`
 
----
+***
 
 ### interactionId?
 
 > `readonly` `optional` **interactionId?**: `string`
 
----
+***
 
 ### traceparent?
 

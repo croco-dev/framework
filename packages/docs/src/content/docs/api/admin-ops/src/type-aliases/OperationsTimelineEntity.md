@@ -13,13 +13,13 @@ title: "OperationsTimelineEntity"
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### label?
 
 > `readonly` `optional` **label?**: `string`
 
----
+***
 
 ### type
 

@@ -11,7 +11,7 @@ title: "DrizzleProviderConformanceOptions"
 
 ### diagnostics?
 
-> `readonly` `optional` **diagnostics**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
+> `readonly` `optional` **diagnostics?**: [`DrizzleProviderConformanceCapability`](/api/testing/src/type-aliases/drizzleproviderconformancecapability/)
 
 ***
 

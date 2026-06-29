@@ -926,18 +926,33 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@croco/access-core':
+        specifier: workspace:*
+        version: link:../access-core
       '@croco/access-drizzle':
         specifier: workspace:*
         version: link:../access-drizzle
+      '@croco/admin-core':
+        specifier: workspace:*
+        version: link:../admin-core
       '@croco/admin-generated':
         specifier: workspace:*
         version: link:../admin-generated
       '@croco/admin-ops':
         specifier: workspace:*
         version: link:../admin-ops
+      '@croco/admin-react':
+        specifier: workspace:*
+        version: link:../admin-react
       '@croco/analytics-core':
         specifier: workspace:*
         version: link:../analytics-core
+      '@croco/analytics-posthog':
+        specifier: workspace:*
+        version: link:../analytics-posthog
+      '@croco/architecture-policy':
+        specifier: workspace:*
+        version: link:../architecture-policy
       '@croco/audit-core':
         specifier: workspace:*
         version: link:../audit-core
@@ -956,12 +971,27 @@ importers:
       '@croco/auth-drizzle':
         specifier: workspace:*
         version: link:../auth-drizzle
+      '@croco/batch-core':
+        specifier: workspace:*
+        version: link:../batch-core
       '@croco/batch-qstash':
         specifier: workspace:*
         version: link:../batch-qstash
       '@croco/billing-core':
         specifier: workspace:*
         version: link:../billing-core
+      '@croco/billing-polar':
+        specifier: workspace:*
+        version: link:../billing-polar
+      '@croco/cache-core':
+        specifier: workspace:*
+        version: link:../cache-core
+      '@croco/cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@croco/customer-health-core':
+        specifier: workspace:*
+        version: link:../customer-health-core
       '@croco/customer-health-drizzle':
         specifier: workspace:*
         version: link:../customer-health-drizzle
@@ -971,24 +1001,48 @@ importers:
       '@croco/diagnostics-core':
         specifier: workspace:*
         version: link:../diagnostics-core
+      '@croco/entitlements-core':
+        specifier: workspace:*
+        version: link:../entitlements-core
       '@croco/entitlements-drizzle':
         specifier: workspace:*
         version: link:../entitlements-drizzle
+      '@croco/esbuild-plugin':
+        specifier: workspace:*
+        version: link:../esbuild-plugin
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
       '@croco/events-inmemory':
         specifier: workspace:*
         version: link:../events-inmemory
+      '@croco/events-tx':
+        specifier: workspace:*
+        version: link:../events-tx
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
       '@croco/execution-drizzle':
         specifier: workspace:*
         version: link:../execution-drizzle
       '@croco/features-core':
         specifier: workspace:*
         version: link:../features-core
+      '@croco/features-posthog':
+        specifier: workspace:*
+        version: link:../features-posthog
+      '@croco/framework-config':
+        specifier: workspace:*
+        version: link:../framework-config
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
       '@croco/framework-preset':
         specifier: workspace:*
         version: link:../framework-preset
@@ -998,15 +1052,30 @@ importers:
       '@croco/frontend-cloudflare':
         specifier: workspace:*
         version: link:../frontend-cloudflare
+      '@croco/frontend-problems':
+        specifier: workspace:*
+        version: link:../frontend-problems
       '@croco/frontend-react':
         specifier: workspace:*
         version: link:../frontend-react
       '@croco/frontend-vite':
         specifier: workspace:*
         version: link:../frontend-vite
+      '@croco/gid-core':
+        specifier: workspace:*
+        version: link:../gid-core
+      '@croco/governance-core':
+        specifier: workspace:*
+        version: link:../governance-core
+      '@croco/health-core':
+        specifier: workspace:*
+        version: link:../health-core
       '@croco/idempotency-core':
         specifier: workspace:*
         version: link:../idempotency-core
+      '@croco/impersonation-core':
+        specifier: workspace:*
+        version: link:../impersonation-core
       '@croco/integrations-posthog':
         specifier: workspace:*
         version: link:../integrations-posthog
@@ -1016,6 +1085,9 @@ importers:
       '@croco/invitation-drizzle':
         specifier: workspace:*
         version: link:../invitation-drizzle
+      '@croco/lifecycle-core':
+        specifier: workspace:*
+        version: link:../lifecycle-core
       '@croco/llm-core':
         specifier: workspace:*
         version: link:../llm-core
@@ -1031,6 +1103,9 @@ importers:
       '@croco/membership-drizzle':
         specifier: workspace:*
         version: link:../membership-drizzle
+      '@croco/meta-vite':
+        specifier: workspace:*
+        version: link:../meta-vite
       '@croco/metering-core':
         specifier: workspace:*
         version: link:../metering-core
@@ -1040,6 +1115,9 @@ importers:
       '@croco/metering-upstash':
         specifier: workspace:*
         version: link:../metering-upstash
+      '@croco/metrics-billing':
+        specifier: workspace:*
+        version: link:../metrics-billing
       '@croco/metrics-core':
         specifier: workspace:*
         version: link:../metrics-core
@@ -1049,6 +1127,9 @@ importers:
       '@croco/notifications-core':
         specifier: workspace:*
         version: link:../notifications-core
+      '@croco/notifications-resend':
+        specifier: workspace:*
+        version: link:../notifications-resend
       '@croco/onboarding-core':
         specifier: workspace:*
         version: link:../onboarding-core
@@ -1058,6 +1139,12 @@ importers:
       '@croco/openapi-spec':
         specifier: workspace:*
         version: link:../openapi-spec
+      '@croco/pagination-core':
+        specifier: workspace:*
+        version: link:../pagination-core
+      '@croco/presentation-preset':
+        specifier: workspace:*
+        version: link:../presentation-preset
       '@croco/preset-cloudflare':
         specifier: workspace:*
         version: link:../preset-cloudflare
@@ -1103,6 +1190,9 @@ importers:
       '@croco/search-drizzle':
         specifier: workspace:*
         version: link:../search-drizzle
+      '@croco/search-meilisearch':
+        specifier: workspace:*
+        version: link:../search-meilisearch
       '@croco/storage-cloudflare':
         specifier: workspace:*
         version: link:../storage-cloudflare
@@ -1112,6 +1202,12 @@ importers:
       '@croco/storage-core':
         specifier: workspace:*
         version: link:../storage-core
+      '@croco/storage-r2':
+        specifier: workspace:*
+        version: link:../storage-r2
+      '@croco/tasks-core':
+        specifier: workspace:*
+        version: link:../tasks-core
       '@croco/tasks-qstash':
         specifier: workspace:*
         version: link:../tasks-qstash
@@ -1121,6 +1217,9 @@ importers:
       '@croco/telemetry-sdk-node':
         specifier: workspace:*
         version: link:../telemetry-sdk-node
+      '@croco/tenant-core':
+        specifier: workspace:*
+        version: link:../tenant-core
       '@croco/testing':
         specifier: workspace:*
         version: link:../testing
@@ -1133,6 +1232,9 @@ importers:
       '@croco/transports-http':
         specifier: workspace:*
         version: link:../transports-http
+      '@croco/triggers-core':
+        specifier: workspace:*
+        version: link:../triggers-core
       '@croco/triggers-qstash':
         specifier: workspace:*
         version: link:../triggers-qstash
@@ -1145,6 +1247,9 @@ importers:
       '@croco/webhooks-core':
         specifier: workspace:*
         version: link:../webhooks-core
+      '@croco/workflow-core':
+        specifier: workspace:*
+        version: link:../workflow-core
       '@playwright/test':
         specifier: 1.58.2
         version: 1.58.2

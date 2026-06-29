@@ -15,31 +15,31 @@ title: "ProrationCalculationParams"
 
 > **changeAt**: `Date`
 
----
+***
 
 ### currentPlan
 
 > **currentPlan**: [`Plan`](/api/billing-core/src/type-aliases/plan/)
 
----
+***
 
 ### nextPlan
 
 > **nextPlan**: [`Plan`](/api/billing-core/src/type-aliases/plan/)
 
----
+***
 
 ### periodEnd
 
 > **periodEnd**: `Date`
 
----
+***
 
 ### periodStart
 
 > **periodStart**: `Date`
 
----
+***
 
 ### quantity?
 

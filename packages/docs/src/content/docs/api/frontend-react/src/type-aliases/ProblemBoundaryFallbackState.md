@@ -13,13 +13,13 @@ title: "ProblemBoundaryFallbackState"
 
 > `readonly` **error**: `unknown`
 
----
+***
 
 ### problem
 
 > `readonly` **problem**: [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### reset
 

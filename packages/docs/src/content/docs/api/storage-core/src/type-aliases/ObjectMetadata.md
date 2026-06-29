@@ -17,7 +17,7 @@ title: "ObjectMetadata"
 
 Content-Type
 
----
+***
 
 ### etag?
 
@@ -25,7 +25,7 @@ Content-Type
 
 ETag
 
----
+***
 
 ### lastModified
 
@@ -33,7 +33,7 @@ ETag
 
 마지막 수정 시간
 
----
+***
 
 ### metadata?
 
@@ -41,7 +41,7 @@ ETag
 
 사용자 정의 메타데이터
 
----
+***
 
 ### size
 

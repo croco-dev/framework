@@ -17,7 +17,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 컨텍스트 메타데이터 (key-value 쌍)
 
----
+***
 
 ### eager?
 
@@ -25,7 +25,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 업로드 시 적용할 변환 (eager transformations)
 
----
+***
 
 ### folder?
 
@@ -33,7 +33,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 업로드할 폴더 경로
 
----
+***
 
 ### publicId?
 
@@ -41,7 +41,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 사용자 정의 public ID (key)
 
----
+***
 
 ### resourceType?
 
@@ -49,7 +49,7 @@ Cloudinary 업로드에 사용할 확장 옵션입니다.
 
 리소스 타입
 
----
+***
 
 ### tags?
 

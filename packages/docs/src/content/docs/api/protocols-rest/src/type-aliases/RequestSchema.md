@@ -13,19 +13,19 @@ title: "RequestSchema"
 
 > `optional` **body?**: `z.ZodType`
 
----
+***
 
 ### headers?
 
 > `optional` **headers?**: `z.ZodType`
 
----
+***
 
 ### params?
 
 > `optional` **params?**: `z.ZodType`
 
----
+***
 
 ### query?
 
