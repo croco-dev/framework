@@ -832,8 +832,9 @@ describe("E2E: generate()", () => {
         "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --check --manifest croco.project-map.json",
       "profile:smoke:real": "pnpm --filter @test/api-server profile:smoke:real",
       "demo:smoke":
-        "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+        "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server jobs:smoke",
       "ops:smoke": "pnpm --filter @test/api-server ops:smoke",
+      "jobs:smoke": "pnpm --filter @test/api-server jobs:smoke",
       "failure-drill:smoke": "pnpm --filter @test/api-server failure-drill:smoke",
       "failure-drill:integration": "pnpm --filter @test/api-server failure-drill:integration",
     });
@@ -864,6 +865,7 @@ describe("E2E: generate()", () => {
     expect(apiPackageJson.devDependencies?.["@croco/cli"]).toMatch(/^\^[0-9]+\.[0-9]+\.[0-9]+$/);
     expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
     expect(apiPackageJson.scripts?.["ops:smoke"]).toBe("tsx src/demo/ops-smoke.ts");
+    expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe("tsx src/demo/jobs-smoke.ts");
     expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
       "tsx src/demo/failure-drill-smoke.ts",
     );
@@ -1149,7 +1151,7 @@ describe("E2E: generate()", () => {
         "contract:verify":
           "pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
         "demo:smoke":
-          "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke",
+          "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server jobs:smoke",
       });
       expect(manifest).toMatchObject({
         schemaVersion: 1,

@@ -190,7 +190,7 @@ describe("jobs command", () => {
     const fetchJobs: JobsStatusFetch = async (input, init) => {
       calls.push({ input, init });
 
-      if (input.endsWith("/jobs?status=failed&limit=10")) {
+      if (input.endsWith("/jobs?status=failed&replayOf=exec-1&limit=10")) {
         return Response.json({
           summary: "attention",
           generatedAt: "2026-01-01T00:00:00.000Z",
@@ -226,6 +226,7 @@ describe("jobs command", () => {
         },
         {
           status: "failed",
+          replayOf: "exec-1",
           limit: 10,
         },
       ),
@@ -261,7 +262,9 @@ describe("jobs command", () => {
       id: "exec-2",
     });
 
-    expect(calls[0].input).toBe("https://api.example.test/ops/jobs?status=failed&limit=10");
+    expect(calls[0].input).toBe(
+      "https://api.example.test/ops/jobs?status=failed&replayOf=exec-1&limit=10",
+    );
     expect(new Headers(calls[0].init?.headers).get("X-Diagnostics-Token")).toBe("secret");
     expect(calls[3].input).toBe("https://api.example.test/ops/jobs/exec-1/cancel");
     expect(calls[3].init?.method).toBe("POST");

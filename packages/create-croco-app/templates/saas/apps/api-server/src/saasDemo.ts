@@ -17,7 +17,12 @@ import {
   type UsageHistoryEntry,
   type UsageHistoryPeriod,
 } from "@croco/entitlements-core";
-import { ExecutionManagerImpl } from "@croco/execution-core";
+import {
+  createExecutionJobsOperations,
+  ExecutionManagerImpl,
+  type JobDetails,
+  type JobsOperations,
+} from "@croco/execution-core";
 import {
   EventBusConfig,
   EventBusStats,
@@ -63,7 +68,6 @@ import {
   InMemoryUsageStorage,
   NoopTxAdapter,
 } from "./inMemoryAdapters";
-import { InMemoryJobsOperations, type JobDetails } from "./jobs";
 import { getSaasProviderProfile, type SaasProviderProfile } from "./providerProfiles";
 
 const TEAM_PLAN_ID = "team";
@@ -265,7 +269,7 @@ export type SaasRuntime = {
   healthService: HealthCheckService;
   diagnosticsCollector: DiagnosticsCollector;
   executionManager: ExecutionManagerImpl;
-  jobs: InMemoryJobsOperations;
+  jobs: JobsOperations;
   lifecycleRuleRegistry: LifecycleRuleRegistry;
   lifecycleRunStore: InMemoryLifecycleRunStore;
   lifecycleActionSink: InMemoryLifecycleActionSink;
@@ -488,7 +492,7 @@ export function createSaasRuntime(): SaasRuntime {
     healthService,
     diagnosticsCollector,
     executionManager,
-    jobs: new InMemoryJobsOperations(),
+    jobs: createExecutionJobsOperations(executionManager),
     lifecycleRuleRegistry,
     lifecycleRunStore,
     lifecycleActionSink,
@@ -861,17 +865,9 @@ async function runBillingSyncJob(runtime: SaasRuntime, tenantId: string): Promis
     idempotencyKey: `billing-sync:${tenantId}`,
     metadata: { workflowName: "billing.sync" },
   });
-  runtime.jobs.create({
-    id: execution.id,
-    type: "billing-sync",
-    payload: { tenantId },
-    maxAttempts: 2,
-    metadata: { workflowName: "billing.sync" },
-  });
 
   await runtime.executionManager.start(execution.id);
-  runtime.jobs.start(execution.id);
-  runtime.jobs.recordLog(execution.id, {
+  await runtime.executionManager.recordLog(execution.id, {
     message: "Billing sync started",
     data: { tenantId },
   });
@@ -884,24 +880,17 @@ async function runBillingSyncJob(runtime: SaasRuntime, tenantId: string): Promis
         code: "BILLING_INACTIVE",
         retryable: false,
       });
-      return runtime.jobs.fail(execution.id, {
-        message: "Billing subscription is not active",
-        code: "BILLING_INACTIVE",
-      });
+      return runtime.jobs.show(execution.id);
     }
 
-    runtime.jobs.recordLog(execution.id, {
+    await runtime.executionManager.recordLog(execution.id, {
       message: "Billing subscription active",
       data: { tenantId, subscriptionStatus },
     });
     await runtime.executionManager.complete(execution.id, { subscriptionStatus });
-    return runtime.jobs.complete(execution.id, { subscriptionStatus });
+    return runtime.jobs.show(execution.id);
   } catch (error) {
     await runtime.executionManager.fail(execution.id, {
-      message: error instanceof Error ? error.message : String(error),
-      retryable: true,
-    });
-    runtime.jobs.fail(execution.id, {
       message: error instanceof Error ? error.message : String(error),
       retryable: true,
     });
