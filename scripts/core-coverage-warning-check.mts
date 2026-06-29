@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -28,18 +28,89 @@ export type BaselineEntry = {
   lines: number;
 };
 
+export type PackageCatalog = {
+  groups?: Record<string, { packages?: string[] }>;
+  maturity?: Record<string, { packages?: string[] }>;
+};
+
+export type CoreCoverageSelectionStatus = "included" | "missing" | "temporarily-excluded";
+
+export type CoreCoverageSelectionCandidate = {
+  packageName: string;
+  packageSlug: string;
+  inCoreCoverageSet: boolean;
+  status: CoreCoverageSelectionStatus;
+  signals: string[];
+  exclusionReason: string | null;
+  recoveryAction: string;
+};
+
 const BASELINE_METRICS: CoverageMetric[] = ["statements", "branches", "functions", "lines"];
 const INTENTIONAL_ZERO_BASELINE_REASONS: Record<string, string> = {};
+const TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS: Record<string, string> = {};
+
+const CORE_COVERAGE_SELECTION_FRAMEWORK_GROUPS = new Set([
+  "Core",
+  "Integration",
+  "Protocol",
+  "Transport",
+]);
+
+const CORE_COVERAGE_SELECTION_RELEASE_CRITICAL_RULES: {
+  signal: string;
+  matches: (packageSlug: string) => boolean;
+}[] = [
+  {
+    signal: "framework-level contract",
+    matches: (packageSlug) => packageSlug.startsWith("framework-"),
+  },
+  {
+    signal: "request/context contract",
+    matches: (packageSlug) => packageSlug.includes("context"),
+  },
+  {
+    signal: "retry/reliability contract",
+    matches: (packageSlug) => packageSlug.startsWith("retry-"),
+  },
+  {
+    signal: "events contract",
+    matches: (packageSlug) => packageSlug.startsWith("events-"),
+  },
+  {
+    signal: "auth contract",
+    matches: (packageSlug) => packageSlug.startsWith("auth-"),
+  },
+  {
+    signal: "telemetry contract",
+    matches: (packageSlug) => packageSlug.startsWith("telemetry-"),
+  },
+  {
+    signal: "transport runtime contract",
+    matches: (packageSlug) => packageSlug.startsWith("transports-"),
+  },
+  {
+    signal: "health/readiness contract",
+    matches: (packageSlug) => packageSlug.startsWith("health-"),
+  },
+  {
+    signal: "failure/problem contract",
+    matches: (packageSlug) => packageSlug.startsWith("problems-"),
+  },
+];
 
 const projectRoot = process.cwd();
 const baselinePath = join(projectRoot, "ci-reports", "coverage", "core-baseline.txt");
 const reportDirectory = join(projectRoot, "ci-reports", "coverage", "core-warning");
 const reportPath = join(reportDirectory, "report.md");
 const packageJsonPath = join(projectRoot, "package.json");
+const packageCatalogPath = join(projectRoot, "docs", "package-catalog.json");
+const packagesDirectory = join(projectRoot, "packages");
 const vitestConfigPath = join(projectRoot, "vitest.config.ts");
 
 const CORE_COVERAGE_PACKAGES = readCoreCoveragePackages();
 const CORE_COVERAGE_THRESHOLDS = readCoreCoverageThresholds();
+const WORKSPACE_PACKAGE_NAMES = readWorkspacePackageNames();
+const PACKAGE_CATALOG = readPackageCatalog();
 
 function readCoreCoveragePackages(): string[] {
   const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
@@ -101,6 +172,41 @@ function readCoreCoverageThresholds(): Record<CoverageMetric, number> {
     );
 
   return coreCoverageThresholds;
+}
+
+function readPackageCatalog(): PackageCatalog {
+  return JSON.parse(readFileSync(packageCatalogPath, "utf-8")) as PackageCatalog;
+}
+
+function readWorkspacePackageNames(): Set<string> {
+  if (!existsSync(packagesDirectory)) {
+    return new Set();
+  }
+
+  const packageNames = readdirSync(packagesDirectory, { withFileTypes: true }).flatMap((entry) => {
+    if (!entry.isDirectory()) {
+      return [];
+    }
+
+    const manifestPath = join(packagesDirectory, entry.name, "package.json");
+
+    if (!existsSync(manifestPath)) {
+      return [];
+    }
+
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as {
+      name?: string;
+      private?: boolean;
+    };
+
+    if (!manifest.name?.startsWith("@croco/") || manifest.private === true) {
+      return [];
+    }
+
+    return [manifest.name];
+  });
+
+  return new Set(packageNames);
 }
 
 function toPackagePath(packageName: string): string {
@@ -241,6 +347,134 @@ export function validateBaselineEntries(
   return errors;
 }
 
+function getCatalogPackageGroups(catalog: PackageCatalog): Map<string, string[]> {
+  const packageGroups = new Map<string, string[]>();
+
+  for (const [groupName, group] of Object.entries(catalog.groups ?? {})) {
+    for (const packageSlug of group.packages ?? []) {
+      packageGroups.set(packageSlug, [...(packageGroups.get(packageSlug) ?? []), groupName]);
+    }
+  }
+
+  return packageGroups;
+}
+
+function getCatalogPackageMaturity(catalog: PackageCatalog): Map<string, string[]> {
+  const packageMaturity = new Map<string, string[]>();
+
+  for (const [maturityName, maturity] of Object.entries(catalog.maturity ?? {})) {
+    for (const packageSlug of maturity.packages ?? []) {
+      packageMaturity.set(packageSlug, [...(packageMaturity.get(packageSlug) ?? []), maturityName]);
+    }
+  }
+
+  return packageMaturity;
+}
+
+function uniqueSignals(signals: string[]): string[] {
+  return [...new Set(signals)].sort((left, right) => left.localeCompare(right));
+}
+
+function getReleaseCriticalSignals(packageSlug: string): string[] {
+  return CORE_COVERAGE_SELECTION_RELEASE_CRITICAL_RULES.filter((rule) =>
+    rule.matches(packageSlug),
+  ).map((rule) => rule.signal);
+}
+
+function getSelectionRecoveryAction(
+  packageName: string,
+  status: CoreCoverageSelectionStatus,
+  exclusionReason: string | null,
+): string {
+  if (status === "included") {
+    return "현재 core coverage set에 포함됨.";
+  }
+
+  if (status === "temporarily-excluded") {
+    return `임시 제외 사유 확인 후 제거하거나 core set에 추가: ${exclusionReason}`;
+  }
+
+  return `\`package.json\`의 \`test:coverage:core\`에 \`--filter ${packageName}\`를 추가하고 \`pnpm test:coverage:core\`로 baseline row를 만든다. 아직 준비되지 않았다면 \`TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS\`에 사유를 기록한다.`;
+}
+
+export function getCoreCoverageSelectionCandidates({
+  catalog,
+  workspacePackageNames,
+  coreCoveragePackages,
+  temporaryExclusions = {},
+}: {
+  catalog: PackageCatalog;
+  workspacePackageNames: ReadonlySet<string>;
+  coreCoveragePackages: readonly string[];
+  temporaryExclusions?: Record<string, string>;
+}): CoreCoverageSelectionCandidate[] {
+  const packageGroups = getCatalogPackageGroups(catalog);
+  const packageMaturity = getCatalogPackageMaturity(catalog);
+  const coreCoverageSet = new Set(coreCoveragePackages);
+  const packageSlugs = new Set([
+    ...packageGroups.keys(),
+    ...packageMaturity.keys(),
+    ...[...workspacePackageNames].map((packageName) => packageName.replace("@croco/", "")),
+  ]);
+
+  return [...packageSlugs]
+    .flatMap<CoreCoverageSelectionCandidate>((packageSlug) => {
+      const packageName = `@croco/${packageSlug}`;
+
+      if (!workspacePackageNames.has(packageName)) {
+        return [];
+      }
+
+      const groupSignals = (packageGroups.get(packageSlug) ?? [])
+        .filter((groupName) => CORE_COVERAGE_SELECTION_FRAMEWORK_GROUPS.has(groupName))
+        .map((groupName) => `catalog group: ${groupName}`);
+      const maturitySignals = (packageMaturity.get(packageSlug) ?? [])
+        .filter((maturityName) => maturityName === "production")
+        .map(() => "production-ready maturity");
+      const signals = uniqueSignals([
+        ...groupSignals,
+        ...maturitySignals,
+        ...getReleaseCriticalSignals(packageSlug),
+      ]);
+
+      if (signals.length === 0) {
+        return [];
+      }
+
+      const inCoreCoverageSet = coreCoverageSet.has(packageName);
+      const exclusionReason = temporaryExclusions[packageName]?.trim() || null;
+      const status: CoreCoverageSelectionStatus = inCoreCoverageSet
+        ? "included"
+        : exclusionReason
+          ? "temporarily-excluded"
+          : "missing";
+
+      return [
+        {
+          packageName,
+          packageSlug,
+          inCoreCoverageSet,
+          status,
+          signals,
+          exclusionReason,
+          recoveryAction: getSelectionRecoveryAction(packageName, status, exclusionReason),
+        },
+      ];
+    })
+    .sort((left, right) => left.packageName.localeCompare(right.packageName));
+}
+
+export function getCoreCoverageSelectionWarnings(
+  candidates: readonly CoreCoverageSelectionCandidate[],
+): string[] {
+  return candidates
+    .filter((candidate) => candidate.status === "missing")
+    .map(
+      (candidate) =>
+        `${candidate.packageName}: candidate signals [${candidate.signals.join(", ")}] but missing from test:coverage:core. ${candidate.recoveryAction}`,
+    );
+}
+
 function formatWarnings(warnings: string[]): string {
   return warnings.length > 0 ? warnings.join("; ") : "없음";
 }
@@ -249,7 +483,26 @@ function formatCoveragePct(totals: CoverageTotals | null, metric: CoverageMetric
   return totals ? totals[metric].pct.toFixed(2) : "n/a";
 }
 
-function writeReport(results: PackageCoverageResult[], baselineValidationErrors: string[]) {
+function formatSelectionMembership(candidate: CoreCoverageSelectionCandidate): string {
+  return candidate.inCoreCoverageSet ? "included" : "not included";
+}
+
+function formatSelectionStatus(candidate: CoreCoverageSelectionCandidate): string {
+  switch (candidate.status) {
+    case "included":
+      return "included";
+    case "temporarily-excluded":
+      return "temporary exclusion";
+    case "missing":
+      return "warning";
+  }
+}
+
+function writeReport(
+  results: PackageCoverageResult[],
+  baselineValidationErrors: string[],
+  selectionCandidates: CoreCoverageSelectionCandidate[],
+) {
   mkdirSync(reportDirectory, { recursive: true });
 
   const missingSummaryWarnings = results
@@ -261,16 +514,31 @@ function writeReport(results: PackageCoverageResult[], baselineValidationErrors:
   const baselineWarnings = results.flatMap((result) =>
     result.baselineWarnings.map((warning) => `- ${result.packageName}: ${warning}`),
   );
+  const selectionWarnings = getCoreCoverageSelectionWarnings(selectionCandidates);
 
   const reportLines = [
-    "# Core Coverage Baseline Report",
+    "# Core Coverage Warning Report",
     "",
     "- coverage 실행: gate step (`pnpm test:coverage:core`)에서 별도 실행",
     "- PR 표시: CI job summary와 `core-coverage-warning-report` artifact에 동일 report 게시",
-    "- warning-only 종료 코드: baseline data가 valid하면 warning 수와 무관하게 0, invalid baseline data는 1",
+    "- warning-only 종료 코드: baseline data가 valid하면 selection/baseline warning 수와 무관하게 0, invalid baseline data는 1",
     "",
-    "## 적용 대상",
+    "## 현재 core coverage set",
     ...CORE_COVERAGE_PACKAGES.map((packageName) => `- ${packageName}`),
+    "",
+    "## Selection 정책 신호",
+    "- 후보 입력: `docs/package-catalog.json`, 공개 `@croco/*` package manifest, `package.json`의 `test:coverage:core` filter.",
+    "- 후보 신호: production-ready maturity, Core/Integration/Protocol/Transport catalog group, retry/events/context/auth/telemetry/transport/health/problem/framework contract package.",
+    "- 누락 후보는 warning-only로 보고한다. 기존 `pnpm test:coverage:core` threshold 동작은 변경하지 않는다.",
+    "- 임시 제외가 필요하면 `scripts/core-coverage-warning-check.mts`의 `TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS`에 package name과 사유를 추가한다.",
+    "",
+    "## Core coverage selection candidates",
+    "| 패키지 | Current set | Status | Signals | Recovery action |",
+    "| --- | --- | --- | --- | --- |",
+    ...selectionCandidates.map(
+      (candidate) =>
+        `| \`${candidate.packageName}\` | ${formatSelectionMembership(candidate)} | ${formatSelectionStatus(candidate)} | ${candidate.signals.join(", ")} | ${candidate.recoveryAction} |`,
+    ),
     "",
     "## Threshold 규칙",
     `- lines: ${CORE_COVERAGE_THRESHOLDS.lines}%`,
@@ -280,7 +548,8 @@ function writeReport(results: PackageCoverageResult[], baselineValidationErrors:
     "- 적용 조건: `CORE_COVERAGE=true`이고 현재 cwd가 핵심 패키지 경로일 때만 강제 threshold 적용",
     "",
     "## 예외/범위 제한",
-    "- 1차 warning-only 범위는 `vitest.config.ts`의 `CORE_COVERAGE_PACKAGES`에 포함된 패키지로 고정한다.",
+    "- threshold 강제 범위는 `vitest.config.ts`의 `CORE_COVERAGE_PACKAGES`에 포함된 패키지로 고정한다.",
+    "- selection report는 core coverage 후보를 별도로 표시하지만, 자동으로 `test:coverage:core` filter를 확장하지 않는다.",
     "- 전 저장소 일괄 threshold 강제는 이번 단계에서 도입하지 않는다.",
     "- baseline 부재는 실패 대신 warning으로 기록한다.",
     "- coverage summary가 있는 패키지의 0 baseline은 `INTENTIONAL_ZERO_BASELINE_REASONS`에 bootstrap 예외 사유가 없는 한 invalid data로 실패한다.",
@@ -294,6 +563,9 @@ function writeReport(results: PackageCoverageResult[], baselineValidationErrors:
     ),
     "",
     "## Warning summary",
+    selectionWarnings.length > 0 ? "### Selection warnings" : "### Selection warnings\n- 없음",
+    ...selectionWarnings.map((warning) => `- ${warning}`),
+    "",
     missingSummaryWarnings.length > 0
       ? "### Missing coverage summaries"
       : "### Missing coverage summaries\n- 없음",
@@ -311,8 +583,9 @@ function writeReport(results: PackageCoverageResult[], baselineValidationErrors:
     ...(baselineWarnings.length > 0 ? baselineWarnings : []),
     "",
     "## Enforce 전환 메모",
-    "- 대상 유지: `CORE_COVERAGE_PACKAGES`에 포함된 패키지부터 유지한다.",
-    "- 신규 core package는 coverage summary와 baseline row가 PR summary에 표시된 뒤 core set에 추가한다.",
+    "- 대상 유지: `CORE_COVERAGE_PACKAGES`에 포함된 패키지부터 threshold를 유지한다.",
+    "- 신규 core package는 selection warning, coverage summary, baseline row가 PR summary에 표시된 뒤 core set에 추가한다.",
+    "- selection warning을 blocking으로 전환하려면 누락 후보가 0이거나 각 후보에 만료 가능한 temporary exclusion 사유가 있어야 한다.",
     "- baseline을 의도적으로 갱신할 때는 `pnpm test:coverage:core`를 먼저 실행하고, 생성된 `coverage-summary.json`의 total percentages를 `ci-reports/coverage/core-baseline.txt`에 반영한 뒤 `pnpm test:coverage:core:warning`을 실행한다.",
     "- threshold 상향은 `retry-core functions` 개선 이후 별도 태스크에서 검토한다.",
     "- baseline regression이 연속 0회가 아니라 안정적으로 해소된 이후에만 hard fail 전환을 검토한다.",
@@ -324,21 +597,29 @@ function writeReport(results: PackageCoverageResult[], baselineValidationErrors:
 async function main() {
   const results = CORE_COVERAGE_PACKAGES.map((packageName) => readCoverageSummary(packageName));
   const baselineValidationErrors = validateBaselineEntries(results, baselineByPackage);
+  const selectionCandidates = getCoreCoverageSelectionCandidates({
+    catalog: PACKAGE_CATALOG,
+    workspacePackageNames: WORKSPACE_PACKAGE_NAMES,
+    coreCoveragePackages: CORE_COVERAGE_PACKAGES,
+    temporaryExclusions: TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS,
+  });
 
-  writeReport(results, baselineValidationErrors);
+  writeReport(results, baselineValidationErrors, selectionCandidates);
 
-  console.log(`\n⚠️  Core coverage baseline report written to ${resolve(reportPath)}`);
+  console.log(`\n⚠️  Core coverage warning report written to ${resolve(reportPath)}`);
 
+  const totalSelectionWarnings = getCoreCoverageSelectionWarnings(selectionCandidates).length;
   const totalWarnings = results.reduce(
     (count, result) =>
       count +
       (result.missingSummaryWarning ? 1 : 0) +
       result.thresholdWarnings.length +
       result.baselineWarnings.length,
-    0,
+    totalSelectionWarnings,
   );
   const totalErrors = baselineValidationErrors.length;
 
+  console.log(`⚠️  Total core coverage selection warnings: ${totalSelectionWarnings}`);
   console.log(`⚠️  Total core coverage warnings: ${totalWarnings}`);
   if (totalErrors > 0) {
     for (const error of baselineValidationErrors) {

@@ -87,6 +87,32 @@ describe("strict-contract-typecheck.mts", () => {
     });
   });
 
+  it("ignores pnpm config warnings emitted around baseline TypeScript diagnostics", () => {
+    const diagnostics = collectStrictContractDiagnostics(
+      "/repo",
+      protocolsCorePackage,
+      [
+        '[WARN] The "pnpm" field in package.json is no longer read by pnpm. The following keys were ignored: "pnpm.overrides", "pnpm.auditConfig". See https://pnpm.io/settings for the new home of each setting.',
+        "packages/protocols-core/src/libs/ContractGraph.ts(183,3): error TS2322: target strict diagnostic",
+        "",
+      ].join("\n"),
+    );
+
+    expect(diagnostics).toEqual({
+      targetDiagnostics: [
+        {
+          packageName: "@croco/protocols-core",
+          file: "packages/protocols-core/src/libs/ContractGraph.ts",
+          line: 183,
+          column: 3,
+          code: "TS2322",
+          message: "target strict diagnostic",
+        },
+      ],
+      fatalDiagnostics: [],
+    });
+  });
+
   it("accepts baseline metadata that matches the strict rollout configuration", () => {
     expect(() => validateStrictContractBaselineConfiguration(validBaseline())).not.toThrow();
   });
