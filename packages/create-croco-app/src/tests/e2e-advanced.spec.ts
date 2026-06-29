@@ -200,6 +200,14 @@ describe("E2E Advanced: generate()", () => {
     expect(existsSync(join(testDir, "apps", "api"))).toBe(true);
     expect(existsSync(join(testDir, ".agent"))).toBe(false);
     expect(existsSync(join(testDir, "libs", "shared", "provider-mongodb"))).toBe(false);
+    const readme = readFileSync(join(testDir, "README.md"), "utf8");
+    expect(readme).toContain("Croco DDD workspace");
+    expect(readme).toContain("ddd-api");
+    expect(readme).toContain("pnpm install");
+    expect(readme).toContain("pnpm dev");
+    expect(readme).toContain("pnpm build");
+    expect(readme).toContain("expected success state");
+    expect(readme).toContain("Recovery");
   });
 
   it("throws error for non-empty directory", { timeout: 120_000 }, async () => {

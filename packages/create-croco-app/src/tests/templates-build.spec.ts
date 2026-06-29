@@ -736,6 +736,28 @@ describe("GraphQL addon templates", () => {
   });
 });
 
+describe("Base preset README templates", () => {
+  it("documents the blank preset first-run loop", () => {
+    checkFileExists("blank", "README.md.hbs");
+    checkFileContains("blank", ["README.md.hbs"], /pnpm install/);
+    checkFileContains("blank", ["README.md.hbs"], /pnpm dev/);
+    checkFileContains("blank", ["README.md.hbs"], /pnpm typecheck/);
+    checkFileContains("blank", ["README.md.hbs"], /expected success state/);
+    checkFileContains("blank", ["README.md.hbs"], /Recovery/);
+  });
+
+  it("documents the shared DDD preset first-run loop", () => {
+    checkFileExists("base-ddd", "README.md.hbs");
+    checkFileContains("base-ddd", ["README.md.hbs"], /ddd-api/);
+    checkFileContains("base-ddd", ["README.md.hbs"], /ddd-fullstack/);
+    checkFileContains("base-ddd", ["README.md.hbs"], /pnpm install/);
+    checkFileContains("base-ddd", ["README.md.hbs"], /pnpm dev/);
+    checkFileContains("base-ddd", ["README.md.hbs"], /pnpm build/);
+    checkFileContains("base-ddd", ["README.md.hbs"], /expected success state/);
+    checkFileContains("base-ddd", ["README.md.hbs"], /Recovery/);
+  });
+});
+
 describe.each([
   "spa-be-split",
   "ssr-lambda",
