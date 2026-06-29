@@ -5,6 +5,7 @@ import {
   NotificationChannel,
   type NotificationPayload,
   type NotificationProvider,
+  type NotificationProviderCapabilities,
   type NotificationResult,
   type NotificationSendOptions,
 } from "@croco/notifications-core";
@@ -182,6 +183,17 @@ export class ResendProvider implements NotificationProvider {
 
   getChannel(): NotificationChannel {
     return NotificationChannel.EMAIL;
+  }
+
+  getCapabilities(): NotificationProviderCapabilities {
+    return {
+      providerName: this.getName(),
+      channels: [this.getChannel()],
+      supportsIdempotencyKey: true,
+      supportsProviderTemplates: false,
+      supportsRenderedTemplates: true,
+      outboxIntegration: "consumer-managed",
+    };
   }
 
   async send(

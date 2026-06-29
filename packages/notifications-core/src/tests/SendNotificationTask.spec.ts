@@ -9,6 +9,7 @@ import {
   NotificationProviderNotFoundProblem,
 } from "../libs/problems/NotificationProblems";
 import { SendNotificationTask } from "../libs/SendNotificationTask";
+import { NotificationChannel } from "../libs/types";
 import type { NotificationJobPayload, NotificationProvider } from "../libs/types";
 
 describe("SendNotificationTask", () => {
@@ -106,6 +107,51 @@ describe("SendNotificationTask", () => {
       );
     });
 
+    it("should keep dispatch metadata out of provider send payload", async () => {
+      const mockResult = { success: true, messageId: "msg-123" };
+      vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
+
+      const payload: NotificationJobPayload = {
+        providerName: "resend",
+        to: "test@example.com",
+        content: "Rendered Content",
+        templateId: "welcome",
+        templateVersion: "v1",
+        locale: "en-US",
+        variables: { name: "Ada" },
+        idempotencyKey: "fixed-key",
+        outbox: {
+          outboxMessageId: "outbox-1",
+          idempotencyKey: "fixed-key",
+        },
+        dispatchContext: {
+          channel: NotificationChannel.EMAIL,
+          providerCapabilities: {
+            providerName: "resend",
+            channels: [NotificationChannel.EMAIL],
+            supportsIdempotencyKey: true,
+            supportsProviderTemplates: false,
+            supportsRenderedTemplates: true,
+            outboxIntegration: "consumer-managed",
+          },
+        },
+      };
+
+      await task.handle(payload);
+
+      expect(mockProvider.send).toHaveBeenCalledWith(
+        {
+          to: "test@example.com",
+          content: "Rendered Content",
+          templateId: "welcome",
+          templateVersion: "v1",
+          locale: "en-US",
+          variables: { name: "Ada" },
+        },
+        { idempotencyKey: "fixed-key" },
+      );
+    });
+
     it("should include templateId and variables in provider send call", async () => {
       const mockResult = { success: true, messageId: "msg-123" };
       vi.mocked(mockProvider.send).mockResolvedValue(mockResult);
@@ -151,7 +197,10 @@ describe("SendNotificationTask", () => {
         content: "Test Content",
       };
 
-      await expect(task.handle(payload)).rejects.toThrow("API Error");
+      await expect(task.handle(payload)).rejects.toMatchObject({
+        code: "notifications-core/delivery-failed",
+        cause: mockError,
+      });
     });
 
     it("should throw error when provider returns failure without error details", async () => {

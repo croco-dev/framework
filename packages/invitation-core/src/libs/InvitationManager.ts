@@ -3,6 +3,7 @@ import type { EventPublisher } from "@croco/events-core";
 import { Component } from "@croco/framework-context";
 import type { AbstractMembershipManager, MembershipRole } from "@croco/membership-core";
 import {
+  createNotificationIdempotencyKey,
   NotificationChannel,
   type NotificationPayload,
   type NotificationService,
@@ -355,7 +356,21 @@ export class InvitationManager {
       },
     };
 
-    await this.notificationService.send(NotificationChannel.EMAIL, payload);
+    const preferenceContext = {
+      tenantId: invitation.tenantId,
+      userId: invitation.email,
+      channel: NotificationChannel.EMAIL,
+      topic: "invitation.created",
+    };
+
+    await this.notificationService.send(NotificationChannel.EMAIL, payload, {
+      idempotencyKey: createNotificationIdempotencyKey({
+        ...preferenceContext,
+        recipient: invitation.email,
+        semanticKey: invitation.id,
+      }),
+      preferenceContext,
+    });
   }
 
   private async updateInvitation(
