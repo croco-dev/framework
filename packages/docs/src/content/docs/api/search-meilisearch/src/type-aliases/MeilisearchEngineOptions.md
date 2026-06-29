@@ -23,6 +23,12 @@ Meilisearch 엔진 초기화 옵션입니다.
 
 ***
 
+### taskWait?
+
+> `optional` **taskWait?**: [`MeilisearchTaskWaitOptions`](/api/search-meilisearch/src/type-aliases/meilisearchtaskwaitoptions/)
+
+***
+
 ### tenantTokenOptions?
 
 > `optional` **tenantTokenOptions?**: [`TenantTokenOptions`](/api/search-meilisearch/src/type-aliases/tenanttokenoptions/)

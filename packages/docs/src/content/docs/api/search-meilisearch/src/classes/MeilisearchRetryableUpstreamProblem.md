@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "TenantTokenNotConfiguredProblem"
+title: "MeilisearchRetryableUpstreamProblem"
 ---
 
-테넌트 토큰 옵션 없이 토큰 발급을 시도할 때 발생하는 문제입니다.
+재시도 가능한 Meilisearch 업스트림 실패를 나타내는 Problem입니다.
 
 ## Extends
 
@@ -15,11 +15,21 @@ title: "TenantTokenNotConfiguredProblem"
 
 ### Constructor
 
-> **new TenantTokenNotConfiguredProblem**(): `TenantTokenNotConfiguredProblem`
+> **new MeilisearchRetryableUpstreamProblem**(`context`, `message`): `MeilisearchRetryableUpstreamProblem`
+
+#### Parameters
+
+##### context
+
+`MeilisearchErrorContext`
+
+##### message
+
+`string`
 
 #### Returns
 
-`TenantTokenNotConfiguredProblem`
+`MeilisearchRetryableUpstreamProblem`
 
 #### Overrides
 

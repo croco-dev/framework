@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "TenantTokenNotConfiguredProblem"
+title: "MeilisearchInvalidRequestProblem"
 ---
 
-테넌트 토큰 옵션 없이 토큰 발급을 시도할 때 발생하는 문제입니다.
+Meilisearch 요청 검증에 실패했을 때 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,11 +15,21 @@ title: "TenantTokenNotConfiguredProblem"
 
 ### Constructor
 
-> **new TenantTokenNotConfiguredProblem**(): `TenantTokenNotConfiguredProblem`
+> **new MeilisearchInvalidRequestProblem**(`context`, `detail?`): `MeilisearchInvalidRequestProblem`
+
+#### Parameters
+
+##### context
+
+`MeilisearchErrorContext`
+
+##### detail?
+
+`string` = `"Meilisearch request validation failed"`
 
 #### Returns
 
-`TenantTokenNotConfiguredProblem`
+`MeilisearchInvalidRequestProblem`
 
 #### Overrides
 

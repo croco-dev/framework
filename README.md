@@ -391,8 +391,8 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | 상태                | 의미                                | 전체 public 패키지 수 |
 | ------------------- | ----------------------------------- | --------------------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |                    24 |
-| 🟡 beta             | 기능 완성, 실사용 검증 중           |                    68 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    17 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |                    69 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    16 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |                     0 |
 
 ### Extension & Adapter Matrix
@@ -427,7 +427,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/onboarding-drizzle`      | Onboarding      | Drizzle repository                   | yes  | yes    | -       | -        | database connection supplied by app                                                 | -                                                               | onboarding state persistence<br>step completion storage                                                                                                                                   | 🟡 beta      | has package tests |
 | `@croco/ratelimit-upstash`       | Rate limiting   | Upstash Redis rate-limit store       | yes  | yes    | -       | -        | UPSTASH_REDIS_REST_URL<br>UPSTASH_REDIS_REST_TOKEN                                  | @upstash/redis                                                  | sliding window<br>token bucket<br>fixed window<br>Lua atomicity<br>shared conformance<br>redacted upstream Problems                                                                       | 🔴 alpha/WIP | has package tests |
 | `@croco/search-drizzle`          | Search          | Drizzle search index                 | yes  | yes    | -       | -        | database connection supplied by app                                                 | drizzle-orm                                                     | search document persistence<br>tenant-aware lookup                                                                                                                                        | 🟡 beta      | has package tests |
-| `@croco/search-meilisearch`      | Search          | Meilisearch engine                   | yes  | yes    | -       | -        | MEILISEARCH_HOST<br>MEILISEARCH_API_KEY                                             | -                                                               | indexing<br>search<br>tenant tokens                                                                                                                                                       | 🔴 alpha/WIP | has package tests |
+| `@croco/search-meilisearch`      | Search          | Meilisearch engine                   | yes  | yes    | -       | -        | MEILISEARCH_HOST<br>MEILISEARCH_API_KEY                                             | -                                                               | indexing<br>search<br>tenant tokens<br>search conformance<br>safe diagnostics<br>env-gated live smoke                                                                                     | 🟡 beta      | has package tests |
 | `@croco/storage-cloudflare`      | Storage         | Cloudflare Images provider           | yes  | yes    | -       | -        | CLOUDFLARE_ACCOUNT_ID<br>CLOUDFLARE_API_TOKEN<br>CLOUDFLARE_ACCOUNT_HASH            | -                                                               | image upload<br>transform URLs<br>upload intents<br>signed URLs<br>storage conformance<br>diagnostics<br>optional live smoke                                                              | 🔴 alpha/WIP | has package tests |
 | `@croco/storage-cloudinary`      | Storage         | Cloudinary provider                  | yes  | yes    | -       | -        | CLOUDINARY_CLOUD_NAME<br>CLOUDINARY_API_KEY<br>CLOUDINARY_API_SECRET                | -                                                               | file upload<br>transform URLs<br>upload intents<br>retry<br>storage conformance<br>diagnostics<br>optional live smoke                                                                     | 🟡 beta      | has package tests |
 | `@croco/storage-r2`              | Storage         | Cloudflare R2 S3-compatible provider | yes  | yes    | -       | -        | R2_ACCOUNT_ID<br>R2_ACCESS_KEY_ID<br>R2_SECRET_ACCESS_KEY<br>R2_BUCKET              | -                                                               | put/get/delete<br>signed URLs<br>stream reads<br>retry<br>safe diagnostics<br>env-gated live smoke                                                                                        | 🟡 beta      | has package tests |
@@ -553,6 +553,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/metering-drizzle`              | Provider     | `packages/metering-drizzle`              | README, API, tests |
 | `@croco/onboarding-drizzle`            | Provider     | `packages/onboarding-drizzle`            | README, API, tests |
 | `@croco/search-drizzle`                | Provider     | `packages/search-drizzle`                | README, API, tests |
+| `@croco/search-meilisearch`            | Provider     | `packages/search-meilisearch`            | README, API, tests |
 | `@croco/storage-cloudinary`            | Provider     | `packages/storage-cloudinary`            | README, API, tests |
 | `@croco/storage-r2`                    | Provider     | `packages/storage-r2`                    | README, API, tests |
 | `@croco/architecture-policy`           | Tooling      | `packages/architecture-policy`           | README, API, tests |
@@ -583,7 +584,6 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/metrics-billing`      | Provider     | `packages/metrics-billing`      | README, API, tests |
 | `@croco/notifications-resend` | Provider     | `packages/notifications-resend` | README, API, tests |
 | `@croco/ratelimit-upstash`    | Provider     | `packages/ratelimit-upstash`    | README, API, tests |
-| `@croco/search-meilisearch`   | Provider     | `packages/search-meilisearch`   | README, API, tests |
 | `@croco/storage-cloudflare`   | Provider     | `packages/storage-cloudflare`   | README, API, tests |
 | `@croco/tasks-qstash`         | Provider     | `packages/tasks-qstash`         | README, API, tests |
 | `@croco/triggers-qstash`      | Provider     | `packages/triggers-qstash`      | README, API, tests |

@@ -237,6 +237,7 @@
         "protocols-trpc",
         "rpc-codegen",
         "search-drizzle",
+        "search-meilisearch",
         "storage-cloudinary",
         "storage-core",
         "storage-r2",
@@ -266,7 +267,6 @@
         "metrics-billing",
         "notifications-resend",
         "ratelimit-upstash",
-        "search-meilisearch",
         "storage-cloudflare",
         "tasks-qstash",
         "triggers-qstash"
@@ -609,7 +609,14 @@
         "adapter": "Meilisearch engine",
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["MEILISEARCH_HOST", "MEILISEARCH_API_KEY"],
-        "features": ["indexing", "search", "tenant tokens"]
+        "features": [
+          "indexing",
+          "search",
+          "tenant tokens",
+          "search conformance",
+          "safe diagnostics",
+          "env-gated live smoke"
+        ]
       },
       "storage-cloudflare": {
         "domain": "Storage",

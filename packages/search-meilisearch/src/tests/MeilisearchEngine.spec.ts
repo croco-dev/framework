@@ -1,36 +1,96 @@
 import { Context } from "@croco/framework-context";
-import { MissingTenantProblem } from "@croco/search-core";
+import { MissingTenantProblem, SearchService } from "@croco/search-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MeilisearchEngine } from "../libs/MeilisearchEngine";
+import {
+  MeilisearchIndexNotFoundProblem,
+  MeilisearchInvalidRequestProblem,
+  MeilisearchRetryableUpstreamProblem,
+  MeilisearchTerminalUpstreamProblem,
+  MissingMeilisearchConfigProblem,
+} from "../libs/problems/MeilisearchProblems";
 import type { MeilisearchEngineOptions } from "../libs/types";
+
+const SECRET_SAMPLE = "super-secret-token";
+const SECRET_RICH_ERROR_MESSAGE = `Authorization: Bearer ${SECRET_SAMPLE}; token=${SECRET_SAMPLE}; https://search.example?apiKey=${SECRET_SAMPLE}; Cookie: session=${SECRET_SAMPLE}`;
+type ProblemConstructor<TProblem extends Error> = Function & {
+  readonly prototype: TProblem;
+  readonly name: string;
+};
 
 const mocks = vi.hoisted(() => {
   const index = {
     search: vi.fn(),
     addDocuments: vi.fn(),
-    deleteDocument: vi.fn(),
     deleteDocuments: vi.fn(),
     updateSettings: vi.fn(),
-    delete: vi.fn(),
   };
   const client = {
     index: vi.fn(() => index),
     createIndex: vi.fn(),
     deleteIndex: vi.fn(),
     generateTenantToken: vi.fn(),
+    waitForTask: vi.fn(),
+    health: vi.fn(),
   };
-  return { clientMock: client, indexMock: index };
+  const constructor = vi.fn();
+  return { clientMock: client, constructorMock: constructor, indexMock: index };
 });
 
 vi.mock("meilisearch", () => ({
   MeiliSearch: class {
-    constructor() {
+    constructor(options: unknown) {
+      mocks.constructorMock(options);
       Object.assign(this, mocks.clientMock);
     }
   },
 }));
 
-describe("MeilisearchEngine", () => {
+function createUpstreamError(
+  message: string,
+  options: {
+    readonly status?: number;
+    readonly code?: string;
+    readonly name?: string;
+  },
+): Error & {
+  response?: { readonly status: number };
+  cause?: { readonly code?: string; readonly message?: string; readonly type?: string };
+  code?: string;
+} {
+  const error = new Error(message) as Error & {
+    response?: { status: number };
+    cause?: { code?: string; message?: string; type?: string };
+    code?: string;
+  };
+  if (options.name) {
+    error.name = options.name;
+  }
+  if (options.status !== undefined) {
+    error.response = { status: options.status };
+  }
+  if (options.code !== undefined) {
+    error.code = options.code;
+    error.cause = { code: options.code, message };
+  }
+  return error;
+}
+
+async function expectProblem<TProblem extends Error>(
+  action: () => Promise<unknown>,
+  problemClass: ProblemConstructor<TProblem>,
+): Promise<TProblem> {
+  try {
+    await action();
+  } catch (error) {
+    expect(error).toBeInstanceOf(problemClass);
+    return error as TProblem;
+  }
+
+  throw new Error(`Expected ${problemClass.name} to be thrown.`);
+}
+
+describe("Meilisearch provider conformance", () => {
   let engine!: MeilisearchEngine;
 
   const options: MeilisearchEngineOptions = {
@@ -44,52 +104,122 @@ describe("MeilisearchEngine", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup default returns
-    mocks.indexMock.search.mockResolvedValue({ hits: [], estimatedTotalHits: 0 });
+    mocks.indexMock.search.mockResolvedValue({
+      estimatedTotalHits: 0,
+      hits: [],
+      processingTimeMs: 0,
+    });
     mocks.indexMock.addDocuments.mockResolvedValue({ taskUid: 1 });
-    mocks.indexMock.deleteDocument.mockResolvedValue({ taskUid: 1 });
-    mocks.indexMock.deleteDocuments.mockResolvedValue({ taskUid: 1 });
-    mocks.indexMock.updateSettings.mockResolvedValue({ taskUid: 1 });
+    mocks.indexMock.deleteDocuments.mockResolvedValue({ taskUid: 2 });
+    mocks.indexMock.updateSettings.mockResolvedValue({ taskUid: 3 });
 
-    mocks.clientMock.createIndex.mockResolvedValue({ taskUid: 1 });
-    mocks.clientMock.deleteIndex.mockResolvedValue({ taskUid: 1 });
-    mocks.clientMock.generateTenantToken.mockReturnValue("token");
+    mocks.clientMock.createIndex.mockResolvedValue({ taskUid: 4 });
+    mocks.clientMock.deleteIndex.mockResolvedValue({ taskUid: 5 });
+    mocks.clientMock.generateTenantToken.mockResolvedValue("token");
+    mocks.clientMock.waitForTask.mockResolvedValue({ status: "succeeded" });
 
     engine = new MeilisearchEngine(options);
   });
 
+  describe("configuration", () => {
+    it("fails missing host and API key with stable Problems", () => {
+      expect(() => new MeilisearchEngine({ host: "", apiKey: "masterKey" })).toThrow(
+        MissingMeilisearchConfigProblem,
+      );
+      expect(() => new MeilisearchEngine({ host: "http://localhost:7700", apiKey: "" })).toThrow(
+        MissingMeilisearchConfigProblem,
+      );
+    });
+
+    it("constructs the Meilisearch client without exposing configuration in diagnostics", () => {
+      expect(mocks.constructorMock).toHaveBeenLastCalledWith({
+        apiKey: "masterKey",
+        host: "http://localhost:7700",
+      });
+    });
+  });
+
   describe("search", () => {
-    it("should throw MissingTenantProblem if tenantId is missing", async () => {
+    it("throws MissingTenantProblem if tenantId is missing", async () => {
       vi.spyOn(Context, "getTenantId").mockReturnValue(null);
       await expect(engine.search("index", { query: "test" })).rejects.toThrow(MissingTenantProblem);
     });
 
-    it("should add tenant filter to search query", async () => {
+    it("adds tenant filter, query controls, and supported scalar filters", async () => {
       vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
-      await engine.search("index", { query: "test" });
+      mocks.indexMock.search.mockResolvedValue({
+        estimatedTotalHits: 1,
+        hits: [{ id: "1", title: "Croco" }],
+        processingTimeMs: 7,
+      });
+
+      const result = await engine.search<{ id: string; title: string }>("index", {
+        query: "croco",
+        filters: { active: true, price: 10, status: "published" },
+        limit: 5,
+        offset: 10,
+        sort: [{ field: "price", order: "desc" }],
+      });
 
       expect(mocks.clientMock.index).toHaveBeenCalledWith("index");
       expect(mocks.indexMock.search).toHaveBeenCalledWith(
-        "test",
+        "croco",
         expect.objectContaining({
-          filter: expect.arrayContaining(['_tenantId = "tenant-1"']),
+          filter: expect.arrayContaining([
+            '_tenantId = "tenant-1"',
+            "active = true",
+            "price = 10",
+            'status = "published"',
+          ]),
+          limit: 5,
+          offset: 10,
+          sort: ["price:desc"],
         }),
       );
+      expect(result).toMatchObject({
+        processingTimeMs: 7,
+        total: 1,
+        hits: [{ document: { id: "1", title: "Croco" } }],
+      });
     });
 
-    it("should combine with existing filters", async () => {
+    it("accepts SearchService tenant filters by mapping them to provider tenant isolation", async () => {
       vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
-      await engine.search("index", { query: "test", filters: { status: "active" } });
+      const searchService = new SearchService({ engine });
 
-      expect(mocks.indexMock.search).toHaveBeenCalledWith(
-        "test",
-        expect.objectContaining({
-          filter: expect.arrayContaining(['_tenantId = "tenant-1"', 'status = "active"']),
-        }),
-      );
+      await searchService.search("index", {
+        query: "croco",
+        filters: { status: "published" },
+      });
+
+      const searchOptions = mocks.indexMock.search.mock.calls.at(-1)?.[1] as {
+        readonly filter: readonly string[];
+      };
+      expect(searchOptions.filter).toContain('_tenantId = "tenant-1"');
+      expect(searchOptions.filter).toContain('status = "published"');
+      expect(searchOptions.filter).not.toContain('tenantId = "tenant-1"');
     });
 
-    it("should escape quotes and backslashes in string filters and tenant filters", async () => {
+    it("rejects tenant filters that conflict with the active tenant context", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+
+      await expect(
+        engine.search("index", {
+          query: "test",
+          filters: { tenantId: "tenant-2" },
+        }),
+      ).rejects.toThrow(MeilisearchInvalidRequestProblem);
+      await expect(
+        engine.search("index", {
+          query: "test",
+          filters: { _tenantId: "tenant-2" },
+        }),
+      ).rejects.toThrow(MeilisearchInvalidRequestProblem);
+
+      expect(mocks.indexMock.search).not.toHaveBeenCalled();
+    });
+
+    it("escapes quotes and backslashes in string filters and tenant filters", async () => {
       vi.spyOn(Context, "getTenantId").mockReturnValue('tenant-"one"\\x');
 
       await engine.search("index", {
@@ -109,56 +239,136 @@ describe("MeilisearchEngine", () => {
         }),
       );
     });
+
+    it("rejects unsafe filter and sort fields before sending the search request", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+
+      await expect(
+        engine.search("index", {
+          query: "test",
+          filters: { "status OR _tenantId": "active" },
+        }),
+      ).rejects.toThrow(MeilisearchInvalidRequestProblem);
+
+      await expect(
+        engine.search("index", {
+          query: "test",
+          sort: [{ field: "title;DROP", order: "asc" }],
+        }),
+      ).rejects.toThrow(MeilisearchInvalidRequestProblem);
+
+      expect(mocks.indexMock.search).not.toHaveBeenCalled();
+    });
   });
 
-  describe("indexDocument", () => {
-    it("should throw MissingTenantProblem if tenantId is missing", async () => {
-      vi.spyOn(Context, "getTenantId").mockReturnValue(null);
-      await expect(
-        engine.indexDocument("index", { id: "1", tenantId: "tenant-1" }),
-      ).rejects.toThrow(MissingTenantProblem);
+  describe("index lifecycle", () => {
+    it("creates indexes with tenant filterability and configured searchable/sortable fields", async () => {
+      await engine.createIndex({
+        name: "products",
+        filterableFields: ["category"],
+        searchableFields: ["title"],
+        sortableFields: ["price"],
+      });
+
+      expect(mocks.clientMock.createIndex).toHaveBeenCalledWith("products", { primaryKey: "id" });
+      expect(mocks.indexMock.updateSettings).toHaveBeenCalledWith({
+        filterableAttributes: ["_tenantId", "id", "category"],
+        searchableAttributes: ["title"],
+        sortableAttributes: ["price"],
+      });
+      expect(mocks.clientMock.waitForTask).toHaveBeenCalledWith(4, {});
+      expect(mocks.clientMock.waitForTask).toHaveBeenCalledWith(3, {});
     });
 
-    it("should add _tenantId field to document", async () => {
+    it("keeps Meilisearch default searchable attributes when searchable fields are omitted", async () => {
+      await engine.createIndex({ name: "products" });
+
+      expect(mocks.indexMock.updateSettings).toHaveBeenCalledWith({
+        filterableAttributes: ["_tenantId", "id"],
+        sortableAttributes: [],
+      });
+      expect(mocks.indexMock.updateSettings).not.toHaveBeenCalledWith(
+        expect.objectContaining({ searchableAttributes: [] }),
+      );
+    });
+
+    it("deletes indexes and waits for the provider task", async () => {
+      await engine.deleteIndex("products");
+
+      expect(mocks.clientMock.deleteIndex).toHaveBeenCalledWith("products");
+      expect(mocks.clientMock.waitForTask).toHaveBeenCalledWith(5, {});
+    });
+  });
+
+  describe("document writes", () => {
+    it("adds the active tenant to indexed documents and waits for the task", async () => {
       vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
-      await engine.indexDocument("index", { id: "1", tenantId: "tenant-1", title: "test" });
+
+      await engine.indexDocument("products", {
+        _tenantId: "forged-tenant",
+        id: "1",
+        tenantId: "tenant-from-document",
+        title: "test",
+      });
 
       expect(mocks.indexMock.addDocuments).toHaveBeenCalledWith([
-        expect.objectContaining({ id: "1", title: "test", _tenantId: "tenant-1" }),
+        expect.objectContaining({
+          _tenantId: "tenant-1",
+          id: "1",
+          tenantId: "tenant-1",
+          title: "test",
+        }),
       ]);
+      expect(mocks.clientMock.waitForTask).toHaveBeenCalledWith(1, {});
+    });
+
+    it("bulk indexes documents and preserves tenant isolation", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+
+      await engine.bulkIndex("products", [
+        { id: "1", tenantId: "ignored", title: "One" },
+        { id: "2", tenantId: "ignored", title: "Two" },
+      ]);
+
+      expect(mocks.indexMock.addDocuments).toHaveBeenCalledWith([
+        expect.objectContaining({ _tenantId: "tenant-1", id: "1", tenantId: "tenant-1" }),
+        expect.objectContaining({ _tenantId: "tenant-1", id: "2", tenantId: "tenant-1" }),
+      ]);
+    });
+
+    it("treats empty bulk index input as a deterministic no-op", async () => {
+      await engine.bulkIndex("products", []);
+
+      expect(mocks.indexMock.addDocuments).not.toHaveBeenCalled();
+      expect(mocks.clientMock.waitForTask).not.toHaveBeenCalled();
+    });
+
+    it("rejects invalid index and document identifiers", async () => {
+      await expect(engine.indexDocument("", { id: "1", tenantId: "tenant-1" })).rejects.toThrow(
+        MeilisearchInvalidRequestProblem,
+      );
+      await expect(
+        engine.indexDocument("products", { id: "", tenantId: "tenant-1" }),
+      ).rejects.toThrow(MeilisearchInvalidRequestProblem);
     });
   });
 
-  describe("createIndex", () => {
-    it("should create index and update settings with _tenantId filterable", async () => {
-      await engine.createIndex({ name: "new-index", filterableFields: ["category"] });
+  describe("deleteDocument", () => {
+    it("deletes by tenant-bound filter and escapes tenant and document ids", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue('tenant-"one"\\x');
 
-      expect(mocks.clientMock.createIndex).toHaveBeenCalledWith("new-index", { primaryKey: "id" });
-      expect(mocks.indexMock.updateSettings).toHaveBeenCalledWith(
-        expect.objectContaining({
-          filterableAttributes: expect.arrayContaining(["_tenantId", "category"]),
-        }),
-      );
+      await engine.deleteDocument("index", 'doc-"id"\\x');
+
+      expect(mocks.indexMock.deleteDocuments).toHaveBeenCalledWith({
+        filter: '_tenantId = "tenant-\\"one\\"\\\\x" AND id = "doc-\\"id\\"\\\\x"',
+      });
+      expect(mocks.clientMock.waitForTask).toHaveBeenCalledWith(2, {});
     });
   });
 
   describe("generateTenantToken", () => {
-    it("should generate tenant token using SDK", async () => {
-      const token = await engine.generateTenantToken("tenant-1");
-      expect(mocks.clientMock.generateTenantToken).toHaveBeenCalledWith(
-        options.tenantTokenOptions?.apiKeyUid,
-        {
-          "*": {
-            filter: `_tenantId = "tenant-1"`,
-          },
-        },
-        expect.anything(),
-      );
-      expect(token).toBe("token");
-    });
-
-    it("should escape tenant ids in tenant token filters", async () => {
-      await engine.generateTenantToken('tenant-"one"\\x');
+    it("generates tenant token using escaped tenant search rules", async () => {
+      const token = await engine.generateTenantToken('tenant-"one"\\x');
 
       expect(mocks.clientMock.generateTenantToken).toHaveBeenCalledWith(
         options.tenantTokenOptions?.apiKeyUid,
@@ -169,9 +379,10 @@ describe("MeilisearchEngine", () => {
         },
         expect.anything(),
       );
+      expect(token).toBe("token");
     });
 
-    it("should compute expiresAt when expiresIn is 0", async () => {
+    it("computes expiresAt when expiresIn is 0", async () => {
       const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
 
       const engineWithZeroExpiresIn = new MeilisearchEngine({
@@ -188,7 +399,7 @@ describe("MeilisearchEngine", () => {
         "uid",
         {
           "*": {
-            filter: `_tenantId = "tenant-1"`,
+            filter: '_tenantId = "tenant-1"',
           },
         },
         {
@@ -198,17 +409,99 @@ describe("MeilisearchEngine", () => {
 
       dateNowSpy.mockRestore();
     });
+
+    it("rejects missing token configuration and empty tenant ids", async () => {
+      const engineWithoutTokenConfig = new MeilisearchEngine({
+        apiKey: "masterKey",
+        host: "http://localhost:7700",
+      });
+
+      await expect(engineWithoutTokenConfig.generateTenantToken("tenant-1")).rejects.toMatchObject({
+        code: "search-meilisearch/tenant-token-not-configured",
+      });
+      await expect(engine.generateTenantToken("")).rejects.toThrow(
+        MeilisearchInvalidRequestProblem,
+      );
+    });
   });
 
-  describe("deleteDocument", () => {
-    it("should escape tenant and document ids in delete filters", async () => {
-      vi.spyOn(Context, "getTenantId").mockReturnValue('tenant-"one"\\x');
+  describe("upstream failure normalization", () => {
+    it("normalizes retryable upstream failures and redacts sensitive error details", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.indexMock.search.mockRejectedValue(
+        createUpstreamError(SECRET_RICH_ERROR_MESSAGE, {
+          code: "temporarily_unavailable",
+          status: 503,
+        }),
+      );
 
-      await engine.deleteDocument("index", 'doc-"id"\\x');
+      const problem = await expectProblem(
+        () => engine.search("products", { query: "croco" }),
+        MeilisearchRetryableUpstreamProblem,
+      );
 
-      expect(mocks.indexMock.deleteDocuments).toHaveBeenCalledWith({
-        filter: '_tenantId = "tenant-\\"one\\"\\\\x" AND id = "doc-\\"id\\"\\\\x"',
+      expect(problem.detail).toContain("search");
+      expect(problem.detail).not.toContain(SECRET_SAMPLE);
+      expect(problem.extensions).toMatchObject({
+        operation: "search",
+        retryable: true,
+        status: 503,
       });
+    });
+
+    it("normalizes terminal upstream failures", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.indexMock.search.mockRejectedValue(
+        createUpstreamError("invalid key", { code: "invalid_api_key", status: 401 }),
+      );
+
+      const problem = await expectProblem(
+        () => engine.search("products", { query: "croco" }),
+        MeilisearchTerminalUpstreamProblem,
+      );
+
+      expect(problem.extensions).toMatchObject({
+        operation: "search",
+        retryable: false,
+        status: 401,
+      });
+    });
+
+    it("normalizes index-not-found upstream failures", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.indexMock.search.mockRejectedValue(
+        createUpstreamError("index not found", { code: "index_not_found", status: 404 }),
+      );
+
+      await expectProblem(
+        () => engine.search("products", { query: "croco" }),
+        MeilisearchIndexNotFoundProblem,
+      );
+    });
+
+    it("normalizes failed async tasks through the same Problem taxonomy", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.clientMock.waitForTask.mockResolvedValueOnce({
+        error: { code: "index_not_found", message: "index not found" },
+        status: "failed",
+      });
+
+      await expectProblem(
+        () => engine.indexDocument("products", { id: "1", tenantId: "tenant-1" }),
+        MeilisearchIndexNotFoundProblem,
+      );
+    });
+
+    it("fails malformed async task responses while task waiting is enabled", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.indexMock.addDocuments.mockResolvedValueOnce({});
+
+      await expectProblem(
+        () => engine.indexDocument("products", { id: "1", tenantId: "tenant-1" }),
+        MeilisearchInvalidRequestProblem,
+      );
+
+      expect(mocks.clientMock.waitForTask).not.toHaveBeenCalled();
     });
   });
 });
