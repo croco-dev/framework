@@ -9,7 +9,7 @@ title: "OnboardingEvent"
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
 ***
 
@@ -21,7 +21,7 @@ title: "OnboardingEvent"
 
 ### stepId?
 
-> `optional` **stepId**: `string`
+> `optional` **stepId?**: `string`
 
 ***
 

@@ -15,31 +15,31 @@ title: "AuditableOptions"
 
 > **action**: `string`
 
----
+***
 
 ### includeResult?
 
 > `optional` **includeResult?**: `boolean`
 
----
+***
 
 ### payloadParam?
 
 > `optional` **payloadParam?**: `string`
 
----
+***
 
 ### resourceIdParam?
 
 > `optional` **resourceIdParam?**: `string`
 
----
+***
 
 ### resourceType
 
 > **resourceType**: `string`
 
----
+***
 
 ### throwOnFailure?
 

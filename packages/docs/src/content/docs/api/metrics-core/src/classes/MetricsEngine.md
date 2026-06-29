@@ -10,7 +10,6 @@ MetricsEngine - Facade service for all metrics calculations.
 ## Description
 
 Provides a unified interface for calculating SaaS metrics across multiple domains:
-
 - MRR (Monthly Recurring Revenue)
 - Retention (Churn, GRR, NRR)
 - Growth (Quick Ratio)
@@ -92,7 +91,7 @@ Number of active customers
 
 ARPA as Money value
 
----
+***
 
 ### calculateChurn()
 
@@ -116,7 +115,7 @@ ARPA as Money value
 
 `Promise`\<`number` \| `null`\>
 
----
+***
 
 ### calculateGRR()
 
@@ -146,7 +145,7 @@ MRR movement data for the period
 
 GRR as percentage (0-100), or null if starting MRR is zero
 
----
+***
 
 ### calculateLTV()
 
@@ -171,7 +170,7 @@ LTV calculation configuration
 
 LTV as Money value, or null if churn rate is 0 (infinite LTV)
 
----
+***
 
 ### calculateMRR()
 
@@ -197,7 +196,7 @@ Active subscriptions to calculate MRR from
 
 Total MRR as Money value
 
----
+***
 
 ### calculateNRR()
 
@@ -227,7 +226,7 @@ MRR movement data for the period
 
 NRR as percentage (can be >100%), or null if starting MRR is zero
 
----
+***
 
 ### calculateQuickRatio()
 
@@ -236,8 +235,7 @@ NRR as percentage (can be >100%), or null if starting MRR is zero
 Calculate Quick Ratio for a period.
 
 Quick Ratio measures how much new revenue is coming in compared to revenue leaving.
-
-- > 4: Excellent growth
+- >4: Excellent growth
 - 2-4: Healthy growth
 - 1-2: Moderate growth
 - <1: Declining (at risk)
@@ -256,7 +254,7 @@ MRR movement data for the period
 
 Quick Ratio, or null if denominator is zero
 
----
+***
 
 ### captureSnapshot()
 
@@ -288,7 +286,7 @@ Optional tenant ID
 
 `Promise`\<`void`\>
 
----
+***
 
 ### getCarryingCapacity()
 
@@ -310,7 +308,7 @@ Configuration for calculation
 
 User CC result, or null if churn rate is 0 (infinite capacity)
 
----
+***
 
 ### getMRRMovement()
 
@@ -350,7 +348,7 @@ New plan amount
 
 MRR movement type
 
----
+***
 
 ### simulateCapacity()
 

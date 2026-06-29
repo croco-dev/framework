@@ -15,25 +15,25 @@ GraphQL server and schema compilation option types.
 
 > `optional` **autoDiscover?**: `boolean`
 
----
+***
 
 ### container?
 
 > `optional` **container?**: [`ContainerType`](/api/transports-graphql/src/type-aliases/containertype/)
 
----
+***
 
 ### emitSchemaFile?
 
 > `optional` **emitSchemaFile?**: `BuildSchemaOptions`\[`"emitSchemaFile"`\]
 
----
+***
 
 ### resolvers?
 
 > `optional` **resolvers?**: `Function`[]
 
----
+***
 
 ### validate?
 

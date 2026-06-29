@@ -15,30 +15,30 @@ Clerk 웹훅과 인증 요청에 필요한 공개 타입입니다.
 
 ## Properties
 
-### created_at?
+### created\_at?
 
-> `optional` **created_at?**: `number`
+> `optional` **created\_at?**: `number`
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### name
 
 > **name**: `string`
 
----
+***
 
 ### slug
 
 > **slug**: `string`
 
----
+***
 
-### updated_at?
+### updated\_at?
 
-> `optional` **updated_at?**: `number`
+> `optional` **updated\_at?**: `number`

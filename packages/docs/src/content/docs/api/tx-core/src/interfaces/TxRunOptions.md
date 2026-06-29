@@ -19,13 +19,13 @@ title: "TxRunOptions"
 
 > `optional` **nesting?**: [`NestingStrategy`](/api/tx-core/src/type-aliases/nestingstrategy/)
 
----
+***
 
 ### options?
 
 > `optional` **options?**: `TOptions`
 
----
+***
 
 ### timeout?
 

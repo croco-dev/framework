@@ -15,7 +15,7 @@ title: "OnboardingDefinition"
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
 ***
 

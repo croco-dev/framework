@@ -5,4 +5,4 @@ prev: false
 title: "HealthCheckStatus"
 ---
 
-> **HealthCheckStatus** = `HealthStatus`
+> **HealthCheckStatus** = [`HealthStatus`](/api/health-core/src/type-aliases/healthstatus/)

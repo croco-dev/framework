@@ -19,13 +19,13 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`content`](/api/notifications-core/src/interfaces/notificationpayload/#content)
 
----
+***
 
 ### idempotencyKey?
 
 > `optional` **idempotencyKey?**: `string`
 
----
+***
 
 ### metadata?
 
@@ -35,13 +35,13 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`metadata`](/api/notifications-core/src/interfaces/notificationpayload/#metadata)
 
----
+***
 
 ### providerName
 
 > **providerName**: `string`
 
----
+***
 
 ### subject?
 
@@ -51,7 +51,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`subject`](/api/notifications-core/src/interfaces/notificationpayload/#subject)
 
----
+***
 
 ### templateId?
 
@@ -61,7 +61,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`templateId`](/api/notifications-core/src/interfaces/notificationpayload/#templateid)
 
----
+***
 
 ### to
 
@@ -71,7 +71,7 @@ title: "NotificationJobPayload"
 
 [`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`to`](/api/notifications-core/src/interfaces/notificationpayload/#to)
 
----
+***
 
 ### variables?
 

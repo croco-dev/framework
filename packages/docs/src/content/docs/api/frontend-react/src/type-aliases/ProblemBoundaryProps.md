@@ -13,13 +13,13 @@ title: "ProblemBoundaryProps"
 
 > `readonly` `optional` **children?**: `ReactNode`
 
----
+***
 
 ### fallback?
 
 > `readonly` `optional` **fallback?**: [`ProblemBoundaryFallback`](/api/frontend-react/src/type-aliases/problemboundaryfallback/)
 
----
+***
 
 ### onProblem?
 
@@ -43,7 +43,7 @@ title: "ProblemBoundaryProps"
 
 `void`
 
----
+***
 
 ### onReset?
 
@@ -59,13 +59,13 @@ title: "ProblemBoundaryProps"
 
 `void`
 
----
+***
 
 ### recoveryActions?
 
 > `readonly` `optional` **recoveryActions?**: readonly [`ProblemRecoveryAction`](/api/frontend-react/src/type-aliases/problemrecoveryaction/)[]
 
----
+***
 
 ### resetKeys?
 

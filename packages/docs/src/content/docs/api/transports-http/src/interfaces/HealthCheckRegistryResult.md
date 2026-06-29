@@ -5,26 +5,36 @@ prev: false
 title: "HealthCheckRegistryResult"
 ---
 
+Configuration options for the health check service.
+
+## Example
+
+```typescript
+const options: HealthCheckServiceOptions = {
+  timeout: 10000, // 10 seconds
+};
+```
+
 ## Extends
 
-- `HealthCheckResult`
+- [`HealthCheckResult`](/api/health-core/src/type-aliases/healthcheckresult/)
 
 ## Properties
 
 ### results
 
-> **results**: `HealthIndicatorResult`[]
+> **results**: [`HealthIndicatorResult`](/api/health-core/src/type-aliases/healthindicatorresult/)[]
 
 #### Inherited from
 
-`CoreHealthCheckResult.results`
+`HealthCheckResult.results`
 
 ***
 
 ### status
 
-> **status**: `HealthStatus`
+> **status**: [`HealthStatus`](/api/health-core/src/type-aliases/healthstatus/)
 
 #### Inherited from
 
-`CoreHealthCheckResult.status`
+`HealthCheckResult.status`

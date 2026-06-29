@@ -497,44 +497,44 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 
 | 패키지                                 | 그룹         | 디렉터리                                 | 문서               |
 | -------------------------------------- | ------------ | ---------------------------------------- | ------------------ |
-| `@croco/cache-core`                    | Core         | `packages/cache-core`                    | README, tests      |
+| `@croco/cache-core`                    | Core         | `packages/cache-core`                    | README, API, tests |
 | `@croco/diagnostics-core`              | Core         | `packages/diagnostics-core`              | README, API, tests |
 | `@croco/events-inmemory`               | Core         | `packages/events-inmemory`               | README, API, tests |
-| `@croco/events-tx`                     | Core         | `packages/events-tx`                     | README, tests      |
-| `@croco/framework-config`              | Core         | `packages/framework-config`              | README, tests      |
-| `@croco/framework-logger`              | Core         | `packages/framework-logger`              | README, tests      |
-| `@croco/framework-module`              | Core         | `packages/framework-module`              | README, tests      |
+| `@croco/events-tx`                     | Core         | `packages/events-tx`                     | README, API, tests |
+| `@croco/framework-config`              | Core         | `packages/framework-config`              | README, API, tests |
+| `@croco/framework-logger`              | Core         | `packages/framework-logger`              | README, API, tests |
+| `@croco/framework-module`              | Core         | `packages/framework-module`              | README, API, tests |
 | `@croco/framework-preset`              | Core         | `packages/framework-preset`              | README, API, tests |
 | `@croco/framework-routes`              | Core         | `packages/framework-routes`              | README, API, tests |
-| `@croco/gid-core`                      | Core         | `packages/gid-core`                      | README, tests      |
-| `@croco/health-core`                   | Core         | `packages/health-core`                   | README, tests      |
+| `@croco/gid-core`                      | Core         | `packages/gid-core`                      | README, API, tests |
+| `@croco/health-core`                   | Core         | `packages/health-core`                   | README, API, tests |
 | `@croco/idempotency-core`              | Core         | `packages/idempotency-core`              | README, API, tests |
-| `@croco/pagination-core`               | Core         | `packages/pagination-core`               | README, tests      |
-| `@croco/tenant-core`                   | Core         | `packages/tenant-core`                   | README, tests      |
+| `@croco/pagination-core`               | Core         | `packages/pagination-core`               | README, API, tests |
+| `@croco/tenant-core`                   | Core         | `packages/tenant-core`                   | README, API, tests |
 | `@croco/webhooks-core`                 | Core         | `packages/webhooks-core`                 | README, API, tests |
-| `@croco/access-core`                   | Domain       | `packages/access-core`                   | README, tests      |
-| `@croco/admin-core`                    | Domain       | `packages/admin-core`                    | README, tests      |
+| `@croco/access-core`                   | Domain       | `packages/access-core`                   | README, API, tests |
+| `@croco/admin-core`                    | Domain       | `packages/admin-core`                    | README, API, tests |
 | `@croco/admin-ops`                     | Domain       | `packages/admin-ops`                     | README, API, tests |
-| `@croco/customer-health-core`          | Domain       | `packages/customer-health-core`          | README, tests      |
-| `@croco/entitlements-core`             | Domain       | `packages/entitlements-core`             | README, tests      |
-| `@croco/execution-core`                | Domain       | `packages/execution-core`                | README, tests      |
+| `@croco/customer-health-core`          | Domain       | `packages/customer-health-core`          | README, API, tests |
+| `@croco/entitlements-core`             | Domain       | `packages/entitlements-core`             | README, API, tests |
+| `@croco/execution-core`                | Domain       | `packages/execution-core`                | README, API, tests |
 | `@croco/features-core`                 | Domain       | `packages/features-core`                 | README, API, tests |
-| `@croco/governance-core`               | Domain       | `packages/governance-core`               | README, tests      |
-| `@croco/impersonation-core`            | Domain       | `packages/impersonation-core`            | README, tests      |
-| `@croco/lifecycle-core`                | Domain       | `packages/lifecycle-core`                | README, tests      |
+| `@croco/governance-core`               | Domain       | `packages/governance-core`               | README, API, tests |
+| `@croco/impersonation-core`            | Domain       | `packages/impersonation-core`            | README, API, tests |
+| `@croco/lifecycle-core`                | Domain       | `packages/lifecycle-core`                | README, API, tests |
 | `@croco/notifications-core`            | Domain       | `packages/notifications-core`            | README, API, tests |
 | `@croco/onboarding-core`               | Domain       | `packages/onboarding-core`               | README, API, tests |
 | `@croco/storage-core`                  | Domain       | `packages/storage-core`                  | README, API, tests |
-| `@croco/tasks-core`                    | Domain       | `packages/tasks-core`                    | README, tests      |
-| `@croco/triggers-core`                 | Domain       | `packages/triggers-core`                 | README, tests      |
-| `@croco/workflow-core`                 | Domain       | `packages/workflow-core`                 | README, tests      |
-| `@croco/features-posthog`              | Integration  | `packages/features-posthog`              | README, tests      |
+| `@croco/tasks-core`                    | Domain       | `packages/tasks-core`                    | README, API, tests |
+| `@croco/triggers-core`                 | Domain       | `packages/triggers-core`                 | README, API, tests |
+| `@croco/workflow-core`                 | Domain       | `packages/workflow-core`                 | README, API, tests |
+| `@croco/features-posthog`              | Integration  | `packages/features-posthog`              | README, API, tests |
 | `@croco/integrations-posthog`          | Integration  | `packages/integrations-posthog`          | README, API, tests |
 | `@croco/frontend-cloudflare`           | Presentation | `packages/frontend-cloudflare`           | README, API, tests |
 | `@croco/frontend-react`                | Presentation | `packages/frontend-react`                | README, API, tests |
 | `@croco/frontend-vite`                 | Presentation | `packages/frontend-vite`                 | README, API, tests |
-| `@croco/meta-vite`                     | Presentation | `packages/meta-vite`                     | README, tests      |
-| `@croco/presentation-preset`           | Presentation | `packages/presentation-preset`           | README, tests      |
+| `@croco/meta-vite`                     | Presentation | `packages/meta-vite`                     | README, API, tests |
+| `@croco/presentation-preset`           | Presentation | `packages/presentation-preset`           | README, API, tests |
 | `@croco/openapi-spec`                  | Protocol     | `packages/openapi-spec`                  | README, API, tests |
 | `@croco/protocols-core`                | Protocol     | `packages/protocols-core`                | README, API, tests |
 | `@croco/protocols-graphql`             | Protocol     | `packages/protocols-graphql`             | README, API, tests |
@@ -543,7 +543,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/access-drizzle`                | Provider     | `packages/access-drizzle`                | README, API, tests |
 | `@croco/audit-drizzle`                 | Provider     | `packages/audit-drizzle`                 | README, API, tests |
 | `@croco/auth-drizzle`                  | Provider     | `packages/auth-drizzle`                  | README, API, tests |
-| `@croco/billing-polar`                 | Provider     | `packages/billing-polar`                 | README, tests      |
+| `@croco/billing-polar`                 | Provider     | `packages/billing-polar`                 | README, API, tests |
 | `@croco/customer-health-drizzle`       | Provider     | `packages/customer-health-drizzle`       | README, API, tests |
 | `@croco/entitlements-drizzle`          | Provider     | `packages/entitlements-drizzle`          | README, API, tests |
 | `@croco/execution-drizzle`             | Provider     | `packages/execution-drizzle`             | README, API, tests |
@@ -554,11 +554,11 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/onboarding-drizzle`            | Provider     | `packages/onboarding-drizzle`            | README, API, tests |
 | `@croco/search-drizzle`                | Provider     | `packages/search-drizzle`                | README, API, tests |
 | `@croco/storage-cloudinary`            | Provider     | `packages/storage-cloudinary`            | README, API, tests |
-| `@croco/storage-r2`                    | Provider     | `packages/storage-r2`                    | README, tests      |
-| `@croco/architecture-policy`           | Tooling      | `packages/architecture-policy`           | README, tests      |
-| `@croco/cli`                           | Tooling      | `packages/cli`                           | README, tests      |
+| `@croco/storage-r2`                    | Provider     | `packages/storage-r2`                    | README, API, tests |
+| `@croco/architecture-policy`           | Tooling      | `packages/architecture-policy`           | README, API, tests |
+| `@croco/cli`                           | Tooling      | `packages/cli`                           | README, API, tests |
 | `create-croco-app`                     | Tooling      | `packages/create-croco-app`              | README, API, tests |
-| `@croco/esbuild-plugin`                | Tooling      | `packages/esbuild-plugin`                | README, tests      |
+| `@croco/esbuild-plugin`                | Tooling      | `packages/esbuild-plugin`                | README, API, tests |
 | `@croco/preset-cloudflare`             | Tooling      | `packages/preset-cloudflare`             | README, API, tests |
 | `@croco/preset-lambda`                 | Tooling      | `packages/preset-lambda`                 | README, API, tests |
 | `@croco/preset-node`                   | Tooling      | `packages/preset-node`                   | README, API, tests |
@@ -571,19 +571,19 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | 패키지                        | 그룹         | 디렉터리                        | 문서               |
 | ----------------------------- | ------------ | ------------------------------- | ------------------ |
 | `@croco/analytics-core`       | Domain       | `packages/analytics-core`       | README, API, tests |
-| `@croco/batch-core`           | Domain       | `packages/batch-core`           | README, tests      |
-| `@croco/analytics-posthog`    | Integration  | `packages/analytics-posthog`    | README, tests      |
-| `@croco/admin-react`          | Presentation | `packages/admin-react`          | README, tests      |
-| `@croco/frontend-problems`    | Presentation | `packages/frontend-problems`    | README, tests      |
+| `@croco/batch-core`           | Domain       | `packages/batch-core`           | README, API, tests |
+| `@croco/analytics-posthog`    | Integration  | `packages/analytics-posthog`    | README, API, tests |
+| `@croco/admin-react`          | Presentation | `packages/admin-react`          | README, API, tests |
+| `@croco/frontend-problems`    | Presentation | `packages/frontend-problems`    | README, API, tests |
 | `@croco/admin-generated`      | Protocol     | `packages/admin-generated`      | README, API, tests |
 | `@croco/auth-better-auth`     | Provider     | `packages/auth-better-auth`     | README, API, tests |
 | `@croco/auth-clerk`           | Provider     | `packages/auth-clerk`           | README, API, tests |
 | `@croco/batch-qstash`         | Provider     | `packages/batch-qstash`         | README, API, tests |
 | `@croco/metering-upstash`     | Provider     | `packages/metering-upstash`     | README, API, tests |
-| `@croco/metrics-billing`      | Provider     | `packages/metrics-billing`      | README, tests      |
-| `@croco/notifications-resend` | Provider     | `packages/notifications-resend` | README, tests      |
+| `@croco/metrics-billing`      | Provider     | `packages/metrics-billing`      | README, API, tests |
+| `@croco/notifications-resend` | Provider     | `packages/notifications-resend` | README, API, tests |
 | `@croco/ratelimit-upstash`    | Provider     | `packages/ratelimit-upstash`    | README, API, tests |
-| `@croco/search-meilisearch`   | Provider     | `packages/search-meilisearch`   | README, tests      |
+| `@croco/search-meilisearch`   | Provider     | `packages/search-meilisearch`   | README, API, tests |
 | `@croco/storage-cloudflare`   | Provider     | `packages/storage-cloudflare`   | README, API, tests |
 | `@croco/tasks-qstash`         | Provider     | `packages/tasks-qstash`         | README, API, tests |
 | `@croco/triggers-qstash`      | Provider     | `packages/triggers-qstash`      | README, API, tests |

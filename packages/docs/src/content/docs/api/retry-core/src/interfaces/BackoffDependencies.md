@@ -19,7 +19,7 @@ Random function (default: Math.random)
 
 `number`
 
----
+***
 
 ### sleep?
 

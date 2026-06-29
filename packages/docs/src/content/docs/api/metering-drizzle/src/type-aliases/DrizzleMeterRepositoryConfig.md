@@ -11,9 +11,9 @@ title: "DrizzleMeterRepositoryConfig"
 
 ## Properties
 
-### deserializeJson()?
+### deserializeJson?
 
-> `optional` **deserializeJson**: (`value`) => `unknown`
+> `optional` **deserializeJson?**: (`value`) => `unknown`
 
 #### Parameters
 
@@ -39,9 +39,9 @@ title: "DrizzleMeterRepositoryConfig"
 
 ***
 
-### serializeJson()?
+### serializeJson?
 
-> `optional` **serializeJson**: (`value`) => `string`
+> `optional` **serializeJson?**: (`value`) => `string`
 
 #### Parameters
 

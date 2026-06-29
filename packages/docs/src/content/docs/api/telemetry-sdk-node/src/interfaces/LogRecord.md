@@ -13,8 +13,8 @@ Structured logging interface for consistent log output.
 ```typescript
 logger.emit({
   severity: LogSeverity.INFO,
-  body: "User logged in",
-  attributes: { userId: "123" },
+  body: 'User logged in',
+  attributes: { userId: '123' }
 });
 ```
 
@@ -26,7 +26,7 @@ logger.emit({
 
 Additional attributes associated with the log
 
----
+***
 
 ### body
 
@@ -34,7 +34,7 @@ Additional attributes associated with the log
 
 The log message body
 
----
+***
 
 ### observedTimestamp?
 
@@ -42,7 +42,7 @@ The log message body
 
 The observed timestamp (when the event was observed)
 
----
+***
 
 ### severity?
 
@@ -50,7 +50,7 @@ The observed timestamp (when the event was observed)
 
 Severity level of the log
 
----
+***
 
 ### severityText?
 
@@ -58,7 +58,7 @@ Severity level of the log
 
 Severity text (e.g., 'INFO', 'ERROR')
 
----
+***
 
 ### timestamp?
 
@@ -66,7 +66,7 @@ Severity text (e.g., 'INFO', 'ERROR')
 
 The timestamp when the log was emitted
 
----
+***
 
 ### traceContext?
 

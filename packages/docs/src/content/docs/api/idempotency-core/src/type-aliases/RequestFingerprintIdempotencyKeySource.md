@@ -13,43 +13,43 @@ title: "RequestFingerprintIdempotencyKeySource"
 
 > `readonly` **bodyFingerprint**: `string`
 
----
+***
 
 ### fingerprint?
 
 > `readonly` `optional` **fingerprint?**: `string`
 
----
+***
 
 ### headerFingerprint?
 
 > `readonly` `optional` **headerFingerprint?**: `string`
 
----
+***
 
 ### key?
 
 > `readonly` `optional` **key?**: `string`
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"request-fingerprint"`
 
----
+***
 
 ### method
 
 > `readonly` **method**: `string`
 
----
+***
 
 ### path
 
 > `readonly` **path**: `string`
 
----
+***
 
 ### queryFingerprint?
 

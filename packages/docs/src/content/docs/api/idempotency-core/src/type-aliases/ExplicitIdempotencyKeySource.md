@@ -13,13 +13,13 @@ title: "ExplicitIdempotencyKeySource"
 
 > `readonly` `optional` **fingerprint?**: `string`
 
----
+***
 
 ### key
 
 > `readonly` **key**: `string`
 
----
+***
 
 ### kind
 

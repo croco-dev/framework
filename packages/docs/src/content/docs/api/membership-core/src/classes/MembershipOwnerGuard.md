@@ -19,10 +19,10 @@ title: "MembershipOwnerGuard"
 const guard = new MembershipOwnerGuard(store);
 
 await guard.validateOwnerMutation({
-  tenantId: "tenant-1",
-  userId: "user-1",
-  currentRole: "owner",
-  operation: "remove",
+  tenantId: 'tenant-1',
+  userId: 'user-1',
+  currentRole: 'owner',
+  operation: 'remove'
 });
 ```
 
@@ -58,7 +58,7 @@ await guard.validateOwnerMutation({
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
----
+***
 
 ### isLastOwner()
 
@@ -82,7 +82,7 @@ await guard.validateOwnerMutation({
 
 `Promise`\<`boolean`\>
 
----
+***
 
 ### validateLastOwner()
 
@@ -106,7 +106,7 @@ await guard.validateOwnerMutation({
 
 `Promise`\<`void`\>
 
----
+***
 
 ### validateOwnerMutation()
 

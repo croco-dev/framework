@@ -13,6 +13,10 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ## Extended by
 
+- [`ArchitecturePolicyManifestShapeProblem`](/api/architecture-policy/src/classes/architecturepolicymanifestshapeproblem/)
+- [`ArchitecturePolicyManifestJsonParseProblem`](/api/architecture-policy/src/classes/architecturepolicymanifestjsonparseproblem/)
+- [`ArchitecturePolicyManifestSchemaVersionProblem`](/api/architecture-policy/src/classes/architecturepolicymanifestschemaversionproblem/)
+- [`ArchitecturePolicyPackageJsonParseProblem`](/api/architecture-policy/src/classes/architecturepolicypackagejsonparseproblem/)
 - [`BetterAuthAuthenticationProblem`](/api/auth-better-auth/src/classes/betterauthauthenticationproblem/)
 - [`BetterAuthNotInitializedProblem`](/api/auth-better-auth/src/classes/betterauthnotinitializedproblem/)
 - [`BetterAuthSessionNotFoundProblem`](/api/auth-better-auth/src/classes/betterauthsessionnotfoundproblem/)
@@ -24,6 +28,14 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`QStashBatchConfigProblem`](/api/batch-qstash/src/classes/qstashbatchconfigproblem/)
 - [`QStashBatchValidationProblem`](/api/batch-qstash/src/classes/qstashbatchvalidationproblem/)
 - [`QStashBatchPublishProblem`](/api/batch-qstash/src/classes/qstashbatchpublishproblem/)
+- [`ConfigSchemaNotFoundProblem`](/api/framework-config/src/classes/configschemanotfoundproblem/)
+- [`ConfigValidationProblem`](/api/framework-config/src/classes/configvalidationproblem/)
+- [`InvalidBooleanEnvProblem`](/api/framework-config/src/classes/invalidbooleanenvproblem/)
+- [`SelfImpersonationProblem`](/api/impersonation-core/src/classes/selfimpersonationproblem/)
+- [`NestedImpersonationProblem`](/api/impersonation-core/src/classes/nestedimpersonationproblem/)
+- [`ImpersonationReasonRequiredProblem`](/api/impersonation-core/src/classes/impersonationreasonrequiredproblem/)
+- [`BlockedDuringImpersonationProblem`](/api/impersonation-core/src/classes/blockedduringimpersonationproblem/)
+- [`ImpersonationSessionNotFoundProblem`](/api/impersonation-core/src/classes/impersonationsessionnotfoundproblem/)
 - [`NotificationProviderNotConfiguredProblem`](/api/notifications-core/src/classes/notificationprovidernotconfiguredproblem/)
 - [`NotificationProviderNotRegisteredProblem`](/api/notifications-core/src/classes/notificationprovidernotregisteredproblem/)
 - [`NotificationProviderAlreadyRegisteredProblem`](/api/notifications-core/src/classes/notificationprovideralreadyregisteredproblem/)
@@ -33,6 +45,9 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`NotificationSendMaxAttemptsInvalidProblem`](/api/notifications-core/src/classes/notificationsendmaxattemptsinvalidproblem/)
 - [`NotificationDeliveryFailedProblem`](/api/notifications-core/src/classes/notificationdeliveryfailedproblem/)
 - [`InvalidSearchRowProblem`](/api/search-drizzle/src/classes/invalidsearchrowproblem/)
+- [`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/)
+- [`ForbiddenProblem`](/api/access-core/src/classes/forbiddenproblem/)
+- [`AdminResourceValidationProblem`](/api/admin-core/src/classes/adminresourcevalidationproblem/)
 - [`AdminGeneratedContractProblem`](/api/admin-generated/src/classes/admingeneratedcontractproblem/)
 - [`AuditableDecoratorProblem`](/api/audit-core/src/classes/auditabledecoratorproblem/)
 - [`ClerkExternalServiceProblem`](/api/auth-clerk/src/classes/clerkexternalserviceproblem/)
@@ -58,8 +73,26 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`MoneyDivisionByZeroProblem`](/api/billing-core/src/classes/moneydivisionbyzeroproblem/)
 - [`SubscriptionNotFoundProblem`](/api/billing-core/src/classes/subscriptionnotfoundproblem/)
 - [`WebhookAlreadyProcessedProblem`](/api/billing-core/src/classes/webhookalreadyprocessedproblem/)
+- [`BillingStatusMappingProblem`](/api/billing-polar/src/classes/billingstatusmappingproblem/)
+- [`PolarCustomerNotFoundProblem`](/api/billing-polar/src/classes/polarcustomernotfoundproblem/)
+- [`PolarMissingConfigProblem`](/api/billing-polar/src/classes/polarmissingconfigproblem/)
+- [`PolarRetryableUpstreamProblem`](/api/billing-polar/src/classes/polarretryableupstreamproblem/)
+- [`PolarSubscriptionNotFoundProblem`](/api/billing-polar/src/classes/polarsubscriptionnotfoundproblem/)
+- [`PolarTerminalUpstreamProblem`](/api/billing-polar/src/classes/polarterminalupstreamproblem/)
+- [`PolarValidationProblem`](/api/billing-polar/src/classes/polarvalidationproblem/)
+- [`WebhookProcessingProblem`](/api/billing-polar/src/classes/webhookprocessingproblem/)
+- [`WebhookValidationProblem`](/api/billing-polar/src/classes/webhookvalidationproblem/)
+- [`CacheDecoratorConfigProblem`](/api/cache-core/src/classes/cachedecoratorconfigproblem/)
+- [`HealthScoreNotFoundProblem`](/api/customer-health-core/src/classes/healthscorenotfoundproblem/)
 - [`BatchResultLengthMismatchProblem`](/api/dataloader-core/src/classes/batchresultlengthmismatchproblem/)
 - [`DuplicateDiagnosticsProviderProblem`](/api/diagnostics-core/src/classes/duplicatediagnosticsproviderproblem/)
+- [`EntitlementDeniedProblem`](/api/entitlements-core/src/classes/entitlementdeniedproblem/)
+- [`EntitlementInactiveSubscriptionProblem`](/api/entitlements-core/src/classes/entitlementinactivesubscriptionproblem/)
+- [`EntitlementMissingPlanProblem`](/api/entitlements-core/src/classes/entitlementmissingplanproblem/)
+- [`EntitlementNotFoundProblem`](/api/entitlements-core/src/classes/entitlementnotfoundproblem/)
+- [`EntitlementProviderUnavailableProblem`](/api/entitlements-core/src/classes/entitlementproviderunavailableproblem/)
+- [`EntitlementQuotaExceededProblem`](/api/entitlements-core/src/classes/entitlementquotaexceededproblem/)
+- [`EntitlementRequirementProblem`](/api/entitlements-core/src/classes/entitlementrequirementproblem/)
 - [`DuplicateEventFieldProblem`](/api/events-core/src/classes/duplicateeventfieldproblem/)
 - [`DuplicateEventNameProblem`](/api/events-core/src/classes/duplicateeventnameproblem/)
 - [`EventAfterCommitRequiresActiveTransactionProblem`](/api/events-core/src/classes/eventaftercommitrequiresactivetransactionproblem/)
@@ -71,6 +104,11 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`EventPublishFailedError`](/api/events-inmemory/src/classes/eventpublishfailederror/)
 - [`BackpressureExceededProblem`](/api/events-inmemory/src/classes/backpressureexceededproblem/)
 - [`BackpressureTimeoutProblem`](/api/events-inmemory/src/classes/backpressuretimeoutproblem/)
+- [`OutboxPublishExhaustedProblem`](/api/events-tx/src/classes/outboxpublishexhaustedproblem/)
+- [`OutboxStorageProblem`](/api/events-tx/src/classes/outboxstorageproblem/)
+- [`OutboxTransactionRequiredProblem`](/api/events-tx/src/classes/outboxtransactionrequiredproblem/)
+- [`TransactionStateProblem`](/api/events-tx/src/classes/transactionstateproblem/)
+- [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
 - [`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/)
 - [`ContainerScopeMismatchProblem`](/api/framework-context/src/classes/containerscopemismatchproblem/)
 - [`CircularDependencyProblem`](/api/framework-context/src/classes/circulardependencyproblem/)
@@ -81,7 +119,17 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`PipelineGraphProblem`](/api/framework-context/src/classes/pipelinegraphproblem/)
 - [`ShutdownConfigurationConflictProblem`](/api/framework-context/src/classes/shutdownconfigurationconflictproblem/)
 - [`ShutdownTimeoutProblem`](/api/framework-context/src/classes/shutdowntimeoutproblem/)
+- [`InvalidModuleDefinitionProblem`](/api/framework-module/src/classes/invalidmoduledefinitionproblem/)
+- [`ModuleCircularDependencyProblem`](/api/framework-module/src/classes/modulecirculardependencyproblem/)
+- [`ModuleLifecycleProblem`](/api/framework-module/src/classes/modulelifecycleproblem/)
+- [`ModuleProviderVisibilityProblem`](/api/framework-module/src/classes/moduleprovidervisibilityproblem/)
 - [`MissingCloudflareVitePluginProblem`](/api/frontend-vite/src/classes/missingcloudflarevitepluginproblem/)
+- [`InvalidIdPrefixProblem`](/api/gid-core/src/classes/invalididprefixproblem/)
+- [`IdPrefixProblem`](/api/gid-core/src/classes/idprefixproblem/)
+- [`DataGovernanceValidationProblem`](/api/governance-core/src/classes/datagovernancevalidationproblem/)
+- [`RetentionPolicyViolationProblem`](/api/governance-core/src/classes/retentionpolicyviolationproblem/)
+- [`UnsupportedDataDeleteProblem`](/api/governance-core/src/classes/unsupporteddatadeleteproblem/)
+- [`UnsupportedDataExportProblem`](/api/governance-core/src/classes/unsupporteddataexportproblem/)
 - [`PostHogConfigProblem`](/api/integrations-posthog/src/classes/posthogconfigproblem/)
 - [`BatchSizeExceededProblem`](/api/invitation-core/src/classes/batchsizeexceededproblem/)
 - [`InvalidAutoJoinRoleProblem`](/api/invitation-core/src/classes/invalidautojoinroleproblem/)
@@ -93,6 +141,9 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvitationNotFoundProblem`](/api/invitation-core/src/classes/invitationnotfoundproblem/)
 - [`DuplicateInvitationProblem`](/api/invitation-core/src/classes/duplicateinvitationproblem/)
 - [`InvitationRateLimitExceededProblem`](/api/invitation-core/src/classes/invitationratelimitexceededproblem/)
+- [`DuplicateLifecycleRuleProblem`](/api/lifecycle-core/src/classes/duplicatelifecycleruleproblem/)
+- [`LifecycleActionAdapterProblem`](/api/lifecycle-core/src/classes/lifecycleactionadapterproblem/)
+- [`LifecycleRuleDefinitionProblem`](/api/lifecycle-core/src/classes/lifecycleruledefinitionproblem/)
 - [`InvalidLlmPromptProblem`](/api/llm-core/src/classes/invalidllmpromptproblem/)
 - [`InvalidLlmResponseProblem`](/api/llm-core/src/classes/invalidllmresponseproblem/)
 - [`LlmProblem`](/api/llm-core/src/classes/llmproblem/)
@@ -127,6 +178,9 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`OwnershipTransferRequiredProblem`](/api/membership-core/src/classes/ownershiptransferrequiredproblem/)
 - [`RoleHierarchyViolationProblem`](/api/membership-core/src/classes/rolehierarchyviolationproblem/)
 - [`SeatLimitExceededProblem`](/api/membership-core/src/classes/seatlimitexceededproblem/)
+- [`ServerActionInvalidPathProblem`](/api/meta-vite/src/classes/serveractioninvalidpathproblem/)
+- [`ServerActionNotFoundProblem`](/api/meta-vite/src/classes/serveractionnotfoundproblem/)
+- [`ServerActionValidationProblem`](/api/meta-vite/src/classes/serveractionvalidationproblem/)
 - [`AtomicQuotaNotSupportedProblem`](/api/metering-core/src/classes/atomicquotanotsupportedproblem/)
 - [`DuplicateRecordProblem`](/api/metering-core/src/classes/duplicaterecordproblem/)
 - [`InvalidMeterProblem`](/api/metering-core/src/classes/invalidmeterproblem/)
@@ -147,9 +201,12 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`MissingUpFunctionProblem`](/api/migration-runner/src/classes/missingupfunctionproblem/)
 - [`UnsupportedDialectProblem`](/api/migration-runner/src/classes/unsupporteddialectproblem/)
 - [`UnsupportedMigrationQueryResultProblem`](/api/migration-runner/src/classes/unsupportedmigrationqueryresultproblem/)
+- [`ResendNotificationProblem`](/api/notifications-resend/src/classes/resendnotificationproblem/)
 - [`OnboardingContextRequiredProblem`](/api/onboarding-core/src/classes/onboardingcontextrequiredproblem/)
 - [`OnboardingDefinitionNotFoundProblem`](/api/onboarding-core/src/classes/onboardingdefinitionnotfoundproblem/)
 - [`OnboardingStepNotFoundProblem`](/api/onboarding-core/src/classes/onboardingstepnotfoundproblem/)
+- [`ConflictingPaginationProblem`](/api/pagination-core/src/classes/conflictingpaginationproblem/)
+- [`InvalidCursorProblem`](/api/pagination-core/src/classes/invalidcursorproblem/)
 - [`ProblemRegistryValidationProblem`](/api/problems-core/src/classes/problemregistryvalidationproblem/)
 - [`ContractGraphDiagnosticError`](/api/protocols-core/src/classes/contractgraphdiagnosticerror/)
 - [`GraphQLAuthenticationProblem`](/api/protocols-graphql/src/classes/graphqlauthenticationproblem/)
@@ -181,6 +238,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`SearchCapabilityUnavailableProblem`](/api/search-core/src/classes/searchcapabilityunavailableproblem/)
 - [`StrategyUnavailableProblem`](/api/search-core/src/classes/strategyunavailableproblem/)
 - [`TransformNotFoundProblem`](/api/search-core/src/classes/transformnotfoundproblem/)
+- [`TenantTokenNotConfiguredProblem`](/api/search-meilisearch/src/classes/tenanttokennotconfiguredproblem/)
 - [`CloudflareImagesMissingConfigProblem`](/api/storage-cloudflare/src/classes/cloudflareimagesmissingconfigproblem/)
 - [`CloudflareImagesRetryableUpstreamProblem`](/api/storage-cloudflare/src/classes/cloudflareimagesretryableupstreamproblem/)
 - [`CloudflareImagesTerminalUpstreamProblem`](/api/storage-cloudflare/src/classes/cloudflareimagesterminalupstreamproblem/)
@@ -192,9 +250,16 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`StorageProblem`](/api/storage-core/src/classes/storageproblem/)
 - [`OtlpEndpointRequiredProblem`](/api/telemetry-sdk-node/src/classes/otlpendpointrequiredproblem/)
 - [`SamplerProblem`](/api/telemetry-sdk-node/src/classes/samplerproblem/)
+- [`DuplicateTaskRegistrationProblem`](/api/tasks-core/src/classes/duplicatetaskregistrationproblem/)
+- [`TaskNotFoundProblem`](/api/tasks-core/src/classes/tasknotfoundproblem/)
+- [`TaskRunnerDIFailureProblem`](/api/tasks-core/src/classes/taskrunnerdifailureproblem/)
 - [`QStashTaskConfigProblem`](/api/tasks-qstash/src/classes/qstashtaskconfigproblem/)
 - [`QStashTaskPublishProblem`](/api/tasks-qstash/src/classes/qstashtaskpublishproblem/)
 - [`QStashTaskValidationProblem`](/api/tasks-qstash/src/classes/qstashtaskvalidationproblem/)
+- [`DuplicateTenantManagerRegistrationProblem`](/api/tenant-core/src/classes/duplicatetenantmanagerregistrationproblem/)
+- [`TenantManagerNotRegisteredProblem`](/api/tenant-core/src/classes/tenantmanagernotregisteredproblem/)
+- [`TenantNotFoundProblem`](/api/tenant-core/src/classes/tenantnotfoundproblem/)
+- [`TenantRequiredProblem`](/api/tenant-core/src/classes/tenantrequiredproblem/)
 - [`GraphQLRequestBodyAbortedProblem`](/api/transports-graphql/src/classes/graphqlrequestbodyabortedproblem/)
 - [`GraphQLRequestBodyTooLargeProblem`](/api/transports-graphql/src/classes/graphqlrequestbodytoolargeproblem/)
 - [`GraphQLResolversNotConfiguredProblem`](/api/transports-graphql/src/classes/graphqlresolversnotconfiguredproblem/)
@@ -210,6 +275,15 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`RlsExecuteUnsupportedProblem`](/api/tx-drizzle/src/classes/rlsexecuteunsupportedproblem/)
 - [`SavepointUnsupportedProblem`](/api/tx-drizzle/src/classes/savepointunsupportedproblem/)
 - [`TenantContextRequiredProblem`](/api/tx-drizzle/src/classes/tenantcontextrequiredproblem/)
+- [`DuplicateWorkflowRegistrationProblem`](/api/workflow-core/src/classes/duplicateworkflowregistrationproblem/)
+- [`SagaDefinitionProblem`](/api/workflow-core/src/classes/sagadefinitionproblem/)
+- [`SagaExecutionFailedProblem`](/api/workflow-core/src/classes/sagaexecutionfailedproblem/)
+- [`SagaExecutionNotFoundProblem`](/api/workflow-core/src/classes/sagaexecutionnotfoundproblem/)
+- [`SagaReplayProblem`](/api/workflow-core/src/classes/sagareplayproblem/)
+- [`SagaStoreConflictProblem`](/api/workflow-core/src/classes/sagastoreconflictproblem/)
+- [`WorkflowDefinitionProblem`](/api/workflow-core/src/classes/workflowdefinitionproblem/)
+- [`WorkflowNotFoundProblem`](/api/workflow-core/src/classes/workflownotfoundproblem/)
+- [`WorkflowReplayUnsupportedProblem`](/api/workflow-core/src/classes/workflowreplayunsupportedproblem/)
 
 ## Properties
 
@@ -217,7 +291,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
----
+***
 
 ### cause?
 
@@ -227,31 +301,31 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.cause`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### detail?
 
 > `readonly` `optional` **detail?**: `string`
 
----
+***
 
 ### extensions?
 
 > `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
----
+***
 
 ### instance?
 
 > `readonly` `optional` **instance?**: `string`
 
----
+***
 
 ### message
 
@@ -261,7 +335,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.message`
 
----
+***
 
 ### name
 
@@ -271,7 +345,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.name`
 
----
+***
 
 ### stack?
 
@@ -281,13 +355,13 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.stack`
 
----
+***
 
 ### type
 
 > `readonly` **type**: `string`
 
----
+***
 
 ### stackTraceLimit
 
@@ -319,7 +393,7 @@ not capture any frames.
 
 `number`
 
----
+***
 
 ### title
 
@@ -341,7 +415,7 @@ not capture any frames.
 
 [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### captureStackTrace()
 
@@ -354,7 +428,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -409,7 +483,7 @@ a();
 
 `Error.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

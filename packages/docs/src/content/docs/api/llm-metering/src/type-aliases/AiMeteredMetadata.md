@@ -31,7 +31,7 @@ title: "AiMeteredMetadata"
 
 \{ `accuracy?`: `"EXACT"` \| `"ESTIMATED"` \| `"UNKNOWN"`; `tokens`: `number`; \} \| `null`
 
----
+***
 
 ### idempotencyKeyExtractor?
 
@@ -47,7 +47,7 @@ title: "AiMeteredMetadata"
 
 `string` \| `undefined`
 
----
+***
 
 ### metadataExtractor?
 
@@ -67,13 +67,13 @@ title: "AiMeteredMetadata"
 
 `Record`\<`string`, `unknown`\> \| `undefined`
 
----
+***
 
 ### tenantId?
 
 > `optional` **tenantId?**: `string`
 
----
+***
 
 ### usageExtractor?
 

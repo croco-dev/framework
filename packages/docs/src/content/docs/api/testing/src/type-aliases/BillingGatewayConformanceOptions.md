@@ -11,7 +11,7 @@ title: "BillingGatewayConformanceOptions"
 
 ### TGateway
 
-`TGateway` _extends_ [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
+`TGateway` *extends* [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/) = [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
 
 ## Properties
 
@@ -19,7 +19,7 @@ title: "BillingGatewayConformanceOptions"
 
 > `readonly` `optional` **assertions?**: [`BillingGatewayConformanceAssertions`](/api/testing/src/type-aliases/billinggatewayconformanceassertions/)\<`TGateway`\>
 
----
+***
 
 ### createGateway
 
@@ -29,13 +29,13 @@ title: "BillingGatewayConformanceOptions"
 
 `TGateway` \| `Promise`\<`TGateway`\>
 
----
+***
 
 ### failureScenarios?
 
 > `readonly` `optional` **failureScenarios?**: readonly [`BillingGatewayFailureScenario`](/api/testing/src/type-aliases/billinggatewayfailurescenario/)\<`TGateway`\>[]
 
----
+***
 
 ### fixtures
 

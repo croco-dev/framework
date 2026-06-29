@@ -13,19 +13,19 @@ title: "PolicySource"
 
 > `readonly` `optional` **decorator?**: `string`
 
----
+***
 
 ### file?
 
 > `readonly` `optional` **file?**: `string`
 
----
+***
 
 ### packageName?
 
 > `readonly` `optional` **packageName?**: `string`
 
----
+***
 
 ### symbol?
 

@@ -13,7 +13,7 @@ title: "GenerateClientOptions"
 
 > `readonly` `optional` **problemRuntime?**: [`GenerateClientProblemRuntime`](/api/rpc-codegen/src/type-aliases/generateclientproblemruntime/)
 
----
+***
 
 ### reactQuery?
 

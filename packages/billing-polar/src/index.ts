@@ -6,8 +6,6 @@
  * Polar payment provider integration for the Croco billing system.
  * Provides gateway implementation, webhook handling, and event mapping for Polar.
  *
- * @module @croco/billing-polar
- *
  * @example
  * ```typescript
  * import { PolarBillingGateway, PolarConfig } from '@croco/billing-polar';

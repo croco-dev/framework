@@ -15,25 +15,25 @@ title: "SearchQuery"
 
 > `optional` **filters?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### limit?
 
 > `optional` **limit?**: `number`
 
----
+***
 
 ### offset?
 
 > `optional` **offset?**: `number`
 
----
+***
 
 ### query
 
 > **query**: `string`
 
----
+***
 
 ### sort?
 

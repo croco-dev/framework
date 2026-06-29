@@ -15,7 +15,7 @@ Options for creating a Counter instrument.
 
 Optional description of the counter
 
----
+***
 
 ### name
 
@@ -23,7 +23,7 @@ Optional description of the counter
 
 The name of the counter
 
----
+***
 
 ### unit?
 

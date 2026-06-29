@@ -9,7 +9,7 @@ title: "BillingStoreSubscriptionProvider"
 
 ## Extends
 
-- `SubscriptionProvider`
+- [`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/)
 
 ## Constructors
 
@@ -31,17 +31,17 @@ title: "BillingStoreSubscriptionProvider"
 
 #### Overrides
 
-`SubscriptionProvider.constructor`
+[`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/).[`constructor`](/api/entitlements-core/src/classes/subscriptionprovider/#constructor)
 
 ## Properties
 
 ### token
 
-> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`SubscriptionProvider`\>
+> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<[`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/)\>
 
 #### Inherited from
 
-`SubscriptionProvider.token`
+[`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/).[`token`](/api/entitlements-core/src/classes/subscriptionprovider/#token)
 
 ## Methods
 
@@ -63,4 +63,4 @@ title: "BillingStoreSubscriptionProvider"
 
 #### Overrides
 
-`SubscriptionProvider.getCurrentPlanId`
+[`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/).[`getCurrentPlanId`](/api/entitlements-core/src/classes/subscriptionprovider/#getcurrentplanid)

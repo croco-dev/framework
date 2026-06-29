@@ -17,13 +17,13 @@ title: "ServerlessProviderLiveSmokeGate"
 
 `boolean`
 
----
+***
 
 ### requiredEnv
 
 > `readonly` **requiredEnv**: readonly `string`[]
 
----
+***
 
 ### run?
 

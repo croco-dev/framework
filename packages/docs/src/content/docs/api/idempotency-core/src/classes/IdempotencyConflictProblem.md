@@ -49,7 +49,7 @@ title: "IdempotencyConflictProblem"
 
 `IdempotencyProblem.category`
 
----
+***
 
 ### cause?
 
@@ -59,7 +59,7 @@ title: "IdempotencyConflictProblem"
 
 `IdempotencyProblem.cause`
 
----
+***
 
 ### code
 
@@ -69,7 +69,7 @@ title: "IdempotencyConflictProblem"
 
 `IdempotencyProblem.code`
 
----
+***
 
 ### detail?
 
@@ -79,7 +79,7 @@ title: "IdempotencyConflictProblem"
 
 `IdempotencyProblem.detail`
 
----
+***
 
 ### extensions?
 
@@ -89,7 +89,7 @@ title: "IdempotencyConflictProblem"
 
 `IdempotencyProblem.extensions`
 
----
+***
 
 ### instance?
 
@@ -99,7 +99,7 @@ title: "IdempotencyConflictProblem"
 
 `IdempotencyProblem.instance`
 
----
+***
 
 ### message
 
@@ -109,7 +109,7 @@ title: "IdempotencyConflictProblem"
 
 `IdempotencyProblem.message`
 
----
+***
 
 ### name
 
@@ -119,7 +119,7 @@ title: "IdempotencyConflictProblem"
 
 `IdempotencyProblem.name`
 
----
+***
 
 ### stack?
 
@@ -129,7 +129,7 @@ title: "IdempotencyConflictProblem"
 
 `IdempotencyProblem.stack`
 
----
+***
 
 ### type
 
@@ -139,7 +139,7 @@ title: "IdempotencyConflictProblem"
 
 `IdempotencyProblem.type`
 
----
+***
 
 ### stackTraceLimit
 
@@ -175,7 +175,7 @@ not capture any frames.
 
 `IdempotencyProblem.status`
 
----
+***
 
 ### title
 
@@ -205,7 +205,7 @@ not capture any frames.
 
 `IdempotencyProblem.toJSON`
 
----
+***
 
 ### captureStackTrace()
 
@@ -218,7 +218,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -273,7 +273,7 @@ a();
 
 `IdempotencyProblem.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

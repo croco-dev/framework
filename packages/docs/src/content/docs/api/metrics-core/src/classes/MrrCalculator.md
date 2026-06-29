@@ -46,7 +46,7 @@ Active subscriptions to calculate MRR from
 
 Total MRR as Money value
 
----
+***
 
 ### classifyMRRMovement()
 
@@ -86,7 +86,7 @@ New plan amount
 
 MRR movement type
 
----
+***
 
 ### normalizeMRR()
 

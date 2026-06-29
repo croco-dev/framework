@@ -15,7 +15,7 @@ title: "NotificationService"
 
 ##### taskRunner
 
-`TaskRunner`
+[`TaskRunner`](/api/tasks-core/src/classes/taskrunner/)
 
 ##### registry
 
@@ -45,7 +45,7 @@ title: "NotificationService"
 
 `void`
 
----
+***
 
 ### send()
 

@@ -13,19 +13,19 @@ title: "WebhookGatewayRequest"
 
 > `readonly` **headers**: [`WebhookHeaders`](/api/webhooks-core/src/type-aliases/webhookheaders/)
 
----
+***
 
 ### metadata?
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
----
+***
 
 ### rawBody
 
 > `readonly` **rawBody**: [`WebhookRawBody`](/api/webhooks-core/src/type-aliases/webhookrawbody/)
 
----
+***
 
 ### receivedAt?
 

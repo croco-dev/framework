@@ -11,9 +11,9 @@ title: "DrizzleAuditLogRepositoryConfig"
 
 ## Properties
 
-### deserializeJson()?
+### deserializeJson?
 
-> `optional` **deserializeJson**: (`value`) => `unknown`
+> `optional` **deserializeJson?**: (`value`) => `unknown`
 
 #### Parameters
 
@@ -33,9 +33,9 @@ title: "DrizzleAuditLogRepositoryConfig"
 
 ***
 
-### serializeJson()?
+### serializeJson?
 
-> `optional` **serializeJson**: (`value`) => `string`
+> `optional` **serializeJson?**: (`value`) => `string`
 
 #### Parameters
 

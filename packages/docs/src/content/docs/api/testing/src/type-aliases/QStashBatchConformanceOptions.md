@@ -23,19 +23,19 @@ title: "QStashBatchConformanceOptions"
 
 [`QStashBatchConformanceHarness`](/api/testing/src/type-aliases/qstashbatchconformanceharness/) \| `Promise`\<[`QStashBatchConformanceHarness`](/api/testing/src/type-aliases/qstashbatchconformanceharness/)\>
 
----
+***
 
 ### liveSmoke?
 
 > `readonly` `optional` **liveSmoke?**: [`ServerlessProviderLiveSmokeGate`](/api/testing/src/type-aliases/serverlessproviderlivesmokegate/)
 
----
+***
 
 ### providerName
 
 > `readonly` **providerName**: `string`
 
----
+***
 
 ### secretSamples?
 

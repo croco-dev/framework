@@ -11,19 +11,19 @@ title: "ParamMetadata"
 
 > **index**: `number`
 
----
+***
 
 ### name?
 
 > `optional` **name?**: `string`
 
----
+***
 
 ### pipes?
 
 > `optional` **pipes?**: ([`PipeTransformConstructor`](/api/protocols-rest/src/type-aliases/pipetransformconstructor/) \| [`PipeTransform`](/api/protocols-rest/src/interfaces/pipetransform/)\<`unknown`, `unknown`\>)[]
 
----
+***
 
 ### type
 

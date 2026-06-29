@@ -21,19 +21,19 @@ title: "DeriveOptions"
 
 > `optional` **as?**: `string`
 
----
+***
 
 ### filterable?
 
 > `optional` **filterable?**: `boolean`
 
----
+***
 
 ### options?
 
 > `optional` **options?**: `TOptions`
 
----
+***
 
 ### sortable?
 

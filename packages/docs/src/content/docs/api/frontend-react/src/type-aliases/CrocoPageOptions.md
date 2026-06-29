@@ -34,7 +34,7 @@ head 메타데이터 반환 함수
 
 > `optional` **title?**: `string`
 
----
+***
 
 ### path?
 
@@ -42,7 +42,7 @@ head 메타데이터 반환 함수
 
 페이지 경로
 
----
+***
 
 ### revalidate?
 
@@ -50,7 +50,7 @@ head 메타데이터 반환 함수
 
 ISR revalidate 시간(ms)
 
----
+***
 
 ### ssr?
 

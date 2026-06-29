@@ -13,13 +13,13 @@ title: "AuthGuardOptions"
 
 > `optional` **headerName?**: `string`
 
----
+***
 
 ### scheme?
 
 > `optional` **scheme?**: `string`
 
----
+***
 
 ### verifier
 

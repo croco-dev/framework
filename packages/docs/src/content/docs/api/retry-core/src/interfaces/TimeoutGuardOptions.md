@@ -19,7 +19,7 @@ Custom timeout checker (for testing)
 
 `number`
 
----
+***
 
 ### reserveTimeMs?
 

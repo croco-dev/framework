@@ -11,11 +11,11 @@ title: "GraphQLProblemResponseOptions"
 
 ### Code
 
-`Code` _extends_ `string` = `string`
+`Code` *extends* `string` = `string`
 
 ### Category
 
-`Category` _extends_ [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+`Category` *extends* [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/) = [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
 ## Properties
 
@@ -23,25 +23,25 @@ title: "GraphQLProblemResponseOptions"
 
 > `readonly` **category**: `Category`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `Code`
 
----
+***
 
 ### description?
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### status?
 
 > `readonly` `optional` **status?**: `number`
 
----
+***
 
 ### type?
 

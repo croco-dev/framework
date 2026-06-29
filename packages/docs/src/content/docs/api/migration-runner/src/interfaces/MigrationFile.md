@@ -21,25 +21,25 @@ title: "MigrationFile"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### id
 
 > **id**: `string`
 
----
+***
 
 ### name
 
 > **name**: `string`
 
----
+***
 
 ### path
 
 > **path**: `string`
 
----
+***
 
 ### up
 

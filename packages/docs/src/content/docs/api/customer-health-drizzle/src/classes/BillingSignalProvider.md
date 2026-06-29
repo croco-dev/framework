@@ -9,7 +9,7 @@ title: "BillingSignalProvider"
 
 ## Extends
 
-- `SignalProvider`
+- [`SignalProvider`](/api/customer-health-core/src/classes/signalprovider/)
 
 ## Constructors
 
@@ -31,33 +31,33 @@ title: "BillingSignalProvider"
 
 #### Overrides
 
-`SignalProvider.constructor`
+[`SignalProvider`](/api/customer-health-core/src/classes/signalprovider/).[`constructor`](/api/customer-health-core/src/classes/signalprovider/#constructor)
 
 ## Properties
 
 ### category
 
-> `readonly` **category**: `SignalCategory` = `"business"`
+> `readonly` **category**: [`SignalCategory`](/api/customer-health-core/src/type-aliases/signalcategory/) = `"business"`
 
 #### Overrides
 
-`SignalProvider.category`
+[`SignalProvider`](/api/customer-health-core/src/classes/signalprovider/).[`category`](/api/customer-health-core/src/classes/signalprovider/#category)
 
 ***
 
 ### token
 
-> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`SignalProvider`\>
+> `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<[`SignalProvider`](/api/customer-health-core/src/classes/signalprovider/)\>
 
 #### Inherited from
 
-`SignalProvider.token`
+[`SignalProvider`](/api/customer-health-core/src/classes/signalprovider/).[`token`](/api/customer-health-core/src/classes/signalprovider/#token)
 
 ## Methods
 
 ### collect()
 
-> **collect**(`tenantId`): `Promise`\<`HealthSignal`[]\>
+> **collect**(`tenantId`): `Promise`\<[`HealthSignal`](/api/customer-health-core/src/type-aliases/healthsignal/)[]\>
 
 테넌트의 구독 상태를 기반으로 비즈니스 신호를 수집합니다.
 
@@ -69,8 +69,8 @@ title: "BillingSignalProvider"
 
 #### Returns
 
-`Promise`\<`HealthSignal`[]\>
+`Promise`\<[`HealthSignal`](/api/customer-health-core/src/type-aliases/healthsignal/)[]\>
 
 #### Overrides
 
-`SignalProvider.collect`
+[`SignalProvider`](/api/customer-health-core/src/classes/signalprovider/).[`collect`](/api/customer-health-core/src/classes/signalprovider/#collect)

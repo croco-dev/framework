@@ -31,7 +31,7 @@ title: "CrocoTestingApp"
 
 > `readonly` **app**: [`CrocoApp`](/api/transports-http/src/classes/crocoapp/)
 
----
+***
 
 ### baseUrl
 
@@ -57,7 +57,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>
 
----
+***
 
 ### delete()
 
@@ -77,7 +77,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### get()
 
@@ -97,7 +97,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### patch()
 
@@ -117,7 +117,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### post()
 
@@ -137,7 +137,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### put()
 
@@ -157,7 +157,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### readJson()
 
@@ -179,7 +179,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`T`\>
 
----
+***
 
 ### readProblem()
 
@@ -195,7 +195,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)\>
 
----
+***
 
 ### request()
 
@@ -215,7 +215,7 @@ title: "CrocoTestingApp"
 
 `Promise`\<`Response`\>
 
----
+***
 
 ### rpcFetch()
 
@@ -231,7 +231,7 @@ title: "CrocoTestingApp"
 
 ###### input
 
-`URL` \| `RequestInfo`
+`RequestInfo` \| `URL`
 
 ###### init?
 
