@@ -391,8 +391,8 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | 상태                | 의미                                | 전체 public 패키지 수 |
 | ------------------- | ----------------------------------- | --------------------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |                    24 |
-| 🟡 beta             | 기능 완성, 실사용 검증 중           |                    69 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    16 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |                    70 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    15 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |                     0 |
 
 ### Extension & Adapter Matrix
@@ -515,6 +515,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/access-core`                   | Domain       | `packages/access-core`                   | README, API, tests |
 | `@croco/admin-core`                    | Domain       | `packages/admin-core`                    | README, API, tests |
 | `@croco/admin-ops`                     | Domain       | `packages/admin-ops`                     | README, API, tests |
+| `@croco/batch-core`                    | Domain       | `packages/batch-core`                    | README, API, tests |
 | `@croco/customer-health-core`          | Domain       | `packages/customer-health-core`          | README, API, tests |
 | `@croco/entitlements-core`             | Domain       | `packages/entitlements-core`             | README, API, tests |
 | `@croco/execution-core`                | Domain       | `packages/execution-core`                | README, API, tests |
@@ -572,7 +573,6 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | 패키지                        | 그룹         | 디렉터리                        | 문서               |
 | ----------------------------- | ------------ | ------------------------------- | ------------------ |
 | `@croco/analytics-core`       | Domain       | `packages/analytics-core`       | README, API, tests |
-| `@croco/batch-core`           | Domain       | `packages/batch-core`           | README, API, tests |
 | `@croco/analytics-posthog`    | Integration  | `packages/analytics-posthog`    | README, API, tests |
 | `@croco/admin-react`          | Presentation | `packages/admin-react`          | README, API, tests |
 | `@croco/frontend-problems`    | Presentation | `packages/frontend-problems`    | README, API, tests |

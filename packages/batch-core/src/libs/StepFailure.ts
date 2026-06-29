@@ -32,10 +32,9 @@ export function createStepExecutionError(
 ): ExecutionError {
   const err = error instanceof Error ? error : new Error(String(error));
   const classification = classifyFailure(error, classifier, context);
-  const code =
-    classification.code ??
-    extractFailureCode(error) ??
-    (classification.classifierFailed ? FAILURE_CLASSIFICATION_FAILED_CODE : undefined);
+  const code = classification.classifierFailed
+    ? FAILURE_CLASSIFICATION_FAILED_CODE
+    : (classification.code ?? extractFailureCode(error));
 
   return {
     message: err.message,

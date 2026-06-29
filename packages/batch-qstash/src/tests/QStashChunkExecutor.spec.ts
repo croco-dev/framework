@@ -482,7 +482,7 @@ describe("QStashChunkExecutor", () => {
       "exec-1",
       expect.objectContaining({
         message: "Write failed",
-        code: "InternalServerError",
+        code: "batch-core/failure-classification-failed",
         retryable: true,
       }),
     );

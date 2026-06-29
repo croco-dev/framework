@@ -152,17 +152,9 @@ describe("ChunkExecutor", () => {
     const realManager = new ExecutionManagerImpl(new TestExecutionStore());
     const realExecutor = new ChunkExecutor(realManager);
     const execution = await realManager.create({ type: "batch-job" });
-    const firstReader = {
-      read: vi.fn().mockResolvedValueOnce(1).mockResolvedValueOnce(null),
-      getCheckpoint: vi.fn().mockReturnValue({ offset: 1 }),
-      restoreCheckpoint: vi.fn(),
-    };
+    const firstReader = createCheckpointReader([1]);
     const firstWriter = { write: vi.fn().mockResolvedValue(undefined) };
-    const secondReader = {
-      read: vi.fn().mockResolvedValueOnce(2).mockResolvedValueOnce(null),
-      getCheckpoint: vi.fn().mockReturnValue({ offset: 2 }),
-      restoreCheckpoint: vi.fn(),
-    };
+    const secondReader = createCheckpointReader([2]);
     const secondWriter = { write: vi.fn().mockResolvedValue(undefined) };
 
     await realExecutor.execute(
@@ -175,6 +167,14 @@ describe("ChunkExecutor", () => {
       }),
       { completeExecution: false },
     );
+
+    const running = await realManager.get(execution.id);
+    expect(running.status).toBe("running");
+    expect(running.completedAt).toBeUndefined();
+    expect(running.checkpoints).toEqual({
+      "extract.cursor": { offset: 1 },
+    });
+
     await realExecutor.execute(
       execution.id,
       new Step<number, number>({
@@ -191,10 +191,180 @@ describe("ChunkExecutor", () => {
     expect(completed.attempts).toBe(1);
     expect(completed.checkpoints).toEqual({
       "extract.cursor": { offset: 1 },
-      "load.cursor": { offset: 2 },
+      "load.cursor": { offset: 1 },
     });
     expect(firstWriter.write).toHaveBeenCalledWith([1]);
     expect(secondWriter.write).toHaveBeenCalledWith([2]);
+  });
+
+  it("should resume retryable failures from the last successful checkpoint", async () => {
+    const realManager = new ExecutionManagerImpl(new TestExecutionStore());
+    const realExecutor = new ChunkExecutor(realManager);
+    const execution = await realManager.create({ type: "batch-job", maxAttempts: 2 });
+    await realManager.updateProgress(execution.id, { current: 0, total: 3 });
+
+    const reader = createCheckpointReader([1, 2, 3]);
+    const writes: number[][] = [];
+    let shouldFailChunk = true;
+    const writer = {
+      write: vi.fn().mockImplementation(async (items: number[]) => {
+        writes.push([...items]);
+        if (shouldFailChunk && items.includes(3)) {
+          shouldFailChunk = false;
+          throw new Error("temporary sink outage");
+        }
+      }),
+    };
+    const step = new Step<number, number>({
+      name: "import-users",
+      reader: reader as unknown as ItemReader<number>,
+      writer,
+      chunkSize: 2,
+    });
+
+    await expect(realExecutor.execute(execution.id, step)).rejects.toThrow("temporary sink outage");
+
+    const retrying = await realManager.get(execution.id);
+    expect(retrying.status).toBe("retrying");
+    expect(retrying.error).toEqual(
+      expect.objectContaining({
+        message: "temporary sink outage",
+        retryable: true,
+      }),
+    );
+    expect(retrying.checkpoints).toEqual({
+      "import-users.cursor": { offset: 2 },
+    });
+    expect(retrying.progress).toEqual({
+      current: 2,
+      total: 3,
+      percent: 67,
+    });
+
+    await realExecutor.execute(execution.id, step);
+
+    const completed = await realManager.get(execution.id);
+    expect(completed.status).toBe("completed");
+    expect(completed.error).toBeUndefined();
+    expect(completed.result).toEqual({ processedCount: 3 });
+    expect(completed.checkpoints).toEqual({
+      "import-users.cursor": { offset: 3 },
+    });
+    expect(completed.progress).toEqual({
+      current: 3,
+      total: 3,
+      percent: 100,
+    });
+    expect(reader.restoreCheckpoint).toHaveBeenCalledWith({ offset: 2 });
+    expect(writes).toEqual([[1, 2], [3], [3]]);
+  });
+
+  it("should not seed retry progress without a restored step checkpoint", async () => {
+    const realManager = new ExecutionManagerImpl(new TestExecutionStore());
+    const realExecutor = new ChunkExecutor(realManager);
+    const execution = await realManager.create({ type: "batch-job", maxAttempts: 2 });
+    await realManager.start(execution.id);
+    await realManager.updateProgress(execution.id, { current: 2, total: 3 });
+    await realManager.fail(execution.id, {
+      message: "temporary sink outage",
+      retryable: true,
+    });
+
+    const reader = {
+      read: vi
+        .fn()
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(null),
+    };
+    const writer = {
+      write: vi.fn().mockResolvedValue(undefined),
+    };
+    const step = new Step<number, number>({
+      name: "non-checkpointable-import",
+      reader,
+      writer,
+      chunkSize: 3,
+    });
+
+    await realExecutor.execute(execution.id, step);
+
+    const completed = await realManager.get(execution.id);
+    expect(completed.status).toBe("completed");
+    expect(completed.result).toEqual({ processedCount: 3 });
+    expect(completed.progress).toEqual({
+      current: 3,
+      total: 3,
+      percent: 100,
+    });
+    expect(writer.write).toHaveBeenCalledWith([1, 2, 3]);
+  });
+
+  it("should leave a failed writer chunk uncheckpointed for idempotent retry", async () => {
+    const reader = createCheckpointReader([1, 2]);
+    const writer = {
+      write: vi.fn().mockRejectedValue(new Error("write failed before checkpoint")),
+    };
+    const step = new Step<number, number>({
+      name: "write-step",
+      reader: reader as unknown as ItemReader<number>,
+      writer,
+      chunkSize: 2,
+    });
+
+    await expect(executor.execute("exec-1", step)).rejects.toThrow(
+      "write failed before checkpoint",
+    );
+
+    expect(writer.write).toHaveBeenCalledWith([1, 2]);
+    expect(executionManager.checkpoint).not.toHaveBeenCalled();
+    expect(executionManager.fail).toHaveBeenCalledWith(
+      "exec-1",
+      expect.objectContaining({
+        message: "write failed before checkpoint",
+        retryable: true,
+      }),
+    );
+  });
+
+  it("should record processor failure metadata for operator inspection", async () => {
+    const realManager = new ExecutionManagerImpl(new TestExecutionStore());
+    const realExecutor = new ChunkExecutor(realManager);
+    const execution = await realManager.create({ type: "batch-job" });
+    const processorError = Object.assign(new Error("invalid row"), {
+      code: "BATCH_INVALID_ROW",
+    });
+    const reader = {
+      read: vi.fn().mockResolvedValueOnce(1),
+    };
+    const processor = {
+      process: vi.fn().mockRejectedValue(processorError),
+    };
+    const writer = {
+      write: vi.fn().mockResolvedValue(undefined),
+    };
+    const step = new Step<number, number>({
+      name: "validate-row",
+      reader,
+      processor,
+      writer,
+      classifyFailure: () => ({ retryable: false }),
+    });
+
+    await expect(realExecutor.execute(execution.id, step)).rejects.toThrow("invalid row");
+
+    const failed = await realManager.get(execution.id);
+    expect(failed.status).toBe("failed");
+    expect(failed.error).toEqual(
+      expect.objectContaining({
+        message: "invalid row",
+        code: "BATCH_INVALID_ROW",
+        retryable: false,
+      }),
+    );
+    expect(writer.write).not.toHaveBeenCalled();
+    expect(failed.checkpoints).toBeUndefined();
   });
 
   it("should handle errors", async () => {
@@ -279,6 +449,36 @@ describe("ChunkExecutor", () => {
       }),
     );
   });
+
+  it("should expose classifier failures even when the original error has a code", async () => {
+    const error = Object.assign(new Error("Read failed"), {
+      code: "UPSTREAM_READ_FAILED",
+    });
+    const classifyFailure = vi.fn().mockImplementation(() => {
+      throw new Error("Classifier failed");
+    });
+    const reader = {
+      read: vi.fn().mockRejectedValue(error),
+    };
+    const writer = { write: vi.fn() };
+
+    const step = new Step<number, number>({
+      name: "coded-classifier-failure-step",
+      reader: reader as unknown as ItemReader<number>,
+      writer,
+      classifyFailure,
+    });
+
+    await expect(executor.execute("exec-1", step)).rejects.toThrow("Read failed");
+    expect(executionManager.fail).toHaveBeenCalledWith(
+      "exec-1",
+      expect.objectContaining({
+        message: "Read failed",
+        code: "batch-core/failure-classification-failed",
+        retryable: true,
+      }),
+    );
+  });
 });
 
 class TestExecutionStore implements ExecutionStore {
@@ -344,4 +544,40 @@ class TestExecutionStore implements ExecutionStore {
   async delete(id: string): Promise<void> {
     this.executions.delete(id);
   }
+}
+
+type OffsetCheckpoint = {
+  readonly offset: number;
+};
+
+function createCheckpointReader<T>(items: readonly T[]): ItemReader<T> & {
+  readonly getCheckpoint: Mock<() => OffsetCheckpoint>;
+  readonly restoreCheckpoint: Mock<(checkpoint: unknown) => void>;
+} {
+  let offset = 0;
+
+  return {
+    read: vi.fn(async () => {
+      if (offset >= items.length) {
+        return null;
+      }
+
+      return items[offset++];
+    }),
+    getCheckpoint: vi.fn(() => ({ offset })),
+    restoreCheckpoint: vi.fn((checkpoint: unknown) => {
+      if (isOffsetCheckpoint(checkpoint)) {
+        offset = checkpoint.offset;
+      }
+    }),
+  };
+}
+
+function isOffsetCheckpoint(checkpoint: unknown): checkpoint is OffsetCheckpoint {
+  return (
+    typeof checkpoint === "object" &&
+    checkpoint !== null &&
+    "offset" in checkpoint &&
+    typeof checkpoint.offset === "number"
+  );
 }

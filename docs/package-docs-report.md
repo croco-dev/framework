@@ -52,8 +52,8 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       24 |
-| 🟡 beta             |       69 |
-| 🔴 alpha/WIP        |       16 |
+| 🟡 beta             |       70 |
+| 🔴 alpha/WIP        |       15 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix
