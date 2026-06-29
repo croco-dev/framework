@@ -15,37 +15,37 @@ title: "AuditLogFilter"
 
 > `optional` **action?**: `string`
 
-***
+---
 
 ### actorId?
 
 > `optional` **actorId?**: `string`
 
-***
+---
 
 ### endDate?
 
 > `optional` **endDate?**: `Date`
 
-***
+---
 
 ### resourceId?
 
 > `optional` **resourceId?**: `string`
 
-***
+---
 
 ### resourceType?
 
 > `optional` **resourceType?**: `string`
 
-***
+---
 
 ### startDate?
 
 > `optional` **startDate?**: `Date`
 
-***
+---
 
 ### tenantId
 

@@ -18,6 +18,7 @@ pnpm add @croco/cache-core
 - **통계 조회**: hit, miss, eviction, size 집계
 - **고수준 API**: `getOrSet()`, `invalidatePattern()`, `warmup()`
 - **분산 캐시 확장점**: 락 획득과 무효화 전파 인터페이스 제공
+- **Cache Invalidation Graph**: domain event와 cache key/tag 무효화 관계를 manifest와 check로 검증
 
 ## 사용법
 
@@ -70,6 +71,52 @@ await cache.warmup([
 await cache.invalidatePattern("tenant:1:*");
 ```
 
+### Event-driven Cache Invalidation Graph
+
+```typescript
+import {
+  assertCacheInvalidationGraphValid,
+  createCacheInvalidationManifest,
+  createCacheStoreInvalidationAdapter,
+  defineCacheInvalidationEvent,
+  defineCacheInvalidationGraph,
+  defineCacheInvalidationRule,
+  defineCacheKey,
+  invalidateCacheForEvent,
+  invalidateCacheKey,
+  InMemoryCacheStore,
+} from "@croco/cache-core";
+
+const cache = new InMemoryCacheStore<string>({ maxEntries: 1000 });
+
+const graph = defineCacheInvalidationGraph({
+  events: [defineCacheInvalidationEvent({ eventName: "user.updated" })],
+  keys: [
+    defineCacheKey({ id: "user-by-id", pattern: "user:*" }),
+    defineCacheKey({ id: "user-list", key: "users:list" }),
+  ],
+  rules: [
+    defineCacheInvalidationRule({
+      eventName: "user.updated",
+      invalidates: [invalidateCacheKey("user-by-id"), invalidateCacheKey("user-list")],
+    }),
+  ],
+});
+
+const manifest = assertCacheInvalidationGraphValid(createCacheInvalidationManifest(graph));
+
+await invalidateCacheForEvent({
+  adapter: createCacheStoreInvalidationAdapter(cache, { name: "memory-cache" }),
+  event: { eventName: "user.updated" },
+  manifest,
+});
+```
+
+`createCacheInvalidationManifest()`는 선언된 event별로 어떤 cache key, pattern, tag가 무효화되는지
+정렬된 manifest로 반환합니다. `assertCacheInvalidationGraphValid()`는 unknown event reference와
+orphan cache key/tag rule을 `cache-core/invalidation-graph-invalid` Problem으로 실패시킵니다.
+adapter capability manifest는 exact key, pattern, tag invalidation 지원 여부를 명시합니다.
+
 ### 데코레이터 기반 캐싱
 
 ```typescript
@@ -92,26 +139,30 @@ class UserService {
 
 ### 타입
 
-| 타입                          | 설명                        |
-| ----------------------------- | --------------------------- |
-| `Cache<K, V>`                 | 제네릭 캐시 계약            |
-| `CacheStore<K, V>`            | 하위 호환용 추상 베이스     |
-| `CacheStats`                  | hit/miss/eviction/size 통계 |
-| `CacheWarmupEntry<K, V>`      | warmup 항목                 |
-| `DistributedCacheStore<K, V>` | 분산 캐시 확장 계약         |
-| `DistributedCacheLock`        | 분산 락 해제 핸들           |
+| 타입                          | 설명                            |
+| ----------------------------- | ------------------------------- |
+| `Cache<K, V>`                 | 제네릭 캐시 계약                |
+| `CacheStore<K, V>`            | 하위 호환용 추상 베이스         |
+| `CacheStats`                  | hit/miss/eviction/size 통계     |
+| `CacheWarmupEntry<K, V>`      | warmup 항목                     |
+| `DistributedCacheStore<K, V>` | 분산 캐시 확장 계약             |
+| `DistributedCacheLock`        | 분산 락 해제 핸들               |
+| `CacheInvalidationManifest`   | event → key/tag 무효화 graph    |
+| `CacheInvalidationAdapter`    | adapter capability/runtime 계약 |
 
 ### 주요 메서드
 
-| 메서드                            | 설명                           |
-| --------------------------------- | ------------------------------ |
-| `get(key)`                        | 값 조회 및 LRU 갱신            |
-| `set(key, value, ttlMs?)`         | 값 저장                        |
-| `getOrSet(key, loader, options?)` | 캐시 미스 시 singleflight 로딩 |
-| `invalidatePattern(pattern)`      | 와일드카드 패턴 무효화         |
-| `warmup(entries)`                 | 미리 캐시 적재                 |
-| `pruneExpired()`                  | 만료 항목 수동 정리            |
-| `getStats()`                      | 통계 조회                      |
+| 메서드                                   | 설명                           |
+| ---------------------------------------- | ------------------------------ |
+| `get(key)`                               | 값 조회 및 LRU 갱신            |
+| `set(key, value, ttlMs?)`                | 값 저장                        |
+| `getOrSet(key, loader, options?)`        | 캐시 미스 시 singleflight 로딩 |
+| `invalidatePattern(pattern)`             | 와일드카드 패턴 무효화         |
+| `warmup(entries)`                        | 미리 캐시 적재                 |
+| `pruneExpired()`                         | 만료 항목 수동 정리            |
+| `getStats()`                             | 통계 조회                      |
+| `createCacheInvalidationManifest(graph)` | cache invalidation graph 생성  |
+| `invalidateCacheForEvent(options)`       | event 기준 cache 무효화 실행   |
 
 ## 라이선스
 

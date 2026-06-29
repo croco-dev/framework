@@ -180,22 +180,20 @@ function writeConsumerPackageJson(consumerRoot: string, tarballs: PackageTarball
       {
         name: "croco-meta-vite-consumer",
         private: true,
-        pnpm: {
-          overrides: {
-            "@croco/cache-core": `file:${tarballs.cacheCore}`,
-            "@croco/diagnostics-core": `file:${tarballs.diagnosticsCore}`,
-            "@croco/framework-context": `file:${tarballs.frameworkContext}`,
-            "@croco/framework-preset": `file:${tarballs.frameworkPreset}`,
-            "@croco/presentation-preset": `file:${tarballs.presentationPreset}`,
-            "@croco/problems-core": `file:${tarballs.problemsCore}`,
-          },
-        },
         type: "module",
       },
       null,
       2,
     )}\n`,
   );
+  writePnpmWorkspaceOverrides(consumerRoot, {
+    "@croco/cache-core": `file:${tarballs.cacheCore}`,
+    "@croco/diagnostics-core": `file:${tarballs.diagnosticsCore}`,
+    "@croco/framework-context": `file:${tarballs.frameworkContext}`,
+    "@croco/framework-preset": `file:${tarballs.frameworkPreset}`,
+    "@croco/presentation-preset": `file:${tarballs.presentationPreset}`,
+    "@croco/problems-core": `file:${tarballs.problemsCore}`,
+  });
 }
 
 function installMetaViteConsumer(
@@ -246,6 +244,22 @@ function findTarball(directory: string, prefix: string): string {
 
 function tscPath(): string {
   return join(rootDir, "node_modules", "typescript", "bin", "tsc");
+}
+
+function writePnpmWorkspaceOverrides(
+  consumerRoot: string,
+  overrides: Record<string, string>,
+): void {
+  const lines = [
+    "packages:",
+    "  - .",
+    "overrides:",
+    ...Object.entries(overrides).map(
+      ([packageName, range]) => `  ${JSON.stringify(packageName)}: ${JSON.stringify(range)}`,
+    ),
+  ];
+
+  writeFileSync(join(consumerRoot, "pnpm-workspace.yaml"), `${lines.join("\n")}\n`);
 }
 
 function run(

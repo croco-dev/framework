@@ -43,18 +43,16 @@ describe("published telemetry SDK types", () => {
             {
               name: "croco-telemetry-sdk-node-consumer",
               private: true,
-              pnpm: {
-                overrides: {
-                  "@croco/diagnostics-core": `file:${diagnosticsCoreTarball}`,
-                  "@croco/problems-core": `file:${problemsCoreTarball}`,
-                },
-              },
               type: "module",
             },
             null,
             2,
           )}\n`,
         );
+        writePnpmWorkspaceOverrides(consumerRoot, {
+          "@croco/diagnostics-core": `file:${diagnosticsCoreTarball}`,
+          "@croco/problems-core": `file:${problemsCoreTarball}`,
+        });
         writeFileSync(
           join(consumerRoot, "index.ts"),
           [
@@ -137,6 +135,22 @@ function findTarball(directory: string, prefix: string): string {
   }
 
   return join(directory, filename);
+}
+
+function writePnpmWorkspaceOverrides(
+  consumerRoot: string,
+  overrides: Record<string, string>,
+): void {
+  const lines = [
+    "packages:",
+    "  - .",
+    "overrides:",
+    ...Object.entries(overrides).map(
+      ([packageName, range]) => `  ${JSON.stringify(packageName)}: ${JSON.stringify(range)}`,
+    ),
+  ];
+
+  writeFileSync(join(consumerRoot, "pnpm-workspace.yaml"), `${lines.join("\n")}\n`);
 }
 
 function run(

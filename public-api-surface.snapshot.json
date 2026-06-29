@@ -3432,6 +3432,30 @@
       "entrypoint": "packages/cache-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "assertCacheInvalidatesForEvent",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "assertCacheInvalidationGraphValid",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "CACHE_ADAPTER_CAPABILITY_MANIFEST_SCHEMA_VERSION",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "const"
+        },
+        {
+          "name": "CACHE_INVALIDATION_MANIFEST_SCHEMA_VERSION",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "const"
+        },
+        {
           "name": "Cache",
           "exportKind": "named",
           "source": "./libs/CacheStore",
@@ -3456,10 +3480,76 @@
           "declarationKind": "function"
         },
         {
+          "name": "CacheInvalidationAssertionProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/CacheDecoratorProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "CacheInvalidationFailedProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/CacheDecoratorProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "CacheInvalidationGraphProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/CacheDecoratorProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "CacheStore",
           "exportKind": "named",
           "source": "./libs/CacheStore",
           "declarationKind": "class"
+        },
+        {
+          "name": "createCacheAdapterCapabilityManifest",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createCacheInvalidationManifest",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createCacheStoreInvalidationAdapter",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineCacheInvalidationEvent",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineCacheInvalidationGraph",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineCacheInvalidationRule",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineCacheKey",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineCacheTag",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
         },
         {
           "name": "DistributedCacheStore",
@@ -3472,13 +3562,64 @@
           "exportKind": "named",
           "source": "./libs/InMemoryCacheStore",
           "declarationKind": "class"
+        },
+        {
+          "name": "invalidateCacheForEvent",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "invalidateCacheKey",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "invalidateCacheTag",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "serializeCacheInvalidationManifest",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph",
+          "declarationKind": "function"
+        },
+        {
+          "name": "UnknownCacheInvalidationEventProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/CacheDecoratorProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "UnsupportedCacheInvalidationCapabilityProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/CacheDecoratorProblems",
+          "declarationKind": "class"
         }
       ],
       "typeExports": [
         {
+          "name": "AssertCacheInvalidatesForEventOptions",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
           "name": "CacheableOptions",
           "exportKind": "named",
           "source": "./libs/decorators/Cacheable"
+        },
+        {
+          "name": "CacheAdapterCapabilityManifest",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheAdapterCapabilityManifestSchemaVersion",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
         },
         {
           "name": "CacheEvictOptions",
@@ -3491,6 +3632,106 @@
           "source": "./libs/CacheStore"
         },
         {
+          "name": "CacheInvalidationAdapter",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationAdapterCapabilities",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationAdapterOperationResult",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationAppliedOperation",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/problems/CacheDecoratorProblems"
+        },
+        {
+          "name": "CacheInvalidationEventDeclaration",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationEventLike",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationGraphDefinition",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationManifest",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationManifestEvent",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationManifestOperation",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationManifestSchemaVersion",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationManifestStatus",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationReference",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationResult",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationRule",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationTelemetryContext",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationTelemetryEvent",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheInvalidationTelemetrySink",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheKeyDeclaration",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
           "name": "CachePattern",
           "exportKind": "named",
           "source": "./libs/CacheStore"
@@ -3499,6 +3740,16 @@
           "name": "CacheStats",
           "exportKind": "named",
           "source": "./libs/CacheStore"
+        },
+        {
+          "name": "CacheStoreInvalidationAdapterOptions",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
+        },
+        {
+          "name": "CacheTagDeclaration",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
         },
         {
           "name": "CacheWarmupEntry",
@@ -3519,6 +3770,11 @@
           "name": "InMemoryCacheStoreOptions",
           "exportKind": "named",
           "source": "./libs/InMemoryCacheStore"
+        },
+        {
+          "name": "InvalidateCacheForEventOptions",
+          "exportKind": "named",
+          "source": "./libs/CacheInvalidationGraph"
         }
       ]
     },
