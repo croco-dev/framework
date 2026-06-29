@@ -304,6 +304,13 @@ describe("E2E: generate()", () => {
     expect(existsSync(join(testDir, "pnpm-workspace.yaml"))).toBe(true);
     expect(existsSync(join(testDir, "turbo.json"))).toBe(true);
     expect(existsSync(join(testDir, "tsconfig.json"))).toBe(true);
+    const readme = readFileSync(join(testDir, "README.md"), "utf8");
+    expect(readme).toContain("Blank Croco workspace");
+    expect(readme).toContain("pnpm install");
+    expect(readme).toContain("pnpm dev");
+    expect(readme).toContain("pnpm typecheck");
+    expect(readme).toContain("expected success state");
+    expect(readme).toContain("Recovery");
   });
 
   it("rejects mismatched goal generator options before creating the target directory", async () => {

@@ -615,6 +615,7 @@ try {
       generatedSmokeRangeOverrides,
       generatedSmokeExternalCrocoRangeExceptions,
     );
+    assertGeneratedReadme(projectDir, smokeCase);
     writePnpmOverrides(projectDir, generatedSmokeRangeOverrides);
     run("pnpm", ["install"], projectDir);
     const lockfilePath = join(projectDir, "pnpm-lock.yaml");
@@ -691,6 +692,18 @@ function assertExists(path: string, message: string): void {
   if (!existsSync(path)) {
     throw new Error(message);
   }
+}
+
+function assertGeneratedReadme(projectDir: string, smokeCase: SmokeCase): void {
+  const readmePath = join(projectDir, "README.md");
+  assertExists(readmePath, `${smokeCase.name} did not generate README.md`);
+
+  const readme = readFileSync(readmePath, "utf8");
+  if (readme.includes("{{") || readme.includes("}}")) {
+    throw new Error(`${smokeCase.name} generated README.md with unresolved template placeholders`);
+  }
+
+  console.log(`create-croco-app-generated-smoke: ${smokeCase.name} README.md exists`);
 }
 
 function runValidation(
