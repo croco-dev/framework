@@ -50,6 +50,18 @@ Capture an event.
 
 ***
 
+### flush()
+
+> **flush**(): `Promise`\<`void`\>
+
+Flush buffered analytics events before a runtime boundary such as Lambda return or shutdown.
+
+#### Returns
+
+`Promise`\<`void`\>
+
+***
+
 ### group()
 
 > `abstract` **group**(`groupType`, `groupKey`, `properties?`): `void`

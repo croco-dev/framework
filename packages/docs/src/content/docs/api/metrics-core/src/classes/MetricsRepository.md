@@ -13,6 +13,7 @@ Repository abstract class for storing and querying metrics data.
 모든 메서드는 tenant 격리를 보장해야 함
 
 **TimescaleDB Schema (Hypertable)**:
+
 ```sql
 -- TimescaleDB 확장 활성화
 CREATE EXTENSION IF NOT EXISTS timescaledb;
@@ -107,7 +108,7 @@ MRR 변동 이력 조회
 
 MRR 변동 데이터 배열
 
-***
+---
 
 ### getRetentionMetrics()
 
@@ -135,7 +136,7 @@ MRR 변동 데이터 배열
 
 리텐션 메트릭 (GRR, NRR, Churn Rate 등)
 
-***
+---
 
 ### getSnapshot()
 
@@ -163,11 +164,11 @@ MRR 변동 데이터 배열
 
 스냅샷 데이터, 없으면 null
 
-***
+---
 
 ### recordMRRMovement()
 
-> `abstract` **recordMRRMovement**(`tenantId`, `movement`, `timestamp`, `eventKey?`): `Promise`\<`void`\>
+> `abstract` **recordMRRMovement**(`tenantId`, `movement`, `timestamp`, `eventKey?`, `dedupeEventKeys?`): `Promise`\<`void`\>
 
 MRR 변동 이력 기록
 
@@ -197,11 +198,17 @@ MRR 변동 데이터
 
 이벤트 기반 멱등성 키 (선택)
 
+##### dedupeEventKeys?
+
+readonly `string`[]
+
+이전 버전이나 외부 시스템에서 이미 저장했을 수 있는 호환 멱등성 키
+
 #### Returns
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### recordSnapshot()
 

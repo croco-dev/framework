@@ -1,21 +1,39 @@
 import { randomUUID } from "node:crypto";
 import { AnalyticsManager } from "@croco/analytics-core";
-import { Component, Context, type ILogger, Inject, LOGGER_TOKEN } from "@croco/framework-context";
-import type { PostHogClient } from "@croco/integrations-posthog";
+import { Component, Container, Context, LOGGER_TOKEN, Token } from "@croco/framework-context";
+import type { ILogger } from "@croco/framework-context";
+import { PostHogClient } from "@croco/integrations-posthog";
+import {
+  PostHogAnalyticsCaptureProblem,
+  PostHogAnalyticsFlushProblem,
+} from "./problems/PostHogAnalyticsProblems";
+
+export type PostHogAnalyticsManagerOptions = {
+  readonly enabled?: boolean;
+};
+
+export const POSTHOG_ANALYTICS_MANAGER_OPTIONS = new Token<PostHogAnalyticsManagerOptions>(
+  "POSTHOG_ANALYTICS_MANAGER_OPTIONS",
+);
 
 /**
  * Croco Context 정보를 활용해 PostHog 이벤트와 그룹 정보를 전송하는 분석 관리자입니다.
  */
 @Component()
 export class PostHogAnalyticsManager extends AnalyticsManager {
-  constructor(
-    private readonly posthogClient: PostHogClient,
-    @Inject(LOGGER_TOKEN) private readonly logger: ILogger,
-  ) {
+  private readonly options: PostHogAnalyticsManagerOptions;
+
+  constructor(private readonly posthogClient: PostHogClient) {
     super();
+    this.options = Container.getOptional(POSTHOG_ANALYTICS_MANAGER_OPTIONS) ?? {};
   }
 
   capture(event: string, properties?: Record<string, unknown>): void {
+    if (!this.isEnabled()) {
+      this.logDisabledOperation("capture", { event });
+      return;
+    }
+
     const distinctId = this.getDistinctId(properties);
     const groups = this.getGroups(properties);
 
@@ -36,6 +54,11 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
   }
 
   identify(distinctId: string, properties?: Record<string, unknown>): void {
+    if (!this.isEnabled()) {
+      this.logDisabledOperation("identify");
+      return;
+    }
+
     this.posthogClient.getClient().identify({
       distinctId,
       properties,
@@ -43,11 +66,34 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
   }
 
   group(groupType: string, groupKey: string, properties?: Record<string, unknown>): void {
+    if (!this.isEnabled()) {
+      this.logDisabledOperation("group", { groupType });
+      return;
+    }
+
     this.posthogClient.getClient().groupIdentify({
       groupType,
       groupKey,
       properties,
     });
+  }
+
+  async flush(): Promise<void> {
+    if (!this.isEnabled()) {
+      this.logDisabledOperation("flush");
+      return;
+    }
+
+    try {
+      await this.posthogClient.shutdown();
+    } catch (error) {
+      const problem = new PostHogAnalyticsFlushProblem(error instanceof Error ? error : undefined);
+      this.getLogger().warn("PostHog analytics flush failed", {
+        ...createSafeErrorLogMetadata(error),
+        problemCode: problem.code,
+      });
+      throw problem;
+    }
   }
 
   private getDistinctId(properties?: Record<string, unknown>): string {
@@ -77,9 +123,83 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
   }
 
   private logCaptureFailure(event: string, error: unknown): void {
-    this.logger.warn("PostHog capture failed", {
+    const problem = new PostHogAnalyticsCaptureProblem(
       event,
-      error: error instanceof Error ? error.message : String(error),
+      error instanceof Error ? error : undefined,
+    );
+    this.getLogger().warn("PostHog capture failed", {
+      event,
+      ...createSafeErrorLogMetadata(error),
+      problemCode: problem.code,
     });
   }
+
+  private isEnabled(): boolean {
+    return this.options.enabled !== false;
+  }
+
+  private logDisabledOperation(operation: string, context: Record<string, unknown> = {}): void {
+    this.getLogger().info("PostHog analytics operation skipped because analytics is disabled", {
+      provider: "posthog",
+      operation,
+      ...context,
+    });
+  }
+
+  private getLogger(): ILogger {
+    return Container.get(LOGGER_TOKEN);
+  }
+}
+
+// tsup currently skips decorator metadata emission without @swc/core, so publish the DI edge explicitly.
+Reflect.defineMetadata("design:paramtypes", [PostHogClient], PostHogAnalyticsManager);
+
+type SafePostHogErrorLogMetadata = {
+  readonly errorName?: string;
+  readonly errorType?: string;
+  readonly upstreamCode?: string;
+  readonly upstreamStatus?: number;
+};
+
+function createSafeErrorLogMetadata(error: unknown): SafePostHogErrorLogMetadata {
+  if (!error || typeof error !== "object") {
+    return { errorType: typeof error };
+  }
+
+  const errorName = getErrorName(error);
+  const upstreamCode = getErrorStringProperty(error, "code");
+  const upstreamStatus =
+    getErrorNumberProperty(error, "status") ?? getErrorNumberProperty(error, "statusCode");
+
+  return {
+    ...(errorName && { errorName }),
+    ...(upstreamCode && { upstreamCode }),
+    ...(upstreamStatus !== undefined && { upstreamStatus }),
+  };
+}
+
+function getErrorName(error: object): string | undefined {
+  if (error instanceof Error) {
+    return error.name;
+  }
+
+  return getErrorStringProperty(error, "name");
+}
+
+function getErrorStringProperty(error: object, key: string): string | undefined {
+  if (!(key in error)) {
+    return undefined;
+  }
+
+  const value = (error as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function getErrorNumberProperty(error: object, key: string): number | undefined {
+  if (!(key in error)) {
+    return undefined;
+  }
+
+  const value = (error as Record<string, unknown>)[key];
+  return typeof value === "number" ? value : undefined;
 }

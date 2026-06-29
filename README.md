@@ -391,8 +391,8 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | 상태                | 의미                                | 전체 public 패키지 수 |
 | ------------------- | ----------------------------------- | --------------------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |                    24 |
-| 🟡 beta             | 기능 완성, 실사용 검증 중           |                    70 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    15 |
+| 🟡 beta             | 기능 완성, 실사용 검증 중           |                    73 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    12 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |                     0 |
 
 ### Extension & Adapter Matrix
@@ -422,7 +422,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/membership-drizzle`      | Membership      | Drizzle repository                   | yes  | yes    | -       | -        | database connection supplied by app                                                 | -                                                               | membership persistence<br>transaction-aware repository                                                                                                                                    | 🟡 beta      | has package tests |
 | `@croco/metering-drizzle`        | Metering        | Drizzle usage store                  | yes  | yes    | -       | -        | database connection supplied by app                                                 | -                                                               | usage persistence<br>quota lookup<br>migration scripts                                                                                                                                    | 🟡 beta      | has package tests |
 | `@croco/metering-upstash`        | Metering        | Upstash Redis client adapter         | yes  | yes    | -       | -        | UPSTASH_REDIS_REST_URL<br>UPSTASH_REDIS_REST_TOKEN                                  | -                                                               | Redis command adapter<br>serverless usage storage<br>shared conformance<br>redacted upstream Problems                                                                                     | 🔴 alpha/WIP | has package tests |
-| `@croco/metrics-billing`         | Metrics         | Billing metrics bridge               | yes  | yes    | yes     | -        | none                                                                                | -                                                               | billing event metrics<br>usage aggregation bridge                                                                                                                                         | 🔴 alpha/WIP | has package tests |
+| `@croco/metrics-billing`         | Metrics         | Billing metrics bridge               | yes  | yes    | yes     | -        | none                                                                                | -                                                               | billing event metrics<br>usage aggregation bridge<br>tenant propagation<br>event identity idempotency<br>dropped metric Problems                                                          | 🟡 beta      | has package tests |
 | `@croco/notifications-resend`    | Notifications   | Resend email provider                | yes  | yes    | -       | -        | RESEND_API_KEY<br>default from address                                              | -                                                               | email send<br>rendered template send<br>retry<br>idempotency key<br>safe diagnostics<br>redacted upstream Problems<br>optional live smoke                                                 | 🔴 alpha/WIP | has package tests |
 | `@croco/onboarding-drizzle`      | Onboarding      | Drizzle repository                   | yes  | yes    | -       | -        | database connection supplied by app                                                 | -                                                               | onboarding state persistence<br>step completion storage                                                                                                                                   | 🟡 beta      | has package tests |
 | `@croco/ratelimit-upstash`       | Rate limiting   | Upstash Redis rate-limit store       | yes  | yes    | -       | -        | UPSTASH_REDIS_REST_URL<br>UPSTASH_REDIS_REST_TOKEN                                  | @upstash/redis                                                  | sliding window<br>token bucket<br>fixed window<br>Lua atomicity<br>shared conformance<br>redacted upstream Problems                                                                       | 🔴 alpha/WIP | has package tests |
@@ -436,13 +436,13 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 
 #### Integration
 
-| Package                       | Domain        | Adapter                        | Node | Lambda | Workers | Frontend | Required env/config                                                                             | Peer deps | Features                                                                                             | Maturity            | Package tests     |
-| ----------------------------- | ------------- | ------------------------------ | ---- | ------ | ------- | -------- | ----------------------------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------- | ------------------- | ----------------- |
-| `@croco/analytics-posthog`    | Analytics     | PostHog analytics provider     | yes  | yes    | -       | -        | POSTHOG_API_KEY<br>POSTHOG_HOST optional                                                        | -         | event capture<br>user/group analytics                                                                | 🔴 alpha/WIP        | has package tests |
-| `@croco/features-posthog`     | Feature flags | PostHog feature provider       | yes  | yes    | -       | -        | POSTHOG_API_KEY<br>POSTHOG_HOST optional                                                        | -         | feature flag lookup<br>PostHog client reuse                                                          | 🟡 beta             | has package tests |
-| `@croco/integrations-posthog` | PostHog       | Shared PostHog client          | yes  | yes    | -       | -        | POSTHOG_API_KEY<br>POSTHOG_HOST optional                                                        | -         | client lifecycle<br>capture flush<br>diagnostics                                                     | 🟡 beta             | has package tests |
-| `@croco/telemetry-api`        | Telemetry     | OpenTelemetry application API  | yes  | yes    | yes     | yes      | none                                                                                            | -         | Trace decorator<br>withSpan<br>recordError<br>trace context lookup<br>browser RPC correlation bridge | 🟢 production-ready | has package tests |
-| `@croco/telemetry-sdk-node`   | Telemetry     | OpenTelemetry Node SDK runtime | yes  | yes    | -       | -        | OTEL_EXPORTER_OTLP_TRACES_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT<br>TELEMETRY_ENABLED optional | -         | SDK init<br>Lambda preset<br>OTLP export<br>forceFlush                                               | 🟢 production-ready | has package tests |
+| Package                       | Domain        | Adapter                        | Node | Lambda | Workers | Frontend | Required env/config                                                                             | Peer deps | Features                                                                                                              | Maturity            | Package tests     |
+| ----------------------------- | ------------- | ------------------------------ | ---- | ------ | ------- | -------- | ----------------------------------------------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------- | ------------------- | ----------------- |
+| `@croco/analytics-posthog`    | Analytics     | PostHog analytics provider     | yes  | yes    | -       | -        | POSTHOG_API_KEY<br>POSTHOG_HOST optional                                                        | -         | event capture<br>user/group analytics<br>flush lifecycle<br>disabled-mode skip evidence<br>safe readiness diagnostics | 🟡 beta             | has package tests |
+| `@croco/features-posthog`     | Feature flags | PostHog feature provider       | yes  | yes    | -       | -        | POSTHOG_API_KEY<br>POSTHOG_HOST optional                                                        | -         | feature flag lookup<br>PostHog client reuse                                                                           | 🟡 beta             | has package tests |
+| `@croco/integrations-posthog` | PostHog       | Shared PostHog client          | yes  | yes    | -       | -        | POSTHOG_API_KEY<br>POSTHOG_HOST optional                                                        | -         | client lifecycle<br>capture flush<br>diagnostics                                                                      | 🟡 beta             | has package tests |
+| `@croco/telemetry-api`        | Telemetry     | OpenTelemetry application API  | yes  | yes    | yes     | yes      | none                                                                                            | -         | Trace decorator<br>withSpan<br>recordError<br>trace context lookup<br>browser RPC correlation bridge                  | 🟢 production-ready | has package tests |
+| `@croco/telemetry-sdk-node`   | Telemetry     | OpenTelemetry Node SDK runtime | yes  | yes    | -       | -        | OTEL_EXPORTER_OTLP_TRACES_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT<br>TELEMETRY_ENABLED optional | -         | SDK init<br>Lambda preset<br>OTLP export<br>forceFlush                                                                | 🟢 production-ready | has package tests |
 
 #### Transport
 
@@ -515,6 +515,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/access-core`                   | Domain       | `packages/access-core`                   | README, API, tests |
 | `@croco/admin-core`                    | Domain       | `packages/admin-core`                    | README, API, tests |
 | `@croco/admin-ops`                     | Domain       | `packages/admin-ops`                     | README, API, tests |
+| `@croco/analytics-core`                | Domain       | `packages/analytics-core`                | README, API, tests |
 | `@croco/batch-core`                    | Domain       | `packages/batch-core`                    | README, API, tests |
 | `@croco/customer-health-core`          | Domain       | `packages/customer-health-core`          | README, API, tests |
 | `@croco/entitlements-core`             | Domain       | `packages/entitlements-core`             | README, API, tests |
@@ -529,6 +530,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/tasks-core`                    | Domain       | `packages/tasks-core`                    | README, API, tests |
 | `@croco/triggers-core`                 | Domain       | `packages/triggers-core`                 | README, API, tests |
 | `@croco/workflow-core`                 | Domain       | `packages/workflow-core`                 | README, API, tests |
+| `@croco/analytics-posthog`             | Integration  | `packages/analytics-posthog`             | README, API, tests |
 | `@croco/features-posthog`              | Integration  | `packages/features-posthog`              | README, API, tests |
 | `@croco/integrations-posthog`          | Integration  | `packages/integrations-posthog`          | README, API, tests |
 | `@croco/frontend-cloudflare`           | Presentation | `packages/frontend-cloudflare`           | README, API, tests |
@@ -552,6 +554,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/llm-openai`                    | Provider     | `packages/llm-openai`                    | README, API, tests |
 | `@croco/membership-drizzle`            | Provider     | `packages/membership-drizzle`            | README, API, tests |
 | `@croco/metering-drizzle`              | Provider     | `packages/metering-drizzle`              | README, API, tests |
+| `@croco/metrics-billing`               | Provider     | `packages/metrics-billing`               | README, API, tests |
 | `@croco/onboarding-drizzle`            | Provider     | `packages/onboarding-drizzle`            | README, API, tests |
 | `@croco/search-drizzle`                | Provider     | `packages/search-drizzle`                | README, API, tests |
 | `@croco/search-meilisearch`            | Provider     | `packages/search-meilisearch`            | README, API, tests |
@@ -572,8 +575,6 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 
 | 패키지                        | 그룹         | 디렉터리                        | 문서               |
 | ----------------------------- | ------------ | ------------------------------- | ------------------ |
-| `@croco/analytics-core`       | Domain       | `packages/analytics-core`       | README, API, tests |
-| `@croco/analytics-posthog`    | Integration  | `packages/analytics-posthog`    | README, API, tests |
 | `@croco/admin-react`          | Presentation | `packages/admin-react`          | README, API, tests |
 | `@croco/frontend-problems`    | Presentation | `packages/frontend-problems`    | README, API, tests |
 | `@croco/admin-generated`      | Protocol     | `packages/admin-generated`      | README, API, tests |
@@ -581,7 +582,6 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/auth-clerk`           | Provider     | `packages/auth-clerk`           | README, API, tests |
 | `@croco/batch-qstash`         | Provider     | `packages/batch-qstash`         | README, API, tests |
 | `@croco/metering-upstash`     | Provider     | `packages/metering-upstash`     | README, API, tests |
-| `@croco/metrics-billing`      | Provider     | `packages/metrics-billing`      | README, API, tests |
 | `@croco/notifications-resend` | Provider     | `packages/notifications-resend` | README, API, tests |
 | `@croco/ratelimit-upstash`    | Provider     | `packages/ratelimit-upstash`    | README, API, tests |
 | `@croco/storage-cloudflare`   | Provider     | `packages/storage-cloudflare`   | README, API, tests |

@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 398,
+  "problemCount": 403,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -377,6 +377,87 @@
           "line": 18,
           "column": 5,
           "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "analytics-posthog/capture-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-posthog-capture-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts",
+          "line": 4,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "analytics-posthog/flush-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-posthog-flush-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts",
+          "line": 19,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "analytics-posthog/readiness-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-posthog-readiness-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-posthog/src/libs/problems/PostHogAnalyticsProblems.ts",
+          "line": 33,
+          "column": 3,
+          "kind": "problem-class"
         }
       ]
     },
@@ -5426,6 +5507,60 @@
           "line": 5,
           "column": 5,
           "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "metrics-billing/metric-dropped",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metrics-billing-metric-dropped",
+      "recovery": {
+        "cause": "Billing metrics could not be recorded because the referenced account, subscription, or plan evidence was missing.",
+        "userAction": "Restore the missing billing state identified by reason/resourceId, then replay the same billing event with the same event key.",
+        "operatorAction": "Use extensions.reason, tenantId, resourceId, and eventKey to rebuild the missing account, subscription, or plan before replay.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts",
+          "line": 17,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "metrics-billing/recording-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metrics-billing-recording-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/metrics-billing/src/libs/problems/BillingMetricsProblems.ts",
+          "line": 46,
+          "column": 3,
+          "kind": "problem-class"
         }
       ]
     },

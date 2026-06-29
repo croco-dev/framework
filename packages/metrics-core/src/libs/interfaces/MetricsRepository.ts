@@ -68,12 +68,14 @@ export abstract class MetricsRepository {
    * @param movement - MRR 변동 데이터
    * @param timestamp - 변동 발생 시각
    * @param eventKey - 이벤트 기반 멱등성 키 (선택)
+   * @param dedupeEventKeys - 이전 버전이나 외부 시스템에서 이미 저장했을 수 있는 호환 멱등성 키
    */
   abstract recordMRRMovement(
     tenantId: string,
     movement: MRRMovement,
     timestamp: Date,
     eventKey?: string,
+    dedupeEventKeys?: readonly string[],
   ): Promise<void>;
 
   /**

@@ -184,6 +184,8 @@
         "access-drizzle",
         "admin-core",
         "admin-ops",
+        "analytics-core",
+        "analytics-posthog",
         "architecture-policy",
         "audit-drizzle",
         "auth-drizzle",
@@ -223,6 +225,7 @@
         "llm-openai",
         "membership-drizzle",
         "metering-drizzle",
+        "metrics-billing",
         "meta-vite",
         "notifications-core",
         "onboarding-core",
@@ -257,14 +260,11 @@
       "packages": [
         "admin-generated",
         "admin-react",
-        "analytics-core",
-        "analytics-posthog",
         "auth-better-auth",
         "auth-clerk",
         "batch-qstash",
         "frontend-problems",
         "metering-upstash",
-        "metrics-billing",
         "notifications-resend",
         "ratelimit-upstash",
         "storage-cloudflare",
@@ -310,7 +310,13 @@
         "adapter": "PostHog analytics provider",
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["POSTHOG_API_KEY", "POSTHOG_HOST optional"],
-        "features": ["event capture", "user/group analytics"]
+        "features": [
+          "event capture",
+          "user/group analytics",
+          "flush lifecycle",
+          "disabled-mode skip evidence",
+          "safe readiness diagnostics"
+        ]
       },
       "audit-drizzle": {
         "domain": "Audit",
@@ -547,7 +553,13 @@
         "adapter": "Billing metrics bridge",
         "runtimes": ["node", "lambda", "cloudflare-workers"],
         "requiredEnv": ["none"],
-        "features": ["billing event metrics", "usage aggregation bridge"]
+        "features": [
+          "billing event metrics",
+          "usage aggregation bridge",
+          "tenant propagation",
+          "event identity idempotency",
+          "dropped metric Problems"
+        ]
       },
       "notifications-resend": {
         "domain": "Notifications",
