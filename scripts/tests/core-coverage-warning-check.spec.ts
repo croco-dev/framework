@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { CoverageTotals } from "../core-coverage-warning-check.mts";
 import {
+  getCoreCoverageSelectionCandidates,
+  getCoreCoverageSelectionWarnings,
   getBaselineWarnings,
   parseBaselineContent,
   validateBaselineEntries,
@@ -73,6 +75,76 @@ describe("core-coverage-warning-check.mts", () => {
     );
 
     expect(errors).toEqual([]);
+  });
+
+  it("reports release-critical candidates that are missing from the core coverage set", () => {
+    const candidates = getCoreCoverageSelectionCandidates({
+      catalog: {
+        groups: {
+          Core: { packages: ["health-core", "retry-core"] },
+          Domain: { packages: ["billing-core"] },
+        },
+        maturity: {
+          production: { packages: ["billing-core", "retry-core"] },
+          beta: { packages: ["health-core"] },
+        },
+      },
+      workspacePackageNames: new Set([
+        "@croco/billing-core",
+        "@croco/health-core",
+        "@croco/retry-core",
+      ]),
+      coreCoveragePackages: ["@croco/retry-core"],
+    });
+
+    expect(candidates).toEqual([
+      expect.objectContaining({
+        packageName: "@croco/billing-core",
+        status: "missing",
+        signals: ["production-ready maturity"],
+      }),
+      expect.objectContaining({
+        packageName: "@croco/health-core",
+        status: "missing",
+        signals: ["catalog group: Core", "health/readiness contract"],
+      }),
+      expect.objectContaining({
+        packageName: "@croco/retry-core",
+        status: "included",
+        signals: ["catalog group: Core", "production-ready maturity", "retry/reliability contract"],
+      }),
+    ]);
+    expect(getCoreCoverageSelectionWarnings(candidates)).toEqual([
+      expect.stringContaining("@croco/billing-core: candidate signals"),
+      expect.stringContaining("@croco/health-core: candidate signals"),
+    ]);
+  });
+
+  it("keeps temporary selection exclusions visible without counting them as missing warnings", () => {
+    const candidates = getCoreCoverageSelectionCandidates({
+      catalog: {
+        groups: {
+          Transport: { packages: ["transports-http"] },
+        },
+        maturity: {},
+      },
+      workspacePackageNames: new Set(["@croco/transports-http"]),
+      coreCoveragePackages: [],
+      temporaryExclusions: {
+        "@croco/transports-http":
+          "coverage migration tracked separately until adapter fixtures land",
+      },
+    });
+
+    expect(candidates).toEqual([
+      expect.objectContaining({
+        packageName: "@croco/transports-http",
+        status: "temporarily-excluded",
+        exclusionReason: "coverage migration tracked separately until adapter fixtures land",
+        signals: ["catalog group: Transport", "transport runtime contract"],
+      }),
+    ]);
+    expect(getCoreCoverageSelectionWarnings(candidates)).toEqual([]);
   });
 });
 

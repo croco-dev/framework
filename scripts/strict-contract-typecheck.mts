@@ -112,6 +112,10 @@ export function collectStrictContractDiagnostics(
       continue;
     }
 
+    if (isIgnorableToolingDiagnostic(trimmedLine)) {
+      continue;
+    }
+
     if (/^.+?\(\d+,\d+\): error TS\d+: /.test(line)) {
       const diagnostic = normalizeDiagnosticLine(rootDir, pkg, line);
       if (diagnostic) {
@@ -133,6 +137,10 @@ export function collectStrictContractDiagnostics(
     targetDiagnostics: targetDiagnostics.sort(compareDiagnostics),
     fatalDiagnostics,
   };
+}
+
+function isIgnorableToolingDiagnostic(line: string): boolean {
+  return line.startsWith('[WARN] The "pnpm" field in package.json is no longer read by pnpm.');
 }
 
 function diagnosticKey(diagnostic: StrictContractDiagnostic): string {

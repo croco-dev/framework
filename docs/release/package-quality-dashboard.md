@@ -27,7 +27,7 @@ The protected `trunk` branch keeps the existing hard gates:
 Warning-only gates stay advisory until they have stable baselines and a clear owner:
 
 - Production dependency audit is advisory in CI and remains visible in the security report.
-- Core coverage baseline warnings are posted to the job summary and artifact.
+- Core coverage selection and baseline warnings are posted to the job summary and artifact.
 - Benchmark warnings stay warning-only unless `BENCHMARK_GATE_MODE=enforce` is explicitly set.
 - Bundle-size warnings stay advisory while `ci-reports/bundle-size/baseline.json` is missing, incomplete, or still being stabilized.
 
@@ -37,6 +37,28 @@ Promote an advisory gate to a blocking trunk gate only when:
 2. The baseline is committed or otherwise reproducible from protected-branch history.
 3. New packages either participate in the gate or carry an explicit documented exemption.
 4. The recovery action is local and deterministic for contributors.
+
+## Core Coverage Warning Report
+
+`pnpm test:coverage:core:warning` writes `ci-reports/coverage/core-warning/report.md`, appends it to the GitHub Actions job summary, and uploads it as the `core-coverage-warning-report` artifact.
+The first rollout is warning-only: missing selection candidates are visible in CI, but only invalid baseline data can make the reporter exit non-zero.
+
+Selection candidates come from executable repository signals:
+
+- public `@croco/*` package manifests under `packages/*/package.json`;
+- `docs/package-catalog.json` maturity and group membership;
+- the current `package.json` `test:coverage:core` filter list;
+- release-critical package names around framework contracts, retry/events/auth/telemetry/transport/health/problem surfaces.
+
+Add a package to core coverage by updating the `test:coverage:core` script with a new `--filter @croco/<package>` entry, running `pnpm test:coverage:core`, adding the measured row to `ci-reports/coverage/core-baseline.txt`, then rerunning `pnpm test:coverage:core:warning`.
+If the package is intentionally deferred, record a temporary reason in `TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS` in `scripts/core-coverage-warning-check.mts` so the report preserves the decision instead of silently dropping the candidate.
+
+Promote selection warnings to a blocking trunk gate only after:
+
+1. Every candidate is either included in `test:coverage:core` or has a short-lived temporary exclusion reason.
+2. Each included package has a coverage summary and committed baseline row from a reproducible protected-branch run.
+3. New production-ready or release-critical packages trigger a deterministic local recovery action in the report.
+4. Several PRs show no unexplained selection warnings and no invalid baseline rows.
 
 ## Bundle-Size Warning Report
 
