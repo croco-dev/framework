@@ -2238,6 +2238,9 @@ importers:
 
   packages/notifications-resend:
     dependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
@@ -2250,6 +2253,9 @@ importers:
       '@croco/retry-core':
         specifier: workspace:*
         version: link:../retry-core
+      '@croco/telemetry-api':
+        specifier: workspace:*
+        version: link:../telemetry-api
       resend:
         specifier: ^4.0.0
         version: 4.8.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)

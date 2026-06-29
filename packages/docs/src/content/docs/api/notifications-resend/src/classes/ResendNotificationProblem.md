@@ -5,7 +5,7 @@ prev: false
 title: "ResendNotificationProblem"
 ---
 
-Resend 전송 실패를 표현하는 Problem입니다.
+Resend 전송 실패와 설정/검증 문제를 표현하는 Problem입니다.
 
 ## Extends
 

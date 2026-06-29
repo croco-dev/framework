@@ -267,7 +267,7 @@ export function createProblemCodeRegistry(
       status: toHttpStatus(category),
       title: toTitle(category),
       cookbookPath: `/reference/problem-recovery-cookbook/#${slugifyProblemCode(code)}`,
-      recovery: recoveryMetadataByCategory[category],
+      recovery: recoveryMetadataByCode[code] ?? recoveryMetadataByCategory[category],
       sources,
     });
   }
@@ -1011,6 +1011,47 @@ const recoveryMetadataByCategory = {
     severity: "info",
   }),
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
+
+const recoveryMetadataByCode = {
+  "notifications-resend/idempotency-conflict": recovery({
+    cause: "Resend rejected reuse of an idempotency key for a different send request.",
+    userAction:
+      "Replay the original payload with the same key or use a new key for a changed send intent.",
+    operatorAction: "Audit callers so each business send intent has one stable idempotency key.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  "notifications-resend/missing-config": recovery({
+    cause:
+      "Required Resend configuration is absent or blank before provider readiness can be proven.",
+    userAction: "Configure RESEND_API_KEY and a verified default sender, then rerun diagnostics.",
+    operatorAction:
+      "Check deployment env/config injection and verify diagnostics do not expose the raw key.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "notifications-resend/retryable-upstream": recovery({
+    cause: "Resend returned a transient status, rate limit, or network timeout.",
+    userAction: "Retry with the same idempotency key when the send intent is unchanged.",
+    operatorAction:
+      "Check Resend status, rate limits, and retry-after/upstream status in telemetry.",
+    retryability: "retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "notifications-resend/terminal-upstream": recovery({
+    cause: "Resend rejected the request with a non-retryable upstream failure.",
+    userAction:
+      "Do not retry unchanged input; correct the API key, domain, sender verification, or request content.",
+    operatorAction:
+      "Inspect redacted upstream code/status and fix provider configuration before retrying.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+} as const satisfies Partial<Record<string, ProblemRecoveryMetadata>>;
 
 function recovery(options: {
   readonly cause: string;

@@ -25,13 +25,13 @@ title: "DrizzleAuditLogRepositoryConfig"
 
 `unknown`
 
----
+***
 
 ### schema
 
 > **schema**: [`AuditLogTable`](/api/audit-drizzle/src/type-aliases/auditlogtable/)
 
----
+***
 
 ### serializeJson?
 
@@ -47,7 +47,7 @@ title: "DrizzleAuditLogRepositoryConfig"
 
 `string`
 
----
+***
 
 ### table
 

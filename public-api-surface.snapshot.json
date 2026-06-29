@@ -11952,6 +11952,24 @@
       "entrypoint": "packages/notifications-resend/src/index.ts",
       "runtimeExports": [
         {
+          "name": "ResendDiagnosticsProvider",
+          "exportKind": "named",
+          "source": "./libs/ResendDiagnosticsProvider",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ResendIdempotencyConflictProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/ResendNotificationProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ResendMissingConfigProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/ResendNotificationProblem",
+          "declarationKind": "class"
+        },
+        {
           "name": "ResendNotificationProblem",
           "exportKind": "named",
           "source": "./libs/problems/ResendNotificationProblem",
@@ -11962,13 +11980,51 @@
           "exportKind": "named",
           "source": "./libs/ResendProvider",
           "declarationKind": "class"
+        },
+        {
+          "name": "ResendRetryableUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/ResendNotificationProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ResendTerminalUpstreamProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/ResendNotificationProblem",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ResendValidationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/ResendNotificationProblem",
+          "declarationKind": "class"
         }
       ],
       "typeExports": [
         {
           "name": "ResendConfig",
           "exportKind": "named",
-          "source": "./libs/ResendProvider"
+          "source": "./libs/ResendConfig"
+        },
+        {
+          "name": "ResendDiagnosticsOptions",
+          "exportKind": "named",
+          "source": "./libs/ResendDiagnosticsProvider"
+        },
+        {
+          "name": "ResendReadinessCheckContext",
+          "exportKind": "named",
+          "source": "./libs/ResendDiagnosticsProvider"
+        },
+        {
+          "name": "ResendReadinessCheckResult",
+          "exportKind": "named",
+          "source": "./libs/ResendDiagnosticsProvider"
+        },
+        {
+          "name": "SafeResendConfigDetails",
+          "exportKind": "named",
+          "source": "./libs/ResendConfig"
         }
       ]
     },

@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "InvalidSearchRowProblem"
+title: "ResendRetryableUpstreamProblem"
 ---
 
-검색 결과 행이 객체 형태가 아닐 때 발생하는 문제입니다.
+Resend 전송 실패와 설정/검증 문제를 표현하는 Problem입니다.
 
 ## Extends
 
@@ -15,13 +15,21 @@ title: "InvalidSearchRowProblem"
 
 ### Constructor
 
-> **new InvalidSearchRowProblem**(): `InvalidSearchRowProblem`
+> **new ResendRetryableUpstreamProblem**(`context`, `detail?`): `ResendRetryableUpstreamProblem`
 
-잘못된 검색 결과 행 문제를 생성합니다.
+#### Parameters
+
+##### context
+
+`ResendErrorContext`
+
+##### detail?
+
+`string` = `"Resend upstream request failed retryably"`
 
 #### Returns
 
-`InvalidSearchRowProblem`
+`ResendRetryableUpstreamProblem`
 
 #### Overrides
 
@@ -31,9 +39,9 @@ title: "InvalidSearchRowProblem"
 
 ### category
 
-> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
+> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
@@ -51,9 +59,9 @@ title: "InvalidSearchRowProblem"
 
 ### code
 
-> `readonly` **code**: `"SEARCH_DRIZZLE_INVALID_ROW"` = `"SEARCH_DRIZZLE_INVALID_ROW"`
+> `readonly` **code**: `string`
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 

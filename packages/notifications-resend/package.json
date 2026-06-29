@@ -40,10 +40,12 @@
     "lint": "oxlint ."
   },
   "dependencies": {
+    "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/notifications-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/retry-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
     "resend": "^4.0.0"
   },
   "devDependencies": {
