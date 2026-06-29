@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  buildBundleSizeMarkdown,
   buildReportMarkdown,
   createPackageQualityReport,
   parseWorkspacePackagePatterns,
@@ -128,16 +129,142 @@ describe("package-quality-report.mts", () => {
       join(repo, "ci-reports", "package-quality", "summary.json"),
       "utf-8",
     );
+    const bundleSizeMarkdown = readFileSync(
+      join(repo, "ci-reports", "package-quality", "bundle-size.md"),
+      "utf-8",
+    );
 
     expect(markdown).toContain("# Package Quality Dashboard");
     expect(markdown).toContain("`strict-contract-typecheck`");
     expect(markdown).toContain("`static-misuse:check`");
     expect(markdown).toContain("| `public-api:check` | package public export surface drift");
+    expect(markdown).toContain(
+      "| `bundle-size:warning` | publishable package generated artifact growth",
+    );
     expect(markdown).toContain("- Runtime exports added/removed: 1 / 0");
     expect(markdown).toContain("- Type exports added/removed: 0 / 1");
     expect(markdown).toContain("run `pnpm public-api:write`");
     expect(summaryJson).toContain('"packageName": "@croco/alpha"');
     expect(summaryJson).toContain('"publicApi"');
+    expect(summaryJson).toContain('"bundleSize"');
+    expect(bundleSizeMarkdown).toContain("# Bundle Size Warning Report");
+  });
+
+  it("reports bundle-size artifact ownership when baselines are missing", () => {
+    const repo = createTempRepo();
+    const artifactSource = "console.log('alpha');\n";
+    writePackage(repo, "alpha", "@croco/alpha", {
+      build: "tsup",
+    });
+    writeFile(repo, "packages/alpha/dist/index.js", artifactSource);
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+    });
+    const artifact = report.bundleSize.artifacts.find(
+      (entry) => entry.artifactPath === "packages/alpha/dist/index.js",
+    );
+    const dashboard = buildReportMarkdown(report);
+    const bundleMarkdown = buildBundleSizeMarkdown(report.bundleSize);
+
+    expect(artifact).toEqual(
+      expect.objectContaining({
+        packageName: "@croco/alpha",
+        sizeBytes: Buffer.byteLength(artifactSource),
+        baselineBytes: null,
+        status: "missing-baseline",
+        recoveryCommand: "pnpm --filter @croco/alpha build && pnpm package-quality:report",
+      }),
+    );
+    expect(report.bundleSize.missingBaselineCount).toBe(1);
+    expect(dashboard).toContain("warning-only; 1 missing bundle-size baseline(s)");
+    expect(bundleMarkdown).toContain(
+      "| `@croco/alpha` | `packages/alpha/dist/index.js` | 22 B | missing | - | - | missing-baseline |",
+    );
+  });
+
+  it("reports bundle-size growth against committed baselines", () => {
+    const repo = createTempRepo();
+    const artifactSource = "console.log('larger alpha bundle');\n";
+    writePackage(repo, "alpha", "@croco/alpha", {
+      build: "tsup",
+    });
+    writeFile(repo, "packages/alpha/dist/index.js", artifactSource);
+    writeFile(
+      repo,
+      "ci-reports/bundle-size/baseline.json",
+      `${JSON.stringify(
+        {
+          artifacts: {
+            "@croco/alpha:packages/alpha/dist/index.js": {
+              bytes: 10,
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+    });
+    const artifact = report.bundleSize.artifacts.find(
+      (entry) => entry.artifactPath === "packages/alpha/dist/index.js",
+    );
+    const bundleMarkdown = buildBundleSizeMarkdown(report.bundleSize);
+
+    expect(artifact).toEqual(
+      expect.objectContaining({
+        packageName: "@croco/alpha",
+        baselineKey: "@croco/alpha:packages/alpha/dist/index.js",
+        baselineBytes: 10,
+        deltaBytes: Buffer.byteLength(artifactSource) - 10,
+        status: "over-baseline",
+      }),
+    );
+    expect(report.bundleSize.overBaselineCount).toBe(1);
+    expect(bundleMarkdown).toContain("over-baseline");
+    expect(bundleMarkdown).toContain("ci-reports/bundle-size/baseline.json");
+  });
+
+  it("reports unmatched bundle-size baselines as warning-only stale setup work", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "alpha", "@croco/alpha", {
+      build: "tsup",
+    });
+    writeFile(repo, "packages/alpha/dist/index.js", "console.log('alpha');\n");
+    writeFile(
+      repo,
+      "ci-reports/bundle-size/baseline.json",
+      `${JSON.stringify(
+        {
+          artifacts: {
+            "@croco/alpha:packages/alpha/dist/index.js": 64,
+            "@croco/alpha:packages/alpha/dist/stale.js": 128,
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+    });
+    const dashboard = buildReportMarkdown(report);
+    const bundleMarkdown = buildBundleSizeMarkdown(report.bundleSize);
+
+    expect(report.bundleSize.unmatchedBaselineCount).toBe(1);
+    expect(report.bundleSize.unmatchedBaselines).toEqual([
+      "@croco/alpha:packages/alpha/dist/stale.js",
+    ]);
+    expect(dashboard).toContain("1 unmatched bundle-size baseline(s)");
+    expect(bundleMarkdown).toContain("## Unmatched baselines");
+    expect(bundleMarkdown).toContain("| `@croco/alpha:packages/alpha/dist/stale.js` |");
   });
 
   it("flags repository-core Drizzle boundary violations", () => {

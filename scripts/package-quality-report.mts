@@ -55,6 +55,40 @@ export type PublicApiGuardResult = {
   readonly updateCommand: string;
 };
 
+export type BundleSizeStatus =
+  | "within-baseline"
+  | "over-baseline"
+  | "missing-baseline"
+  | "not-built";
+
+export type BundleSizeArtifact = {
+  readonly packageName: string;
+  readonly relativeDir: string;
+  readonly artifactPath: string | null;
+  readonly baselineKey: string | null;
+  readonly sizeBytes: number | null;
+  readonly baselineBytes: number | null;
+  readonly deltaBytes: number | null;
+  readonly deltaPercent: number | null;
+  readonly status: BundleSizeStatus;
+  readonly recoveryCommand: string;
+};
+
+export type BundleSizeWarningReport = {
+  readonly ciMode: "warning-only";
+  readonly baselinePath: string;
+  readonly reportPath: string;
+  readonly localCommand: string;
+  readonly measuredPackageCount: number;
+  readonly artifactCount: number;
+  readonly missingBaselineCount: number;
+  readonly overBaselineCount: number;
+  readonly unmatchedBaselineCount: number;
+  readonly notBuiltPackageCount: number;
+  readonly unmatchedBaselines: readonly string[];
+  readonly artifacts: readonly BundleSizeArtifact[];
+};
+
 export type PackageQualityReport = {
   readonly generatedAt: string;
   readonly rootDir: string;
@@ -62,6 +96,7 @@ export type PackageQualityReport = {
   readonly rows: readonly PackageQualityRow[];
   readonly boundaries: readonly DependencyBoundaryResult[];
   readonly publicApi: PublicApiGuardResult;
+  readonly bundleSize: BundleSizeWarningReport;
   readonly gateOutcomes: Readonly<Record<string, string>>;
 };
 
@@ -98,11 +133,29 @@ type DependencyBoundaryRule = {
   readonly policy: string;
 };
 
+type BundleBaselineMatch = {
+  readonly key: string;
+  readonly bytes: number;
+};
+
 const QUALITY_TASKS: readonly QualityTask[] = ["build", "typecheck", "test"];
 const reportDirectory = join("ci-reports", "package-quality");
+const bundleSizeBaselinePath = join("ci-reports", "bundle-size", "baseline.json");
+const bundleSizeReportPath = join(reportDirectory, "bundle-size.md");
 const turboRunsDirectory = join(".turbo", "runs");
 const workspaceFileName = "pnpm-workspace.yaml";
 const publicApiSummaryPath = join(reportDirectory, "public-api-summary.json");
+const bundleSizeRecoveryCommand = "pnpm build && pnpm package-quality:report";
+const bundleSizeArtifactSuffixes = [
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".css",
+  ".wasm",
+  ".map",
+  ".json",
+  ".d.ts",
+];
 
 const DEPENDENCY_BOUNDARY_RULES: readonly DependencyBoundaryRule[] = [
   {
@@ -625,6 +678,182 @@ function readPublicApiGuardResult(rootDir: string): PublicApiGuardResult {
   };
 }
 
+function readBundleSizeBaselines(rootDir: string): ReadonlyMap<string, number> {
+  const baselinePath = join(rootDir, bundleSizeBaselinePath);
+
+  if (!existsSync(baselinePath)) {
+    return new Map();
+  }
+
+  const baseline = readJsonFile(baselinePath);
+  if (!isRecord(baseline)) {
+    throw new Error(`${bundleSizeBaselinePath} must contain an object`);
+  }
+
+  const artifactEntries = isRecord(baseline.artifacts) ? baseline.artifacts : baseline;
+  const baselines = new Map<string, number>();
+
+  for (const [key, value] of Object.entries(artifactEntries)) {
+    if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+      baselines.set(key, value);
+      continue;
+    }
+
+    if (
+      isRecord(value) &&
+      typeof value.bytes === "number" &&
+      Number.isFinite(value.bytes) &&
+      value.bytes >= 0
+    ) {
+      baselines.set(key, value.bytes);
+      continue;
+    }
+
+    throw new Error(
+      `${bundleSizeBaselinePath} entry ${key} must be a non-negative byte number or an object with a non-negative bytes number`,
+    );
+  }
+
+  return baselines;
+}
+
+function isMeasuredBundleArtifact(path: string): boolean {
+  return bundleSizeArtifactSuffixes.some((suffix) => path.endsWith(suffix));
+}
+
+function getBundleBaselineMatch(
+  baselines: ReadonlyMap<string, number>,
+  packageName: string,
+  artifactPath: string,
+): BundleBaselineMatch | null {
+  const packageArtifactKey = `${packageName}:${artifactPath}`;
+  const packageArtifactBytes = baselines.get(packageArtifactKey);
+  if (packageArtifactBytes !== undefined) {
+    return {
+      key: packageArtifactKey,
+      bytes: packageArtifactBytes,
+    };
+  }
+
+  const artifactBytes = baselines.get(artifactPath);
+  return artifactBytes === undefined
+    ? null
+    : {
+        key: artifactPath,
+        bytes: artifactBytes,
+      };
+}
+
+function getBundleSizeRecoveryCommand(packageName: string): string {
+  return `pnpm --filter ${packageName} build && pnpm package-quality:report`;
+}
+
+function createBundleSizeArtifact(
+  pkg: PackageInfo,
+  artifactPath: string,
+  sizeBytes: number,
+  baselineMatch: BundleBaselineMatch | null,
+): BundleSizeArtifact {
+  const baselineBytes = baselineMatch?.bytes ?? null;
+  const deltaBytes = baselineBytes === null ? null : sizeBytes - baselineBytes;
+  const deltaPercent =
+    baselineBytes === null || baselineBytes === 0 ? null : (deltaBytes / baselineBytes) * 100;
+
+  return {
+    packageName: pkg.name,
+    relativeDir: pkg.relativeDir,
+    artifactPath,
+    baselineKey: baselineMatch?.key ?? null,
+    sizeBytes,
+    baselineBytes,
+    deltaBytes,
+    deltaPercent,
+    status:
+      baselineBytes === null
+        ? "missing-baseline"
+        : sizeBytes > baselineBytes
+          ? "over-baseline"
+          : "within-baseline",
+    recoveryCommand: getBundleSizeRecoveryCommand(pkg.name),
+  };
+}
+
+function createNotBuiltBundleSizeArtifact(pkg: PackageInfo): BundleSizeArtifact {
+  return {
+    packageName: pkg.name,
+    relativeDir: pkg.relativeDir,
+    artifactPath: null,
+    baselineKey: null,
+    sizeBytes: null,
+    baselineBytes: null,
+    deltaBytes: null,
+    deltaPercent: null,
+    status: "not-built",
+    recoveryCommand: getBundleSizeRecoveryCommand(pkg.name),
+  };
+}
+
+function collectPackageBundleSizeArtifacts(
+  rootDir: string,
+  pkg: PackageInfo,
+  baselines: ReadonlyMap<string, number>,
+): BundleSizeArtifact[] {
+  const distDir = join(rootDir, pkg.relativeDir, "dist");
+
+  if (!existsSync(distDir) || !statSync(distDir).isDirectory()) {
+    return [createNotBuiltBundleSizeArtifact(pkg)];
+  }
+
+  const artifacts = walkFiles(distDir)
+    .map((filePath) => toPosixPath(relative(rootDir, filePath)))
+    .filter(isMeasuredBundleArtifact)
+    .map((artifactPath) =>
+      createBundleSizeArtifact(
+        pkg,
+        artifactPath,
+        statSync(join(rootDir, artifactPath)).size,
+        getBundleBaselineMatch(baselines, pkg.name, artifactPath),
+      ),
+    );
+
+  return artifacts.length > 0 ? artifacts : [createNotBuiltBundleSizeArtifact(pkg)];
+}
+
+export function createBundleSizeWarningReport(
+  rootDir: string,
+  packages: readonly PackageInfo[],
+): BundleSizeWarningReport {
+  const baselines = readBundleSizeBaselines(rootDir);
+  const measuredPackages = packages.filter((pkg) => !pkg.private && Boolean(pkg.scripts.build));
+  const artifacts = measuredPackages.flatMap((pkg) =>
+    collectPackageBundleSizeArtifacts(rootDir, pkg, baselines),
+  );
+  const matchedBaselineKeys = new Set(
+    artifacts
+      .map((artifact) => artifact.baselineKey)
+      .filter((baselineKey): baselineKey is string => baselineKey !== null),
+  );
+  const unmatchedBaselines = [...baselines.keys()]
+    .filter((baselineKey) => !matchedBaselineKeys.has(baselineKey))
+    .sort();
+
+  return {
+    ciMode: "warning-only",
+    baselinePath: bundleSizeBaselinePath,
+    reportPath: bundleSizeReportPath,
+    localCommand: bundleSizeRecoveryCommand,
+    measuredPackageCount: measuredPackages.length,
+    artifactCount: artifacts.filter((artifact) => artifact.artifactPath !== null).length,
+    missingBaselineCount: artifacts.filter((artifact) => artifact.status === "missing-baseline")
+      .length,
+    overBaselineCount: artifacts.filter((artifact) => artifact.status === "over-baseline").length,
+    unmatchedBaselineCount: unmatchedBaselines.length,
+    notBuiltPackageCount: artifacts.filter((artifact) => artifact.status === "not-built").length,
+    unmatchedBaselines,
+    artifacts,
+  };
+}
+
 export function createPackageQualityReport(
   options: Pick<CheckOptions, "rootDir" | "summaryDir">,
 ): PackageQualityReport {
@@ -640,6 +869,7 @@ export function createPackageQualityReport(
     rows,
     boundaries: scanDependencyBoundaries(options.rootDir),
     publicApi: readPublicApiGuardResult(options.rootDir),
+    bundleSize: createBundleSizeWarningReport(options.rootDir, packages),
     gateOutcomes: readGateOutcomes(),
   };
 }
@@ -758,6 +988,135 @@ function formatPublicApiSection(result: PublicApiGuardResult): string[] {
   ];
 }
 
+function formatBytes(value: number | null): string {
+  if (value === null) {
+    return "-";
+  }
+
+  const absoluteValue = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+
+  if (absoluteValue < 1024) {
+    return `${sign}${absoluteValue} B`;
+  }
+
+  if (absoluteValue < 1024 * 1024) {
+    return `${sign}${(absoluteValue / 1024).toFixed(1)} KiB`;
+  }
+
+  return `${sign}${(absoluteValue / 1024 / 1024).toFixed(2)} MiB`;
+}
+
+function formatBundleDelta(artifact: BundleSizeArtifact): string {
+  if (artifact.deltaBytes === null) {
+    return "-";
+  }
+
+  const sign = artifact.deltaBytes >= 0 ? "+" : "";
+  const percent =
+    artifact.deltaPercent === null ? "" : ` (${sign}${artifact.deltaPercent.toFixed(1)}%)`;
+
+  return `${sign}${formatBytes(artifact.deltaBytes)}${percent}`;
+}
+
+function formatBundleArtifactPath(artifact: BundleSizeArtifact): string {
+  return artifact.artifactPath === null
+    ? "_dist artifact not found_"
+    : `\`${artifact.artifactPath}\``;
+}
+
+function formatBundleBaseline(artifact: BundleSizeArtifact): string {
+  return artifact.baselineBytes === null ? "missing" : formatBytes(artifact.baselineBytes);
+}
+
+function formatBundleSizeStatus(report: BundleSizeWarningReport): string {
+  if (report.measuredPackageCount === 0) {
+    return "warning-only; no publishable build packages in scope";
+  }
+
+  const warnings = [
+    report.overBaselineCount > 0 ? `${report.overBaselineCount} artifact(s) over baseline` : null,
+    report.missingBaselineCount > 0
+      ? `${report.missingBaselineCount} missing bundle-size baseline(s)`
+      : null,
+    report.unmatchedBaselineCount > 0
+      ? `${report.unmatchedBaselineCount} unmatched bundle-size baseline(s)`
+      : null,
+    report.notBuiltPackageCount > 0
+      ? `${report.notBuiltPackageCount} package(s) without measured dist artifacts`
+      : null,
+  ].filter((warning): warning is string => warning !== null);
+
+  if (warnings.length > 0) {
+    return `warning-only; ${warnings.join(", ")}`;
+  }
+
+  return "warning-only; measured artifacts within baseline";
+}
+
+function formatBundleBaselineKey(artifact: BundleSizeArtifact): string {
+  return artifact.baselineKey === null ? "-" : `\`${artifact.baselineKey}\``;
+}
+
+function formatUnmatchedBaselineRows(report: BundleSizeWarningReport): string[] {
+  if (report.unmatchedBaselines.length === 0) {
+    return ["| _none_ |"];
+  }
+
+  return report.unmatchedBaselines.map((baselineKey) => `| \`${baselineKey}\` |`);
+}
+
+function formatBundleSizeEvidence(report: BundleSizeWarningReport): string {
+  return `report \`${report.reportPath}\`; baseline \`${report.baselinePath}\`; run \`${report.localCommand}\``;
+}
+
+export function buildBundleSizeMarkdown(report: BundleSizeWarningReport): string {
+  const artifactRows =
+    report.artifacts.length === 0
+      ? ["| _none_ | _none_ | - | - | - | - | warning-only | - |"]
+      : report.artifacts.map(
+          (artifact) =>
+            `| \`${artifact.packageName}\` | ${formatBundleArtifactPath(artifact)} | ${formatBytes(artifact.sizeBytes)} | ${formatBundleBaseline(artifact)} | ${formatBundleBaselineKey(artifact)} | ${formatBundleDelta(artifact)} | ${artifact.status} | \`${artifact.recoveryCommand}\` |`,
+        );
+
+  const lines = [
+    "# Bundle Size Warning Report",
+    "",
+    `- CI mode: ${report.ciMode}`,
+    "- Scope: publishable workspace packages with a `build` script and generated `dist` artifacts (`.js`, `.mjs`, `.cjs`, `.css`, `.wasm`, `.map`, `.json`, `.d.ts`).",
+    `- Baseline input: \`${report.baselinePath}\``,
+    `- Local recovery command: \`${report.localCommand}\``,
+    "",
+    "## Warning summary",
+    `- Measured packages: ${report.measuredPackageCount}`,
+    `- Measured artifacts: ${report.artifactCount}`,
+    `- Missing baselines: ${report.missingBaselineCount}`,
+    `- Over-baseline artifacts: ${report.overBaselineCount}`,
+    `- Unmatched baselines: ${report.unmatchedBaselineCount}`,
+    `- Packages without measured dist artifacts: ${report.notBuiltPackageCount}`,
+    "",
+    "## Artifact responsibility",
+    "| Package | Artifact | Size | Baseline | Baseline key | Delta | Status | Recovery |",
+    "| --- | --- | ---: | ---: | --- | ---: | --- | --- |",
+    ...artifactRows,
+    "",
+    "## Unmatched baselines",
+    "Baseline keys listed here did not match any measured artifact and may be stale or duplicated.",
+    "",
+    "| Baseline key |",
+    "| --- |",
+    ...formatUnmatchedBaselineRows(report),
+    "",
+    "## Promotion criteria",
+    "1. Commit `ci-reports/bundle-size/baseline.json` from a green protected-branch build or another reproducible protected-branch source.",
+    "2. Every measured artifact must resolve to exactly one package and artifact row with a local recovery command.",
+    "3. New publishable build packages must either produce measured `dist` artifacts or carry an explicit exemption before enforcement.",
+    "4. Keep this report warning-only until multiple PRs show stable package ownership, no missing baselines, and no unmatched baselines.",
+  ];
+
+  return `${lines.join("\n")}\n`;
+}
+
 export function buildReportMarkdown(report: PackageQualityReport): string {
   const lines = [
     "# Package Quality Dashboard",
@@ -775,7 +1134,8 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     `| \`build\` | package build tasks | blocking on PR/trunk | ${report.gateOutcomes.build} | Turbo \`build\` summary below |`,
     `| \`typecheck\` | package TypeScript tasks | blocking on PR/trunk | ${report.gateOutcomes.typecheck} | Turbo \`typecheck\` summary below |`,
     `| \`test\` | package test tasks | blocking on PR/trunk | ${report.gateOutcomes.test} | Turbo \`test\` summary below |`,
-    "| benchmark and bundle size | performance/bundle drift | warning-only until baselines stabilize | warning-only | benchmark workflow keeps enforce mode explicit; bundle size remains a future warning gate |",
+    `| \`bundle-size:warning\` | publishable package generated artifact growth | warning-only until baselines stabilize | ${formatBundleSizeStatus(report.bundleSize)} | ${formatBundleSizeEvidence(report.bundleSize)} |`,
+    "| benchmark | performance drift | warning-only until baselines stabilize | warning-only | benchmark workflow keeps enforce mode explicit |",
     "",
     "## Package task totals",
     "| Task | Pass | Fail | Not collected | Not configured | Not run |",
@@ -798,6 +1158,12 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     "",
     ...formatPublicApiSection(report.publicApi),
     "",
+    "## Bundle size warning",
+    `- Status: ${formatBundleSizeStatus(report.bundleSize)}`,
+    `- Report: \`${report.bundleSize.reportPath}\``,
+    `- Baseline input: \`${report.bundleSize.baselinePath}\``,
+    `- Local recovery command: \`${report.bundleSize.localCommand}\``,
+    "",
     "## Package matrix",
     "| Package | Build | Typecheck | Test | Notes |",
     "| --- | --- | --- | --- | --- |",
@@ -808,7 +1174,7 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     "",
     "## Trunk gate rollout",
     "- Current blocking gates: changeset-required, architecture-policy, dependency-boundaries, static-misuse, lint/format/policy checks, build, typecheck, and test.",
-    "- Current advisory gates: production audit on PRs, core coverage baseline warnings, benchmark warnings, and future bundle-size warnings.",
+    "- Current advisory gates: production audit on PRs, core coverage baseline warnings, benchmark warnings, and bundle-size warnings.",
     "- Promote warning-only gates only after the dashboard shows stable package-level ownership, no unknown package rows, and documented baselines.",
     "- New packages should appear in this dashboard with explicit build/typecheck/test support or an intentional not-configured state.",
   ];
@@ -821,9 +1187,11 @@ export function writePackageQualityReport(report: PackageQualityReport, outputDi
 
   const markdownPath = join(outputDir, "report.md");
   const jsonPath = join(outputDir, "summary.json");
+  const bundleSizePath = join(outputDir, "bundle-size.md");
 
   writeFileSync(markdownPath, buildReportMarkdown(report));
   writeFileSync(jsonPath, `${JSON.stringify(report, null, 2)}\n`);
+  writeFileSync(bundleSizePath, buildBundleSizeMarkdown(report.bundleSize));
 
   return markdownPath;
 }
