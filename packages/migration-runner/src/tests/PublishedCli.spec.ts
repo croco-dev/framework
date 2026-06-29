@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,17 +49,15 @@ describe("published migrate CLI", () => {
             {
               name: "croco-migration-runner-consumer",
               private: true,
-              pnpm: {
-                overrides: {
-                  "@croco/problems-core": `file:${problemsCoreTarball}`,
-                },
-              },
               type: "commonjs",
             },
             null,
             2,
           )}\n`,
         );
+        writePnpmWorkspaceOverrides(consumerRoot, {
+          "@croco/problems-core": `file:${problemsCoreTarball}`,
+        });
 
         run("pnpm", ["add", "--prod", migrationRunnerTarball, "--ignore-scripts"], consumerRoot);
 
@@ -112,6 +110,22 @@ function readPackageVersion(): string {
   }
 
   return manifest.version;
+}
+
+function writePnpmWorkspaceOverrides(
+  consumerRoot: string,
+  overrides: Record<string, string>,
+): void {
+  const lines = [
+    "packages:",
+    "  - .",
+    "overrides:",
+    ...Object.entries(overrides).map(
+      ([packageName, range]) => `  ${JSON.stringify(packageName)}: ${JSON.stringify(range)}`,
+    ),
+  ];
+
+  writeFileSync(join(consumerRoot, "pnpm-workspace.yaml"), `${lines.join("\n")}\n`);
 }
 
 function run(

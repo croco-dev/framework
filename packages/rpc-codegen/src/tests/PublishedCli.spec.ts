@@ -59,18 +59,16 @@ describe("published RPC codegen CLI", () => {
             {
               name: "croco-rpc-codegen-consumer",
               private: true,
-              pnpm: {
-                overrides: {
-                  "@croco/problems-core": `file:${problemsCoreTarball}`,
-                  "@croco/protocols-core": `file:${protocolsCoreTarball}`,
-                },
-              },
               type: "module",
             },
             null,
             2,
           )}\n`,
         );
+        writePnpmWorkspaceOverrides(consumerRoot, {
+          "@croco/problems-core": `file:${problemsCoreTarball}`,
+          "@croco/protocols-core": `file:${protocolsCoreTarball}`,
+        });
 
         run("pnpm", ["add", "--prod", rpcCodegenTarball, "--ignore-scripts"], consumerRoot);
 
@@ -109,6 +107,22 @@ function findTarball(directory: string, prefix: string): string {
   }
 
   return join(directory, filename);
+}
+
+function writePnpmWorkspaceOverrides(
+  consumerRoot: string,
+  overrides: Record<string, string>,
+): void {
+  const lines = [
+    "packages:",
+    "  - .",
+    "overrides:",
+    ...Object.entries(overrides).map(
+      ([packageName, range]) => `  ${JSON.stringify(packageName)}: ${JSON.stringify(range)}`,
+    ),
+  ];
+
+  writeFileSync(join(consumerRoot, "pnpm-workspace.yaml"), `${lines.join("\n")}\n`);
 }
 
 function run(
