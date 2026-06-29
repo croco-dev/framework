@@ -23,6 +23,8 @@ import {
 } from "./create-croco-app-generated-smoke-support.mts";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../packages/create-croco-app/src/supported-options.ts";
 
+const DEFAULT_TENANT_MODEL = "org";
+
 type SmokeValidation = {
   readonly label: string;
   readonly packagePath?: readonly string[];
@@ -355,6 +357,8 @@ const smokeCases: readonly SmokeCase[] = [
       "@smoke",
       "--saas-profile",
       "saas-node-postgres",
+      "--tenant-model",
+      "rls-backed",
       "--no-install",
       "--no-git",
     ],
@@ -364,10 +368,14 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["profile:check"],
         paths: [
           "croco-saas-profile.manifest.json",
+          "croco-tenant-model.manifest.json",
+          "croco-tenant-model.schema.json",
           ".env.example",
           "docs/provider-profile.md",
+          "docs/tenant-model-playbook.md",
           "docs/secrets-checklist.md",
           "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "apps/api-server/src/generatedTenantModel.ts",
         ],
       },
       {
@@ -430,6 +438,8 @@ const smokeCases: readonly SmokeCase[] = [
       "@smoke",
       "--saas-profile",
       "saas-cloudflare",
+      "--tenant-model",
+      "workspace",
       "--no-install",
       "--no-git",
     ],
@@ -439,10 +449,14 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["profile:check"],
         paths: [
           "croco-saas-profile.manifest.json",
+          "croco-tenant-model.manifest.json",
+          "croco-tenant-model.schema.json",
           ".env.example",
           "docs/provider-profile.md",
+          "docs/tenant-model-playbook.md",
           "docs/secrets-checklist.md",
           "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "apps/api-server/src/generatedTenantModel.ts",
         ],
       },
       { label: "typecheck", args: ["typecheck"] },
@@ -460,6 +474,8 @@ const smokeCases: readonly SmokeCase[] = [
       "@smoke",
       "--saas-profile",
       "saas-lambda",
+      "--tenant-model",
+      "shared-schema",
       "--no-install",
       "--no-git",
     ],
@@ -469,10 +485,14 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["profile:check"],
         paths: [
           "croco-saas-profile.manifest.json",
+          "croco-tenant-model.manifest.json",
+          "croco-tenant-model.schema.json",
           ".env.example",
           "docs/provider-profile.md",
+          "docs/tenant-model-playbook.md",
           "docs/secrets-checklist.md",
           "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "apps/api-server/src/generatedTenantModel.ts",
         ],
       },
       { label: "typecheck", args: ["typecheck"] },
@@ -483,7 +503,16 @@ const smokeCases: readonly SmokeCase[] = [
   },
   {
     name: "ai-saas-golden-path",
-    args: ["--preset", "ai-saas", "--scope", "@smoke", "--no-install", "--no-git"],
+    args: [
+      "--preset",
+      "ai-saas",
+      "--scope",
+      "@smoke",
+      "--tenant-model",
+      "single",
+      "--no-install",
+      "--no-git",
+    ],
     validations: [
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
@@ -556,6 +585,7 @@ try {
       "--filter=@croco/tasks-qstash...",
       "--filter=@croco/telemetry-api...",
       "--filter=@croco/telemetry-sdk-node...",
+      "--filter=@croco/tenant-core...",
       "--filter=@croco/transports-http...",
       "--filter=@croco/triggers-qstash...",
       "--filter=@croco/tx-drizzle...",
@@ -730,6 +760,11 @@ function assertSmokeCoverage(cases: readonly SmokeCase[]): void {
     SUPPORTED_CREATE_CROCO_APP_CHOICES.saasProviderProfiles,
     coverage.saasProviderProfiles,
   );
+  assertCovers(
+    "tenant-model",
+    SUPPORTED_CREATE_CROCO_APP_CHOICES.tenantModels,
+    coverage.tenantModels,
+  );
 }
 
 function printSmokeCoverageSummary(cases: readonly SmokeCase[]): void {
@@ -739,7 +774,7 @@ function printSmokeCoverageSummary(cases: readonly SmokeCase[]): void {
     `create-croco-app-generated-smoke: matrix cases ${cases.map(({ name }) => name).join(", ")}`,
   );
   console.log(
-    `create-croco-app-generated-smoke: matrix covers presets=${coverage.presets.join(", ")}; apis=${coverage.apis.join(", ")}; api-hosting=${coverage.apiHosting.join(", ")}; backend-deploy=${coverage.backendDeploys.join(", ")}; frontend-deploy=${coverage.frontendDeploys.join(", ")}; db=${coverage.databases.join(", ")}; saas-profile=${coverage.saasProviderProfiles.join(", ")}`,
+    `create-croco-app-generated-smoke: matrix covers presets=${coverage.presets.join(", ")}; apis=${coverage.apis.join(", ")}; api-hosting=${coverage.apiHosting.join(", ")}; backend-deploy=${coverage.backendDeploys.join(", ")}; frontend-deploy=${coverage.frontendDeploys.join(", ")}; db=${coverage.databases.join(", ")}; saas-profile=${coverage.saasProviderProfiles.join(", ")}; tenant-model=${coverage.tenantModels.join(", ")}`,
   );
 }
 
@@ -751,6 +786,7 @@ function readSmokeCoverage(cases: readonly SmokeCase[]): {
   readonly frontendDeploys: readonly string[];
   readonly databases: readonly string[];
   readonly saasProviderProfiles: readonly string[];
+  readonly tenantModels: readonly string[];
 } {
   return {
     presets: readCoveredValues(cases, "--preset", SUPPORTED_CREATE_CROCO_APP_CHOICES.presets),
@@ -778,7 +814,36 @@ function readSmokeCoverage(cases: readonly SmokeCase[]): {
       "--saas-profile",
       SUPPORTED_CREATE_CROCO_APP_CHOICES.saasProviderProfiles,
     ),
+    tenantModels: readCoveredTenantModels(cases),
   };
+}
+
+function readCoveredTenantModels(cases: readonly SmokeCase[]): readonly string[] {
+  const coveredTenantModels = new Set(
+    readCoveredValues(cases, "--tenant-model", SUPPORTED_CREATE_CROCO_APP_CHOICES.tenantModels),
+  );
+
+  for (const smokeCase of cases) {
+    const preset = readFlagValue(smokeCase.args, "--preset");
+    const goal = readFlagValue(smokeCase.args, "--goal");
+    const hasTenantModel = readFlagValue(smokeCase.args, "--tenant-model") !== undefined;
+
+    if (!hasTenantModel && (preset === "saas" || preset === "ai-saas" || goal === "saas-api")) {
+      coveredTenantModels.add(DEFAULT_TENANT_MODEL);
+    }
+  }
+
+  return SUPPORTED_CREATE_CROCO_APP_CHOICES.tenantModels.filter((tenantModel) =>
+    coveredTenantModels.has(tenantModel),
+  );
+}
+
+function readFlagValue(args: readonly string[], flag: string): string | undefined {
+  const flagIndex = args.indexOf(flag);
+  if (flagIndex === -1) return undefined;
+
+  const value = args[flagIndex + 1];
+  return value && !value.startsWith("--") ? value : undefined;
 }
 
 function readCoveredValues(

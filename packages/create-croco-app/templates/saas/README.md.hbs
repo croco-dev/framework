@@ -11,7 +11,7 @@ pnpm demo:smoke
 
 `demo:smoke`는 REST contract graph를 검사하고, generated client를 만든 뒤, SaaS demo flow를 실행합니다.
 CLI smoke는 서버를 시작하지 않으며, in-memory provider profile만 사용합니다.
-`pnpm profile:check`도 함께 실행되어 생성된 `croco-saas-profile.manifest.json`과 타입 소스가 drift 없이 맞는지 확인합니다.
+`pnpm profile:check`도 함께 실행되어 생성된 provider profile, tenant model manifest/schema/playbook, 타입 소스가 drift 없이 맞는지 확인합니다.
 
 ## Operational Smoke
 
@@ -95,10 +95,14 @@ SAAS_PROVIDER_PROFILE=in-memory pnpm demo:smoke
 생성 시 선택한 production provider profile은 다음 산출물로 고정됩니다.
 
 - `croco-saas-profile.manifest.json`: runtime target, package list, provider capability matrix, required env, smoke command 계약
+- `croco-tenant-model.manifest.json`: `single`, `org`, `workspace`, `shared-schema`, `rls-backed` tenant model 계약과 선택값
+- `croco-tenant-model.schema.json`: tenant model manifest schema
 - `.env.example`: real-provider opt-in smoke에 필요한 env 변수
 - `docs/provider-profile.md`: provider package, capability, deployment note
+- `docs/tenant-model-playbook.md`: schema/migration hints, unsafe migration warning, diagnostic code playbook
 - `docs/secrets-checklist.md`: 배포 전 secret/non-secret config checklist
 - `apps/api-server/src/generatedSaasProviderProfile.ts`: CI drift 검사용 타입 소스
+- `apps/api-server/src/generatedTenantModel.ts`: tenant model manifest/schema/playbook drift 검사용 타입 소스
 
 지원 production profile은 `saas-node-postgres`, `saas-cloudflare`, `saas-lambda`입니다. `pnpm demo:smoke`는 항상 zero-credential in-memory smoke이고, real provider preflight는 명시적으로 분리되어 있습니다.
 
@@ -111,6 +115,14 @@ SAAS_PROVIDER_PROFILE=<generated-profile> pnpm failure-drill:integration
 
 `profile:smoke:real`은 실제 외부 provider를 호출하기 전에 manifest와 required env를 검사합니다. 누락된 값은 `CROCO_SAAS_PROFILE_ENV_MISSING` diagnostic으로 실패합니다.
 `failure-drill:integration`은 같은 real-provider preflight 경계를 사용하므로 credential이 준비된 환경에서만 명시적으로 실행합니다.
+
+## Tenant Models
+
+기본 tenant model은 `org`입니다. 생성 시 `--tenant-model single|org|workspace|shared-schema|rls-backed`로 명시할 수 있습니다.
+
+`pnpm profile:check`는 provider runtime과 tenant model이 호환되는지 함께 검사합니다. 예를 들어 `rls-backed`는 Postgres transaction boundary가 필요하므로 Node/Postgres profile에서만 통과하고, Cloudflare Workers 또는 Lambda profile과 조합되면 `CROCO_TENANT_MODEL_COMPATIBILITY_FAILED` diagnostic으로 실패합니다.
+
+`docs/tenant-model-playbook.md`에는 선택한 model의 required package/adapter/capability, schema hint, migration helper output, unsafe migration warning, diagnostic code가 포함됩니다. tenant isolation을 바꾸려면 `croco-tenant-model.manifest.json`, schema, playbook, generated source를 같은 변경으로 커밋해야 합니다.
 
 Provider-backed profile seam은 기존 `drizzle-polar-upstash`와 신규 production profiles로 문서화되어 있습니다. 실제 adapter wiring을 추가할 때 다음 package와 env contract를 사용합니다.
 

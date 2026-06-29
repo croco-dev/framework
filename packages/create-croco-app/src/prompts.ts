@@ -1,4 +1,9 @@
 import * as p from "@clack/prompts";
+import {
+  DEFAULT_TENANT_MODEL,
+  TENANT_MODEL_NAMES,
+  getTenantModelDefinition,
+} from "@croco/tenant-core/tenant-model";
 import pc from "picocolors";
 import { GOAL_SPECS, readGoal, resolveGoalOptions } from "./goals.js";
 import {
@@ -200,6 +205,31 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       process.exit(0);
     }
 
+    const tenantModel =
+      preset === "saas" || preset === "ai-saas"
+        ? (cliArgs.tenantModel ??
+          (await p.select({
+            message: "Select a tenant model:",
+            initialValue: DEFAULT_TENANT_MODEL,
+            options: TENANT_MODEL_NAMES.map((value) => {
+              const definition = getTenantModelDefinition(value);
+
+              return {
+                value,
+                label: definition.displayName,
+                hint:
+                  value === DEFAULT_TENANT_MODEL
+                    ? "Default SaaS organization model"
+                    : definition.summary,
+              };
+            }),
+          })))
+        : undefined;
+    if (p.isCancel(tenantModel)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+
     const agentRules =
       cliArgs.agentRules ??
       (await p.confirm({
@@ -232,6 +262,10 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       saasProviderProfile:
         preset === "saas" || preset === "ai-saas"
           ? (saasProviderProfile as GeneratorOptions["saasProviderProfile"])
+          : undefined,
+      tenantModel:
+        preset === "saas" || preset === "ai-saas"
+          ? (tenantModel as GeneratorOptions["tenantModel"])
           : undefined,
       webApps: [],
       apiHosting: "standalone",

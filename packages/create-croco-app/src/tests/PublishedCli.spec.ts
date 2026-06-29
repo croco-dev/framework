@@ -28,6 +28,7 @@ describe("published create-croco-app CLI", () => {
 
       try {
         ensureBuilt();
+        assertTenantModelHelpersBundled();
         packRuntimeWorkspacePackages(packRoot);
         run(
           "pnpm",
@@ -104,6 +105,18 @@ function requiredLibraryArtifacts(packageName: string): string[] {
 
   return ["index.js", "index.mjs", "index.d.ts", "index.d.mts"].map((filename) =>
     join(distDir, filename),
+  );
+}
+
+function assertTenantModelHelpersBundled(): void {
+  const distDir = join(packageDir, "dist");
+  const builtSources = readdirSync(distDir)
+    .filter((filename) => filename.endsWith(".js"))
+    .map((filename) => readFileSync(join(distDir, filename), "utf8"))
+    .join("\n");
+
+  expect(builtSources).not.toMatch(
+    /(?:from\s+|import\()["']@croco\/tenant-core(?:\/tenant-model)?["']/,
   );
 }
 

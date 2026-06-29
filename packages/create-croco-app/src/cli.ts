@@ -33,6 +33,10 @@ export function createProgram(): Command {
       "--saas-profile <profile>",
       `Production SaaS provider profile (${formatSaasProviderProfileChoices()})`,
     )
+    .option(
+      "--tenant-model <model>",
+      "SaaS tenant model (single|org|workspace|shared-schema|rls-backed)",
+    )
     .option("--api <api>", "API type (graphql|trpc)")
     .option("--api-hosting <hosting>", "API hosting (standalone|nextjs)")
     .option("--web-apps <apps>", "Comma-separated web app names")

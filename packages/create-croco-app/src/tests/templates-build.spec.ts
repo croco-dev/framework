@@ -518,8 +518,25 @@ function checkSaasStructure() {
     ["apps", "api-server", "src", "provider-profile-check.ts"],
     /CROCO_SAAS_PROFILE_PACKAGE_MISSING/,
   );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "provider-profile-check.ts"],
+    /generatedTenantModelManifest/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "provider-profile-check.ts"],
+    /CROCO_TENANT_MODEL_COMPATIBILITY_FAILED/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "provider-profile-check.ts"],
+    /croco-tenant-model\.manifest\.json/,
+  );
   checkFileContains("saas", ["README.md.hbs"], /SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter/);
   checkFileContains("saas", ["README.md.hbs"], /croco-saas-profile\.manifest\.json/);
+  checkFileContains("saas", ["README.md.hbs"], /croco-tenant-model\.manifest\.json/);
+  checkFileContains("saas", ["README.md.hbs"], /tenant-model-playbook\.md/);
   checkFileContains("saas", ["README.md.hbs"], /@croco\/billing-polar/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /billing-sync/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LifecycleRuleEvaluator/);
