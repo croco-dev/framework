@@ -11,9 +11,9 @@ title: "DrizzleMeterRepositoryConfig"
 
 ## Properties
 
-### deserializeJson()?
+### deserializeJson?
 
-> `optional` **deserializeJson**: (`value`) => `unknown`
+> `optional` **deserializeJson?**: (`value`) => `unknown`
 
 #### Parameters
 
@@ -25,23 +25,23 @@ title: "DrizzleMeterRepositoryConfig"
 
 `unknown`
 
-***
+---
 
 ### meterSchema
 
 > **meterSchema**: [`MeterTable`](/api/metering-drizzle/src/type-aliases/metertable/)
 
-***
+---
 
 ### meterTable
 
 > **meterTable**: `unknown`
 
-***
+---
 
-### serializeJson()?
+### serializeJson?
 
-> `optional` **serializeJson**: (`value`) => `string`
+> `optional` **serializeJson?**: (`value`) => `string`
 
 #### Parameters
 
@@ -53,13 +53,13 @@ title: "DrizzleMeterRepositoryConfig"
 
 `string`
 
-***
+---
 
 ### usageRecordSchema
 
 > **usageRecordSchema**: [`UsageRecordTable`](/api/metering-drizzle/src/type-aliases/usagerecordtable/)
 
-***
+---
 
 ### usageRecordTable
 

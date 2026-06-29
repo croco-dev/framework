@@ -11,14 +11,14 @@ title: "StepState"
 
 > **completed**: `boolean`
 
-***
+---
 
 ### completedAt?
 
-> `optional` **completedAt**: `Date`
+> `optional` **completedAt?**: `Date`
 
-***
+---
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>

@@ -11,9 +11,9 @@ title: "DrizzleAuditLogRepositoryConfig"
 
 ## Properties
 
-### deserializeJson()?
+### deserializeJson?
 
-> `optional` **deserializeJson**: (`value`) => `unknown`
+> `optional` **deserializeJson?**: (`value`) => `unknown`
 
 #### Parameters
 
@@ -25,17 +25,17 @@ title: "DrizzleAuditLogRepositoryConfig"
 
 `unknown`
 
-***
+---
 
 ### schema
 
 > **schema**: [`AuditLogTable`](/api/audit-drizzle/src/type-aliases/auditlogtable/)
 
-***
+---
 
-### serializeJson()?
+### serializeJson?
 
-> `optional` **serializeJson**: (`value`) => `string`
+> `optional` **serializeJson?**: (`value`) => `string`
 
 #### Parameters
 
@@ -47,7 +47,7 @@ title: "DrizzleAuditLogRepositoryConfig"
 
 `string`
 
-***
+---
 
 ### table
 

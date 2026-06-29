@@ -9,39 +9,39 @@ title: "OnboardingEvent"
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### onboardingId
 
 > **onboardingId**: `string`
 
-***
+---
 
 ### stepId?
 
-> `optional` **stepId**: `string`
+> `optional` **stepId?**: `string`
 
-***
+---
 
 ### tenantId
 
 > **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
 > **timestamp**: `Date`
 
-***
+---
 
 ### type
 
 > **type**: [`OnboardingEventType`](/api/onboarding-core/src/type-aliases/onboardingeventtype/)
 
-***
+---
 
 ### userId
 

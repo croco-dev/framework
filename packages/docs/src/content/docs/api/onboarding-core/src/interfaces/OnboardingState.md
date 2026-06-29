@@ -9,33 +9,33 @@ title: "OnboardingState"
 
 ### completedAt?
 
-> `optional` **completedAt**: `Date`
+> `optional` **completedAt?**: `Date`
 
-***
+---
 
 ### currentStepId?
 
-> `optional` **currentStepId**: `string`
+> `optional` **currentStepId?**: `string`
 
-***
+---
 
 ### isCompleted
 
 > **isCompleted**: `boolean`
 
-***
+---
 
 ### startedAt?
 
-> `optional` **startedAt**: `Date`
+> `optional` **startedAt?**: `Date`
 
-***
+---
 
 ### status?
 
-> `optional` **status**: [`OnboardingStatus`](/api/onboarding-core/src/type-aliases/onboardingstatus/)
+> `optional` **status?**: [`OnboardingStatus`](/api/onboarding-core/src/type-aliases/onboardingstatus/)
 
-***
+---
 
 ### steps
 

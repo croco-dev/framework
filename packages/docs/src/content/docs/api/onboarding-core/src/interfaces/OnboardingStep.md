@@ -9,52 +9,52 @@ title: "OnboardingStep"
 
 ### dependsOn?
 
-> `optional` **dependsOn**: `string`[]
+> `optional` **dependsOn?**: `string`[]
 
-***
+---
 
 ### description?
 
-> `optional` **description**: `string`
+> `optional` **description?**: `string`
 
-***
+---
 
 ### featureFlagKey?
 
-> `optional` **featureFlagKey**: `string`
+> `optional` **featureFlagKey?**: `string`
 
-***
+---
 
 ### id
 
 > **id**: `string`
 
-***
+---
 
 ### metadata?
 
-> `optional` **metadata**: `Record`\<`string`, `unknown`\>
+> `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### order?
 
-> `optional` **order**: `number`
+> `optional` **order?**: `number`
 
-***
+---
 
 ### required?
 
-> `optional` **required**: `boolean`
+> `optional` **required?**: `boolean`
 
-***
+---
 
 ### title
 
 > **title**: `string`
 
-***
+---
 
 ### type?
 
-> `optional` **type**: [`OnboardingStepType`](/api/onboarding-core/src/type-aliases/onboardingsteptype/)
+> `optional` **type?**: [`OnboardingStepType`](/api/onboarding-core/src/type-aliases/onboardingsteptype/)

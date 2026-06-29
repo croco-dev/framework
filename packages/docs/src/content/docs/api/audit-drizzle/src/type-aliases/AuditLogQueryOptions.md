@@ -13,16 +13,16 @@ title: "AuditLogQueryOptions"
 
 ### limit?
 
-> `optional` **limit**: `number`
+> `optional` **limit?**: `number`
 
-***
+---
 
 ### offset?
 
-> `optional` **offset**: `number`
+> `optional` **offset?**: `number`
 
-***
+---
 
 ### orderBy?
 
-> `optional` **orderBy**: `"asc"` \| `"desc"`
+> `optional` **orderBy?**: `"asc"` \| `"desc"`
