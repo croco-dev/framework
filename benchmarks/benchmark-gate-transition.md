@@ -33,6 +33,8 @@ Switch `BENCHMARK_GATE_MODE` from `warning-only` to `enforce` only when all item
 - [ ] Each row's p75 spread across those runs is at or below 10%.
 - [ ] No reviewed run contains benchmark runner errors, empty reports, threshold skips, or baseline skips.
 - [ ] Baseline updates are taken from a green workflow run, not from a noisy local-only run.
+- [ ] The variance review is provided to the readiness reporter at
+      `ci-reports/benchmark/latest-five-green-runs.md` or with `pnpm bench:readiness --variance-evidence=<path>`.
 
 Use this variance check for each benchmark row:
 
@@ -110,6 +112,8 @@ Before adding a package:
   hard-fail step.
 - `.github/workflows/ci.yml`: core coverage threshold gate and core coverage baseline report publication.
 - `scripts/bench-threshold-check.mts`: benchmark runner, threshold, baseline, skip, and result validation.
+- `scripts/benchmark-readiness-report.mts`: warning-only enforce-readiness report generation from
+  `benchmark-result.json` plus latest-five-green-run variance evidence.
 - `scripts/post-benchmark-comment.mjs`: benchmark PR comment formatter.
 - `scripts/core-coverage-warning-check.mts`: core coverage baseline/threshold report generator.
 - `benchmarks/thresholds.json`: benchmark p75 absolute thresholds in milliseconds.

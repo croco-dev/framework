@@ -29,6 +29,7 @@
     "typecheck": "turbo typecheck",
     "version-packages": "changeset version",
     "bench:check": "node --experimental-strip-types scripts/bench-threshold-check.mts",
+    "bench:readiness": "node --experimental-strip-types scripts/benchmark-readiness-report.mts",
     "bench:update": "node --experimental-strip-types scripts/bench-threshold-check.mts --update-baseline",
     "changeset-required:check": "node --experimental-strip-types scripts/changeset-required-check.mts",
     "create-croco-app:smoke": "node --experimental-strip-types scripts/create-croco-app-generated-smoke.mts",

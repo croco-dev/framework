@@ -32,6 +32,10 @@ export type BenchmarkGateEvaluation = {
   gateFailures: string[];
 };
 
+export type BenchmarkCheckResult = BenchmarkGateEvaluation & {
+  reports: BenchmarkReport[];
+};
+
 export type BenchmarkEntry = { name: string; p75: number };
 
 export type BenchmarkCollection = {
@@ -64,6 +68,11 @@ const BASELINE_TOLERANCE = 0.2;
 const CI_THRESHOLD_MULTIPLIER = 2;
 const LOCAL_THRESHOLD_MULTIPLIER = 1;
 const BOX_WIDTH = 62;
+
+export const BENCHMARK_EMPTY_REPORT_FAILURE = "No benchmark reports were collected.";
+export const BENCHMARK_MISSING_REPORT_SUFFIX = ": benchmark report was not collected.";
+export const BENCHMARK_RUNNER_ERROR_PREFIX = "benchmark runner error:";
+export const BENCHMARK_MODULE_FAILED_PREFIX = "benchmark module failed:";
 
 const EXPLICIT_THRESHOLD_SKIPS: Record<string, string> = {};
 
@@ -170,12 +179,12 @@ export function evaluateBenchmarkGate(
   const reportedNames = new Set(reports.map((report) => report.name));
 
   if (reports.length === 0) {
-    gateFailures.push("No benchmark reports were collected.");
+    gateFailures.push(BENCHMARK_EMPTY_REPORT_FAILURE);
   }
 
   for (const benchmarkName of expectedBenchmarkNames) {
     if (!reportedNames.has(benchmarkName)) {
-      gateFailures.push(`${benchmarkName}: benchmark report was not collected.`);
+      gateFailures.push(`${benchmarkName}${BENCHMARK_MISSING_REPORT_SUFFIX}`);
     }
   }
 
@@ -220,12 +229,12 @@ export function evaluateBaselineUpdateReadiness(
   const reportedNames = new Set(reports.map((report) => report.name));
 
   if (reports.length === 0) {
-    gateFailures.push("No benchmark reports were collected.");
+    gateFailures.push(BENCHMARK_EMPTY_REPORT_FAILURE);
   }
 
   for (const benchmarkName of expectedBenchmarkNames) {
     if (!reportedNames.has(benchmarkName)) {
-      gateFailures.push(`${benchmarkName}: benchmark report was not collected.`);
+      gateFailures.push(`${benchmarkName}${BENCHMARK_MISSING_REPORT_SUFFIX}`);
     }
   }
 
@@ -345,11 +354,11 @@ async function main() {
     const runResult = await vitest.start();
     const runnerFailures = [
       ...runResult.unhandledErrors.map(
-        (error) => `benchmark runner error: ${formatUnknownError(error)}`,
+        (error) => `${BENCHMARK_RUNNER_ERROR_PREFIX} ${formatUnknownError(error)}`,
       ),
       ...runResult.testModules
         .filter((module) => module.state() === "failed")
-        .map((module) => `benchmark module failed: ${module.relativeModuleId}`),
+        .map((module) => `${BENCHMARK_MODULE_FAILED_PREFIX} ${module.relativeModuleId}`),
     ];
 
     const files = vitest.state.getFiles();
