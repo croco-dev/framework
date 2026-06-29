@@ -33,6 +33,8 @@ describe("noninteractive CLI option validation", () => {
     );
     expect(help).toContain("--saas-profile");
     expect(help).toContain("saas-node-postgres|saas-cloudflare|saas-lambda");
+    expect(help).toContain("--tenant-model");
+    expect(help).toContain("single|org|workspace|shared-schema|rls-backed");
     expect(help).toContain("--no-install");
     expect(help).toContain("Skip pnpm dependency installation");
     expect(help).toContain("--json");
@@ -67,6 +69,7 @@ describe("noninteractive CLI option validation", () => {
       scope: "@test",
       goal: "saas-api",
       preset: "saas",
+      tenantModel: "org",
       webApps: [],
       apiHosting: "standalone",
       db: [],
@@ -139,6 +142,62 @@ describe("noninteractive CLI option validation", () => {
     expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
       'Invalid --api value "rest". Expected graphql or trpc.',
     );
+  });
+
+  it("normalizes SaaS tenant model defaults and explicit choices", () => {
+    const defaultOptions = normalizeNonInteractiveOptions(
+      parseCliOptions("my-saas", {
+        preset: "saas",
+        scope: "@test",
+        install: false,
+        git: false,
+      }),
+    );
+    const workspaceOptions = normalizeNonInteractiveOptions(
+      parseCliOptions("my-saas-workspace", {
+        preset: "saas",
+        scope: "@test",
+        saasProfile: "saas-cloudflare",
+        tenantModel: "workspace",
+        install: false,
+        git: false,
+      }),
+    );
+
+    expect(defaultOptions.tenantModel).toBe("org");
+    expect(workspaceOptions).toMatchObject({
+      saasProviderProfile: "saas-cloudflare",
+      tenantModel: "workspace",
+    });
+  });
+
+  it("rejects invalid and non-SaaS tenant model options", () => {
+    expect(() =>
+      normalizeNonInteractiveOptions(
+        parseCliOptions("my-saas", {
+          preset: "saas",
+          scope: "@test",
+          tenantModel: "custom",
+          install: false,
+          git: false,
+        }),
+      ),
+    ).toThrow(
+      'Invalid --tenant-model value "custom". Expected single, org, workspace, shared-schema or rls-backed.',
+    );
+
+    expect(() =>
+      normalizeNonInteractiveOptions(
+        parseCliOptions("my-api", {
+          preset: "ddd-api",
+          scope: "@test",
+          api: "trpc",
+          tenantModel: "org",
+          install: false,
+          git: false,
+        }),
+      ),
+    ).toThrow("--tenant-model is only supported with the saas and ai-saas presets");
   });
 
   it("rejects empty scalar CLI values before prompt or generation", () => {

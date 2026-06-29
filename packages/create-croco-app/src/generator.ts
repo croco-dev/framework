@@ -1,5 +1,11 @@
 import { execSync } from "node:child_process";
 import {
+  DEFAULT_TENANT_MODEL,
+  createTenantModelManifest,
+  createTenantModelManifestSchema,
+  renderTenantModelPlaybook,
+} from "@croco/tenant-core/tenant-model";
+import {
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -29,6 +35,7 @@ import {
 import { DirectoryNotEmptyProblem } from "./libs/problems/DirectoryNotEmptyProblem.js";
 import {
   DEFAULT_SAAS_PROVIDER_PROFILE,
+  assertSaasProviderTenantModelCompatibility,
   assertSaasProviderProfileCapabilities,
   createSaasProviderProfileManifest,
   getSaasProviderProfileDefinition,
@@ -188,9 +195,14 @@ function writeSaasProviderProfileArtifacts(targetDir: string, options: Generator
   const profile = getSaasProviderProfileDefinition(
     options.saasProviderProfile ?? DEFAULT_SAAS_PROVIDER_PROFILE,
   );
+  const tenantModel = options.tenantModel ?? DEFAULT_TENANT_MODEL;
   assertSaasProviderProfileCapabilities(profile);
+  assertSaasProviderTenantModelCompatibility(profile, tenantModel);
 
-  const manifest = createSaasProviderProfileManifest(profile);
+  const manifest = createSaasProviderProfileManifest(profile, tenantModel);
+  const tenantModelManifest = createTenantModelManifest(tenantModel);
+  const tenantModelSchema = createTenantModelManifestSchema();
+  const tenantModelPlaybook = renderTenantModelPlaybook(tenantModelManifest);
   const docsDir = join(targetDir, "docs");
   const apiServerSrcDir = join(targetDir, "apps", "api-server", "src");
 
@@ -198,6 +210,14 @@ function writeSaasProviderProfileArtifacts(targetDir: string, options: Generator
   writeFileSync(
     join(targetDir, "croco-saas-profile.manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(targetDir, "croco-tenant-model.manifest.json"),
+    `${JSON.stringify(tenantModelManifest, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(targetDir, "croco-tenant-model.schema.json"),
+    `${JSON.stringify(tenantModelSchema, null, 2)}\n`,
   );
   writeFileSync(
     join(targetDir, "croco-runtime-policy.manifest.json"),
@@ -209,10 +229,20 @@ function writeSaasProviderProfileArtifacts(targetDir: string, options: Generator
   );
   writeFileSync(join(targetDir, ".env.example"), renderSaasEnvExample(manifest));
   writeFileSync(join(docsDir, "provider-profile.md"), renderSaasDeployNotes(manifest));
+  writeFileSync(join(docsDir, "tenant-model-playbook.md"), tenantModelPlaybook);
   writeFileSync(join(docsDir, "secrets-checklist.md"), renderSaasSecretsChecklist(manifest));
   writeFileSync(
     join(apiServerSrcDir, "generatedSaasProviderProfile.ts"),
     `export const generatedSaasProviderProfileManifest = ${JSON.stringify(manifest, null, 2)} as const;\n`,
+  );
+  writeFileSync(
+    join(apiServerSrcDir, "generatedTenantModel.ts"),
+    [
+      `export const generatedTenantModelManifest = ${JSON.stringify(tenantModelManifest, null, 2)} as const;`,
+      `export const generatedTenantModelManifestSchema = ${JSON.stringify(tenantModelSchema, null, 2)} as const;`,
+      `export const generatedTenantModelPlaybook = ${JSON.stringify(tenantModelPlaybook)} as const;`,
+      "",
+    ].join("\n"),
   );
   writeSaasProviderPackageDependencies(targetDir, manifest);
 }
@@ -387,7 +417,7 @@ function writeSaasProviderPackageDependencies(
   };
   const dependencies = packageJson.dependencies ?? {};
 
-  for (const packageName of manifest.packages) {
+  for (const packageName of [...manifest.packages, ...manifest.tenantModel.requiredPackages]) {
     dependencies[packageName] ??= getSaasProviderPackageDependencyRange(packageName);
   }
 

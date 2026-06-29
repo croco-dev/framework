@@ -13,6 +13,7 @@ export const SUPPORTED_CREATE_CROCO_APP_CHOICES = {
   ],
   goals: ["saas-api", "spa-backend-split", "worker", "internal-tool"],
   saasProviderProfiles: ["saas-node-postgres", "saas-cloudflare", "saas-lambda"],
+  tenantModels: ["single", "org", "workspace", "shared-schema", "rls-backed"],
   apis: ["graphql", "trpc"],
   apiHosting: ["standalone", "nextjs"],
   backendDeploys: ["docker", "lambda"],
@@ -22,6 +23,7 @@ export const SUPPORTED_CREATE_CROCO_APP_CHOICES = {
   readonly presets: readonly GeneratorOptions["preset"][];
   readonly goals: readonly NonNullable<GeneratorOptions["goal"]>[];
   readonly saasProviderProfiles: readonly NonNullable<GeneratorOptions["saasProviderProfile"]>[];
+  readonly tenantModels: readonly NonNullable<GeneratorOptions["tenantModel"]>[];
   readonly apis: readonly NonNullable<GeneratorOptions["api"]>[];
   readonly apiHosting: readonly GeneratorOptions["apiHosting"][];
   readonly backendDeploys: readonly NonNullable<GeneratorOptions["backendDeploy"]>[];

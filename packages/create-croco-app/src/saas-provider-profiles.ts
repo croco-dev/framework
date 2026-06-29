@@ -1,3 +1,12 @@
+import {
+  DEFAULT_TENANT_MODEL,
+  createTenantModelManifest,
+  getTenantModelDefinition,
+  validateTenantModelCompatibility,
+  type TenantModelCapabilityName,
+  type TenantModelName,
+} from "@croco/tenant-core/tenant-model";
+
 export const SAAS_PROVIDER_PROFILE_CHOICES = [
   "saas-node-postgres",
   "saas-cloudflare",
@@ -71,6 +80,16 @@ export type SaasProviderProfileManifest = {
   compatibility: {
     requiredCapabilities: readonly SaasProviderCapabilityName[];
   };
+  tenantModel: {
+    currentModel: TenantModelName;
+    defaultModel: TenantModelName;
+    manifest: "croco-tenant-model.manifest.json";
+    schema: "croco-tenant-model.schema.json";
+    playbook: "docs/tenant-model-playbook.md";
+    requiredPackages: readonly string[];
+    requiredAdapters: readonly string[];
+    requiredCapabilities: readonly TenantModelCapabilityName[];
+  };
   deployNotes: readonly string[];
 };
 
@@ -93,6 +112,13 @@ export const REQUIRED_SAAS_PROVIDER_CAPABILITIES = [
   "telemetry",
   "webhookVerification",
 ] as const satisfies readonly SaasProviderCapabilityName[];
+
+const GENERATED_SAAS_TENANT_MODEL_PACKAGES = [
+  "@croco/tenant-core",
+  "@croco/membership-core",
+  "@croco/invitation-core",
+  "@croco/tx-core",
+] as const;
 
 const commonEnv = [
   envVar("SAAS_PROVIDER_PROFILE", "Selected generated provider profile name.", true, false),
@@ -395,7 +421,10 @@ export function getSaasProviderProfileDefinition(
 
 export function createSaasProviderProfileManifest(
   profile: SaasProviderProfileDefinition,
+  tenantModel: TenantModelName = DEFAULT_TENANT_MODEL,
 ): SaasProviderProfileManifest {
+  const tenantModelManifest = createTenantModelManifest(tenantModel);
+
   return {
     schemaVersion: "croco.saas-provider-profile/v1",
     profile: {
@@ -418,6 +447,16 @@ export function createSaasProviderProfileManifest(
     },
     compatibility: {
       requiredCapabilities: REQUIRED_SAAS_PROVIDER_CAPABILITIES,
+    },
+    tenantModel: {
+      currentModel: tenantModelManifest.currentModel,
+      defaultModel: tenantModelManifest.defaultModel,
+      manifest: "croco-tenant-model.manifest.json",
+      schema: "croco-tenant-model.schema.json",
+      playbook: "docs/tenant-model-playbook.md",
+      requiredPackages: tenantModelManifest.selected.requiredPackages,
+      requiredAdapters: tenantModelManifest.selected.requiredAdapters,
+      requiredCapabilities: tenantModelManifest.selected.requiredCapabilities,
     },
     deployNotes: profile.deployNotes,
   };
@@ -449,6 +488,27 @@ export function getSaasProviderPackageDependencyRange(packageName: string): stri
   }
 
   return range;
+}
+
+export function assertSaasProviderTenantModelCompatibility(
+  profile: SaasProviderProfileDefinition,
+  tenantModel: TenantModelName = DEFAULT_TENANT_MODEL,
+): void {
+  const result = validateTenantModelCompatibility({
+    tenantModel,
+    providerProfileName: profile.name,
+    runtimeTarget: profile.runtimeTarget,
+    packages: [...profile.packages, ...GENERATED_SAAS_TENANT_MODEL_PACKAGES],
+  });
+
+  if (result.ok) return;
+
+  throw new Error(
+    [
+      `CROCO_TENANT_MODEL_COMPATIBILITY_FAILED: ${profile.name} cannot use tenant model '${tenantModel}'`,
+      ...result.diagnostics.map((diagnostic) => `- ${diagnostic.code}: ${diagnostic.message}`),
+    ].join("\n"),
+  );
 }
 
 export function renderSaasEnvExample(manifest: SaasProviderProfileManifest): string {
@@ -499,10 +559,13 @@ export function renderSaasSecretsChecklist(manifest: SaasProviderProfileManifest
 }
 
 export function renderSaasDeployNotes(manifest: SaasProviderProfileManifest): string {
+  const tenantModel = getTenantModelDefinition(manifest.tenantModel.currentModel);
+
   return [
     `# ${manifest.profile.displayName} Deploy Notes`,
     "",
     `Runtime target: \`${manifest.profile.runtimeTarget}\``,
+    `Tenant model: \`${tenantModel.name}\` (${tenantModel.displayName})`,
     "",
     "## Provider Packages",
     "",
@@ -518,6 +581,13 @@ export function renderSaasDeployNotes(manifest: SaasProviderProfileManifest): st
           capability.env.length > 0 ? capability.env.join(", ") : "-"
         } | ${capability.status} |`,
     ),
+    "",
+    "## Tenant Model",
+    "",
+    tenantModel.summary,
+    "",
+    `Playbook: \`${manifest.tenantModel.playbook}\``,
+    `Manifest: \`${manifest.tenantModel.manifest}\``,
     "",
     "## Deployment Notes",
     "",

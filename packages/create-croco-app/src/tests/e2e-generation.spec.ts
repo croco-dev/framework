@@ -791,6 +791,7 @@ describe("E2E: generate()", () => {
       scope: "@test",
       preset: "saas",
       saasProviderProfile: "saas-cloudflare",
+      tenantModel: "workspace",
       webApps: [],
       apiHosting: "standalone",
       db: [],
@@ -873,14 +874,26 @@ describe("E2E: generate()", () => {
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts")),
     ).toBe(true);
+    expect(existsSync(join(testDir, "apps", "api-server", "src", "generatedTenantModel.ts"))).toBe(
+      true,
+    );
     expect(existsSync(join(testDir, "croco-saas-profile.manifest.json"))).toBe(true);
+    expect(existsSync(join(testDir, "croco-tenant-model.manifest.json"))).toBe(true);
+    expect(existsSync(join(testDir, "croco-tenant-model.schema.json"))).toBe(true);
     expect(existsSync(join(testDir, "croco.arch.json"))).toBe(true);
     expect(existsSync(join(testDir, "croco-runtime-policy.manifest.json"))).toBe(true);
     expect(existsSync(join(testDir, ".env.example"))).toBe(true);
     expect(existsSync(join(testDir, "docs", "provider-profile.md"))).toBe(true);
+    expect(existsSync(join(testDir, "docs", "tenant-model-playbook.md"))).toBe(true);
     expect(existsSync(join(testDir, "docs", "secrets-checklist.md"))).toBe(true);
     const profileManifest = JSON.parse(
       readFileSync(join(testDir, "croco-saas-profile.manifest.json"), "utf8"),
+    );
+    const tenantModelManifest = JSON.parse(
+      readFileSync(join(testDir, "croco-tenant-model.manifest.json"), "utf8"),
+    );
+    const tenantModelSchema = JSON.parse(
+      readFileSync(join(testDir, "croco-tenant-model.schema.json"), "utf8"),
     );
     const runtimePolicyManifest = JSON.parse(
       readFileSync(join(testDir, "croco-runtime-policy.manifest.json"), "utf8"),
@@ -890,8 +903,16 @@ describe("E2E: generate()", () => {
     );
     const envExample = readFileSync(join(testDir, ".env.example"), "utf8");
     const providerProfileDocs = readFileSync(join(testDir, "docs", "provider-profile.md"), "utf8");
+    const tenantModelPlaybook = readFileSync(
+      join(testDir, "docs", "tenant-model-playbook.md"),
+      "utf8",
+    );
     const generatedProfileSource = readFileSync(
       join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts"),
+      "utf8",
+    );
+    const generatedTenantModelSource = readFileSync(
+      join(testDir, "apps", "api-server", "src", "generatedTenantModel.ts"),
       "utf8",
     );
 
@@ -905,6 +926,47 @@ describe("E2E: generate()", () => {
         zeroCredential: "pnpm demo:smoke",
         realProviderOptIn: "SAAS_PROVIDER_PROFILE=saas-cloudflare pnpm profile:smoke:real",
       },
+      tenantModel: {
+        currentModel: "workspace",
+        defaultModel: "org",
+        manifest: "croco-tenant-model.manifest.json",
+        schema: "croco-tenant-model.schema.json",
+        playbook: "docs/tenant-model-playbook.md",
+        requiredAdapters: [
+          "TenantManager",
+          "MembershipManager",
+          "InvitationManager",
+          "WorkspaceSelectionAdapter",
+        ],
+      },
+    });
+    expect(tenantModelManifest).toMatchObject({
+      schemaVersion: "croco.tenant-model/v1",
+      currentModel: "workspace",
+      defaultModel: "org",
+      selected: {
+        name: "workspace",
+        tenantKey: "workspaceId",
+      },
+      schema: {
+        file: "croco-tenant-model.schema.json",
+        version: "croco.tenant-model/v1",
+      },
+      migration: {
+        from: "org",
+        to: "workspace",
+        risk: "low",
+      },
+    });
+    expect(tenantModelManifest.models.map((model: { name: string }) => model.name)).toEqual([
+      "single",
+      "org",
+      "workspace",
+      "shared-schema",
+      "rls-backed",
+    ]);
+    expect(tenantModelSchema.properties.currentModel).toEqual({
+      enum: ["single", "org", "workspace", "shared-schema", "rls-backed"],
     });
     expect(runtimePolicyManifest).toMatchObject({
       schemaVersion: "croco.runtime-policy/v1",
@@ -945,7 +1007,10 @@ describe("E2E: generate()", () => {
         "@croco/tasks-qstash",
       ]),
     );
-    for (const packageName of profileManifest.packages as string[]) {
+    for (const packageName of [
+      ...(profileManifest.packages as string[]),
+      ...(profileManifest.tenantModel.requiredPackages as string[]),
+    ]) {
       expect(apiPackageJson.dependencies?.[packageName], packageName).toEqual(expect.any(String));
     }
     expect(apiPackageJson.dependencies).toMatchObject({
@@ -974,8 +1039,14 @@ describe("E2E: generate()", () => {
     expect(envExample).toContain("SAAS_PROVIDER_PROFILE=saas-cloudflare");
     expect(envExample).toContain("CLOUDFLARE_ACCOUNT_ID=<secret>");
     expect(providerProfileDocs).toContain("Capability Matrix");
+    expect(providerProfileDocs).toContain("Tenant model: `workspace`");
     expect(providerProfileDocs).toContain("QStash");
+    expect(tenantModelPlaybook).toContain("Current model: `workspace`");
+    expect(tenantModelPlaybook).toContain("Tenant model migration: org -> workspace");
+    expect(tenantModelPlaybook).toContain("tenant-core/tenant-model-runtime-incompatible");
     expect(generatedProfileSource).toContain("saas-cloudflare");
+    expect(generatedTenantModelSource).toContain("generatedTenantModelManifest");
+    expect(generatedTenantModelSource).toContain('"workspace"');
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "demo", "saasSmokeContract.ts")),
     ).toBe(true);
@@ -1000,6 +1071,27 @@ describe("E2E: generate()", () => {
     assertNoHandlebarsPlaceholders(testDir);
     assertNoExternalCrocoWorkspaceRanges(testDir);
     assertAllSourceBareImportsDeclared(testDir);
+  });
+
+  it("rejects incompatible SaaS provider and tenant model combinations before generation", async () => {
+    const options: GeneratorOptions = {
+      projectName: "my-incompatible-saas",
+      scope: "@test",
+      preset: "saas",
+      saasProviderProfile: "saas-cloudflare",
+      tenantModel: "rls-backed",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    await expect(generate(testDir, options)).rejects.toThrow(
+      "CROCO_TENANT_MODEL_COMPATIBILITY_FAILED",
+    );
+    expect(existsSync(join(testDir, "croco-tenant-model.manifest.json"))).toBe(false);
   });
 
   it(
@@ -1034,6 +1126,13 @@ describe("E2E: generate()", () => {
         telemetry?: unknown;
         deploymentPreset?: unknown;
         qualityGates?: unknown;
+        tenantModel?: unknown;
+      };
+      const tenantModelManifest = JSON.parse(
+        readFileSync(join(testDir, "croco-tenant-model.manifest.json"), "utf8"),
+      ) as {
+        currentModel?: unknown;
+        defaultModel?: unknown;
       };
 
       expect(rootPackageJson.scripts).toMatchObject({
@@ -1063,6 +1162,7 @@ describe("E2E: generate()", () => {
         storage: ["in-memory-demo"],
         auth: "tenant-demo",
         billing: "demo",
+        tenantModel: "org",
         telemetry: "opentelemetry-otlp",
         deploymentPreset: "node-api",
         qualityGates: [
@@ -1074,6 +1174,10 @@ describe("E2E: generate()", () => {
           "demo:smoke",
           "failure-drill:smoke",
         ],
+      });
+      expect(tenantModelManifest).toMatchObject({
+        currentModel: "org",
+        defaultModel: "org",
       });
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);

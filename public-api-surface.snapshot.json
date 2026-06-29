@@ -16561,10 +16561,34 @@
           "declarationKind": "function"
         },
         {
+          "name": "createTenantMigrationPlan",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createTenantModelManifest",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createTenantModelManifestSchema",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "function"
+        },
+        {
           "name": "createTenantRepositoryBoundary",
           "exportKind": "named",
           "source": "./libs/TenantIsolationEnforcer",
           "declarationKind": "function"
+        },
+        {
+          "name": "DEFAULT_TENANT_MODEL",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "const"
         },
         {
           "name": "DuplicateTenantManagerRegistrationProblem",
@@ -16573,10 +16597,22 @@
           "declarationKind": "class"
         },
         {
+          "name": "getTenantModelDefinition",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "function"
+        },
+        {
           "name": "HeaderTenantResolver",
           "exportKind": "named",
           "source": "./libs/resolvers/HeaderTenantResolver",
           "declarationKind": "class"
+        },
+        {
+          "name": "isTenantModelName",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "function"
         },
         {
           "name": "JwtTenantResolver",
@@ -16591,6 +16627,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "renderTenantMigrationPlan",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "function"
+        },
+        {
+          "name": "renderTenantModelPlaybook",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "function"
+        },
+        {
           "name": "SubdomainTenantResolver",
           "exportKind": "named",
           "source": "./libs/resolvers/SubdomainTenantResolver",
@@ -16600,6 +16648,24 @@
           "name": "TENANT_ISOLATION_DIAGNOSTIC_CODES",
           "exportKind": "named",
           "source": "./libs/problems/TenantIsolationProblems",
+          "declarationKind": "const"
+        },
+        {
+          "name": "TENANT_MODEL_DEFINITIONS",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "const"
+        },
+        {
+          "name": "TENANT_MODEL_MANIFEST_SCHEMA_VERSION",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "const"
+        },
+        {
+          "name": "TENANT_MODEL_NAMES",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
           "declarationKind": "const"
         },
         {
@@ -16667,6 +16733,12 @@
           "exportKind": "named",
           "source": "./libs/problems/TenantIsolationProblems",
           "declarationKind": "class"
+        },
+        {
+          "name": "validateTenantModelCompatibility",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
@@ -16784,6 +16856,66 @@
           "name": "TenantMiddlewareResult",
           "exportKind": "named",
           "source": "./libs/TenantMiddleware"
+        },
+        {
+          "name": "TenantMigrationPlan",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelCapabilityName",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelCompatibilityDiagnostic",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelCompatibilityInput",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelCompatibilityResult",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelDefinition",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelDiagnosticCode",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelManifest",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelManifestSchema",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelName",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelRiskLevel",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelRuntimeTarget",
+          "exportKind": "named",
+          "source": "./tenant-model"
         },
         {
           "name": "TenantOperationIsolation",

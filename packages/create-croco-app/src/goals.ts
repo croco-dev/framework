@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { DEFAULT_TENANT_MODEL, type TenantModelName } from "@croco/tenant-core/tenant-model";
 import { InvalidGoalOptionProblem } from "./libs/problems/InvalidGoalOptionProblem.js";
 import type { AppGoal, GeneratorOptions } from "./types.js";
 
@@ -15,6 +16,7 @@ export type GoalManifest = {
   readonly storage: readonly string[];
   readonly auth: "none" | "tenant-demo" | "admin-demo";
   readonly billing: "none" | "demo";
+  readonly tenantModel?: TenantModelName;
   readonly telemetry: "opentelemetry-otlp" | "none";
   readonly deploymentPreset: string;
   readonly qualityGates: readonly string[];
@@ -37,6 +39,7 @@ export const GOAL_SPECS = {
       webApps: [],
       apiHosting: "standalone",
       db: [],
+      tenantModel: DEFAULT_TENANT_MODEL,
       agentRules: true,
     },
     manifest: {
@@ -55,6 +58,7 @@ export const GOAL_SPECS = {
       storage: ["in-memory-demo"],
       auth: "tenant-demo",
       billing: "demo",
+      tenantModel: DEFAULT_TENANT_MODEL,
       telemetry: "opentelemetry-otlp",
       deploymentPreset: "node-api",
       qualityGates: [
@@ -240,6 +244,7 @@ export function validateResolvedGoalOptions(options: GeneratorOptions): void {
   if (options.apiHosting !== expectedOptions.apiHosting) mismatches.push("apiHosting");
   if (options.backendDeploy !== expectedOptions.backendDeploy) mismatches.push("backendDeploy");
   if (options.frontendDeploy !== expectedOptions.frontendDeploy) mismatches.push("frontendDeploy");
+  if (options.tenantModel !== expectedOptions.tenantModel) mismatches.push("tenantModel");
   if (!sameStringArray(options.webApps, expectedOptions.webApps)) mismatches.push("webApps");
   if (!sameStringArray(options.db, expectedOptions.db)) mismatches.push("db");
 
@@ -260,6 +265,8 @@ function assertGoalDoesNotMixStackOptions(goal: AppGoal, options: Partial<Genera
   if (options.apiHosting) unsupportedOptions.push("--api-hosting");
   if (options.backendDeploy) unsupportedOptions.push("--backend-deploy");
   if (options.frontendDeploy) unsupportedOptions.push("--frontend-deploy");
+  if (options.saasProviderProfile) unsupportedOptions.push("--saas-profile");
+  if (options.tenantModel) unsupportedOptions.push("--tenant-model");
   if (options.webApps && options.webApps.length > 0) unsupportedOptions.push("--web-apps");
   if (options.db && options.db.length > 0) unsupportedOptions.push("--db");
 

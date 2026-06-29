@@ -1,3 +1,4 @@
+import { DEFAULT_TENANT_MODEL } from "@croco/tenant-core/tenant-model";
 import { validateProjectName } from "./helpers/validate.js";
 import {
   readGoal,
@@ -21,6 +22,7 @@ const BACKEND_DEPLOYS = SUPPORTED_CREATE_CROCO_APP_CHOICES.backendDeploys;
 const FRONTEND_DEPLOYS = SUPPORTED_CREATE_CROCO_APP_CHOICES.frontendDeploys;
 const DATABASES = SUPPORTED_CREATE_CROCO_APP_CHOICES.databases;
 const SAAS_PROVIDER_PROFILES = SUPPORTED_CREATE_CROCO_APP_CHOICES.saasProviderProfiles;
+const TENANT_MODELS = SUPPORTED_CREATE_CROCO_APP_CHOICES.tenantModels;
 
 type ChoiceName =
   | "preset"
@@ -29,7 +31,8 @@ type ChoiceName =
   | "backend-deploy"
   | "frontend-deploy"
   | "db"
-  | "saas-profile";
+  | "saas-profile"
+  | "tenant-model";
 
 type RawCliOptions = Record<string, string | boolean | undefined>;
 type SaasPreset = Extract<GeneratorOptions["preset"], "saas" | "ai-saas">;
@@ -50,6 +53,9 @@ export function parseCliOptions(
   if (typeof rawOptions.saasProfile === "string") {
     cliOptions.saasProviderProfile =
       rawOptions.saasProfile as GeneratorOptions["saasProviderProfile"];
+  }
+  if (typeof rawOptions.tenantModel === "string") {
+    cliOptions.tenantModel = rawOptions.tenantModel as GeneratorOptions["tenantModel"];
   }
   if (typeof rawOptions.api === "string")
     cliOptions.api = rawOptions.api as GeneratorOptions["api"];
@@ -109,6 +115,9 @@ export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void 
   if (cliOptions.saasProviderProfile !== undefined) {
     readChoice("saas-profile", cliOptions.saasProviderProfile, SAAS_PROVIDER_PROFILES);
   }
+  if (cliOptions.tenantModel !== undefined) {
+    readChoice("tenant-model", cliOptions.tenantModel, TENANT_MODELS);
+  }
   if (cliOptions.api !== undefined) readChoice("api", cliOptions.api, APIS);
   if (cliOptions.apiHosting !== undefined)
     readChoice("api-hosting", cliOptions.apiHosting, API_HOSTING);
@@ -163,6 +172,13 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
       "--saas-profile is only supported with the saas and ai-saas presets",
       "Remove --saas-profile or choose --preset saas or --preset ai-saas.",
       "--saas-profile",
+    );
+  }
+  if (!isSaasPreset(options.preset) && options.tenantModel) {
+    throwInvalidCliOption(
+      "--tenant-model is only supported with the saas and ai-saas presets",
+      "Remove --tenant-model or choose --preset saas or --preset ai-saas.",
+      "--tenant-model",
     );
   }
 
@@ -295,6 +311,7 @@ export function normalizeNonInteractiveOptions(
       scope,
       preset,
       saasProviderProfile: cliOptions.saasProviderProfile ?? DEFAULT_SAAS_PROVIDER_PROFILE,
+      tenantModel: cliOptions.tenantModel ?? DEFAULT_TENANT_MODEL,
       webApps: [],
       apiHosting: "standalone",
       db: [],
@@ -353,6 +370,7 @@ export function normalizeNonInteractiveOptions(
     backendDeploy,
     frontendDeploy,
     saasProviderProfile: cliOptions.saasProviderProfile,
+    tenantModel: cliOptions.tenantModel,
     db,
     agentRules: cliOptions.agentRules ?? true,
     installDeps: cliOptions.installDeps ?? true,
@@ -370,6 +388,13 @@ function assertBlankOptions(cliOptions: Partial<GeneratorOptions>): void {
       "--saas-profile is only supported with the saas and ai-saas presets",
       "Remove --saas-profile or choose --preset saas or --preset ai-saas.",
       "--saas-profile",
+    );
+  }
+  if (cliOptions.tenantModel) {
+    throwInvalidCliOption(
+      "--tenant-model is only supported with the saas and ai-saas presets",
+      "Remove --tenant-model or choose --preset saas or --preset ai-saas.",
+      "--tenant-model",
     );
   }
   if (cliOptions.api) throwUnsupportedPresetOption("--api", "blank");
@@ -398,6 +423,8 @@ function assertSaasOptions(options: Partial<GeneratorOptions>, preset: SaasPrese
   const presetName = preset;
   const saasProviderProfile = options.saasProviderProfile ?? DEFAULT_SAAS_PROVIDER_PROFILE;
   getSaasProviderProfileDefinition(saasProviderProfile);
+  const tenantModel = options.tenantModel ?? DEFAULT_TENANT_MODEL;
+  readChoice("tenant-model", tenantModel, TENANT_MODELS);
 
   if (options.api)
     throw new InvalidSaasPresetOptionProblem(
@@ -435,6 +462,13 @@ function assertProductionOptions(
       "--saas-profile is only supported with the saas and ai-saas presets",
       "Remove --saas-profile or choose --preset saas or --preset ai-saas.",
       "--saas-profile",
+    );
+  }
+  if (options.tenantModel) {
+    throwInvalidCliOption(
+      "--tenant-model is only supported with the saas and ai-saas presets",
+      "Remove --tenant-model or choose --preset saas or --preset ai-saas.",
+      "--tenant-model",
     );
   }
   if (options.api) throwUnsupportedPresetOption("--api", preset);
