@@ -780,5 +780,111 @@
         ]
       }
     }
+  },
+  "certification": {
+    "schemaVersion": 1,
+    "records": [
+      {
+        "package": "@croco/storage-r2",
+        "contract": "@croco/storage-core/StorageProvider",
+        "adapterCategory": "provider",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.3",
+        "state": "candidate",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/storage-r2 test"
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/storage-r2 test"
+          },
+          "liveSmoke": {
+            "status": "missing",
+            "reason": "Optional R2 live smoke is env-gated and no reviewed real-credential run is recorded in release evidence."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/storage-r2 test",
+            "description": "R2StorageDiagnosticsProvider tests cover readiness output and secret redaction."
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/storage-r2 test",
+            "description": "Problem and diagnostics tests cover R2 access key and secret redaction."
+          }
+        },
+        "knownGaps": ["Recorded real R2 liveSmoke evidence is required before certified state."]
+      },
+      {
+        "package": "@croco/billing-polar",
+        "contract": "@croco/billing-core/BillingGateway",
+        "adapterCategory": "provider",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.3",
+        "state": "candidate",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/billing-polar test"
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/billing-polar test"
+          },
+          "liveSmoke": {
+            "status": "missing",
+            "reason": "Optional Polar live smoke is env-gated and no reviewed real-credential run is recorded in release evidence."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/billing-polar test",
+            "description": "PolarBillingDiagnosticsProvider tests cover readiness output and safe configuration reporting."
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/billing-polar test",
+            "description": "Diagnostics and Problem tests cover Polar token and webhook secret redaction."
+          }
+        },
+        "knownGaps": ["Recorded real Polar liveSmoke evidence is required before certified state."]
+      },
+      {
+        "package": "@croco/search-meilisearch",
+        "contract": "@croco/search-core/SearchEngine",
+        "adapterCategory": "provider",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.3",
+        "state": "candidate",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/search-meilisearch test"
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/search-meilisearch test"
+          },
+          "liveSmoke": {
+            "status": "missing",
+            "reason": "Optional Meilisearch live smoke is env-gated and no reviewed real-credential run is recorded in release evidence."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/search-meilisearch test",
+            "description": "MeilisearchDiagnosticsProvider tests cover readiness output without exposing host/API key material."
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/search-meilisearch test",
+            "description": "Search provider tests cover upstream failure normalization and API key redaction."
+          }
+        },
+        "knownGaps": [
+          "Recorded real Meilisearch liveSmoke evidence is required before certified state."
+        ]
+      }
+    ]
   }
 }
