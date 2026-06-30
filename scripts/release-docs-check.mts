@@ -110,6 +110,20 @@ function collectErrors(
     errors.push("RELEASING.md must document npmjs.com provenance UI verification.");
   }
 
+  if (!docs.includes("pnpm alpha-release:smoke")) {
+    errors.push("RELEASING.md must document the alpha release smoke command.");
+  }
+
+  if (!docs.includes("ci-reports/release/alpha-release-smoke.md")) {
+    errors.push("RELEASING.md must document the alpha release smoke evidence artifact.");
+  }
+
+  if (!docs.includes("alpha stability and compatibility expectations")) {
+    errors.push(
+      "RELEASING.md must require alpha stability and compatibility expectations in release notes.",
+    );
+  }
+
   if (!docs.includes("fixed") || !docs.includes("linked")) {
     errors.push("RELEASING.md must describe fixed/linked group behavior.");
   }

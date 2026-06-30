@@ -145,6 +145,46 @@ pnpm changeset pre exit
 | 출시 후보   | `rc`     | `1.0.0-rc.0`    | 정식 출시 직전 최종 검증   |
 | 정식 출시   | `latest` | `1.0.0`         | 일반 사용자용 안정 버전    |
 
+### First alpha release gate
+
+The first alpha release must use the `alpha` dist-tag. Do not publish a `latest` tag until the alpha
+package set has passed the release workflow and the release notes have been reviewed.
+
+The alpha spine is the externally installable path that proves Croco can leave the monorepo checkout:
+
+- tooling: `create-croco-app`, `@croco/cli`;
+- runtime spine: `@croco/problems-core`, `@croco/framework-context`, `@croco/events-core`,
+  `@croco/events-inmemory`, `@croco/protocols-rest`, `@croco/repository-core`,
+  `@croco/retry-core`, `@croco/telemetry-api`, `@croco/telemetry-sdk-node`,
+  `@croco/transports-http`.
+
+Run the release smoke before publishing:
+
+```bash
+pnpm alpha-release:smoke
+```
+
+This packs the alpha spine and `create-croco-app`, installs them into clean temporary projects,
+generates the `production-app` preset from the packed CLI artifact, rewrites Croco dependencies to
+packed artifacts, then runs install, `contract:snapshot`, `contract:verify`, `typecheck`, `build`,
+and `dev:smoke`. The script fails if `workspace:` ranges or repository checkout paths leak into the
+clean install evidence.
+
+The smoke report is written at `ci-reports/release/alpha-release-smoke.md`. Attach or link that
+report from the alpha release notes, or upload it as the `alpha-release-smoke` CI artifact when the
+release workflow has workflow-scoped credentials. Treat a missing or failed report as
+publish-blocking.
+
+### Alpha release notes
+
+Alpha release notes must state alpha stability and compatibility expectations explicitly:
+
+- packages are early-access and may change before `latest`;
+- supported Node, package manager, and runtime expectations;
+- the dist-tag used for install commands, for example `npm install @croco/problems-core@alpha`;
+- the `alpha-release-smoke` artifact or equivalent release evidence;
+- known compatibility gaps and the recovery path for failed clean installs or generated app smoke.
+
 ---
 
 ## 5. Rollback / Hotfix
