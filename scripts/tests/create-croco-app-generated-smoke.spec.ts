@@ -6,6 +6,7 @@ import {
   createWorkspacePackageIndex,
   resolveLocalCrocoPackagesForGeneratedProject,
   rewriteExternalCrocoRanges,
+  writePnpmWorkspaceOverrides,
 } from "../create-croco-app-generated-smoke-support.mts";
 
 const tempRoots: string[] = [];
@@ -113,6 +114,37 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
     const packageJson = readGeneratedPackage(projectDir, "package.json");
     expect(workspacePackages).toEqual([]);
     expect(packageJson.dependencies?.["@croco/external-only"]).toBe("^9.0.0");
+  });
+
+  it("writes local tarball overrides to pnpm-workspace.yaml", () => {
+    const root = createTempRoot();
+    const projectDir = join(root, "generated-app");
+    writeGeneratedPackage(projectDir, "package.json", {
+      name: "generated-app",
+      dependencies: {
+        "@croco/template-only": "^0.0.0",
+      },
+    });
+    writeFileSync(
+      join(projectDir, "pnpm-workspace.yaml"),
+      ["packages:", '  - "apps/**/*"', "", "onlyBuiltDependencies:", "  - esbuild", ""].join("\n"),
+    );
+
+    writePnpmWorkspaceOverrides(projectDir, {
+      "@croco/template-only": "file:/tmp/template-only.tgz",
+    });
+
+    const workspaceConfig = readFileSync(join(projectDir, "pnpm-workspace.yaml"), "utf8");
+    const packageJson = readGeneratedPackage(projectDir, "package.json") as {
+      readonly pnpm?: unknown;
+    };
+
+    expect(workspaceConfig).toContain('packages:\n  - "apps/**/*"');
+    expect(workspaceConfig).toContain("onlyBuiltDependencies:\n  - esbuild");
+    expect(workspaceConfig).toContain(
+      'overrides:\n  "@croco/template-only": "file:/tmp/template-only.tgz"',
+    );
+    expect(packageJson.pnpm).toBeUndefined();
   });
 });
 

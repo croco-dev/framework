@@ -1,3 +1,13 @@
 packages:
   - 'api-worker'
   - 'ssr-worker'
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  sharp: true
+  workerd: true
+onlyBuiltDependencies:
+  - esbuild
+  - lefthook
+  - sharp
+  - workerd

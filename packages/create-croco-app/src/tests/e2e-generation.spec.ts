@@ -24,10 +24,14 @@ const SOURCE_FILE_EXTENSIONS = new Set([
   ".cts",
 ]);
 const IMPORT_SPECIFIER_PATTERN =
-  /\b(?:import|export)\s+(?:type\s+)?(?:[^'"]*?\s+from\s+)?["']([^"']+)["']/g;
+  /\b(?:import|export)\s+(type\s+)?(?:[^'"]*?\s+from\s+)?["']([^"']+)["']/g;
 const DYNAMIC_IMPORT_SPECIFIER_PATTERN = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
 
 type DependencyField = (typeof DEPENDENCY_FIELDS)[number];
+type ImportReference = {
+  specifier: string;
+  typeOnly: boolean;
+};
 type PackageJson = {
   name?: string;
   scripts?: Record<string, string>;
@@ -138,6 +142,16 @@ function toPackageName(specifier: string): string | undefined {
   return specifier.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
 }
 
+function toTypesPackageName(packageName: string): string {
+  if (!packageName.startsWith("@")) {
+    return `@types/${packageName}`;
+  }
+
+  const [scope, name] = packageName.split("/");
+
+  return `@types/${scope.slice(1)}__${name}`;
+}
+
 function collectBarePackageImports(filePath: string): string[] {
   const imports = preProcessFile(readFileSync(filePath, "utf8"), true, true)
     .importedFiles.map(({ fileName }) => toPackageName(fileName))
@@ -146,11 +160,17 @@ function collectBarePackageImports(filePath: string): string[] {
   return [...new Set(imports)];
 }
 
-function collectImportSpecifiers(content: string): string[] {
+function collectImportReferences(content: string): ImportReference[] {
   return [
-    ...content.matchAll(IMPORT_SPECIFIER_PATTERN),
-    ...content.matchAll(DYNAMIC_IMPORT_SPECIFIER_PATTERN),
-  ].map((match) => match[1]);
+    ...[...content.matchAll(IMPORT_SPECIFIER_PATTERN)].map((match) => ({
+      specifier: match[2],
+      typeOnly: match[1] !== undefined,
+    })),
+    ...[...content.matchAll(DYNAMIC_IMPORT_SPECIFIER_PATTERN)].map((match) => ({
+      specifier: match[1],
+      typeOnly: false,
+    })),
+  ];
 }
 
 function assertViteConfigImportsDeclared(packageDir: string): void {
@@ -175,14 +195,27 @@ function assertSourceBareImportsDeclared(packageDir: string): void {
   const missingDependencies = collectFiles(join(packageDir, "src"))
     .filter((filePath) => SOURCE_FILE_EXTENSIONS.has(extname(filePath)))
     .flatMap((filePath) =>
-      collectImportSpecifiers(readFileSync(filePath, "utf8"))
-        .map(toPackageName)
-        .filter((packageName): packageName is string => packageName !== undefined)
-        .filter((packageName) => !declaredDependencies.has(packageName))
-        .map((packageName) => ({
-          filePath: relative(packageDir, filePath),
-          packageName,
-        })),
+      collectImportReferences(readFileSync(filePath, "utf8")).flatMap((reference) => {
+        const packageName = toPackageName(reference.specifier);
+
+        if (packageName === undefined) {
+          return [];
+        }
+
+        if (
+          declaredDependencies.has(packageName) ||
+          (reference.typeOnly && declaredDependencies.has(toTypesPackageName(packageName)))
+        ) {
+          return [];
+        }
+
+        return [
+          {
+            filePath: relative(packageDir, filePath),
+            packageName,
+          },
+        ];
+      }),
     );
 
   expect(missingDependencies).toEqual([]);
@@ -565,14 +598,19 @@ describe("E2E: generate()", () => {
     expect(handlerContent).toContain('from "@croco/telemetry-sdk-node";');
     expect(handlerContent).toContain('from "@apollo/server";');
     expect(handlerContent).toContain('from "@as-integrations/aws-lambda";');
+    expect(handlerContent).toContain('import type { APIGatewayProxyHandlerV2 } from "aws-lambda";');
     expect(handlerContent).toContain('import { createSchema } from "./schema.js";');
     expect(handlerContent).toContain("const telemetryReady = telemetry.init(");
+    expect(handlerContent).toContain(
+      "const lambdaHandlerPromise: Promise<APIGatewayProxyHandlerV2>",
+    );
     expect(handlerContent).toContain("await telemetryReady;");
     expect(handlerContent).toContain("const lambdaHandler = await lambdaHandlerPromise;");
     expect(handlerContent).toContain("await telemetry.forceFlush();");
     expect(schemaContent).toContain("export async function createSchema()");
     expect(packageJson.dependencies?.["@apollo/server"]).toBe("^4.12.2");
     expect(packageJson.dependencies?.["@as-integrations/aws-lambda"]).toBe("^3.1.0");
+    expect(packageJson.devDependencies?.["@types/aws-lambda"]).toBe("^8.10.146");
     expect(packageJson.dependencies?.["apollo-server"]).toBeUndefined();
     expect(packageJson.dependencies?.["@croco/protocols-graphql"]).toBe("^0.0.3");
     expect(packageJson.dependencies?.["@croco/telemetry-sdk-node"]).toBe("^0.0.2");

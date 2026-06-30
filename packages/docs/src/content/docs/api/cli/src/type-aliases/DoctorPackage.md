@@ -13,14 +13,26 @@ title: "DoctorPackage"
 
 > `readonly` **absoluteDir**: `string`
 
-***
+---
+
+### dependencies
+
+> `readonly` **dependencies**: readonly `DoctorPackageDependency`[]
+
+---
 
 ### name
 
 > `readonly` **name**: `string`
 
-***
+---
 
 ### relativeDir
 
 > `readonly` **relativeDir**: `string`
+
+---
+
+### version
+
+> `readonly` **version**: `string` \| `null`

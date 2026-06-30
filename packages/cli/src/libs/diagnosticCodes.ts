@@ -7,6 +7,28 @@ export const CLI_DIAGNOSTIC_CODES = {
   doctorWorkspacePackageInvalid: "CROCO_CLI_DOCTOR_003",
   doctorRepositoryCoreDrizzleBoundary: "CROCO_CLI_DOCTOR_004",
   doctorLambdaTelemetryFlushMissing: "CROCO_CLI_DOCTOR_005",
+  doctorWorkspaceVersionConflict: "CROCO_DOCTOR_WORKSPACE_VERSION_CONFLICT",
+  doctorSpinePackageNotInstalled: "CROCO_DOCTOR_SPINE_PACKAGE_NOT_INSTALLED",
+  doctorSpinePackageManifestInvalid: "CROCO_DOCTOR_SPINE_PACKAGE_MANIFEST_INVALID",
+  doctorSpinePackageNotBuilt: "CROCO_DOCTOR_SPINE_PACKAGE_NOT_BUILT",
+  doctorContractGraphMissing: "CROCO_DOCTOR_CONTRACT_GRAPH_MISSING",
+  doctorContractGraphInvalid: "CROCO_DOCTOR_CONTRACT_GRAPH_INVALID",
+  doctorContractGraphErrors: "CROCO_DOCTOR_CONTRACT_GRAPH_ERRORS",
+  doctorProblemRegistryMissing: "CROCO_DOCTOR_PROBLEM_REGISTRY_MISSING",
+  doctorProblemRegistryInvalid: "CROCO_DOCTOR_PROBLEM_REGISTRY_INVALID",
+  doctorProblemRegistryDrift: "CROCO_DOCTOR_PROBLEM_REGISTRY_DRIFT",
+  doctorProblemRegistryCheckTimeout: "CROCO_DOCTOR_PROBLEM_REGISTRY_CHECK_TIMEOUT",
+  doctorProblemRegistryCheckFailed: "CROCO_DOCTOR_PROBLEM_REGISTRY_CHECK_FAILED",
+  doctorRuntimeCapabilityManifestMissing: "CROCO_DOCTOR_RUNTIME_CAPABILITY_MANIFEST_MISSING",
+  doctorRuntimeCapabilityManifestInvalid: "CROCO_DOCTOR_RUNTIME_CAPABILITY_MANIFEST_INVALID",
+  doctorHttpSecurityValidationDisabled: "CROCO_DOCTOR_HTTP_SECURITY_VALIDATION_DISABLED",
+  doctorHttpSecurityMiddlewareMissing: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING",
+  doctorDiGraphManifestInvalid: "CROCO_DOCTOR_DI_GRAPH_MANIFEST_INVALID",
+  doctorDiBootstrapErrors: "CROCO_DOCTOR_DI_BOOTSTRAP_ERRORS",
+  doctorProviderProfileInvalid: "CROCO_DOCTOR_PROVIDER_PROFILE_INVALID",
+  doctorProviderPackageMissing: "CROCO_DOCTOR_PROVIDER_PACKAGE_MISSING",
+  doctorProviderCertificationGap: "CROCO_DOCTOR_PROVIDER_CERTIFICATION_GAP",
+  doctorProviderCertificationDocumented: "CROCO_DOCTOR_PROVIDER_CERTIFICATION_DOCUMENTED",
   usageDashboardTenantRequired: "CROCO_CLI_USAGE_DASHBOARD_001",
   usageDashboardTenantNotFound: "CROCO_CLI_USAGE_DASHBOARD_002",
   usageDashboardMeterNotFound: "CROCO_CLI_USAGE_DASHBOARD_003",
@@ -63,10 +85,32 @@ export const CLI_LEGACY_DIAGNOSTIC_CODES = {
 
 export type CliDiagnosticKey = keyof typeof CLI_DIAGNOSTIC_CODES;
 export type CliDiagnosticCode = (typeof CLI_DIAGNOSTIC_CODES)[CliDiagnosticKey];
-export type CliStaticLegacyDiagnosticKey = Exclude<
-  CliDiagnosticKey,
-  "projectMapFrameworkManifestDiagnostic" | "projectMapContractGraphDiagnostic"
->;
+type CliNonLegacyDiagnosticKey =
+  | "doctorWorkspaceVersionConflict"
+  | "doctorSpinePackageNotInstalled"
+  | "doctorSpinePackageManifestInvalid"
+  | "doctorSpinePackageNotBuilt"
+  | "doctorContractGraphMissing"
+  | "doctorContractGraphInvalid"
+  | "doctorContractGraphErrors"
+  | "doctorProblemRegistryMissing"
+  | "doctorProblemRegistryInvalid"
+  | "doctorProblemRegistryDrift"
+  | "doctorProblemRegistryCheckTimeout"
+  | "doctorProblemRegistryCheckFailed"
+  | "doctorRuntimeCapabilityManifestMissing"
+  | "doctorRuntimeCapabilityManifestInvalid"
+  | "doctorHttpSecurityValidationDisabled"
+  | "doctorHttpSecurityMiddlewareMissing"
+  | "doctorDiGraphManifestInvalid"
+  | "doctorDiBootstrapErrors"
+  | "doctorProviderProfileInvalid"
+  | "doctorProviderPackageMissing"
+  | "doctorProviderCertificationGap"
+  | "doctorProviderCertificationDocumented"
+  | "projectMapFrameworkManifestDiagnostic"
+  | "projectMapContractGraphDiagnostic";
+export type CliStaticLegacyDiagnosticKey = Exclude<CliDiagnosticKey, CliNonLegacyDiagnosticKey>;
 
 const LEGACY_TO_STABLE_DIAGNOSTIC_CODES = new Map<string, CliDiagnosticCode>();
 

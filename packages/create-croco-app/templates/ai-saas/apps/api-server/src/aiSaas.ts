@@ -585,7 +585,7 @@ export async function runAiSaasDemoFlow(
     quotaFailureCode = error.code;
   }
 
-  const lastLog = logs.at(-1);
+  const lastLog = logs.length === 0 ? undefined : logs[logs.length - 1];
   if (!lastLog) {
     throw new Error("AI SaaS smoke did not record an invocation log");
   }

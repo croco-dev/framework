@@ -23,6 +23,12 @@ type SaasDemoEndpointEnv = {
   [SAAS_DEMO_ENDPOINTS_ENABLED_ENV]?: string;
 };
 
+type RuntimeGlobal = typeof globalThis & {
+  process?: {
+    env?: SaasDemoEndpointEnv;
+  };
+};
+
 export const SAAS_PROVIDER_PROFILES = {
   "in-memory": {
     name: "in-memory",
@@ -196,6 +202,10 @@ export function listSaasProviderProfiles(): SaasProviderProfile[] {
   return Object.values(SAAS_PROVIDER_PROFILES);
 }
 
-export function isSaasDemoEndpointEnabled(env: SaasDemoEndpointEnv = process.env): boolean {
+function getRuntimeEnv(): SaasDemoEndpointEnv {
+  return (globalThis as RuntimeGlobal).process?.env ?? {};
+}
+
+export function isSaasDemoEndpointEnabled(env: SaasDemoEndpointEnv = getRuntimeEnv()): boolean {
   return env.NODE_ENV !== "production" && env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] === "true";
 }

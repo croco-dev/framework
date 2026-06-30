@@ -1,5 +1,12 @@
 packages:
   - "apps/**/*"
 
+allowBuilds:
+  "@apollo/protobufjs": true
+  esbuild: true
+  protobufjs: true
+
 onlyBuiltDependencies:
+  - "@apollo/protobufjs"
   - esbuild
+  - protobufjs

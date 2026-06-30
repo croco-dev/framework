@@ -1,3 +1,19 @@
 packages:
   - "apps/**/*"
   - "libs/**/*"
+
+allowBuilds:
+  "@apollo/protobufjs": true
+  esbuild: true
+  lefthook: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true
+
+onlyBuiltDependencies:
+  - "@apollo/protobufjs"
+  - esbuild
+  - lefthook
+  - protobufjs
+  - sharp
+  - unrs-resolver
