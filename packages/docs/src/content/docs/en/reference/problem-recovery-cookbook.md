@@ -4786,7 +4786,7 @@ Sources:
 
 Sources:
 
-- `packages/problems-core/src/libs/ProblemRegistry.ts:67:5` (problem-constructor)
+- `packages/problems-core/src/libs/ProblemRegistry.ts:173:5` (problem-constructor)
 
 <a id="problems-core-unhandled-category"></a>
 
@@ -4820,7 +4820,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-core/src/libs/ContractGraph.ts:121:5` (problem-constructor)
+- `packages/protocols-core/src/libs/ContractGraph.ts:141:5` (problem-constructor)
 
 <a id="protocols-graphql-auth-invalid-header-format"></a>
 

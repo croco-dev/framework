@@ -2,16 +2,12 @@
 editUrl: false
 next: false
 prev: false
-title: "ProblemResponseIR"
+title: "ProblemRegistryProblemDefinition"
 ---
 
-> **ProblemResponseIR**\<`Code`, `Category`, `Status`\> = `object`
+> **ProblemRegistryProblemDefinition**\<`Category`, `Status`\> = `object`
 
 ## Type Parameters
-
-### Code
-
-`Code` *extends* `string` = `string`
 
 ### Category
 
@@ -29,12 +25,6 @@ title: "ProblemResponseIR"
 
 ***
 
-### code
-
-> `readonly` **code**: `Code`
-
-***
-
 ### cookbookPath?
 
 > `readonly` `optional` **cookbookPath?**: `string`
@@ -47,21 +37,27 @@ title: "ProblemResponseIR"
 
 ***
 
-### registry?
+### public
 
-> `readonly` `optional` **registry?**: [`ProblemRegistryReferenceIR`](/api/protocols-core/src/type-aliases/problemregistryreferenceir/)
-
-***
-
-### routeContractProblems?
-
-> `readonly` `optional` **routeContractProblems?**: readonly `ProblemResponseIR`[]
+> `readonly` **public**: `boolean`
 
 ***
 
-### status
+### redaction
 
-> `readonly` **status**: `Status`
+> `readonly` **redaction**: [`ProblemRegistryRedaction`](/api/problems-core/src/type-aliases/problemregistryredaction/)
+
+***
+
+### retryable
+
+> `readonly` **retryable**: `boolean`
+
+***
+
+### status?
+
+> `readonly` `optional` **status?**: `Status`
 
 ***
 

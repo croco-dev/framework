@@ -58,12 +58,25 @@ export type { ProblemExtensions } from "./libs/ProblemExtensions";
 export { ProblemFactory } from "./libs/ProblemFactory";
 export type {
   CreateProblemCodeRegistryOptions,
+  DefinedProblemRegistryEntries,
+  DefineProblemRegistryOptions,
+  PackageProblemRegistry,
+  PackageProblemRegistryEntry,
+  PackageProblemRegistryVersion,
   ProblemCodeDiscovery,
   ProblemCodeRegistry,
   ProblemCodeRegistryEntry,
   ProblemCodeRegistryVersion,
   ProblemCodeSource,
   ProblemCodeSourceKind,
+  ProblemRegistryProblemDefinition,
+  ProblemRegistryProblemDefinitions,
+  ProblemRegistryRedaction,
+  ProblemRegistrySnapshot,
+  ProblemRegistrySnapshotPackage,
+  ProblemRegistrySnapshotVersion,
+  ProblemRegistryStatusForCategory,
+  ProblemRegistryVisibility,
   ProblemRecoveryMetadata,
   ProblemRedactionPolicy,
   ProblemRetryability,
@@ -71,13 +84,20 @@ export type {
   ProblemTelemetrySeverity,
 } from "./libs/ProblemRegistry";
 export {
+  assertPackageProblemRegistryValid,
   assertProblemCodeRegistryValid,
+  createProblemRegistrySnapshot,
   createProblemCodeRegistry,
+  defineProblemRegistry,
+  getPackageProblemRegistryValidationErrors,
   getProblemCodeRegistryValidationErrors,
   getProblemCookbookPath,
   getProblemRecoveryMetadata,
+  getProblemRegistryPackagePrefix,
+  hasProblemRegistryPackagePrefix,
   ProblemRegistryValidationProblem,
   slugifyProblemCode,
+  stringifyProblemRegistrySnapshot,
 } from "./libs/ProblemRegistry";
 /**
  * Problem Details를 직렬화하고 역직렬화하는 유틸리티입니다.

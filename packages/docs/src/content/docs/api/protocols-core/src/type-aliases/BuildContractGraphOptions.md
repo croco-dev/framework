@@ -9,6 +9,12 @@ title: "BuildContractGraphOptions"
 
 ## Properties
 
+### problemRegistries?
+
+> `readonly` `optional` **problemRegistries?**: readonly [`PackageProblemRegistry`](/api/problems-core/src/type-aliases/packageproblemregistry/)[]
+
+***
+
 ### strictProblemResponses?
 
 > `readonly` `optional` **strictProblemResponses?**: `boolean`

@@ -11,6 +11,10 @@ export type ProblemCodeSourceKind =
 export type ProblemRetryability = "retryable" | "conditional" | "not-retryable";
 export type ProblemRedactionPolicy = "public" | "safe-message" | "operator-only";
 export type ProblemTelemetrySeverity = "info" | "warning" | "error";
+export type PackageProblemRegistryVersion = "croco.problem-registry.v1";
+export type ProblemRegistrySnapshotVersion = "croco.problem-registry.snapshot.v1";
+export type ProblemRegistryVisibility = "public" | "private";
+export type ProblemRegistryRedaction = "public" | "safe" | "operator-only";
 
 export type ProblemCodeSource = {
   readonly file: string;
@@ -60,6 +64,108 @@ export type CreateProblemCodeRegistryOptions = {
   readonly cookbookBasePath?: string;
 };
 
+export type ProblemRegistryProblemDefinition<
+  Category extends ProblemCategory = ProblemCategory,
+  Status extends number = number,
+> = {
+  readonly category: Category;
+  readonly status?: Status;
+  readonly retryable: boolean;
+  readonly public: boolean;
+  readonly redaction: ProblemRegistryRedaction;
+  readonly description?: string;
+  readonly type?: string;
+  readonly cookbookPath?: string;
+};
+
+export type ProblemRegistryProblemDefinitions = Record<string, ProblemRegistryProblemDefinition>;
+
+export type ProblemRegistryStatusForCategory<Category extends ProblemCategory> =
+  Category extends ProblemCategory.BadRequest
+    ? 400
+    : Category extends ProblemCategory.Unauthorized
+      ? 401
+      : Category extends ProblemCategory.Forbidden
+        ? 403
+        : Category extends ProblemCategory.NotFound
+          ? 404
+          : Category extends ProblemCategory.Conflict
+            ? 409
+            : Category extends ProblemCategory.Gone
+              ? 410
+              : Category extends ProblemCategory.ValidationError
+                ? 422
+                : Category extends ProblemCategory.BusinessRuleViolation
+                  ? 422
+                  : Category extends ProblemCategory.TooManyRequests
+                    ? 429
+                    : Category extends ProblemCategory.InternalServerError
+                      ? 500
+                      : Category extends ProblemCategory.NotImplemented
+                        ? 501
+                        : number;
+
+export type DefinedProblemRegistryEntries<Problems extends ProblemRegistryProblemDefinitions> = {
+  readonly [Code in keyof Problems & string]: PackageProblemRegistryEntry<
+    Code,
+    Problems[Code]["category"],
+    Problems[Code]["status"] extends number
+      ? Problems[Code]["status"]
+      : ProblemRegistryStatusForCategory<Problems[Code]["category"]>
+  >;
+}[keyof Problems & string][];
+
+export type DefineProblemRegistryOptions<
+  Problems extends ProblemRegistryProblemDefinitions = ProblemRegistryProblemDefinitions,
+> = {
+  readonly package: string;
+  readonly problems: Problems;
+};
+
+export type PackageProblemRegistryEntry<
+  Code extends string = string,
+  Category extends ProblemCategory = ProblemCategory,
+  Status extends number = number,
+> = {
+  readonly package: string;
+  readonly code: Code;
+  readonly category: Category;
+  readonly status: Status;
+  readonly retryable: boolean;
+  readonly retryability: "retryable" | "not-retryable";
+  readonly public: boolean;
+  readonly visibility: ProblemRegistryVisibility;
+  readonly redaction: ProblemRegistryRedaction;
+  readonly cookbookPath: string;
+  readonly description?: string;
+  readonly type?: string;
+};
+
+export type PackageProblemRegistry<
+  Problems extends readonly PackageProblemRegistryEntry[] = readonly PackageProblemRegistryEntry[],
+> = {
+  readonly version: PackageProblemRegistryVersion;
+  readonly package: string;
+  readonly packagePrefix: string;
+  readonly problemCount: number;
+  readonly problems: Problems;
+};
+
+export type ProblemRegistrySnapshotPackage = {
+  readonly package: string;
+  readonly packagePrefix: string;
+  readonly problemCodes: readonly string[];
+};
+
+export type ProblemRegistrySnapshot = {
+  readonly snapshotVersion: ProblemRegistrySnapshotVersion;
+  readonly registryVersion: PackageProblemRegistryVersion;
+  readonly packageCount: number;
+  readonly problemCount: number;
+  readonly packages: readonly ProblemRegistrySnapshotPackage[];
+  readonly problems: readonly PackageProblemRegistryEntry[];
+};
+
 export class ProblemRegistryValidationProblem extends Problem {
   public readonly errors: readonly string[];
 
@@ -74,6 +180,226 @@ export class ProblemRegistryValidationProblem extends Problem {
     );
     this.errors = errors;
   }
+}
+
+export function defineProblemRegistry<const Problems extends ProblemRegistryProblemDefinitions>(
+  options: DefineProblemRegistryOptions<Problems>,
+): PackageProblemRegistry<DefinedProblemRegistryEntries<Problems>> {
+  const packagePrefix = getProblemRegistryPackagePrefix(options.package);
+  const problems = Object.entries(options.problems)
+    .map(([code, definition]) =>
+      createPackageProblemRegistryEntry(options.package, code, definition),
+    )
+    .sort(comparePackageProblemRegistryEntries);
+  const registry = {
+    version: "croco.problem-registry.v1",
+    package: options.package,
+    packagePrefix,
+    problemCount: problems.length,
+    problems,
+  } as const;
+  const errors = getPackageProblemRegistryValidationErrors(registry);
+
+  if (errors.length > 0) {
+    throw new ProblemRegistryValidationProblem(errors);
+  }
+
+  return registry as PackageProblemRegistry<DefinedProblemRegistryEntries<Problems>>;
+}
+
+export function createProblemRegistrySnapshot(
+  registries: readonly PackageProblemRegistry[],
+): ProblemRegistrySnapshot {
+  const errors = registries.flatMap(getPackageProblemRegistryValidationErrors);
+  const packageSummaries = registries
+    .map((registry) => ({
+      package: registry.package,
+      packagePrefix: registry.packagePrefix,
+      problemCodes: registry.problems.map((problem) => problem.code).sort(compareStrings),
+    }))
+    .sort(compareProblemRegistrySnapshotPackages);
+  const problems = registries
+    .flatMap((registry) => registry.problems)
+    .sort(comparePackageProblemRegistryEntries);
+  const seenCodes = new Map<string, PackageProblemRegistryEntry>();
+
+  for (const problem of problems) {
+    const existing = seenCodes.get(problem.code);
+
+    if (existing) {
+      errors.push(
+        `Problem code '${problem.code}' is declared by both ${existing.package} and ${problem.package}.`,
+      );
+      continue;
+    }
+
+    seenCodes.set(problem.code, problem);
+  }
+
+  if (errors.length > 0) {
+    throw new ProblemRegistryValidationProblem(errors);
+  }
+
+  return {
+    snapshotVersion: "croco.problem-registry.snapshot.v1",
+    registryVersion: "croco.problem-registry.v1",
+    packageCount: registries.length,
+    problemCount: problems.length,
+    packages: packageSummaries,
+    problems,
+  };
+}
+
+export function stringifyProblemRegistrySnapshot(snapshot: ProblemRegistrySnapshot): string {
+  return `${JSON.stringify(snapshot, null, 2)}\n`;
+}
+
+export function getPackageProblemRegistryValidationErrors(
+  registry: PackageProblemRegistry,
+): readonly string[] {
+  const errors: string[] = [];
+  const seenCodes = new Set<string>();
+  const expectedPrefix = getProblemRegistryPackagePrefix(registry.package);
+
+  if (registry.version !== "croco.problem-registry.v1") {
+    errors.push(`Unsupported ProblemRegistry manifest version '${registry.version}'.`);
+  }
+
+  if (registry.package.length === 0) {
+    errors.push("ProblemRegistry package name must not be empty.");
+  }
+
+  if (registry.packagePrefix !== expectedPrefix) {
+    errors.push(
+      `ProblemRegistry package '${registry.package}' has prefix '${registry.packagePrefix}', expected '${expectedPrefix}'.`,
+    );
+  }
+
+  if (registry.problemCount !== registry.problems.length) {
+    errors.push(
+      `ProblemRegistry package '${registry.package}' count ${registry.problemCount} does not match ${registry.problems.length} entries.`,
+    );
+  }
+
+  for (const problem of registry.problems) {
+    if (seenCodes.has(problem.code)) {
+      errors.push(
+        `ProblemRegistry package '${registry.package}' contains duplicate code '${problem.code}'.`,
+      );
+      continue;
+    }
+
+    seenCodes.add(problem.code);
+
+    if (problem.package !== registry.package) {
+      errors.push(
+        `Problem code '${problem.code}' belongs to package '${problem.package}', expected '${registry.package}'.`,
+      );
+    }
+
+    if (!hasProblemRegistryPackagePrefix(problem.code, registry.packagePrefix)) {
+      errors.push(
+        `Problem code '${problem.code}' must start with package prefix '${registry.packagePrefix}_'.`,
+      );
+    }
+
+    const expectedStatus = ProblemCategoryMapper.toHttpStatus(problem.category);
+
+    if (problem.status !== expectedStatus) {
+      errors.push(
+        `Problem code '${problem.code}' has status ${problem.status}, expected ${expectedStatus} for ${problem.category}.`,
+      );
+    }
+
+    if (problem.retryability !== (problem.retryable ? "retryable" : "not-retryable")) {
+      errors.push(`Problem code '${problem.code}' has inconsistent retryability metadata.`);
+    }
+
+    if (problem.visibility !== (problem.public ? "public" : "private")) {
+      errors.push(`Problem code '${problem.code}' has inconsistent visibility metadata.`);
+    }
+
+    if (!isProblemRegistryRedaction(problem.redaction)) {
+      errors.push(
+        `Problem code '${problem.code}' has unsupported redaction '${problem.redaction}'.`,
+      );
+    }
+  }
+
+  return errors;
+}
+
+export function assertPackageProblemRegistryValid(registry: PackageProblemRegistry): void {
+  const errors = getPackageProblemRegistryValidationErrors(registry);
+
+  if (errors.length > 0) {
+    throw new ProblemRegistryValidationProblem(errors);
+  }
+}
+
+export function getProblemRegistryPackagePrefix(packageName: string): string {
+  const packageNameSegments = packageName.split("/");
+  const unscoped = packageName.includes("/")
+    ? packageNameSegments[packageNameSegments.length - 1]
+    : packageName;
+
+  return (
+    (unscoped ?? packageName)
+      .replace(/^@/, "")
+      .replace(/[^A-Za-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .replace(/_+/g, "_")
+      .toUpperCase() || "PACKAGE"
+  );
+}
+
+export function hasProblemRegistryPackagePrefix(code: string, packagePrefix: string): boolean {
+  return code.startsWith(`${packagePrefix}_`);
+}
+
+function createPackageProblemRegistryEntry(
+  packageName: string,
+  code: string,
+  definition: ProblemRegistryProblemDefinition,
+): PackageProblemRegistryEntry {
+  const status = definition.status ?? ProblemCategoryMapper.toHttpStatus(definition.category);
+
+  return {
+    package: packageName,
+    code,
+    category: definition.category,
+    status,
+    retryable: definition.retryable,
+    retryability: definition.retryable ? "retryable" : "not-retryable",
+    public: definition.public,
+    visibility: definition.public ? "public" : "private",
+    redaction: definition.redaction,
+    cookbookPath: definition.cookbookPath ?? getProblemCookbookPath(code),
+    ...(definition.description ? { description: definition.description } : {}),
+    ...(definition.type ? { type: definition.type } : {}),
+  };
+}
+
+function isProblemRegistryRedaction(value: string): value is ProblemRegistryRedaction {
+  return value === "public" || value === "safe" || value === "operator-only";
+}
+
+function comparePackageProblemRegistryEntries(
+  left: PackageProblemRegistryEntry,
+  right: PackageProblemRegistryEntry,
+): number {
+  return left.code.localeCompare(right.code) || left.package.localeCompare(right.package);
+}
+
+function compareProblemRegistrySnapshotPackages(
+  left: ProblemRegistrySnapshotPackage,
+  right: ProblemRegistrySnapshotPackage,
+): number {
+  return left.package.localeCompare(right.package);
+}
+
+function compareStrings(left: string, right: string): number {
+  return left.localeCompare(right);
 }
 
 const PROBLEM_TELEMETRY_ATTRIBUTES = [

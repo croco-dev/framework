@@ -1,8 +1,15 @@
 import "reflect-metadata";
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import {
+  createProblemRegistrySnapshot,
+  Problem,
+  ProblemCategory,
+  ProblemRegistryValidationProblem,
+  type PackageProblemRegistry,
+  type PackageProblemRegistryEntry,
+} from "@croco/problems-core";
 import type { z } from "zod";
 import { extractRouteIR } from "./extractRouteIR";
-import type { RouteIR } from "./RouteIR";
+import type { ProblemRegistryReferenceIR, ProblemResponseIR, RouteIR } from "./RouteIR";
 import {
   describeZodSchema,
   getSchemaDescriptorDiagnostics,
@@ -21,7 +28,13 @@ import {
 
 export type ContractGraphVersion = "croco.contract-graph.v1";
 export type ContractDiagnosticSeverity = "error" | "warning";
-export type ContractDiagnosticTarget = "graph" | "controller" | "route" | "param" | "schema";
+export type ContractDiagnosticTarget =
+  | "graph"
+  | "controller"
+  | "route"
+  | "param"
+  | "schema"
+  | "problem";
 
 export type ContractDiagnostic = {
   readonly code: string;
@@ -105,12 +118,19 @@ export type ContractGraphRoute = RouteIR & {
 
 export type BuildContractGraphOptions = {
   readonly strictProblemResponses?: boolean;
+  readonly problemRegistries?: readonly PackageProblemRegistry[];
 };
 
 export type ContractGraph = {
   readonly version: ContractGraphVersion;
   readonly controllers: readonly ContractGraphController[];
   readonly routes: readonly ContractGraphRoute[];
+  readonly diagnostics: readonly ContractDiagnostic[];
+};
+
+type ProblemRegistryIndex = {
+  readonly enabled: boolean;
+  readonly entriesByCode: ReadonlyMap<string, PackageProblemRegistryEntry>;
   readonly diagnostics: readonly ContractDiagnostic[];
 };
 
@@ -135,6 +155,9 @@ export function buildContractGraph(
   const graphControllers: ContractGraphController[] = [];
   const graphRoutes: ContractGraphRoute[] = [];
   const diagnostics: ContractDiagnostic[] = [];
+  const problemRegistryIndex = createProblemRegistryIndex(options.problemRegistries);
+
+  diagnostics.push(...problemRegistryIndex.diagnostics);
 
   for (const controller of controllers) {
     const controllerMeta = Reflect.getMetadata(REST_CONTROLLER_KEY, controller) as
@@ -146,7 +169,7 @@ export function buildContractGraph(
     }
 
     const routes = extractRouteIR(controller).map((route) =>
-      toContractGraphRoute(route, controllerMeta.path, controller),
+      toContractGraphRoute(route, controllerMeta.path, controller, problemRegistryIndex),
     );
 
     graphControllers.push({
@@ -165,7 +188,7 @@ export function buildContractGraph(
     graphRoutes.push(...routes);
 
     for (const route of routes) {
-      diagnostics.push(...validateRoute(route, options));
+      diagnostics.push(...validateRoute(route, options, problemRegistryIndex));
     }
   }
 
@@ -221,15 +244,69 @@ export function getContractPathParams(path: string): ContractPathParam[] {
     .filter((param) => param.name.length > 0);
 }
 
+function createProblemRegistryIndex(
+  registries: readonly PackageProblemRegistry[] | undefined,
+): ProblemRegistryIndex {
+  if (!registries || registries.length === 0) {
+    return {
+      enabled: false,
+      entriesByCode: new Map(),
+      diagnostics: [],
+    };
+  }
+
+  try {
+    const snapshot = createProblemRegistrySnapshot(registries);
+
+    return {
+      enabled: true,
+      entriesByCode: new Map(snapshot.problems.map((problem) => [problem.code, problem])),
+      diagnostics: [],
+    };
+  } catch (error) {
+    const errors =
+      error instanceof ProblemRegistryValidationProblem
+        ? error.errors
+        : [`ProblemRegistry manifests could not be read: ${String(error)}`];
+
+    return {
+      enabled: false,
+      entriesByCode: new Map(),
+      diagnostics: errors.map((message) => ({
+        code: "contract-graph-problem-registry-invalid",
+        severity: "error",
+        target: "graph",
+        message,
+      })),
+    };
+  }
+}
+
 function toContractGraphRoute(
   route: RouteIR,
   controllerPath: string,
   controllerCtor: Constructor,
+  problemRegistryIndex: ProblemRegistryIndex,
 ): ContractGraphRoute {
   const routeId = `${route.controllerName}.${route.methodName}`;
+  const problemResponses = attachProblemRegistryReferences(
+    route.problemResponses,
+    problemRegistryIndex.entriesByCode,
+  );
+  const routeContract = route.routeContract
+    ? {
+        ...route.routeContract,
+        problemResponses: attachProblemRegistryReferences(
+          route.routeContract.problemResponses,
+          problemRegistryIndex.entriesByCode,
+        ),
+      }
+    : null;
 
   return {
     ...route,
+    routeContract,
+    problemResponses,
     routeId,
     operationId: route.routeContract?.operationId ?? routeId.replace(/[^A-Za-z0-9_]+/g, "_"),
     controllerPath,
@@ -266,9 +343,49 @@ function toContractGraphRoute(
   };
 }
 
+function attachProblemRegistryReferences(
+  responses: readonly ProblemResponseIR[] | undefined,
+  entriesByCode: ReadonlyMap<string, PackageProblemRegistryEntry>,
+): readonly ProblemResponseIR[] {
+  if (!responses) {
+    return [];
+  }
+
+  return responses.map((response) => {
+    const entry = entriesByCode.get(response.code);
+    const routeContractProblems = response.routeContractProblems
+      ? attachProblemRegistryReferences(response.routeContractProblems, entriesByCode)
+      : undefined;
+
+    return {
+      ...response,
+      ...(entry ? { registry: toProblemRegistryReference(entry) } : {}),
+      ...(routeContractProblems ? { routeContractProblems } : {}),
+    };
+  });
+}
+
+function toProblemRegistryReference(
+  entry: PackageProblemRegistryEntry,
+): ProblemRegistryReferenceIR {
+  return {
+    package: entry.package,
+    code: entry.code,
+    category: entry.category,
+    status: entry.status,
+    retryable: entry.retryable,
+    retryability: entry.retryability,
+    public: entry.public,
+    visibility: entry.visibility,
+    redaction: entry.redaction,
+    cookbookPath: entry.cookbookPath,
+  };
+}
+
 function validateRoute(
   route: ContractGraphRoute,
   options: BuildContractGraphOptions,
+  problemRegistryIndex: ProblemRegistryIndex,
 ): ContractDiagnostic[] {
   const diagnostics: ContractDiagnostic[] = [];
 
@@ -289,6 +406,7 @@ function validateRoute(
   diagnostics.push(...validateRouteContract(route));
   diagnostics.push(...validateRouteSchemas(route));
   diagnostics.push(...validateProblemResponses(route));
+  diagnostics.push(...validateProblemRegistryReferences(route, problemRegistryIndex));
   diagnostics.push(...validateStrictProblemResponses(route, options));
 
   return diagnostics;
@@ -523,6 +641,57 @@ function validateProblemResponses(route: ContractGraphRoute): ContractDiagnostic
   }
 
   diagnostics.push(...validateRouteContractProblemResponses(route));
+
+  return diagnostics;
+}
+
+function validateProblemRegistryReferences(
+  route: ContractGraphRoute,
+  problemRegistryIndex: ProblemRegistryIndex,
+): ContractDiagnostic[] {
+  if (!problemRegistryIndex.enabled) {
+    return [];
+  }
+
+  const diagnostics: ContractDiagnostic[] = [];
+  const seenCodes = new Set<string>();
+  const responses = [
+    ...(route.problemResponses ?? []),
+    ...(route.routeContract?.problemResponses ?? []),
+  ];
+
+  for (const response of responses) {
+    if (seenCodes.has(response.code)) {
+      continue;
+    }
+
+    seenCodes.add(response.code);
+
+    const entry = problemRegistryIndex.entriesByCode.get(response.code);
+
+    if (!entry) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          "contract-route-problem-registry-missing",
+          "error",
+          `Route declares Problem code '${response.code}', but no supplied ProblemRegistry manifest declares it.`,
+        ),
+      );
+      continue;
+    }
+
+    if (entry.category !== response.category || entry.status !== response.status) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          "contract-route-problem-registry-mismatch",
+          "error",
+          `Route declares Problem code '${response.code}' as ${response.category}/${response.status}, but the ProblemRegistry declares ${entry.category}/${entry.status}.`,
+        ),
+      );
+    }
+  }
 
   return diagnostics;
 }
@@ -966,6 +1135,10 @@ function createRouteDiagnostic(
 }
 
 function getDiagnosticTarget(code: string): ContractDiagnosticTarget {
+  if (isProblemRegistryDiagnosticCode(code)) {
+    return "problem";
+  }
+
   if (code.includes("param")) {
     return "param";
   }
@@ -975,6 +1148,13 @@ function getDiagnosticTarget(code: string): ContractDiagnosticTarget {
   }
 
   return "route";
+}
+
+function isProblemRegistryDiagnosticCode(code: string): boolean {
+  return (
+    code === "contract-route-problem-registry-missing" ||
+    code === "contract-route-problem-registry-mismatch"
+  );
 }
 
 function getMetadataReferences(

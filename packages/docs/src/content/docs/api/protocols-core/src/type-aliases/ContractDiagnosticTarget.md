@@ -5,4 +5,4 @@ prev: false
 title: "ContractDiagnosticTarget"
 ---
 
-> **ContractDiagnosticTarget** = `"graph"` \| `"controller"` \| `"route"` \| `"param"` \| `"schema"`
+> **ContractDiagnosticTarget** = `"graph"` \| `"controller"` \| `"route"` \| `"param"` \| `"schema"` \| `"problem"`

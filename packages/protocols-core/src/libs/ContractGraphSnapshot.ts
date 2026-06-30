@@ -12,7 +12,7 @@ import {
   createContractGraphConsumerCoverage,
   type ContractGraphConsumerCoverageReport,
 } from "./ContractGraphConsumerCoverage";
-import type { ParamIR } from "./RouteIR";
+import type { ParamIR, ProblemRegistryReferenceIR } from "./RouteIR";
 import { describeZodSchema } from "./SchemaDescriptor";
 import type { ContractSchemaDescriptor, ContractSchemaFieldDescriptor } from "./SchemaDescriptor";
 
@@ -42,6 +42,7 @@ export type ContractGraphSnapshotProblemResponse = {
   readonly status: number;
   readonly cookbookPath?: string;
   readonly description?: string;
+  readonly registry?: ProblemRegistryReferenceIR;
   readonly type?: string;
 };
 
@@ -190,6 +191,7 @@ function toSnapshotRoute(route: ContractGraphRoute): ContractGraphSnapshotRoute 
         status: problem.status,
         ...(problem.cookbookPath ? { cookbookPath: problem.cookbookPath } : {}),
         ...(problem.description ? { description: problem.description } : {}),
+        ...(problem.registry ? { registry: problem.registry } : {}),
         ...(problem.type ? { type: problem.type } : {}),
       }))
       .sort(compareProblemResponses),
