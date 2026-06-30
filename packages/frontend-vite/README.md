@@ -2,9 +2,12 @@
 
 > Croco Presentation Tier — 5th layer: Framework → Protocols → Transports → Integrations → Presentation
 
-Cloudflare Workers + Vite + Vike 통합 플러그인 패키지입니다.
+Croco Presentation 계층의 Vite 통합 helper 패키지입니다.
 
-이 패키지는 Cloudflare Workers 환경에서 Vite와 Vike를 함께 사용하기 위한 플러그인을 제공합니다.
+이 패키지는 SPA browser build와 Cloudflare Workers 대상 Vite 설정 helper를 제공합니다.
+SSR/RSC route runtime, route manifest, server actions는 `@croco/meta-vite`가 소유합니다.
+Vike runtime 통합은 제공하지 않습니다. `create-croco-app`의 Vike 이름 preset은
+기존 자동화 호환성을 위한 legacy 이름이며, 현재 생성물은 `@croco/meta-vite` runtime을 사용합니다.
 
 ## 런타임 증거
 
@@ -67,7 +70,8 @@ export default {
 
 ### `crocoVitePlugin(options?)`
 
-Cloudflare Workers + Vite + Vike 통합 플러그인을 반환합니다.
+Cloudflare Workers 대상 Vite 통합 플러그인을 반환합니다.
+SSR/RSC routes는 `@croco/meta-vite`의 Vite plugin과 generated route manifest가 소유합니다.
 
 **옵션:**
 

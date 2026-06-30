@@ -26,7 +26,10 @@ export function createProgram(): Command {
     )
     .option(
       "--preset <preset>",
-      "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|admin-console|saas|ai-saas)",
+      [
+        "Project preset (blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|admin-console|saas|ai-saas).",
+        "ddd-vike-fullstack is a legacy compatibility name for the meta-vite Worker profile",
+      ].join(" "),
     )
     .option("--scope <scope>", "Package scope (e.g. @myorg)")
     .option(

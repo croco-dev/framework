@@ -82,8 +82,9 @@ export default function Page() {
   - `createCrocoPageConfig`의 `mode`가 `@croco/meta-vite` `RenderMode`와 호환되고, route `path`
     registration을 config helper에 섞지 않는지 검증합니다.
 - generated fullstack smoke: `CROCO_GENERATED_SMOKE_CASES=meta-vite-fullstack-workers pnpm create-croco-app:smoke`
-  - `ddd-vike-fullstack` + `--frontend-deploy cloudflare-meta-vite` generated profile에서
-    `@croco/meta-vite` page/API/action/ISR smoke를 실행합니다.
+  - `ddd-vike-fullstack` compatibility preset name과 `--frontend-deploy cloudflare-meta-vite`
+    generated profile에서 `@croco/meta-vite` page/API/action/ISR smoke를 실행합니다.
+    해당 preset 이름은 legacy 호환성 이름이며, 현재 SSR/RSC runtime은 `@croco/meta-vite`입니다.
   - `react-dom/server` + `react-dom/client` + generated DOM harness로 browser hydration을 검증하고,
     `PageDataProvider`로 전달된 page data가 hydration 후 DOM에 남는지 확인합니다.
   - stale server markup과 client page data mismatch가 `onRecoverableError`로 드러나는지 검증해,
