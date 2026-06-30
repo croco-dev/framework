@@ -65,14 +65,22 @@ export type {
   ContractGraphSnapshotRouteContract,
   ContractGraphSnapshotRoute,
   ContractGraphSnapshotVersion,
+  ContractGraphV1,
+  ContractGraphV1DiRef,
+  ContractGraphV1PolicyRef,
+  ContractGraphV1Route,
+  ContractGraphV1RuntimeRequirement,
   ContractSchemaFieldSnapshot,
   ContractSchemaLocation,
   ContractSchemaSnapshot,
 } from "./libs/ContractGraphSnapshot";
 export {
+  createContractGraphV1,
   createContractGraphSnapshot,
+  isContractGraphV1,
   isContractGraphSnapshot,
   snapshotZodSchema,
+  stringifyContractGraphV1,
   stringifyContractGraphSnapshot,
 } from "./libs/ContractGraphSnapshot";
 export type {
