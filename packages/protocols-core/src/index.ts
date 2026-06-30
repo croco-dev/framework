@@ -106,6 +106,7 @@ export {
 export { extractRouteIR } from "./libs/extractRouteIR";
 export type {
   ParamIR,
+  ProblemRegistryReferenceIR,
   ProblemResponseIR,
   RouteContractIR,
   RouteContractSourceLocation,

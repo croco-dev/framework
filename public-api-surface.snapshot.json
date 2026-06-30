@@ -12836,6 +12836,12 @@
       "entrypoint": "packages/problems-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "assertPackageProblemRegistryValid",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertProblemCodeRegistryValid",
           "exportKind": "named",
           "source": "./libs/ProblemRegistry",
@@ -12854,6 +12860,24 @@
           "declarationKind": "function"
         },
         {
+          "name": "createProblemRegistrySnapshot",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
+          "name": "defineProblemRegistry",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getPackageProblemRegistryValidationErrors",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
           "name": "getProblemCodeRegistryValidationErrors",
           "exportKind": "named",
           "source": "./libs/ProblemRegistry",
@@ -12867,6 +12891,18 @@
         },
         {
           "name": "getProblemRecoveryMetadata",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getProblemRegistryPackagePrefix",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
+          "name": "hasProblemRegistryPackagePrefix",
           "exportKind": "named",
           "source": "./libs/ProblemRegistry",
           "declarationKind": "function"
@@ -12926,6 +12962,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "stringifyProblemRegistrySnapshot",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
           "name": "toHttpStatus",
           "exportKind": "named",
           "source": "./libs/ProblemCategoryMapper",
@@ -12947,6 +12989,31 @@
       "typeExports": [
         {
           "name": "CreateProblemCodeRegistryOptions",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "DefinedProblemRegistryEntries",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "DefineProblemRegistryOptions",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "PackageProblemRegistry",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "PackageProblemRegistryEntry",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "PackageProblemRegistryVersion",
           "exportKind": "named",
           "source": "./libs/ProblemRegistry"
         },
@@ -13002,6 +13069,46 @@
         },
         {
           "name": "ProblemRedactionPolicy",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemRegistryProblemDefinition",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemRegistryProblemDefinitions",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemRegistryRedaction",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemRegistrySnapshot",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemRegistrySnapshotPackage",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemRegistrySnapshotVersion",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemRegistryStatusForCategory",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemRegistryVisibility",
           "exportKind": "named",
           "source": "./libs/ProblemRegistry"
         },
@@ -13495,6 +13602,11 @@
         },
         {
           "name": "ParamIR",
+          "exportKind": "named",
+          "source": "./libs/RouteIR"
+        },
+        {
+          "name": "ProblemRegistryReferenceIR",
           "exportKind": "named",
           "source": "./libs/RouteIR"
         },

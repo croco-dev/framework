@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { ProblemCategory } from "@croco/problems-core";
+import { defineProblemRegistry, ProblemCategory } from "@croco/problems-core";
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -952,6 +952,149 @@ describe("buildContractGraph", () => {
         routeId: "UsersController.getUser",
       }),
     ]);
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
+
+  it("should attach declared ProblemRegistry entries to route Problem responses", () => {
+    const registry = defineProblemRegistry({
+      package: "@croco/users-api",
+      problems: {
+        USERS_API_NOT_FOUND: {
+          category: ProblemCategory.NotFound,
+          retryable: false,
+          public: true,
+          status: 404,
+          redaction: "public",
+        },
+      },
+    });
+
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ProblemResponse({ code: "USERS_API_NOT_FOUND", category: ProblemCategory.NotFound })
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([UsersController], { problemRegistries: [registry] });
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(graph.routes[0]?.problemResponses?.[0]?.registry).toEqual({
+      package: "@croco/users-api",
+      code: "USERS_API_NOT_FOUND",
+      category: ProblemCategory.NotFound,
+      status: 404,
+      retryable: false,
+      retryability: "not-retryable",
+      public: true,
+      visibility: "public",
+      redaction: "public",
+      cookbookPath: "/reference/problem-recovery-cookbook/#users-api-not-found",
+    });
+
+    expect(createContractGraphSnapshot(graph).routes[0]?.problems[0]?.registry).toEqual(
+      graph.routes[0]?.problemResponses?.[0]?.registry,
+    );
+  });
+
+  it("should reject route Problem responses missing from supplied ProblemRegistry manifests", () => {
+    const registry = defineProblemRegistry({
+      package: "@croco/users-api",
+      problems: {
+        USERS_API_NOT_FOUND: {
+          category: ProblemCategory.NotFound,
+          retryable: false,
+          public: true,
+          status: 404,
+          redaction: "public",
+        },
+      },
+    });
+
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ProblemResponse({
+        code: "USERS_API_FORBIDDEN",
+        category: ProblemCategory.Forbidden,
+      })
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([UsersController], { problemRegistries: [registry] });
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-route-problem-registry-missing",
+        target: "problem",
+        routeId: "UsersController.getUser",
+      }),
+    ]);
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
+
+  it("should reject route Problem responses that drift from supplied ProblemRegistry manifests", () => {
+    const registry = defineProblemRegistry({
+      package: "@croco/users-api",
+      problems: {
+        USERS_API_NOT_FOUND: {
+          category: ProblemCategory.NotFound,
+          retryable: false,
+          public: true,
+          status: 404,
+          redaction: "public",
+        },
+      },
+    });
+
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ProblemResponse({
+        code: "USERS_API_NOT_FOUND",
+        category: ProblemCategory.Forbidden,
+        status: 403,
+      })
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([UsersController], { problemRegistries: [registry] });
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-route-problem-registry-mismatch",
+        target: "problem",
+        routeId: "UsersController.getUser",
+      }),
+    ]);
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
+
+  it("should report invalid supplied ProblemRegistry manifests as graph diagnostics", () => {
+    const registry = defineProblemRegistry({
+      package: "@croco/users-api",
+      problems: {
+        USERS_API_NOT_FOUND: {
+          category: ProblemCategory.NotFound,
+          retryable: false,
+          public: true,
+          status: 404,
+          redaction: "public",
+        },
+      },
+    });
+
+    const graph = buildContractGraph([], { problemRegistries: [registry, registry] });
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-graph-problem-registry-invalid",
+        target: "graph",
+      }),
+    ]);
+    expect(graph.diagnostics[0]?.message).toContain(
+      "Problem code 'USERS_API_NOT_FOUND' is declared by both @croco/users-api and @croco/users-api.",
+    );
     expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
   });
 

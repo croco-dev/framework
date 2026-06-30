@@ -6935,7 +6935,7 @@
       "sources": [
         {
           "file": "packages/problems-core/src/libs/ProblemRegistry.ts",
-          "line": 67,
+          "line": 173,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -6989,7 +6989,7 @@
       "sources": [
         {
           "file": "packages/protocols-core/src/libs/ContractGraph.ts",
-          "line": 121,
+          "line": 141,
           "column": 5,
           "kind": "problem-constructor"
         }

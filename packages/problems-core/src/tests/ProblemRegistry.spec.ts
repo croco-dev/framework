@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   assertProblemCodeRegistryValid,
+  createProblemRegistrySnapshot,
   createProblemCodeRegistry,
+  defineProblemRegistry,
   getProblemCookbookPath,
   ProblemCategory,
   ProblemRegistryValidationProblem,
   slugifyProblemCode,
+  stringifyProblemRegistrySnapshot,
   type ProblemCodeDiscovery,
 } from "../index";
 
@@ -48,6 +51,93 @@ describe("Problem code registry", () => {
     expect(registry.problems[1]?.sources.map((source) => source.file)).toEqual([
       "packages/storage/src/a.ts",
     ]);
+  });
+
+  it("defines package ProblemRegistry manifests with visibility and redaction metadata", () => {
+    const registry = defineProblemRegistry({
+      package: "@croco/billing-polar",
+      problems: {
+        BILLING_POLAR_MISSING_CONFIG: {
+          category: ProblemCategory.BadRequest,
+          retryable: false,
+          public: true,
+          status: 400,
+          redaction: "safe",
+        },
+      },
+    });
+
+    expect(registry).toEqual({
+      version: "croco.problem-registry.v1",
+      package: "@croco/billing-polar",
+      packagePrefix: "BILLING_POLAR",
+      problemCount: 1,
+      problems: [
+        {
+          package: "@croco/billing-polar",
+          code: "BILLING_POLAR_MISSING_CONFIG",
+          category: ProblemCategory.BadRequest,
+          status: 400,
+          retryable: false,
+          retryability: "not-retryable",
+          public: true,
+          visibility: "public",
+          redaction: "safe",
+          cookbookPath: "/reference/problem-recovery-cookbook/#billing-polar-missing-config",
+        },
+      ],
+    });
+
+    const snapshot = createProblemRegistrySnapshot([registry]);
+
+    expect(JSON.parse(stringifyProblemRegistrySnapshot(snapshot))).toEqual(snapshot);
+    expect(snapshot).toMatchObject({
+      snapshotVersion: "croco.problem-registry.snapshot.v1",
+      registryVersion: "croco.problem-registry.v1",
+      packageCount: 1,
+      problemCount: 1,
+      packages: [
+        {
+          package: "@croco/billing-polar",
+          packagePrefix: "BILLING_POLAR",
+          problemCodes: ["BILLING_POLAR_MISSING_CONFIG"],
+        },
+      ],
+    });
+  });
+
+  it("rejects package ProblemRegistry prefix and duplicate-code drift", () => {
+    expect(() =>
+      defineProblemRegistry({
+        package: "@croco/billing-polar",
+        problems: {
+          MISSING_CONFIG: {
+            category: ProblemCategory.BadRequest,
+            retryable: false,
+            public: true,
+            status: 400,
+            redaction: "safe",
+          },
+        },
+      }),
+    ).toThrow(ProblemRegistryValidationProblem);
+
+    const registry = defineProblemRegistry({
+      package: "@croco/billing-polar",
+      problems: {
+        BILLING_POLAR_MISSING_CONFIG: {
+          category: ProblemCategory.BadRequest,
+          retryable: false,
+          public: true,
+          status: 400,
+          redaction: "safe",
+        },
+      },
+    });
+
+    expect(() => createProblemRegistrySnapshot([registry, registry])).toThrow(
+      ProblemRegistryValidationProblem,
+    );
   });
 
   it("rejects a discovered code that is declared more than once", () => {

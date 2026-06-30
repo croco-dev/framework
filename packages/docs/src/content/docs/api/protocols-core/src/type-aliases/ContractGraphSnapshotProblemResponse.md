@@ -33,6 +33,12 @@ title: "ContractGraphSnapshotProblemResponse"
 
 ***
 
+### registry?
+
+> `readonly` `optional` **registry?**: [`ProblemRegistryReferenceIR`](/api/protocols-core/src/type-aliases/problemregistryreferenceir/)
+
+***
+
 ### status
 
 > `readonly` **status**: `number`

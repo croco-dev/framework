@@ -1,4 +1,8 @@
-import type { ProblemCategory } from "@croco/problems-core";
+import type {
+  ProblemCategory,
+  ProblemRegistryRedaction,
+  ProblemRegistryVisibility,
+} from "@croco/problems-core";
 import type { z } from "zod";
 
 export interface RouteIR {
@@ -56,5 +60,19 @@ export type ProblemResponseIR<
   readonly description?: string;
   readonly type?: string;
   readonly cookbookPath?: string;
+  readonly registry?: ProblemRegistryReferenceIR;
   readonly routeContractProblems?: readonly ProblemResponseIR[];
+};
+
+export type ProblemRegistryReferenceIR = {
+  readonly package: string;
+  readonly code: string;
+  readonly category: ProblemCategory;
+  readonly status: number;
+  readonly retryable: boolean;
+  readonly retryability: "retryable" | "not-retryable";
+  readonly public: boolean;
+  readonly visibility: ProblemRegistryVisibility;
+  readonly redaction: ProblemRegistryRedaction;
+  readonly cookbookPath: string;
 };
