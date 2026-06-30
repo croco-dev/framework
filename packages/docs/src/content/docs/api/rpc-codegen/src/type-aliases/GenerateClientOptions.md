@@ -15,6 +15,12 @@ title: "GenerateClientOptions"
 
 ---
 
+### manifestBundlePath?
+
+> `readonly` `optional` **manifestBundlePath?**: `string`
+
+---
+
 ### problemRuntime?
 
 > `readonly` `optional` **problemRuntime?**: [`GenerateClientProblemRuntime`](/api/rpc-codegen/src/type-aliases/generateclientproblemruntime/)

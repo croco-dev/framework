@@ -11,6 +11,7 @@ type CliOptions = {
   readonly bearerAuthScheme: string | null;
   readonly strictProblems: boolean;
   readonly check: boolean;
+  readonly manifestBundlePath: string | null;
 };
 
 type CliParseResult =
@@ -109,6 +110,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
         : null,
       strictProblems: args.includes("--strict-problems"),
       check,
+      manifestBundlePath: getFlagValue(args, "--manifest-bundle"),
     },
   };
 }
@@ -132,6 +134,7 @@ function toEmitOpenAPIOptions(options: CliOptions): EmitOpenAPIOptions {
           },
         }
       : {}),
+    ...(options.manifestBundlePath ? { manifestBundlePath: options.manifestBundlePath } : {}),
   };
 }
 
@@ -165,6 +168,8 @@ Options:
   --version <s>         API version (default: 1.0.0)
   --server <url>        Server URL to include; repeat for multiple servers
   --bearer-auth [name]  Add an HTTP bearer security scheme (default name: bearerAuth)
+  --manifest-bundle <dir>
+                       Reference the shared Project manifest bundle in generated OpenAPI
   --check               Validate the canonical contract graph without writing OpenAPI
   --strict-problems     Warn when routes do not declare generated client Problem unions
   --help, -h            Show this help message`);

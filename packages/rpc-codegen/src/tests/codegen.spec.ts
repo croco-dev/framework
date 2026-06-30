@@ -796,6 +796,55 @@ describe("generateClientFiles", () => {
     );
   });
 
+  it("should generate a shared Project manifest bundle source reference", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/users",
+        routeContract: null,
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR, {
+      manifestBundlePath: ".croco/manifest/",
+    });
+    const manifestSource = fs.readFileSync(path.join(TEMP_DIR, "manifest-source.ts"), "utf-8");
+    const indexSource = fs.readFileSync(path.join(TEMP_DIR, "index.ts"), "utf-8");
+
+    expect(files).toEqual([
+      path.join(TEMP_DIR, "user.ts"),
+      path.join(TEMP_DIR, "rpc.ts"),
+      path.join(TEMP_DIR, "manifest-source.ts"),
+      path.join(TEMP_DIR, "index.ts"),
+    ]);
+    expect(manifestSource).toBe(`export const crocoManifestBundleSource = {
+  schemaVersion: 'croco.rpc.manifest-source.v1',
+  directory: '.croco/manifest',
+  artifacts: {
+    contractGraph: '.croco/manifest/contract-graph.json',
+    problems: '.croco/manifest/problems.json',
+    diGraph: '.croco/manifest/di-graph.json',
+    runtime: '.croco/manifest/runtime.json',
+    policies: '.croco/manifest/policies.json',
+    providers: '.croco/manifest/providers.json',
+  },
+} as const;
+
+export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
+`);
+    expect(indexSource).toContain(
+      "export { crocoManifestBundleSource, type CrocoManifestBundleSource } from './manifest-source';",
+    );
+    assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "manifest-source.ts", "user.ts"]);
+  });
+
   it("should reject generated Result method names that collide with route methods", () => {
     const routes: RouteIR[] = [
       {

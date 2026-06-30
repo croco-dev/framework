@@ -9,13 +9,16 @@ import {
   assertContractGraphConsumerRouteCoverage,
   assertContractGraphHasNoErrors,
   buildContractGraph,
+  createProjectManifestBundleArtifactPaths,
   type ContractGraph,
   type ContractGraphConsumerRouteField,
   type ContractEntitlementRequirement,
   type ContractGraphObservedConsumerRoute,
   type ContractGraphRoute,
   getContractPathParams,
+  normalizeProjectManifestBundlePath,
   type ParamIR,
+  type ProjectManifestBundleArtifactKey,
   unwrapZodEffectsSchema,
 } from "@croco/protocols-core";
 import { type ZodType, z } from "zod";
@@ -54,6 +57,14 @@ type DeclaredEntitlementOpenAPI = {
   readonly description?: string;
   readonly resource?: ContractEntitlementRequirement["resource"];
 };
+type CrocoManifestBundleReference = {
+  readonly schemaVersion: "croco.openapi.manifest-source.v1";
+  readonly directory: string;
+  readonly artifacts: Record<ProjectManifestBundleArtifactKey, string>;
+};
+type CrocoOpenAPIDocument = OpenAPIDocument & {
+  readonly "x-croco-manifest-bundle"?: CrocoManifestBundleReference;
+};
 
 export type ProblemResponseConfig = {
   readonly status: number | `${number}` | "default";
@@ -68,6 +79,7 @@ export type EmitOpenAPIOptions = {
   readonly tags?: OpenAPIConfig["tags"];
   readonly defaultResponses?: RouteResponses;
   readonly problemResponses?: readonly ProblemResponseConfig[];
+  readonly manifestBundlePath?: string;
 };
 
 const DEFAULT_INFO: OpenAPIConfig["info"] = {
@@ -96,7 +108,7 @@ class OpenAPIContractProblem extends Problem {
 export function emitOpenAPI(
   controllers: Function[],
   options: EmitOpenAPIOptions = {},
-): OpenAPIDocument {
+): CrocoOpenAPIDocument {
   return emitOpenAPIFromContractGraph(
     buildContractGraph(controllers as ControllerConstructor[]),
     options,
@@ -106,7 +118,7 @@ export function emitOpenAPI(
 export function emitOpenAPIFromContractGraph(
   graph: ContractGraph,
   options: EmitOpenAPIOptions = {},
-): OpenAPIDocument {
+): CrocoOpenAPIDocument {
   assertContractGraphHasNoErrors(graph);
 
   const registry = new OpenAPIRegistry();
@@ -121,17 +133,34 @@ export function emitOpenAPIFromContractGraph(
   });
 
   const generator = new OpenApiGeneratorV31(registry.definitions);
-  const document = generator.generateDocument({
-    openapi: "3.1.0",
-    info: { ...DEFAULT_INFO, ...options.info },
-    servers: options.servers ?? DEFAULT_SERVERS,
-    security: options.security ?? [],
-    tags: options.tags ?? toTags(routes),
-  });
+  const document: CrocoOpenAPIDocument = {
+    ...generator.generateDocument({
+      openapi: "3.1.0",
+      info: { ...DEFAULT_INFO, ...options.info },
+      servers: options.servers ?? DEFAULT_SERVERS,
+      security: options.security ?? [],
+      tags: options.tags ?? toTags(routes),
+    }),
+    ...(options.manifestBundlePath
+      ? {
+          "x-croco-manifest-bundle": createManifestBundleReference(options.manifestBundlePath),
+        }
+      : {}),
+  };
 
   assertContractGraphConsumerRouteCoverage(graph, "openapi", collectOpenAPICoveredRoutes(document));
 
   return document;
+}
+
+function createManifestBundleReference(manifestBundlePath: string): CrocoManifestBundleReference {
+  const directory = normalizeProjectManifestBundlePath(manifestBundlePath);
+
+  return {
+    schemaVersion: "croco.openapi.manifest-source.v1",
+    directory,
+    artifacts: createProjectManifestBundleArtifactPaths(directory),
+  };
 }
 
 function registerProblemDetailsSchema(registry: OpenAPIRegistry): OpenAPIReference {

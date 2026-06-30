@@ -5,7 +5,7 @@ prev: false
 title: "emitOpenAPIFromContractGraph"
 ---
 
-> **emitOpenAPIFromContractGraph**(`graph`, `options?`): `OpenAPIObject`
+> **emitOpenAPIFromContractGraph**(`graph`, `options?`): `CrocoOpenAPIDocument`
 
 ## Parameters
 
@@ -19,4 +19,4 @@ title: "emitOpenAPIFromContractGraph"
 
 ## Returns
 
-`OpenAPIObject`
+`CrocoOpenAPIDocument`

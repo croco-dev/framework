@@ -4,6 +4,7 @@ import type { FrameworkManifest } from "@croco/framework-routes";
 import type { ContractDiagnostic, ContractGraphSnapshot } from "@croco/protocols-core";
 import {
   createProjectMapManifest,
+  createProjectManifestBundle,
   runProjectMap,
   stringifyProjectMapManifest,
 } from "../commands/projectMap.js";
@@ -93,6 +94,80 @@ describe("projectMap", () => {
         }),
       ]),
     });
+  });
+
+  it("writes a deterministic schema-versioned Project manifest bundle", async () => {
+    const stdout: string[] = [];
+    const writes = new Map<string, string>();
+    const manifest = createProjectMapManifest({
+      projectRoot: "/workspace/app",
+      rootPackage: { name: "demo-app", packageManager: "pnpm@10.15.1" },
+      packageGraph: [
+        createPackage("demo-app", "package.json"),
+        createPackage("@demo/api", "apps/api/package.json"),
+      ],
+      frameworkManifest: createFrameworkManifest(),
+      contractGraphSnapshot: createContractSnapshot(),
+      telemetryBoundaries: [
+        {
+          kind: "telemetry-runtime",
+          id: "telemetry-runtime:apps/api/src/index.ts:3",
+          source: { file: "apps/api/src/index.ts", line: 3, column: 1 },
+        },
+      ],
+    });
+    const bundle = createProjectManifestBundle(manifest);
+
+    expect(bundle.map((artifact) => artifact.path)).toEqual([
+      "contract-graph.json",
+      "problems.json",
+      "di-graph.json",
+      "runtime.json",
+      "policies.json",
+      "providers.json",
+    ]);
+    expect(JSON.parse(bundle[0]?.content ?? "{}")).toMatchObject({
+      schemaVersion: "croco.manifest.contract-graph.v1",
+      source: {
+        schemaVersion: "croco.project-map.manifest.v1",
+        artifact: "croco.project-map.json",
+        packageName: "demo-app",
+      },
+      routes: [
+        {
+          id: "UsersController.listUsers",
+          source: { file: "apps/api/src/controllers/UsersController.ts", line: 8, column: 3 },
+        },
+      ],
+    });
+
+    const exitCode = await runProjectMap(
+      [
+        "--controllers",
+        "src/**/*.ts",
+        "--out",
+        "croco.project-map.json",
+        "--manifest-bundle",
+        ".croco/manifest",
+      ],
+      {
+        io: {
+          ...createIo(stdout),
+          mkdir: () => {},
+          writeFile: (path, content) => writes.set(path, content),
+        },
+        loadProjectMap: async () => manifest,
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toEqual([
+      "Wrote Project Map manifest to /workspace/app/croco.project-map.json.",
+      "Wrote Project manifest bundle to /workspace/app/.croco/manifest.",
+    ]);
+    expect(writes.has("/workspace/app/croco.project-map.json")).toBe(true);
+    expect(writes.has("/workspace/app/.croco/manifest/contract-graph.json")).toBe(true);
+    expect(writes.has("/workspace/app/.croco/manifest/providers.json")).toBe(true);
   });
 
   it("exits non-zero when contract, runtime, and package manifest conflicts exist", async () => {
@@ -285,6 +360,49 @@ describe("projectMap", () => {
     expect(exitCode).toBe(1);
     expect(stdout).toEqual([
       `ERROR ${CLI_DIAGNOSTIC_CODES.projectMapManifestDrift} artifact=/workspace/app/croco.project-map.json: Project Map manifest '/workspace/app/croco.project-map.json' is stale. Regenerate it with croco project map --out croco.project-map.json.`,
+      "Project Map check failed with 1 error(s).",
+    ]);
+  });
+
+  it("fails check mode when a committed Project manifest bundle artifact is stale", async () => {
+    const stdout: string[] = [];
+    const manifest = createProjectMapManifest({
+      projectRoot: "/workspace/app",
+      rootPackage: { name: "demo-app" },
+      packageGraph: [createPackage("demo-app", "package.json")],
+      frameworkManifest: createFrameworkManifest(),
+      contractGraphSnapshot: createContractSnapshot(),
+    });
+    const bundleFiles = new Map(
+      createProjectManifestBundle(manifest).map((artifact) => [
+        `/workspace/app/.croco/manifest/${artifact.path}`,
+        artifact.content,
+      ]),
+    );
+    bundleFiles.set(
+      "/workspace/app/.croco/manifest/providers.json",
+      JSON.stringify({ schemaVersion: "croco.manifest.providers.v1", providerProfile: "old" }),
+    );
+
+    const exitCode = await runProjectMap(
+      ["--check", "--manifest", "croco.project-map.json", "--manifest-bundle", ".croco/manifest"],
+      {
+        io: {
+          ...createIo(stdout),
+          exists: (path) =>
+            path === "/workspace/app/croco.project-map.json" || bundleFiles.has(path),
+          readFile: (path) =>
+            path === "/workspace/app/croco.project-map.json"
+              ? stringifyProjectMapManifest(manifest)
+              : (bundleFiles.get(path) ?? ""),
+        },
+        loadProjectMap: async () => manifest,
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([
+      `ERROR ${CLI_DIAGNOSTIC_CODES.projectMapManifestDrift} artifact=/workspace/app/.croco/manifest/providers.json: Project manifest bundle artifact '/workspace/app/.croco/manifest/providers.json' is stale. Regenerate it with croco project map --manifest-bundle .croco/manifest.`,
       "Project Map check failed with 1 error(s).",
     ]);
   });
