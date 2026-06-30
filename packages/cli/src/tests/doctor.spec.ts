@@ -305,6 +305,7 @@ describe("doctor", () => {
       "workspace-version-consistency",
       "spine-package-state",
       "contract-graph-readiness",
+      "project-manifest-bundle",
       "problem-registry-readiness",
       "runtime-capability-manifest",
       "http-security-middleware-contract",
@@ -312,6 +313,44 @@ describe("doctor", () => {
       "provider-certification",
       "repository-core-boundary",
       "lambda-telemetry-flush",
+    ]);
+  });
+
+  it("reads schema-versioned Project manifest bundle artifacts", () => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeProjectManifestBundle(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const bundleCheck = report.checks.find((check) => check.id === "project-manifest-bundle");
+
+    expect(report.summary).toBe("healthy");
+    expect(bundleCheck).toMatchObject({
+      status: "pass",
+      note: "6 schema-versioned manifest bundle artifact(s) are readable.",
+    });
+  });
+
+  it("fails Project manifest bundle readiness when project-map scripts expect missing artifacts", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "project-map:check":
+          "croco project map --check --manifest croco.project-map.json --manifest-bundle .croco/manifest",
+      },
+    });
+    writePackage(repo, "api", "@croco/api");
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.projectMapManifestMissing,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapManifestMissing,
+        checkId: "project-manifest-bundle",
+        location: expect.objectContaining({ file: ".croco/manifest" }),
+      }),
     ]);
   });
 
@@ -629,6 +668,25 @@ function writeNodeModulePackage(
   });
   writeFile(repo, `${importerDir}/node_modules/${packageName}/dist/index.js`, "export {};\n");
   writeFile(repo, `${importerDir}/node_modules/${packageName}/dist/index.d.ts`, "export {};\n");
+}
+
+function writeProjectManifestBundle(repo: string): void {
+  for (const artifact of [
+    { path: "contract-graph.json", schemaVersion: "croco.manifest.contract-graph.v1" },
+    { path: "problems.json", schemaVersion: "croco.manifest.problems.v1" },
+    { path: "di-graph.json", schemaVersion: "croco.manifest.di-graph.v1" },
+    { path: "runtime.json", schemaVersion: "croco.manifest.runtime.v1" },
+    { path: "policies.json", schemaVersion: "croco.manifest.policies.v1" },
+    { path: "providers.json", schemaVersion: "croco.manifest.providers.v1" },
+  ]) {
+    writeJson(repo, `.croco/manifest/${artifact.path}`, {
+      schemaVersion: artifact.schemaVersion,
+      source: {
+        schemaVersion: "croco.project-map.manifest.v1",
+        artifact: "croco.project-map.json",
+      },
+    });
+  }
 }
 
 function writeJson(repo: string, relativePath: string, value: unknown): void {

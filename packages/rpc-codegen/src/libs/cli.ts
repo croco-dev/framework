@@ -9,6 +9,7 @@ type CliOptions = {
   readonly controllers: string;
   readonly frontendActionManifestCheck: boolean;
   readonly frontendActionManifestPath: string | null;
+  readonly manifestBundlePath: string | null;
   readonly outDir: string | null;
   readonly problemRuntime: GenerateClientProblemRuntime;
   readonly reactQuery: boolean;
@@ -77,6 +78,9 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
     ...(result.options.frontendActionManifestPath
       ? { frontendActionManifestPath: result.options.frontendActionManifestPath }
       : {}),
+    ...(result.options.manifestBundlePath
+      ? { manifestBundlePath: result.options.manifestBundlePath }
+      : {}),
     problemRuntime: result.options.problemRuntime,
     reactQuery: result.options.reactQuery,
   });
@@ -96,6 +100,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
   const controllers = getFlagValue(args, "--controllers");
   const frontendActionManifestPath = getFlagValue(args, "--frontend-action-manifest");
   const frontendActionManifestCheck = args.includes("--frontend-action-manifest-check");
+  const manifestBundlePath = getFlagValue(args, "--manifest-bundle");
   const outDir = getFlagValue(args, "--out");
   const check = args.includes("--check");
   const strictProblems = args.includes("--strict-problems");
@@ -116,6 +121,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
       controllers,
       frontendActionManifestCheck,
       frontendActionManifestPath,
+      manifestBundlePath,
       outDir,
       problemRuntime,
       reactQuery: args.includes("--react-query"),
@@ -157,6 +163,8 @@ Options:
                        Write the frontend action manifest for generated REST RPC routes
   --frontend-action-manifest-check
                        Fail when the committed frontend action manifest drifts from current contracts
+  --manifest-bundle <dir>
+                       Generate a source reference to the shared Project manifest bundle
   --check               Validate the canonical contract graph without writing clients
   --strict-problems     Warn when routes do not declare generated client Problem unions
   --help, -h            Show this help message`);

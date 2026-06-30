@@ -30,7 +30,7 @@ pnpm dev:web
 
 - API unavailable: resource table과 timeline은 마지막 성공 상태를 유지하고 상단 alert에 네트워크 실패를 표시합니다.
 - Missing user: generated `getUserResult` client가 declared Problem branch를 반환하며 UI는 `admin-console/user-not-found` code와 recovery action을 표시합니다.
-- Contract drift: `pnpm contract:verify`가 snapshot diff, consumer coverage report, OpenAPI generation, generated client typecheck를 순서대로 실행합니다.
+- Contract drift: `pnpm contract:verify`가 snapshot diff, consumer coverage report, Project Map manifest bundle, OpenAPI generation, generated client typecheck를 순서대로 실행합니다.
 
 ## Contract Commands
 
@@ -42,6 +42,7 @@ pnpm codegen
 
 `contract:client`는 admin controller 계약에서 React Query hook을 포함한 fetch client를 생성합니다. Admin web은 `{{scope}}/provider-rpc`의 `adminClient`와 generated output types를 직접 사용하므로 `typecheck`와 `build`는 codegen을 먼저 실행합니다.
 `contract:coverage`는 같은 controller 계약에서 `contract-graph.coverage.json`을 써서 OpenAPI/RPC consumer coverage diagnostics를 남깁니다.
+`contract:verify`는 `project-map:write`와 `project-map:check`를 실행해 `.croco/manifest` inspectable bundle을 갱신하고 검증합니다. Generated OpenAPI/RPC outputs는 같은 bundle 경로를 source reference로 남깁니다.
 
 ## Structure
 

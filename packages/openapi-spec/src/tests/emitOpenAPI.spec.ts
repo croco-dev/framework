@@ -119,6 +119,32 @@ describe("emitOpenAPI", () => {
     });
   });
 
+  it("should reference the shared Project manifest bundle when configured", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/")
+      listUsers(): void {}
+    }
+
+    const graph = buildContractGraph([UsersController]);
+    const spec = emitOpenAPIFromContractGraph(graph, {
+      manifestBundlePath: ".croco/manifest/",
+    });
+
+    expect(spec["x-croco-manifest-bundle"]).toEqual({
+      schemaVersion: "croco.openapi.manifest-source.v1",
+      directory: ".croco/manifest",
+      artifacts: {
+        contractGraph: ".croco/manifest/contract-graph.json",
+        problems: ".croco/manifest/problems.json",
+        diGraph: ".croco/manifest/di-graph.json",
+        runtime: ".croco/manifest/runtime.json",
+        policies: ".croco/manifest/policies.json",
+        providers: ".croco/manifest/providers.json",
+      },
+    });
+  });
+
   it("should emit entitlement requirements as OpenAPI operation extensions", () => {
     const entitlementRequirementsKey = Symbol.for("croco:entitlements:requirements");
 

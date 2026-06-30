@@ -13394,6 +13394,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createProjectManifestBundleArtifactPaths",
+          "exportKind": "named",
+          "source": "./libs/ProjectManifestBundle",
+          "declarationKind": "function"
+        },
+        {
           "name": "DEFAULT_CONTRACT_GRAPH_CONSUMERS",
           "exportKind": "named",
           "source": "./libs/ContractGraphConsumerCoverage",
@@ -13532,9 +13538,33 @@
           "declarationKind": "function"
         },
         {
+          "name": "joinProjectManifestBundlePath",
+          "exportKind": "named",
+          "source": "./libs/ProjectManifestBundle",
+          "declarationKind": "function"
+        },
+        {
           "name": "JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX",
           "exportKind": "named",
           "source": "./libs/SchemaDescriptor",
+          "declarationKind": "const"
+        },
+        {
+          "name": "normalizeProjectManifestBundlePath",
+          "exportKind": "named",
+          "source": "./libs/ProjectManifestBundle",
+          "declarationKind": "function"
+        },
+        {
+          "name": "PROJECT_MANIFEST_BUNDLE_ARTIFACT_ENTRIES",
+          "exportKind": "named",
+          "source": "./libs/ProjectManifestBundle",
+          "declarationKind": "const"
+        },
+        {
+          "name": "PROJECT_MANIFEST_BUNDLE_ARTIFACTS",
+          "exportKind": "named",
+          "source": "./libs/ProjectManifestBundle",
           "declarationKind": "const"
         },
         {
@@ -13857,6 +13887,16 @@
           "name": "ProblemResponseIR",
           "exportKind": "named",
           "source": "./libs/RouteIR"
+        },
+        {
+          "name": "ProjectManifestBundleArtifactFileName",
+          "exportKind": "named",
+          "source": "./libs/ProjectManifestBundle"
+        },
+        {
+          "name": "ProjectManifestBundleArtifactKey",
+          "exportKind": "named",
+          "source": "./libs/ProjectManifestBundle"
         },
         {
           "name": "RouteContractIR",

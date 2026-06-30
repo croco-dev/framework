@@ -736,6 +736,9 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain(
         "--problem-runtime frontend-problems",
       );
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain(
+        "--manifest-bundle .croco/manifest",
+      );
       expect(apiPackageJson.scripts).toMatchObject({
         "dev:smoke": "tsx src/dev-smoke.ts",
         build: "tsup src/index.ts src/lambda.ts --format cjs --clean",
@@ -824,6 +827,9 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain(
         "--problem-runtime frontend-problems",
       );
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain(
+        "--manifest-bundle .croco/manifest",
+      );
       expect(apiPackageJson.scripts).toMatchObject({
         "admin:smoke": "tsx src/dev-smoke.ts",
       });
@@ -887,9 +893,9 @@ describe("E2E: generate()", () => {
       "runtime-policy:check":
         "NODE_PATH=./node_modules croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
       "project-map:write":
-        "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --out croco.project-map.json",
+        "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --out croco.project-map.json --manifest-bundle .croco/manifest",
       "project-map:check":
-        "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --check --manifest croco.project-map.json",
+        "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --check --manifest croco.project-map.json --manifest-bundle .croco/manifest",
       "profile:smoke:real": "pnpm --filter @test/api-server profile:smoke:real",
       "demo:smoke":
         "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server jobs:smoke",
@@ -1240,7 +1246,7 @@ describe("E2E: generate()", () => {
         build: "turbo build",
         test: "turbo test",
         "contract:verify":
-          "pnpm contract:diff && pnpm contract:coverage && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
+          "pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
         "demo:smoke":
           "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server jobs:smoke",
       });

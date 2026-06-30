@@ -12,6 +12,7 @@ const generationModuleImports = vi.hoisted(() => ({
   loadControllers: 0,
   buildContractGraph: 0,
   lastBuildOptions: null as null | Record<string, unknown>,
+  lastEmitOptions: null as null | Record<string, unknown>,
   graph: {
     version: "croco.contract-graph.v1",
     controllers: [
@@ -45,8 +46,9 @@ vi.mock("../libs/emitOpenAPI", () => {
     emitOpenAPI: () => {
       throw new Error("emitOpenAPI should not run for help or invalid arguments");
     },
-    emitOpenAPIFromContractGraph: () => {
+    emitOpenAPIFromContractGraph: (_graph: unknown, options: Record<string, unknown>) => {
       generationModuleImports.emitOpenAPIFromContractGraph += 1;
+      generationModuleImports.lastEmitOptions = options;
       return { openapi: "3.1.0", info: { title: "Croco API", version: "1.0.0" }, paths: {} };
     },
   };
@@ -95,6 +97,7 @@ describe("openapi-spec CLI", () => {
     generationModuleImports.loadControllers = 0;
     generationModuleImports.buildContractGraph = 0;
     generationModuleImports.lastBuildOptions = null;
+    generationModuleImports.lastEmitOptions = null;
     fileSystemImports.writeFile = 0;
     fileSystemImports.lastWritePath = null;
     fileSystemImports.lastWriteContents = null;
@@ -127,6 +130,7 @@ describe("openapi-spec CLI", () => {
       loadControllers: 0,
       buildContractGraph: 0,
       lastBuildOptions: null,
+      lastEmitOptions: null,
       graph: generationModuleImports.graph,
     });
   });
@@ -148,6 +152,7 @@ describe("openapi-spec CLI", () => {
       loadControllers: 0,
       buildContractGraph: 0,
       lastBuildOptions: null,
+      lastEmitOptions: null,
       graph: generationModuleImports.graph,
     });
   });
@@ -271,8 +276,33 @@ describe("openapi-spec CLI", () => {
     );
     expect(generationModuleImports.lastBuildOptions).toEqual({ strictProblemResponses: true });
     expect(generationModuleImports.emitOpenAPIFromContractGraph).toBe(1);
+    expect(generationModuleImports.lastEmitOptions).toMatchObject({
+      info: { title: "Croco API", version: "1.0.0" },
+    });
     expect(fileSystemImports.writeFile).toBe(1);
     expect(fileSystemImports.lastWritePath).toBe("openapi.json");
     expect(fileSystemImports.lastWriteContents).toContain('"openapi": "3.1.0"');
+  });
+
+  it("passes the Project manifest bundle source to OpenAPI generation", async () => {
+    const exitCode = await runCli(
+      [
+        "--controllers",
+        "src/**/*.ts",
+        "--out",
+        "openapi.json",
+        "--manifest-bundle",
+        ".croco/manifest",
+      ],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(generationModuleImports.emitOpenAPIFromContractGraph).toBe(1);
+    expect(generationModuleImports.lastEmitOptions).toMatchObject({
+      manifestBundlePath: ".croco/manifest",
+    });
   });
 });
