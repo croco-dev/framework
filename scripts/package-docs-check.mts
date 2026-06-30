@@ -2227,11 +2227,19 @@ function writeGeneratedFile(filePath: string, content: string): void {
 }
 
 function formatMarkdown(filePath: string, content: string): string {
-  const result = spawnSync("pnpm", ["exec", "oxfmt", "--stdin-filepath", filePath], {
-    cwd: scriptRootDir,
-    encoding: "utf-8",
-    input: content,
-  });
+  const localOxfmtPath = join(scriptRootDir, "node_modules", ".bin", "oxfmt");
+  const hasLocalOxfmt = existsSync(localOxfmtPath);
+  const result = spawnSync(
+    hasLocalOxfmt ? localOxfmtPath : "pnpm",
+    hasLocalOxfmt
+      ? ["--stdin-filepath", filePath]
+      : ["exec", "oxfmt", "--stdin-filepath", filePath],
+    {
+      cwd: scriptRootDir,
+      encoding: "utf-8",
+      input: content,
+    },
+  );
 
   if (result.status !== 0) {
     throw new Error(result.stderr.trim() || result.stdout.trim() || `oxfmt failed for ${filePath}`);

@@ -115,6 +115,8 @@ Certification has three states:
 The certification source of truth for first-party packages is `docs/package-catalog.json` plus the
 evidence linked from package README, tests, docs, and release notes. The extension matrix renders the
 runtime and maturity metadata, but maturity alone is not certification.
+`pnpm provider-certification:check` enforces this record in CI before a provider, integration,
+transport, or presentation package can remain production-ready with a certification claim.
 
 ### Certification Checklist
 
