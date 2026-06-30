@@ -44,6 +44,21 @@ describe("package-entrypoint-smoke.mts", () => {
     );
   });
 
+  it("fails early when package build artifacts are absent", () => {
+    const root = createTempRoot();
+    writeUnbuiltPackage(root, "unbuilt");
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Package entrypoint smoke build prerequisite failed:");
+    expect(result.stdout).toContain("1 public package(s) are missing build artifacts under dist.");
+    expect(result.stdout).toContain("Run pnpm build before pnpm package-entrypoints:smoke.");
+    expect(result.stdout).toContain("@croco/unbuilt (packages/unbuilt/dist)");
+    expect(result.stdout).not.toContain("points to missing file");
+    expect(result.stdout).not.toContain("no ESM import target found");
+  });
+
   it("fails when an export map points at a missing runtime entrypoint", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "invalid-export", {
@@ -185,6 +200,41 @@ function writeImportablePackage(
               import: options.importTarget ?? "./dist/index.mjs",
               require: "./dist/index.js",
               types: options.typesTarget ?? "./dist/index.d.ts",
+            },
+          },
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+function writeUnbuiltPackage(root: string, packageDirName: string): void {
+  const packageDir = join(root, "packages", packageDirName);
+  mkdirSync(join(packageDir, "src"), { recursive: true });
+
+  const packageName = `@croco/${packageDirName}`;
+  writeFileSync(join(packageDir, "src", "index.ts"), 'export const value = "ok";\n');
+  writeFileSync(
+    join(packageDir, "package.json"),
+    `${JSON.stringify(
+      {
+        name: packageName,
+        version: "0.0.0",
+        files: ["dist"],
+        type: "commonjs",
+        main: "./src/index.ts",
+        types: "./src/index.ts",
+        publishConfig: {
+          access: "public",
+          main: "./dist/index.js",
+          types: "./dist/index.d.ts",
+          exports: {
+            ".": {
+              import: "./dist/index.mjs",
+              require: "./dist/index.js",
+              types: "./dist/index.d.ts",
             },
           },
         },
