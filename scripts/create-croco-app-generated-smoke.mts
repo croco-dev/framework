@@ -424,6 +424,7 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["contract:verify"],
         paths: ["contract-graph.coverage.json"],
       },
+      { label: "doctor readiness", args: ["exec", "croco", "doctor", "--json"] },
       { label: "demo seed", args: ["demo:seed"] },
       { label: "demo flow", args: ["demo:smoke"] },
       { label: "failure drill smoke", args: ["failure-drill:smoke"] },
@@ -651,12 +652,23 @@ try {
 function runGeneratedAppContractGates(): void {
   runGate("strict contract typecheck", ["strict-contract-typecheck"]);
   runGate("static misuse check", ["static-misuse:check"]);
-  runGate("generated template oxlint", ["exec", "oxlint", "packages/create-croco-app/templates"]);
+  runGate("generated template oxlint", ["exec", "oxlint", "packages/create-croco-app/templates"], {
+    NODE_OPTIONS: withNodeOption(process.env.NODE_OPTIONS, "--experimental-strip-types"),
+  });
 }
 
-function runGate(label: string, args: readonly string[]): void {
-  run("pnpm", args, rootDir);
+function runGate(
+  label: string,
+  args: readonly string[],
+  env?: Readonly<Record<string, string>>,
+): void {
+  run("pnpm", args, rootDir, env);
   console.log(`create-croco-app-generated-smoke: ${label} passed`);
+}
+
+function withNodeOption(existingOptions: string | undefined, option: string): string {
+  const tokens = existingOptions?.split(/\s+/).filter(Boolean) ?? [];
+  return tokens.includes(option) ? tokens.join(" ") : [...tokens, option].join(" ");
 }
 
 function selectSmokeCases(cases: readonly SmokeCase[]): readonly SmokeCase[] {
