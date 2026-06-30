@@ -6,19 +6,30 @@ const releaseWorkflowPath = resolve(__dirname, "../../.github/workflows/release.
 
 const readReleaseWorkflow = () => readFileSync(releaseWorkflowPath, "utf-8");
 
-const getReleaseWorkPattern = () => {
+const getWorkflowPattern = (variableName: string) => {
   const workflow = readReleaseWorkflow();
-  const match = workflow.match(/release_work_pattern='([^']+)'/);
+  const match = workflow.match(new RegExp(`${variableName}='([^']+)'`));
 
-  expect(match, "release_work_pattern should be present").not.toBeNull();
+  expect(match, `${variableName} should be present`).not.toBeNull();
 
   return new RegExp(match?.[1] ?? "");
 };
+
+const getReleaseWorkPattern = () => getWorkflowPattern("release_work_pattern");
+
+const getReleaseGateMaintenancePattern = () =>
+  getWorkflowPattern("release_gate_maintenance_pattern");
 
 const shouldRunReleaseWork = (changedFiles: string[]) => {
   const releaseWorkPattern = getReleaseWorkPattern();
 
   return changedFiles.some((file) => releaseWorkPattern.test(file));
+};
+
+const shouldRunReleaseGateMaintenance = (changedFiles: string[]) => {
+  const releaseGateMaintenancePattern = getReleaseGateMaintenancePattern();
+
+  return changedFiles.some((file) => releaseGateMaintenancePattern.test(file));
 };
 
 describe("release workflow quality gates", () => {
@@ -78,6 +89,7 @@ describe("release workflow quality gates", () => {
 
   it("runs for Changesets prerelease state changes", () => {
     expect(shouldRunReleaseWork([".changeset/pre.json"])).toBe(true);
+    expect(shouldRunReleaseGateMaintenance([".changeset/pre.json"])).toBe(false);
   });
 
   it("keeps existing release-work file triggers", () => {
@@ -88,9 +100,53 @@ describe("release workflow quality gates", () => {
     expect(shouldRunReleaseWork(["pnpm-lock.yaml"])).toBe(true);
   });
 
+  it("runs focused self-checks for release-gate maintenance changes", () => {
+    const workflow = readReleaseWorkflow();
+    const releaseGateFiles = [
+      ".github/workflows/release.yml",
+      "scripts/changeset-required-check.mts",
+      "scripts/normalize-packages.mjs",
+      "scripts/package-bin-smoke.mts",
+      "scripts/package-entrypoint-smoke.mts",
+      "scripts/package-manifest-contracts.mjs",
+      "scripts/release-docs-check.mts",
+      "scripts/tests/changeset-required-check.spec.ts",
+      "scripts/tests/normalize-packages.spec.ts",
+      "scripts/tests/package-bin-smoke.spec.ts",
+      "scripts/tests/package-entrypoint-smoke.spec.ts",
+      "scripts/tests/release-docs-check.spec.ts",
+      "scripts/tests/release-workflow.spec.ts",
+    ];
+
+    for (const file of releaseGateFiles) {
+      expect(
+        shouldRunReleaseGateMaintenance([file]),
+        `${file} should trigger release gate maintenance`,
+      ).toBe(true);
+      expect(shouldRunReleaseWork([file]), `${file} should not be release metadata`).toBe(false);
+    }
+
+    expect(workflow).toContain("- name: Release gate maintenance self-check");
+    expect(workflow).toContain(
+      "if: steps.release_work.outputs.should_verify_release_gate_maintenance == 'true'",
+    );
+    expect(workflow).toContain("pnpm exec vitest run scripts/tests/release-workflow.spec.ts");
+    expect(workflow).toContain("scripts/tests/normalize-packages.spec.ts");
+    expect(workflow).toContain("pnpm package-manifests:check");
+    expect(workflow).toContain("pnpm release-docs:check");
+    expect(workflow).toContain("pnpm package-entrypoints:smoke");
+    expect(workflow).toContain("pnpm package-bins:smoke");
+    expect(workflow).toContain("if: steps.release_work.outputs.should_publish == 'true'");
+  });
+
   it("skips non-release-only changes", () => {
     expect(shouldRunReleaseWork(["RELEASING.md"])).toBe(false);
     expect(shouldRunReleaseWork(["packages/framework-context/src/index.ts"])).toBe(false);
     expect(shouldRunReleaseWork([".changeset/config.json"])).toBe(false);
+    expect(shouldRunReleaseGateMaintenance(["RELEASING.md"])).toBe(false);
+    expect(shouldRunReleaseGateMaintenance(["packages/framework-context/src/index.ts"])).toBe(
+      false,
+    );
+    expect(shouldRunReleaseGateMaintenance([".changeset/config.json"])).toBe(false);
   });
 });
