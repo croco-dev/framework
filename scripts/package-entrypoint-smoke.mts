@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   symlinkSync,
@@ -80,6 +81,7 @@ function main(): void {
     const packageJsonFiles = findPackageJsonFiles(join(rootDir, "packages"));
     const packageIndex = packageIndexFor(packageJsonFiles);
     const diagnostics: string[] = [];
+    const packageInfos: PackageInfo[] = [];
     const packageResults: PackageSmokeResult[] = [];
     const exemptions: ExemptionResult[] = [];
     let skippedPrivateCount = 0;
@@ -106,13 +108,30 @@ function main(): void {
         continue;
       }
 
-      const packageInfo: PackageInfo = {
+      packageInfos.push({
         packageDir: dirname(packagePath),
         packageName,
         packagePath,
         publishManifest: publishManifestFor(sourceManifest),
         sourceManifest,
-      };
+      });
+    }
+
+    if (diagnostics.length > 0) {
+      printCoverageSummary(packageResults, exemptions, skippedPrivateCount);
+      printSmokeViolations(diagnostics);
+      process.exitCode = 1;
+      return;
+    }
+
+    const buildPrerequisiteDiagnostics = buildPrerequisiteDiagnosticsFor(rootDir, packageInfos);
+    if (buildPrerequisiteDiagnostics.length > 0) {
+      printBuildPrerequisiteFailure(buildPrerequisiteDiagnostics);
+      process.exitCode = 1;
+      return;
+    }
+
+    for (const packageInfo of packageInfos) {
       const plan = planPackageSmoke(packageInfo);
       diagnostics.push(...plan.diagnostics);
       if (plan.diagnostics.length === 0) {
@@ -121,7 +140,7 @@ function main(): void {
       packageResults.push({
         cjsCount: plan.cjs.length,
         esmCount: plan.esm.length,
-        packageName,
+        packageName: packageInfo.packageName,
         typesCount: plan.types.length,
       });
     }
@@ -129,11 +148,7 @@ function main(): void {
     printCoverageSummary(packageResults, exemptions, skippedPrivateCount);
 
     if (diagnostics.length > 0) {
-      console.log("");
-      console.log("Package entrypoint smoke violations:");
-      for (const diagnostic of diagnostics) {
-        console.log(`- ${diagnostic}`);
-      }
+      printSmokeViolations(diagnostics);
       process.exitCode = 1;
       return;
     }
@@ -167,6 +182,66 @@ function parseArgs(args: readonly string[]): { readonly rootDir: string } {
   }
 
   return { rootDir };
+}
+
+function buildPrerequisiteDiagnosticsFor(
+  rootDir: string,
+  packageInfos: readonly PackageInfo[],
+): string[] {
+  const missingBuildArtifacts = packageInfos.filter(
+    (packageInfo) => !packageHasBuildArtifacts(packageInfo.packageDir),
+  );
+
+  if (missingBuildArtifacts.length === 0) {
+    return [];
+  }
+
+  const shownPackages = missingBuildArtifacts
+    .slice(0, 10)
+    .map(
+      (packageInfo) =>
+        `${packageInfo.packageName} (${relative(rootDir, join(packageInfo.packageDir, "dist"))})`,
+    );
+  const remainingCount = missingBuildArtifacts.length - shownPackages.length;
+  const packageList =
+    remainingCount > 0
+      ? `${shownPackages.join(", ")}, and ${remainingCount} more`
+      : shownPackages.join(", ");
+
+  return [
+    `${missingBuildArtifacts.length} public package(s) are missing build artifacts under dist.`,
+    "Run pnpm build before pnpm package-entrypoints:smoke.",
+    `Missing packages: ${packageList}.`,
+  ];
+}
+
+function packageHasBuildArtifacts(packageDir: string): boolean {
+  const distDir = join(packageDir, "dist");
+  if (!existsSync(distDir)) {
+    return false;
+  }
+
+  try {
+    return readdirSync(distDir).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function printBuildPrerequisiteFailure(diagnostics: readonly string[]): void {
+  console.log("");
+  console.log("Package entrypoint smoke build prerequisite failed:");
+  for (const diagnostic of diagnostics) {
+    console.log(`- ${diagnostic}`);
+  }
+}
+
+function printSmokeViolations(diagnostics: readonly string[]): void {
+  console.log("");
+  console.log("Package entrypoint smoke violations:");
+  for (const diagnostic of diagnostics) {
+    console.log(`- ${diagnostic}`);
+  }
 }
 
 function readPackageJson(packagePath: string): PackageJson {
