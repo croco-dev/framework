@@ -1,0 +1,164 @@
+---
+title: Reliability Path RFC
+description: Croco's official reliability path for composing commands, transactions, events, outbox dispatch, jobs, retry, idempotency, Problems, and telemetry.
+---
+
+This RFC defines Croco's SaaS reliability path. It is the contract that tells package authors and
+application teams how a mutating command should move from request handling to durable work,
+dispatch, recovery, and operational evidence.
+
+The path is intentionally explicit:
+
+```txt
+Command
+  -> Unit of Work
+  -> Domain Events
+  -> Transactional Outbox
+  -> Task/Batch/Trigger Dispatch
+  -> Retry/Circuit/Timeout
+  -> Idempotency Record
+  -> Problem + Telemetry Evidence
+```
+
+The goal is not to make every operation synchronous or to hide distributed-system failure. The goal
+is to keep each boundary typed, observable, replayable, and honest about its delivery guarantees.
+
+## Status
+
+This is the current RFC for the M3 SaaS Reliability Path. It documents the intended composition
+between existing packages and the follow-up implementation work needed to make that composition
+machine-checkable.
+
+## Reliability Contract
+
+| Stage                                  | Owner                                                                                                                       | Responsibility                                                                                                                                                          | Required evidence                                                                               |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Command                                | Route, RPC, or application service layer                                                                                    | Validate intent, resolve tenant and actor context, derive or require a command id and idempotency key, and start the trace/correlation boundary.                        | route id, command id, correlation id, tenant id, idempotency key, declared Problem responses    |
+| Unit of Work                           | `@croco/tx-core` and adapters such as `@croco/tx-drizzle`                                                                   | Own the commit/rollback boundary for domain writes and outbox appends. External side effects must not be published before commit.                                       | tx id or logical operation id, status, duration, rollback reason, after-commit diagnostics      |
+| Domain Events                          | `@croco/events-core`                                                                                                        | Name state changes as typed domain events with stable event identity, event type, aggregate or source id, and trace metadata.                                           | event id, event type, occurred-at timestamp, aggregate/source id, trace context                 |
+| Transactional Outbox                   | `@croco/events-tx` now, and the planned outbox-core contract in [#1092](https://github.com/croco-dev/framework/issues/1092) | Append side-effect intent in the same transaction as the domain write, then expose visible messages for relay after commit.                                             | outbox id, event id, idempotency key, attempt count, visibility window, retry/dead-letter state |
+| Task, batch, trigger, and job dispatch | `@croco/tasks-core`, `@croco/batch-core`, `@croco/triggers-core`, `@croco/execution-core`, and provider adapters            | Convert outbox intent into inspectable execution records, scheduled work, task runs, batches, and operator-facing jobs.                                                 | execution id, task/job type, status, attempt, checkpoint, replay source, append-only logs       |
+| Retry, circuit, and timeout            | `@croco/retry-core` plus package-local retry policies                                                                       | Retry only typed transient failures, stop before runtime deadlines, open circuits when a dependency is unhealthy, and preserve exhausted retry evidence.                | retry attempt, backoff, circuit id/state, timeout reserve, final Problem                        |
+| Idempotency record                     | `@croco/idempotency-core` and package integrations                                                                          | Scope dedupe to tenant and intent, replay completed results, expose in-flight or conflict states, and prevent operator replay from being swallowed by the original key. | idempotency namespace, key, fingerprint, tenant id, source, replay/conflict status              |
+| Problem and telemetry evidence         | `@croco/problems-core`, `@croco/telemetry-api`, and `@croco/telemetry-sdk-node`                                             | Normalize expected failures as Problems and correlate route, tx, event, outbox, job, retry, and idempotency signals in traces and events.                               | Problem code/category/status, safe extensions, trace id, span id or span link, correlation id   |
+
+## Delivery Semantics
+
+Croco must not claim exactly-once delivery. The reliability path is built on at-least-once delivery
+plus explicit dedupe, replay, and ordering boundaries.
+
+At-least-once means a committed outbox message may be dispatched more than once. A relay can crash
+after publishing and before marking a message as published. A provider can accept work and fail to
+return a response. A visibility timeout can expire while a worker is still finishing. These states
+are normal distributed-system failure modes, so Croco models them instead of hiding them.
+
+Dedupe belongs at the consumer and intent boundary. Outbox messages carry an idempotency key, and
+consumers use inbox or idempotency records keyed by tenant, consumer, event/message identity, and
+fingerprint. A duplicate delivery of the same intent should replay the stored result or return a
+typed duplicate/in-flight state. A reused key with a different fingerprint is a `Conflict` Problem,
+not a successful replay.
+
+Replay is explicit operator recovery. Job replay creates a new execution linked to the failed or
+timed-out source execution; it does not reuse the original idempotency key. That keeps recovery
+actions visible instead of letting a dedupe store silently return the old failed record. See
+[Jobs v1](https://github.com/croco-dev/framework/blob/trunk/docs/jobs-v1.md) for the current
+operator surface.
+
+Ordering is scoped, not global. Packages can preserve ordering within a declared aggregate,
+partition, queue, or provider ordering key, but the reliability path does not promise global
+ordering across tenants, aggregates, queues, triggers, or provider adapters. Any component that
+requires ordered consumption must declare the partition key and the recovery behavior when an older
+message is delayed, retried, or dead-lettered.
+
+## Problem-Driven Decisions
+
+Problem category answers the first recovery question: should the default path retry, wait, reject,
+or ask an operator to replay? Problem code answers the second question: which exact package failure
+happened?
+
+Croco's shared [Failure Semantics](/en/guides/failure-semantics/) contract remains the source of
+truth for category defaults. This RFC applies those defaults across the reliability path:
+
+| Decision point | Retryable by default                                                                           | Terminal by default                                                                     | Required package behavior                                                                            |
+| -------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Route command  | `InternalServerError`, `TooManyRequests`                                                       | validation, auth, not-found, business-rule, and malformed input Problems                | classify expected failures before transport serialization                                            |
+| Transaction    | transient adapter/runtime failures after rollback                                              | invalid propagation, missing required transaction, domain validation                    | preserve rollback evidence and do not publish external side effects from a failed transaction        |
+| Outbox relay   | provider unavailable, rate limit, timeout, circuit-open Problems when the intent is idempotent | malformed payload, unsupported capability, exhausted retry, non-idempotent unsafe retry | schedule retry or dead-letter with the Problem code/category attached                                |
+| Job execution  | retryable task/provider Problems while attempts remain                                         | non-retryable Problems or exhausted attempts                                            | transition to retrying, failed, timed_out, dead_lettered, or replayable state with operator evidence |
+| Idempotency    | in-flight state after the documented retry window when safe                                    | key/fingerprint conflict, invalid key, tenant-scope mismatch                            | replay prior success/typed failure or expose deterministic Conflict/Invalid Problems                 |
+
+Package code must not turn an expected operational failure into a generic `Error` and must not
+return success when telemetry, outbox, job, or idempotency evidence says the operation failed. A
+fallback is acceptable only when it preserves the original Problem evidence and gives the caller or
+operator a clear recovery action.
+
+[#1123](https://github.com/croco-dev/framework/issues/1123) tracks the implementation follow-up for
+a machine-checkable Problem-driven recovery matrix across retry, execution, jobs, and idempotency.
+
+## Telemetry Correlation
+
+The reliability path should be reconstructable from trace and event evidence. A route span is the
+root for synchronous command handling. Transaction and outbox append spans should be children of
+that route span. Asynchronous relay, task, batch, trigger, and job spans should either continue the
+captured context or use span links to connect back to the outbox/event source when they run in a
+separate worker.
+
+Every stage must keep the correlation identifiers it owns:
+
+| Stage                  | Minimum correlation fields                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| Route/command          | trace id, span id, correlation id, route id, command id, tenant id, actor id when available         |
+| Transaction            | trace id, tx operation id, transaction status, rollback Problem code when present                   |
+| Domain event           | event id, event type, aggregate/source id, occurred-at timestamp, trace context                     |
+| Outbox                 | outbox id, event id, idempotency key, status, attempt, visibility window, dead-letter reason        |
+| Job/task/batch/trigger | execution id, job/task type, attempt, checkpoint, replay source, provider message id when available |
+| Retry/circuit/timeout  | retry attempt, backoff delay, circuit id/state, timeout reserve, exhausted Problem code             |
+| Idempotency            | namespace, key, fingerprint, tenant id, source, replay/in-flight/conflict status                    |
+| Problem                | code, category, status, retryability, redacted safe extensions                                      |
+
+These identifiers are evidence, not user-facing payload. Raw request bodies, credentials, provider
+secrets, tenant-private data, and raw upstream responses must stay out of public telemetry fields.
+Provider-specific evidence should be redacted and stored only in safe Problem extensions or
+operator-only telemetry.
+
+[#1122](https://github.com/croco-dev/framework/issues/1122) tracks the implementation follow-up for
+a reliability telemetry correlation manifest and drift check.
+
+## Ownership Boundaries
+
+Each package owns the smallest contract it can verify:
+
+- `@croco/tx-core` owns active transaction context, propagation, timeout, rollback, and
+  after-commit diagnostics. It does not publish external side effects.
+- `@croco/events-core` owns event identity, serialization shape, handler contracts, and event
+  metadata. It does not own durable dispatch.
+- `@croco/events-tx` owns transactional outbox/inbox behavior until a dedicated outbox core contract
+  exists. It must keep outbox append atomic with the unit of work and keep relay state inspectable.
+- `@croco/execution-core` owns execution lifecycle, retry state, checkpointing, logs, timeout, and
+  replay relationships. Task, batch, trigger, and provider packages adapt that execution contract.
+- `@croco/retry-core` owns retry policy, backoff, circuit breaker, timeout guard, and retry-related
+  Problems. It consumes Problem category/code; it does not infer domain safety by itself.
+- `@croco/idempotency-core` owns key derivation, store conformance, replay, in-flight, conflict, and
+  tenant-scoped dedupe semantics.
+- `@croco/problems-core` owns stable Problem envelope/category/code metadata. Package-specific
+  Problems must preserve enough evidence for retry and terminal decisions.
+- `@croco/telemetry-api` owns application-level spans, events, error recording, and trace context
+  lookup. Runtime SDK packages own initialization and flush behavior.
+
+No package should silently compensate for another package's missing evidence. If a reliability
+boundary is missing a required id, Problem, status, or telemetry signal, the next package should
+surface a diagnostic or typed Problem instead of assuming success.
+
+## Implementation Follow-ups
+
+This RFC closes the documentation contract for the reliability path. The implementation work is
+tracked in these issues:
+
+- [#1092: Define TransactionalOutboxStore contract](https://github.com/croco-dev/framework/issues/1092)
+- [#1122: Add telemetry correlation manifest for reliability path](https://github.com/croco-dev/framework/issues/1122)
+- [#1123: Add Problem-driven recovery matrix for jobs and retries](https://github.com/croco-dev/framework/issues/1123)
+- [#1124: Add generated SaaS reliability path smoke](https://github.com/croco-dev/framework/issues/1124)
+
+Those follow-ups should keep the same rule as this RFC: prove at-least-once delivery, dedupe,
+replay, ordering boundaries, Problem decisions, and telemetry correlation with tests or generated
+artifacts before promoting the reliability path as production evidence.
