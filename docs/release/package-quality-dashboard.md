@@ -6,6 +6,7 @@ The dashboard is written to `ci-reports/package-quality/report.md`, appended to 
 ## What It Shows
 
 - Per-package `build`, `typecheck`, and `test` outcomes from the latest Turbo summaries.
+- Provider, integration, transport, and presentation certification evidence from `pnpm provider-certification:check`, written to `ci-reports/package-quality/provider-certification.md` and `provider-certification.json`.
 - Production-ready package evidence from `pnpm production-ready:check`, written to `ci-reports/package-quality/production-ready.md`.
 - Failure evidence narrowed to the package, check, and Turbo log path.
 - Repository dependency boundary results, starting with the `@croco/repository-core` Drizzle-free rule.
@@ -20,6 +21,7 @@ The protected `trunk` branch keeps the existing hard gates:
 - `changeset-required:check` for release-significant public package changes.
 - `pnpm check`, including package manifest drift, docs catalog drift, release docs drift, circular dependency policy, dependency boundaries, lint, and format.
 - `build`, `typecheck`, and `test` through Turbo package tasks.
+- `provider-certification:check` after package tests, blocking production-ready extension packages without certified catalog evidence.
 - `production-ready:check` after Turbo summaries, blocking production-ready packages that lack required maturity evidence.
 - Package entrypoint and binary smoke checks.
 - Generated app smoke, CLI integration tests, and core coverage.
@@ -97,6 +99,33 @@ Promote bundle-size warnings to a blocking trunk gate only after:
 2. Every measured artifact resolves to exactly one package and artifact row with a local recovery command.
 3. New publishable build packages either produce measured `dist` artifacts or carry a documented exemption.
 4. Several PRs show stable package ownership, no missing baselines, no unmatched baselines, and acceptable bundle variance.
+
+## Provider Certification Gate
+
+`pnpm provider-certification:check` validates the certification source of truth in `docs/package-catalog.json`.
+Certification is separate from maturity, but a production-ready package in the extension matrix groups (`Provider`, `Integration`, `Transport`, or `Presentation`) must have a `certification.records.<package>` entry with `state: "certified"`.
+
+For each certified or production-ready extension package, the gate requires package-scoped evidence for:
+
+- conformance;
+- no-credential smoke;
+- diagnostics;
+- redaction;
+- documented live-smoke behavior.
+
+The gate also blocks `knownGaps` for certified or production-ready packages unless every gap has a package-scoped allowance under `certification.policy.knownGapAllowances.<package>.<gap>` with a non-empty `reason` and `owner`.
+There is no global known-gap bypass.
+
+Manual docs badges and compatibility claims are checked by scanning unfenced markdown for the Croco compatibility claim phrase in the root README, `docs`, package READMEs, and public docs content.
+A claim must either live in the certified package README or name `@croco/<package>` with a matching certified catalog record.
+
+Local recovery:
+
+```bash
+pnpm provider-certification:check
+```
+
+The CI gate appends `ci-reports/package-quality/provider-certification.md` to the GitHub Actions job summary and uploads both markdown and JSON with the package quality dashboard artifact.
 
 ## Production-Ready Package Gate
 

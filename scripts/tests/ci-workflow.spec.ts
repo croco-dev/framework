@@ -16,6 +16,8 @@ describe("CI package quality dashboard", () => {
       "run: pnpm turbo run typecheck --summarize --continue=always",
       "- name: Test",
       "run: pnpm turbo run test --summarize --continue=always",
+      "- name: Provider certification gate",
+      "run: |\n          set +e\n          pnpm provider-certification:check",
       "- name: Production-ready package gate",
       "production_ready_args+=(--require-task-summaries)",
       'pnpm production-ready:check -- "${production_ready_args[@]}"',
@@ -44,6 +46,20 @@ describe("CI package quality dashboard", () => {
     expect(workflow).toContain("PACKAGE_QUALITY_BUILD_STATUS: ${{ steps.build.outcome");
     expect(workflow).toContain("PACKAGE_QUALITY_TYPECHECK_STATUS: ${{ steps.typecheck.outcome");
     expect(workflow).toContain("PACKAGE_QUALITY_TEST_STATUS: ${{ steps.test.outcome");
+    expect(workflow).toContain(
+      "PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS: ${{ steps.provider_certification_gate.outcome",
+    );
+  });
+
+  it("appends the provider certification matrix before exiting the blocking gate", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).toContain("ci-reports/package-quality/provider-certification.md");
+    expect(workflow).toContain("pnpm provider-certification:check");
+    expect(workflow).toContain(
+      'cat ci-reports/package-quality/provider-certification.md >> "$GITHUB_STEP_SUMMARY"',
+    );
+    expect(workflow).toContain('exit "$status"');
   });
 
   it("appends the production-ready package report before exiting the blocking gate", () => {

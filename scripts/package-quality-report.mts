@@ -620,6 +620,8 @@ function readGateOutcomes(): Record<string, string> {
     build: process.env.PACKAGE_QUALITY_BUILD_STATUS ?? "not provided",
     typecheck: process.env.PACKAGE_QUALITY_TYPECHECK_STATUS ?? "not provided",
     test: process.env.PACKAGE_QUALITY_TEST_STATUS ?? "not provided",
+    "provider-certification:check":
+      process.env.PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS ?? "not provided",
   };
 }
 
@@ -1134,6 +1136,7 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     `| \`build\` | package build tasks | blocking on PR/trunk | ${report.gateOutcomes.build} | Turbo \`build\` summary below |`,
     `| \`typecheck\` | package TypeScript tasks | blocking on PR/trunk | ${report.gateOutcomes.typecheck} | Turbo \`typecheck\` summary below |`,
     `| \`test\` | package test tasks | blocking on PR/trunk | ${report.gateOutcomes.test} | Turbo \`test\` summary below |`,
+    `| \`provider-certification:check\` | provider, integration, transport, and presentation certification evidence | blocking on PR/trunk | ${report.gateOutcomes["provider-certification:check"]} | validates catalog certification records and writes \`ci-reports/package-quality/provider-certification.md\` plus JSON |`,
     `| \`bundle-size:warning\` | publishable package generated artifact growth | warning-only until baselines stabilize | ${formatBundleSizeStatus(report.bundleSize)} | ${formatBundleSizeEvidence(report.bundleSize)} |`,
     "| benchmark | performance drift | warning-only until baselines stabilize | warning-only | benchmark workflow keeps enforce mode explicit |",
     "",
