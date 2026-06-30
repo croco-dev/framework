@@ -13,11 +13,15 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { argv, exit, stdout } from "node:process";
+import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
 export type ProblemRegistryMode = "check" | "write";
+export type ProblemRegistryRunOptions = {
+  readonly baseRef?: string;
+  readonly baseRegistry?: ProblemCodeRegistry | null;
+};
 export type ProblemCategory = (typeof ProblemCategory)[keyof typeof ProblemCategory];
 export type ProblemCodeRegistryVersion = "croco.problem-code-registry.v1";
 export type ProblemCodeSourceKind =
@@ -28,6 +32,19 @@ export type ProblemCodeSourceKind =
 export type ProblemRetryability = "retryable" | "conditional" | "not-retryable";
 export type ProblemRedactionPolicy = "public" | "safe-message" | "operator-only";
 export type ProblemTelemetrySeverity = "info" | "warning" | "error";
+export type ProblemLifecycleStatus = "active" | "deprecated";
+
+export type ProblemDeprecationMetadata = {
+  readonly reason: string;
+  readonly migrationNote: string;
+  readonly replacementCode?: string;
+  readonly since?: string;
+};
+
+export type ProblemLifecycle = {
+  readonly status: ProblemLifecycleStatus;
+  readonly deprecation?: ProblemDeprecationMetadata;
+};
 
 export type ProblemCodeSource = {
   readonly file: string;
@@ -62,6 +79,7 @@ export type ProblemCodeRegistryEntry = {
   readonly title: string;
   readonly cookbookPath: string;
   readonly recovery: ProblemRecoveryMetadata;
+  readonly lifecycle: ProblemLifecycle;
   readonly sources: readonly ProblemCodeSource[];
 };
 
@@ -102,6 +120,13 @@ type ProblemConstructorForwarder = {
 };
 
 const registryPath = join("docs", "problem-code-registry.json");
+const generatedRegistrySourcePath = join(
+  "packages",
+  "problems-core",
+  "src",
+  "generated",
+  "problem-code-registry.ts",
+);
 const repoRootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cookbookPath = join(
   "packages",
@@ -156,14 +181,35 @@ const factoryMethodCategory = {
 export function runProblemRegistryCheck(
   rootDir = process.cwd(),
   mode: ProblemRegistryMode = "check",
+  options: ProblemRegistryRunOptions = {},
 ): ProblemRegistryRunResult {
   const absoluteRootDir = resolve(rootDir);
 
   try {
     const discoveries = discoverProblemCodes(absoluteRootDir);
-    const registry = createProblemCodeRegistry(discoveries);
+    const existingRegistry = readExistingProblemCodeRegistry(absoluteRootDir);
+    const baseRegistry = readBaseProblemCodeRegistry(absoluteRootDir, options);
+    const implementationBaselineRegistry = mergeProblemRegistryBaselines(
+      baseRegistry,
+      existingRegistry,
+    );
+    const generatedRegistry = createProblemCodeRegistry(discoveries);
+    const registry = mergeDeprecatedProblemEntries(generatedRegistry, existingRegistry);
     const artifacts = formatProblemRegistryArtifacts(createProblemRegistryArtifacts(registry));
-    const diagnostics = syncProblemRegistryArtifacts(absoluteRootDir, artifacts, mode);
+    const preflightDiagnostics = [
+      ...getRegistryImplementationDiagnostics(implementationBaselineRegistry, registry),
+      ...getProblemContractChangeDiagnostics(
+        absoluteRootDir,
+        baseRegistry ?? existingRegistry,
+        generatedRegistry,
+      ),
+      ...getProblemRedactionDiagnostics(absoluteRootDir),
+    ];
+    const syncDiagnostics =
+      preflightDiagnostics.length === 0
+        ? syncProblemRegistryArtifacts(absoluteRootDir, artifacts, mode)
+        : [];
+    const diagnostics = [...preflightDiagnostics, ...syncDiagnostics];
 
     return {
       status: diagnostics.length === 0 ? "pass" : "fail",
@@ -269,6 +315,7 @@ export function createProblemCodeRegistry(
       title: toTitle(category),
       cookbookPath: `/reference/problem-recovery-cookbook/#${slugifyProblemCode(code)}`,
       recovery: recoveryMetadataByCode[code] ?? recoveryMetadataByCategory[category],
+      lifecycle: createActiveProblemLifecycle(),
       sources,
     });
   }
@@ -294,6 +341,7 @@ export function createProblemRegistryArtifacts(
   return new Map([
     [registryPath, `${JSON.stringify(registry, null, 2)}\n`],
     [cookbookPath, formatProblemRecoveryCookbook(registry)],
+    [generatedRegistrySourcePath, formatGeneratedProblemRegistrySource(registry)],
   ]);
 }
 
@@ -369,6 +417,442 @@ function syncProblemRegistryArtifacts(
   }
 
   return diagnostics;
+}
+
+function readExistingProblemCodeRegistry(rootDir: string): ProblemCodeRegistry | null {
+  const absolutePath = join(rootDir, registryPath);
+
+  if (!existsSync(absolutePath)) {
+    return null;
+  }
+
+  try {
+    const value = JSON.parse(readFileSync(absolutePath, "utf-8")) as unknown;
+
+    return isProblemCodeRegistryLike(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function readBaseProblemCodeRegistry(
+  rootDir: string,
+  options: ProblemRegistryRunOptions,
+): ProblemCodeRegistry | null {
+  if ("baseRegistry" in options) {
+    return options.baseRegistry ?? null;
+  }
+
+  const baseRef = options.baseRef ?? getDefaultProblemRegistryBaseRef(rootDir);
+
+  if (!baseRef) {
+    return null;
+  }
+
+  const content = readGitFile(rootDir, baseRef, registryPath);
+
+  if (!content) {
+    return null;
+  }
+
+  try {
+    const value = JSON.parse(content) as unknown;
+
+    return isProblemCodeRegistryLike(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function getDefaultProblemRegistryBaseRef(rootDir: string): string | null {
+  const candidates = env.GITHUB_BASE_REF
+    ? [`origin/${env.GITHUB_BASE_REF}`]
+    : ["origin/trunk", "trunk"];
+
+  return candidates.find((candidate) => isGitCommitRef(rootDir, candidate)) ?? null;
+}
+
+function isGitCommitRef(rootDir: string, ref: string): boolean {
+  const result = spawnSync("git", ["rev-parse", "--verify", `${ref}^{commit}`], {
+    cwd: rootDir,
+    encoding: "utf-8",
+  });
+
+  return result.status === 0;
+}
+
+function readGitFile(rootDir: string, ref: string, path: string): string | null {
+  const result = spawnSync("git", ["show", `${ref}:${toPosixPath(path)}`], {
+    cwd: rootDir,
+    encoding: "utf-8",
+  });
+
+  return result.status === 0 ? result.stdout : null;
+}
+
+function isProblemCodeRegistryLike(value: unknown): value is ProblemCodeRegistry {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    (value as { readonly version?: unknown }).version === "croco.problem-code-registry.v1" &&
+    Array.isArray((value as { readonly problems?: unknown }).problems)
+  );
+}
+
+function mergeProblemRegistryBaselines(
+  ...registries: readonly (ProblemCodeRegistry | null)[]
+): ProblemCodeRegistry | null {
+  const problemsByCode = new Map<string, ProblemCodeRegistryEntry>();
+  const [firstRegistry] = registries.filter((registry): registry is ProblemCodeRegistry =>
+    Boolean(registry),
+  );
+
+  if (!firstRegistry) {
+    return null;
+  }
+
+  for (const registry of registries) {
+    for (const problem of registry?.problems ?? []) {
+      problemsByCode.set(problem.code, problem);
+    }
+  }
+
+  const problems = [...problemsByCode.values()].sort((left, right) =>
+    left.code.localeCompare(right.code),
+  );
+
+  return {
+    ...firstRegistry,
+    problemCount: problems.length,
+    problems,
+  };
+}
+
+function mergeDeprecatedProblemEntries(
+  generatedRegistry: ProblemCodeRegistry,
+  existingRegistry: ProblemCodeRegistry | null,
+): ProblemCodeRegistry {
+  if (!existingRegistry) {
+    return generatedRegistry;
+  }
+
+  const generatedByCode = new Map(
+    generatedRegistry.problems.map((problem) => [problem.code, problem]),
+  );
+  const mergedByCode = new Map(generatedByCode);
+
+  for (const existingProblem of existingRegistry.problems) {
+    if (getProblemLifecycleStatus(existingProblem) !== "deprecated") {
+      continue;
+    }
+
+    const generatedProblem = generatedByCode.get(existingProblem.code);
+    const deprecatedLifecycle = getProblemLifecycle(existingProblem);
+
+    mergedByCode.set(
+      existingProblem.code,
+      generatedProblem
+        ? { ...generatedProblem, lifecycle: deprecatedLifecycle }
+        : {
+            ...existingProblem,
+            lifecycle: deprecatedLifecycle,
+            sources: [],
+          },
+    );
+  }
+
+  const problems = [...mergedByCode.values()].sort((left, right) =>
+    left.code.localeCompare(right.code),
+  );
+
+  return {
+    ...generatedRegistry,
+    problemCount: problems.length,
+    problems,
+  };
+}
+
+function getRegistryImplementationDiagnostics(
+  baselineRegistry: ProblemCodeRegistry | null,
+  registry: ProblemCodeRegistry,
+): readonly string[] {
+  if (!baselineRegistry) {
+    return [];
+  }
+
+  const registryByCode = new Map(registry.problems.map((problem) => [problem.code, problem]));
+  const diagnostics: string[] = [];
+
+  for (const baselineProblem of baselineRegistry.problems) {
+    const registryProblem = registryByCode.get(baselineProblem.code);
+
+    if (
+      getProblemLifecycleStatus(baselineProblem) === "deprecated" ||
+      (registryProblem &&
+        (registryProblem.sources.length > 0 ||
+          getProblemLifecycleStatus(registryProblem) === "deprecated"))
+    ) {
+      continue;
+    }
+
+    diagnostics.push(
+      `Problem code '${baselineProblem.code}' is registered but has no corresponding implementation; mark it deprecated with migration metadata before removing the source.`,
+    );
+  }
+
+  return diagnostics;
+}
+
+function getProblemContractChangeDiagnostics(
+  rootDir: string,
+  existingRegistry: ProblemCodeRegistry | null,
+  generatedRegistry: ProblemCodeRegistry,
+): readonly string[] {
+  if (!existingRegistry) {
+    return [];
+  }
+
+  const generatedByCode = new Map(
+    generatedRegistry.problems.map((problem) => [problem.code, problem]),
+  );
+  const diagnostics: string[] = [];
+
+  for (const existingProblem of existingRegistry.problems) {
+    const generatedProblem = generatedByCode.get(existingProblem.code);
+
+    if (!generatedProblem || getProblemLifecycleStatus(existingProblem) === "deprecated") {
+      continue;
+    }
+
+    const existingRetryability = existingProblem.recovery.retryability;
+    const generatedRetryability = generatedProblem.recovery.retryability;
+    const changedFields = [
+      existingProblem.category === generatedProblem.category
+        ? null
+        : `category ${existingProblem.category} -> ${generatedProblem.category}`,
+      existingProblem.status === generatedProblem.status
+        ? null
+        : `status ${existingProblem.status} -> ${generatedProblem.status}`,
+      existingRetryability === generatedRetryability
+        ? null
+        : `retryability ${existingRetryability} -> ${generatedRetryability}`,
+    ].filter((field): field is string => field !== null);
+
+    if (
+      changedFields.length === 0 ||
+      hasProblemContractChangeEvidence(rootDir, existingProblem.code)
+    ) {
+      continue;
+    }
+
+    diagnostics.push(
+      `Problem code '${existingProblem.code}' changed ${changedFields.join(", ")} without an explicit changeset or migration note mentioning that code.`,
+    );
+  }
+
+  return diagnostics;
+}
+
+function hasProblemContractChangeEvidence(rootDir: string, code: string): boolean {
+  return getProblemContractEvidencePaths(rootDir).some((relativePath) => {
+    const absolutePath = join(rootDir, relativePath);
+
+    return existsSync(absolutePath) && readFileSync(absolutePath, "utf-8").includes(code);
+  });
+}
+
+function getProblemContractEvidencePaths(rootDir: string): readonly string[] {
+  const paths = [
+    join("docs", "release", "problem-code-migrations.md"),
+    join("docs", "troubleshooting", "diagnostics.md"),
+  ];
+  const changesetDir = join(rootDir, ".changeset");
+
+  if (!existsSync(changesetDir)) {
+    return paths;
+  }
+
+  for (const entry of readdirSync(changesetDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".md") || entry.name === "README.md") {
+      continue;
+    }
+
+    paths.push(join(".changeset", entry.name));
+  }
+
+  return paths.sort();
+}
+
+function getProblemRedactionDiagnostics(rootDir: string): readonly string[] {
+  return getSourceFiles(rootDir).flatMap((file) =>
+    getProblemRedactionDiagnosticsForFile(rootDir, file),
+  );
+}
+
+function getProblemRedactionDiagnosticsForFile(rootDir: string, file: string): readonly string[] {
+  const source = readFileSync(file, "utf-8");
+  const sourceFile = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const diagnostics: string[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isObjectLiteralExpression(node)) {
+      collectUnsafeExtensionDiagnostics(rootDir, sourceFile, node, diagnostics);
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return diagnostics;
+}
+
+function collectUnsafeExtensionDiagnostics(
+  rootDir: string,
+  sourceFile: ts.SourceFile,
+  node: ts.ObjectLiteralExpression,
+  diagnostics: string[],
+): void {
+  for (const property of node.properties) {
+    if (!ts.isPropertyAssignment(property) || getPropertyName(property.name) !== "extensions") {
+      continue;
+    }
+
+    const initializer = unwrapExpression(property.initializer);
+
+    if (!initializer || !ts.isObjectLiteralExpression(initializer)) {
+      continue;
+    }
+
+    collectUnsafeExtensionObjectDiagnostics(rootDir, sourceFile, initializer, diagnostics);
+  }
+}
+
+function collectUnsafeExtensionObjectDiagnostics(
+  rootDir: string,
+  sourceFile: ts.SourceFile,
+  node: ts.ObjectLiteralExpression,
+  diagnostics: string[],
+): void {
+  for (const property of node.properties) {
+    const key =
+      ts.isPropertyAssignment(property) || ts.isShorthandPropertyAssignment(property)
+        ? getPropertyName(property.name)
+        : null;
+
+    if (!key) {
+      continue;
+    }
+
+    const keyReason = getUnsafeExtensionKeyReason(key);
+    if (keyReason) {
+      diagnostics.push(
+        formatUnsafeExtensionDiagnostic(rootDir, sourceFile, property.name, key, keyReason),
+      );
+    }
+
+    if (ts.isPropertyAssignment(property)) {
+      const initializer = unwrapExpression(property.initializer);
+      const valueReason = initializer ? getUnsafeExtensionValueReason(initializer) : null;
+
+      if (valueReason) {
+        diagnostics.push(
+          formatUnsafeExtensionDiagnostic(rootDir, sourceFile, initializer, key, valueReason),
+        );
+      }
+
+      if (initializer && ts.isObjectLiteralExpression(initializer)) {
+        collectUnsafeExtensionObjectDiagnostics(rootDir, sourceFile, initializer, diagnostics);
+      }
+    }
+  }
+}
+
+function getUnsafeExtensionKeyReason(key: string): string | null {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/gu, "");
+
+  if (
+    [
+      "raw",
+      "rawbody",
+      "rawrequest",
+      "rawrequestbody",
+      "requestbody",
+      "request",
+      "rawresponse",
+      "responsebody",
+      "providerresponse",
+      "rawproviderresponse",
+      "providerrequest",
+      "upstreamresponse",
+      "rawupstreamresponse",
+      "upstreamrequest",
+      "headers",
+    ].includes(normalized)
+  ) {
+    return "raw request/provider payloads must be summarized and redacted before they enter Problem extensions";
+  }
+
+  if (
+    [
+      "authorization",
+      "cookie",
+      "credential",
+      "password",
+      "secret",
+      "apikey",
+      "privatekey",
+      "accesskey",
+      "accesstoken",
+      "refreshtoken",
+      "connectionstring",
+      "databaseurl",
+      "redisurl",
+      "mongodburl",
+      "postgresurl",
+      "postgresqlurl",
+      "dsn",
+    ].includes(normalized)
+  ) {
+    return "secret-bearing values must not enter Problem extensions";
+  }
+
+  return null;
+}
+
+function getUnsafeExtensionValueReason(node: ts.Expression): string | null {
+  if (!ts.isStringLiteral(node) && !ts.isNoSubstitutionTemplateLiteral(node)) {
+    return null;
+  }
+
+  if (
+    /\b(?:Bearer|Basic)\s+\S+/iu.test(node.text) ||
+    /\b(?:password|secret|token|api[-_]?key|access[-_]?token)\s*[:=]\s*\S+/iu.test(node.text) ||
+    /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/\S+/iu.test(node.text)
+  ) {
+    return "literal secret-looking values must be redacted before they enter Problem extensions";
+  }
+
+  return null;
+}
+
+function formatUnsafeExtensionDiagnostic(
+  rootDir: string,
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  key: string,
+  reason: string,
+): string {
+  const location = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+
+  return `Unsafe Problem extension '${key}' at ${toPosixPath(relative(rootDir, sourceFile.fileName))}:${location.line + 1}:${location.character + 1}: ${reason}.`;
 }
 
 function discoverProblemCodeCandidates(
@@ -629,6 +1113,7 @@ function getSourceFiles(rootDir: string): readonly string[] {
 }
 
 function isProductionTypeScriptFile(file: string): boolean {
+  const normalizedFile = toPosixPath(file);
   const isTypeScript = file.endsWith(".ts") || file.endsWith(".tsx");
   const isDeclarationFile = file.endsWith(".d.ts");
   const isTestFile =
@@ -641,8 +1126,9 @@ function isProductionTypeScriptFile(file: string): boolean {
     isTypeScript &&
     !isDeclarationFile &&
     !isTestFile &&
-    !file.split("/").includes("tests") &&
-    !file.split("/").includes("__fixtures__")
+    !normalizedFile.split("/").includes("tests") &&
+    !normalizedFile.split("/").includes("__fixtures__") &&
+    !normalizedFile.includes("/src/generated/")
   );
 }
 
@@ -1224,6 +1710,10 @@ function recovery(options: {
   };
 }
 
+function createActiveProblemLifecycle(): ProblemLifecycle {
+  return { status: "active" };
+}
+
 function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): readonly string[] {
   const errors: string[] = [];
   const seenCodes = new Set<string>();
@@ -1241,6 +1731,7 @@ function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): 
     }
 
     seenCodes.add(problem.code);
+    const lifecycle = getProblemLifecycle(problem);
 
     if (problem.status !== toHttpStatus(problem.category)) {
       errors.push(`Problem code '${problem.code}' has a status/category mismatch.`);
@@ -1250,7 +1741,14 @@ function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): 
       errors.push(`Problem code '${problem.code}' is missing recovery cookbook metadata.`);
     }
 
-    if (problem.sources.length === 0) {
+    if (
+      lifecycle.status === "deprecated" &&
+      !isCompleteDeprecationMetadata(lifecycle.deprecation)
+    ) {
+      errors.push(`Deprecated Problem code '${problem.code}' is missing migration metadata.`);
+    }
+
+    if (problem.sources.length === 0 && lifecycle.status !== "deprecated") {
       errors.push(`Problem code '${problem.code}' has no source locations.`);
     } else if (problem.sources.length > 1) {
       errors.push(
@@ -1260,6 +1758,14 @@ function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): 
   }
 
   return errors;
+}
+
+function getProblemLifecycle(problem: ProblemCodeRegistryEntry): ProblemLifecycle {
+  return problem.lifecycle ?? createActiveProblemLifecycle();
+}
+
+function getProblemLifecycleStatus(problem: ProblemCodeRegistryEntry): ProblemLifecycleStatus {
+  return getProblemLifecycle(problem).status;
 }
 
 function toHttpStatus(category: ProblemCategory): number {
@@ -1341,6 +1847,30 @@ function isCompleteRecoveryMetadata(metadata: ProblemRecoveryMetadata): boolean 
   );
 }
 
+function isCompleteDeprecationMetadata(
+  metadata: ProblemDeprecationMetadata | undefined,
+): metadata is ProblemDeprecationMetadata {
+  return Boolean(metadata?.reason && metadata.migrationNote);
+}
+
+function formatGeneratedProblemRegistrySource(registry: ProblemCodeRegistry): string {
+  return `${[
+    'import type { TypedProblemDetails } from "../libs/Problem";',
+    'import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";',
+    "",
+    "export const CROCO_PROBLEM_CODE_REGISTRY = ",
+    `${JSON.stringify(registry, null, 2)} as const satisfies ProblemCodeRegistry;`,
+    "",
+    "export type CrocoProblemRegistry = typeof CROCO_PROBLEM_CODE_REGISTRY;",
+    "export type CrocoProblemRegistryEntry = CrocoProblemRegistry['problems'][number];",
+    "export type CrocoProblemCode = CrocoProblemRegistryEntry['code'];",
+    "",
+    "export type CrocoProblemStatus<Code extends CrocoProblemCode = CrocoProblemCode> = Extract<CrocoProblemRegistryEntry, { readonly code: Code }>['status'];",
+    "",
+    "export type CrocoProblemDetails<Code extends CrocoProblemCode = CrocoProblemCode> = Code extends CrocoProblemCode ? TypedProblemDetails<Code, CrocoProblemStatus<Code>> : never;",
+  ].join("\n")}\n`;
+}
+
 function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
   const lines = [
     "---",
@@ -1352,20 +1882,22 @@ function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
     "",
     "> Generated by `pnpm problem-registry:write`. Do not edit this file by hand.",
     "",
-    `This cookbook documents ${registry.problemCount} public Croco Problem codes. The deterministic JSON registry is generated at \`${registryPath}\`.`,
+    `This cookbook documents ${registry.problemCount} public Croco Problem codes. The deterministic JSON registry is generated at \`${registryPath}\`, and generated client union types are emitted at \`${generatedRegistrySourcePath}\`.`,
     "",
     "## Index",
     "",
-    "| Code | Category | Status | Retryability | Redaction | Sources |",
-    "| --- | --- | ---: | --- | --- | ---: |",
+    "| Code | Category | Status | Retryability | Redaction | Lifecycle | Sources |",
+    "| --- | --- | ---: | --- | --- | --- | ---: |",
     ...registry.problems.map(
       (problem) =>
-        `| [\`${escapeMarkdownTable(problem.code)}\`](#${slugifyProblemCode(problem.code)}) | ${problem.category} | ${problem.status} | ${problem.recovery.retryability} | ${problem.recovery.redactionPolicy} | ${problem.sources.length} |`,
+        `| [\`${escapeMarkdownTable(problem.code)}\`](#${slugifyProblemCode(problem.code)}) | ${problem.category} | ${problem.status} | ${problem.recovery.retryability} | ${problem.recovery.redactionPolicy} | ${getProblemLifecycleStatus(problem)} | ${problem.sources.length} |`,
     ),
     "",
   ];
 
   for (const problem of registry.problems) {
+    const lifecycle = getProblemLifecycle(problem);
+
     lines.push(
       `<a id="${slugifyProblemCode(problem.code)}"></a>`,
       "",
@@ -1375,16 +1907,36 @@ function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
       `- HTTP status: \`${problem.status}\` ${problem.title}`,
       `- Retryability: \`${problem.recovery.retryability}\``,
       `- Redaction policy: \`${problem.recovery.redactionPolicy}\``,
+      `- Lifecycle: \`${lifecycle.status}\``,
       `- Cause: ${problem.recovery.cause}`,
       `- User action: ${problem.recovery.userAction}`,
       `- Operator action: ${problem.recovery.operatorAction}`,
       `- Telemetry: \`${problem.recovery.telemetry.eventName}\` (${problem.recovery.telemetry.severity}) with ${problem.recovery.telemetry.attributes.map((attribute) => `\`${attribute}\``).join(", ")}`,
       "",
+    );
+
+    if (lifecycle.status === "deprecated" && lifecycle.deprecation) {
+      lines.push(
+        "Deprecation:",
+        "",
+        `- Reason: ${lifecycle.deprecation.reason}`,
+        `- Migration note: ${lifecycle.deprecation.migrationNote}`,
+        ...(lifecycle.deprecation.replacementCode
+          ? [`- Replacement code: \`${lifecycle.deprecation.replacementCode}\``]
+          : []),
+        ...(lifecycle.deprecation.since ? [`- Since: \`${lifecycle.deprecation.since}\``] : []),
+        "",
+      );
+    }
+
+    lines.push(
       "Sources:",
       "",
-      ...problem.sources.map(
-        (source) => `- \`${source.file}:${source.line}:${source.column}\` (${source.kind})`,
-      ),
+      ...(problem.sources.length > 0
+        ? problem.sources.map(
+            (source) => `- \`${source.file}:${source.line}:${source.column}\` (${source.kind})`,
+          )
+        : ["- Deprecated registry entry; implementation intentionally removed."]),
       "",
     );
   }
@@ -1424,19 +1976,56 @@ function toPosixPath(path: string): string {
   return path.split("\\").join("/");
 }
 
-function parseMode(args: readonly string[]): ProblemRegistryMode {
-  return args.includes("--write") ? "write" : "check";
+function parseArgs(args: readonly string[]): {
+  readonly mode: ProblemRegistryMode;
+  readonly options: ProblemRegistryRunOptions;
+} {
+  let mode: ProblemRegistryMode = "check";
+  let baseRef: string | undefined;
+
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+
+    if (arg === "--") {
+      continue;
+    }
+
+    if (arg === "--write") {
+      mode = "write";
+      continue;
+    }
+
+    if (arg === "--check") {
+      mode = "check";
+      continue;
+    }
+
+    if (arg === "--base") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new Error("--base requires a git ref");
+      }
+      baseRef = value;
+      index++;
+      continue;
+    }
+
+    throw new Error(`Unknown option: ${arg}`);
+  }
+
+  return { mode, options: { baseRef } };
 }
 
 if (import.meta.url === pathToFileURL(argv[1] ?? "").href) {
-  const result = runProblemRegistryCheck(process.cwd(), parseMode(argv.slice(2)));
+  const { mode, options } = parseArgs(argv.slice(2));
+  const result = runProblemRegistryCheck(process.cwd(), mode, options);
 
   if (result.status === "pass") {
     stdout.write(
-      `Problem registry ${parseMode(argv.slice(2))} passed: ${result.problemCount} codes from ${result.discoveryCount} discoveries.\n`,
+      `Problem registry ${mode} passed: ${result.problemCount} codes from ${result.discoveryCount} discoveries.\n`,
     );
   } else {
-    stdout.write(`Problem registry ${parseMode(argv.slice(2))} failed:\n`);
+    stdout.write(`Problem registry ${mode} failed:\n`);
 
     for (const diagnostic of result.diagnostics) {
       stdout.write(`- ${diagnostic}\n`);

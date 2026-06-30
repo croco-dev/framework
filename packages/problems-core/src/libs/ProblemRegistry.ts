@@ -3,6 +3,7 @@ import { ProblemCategory } from "./ProblemCategory";
 import { ProblemCategoryMapper } from "./ProblemCategoryMapper";
 
 export type ProblemCodeRegistryVersion = "croco.problem-code-registry.v1";
+export type ProblemCategoryName = keyof typeof ProblemCategory;
 export type ProblemCodeSourceKind =
   | "problem-class"
   | "problem-constructor"
@@ -15,6 +16,19 @@ export type PackageProblemRegistryVersion = "croco.problem-registry.v1";
 export type ProblemRegistrySnapshotVersion = "croco.problem-registry.snapshot.v1";
 export type ProblemRegistryVisibility = "public" | "private";
 export type ProblemRegistryRedaction = "public" | "safe" | "operator-only";
+export type ProblemLifecycleStatus = "active" | "deprecated";
+
+export type ProblemDeprecationMetadata = {
+  readonly reason: string;
+  readonly migrationNote: string;
+  readonly replacementCode?: string;
+  readonly since?: string;
+};
+
+export type ProblemLifecycle = {
+  readonly status: ProblemLifecycleStatus;
+  readonly deprecation?: ProblemDeprecationMetadata;
+};
 
 export type ProblemCodeSource = {
   readonly file: string;
@@ -25,7 +39,7 @@ export type ProblemCodeSource = {
 
 export type ProblemCodeDiscovery = {
   readonly code: string;
-  readonly category: ProblemCategory;
+  readonly category: ProblemCategoryName;
   readonly sources: readonly ProblemCodeSource[];
 };
 
@@ -46,11 +60,12 @@ export type ProblemRecoveryMetadata = {
 
 export type ProblemCodeRegistryEntry = {
   readonly code: string;
-  readonly category: ProblemCategory;
+  readonly category: ProblemCategoryName;
   readonly status: number;
   readonly title: string;
   readonly cookbookPath: string;
   readonly recovery: ProblemRecoveryMetadata;
+  readonly lifecycle: ProblemLifecycle;
   readonly sources: readonly ProblemCodeSource[];
 };
 
@@ -537,10 +552,11 @@ export function createProblemCodeRegistry(
     problems.push({
       code,
       category,
-      status: ProblemCategoryMapper.toHttpStatus(category),
-      title: ProblemCategoryMapper.toTitle(category),
+      status: ProblemCategoryMapper.toHttpStatus(toProblemCategory(category)),
+      title: ProblemCategoryMapper.toTitle(toProblemCategory(category)),
       cookbookPath: getProblemCookbookPath(code, cookbookBasePath),
       recovery: CATEGORY_RECOVERY_METADATA[category],
+      lifecycle: createActiveProblemLifecycle(),
       sources,
     });
   }
@@ -582,9 +598,10 @@ export function getProblemCodeRegistryValidationErrors(
     }
 
     seenCodes.add(problem.code);
+    const lifecycle = problem.lifecycle;
 
-    const expectedStatus = ProblemCategoryMapper.toHttpStatus(problem.category);
-    const expectedTitle = ProblemCategoryMapper.toTitle(problem.category);
+    const expectedStatus = ProblemCategoryMapper.toHttpStatus(toProblemCategory(problem.category));
+    const expectedTitle = ProblemCategoryMapper.toTitle(toProblemCategory(problem.category));
 
     if (problem.status !== expectedStatus) {
       errors.push(
@@ -602,7 +619,16 @@ export function getProblemCodeRegistryValidationErrors(
       errors.push(`Problem code '${problem.code}' is missing recovery cookbook metadata.`);
     }
 
-    if (problem.sources.length === 0) {
+    if (!lifecycle || (lifecycle.status !== "active" && lifecycle.status !== "deprecated")) {
+      errors.push(`Problem code '${problem.code}' has an invalid lifecycle status.`);
+    } else if (
+      lifecycle.status === "deprecated" &&
+      !isCompleteDeprecationMetadata(lifecycle.deprecation)
+    ) {
+      errors.push(`Deprecated Problem code '${problem.code}' is missing migration metadata.`);
+    }
+
+    if (problem.sources.length === 0 && lifecycle?.status !== "deprecated") {
       errors.push(`Problem code '${problem.code}' has no source locations.`);
     } else if (problem.sources.length > 1) {
       errors.push(
@@ -668,6 +694,14 @@ function createRecoveryMetadata(options: {
   };
 }
 
+function toProblemCategory(category: ProblemCategoryName): ProblemCategory {
+  return ProblemCategory[category];
+}
+
+function createActiveProblemLifecycle(): ProblemLifecycle {
+  return { status: "active" };
+}
+
 function groupDiscoveriesByCode(
   discoveries: readonly ProblemCodeDiscovery[],
 ): ReadonlyMap<string, readonly ProblemCodeDiscovery[]> {
@@ -724,4 +758,10 @@ function isCompleteRecoveryMetadata(metadata: ProblemRecoveryMetadata): boolean 
     metadata.telemetry.severity.length > 0 &&
     metadata.telemetry.attributes.length > 0
   );
+}
+
+function isCompleteDeprecationMetadata(
+  metadata: ProblemDeprecationMetadata | undefined,
+): metadata is ProblemDeprecationMetadata {
+  return Boolean(metadata?.reason && metadata.migrationNote);
 }

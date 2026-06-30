@@ -12866,6 +12866,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "CROCO_PROBLEM_CODE_REGISTRY",
+          "exportKind": "named",
+          "source": "./generated/problem-code-registry",
+          "declarationKind": "const"
+        },
+        {
           "name": "defineProblemRegistry",
           "exportKind": "named",
           "source": "./libs/ProblemRegistry",
@@ -12993,6 +12999,31 @@
           "source": "./libs/ProblemRegistry"
         },
         {
+          "name": "CrocoProblemCode",
+          "exportKind": "named",
+          "source": "./generated/problem-code-registry"
+        },
+        {
+          "name": "CrocoProblemDetails",
+          "exportKind": "named",
+          "source": "./generated/problem-code-registry"
+        },
+        {
+          "name": "CrocoProblemRegistry",
+          "exportKind": "named",
+          "source": "./generated/problem-code-registry"
+        },
+        {
+          "name": "CrocoProblemRegistryEntry",
+          "exportKind": "named",
+          "source": "./generated/problem-code-registry"
+        },
+        {
+          "name": "CrocoProblemStatus",
+          "exportKind": "named",
+          "source": "./generated/problem-code-registry"
+        },
+        {
           "name": "DefinedProblemRegistryEntries",
           "exportKind": "named",
           "source": "./libs/ProblemRegistry"
@@ -13014,6 +13045,11 @@
         },
         {
           "name": "PackageProblemRegistryVersion",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemCategoryName",
           "exportKind": "named",
           "source": "./libs/ProblemRegistry"
         },
@@ -13048,6 +13084,11 @@
           "source": "./libs/ProblemRegistry"
         },
         {
+          "name": "ProblemDeprecationMetadata",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
           "name": "ProblemDetails",
           "exportKind": "named",
           "source": "./libs/Problem"
@@ -13056,6 +13097,16 @@
           "name": "ProblemExtensions",
           "exportKind": "named",
           "source": "./libs/ProblemExtensions"
+        },
+        {
+          "name": "ProblemLifecycle",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
+          "name": "ProblemLifecycleStatus",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
         },
         {
           "name": "ProblemOptions",

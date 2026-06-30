@@ -63,12 +63,16 @@ export type {
   PackageProblemRegistry,
   PackageProblemRegistryEntry,
   PackageProblemRegistryVersion,
+  ProblemCategoryName,
   ProblemCodeDiscovery,
   ProblemCodeRegistry,
   ProblemCodeRegistryEntry,
   ProblemCodeRegistryVersion,
   ProblemCodeSource,
   ProblemCodeSourceKind,
+  ProblemDeprecationMetadata,
+  ProblemLifecycle,
+  ProblemLifecycleStatus,
   ProblemRegistryProblemDefinition,
   ProblemRegistryProblemDefinitions,
   ProblemRegistryRedaction,
@@ -83,6 +87,14 @@ export type {
   ProblemTelemetryMapping,
   ProblemTelemetrySeverity,
 } from "./libs/ProblemRegistry";
+export { CROCO_PROBLEM_CODE_REGISTRY } from "./generated/problem-code-registry";
+export type {
+  CrocoProblemCode,
+  CrocoProblemDetails,
+  CrocoProblemRegistry,
+  CrocoProblemRegistryEntry,
+  CrocoProblemStatus,
+} from "./generated/problem-code-registry";
 export {
   assertPackageProblemRegistryValid,
   assertProblemCodeRegistryValid,
