@@ -77,6 +77,11 @@ export function createCrocoCommand() {
         "Inspect Croco project artifacts",
         async () => (await import("./project.js")).project as LoadedCommand,
       ),
+      upgrade: lazyCommand(
+        "upgrade",
+        "Report and apply safe Croco version migration codemods",
+        async () => (await import("./upgrade.js")).upgrade as LoadedCommand,
+      ),
     },
   });
 }
