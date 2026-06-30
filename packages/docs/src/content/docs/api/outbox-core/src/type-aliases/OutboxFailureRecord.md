@@ -7,7 +7,7 @@ title: "OutboxFailureRecord"
 
 > **OutboxFailureRecord** = `object`
 
-Provider-neutral transactional outbox storage contract.
+Persisted failure state containing Problem.toJSON() output and normalized retry metadata.
 
 ## Properties
 
@@ -15,7 +15,7 @@ Provider-neutral transactional outbox storage contract.
 
 > `readonly` **problem**: `ReturnType`\<[`Problem`](/api/problems-core/src/classes/problem/)\[`"toJSON"`\]\>
 
-***
+---
 
 ### retry
 

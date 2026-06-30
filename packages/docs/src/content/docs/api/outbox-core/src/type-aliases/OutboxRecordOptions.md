@@ -7,8 +7,6 @@ title: "OutboxRecordOptions"
 
 > **OutboxRecordOptions**\<`TClient`\> = `object`
 
-Provider-neutral transactional outbox storage contract.
-
 ## Type Parameters
 
 ### TClient
@@ -21,25 +19,25 @@ Provider-neutral transactional outbox storage contract.
 
 > `readonly` `optional` **availableAt?**: `Date`
 
-***
+---
 
 ### context?
 
 > `readonly` `optional` **context?**: [`TransactionalOutboxStoreContext`](/api/outbox-core/src/type-aliases/transactionaloutboxstorecontext/)\<`TClient`\>
 
-***
+---
 
 ### id?
 
 > `readonly` `optional` **id?**: `string`
 
-***
+---
 
 ### now?
 
 > `readonly` `optional` **now?**: `Date`
 
-***
+---
 
 ### retry?
 

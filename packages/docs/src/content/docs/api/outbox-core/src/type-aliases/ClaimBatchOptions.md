@@ -7,8 +7,6 @@ title: "ClaimBatchOptions"
 
 > **ClaimBatchOptions**\<`TClient`\> = `object`
 
-Provider-neutral transactional outbox storage contract.
-
 ## Type Parameters
 
 ### TClient
@@ -21,31 +19,31 @@ Provider-neutral transactional outbox storage contract.
 
 > `readonly` `optional` **context?**: [`TransactionalOutboxStoreContext`](/api/outbox-core/src/type-aliases/transactionaloutboxstorecontext/)\<`TClient`\>
 
-***
+---
 
 ### dispatcherId?
 
 > `readonly` `optional` **dispatcherId?**: `string`
 
-***
+---
 
 ### limit
 
 > `readonly` **limit**: `number`
 
-***
+---
 
 ### now
 
 > `readonly` **now**: `Date`
 
-***
+---
 
 ### tenant?
 
 > `readonly` `optional` **tenant?**: [`OutboxTenantBoundary`](/api/outbox-core/src/type-aliases/outboxtenantboundary/)
 
-***
+---
 
 ### visibilityTimeoutMs
 

@@ -3955,6 +3955,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "formatUpgradeReport",
+          "exportKind": "named",
+          "source": "./commands/upgrade",
+          "declarationKind": "function"
+        },
+        {
           "name": "generate",
           "exportKind": "named",
           "source": "./commands/generate",
@@ -4195,6 +4201,12 @@
           "declarationKind": "const"
         },
         {
+          "name": "runUpgrade",
+          "exportKind": "named",
+          "source": "./commands/upgrade",
+          "declarationKind": "function"
+        },
+        {
           "name": "selectMode",
           "exportKind": "named",
           "source": "./libs/prompts",
@@ -4223,6 +4235,12 @@
           "exportKind": "named",
           "source": "./libs/naming",
           "declarationKind": "function"
+        },
+        {
+          "name": "upgrade",
+          "exportKind": "named",
+          "source": "./commands/upgrade",
+          "declarationKind": "const"
         },
         {
           "name": "validate",
@@ -4383,6 +4401,46 @@
           "name": "RuntimePolicyCheckIo",
           "exportKind": "named",
           "source": "./commands/runtimePolicy"
+        },
+        {
+          "name": "UpgradeDirent",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeFinding",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeFindingAction",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeFindingConfidence",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeIo",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeReport",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeReportMode",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeSourceLocation",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
         },
         {
           "name": "WriteOptions",
@@ -6189,7 +6247,19 @@
           "declarationKind": "function"
         },
         {
+          "name": "assertPolicyRuntimeCapabilityManifest",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertPolicyTableRuntimeCapabilities",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "assertPolicyTableRuntimeCapabilityManifest",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
           "declarationKind": "function"
@@ -6201,9 +6271,27 @@
           "declarationKind": "function"
         },
         {
+          "name": "checkPolicyRuntimeCapabilityManifest",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
           "name": "checkPolicyTableRuntimeCapabilities",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "checkPolicyTableRuntimeCapabilityManifest",
+          "exportKind": "named",
+          "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "checkRuntimeCapabilityRequirements",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
           "declarationKind": "function"
         },
         {
@@ -6275,6 +6363,24 @@
           "name": "createPolicyTarget",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createRuntimeCapabilityDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createRuntimeCapabilityManifest",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createRuntimeCapabilityManifestFromSupport",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
           "declarationKind": "function"
         },
         {
@@ -6464,6 +6570,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "RUNTIME_CAPABILITY_MANIFEST_VERSION",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
+          "declarationKind": "const"
+        },
+        {
           "name": "RUNTIME_CAPABILITY_NAMES",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
@@ -6471,6 +6583,12 @@
         },
         {
           "name": "RUNTIME_CAPABILITY_SUPPORT",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
+          "declarationKind": "const"
+        },
+        {
+          "name": "RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
           "declarationKind": "const"
@@ -6509,6 +6627,12 @@
           "name": "startRuntimeInspectionRequest",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
+          "declarationKind": "function"
+        },
+        {
+          "name": "stringifyRuntimeCapabilityManifest",
+          "exportKind": "named",
+          "source": "./libs/runtimeCapabilities",
           "declarationKind": "function"
         },
         {
@@ -6790,6 +6914,26 @@
           "source": "./libs/runtimeCapabilities"
         },
         {
+          "name": "RuntimeCapabilityDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "RuntimeCapabilityDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "RuntimeCapabilityManifest",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "RuntimeCapabilityManifestVersion",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "RuntimeCapabilityName",
           "exportKind": "named",
           "source": "./libs/types"
@@ -6798,6 +6942,11 @@
           "name": "RuntimeCapabilityOverridesFor",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities"
+        },
+        {
+          "name": "RuntimeCapabilityRequirement",
+          "exportKind": "named",
+          "source": "./libs/types"
         },
         {
           "name": "RuntimeCapabilitySupport",
@@ -12346,6 +12495,12 @@
           "declarationKind": "const"
         },
         {
+          "name": "OUTBOX_RECORD_ID_CONFLICT_PROBLEM_CODE",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "const"
+        },
+        {
           "name": "OUTBOX_UNIT_OF_WORK_CONTEXT_PROBLEM_CODE",
           "exportKind": "named",
           "source": "./libs/problems/OutboxProblems",
@@ -12359,6 +12514,12 @@
         },
         {
           "name": "OutboxFailureMetadataProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OutboxRecordIdConflictProblem",
           "exportKind": "named",
           "source": "./libs/problems/OutboxProblems",
           "declarationKind": "class"

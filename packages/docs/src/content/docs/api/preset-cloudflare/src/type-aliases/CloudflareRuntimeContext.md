@@ -13,6 +13,14 @@ title: "CloudflareRuntimeContext"
 
 > `readonly` **capabilities**: `object`
 
+#### abortSignal
+
+> `readonly` **abortSignal**: `true`
+
+#### deadline
+
+> `readonly` **deadline**: `false`
+
 #### env
 
 > `readonly` **env**: `true`
@@ -37,17 +45,21 @@ title: "CloudflareRuntimeContext"
 
 > `readonly` **shutdown**: `false`
 
+#### streamingResponse
+
+> `readonly` **streamingResponse**: `true`
+
 #### waitUntil
 
 > `readonly` **waitUntil**: `true`
 
-***
+---
 
 ### env
 
 > `readonly` **env**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### native
 
@@ -57,19 +69,19 @@ title: "CloudflareRuntimeContext"
 
 > `readonly` **executionContext**: `ExecutionContext`
 
-***
+---
 
 ### platform
 
 > `readonly` **platform**: `"cloudflare-workers"`
 
-***
+---
 
 ### requestId?
 
 > `readonly` `optional` **requestId?**: `string`
 
-***
+---
 
 ### waitUntil
 

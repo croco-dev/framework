@@ -7,15 +7,13 @@ title: "OutboxTenantBoundary"
 
 > **OutboxTenantBoundary** = `object`
 
-Provider-neutral transactional outbox storage contract.
-
 ## Properties
 
 ### isolationKey?
 
 > `readonly` `optional` **isolationKey?**: `string`
 
-***
+---
 
 ### tenantId
 

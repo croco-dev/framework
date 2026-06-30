@@ -15,6 +15,7 @@ import type {
 } from "./types";
 import {
   OutboxFailureMetadataProblem,
+  OutboxRecordIdConflictProblem,
   OutboxUnitOfWorkContextProblem,
   createOutboxFailureProblemExtensions,
   readOutboxFailureMetadata,
@@ -42,14 +43,14 @@ function cloneDate(value: Date | undefined): Date | undefined {
   return value ? new Date(value.getTime()) : undefined;
 }
 
-function cloneRecord(value: Record<string, unknown>): Record<string, unknown> {
-  return { ...value };
+function cloneRecord<T extends Record<string, unknown>>(value: T): T {
+  return structuredClone(value);
 }
 
 function cloneProblemDetails(
   problem: ReturnType<Problem["toJSON"]>,
 ): ReturnType<Problem["toJSON"]> {
-  return { ...problem };
+  return structuredClone(problem);
 }
 
 function cloneRetry(retry: OutboxRetryMetadata): OutboxRetryMetadata {
@@ -158,15 +159,18 @@ function defaultIdFactory(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function normalizeFailureMetadata(failure: OutboxFailureMetadata): OutboxFailureMetadata {
-  const terminal = failure.terminal || failure.attempt >= failure.maxAttempts;
+function normalizeFailureMetadata(
+  failure: OutboxFailureMetadata,
+  maxAttempts: number,
+): OutboxFailureMetadata {
+  const terminal = failure.terminal || failure.attempt >= maxAttempts;
   const shouldRetry = failure.retryable && !terminal;
 
   return {
     retryable: failure.retryable,
     terminal,
     attempt: failure.attempt,
-    maxAttempts: failure.maxAttempts,
+    maxAttempts,
     failedAt: new Date(failure.failedAt.getTime()),
     ...(shouldRetry && failure.nextVisibleAt
       ? { nextVisibleAt: new Date(failure.nextVisibleAt.getTime()) }
@@ -174,15 +178,27 @@ function normalizeFailureMetadata(failure: OutboxFailureMetadata): OutboxFailure
   };
 }
 
+/**
+ * In-memory transactional outbox store implementation for conformance tests and local fixtures.
+ */
 export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStore<InMemoryTransactionalOutboxStoreClient> {
   private rootState = createEmptyState();
   private readonly clients = new WeakSet<InMemoryTransactionalOutboxStoreClient>();
+  private unitOfWorkQueue: Promise<void> = Promise.resolve();
 
   async runInUnitOfWork<T>(
     fn: (
       context: TransactionalOutboxStoreContext<InMemoryTransactionalOutboxStoreClient>,
     ) => Promise<T>,
   ): Promise<T> {
+    let release: () => void = () => {};
+    const previous = this.unitOfWorkQueue;
+    this.unitOfWorkQueue = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+
     const client: InMemoryTransactionalOutboxStoreClient = {
       state: cloneState(this.rootState),
     };
@@ -194,6 +210,7 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
       return result;
     } finally {
       this.clients.delete(client);
+      release();
     }
   }
 
@@ -216,8 +233,13 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
     }
 
     const now = options.now ?? new Date();
+    const id = options.id ?? defaultIdFactory();
+    if (state.records.has(id)) {
+      throw new OutboxRecordIdConflictProblem(id);
+    }
+
     const record: OutboxRecord = {
-      id: options.id ?? defaultIdFactory(),
+      id,
       type: intent.type,
       status: "pending",
       tenant: { ...intent.tenant },
@@ -313,7 +335,7 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
       return;
     }
 
-    const normalizedFailure = normalizeFailureMetadata(failure);
+    const normalizedFailure = normalizeFailureMetadata(failure, record.retry.maxAttempts);
     const shouldRetry = normalizedFailure.retryable && !normalizedFailure.terminal;
     const problemDetails = {
       ...problem.toJSON(),

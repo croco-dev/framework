@@ -53,6 +53,7 @@ export { makeEvent } from "./commands/makeEvent";
 export { makeListener } from "./commands/makeListener";
 export { makeRepository } from "./commands/makeRepository";
 export { migrate } from "./commands/migrate";
+export { formatUpgradeReport, runUpgrade, upgrade } from "./commands/upgrade";
 export {
   formatOpsStatusReport,
   getOpsStatusExitCode,
@@ -107,3 +108,13 @@ export type {
 } from "./commands/ops";
 
 export type { RuntimePolicyCheckIo } from "./commands/runtimePolicy";
+export type {
+  UpgradeDirent,
+  UpgradeFinding,
+  UpgradeFindingAction,
+  UpgradeFindingConfidence,
+  UpgradeIo,
+  UpgradeReport,
+  UpgradeReportMode,
+  UpgradeSourceLocation,
+} from "./commands/upgrade";

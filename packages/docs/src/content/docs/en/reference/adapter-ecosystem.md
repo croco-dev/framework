@@ -76,6 +76,27 @@ or intentionally unclaimed. A package must not silently degrade when a runtime c
 it should fail with a deterministic Problem, diagnostic, build-time check, or documented unsupported
 state.
 
+## RuntimeCapabilityManifest v1
+
+Runtime compatibility claims are represented by `RuntimeCapabilityManifest` artifacts. Generated
+apps write `croco-runtime-capability.manifest.json` with `version:
+"croco.runtime-capability.manifest.v1"`, a `platform` of `node`, `lambda`, or
+`cloudflare-workers`, the deterministic capability map for that platform, and any diagnostics
+found while comparing route/provider requirements against the manifest.
+
+The shared capability vocabulary is owned by `@croco/framework-context` and includes environment
+bindings, filesystem access, Node APIs, request lifecycle hooks, tracing, `waitUntil`, flush,
+streaming response, deadline, abort signal, and shutdown support. Use
+`createRuntimeCapabilityManifest(platform)` to emit a manifest and
+`checkRuntimeCapabilityRequirements()` or the runtime-policy manifest comparison helpers to validate
+route, service, event-handler, or provider requirements before deployment.
+
+Unsupported capability use must fail visibly. Build-time comparisons emit
+`CROCO_RUNTIME_CAPABILITY_001` diagnostics, and runtime hook validation in `@croco/transports-http`
+throws `RuntimeCapabilityProblem` with `diagnosticCode`, `platform`, and `capability` extensions.
+The recovery path is to choose a runtime that supports the capability, remove the requirement, or
+move the behavior behind an adapter that declares the supported runtime boundary.
+
 ## Compatibility Certification
 
 Compatibility certification is an evidence record for one package version, one Croco contract, and
@@ -94,6 +115,8 @@ Certification has three states:
 The certification source of truth for first-party packages is `docs/package-catalog.json` plus the
 evidence linked from package README, tests, docs, and release notes. The extension matrix renders the
 runtime and maturity metadata, but maturity alone is not certification.
+`pnpm provider-certification:check` enforces this record in CI before a provider, integration,
+transport, or presentation package can remain production-ready with a certification claim.
 
 ### Certification Checklist
 

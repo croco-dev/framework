@@ -2,6 +2,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { OutboxFailureMetadata } from "../types";
 
 export const OUTBOX_DISPATCH_PROBLEM_CODE = "outbox-core/dispatch-failed";
+export const OUTBOX_RECORD_ID_CONFLICT_PROBLEM_CODE = "outbox-core/record-id-conflict";
 export const OUTBOX_FAILURE_METADATA_PROBLEM_CODE = "outbox-core/failure-metadata-missing";
 export const OUTBOX_UNIT_OF_WORK_CONTEXT_PROBLEM_CODE = "outbox-core/unit-of-work-context-invalid";
 
@@ -14,6 +15,9 @@ export type OutboxFailureProblemExtensions = {
   readonly outboxNextVisibleAt?: string;
 };
 
+/**
+ * Options used when creating a Problem for outbox dispatch failures.
+ */
 export type OutboxDispatchProblemOptions = {
   readonly detail?: string;
   readonly failure: OutboxFailureMetadata;
@@ -74,6 +78,9 @@ export function readOutboxFailureMetadata(problem: Problem): OutboxFailureMetada
   };
 }
 
+/**
+ * Problem raised when an outbox dispatcher reports a failed dispatch attempt.
+ */
 export class OutboxDispatchProblem extends Problem {
   constructor(options: OutboxDispatchProblemOptions) {
     super(
@@ -88,6 +95,22 @@ export class OutboxDispatchProblem extends Problem {
   }
 }
 
+/**
+ * Problem raised when an explicit outbox record id already belongs to another idempotency scope.
+ */
+export class OutboxRecordIdConflictProblem extends Problem {
+  constructor(id: string) {
+    super(
+      OUTBOX_RECORD_ID_CONFLICT_PROBLEM_CODE,
+      ProblemCategory.Conflict,
+      `Outbox record id '${id}' already exists for another idempotency scope.`,
+    );
+  }
+}
+
+/**
+ * Problem raised when a dispatch failure does not carry outbox retry metadata.
+ */
 export class OutboxFailureMetadataProblem extends Problem {
   constructor() {
     super(
@@ -98,6 +121,9 @@ export class OutboxFailureMetadataProblem extends Problem {
   }
 }
 
+/**
+ * Problem raised when a Unit of Work context is missing or owned by another store.
+ */
 export class OutboxUnitOfWorkContextProblem extends Problem {
   constructor() {
     super(

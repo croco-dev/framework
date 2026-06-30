@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 409,
+  problemCount: 410,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7953,7 +7953,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 79,
+          line: 86,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7966,12 +7966,13 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Internal Server Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#outbox-core-failure-metadata-missing",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause:
+          "A dispatcher attempted to mark an outbox record failed without the required retry metadata extensions.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Abort the dispatch attempt and pass an OutboxDispatchProblem or equivalent Problem with outbox retry metadata.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Audit dispatcher error mapping so every failure path preserves attempt, retryability, terminal state, and failedAt metadata.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",
@@ -7985,7 +7986,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 93,
+          line: 116,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "outbox-core/record-id-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#outbox-core-record-id-conflict",
+      recovery: {
+        cause:
+          "A caller tried to create an outbox record with an explicit id that already belongs to another idempotency scope.",
+        userAction:
+          "Reuse the original idempotency key for the same intent or choose a new record id for a different intent.",
+        operatorAction:
+          "Inspect the producer id/idempotency assignment path and remove any shared id generator or manual id reuse.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
+          line: 103,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7999,12 +8033,13 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#outbox-core-unit-of-work-context-invalid",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause:
+          "An outbox write received a Unit of Work context that was missing, malformed, or created by another store instance.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Abort the write and use the context supplied by the active TransactionalOutboxStore.runInUnitOfWork callback.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Check transaction boundary wiring so repository and outbox writes share the same store-owned Unit of Work client.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",
@@ -8018,7 +8053,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/outbox-core/src/libs/problems/OutboxProblems.ts",
-          line: 103,
+          line: 129,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11089,7 +11124,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/testing.ts",
-          line: 175,
+          line: 178,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11154,7 +11189,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/testing.ts",
-          line: 162,
+          line: 165,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11638,7 +11673,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/runtimeContext.ts",
-          line: 87,
+          line: 88,
           column: 3,
           kind: "problem-class",
         },

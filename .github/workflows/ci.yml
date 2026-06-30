@@ -183,6 +183,22 @@ jobs:
         id: test
         run: pnpm turbo run test --summarize --continue=always
 
+      - name: Provider certification gate
+        id: provider_certification_gate
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          pnpm provider-certification:check
+          status=$?
+          set -e
+          if [ -f ci-reports/package-quality/provider-certification.md ]; then
+            cat ci-reports/package-quality/provider-certification.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Provider certification matrix report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
       - name: Production-ready package gate
         id: production_ready_package_gate
         if: always()
@@ -211,6 +227,7 @@ jobs:
           PACKAGE_QUALITY_BUILD_STATUS: ${{ steps.build.outcome || 'skipped' }}
           PACKAGE_QUALITY_TYPECHECK_STATUS: ${{ steps.typecheck.outcome || 'skipped' }}
           PACKAGE_QUALITY_TEST_STATUS: ${{ steps.test.outcome || 'skipped' }}
+          PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS: ${{ steps.provider_certification_gate.outcome || 'skipped' }}
         shell: bash
         run: |
           pnpm package-quality:report

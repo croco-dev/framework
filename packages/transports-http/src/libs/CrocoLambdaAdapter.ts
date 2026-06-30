@@ -127,6 +127,9 @@ export class CrocoLambdaAdapter {
           requestLifecycle: true,
           waitUntil: true,
           flush: true,
+          streamingResponse: false,
+          deadline: true,
+          abortSignal: false,
           shutdown: false,
         },
       };

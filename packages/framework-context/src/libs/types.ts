@@ -128,10 +128,38 @@ export type RuntimeCapabilities = {
   trace: boolean;
   waitUntil: boolean;
   flush: boolean;
+  streamingResponse: boolean;
+  deadline: boolean;
+  abortSignal: boolean;
   shutdown: boolean;
 };
 
 export type RuntimeCapabilityName = keyof RuntimeCapabilities;
+
+export type RuntimeCapabilityManifestVersion = "croco.runtime-capability.manifest.v1";
+
+export type RuntimeCapabilityDiagnosticCode = "CROCO_RUNTIME_CAPABILITY_001";
+
+export type RuntimeCapabilityDiagnostic = {
+  readonly code: RuntimeCapabilityDiagnosticCode;
+  readonly severity: "error";
+  readonly platform: RuntimePlatform;
+  readonly capability: RuntimeCapabilityName;
+  readonly message: string;
+  readonly source?: DependencySourceLocation;
+};
+
+export type RuntimeCapabilityRequirement = {
+  readonly capability: RuntimeCapabilityName;
+  readonly source?: DependencySourceLocation;
+};
+
+export type RuntimeCapabilityManifest = {
+  readonly version: RuntimeCapabilityManifestVersion;
+  readonly platform: RuntimePlatform;
+  readonly capabilities: RuntimeCapabilities;
+  readonly diagnostics: readonly RuntimeCapabilityDiagnostic[];
+};
 
 export type RuntimeNativeContext = Record<string, unknown>;
 

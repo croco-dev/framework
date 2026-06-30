@@ -782,5 +782,219 @@
         ]
       }
     }
+  },
+  "certification": {
+    "schemaVersion": 1,
+    "records": [
+      {
+        "package": "@croco/storage-r2",
+        "contract": "@croco/storage-core/StorageProvider",
+        "adapterCategory": "provider",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.3",
+        "state": "candidate",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/storage-r2 test"
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/storage-r2 test"
+          },
+          "liveSmoke": {
+            "status": "missing",
+            "reason": "Optional R2 live smoke is env-gated and no reviewed real-credential run is recorded in release evidence."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/storage-r2 test",
+            "description": "R2StorageDiagnosticsProvider tests cover readiness output and secret redaction."
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/storage-r2 test",
+            "description": "Problem and diagnostics tests cover R2 access key and secret redaction."
+          }
+        },
+        "knownGaps": ["Recorded real R2 liveSmoke evidence is required before certified state."]
+      },
+      {
+        "package": "@croco/billing-polar",
+        "contract": "@croco/billing-core/BillingGateway",
+        "adapterCategory": "provider",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.3",
+        "state": "candidate",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/billing-polar test"
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/billing-polar test"
+          },
+          "liveSmoke": {
+            "status": "missing",
+            "reason": "Optional Polar live smoke is env-gated and no reviewed real-credential run is recorded in release evidence."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/billing-polar test",
+            "description": "PolarBillingDiagnosticsProvider tests cover readiness output and safe configuration reporting."
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/billing-polar test",
+            "description": "Diagnostics and Problem tests cover Polar token and webhook secret redaction."
+          }
+        },
+        "knownGaps": ["Recorded real Polar liveSmoke evidence is required before certified state."]
+      },
+      {
+        "package": "@croco/search-meilisearch",
+        "contract": "@croco/search-core/SearchEngine",
+        "adapterCategory": "provider",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.3",
+        "state": "candidate",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/search-meilisearch test"
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/search-meilisearch test"
+          },
+          "liveSmoke": {
+            "status": "missing",
+            "reason": "Optional Meilisearch live smoke is env-gated and no reviewed real-credential run is recorded in release evidence."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/search-meilisearch test",
+            "description": "MeilisearchDiagnosticsProvider tests cover readiness output without exposing host/API key material."
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/search-meilisearch test",
+            "description": "Search provider tests cover upstream failure normalization and API key redaction."
+          }
+        },
+        "knownGaps": [
+          "Recorded real Meilisearch liveSmoke evidence is required before certified state."
+        ]
+      },
+      {
+        "package": "@croco/telemetry-api",
+        "contract": "@croco/telemetry-api/Trace",
+        "adapterCategory": "integration",
+        "runtimes": ["node", "lambda", "cloudflare-workers", "browser"],
+        "packageVersion": "0.0.3",
+        "state": "certified",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/telemetry-api test",
+            "artifact": "packages/telemetry-api/src/tests/Trace.spec.ts"
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/telemetry-api test",
+            "artifact": "packages/telemetry-api/src/tests/frontendBridge.spec.ts"
+          },
+          "liveSmoke": {
+            "status": "present",
+            "artifact": "packages/telemetry-api/README.md",
+            "description": "No external live provider credential is required; no-credential local smoke covers the certified trace and browser bridge paths."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/telemetry-api test",
+            "artifact": "packages/telemetry-api/src/tests/Trace.spec.ts"
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/telemetry-api test",
+            "artifact": "packages/telemetry-api/src/tests/frontendBridge.spec.ts"
+          }
+        },
+        "knownGaps": []
+      },
+      {
+        "package": "@croco/telemetry-sdk-node",
+        "contract": "@croco/telemetry-sdk-node/TelemetryRuntime",
+        "adapterCategory": "integration",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.3",
+        "state": "certified",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/telemetry-sdk-node test",
+            "artifact": "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts"
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/telemetry-sdk-node test",
+            "artifact": "packages/telemetry-sdk-node/src/tests/LambdaPreset.spec.ts"
+          },
+          "liveSmoke": {
+            "status": "present",
+            "artifact": "packages/telemetry-sdk-node/README.md",
+            "description": "Live OTLP export is env-gated by exporter credentials/endpoints; no-credential Lambda preset and forceFlush behavior stay covered in default tests."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/telemetry-sdk-node test",
+            "artifact": "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts"
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/telemetry-sdk-node test",
+            "artifact": "packages/telemetry-sdk-node/src/tests/TelemetryProblems.spec.ts"
+          }
+        },
+        "knownGaps": []
+      },
+      {
+        "package": "@croco/transports-http",
+        "contract": "@croco/transports-http/HttpTransport",
+        "adapterCategory": "transport",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.3",
+        "state": "certified",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/transports-http test",
+            "artifact": "packages/transports-http/src/tests/HttpTransportIntegration.spec.ts"
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/transports-http test",
+            "artifact": "packages/transports-http/src/tests/HealthCheck.spec.ts"
+          },
+          "liveSmoke": {
+            "status": "present",
+            "artifact": "packages/transports-http/README.md",
+            "description": "Operational live and diagnostics smoke is token/env-gated; local no-credential health endpoints stay covered by default tests."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/transports-http test",
+            "artifact": "packages/transports-http/src/tests/OperationalEndpoints.spec.ts"
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/transports-http test",
+            "artifact": "packages/transports-http/src/tests/OperationalEndpoints.spec.ts"
+          }
+        },
+        "knownGaps": []
+      }
+    ]
   }
 }

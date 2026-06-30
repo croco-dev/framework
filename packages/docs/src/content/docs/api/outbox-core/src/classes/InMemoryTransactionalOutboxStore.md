@@ -5,7 +5,7 @@ prev: false
 title: "InMemoryTransactionalOutboxStore"
 ---
 
-Provider-neutral transactional outbox storage contract.
+In-memory transactional outbox store implementation for conformance tests and local fixtures.
 
 ## Implements
 
@@ -41,7 +41,7 @@ Provider-neutral transactional outbox storage contract.
 
 [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/).[`claimBatch`](/api/outbox-core/src/interfaces/transactionaloutboxstore/#claimbatch)
 
-***
+---
 
 ### clear()
 
@@ -51,7 +51,7 @@ Provider-neutral transactional outbox storage contract.
 
 `void`
 
-***
+---
 
 ### findRecord()
 
@@ -67,7 +67,7 @@ Provider-neutral transactional outbox storage contract.
 
 `Promise`\<[`OutboxRecord`](/api/outbox-core/src/type-aliases/outboxrecord/) \| `null`\>
 
-***
+---
 
 ### listRecords()
 
@@ -77,7 +77,7 @@ Provider-neutral transactional outbox storage contract.
 
 `Promise`\<[`OutboxRecord`](/api/outbox-core/src/type-aliases/outboxrecord/)[]\>
 
-***
+---
 
 ### markDispatched()
 
@@ -101,7 +101,7 @@ Provider-neutral transactional outbox storage contract.
 
 [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/).[`markDispatched`](/api/outbox-core/src/interfaces/transactionaloutboxstore/#markdispatched)
 
-***
+---
 
 ### markFailed()
 
@@ -125,7 +125,7 @@ Provider-neutral transactional outbox storage contract.
 
 [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/).[`markFailed`](/api/outbox-core/src/interfaces/transactionaloutboxstore/#markfailed)
 
-***
+---
 
 ### record()
 
@@ -149,7 +149,7 @@ Provider-neutral transactional outbox storage contract.
 
 [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/).[`record`](/api/outbox-core/src/interfaces/transactionaloutboxstore/#record)
 
-***
+---
 
 ### runInUnitOfWork()
 

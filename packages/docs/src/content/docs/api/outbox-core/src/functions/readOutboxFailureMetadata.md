@@ -7,8 +7,6 @@ title: "readOutboxFailureMetadata"
 
 > **readOutboxFailureMetadata**(`problem`): [`OutboxFailureMetadata`](/api/outbox-core/src/type-aliases/outboxfailuremetadata/) \| `null`
 
-Croco Problem types and helpers for outbox dispatch failures.
-
 ## Parameters
 
 ### problem

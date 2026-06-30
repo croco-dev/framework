@@ -170,6 +170,7 @@ export default defineConfig({
             { label: "Architecture", slug: "guides/architecture" },
             { label: "Schema Source Of Truth", slug: "guides/schema-source-of-truth" },
             { label: "Runtime Contract", slug: "guides/runtime-contract" },
+            { label: "Reliability Path RFC", slug: "guides/reliability-path-rfc" },
             { label: "Failure Semantics", slug: "guides/failure-semantics" },
             { label: "Deployment Recipes", slug: "guides/deployment-recipes" },
             { label: "Events Core", slug: "guides/events-core" },

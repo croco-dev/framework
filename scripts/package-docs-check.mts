@@ -22,6 +22,7 @@ type PackageJson = {
   readonly peerDependencies?: unknown;
   readonly name?: unknown;
   readonly private?: unknown;
+  readonly version?: unknown;
 };
 
 type PackageInfo = {
@@ -33,6 +34,7 @@ type PackageInfo = {
   readonly peerDependencies: readonly string[];
   readonly private: boolean;
   readonly shortName: string;
+  readonly version: string;
 };
 
 type PackageRecord = PackageInfo & {
@@ -41,6 +43,7 @@ type PackageRecord = PackageInfo & {
 };
 
 type CatalogMetadata = {
+  readonly certification?: unknown;
   readonly extensionMatrix?: unknown;
   readonly schemaVersion?: unknown;
   readonly groups?: unknown;
@@ -83,6 +86,40 @@ type ExtensionMatrixState = {
   readonly packages: readonly ExtensionRecord[];
 };
 
+type AdapterCategoryKey = (typeof adapterCategoryOrder)[number];
+
+type CertificationStateKey = (typeof certificationStateOrder)[number];
+
+type CertificationEvidenceKey = (typeof certificationEvidenceKeyOrder)[number];
+
+type CertificationEvidenceStatus = (typeof certificationEvidenceStatusOrder)[number];
+
+type CertificationEvidenceItem = {
+  readonly artifact: string;
+  readonly command: string;
+  readonly description: string;
+  readonly reason: string;
+  readonly status: CertificationEvidenceStatus;
+};
+
+type CertificationRecord = {
+  readonly adapterCategory: AdapterCategoryKey;
+  readonly contract: string;
+  readonly evidence: ReadonlyMap<CertificationEvidenceKey, CertificationEvidenceItem>;
+  readonly knownGaps: readonly string[];
+  readonly packageName: string;
+  readonly packageShortName: string;
+  readonly packageVersion: string;
+  readonly runtimes: readonly RuntimeKey[];
+  readonly state: CertificationStateKey;
+};
+
+type CertificationCatalogState = {
+  readonly records: readonly CertificationRecord[];
+  readonly recordsByPackage: ReadonlyMap<string, readonly CertificationRecord[]>;
+  readonly schemaVersion: number;
+};
+
 type RuntimeProfileCatalog = {
   readonly schemaVersion?: unknown;
   readonly validationCommand?: unknown;
@@ -111,6 +148,7 @@ type CoverageSet = {
 };
 
 type CatalogState = {
+  readonly certification: CertificationCatalogState;
   readonly extensionMatrix: ExtensionMatrixState;
   readonly groups: ReadonlyMap<string, CatalogGroup>;
   readonly maturity: ReadonlyMap<MaturityKey, MaturityConfig>;
@@ -148,6 +186,22 @@ const extensionMatrixDocsPath = join(
 const readmePath = "README.md";
 const maturityOrder = ["production", "beta", "alpha", "deprecated"] as const;
 const runtimeOrder = ["node", "lambda", "cloudflare-workers", "browser"] as const;
+const adapterCategoryOrder = [
+  "provider",
+  "integration",
+  "transport",
+  "presentation",
+  "community",
+] as const;
+const certificationStateOrder = ["uncertified", "candidate", "certified"] as const;
+const certificationEvidenceStatusOrder = ["present", "missing", "not-applicable"] as const;
+const certificationEvidenceKeyOrder = [
+  "conformance",
+  "noCredentialSmoke",
+  "liveSmoke",
+  "diagnostics",
+  "redactionTests",
+] as const;
 const artifactFormatOrder = ["esm", "cjs", "dual", "neutral"] as const;
 const artifactTypeOrder = ["code", "types", "config", "asset"] as const;
 const scriptRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -295,8 +349,15 @@ function loadCatalogState(rootDir: string, violations: string[]): CatalogState {
     records,
     violations,
   );
+  const certification = parseCertification(
+    metadata.certification,
+    records,
+    extensionMatrix,
+    violations,
+  );
 
   return {
+    certification,
     extensionMatrix,
     groups,
     maturity,
@@ -341,6 +402,7 @@ function readPackages(rootDir: string): PackageInfo[] {
       peerDependencies: readDependencyKeys(pkg.peerDependencies),
       private: pkg.private === true,
       shortName: toShortPackageName(pkg.name),
+      version: typeof pkg.version === "string" ? pkg.version : "",
     });
   }
 
@@ -611,6 +673,331 @@ function parseExtensionMetadata(
   };
 }
 
+function parseCertification(
+  value: unknown,
+  packages: readonly PackageRecord[],
+  extensionMatrix: ExtensionMatrixState,
+  violations: string[],
+): CertificationCatalogState {
+  if (!isRecord(value)) {
+    violations.push(`${catalogMetadataPath}: certification must be an object`);
+    return {
+      records: [],
+      recordsByPackage: new Map(),
+      schemaVersion: 0,
+    };
+  }
+
+  const schemaVersion = value.schemaVersion;
+  if (schemaVersion !== 1) {
+    violations.push(`${catalogMetadataPath}: certification.schemaVersion must be 1`);
+  }
+
+  const recordsValue = value.records;
+  if (!Array.isArray(recordsValue)) {
+    violations.push(`${catalogMetadataPath}: certification.records must be an array`);
+    return {
+      records: [],
+      recordsByPackage: new Map(),
+      schemaVersion: schemaVersion === 1 ? 1 : 0,
+    };
+  }
+
+  const packageByFullName = new Map(packages.map((pkg) => [pkg.name, pkg]));
+  const extensionByShortName = new Map(extensionMatrix.packages.map((pkg) => [pkg.shortName, pkg]));
+  const recordKeys = new Set<string>();
+  const records: CertificationRecord[] = [];
+
+  for (const [index, recordValue] of recordsValue.entries()) {
+    const record = parseCertificationRecord(
+      index,
+      recordValue,
+      packageByFullName,
+      extensionByShortName,
+      recordKeys,
+      violations,
+    );
+    if (record) {
+      records.push(record);
+    }
+  }
+
+  const recordsByPackage = new Map<string, CertificationRecord[]>();
+  for (const record of records) {
+    const existing = recordsByPackage.get(record.packageShortName) ?? [];
+    recordsByPackage.set(record.packageShortName, [...existing, record]);
+  }
+
+  return {
+    records,
+    recordsByPackage,
+    schemaVersion: schemaVersion === 1 ? 1 : 0,
+  };
+}
+
+function parseCertificationRecord(
+  index: number,
+  value: unknown,
+  packageByFullName: ReadonlyMap<string, PackageRecord>,
+  extensionByShortName: ReadonlyMap<string, ExtensionRecord>,
+  recordKeys: Set<string>,
+  violations: string[],
+): CertificationRecord | null {
+  const label = `certification.records[${index}]`;
+  if (!isRecord(value)) {
+    violations.push(`${catalogMetadataPath}: ${label} must be an object`);
+    return null;
+  }
+
+  const packageName = readRequiredString(value.package, `${label}.package`, violations);
+  const pkg = packageByFullName.get(packageName);
+  if (!pkg) {
+    violations.push(
+      `${catalogMetadataPath}: ${label}.package references missing package ${packageName}`,
+    );
+    return null;
+  }
+
+  const extension = extensionByShortName.get(pkg.shortName);
+  if (!extension) {
+    violations.push(
+      `${catalogMetadataPath}: ${label}.package ${packageName} must also be listed in extensionMatrix.packages`,
+    );
+    return null;
+  }
+
+  const contract = readRequiredString(value.contract, `${label}.contract`, violations);
+  const packageVersion = readRequiredString(
+    value.packageVersion,
+    `${label}.packageVersion`,
+    violations,
+  );
+  if (packageVersion && packageVersion !== pkg.version) {
+    violations.push(
+      `${catalogMetadataPath}: ${label}.packageVersion ${packageVersion} must match ${packageName} package.json version ${pkg.version}`,
+    );
+  }
+
+  const adapterCategory = readAdapterCategory(
+    value.adapterCategory,
+    `${label}.adapterCategory`,
+    violations,
+  );
+  const expectedAdapterCategory = adapterCategoryForGroup(extension.group);
+  if (adapterCategory && expectedAdapterCategory && adapterCategory !== expectedAdapterCategory) {
+    violations.push(
+      `${catalogMetadataPath}: ${label}.adapterCategory ${adapterCategory} must match extensionMatrix group ${extension.group} (${expectedAdapterCategory})`,
+    );
+  }
+
+  const runtimes = readRuntimeArray(value.runtimes, `${label}.runtimes`, violations);
+  const extensionRuntimes = new Set(extension.extension.runtimes);
+  for (const runtime of runtimes) {
+    if (!extensionRuntimes.has(runtime)) {
+      violations.push(
+        `${catalogMetadataPath}: ${label}.runtimes claims ${runtime}, but extensionMatrix.packages.${pkg.shortName}.runtimes does not`,
+      );
+    }
+  }
+
+  const state = readCertificationState(value.state, `${label}.state`, violations);
+  const evidence = parseCertificationEvidence(value.evidence, label, violations);
+  const knownGaps = readStringArray(value.knownGaps, `${label}.knownGaps`, violations);
+  const missingEvidence = [...evidence.entries()].filter(([, item]) => item.status === "missing");
+  const missingEvidenceKeys = missingEvidence.map(([key]) => key);
+
+  if (state === "certified" && missingEvidence.length > 0) {
+    violations.push(
+      `${catalogMetadataPath}: ${label}.state certified cannot have missing evidence: ${missingEvidenceKeys.join(", ")}`,
+    );
+  }
+
+  const unnamedGaps = missingEvidenceKeys.filter(
+    (key) => !knownGaps.some((gap) => gap.includes(key)),
+  );
+  if (unnamedGaps.length > 0) {
+    violations.push(
+      `${catalogMetadataPath}: ${label}.knownGaps must name the missing certification gaps: ${unnamedGaps.join(", ")}`,
+    );
+  }
+
+  const recordKey = [packageName, contract, packageVersion, [...runtimes].sort().join(",")].join(
+    "|",
+  );
+  if (recordKeys.has(recordKey)) {
+    violations.push(
+      `${catalogMetadataPath}: ${label} duplicates certification record ${recordKey}`,
+    );
+  }
+  recordKeys.add(recordKey);
+
+  if (
+    !contract ||
+    !packageVersion ||
+    !adapterCategory ||
+    runtimes.length === 0 ||
+    !state ||
+    evidence.size !== certificationEvidenceKeyOrder.length
+  ) {
+    return null;
+  }
+
+  return {
+    adapterCategory,
+    contract,
+    evidence,
+    knownGaps,
+    packageName,
+    packageShortName: pkg.shortName,
+    packageVersion,
+    runtimes,
+    state,
+  };
+}
+
+function parseCertificationEvidence(
+  value: unknown,
+  recordLabel: string,
+  violations: string[],
+): ReadonlyMap<CertificationEvidenceKey, CertificationEvidenceItem> {
+  const evidence = new Map<CertificationEvidenceKey, CertificationEvidenceItem>();
+  if (!isRecord(value)) {
+    violations.push(`${catalogMetadataPath}: ${recordLabel}.evidence must be an object`);
+    return evidence;
+  }
+
+  for (const key of certificationEvidenceKeyOrder) {
+    const item = parseCertificationEvidenceItem(
+      value[key],
+      `${recordLabel}.evidence.${key}`,
+      violations,
+    );
+    if (item) {
+      evidence.set(key, item);
+    }
+  }
+
+  return evidence;
+}
+
+function parseCertificationEvidenceItem(
+  value: unknown,
+  label: string,
+  violations: string[],
+): CertificationEvidenceItem | null {
+  if (!isRecord(value)) {
+    violations.push(`${catalogMetadataPath}: ${label} must be an object`);
+    return null;
+  }
+
+  const status = readCertificationEvidenceStatus(value.status, `${label}.status`, violations);
+  const command = readOptionalString(value.command, `${label}.command`, violations);
+  const artifact = readOptionalString(value.artifact, `${label}.artifact`, violations);
+  const description = readOptionalString(value.description, `${label}.description`, violations);
+  const reason = readOptionalString(value.reason, `${label}.reason`, violations);
+
+  if (status === "present" && !command && !artifact) {
+    violations.push(
+      `${catalogMetadataPath}: ${label} present evidence must include command or artifact`,
+    );
+  }
+
+  if ((status === "missing" || status === "not-applicable") && !reason) {
+    violations.push(`${catalogMetadataPath}: ${label} ${status} evidence must include reason`);
+  }
+
+  if (!status) {
+    return null;
+  }
+
+  return {
+    artifact,
+    command,
+    description,
+    reason,
+    status,
+  };
+}
+
+function readAdapterCategory(
+  value: unknown,
+  key: string,
+  violations: string[],
+): AdapterCategoryKey | "" {
+  if (typeof value !== "string" || !adapterCategoryOrder.includes(value as AdapterCategoryKey)) {
+    violations.push(
+      `${catalogMetadataPath}: ${key} must be one of ${adapterCategoryOrder.join(", ")}`,
+    );
+    return "";
+  }
+
+  return value as AdapterCategoryKey;
+}
+
+function readCertificationState(
+  value: unknown,
+  key: string,
+  violations: string[],
+): CertificationStateKey | "" {
+  if (
+    typeof value !== "string" ||
+    !certificationStateOrder.includes(value as CertificationStateKey)
+  ) {
+    violations.push(
+      `${catalogMetadataPath}: ${key} must be one of ${certificationStateOrder.join(", ")}`,
+    );
+    return "";
+  }
+
+  return value as CertificationStateKey;
+}
+
+function readCertificationEvidenceStatus(
+  value: unknown,
+  key: string,
+  violations: string[],
+): CertificationEvidenceStatus | "" {
+  if (
+    typeof value !== "string" ||
+    !certificationEvidenceStatusOrder.includes(value as CertificationEvidenceStatus)
+  ) {
+    violations.push(
+      `${catalogMetadataPath}: ${key} must be one of ${certificationEvidenceStatusOrder.join(", ")}`,
+    );
+    return "";
+  }
+
+  return value as CertificationEvidenceStatus;
+}
+
+function readOptionalString(value: unknown, key: string, violations: string[]): string {
+  if (value === undefined) {
+    return "";
+  }
+
+  if (typeof value !== "string" || value.length === 0) {
+    violations.push(`${catalogMetadataPath}: ${key} must be a non-empty string when provided`);
+    return "";
+  }
+
+  return value;
+}
+
+function adapterCategoryForGroup(group: string): AdapterCategoryKey | null {
+  switch (group) {
+    case "Provider":
+      return "provider";
+    case "Integration":
+      return "integration";
+    case "Transport":
+      return "transport";
+    case "Presentation":
+      return "presentation";
+    default:
+      return null;
+  }
+}
+
 function readRequiredString(value: unknown, key: string, violations: string[]): string {
   if (typeof value !== "string" || value.length === 0) {
     violations.push(`${catalogMetadataPath}: ${key} must be a non-empty string`);
@@ -627,6 +1014,15 @@ function readRequiredStringArray(
 ): readonly string[] {
   if (!isStringArray(value) || value.length === 0) {
     violations.push(`${catalogMetadataPath}: ${key} must be a non-empty string array`);
+    return [];
+  }
+
+  return value;
+}
+
+function readStringArray(value: unknown, key: string, violations: string[]): readonly string[] {
+  if (!isStringArray(value)) {
+    violations.push(`${catalogMetadataPath}: ${key} must be a string array`);
     return [];
   }
 
@@ -1449,7 +1845,7 @@ function generateReadmeCatalog(state: CatalogState): string {
     "",
     "> 이 섹션은 `docs/package-catalog.json`의 `extensionMatrix` metadata에서 생성됩니다. 성숙도와 package test 존재 여부는 별도 열로 표시합니다.",
     "",
-    "Adapter category definitions, official priorities, package naming rules, minimum compatibility criteria, and the certification checklist live in [Adapter Ecosystem](packages/docs/src/content/docs/en/reference/adapter-ecosystem.md).",
+    "Adapter category definitions, official priorities, package naming rules, minimum compatibility criteria, and the certification checklist live in [Adapter Ecosystem](packages/docs/src/content/docs/en/reference/adapter-ecosystem.md). Certification state is rendered from `docs/package-catalog.json` `certification.records` and is scoped to package, contract, runtime, package version, and evidence status.",
     "",
     "Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수, Workers는 Cloudflare Workers, Frontend는 browser/SSR frontend integration을 의미합니다.",
   );
@@ -1521,6 +1917,7 @@ function generateDocsReport(
     `| Missing generated API docs | ${coverage.missingApiDocs.length} |`,
     `| Missing package test directory | ${coverage.missingTests.length} |`,
     `| Extension matrix packages | ${state.extensionMatrix.packages.length} |`,
+    `| Certification records | ${state.certification.records.length} |`,
     `| Croco 1.0 spine packages | ${state.spinePackages.length} |`,
     "",
     "New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`. Production-ready packages must have generated API docs unless they have a short-lived justification in `temporaryProductionApiDocExceptions`.",
@@ -1532,6 +1929,12 @@ function generateDocsReport(
     "Downstream release gates should select this package set from `docs/package-catalog.json` `spine.packages`. Spine membership is independent from maturity: non-spine alpha/beta packages can remain outside the 1.0 blocker set unless a golden path or certified adapter contract explicitly pulls them in.",
     "",
     ...formatSpinePackageTable(state),
+    "",
+    "## Certification Records",
+    "",
+    "Certification records are validated from `docs/package-catalog.json` `certification.records`. Each row links a package catalog entry to one contract, package version, runtime set, state, evidence checklist, and explicit known gaps.",
+    "",
+    ...formatCertificationRecords(state.certification.records),
     "",
     "## Missing Package README",
     "",
@@ -1603,6 +2006,8 @@ function generateExtensionMatrixDocs(state: CatalogState): string {
     "",
     "This page lists Croco provider, integration, transport, and presentation adapter compatibility from `docs/package-catalog.json`. Required configuration, runtime support, package peer dependencies, maturity, package test presence, and certification evidence are intentionally separate so users can evaluate production readiness without treating a passing unit test as a maturity or compatibility certification claim.",
     "",
+    "Certification state is rendered from `certification.records`. Records are scoped to package, Croco contract, runtime set, package version, and evidence status; missing evidence is shown as an explicit gap.",
+    "",
     "Adapter category definitions, official priorities, package naming rules, minimum compatibility criteria, and the certification checklist are defined in [Adapter Ecosystem](../adapter-ecosystem/). Provider promotion criteria are defined in [Provider Maturity Gates](../provider-maturity/). Presentation runtime and promotion criteria are defined in [Presentation Runtime Support](../presentation-runtime-support/).",
     "",
     "Runtime columns: Node covers long-running server and CLI use, Lambda covers serverless functions, Workers covers Cloudflare Workers, and Frontend covers browser or SSR frontend integration.",
@@ -1629,14 +2034,15 @@ function appendExtensionMatrixTables(
       "",
       `${headingPrefix} ${group}`,
       "",
-      "| Package | Domain | Adapter | Node | Lambda | Workers | Frontend | Required env/config | Peer deps | Features | Maturity | Package tests |",
-      "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+      "| Package | Domain | Adapter | Node | Lambda | Workers | Frontend | Required env/config | Peer deps | Features | Maturity | Package tests | Certification |",
+      "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     );
 
     for (const pkg of packages) {
       const maturity = state.maturity.get(pkg.maturity)?.label ?? pkg.maturity;
+      const certificationRecords = state.certification.recordsByPackage.get(pkg.shortName) ?? [];
       lines.push(
-        `| \`${pkg.name}\` | ${pkg.extension.domain} | ${pkg.extension.adapter} | ${formatRuntimeSupport(pkg, "node")} | ${formatRuntimeSupport(pkg, "lambda")} | ${formatRuntimeSupport(pkg, "cloudflare-workers")} | ${formatRuntimeSupport(pkg, "browser")} | ${formatList(pkg.extension.requiredEnv)} | ${formatList(pkg.peerDependencies)} | ${formatList(pkg.extension.features)} | ${maturity} | ${formatPackageTestStatus(pkg)} |`,
+        `| \`${pkg.name}\` | ${pkg.extension.domain} | ${pkg.extension.adapter} | ${formatRuntimeSupport(pkg, "node")} | ${formatRuntimeSupport(pkg, "lambda")} | ${formatRuntimeSupport(pkg, "cloudflare-workers")} | ${formatRuntimeSupport(pkg, "browser")} | ${formatList(pkg.extension.requiredEnv)} | ${formatList(pkg.peerDependencies)} | ${formatList(pkg.extension.features)} | ${maturity} | ${formatPackageTestStatus(pkg)} | ${formatCertificationCell(certificationRecords)} |`,
       );
     }
   }
@@ -1708,8 +2114,76 @@ function formatApiDocsBacklogByMaturity(
   return lines;
 }
 
+function formatCertificationRecords(records: readonly CertificationRecord[]): string[] {
+  if (records.length === 0) {
+    return ["No certification records configured."];
+  }
+
+  const lines = [
+    "| Package | State | Contract | Runtimes | Version | Evidence | Known gaps |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+  ];
+
+  for (const record of records) {
+    lines.push(
+      `| \`${record.packageName}\` | ${record.state} | \`${escapeMarkdownTableCell(record.contract)}\` | ${formatList(record.runtimes)} | \`${record.packageVersion}\` | ${formatCertificationEvidenceList(record)} | ${formatList(record.knownGaps.map(escapeMarkdownTableCell))} |`,
+    );
+  }
+
+  return lines;
+}
+
+function formatCertificationEvidenceList(record: CertificationRecord): string {
+  return certificationEvidenceKeyOrder
+    .map((key) => {
+      const item = record.evidence.get(key);
+      return item ? `${key}: ${formatCertificationEvidenceItem(item)}` : `${key}: missing record`;
+    })
+    .join("<br>");
+}
+
+function formatCertificationEvidenceItem(item: CertificationEvidenceItem): string {
+  const details = [item.command, item.artifact, item.description, item.reason]
+    .filter(Boolean)
+    .map(escapeMarkdownTableCell);
+  return details.length > 0 ? `${item.status} (${details.join("; ")})` : item.status;
+}
+
+function formatCertificationCell(records: readonly CertificationRecord[]): string {
+  if (records.length === 0) {
+    return "uncertified<br>no certification record";
+  }
+
+  return records.map(formatCertificationRecordCell).join("<br><br>");
+}
+
+function formatCertificationRecordCell(record: CertificationRecord): string {
+  return [
+    `${record.state} (${record.packageVersion})`,
+    escapeMarkdownTableCell(record.contract),
+    formatList(record.runtimes),
+    formatCertificationGapSummary(record),
+  ].join("<br>");
+}
+
+function formatCertificationGapSummary(record: CertificationRecord): string {
+  const missing = certificationEvidenceKeyOrder.filter(
+    (key) => record.evidence.get(key)?.status === "missing",
+  );
+
+  if (missing.length === 0) {
+    return "evidence complete";
+  }
+
+  return `missing: ${missing.join(", ")}`;
+}
+
 function formatRuntimeSupport(pkg: ExtensionRecord, runtime: RuntimeKey): string {
   return pkg.extension.runtimes.includes(runtime) ? "yes" : "-";
+}
+
+function escapeMarkdownTableCell(value: string): string {
+  return value.replace(/\|/g, "\\|");
 }
 
 function formatList(values: readonly string[]): string {
@@ -1753,11 +2227,19 @@ function writeGeneratedFile(filePath: string, content: string): void {
 }
 
 function formatMarkdown(filePath: string, content: string): string {
-  const result = spawnSync("pnpm", ["exec", "oxfmt", "--stdin-filepath", filePath], {
-    cwd: scriptRootDir,
-    encoding: "utf-8",
-    input: content,
-  });
+  const localOxfmtPath = join(scriptRootDir, "node_modules", ".bin", "oxfmt");
+  const hasLocalOxfmt = existsSync(localOxfmtPath);
+  const result = spawnSync(
+    hasLocalOxfmt ? localOxfmtPath : "pnpm",
+    hasLocalOxfmt
+      ? ["--stdin-filepath", filePath]
+      : ["exec", "oxfmt", "--stdin-filepath", filePath],
+    {
+      cwd: scriptRootDir,
+      encoding: "utf-8",
+      input: content,
+    },
+  );
 
   if (result.status !== 0) {
     throw new Error(result.stderr.trim() || result.stdout.trim() || `oxfmt failed for ${filePath}`);

@@ -2,6 +2,8 @@ import {
   OUTBOX_DISPATCH_PROBLEM_CODE,
   OutboxDispatchProblem,
   OutboxFailureMetadataProblem,
+  OutboxRecordIdConflictProblem,
+  OutboxUnitOfWorkContextProblem,
 } from "./problems/OutboxProblems";
 import type {
   OutboxIntent,
@@ -101,6 +103,30 @@ export function createTransactionalOutboxStoreContractSuite<
         },
       },
       {
+        name: "rejects explicit record id reuse across idempotency scopes",
+        run: async () => {
+          const store = await options.createStore();
+          const now = new Date("2026-01-01T00:00:00.000Z");
+
+          await store.record(createIntent(), { id: "shared-id", now });
+
+          await assertRejects(
+            () =>
+              store.record(createIntent({ idempotencyKey: "welcome:user-2" }), {
+                id: "shared-id",
+                now,
+              }),
+            OutboxRecordIdConflictProblem,
+          );
+
+          assertEqual(
+            (await options.listRecords(store)).length,
+            1,
+            "record id conflict must not overwrite the existing record",
+          );
+        },
+      },
+      {
         name: "commits records written through a Unit of Work context",
         run: async () => {
           const store = await options.createStore();
@@ -117,6 +143,35 @@ export function createTransactionalOutboxStoreContractSuite<
             (await options.listRecords(store)).length,
             1,
             "committed Unit of Work must persist outbox records",
+          );
+        },
+      },
+      {
+        name: "commits concurrent Unit of Work writes without losing records",
+        run: async () => {
+          const store = await options.createStore();
+
+          await Promise.all([
+            options.runInUnitOfWork(store, async (context) => {
+              await store.record(createIntent(), {
+                id: "committed-a",
+                context,
+                now: new Date("2026-01-01T00:00:00.000Z"),
+              });
+            }),
+            options.runInUnitOfWork(store, async (context) => {
+              await store.record(createIntent({ idempotencyKey: "welcome:user-2" }), {
+                id: "committed-b",
+                context,
+                now: new Date("2026-01-01T00:00:00.000Z"),
+              });
+            }),
+          ]);
+
+          assertEqual(
+            (await options.listRecords(store)).length,
+            2,
+            "concurrent Unit of Work commits must preserve independent writes",
           );
         },
       },
@@ -149,12 +204,14 @@ export function createTransactionalOutboxStoreContractSuite<
           const store = await options.createStore();
           const malformedContext = {} as TransactionalOutboxStoreContext<TClient>;
 
-          await assertRejects(() =>
-            store.record(createIntent(), {
-              id: "invalid-context",
-              context: malformedContext,
-              now: new Date("2026-01-01T00:00:00.000Z"),
-            }),
+          await assertRejects(
+            () =>
+              store.record(createIntent(), {
+                id: "invalid-context",
+                context: malformedContext,
+                now: new Date("2026-01-01T00:00:00.000Z"),
+              }),
+            OutboxUnitOfWorkContextProblem,
           );
 
           assertEqual(
@@ -386,8 +443,9 @@ export function createTransactionalOutboxStoreContractSuite<
             visibilityTimeoutMs: 1_000,
           });
 
-          await assertRejects(() =>
-            store.markFailed(claimed.id, new OutboxFailureMetadataProblem()),
+          await assertRejects(
+            () => store.markFailed(claimed.id, new OutboxFailureMetadataProblem()),
+            OutboxFailureMetadataProblem,
           );
 
           const [record] = await options.listRecords(store);
@@ -448,6 +506,51 @@ export function createTransactionalOutboxStoreContractSuite<
             ).length,
             0,
             "terminal retry exhaustion must not become claimable later",
+          );
+        },
+      },
+      {
+        name: "uses stored retry budget when dispatch failure metadata disagrees",
+        run: async () => {
+          const store = await options.createStore();
+          const now = new Date("2026-01-01T00:00:00.000Z");
+          await store.record(createIntent(), {
+            id: "stored-retry-budget",
+            now,
+            retry: { maxAttempts: 1 },
+          });
+          const [claimed] = await store.claimBatch({
+            limit: 1,
+            now,
+            visibilityTimeoutMs: 1_000,
+          });
+
+          await store.markFailed(
+            claimed.id,
+            new OutboxDispatchProblem({
+              detail: "Dispatcher reported a mismatched retry budget.",
+              failure: {
+                retryable: true,
+                terminal: false,
+                attempt: claimed.claim.attempt,
+                maxAttempts: 10,
+                failedAt: new Date("2026-01-01T00:00:00.100Z"),
+                nextVisibleAt: new Date("2026-01-01T00:00:05.000Z"),
+              },
+            }),
+          );
+
+          const [record] = await options.listRecords(store);
+          assertEqual(
+            record.retry.maxAttempts,
+            1,
+            "stored retry budget must remain the source of truth",
+          );
+          assertEqual(record.status, "failed", "stored retry budget must control retry exhaustion");
+          assertEqual(
+            record.failure?.problem.outboxMaxAttempts,
+            1,
+            "stored Problem extensions must expose the normalized retry budget",
           );
         },
       },
@@ -520,10 +623,19 @@ function assertEqual<T>(actual: T, expected: T, message: string): void {
   }
 }
 
-async function assertRejects(fn: () => Promise<unknown>): Promise<void> {
+async function assertRejects(
+  fn: () => Promise<unknown>,
+  expectedError?: new (...args: never[]) => Error,
+): Promise<void> {
   try {
     await fn();
-  } catch {
+  } catch (error) {
+    if (expectedError && !(error instanceof expectedError)) {
+      throw new Error(
+        `Expected operation to reject with ${expectedError.name}, got ${error instanceof Error ? error.name : typeof error}.`,
+      );
+    }
+
     return;
   }
 

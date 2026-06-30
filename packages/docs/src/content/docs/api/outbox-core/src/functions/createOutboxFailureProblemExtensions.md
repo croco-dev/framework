@@ -7,8 +7,6 @@ title: "createOutboxFailureProblemExtensions"
 
 > **createOutboxFailureProblemExtensions**(`failure`): [`OutboxFailureProblemExtensions`](/api/outbox-core/src/type-aliases/outboxfailureproblemextensions/)
 
-Croco Problem types and helpers for outbox dispatch failures.
-
 ## Parameters
 
 ### failure

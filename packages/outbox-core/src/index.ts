@@ -1,6 +1,20 @@
-/**
- * Provider-neutral transactional outbox storage contract.
- */
+export {
+  OUTBOX_DISPATCH_PROBLEM_CODE,
+  OUTBOX_FAILURE_METADATA_PROBLEM_CODE,
+  OUTBOX_RECORD_ID_CONFLICT_PROBLEM_CODE,
+  OUTBOX_UNIT_OF_WORK_CONTEXT_PROBLEM_CODE,
+  OutboxDispatchProblem,
+  OutboxFailureMetadataProblem,
+  OutboxRecordIdConflictProblem,
+  OutboxUnitOfWorkContextProblem,
+  createOutboxFailureProblemExtensions,
+  readOutboxFailureMetadata,
+} from "./libs/problems/OutboxProblems";
+
+export { InMemoryTransactionalOutboxStore } from "./libs/InMemoryTransactionalOutboxStore";
+
+export { createTransactionalOutboxStoreContractSuite } from "./libs/conformance";
+
 export type {
   ClaimBatchOptions,
   ClaimedOutboxRecord,
@@ -22,35 +36,17 @@ export type {
   TransactionalOutboxStoreContext,
 } from "./libs/types";
 
-/**
- * Croco Problem types and helpers for outbox dispatch failures.
- */
-export {
-  OUTBOX_DISPATCH_PROBLEM_CODE,
-  OUTBOX_FAILURE_METADATA_PROBLEM_CODE,
-  OUTBOX_UNIT_OF_WORK_CONTEXT_PROBLEM_CODE,
-  OutboxDispatchProblem,
-  OutboxFailureMetadataProblem,
-  OutboxUnitOfWorkContextProblem,
-  createOutboxFailureProblemExtensions,
-  readOutboxFailureMetadata,
-} from "./libs/problems/OutboxProblems";
 export type {
   OutboxDispatchProblemOptions,
   OutboxFailureProblemExtensions,
 } from "./libs/problems/OutboxProblems";
 
-/**
- * Conformance helpers and an in-memory fixture for provider contract tests.
- */
-export { createTransactionalOutboxStoreContractSuite } from "./libs/conformance";
 export type {
   TransactionalOutboxStoreContractCase,
   TransactionalOutboxStoreContractOptions,
   TransactionalOutboxStoreContractSuite,
 } from "./libs/conformance";
-export {
-  InMemoryTransactionalOutboxStore,
-  type InMemoryTransactionalOutboxStoreClient,
-  type InMemoryTransactionalOutboxStoreState,
+export type {
+  InMemoryTransactionalOutboxStoreClient,
+  InMemoryTransactionalOutboxStoreState,
 } from "./libs/InMemoryTransactionalOutboxStore";

@@ -7,8 +7,6 @@ title: "OutboxRetryOptions"
 
 > **OutboxRetryOptions** = `object`
 
-Provider-neutral transactional outbox storage contract.
-
 ## Properties
 
 ### maxAttempts?

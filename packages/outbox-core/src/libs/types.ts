@@ -43,6 +43,9 @@ export type OutboxRetryMetadata = {
   readonly nextVisibleAt?: Date;
 };
 
+/**
+ * Retry and terminal-state metadata attached to a dispatch failure Problem.
+ */
 export type OutboxFailureMetadata = {
   readonly retryable: boolean;
   readonly terminal: boolean;
@@ -52,6 +55,9 @@ export type OutboxFailureMetadata = {
   readonly nextVisibleAt?: Date;
 };
 
+/**
+ * Persisted failure state containing Problem.toJSON() output and normalized retry metadata.
+ */
 export type OutboxFailureRecord = {
   readonly problem: ReturnType<Problem["toJSON"]>;
   readonly retry: OutboxFailureMetadata;
@@ -84,6 +90,9 @@ export type OutboxClaim = {
   readonly dispatcherId?: string;
 };
 
+/**
+ * Provider dispatch result metadata captured after a message is delivered.
+ */
 export type OutboxDispatchResultMetadata = {
   readonly providerMessageId?: string;
   readonly metadata?: Record<string, unknown>;
@@ -128,6 +137,9 @@ export type ClaimBatchOptions<TClient = unknown> = {
   readonly context?: TransactionalOutboxStoreContext<TClient>;
 };
 
+/**
+ * Provider-neutral transactional outbox storage contract.
+ */
 export interface TransactionalOutboxStore<TClient = unknown> {
   record(intent: OutboxIntent, options: OutboxRecordOptions<TClient>): Promise<OutboxRecord>;
   claimBatch(options: ClaimBatchOptions<TClient>): Promise<ClaimedOutboxRecord[]>;

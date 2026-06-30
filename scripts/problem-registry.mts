@@ -1792,6 +1792,39 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "outbox-core/failure-metadata-missing": recovery({
+    cause:
+      "A dispatcher attempted to mark an outbox record failed without the required retry metadata extensions.",
+    userAction:
+      "Abort the dispatch attempt and pass an OutboxDispatchProblem or equivalent Problem with outbox retry metadata.",
+    operatorAction:
+      "Audit dispatcher error mapping so every failure path preserves attempt, retryability, terminal state, and failedAt metadata.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "outbox-core/record-id-conflict": recovery({
+    cause:
+      "A caller tried to create an outbox record with an explicit id that already belongs to another idempotency scope.",
+    userAction:
+      "Reuse the original idempotency key for the same intent or choose a new record id for a different intent.",
+    operatorAction:
+      "Inspect the producer id/idempotency assignment path and remove any shared id generator or manual id reuse.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  "outbox-core/unit-of-work-context-invalid": recovery({
+    cause:
+      "An outbox write received a Unit of Work context that was missing, malformed, or created by another store instance.",
+    userAction:
+      "Abort the write and use the context supplied by the active TransactionalOutboxStore.runInUnitOfWork callback.",
+    operatorAction:
+      "Check transaction boundary wiring so repository and outbox writes share the same store-owned Unit of Work client.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
 } as const satisfies Partial<Record<string, ProblemRecoveryMetadata>>;
 
 function recovery(options: {

@@ -7,7 +7,7 @@ title: "OutboxDispatchResultMetadata"
 
 > **OutboxDispatchResultMetadata** = `object`
 
-Provider-neutral transactional outbox storage contract.
+Provider dispatch result metadata captured after a message is delivered.
 
 ## Properties
 
@@ -15,7 +15,7 @@ Provider-neutral transactional outbox storage contract.
 
 > `readonly` `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-***
+---
 
 ### providerMessageId?
 

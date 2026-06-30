@@ -28,6 +28,9 @@ export type CloudflareRuntimeContext = {
     readonly requestLifecycle: true;
     readonly waitUntil: true;
     readonly flush: false;
+    readonly streamingResponse: true;
+    readonly deadline: false;
+    readonly abortSignal: true;
     readonly shutdown: false;
   };
 };
@@ -105,6 +108,9 @@ function createRuntimeContext(
       requestLifecycle: true,
       waitUntil: true,
       flush: false,
+      streamingResponse: true,
+      deadline: false,
+      abortSignal: true,
       shutdown: false,
     },
   };

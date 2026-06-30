@@ -126,7 +126,8 @@ const defaultContractGraphSnapshotPath = "contract-graph.snapshot.json";
 const defaultProblemRegistryPath = "docs/problem-code-registry.json";
 const defaultProblemCookbookPath =
   "packages/docs/src/content/docs/en/reference/problem-recovery-cookbook.md";
-const defaultRuntimeCapabilityManifestPath = "croco-runtime-policy.manifest.json";
+const defaultRuntimeCapabilityManifestPath = "croco-runtime-capability.manifest.json";
+const legacyRuntimePolicyManifestPath = "croco-runtime-policy.manifest.json";
 const defaultDiGraphManifestPath = ".croco/build/di-graph.manifest.json";
 const defaultProviderProfileManifestPath = "croco-saas-profile.manifest.json";
 const problemRegistryCheckTimeoutMs = 30_000;
@@ -551,9 +552,17 @@ function problemRegistryReadinessCheck(rootDir: string): DoctorCheckResult {
 
 function runtimeCapabilityManifestCheck(rootDir: string): DoctorCheckResult {
   const checkId = "runtime-capability-manifest";
-  const manifestPath = join(rootDir, defaultRuntimeCapabilityManifestPath);
+  const defaultManifestPath = join(rootDir, defaultRuntimeCapabilityManifestPath);
+  const legacyManifestPath = join(rootDir, legacyRuntimePolicyManifestPath);
+  const manifestPath = existsSync(defaultManifestPath) ? defaultManifestPath : legacyManifestPath;
+  const manifestArtifact = existsSync(defaultManifestPath)
+    ? defaultRuntimeCapabilityManifestPath
+    : legacyRuntimePolicyManifestPath;
   const rootScripts = readRootScripts(rootDir);
-  const expectsManifest = existsSync(manifestPath) || Boolean(rootScripts["runtime-policy:check"]);
+  const expectsManifest =
+    existsSync(defaultManifestPath) ||
+    existsSync(legacyManifestPath) ||
+    Boolean(rootScripts["runtime-policy:check"]);
 
   if (!expectsManifest) {
     return {
@@ -575,10 +584,12 @@ function runtimeCapabilityManifestCheck(rootDir: string): DoctorCheckResult {
           code: CLI_DIAGNOSTIC_CODES.doctorRuntimeCapabilityManifestMissing,
           severity: "error",
           checkId,
-          cause: `${defaultRuntimeCapabilityManifestPath} is required by runtime-policy:check but is missing.`,
+          cause:
+            `${defaultRuntimeCapabilityManifestPath} is required by runtime-policy:check but is missing. ` +
+            `${legacyRuntimePolicyManifestPath} is accepted only for compatibility with older generated apps.`,
           location: { file: defaultRuntimeCapabilityManifestPath },
           action:
-            "Regenerate the runtime policy manifest or remove the stale runtime-policy check script.",
+            "Regenerate the runtime capability manifest or remove the stale runtime-policy check script.",
         },
       ],
     };
@@ -597,10 +608,10 @@ function runtimeCapabilityManifestCheck(rootDir: string): DoctorCheckResult {
           checkId,
           cause:
             manifest.kind === "invalid"
-              ? `${defaultRuntimeCapabilityManifestPath} could not be parsed: ${manifest.message}`
-              : `${defaultRuntimeCapabilityManifestPath} must declare schemaVersion, runtime.platform, and table.plans.`,
-          location: { file: defaultRuntimeCapabilityManifestPath },
-          action: "Regenerate croco-runtime-policy.manifest.json and rerun croco doctor.",
+              ? `${manifestArtifact} could not be parsed: ${manifest.message}`
+              : `${manifestArtifact} must declare RuntimeCapabilityManifest v1 or legacy runtime policy fields.`,
+          location: { file: manifestArtifact },
+          action: "Regenerate croco-runtime-capability.manifest.json and rerun croco doctor.",
         },
       ],
       note: "Runtime capability manifest is invalid.",
@@ -612,7 +623,7 @@ function runtimeCapabilityManifestCheck(rootDir: string): DoctorCheckResult {
     title: "RuntimeCapabilityManifest presence",
     status: "pass",
     diagnostics: [],
-    note: `Runtime target ${readRuntimePlatform(manifest.value)} with ${readRuntimePlanCount(manifest.value)} policy plan(s).`,
+    note: `Runtime target ${readRuntimePlatform(manifest.value)} from ${manifestArtifact}.`,
   };
 }
 
@@ -1718,6 +1729,14 @@ function isProblemCodeRegistryRecord(value: Record<string, unknown>): boolean {
 }
 
 function isRuntimeCapabilityManifestRecord(value: Record<string, unknown>): boolean {
+  if (value.version === "croco.runtime-capability.manifest.v1") {
+    return (
+      typeof value.platform === "string" &&
+      isRecord(value.capabilities) &&
+      Array.isArray(value.diagnostics)
+    );
+  }
+
   const runtime = isRecord(value.runtime) ? value.runtime : null;
   const table = isRecord(value.table) ? value.table : null;
 
@@ -1730,13 +1749,12 @@ function isRuntimeCapabilityManifestRecord(value: Record<string, unknown>): bool
 }
 
 function readRuntimePlatform(value: Record<string, unknown>): string {
+  if (typeof value.platform === "string") {
+    return value.platform;
+  }
+
   const runtime = isRecord(value.runtime) ? value.runtime : null;
   return readOptionalString(runtime?.platform) ?? "unknown";
-}
-
-function readRuntimePlanCount(value: Record<string, unknown>): number {
-  const table = isRecord(value.table) ? value.table : null;
-  return Array.isArray(table?.plans) ? table.plans.length : 0;
 }
 
 function isProviderProfileManifestRecord(value: Record<string, unknown>): boolean {

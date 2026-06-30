@@ -1,6 +1,7 @@
 import type {
   KnownRuntimePlatform,
   RuntimeCapabilities,
+  RuntimeCapabilityManifest,
   RuntimeCapabilityName,
   RuntimePlatform,
 } from "./types";
@@ -299,6 +300,44 @@ export function checkPolicyTableRuntimeCapabilities<TPlatform extends RuntimePla
       runtimeSource: preset.source,
     }),
   );
+}
+
+export function checkPolicyRuntimeCapabilityManifest(
+  plan: PolicyExecutionPlan,
+  manifest: RuntimeCapabilityManifest,
+): readonly PolicyCapabilityDiagnostic[] {
+  return checkPolicyRuntimeCapabilities(plan, manifest.capabilities, {
+    targetRuntime: manifest.platform,
+  });
+}
+
+export function assertPolicyRuntimeCapabilityManifest(
+  plan: PolicyExecutionPlan,
+  manifest: RuntimeCapabilityManifest,
+): void {
+  const [diagnostic] = checkPolicyRuntimeCapabilityManifest(plan, manifest);
+
+  if (diagnostic) {
+    throw new PolicyCapabilityProblem(diagnostic.message);
+  }
+}
+
+export function checkPolicyTableRuntimeCapabilityManifest(
+  table: PolicyTable,
+  manifest: RuntimeCapabilityManifest,
+): readonly PolicyCapabilityDiagnostic[] {
+  return table.plans.flatMap((plan) => checkPolicyRuntimeCapabilityManifest(plan, manifest));
+}
+
+export function assertPolicyTableRuntimeCapabilityManifest(
+  table: PolicyTable,
+  manifest: RuntimeCapabilityManifest,
+): void {
+  const [diagnostic] = checkPolicyTableRuntimeCapabilityManifest(table, manifest);
+
+  if (diagnostic) {
+    throw new PolicyCapabilityProblem(diagnostic.message);
+  }
 }
 
 export function assertPolicyTableRuntimeCapabilities<TPlatform extends RuntimePlatform>(

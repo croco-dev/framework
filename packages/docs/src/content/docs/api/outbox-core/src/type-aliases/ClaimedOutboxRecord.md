@@ -7,8 +7,6 @@ title: "ClaimedOutboxRecord"
 
 > **ClaimedOutboxRecord** = [`OutboxRecord`](/api/outbox-core/src/type-aliases/outboxrecord/) & `object`
 
-Provider-neutral transactional outbox storage contract.
-
 ## Type Declaration
 
 ### claim
