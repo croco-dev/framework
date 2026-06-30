@@ -361,6 +361,7 @@ jobs:
               - 'packages/onboarding-core/src/**'
               - 'packages/onboarding-drizzle/src/**'
               - 'packages/openapi-spec/src/**'
+              - 'packages/outbox-core/src/**'
               - 'packages/pagination-core/src/**'
               - 'packages/presentation-preset/src/**'
               - 'packages/preset-cloudflare/src/**'

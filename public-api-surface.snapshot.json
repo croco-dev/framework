@@ -12460,6 +12460,212 @@
       ]
     },
     {
+      "packageName": "@croco/outbox-core",
+      "relativeDir": "packages/outbox-core",
+      "entrypoint": "packages/outbox-core/src/index.ts",
+      "runtimeExports": [
+        {
+          "name": "createOutboxFailureProblemExtensions",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createTransactionalOutboxStoreContractSuite",
+          "exportKind": "named",
+          "source": "./libs/conformance",
+          "declarationKind": "function"
+        },
+        {
+          "name": "InMemoryTransactionalOutboxStore",
+          "exportKind": "named",
+          "source": "./libs/InMemoryTransactionalOutboxStore",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OUTBOX_DISPATCH_PROBLEM_CODE",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "const"
+        },
+        {
+          "name": "OUTBOX_FAILURE_METADATA_PROBLEM_CODE",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "const"
+        },
+        {
+          "name": "OUTBOX_RECORD_ID_CONFLICT_PROBLEM_CODE",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "const"
+        },
+        {
+          "name": "OUTBOX_UNIT_OF_WORK_CONTEXT_PROBLEM_CODE",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "const"
+        },
+        {
+          "name": "OutboxDispatchProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OutboxFailureMetadataProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OutboxRecordIdConflictProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "OutboxUnitOfWorkContextProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "readOutboxFailureMetadata",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems",
+          "declarationKind": "function"
+        }
+      ],
+      "typeExports": [
+        {
+          "name": "ClaimBatchOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "ClaimedOutboxRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "DispatchResult",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "InMemoryTransactionalOutboxStoreClient",
+          "exportKind": "named",
+          "source": "./libs/InMemoryTransactionalOutboxStore"
+        },
+        {
+          "name": "InMemoryTransactionalOutboxStoreState",
+          "exportKind": "named",
+          "source": "./libs/InMemoryTransactionalOutboxStore"
+        },
+        {
+          "name": "OutboxClaim",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxDispatchProblemOptions",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems"
+        },
+        {
+          "name": "OutboxDispatchResultMetadata",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxFailureMetadata",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxFailureProblemExtensions",
+          "exportKind": "named",
+          "source": "./libs/problems/OutboxProblems"
+        },
+        {
+          "name": "OutboxFailureRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxIntent",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxRecord",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxRecordOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxRecordStatus",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxRetryMetadata",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxRetryOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxSourceReference",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxTenantBoundary",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "OutboxTraceContext",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TransactionalOutboxStore",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TransactionalOutboxStoreContext",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "TransactionalOutboxStoreContractCase",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "TransactionalOutboxStoreContractOptions",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        },
+        {
+          "name": "TransactionalOutboxStoreContractSuite",
+          "exportKind": "named",
+          "source": "./libs/conformance"
+        }
+      ]
+    },
+    {
       "packageName": "@croco/pagination-core",
       "relativeDir": "packages/pagination-core",
       "entrypoint": "packages/pagination-core/src/index.ts",

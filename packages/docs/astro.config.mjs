@@ -108,6 +108,7 @@ export default defineConfig({
             "../onboarding-core/src/index.ts",
             "../onboarding-drizzle/src/index.ts",
             "../openapi-spec/src/index.ts",
+            "../outbox-core/src/index.ts",
             "../pagination-core/src/index.ts",
             "../presentation-preset/src/index.ts",
             "../preset-cloudflare/src/index.ts",
