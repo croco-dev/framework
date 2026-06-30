@@ -149,13 +149,14 @@ Search: CROCO_ROUTE_004, missing path param, @Param, route contract
 
 초기 표준 코드 예시:
 
-| Code                      | Category             | Severity | Cause 요약                                       | Recovery action 요약                                           |
-| ------------------------- | -------------------- | -------- | ------------------------------------------------ | -------------------------------------------------------------- |
-| `CROCO_DI_001`            | dependency-injection | error    | 등록되지 않은 provider를 resolve함               | provider 등록, module export, optional lookup                  |
-| `CROCO_ROUTE_004`         | routing              | error    | path parameter와 controller metadata 불일치      | `@Param` 추가 또는 path token rename                           |
-| `CROCO_BUILD_002`         | build-time           | error    | generated artifact가 source와 drift됨            | package-specific write command 실행 후 diff 검토               |
-| `CROCO_BUILD_003`         | build-time           | error    | controller source에 TypeScript 오류가 있음       | controller type error 수정 후 contract 재실행                  |
-| `CROCO_HTTP_SECURITY_001` | runtime              | error    | HTTP bootstrap에 필수 security middleware가 없음 | security headers, CORS, body limit, rate limit middleware 등록 |
+| Code                           | Category             | Severity | Cause 요약                                       | Recovery action 요약                                           |
+| ------------------------------ | -------------------- | -------- | ------------------------------------------------ | -------------------------------------------------------------- |
+| `CROCO_DI_001`                 | dependency-injection | error    | 등록되지 않은 provider를 resolve함               | provider 등록, module export, optional lookup                  |
+| `CROCO_ROUTE_004`              | routing              | error    | path parameter와 controller metadata 불일치      | `@Param` 추가 또는 path token rename                           |
+| `CROCO_RUNTIME_CAPABILITY_001` | runtime              | error    | 선택 runtime이 필요한 capability를 지원하지 않음 | runtime 변경, requirement 제거, supported adapter로 이동       |
+| `CROCO_BUILD_002`              | build-time           | error    | generated artifact가 source와 drift됨            | package-specific write command 실행 후 diff 검토               |
+| `CROCO_BUILD_003`              | build-time           | error    | controller source에 TypeScript 오류가 있음       | controller type error 수정 후 contract 재실행                  |
+| `CROCO_HTTP_SECURITY_001`      | runtime              | error    | HTTP bootstrap에 필수 security middleware가 없음 | security headers, CORS, body limit, rate limit middleware 등록 |
 
 ### CLI diagnostic code migration
 
@@ -212,6 +213,11 @@ Fix: provider를 resolve 전에 등록하고, module boundary를 넘는 provider
 
 Cause: route path에 선언된 parameter와 controller method metadata가 일치하지 않습니다.
 Fix: path token과 같은 이름의 `@Param` binding을 추가하거나, generated contract와 runtime route가 같은 이름을 보도록 path token을 rename합니다.
+
+### `CROCO_RUNTIME_CAPABILITY_001`
+
+Cause: route, provider, policy, runtime hook이 `croco-runtime-capability.manifest.json`의 선택 runtime에서 지원하지 않는 capability를 요구했습니다.
+Fix: `node`, `lambda`, `cloudflare-workers` 중 해당 capability를 지원하는 runtime으로 바꾸거나, requirement를 제거하거나, capability를 지원하는 adapter 뒤로 코드를 이동합니다. runtime hook에서 발생한 `RuntimeCapabilityProblem`은 Problem extension에 `diagnosticCode`, `platform`, `capability`를 함께 제공합니다.
 
 ### `CROCO_BUILD_002`
 

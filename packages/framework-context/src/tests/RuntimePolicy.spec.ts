@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   assertPolicyTableRuntimeCapabilities,
+  assertPolicyTableRuntimeCapabilityManifest,
   assertPolicyRuntimeCapabilities,
+  checkPolicyTableRuntimeCapabilityManifest,
   checkPolicyTableRuntimeCapabilities,
   compilePolicyTable,
   compilePolicyTableForRuntime,
+  createRuntimeCapabilityManifest,
   createPolicyTarget,
   definePolicyForRuntime,
   definePolicy,
@@ -27,6 +30,9 @@ const capabilities = {
   trace: true,
   waitUntil: true,
   flush: true,
+  streamingResponse: true,
+  deadline: true,
+  abortSignal: true,
   shutdown: true,
 };
 
@@ -230,6 +236,36 @@ describe("RuntimePolicy", () => {
     ]);
 
     expect(table.plans[0]?.entries[0]?.requiredCapabilities).toEqual(["waitUntil", "flush"]);
+  });
+
+  it("should compare route and provider requirements against RuntimeCapabilityManifest v1", () => {
+    const manifest = createRuntimeCapabilityManifest("cloudflare-workers");
+    const routeTarget = createPolicyTarget("route", "ExportController", {
+      operation: "download",
+    });
+    const providerTarget = createPolicyTarget("service", "ArchiveProvider");
+    const table = compilePolicyTable([
+      definePolicy(
+        routeTarget,
+        { kind: "retry", maxAttempts: 2 },
+        { requiredCapabilities: ["nodeApi"] },
+      ),
+      definePolicy(
+        providerTarget,
+        { kind: "timeout", timeoutMs: 1000 },
+        { requiredCapabilities: ["filesystem"] },
+      ),
+    ]);
+
+    const diagnostics = checkPolicyTableRuntimeCapabilityManifest(table, manifest);
+
+    expect(diagnostics.map((diagnostic) => diagnostic.capability)).toEqual([
+      "nodeApi",
+      "filesystem",
+    ]);
+    expect(() => assertPolicyTableRuntimeCapabilityManifest(table, manifest)).toThrow(
+      PolicyCapabilityProblem,
+    );
   });
 
   it("should enforce runtime capabilities through the primary plan resolver", () => {

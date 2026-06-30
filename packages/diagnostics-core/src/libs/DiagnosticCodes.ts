@@ -140,6 +140,33 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     ],
   },
   {
+    code: "CROCO_RUNTIME_CAPABILITY_001",
+    category: "runtime",
+    severity: "error",
+    title: "Runtime capability is unsupported",
+    cause:
+      "A route, provider, policy, or runtime hook requires a capability that the selected runtime manifest does not support.",
+    action:
+      "Choose a runtime that supports the capability, remove the requirement, or move the code behind an adapter that declares a supported capability.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_runtime_capability_001",
+    searchKeywords: [
+      "CROCO_RUNTIME_CAPABILITY_001",
+      "runtime capability",
+      "unsupported capability",
+      "RuntimeCapabilityManifest",
+    ],
+    fixExamples: [
+      {
+        label: "Use a runtime-supported policy requirement",
+        before:
+          "definePolicy(target, { kind: 'retry', maxAttempts: 2 }, { requiredCapabilities: ['nodeApi'] });",
+        after:
+          "definePolicy(target, { kind: 'retry', maxAttempts: 2 }, { requiredCapabilities: ['waitUntil'] });",
+        note: "Only require capabilities present in croco-runtime-capability.manifest.json for the selected runtime.",
+      },
+    ],
+  },
+  {
     code: "CROCO_BUILD_002",
     category: "build-time",
     severity: "error",

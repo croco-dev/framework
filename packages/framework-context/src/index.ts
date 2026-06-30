@@ -194,9 +194,13 @@ export { MiddlewareChain } from "./libs/Middleware";
 
 export {
   assertPolicyTableRuntimeCapabilities,
+  assertPolicyTableRuntimeCapabilityManifest,
   assertPolicyRuntimeCapabilities,
+  assertPolicyRuntimeCapabilityManifest,
   checkPolicyRuntimeCapabilities,
+  checkPolicyRuntimeCapabilityManifest,
   checkPolicyTableRuntimeCapabilities,
+  checkPolicyTableRuntimeCapabilityManifest,
   compilePolicyTable,
   compilePolicyTableForRuntime,
   createPolicyTarget,
@@ -219,11 +223,18 @@ export {
   REQUEST_PIPELINE_PHASES,
 } from "./libs/RequestPipelineGraph";
 export {
+  checkRuntimeCapabilityRequirements,
+  createRuntimeCapabilityDiagnostic,
+  createRuntimeCapabilityManifest,
+  createRuntimeCapabilityManifestFromSupport,
   getRuntimeCapabilitySupport,
   isKnownRuntimePlatform,
   isRuntimeCapabilitySupported,
+  stringifyRuntimeCapabilityManifest,
+  RUNTIME_CAPABILITY_MANIFEST_VERSION,
   RUNTIME_CAPABILITY_NAMES,
   RUNTIME_CAPABILITY_SUPPORT,
+  RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE,
   RUNTIME_PLATFORMS,
 } from "./libs/runtimeCapabilities";
 
@@ -381,7 +392,12 @@ export type {
 export type {
   KnownRuntimePlatform,
   RuntimeCapabilities,
+  RuntimeCapabilityDiagnostic,
+  RuntimeCapabilityDiagnosticCode,
+  RuntimeCapabilityManifest,
+  RuntimeCapabilityManifestVersion,
   RuntimeCapabilityName,
+  RuntimeCapabilityRequirement,
   RuntimeContext,
   RuntimeInspectorRecorder,
   RuntimeInspectorRecorderEventInput,

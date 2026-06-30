@@ -1,9 +1,20 @@
 import type {
+  DependencySourceLocation,
   KnownRuntimePlatform,
   RuntimeCapabilities,
+  RuntimeCapabilityDiagnostic,
+  RuntimeCapabilityManifest,
+  RuntimeCapabilityManifestVersion,
   RuntimeCapabilityName,
+  RuntimeCapabilityRequirement,
   RuntimePlatform,
 } from "./types";
+
+export const RUNTIME_CAPABILITY_MANIFEST_VERSION =
+  "croco.runtime-capability.manifest.v1" as const satisfies RuntimeCapabilityManifestVersion;
+
+export const RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE =
+  "CROCO_RUNTIME_CAPABILITY_001" as const;
 
 export const RUNTIME_PLATFORMS = [
   "node",
@@ -20,6 +31,9 @@ export const RUNTIME_CAPABILITY_NAMES = [
   "trace",
   "waitUntil",
   "flush",
+  "streamingResponse",
+  "deadline",
+  "abortSignal",
   "shutdown",
 ] as const satisfies readonly RuntimeCapabilityName[];
 
@@ -33,6 +47,9 @@ export const RUNTIME_CAPABILITY_SUPPORT = {
     trace: true,
     waitUntil: false,
     flush: false,
+    streamingResponse: true,
+    deadline: false,
+    abortSignal: true,
     shutdown: false,
   },
   lambda: {
@@ -44,6 +61,9 @@ export const RUNTIME_CAPABILITY_SUPPORT = {
     trace: true,
     waitUntil: true,
     flush: true,
+    streamingResponse: false,
+    deadline: true,
+    abortSignal: false,
     shutdown: false,
   },
   "cloudflare-workers": {
@@ -55,6 +75,9 @@ export const RUNTIME_CAPABILITY_SUPPORT = {
     trace: true,
     waitUntil: true,
     flush: false,
+    streamingResponse: true,
+    deadline: false,
+    abortSignal: true,
     shutdown: false,
   },
 } as const satisfies Record<KnownRuntimePlatform, RuntimeCapabilities>;
@@ -106,6 +129,76 @@ export function getRuntimeCapabilitySupport<TPlatform extends KnownRuntimePlatfo
   ] as unknown as RuntimeCapabilitiesForPlatform<TPlatform>;
 }
 
+export function createRuntimeCapabilityManifest<TPlatform extends KnownRuntimePlatform>(
+  platform: TPlatform,
+  options: {
+    readonly requirements?: readonly RuntimeCapabilityRequirement[];
+  } = {},
+): RuntimeCapabilityManifest {
+  return createRuntimeCapabilityManifestFromSupport(
+    platform,
+    getRuntimeCapabilitySupport(platform),
+    {
+      requirements: options.requirements,
+    },
+  );
+}
+
+export function createRuntimeCapabilityManifestFromSupport(
+  platform: RuntimePlatform,
+  capabilities: RuntimeCapabilitySupport,
+  options: {
+    readonly requirements?: readonly RuntimeCapabilityRequirement[];
+  } = {},
+): RuntimeCapabilityManifest {
+  const manifest: RuntimeCapabilityManifest = {
+    version: RUNTIME_CAPABILITY_MANIFEST_VERSION,
+    platform,
+    capabilities: normalizeRuntimeCapabilities(capabilities),
+    diagnostics: [],
+  };
+
+  return {
+    ...manifest,
+    diagnostics: checkRuntimeCapabilityRequirements(manifest, options.requirements ?? []),
+  };
+}
+
+export function checkRuntimeCapabilityRequirements(
+  manifest: Pick<RuntimeCapabilityManifest, "platform" | "capabilities">,
+  requirements: readonly RuntimeCapabilityRequirement[],
+): readonly RuntimeCapabilityDiagnostic[] {
+  return requirements
+    .filter((requirement) => !manifest.capabilities[requirement.capability])
+    .map((requirement) =>
+      createRuntimeCapabilityDiagnostic(
+        manifest.platform,
+        requirement.capability,
+        requirement.source,
+      ),
+    )
+    .sort(compareRuntimeCapabilityDiagnostics);
+}
+
+export function createRuntimeCapabilityDiagnostic(
+  platform: RuntimePlatform,
+  capability: RuntimeCapabilityName,
+  source?: DependencySourceLocation,
+): RuntimeCapabilityDiagnostic {
+  return {
+    code: RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE,
+    severity: "error",
+    platform,
+    capability,
+    message: `Runtime platform '${platform}' does not support capability '${capability}'.`,
+    source,
+  };
+}
+
+export function stringifyRuntimeCapabilityManifest(manifest: RuntimeCapabilityManifest): string {
+  return `${JSON.stringify(normalizeRuntimeCapabilityManifest(manifest), null, 2)}\n`;
+}
+
 export function isRuntimeCapabilitySupported(
   platform: RuntimePlatform,
   capability: RuntimeCapabilityName,
@@ -116,4 +209,44 @@ export function isRuntimeCapabilitySupported(
     : capabilitySupport;
 
   return support?.[capability] ?? false;
+}
+
+function normalizeRuntimeCapabilityManifest(
+  manifest: RuntimeCapabilityManifest,
+): RuntimeCapabilityManifest {
+  return {
+    version: RUNTIME_CAPABILITY_MANIFEST_VERSION,
+    platform: manifest.platform,
+    capabilities: normalizeRuntimeCapabilities(manifest.capabilities),
+    diagnostics: [...manifest.diagnostics].sort(compareRuntimeCapabilityDiagnostics),
+  };
+}
+
+function normalizeRuntimeCapabilities(capabilities: RuntimeCapabilitySupport): RuntimeCapabilities {
+  return Object.fromEntries(
+    RUNTIME_CAPABILITY_NAMES.map((capability) => [capability, capabilities[capability]]),
+  ) as RuntimeCapabilities;
+}
+
+function compareRuntimeCapabilityDiagnostics(
+  left: RuntimeCapabilityDiagnostic,
+  right: RuntimeCapabilityDiagnostic,
+): number {
+  return (
+    left.platform.localeCompare(right.platform) ||
+    left.capability.localeCompare(right.capability) ||
+    formatRuntimeCapabilityDiagnosticSource(left.source).localeCompare(
+      formatRuntimeCapabilityDiagnosticSource(right.source),
+    )
+  );
+}
+
+function formatRuntimeCapabilityDiagnosticSource(
+  source: DependencySourceLocation | undefined,
+): string {
+  if (!source) {
+    return "";
+  }
+
+  return [source.file, source.line, source.column].filter((part) => part !== undefined).join(":");
 }

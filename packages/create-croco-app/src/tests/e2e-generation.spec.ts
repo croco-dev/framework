@@ -951,6 +951,7 @@ describe("E2E: generate()", () => {
     expect(existsSync(join(testDir, "croco-tenant-model.schema.json"))).toBe(true);
     expect(existsSync(join(testDir, "croco.arch.json"))).toBe(true);
     expect(existsSync(join(testDir, "croco-runtime-policy.manifest.json"))).toBe(true);
+    expect(existsSync(join(testDir, "croco-runtime-capability.manifest.json"))).toBe(true);
     expect(existsSync(join(testDir, ".env.example"))).toBe(true);
     expect(existsSync(join(testDir, "docs", "provider-profile.md"))).toBe(true);
     expect(existsSync(join(testDir, "docs", "tenant-model-playbook.md"))).toBe(true);
@@ -966,6 +967,9 @@ describe("E2E: generate()", () => {
     );
     const runtimePolicyManifest = JSON.parse(
       readFileSync(join(testDir, "croco-runtime-policy.manifest.json"), "utf8"),
+    );
+    const runtimeCapabilityManifest = JSON.parse(
+      readFileSync(join(testDir, "croco-runtime-capability.manifest.json"), "utf8"),
     );
     const architecturePolicyManifest = JSON.parse(
       readFileSync(join(testDir, "croco.arch.json"), "utf8"),
@@ -1049,6 +1053,25 @@ describe("E2E: generate()", () => {
       table: {
         plans: [],
       },
+    });
+    expect(runtimeCapabilityManifest).toMatchObject({
+      version: "croco.runtime-capability.manifest.v1",
+      platform: "cloudflare-workers",
+      capabilities: {
+        env: true,
+        filesystem: false,
+        logger: true,
+        nodeApi: false,
+        requestLifecycle: true,
+        trace: true,
+        waitUntil: true,
+        flush: false,
+        streamingResponse: true,
+        deadline: false,
+        abortSignal: true,
+        shutdown: false,
+      },
+      diagnostics: [],
     });
     expect(architecturePolicyManifest).toMatchObject({
       schemaVersion: "croco.architecture-policy/v1",
@@ -1203,6 +1226,14 @@ describe("E2E: generate()", () => {
         currentModel?: unknown;
         defaultModel?: unknown;
       };
+      const runtimeCapabilityManifest = JSON.parse(
+        readFileSync(join(testDir, "croco-runtime-capability.manifest.json"), "utf8"),
+      ) as {
+        version?: unknown;
+        platform?: unknown;
+        capabilities?: Record<string, unknown>;
+        diagnostics?: unknown;
+      };
 
       expect(rootPackageJson.scripts).toMatchObject({
         typecheck: "turbo typecheck",
@@ -1247,6 +1278,25 @@ describe("E2E: generate()", () => {
       expect(tenantModelManifest).toMatchObject({
         currentModel: "org",
         defaultModel: "org",
+      });
+      expect(runtimeCapabilityManifest).toMatchObject({
+        version: "croco.runtime-capability.manifest.v1",
+        platform: "node",
+        capabilities: {
+          env: true,
+          filesystem: true,
+          logger: true,
+          nodeApi: true,
+          requestLifecycle: true,
+          trace: true,
+          waitUntil: false,
+          flush: false,
+          streamingResponse: true,
+          deadline: false,
+          abortSignal: true,
+          shutdown: false,
+        },
+        diagnostics: [],
       });
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);

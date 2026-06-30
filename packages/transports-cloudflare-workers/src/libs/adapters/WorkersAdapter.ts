@@ -41,6 +41,9 @@ function createWorkersRuntimeContext(
       requestLifecycle: true,
       waitUntil: true,
       flush: false,
+      streamingResponse: true,
+      deadline: false,
+      abortSignal: true,
       shutdown: false,
     },
   };

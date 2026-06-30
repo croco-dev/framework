@@ -65,6 +65,9 @@ describe("RuntimeContext", () => {
       requestLifecycle: true,
       waitUntil: true,
       flush: true,
+      streamingResponse: false,
+      deadline: true,
+      abortSignal: false,
       shutdown: false,
     });
   });
@@ -79,6 +82,22 @@ describe("RuntimeContext", () => {
         },
       } as unknown as RuntimeContextInit),
     ).toThrow(RuntimeCapabilityProblem);
+    try {
+      createRuntimeContext({
+        platform: "cloudflare-workers",
+        env: {},
+        capabilities: {
+          flush: true,
+        },
+      } as unknown as RuntimeContextInit);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RuntimeCapabilityProblem);
+      expect((error as RuntimeCapabilityProblem).extensions).toMatchObject({
+        diagnosticCode: "CROCO_RUNTIME_CAPABILITY_001",
+        platform: "cloudflare-workers",
+        capability: "flush",
+      });
+    }
   });
 
   it("rejects unsupported hooks after type erasure", () => {
@@ -120,6 +139,9 @@ describe("RuntimeContext", () => {
         trace: false,
         waitUntil: false,
         flush: true,
+        streamingResponse: false,
+        deadline: false,
+        abortSignal: false,
         shutdown: true,
       },
       env: {},
@@ -138,6 +160,7 @@ describe("RuntimeContext", () => {
     expect(runtime.capabilities.filesystem).toBe(false);
     expect(runtime.capabilities.requestLifecycle).toBe(true);
     expect(runtime.capabilities.flush).toBe(true);
+    expect(runtime.capabilities.streamingResponse).toBe(false);
     expect(shutdown).toHaveBeenCalledOnce();
   });
 
