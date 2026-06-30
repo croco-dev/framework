@@ -123,8 +123,8 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
         { value: "ddd-fullstack", label: "DDD Fullstack", hint: "API + Web frontend" },
         {
           value: "ddd-vike-fullstack",
-          label: "DDD Vike Fullstack",
-          hint: "API Worker + SSR Worker",
+          label: "DDD Worker Fullstack",
+          hint: "Legacy preset name; generates meta-vite API and SSR Workers",
         },
         {
           value: "production-app",

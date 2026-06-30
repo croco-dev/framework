@@ -1,11 +1,11 @@
 # {{projectName}}
 
-Croco HTTP API와 Vike SSR React 앱을 AWS Lambda, S3, CloudFront로 배포하는 pnpm workspace 템플릿입니다.
+Croco HTTP API와 `@croco/meta-vite` SSR React 앱을 AWS Lambda, S3, CloudFront로 배포하는 pnpm workspace 템플릿입니다.
 
 ## 구조
 
-- `apps/api-server` — Croco REST API와 Vike SSR Lambda 엔트리
-- `apps/console-web` — Vike SSR React 페이지와 클라이언트 정적 자산
+- `apps/api-server` — Croco REST API와 `@croco/meta-vite` SSR Lambda 엔트리
+- `apps/console-web` — `@croco/meta-vite` SSR React 페이지와 클라이언트 정적 자산
 - `dist/api` — Lambda에 배포할 Node.js 22 번들 출력
 - `dist/client` — S3에 업로드할 정적 자산 출력
 

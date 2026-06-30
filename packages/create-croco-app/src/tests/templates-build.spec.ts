@@ -324,6 +324,8 @@ function checkAdminConsoleStructure() {
 }
 
 function checkSsrLambdaStructure() {
+  checkFileContains("ssr-lambda", ["README.md.hbs"], /@croco\/meta-vite/);
+  checkFileDoesNotContain("ssr-lambda", ["README.md.hbs"], /Vike SSR/);
   checkFileExists("ssr-lambda", "apps", "api-server", "package.json.hbs");
   checkFileContains(
     "ssr-lambda",
@@ -344,6 +346,8 @@ function checkSsrLambdaStructure() {
 }
 
 function checkContainerFullstackStructure() {
+  checkFileContains("container-fullstack", ["README.md.hbs"], /@croco\/meta-vite/);
+  checkFileDoesNotContain("container-fullstack", ["README.md.hbs"], /Vike SSR/);
   checkFileContains("container-fullstack", ["Dockerfile"], /^FROM /gm);
   const dockerfileContent = readFileSync(
     templatePath("container-fullstack", "Dockerfile"),
@@ -763,6 +767,8 @@ describe("Base preset README templates", () => {
     checkFileExists("base-ddd", "README.md.hbs");
     checkFileContains("base-ddd", ["README.md.hbs"], /ddd-api/);
     checkFileContains("base-ddd", ["README.md.hbs"], /ddd-fullstack/);
+    checkFileContains("base-ddd", ["README.md.hbs"], /legacy compatibility name/);
+    checkFileContains("base-ddd", ["README.md.hbs"], /@croco\/meta-vite/);
     checkFileContains("base-ddd", ["README.md.hbs"], /pnpm install/);
     checkFileContains("base-ddd", ["README.md.hbs"], /pnpm dev/);
     checkFileContains("base-ddd", ["README.md.hbs"], /pnpm build/);

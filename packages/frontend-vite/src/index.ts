@@ -1,10 +1,10 @@
 /**
  * @croco/frontend-vite
  *
- * Cloudflare Workers + Vite + Vike 통합 플러그인 패키지
+ * Croco Presentation Vite integration helpers.
  *
- * 이 패키지는 Cloudflare Workers 환경에서 Vite와 Vike를 함께 사용하기 위한
- * 플러그인을 제공합니다.
+ * 이 패키지는 SPA browser build와 Cloudflare Workers 대상 Vite 설정 helper를
+ * 제공합니다. SSR/RSC route runtime은 @croco/meta-vite가 소유합니다.
  *
  * @packageDocumentation
  */

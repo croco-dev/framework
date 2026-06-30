@@ -487,11 +487,11 @@ describe("E2E: generate()", () => {
   );
 
   it(
-    "generates ddd-vike-fullstack with worker security validation opt-out",
+    "generates the legacy ddd-vike-fullstack compatibility profile with worker security validation opt-out",
     { timeout: 120_000 },
     async () => {
       const options: GeneratorOptions = {
-        projectName: "my-vike-fullstack",
+        projectName: "my-worker-fullstack",
         scope: "@test",
         preset: "ddd-vike-fullstack",
         webApps: ["web"],

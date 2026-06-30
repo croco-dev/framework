@@ -10,6 +10,7 @@ import {
   validateResolvedOptions,
 } from "../options.js";
 import { assertSaasProviderProfileCapabilities } from "../saas-provider-profiles.js";
+import { CREATE_CROCO_APP_COMPATIBILITY_CHOICES } from "../supported-options.js";
 
 const generateMock = vi.hoisted(() => vi.fn());
 
@@ -31,6 +32,7 @@ describe("noninteractive CLI option validation", () => {
     expect(help).toContain(
       "blank|ddd-api|ddd-fullstack|ddd-vike-fullstack|production-app|admin-console|saas|ai-saas",
     );
+    expect(help).toContain("ddd-vike-fullstack is a legacy compatibility name");
     expect(help).toContain("--saas-profile");
     expect(help).toContain("saas-node-postgres|saas-cloudflare|saas-lambda");
     expect(help).toContain("--tenant-model");
@@ -40,6 +42,15 @@ describe("noninteractive CLI option validation", () => {
     expect(help).toContain("--json");
     expect(help).toContain("Print a machine-readable JSON result");
     expect(help).not.toContain("--package-manager");
+  });
+
+  it("marks retained Vike preset naming as meta-vite compatibility", () => {
+    expect(CREATE_CROCO_APP_COMPATIBILITY_CHOICES.presets["ddd-vike-fullstack"]).toEqual({
+      status: "legacy-compatibility-name",
+      currentRuntime: "@croco/meta-vite",
+      requiredFrontendDeploy: "cloudflare-meta-vite",
+      migrationTarget: "Use the generated meta-vite Worker fullstack profile.",
+    });
   });
 
   it("rejects ddd-api generation when --api is missing", () => {

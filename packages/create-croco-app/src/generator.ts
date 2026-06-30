@@ -52,7 +52,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   validateResolvedGoalOptions(options);
 
   const vars = { projectName: options.projectName, scope: options.scope };
-  const isVikeFullstackPreset = options.preset === "ddd-vike-fullstack";
+  const isLegacyVikeFullstackPreset = options.preset === "ddd-vike-fullstack";
 
   // Step 1: targetDir 정규화 및 생성 (non-empty 체크)
   const resolvedTarget = resolve(targetDir);
@@ -100,7 +100,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   }
 
   // Step 3: API + hosting installer
-  if (!isVikeFullstackPreset) {
+  if (!isLegacyVikeFullstackPreset) {
     if (options.api === "graphql") {
       if (options.apiHosting === "standalone") {
         installGraphqlStandalone(resolvedTarget, vars);
@@ -119,7 +119,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   // Step 4: shared/ui (standalone fullstack or nextjs hosting에서 웹앱 있을 때)
   const hasWebApps = options.webApps.length > 0;
   if (
-    !isVikeFullstackPreset &&
+    !isLegacyVikeFullstackPreset &&
     hasWebApps &&
     (options.preset === "ddd-fullstack" || options.apiHosting === "nextjs")
   ) {
@@ -130,7 +130,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   const frontendDeployOwnsWebApp =
     options.frontendDeploy === "cloudflare-meta-vite" || options.frontendDeploy === "vite-spa";
   if (
-    !isVikeFullstackPreset &&
+    !isLegacyVikeFullstackPreset &&
     options.apiHosting === "standalone" &&
     hasWebApps &&
     !frontendDeployOwnsWebApp
@@ -145,7 +145,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   }
 
   // Step 6: backend deploy
-  if (!isVikeFullstackPreset) {
+  if (!isLegacyVikeFullstackPreset) {
     if (options.backendDeploy === "docker") {
       installDocker(resolvedTarget, {
         ...vars,
@@ -159,7 +159,7 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
   }
 
   // Step 7: frontend deploy
-  if (options.frontendDeploy === "cloudflare-meta-vite" && isVikeFullstackPreset) {
+  if (options.frontendDeploy === "cloudflare-meta-vite" && isLegacyVikeFullstackPreset) {
     installFrontendDeploy(resolvedTarget, undefined, {
       ...vars,
       preset: options.preset,
