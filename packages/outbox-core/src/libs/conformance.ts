@@ -1,3 +1,4 @@
+import { fail, strictEqual } from "node:assert/strict";
 import {
   OUTBOX_DISPATCH_PROBLEM_CODE,
   OutboxDispatchProblem,
@@ -739,38 +740,32 @@ function createIntent(
 }
 
 function assertEqual<T>(actual: T, expected: T, message: string): void {
-  if (actual !== expected) {
-    throw new Error(`${message}. Expected ${String(expected)}, got ${String(actual)}.`);
-  }
+  strictEqual(actual, expected, message);
 }
 
 function assertDefined<T>(value: T | undefined, message: string): T {
   if (value === undefined) {
-    throw new Error(message);
+    fail(message);
   }
 
   return value;
 }
 
-type Deferred<T> = {
+export class Deferred<T> {
   readonly promise: Promise<T>;
-  resolve(value: T | PromiseLike<T>): void;
-  reject(reason?: unknown): void;
-};
+  resolve!: (value: T | PromiseLike<T>) => void;
+  reject!: (reason?: unknown) => void;
 
-function createDeferred<T>(): Deferred<T> {
-  let resolve: Deferred<T>["resolve"] = () => {
-    throw new Error("Deferred resolved before initialization.");
-  };
-  let reject: Deferred<T>["reject"] = () => {
-    throw new Error("Deferred rejected before initialization.");
-  };
-  const promise = new Promise<T>((promiseResolve, promiseReject) => {
-    resolve = promiseResolve;
-    reject = promiseReject;
-  });
+  constructor() {
+    this.promise = new Promise<T>((resolve, reject) => {
+      this.resolve = resolve;
+      this.reject = reject;
+    });
+  }
+}
 
-  return { promise, resolve, reject };
+export function createDeferred<T>(): Deferred<T> {
+  return new Deferred<T>();
 }
 
 async function assertRejects(
@@ -781,7 +776,7 @@ async function assertRejects(
     await fn();
   } catch (error) {
     if (expectedError && !(error instanceof expectedError)) {
-      throw new Error(
+      fail(
         `Expected operation to reject with ${expectedError.name}, got ${error instanceof Error ? error.name : typeof error}.`,
       );
     }
@@ -789,5 +784,5 @@ async function assertRejects(
     return;
   }
 
-  throw new Error("Expected operation to reject.");
+  fail("Expected operation to reject.");
 }

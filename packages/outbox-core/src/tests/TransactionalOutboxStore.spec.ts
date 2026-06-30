@@ -5,6 +5,7 @@ import {
   OutboxDispatchProblem,
   OutboxUnitOfWorkContextProblem,
 } from "../index";
+import { createDeferred } from "../libs/conformance";
 
 describe("TransactionalOutboxStore contract", () => {
   const suite = createTransactionalOutboxStoreContractSuite({
@@ -120,7 +121,7 @@ describe("TransactionalOutboxStore contract", () => {
           });
           await testCase.run(store);
         }),
-      ).rejects.toBeInstanceOf(OutboxUnitOfWorkContextProblem);
+      ).rejects.toThrow(OutboxUnitOfWorkContextProblem);
 
       await expect(store.listRecords()).resolves.toEqual([]);
     }
@@ -135,25 +136,4 @@ function createIntent(idempotencyKey: string) {
     source: { eventId: idempotencyKey, eventType: "user.registered" },
     payload: { userId: idempotencyKey },
   };
-}
-
-type Deferred<T> = {
-  readonly promise: Promise<T>;
-  resolve(value: T | PromiseLike<T>): void;
-  reject(reason?: unknown): void;
-};
-
-function createDeferred<T>(): Deferred<T> {
-  let resolve: Deferred<T>["resolve"] = () => {
-    throw new Error("Deferred resolved before initialization.");
-  };
-  let reject: Deferred<T>["reject"] = () => {
-    throw new Error("Deferred rejected before initialization.");
-  };
-  const promise = new Promise<T>((promiseResolve, promiseReject) => {
-    resolve = promiseResolve;
-    reject = promiseReject;
-  });
-
-  return { promise, resolve, reject };
 }
