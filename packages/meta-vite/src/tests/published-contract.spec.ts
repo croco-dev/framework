@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,12 @@ const rootDir = resolve(packageDir, "../..");
 const commandTimeoutMs = 180_000;
 const publishedContractTimeoutMs = 360_000;
 
+type BuildTarget = {
+  readonly packageName: string;
+  readonly sourceDir: string;
+  readonly artifacts: readonly string[];
+};
+
 type PackageTarballs = {
   readonly cacheCore: string;
   readonly diagnosticsCore: string;
@@ -21,6 +27,29 @@ type PackageTarballs = {
   readonly presentationPreset: string;
   readonly problemsCore: string;
 };
+
+const buildTargets: readonly BuildTarget[] = [
+  libraryBuildTarget("problems-core"),
+  libraryBuildTarget("diagnostics-core"),
+  libraryBuildTarget("framework-context"),
+  libraryBuildTarget("framework-preset"),
+  libraryBuildTarget("cache-core"),
+  libraryBuildTarget("presentation-preset"),
+  {
+    packageName: "@croco/meta-vite",
+    sourceDir: join(packageDir, "src"),
+    artifacts: [
+      join(packageDir, "dist", "index.js"),
+      join(packageDir, "dist", "index.mjs"),
+      join(packageDir, "dist", "index.d.ts"),
+      join(packageDir, "dist", "index.d.mts"),
+      join(packageDir, "dist", "libs", "isr", "adapters", "index.js"),
+      join(packageDir, "dist", "libs", "isr", "adapters", "index.mjs"),
+      join(packageDir, "dist", "libs", "isr", "adapters", "index.d.ts"),
+      join(packageDir, "dist", "libs", "isr", "adapters", "index.d.mts"),
+    ],
+  },
+];
 
 describe("published @croco/meta-vite contract", () => {
   it(
@@ -133,7 +162,7 @@ describe("published @croco/meta-vite contract", () => {
 });
 
 function packPackages(packRoot: string): PackageTarballs {
-  run("pnpm", ["--filter", "@croco/meta-vite...", "build"], rootDir);
+  ensureBuilt();
   run(
     "pnpm",
     ["--filter", "@croco/problems-core", "pack", "--pack-destination", packRoot],
@@ -171,6 +200,72 @@ function packPackages(packRoot: string): PackageTarballs {
     presentationPreset: findTarball(packRoot, "croco-presentation-preset-"),
     problemsCore: findTarball(packRoot, "croco-problems-core-"),
   };
+}
+
+function ensureBuilt(): void {
+  if (!buildTargets.every(isBuildTargetCurrent)) {
+    run("pnpm", ["--filter", "@croco/meta-vite...", "build"], rootDir);
+  }
+
+  const missingArtifacts = buildTargets.flatMap((target) =>
+    target.artifacts.filter((artifact) => !existsSync(artifact)),
+  );
+
+  if (missingArtifacts.length > 0) {
+    throw new Error(
+      `Missing build artifacts after build:\n${missingArtifacts.map((artifact) => `- ${artifact}`).join("\n")}`,
+    );
+  }
+}
+
+function isBuildTargetCurrent(target: BuildTarget): boolean {
+  if (!target.artifacts.every((artifact) => existsSync(artifact))) {
+    return false;
+  }
+
+  const oldestArtifactMtime = Math.min(
+    ...target.artifacts.map((artifact) => statSync(artifact).mtimeMs),
+  );
+  return newestSourceMtime(target.sourceDir) <= oldestArtifactMtime;
+}
+
+function newestSourceMtime(directory: string): number {
+  let newest = 0;
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const entryPath = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      newest = Math.max(newest, newestSourceMtime(entryPath));
+      continue;
+    }
+
+    if (entry.isFile() && isBuildInput(entry.name)) {
+      newest = Math.max(newest, statSync(entryPath).mtimeMs);
+    }
+  }
+
+  return newest;
+}
+
+function isBuildInput(filename: string): boolean {
+  return filename.endsWith(".ts") || filename.endsWith(".tsx") || filename.endsWith(".json");
+}
+
+function libraryBuildTarget(packageName: string): BuildTarget {
+  return {
+    packageName: `@croco/${packageName}`,
+    sourceDir: join(rootDir, "packages", packageName, "src"),
+    artifacts: libraryArtifacts(packageName),
+  };
+}
+
+function libraryArtifacts(packageName: string): readonly string[] {
+  const distDir = join(rootDir, "packages", packageName, "dist");
+
+  return ["index.js", "index.mjs", "index.d.ts", "index.d.mts"].map((filename) =>
+    join(distDir, filename),
+  );
 }
 
 function writeConsumerPackageJson(consumerRoot: string, tarballs: PackageTarballs): void {

@@ -15,15 +15,24 @@ describe("contractsDiff", () => {
 
   it("should pass with non-breaking additive route changes", async () => {
     const stdout: string[] = [];
+    let loadOptions: Record<string, unknown> | null = null;
     const baseline = stringifyContractGraphSnapshot(
       createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),
     );
 
     const exitCode = await runContractsDiff(
-      ["--baseline", "contract-graph.snapshot.json", "--controllers", "src/**/*.ts"],
+      [
+        "--baseline",
+        "contract-graph.snapshot.json",
+        "--controllers",
+        "src/**/*.ts",
+        "--strict-schemas",
+      ],
       {
-        loadContractGraph: async () =>
-          createGraph(["UsersController.listUsers", "UsersController.createUser"]),
+        loadContractGraph: async (_glob, options) => {
+          loadOptions = options;
+          return createGraph(["UsersController.listUsers", "UsersController.createUser"]);
+        },
         io: {
           cwd: "/workspace/app",
           readFile: () => baseline,
@@ -33,6 +42,7 @@ describe("contractsDiff", () => {
     );
 
     expect(exitCode).toBe(0);
+    expect(loadOptions).toEqual({ strictSchemas: true });
     expect(stdout).toEqual([
       "NON-BREAKING contract-route-added UsersController.createUser: Route 'UsersController.createUser' was added to the contract graph.",
       "Contract graph diff found 0 breaking change(s) and 1 non-breaking change(s).",

@@ -24,16 +24,21 @@ describe("rpc-codegen contract check CLI", () => {
   it(
     "fails when a loaded controller declares more than one request body parameter",
     async () => {
-      fs.writeFileSync(path.join(sourceDir, "UsersController.ts"), getMultipleBodyController());
+      const controllerPath = path.join(sourceDir, "UsersController.ts");
       const stdout: string[] = [];
+
+      fs.writeFileSync(controllerPath, getMultipleBodyController());
 
       const exitCode = await runCli(["--controllers", path.join(sourceDir, "*.ts"), "--check"], {
         stdout: (message) => stdout.push(message),
       });
 
       expect(exitCode).toBe(1);
-      expect(stdout).toContain(
-        "ERROR contract-route-multiple-body-params UsersController.createUser: Generated contracts support one request body per route, but 2 @Body() parameters were found.",
+      expect(stdout[0]).toContain(
+        `ERROR contract-route-multiple-body-params UsersController.createUser ${controllerPath}:`,
+      );
+      expect(stdout[0]).toContain(
+        "Generated contracts support one request body per route, but 2 @Body() parameters were found.",
       );
       expect(stdout).toContain("Contract graph check failed with 1 error(s).");
     },
@@ -61,8 +66,10 @@ describe("rpc-codegen contract check CLI", () => {
   it(
     "prints strict Problem response diagnostics without failing warnings",
     async () => {
-      fs.writeFileSync(path.join(sourceDir, "AssetsController.ts"), getCatchAllController());
+      const controllerPath = path.join(sourceDir, "AssetsController.ts");
       const stdout: string[] = [];
+
+      fs.writeFileSync(controllerPath, getCatchAllController());
 
       const exitCode = await runCli(
         ["--controllers", path.join(sourceDir, "*.ts"), "--check", "--strict-problems"],
@@ -72,12 +79,83 @@ describe("rpc-codegen contract check CLI", () => {
       );
 
       expect(exitCode).toBe(0);
-      expect(stdout).toContain(
-        "WARNING contract-route-missing-problem-response-contract AssetsController.getAsset: Strict Problem contract mode could not find declared route failures. Keep the generated client failure union as never only when this public route cannot throw Croco Problems; otherwise declare failures with routeProblemResponses(contract).",
+      expect(stdout[0]).toContain(
+        `WARNING contract-route-missing-problem-response-contract AssetsController.getAsset ${controllerPath}:`,
+      );
+      expect(stdout[0]).toContain(
+        "Strict Problem contract mode could not find declared route failures.",
       );
       expect(stdout).toContain(
         "Contract graph check passed for 1 route(s) across 1 controller(s).",
       );
+    },
+    CONTRACT_CHECK_TIMEOUT_MS,
+  );
+
+  it(
+    "fails strict schema mode before permissive generated client contracts are accepted",
+    async () => {
+      const controllerPath = path.join(sourceDir, "AssetsController.ts");
+      const stdout: string[] = [];
+
+      fs.writeFileSync(controllerPath, getCatchAllController());
+
+      const exitCode = await runCli(
+        ["--controllers", path.join(sourceDir, "*.ts"), "--check", "--strict-schemas"],
+        {
+          stdout: (message) => stdout.push(message),
+        },
+      );
+
+      expect(exitCode).toBe(1);
+      expect(stdout).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            `ERROR contract-route-missing-response-schema AssetsController.getAsset ${controllerPath}:`,
+          ),
+          expect.stringContaining(
+            `ERROR contract-route-missing-named-param-schema AssetsController.getAsset ${controllerPath}:`,
+          ),
+        ]),
+      );
+      expect(stdout).toEqual([
+        expect.stringContaining(
+          "Strict schema mode requires a success response schema before RPC/OpenAPI generation.",
+        ),
+        expect.stringContaining(
+          'Strict schema mode requires @Param("id") to receive a Zod schema or a route contract params field',
+        ),
+        "Contract graph check failed with 2 error(s).",
+      ]);
+      expect(stdout.join("\n")).not.toContain(".croco-rpc-codegen-");
+      expect(stdout).toContain("Contract graph check failed with 2 error(s).");
+    },
+    CONTRACT_CHECK_TIMEOUT_MS,
+  );
+
+  it(
+    "does not write generated clients when strict schema diagnostics block generation",
+    async () => {
+      const controllerPath = path.join(sourceDir, "AssetsController.ts");
+      const outDir = path.join(tempRoot, "generated-client");
+      const stdout: string[] = [];
+
+      fs.writeFileSync(controllerPath, getCatchAllController());
+
+      const exitCode = await runCli(
+        ["--controllers", path.join(sourceDir, "*.ts"), "--out", outDir, "--strict-schemas"],
+        {
+          stdout: (message) => stdout.push(message),
+        },
+      );
+
+      expect(exitCode).toBe(1);
+      expect(stdout).toContain(
+        "Contract graph contains 2 error(s); fix them before generating clients.",
+      );
+      expect(stdout.join("\n")).toContain(controllerPath);
+      expect(stdout.join("\n")).not.toContain(".croco-rpc-codegen-");
+      expect(fs.existsSync(outDir)).toBe(false);
     },
     CONTRACT_CHECK_TIMEOUT_MS,
   );

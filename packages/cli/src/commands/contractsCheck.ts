@@ -6,11 +6,15 @@ import {
   formatContractDiagnostic,
   getContractGraphErrors,
   stringifyContractGraphSnapshot,
+  type BuildContractGraphOptions,
   type ContractGraph,
 } from "@croco/protocols-core";
 import { GLOBAL_OPTIONS } from "./options.js";
 
-export type ContractGraphLoader = (glob: string) => Promise<ContractGraph>;
+export type ContractGraphLoader = (
+  glob: string,
+  options: BuildContractGraphOptions,
+) => Promise<ContractGraph>;
 
 export type ContractsCheckIo = {
   readonly stdout: (message: string) => void;
@@ -24,6 +28,7 @@ type ContractsCheckOptions = {
   readonly controllers: string;
   readonly json: boolean;
   readonly out: string | null;
+  readonly strictSchemas: boolean;
 };
 
 type ContractsCheckParseResult =
@@ -74,7 +79,9 @@ export async function runContractsCheck(
   }
 
   const loadContractGraph = options.loadContractGraph ?? loadContractGraphFromRpcCodegen;
-  const graph = await loadContractGraph(parsed.options.controllers);
+  const graph = await loadContractGraph(parsed.options.controllers, {
+    strictSchemas: parsed.options.strictSchemas,
+  });
   const snapshot = createContractGraphSnapshot(graph);
   const snapshotJson = stringifyContractGraphSnapshot(snapshot);
 
@@ -130,6 +137,7 @@ export function parseContractsCheckArgs(args: readonly string[]): ContractsCheck
       controllers,
       out,
       json: args.includes("--json") || out !== null,
+      strictSchemas: args.includes("--strict-schemas"),
     },
   };
 }
@@ -142,6 +150,7 @@ Options:
   --controllers <glob>  Controller files to load
   --json                Print a stable ContractGraph snapshot JSON report
   --out <path>          Write the stable snapshot JSON report to a file
+  --strict-schemas      Fail when generated routes omit response, body, or named parameter schemas
   --help, -h            Show this help message`);
 }
 
@@ -151,10 +160,13 @@ function reportContractDiagnostics(graph: ContractGraph, io: ContractsCheckIo): 
   }
 }
 
-async function loadContractGraphFromRpcCodegen(glob: string): Promise<ContractGraph> {
+async function loadContractGraphFromRpcCodegen(
+  glob: string,
+  options: BuildContractGraphOptions,
+): Promise<ContractGraph> {
   const { loadContractGraph } = await import("@croco/rpc-codegen");
 
-  return loadContractGraph(glob);
+  return loadContractGraph(glob, options);
 }
 
 function writeOutputFile(path: string, content: string, io: ContractsCheckIo): void {

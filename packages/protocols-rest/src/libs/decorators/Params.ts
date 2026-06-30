@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import type { z } from "zod";
 import { ParamType, REST_PARAMS_KEY } from "../constants";
+import { captureRestDecoratorSourceLocation } from "../sourceLocation";
 import type { ParamMetadata } from "../types";
 import {
   hasRouteBodyContract,
@@ -19,6 +20,8 @@ type AnyZodObject = z.AnyZodObject;
 
 function createParamDecorator(type: ParamType) {
   return (name?: string, schema?: z.ZodType): ParameterDecorator => {
+    const sourceLocation = captureRestDecoratorSourceLocation();
+
     return (target: object, propertyKey: string | symbol | undefined, parameterIndex: number) => {
       if (!propertyKey) return;
 
@@ -31,6 +34,7 @@ function createParamDecorator(type: ParamType) {
         type,
         index: parameterIndex,
         name,
+        ...(sourceLocation ? { sourceLocation } : {}),
       };
 
       if (schema) {

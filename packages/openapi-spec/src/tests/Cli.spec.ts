@@ -182,7 +182,7 @@ describe("openapi-spec CLI", () => {
     };
 
     const exitCode = await runCli(
-      ["--controllers", "src/**/*.ts", "--check", "--strict-problems"],
+      ["--controllers", "src/**/*.ts", "--check", "--strict-problems", "--strict-schemas"],
       {
         stdout: (message) => stdout.push(message),
       },
@@ -195,7 +195,10 @@ describe("openapi-spec CLI", () => {
     expect(stdout).toContain("Contract graph check failed with 1 error(s).");
     expect(generationModuleImports.loadControllers).toBe(1);
     expect(generationModuleImports.buildContractGraph).toBe(1);
-    expect(generationModuleImports.lastBuildOptions).toEqual({ strictProblemResponses: true });
+    expect(generationModuleImports.lastBuildOptions).toEqual({
+      strictProblemResponses: true,
+      strictSchemas: true,
+    });
     expect(generationModuleImports.emitOpenAPIFromContractGraph).toBe(0);
   });
 
@@ -274,7 +277,10 @@ describe("openapi-spec CLI", () => {
     expect(stdout).toContain(
       "WARNING contract-route-missing-problem-union UsersController.list: Declare generated client Problem responses.",
     );
-    expect(generationModuleImports.lastBuildOptions).toEqual({ strictProblemResponses: true });
+    expect(generationModuleImports.lastBuildOptions).toEqual({
+      strictProblemResponses: true,
+      strictSchemas: false,
+    });
     expect(generationModuleImports.emitOpenAPIFromContractGraph).toBe(1);
     expect(generationModuleImports.lastEmitOptions).toMatchObject({
       info: { title: "Croco API", version: "1.0.0" },

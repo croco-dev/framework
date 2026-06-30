@@ -2,12 +2,29 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import { discoverControllerConstructors, type Constructor } from "@croco/protocols-core";
-import { type Diagnostic, Project, type SourceFile, ts } from "ts-morph";
+import {
+  discoverControllerConstructors,
+  type Constructor,
+  type RouteContractSourceLocation,
+} from "@croco/protocols-core";
+import { type Decorator, type Diagnostic, Node, Project, type SourceFile, ts } from "ts-morph";
 
 type Controller = Constructor;
 
 const CONTROLLER_TYPESCRIPT_DIAGNOSTIC_CODE = "CROCO_BUILD_003";
+const REST_ROUTES_KEY = Symbol.for("croco:rest:routes");
+const REST_PARAMS_KEY = Symbol.for("croco:rest:params");
+const HTTP_ROUTE_DECORATOR_NAMES = new Set([
+  "All",
+  "Delete",
+  "Get",
+  "Head",
+  "Options",
+  "Patch",
+  "Post",
+  "Put",
+]);
+const PARAM_DECORATOR_NAMES = new Set(["Body", "Ctx", "Header", "Param", "Query", "Raw"]);
 
 class NoRestControllersFoundProblem extends Problem {
   constructor(glob: string) {
@@ -26,6 +43,24 @@ type ControllerTypeScriptDiagnostic = {
   readonly line: number | null;
   readonly column: number | null;
   readonly message: string;
+};
+
+type RouteSourceLocations = {
+  readonly route?: RouteContractSourceLocation;
+  readonly params: ReadonlyMap<number, RouteContractSourceLocation>;
+};
+
+type SourceFileControllerSourceLocations = ReadonlyMap<string, ControllerSourceLocations>;
+type ControllerSourceLocations = ReadonlyMap<string, RouteSourceLocations>;
+
+type RestRouteMetadata = {
+  readonly methodName: string | symbol;
+  readonly sourceLocation?: RouteContractSourceLocation;
+};
+
+type RestParamMetadata = {
+  readonly index: number;
+  readonly sourceLocation?: RouteContractSourceLocation;
 };
 
 class ControllerTypeScriptDiagnosticsProblem extends Problem {
@@ -65,6 +100,7 @@ export async function loadControllers(glob: string): Promise<Controller[]> {
     throw new NoRestControllersFoundProblem(glob);
   }
 
+  const sourceLocations = collectControllerSourceLocations(sourceFiles);
   const rootDir = getCommonSourceDir(getProgramEmitSourceFilePaths(project, sourceFiles));
   const emitDir = fs.mkdtempSync(
     path.join(getModuleResolutionRoot(rootDir), ".croco-openapi-spec-"),
@@ -81,7 +117,15 @@ export async function loadControllers(glob: string): Promise<Controller[]> {
       const moduleExports = await importEmittedModule(
         getEmittedFilePath(rootDir, emitDir, sourceFile),
       );
-      controllers.push(...discoverControllerConstructors(moduleExports));
+      const discoveredControllers = discoverControllerConstructors(moduleExports);
+
+      const sourceFileLocations = sourceLocations.get(sourceFile.getFilePath());
+
+      for (const controller of discoveredControllers) {
+        applyControllerSourceLocations(controller, sourceFileLocations?.get(controller.name));
+      }
+
+      controllers.push(...discoveredControllers);
     }
 
     if (controllers.length === 0) {
@@ -92,6 +136,153 @@ export async function loadControllers(glob: string): Promise<Controller[]> {
   } finally {
     fs.rmSync(emitDir, { recursive: true, force: true });
   }
+}
+
+function collectControllerSourceLocations(
+  sourceFiles: readonly SourceFile[],
+): ReadonlyMap<string, SourceFileControllerSourceLocations> {
+  const sourceFileLocations = new Map<string, SourceFileControllerSourceLocations>();
+
+  for (const sourceFile of sourceFiles) {
+    const controllers = new Map<string, ControllerSourceLocations>();
+
+    for (const classDeclaration of sourceFile.getClasses()) {
+      const className = classDeclaration.getName();
+
+      if (!className) {
+        continue;
+      }
+
+      const routes = new Map<string, RouteSourceLocations>();
+
+      for (const method of classDeclaration.getMethods()) {
+        const routeDecorator = method.getDecorators().find(isHttpRouteDecorator);
+        const params = new Map<number, RouteContractSourceLocation>();
+
+        method.getParameters().forEach((parameter, index) => {
+          const paramDecorator = parameter.getDecorators().find(isParamDecorator);
+
+          if (paramDecorator) {
+            params.set(index, toSourceLocation(paramDecorator));
+          }
+        });
+
+        if (!routeDecorator && params.size === 0) {
+          continue;
+        }
+
+        routes.set(method.getName(), {
+          ...(routeDecorator ? { route: toSourceLocation(routeDecorator) } : {}),
+          params,
+        });
+      }
+
+      if (routes.size > 0) {
+        controllers.set(className, routes);
+      }
+    }
+
+    if (controllers.size > 0) {
+      sourceFileLocations.set(sourceFile.getFilePath(), controllers);
+    }
+  }
+
+  return sourceFileLocations;
+}
+
+function applyControllerSourceLocations(
+  controller: Constructor,
+  sourceLocations: ControllerSourceLocations | undefined,
+): void {
+  if (!sourceLocations) {
+    return;
+  }
+
+  applyRouteSourceLocations(controller, sourceLocations);
+  applyParamSourceLocations(controller, sourceLocations);
+}
+
+function applyRouteSourceLocations(
+  controller: Constructor,
+  sourceLocations: ControllerSourceLocations,
+): void {
+  const routes = Reflect.getMetadata(REST_ROUTES_KEY, controller) as
+    | RestRouteMetadata[]
+    | undefined;
+
+  if (!routes) {
+    return;
+  }
+
+  Reflect.defineMetadata(
+    REST_ROUTES_KEY,
+    routes.map((route) => {
+      const sourceLocation = sourceLocations.get(String(route.methodName))?.route;
+
+      return sourceLocation ? { ...route, sourceLocation } : route;
+    }),
+    controller,
+  );
+}
+
+function applyParamSourceLocations(
+  controller: Constructor,
+  sourceLocations: ControllerSourceLocations,
+): void {
+  const paramsMap = Reflect.getMetadata(REST_PARAMS_KEY, controller) as
+    | Map<string | symbol, RestParamMetadata[]>
+    | undefined;
+
+  if (!paramsMap) {
+    return;
+  }
+
+  const mappedParams = new Map<string | symbol, RestParamMetadata[]>();
+
+  for (const [methodName, params] of paramsMap) {
+    const methodSourceLocations = sourceLocations.get(String(methodName));
+
+    mappedParams.set(
+      methodName,
+      params.map((param) => {
+        const sourceLocation = methodSourceLocations?.params.get(param.index);
+
+        return sourceLocation ? { ...param, sourceLocation } : param;
+      }),
+    );
+  }
+
+  Reflect.defineMetadata(REST_PARAMS_KEY, mappedParams, controller);
+}
+
+function isHttpRouteDecorator(decorator: Decorator): boolean {
+  return HTTP_ROUTE_DECORATOR_NAMES.has(getDecoratorName(decorator));
+}
+
+function isParamDecorator(decorator: Decorator): boolean {
+  return PARAM_DECORATOR_NAMES.has(getDecoratorName(decorator));
+}
+
+function getDecoratorName(decorator: Decorator): string {
+  const expression = decorator.getExpression();
+  const nameExpression = Node.isCallExpression(expression)
+    ? expression.getExpression()
+    : expression;
+  const text = nameExpression.getText();
+  const parts = text.split(".");
+
+  return parts[parts.length - 1] ?? text;
+}
+
+function toSourceLocation(decorator: Decorator): RouteContractSourceLocation {
+  const sourceFile = decorator.getSourceFile();
+  const location = sourceFile.compilerNode.getLineAndCharacterOfPosition(decorator.getStart());
+
+  return {
+    path: sourceFile.getFilePath(),
+    line: location.line + 1,
+    column: location.character + 1,
+  };
 }
 
 async function importEmittedModule(filePath: string): Promise<Record<string, unknown>> {

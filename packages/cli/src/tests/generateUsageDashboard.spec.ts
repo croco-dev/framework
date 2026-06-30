@@ -71,6 +71,8 @@ describe("runGenerateUsageDashboard", () => {
     expect(result?.page?.files.map((file) => file.status)).toEqual(["created", "created"]);
     expect(controllerContent).toContain('@Controller("/ops")');
     expect(controllerContent).toContain('@Get("/usage")');
+    expect(controllerContent).toContain("@ResponseSchema(usageDashboardSnapshotSchema)");
+    expect(controllerContent).toContain("const usageDashboardSnapshotSchema = z.object");
     expect(controllerContent).toContain('await import("../usage-dashboard/UsageDashboardRuntime")');
     expect(controllerContent).toContain('ctx.header("x-tenant-id") ?? ctx.query("tenantId")');
     expect(serviceContent).toContain("export type UsageDashboardSnapshot");
@@ -221,7 +223,7 @@ describe("runGenerateUsageDashboard", () => {
     const cwd = await createWorkspace({ apiServerManifest: "{}" });
 
     await expect(runGenerateUsageDashboard({ cwd })).rejects.toThrow(
-      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/problems-core, @croco/billing-core, @croco/entitlements-core, @croco/metering-core, @croco/tenant-core, @croco/protocols-rest, @croco/transports-http.",
+      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/problems-core, @croco/billing-core, @croco/entitlements-core, @croco/metering-core, @croco/tenant-core, @croco/protocols-rest, @croco/transports-http, zod.",
     );
     await expect(
       fs.access(
@@ -332,6 +334,7 @@ async function createWorkspace(
         "@croco/protocols-rest",
         "@croco/tenant-core",
         "@croco/transports-http",
+        "zod",
       ]),
   );
   await fs.writeFile(

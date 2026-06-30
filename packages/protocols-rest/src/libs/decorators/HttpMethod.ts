@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { HttpMethod as HttpMethodEnum, REST_ROUTES_KEY } from "../constants";
+import { captureRestDecoratorSourceLocation } from "../sourceLocation";
 import type { RouteMetadata } from "../types";
 import type { RouteContractSpec } from "../types/RouteContract";
 
@@ -14,6 +15,8 @@ function createMethodDecorator<const Method extends HttpMethodEnum>(
   method: Method,
 ): HttpMethodDecoratorFactory<Method> {
   return ((pathOrContract: string | RouteContractForMethod<Method> = ""): MethodDecorator => {
+    const sourceLocation = captureRestDecoratorSourceLocation();
+
     return (target: Object, propertyKey: string | symbol, descriptor: PropertyDescriptor) => {
       const contract = typeof pathOrContract === "string" ? undefined : pathOrContract;
       const path = typeof pathOrContract === "string" ? pathOrContract : pathOrContract.path;
@@ -29,6 +32,7 @@ function createMethodDecorator<const Method extends HttpMethodEnum>(
         path: normalizedPath === "/" ? "" : normalizedPath,
         methodName: propertyKey,
         ...(contract ? { contract } : {}),
+        ...(sourceLocation ? { sourceLocation } : {}),
       };
 
       Reflect.defineMetadata(

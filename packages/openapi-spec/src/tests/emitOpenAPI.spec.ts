@@ -675,8 +675,14 @@ describe("emitOpenAPI", () => {
       handleHook(@Param("id") _id: string): void {}
     }
 
-    expect(() => emitOpenAPI([HooksController])).toThrow(
-      "ERROR contract-route-unsupported-all-method HooksController.handleHook: @All is runtime-only and cannot be represented as a concrete generated contract. Use explicit HTTP method decorators for OpenAPI and typed clients.",
+    const message = expectThrownMessage(() => emitOpenAPI([HooksController]));
+
+    expect(message).toContain(
+      "ERROR contract-route-unsupported-all-method HooksController.handleHook",
+    );
+    expect(message).toContain("emitOpenAPI.spec.ts:");
+    expect(message).toContain(
+      "@All is runtime-only and cannot be represented as a concrete generated contract.",
     );
   });
 
@@ -687,8 +693,12 @@ describe("emitOpenAPI", () => {
       getUser(@Param("userId") _userId: string): void {}
     }
 
-    expect(() => emitOpenAPI([UsersController])).toThrow(
-      "ERROR contract-route-missing-path-param UsersController.getUser: Route path declares ':id' but no @Param(\"id\") metadata was found.",
+    const message = expectThrownMessage(() => emitOpenAPI([UsersController]));
+
+    expect(message).toContain("ERROR contract-route-missing-path-param UsersController.getUser");
+    expect(message).toContain("emitOpenAPI.spec.ts:");
+    expect(message).toContain(
+      "Route path declares ':id' but no @Param(\"id\") metadata was found.",
     );
   });
 
@@ -702,8 +712,14 @@ describe("emitOpenAPI", () => {
       ): void {}
     }
 
-    expect(() => emitOpenAPI([UsersController])).toThrow(
-      "ERROR contract-route-multiple-body-params UsersController.createUser: Generated contracts support one request body per route, but 2 @Body() parameters were found.",
+    const message = expectThrownMessage(() => emitOpenAPI([UsersController]));
+
+    expect(message).toContain(
+      "ERROR contract-route-multiple-body-params UsersController.createUser",
+    );
+    expect(message).toContain("emitOpenAPI.spec.ts:");
+    expect(message).toContain(
+      "Generated contracts support one request body per route, but 2 @Body() parameters were found.",
     );
   });
 
@@ -862,4 +878,14 @@ function expectRedoclyLintPasses(spec: object): void {
   } finally {
     rmSync(tempDirectory, { force: true, recursive: true });
   }
+}
+
+function expectThrownMessage(action: () => unknown): string {
+  try {
+    action();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  throw new Error("Expected action to throw.");
 }

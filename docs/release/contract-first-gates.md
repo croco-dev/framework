@@ -13,7 +13,8 @@ pnpm contract:snapshot
 ```
 
 `contract:check` validates controller metadata and fails on contract graph errors such as missing
-path params, duplicate operation ids, or multiple request bodies.
+path params, duplicate operation ids, multiple request bodies, or, in generated app strict mode,
+missing response, body, path, query, or header schemas.
 
 `contract:snapshot` writes a deterministic `contract-graph.snapshot.json` file. Commit this file
 when a contract change is intentional.
@@ -25,8 +26,9 @@ pnpm contract:verify
 ```
 
 Generated `create-croco-app` REST templates expose `contract:verify` and `ci:contracts` scripts.
-They compare the committed snapshot against current controllers first, write a consumer coverage
-report, then regenerate OpenAPI and RPC client artifacts from the accepted contract.
+They run REST graph checks with `--strict-schemas`, compare the committed snapshot against current
+controllers first, write a consumer coverage report, then regenerate OpenAPI and RPC client
+artifacts from the accepted contract.
 
 `contract:diff` compares the committed snapshot with current controllers and fails on current graph
 errors or breaking contract drift. Removed controllers, removed routes, HTTP method/path changes,
@@ -36,6 +38,8 @@ reported as non-breaking.
 
 `contract:openapi` and `contract:client` should run after the check and diff gates so generated
 artifacts are produced only from an accepted contract graph.
+Generated REST app templates pass `--strict-schemas` to both generators so schema-less routes fail
+before OpenAPI output or permissive `unknown | undefined` RPC success types are written.
 
 `contract:coverage` writes `contract-graph.coverage.json` with the same route graph plus consumer
 coverage diagnostics. Unsupported graph fields are reported explicitly so generator omissions do not
@@ -78,9 +82,12 @@ with `contract-schema-json-unsafe` before generator-specific output is written.
 
 ```bash
 croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts'
+croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts' --strict-schemas
 croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts' --json --out contract-graph.snapshot.json
 croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts' --json --out contract-graph.coverage.json
-croco contracts diff --baseline contract-graph.snapshot.json --controllers 'apps/api-server/src/controllers/**/*.ts'
+croco contracts diff --baseline contract-graph.snapshot.json --controllers 'apps/api-server/src/controllers/**/*.ts' --strict-schemas
+croco-openapi-spec --controllers 'apps/api-server/src/controllers/**/*.ts' --strict-schemas --out openapi.json
+croco-rpc-codegen --controllers 'apps/api-server/src/controllers/**/*.ts' --strict-schemas --out libs/shared/provider-rpc/src
 ```
 
 `croco contracts check --json` prints the same stable JSON snapshot to stdout when `--out` is not

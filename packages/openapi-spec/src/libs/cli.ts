@@ -10,6 +10,7 @@ type CliOptions = {
   readonly servers: { readonly url: string }[];
   readonly bearerAuthScheme: string | null;
   readonly strictProblems: boolean;
+  readonly strictSchemas: boolean;
   readonly check: boolean;
   readonly manifestBundlePath: string | null;
 };
@@ -54,6 +55,7 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
   const controllers = await loadControllers(result.options.controllers);
   const graph = buildContractGraph(controllers, {
     strictProblemResponses: result.options.strictProblems,
+    strictSchemas: result.options.strictSchemas,
   });
 
   if (result.options.check) {
@@ -109,6 +111,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
         ? (getFlagValue(args, "--bearer-auth") ?? "bearerAuth")
         : null,
       strictProblems: args.includes("--strict-problems"),
+      strictSchemas: args.includes("--strict-schemas"),
       check,
       manifestBundlePath: getFlagValue(args, "--manifest-bundle"),
     },
@@ -172,6 +175,7 @@ Options:
                        Reference the shared Project manifest bundle in generated OpenAPI
   --check               Validate the canonical contract graph without writing OpenAPI
   --strict-problems     Warn when routes do not declare generated client Problem unions
+  --strict-schemas      Fail when generated routes omit response, body, or named parameter schemas
   --help, -h            Show this help message`);
 }
 

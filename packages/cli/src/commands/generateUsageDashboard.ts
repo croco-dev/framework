@@ -734,13 +734,65 @@ function formatRuntimeImportError(error: unknown): string {
 }
 
 function controllerTemplate(route: RouteParts): string {
-  return `import { Controller, Ctx, Get } from "@croco/protocols-rest";
+  return `import { Controller, Ctx, Get, ResponseSchema } from "@croco/protocols-rest";
 import type { CrocoHttpContext } from "@croco/transports-http";
+import { z } from "zod";
 import type { UsageDashboardSnapshot } from "../usage-dashboard/UsageDashboardService";
+
+const usageDashboardOveragePolicySchema = z.enum(["BLOCK", "WARN", "ALLOW_WITH_OVERAGE"]);
+const usageDashboardOverageStateSchema = z.enum([
+  "within_quota",
+  "near_quota",
+  "over_quota_blocked",
+  "over_quota_warn",
+  "overage_allowed",
+]);
+
+const usageDashboardMeterSnapshotSchema = z.object({
+  meterId: z.string(),
+  featureKey: z.string().nullable(),
+  usage: z.number(),
+  quota: z.number().nullable(),
+  remaining: z.number().nullable(),
+  percentUsed: z.number().nullable(),
+  overagePolicy: usageDashboardOveragePolicySchema.nullable(),
+  overageState: usageDashboardOverageStateSchema,
+  unit: z.string().nullable(),
+});
+
+const usageDashboardFeatureSnapshotSchema = z.object({
+  featureKey: z.string(),
+  granted: z.boolean(),
+  type: z.enum(["boolean", "metered", "static"]),
+  usage: z.number().nullable(),
+  quota: z.number().nullable(),
+  remaining: z.number().nullable(),
+  percentUsed: z.number().nullable(),
+  overagePolicy: usageDashboardOveragePolicySchema.nullable(),
+  overageState: usageDashboardOverageStateSchema.nullable(),
+  reason: z.string().nullable(),
+});
+
+const usageDashboardSnapshotSchema = z.object({
+  tenantId: z.string(),
+  planId: z.string().nullable(),
+  subscriptionStatus: z.string(),
+  currentPeriodEnd: z.string().nullable(),
+  aggregate: z.object({
+    usage: z.number(),
+    quota: z.number().nullable(),
+    remaining: z.number().nullable(),
+    percentUsed: z.number().nullable(),
+  }),
+  meters: z.array(usageDashboardMeterSnapshotSchema),
+  features: z.array(usageDashboardFeatureSnapshotSchema),
+  lastUpdatedAt: z.string(),
+});
 
 @Controller("${route.controllerPath}")
 export class UsageDashboardController {
   @Get("${route.methodPath}")
+  @ResponseSchema(usageDashboardSnapshotSchema)
   async snapshot(@Ctx() ctx: CrocoHttpContext): Promise<UsageDashboardSnapshot> {
     const { createUsageDashboardService } = await import("../usage-dashboard/UsageDashboardRuntime");
     const service = await createUsageDashboardService();

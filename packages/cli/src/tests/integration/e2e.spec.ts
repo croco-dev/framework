@@ -244,6 +244,7 @@ async function createWorkspace(): Promise<string> {
       "@croco/tenant-core",
       "@croco/transports-http",
       "typedi",
+      "zod",
     ]),
   );
   await fs.writeFile(
@@ -329,6 +330,7 @@ declare module '@croco/protocols-rest' {
   export function Get(path: string): MethodDecorator;
   export function Post(path: string): MethodDecorator;
   export function Put(path: string): MethodDecorator;
+  export function ResponseSchema(schema: unknown): MethodDecorator;
 }
 
 declare module '@croco/transports-http' {
@@ -379,6 +381,21 @@ declare module '@croco/meta-vite' {
 
 declare module 'typedi' {
   export function Service(): ClassDecorator;
+}
+
+declare module 'zod' {
+  export type ZodTypeAny = {
+    nullable(): ZodTypeAny;
+  };
+
+  export const z: {
+    array(item: ZodTypeAny): ZodTypeAny;
+    boolean(): ZodTypeAny;
+    enum(values: readonly string[]): ZodTypeAny;
+    number(): ZodTypeAny;
+    object(shape: Record<string, ZodTypeAny>): ZodTypeAny;
+    string(): ZodTypeAny;
+  };
 }
 
 declare module '@croco/problems-core' {
