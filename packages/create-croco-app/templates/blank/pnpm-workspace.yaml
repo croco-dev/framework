@@ -2,7 +2,7 @@ packages:
   - "apps/**/*"
   - "libs/**/*"
 
-onlyBuiltDeps:
+onlyBuiltDependencies:
   - esbuild
   - lefthook
   - sharp
