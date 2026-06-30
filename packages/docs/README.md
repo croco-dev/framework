@@ -30,6 +30,7 @@ Croco Framework 공식 문서 사이트입니다. Starlight(Astro 기반)로 구
 
 - [Getting Started](src/content/docs/en/guides/getting-started.mdx) — Croco 설치 및 첫 API
 - [Architecture](src/content/docs/en/guides/architecture.mdx) — 5계층 구조
+- [Reliability Path RFC](src/content/docs/en/guides/reliability-path-rfc.mdx) — SaaS 운영 신뢰성 경로
 - [Failure Semantics](src/content/docs/en/guides/failure-semantics.mdx) — Problem/retry/timeout/idempotency 실패 계약
 - [Deployment Recipes](src/content/docs/en/guides/deployment-recipes.mdx) — Lambda, Workers, Node 배포 레시피
 - [Events Core](src/content/docs/en/guides/events-core.mdx) — 도메인 이벤트
