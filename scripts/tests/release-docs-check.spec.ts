@@ -35,6 +35,9 @@ describe("release-docs-check.mts", () => {
         "The release workflow exports NPM_CONFIG_PROVENANCE=true.",
         "Maintainers verify provenance with npm audit signatures.",
         "The npm Version field shows the provenance check mark.",
+        "Run pnpm alpha-release:smoke before publish.",
+        "Upload ci-reports/release/alpha-release-smoke.md as release evidence.",
+        "Release notes state alpha stability and compatibility expectations.",
       ].join("\n"),
     );
 
@@ -77,6 +80,9 @@ describe("release-docs-check.mts", () => {
         "- **Mode**: Independent",
         "The fixed and linked arrays are empty.",
         "Select each changed publishable package를 각각 when creating a changeset.",
+        "Run pnpm alpha-release:smoke before publish.",
+        "Upload ci-reports/release/alpha-release-smoke.md as release evidence.",
+        "Release notes state alpha stability and compatibility expectations.",
       ].join("\n"),
     );
 
@@ -86,6 +92,32 @@ describe("release-docs-check.mts", () => {
     expect(result.stdout).toContain("npm provenance publish configuration");
     expect(result.stdout).toContain("npm provenance CLI verification command");
     expect(result.stdout).toContain("npmjs.com provenance UI verification");
+  });
+
+  it("fails when the guide omits alpha release smoke evidence", () => {
+    const root = createFixture(
+      {
+        fixed: [],
+        linked: [],
+      },
+      [
+        "# Release",
+        "`.changeset/config.json` is the source of truth.",
+        "- **Mode**: Independent",
+        "The fixed and linked arrays are empty.",
+        "Select each changed publishable package를 각각 when creating a changeset.",
+        "The release workflow exports NPM_CONFIG_PROVENANCE=true.",
+        "Maintainers verify provenance with npm audit signatures.",
+        "The npm Version field shows the provenance check mark.",
+      ].join("\n"),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("alpha release smoke command");
+    expect(result.stdout).toContain("alpha release smoke evidence artifact");
+    expect(result.stdout).toContain("alpha stability and compatibility expectations");
   });
 
   it("fails when configured fixed groups are missing from the guide", () => {
