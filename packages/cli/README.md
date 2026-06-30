@@ -14,22 +14,23 @@ Run from any directory inside a Croco workspace. The CLI automatically detects `
 
 ## Commands
 
-| Command                                 | Description                                   |
-| --------------------------------------- | --------------------------------------------- |
-| `make controller <Name>`                | New controller class with CRUD methods        |
-| `make repository <Name>`                | New repository class                          |
-| `make entity <Name>`                    | New entity class                              |
-| `make event <Name>`                     | New domain event class                        |
-| `make listener <Name>`                  | New event handler                             |
-| `create page <Name>`                    | Console web page (SSR or SPA)                 |
-| `create domain <name>`                  | API domain module (5 files)                   |
-| `generate scaffold <Model>`             | Page + domain bundle                          |
-| `codegen rpc [args]`                    | Generate RPC client code                      |
-| `codegen openapi [args]`                | Generate OpenAPI spec                         |
-| `doctor [path]`                         | Diagnose workspace boundaries and setup       |
-| `migrate up\|down\|status [args]`       | Run, rollback, or inspect database migrations |
-| `jobs list\|show\|logs\|cancel\|replay` | Inspect and recover Croco background jobs     |
-| `ops check\|status <url>`               | Validate or inspect operational endpoints     |
+| Command                                 | Description                                      |
+| --------------------------------------- | ------------------------------------------------ |
+| `make controller <Name>`                | New controller class with CRUD methods           |
+| `make repository <Name>`                | New repository class                             |
+| `make entity <Name>`                    | New entity class                                 |
+| `make event <Name>`                     | New domain event class                           |
+| `make listener <Name>`                  | New event handler                                |
+| `create page <Name>`                    | Console web page (SSR or SPA)                    |
+| `create domain <name>`                  | API domain module (5 files)                      |
+| `generate scaffold <Model>`             | Page + domain bundle                             |
+| `codegen rpc [args]`                    | Generate RPC client code                         |
+| `codegen openapi [args]`                | Generate OpenAPI spec                            |
+| `doctor [path]`                         | Diagnose workspace boundaries and setup          |
+| `migrate up\|down\|status [args]`       | Run, rollback, or inspect database migrations    |
+| `upgrade [paths...] [--write]`          | Report and apply safe version migration codemods |
+| `jobs list\|show\|logs\|cancel\|replay` | Inspect and recover Croco background jobs        |
+| `ops check\|status <url>`               | Validate or inspect operational endpoints        |
 
 ### make — Application Artifacts
 
@@ -60,6 +61,13 @@ Creates a single source file under `apps/api-server/src/`:
 - `croco migrate up` runs pending migrations via `@croco/migration-runner`
 - `croco migrate down` rolls back migrations
 - `croco migrate status` shows executed and pending migration status
+
+### upgrade — Version Migration Assistant
+
+- `croco upgrade apps/console-web` scans source files and prints a dry-run migration report.
+- `croco upgrade apps/console-web --write` applies only safe codemods and keeps uncertain findings as confirmation items.
+- Dry-run and write reports include before/after hunks for every safe codemod so changes are reviewable before commit.
+- Initial rules cover generated SPA `routeConfig` files with a confirmation-required `@croco/meta-vite` `defineRoute` suggestion, `Problem.code` matchers safely migrating the legacy HTTP security diagnostic code to `CROCO_HTTP_SECURITY_001`, and manual-only reporting for legacy compatibility strings or disabled HTTP security validation.
 
 ### doctor — Workspace Diagnostics
 

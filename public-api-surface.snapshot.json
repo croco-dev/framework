@@ -3955,6 +3955,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "formatUpgradeReport",
+          "exportKind": "named",
+          "source": "./commands/upgrade",
+          "declarationKind": "function"
+        },
+        {
           "name": "generate",
           "exportKind": "named",
           "source": "./commands/generate",
@@ -4195,6 +4201,12 @@
           "declarationKind": "const"
         },
         {
+          "name": "runUpgrade",
+          "exportKind": "named",
+          "source": "./commands/upgrade",
+          "declarationKind": "function"
+        },
+        {
           "name": "selectMode",
           "exportKind": "named",
           "source": "./libs/prompts",
@@ -4223,6 +4235,12 @@
           "exportKind": "named",
           "source": "./libs/naming",
           "declarationKind": "function"
+        },
+        {
+          "name": "upgrade",
+          "exportKind": "named",
+          "source": "./commands/upgrade",
+          "declarationKind": "const"
         },
         {
           "name": "validate",
@@ -4383,6 +4401,46 @@
           "name": "RuntimePolicyCheckIo",
           "exportKind": "named",
           "source": "./commands/runtimePolicy"
+        },
+        {
+          "name": "UpgradeDirent",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeFinding",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeFindingAction",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeFindingConfidence",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeIo",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeReport",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeReportMode",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
+        },
+        {
+          "name": "UpgradeSourceLocation",
+          "exportKind": "named",
+          "source": "./commands/upgrade"
         },
         {
           "name": "WriteOptions",
