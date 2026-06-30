@@ -88,6 +88,9 @@ describe("core-coverage-warning-check.mts", () => {
           production: { packages: ["billing-core", "retry-core"] },
           beta: { packages: ["health-core"] },
         },
+        spine: {
+          packages: ["billing-core"],
+        },
       },
       workspacePackageNames: new Set([
         "@croco/billing-core",
@@ -101,7 +104,7 @@ describe("core-coverage-warning-check.mts", () => {
       expect.objectContaining({
         packageName: "@croco/billing-core",
         status: "missing",
-        signals: ["production-ready maturity"],
+        signals: ["1.0 spine package", "production-ready maturity"],
       }),
       expect.objectContaining({
         packageName: "@croco/health-core",
@@ -117,6 +120,35 @@ describe("core-coverage-warning-check.mts", () => {
     expect(getCoreCoverageSelectionWarnings(candidates)).toEqual([
       expect.stringContaining("@croco/billing-core: candidate signals"),
       expect.stringContaining("@croco/health-core: candidate signals"),
+    ]);
+  });
+
+  it("reports beta spine packages as deterministic coverage candidates", () => {
+    const candidates = getCoreCoverageSelectionCandidates({
+      catalog: {
+        groups: {
+          Tooling: { packages: ["create-croco-app"] },
+        },
+        maturity: {
+          beta: { packages: ["create-croco-app"] },
+        },
+        spine: {
+          packages: ["create-croco-app"],
+        },
+      },
+      workspacePackageNames: new Set(["create-croco-app"]),
+      coreCoveragePackages: [],
+    });
+
+    expect(candidates).toEqual([
+      expect.objectContaining({
+        packageName: "create-croco-app",
+        status: "missing",
+        signals: ["1.0 spine package"],
+      }),
+    ]);
+    expect(getCoreCoverageSelectionWarnings(candidates)).toEqual([
+      expect.stringContaining("create-croco-app: candidate signals"),
     ]);
   });
 

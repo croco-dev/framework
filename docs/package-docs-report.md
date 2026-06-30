@@ -12,8 +12,36 @@
 | Missing generated API docs     |     0 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    41 |
+| Croco 1.0 spine packages       |    18 |
 
 New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`. Production-ready packages must have generated API docs unless they have a short-lived justification in `temporaryProductionApiDocExceptions`.
+
+## Croco 1.0 Spine
+
+Release-critical package set whose public API, diagnostics, generated artifacts, runtime contracts, and release evidence define the Croco 1.0 compatibility spine.
+
+Downstream release gates should select this package set from `docs/package-catalog.json` `spine.packages`. Spine membership is independent from maturity: non-spine alpha/beta packages can remain outside the 1.0 blocker set unless a golden path or certified adapter contract explicitly pulls them in.
+
+| Package                     | Group       | Maturity            | Directory                     |
+| --------------------------- | ----------- | ------------------- | ----------------------------- |
+| `@croco/framework-context`  | Core        | 🟢 production-ready | `packages/framework-context`  |
+| `@croco/problems-core`      | Core        | 🟢 production-ready | `packages/problems-core`      |
+| `@croco/protocols-core`     | Protocol    | 🟡 beta             | `packages/protocols-core`     |
+| `@croco/protocols-rest`     | Protocol    | 🟢 production-ready | `packages/protocols-rest`     |
+| `@croco/openapi-spec`       | Protocol    | 🟡 beta             | `packages/openapi-spec`       |
+| `@croco/rpc-codegen`        | Protocol    | 🟡 beta             | `packages/rpc-codegen`        |
+| `@croco/transports-http`    | Transport   | 🟢 production-ready | `packages/transports-http`    |
+| `@croco/telemetry-api`      | Integration | 🟢 production-ready | `packages/telemetry-api`      |
+| `@croco/telemetry-sdk-node` | Integration | 🟢 production-ready | `packages/telemetry-sdk-node` |
+| `@croco/tx-core`            | Core        | 🟢 production-ready | `packages/tx-core`            |
+| `@croco/tx-drizzle`         | Core        | 🟢 production-ready | `packages/tx-drizzle`         |
+| `@croco/events-core`        | Core        | 🟢 production-ready | `packages/events-core`        |
+| `@croco/events-tx`          | Core        | 🟡 beta             | `packages/events-tx`          |
+| `@croco/retry-core`         | Core        | 🟢 production-ready | `packages/retry-core`         |
+| `@croco/idempotency-core`   | Core        | 🟡 beta             | `packages/idempotency-core`   |
+| `@croco/testing`            | Tooling     | 🟡 beta             | `packages/testing`            |
+| `create-croco-app`          | Tooling     | 🟡 beta             | `packages/create-croco-app`   |
+| `@croco/cli`                | Tooling     | 🟡 beta             | `packages/cli`                |
 
 ## Missing Package README
 

@@ -1,5 +1,29 @@
 {
   "schemaVersion": 1,
+  "spine": {
+    "label": "Croco 1.0 spine",
+    "description": "Release-critical package set whose public API, diagnostics, generated artifacts, runtime contracts, and release evidence define the Croco 1.0 compatibility spine.",
+    "packages": [
+      "framework-context",
+      "problems-core",
+      "protocols-core",
+      "protocols-rest",
+      "openapi-spec",
+      "rpc-codegen",
+      "transports-http",
+      "telemetry-api",
+      "telemetry-sdk-node",
+      "tx-core",
+      "tx-drizzle",
+      "events-core",
+      "events-tx",
+      "retry-core",
+      "idempotency-core",
+      "testing",
+      "create-croco-app",
+      "cli"
+    ]
+  },
   "groups": {
     "Core": {
       "description": "Framework primitives, context, reliability, transactions, and cross-cutting core utilities",

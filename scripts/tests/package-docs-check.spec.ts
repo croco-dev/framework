@@ -59,11 +59,16 @@ describe("package-docs-check.mts", () => {
     expect(result.status).toBe(0);
     expect(readme).toContain("<!-- CROCO:PACKAGE-CATALOG:START -->");
     expect(readme).toContain("현재 카탈로그는 **2개 public package**");
+    expect(readme).toContain("Croco 1.0 Spine");
+    expect(readme).toContain("release-critical compatibility scope");
     expect(readme).toContain("Extension & Adapter Matrix");
     expect(readme).toContain("Adapter Ecosystem");
     expect(readme).toContain("compatibility certification checklist");
     expect(readme).toContain("certified compatibility");
     expect(readme).toContain("`@croco/alpha`");
+    expect(report).toContain("## Croco 1.0 Spine");
+    expect(report).toContain("Croco 1.0 spine packages");
+    expect(report).toContain("| `@croco/beta`");
     expect(report).toContain("Missing generated API docs");
     expect(report).toContain("Generated API Docs Backlog By Maturity");
     expect(report).toContain("| beta             |                2 |");
@@ -107,6 +112,24 @@ describe("package-docs-check.mts", () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("references missing package removed");
+  });
+
+  it("fails when spine metadata references a package that no longer exists", () => {
+    const root = createTempRoot();
+    writePackage(root, "alpha", { name: "@croco/alpha" });
+    writeCatalogMetadata(root, ["alpha"], {
+      spinePackages: ["alpha", "removed"],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["alpha"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("spine.packages references missing package removed");
   });
 
   it("fails for a new public package without README or API docs outside the legacy baseline", () => {
@@ -419,6 +442,7 @@ function writeCatalogMetadata(
     readonly extensionRuntimesByPackage?: Record<string, readonly string[]>;
     readonly groupName?: string;
     readonly productionPackages?: readonly string[];
+    readonly spinePackages?: readonly string[];
   } = {},
 ): void {
   const groupName = options.groupName ?? "Core";
@@ -430,6 +454,11 @@ function writeCatalogMetadata(
   );
   writeJson(join(root, "docs", "package-catalog.json"), {
     schemaVersion: 1,
+    spine: {
+      label: "Croco 1.0 spine",
+      description: "Fixture release-critical package set.",
+      packages: options.spinePackages ?? packageNames,
+    },
     groups: {
       [groupName]: {
         description: "Fixture core packages",

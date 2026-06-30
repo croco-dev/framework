@@ -45,6 +45,7 @@ type CatalogMetadata = {
   readonly schemaVersion?: unknown;
   readonly groups?: unknown;
   readonly maturity?: unknown;
+  readonly spine?: unknown;
 };
 
 type CatalogGroup = {
@@ -53,6 +54,12 @@ type CatalogGroup = {
 };
 
 type MaturityConfig = {
+  readonly label: string;
+  readonly packages: readonly string[];
+};
+
+type SpineConfig = {
+  readonly description: string;
   readonly label: string;
   readonly packages: readonly string[];
 };
@@ -109,6 +116,8 @@ type CatalogState = {
   readonly maturity: ReadonlyMap<MaturityKey, MaturityConfig>;
   readonly packages: readonly PackageRecord[];
   readonly privatePackageCount: number;
+  readonly spine: SpineConfig;
+  readonly spinePackages: readonly PackageRecord[];
 };
 
 const catalogStart = "<!-- CROCO:PACKAGE-CATALOG:START -->";
@@ -274,6 +283,12 @@ function loadCatalogState(rootDir: string, violations: string[]): CatalogState {
       maturity: maturityKey,
     };
   });
+  const spine = parseSpine(metadata.spine, records, violations);
+  const packageByShortName = new Map(records.map((pkg) => [pkg.shortName, pkg]));
+  const spinePackages = spine.packages.flatMap((packageName) => {
+    const pkg = packageByShortName.get(packageName);
+    return pkg ? [pkg] : [];
+  });
   const extensionMatrix = parseExtensionMatrix(
     metadata.extensionMatrix,
     groups,
@@ -287,6 +302,8 @@ function loadCatalogState(rootDir: string, violations: string[]): CatalogState {
     maturity,
     packages: records,
     privatePackageCount: packages.length - publicPackages.length,
+    spine,
+    spinePackages,
   };
 }
 
@@ -399,6 +416,54 @@ function parseMaturity(
   }
 
   return maturity;
+}
+
+function parseSpine(
+  value: unknown,
+  packages: readonly PackageRecord[],
+  violations: string[],
+): SpineConfig {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    violations.push(`${catalogMetadataPath}: spine must be an object`);
+    return {
+      description: "",
+      label: "Croco 1.0 spine",
+      packages: [],
+    };
+  }
+
+  const config = value as Record<string, unknown>;
+  const label = readRequiredString(config.label, "spine.label", violations);
+  const description = readRequiredString(config.description, "spine.description", violations);
+  const packageNames = readRequiredStringArray(config.packages, "spine.packages", violations);
+  const packageByName = new Map(packages.map((pkg) => [pkg.shortName, pkg]));
+  const seen = new Set<string>();
+
+  for (const packageName of packageNames) {
+    if (seen.has(packageName)) {
+      violations.push(`${catalogMetadataPath}: spine.packages contains duplicate ${packageName}`);
+      continue;
+    }
+
+    seen.add(packageName);
+    const pkg = packageByName.get(packageName);
+    if (!pkg) {
+      violations.push(
+        `${catalogMetadataPath}: spine.packages references missing package ${packageName}`,
+      );
+      continue;
+    }
+
+    if (pkg.maturity === "deprecated") {
+      violations.push(`${catalogMetadataPath}: spine package ${packageName} cannot be deprecated`);
+    }
+  }
+
+  return {
+    description: description || "Release-critical package set for Croco 1.0.",
+    label: label || "Croco 1.0 spine",
+    packages: packageNames,
+  };
 }
 
 function parseExtensionMatrix(
@@ -1340,6 +1405,14 @@ function generateReadmeCatalog(state: CatalogState): string {
     "",
     `현재 카탈로그는 **${state.packages.length}개 public package**를 추적합니다. Private package ${state.privatePackageCount}개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.`,
     "",
+    "### Croco 1.0 Spine",
+    "",
+    `${state.spine.label}은 ${state.spinePackages.length}개 package를 release-critical compatibility scope로 고정합니다. Source of truth는 \`docs/package-catalog.json\`의 \`spine.packages\`이며, 운영 가이드와 후속 release-gate issue 목록은 [Croco 1.0 Spine](docs/release/croco-1.0-spine.md)에 있습니다.`,
+    "",
+    "Spine membership is not a maturity claim: production-ready packages already have the strongest evidence gates, beta spine packages are allowed while their 1.0 gates harden, and non-spine beta/alpha packages do not block 1.0 unless they are pulled into a golden path or certified adapter path.",
+    "",
+    ...formatSpinePackageTable(state),
+    "",
     "### Package Groups",
     "",
     "| 그룹 | 역할 | 패키지 수 |",
@@ -1355,7 +1428,7 @@ function generateReadmeCatalog(state: CatalogState): string {
     "",
     "### Maturity Guide",
     "",
-    "Adapter 경계와 공식 우선순위, compatibility certification checklist는 [Adapter Ecosystem](packages/docs/src/content/docs/en/reference/adapter-ecosystem.md)에 정의되어 있습니다. 성숙도 승급 기준은 [Provider Maturity Gates](packages/docs/src/content/docs/en/reference/provider-maturity.md)와 [Presentation Runtime Support](packages/docs/src/content/docs/en/reference/presentation-runtime-support.md)에 정의되어 있으며, package test 존재 여부만으로 production-ready나 certified compatibility를 의미하지 않습니다.",
+    "Adapter 경계와 공식 우선순위, compatibility certification checklist는 [Adapter Ecosystem](packages/docs/src/content/docs/en/reference/adapter-ecosystem.md)에 정의되어 있습니다. 성숙도 승급 기준은 [Provider Maturity Gates](packages/docs/src/content/docs/en/reference/provider-maturity.md)와 [Presentation Runtime Support](packages/docs/src/content/docs/en/reference/presentation-runtime-support.md)에 정의되어 있으며, package test 존재 여부만으로 production-ready나 certified compatibility를 의미하지 않습니다. 1.0 spine은 release scope이고, production-ready는 package evidence state이며, certified adapter는 adapter/runtime/contract별 evidence state입니다.",
     "",
     "| 상태 | 의미 | 전체 public 패키지 수 |",
     "| --- | --- | ---: |",
@@ -1448,8 +1521,17 @@ function generateDocsReport(
     `| Missing generated API docs | ${coverage.missingApiDocs.length} |`,
     `| Missing package test directory | ${coverage.missingTests.length} |`,
     `| Extension matrix packages | ${state.extensionMatrix.packages.length} |`,
+    `| Croco 1.0 spine packages | ${state.spinePackages.length} |`,
     "",
     "New public packages must not add missing README, API docs, or test coverage unless the gap is explicitly listed in `docs/package-docs-baseline.json`. Production-ready packages must have generated API docs unless they have a short-lived justification in `temporaryProductionApiDocExceptions`.",
+    "",
+    "## Croco 1.0 Spine",
+    "",
+    `${state.spine.description}`,
+    "",
+    "Downstream release gates should select this package set from `docs/package-catalog.json` `spine.packages`. Spine membership is independent from maturity: non-spine alpha/beta packages can remain outside the 1.0 blocker set unless a golden path or certified adapter contract explicitly pulls them in.",
+    "",
+    ...formatSpinePackageTable(state),
     "",
     "## Missing Package README",
     "",
@@ -1558,6 +1640,21 @@ function appendExtensionMatrixTables(
       );
     }
   }
+}
+
+function formatSpinePackageTable(state: CatalogState): string[] {
+  if (state.spinePackages.length === 0) {
+    return ["No spine packages are configured."];
+  }
+
+  const lines = ["| Package | Group | Maturity | Directory |", "| --- | --- | --- | --- |"];
+
+  for (const pkg of state.spinePackages) {
+    const maturity = state.maturity.get(pkg.maturity)?.label ?? pkg.maturity;
+    lines.push(`| \`${pkg.name}\` | ${pkg.group} | ${maturity} | \`packages/${pkg.dir}\` |`);
+  }
+
+  return lines;
 }
 
 function formatMissingPackages(
