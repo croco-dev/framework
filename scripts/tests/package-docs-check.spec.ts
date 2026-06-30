@@ -65,8 +65,10 @@ describe("package-docs-check.mts", () => {
     expect(readme).toContain("Adapter Ecosystem");
     expect(readme).toContain("compatibility certification checklist");
     expect(readme).toContain("certified compatibility");
+    expect(readme).toContain("no certification record");
     expect(readme).toContain("`@croco/alpha`");
     expect(report).toContain("## Croco 1.0 Spine");
+    expect(report).toContain("## Certification Records");
     expect(report).toContain("Croco 1.0 spine packages");
     expect(report).toContain("| `@croco/beta`");
     expect(report).toContain("Missing generated API docs");
@@ -77,6 +79,7 @@ describe("package-docs-check.mts", () => {
     expect(matrix).toContain("Adapter Ecosystem");
     expect(matrix).toContain("certification checklist");
     expect(matrix).toContain("compatibility certification claim");
+    expect(matrix).toContain("no certification record");
     expect(matrix).toContain("`@croco/alpha`");
   });
 
@@ -238,6 +241,244 @@ describe("package-docs-check.mts", () => {
     expect(result.stdout).toContain(
       "extensionMatrix is missing metadata for Provider package provider",
     );
+  });
+
+  it("renders certification records from catalog metadata", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", {
+      name: "@croco/provider",
+      version: "1.2.3",
+    });
+    writeCatalogMetadata(root, ["provider"], {
+      certificationRecords: [
+        createCertificationRecord("@croco/provider", {
+          contract: "@croco/core/Provider",
+          packageVersion: "1.2.3",
+        }),
+      ],
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+    const report = readFileSync(join(root, "docs", "package-docs-report.md"), "utf-8");
+    const matrix = readFileSync(
+      join(
+        root,
+        "packages",
+        "docs",
+        "src",
+        "content",
+        "docs",
+        "en",
+        "reference",
+        "extension-matrix.md",
+      ),
+      "utf-8",
+    );
+
+    expect(result.status).toBe(0);
+    expect(report).toMatch(/\| Certification records\s+\|\s+1 \|/);
+    expect(report).toContain("`@croco/core/Provider`");
+    expect(report).toContain("liveSmoke: missing");
+    expect(report).toContain("liveSmoke evidence has not been recorded.");
+    expect(matrix).toContain("candidate (1.2.3)");
+    expect(matrix).toContain("missing: liveSmoke");
+  });
+
+  it("fails when certification records do not link to extension matrix entries", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", {
+      name: "@croco/provider",
+      version: "1.2.3",
+    });
+    writeCatalogMetadata(root, ["provider"], {
+      certificationRecords: [
+        createCertificationRecord("@croco/provider", {
+          contract: "@croco/core/Provider",
+          packageVersion: "1.2.3",
+        }),
+      ],
+      extensionGroups: [],
+      extensionPackages: [],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "certification.records[0].package @croco/provider must also be listed in extensionMatrix.packages",
+    );
+  });
+
+  it("fails when missing certification evidence lacks an explicit reason", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", {
+      name: "@croco/provider",
+      version: "1.2.3",
+    });
+    writeCatalogMetadata(root, ["provider"], {
+      certificationRecords: [
+        createCertificationRecord("@croco/provider", {
+          evidence: {
+            liveSmoke: {
+              status: "missing",
+            },
+          },
+          contract: "@croco/core/Provider",
+          packageVersion: "1.2.3",
+        }),
+      ],
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "certification.records[0].evidence.liveSmoke missing evidence must include reason",
+    );
+  });
+
+  it("fails when known certification gaps do not name missing evidence keys", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", {
+      name: "@croco/provider",
+      version: "1.2.3",
+    });
+    writeCatalogMetadata(root, ["provider"], {
+      certificationRecords: [
+        createCertificationRecord("@croco/provider", {
+          contract: "@croco/core/Provider",
+          knownGaps: ["Real credential smoke has not been recorded."],
+          packageVersion: "1.2.3",
+        }),
+      ],
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "certification.records[0].knownGaps must name the missing certification gaps: liveSmoke",
+    );
+  });
+
+  it("fails when present certification evidence only has prose", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", {
+      name: "@croco/provider",
+      version: "1.2.3",
+    });
+    writeCatalogMetadata(root, ["provider"], {
+      certificationRecords: [
+        createCertificationRecord("@croco/provider", {
+          evidence: {
+            diagnostics: {
+              status: "present",
+              description: "Diagnostics coverage exists in package tests.",
+            },
+          },
+          contract: "@croco/core/Provider",
+          packageVersion: "1.2.3",
+        }),
+      ],
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "certification.records[0].evidence.diagnostics present evidence must include command or artifact",
+    );
+  });
+
+  it("escapes pipe characters in rendered certification table cells", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", {
+      name: "@croco/provider",
+      version: "1.2.3",
+    });
+    writeCatalogMetadata(root, ["provider"], {
+      certificationRecords: [
+        createCertificationRecord("@croco/provider", {
+          contract: "@croco/core/Provider|v1",
+          evidence: {
+            diagnostics: {
+              status: "present",
+              command: "pnpm test -- --case diagnostics|provider",
+            },
+          },
+          knownGaps: ["liveSmoke | real credential smoke has not been recorded."],
+          packageVersion: "1.2.3",
+        }),
+      ],
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+    const report = readFileSync(join(root, "docs", "package-docs-report.md"), "utf-8");
+    const matrix = readFileSync(
+      join(
+        root,
+        "packages",
+        "docs",
+        "src",
+        "content",
+        "docs",
+        "en",
+        "reference",
+        "extension-matrix.md",
+      ),
+      "utf-8",
+    );
+
+    expect(result.status).toBe(0);
+    expect(report).toContain("`@croco/core/Provider\\|v1`");
+    expect(report).toContain("diagnostics\\|provider");
+    expect(report).toContain("liveSmoke \\| real credential smoke has not been recorded.");
+    expect(matrix).toContain("@croco/core/Provider\\|v1");
   });
 
   it("fails when presentation-preset claims a runtime without generated profile evidence", () => {
@@ -424,7 +665,10 @@ function writePackage(
     writeFileSync(join(packageDir, "README.md"), `# ${pkg.name}\n\nFixture package.\n`);
   }
 
-  writeFileSync(join(packageDir, "package.json"), `${JSON.stringify(pkg, null, 2)}\n`);
+  writeFileSync(
+    join(packageDir, "package.json"),
+    `${JSON.stringify({ version: "0.0.0", ...pkg }, null, 2)}\n`,
+  );
 }
 
 function writeGeneratedApiDocs(root: string, packageDirName: string): void {
@@ -440,6 +684,7 @@ function writeCatalogMetadata(
     readonly extensionGroups?: readonly string[];
     readonly extensionPackages?: readonly string[];
     readonly extensionRuntimesByPackage?: Record<string, readonly string[]>;
+    readonly certificationRecords?: readonly Record<string, unknown>[];
     readonly groupName?: string;
     readonly productionPackages?: readonly string[];
     readonly spinePackages?: readonly string[];
@@ -498,7 +743,62 @@ function writeCatalogMetadata(
         ]),
       ),
     },
+    certification: {
+      schemaVersion: 1,
+      records: options.certificationRecords ?? [],
+    },
   });
+}
+
+function createCertificationRecord(
+  packageName: string,
+  overrides: {
+    readonly adapterCategory?: string;
+    readonly contract?: string;
+    readonly evidence?: Record<string, Record<string, unknown>>;
+    readonly knownGaps?: readonly string[];
+    readonly package?: string;
+    readonly packageVersion?: string;
+    readonly runtimes?: readonly string[];
+    readonly state?: string;
+  } = {},
+): Record<string, unknown> {
+  const evidence = {
+    conformance: {
+      status: "present",
+      command: `pnpm --filter ${packageName} test`,
+    },
+    noCredentialSmoke: {
+      status: "present",
+      command: `pnpm --filter ${packageName} test`,
+    },
+    liveSmoke: {
+      status: "missing",
+      reason: "Live smoke has not been recorded.",
+    },
+    diagnostics: {
+      status: "present",
+      command: `pnpm --filter ${packageName} test`,
+      description: "Diagnostics coverage exists in package tests.",
+    },
+    redactionTests: {
+      status: "present",
+      command: `pnpm --filter ${packageName} test`,
+      description: "Redaction coverage exists in package tests.",
+    },
+    ...overrides.evidence,
+  };
+
+  return {
+    package: overrides.package ?? packageName,
+    contract: overrides.contract ?? "@croco/core/Provider",
+    adapterCategory: overrides.adapterCategory ?? "provider",
+    runtimes: overrides.runtimes ?? ["node"],
+    packageVersion: overrides.packageVersion ?? "0.0.0",
+    state: overrides.state ?? "candidate",
+    evidence,
+    knownGaps: overrides.knownGaps ?? ["liveSmoke evidence has not been recorded."],
+  };
 }
 
 function writePresentationRuntimeProfileCatalog(
