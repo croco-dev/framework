@@ -389,6 +389,9 @@ export class CrocoRouteRegistrar {
           flush: false,
           nodeApi: false,
           requestLifecycle: true,
+          streamingResponse: true,
+          deadline: false,
+          abortSignal: true,
           shutdown: false,
         },
       };
@@ -404,6 +407,9 @@ export class CrocoRouteRegistrar {
         flush: false,
         nodeApi: true,
         requestLifecycle: true,
+        streamingResponse: true,
+        deadline: false,
+        abortSignal: true,
         shutdown: false,
       },
     };

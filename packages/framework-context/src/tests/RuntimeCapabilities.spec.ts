@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  checkRuntimeCapabilityRequirements,
+  createRuntimeCapabilityManifest,
   getRuntimeCapabilitySupport,
   isRuntimeCapabilitySupported,
+  stringifyRuntimeCapabilityManifest,
+  RUNTIME_CAPABILITY_MANIFEST_VERSION,
   RUNTIME_CAPABILITY_NAMES,
   RUNTIME_CAPABILITY_SUPPORT,
+  RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE,
   RUNTIME_PLATFORMS,
 } from "../index";
 
@@ -20,6 +25,9 @@ describe("runtime capabilities", () => {
       "trace",
       "waitUntil",
       "flush",
+      "streamingResponse",
+      "deadline",
+      "abortSignal",
       "shutdown",
     ]);
   });
@@ -38,6 +46,9 @@ describe("runtime capabilities", () => {
         trace: false,
         waitUntil: false,
         flush: true,
+        streamingResponse: false,
+        deadline: false,
+        abortSignal: false,
         shutdown: false,
       }),
     ).toBe(true);
@@ -51,5 +62,57 @@ describe("runtime capabilities", () => {
     expect(RUNTIME_CAPABILITY_SUPPORT["cloudflare-workers"].filesystem).toBe(false);
     expect(RUNTIME_CAPABILITY_SUPPORT["cloudflare-workers"].nodeApi).toBe(false);
     expect(RUNTIME_CAPABILITY_SUPPORT["cloudflare-workers"].requestLifecycle).toBe(true);
+  });
+
+  it("emits deterministic RuntimeCapabilityManifest v1 artifacts", () => {
+    const manifest = createRuntimeCapabilityManifest("lambda");
+
+    expect(manifest).toEqual({
+      version: RUNTIME_CAPABILITY_MANIFEST_VERSION,
+      platform: "lambda",
+      capabilities: {
+        env: true,
+        filesystem: true,
+        logger: true,
+        nodeApi: true,
+        requestLifecycle: true,
+        trace: true,
+        waitUntil: true,
+        flush: true,
+        streamingResponse: false,
+        deadline: true,
+        abortSignal: false,
+        shutdown: false,
+      },
+      diagnostics: [],
+    });
+    expect(stringifyRuntimeCapabilityManifest(manifest)).toBe(
+      `${JSON.stringify(manifest, null, 2)}\n`,
+    );
+  });
+
+  it("reports unsupported runtime requirements with a stable CROCO diagnostic", () => {
+    const manifest = createRuntimeCapabilityManifest("cloudflare-workers", {
+      requirements: [
+        {
+          capability: "nodeApi",
+          source: { file: "src/routes/admin.ts", symbol: "AdminController.export" },
+        },
+      ],
+    });
+
+    expect(manifest.diagnostics).toEqual([
+      {
+        code: RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE,
+        severity: "error",
+        platform: "cloudflare-workers",
+        capability: "nodeApi",
+        message: "Runtime platform 'cloudflare-workers' does not support capability 'nodeApi'.",
+        source: { file: "src/routes/admin.ts", symbol: "AdminController.export" },
+      },
+    ]);
+    expect(
+      checkRuntimeCapabilityRequirements(manifest, [{ capability: "filesystem" }])[0]?.code,
+    ).toBe(RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE);
   });
 });

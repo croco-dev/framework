@@ -5,13 +5,21 @@ prev: false
 title: "RUNTIME_CAPABILITY_SUPPORT"
 ---
 
-> `const` **RUNTIME\_CAPABILITY\_SUPPORT**: `object`
+> `const` **RUNTIME_CAPABILITY_SUPPORT**: `object`
 
 ## Type Declaration
 
 ### cloudflare-workers
 
 > `readonly` **cloudflare-workers**: `object`
+
+#### cloudflare-workers.abortSignal
+
+> `readonly` **abortSignal**: `true` = `true`
+
+#### cloudflare-workers.deadline
+
+> `readonly` **deadline**: `false` = `false`
 
 #### cloudflare-workers.env
 
@@ -41,6 +49,10 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 
 > `readonly` **shutdown**: `false` = `false`
 
+#### cloudflare-workers.streamingResponse
+
+> `readonly` **streamingResponse**: `true` = `true`
+
 #### cloudflare-workers.trace
 
 > `readonly` **trace**: `true` = `true`
@@ -52,6 +64,14 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 ### lambda
 
 > `readonly` **lambda**: `object`
+
+#### lambda.abortSignal
+
+> `readonly` **abortSignal**: `false` = `false`
+
+#### lambda.deadline
+
+> `readonly` **deadline**: `true` = `true`
 
 #### lambda.env
 
@@ -81,6 +101,10 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 
 > `readonly` **shutdown**: `false` = `false`
 
+#### lambda.streamingResponse
+
+> `readonly` **streamingResponse**: `false` = `false`
+
 #### lambda.trace
 
 > `readonly` **trace**: `true` = `true`
@@ -92,6 +116,14 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 ### node
 
 > `readonly` **node**: `object`
+
+#### node.abortSignal
+
+> `readonly` **abortSignal**: `true` = `true`
+
+#### node.deadline
+
+> `readonly` **deadline**: `false` = `false`
 
 #### node.env
 
@@ -120,6 +152,10 @@ title: "RUNTIME_CAPABILITY_SUPPORT"
 #### node.shutdown
 
 > `readonly` **shutdown**: `false` = `false`
+
+#### node.streamingResponse
+
+> `readonly` **streamingResponse**: `true` = `true`
 
 #### node.trace
 

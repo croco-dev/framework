@@ -6,7 +6,7 @@ export default defineConfig({
   target: "node22",
   clean: true,
   dts: true,
-  noExternal: ["@croco/tenant-core"],
+  noExternal: ["@croco/framework-context", "@croco/tenant-core"],
   banner: {
     js: "#!/usr/bin/env node",
   },

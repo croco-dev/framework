@@ -12,6 +12,7 @@ import type {
   RuntimeTraceContext,
 } from "@croco/framework-context";
 import {
+  createRuntimeCapabilityDiagnostic,
   getRuntimeCapabilitySupport,
   isKnownRuntimePlatform,
   RUNTIME_CAPABILITY_NAMES,
@@ -87,8 +88,16 @@ export class RuntimeCapabilityProblem extends Problem {
   readonly code = "transports-http/runtime-capability-invalid";
   readonly category = ProblemCategory.Conflict;
 
-  constructor(detail: string) {
-    super(undefined, undefined, detail);
+  constructor(detail: string, diagnostic?: ReturnType<typeof createRuntimeCapabilityDiagnostic>) {
+    super(undefined, undefined, detail, {
+      extensions: diagnostic
+        ? {
+            diagnosticCode: diagnostic.code,
+            platform: diagnostic.platform,
+            capability: diagnostic.capability,
+          }
+        : undefined,
+    });
   }
 }
 
@@ -105,6 +114,9 @@ const DEFAULT_CAPABILITIES: RuntimeCapabilities = {
   trace: false,
   waitUntil: false,
   flush: false,
+  streamingResponse: false,
+  deadline: false,
+  abortSignal: false,
   shutdown: false,
 };
 
@@ -124,6 +136,9 @@ export function createRuntimeContext(init: RuntimeContextInit): RuntimeContext {
     filesystem: support.filesystem,
     nodeApi: support.nodeApi,
     requestLifecycle: support.requestLifecycle,
+    streamingResponse: support.streamingResponse,
+    deadline: support.deadline,
+    abortSignal: support.abortSignal,
     ...init.capabilities,
     env: init.capabilities?.env ?? init.env !== undefined,
     logger: init.capabilities?.logger ?? init.logger !== undefined,
@@ -172,9 +187,8 @@ function assertRuntimeCapabilities(
       !support[capability] &&
       (capabilities[capability] || (isImplementationBacked && implemented))
     ) {
-      throw new RuntimeCapabilityProblem(
-        `Runtime platform '${init.platform}' does not support capability '${capability}'.`,
-      );
+      const diagnostic = createRuntimeCapabilityDiagnostic(init.platform, capability);
+      throw new RuntimeCapabilityProblem(diagnostic.message, diagnostic);
     }
 
     if (isImplementationBacked && capabilities[capability] && !implemented) {
@@ -220,6 +234,12 @@ function hasRuntimeCapabilityImplementation(
       return init.waitUntil !== undefined;
     case "flush":
       return init.flush !== undefined;
+    case "streamingResponse":
+      return true;
+    case "deadline":
+      return true;
+    case "abortSignal":
+      return true;
     case "shutdown":
       return init.shutdown !== undefined;
   }

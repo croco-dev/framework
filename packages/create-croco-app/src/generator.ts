@@ -6,6 +6,11 @@ import {
   renderTenantModelPlaybook,
 } from "@croco/tenant-core/tenant-model";
 import {
+  createRuntimeCapabilityManifest,
+  stringifyRuntimeCapabilityManifest,
+} from "@croco/framework-context";
+import type { KnownRuntimePlatform } from "@croco/framework-context";
+import {
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -428,6 +433,7 @@ function writeSaasProviderPackageDependencies(
 async function finalize(targetDir: string, options: GeneratorOptions): Promise<void> {
   rewriteExternalCrocoWorkspaceRanges(targetDir);
   writeGoalManifest(targetDir, options);
+  writeRuntimeCapabilityManifest(targetDir, options);
 
   // Step 10: .env.example → .env 복사
   const envExample = join(targetDir, ".env.example");
@@ -445,6 +451,32 @@ async function finalize(targetDir: string, options: GeneratorOptions): Promise<v
   if (options.installDeps) {
     installPnpmDependencies(targetDir);
   }
+}
+
+function writeRuntimeCapabilityManifest(targetDir: string, options: GeneratorOptions): void {
+  const platform = resolveRuntimeCapabilityPlatform(options);
+  const manifest = createRuntimeCapabilityManifest(platform);
+
+  writeFileSync(
+    join(targetDir, "croco-runtime-capability.manifest.json"),
+    stringifyRuntimeCapabilityManifest(manifest),
+  );
+}
+
+function resolveRuntimeCapabilityPlatform(options: GeneratorOptions): KnownRuntimePlatform {
+  if (options.saasProviderProfile) {
+    return getSaasProviderProfileDefinition(options.saasProviderProfile).runtimeTarget;
+  }
+
+  if (options.backendDeploy === "lambda") {
+    return "lambda";
+  }
+
+  if (options.frontendDeploy === "cloudflare-meta-vite") {
+    return "cloudflare-workers";
+  }
+
+  return "node";
 }
 
 function installPnpmDependencies(targetDir: string): void {

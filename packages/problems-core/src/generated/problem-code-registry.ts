@@ -10992,7 +10992,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/testing.ts",
-          line: 175,
+          line: 178,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11057,7 +11057,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/testing.ts",
-          line: 162,
+          line: 165,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11541,7 +11541,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/runtimeContext.ts",
-          line: 87,
+          line: 88,
           column: 3,
           kind: "problem-class",
         },
