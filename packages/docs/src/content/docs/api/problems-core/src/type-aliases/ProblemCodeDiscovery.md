@@ -11,15 +11,15 @@ title: "ProblemCodeDiscovery"
 
 ### category
 
-> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+> `readonly` **category**: [`ProblemCategoryName`](/api/problems-core/src/type-aliases/problemcategoryname/)
 
-***
+---
 
 ### code
 
 > `readonly` **code**: `string`
 
-***
+---
 
 ### sources
 

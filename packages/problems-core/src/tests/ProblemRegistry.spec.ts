@@ -37,6 +37,7 @@ describe("Problem code registry", () => {
       status: 403,
       title: "Forbidden",
       cookbookPath: "/reference/problem-recovery-cookbook/#auth-not-allowed",
+      lifecycle: { status: "active" },
       recovery: {
         cause: expect.stringContaining("not allowed"),
         retryability: "not-retryable",
@@ -185,6 +186,61 @@ describe("Problem code registry", () => {
               ...entry.recovery,
               userAction: "",
             },
+          },
+        ],
+      }),
+    ).toThrow(ProblemRegistryValidationProblem);
+  });
+
+  it("allows deprecated registry entries without source locations when migration metadata is present", () => {
+    const registry = createProblemCodeRegistry([
+      discovery("auth/not-allowed", ProblemCategory.Forbidden, "packages/auth/src/a.ts", 4),
+    ]);
+    const [entry] = registry.problems;
+
+    if (!entry) {
+      throw new Error("expected registry fixture entry");
+    }
+
+    expect(() =>
+      assertProblemCodeRegistryValid({
+        ...registry,
+        problems: [
+          {
+            ...entry,
+            lifecycle: {
+              status: "deprecated",
+              deprecation: {
+                reason: "The Problem code was replaced by a package-scoped code.",
+                migrationNote: "Use auth/not-allowed-v2 for new client branches.",
+                replacementCode: "auth/not-allowed-v2",
+              },
+            },
+            sources: [],
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects deprecated registry entries without migration metadata", () => {
+    const registry = createProblemCodeRegistry([
+      discovery("auth/not-allowed", ProblemCategory.Forbidden, "packages/auth/src/a.ts", 4),
+    ]);
+    const [entry] = registry.problems;
+
+    if (!entry) {
+      throw new Error("expected registry fixture entry");
+    }
+
+    expect(() =>
+      assertProblemCodeRegistryValid({
+        ...registry,
+        problems: [
+          {
+            ...entry,
+            lifecycle: { status: "deprecated" },
+            sources: [],
           },
         ],
       }),
