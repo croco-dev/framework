@@ -9,7 +9,7 @@ import {
   type RequestPipelineGraph,
 } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
-import { Problem, ProblemFactory } from "@croco/problems-core";
+import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import { extractRouteIR } from "@croco/protocols-core";
 import {
   getFilters,
@@ -75,6 +75,13 @@ type RequiredSecurityMiddleware = {
   readonly exportName: SecurityMiddlewareExportName;
   readonly matches: (middleware: MiddlewareFunction) => boolean;
 };
+
+const SECURITY_MIDDLEWARE_VALIDATION_CODE = "CROCO_HTTP_SECURITY_001";
+const LEGACY_SECURITY_MIDDLEWARE_VALIDATION_CODE = "transports-http/security-middleware-validation";
+const LEGACY_SECURITY_MIDDLEWARE_VALIDATION_PROBLEM = {
+  code: LEGACY_SECURITY_MIDDLEWARE_VALIDATION_CODE,
+  category: ProblemCategory.InternalServerError,
+} as const;
 
 const REQUIRED_SECURITY_MIDDLEWARES: readonly RequiredSecurityMiddleware[] = [
   {
@@ -185,10 +192,11 @@ export class CrocoApp {
       return;
     }
 
-    throw ProblemFactory.internalServerError(
-      "transports-http/security-middleware-validation",
-      message,
-    );
+    throw ProblemFactory.internalServerError(SECURITY_MIDDLEWARE_VALIDATION_CODE, message, {
+      extensions: {
+        legacyCode: LEGACY_SECURITY_MIDDLEWARE_VALIDATION_PROBLEM.code,
+      },
+    });
   }
 
   private validateDiBootstrapContract(): DiValidationMode {

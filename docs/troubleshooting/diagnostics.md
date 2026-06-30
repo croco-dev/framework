@@ -149,12 +149,13 @@ Search: CROCO_ROUTE_004, missing path param, @Param, route contract
 
 초기 표준 코드 예시:
 
-| Code              | Category             | Severity | Cause 요약                                  | Recovery action 요약                             |
-| ----------------- | -------------------- | -------- | ------------------------------------------- | ------------------------------------------------ |
-| `CROCO_DI_001`    | dependency-injection | error    | 등록되지 않은 provider를 resolve함          | provider 등록, module export, optional lookup    |
-| `CROCO_ROUTE_004` | routing              | error    | path parameter와 controller metadata 불일치 | `@Param` 추가 또는 path token rename             |
-| `CROCO_BUILD_002` | build-time           | error    | generated artifact가 source와 drift됨       | package-specific write command 실행 후 diff 검토 |
-| `CROCO_BUILD_003` | build-time           | error    | controller source에 TypeScript 오류가 있음  | controller type error 수정 후 contract 재실행    |
+| Code                      | Category             | Severity | Cause 요약                                       | Recovery action 요약                                           |
+| ------------------------- | -------------------- | -------- | ------------------------------------------------ | -------------------------------------------------------------- |
+| `CROCO_DI_001`            | dependency-injection | error    | 등록되지 않은 provider를 resolve함               | provider 등록, module export, optional lookup                  |
+| `CROCO_ROUTE_004`         | routing              | error    | path parameter와 controller metadata 불일치      | `@Param` 추가 또는 path token rename                           |
+| `CROCO_BUILD_002`         | build-time           | error    | generated artifact가 source와 drift됨            | package-specific write command 실행 후 diff 검토               |
+| `CROCO_BUILD_003`         | build-time           | error    | controller source에 TypeScript 오류가 있음       | controller type error 수정 후 contract 재실행                  |
+| `CROCO_HTTP_SECURITY_001` | runtime              | error    | HTTP bootstrap에 필수 security middleware가 없음 | security headers, CORS, body limit, rate limit middleware 등록 |
 
 ### CLI diagnostic code migration
 
@@ -221,6 +222,17 @@ Fix: package-specific write command를 실행하고 generated diff를 검토한 
 
 Cause: RPC/OpenAPI contract loader가 import하려는 controller source에 TypeScript diagnostic이 있습니다. 이 상태에서 emitted JavaScript를 import하면 type-safe source contract가 아닌 깨진 source에서 contract artifact가 생성될 수 있습니다.
 Fix: 출력된 source file, line/column, `TS####` diagnostic을 기준으로 controller type error를 수정한 뒤 `contract:check`, `contract:openapi`, `contract:client`를 다시 실행합니다.
+
+### `CROCO_HTTP_SECURITY_001`
+
+Cause: HTTP app bootstrap이 `securityHeadersMiddleware`, `corsMiddleware`, `bodyLimitMiddleware`,
+`rateLimitHttpMiddleware` 중 하나 이상이 빠진 상태를 발견했습니다.
+Fix: 운영 및 generated app 기본 경로에서는 네 가지 middleware를 모두 등록합니다. 로컬 마이그레이션이나
+테스트 fixture처럼 실패를 의도적으로 확인하는 경우에만 `securityValidation: "off"` 또는
+`CROCO_HTTP_SECURITY_VALIDATION=off`를 사용하고, PR 설명이나 fixture 이름에 그 이유를 남깁니다.
+이전 slash-form code인 `transports-http/security-middleware-validation`을 매칭하던 코드는
+`CROCO_HTTP_SECURITY_001`로 옮기고, 전환 기간에는 Problem `extensions.legacyCode`에서 이전 값을
+확인할 수 있습니다.
 
 ### 변경 정책
 

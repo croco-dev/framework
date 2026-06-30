@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 405,
+  problemCount: 406,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -2765,6 +2765,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 55,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_HTTP_SECURITY_001",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-security-001",
+      recovery: {
+        cause:
+          "HTTP bootstrap validation found a generated or application app without the required security middleware set.",
+        userAction:
+          "Use an app build that registers security headers, CORS, body limit, and rate-limit middleware before first run.",
+        operatorAction:
+          "Add the missing @croco/transports-http middleware or keep securityValidation disabled only in an explicit local migration/testing fixture.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/CrocoApp.ts",
+          line: 195,
+          column: 11,
+          kind: "problem-factory",
         },
       ],
     },
@@ -11281,7 +11314,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 224,
+          line: 232,
           column: 11,
           kind: "problem-factory",
         },
@@ -11522,13 +11555,14 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#transports-http-security-middleware-validation",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause:
+          "Compatibility metadata for the previous HTTP security middleware validation code. New runtime failures use CROCO_HTTP_SECURITY_001 and preserve this value as extensions.legacyCode.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Migrate Problem.code matchers to CROCO_HTTP_SECURITY_001; use extensions.legacyCode only while rolling out compatibility changes.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
+          "Update dashboards, alerts, and runbooks from transports-http/security-middleware-validation to CROCO_HTTP_SECURITY_001 before removing legacy-code matching.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
         telemetry: {
           eventName: "croco.problem.error",
           severity: "error",
@@ -11541,9 +11575,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 188,
-          column: 11,
-          kind: "problem-factory",
+          line: 81,
+          column: 55,
+          kind: "problem-metadata",
         },
       ],
     },

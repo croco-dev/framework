@@ -264,7 +264,15 @@ fallback 차단을 모두 끕니다. 운영 경로에서는 `enforce`를 권장�
 | `bodyLimitMiddleware`       | `@croco/transports-http` | Caps request body size to prevent payload-based DoS                            |
 | `rateLimitHttpMiddleware`   | `@croco/transports-http` | Applies rate limiting to HTTP requests                                         |
 
-All four are part of the public API and can be imported directly from `@croco/transports-http`. Unless `securityValidation: 'off'` is set, missing any of them will cause bootstrap validation to fail.
+All four are part of the public API and can be imported directly from `@croco/transports-http`.
+Generated applications should register all four by default. Missing middleware fails bootstrap with
+`CROCO_HTTP_SECURITY_001` and `legacyCode: "transports-http/security-middleware-validation"`.
+Consumers that matched the previous slash-form code should migrate to `CROCO_HTTP_SECURITY_001`;
+the legacy value is preserved in `extensions.legacyCode` for compatibility during that migration.
+
+Use `securityValidation: 'off'` or `CROCO_HTTP_SECURITY_VALIDATION=off` only for explicit local
+migration/testing fixtures where the unsafe path is the behavior under test. Do not depend on the
+opt-out for normal first-run or production bootstrap.
 
 ## API 레퍼런스
 

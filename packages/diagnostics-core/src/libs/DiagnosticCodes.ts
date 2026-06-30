@@ -552,6 +552,34 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
       command: "pnpm exec croco project map --out croco.project-map.json",
     },
   }),
+  {
+    code: "CROCO_HTTP_SECURITY_001",
+    category: "runtime",
+    severity: "error",
+    title: "Required HTTP security middleware is missing",
+    cause:
+      "HTTP bootstrap validation found a generated or application HTTP app without the required security headers, CORS, body limit, or rate-limit middleware.",
+    action:
+      "Register all required @croco/transports-http security middleware before bootstrap, or use securityValidation: 'off' only for explicit local migration/testing.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_http_security_001",
+    searchKeywords: [
+      "CROCO_HTTP_SECURITY_001",
+      "transports-http/security-middleware-validation",
+      "securityValidation",
+      "securityHeadersMiddleware",
+      "corsMiddleware",
+      "bodyLimitMiddleware",
+      "rateLimitHttpMiddleware",
+    ],
+    fixExamples: [
+      {
+        label: "Register the required HTTP security middleware",
+        before: "createApp({ controllers: [UserController] });",
+        after:
+          "createApp({\n  controllers: [UserController],\n  middlewares: [\n    securityHeadersMiddleware(),\n    corsMiddleware({ origins: allowedOrigins }),\n    bodyLimitMiddleware({ limit: mb(1) }),\n    rateLimitHttpMiddleware({ rateLimiter, policy }),\n  ],\n});",
+      },
+    ],
+  },
 ] as const satisfies readonly DiagnosticCodeDefinition[];
 
 const diagnosticCodeDefinitionByCode = new Map<string, DiagnosticCodeDefinition>(

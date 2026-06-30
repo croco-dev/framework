@@ -1,10 +1,79 @@
 import { toWorkersHandler } from "@croco/transports-cloudflare-workers";
-import { createApp } from "@croco/transports-http";
+import {
+  createSlidingWindowPolicy,
+  RateLimiter,
+  RateLimitKeyBuilder,
+  SlidingWindowInMemoryStore,
+} from "@croco/ratelimit-core";
+import {
+  bodyLimitMiddleware,
+  corsMiddleware,
+  createApp,
+  mb,
+  rateLimitHttpMiddleware,
+  securityHeadersMiddleware,
+} from "@croco/transports-http";
 
-const app = createApp({
-  controllers: [],
-  diValidation: "off",
-  securityValidation: "off",
-});
+const DEFAULT_WEB_ORIGIN = "http://localhost:5173";
+const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set([
+  "/health",
+  "/health/live",
+  "/health/ready",
+  "/ready",
+]);
 
-export default toWorkersHandler(app);
+// Cloudflare Workers isolates do not share in-memory state. Replace this with a Durable Objects or KV-backed
+// store before relying on rate limits for production-wide enforcement.
+const rateLimiter = new RateLimiter(
+  new SlidingWindowInMemoryStore(),
+  new RateLimitKeyBuilder(["ip"]),
+);
+
+type ApiWorkerEnv = Record<string, unknown> & {
+  WEB_ORIGIN?: string;
+};
+
+type ApiWorkerHandler = ReturnType<typeof toWorkersHandler>;
+
+let cachedWebOrigin: string | undefined;
+let cachedHandler: ApiWorkerHandler | undefined;
+
+function getWebOrigin(env: ApiWorkerEnv): string {
+  return typeof env.WEB_ORIGIN === "string" && env.WEB_ORIGIN.length > 0
+    ? env.WEB_ORIGIN
+    : DEFAULT_WEB_ORIGIN;
+}
+
+function getApiWorkerHandler(env: ApiWorkerEnv): ApiWorkerHandler {
+  const webOrigin = getWebOrigin(env);
+
+  if (cachedHandler && cachedWebOrigin === webOrigin) {
+    return cachedHandler;
+  }
+
+  const app = createApp({
+    controllers: [],
+    diValidation: "off",
+    middlewares: [
+      securityHeadersMiddleware(),
+      corsMiddleware({ origins: [webOrigin] }),
+      bodyLimitMiddleware({ limit: mb(1) }),
+      rateLimitHttpMiddleware({
+        rateLimiter,
+        policy: createSlidingWindowPolicy("api", 100, 60_000),
+        skip: (ctx) => OPERATIONAL_RATE_LIMIT_BYPASS_PATHS.has(ctx.req.path),
+      }),
+    ],
+  });
+
+  cachedWebOrigin = webOrigin;
+  cachedHandler = toWorkersHandler(app);
+  return cachedHandler;
+}
+
+export default {
+  fetch(...args: Parameters<ApiWorkerHandler["fetch"]>): ReturnType<ApiWorkerHandler["fetch"]> {
+    const [, env] = args;
+    return getApiWorkerHandler(env as ApiWorkerEnv).fetch(...args);
+  },
+};

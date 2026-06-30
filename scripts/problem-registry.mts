@@ -700,9 +700,13 @@ function getProblemRedactionDiagnosticsForFile(rootDir: string, file: string): r
     file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
   const diagnostics: string[] = [];
+  const stringConstants = collectStringConstants(rootDir, sourceFile);
 
   function visit(node: ts.Node): void {
-    if (ts.isObjectLiteralExpression(node)) {
+    if (
+      ts.isObjectLiteralExpression(node) &&
+      isProblemExtensionOptionsObject(sourceFile, node, stringConstants)
+    ) {
       collectUnsafeExtensionDiagnostics(rootDir, sourceFile, node, diagnostics);
     }
 
@@ -712,6 +716,86 @@ function getProblemRedactionDiagnosticsForFile(rootDir: string, file: string): r
   visit(sourceFile);
 
   return diagnostics;
+}
+
+function isProblemExtensionOptionsObject(
+  sourceFile: ts.SourceFile,
+  node: ts.ObjectLiteralExpression,
+  stringConstants: StringConstants,
+): boolean {
+  if (!hasObjectLiteralProperty(node, "extensions")) {
+    return false;
+  }
+
+  if (getProblemMetadataObject(sourceFile, node, stringConstants)) {
+    return true;
+  }
+
+  return isProblemConstructionArgument(sourceFile, node);
+}
+
+function hasObjectLiteralProperty(node: ts.ObjectLiteralExpression, propertyName: string): boolean {
+  return node.properties.some(
+    (property) =>
+      ts.isPropertyAssignment(property) && getPropertyName(property.name) === propertyName,
+  );
+}
+
+function isProblemConstructionArgument(
+  sourceFile: ts.SourceFile,
+  node: ts.ObjectLiteralExpression,
+): boolean {
+  const expression = getExpressionArgumentContainer(node);
+  const parent = expression.parent;
+
+  if (ts.isCallExpression(parent) && parent.arguments.some((argument) => argument === expression)) {
+    if (parent.expression.kind === ts.SyntaxKind.SuperKeyword) {
+      return true;
+    }
+
+    if (
+      ts.isPropertyAccessExpression(parent.expression) &&
+      parent.expression.expression.getText(sourceFile) === "ProblemFactory"
+    ) {
+      return true;
+    }
+
+    return getExpressionTerminalName(parent.expression)?.endsWith("Problem") ?? false;
+  }
+
+  return (
+    ts.isNewExpression(parent) &&
+    parent.arguments?.some((argument) => argument === expression) === true &&
+    (getExpressionTerminalName(parent.expression)?.endsWith("Problem") ?? false)
+  );
+}
+
+function getExpressionArgumentContainer(node: ts.Expression): ts.Expression {
+  let expression = node;
+
+  while (
+    ts.isParenthesizedExpression(expression.parent) ||
+    ts.isAsExpression(expression.parent) ||
+    ts.isSatisfiesExpression(expression.parent) ||
+    (ts.isConditionalExpression(expression.parent) &&
+      (expression.parent.whenTrue === expression || expression.parent.whenFalse === expression))
+  ) {
+    expression = expression.parent;
+  }
+
+  return expression;
+}
+
+function getExpressionTerminalName(expression: ts.Expression): string | null {
+  if (ts.isIdentifier(expression)) {
+    return expression.text;
+  }
+
+  if (ts.isPropertyAccessExpression(expression)) {
+    return expression.name.text;
+  }
+
+  return null;
 }
 
 function collectUnsafeExtensionDiagnostics(
@@ -1272,7 +1356,7 @@ function mergeStringConstants(...sources: readonly StringConstants[]): StringCon
   return { identifiers, propertyAccesses };
 }
 
-const importedSourceFileCache = new Map<string, ts.SourceFile>();
+const IMPORTED_SOURCE_FILE_CACHE = new Map<string, ts.SourceFile>();
 
 function resolveImportedSourceFile(
   rootDir: string,
@@ -1302,7 +1386,7 @@ function resolveImportedSourceFile(
     return null;
   }
 
-  const cached = importedSourceFileCache.get(sourceFilePath);
+  const cached = IMPORTED_SOURCE_FILE_CACHE.get(sourceFilePath);
   if (cached) {
     return cached;
   }
@@ -1316,7 +1400,7 @@ function resolveImportedSourceFile(
     true,
     sourceFilePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
-  importedSourceFileCache.set(sourceFilePath, parsed);
+  IMPORTED_SOURCE_FILE_CACHE.set(sourceFilePath, parsed);
 
   return parsed;
 }
@@ -1637,6 +1721,28 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  CROCO_HTTP_SECURITY_001: recovery({
+    cause:
+      "HTTP bootstrap validation found a generated or application app without the required security middleware set.",
+    userAction:
+      "Use an app build that registers security headers, CORS, body limit, and rate-limit middleware before first run.",
+    operatorAction:
+      "Add the missing @croco/transports-http middleware or keep securityValidation disabled only in an explicit local migration/testing fixture.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
+  "transports-http/security-middleware-validation": recovery({
+    cause:
+      "Compatibility metadata for the previous HTTP security middleware validation code. New runtime failures use CROCO_HTTP_SECURITY_001 and preserve this value as extensions.legacyCode.",
+    userAction:
+      "Migrate Problem.code matchers to CROCO_HTTP_SECURITY_001; use extensions.legacyCode only while rolling out compatibility changes.",
+    operatorAction:
+      "Update dashboards, alerts, and runbooks from transports-http/security-middleware-validation to CROCO_HTTP_SECURITY_001 before removing legacy-code matching.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
   "metrics-billing/metric-dropped": recovery({
     cause:
       "Billing metrics could not be recorded because the referenced account, subscription, or plan evidence was missing.",
@@ -2003,14 +2109,14 @@ function parseArgs(args: readonly string[]): {
     if (arg === "--base") {
       const value = args[index + 1];
       if (!value) {
-        throw new Error("--base requires a git ref");
+        throw new ProblemRegistryValidationProblem(["--base requires a git ref"]);
       }
       baseRef = value;
       index++;
       continue;
     }
 
-    throw new Error(`Unknown option: ${arg}`);
+    throw new ProblemRegistryValidationProblem([`Unknown option: ${arg}`]);
   }
 
   return { mode, options: { baseRef } };
