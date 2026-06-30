@@ -1,12 +1,16 @@
+import { formatContractDiagnostic, getContractGraphErrors } from "@croco/protocols-core";
+import type { ContractGraph } from "@croco/protocols-core";
 import type { EmitOpenAPIOptions } from "./emitOpenAPI";
 
 type CliOptions = {
   readonly controllers: string;
-  readonly outFile: string;
+  readonly outFile: string | null;
   readonly title: string;
   readonly version: string;
   readonly servers: { readonly url: string }[];
   readonly bearerAuthScheme: string | null;
+  readonly strictProblems: boolean;
+  readonly check: boolean;
 };
 
 type CliParseResult =
@@ -35,15 +39,46 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
     return 1;
   }
 
-  const [{ writeFile }, { emitOpenAPI }, { loadControllers }] = await Promise.all([
+  const [
+    { writeFile },
+    { buildContractGraph },
+    { emitOpenAPIFromContractGraph },
+    { loadControllers },
+  ] = await Promise.all([
     import("node:fs/promises"),
+    import("@croco/protocols-core"),
     import("./emitOpenAPI"),
     import("./loadControllers"),
   ]);
   const controllers = await loadControllers(result.options.controllers);
-  const document = emitOpenAPI(controllers, toEmitOpenAPIOptions(result.options));
+  const graph = buildContractGraph(controllers, {
+    strictProblemResponses: result.options.strictProblems,
+  });
 
-  await writeFile(result.options.outFile, JSON.stringify(document, null, 2));
+  if (result.options.check) {
+    return reportContractGraph(graph, io);
+  }
+
+  const errors = getContractGraphErrors(graph);
+  reportContractDiagnostics(graph, io);
+
+  if (errors.length > 0) {
+    io.stdout(
+      `Contract graph contains ${errors.length} error(s); fix them before generating OpenAPI.`,
+    );
+    return 1;
+  }
+
+  const outFile = result.options.outFile;
+
+  if (!outFile) {
+    printHelp(io);
+    return 1;
+  }
+
+  const document = emitOpenAPIFromContractGraph(graph, toEmitOpenAPIOptions(result.options));
+
+  await writeFile(outFile, JSON.stringify(document, null, 2));
 
   return 0;
 }
@@ -55,8 +90,9 @@ export function parseArgs(args: readonly string[]): CliParseResult {
 
   const controllers = getFlagValue(args, "--controllers");
   const outFile = getFlagValue(args, "--out");
+  const check = args.includes("--check");
 
-  if (!controllers || !outFile) {
+  if (!controllers || (!outFile && !check)) {
     return { kind: "invalid" };
   }
 
@@ -71,6 +107,8 @@ export function parseArgs(args: readonly string[]): CliParseResult {
       bearerAuthScheme: args.includes("--bearer-auth")
         ? (getFlagValue(args, "--bearer-auth") ?? "bearerAuth")
         : null,
+      strictProblems: args.includes("--strict-problems"),
+      check,
     },
   };
 }
@@ -118,6 +156,7 @@ function getFlagValues(args: readonly string[], flag: string): string[] {
 
 function printHelp(io: CliIo): void {
   io.stdout(`Usage: croco-openapi-spec --controllers <glob> --out <file> [--title <s>] [--version <s>] [--server <url>] [--bearer-auth [name]]
+       croco-openapi-spec --controllers <glob> --check [--strict-problems]
 
 Options:
   --controllers <glob>  Controller files to load
@@ -125,5 +164,31 @@ Options:
   --title <s>           API title (default: Croco API)
   --version <s>         API version (default: 1.0.0)
   --server <url>        Server URL to include; repeat for multiple servers
-  --bearer-auth [name]  Add an HTTP bearer security scheme (default name: bearerAuth)`);
+  --bearer-auth [name]  Add an HTTP bearer security scheme (default name: bearerAuth)
+  --check               Validate the canonical contract graph without writing OpenAPI
+  --strict-problems     Warn when routes do not declare generated client Problem unions
+  --help, -h            Show this help message`);
+}
+
+function reportContractGraph(graph: ContractGraph, io: CliIo): number {
+  reportContractDiagnostics(graph, io);
+
+  const errors = getContractGraphErrors(graph);
+
+  if (errors.length > 0) {
+    io.stdout(`Contract graph check failed with ${errors.length} error(s).`);
+    return 1;
+  }
+
+  io.stdout(
+    `Contract graph check passed for ${graph.routes.length} route(s) across ${graph.controllers.length} controller(s).`,
+  );
+
+  return 0;
+}
+
+function reportContractDiagnostics(graph: ContractGraph, io: CliIo): void {
+  for (const diagnostic of graph.diagnostics) {
+    io.stdout(formatContractDiagnostic(diagnostic));
+  }
 }

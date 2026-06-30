@@ -13188,6 +13188,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createContractGraphV1",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot",
+          "declarationKind": "function"
+        },
+        {
           "name": "DEFAULT_CONTRACT_GRAPH_CONSUMERS",
           "exportKind": "named",
           "source": "./libs/ContractGraphConsumerCoverage",
@@ -13314,6 +13320,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "isContractGraphV1",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot",
+          "declarationKind": "function"
+        },
+        {
           "name": "isControllerConstructor",
           "exportKind": "named",
           "source": "./libs/controllerDiscovery",
@@ -13333,6 +13345,12 @@
         },
         {
           "name": "stringifyContractGraphSnapshot",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot",
+          "declarationKind": "function"
+        },
+        {
+          "name": "stringifyContractGraphV1",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot",
           "declarationKind": "function"
@@ -13502,6 +13520,31 @@
         },
         {
           "name": "ContractGraphSnapshotVersion",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractGraphV1",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractGraphV1DiRef",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractGraphV1PolicyRef",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractGraphV1Route",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot"
+        },
+        {
+          "name": "ContractGraphV1RuntimeRequirement",
           "exportKind": "named",
           "source": "./libs/ContractGraphSnapshot"
         },

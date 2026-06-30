@@ -16,7 +16,10 @@ import {
 } from "../libs/ContractGraphConsumerCoverage";
 import { diffContractGraphSnapshots } from "../libs/ContractGraphDiff";
 import {
+  createContractGraphV1,
   createContractGraphSnapshot,
+  isContractGraphV1,
+  stringifyContractGraphV1,
   stringifyContractGraphSnapshot,
 } from "../libs/ContractGraphSnapshot";
 import { REST_ROUTES_KEY, type RouteMetadata } from "../libs/sharedTypes";
@@ -612,6 +615,226 @@ describe("buildContractGraph", () => {
         ],
       },
     });
+  });
+
+  it("should expose ContractGraph v1 as a deterministic JSON-safe route schema", () => {
+    const AuditGuard = class AuditGuard {};
+    const createReportBody = z.object({ title: z.string() });
+    const reportResponse = z.object({ id: z.string(), title: z.string() });
+
+    @UseGuards(AuditGuard)
+    @Roles("admin")
+    @Controller("/reports")
+    class ReportsController {
+      @Post("/")
+      @RequiresEntitlement({
+        feature: "reports.create",
+        description: "Create reports.",
+        resource: { type: "report" },
+      })
+      @ProblemResponse({ code: "REPORT_FORBIDDEN", category: ProblemCategory.Forbidden })
+      @ResponseSchema(reportResponse)
+      createReport(@Body(createReportBody) _body: z.infer<typeof createReportBody>): void {}
+    }
+
+    @Controller("/health")
+    class HealthController {
+      @Get("/")
+      getHealth(): void {}
+    }
+
+    attachRouteContract(ReportsController, "createReport", {
+      id: "reports.create",
+      method: "POST",
+      path: "/reports",
+      operationId: "createReport",
+      sourceLocation: { path: "src/controllers/ReportsController.ts", line: 12 },
+      body: createReportBody,
+      response: reportResponse,
+      problems: [{ code: "REPORT_FORBIDDEN", category: ProblemCategory.Forbidden, status: 403 }],
+    });
+
+    const first = stringifyContractGraphV1(
+      createContractGraphV1(buildContractGraph([ReportsController, HealthController])),
+    );
+    const second = stringifyContractGraphV1(
+      createContractGraphV1(buildContractGraph([HealthController, ReportsController])),
+    );
+    const graph = JSON.parse(first);
+
+    expect(first).toBe(second);
+    expect(isContractGraphV1(graph)).toBe(true);
+    expect(graph).toMatchObject({
+      version: "croco.contract-graph.v1",
+      diagnostics: [],
+      routes: [
+        {
+          id: "HealthController.getHealth",
+          protocol: "rest",
+          method: "GET",
+          path: "/health",
+          source: null,
+          inputSchemas: {
+            body: null,
+            path: null,
+            query: null,
+            headers: null,
+          },
+          outputSchema: null,
+          problems: [],
+          policies: [],
+          runtime: [{ type: "rest.route", method: "GET", path: "/health" }],
+          di: [],
+        },
+        {
+          id: "ReportsController.createReport",
+          protocol: "rest",
+          method: "POST",
+          path: "/reports",
+          source: { path: "src/controllers/ReportsController.ts", line: 12 },
+          inputSchemas: {
+            body: {
+              kind: "object",
+              fields: [{ name: "title", required: true, schema: { kind: "string" } }],
+            },
+          },
+          outputSchema: {
+            kind: "object",
+            fields: [
+              { name: "id", required: true, schema: { kind: "string" } },
+              { name: "title", required: true, schema: { kind: "string" } },
+            ],
+          },
+          problems: [
+            {
+              code: "REPORT_FORBIDDEN",
+              category: "Forbidden",
+              status: 403,
+              cookbookPath: "/reference/problem-recovery-cookbook/#report-forbidden",
+            },
+          ],
+          policies: expect.arrayContaining([
+            {
+              type: "entitlement",
+              id: expect.stringContaining("entitlement:ReportsController.createReport:0:"),
+              owner: {
+                controllerName: "ReportsController",
+                routeId: "ReportsController.createReport",
+                methodName: "createReport",
+              },
+              entitlement: {
+                feature: "reports.create",
+                description: "Create reports.",
+                resource: { type: "report" },
+              },
+            },
+            {
+              type: "rest.role",
+              id: "rest.role:ReportsController.createReport:0:admin",
+              owner: {
+                controllerName: "ReportsController",
+                routeId: "ReportsController.createReport",
+                methodName: "createReport",
+              },
+              role: "admin",
+            },
+          ]),
+          runtime: [{ type: "rest.route", method: "POST", path: "/reports" }],
+          di: [
+            expect.objectContaining({
+              type: "rest.guard",
+              declaredAt: "controller",
+              name: "AuditGuard",
+            }),
+          ],
+        },
+      ],
+    });
+
+    @Controller("/profiles")
+    class ProfilesController {
+      @Post("/")
+      createProfile(@Body(z.string().refine((value) => value.length > 0)) _body: string): void {}
+    }
+
+    expect(createContractGraphV1(buildContractGraph([ProfilesController])).diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-schema-zod-effects-unwrapped",
+        severity: "warning",
+        routeId: "ProfilesController.createProfile",
+      }),
+    ]);
+  });
+
+  it("should reject malformed ContractGraph v1 envelopes", () => {
+    const validRoute = {
+      id: "UsersController.list",
+      protocol: "rest",
+      method: "GET",
+      path: "/users",
+      source: null,
+      inputSchemas: {
+        body: null,
+        path: null,
+        query: null,
+        headers: null,
+      },
+      outputSchema: null,
+      problems: [],
+      policies: [],
+      runtime: [{ type: "rest.route", method: "GET", path: "/users" }],
+      di: [],
+    };
+    const validDiagnostic = {
+      code: "contract-route-missing-problem-union",
+      severity: "warning",
+      target: "route",
+      message: "Declare generated client Problem responses.",
+      routeId: "UsersController.list",
+    };
+
+    expect(
+      isContractGraphV1({
+        version: "croco.contract-graph.v1",
+        routes: [validRoute],
+        diagnostics: [validDiagnostic],
+      }),
+    ).toBe(true);
+    expect(
+      isContractGraphV1({
+        version: "croco.contract-graph.v1",
+        routes: [null],
+        diagnostics: [],
+      }),
+    ).toBe(false);
+    expect(
+      isContractGraphV1({
+        version: "croco.contract-graph.v1",
+        routes: [{ ...validRoute, method: undefined }],
+        diagnostics: [],
+      }),
+    ).toBe(false);
+    expect(
+      isContractGraphV1({
+        version: "croco.contract-graph.v1",
+        routes: [{ ...validRoute, source: { line: 12 } }],
+        diagnostics: [],
+      }),
+    ).toBe(false);
+    expect(
+      isContractGraphV1({
+        version: "croco.contract-graph.v1",
+        routes: [validRoute],
+        diagnostics: [null],
+      }),
+    ).toBe(false);
+    expect(
+      isContractGraphV1({
+        version: "croco.contract-graph.v1",
+        routes: [validRoute],
+        diagnostics: [{ ...validDiagnostic, message: undefined }],
+      }),
+    ).toBe(false);
   });
 
   it("should report consumer coverage diagnostics instead of silently dropping unsupported fields", () => {
