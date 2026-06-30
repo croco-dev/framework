@@ -65,7 +65,8 @@ Creates a single source file under `apps/api-server/src/`:
 
 - `croco doctor --json` finds the nearest `pnpm-workspace.yaml`, discovers workspace packages, and prints a machine-readable report for CI.
 - `croco doctor apps/api-server` runs the same checks from a specific workspace path.
-- Current blocking diagnostics include `doctor/repository-core-drizzle-boundary` and `doctor/lambda-telemetry-flush-missing`. Each failure reports the cause, source location, and recovery action.
+- Doctor checks workspace dependency ranges, installed/built Croco spine packages, ContractGraph snapshots, ProblemRegistry artifacts, runtime capability manifests, HTTP security middleware, DI graph manifests, provider profile certification, repository-core boundaries, and Lambda telemetry flush evidence.
+- Failures emit stable `CROCO_DOCTOR_*` diagnostic codes with cause, source location, and recovery action. Legacy slash-form codes remain in JSON as `legacyCode` only where they existed before.
 
 In this repository, `pnpm run doctor` builds the CLI and runs `croco doctor` against the current workspace.
 

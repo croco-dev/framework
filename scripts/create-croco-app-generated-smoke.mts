@@ -16,6 +16,7 @@ import {
   createWorkspacePackageIndex,
   resolveLocalCrocoPackagesForGeneratedProject,
   rewriteExternalCrocoRanges,
+  writePnpmWorkspaceOverrides,
   type DependencyField,
   type ExternalCrocoRangeException,
   type PackageJson,
@@ -521,6 +522,7 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["contract:verify"],
         paths: ["contract-graph.coverage.json"],
       },
+      { label: "doctor", args: ["exec", "croco", "doctor", "--json"] },
       { label: "demo seed", args: ["demo:seed"] },
       { label: "demo flow", args: ["demo:smoke"] },
       { label: "failure drill smoke", args: ["failure-drill:smoke"] },
@@ -735,7 +737,7 @@ try {
       generatedSmokeExternalCrocoRangeExceptions,
     );
     assertGeneratedReadme(projectDir, smokeCase);
-    writePnpmOverrides(projectDir, generatedSmokeRangeOverrides);
+    writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
     runSmokeCaseCommand(
       smokeReport,
       caseResult,
@@ -1454,7 +1456,7 @@ function runSpaBeSplitContractSmoke(
     contractSmokeRangeOverrides,
     generatedSmokeExternalCrocoRangeExceptions,
   );
-  writePnpmOverrides(projectDir, contractSmokeRangeOverrides);
+  writePnpmWorkspaceOverrides(projectDir, contractSmokeRangeOverrides);
 
   run("corepack", ["pnpm", "install"], projectDir);
   assertPnpmLockfileUsesLocalTarballOverrides(
@@ -1567,23 +1569,6 @@ function packWorkspacePackage(
   packedWorkspacePackages.set(workspacePackage.name, tarballPath);
 
   return tarballPath;
-}
-
-function writePnpmOverrides(projectDir: string, rangeOverrides: Record<string, string>): void {
-  const manifestPath = join(projectDir, "package.json");
-  const packageJson = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
-  const pnpmConfig = isRecord(packageJson.pnpm) ? packageJson.pnpm : {};
-  const existingOverrides = isDependencyMap(pnpmConfig.overrides) ? pnpmConfig.overrides : {};
-
-  packageJson.pnpm = {
-    ...pnpmConfig,
-    overrides: {
-      ...existingOverrides,
-      ...rangeOverrides,
-    },
-  };
-
-  writeFileSync(manifestPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 }
 
 function assertPnpmLockfileUsesLocalTarballOverrides(

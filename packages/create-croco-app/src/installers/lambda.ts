@@ -23,6 +23,9 @@ export function installLambda(
       dependencies: {
         "@as-integrations/aws-lambda": "^3.1.0",
       },
+      devDependencies: {
+        "@types/aws-lambda": "^8.10.146",
+      },
     });
   }
 }

@@ -1,6 +1,7 @@
 import { ApolloServer } from "@apollo/server";
 import { handlers, startServerAndCreateLambdaHandler } from "@as-integrations/aws-lambda";
 import { lambdaPreset, TelemetryRuntime } from "@croco/telemetry-sdk-node";
+import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { createSchema } from "./schema.js";
 
 const telemetry = TelemetryRuntime.getInstance();
@@ -10,7 +11,7 @@ const telemetryReady = telemetry.init(
   }),
 );
 
-const lambdaHandlerPromise = createSchema().then((schema) => {
+const lambdaHandlerPromise: Promise<APIGatewayProxyHandlerV2> = createSchema().then((schema) => {
   const server = new ApolloServer({ schema });
 
   return startServerAndCreateLambdaHandler(
@@ -20,8 +21,8 @@ const lambdaHandlerPromise = createSchema().then((schema) => {
 });
 
 export const handler = async (
-  ...args: Parameters<Awaited<typeof lambdaHandlerPromise>>
-): Promise<Awaited<ReturnType<Awaited<typeof lambdaHandlerPromise>>>> => {
+  ...args: Parameters<APIGatewayProxyHandlerV2>
+): Promise<Awaited<ReturnType<APIGatewayProxyHandlerV2>>> => {
   try {
     await telemetryReady;
     const lambdaHandler = await lambdaHandlerPromise;

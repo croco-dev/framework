@@ -208,6 +208,354 @@ describe("doctor", () => {
     ]);
   });
 
+  it("passes generated SaaS-style readiness artifacts without live provider credentials", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "contract:snapshot": "croco contracts check --json --out contract-graph.snapshot.json",
+        "runtime-policy:check":
+          "croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
+      },
+      devDependencies: {
+        "@croco/cli": "file:../packs/croco-cli.tgz",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/auth-better-auth": "file:../packs/croco-auth-better-auth.tgz",
+        "@croco/problems-core": "file:../packs/croco-problems-core.tgz",
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { bodyLimitMiddleware, corsMiddleware, createApp, rateLimitHttpMiddleware, securityHeadersMiddleware } from "@croco/transports-http";',
+        "export function createApiApp() {",
+        "  return createApp({",
+        "    controllers: [],",
+        "    middlewares: [",
+        "      securityHeadersMiddleware(),",
+        "      corsMiddleware({ origins: ['http://localhost:5173'] }),",
+        "      bodyLimitMiddleware({ limit: 1024 }),",
+        "      rateLimitHttpMiddleware({ rateLimiter: {} as never, policy: {} as never }),",
+        "    ],",
+        "  });",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeNodeModulePackage(repo, "@croco/cli");
+    for (const packageName of [
+      "@croco/auth-better-auth",
+      "@croco/problems-core",
+      "@croco/transports-http",
+    ]) {
+      writeNodeModulePackage(repo, packageName, "packages/api");
+    }
+    writeJson(repo, "contract-graph.snapshot.json", {
+      snapshotVersion: "croco.contract-graph.snapshot.v1",
+      graphVersion: "croco.contract-graph.v1",
+      controllerCount: 0,
+      routeCount: 0,
+      operationIds: [],
+      controllers: [],
+      routes: [],
+      diagnostics: [],
+    });
+    writeJson(repo, "croco-runtime-policy.manifest.json", {
+      schemaVersion: "croco.runtime-policy/v1",
+      runtime: { platform: "node" },
+      table: { plans: [] },
+    });
+    writeJson(repo, "croco-saas-profile.manifest.json", {
+      schemaVersion: "croco.saas-provider-profile/v1",
+      profile: {
+        name: "saas-node-postgres",
+        displayName: "Node/Postgres SaaS",
+        runtimeTarget: "node",
+      },
+      packages: ["@croco/auth-better-auth"],
+      capabilities: [
+        "runtime",
+        "auth",
+        "billing",
+        "metering",
+        "storage",
+        "tasks",
+        "telemetry",
+        "webhookVerification",
+      ].map((capability) => ({
+        capability,
+        provider: "zero-credential",
+        status: "configured",
+        env: [],
+        notes: "covered by generated smoke",
+      })),
+    });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("healthy");
+    expect(report.diagnostics).toEqual([]);
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(report.checks.map((check) => check.id)).toEqual([
+      "workspace-discovery",
+      "workspace-version-consistency",
+      "spine-package-state",
+      "contract-graph-readiness",
+      "problem-registry-readiness",
+      "runtime-capability-manifest",
+      "http-security-middleware-contract",
+      "di-graph-bootstrap",
+      "provider-certification",
+      "repository-core-boundary",
+      "lambda-telemetry-flush",
+    ]);
+  });
+
+  it("reports readiness failures with stable CROCO diagnostic codes", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "contract:snapshot": "croco contracts check --json --out contract-graph.snapshot.json",
+        "problem-registry:check": "node scripts/problem-registry.mts --check",
+        "runtime-policy:check":
+          "croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
+      },
+      devDependencies: {
+        "@croco/cli": "file:../packs/croco-cli.tgz",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApp, securityHeadersMiddleware } from "@croco/transports-http";',
+        "export function createApiApp() {",
+        "  return createApp({",
+        "    controllers: [],",
+        "    securityValidation: 'off',",
+        "    middlewares: [securityHeadersMiddleware()],",
+        "  });",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeJson(repo, ".croco/build/di-graph.manifest.json", {
+      version: "croco.di-graph.manifest.v1",
+      status: "failed",
+      diagnostics: [
+        {
+          code: "framework-context/di-missing-provider",
+          severity: "error",
+          message: "Provider ApiController is not registered",
+        },
+      ],
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const codes = report.diagnostics.map((diagnostic) => diagnostic.code);
+
+    expect(report.summary).toBe("issues_detected");
+    expect(codes).toEqual(
+      expect.arrayContaining([
+        "CROCO_DOCTOR_SPINE_PACKAGE_NOT_INSTALLED",
+        "CROCO_DOCTOR_CONTRACT_GRAPH_MISSING",
+        "CROCO_DOCTOR_PROBLEM_REGISTRY_MISSING",
+        "CROCO_DOCTOR_RUNTIME_CAPABILITY_MANIFEST_MISSING",
+        "CROCO_DOCTOR_HTTP_SECURITY_VALIDATION_DISABLED",
+        "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING",
+        "CROCO_DOCTOR_DI_BOOTSTRAP_ERRORS",
+      ]),
+    );
+    expect(codes.every((code) => code.startsWith("CROCO_"))).toBe(true);
+    expect(getDoctorExitCode(report)).toBe(1);
+  });
+
+  it("flags root package dependencies that drift from local workspace package versions", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      devDependencies: {
+        "@croco/cli": "^0.0.1",
+      },
+    });
+    writePackage(repo, "cli", "@croco/cli", { version: "0.0.3" });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_WORKSPACE_VERSION_CONFLICT",
+        location: expect.objectContaining({
+          file: "package.json",
+          packageName: "croco-doctor-test",
+        }),
+      }),
+    ]);
+  });
+
+  it("does not count HTTP security middleware tokens outside createApp middlewares", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { bodyLimitMiddleware, corsMiddleware, createApp, rateLimitHttpMiddleware, securityHeadersMiddleware } from "@croco/transports-http";',
+        "function unusedSecuritySetup() {",
+        "  securityHeadersMiddleware();",
+        "  corsMiddleware({ origins: ['http://localhost:5173'] });",
+        "  bodyLimitMiddleware({ limit: 1024 });",
+        "  rateLimitHttpMiddleware({ rateLimiter: {} as never, policy: {} as never });",
+        "}",
+        "export function createApiApp() {",
+        "  return createApp({",
+        "    controllers: [],",
+        "    middlewares: [",
+        "      'securityHeadersMiddleware()',",
+        "      'corsMiddleware()',",
+        "      'bodyLimitMiddleware()',",
+        "      'rateLimitHttpMiddleware()',",
+        "    ],",
+        "  });",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING",
+        location: expect.objectContaining({
+          file: "packages/api/src/app.ts",
+          packageName: "@smoke/api-server",
+        }),
+      }),
+    ]);
+  });
+
+  it("accepts HTTP security middleware through a local helper referenced by createApp", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { bodyLimitMiddleware, corsMiddleware, createApp, rateLimitHttpMiddleware, securityHeadersMiddleware } from "@croco/transports-http";',
+        "export function createApiApp() {",
+        "  return createApp({",
+        "    controllers: [],",
+        "    middlewares: [",
+        "      securityHeadersMiddleware(),",
+        "      corsMiddleware({ origins: ['http://localhost:5173'] }),",
+        "      bodyLimitMiddleware({ limit: 1024 }),",
+        "      createApiRateLimitMiddleware(),",
+        "    ],",
+        "  });",
+        "}",
+        "function createApiRateLimitMiddleware() {",
+        "  return rateLimitHttpMiddleware({ rateLimiter: {} as never, policy: {} as never });",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("healthy");
+    expect(report.diagnostics).toEqual([]);
+  });
+
+  it("fails ProblemRegistry readiness when the declared drift gate fails", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "problem-registry:check": "node -e \"console.error('registry drift'); process.exit(1)\"",
+      },
+    });
+    writePackage(repo, "api", "@croco/api");
+    writeJson(repo, "docs/problem-code-registry.json", {
+      version: "croco.problem-code-registry.v1",
+      problemCount: 0,
+      problems: [],
+    });
+    writeFile(
+      repo,
+      "packages/docs/src/content/docs/en/reference/problem-recovery-cookbook.md",
+      "# Problem recovery cookbook\n",
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_PROBLEM_REGISTRY_DRIFT",
+        cause: expect.stringContaining("registry drift"),
+        location: expect.objectContaining({ file: "docs/problem-code-registry.json" }),
+      }),
+    ]);
+  });
+
+  it("validates nested package export build targets including require outputs", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/problems-core": "file:../packs/croco-problems-core.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/problems-core", "packages/api", {
+      publishConfig: {
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.cjs",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+    });
+    writeFile(
+      repo,
+      "packages/api/node_modules/@croco/problems-core/dist/index.mjs",
+      "export {};\n",
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "CROCO_DOCTOR_SPINE_PACKAGE_NOT_BUILT",
+        location: expect.objectContaining({
+          file: "packages/api/node_modules/@croco/problems-core/dist/index.cjs",
+          packageName: "@croco/problems-core",
+        }),
+      }),
+    ]);
+  });
+
   it("registers the doctor command metadata", () => {
     expect(Object.keys(doctor.args ?? {})).toEqual(["cwd", "dryRun", "overwrite", "path", "json"]);
   });
@@ -231,20 +579,60 @@ function createTempRepo(): string {
 function createCrocoWorkspace(): string {
   const repo = createTempRepo();
   writeFile(repo, "pnpm-workspace.yaml", "packages:\n  - packages/*\n");
+  writeRootPackage(repo);
   return repo;
 }
 
-function writePackage(repo: string, dirName: string, packageName: string): void {
-  writeWorkspacePackage(repo, `packages/${dirName}`, packageName);
+function writeRootPackage(repo: string, manifest: Record<string, unknown> = {}): void {
+  writeJson(repo, "package.json", {
+    name: "croco-doctor-test",
+    private: true,
+    packageManager: "pnpm@10.15.1",
+    ...manifest,
+  });
 }
 
-function writeWorkspacePackage(repo: string, relativeDir: string, packageName: string): void {
-  writeFile(
-    repo,
-    `${relativeDir}/package.json`,
-    `${JSON.stringify({ name: packageName }, null, 2)}\n`,
-  );
+function writePackage(
+  repo: string,
+  dirName: string,
+  packageName: string,
+  manifest: Record<string, unknown> = {},
+): void {
+  writeWorkspacePackage(repo, `packages/${dirName}`, packageName, manifest);
+}
+
+function writeWorkspacePackage(
+  repo: string,
+  relativeDir: string,
+  packageName: string,
+  manifest: Record<string, unknown> = {},
+): void {
+  writeJson(repo, `${relativeDir}/package.json`, { name: packageName, ...manifest });
   writeFile(repo, `${relativeDir}/src/index.ts`, "export const value = 1;\n");
+}
+
+function writeNodeModulePackage(
+  repo: string,
+  packageName: string,
+  importerDir = ".",
+  manifest: Record<string, unknown> = {},
+): void {
+  const packagePath = `${importerDir}/node_modules/${packageName}/package.json`;
+  writeJson(repo, packagePath, {
+    name: packageName,
+    version: "0.0.0-smoke",
+    publishConfig: {
+      main: "./dist/index.js",
+      types: "./dist/index.d.ts",
+    },
+    ...manifest,
+  });
+  writeFile(repo, `${importerDir}/node_modules/${packageName}/dist/index.js`, "export {};\n");
+  writeFile(repo, `${importerDir}/node_modules/${packageName}/dist/index.d.ts`, "export {};\n");
+}
+
+function writeJson(repo: string, relativePath: string, value: unknown): void {
+  writeFile(repo, relativePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 function writeFile(repo: string, relativePath: string, content: string): void {

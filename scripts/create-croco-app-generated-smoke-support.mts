@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 export const dependencyFields = [
@@ -177,6 +177,28 @@ export function rewriteExternalCrocoRanges(
   }
 }
 
+export function writePnpmWorkspaceOverrides(
+  projectDir: string,
+  rangeOverrides: Readonly<Record<string, string>>,
+): void {
+  const workspacePath = join(projectDir, "pnpm-workspace.yaml");
+  const existingContent = existsSync(workspacePath)
+    ? readFileSync(workspacePath, "utf8")
+    : `packages:\n  - "apps/**/*"\n  - "libs/**/*"\n`;
+  const contentWithoutOverrides = removeTopLevelYamlBlock(existingContent, "overrides").trimEnd();
+  const overrideLines = Object.entries(rangeOverrides)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(
+      ([packageName, range]) =>
+        `  ${toYamlDoubleQuotedScalar(packageName)}: ${toYamlDoubleQuotedScalar(range)}`,
+    );
+
+  writeFileSync(
+    workspacePath,
+    `${contentWithoutOverrides}\n\n${["overrides:", ...overrideLines].join("\n")}\n`,
+  );
+}
+
 function readProjectManifests(projectDir: string): readonly {
   readonly path: string;
   readonly packageJson: PackageJson;
@@ -236,4 +258,27 @@ function isDependencyMap(value: unknown): value is Record<string, string> {
   }
 
   return Object.values(value).every((dependencyRange) => typeof dependencyRange === "string");
+}
+
+function removeTopLevelYamlBlock(content: string, key: string): string {
+  const lines = content.split(/\r?\n/);
+  const blockStartIndex = lines.findIndex((line) => line.trim() === `${key}:`);
+
+  if (blockStartIndex === -1) {
+    return content;
+  }
+
+  let blockEndIndex = blockStartIndex + 1;
+  while (
+    blockEndIndex < lines.length &&
+    (lines[blockEndIndex] === "" || /^\s/.test(lines[blockEndIndex]))
+  ) {
+    blockEndIndex += 1;
+  }
+
+  return [...lines.slice(0, blockStartIndex), ...lines.slice(blockEndIndex)].join("\n");
+}
+
+function toYamlDoubleQuotedScalar(value: string): string {
+  return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
 }
