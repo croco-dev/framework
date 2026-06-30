@@ -306,6 +306,24 @@ describe("rpc-codegen CLI", () => {
     });
   });
 
+  it("passes the Project manifest bundle source to client generation", async () => {
+    const exitCode = await runCli(
+      ["--controllers", "src/**/*.ts", "--out", "client", "--manifest-bundle", ".croco/manifest"],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toEqual(["client/user.ts"]);
+    expect(generationModuleImports.generateClientFiles).toBe(1);
+    expect(generationModuleImports.lastGenerateOptions).toEqual({
+      manifestBundlePath: ".croco/manifest",
+      problemRuntime: "inline",
+      reactQuery: false,
+    });
+  });
+
   it("fails frontend action manifest check when the committed manifest drifts", async () => {
     generationModuleImports.manifestCheckResult = {
       ok: false,

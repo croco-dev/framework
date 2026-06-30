@@ -84,6 +84,17 @@ export {
   stringifyContractGraphSnapshot,
 } from "./libs/ContractGraphSnapshot";
 export type {
+  ProjectManifestBundleArtifactFileName,
+  ProjectManifestBundleArtifactKey,
+} from "./libs/ProjectManifestBundle";
+export {
+  createProjectManifestBundleArtifactPaths,
+  joinProjectManifestBundlePath,
+  normalizeProjectManifestBundlePath,
+  PROJECT_MANIFEST_BUNDLE_ARTIFACT_ENTRIES,
+  PROJECT_MANIFEST_BUNDLE_ARTIFACTS,
+} from "./libs/ProjectManifestBundle";
+export type {
   ContractSchemaDescriptor,
   ContractSchemaDiagnostic,
   ContractSchemaDiagnosticSeverity,

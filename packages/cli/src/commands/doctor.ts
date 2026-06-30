@@ -2,10 +2,12 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { defineCommand } from "citty";
+import { PROJECT_MANIFEST_BUNDLE_ARTIFACTS } from "@croco/protocols-core";
 import { WORKSPACE_MAX_DEPTH } from "../libs/constants.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 import type { CliDiagnosticCode } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS } from "./projectMap.js";
 
 export type DoctorSeverity = "error" | "warning";
 export type DoctorSummary = "healthy" | "issues_detected";
@@ -123,6 +125,7 @@ const requiredSaasProviderCapabilities = [
   "webhookVerification",
 ] as const;
 const defaultContractGraphSnapshotPath = "contract-graph.snapshot.json";
+const defaultProjectManifestBundlePath = ".croco/manifest";
 const defaultProblemRegistryPath = "docs/problem-code-registry.json";
 const defaultProblemCookbookPath =
   "packages/docs/src/content/docs/en/reference/problem-recovery-cookbook.md";
@@ -130,6 +133,32 @@ const defaultRuntimeCapabilityManifestPath = "croco-runtime-capability.manifest.
 const legacyRuntimePolicyManifestPath = "croco-runtime-policy.manifest.json";
 const defaultDiGraphManifestPath = ".croco/build/di-graph.manifest.json";
 const defaultProviderProfileManifestPath = "croco-saas-profile.manifest.json";
+const projectManifestBundleFiles = [
+  {
+    path: PROJECT_MANIFEST_BUNDLE_ARTIFACTS.contractGraph,
+    schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.contractGraph,
+  },
+  {
+    path: PROJECT_MANIFEST_BUNDLE_ARTIFACTS.problems,
+    schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.problems,
+  },
+  {
+    path: PROJECT_MANIFEST_BUNDLE_ARTIFACTS.diGraph,
+    schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.diGraph,
+  },
+  {
+    path: PROJECT_MANIFEST_BUNDLE_ARTIFACTS.runtime,
+    schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.runtime,
+  },
+  {
+    path: PROJECT_MANIFEST_BUNDLE_ARTIFACTS.policies,
+    schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.policies,
+  },
+  {
+    path: PROJECT_MANIFEST_BUNDLE_ARTIFACTS.providers,
+    schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.providers,
+  },
+] as const;
 const problemRegistryCheckTimeoutMs = 30_000;
 const commandOutputMaxLength = 500;
 
@@ -173,6 +202,7 @@ export function runDoctor(options: RunDoctorOptions = {}): DoctorReport {
     workspaceVersionConsistencyCheck(rootDir, workspace.packages),
     spinePackageStateCheck(rootDir, workspace.packages),
     contractGraphReadinessCheck(rootDir),
+    projectManifestBundleReadinessCheck(rootDir),
     problemRegistryReadinessCheck(rootDir),
     runtimeCapabilityManifestCheck(rootDir),
     httpSecurityMiddlewareContractCheck(rootDir, workspace.packages),
@@ -460,6 +490,95 @@ function contractGraphReadinessCheck(rootDir: string): DoctorCheckResult {
       diagnostics.length > 0
         ? `${diagnostics.length} ContractGraph error diagnostic(s) found.`
         : `${readNumber(snapshot.value, "routeCount", 0)} route(s) captured with ${graphDiagnostics.length} diagnostic(s).`,
+  };
+}
+
+function projectManifestBundleReadinessCheck(rootDir: string): DoctorCheckResult {
+  const checkId = "project-manifest-bundle";
+  const bundleDir = join(rootDir, defaultProjectManifestBundlePath);
+  const rootScripts = readRootScripts(rootDir);
+  const expectsBundle =
+    existsSync(bundleDir) ||
+    Object.values(rootScripts).some((script) => script.includes("--manifest-bundle"));
+
+  if (!expectsBundle) {
+    return {
+      id: checkId,
+      title: "Project manifest bundle",
+      status: "skipped",
+      diagnostics: [],
+      note: `${defaultProjectManifestBundlePath} was not found.`,
+    };
+  }
+
+  if (!existsSync(bundleDir)) {
+    return {
+      id: checkId,
+      title: "Project manifest bundle",
+      status: "fail",
+      diagnostics: [
+        {
+          code: CLI_DIAGNOSTIC_CODES.projectMapManifestMissing,
+          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapManifestMissing,
+          severity: "error",
+          checkId,
+          cause: `${defaultProjectManifestBundlePath} is required by project-map scripts but is missing.`,
+          location: { file: defaultProjectManifestBundlePath },
+          action:
+            "Run croco project map --manifest-bundle .croco/manifest and commit the generated bundle when it is part of the drift gate.",
+        },
+      ],
+    };
+  }
+
+  const diagnostics = projectManifestBundleFiles.flatMap((artifact): DoctorDiagnostic[] => {
+    const artifactPath = join(bundleDir, artifact.path);
+    const artifactRelativePath = toPosixPath(join(defaultProjectManifestBundlePath, artifact.path));
+
+    if (!existsSync(artifactPath)) {
+      return [
+        {
+          code: CLI_DIAGNOSTIC_CODES.projectMapManifestMissing,
+          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapManifestMissing,
+          severity: "error",
+          checkId,
+          cause: `Project manifest bundle artifact ${artifactRelativePath} is missing.`,
+          location: { file: artifactRelativePath },
+          action: "Regenerate the bundle with croco project map --manifest-bundle .croco/manifest.",
+        },
+      ];
+    }
+
+    const manifest = readJsonObject(artifactPath);
+    if (manifest.kind === "valid" && manifest.value.schemaVersion === artifact.schemaVersion) {
+      return [];
+    }
+
+    return [
+      {
+        code: CLI_DIAGNOSTIC_CODES.projectMapManifestDrift,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapManifestDrift,
+        severity: "error",
+        checkId,
+        cause:
+          manifest.kind === "invalid"
+            ? `${artifactRelativePath} could not be parsed: ${manifest.message}`
+            : `${artifactRelativePath} must be ${artifact.schemaVersion}.`,
+        location: { file: artifactRelativePath },
+        action: "Regenerate the bundle with croco project map --manifest-bundle .croco/manifest.",
+      },
+    ];
+  });
+
+  return {
+    id: checkId,
+    title: "Project manifest bundle",
+    status: diagnostics.length > 0 ? "fail" : "pass",
+    diagnostics,
+    note:
+      diagnostics.length > 0
+        ? `${diagnostics.length} Project manifest bundle issue(s) found.`
+        : `${projectManifestBundleFiles.length} schema-versioned manifest bundle artifact(s) are readable.`,
   };
 }
 

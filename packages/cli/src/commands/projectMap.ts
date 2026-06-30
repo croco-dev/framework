@@ -1,4 +1,4 @@
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { defineCommand } from "citty";
 import {
@@ -20,6 +20,7 @@ import {
   createContractGraphSnapshot,
   formatContractDiagnostic,
   isContractGraphSnapshot,
+  PROJECT_MANIFEST_BUNDLE_ARTIFACTS,
   type ContractDiagnostic,
   type ContractGraph,
   type ContractGraphSnapshot,
@@ -102,6 +103,11 @@ export type ProjectMapGeneratedArtifact = {
   readonly kind: string;
   readonly path: string;
   readonly commitPolicy: "commit-required" | "gitignored-generated";
+};
+
+export type ProjectManifestBundleArtifact = {
+  readonly path: string;
+  readonly content: string;
 };
 
 export type ProjectMapManifest = {
@@ -251,6 +257,7 @@ export type ProjectMapOptions = {
   readonly contractGraph: string | null;
   readonly runtimePolicy: string | null;
   readonly providerProfile: string | null;
+  readonly manifestBundle: string | null;
 };
 
 type ProjectMapParseResult =
@@ -281,10 +288,19 @@ type ProviderProfileManifest = {
 
 const PROJECT_MAP_MANIFEST_VERSION: ProjectMapManifestVersion = "croco.project-map.manifest.v1";
 const DEFAULT_PROJECT_MAP_PATH = "croco.project-map.json";
+const DEFAULT_PROJECT_MANIFEST_BUNDLE_DIR = ".croco/manifest";
 const DEFAULT_FRAMEWORK_MANIFEST_PATH = ".croco/build/framework-manifest.json";
 const DEFAULT_CONTRACT_GRAPH_SNAPSHOT_PATH = "contract-graph.snapshot.json";
 const DEFAULT_RUNTIME_POLICY_PATH = "croco-runtime-policy.manifest.json";
 const DEFAULT_PROVIDER_PROFILE_PATH = "croco-saas-profile.manifest.json";
+export const PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS = {
+  contractGraph: "croco.manifest.contract-graph.v1",
+  problems: "croco.manifest.problems.v1",
+  diGraph: "croco.manifest.di-graph.v1",
+  runtime: "croco.manifest.runtime.v1",
+  policies: "croco.manifest.policies.v1",
+  providers: "croco.manifest.providers.v1",
+} as const;
 const PACKAGE_DEPENDENCY_FIELDS = [
   "dependencies",
   "devDependencies",
@@ -355,17 +371,30 @@ export async function runProjectMap(
         loadProjectMapFromWorkspace(projectMapOptions, projectMapIo, options.loadContractGraph));
     const manifest = await loadProjectMap(parsed.options, io);
     const checkedManifest = parsed.options.check
-      ? appendProjectMapDiagnostics(
-          manifest,
-          readProjectMapDriftDiagnostics(manifest, parsed.options, io),
-        )
+      ? appendProjectMapDiagnostics(manifest, [
+          ...readProjectMapDriftDiagnostics(manifest, parsed.options, io),
+          ...readProjectManifestBundleDriftDiagnostics(manifest, parsed.options, io),
+        ])
       : manifest;
     const manifestJson = stringifyProjectMapManifest(checkedManifest);
 
     if (parsed.options.out && !parsed.options.check) {
       writeOutputFile(parsed.options.out, manifestJson, io);
       io.stdout(`Wrote Project Map manifest to ${resolvePath(parsed.options.out, io.cwd)}.`);
-    } else if (parsed.options.json) {
+    }
+
+    if (parsed.options.manifestBundle && !parsed.options.check) {
+      writeProjectManifestBundle(manifest, parsed.options.manifestBundle, io);
+      io.stdout(
+        `Wrote Project manifest bundle to ${resolvePath(parsed.options.manifestBundle, io.cwd)}.`,
+      );
+    }
+
+    if (!parsed.options.check && (parsed.options.out || parsed.options.manifestBundle)) {
+      return hasProjectMapErrors(checkedManifest) ? 1 : 0;
+    }
+
+    if (parsed.options.json) {
       io.stdout(manifestJson.trimEnd());
     } else {
       reportProjectMapDiagnostics(checkedManifest, io);
@@ -387,6 +416,9 @@ export function parseProjectMapArgs(args: readonly string[]): ProjectMapParseRes
   const check = args.includes("--check");
   const manifest =
     getFlagValue(args, "--manifest") ?? (check ? (out ?? DEFAULT_PROJECT_MAP_PATH) : null);
+  const manifestBundle = args.includes("--manifest-bundle")
+    ? (getFlagValue(args, "--manifest-bundle") ?? DEFAULT_PROJECT_MANIFEST_BUNDLE_DIR)
+    : null;
 
   return {
     kind: "run",
@@ -401,6 +433,7 @@ export function parseProjectMapArgs(args: readonly string[]): ProjectMapParseRes
       contractGraph: getFlagValue(args, "--contract-graph"),
       runtimePolicy: getFlagValue(args, "--runtime-policy"),
       providerProfile: getFlagValue(args, "--provider-profile"),
+      manifestBundle,
     },
   };
 }
@@ -540,6 +573,106 @@ export function createProjectMapManifest(input: ProjectMapInput): ProjectMapMani
 
 export function stringifyProjectMapManifest(manifest: ProjectMapManifest): string {
   return `${JSON.stringify(manifest, null, 2)}\n`;
+}
+
+export function createProjectManifestBundle(
+  manifest: ProjectMapManifest,
+): ProjectManifestBundleArtifact[] {
+  const routeDiagnosticCodes = new Set<string>([
+    CLI_DIAGNOSTIC_CODES.projectMapFrameworkManifestDiagnostic,
+    CLI_DIAGNOSTIC_CODES.projectMapContractRouteConflict,
+    CLI_DIAGNOSTIC_CODES.projectMapContractGraphDiagnostic,
+  ]);
+  const runtimeDiagnosticCodes = new Set<string>([
+    CLI_DIAGNOSTIC_CODES.projectMapRuntimeTargetMissing,
+    CLI_DIAGNOSTIC_CODES.projectMapRuntimeTargetUnsupported,
+    CLI_DIAGNOSTIC_CODES.projectMapRuntimeCapabilityConflict,
+  ]);
+  const routeDiagnostics = manifest.diagnostics.filter((diagnostic) =>
+    routeDiagnosticCodes.has(diagnostic.code),
+  );
+  const runtimeDiagnostics = manifest.diagnostics.filter((diagnostic) =>
+    runtimeDiagnosticCodes.has(diagnostic.code),
+  );
+  const providerDiagnostics = manifest.diagnostics.filter(
+    (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.projectMapPackageManifestConflict,
+  );
+
+  return [
+    createProjectManifestBundleArtifact(PROJECT_MANIFEST_BUNDLE_ARTIFACTS.contractGraph, {
+      schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.contractGraph,
+      source: createProjectManifestBundleSource(manifest),
+      project: manifest.project,
+      summary: {
+        controllers: manifest.summary.controllers,
+        routes: manifest.summary.routes,
+        diagnostics: routeDiagnostics.length,
+        errors: countDiagnostics(routeDiagnostics, "error"),
+        warnings: countDiagnostics(routeDiagnostics, "warning"),
+      },
+      frameworkManifestVersion: manifest.routeGraph.frameworkManifestVersion,
+      ...(manifest.routeGraph.contractGraphSnapshotVersion
+        ? { contractGraphSnapshotVersion: manifest.routeGraph.contractGraphSnapshotVersion }
+        : {}),
+      controllers: manifest.routeGraph.controllers,
+      routes: manifest.routeGraph.routes,
+      diagnostics: routeDiagnostics,
+    }),
+    createProjectManifestBundleArtifact(PROJECT_MANIFEST_BUNDLE_ARTIFACTS.problems, {
+      schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.problems,
+      source: createProjectManifestBundleSource(manifest),
+      project: manifest.project,
+      summary: {
+        responses: manifest.summary.problems,
+      },
+      responses: manifest.problems.responses,
+    }),
+    createProjectManifestBundleArtifact(PROJECT_MANIFEST_BUNDLE_ARTIFACTS.diGraph, {
+      schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.diGraph,
+      source: createProjectManifestBundleSource(manifest),
+      project: manifest.project,
+      summary: {
+        providers: manifest.summary.providers,
+      },
+      providers: manifest.di.providers,
+    }),
+    createProjectManifestBundleArtifact(PROJECT_MANIFEST_BUNDLE_ARTIFACTS.runtime, {
+      schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.runtime,
+      source: createProjectManifestBundleSource(manifest),
+      project: manifest.project,
+      summary: {
+        telemetryBoundaries: manifest.summary.telemetryBoundaries,
+        diagnostics: runtimeDiagnostics.length,
+      },
+      policy: manifest.policies.runtime ?? null,
+      telemetry: manifest.telemetry,
+      diagnostics: runtimeDiagnostics,
+    }),
+    createProjectManifestBundleArtifact(PROJECT_MANIFEST_BUNDLE_ARTIFACTS.policies, {
+      schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.policies,
+      source: createProjectManifestBundleSource(manifest),
+      project: manifest.project,
+      summary: {
+        policies: manifest.summary.policies,
+        diagnostics: runtimeDiagnostics.length,
+      },
+      runtime: manifest.policies.runtime ?? null,
+      diagnostics: runtimeDiagnostics,
+    }),
+    createProjectManifestBundleArtifact(PROJECT_MANIFEST_BUNDLE_ARTIFACTS.providers, {
+      schemaVersion: PROJECT_MANIFEST_BUNDLE_SCHEMA_VERSIONS.providers,
+      source: createProjectManifestBundleSource(manifest),
+      project: manifest.project,
+      summary: {
+        providerProfilePackages: manifest.packageGraph.providerProfile?.packages.length ?? 0,
+        diProviders: manifest.summary.providers,
+        diagnostics: providerDiagnostics.length,
+      },
+      providerProfile: manifest.packageGraph.providerProfile ?? null,
+      diProviders: manifest.di.providers,
+      diagnostics: providerDiagnostics,
+    }),
+  ];
 }
 
 async function loadProjectMapFromWorkspace(
@@ -868,6 +1001,50 @@ function readProjectMapDriftDiagnostics(
   ];
 }
 
+function readProjectManifestBundleDriftDiagnostics(
+  manifest: ProjectMapManifest,
+  options: ProjectMapOptions,
+  io: ProjectMapIo,
+): ProjectMapDiagnostic[] {
+  if (!options.manifestBundle) {
+    return [];
+  }
+
+  const manifestBundlePath = resolvePath(options.manifestBundle, io.cwd);
+
+  return createProjectManifestBundle(manifest).flatMap((artifact): ProjectMapDiagnostic[] => {
+    const artifactPath = join(manifestBundlePath, artifact.path);
+
+    if (!io.exists(artifactPath)) {
+      return [
+        {
+          code: CLI_DIAGNOSTIC_CODES.projectMapManifestMissing,
+          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapManifestMissing,
+          severity: "error" as const,
+          artifact: artifactPath,
+          message: `Project manifest bundle artifact '${artifactPath}' does not exist. Run croco project map --manifest-bundle ${options.manifestBundle}.`,
+        },
+      ];
+    }
+
+    const existingJson = normalizeJsonFile(io.readFile(artifactPath));
+
+    if (existingJson === artifact.content) {
+      return [];
+    }
+
+    return [
+      {
+        code: CLI_DIAGNOSTIC_CODES.projectMapManifestDrift,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapManifestDrift,
+        severity: "error" as const,
+        artifact: artifactPath,
+        message: `Project manifest bundle artifact '${artifactPath}' is stale. Regenerate it with croco project map --manifest-bundle ${options.manifestBundle}.`,
+      },
+    ];
+  });
+}
+
 function normalizeJsonFile(content: string): string {
   try {
     return `${JSON.stringify(JSON.parse(content) as unknown, null, 2)}\n`;
@@ -985,6 +1162,7 @@ Options:
   --controllers <glob>          Controller files used to build the Contract Graph
   --source <path>               Source file or directory to scan for providers, events, telemetry, and entrypoints; may be repeated
   --out <path>                  Write the stable Project Map manifest JSON
+  --manifest-bundle <dir>       Write or check the inspectable Project manifest bundle
   --check                       Compare the generated manifest with --manifest and fail on drift
   --manifest <path>             Existing Project Map manifest for --check (default: croco.project-map.json)
   --framework-manifest <path>   Existing framework manifest to read when controllers are not provided
@@ -1441,6 +1619,45 @@ function writeOutputFile(path: string, content: string, io: ProjectMapIo): void 
   io.writeFile(resolvedPath, content);
 }
 
+function writeProjectManifestBundle(
+  manifest: ProjectMapManifest,
+  path: string,
+  io: ProjectMapIo,
+): void {
+  const resolvedPath = resolvePath(path, io.cwd);
+  io.mkdir(resolvedPath);
+
+  for (const artifact of createProjectManifestBundle(manifest)) {
+    io.writeFile(join(resolvedPath, artifact.path), artifact.content);
+  }
+}
+
+function createProjectManifestBundleArtifact(
+  path: string,
+  value: Record<string, unknown>,
+): ProjectManifestBundleArtifact {
+  return {
+    path,
+    content: `${JSON.stringify(value, null, 2)}\n`,
+  };
+}
+
+function createProjectManifestBundleSource(manifest: ProjectMapManifest): Record<string, unknown> {
+  return {
+    schemaVersion: PROJECT_MAP_MANIFEST_VERSION,
+    artifact: DEFAULT_PROJECT_MAP_PATH,
+    packageName: manifest.project.packageName,
+    generatedArtifacts: manifest.generatedArtifacts,
+  };
+}
+
+function countDiagnostics(
+  diagnostics: readonly ProjectMapDiagnostic[],
+  severity: ProjectMapDiagnosticSeverity,
+): number {
+  return diagnostics.filter((diagnostic) => diagnostic.severity === severity).length;
+}
+
 function toProjectMapSourceLocation(source: {
   readonly path: string;
   readonly line: number;
@@ -1510,6 +1727,7 @@ function getFirstPosition(args: readonly string[]): string | null {
     "--source",
     "--out",
     "--manifest",
+    "--manifest-bundle",
     "--framework-manifest",
     "--contract-graph",
     "--runtime-policy",

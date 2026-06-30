@@ -16,6 +16,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   assertContractGraphConsumerRouteCoverage,
   assertContractGraphHasNoErrors,
+  createProjectManifestBundleArtifactPaths,
   type ContractGraph,
   type ContractGraphConsumerRouteField,
   type ContractGraphObservedConsumerRoute,
@@ -31,11 +32,13 @@ import {
   getZodSchemaTypeName,
   getContractPathParamNames,
   getContractPathParams,
+  normalizeProjectManifestBundlePath,
   type RouteIR,
 } from "@croco/protocols-core";
 
 export type GenerateClientOptions = {
   readonly frontendActionManifestPath?: string;
+  readonly manifestBundlePath?: string;
   readonly problemRuntime?: GenerateClientProblemRuntime;
   readonly reactQuery?: boolean;
 };
@@ -151,7 +154,13 @@ export function generateClientFiles(
   const supportPath = path.join(outDir, "rpc.ts");
   const supportContent = generateRpcSupport(options);
   const indexPath = path.join(outDir, "index.ts");
-  const indexContent = generateClientIndex(domainRouteGroups);
+  const indexContent = generateClientIndex(domainRouteGroups, options);
+  const manifestSourceFile = options.manifestBundlePath
+    ? {
+        filePath: path.join(outDir, "manifest-source.ts"),
+        content: generateManifestSource(options.manifestBundlePath),
+      }
+    : null;
   const frontendActionManifestFile = options.frontendActionManifestPath
     ? {
         filePath: options.frontendActionManifestPath,
@@ -161,6 +170,7 @@ export function generateClientFiles(
   const files: readonly GeneratedClientFile[] = [
     ...domainFiles,
     { filePath: supportPath, content: supportContent },
+    ...(manifestSourceFile ? [manifestSourceFile] : []),
     { filePath: indexPath, content: indexContent },
     ...(frontendActionManifestFile ? [frontendActionManifestFile] : []),
   ];
@@ -788,7 +798,10 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function generateClientIndex(domainRoutes: readonly DomainRoutes[]): string {
+function generateClientIndex(
+  domainRoutes: readonly DomainRoutes[],
+  options: GenerateClientOptions = {},
+): string {
   const clientExports = domainRoutes.map((domainRoute) => {
     const exports = [
       `${domainRoute.domain}Client`,
@@ -804,9 +817,30 @@ function generateClientIndex(domainRoutes: readonly DomainRoutes[]): string {
   const namespaceExports = domainRoutes.map(
     (domainRoute) => `export * as ${domainRoute.domain}Rpc from './${domainRoute.domain}';`,
   );
+  const manifestSourceExport = options.manifestBundlePath
+    ? "export { crocoManifestBundleSource, type CrocoManifestBundleSource } from './manifest-source';"
+    : null;
 
   return `export * from './rpc';
-${[...clientExports, ...namespaceExports].join("\n")}
+${[...clientExports, ...namespaceExports, ...(manifestSourceExport ? [manifestSourceExport] : [])].join("\n")}
+`;
+}
+
+function generateManifestSource(manifestBundlePath: string): string {
+  const directory = normalizeProjectManifestBundlePath(manifestBundlePath);
+  const artifacts = createProjectManifestBundleArtifactPaths(directory);
+
+  return `export const crocoManifestBundleSource = {
+  schemaVersion: 'croco.rpc.manifest-source.v1',
+  directory: ${literalValueToTypeScript(directory)},
+  artifacts: {
+${Object.entries(artifacts)
+  .map(([key, artifactPath]) => `    ${key}: ${literalValueToTypeScript(artifactPath)},`)
+  .join("\n")}
+  },
+} as const;
+
+export type CrocoManifestBundleSource = typeof crocoManifestBundleSource;
 `;
 }
 

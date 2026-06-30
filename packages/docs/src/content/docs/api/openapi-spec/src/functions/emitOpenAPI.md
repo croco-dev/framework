@@ -5,7 +5,7 @@ prev: false
 title: "emitOpenAPI"
 ---
 
-> **emitOpenAPI**(`controllers`, `options?`): `OpenAPIObject`
+> **emitOpenAPI**(`controllers`, `options?`): `CrocoOpenAPIDocument`
 
 ## Parameters
 
@@ -19,4 +19,4 @@ title: "emitOpenAPI"
 
 ## Returns
 
-`OpenAPIObject`
+`CrocoOpenAPIDocument`
