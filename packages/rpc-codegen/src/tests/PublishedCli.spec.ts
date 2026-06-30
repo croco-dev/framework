@@ -32,12 +32,24 @@ describe("published RPC codegen CLI", () => {
         );
         run(
           "pnpm",
+          ["--filter", "@croco/framework-preset", "pack", "--pack-destination", packRoot],
+          rootDir,
+        );
+        run(
+          "pnpm",
+          ["--filter", "@croco/presentation-preset", "pack", "--pack-destination", packRoot],
+          rootDir,
+        );
+        run(
+          "pnpm",
           ["--filter", "@croco/rpc-codegen", "pack", "--pack-destination", packRoot],
           rootDir,
         );
 
         const problemsCoreTarball = findTarball(packRoot, "croco-problems-core-");
         const protocolsCoreTarball = findTarball(packRoot, "croco-protocols-core-");
+        const frameworkPresetTarball = findTarball(packRoot, "croco-framework-preset-");
+        const presentationPresetTarball = findTarball(packRoot, "croco-presentation-preset-");
         const rpcCodegenTarball = findTarball(packRoot, "croco-rpc-codegen-");
         const packedManifest = JSON.parse(
           run("tar", ["-xOf", rpcCodegenTarball, "package/package.json"], rootDir).stdout,
@@ -66,6 +78,8 @@ describe("published RPC codegen CLI", () => {
           )}\n`,
         );
         writePnpmWorkspaceOverrides(consumerRoot, {
+          "@croco/framework-preset": `file:${frameworkPresetTarball}`,
+          "@croco/presentation-preset": `file:${presentationPresetTarball}`,
           "@croco/problems-core": `file:${problemsCoreTarball}`,
           "@croco/protocols-core": `file:${protocolsCoreTarball}`,
         });
@@ -87,6 +101,8 @@ function ensureBuilt(): void {
   if (
     existsSync(join(rootDir, "packages", "problems-core", "dist", "index.js")) &&
     existsSync(join(rootDir, "packages", "protocols-core", "dist", "index.js")) &&
+    existsSync(join(rootDir, "packages", "framework-preset", "dist", "index.js")) &&
+    existsSync(join(rootDir, "packages", "presentation-preset", "dist", "index.js")) &&
     existsSync(join(packageDir, "dist", "cli.js"))
   ) {
     return;
@@ -94,6 +110,8 @@ function ensureBuilt(): void {
 
   run("pnpm", ["--filter", "@croco/problems-core", "build"], rootDir);
   run("pnpm", ["--filter", "@croco/protocols-core", "build"], rootDir);
+  run("pnpm", ["--filter", "@croco/framework-preset", "build"], rootDir);
+  run("pnpm", ["--filter", "@croco/presentation-preset", "build"], rootDir);
   run("pnpm", ["--filter", "@croco/rpc-codegen", "build"], rootDir);
 }
 

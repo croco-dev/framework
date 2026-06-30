@@ -10406,6 +10406,12 @@
       "entrypoint": "packages/meta-vite/src/index.ts",
       "runtimeExports": [
         {
+          "name": "checkMetaViteFrontendActionManifestFile",
+          "exportKind": "named",
+          "source": "./libs/build/frontendActionManifest",
+          "declarationKind": "const"
+        },
+        {
           "name": "createCloudflareComposedHandler",
           "exportKind": "named",
           "source": "./libs/providers/cloudflare",
@@ -10463,6 +10469,18 @@
           "name": "createMetaOutputContract",
           "exportKind": "named",
           "source": "./libs/output/outputContract",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createMetaViteFrontendActionManifest",
+          "exportKind": "named",
+          "source": "./libs/build/frontendActionManifest",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createMetaViteFrontendActionManifestFromRegistry",
+          "exportKind": "named",
+          "source": "./libs/build/frontendActionManifest",
           "declarationKind": "function"
         },
         {
@@ -10610,6 +10628,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "serializeMetaViteFrontendActionManifest",
+          "exportKind": "named",
+          "source": "./libs/build/frontendActionManifest",
+          "declarationKind": "const"
+        },
+        {
           "name": "serializeMetaViteRouteManifest",
           "exportKind": "named",
           "source": "./libs/build/routeManifest",
@@ -10644,6 +10668,12 @@
           "exportKind": "named",
           "source": "./libs/actions/serverActions",
           "declarationKind": "function"
+        },
+        {
+          "name": "writeMetaViteFrontendActionManifest",
+          "exportKind": "named",
+          "source": "./libs/build/frontendActionManifest",
+          "declarationKind": "const"
         },
         {
           "name": "writeMetaViteRouteManifest",
@@ -10774,6 +10804,16 @@
           "source": "./libs/build/routeManifest"
         },
         {
+          "name": "MetaViteFrontendActionManifestRegistryOptions",
+          "exportKind": "named",
+          "source": "./libs/build/frontendActionManifest"
+        },
+        {
+          "name": "MetaViteFrontendActionManifestSource",
+          "exportKind": "named",
+          "source": "./libs/build/frontendActionManifest"
+        },
+        {
           "name": "MetaVitePageRouteManifestEntry",
           "exportKind": "named",
           "source": "./libs/build/routeManifest"
@@ -10817,6 +10857,11 @@
           "name": "MetaViteServerActionManifestEntry",
           "exportKind": "named",
           "source": "./libs/build/routeManifest"
+        },
+        {
+          "name": "MetaViteServerActionRegistryFrontendActionManifestSource",
+          "exportKind": "named",
+          "source": "./libs/build/frontendActionManifest"
         },
         {
           "name": "MetaViteServerActionRegistryManifestSource",
@@ -12456,10 +12501,40 @@
       "entrypoint": "packages/presentation-preset/src/index.ts",
       "runtimeExports": [
         {
+          "name": "checkFrontendActionManifestFile",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendActionManifest",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest",
+          "declarationKind": "function"
+        },
+        {
+          "name": "FRONTEND_ACTION_MANIFEST_SCHEMA_VERSION",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest",
+          "declarationKind": "const"
+        },
+        {
           "name": "OutputContractValidator",
           "exportKind": "named",
           "source": "./output-contract-validator",
           "declarationKind": "class"
+        },
+        {
+          "name": "serializeFrontendActionManifest",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest",
+          "declarationKind": "function"
+        },
+        {
+          "name": "writeFrontendActionManifest",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest",
+          "declarationKind": "function"
         }
       ],
       "typeExports": [
@@ -12487,6 +12562,76 @@
           "name": "EntryDescriptor",
           "exportKind": "named",
           "source": "./output-contract"
+        },
+        {
+          "name": "FrontendActionEntitlement",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionEntitlementResource",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionInputLocation",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionInvalidationHint",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionManifest",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionManifestDrift",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionManifestEntry",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionManifestSourceKind",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionMetadataReference",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionPermissionMetadata",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionProblem",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionShapeReference",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionShapeReferenceKind",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
+        },
+        {
+          "name": "FrontendActionSource",
+          "exportKind": "named",
+          "source": "./frontend-action-manifest"
         },
         {
           "name": "GeneratedRuntimeProfile",
@@ -15384,6 +15529,18 @@
       "relativeDir": "packages/rpc-codegen",
       "entrypoint": "packages/rpc-codegen/src/index.ts",
       "runtimeExports": [
+        {
+          "name": "createFrontendActionManifestFromContractGraph",
+          "exportKind": "named",
+          "source": "./libs/generate",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createFrontendActionManifestFromRoutes",
+          "exportKind": "named",
+          "source": "./libs/generate",
+          "declarationKind": "function"
+        },
         {
           "name": "generateClientFiles",
           "exportKind": "named",

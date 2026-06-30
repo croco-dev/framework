@@ -66,6 +66,7 @@ export type MetaViteServerActionManifestEntry = {
   readonly input: ServerActionContractIR["input"];
   readonly output: ServerActionContractIR["output"];
   readonly problems: ServerActionContractIR["problems"];
+  readonly invalidates: NonNullable<ServerActionContractIR["invalidates"]>;
   readonly runtimeCapabilities: readonly MetaViteRuntimeCapability[];
 };
 
@@ -201,6 +202,7 @@ function createServerActionEntry(
     input: action.input,
     output: action.output,
     problems: action.problems,
+    invalidates: action.invalidates ?? [],
     runtimeCapabilities: ["fetch", "server-action-dispatch", "form-data"],
   };
 }

@@ -13,7 +13,11 @@ import {
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { generateClientFiles, generateClientFilesFromContractGraph } from "../libs/generate";
+import {
+  createFrontendActionManifestFromContractGraph,
+  generateClientFiles,
+  generateClientFilesFromContractGraph,
+} from "../libs/generate";
 
 const TEMP_DIR = path.join(__dirname, "codegen-temp");
 const GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS = 15_000;
@@ -276,6 +280,163 @@ describe("generateClientFiles", () => {
     expect(content).toContain(
       "{ code: 'USER_NOT_FOUND', category: 'NotFound', status: 404, description: 'User id is missing, or the user was deleted.' }",
     );
+  });
+
+  it("should emit a deterministic frontend action manifest for REST RPC routes", () => {
+    const manifestPath = path.join(TEMP_DIR, "frontend-action-manifest.json");
+    const graph: ContractGraph = {
+      version: "croco.contract-graph.v1",
+      controllers: [
+        {
+          name: "UsersController",
+          path: "/users",
+          guards: [],
+          roles: [],
+          routeIds: ["UsersController.createUser"],
+        },
+      ],
+      routes: [
+        {
+          routeId: "UsersController.createUser",
+          operationId: "UsersController_createUser",
+          controllerName: "UsersController",
+          methodName: "createUser",
+          httpMethod: "POST",
+          path: "/users",
+          controllerPath: "/users",
+          routeContract: null,
+          params: [{ kind: "body", name: "", schema: null }],
+          inputSchema: null,
+          inputSchemas: BODY_INPUT_SCHEMAS,
+          outputSchema: z.object({ id: z.string() }) as unknown as RouteIR["outputSchema"],
+          domain: null,
+          access: {
+            guards: [
+              {
+                type: "rest.guard",
+                id: "rest.guard:route:UsersController.createUser:0:constructor:SessionGuard",
+                kind: "constructor",
+                name: "SessionGuard",
+                declaredAt: "route",
+                owner: {
+                  controllerName: "UsersController",
+                  routeId: "UsersController.createUser",
+                  methodName: "createUser",
+                },
+                index: 0,
+              },
+            ],
+            roles: ["admin"],
+          },
+          entitlements: [
+            {
+              feature: "users.write",
+              description: "Create users in the active tenant",
+              resource: { type: "tenant", idParam: "tenantId" },
+            },
+          ],
+          problemResponses: [
+            {
+              code: "USER_EXISTS",
+              category: ProblemCategory.Conflict,
+              status: 409,
+              description: "The user already exists.",
+              type: "https://example.com/problems/user-exists",
+            },
+          ],
+        },
+      ],
+      diagnostics: [],
+    };
+
+    const files = generateClientFilesFromContractGraph(graph, TEMP_DIR, {
+      frontendActionManifestPath: manifestPath,
+    });
+    const manifest = createFrontendActionManifestFromContractGraph(graph);
+    const serialized = fs.readFileSync(manifestPath, "utf-8");
+
+    expect(files).toEqual([
+      path.join(TEMP_DIR, "users.ts"),
+      path.join(TEMP_DIR, "rpc.ts"),
+      path.join(TEMP_DIR, "index.ts"),
+      manifestPath,
+    ]);
+    expect(serialized).toBe(JSON.stringify(manifest, null, 2) + "\n");
+    expect(serialized).toMatchInlineSnapshot(`
+      "{
+        "schemaVersion": "croco.frontend-action-manifest.v1",
+        "actions": [
+          {
+            "id": "rest:UsersController.createUser",
+            "source": {
+              "kind": "rest-rpc-route",
+              "packageName": "@croco/rpc-codegen",
+              "routeId": "UsersController.createUser",
+              "operationId": "UsersController_createUser",
+              "controllerName": "UsersController",
+              "methodName": "createUser",
+              "domain": "users"
+            },
+            "method": "POST",
+            "path": "/users",
+            "input": {
+              "kind": "generated-type",
+              "ref": "CreateUserInput",
+              "locations": [
+                "body"
+              ]
+            },
+            "output": {
+              "kind": "generated-type",
+              "ref": "CreateUserOutput"
+            },
+            "problems": [
+              {
+                "code": "USER_EXISTS",
+                "category": "Conflict",
+                "status": 409,
+                "description": "The user already exists.",
+                "type": "https://example.com/problems/user-exists"
+              }
+            ],
+            "permissions": {
+              "guards": [
+                {
+                  "id": "rest.guard:route:UsersController.createUser:0:constructor:SessionGuard",
+                  "name": "SessionGuard",
+                  "owner": {
+                    "controllerName": "UsersController",
+                    "routeId": "UsersController.createUser",
+                    "methodName": "createUser"
+                  }
+                }
+              ],
+              "roles": [
+                "admin"
+              ],
+              "entitlements": [
+                {
+                  "feature": "users.write",
+                  "description": "Create users in the active tenant",
+                  "resource": {
+                    "type": "tenant",
+                    "idParam": "tenantId"
+                  }
+                }
+              ]
+            },
+            "invalidates": [
+              {
+                "kind": "query-key-prefix",
+                "target": "users",
+                "reason": "mutation"
+              }
+            ]
+          }
+        ]
+      }
+      "
+    `);
   });
 
   it("should import the shared frontend Problem runtime when configured", () => {

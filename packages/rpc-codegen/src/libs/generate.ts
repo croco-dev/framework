@@ -1,5 +1,17 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import {
+  createFrontendActionManifest,
+  serializeFrontendActionManifest,
+  type FrontendActionEntitlement,
+  type FrontendActionInputLocation,
+  type FrontendActionManifest,
+  type FrontendActionManifestEntry,
+  type FrontendActionMetadataReference,
+  type FrontendActionPermissionMetadata,
+  type FrontendActionProblem,
+  type FrontendActionShapeReference,
+} from "@croco/presentation-preset";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   assertContractGraphConsumerRouteCoverage,
@@ -23,6 +35,7 @@ import {
 } from "@croco/protocols-core";
 
 export type GenerateClientOptions = {
+  readonly frontendActionManifestPath?: string;
   readonly problemRuntime?: GenerateClientProblemRuntime;
   readonly reactQuery?: boolean;
 };
@@ -42,6 +55,14 @@ type DomainRoutes = {
 type GeneratedClientFile = {
   readonly filePath: string;
   readonly content: string;
+};
+
+type GeneratedClientRouteWithAccess = GeneratedClientRoute & {
+  readonly access?: {
+    readonly guards?: readonly FrontendActionMetadataReference[];
+    readonly roles?: readonly string[];
+  };
+  readonly entitlements?: readonly FrontendActionEntitlement[];
 };
 
 type ResponseHelperOptions = {
@@ -131,19 +152,214 @@ export function generateClientFiles(
   const supportContent = generateRpcSupport(options);
   const indexPath = path.join(outDir, "index.ts");
   const indexContent = generateClientIndex(domainRouteGroups);
+  const frontendActionManifestFile = options.frontendActionManifestPath
+    ? {
+        filePath: options.frontendActionManifestPath,
+        content: serializeFrontendActionManifest(createFrontendActionManifestFromRoutes(routes)),
+      }
+    : null;
   const files: readonly GeneratedClientFile[] = [
     ...domainFiles,
     { filePath: supportPath, content: supportContent },
     { filePath: indexPath, content: indexContent },
+    ...(frontendActionManifestFile ? [frontendActionManifestFile] : []),
   ];
 
   fs.mkdirSync(outDir, { recursive: true });
 
   for (const file of files) {
+    fs.mkdirSync(path.dirname(file.filePath), { recursive: true });
     fs.writeFileSync(file.filePath, file.content);
   }
 
   return files.map((file) => file.filePath);
+}
+
+export function createFrontendActionManifestFromContractGraph(
+  graph: ContractGraph,
+): FrontendActionManifest {
+  assertContractGraphHasNoErrors(graph);
+
+  return createFrontendActionManifestFromRoutes([...graph.routes]);
+}
+
+export function createFrontendActionManifestFromRoutes(
+  routes: readonly GeneratedClientRoute[],
+): FrontendActionManifest {
+  assertGeneratedClientRoutes(routes);
+
+  return createFrontendActionManifest(routes.map(createFrontendActionManifestEntry));
+}
+
+function createFrontendActionManifestEntry(
+  route: GeneratedClientRoute,
+): FrontendActionManifestEntry {
+  const routeId = getRouteId(route);
+  const operationId = getOperationId(route);
+  const domain = getDomainName(route);
+
+  return {
+    id: `rest:${routeId}`,
+    source: {
+      kind: "rest-rpc-route",
+      packageName: "@croco/rpc-codegen",
+      routeId,
+      operationId,
+      controllerName: route.controllerName,
+      methodName: route.methodName,
+      domain,
+    },
+    method: route.httpMethod.toUpperCase(),
+    path: route.path,
+    input: createFrontendActionInputReference(route),
+    output: createFrontendActionOutputReference(route),
+    problems: createFrontendActionProblems(route),
+    permissions: createFrontendActionPermissions(route),
+    invalidates: isMutationRoute(route)
+      ? [{ kind: "query-key-prefix", target: domain, reason: "mutation" }]
+      : [],
+  };
+}
+
+function createFrontendActionInputReference(
+  route: GeneratedClientRoute,
+): FrontendActionShapeReference {
+  const locations = getFrontendActionInputLocations(route);
+
+  if (locations.length === 0) {
+    return { kind: "none" };
+  }
+
+  return {
+    kind: "generated-type",
+    ref: getInputTypeName(route),
+    locations,
+  };
+}
+
+function createFrontendActionOutputReference(
+  route: GeneratedClientRoute,
+): FrontendActionShapeReference {
+  if (!route.outputSchema) {
+    return { kind: "none" };
+  }
+
+  return {
+    kind: "generated-type",
+    ref: getOutputTypeName(route),
+  };
+}
+
+function getFrontendActionInputLocations(
+  route: GeneratedClientRoute,
+): readonly FrontendActionInputLocation[] {
+  const locations: FrontendActionInputLocation[] = [];
+
+  if (route.inputSchemas.body) {
+    locations.push("body");
+  }
+  if (route.inputSchemas.path) {
+    locations.push("path");
+  }
+  if (route.inputSchemas.query) {
+    locations.push("query");
+  }
+  if (route.inputSchemas.headers) {
+    locations.push("headers");
+  }
+
+  return locations;
+}
+
+function createFrontendActionProblems(
+  route: GeneratedClientRoute,
+): readonly FrontendActionProblem[] {
+  return [...(route.problemResponses ?? [])]
+    .sort(
+      (left, right) =>
+        compareStrings(left.code, right.code) ||
+        compareStrings(String(left.category), String(right.category)) ||
+        left.status - right.status,
+    )
+    .map((problem) => ({
+      code: problem.code,
+      category: String(problem.category),
+      status: problem.status,
+      ...(problem.description ? { description: problem.description } : {}),
+      ...(problem.type ? { type: problem.type } : {}),
+      ...(problem.cookbookPath ? { cookbookPath: problem.cookbookPath } : {}),
+    }));
+}
+
+function createFrontendActionPermissions(
+  route: GeneratedClientRoute,
+): FrontendActionPermissionMetadata {
+  const metadata = route as GeneratedClientRouteWithAccess;
+
+  return {
+    guards: [...(metadata.access?.guards ?? [])]
+      .map(normalizeFrontendActionGuard)
+      .sort(
+        (left, right) => compareStrings(left.id, right.id) || compareStrings(left.name, right.name),
+      ),
+    roles: [...(metadata.access?.roles ?? [])].sort(compareStrings),
+    entitlements: [...(metadata.entitlements ?? [])]
+      .map(normalizeFrontendActionEntitlement)
+      .sort(compareFrontendActionEntitlements),
+  };
+}
+
+function normalizeFrontendActionGuard(
+  guard: FrontendActionMetadataReference,
+): FrontendActionMetadataReference {
+  return {
+    id: guard.id,
+    name: guard.name,
+    ...(guard.owner
+      ? {
+          owner: {
+            controllerName: guard.owner.controllerName,
+            ...(guard.owner.routeId ? { routeId: guard.owner.routeId } : {}),
+            ...(guard.owner.methodName ? { methodName: guard.owner.methodName } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+function normalizeFrontendActionEntitlement(
+  entitlement: FrontendActionEntitlement,
+): FrontendActionEntitlement {
+  return {
+    feature: entitlement.feature,
+    ...(entitlement.description ? { description: entitlement.description } : {}),
+    ...(entitlement.resource
+      ? {
+          resource: {
+            type: entitlement.resource.type,
+            ...(entitlement.resource.id ? { id: entitlement.resource.id } : {}),
+            ...(entitlement.resource.idParam ? { idParam: entitlement.resource.idParam } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+function compareFrontendActionEntitlements(
+  left: FrontendActionEntitlement,
+  right: FrontendActionEntitlement,
+): number {
+  return compareStrings(JSON.stringify(left), JSON.stringify(right));
+}
+
+function compareStrings(left: string, right: string): number {
+  if (left < right) {
+    return -1;
+  }
+  if (left > right) {
+    return 1;
+  }
+  return 0;
 }
 
 function assertGeneratedClientRoutes(routes: readonly GeneratedClientRoute[]): void {

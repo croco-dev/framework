@@ -10,6 +10,8 @@ React Query contracts without hand-maintained glue code.
 
 - `generateClientFiles` - emits client files from route definitions.
 - `generateClientFilesFromContractGraph` - emits client files from a contract graph.
+- `createFrontendActionManifestFromRoutes` and `createFrontendActionManifestFromContractGraph` -
+  emit the shared frontend action manifest for generated REST RPC routes.
 - `loadContractGraph` and `loadRoutes` - load generator inputs.
 - Generator option and Problem-runtime types.
 
@@ -18,9 +20,32 @@ React Query contracts without hand-maintained glue code.
 ```typescript
 import { generateClientFilesFromContractGraph } from "@croco/rpc-codegen";
 
-await generateClientFilesFromContractGraph(graph, {
-  outputDir: "./src/generated/rpc",
+await generateClientFilesFromContractGraph(graph, "./src/generated/rpc", {
+  frontendActionManifestPath: "./src/generated/frontend-action-manifest.json",
 });
+```
+
+The manifest is a stable `croco.frontend-action-manifest.v1` artifact. It lets humans, CI, and
+LLM tooling inspect which generated client actions exist, which REST contract each one calls, the
+generated input/output type references, declared Problems, access metadata, entitlements, and
+mutation invalidation hints.
+
+CLI usage:
+
+```bash
+croco-rpc-codegen \
+  --controllers "src/controllers/**/*.ts" \
+  --out src/generated/rpc \
+  --frontend-action-manifest src/generated/frontend-action-manifest.json
+```
+
+CI drift gate:
+
+```bash
+croco-rpc-codegen \
+  --controllers "src/controllers/**/*.ts" \
+  --frontend-action-manifest src/generated/frontend-action-manifest.json \
+  --frontend-action-manifest-check
 ```
 
 Generated clients accept an optional `RpcClientRequestOptions` argument. Browser apps can pass a

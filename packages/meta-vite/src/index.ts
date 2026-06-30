@@ -64,6 +64,18 @@ export type {
   MetaViteServerActionManifestEntry,
   MetaViteServerActionRegistryManifestSource,
 } from "./libs/build/routeManifest";
+export {
+  checkMetaViteFrontendActionManifestFile,
+  createMetaViteFrontendActionManifest,
+  createMetaViteFrontendActionManifestFromRegistry,
+  serializeMetaViteFrontendActionManifest,
+  writeMetaViteFrontendActionManifest,
+} from "./libs/build/frontendActionManifest";
+export type {
+  MetaViteFrontendActionManifestRegistryOptions,
+  MetaViteFrontendActionManifestSource,
+  MetaViteServerActionRegistryFrontendActionManifestSource,
+} from "./libs/build/frontendActionManifest";
 export { createIsrHandler } from "./libs/isr/createIsrHandler";
 export { createIsrMiddleware } from "./libs/isr/isrMiddleware";
 export {

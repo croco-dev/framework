@@ -2648,6 +2648,9 @@ importers:
 
   packages/rpc-codegen:
     dependencies:
+      '@croco/presentation-preset':
+        specifier: workspace:*
+        version: link:../presentation-preset
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
