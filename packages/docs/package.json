@@ -94,6 +94,7 @@
     "@croco/onboarding-core": "workspace:*",
     "@croco/onboarding-drizzle": "workspace:*",
     "@croco/openapi-spec": "workspace:*",
+    "@croco/outbox-core": "workspace:*",
     "@croco/pagination-core": "workspace:*",
     "@croco/presentation-preset": "workspace:*",
     "@croco/preset-cloudflare": "workspace:*",

@@ -1151,6 +1151,9 @@ importers:
       '@croco/openapi-spec':
         specifier: workspace:*
         version: link:../openapi-spec
+      '@croco/outbox-core':
+        specifier: workspace:*
+        version: link:../outbox-core
       '@croco/pagination-core':
         specifier: workspace:*
         version: link:../pagination-core
@@ -2383,6 +2386,16 @@ importers:
       typedi:
         specifier: 0.10.0
         version: 0.10.0
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+
+  packages/outbox-core:
+    dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
