@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { CLI_DIAGNOSTIC_CODES, withLegacyCode } from "./diagnosticCodes.js";
 
 const DEFAULT_TIMEOUT_MS = 5000;
 export const DEFAULT_TOKEN_HEADER = "X-Diagnostics-Token";
@@ -52,9 +53,10 @@ const CHECK_REQUIRED_ENDPOINTS = [
 class InvalidOpsTimeoutProblem extends Problem {
   constructor(value: unknown) {
     super(
-      "cli/invalid-ops-timeout",
+      CLI_DIAGNOSTIC_CODES.opsInvalidTimeout,
       ProblemCategory.BadRequest,
       `Invalid timeout: ${String(value)}`,
+      withLegacyCode("opsInvalidTimeout"),
     );
   }
 }
@@ -62,9 +64,10 @@ class InvalidOpsTimeoutProblem extends Problem {
 class InvalidOpsTargetUrlProblem extends Problem {
   constructor(target: string) {
     super(
-      "cli/invalid-ops-target-url",
+      CLI_DIAGNOSTIC_CODES.opsInvalidTargetUrl,
       ProblemCategory.BadRequest,
       `Invalid Croco app URL: ${target}`,
+      withLegacyCode("opsInvalidTargetUrl"),
     );
   }
 }

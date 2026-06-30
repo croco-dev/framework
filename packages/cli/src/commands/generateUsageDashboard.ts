@@ -279,53 +279,95 @@ function splitRoutePath(path: string): RouteParts {
 }
 
 function problemsTemplate(): string {
-  return `import { Problem, ProblemCategory, type ProblemOptions } from "@croco/problems-core";
+  return `import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { ProblemDetails, ProblemOptions } from "@croco/problems-core";
 
-export class UsageDashboardTenantRequiredProblem extends Problem {
-  readonly code = "usage-dashboard/tenant-required";
+export const USAGE_DASHBOARD_PROBLEM_CODES = {
+  tenantRequired: "CROCO_CLI_USAGE_DASHBOARD_001",
+  tenantNotFound: "CROCO_CLI_USAGE_DASHBOARD_002",
+  meterNotFound: "CROCO_CLI_USAGE_DASHBOARD_003",
+  providerUnavailable: "CROCO_CLI_USAGE_DASHBOARD_004",
+} as const;
+
+export const USAGE_DASHBOARD_LEGACY_PROBLEM_CODES = {
+  tenantRequired: "usage-dashboard/tenant-required",
+  tenantNotFound: "usage-dashboard/tenant-not-found",
+  meterNotFound: "usage-dashboard/meter-not-found",
+  providerUnavailable: "usage-dashboard/provider-unavailable",
+} as const;
+
+type UsageDashboardProblemJson = ProblemDetails & {
+  readonly legacyCode: string;
+};
+
+abstract class UsageDashboardProblem extends Problem {
+  abstract readonly code: string;
+  abstract readonly category: ProblemCategory;
+  abstract readonly legacyCode: string;
+
+  protected constructor(code: string, category: ProblemCategory, detail?: string, options?: ProblemOptions) {
+    super(code, category, detail, options);
+  }
+
+  toJSON(): UsageDashboardProblemJson {
+    return { ...super.toJSON(), legacyCode: this.legacyCode };
+  }
+}
+
+export class UsageDashboardTenantRequiredProblem extends UsageDashboardProblem {
+  readonly code = USAGE_DASHBOARD_PROBLEM_CODES.tenantRequired;
+  readonly legacyCode = USAGE_DASHBOARD_LEGACY_PROBLEM_CODES.tenantRequired;
   readonly category = ProblemCategory.ValidationError;
 
   constructor() {
     super(
-      "usage-dashboard/tenant-required",
+      USAGE_DASHBOARD_PROBLEM_CODES.tenantRequired,
       ProblemCategory.ValidationError,
       "Usage dashboard requires x-tenant-id header or tenantId query parameter.",
     );
   }
 }
 
-export class UsageDashboardTenantNotFoundProblem extends Problem {
-  readonly code = "usage-dashboard/tenant-not-found";
+export class UsageDashboardTenantNotFoundProblem extends UsageDashboardProblem {
+  readonly code = USAGE_DASHBOARD_PROBLEM_CODES.tenantNotFound;
+  readonly legacyCode = USAGE_DASHBOARD_LEGACY_PROBLEM_CODES.tenantNotFound;
   readonly category = ProblemCategory.NotFound;
 
   constructor(tenantId: string) {
     super(
-      "usage-dashboard/tenant-not-found",
+      USAGE_DASHBOARD_PROBLEM_CODES.tenantNotFound,
       ProblemCategory.NotFound,
       "Usage dashboard tenant not found: " + tenantId + ".",
     );
   }
 }
 
-export class UsageDashboardMeterNotFoundProblem extends Problem {
-  readonly code = "usage-dashboard/meter-not-found";
+export class UsageDashboardMeterNotFoundProblem extends UsageDashboardProblem {
+  readonly code = USAGE_DASHBOARD_PROBLEM_CODES.meterNotFound;
+  readonly legacyCode = USAGE_DASHBOARD_LEGACY_PROBLEM_CODES.meterNotFound;
   readonly category = ProblemCategory.NotFound;
 
   constructor(tenantId: string, meterId: string) {
     super(
-      "usage-dashboard/meter-not-found",
+      USAGE_DASHBOARD_PROBLEM_CODES.meterNotFound,
       ProblemCategory.NotFound,
       "Usage dashboard meter " + meterId + " not found for tenant " + tenantId + ".",
     );
   }
 }
 
-export class UsageDashboardProviderUnavailableProblem extends Problem {
-  readonly code = "usage-dashboard/provider-unavailable";
+export class UsageDashboardProviderUnavailableProblem extends UsageDashboardProblem {
+  readonly code = USAGE_DASHBOARD_PROBLEM_CODES.providerUnavailable;
+  readonly legacyCode = USAGE_DASHBOARD_LEGACY_PROBLEM_CODES.providerUnavailable;
   readonly category = ProblemCategory.InternalServerError;
 
   constructor(detail = "Usage dashboard runtime providers are unavailable.", options?: ProblemOptions) {
-    super("usage-dashboard/provider-unavailable", ProblemCategory.InternalServerError, detail, options);
+    super(
+      USAGE_DASHBOARD_PROBLEM_CODES.providerUnavailable,
+      ProblemCategory.InternalServerError,
+      detail,
+      options,
+    );
   }
 }
 `;

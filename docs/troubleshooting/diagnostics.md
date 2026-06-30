@@ -156,6 +156,52 @@ Search: CROCO_ROUTE_004, missing path param, @Param, route contract
 | `CROCO_BUILD_002` | build-time           | error    | generated artifact가 source와 drift됨       | package-specific write command 실행 후 diff 검토 |
 | `CROCO_BUILD_003` | build-time           | error    | controller source에 TypeScript 오류가 있음  | controller type error 수정 후 contract 재실행    |
 
+### CLI diagnostic code migration
+
+CLI가 직접 생성하는 diagnostic/Problem의 primary `code`는 `CROCO_*` 형식을 사용합니다. 이전 slash-form 값은 제거된 primary code가 아니라 `legacyCode` alias로만 남깁니다. JSON 출력이나 Problem extension에서 `legacyCode`가 보이면 migration lookup 용도로만 사용하고, 새 suppress/filter/support tooling은 `code`의 `CROCO_*` 값을 기준으로 작성합니다.
+
+Project Map wrapper diagnostics preserve the concrete wrapped source code in `legacyCode`. The wildcard rows below are patterns, not serialized alias values: `project-map/framework-manifest-*` is emitted as `project-map/framework-manifest-<sourceCode>`, and `project-map/contract-graph-*` is emitted as `project-map/contract-graph-<sourceCode>`. Use the emitted `legacyCode` field for exact migration lookup when those wrapper diagnostics appear.
+
+예시:
+
+```text
+ERROR CROCO_CLI_DOCTOR_005
+  Cause: A Lambda entrypoint initializes @croco/telemetry-sdk-node but does not flush telemetry before the invocation returns.
+  Location: packages/api/src/handler.ts:1 (@croco/api)
+  Action: Await telemetry readiness before handler work and call telemetry.forceFlush() in a finally block before returning.
+```
+
+| Stable code                     | Legacy alias / pattern                    | Surface             | Meaning                                    |
+| ------------------------------- | ----------------------------------------- | ------------------- | ------------------------------------------ |
+| `CROCO_CLI_DOCTOR_001`          | `doctor/workspace-not-found`              | `croco doctor`      | workspace root를 찾지 못함                 |
+| `CROCO_CLI_DOCTOR_002`          | `doctor/workspace-packages-empty`         | `croco doctor`      | workspace glob이 package를 찾지 못함       |
+| `CROCO_CLI_DOCTOR_003`          | `doctor/workspace-package-invalid`        | `croco doctor`      | package manifest가 유효하지 않음           |
+| `CROCO_CLI_DOCTOR_004`          | `doctor/repository-core-drizzle-boundary` | `croco doctor`      | repository-core가 Drizzle 구현에 오염됨    |
+| `CROCO_CLI_DOCTOR_005`          | `doctor/lambda-telemetry-flush-missing`   | `croco doctor`      | Lambda telemetry flush 보장이 없음         |
+| `CROCO_CLI_USAGE_DASHBOARD_001` | `usage-dashboard/tenant-required`         | generated dashboard | tenant context 누락                        |
+| `CROCO_CLI_USAGE_DASHBOARD_002` | `usage-dashboard/tenant-not-found`        | generated dashboard | tenant lookup 실패                         |
+| `CROCO_CLI_USAGE_DASHBOARD_003` | `usage-dashboard/meter-not-found`         | generated dashboard | meter lookup 실패                          |
+| `CROCO_CLI_USAGE_DASHBOARD_004` | `usage-dashboard/provider-unavailable`    | generated dashboard | dashboard provider dependency 실패         |
+| `CROCO_CLI_OPS_001`             | `cli/invalid-ops-target-url`              | `croco ops`         | ops target URL이 유효하지 않음             |
+| `CROCO_CLI_OPS_002`             | `cli/invalid-ops-timeout`                 | `croco ops`         | ops timeout이 유효하지 않음                |
+| `CROCO_CLI_JOBS_001`            | `cli/invalid-jobs-target-url`             | `croco jobs`        | jobs target URL이 유효하지 않음            |
+| `CROCO_CLI_JOBS_002`            | `cli/invalid-jobs-number`                 | `croco jobs`        | jobs numeric option이 유효하지 않음        |
+| `CROCO_CLI_JOBS_003`            | `cli/missing-jobs-target-url`             | `croco jobs`        | jobs target URL이 없음                     |
+| `CROCO_CLI_JOBS_004`            | `cli/jobs-http-error`                     | `croco jobs`        | jobs endpoint가 404 외 실패 응답을 반환함  |
+| `CROCO_CLI_JOBS_005`            | `cli/jobs-endpoint-not-found`             | `croco jobs`        | jobs endpoint 또는 job id를 찾을 수 없음   |
+| `CROCO_CLI_DI_CHECK_001`        | `cli/di-manifest-invalid`                 | `croco di check`    | DI/module manifest를 읽을 수 없음          |
+| `CROCO_CLI_DI_CHECK_002`        | `cli/di-manifest-failed`                  | `croco di check`    | failed manifest에 diagnostics가 없음       |
+| `CROCO_CLI_DI_CHECK_003`        | `cli/di-diagnostic-unknown`               | `croco di check`    | manifest diagnostic code가 없음            |
+| `CROCO_CLI_PROJECT_MAP_001`     | `project-map/framework-manifest-*`        | `croco project map` | framework manifest diagnostic wrapper      |
+| `CROCO_CLI_PROJECT_MAP_002`     | `project-map/contract-route-conflict`     | `croco project map` | framework/contract route set 불일치        |
+| `CROCO_CLI_PROJECT_MAP_003`     | `project-map/contract-graph-*`            | `croco project map` | Contract Graph diagnostic wrapper          |
+| `CROCO_CLI_PROJECT_MAP_004`     | `project-map/runtime-target-missing`      | `croco project map` | runtime target 누락                        |
+| `CROCO_CLI_PROJECT_MAP_005`     | `project-map/runtime-target-unsupported`  | `croco project map` | 지원하지 않는 runtime target               |
+| `CROCO_CLI_PROJECT_MAP_006`     | `project-map/runtime-capability-conflict` | `croco project map` | runtime capability conflict                |
+| `CROCO_CLI_PROJECT_MAP_007`     | `project-map/package-manifest-conflict`   | `croco project map` | provider profile package가 manifest에 없음 |
+| `CROCO_CLI_PROJECT_MAP_008`     | `project-map/manifest-missing`            | `croco project map` | committed Project Map manifest 누락        |
+| `CROCO_CLI_PROJECT_MAP_009`     | `project-map/manifest-drift`              | `croco project map` | committed Project Map manifest drift       |
+
 ### `CROCO_DI_001`
 
 Cause: DI container가 active scope에서 등록되지 않은 provider token을 resolve하려고 했습니다.

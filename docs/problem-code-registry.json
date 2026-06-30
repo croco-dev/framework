@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 403,
+  "problemCount": 405,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -1920,141 +1920,6 @@
       ]
     },
     {
-      "code": "cli/invalid-jobs-number",
-      "category": "BadRequest",
-      "status": 400,
-      "title": "Bad Request",
-      "cookbookPath": "/reference/problem-recovery-cookbook/#cli-invalid-jobs-number",
-      "recovery": {
-        "cause": "The caller sent malformed input or unsupported request options.",
-        "userAction": "Correct the request input and retry after validation passes.",
-        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
-        "retryability": "not-retryable",
-        "redactionPolicy": "public",
-        "telemetry": {
-          "eventName": "croco.problem.info",
-          "severity": "info",
-          "attributes": ["problem.code", "problem.category", "problem.status"]
-        }
-      },
-      "sources": [
-        {
-          "file": "packages/cli/src/commands/jobs.ts",
-          "line": 97,
-          "column": 5,
-          "kind": "problem-constructor"
-        }
-      ]
-    },
-    {
-      "code": "cli/invalid-jobs-target-url",
-      "category": "BadRequest",
-      "status": 400,
-      "title": "Bad Request",
-      "cookbookPath": "/reference/problem-recovery-cookbook/#cli-invalid-jobs-target-url",
-      "recovery": {
-        "cause": "The caller sent malformed input or unsupported request options.",
-        "userAction": "Correct the request input and retry after validation passes.",
-        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
-        "retryability": "not-retryable",
-        "redactionPolicy": "public",
-        "telemetry": {
-          "eventName": "croco.problem.info",
-          "severity": "info",
-          "attributes": ["problem.code", "problem.category", "problem.status"]
-        }
-      },
-      "sources": [
-        {
-          "file": "packages/cli/src/commands/jobs.ts",
-          "line": 87,
-          "column": 5,
-          "kind": "problem-constructor"
-        }
-      ]
-    },
-    {
-      "code": "cli/invalid-ops-target-url",
-      "category": "BadRequest",
-      "status": 400,
-      "title": "Bad Request",
-      "cookbookPath": "/reference/problem-recovery-cookbook/#cli-invalid-ops-target-url",
-      "recovery": {
-        "cause": "The caller sent malformed input or unsupported request options.",
-        "userAction": "Correct the request input and retry after validation passes.",
-        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
-        "retryability": "not-retryable",
-        "redactionPolicy": "public",
-        "telemetry": {
-          "eventName": "croco.problem.info",
-          "severity": "info",
-          "attributes": ["problem.code", "problem.category", "problem.status"]
-        }
-      },
-      "sources": [
-        {
-          "file": "packages/cli/src/libs/ops.ts",
-          "line": 64,
-          "column": 5,
-          "kind": "problem-constructor"
-        }
-      ]
-    },
-    {
-      "code": "cli/invalid-ops-timeout",
-      "category": "BadRequest",
-      "status": 400,
-      "title": "Bad Request",
-      "cookbookPath": "/reference/problem-recovery-cookbook/#cli-invalid-ops-timeout",
-      "recovery": {
-        "cause": "The caller sent malformed input or unsupported request options.",
-        "userAction": "Correct the request input and retry after validation passes.",
-        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
-        "retryability": "not-retryable",
-        "redactionPolicy": "public",
-        "telemetry": {
-          "eventName": "croco.problem.info",
-          "severity": "info",
-          "attributes": ["problem.code", "problem.category", "problem.status"]
-        }
-      },
-      "sources": [
-        {
-          "file": "packages/cli/src/libs/ops.ts",
-          "line": 54,
-          "column": 5,
-          "kind": "problem-constructor"
-        }
-      ]
-    },
-    {
-      "code": "cli/missing-jobs-target-url",
-      "category": "BadRequest",
-      "status": 400,
-      "title": "Bad Request",
-      "cookbookPath": "/reference/problem-recovery-cookbook/#cli-missing-jobs-target-url",
-      "recovery": {
-        "cause": "The caller sent malformed input or unsupported request options.",
-        "userAction": "Correct the request input and retry after validation passes.",
-        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
-        "retryability": "not-retryable",
-        "redactionPolicy": "public",
-        "telemetry": {
-          "eventName": "croco.problem.info",
-          "severity": "info",
-          "attributes": ["problem.code", "problem.category", "problem.status"]
-        }
-      },
-      "sources": [
-        {
-          "file": "packages/cli/src/commands/jobs.ts",
-          "line": 107,
-          "column": 5,
-          "kind": "problem-constructor"
-        }
-      ]
-    },
-    {
       "code": "cloudflare/images-invalid-ttl",
       "category": "InternalServerError",
       "status": 500,
@@ -2346,6 +2211,195 @@
         {
           "file": "packages/create-croco-app/templates/addons/web-meta-vite/src/client.tsx",
           "line": 11,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "CROCO_CLI_JOBS_001",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#croco-cli-jobs-001",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cli/src/commands/jobs.ts",
+          "line": 88,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "CROCO_CLI_JOBS_002",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#croco-cli-jobs-002",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cli/src/commands/jobs.ts",
+          "line": 99,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "CROCO_CLI_JOBS_003",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#croco-cli-jobs-003",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cli/src/commands/jobs.ts",
+          "line": 110,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "CROCO_CLI_JOBS_004",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#croco-cli-jobs-004",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cli/src/commands/jobs.ts",
+          "line": 137,
+          "column": 49,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "CROCO_CLI_JOBS_005",
+      "category": "NotFound",
+      "status": 404,
+      "title": "Not Found",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#croco-cli-jobs-005",
+      "recovery": {
+        "cause": "The requested resource or route-visible record does not exist.",
+        "userAction": "Verify the identifier and refresh the resource list before retrying.",
+        "operatorAction": "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cli/src/commands/jobs.ts",
+          "line": 132,
+          "column": 63,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "CROCO_CLI_OPS_001",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#croco-cli-ops-001",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cli/src/libs/ops.ts",
+          "line": 66,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "CROCO_CLI_OPS_002",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#croco-cli-ops-002",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "sources": [
+        {
+          "file": "packages/cli/src/libs/ops.ts",
+          "line": 55,
           "column": 5,
           "kind": "problem-constructor"
         }

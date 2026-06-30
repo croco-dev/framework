@@ -8,6 +8,7 @@ import {
   runOpsStatus,
 } from "../commands/ops.js";
 import type { OpsStatusFetch } from "../commands/ops.js";
+import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
 describe("ops status", () => {
   beforeEach(() => {
@@ -221,11 +222,17 @@ describe("ops status", () => {
 
   it("reports invalid inputs as Problem details", async () => {
     await expect(runOpsStatus("not-a-url")).rejects.toMatchObject({
-      code: "cli/invalid-ops-target-url",
+      code: CLI_DIAGNOSTIC_CODES.opsInvalidTargetUrl,
+      extensions: {
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.opsInvalidTargetUrl,
+      },
       status: 400,
     });
     await expect(runOpsStatus("http://localhost:3000", { timeoutMs: 0 })).rejects.toMatchObject({
-      code: "cli/invalid-ops-timeout",
+      code: CLI_DIAGNOSTIC_CODES.opsInvalidTimeout,
+      extensions: {
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.opsInvalidTimeout,
+      },
       status: 400,
     });
   });

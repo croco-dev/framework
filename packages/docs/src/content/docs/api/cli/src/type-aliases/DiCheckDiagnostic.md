@@ -13,31 +13,37 @@ title: "DiCheckDiagnostic"
 
 > `readonly` **code**: `string`
 
-***
+---
+
+### legacyCode?
+
+> `readonly` `optional` **legacyCode?**: `string`
+
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### moduleName?
 
 > `readonly` `optional` **moduleName?**: `string`
 
-***
+---
 
 ### path?
 
 > `readonly` `optional` **path?**: readonly `string`[]
 
-***
+---
 
 ### severity
 
 > `readonly` **severity**: `"error"` \| `"warning"`
 
-***
+---
 
 ### sourceLocation?
 
@@ -55,7 +61,7 @@ title: "DiCheckDiagnostic"
 
 > `readonly` `optional` **line?**: `number`
 
-***
+---
 
 ### token?
 

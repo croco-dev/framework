@@ -2,6 +2,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { defineCommand } from "citty";
 import { WORKSPACE_MAX_DEPTH } from "../libs/constants.js";
+import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
+import type { CliDiagnosticCode } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 export type DoctorSeverity = "error" | "warning";
@@ -15,7 +17,8 @@ export type DoctorLocation = {
 };
 
 export type DoctorDiagnostic = {
-  readonly code: string;
+  readonly code: CliDiagnosticCode;
+  readonly legacyCode?: string;
   readonly severity: DoctorSeverity;
   readonly checkId: string;
   readonly cause: string;
@@ -82,7 +85,8 @@ export function runDoctor(options: RunDoctorOptions = {}): DoctorReport {
 
   if (!rootDir) {
     const diagnostic: DoctorDiagnostic = {
-      code: "doctor/workspace-not-found",
+      code: CLI_DIAGNOSTIC_CODES.doctorWorkspaceNotFound,
+      legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorWorkspaceNotFound,
       severity: "error",
       checkId: "workspace-discovery",
       cause:
@@ -172,7 +176,8 @@ function workspaceDiscoveryCheck(
 
   if (includeCount > 0 && workspace.packages.length === 0 && workspace.diagnostics.length === 0) {
     diagnostics.push({
-      code: "doctor/workspace-packages-empty",
+      code: CLI_DIAGNOSTIC_CODES.doctorWorkspacePackagesEmpty,
+      legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorWorkspacePackagesEmpty,
       severity: "error",
       checkId: "workspace-discovery",
       cause:
@@ -208,7 +213,8 @@ function repositoryCoreBoundaryCheck(rootDir: string): DoctorCheckResult {
 
   const diagnostics = listSourceFiles(sourceDir).flatMap((file) =>
     findForbiddenLines(file, /drizzle/i).map((line) => ({
-      code: "doctor/repository-core-drizzle-boundary",
+      code: CLI_DIAGNOSTIC_CODES.doctorRepositoryCoreDrizzleBoundary,
+      legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorRepositoryCoreDrizzleBoundary,
       severity: "error" as const,
       checkId,
       cause:
@@ -256,7 +262,8 @@ function lambdaTelemetryFlushCheck(
 
       return [
         {
-          code: "doctor/lambda-telemetry-flush-missing",
+          code: CLI_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
+          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
           severity: "error" as const,
           checkId,
           cause:
@@ -583,7 +590,8 @@ function invalidPackageDiagnostic(
   return {
     kind: "invalid",
     diagnostic: {
-      code: "doctor/workspace-package-invalid",
+      code: CLI_DIAGNOSTIC_CODES.doctorWorkspacePackageInvalid,
+      legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorWorkspacePackageInvalid,
       severity: "error",
       checkId: "workspace-discovery",
       cause,

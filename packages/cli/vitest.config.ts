@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@croco/architecture-policy": resolve(currentDir, "../architecture-policy/src/index.ts"),
+      "@croco/diagnostics-core": resolve(currentDir, "../diagnostics-core/src/index.ts"),
       "@croco/execution-core": resolve(currentDir, "../execution-core/src/index.ts"),
       "@croco/migration-runner": resolve(currentDir, "../migration-runner/src/index.ts"),
       "@croco/openapi-spec": resolve(currentDir, "../openapi-spec/src/index.ts"),

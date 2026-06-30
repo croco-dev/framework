@@ -8,10 +8,11 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { argv, exit, stdout } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
@@ -382,7 +383,7 @@ function discoverProblemCodeCandidates(
     true,
     file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
-  const stringConstants = collectStringConstants(sourceFile);
+  const stringConstants = collectStringConstants(rootDir, sourceFile);
   const problemConstructors = collectProblemConstructorForwarders(sourceFile, stringConstants);
   const discoveries: ProblemCodeDiscoveryCandidate[] = [];
   const classProblemFieldStack: boolean[] = [];
@@ -649,7 +650,14 @@ function shouldSkipPath(name: string): boolean {
   return name === "node_modules" || name === "dist" || name === ".turbo" || name === "coverage";
 }
 
-function collectStringConstants(sourceFile: ts.SourceFile): StringConstants {
+function collectStringConstants(rootDir: string, sourceFile: ts.SourceFile): StringConstants {
+  return mergeStringConstants(
+    collectImportedStringConstants(rootDir, sourceFile),
+    collectLocalStringConstants(sourceFile),
+  );
+}
+
+function collectLocalStringConstants(sourceFile: ts.SourceFile): StringConstants {
   const identifiers = new Map<string, string>();
   const propertyAccesses = new Map<string, string>();
 
@@ -709,6 +717,136 @@ function collectStringConstants(sourceFile: ts.SourceFile): StringConstants {
   collect(sourceFile);
 
   return { identifiers, propertyAccesses };
+}
+
+function collectImportedStringConstants(
+  rootDir: string,
+  sourceFile: ts.SourceFile,
+): StringConstants {
+  const identifiers = new Map<string, string>();
+  const propertyAccesses = new Map<string, string>();
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !statement.importClause) {
+      continue;
+    }
+
+    const namedBindings = statement.importClause.namedBindings;
+
+    if (!namedBindings || !ts.isNamedImports(namedBindings)) {
+      continue;
+    }
+
+    const importedSourceFile = resolveImportedSourceFile(
+      rootDir,
+      sourceFile,
+      statement.moduleSpecifier,
+    );
+
+    if (!importedSourceFile) {
+      continue;
+    }
+
+    const importedConstants = collectLocalStringConstants(importedSourceFile);
+
+    for (const element of namedBindings.elements) {
+      const importedName = element.propertyName?.text ?? element.name.text;
+      const localName = element.name.text;
+      const importedValue = importedConstants.identifiers.get(importedName);
+
+      if (importedValue) {
+        identifiers.set(localName, importedValue);
+      }
+
+      for (const [key, value] of importedConstants.propertyAccesses) {
+        if (key === importedName || key.startsWith(`${importedName}.`)) {
+          propertyAccesses.set(`${localName}${key.slice(importedName.length)}`, value);
+        }
+      }
+    }
+  }
+
+  return { identifiers, propertyAccesses };
+}
+
+function mergeStringConstants(...sources: readonly StringConstants[]): StringConstants {
+  const identifiers = new Map<string, string>();
+  const propertyAccesses = new Map<string, string>();
+
+  for (const source of sources) {
+    for (const [key, value] of source.identifiers) {
+      identifiers.set(key, value);
+    }
+
+    for (const [key, value] of source.propertyAccesses) {
+      propertyAccesses.set(key, value);
+    }
+  }
+
+  return { identifiers, propertyAccesses };
+}
+
+const importedSourceFileCache = new Map<string, ts.SourceFile>();
+
+function resolveImportedSourceFile(
+  rootDir: string,
+  sourceFile: ts.SourceFile,
+  moduleSpecifier: ts.Expression,
+): ts.SourceFile | null {
+  if (!ts.isStringLiteral(moduleSpecifier) || !moduleSpecifier.text.startsWith(".")) {
+    return null;
+  }
+
+  const importedPath = resolve(dirname(sourceFile.fileName), moduleSpecifier.text);
+  const sourcePath = importedPath.replace(/\.(cjs|js|jsx|mjs)$/u, "");
+  const candidates = [
+    importedPath,
+    `${sourcePath}.ts`,
+    `${sourcePath}.tsx`,
+    join(sourcePath, "index.ts"),
+    join(sourcePath, "index.tsx"),
+  ];
+  const sourceFilePath = candidates.find((candidate) => {
+    const normalizedCandidate = resolve(candidate);
+
+    return isPathInsideRoot(rootDir, normalizedCandidate) && isFile(normalizedCandidate);
+  });
+
+  if (!sourceFilePath) {
+    return null;
+  }
+
+  const cached = importedSourceFileCache.get(sourceFilePath);
+  if (cached) {
+    return cached;
+  }
+
+  const source = readFileSync(sourceFilePath, "utf-8");
+
+  const parsed = ts.createSourceFile(
+    sourceFilePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    sourceFilePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  importedSourceFileCache.set(sourceFilePath, parsed);
+
+  return parsed;
+}
+
+function isPathInsideRoot(rootDir: string, candidate: string): boolean {
+  const relativePath = relative(rootDir, candidate);
+
+  return relativePath !== "" && !relativePath.startsWith("..") && !isAbsolute(relativePath);
+}
+
+function isFile(path: string): boolean {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
 }
 
 function collectProblemConstructorForwarders(

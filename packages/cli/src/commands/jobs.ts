@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { CLI_DIAGNOSTIC_CODES, withLegacyCode } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -85,9 +86,10 @@ export type RunJobsOptions = {
 class InvalidJobsTargetUrlProblem extends Problem {
   constructor(target: string) {
     super(
-      "cli/invalid-jobs-target-url",
+      CLI_DIAGNOSTIC_CODES.jobsInvalidTargetUrl,
       ProblemCategory.BadRequest,
       `Invalid Croco app URL: ${target}`,
+      withLegacyCode("jobsInvalidTargetUrl"),
     );
   }
 }
@@ -95,9 +97,10 @@ class InvalidJobsTargetUrlProblem extends Problem {
 class InvalidJobsNumberProblem extends Problem {
   constructor(name: string, value: unknown) {
     super(
-      "cli/invalid-jobs-number",
+      CLI_DIAGNOSTIC_CODES.jobsInvalidNumber,
       ProblemCategory.BadRequest,
       `Invalid ${name}: ${String(value)}`,
+      withLegacyCode("jobsInvalidNumber"),
     );
   }
 }
@@ -105,22 +108,36 @@ class InvalidJobsNumberProblem extends Problem {
 class MissingJobsTargetUrlProblem extends Problem {
   constructor() {
     super(
-      "cli/missing-jobs-target-url",
+      CLI_DIAGNOSTIC_CODES.jobsMissingTargetUrl,
       ProblemCategory.BadRequest,
       "Missing Croco app URL. Pass --url or set CROCO_JOBS_URL.",
+      withLegacyCode("jobsMissingTargetUrl"),
     );
   }
 }
 
 class JobsHttpProblem extends Problem {
   constructor(status: number, detail: string) {
+    const isNotFound = status === 404;
+
     super(
-      "cli/jobs-http-error",
-      status === 404 ? ProblemCategory.NotFound : ProblemCategory.Conflict,
+      isNotFound ? CLI_DIAGNOSTIC_CODES.jobsEndpointNotFound : CLI_DIAGNOSTIC_CODES.jobsHttpError,
+      isNotFound ? ProblemCategory.NotFound : ProblemCategory.Conflict,
       `Jobs endpoint returned ${status}: ${detail}`,
+      withLegacyCode(isNotFound ? "jobsEndpointNotFound" : "jobsHttpError"),
     );
   }
 }
+
+export const JOBS_ENDPOINT_NOT_FOUND_PROBLEM_REGISTRY_ENTRY = {
+  code: CLI_DIAGNOSTIC_CODES.jobsEndpointNotFound,
+  category: ProblemCategory.NotFound,
+} as const;
+
+export const JOBS_HTTP_PROBLEM_REGISTRY_ENTRY = {
+  code: CLI_DIAGNOSTIC_CODES.jobsHttpError,
+  category: ProblemCategory.Conflict,
+} as const;
 
 const list = defineCommand({
   meta: {

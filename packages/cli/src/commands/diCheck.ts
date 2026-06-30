@@ -1,12 +1,18 @@
 import { dirname, resolve } from "node:path";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { defineCommand } from "citty";
+import {
+  CLI_DIAGNOSTIC_CODES,
+  CLI_LEGACY_DIAGNOSTIC_CODES,
+  getStableCliDiagnosticCodeForLegacyCode,
+} from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 type DiCheckStatus = "passed" | "failed";
 
 export type DiCheckDiagnostic = {
   readonly code: string;
+  readonly legacyCode?: string;
   readonly severity: "error" | "warning";
   readonly message: string;
   readonly token?: string;
@@ -139,7 +145,8 @@ function readJsonManifest(path: string, io: DiCheckIo): unknown {
       status: "failed",
       diagnostics: [
         {
-          code: "cli/di-manifest-invalid",
+          code: CLI_DIAGNOSTIC_CODES.diCheckManifestInvalid,
+          legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckManifestInvalid,
           severity: "error",
           message: `Unable to read DI graph manifest '${path}': ${message}`,
         },
@@ -157,7 +164,8 @@ function createDiCheckReport(manifest: unknown): DiCheckReport {
 
   if (manifestStatus === "failed" && diagnostics.length === 0) {
     diagnostics.push({
-      code: "cli/di-manifest-failed",
+      code: CLI_DIAGNOSTIC_CODES.diCheckManifestFailed,
+      legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckManifestFailed,
       severity: "error",
       message: "DI graph manifest is failed but does not include diagnostics.",
     });
@@ -177,7 +185,8 @@ function readManifestDiagnostics(
   if (!manifest) {
     return [
       {
-        code: "cli/di-manifest-invalid",
+        code: CLI_DIAGNOSTIC_CODES.diCheckManifestInvalid,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckManifestInvalid,
         severity: "error",
         message: "DI graph manifest must be a JSON object.",
       },
@@ -200,9 +209,24 @@ function normalizeDiagnostic(value: unknown): DiCheckDiagnostic {
     : undefined;
   const token = readOptionalString(record, "token");
   const moduleName = readOptionalString(record, "moduleName");
+  const rawCode = readOptionalString(record, "code");
+  const rawLegacyCode = readOptionalString(record, "legacyCode");
+  const stableCode = rawCode ? getStableCliDiagnosticCodeForLegacyCode(rawCode) : undefined;
+  const isUnmappedCliLegacyCode = rawCode !== undefined && isCliLegacyDiagnosticCode(rawCode);
+  const code =
+    stableCode ??
+    (isUnmappedCliLegacyCode ? CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown : rawCode) ??
+    CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown;
+  const legacyCode =
+    (isUnmappedCliLegacyCode ? rawCode : rawLegacyCode) ??
+    (stableCode && rawCode ? rawCode : undefined) ??
+    (code === CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown
+      ? CLI_LEGACY_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown
+      : undefined);
 
   return {
-    code: readString(record, "code", "cli/di-diagnostic-unknown"),
+    code,
+    ...(legacyCode ? { legacyCode } : {}),
     severity: readSeverity(record?.severity),
     message: readString(record, "message", "DI graph manifest reported an error."),
     ...(token ? { token } : {}),
@@ -210,6 +234,20 @@ function normalizeDiagnostic(value: unknown): DiCheckDiagnostic {
     ...(path && path.length > 0 ? { path } : {}),
     ...(sourceLocation ? { sourceLocation } : {}),
   };
+}
+
+const CLI_LEGACY_DIAGNOSTIC_PREFIXES = [
+  "cli/",
+  "di-check/",
+  "doctor/",
+  "jobs/",
+  "ops/",
+  "project-map/",
+  "usage-dashboard/",
+] as const;
+
+function isCliLegacyDiagnosticCode(code: string): boolean {
+  return CLI_LEGACY_DIAGNOSTIC_PREFIXES.some((prefix) => code.startsWith(prefix));
 }
 
 function asSourceLocation(value: unknown): DiCheckDiagnostic["sourceLocation"] | undefined {

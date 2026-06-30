@@ -13,31 +13,37 @@ title: "DoctorDiagnostic"
 
 > `readonly` **action**: `string`
 
-***
+---
 
 ### cause
 
 > `readonly` **cause**: `string`
 
-***
+---
 
 ### checkId
 
 > `readonly` **checkId**: `string`
 
-***
+---
 
 ### code
 
-> `readonly` **code**: `string`
+> `readonly` **code**: `CliDiagnosticCode`
 
-***
+---
+
+### legacyCode?
+
+> `readonly` `optional` **legacyCode?**: `string`
+
+---
 
 ### location
 
 > `readonly` **location**: [`DoctorLocation`](/api/cli/src/type-aliases/doctorlocation/) \| `null`
 
-***
+---
 
 ### severity
 

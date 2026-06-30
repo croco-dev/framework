@@ -24,6 +24,12 @@ import {
   type ContractGraph,
   type ContractGraphSnapshot,
 } from "@croco/protocols-core";
+import {
+  CLI_DIAGNOSTIC_CODES,
+  CLI_LEGACY_DIAGNOSTIC_CODES,
+  projectMapContractGraphLegacyCode,
+  projectMapFrameworkManifestLegacyCode,
+} from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 export type ProjectMapManifestVersion = "croco.project-map.manifest.v1";
@@ -44,6 +50,8 @@ export type ProjectMapSourceLocation = {
 
 export type ProjectMapDiagnostic = {
   readonly code: string;
+  readonly legacyCode?: string;
+  readonly sourceCode?: string;
   readonly severity: ProjectMapDiagnosticSeverity;
   readonly message: string;
   readonly source?: ProjectMapSourceLocation;
@@ -608,7 +616,9 @@ function createProjectMapDiagnostics(input: {
 }): ProjectMapDiagnostic[] {
   return [
     ...input.frameworkManifest.diagnostics.map((diagnostic) => ({
-      code: `project-map/framework-manifest-${diagnostic.code}`,
+      code: CLI_DIAGNOSTIC_CODES.projectMapFrameworkManifestDiagnostic,
+      legacyCode: projectMapFrameworkManifestLegacyCode(diagnostic.code),
+      sourceCode: diagnostic.code,
       severity: diagnostic.severity,
       message: diagnostic.message,
       ...(diagnostic.sourcePath ? { source: { file: diagnostic.sourcePath } } : {}),
@@ -635,7 +645,8 @@ function createContractGraphDiagnostics(
   const missingFromManifest = snapshot.routes
     .filter((route) => !routeIds.has(route.routeId))
     .map((route) => ({
-      code: "project-map/contract-route-conflict",
+      code: CLI_DIAGNOSTIC_CODES.projectMapContractRouteConflict,
+      legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapContractRouteConflict,
       severity: "error" as const,
       routeId: route.routeId,
       message: `Contract Graph route '${route.routeId}' is missing from the framework manifest route graph.`,
@@ -643,7 +654,8 @@ function createContractGraphDiagnostics(
   const missingFromContract = routes
     .filter((route) => !snapshotRouteIds.has(route.id))
     .map((route) => ({
-      code: "project-map/contract-route-conflict",
+      code: CLI_DIAGNOSTIC_CODES.projectMapContractRouteConflict,
+      legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapContractRouteConflict,
       severity: "error" as const,
       routeId: route.id,
       ...(route.source ? { source: route.source } : {}),
@@ -661,7 +673,9 @@ function toProjectMapContractDiagnostic(diagnostic: ContractDiagnostic): Project
       : undefined;
 
   return {
-    code: `project-map/contract-graph-${diagnostic.code}`,
+    code: CLI_DIAGNOSTIC_CODES.projectMapContractGraphDiagnostic,
+    legacyCode: projectMapContractGraphLegacyCode(diagnostic.code),
+    sourceCode: diagnostic.code,
     severity: diagnostic.severity,
     message: formatted,
     ...(routeId ? { routeId } : {}),
@@ -681,7 +695,8 @@ function createRuntimePolicyDiagnostics(
   if (!target) {
     return [
       {
-        code: "project-map/runtime-target-missing",
+        code: CLI_DIAGNOSTIC_CODES.projectMapRuntimeTargetMissing,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapRuntimeTargetMissing,
         severity: "error",
         artifact: input.path,
         message: "Runtime policy manifest must set runtime.platform or target.",
@@ -692,7 +707,8 @@ function createRuntimePolicyDiagnostics(
   if (!isKnownRuntimePlatform(target)) {
     return [
       {
-        code: "project-map/runtime-target-unsupported",
+        code: CLI_DIAGNOSTIC_CODES.projectMapRuntimeTargetUnsupported,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapRuntimeTargetUnsupported,
         severity: "error",
         artifact: input.path,
         message: `Runtime policy manifest uses unsupported target runtime '${target}'.`,
@@ -709,7 +725,8 @@ function createRuntimePolicyDiagnostics(
   } as RuntimePolicyPresetConfig<typeof target>);
 
   return checkPolicyTableRuntimeCapabilities(table, preset).map((diagnostic) => ({
-    code: "project-map/runtime-capability-conflict",
+    code: CLI_DIAGNOSTIC_CODES.projectMapRuntimeCapabilityConflict,
+    legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapRuntimeCapabilityConflict,
     severity: "error",
     artifact: input.path,
     capability: diagnostic.capability,
@@ -735,7 +752,8 @@ function createPackageManifestDiagnostics(
     .sort(compareStrings)
     .filter((packageName) => !declaredPackages.has(packageName))
     .map((packageName) => ({
-      code: "project-map/package-manifest-conflict",
+      code: CLI_DIAGNOSTIC_CODES.projectMapPackageManifestConflict,
+      legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapPackageManifestConflict,
       severity: "error" as const,
       artifact: input.path,
       packageName,
@@ -824,7 +842,8 @@ function readProjectMapDriftDiagnostics(
   if (!io.exists(manifestPath)) {
     return [
       {
-        code: "project-map/manifest-missing",
+        code: CLI_DIAGNOSTIC_CODES.projectMapManifestMissing,
+        legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapManifestMissing,
         severity: "error",
         artifact: manifestPath,
         message: `Project Map manifest '${manifestPath}' does not exist. Run croco project map --out ${DEFAULT_PROJECT_MAP_PATH}.`,
@@ -840,7 +859,8 @@ function readProjectMapDriftDiagnostics(
 
   return [
     {
-      code: "project-map/manifest-drift",
+      code: CLI_DIAGNOSTIC_CODES.projectMapManifestDrift,
+      legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.projectMapManifestDrift,
       severity: "error",
       artifact: manifestPath,
       message: `Project Map manifest '${manifestPath}' is stale. Regenerate it with croco project map --out ${DEFAULT_PROJECT_MAP_PATH}.`,
