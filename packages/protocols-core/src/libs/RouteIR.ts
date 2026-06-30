@@ -10,6 +10,7 @@ export interface RouteIR {
   methodName: string;
   httpMethod: string;
   path: string;
+  sourceLocation?: RouteContractSourceLocation;
   routeContract: RouteContractIR | null;
   params: ParamIR[];
   inputSchema: z.ZodType | null;
@@ -47,6 +48,7 @@ export interface ParamIR {
   kind: "body" | "query" | "path" | "header" | "ctx";
   name: string;
   schema: z.ZodType | null;
+  sourceLocation?: RouteContractSourceLocation;
 }
 
 export type ProblemResponseIR<

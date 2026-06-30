@@ -66,6 +66,50 @@ describe("loadRoutes", () => {
   );
 
   it(
+    "maps emitted decorator source locations back to the original controller file",
+    async () => {
+      const controllerPath = path.join(sourceDir, "WeakSchemaController.ts");
+
+      fs.writeFileSync(controllerPath, getWeakSchemaControllerSource());
+
+      const graph = await loadContractGraph(path.join(sourceDir, "*.ts"), { strictSchemas: true });
+      const paramDiagnostic = graph.diagnostics.find(
+        (diagnostic) => diagnostic.code === "contract-route-missing-named-param-schema",
+      );
+
+      expect(paramDiagnostic?.sourceLocation?.path).toBe(controllerPath);
+      expect(paramDiagnostic?.sourceLocation?.path).not.toContain(".croco-rpc-codegen-");
+      expect(paramDiagnostic?.sourceLocation?.line).toEqual(expect.any(Number));
+      expect(paramDiagnostic?.sourceLocation?.column).toEqual(expect.any(Number));
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
+    "keeps emitted decorator source locations scoped to each source file",
+    async () => {
+      const firstDir = path.join(sourceDir, "first");
+      const secondDir = path.join(sourceDir, "second");
+      const firstControllerPath = path.join(firstDir, "DuplicateController.ts");
+      const secondControllerPath = path.join(secondDir, "DuplicateController.ts");
+
+      fs.mkdirSync(firstDir, { recursive: true });
+      fs.mkdirSync(secondDir, { recursive: true });
+      fs.writeFileSync(firstControllerPath, getDuplicateControllerSource("/first"));
+      fs.writeFileSync(secondControllerPath, getDuplicateControllerSource("/second"));
+
+      const routes = await loadRoutes(path.join(sourceDir, "**/*.ts"));
+      const sourceLocationByPath = new Map(
+        routes.map((route) => [route.path, route.sourceLocation?.path]),
+      );
+
+      expect(sourceLocationByPath.get("/first")).toBe(firstControllerPath);
+      expect(sourceLocationByPath.get("/second")).toBe(secondControllerPath);
+    },
+    LOAD_ROUTES_TIMEOUT_MS,
+  );
+
+  it(
     "resolves controller imports from the nearest project node_modules",
     async () => {
       writeProtocolsRestFixture(tempRoot);
@@ -343,6 +387,105 @@ export class UsersController {
   listUsers() {
     return [new UserDto()];
   }
+}
+`;
+}
+
+function getWeakSchemaControllerSource(): string {
+  return `import 'reflect-metadata';
+
+const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
+const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
+const REST_PARAMS_KEY = Symbol.for('croco:rest:params');
+
+declare namespace Reflect {
+  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
+  function getMetadata(metadataKey: unknown, target: object): unknown;
+}
+
+enum ParamType {
+  PARAM = 'param',
+}
+
+type RouteMetadata = {
+  readonly method: string;
+  readonly path: string;
+  readonly methodName: string | symbol;
+};
+
+function Controller(controllerPath: string): ClassDecorator {
+  return (target) => {
+    Reflect.defineMetadata(REST_CONTROLLER_KEY, { path: controllerPath, target }, target);
+  };
+}
+
+function Get(routePath: string): MethodDecorator {
+  return (target, propertyKey) => {
+    const ctor = target.constructor;
+    const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
+
+    Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, { method: 'GET', path: routePath, methodName: propertyKey }], ctor);
+  };
+}
+
+function Param(name: string): ParameterDecorator {
+  return (target, propertyKey, parameterIndex) => {
+    if (!propertyKey) return;
+
+    const ctor = target.constructor;
+    const paramsMap = (Reflect.getMetadata(REST_PARAMS_KEY, ctor) as Map<string | symbol, unknown[]> | undefined) ?? new Map();
+    const params = paramsMap.get(propertyKey) ?? [];
+
+    params.push({ type: ParamType.PARAM, index: parameterIndex, name });
+    paramsMap.set(propertyKey, params);
+    Reflect.defineMetadata(REST_PARAMS_KEY, paramsMap, ctor);
+  };
+}
+
+@Controller('/users')
+export class WeakSchemaController {
+  @Get('/:id')
+  getUser(@Param('id') _id: string): void {}
+}
+`;
+}
+
+function getDuplicateControllerSource(controllerPath: string): string {
+  return `import 'reflect-metadata';
+
+const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
+const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
+
+declare namespace Reflect {
+  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
+  function getMetadata(metadataKey: unknown, target: object): unknown;
+}
+
+type RouteMetadata = {
+  readonly method: string;
+  readonly path: string;
+  readonly methodName: string | symbol;
+};
+
+function Controller(path: string): ClassDecorator {
+  return (target) => {
+    Reflect.defineMetadata(REST_CONTROLLER_KEY, { path, target }, target);
+  };
+}
+
+function Get(routePath: string): MethodDecorator {
+  return (target, propertyKey) => {
+    const ctor = target.constructor;
+    const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
+
+    Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, { method: 'GET', path: routePath, methodName: propertyKey }], ctor);
+  };
+}
+
+@Controller('${controllerPath}')
+export class DuplicateController {
+  @Get('/')
+  find(): void {}
 }
 `;
 }

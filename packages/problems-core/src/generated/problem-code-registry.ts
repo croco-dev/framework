@@ -7828,7 +7828,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/openapi-spec/src/libs/loadControllers.ts",
-          line: 35,
+          line: 70,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7889,7 +7889,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/openapi-spec/src/libs/loadControllers.ts",
-          line: 14,
+          line: 31,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8106,7 +8106,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/ContractGraph.ts",
-          line: 141,
+          line: 142,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9115,7 +9115,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/loadRoutes.ts",
-          line: 40,
+          line: 72,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9176,7 +9176,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/loadRoutes.ts",
-          line: 19,
+          line: 33,
           column: 5,
           kind: "problem-constructor",
         },

@@ -739,6 +739,7 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain(
         "--manifest-bundle .croco/manifest",
       );
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(apiPackageJson.scripts).toMatchObject({
         "dev:smoke": "tsx src/dev-smoke.ts",
         build: "tsup src/index.ts src/lambda.ts --format cjs --clean",
@@ -830,6 +831,7 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain(
         "--manifest-bundle .croco/manifest",
       );
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(apiPackageJson.scripts).toMatchObject({
         "admin:smoke": "tsx src/dev-smoke.ts",
       });
@@ -1250,6 +1252,8 @@ describe("E2E: generate()", () => {
         "demo:smoke":
           "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server jobs:smoke",
       });
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
+      expect(rootPackageJson.scripts?.["contract:openapi"]).toContain("--strict-schemas");
       expect(manifest).toMatchObject({
         schemaVersion: 1,
         projectName: "my-saas-api",
@@ -1343,6 +1347,8 @@ describe("E2E: generate()", () => {
         "failure-drill:smoke": "pnpm --filter @test/api-server failure-drill:smoke",
         "failure-drill:integration": "pnpm --filter @test/api-server failure-drill:integration",
       });
+      expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
+      expect(rootPackageJson.scripts?.["contract:openapi"]).toContain("--strict-schemas");
       expect(apiPackageJson.dependencies).toMatchObject({
         "@croco/llm-core": "^0.0.2",
         "@croco/llm-metering": "^0.0.2",

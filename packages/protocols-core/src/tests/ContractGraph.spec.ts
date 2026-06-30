@@ -34,6 +34,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Post,
   ProblemResponse,
@@ -339,6 +340,155 @@ describe("buildContractGraph", () => {
       }),
     ]);
     expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
+
+  it("should reject weak request and response schemas in strict schema mode", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      getUser(
+        @Param("id") _id: string,
+        @Query("include") _include: string,
+        @Header("x-request-id") _requestId: string,
+      ): void {}
+
+      @Post("/")
+      createUser(@Body() _body: { name: string }): void {}
+    }
+
+    const graph = buildContractGraph([UsersController], { strictSchemas: true });
+
+    expect(graph.diagnostics).toHaveLength(6);
+    expect(graph.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "contract-route-missing-response-schema",
+          severity: "error",
+          routeId: "UsersController.getUser",
+        }),
+        expect.objectContaining({
+          code: "contract-route-missing-named-param-schema",
+          severity: "error",
+          routeId: "UsersController.getUser",
+          message: expect.stringContaining('@Param("id")'),
+        }),
+        expect.objectContaining({
+          code: "contract-route-missing-named-param-schema",
+          severity: "error",
+          routeId: "UsersController.getUser",
+          message: expect.stringContaining('@Query("include")'),
+        }),
+        expect.objectContaining({
+          code: "contract-route-missing-named-param-schema",
+          severity: "error",
+          routeId: "UsersController.getUser",
+          message: expect.stringContaining('@Header("x-request-id")'),
+        }),
+        expect.objectContaining({
+          code: "contract-route-missing-response-schema",
+          severity: "error",
+          routeId: "UsersController.createUser",
+        }),
+        expect.objectContaining({
+          code: "contract-route-missing-body-schema",
+          severity: "error",
+          routeId: "UsersController.createUser",
+        }),
+      ]),
+    );
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
+
+  it("should accept route contract schemas as the strict schema source of truth", () => {
+    const idSchema = z.string().uuid();
+    const includeSchema = z.boolean().optional();
+    const createUserBody = z.object({ name: z.string().min(1) });
+    const createUserResponse = z.object({ id: idSchema, name: z.string() });
+
+    @Controller("/users")
+    class UsersController {
+      @Post("/:id")
+      createUser(
+        @Param("id") _id: string,
+        @Query("include") _include: boolean | undefined,
+        @Body() _body: z.infer<typeof createUserBody>,
+      ): void {}
+    }
+
+    attachRouteContract(UsersController, "createUser", {
+      id: "users.create",
+      method: "POST",
+      path: "/users/:id",
+      params: z.object({ id: idSchema }),
+      query: z.object({ include: includeSchema }),
+      body: createUserBody,
+      response: createUserResponse,
+    });
+
+    const graph = buildContractGraph([UsersController], { strictSchemas: true });
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(() => assertContractGraphHasNoErrors(graph)).not.toThrow();
+  });
+
+  it("should require explicit header schemas even when a route contract backs other schemas", () => {
+    const responseSchema = z.object({ ok: z.boolean() });
+
+    @Controller("/users")
+    class UsersController {
+      @Get("/")
+      listUsers(@Header("x-request-id") _requestId: string): void {}
+    }
+
+    attachRouteContract(UsersController, "listUsers", {
+      method: "GET",
+      path: "/users",
+      response: responseSchema,
+    });
+
+    const graph = buildContractGraph([UsersController], { strictSchemas: true });
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-route-missing-named-param-schema",
+        routeId: "UsersController.listUsers",
+        message: expect.stringContaining(
+          'requires @Header("x-request-id") to receive a Zod schema',
+        ),
+      }),
+    ]);
+    expect(graph.diagnostics[0]?.message).not.toContain("route contract field");
+  });
+
+  it("should include route contract source locations in strict schema diagnostics", () => {
+    const idSchema = z.string();
+    const sourceLocation = { path: "src/controllers/UserController.ts", line: 12, column: 4 };
+
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      getUser(@Param("id", idSchema) _id: string): void {}
+    }
+
+    attachRouteContract(UsersController, "getUser", {
+      method: "GET",
+      path: "/users/:id",
+      sourceLocation,
+      params: z.object({ id: idSchema }),
+    });
+
+    const graph = buildContractGraph([UsersController], { strictSchemas: true });
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-route-missing-response-schema",
+        routeId: "UsersController.getUser",
+        sourceLocation,
+      }),
+    ]);
+    expect(formatContractDiagnostic(graph.diagnostics[0])).toContain(
+      "src/controllers/UserController.ts:12:4",
+    );
   });
 
   it("should warn when generated contracts unwrap Zod effects", () => {

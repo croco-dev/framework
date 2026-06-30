@@ -14,6 +14,7 @@ type CliOptions = {
   readonly problemRuntime: GenerateClientProblemRuntime;
   readonly reactQuery: boolean;
   readonly strictProblems: boolean;
+  readonly strictSchemas: boolean;
   readonly check: boolean;
 };
 
@@ -46,6 +47,7 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
   const { loadContractGraph } = await import("./loadRoutes");
   const graph = await loadContractGraph(result.options.controllers, {
     strictProblemResponses: result.options.strictProblems,
+    strictSchemas: result.options.strictSchemas,
   });
 
   if (result.options.check) {
@@ -104,6 +106,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
   const outDir = getFlagValue(args, "--out");
   const check = args.includes("--check");
   const strictProblems = args.includes("--strict-problems");
+  const strictSchemas = args.includes("--strict-schemas");
   const problemRuntime = parseProblemRuntime(args);
 
   if (
@@ -126,6 +129,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
       problemRuntime,
       reactQuery: args.includes("--react-query"),
       strictProblems,
+      strictSchemas,
       check,
     },
   };
@@ -167,6 +171,7 @@ Options:
                        Generate a source reference to the shared Project manifest bundle
   --check               Validate the canonical contract graph without writing clients
   --strict-problems     Warn when routes do not declare generated client Problem unions
+  --strict-schemas      Fail when generated routes omit response, body, or named parameter schemas
   --help, -h            Show this help message`);
 }
 

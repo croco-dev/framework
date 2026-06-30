@@ -4936,7 +4936,7 @@ Sources:
 
 Sources:
 
-- `packages/openapi-spec/src/libs/loadControllers.ts:35:5` (problem-constructor)
+- `packages/openapi-spec/src/libs/loadControllers.ts:70:5` (problem-constructor)
 
 <a id="openapi-spec-invalid-contract"></a>
 
@@ -4972,7 +4972,7 @@ Sources:
 
 Sources:
 
-- `packages/openapi-spec/src/libs/loadControllers.ts:14:5` (problem-constructor)
+- `packages/openapi-spec/src/libs/loadControllers.ts:31:5` (problem-constructor)
 
 <a id="otlp-endpoint-required"></a>
 
@@ -5098,7 +5098,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-core/src/libs/ContractGraph.ts:141:5` (problem-constructor)
+- `packages/protocols-core/src/libs/ContractGraph.ts:142:5` (problem-constructor)
 
 <a id="protocols-graphql-auth-invalid-header-format"></a>
 
@@ -5674,7 +5674,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/loadRoutes.ts:40:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/loadRoutes.ts:72:5` (problem-constructor)
 
 <a id="rpc-codegen-invalid-contract"></a>
 
@@ -5710,7 +5710,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/loadRoutes.ts:19:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/loadRoutes.ts:33:5` (problem-constructor)
 
 <a id="rpc-codegen-unsupported-form-schema"></a>
 

@@ -2,6 +2,7 @@ import "reflect-metadata";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { buildContractGraph } from "@croco/protocols-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { emitOpenAPI } from "../libs/emitOpenAPI";
 import { loadControllers } from "../libs/loadControllers";
@@ -69,6 +70,33 @@ describe("loadControllers", () => {
 
       expect(controllers.map((controller) => controller.name)).toEqual(["LocalImportController"]);
       expect(spec.paths?.["/local-imports"]?.get?.operationId).toBe("LocalImportController_list");
+    },
+    LOAD_CONTROLLER_TIMEOUT_MS,
+  );
+
+  it(
+    "keeps emitted decorator source locations scoped to each source file",
+    async () => {
+      const firstDir = path.join(sourceDir, "first");
+      const secondDir = path.join(sourceDir, "second");
+      const firstControllerPath = path.join(firstDir, "DuplicateController.ts");
+      const secondControllerPath = path.join(secondDir, "DuplicateController.ts");
+
+      fs.mkdirSync(firstDir, { recursive: true });
+      fs.mkdirSync(secondDir, { recursive: true });
+      fs.writeFileSync(firstControllerPath, getDuplicateControllerSource("/first"));
+      fs.writeFileSync(secondControllerPath, getDuplicateControllerSource("/second"));
+
+      const controllers = await loadControllers(path.join(sourceDir, "**/*.ts"));
+      const graph = buildContractGraph(controllers, { strictSchemas: true });
+      const sourceLocationByPath = new Map(
+        graph.diagnostics
+          .filter((diagnostic) => diagnostic.code === "contract-route-missing-response-schema")
+          .map((diagnostic) => [diagnostic.path, diagnostic.sourceLocation?.path]),
+      );
+
+      expect(sourceLocationByPath.get("/first")).toBe(firstControllerPath);
+      expect(sourceLocationByPath.get("/second")).toBe(secondControllerPath);
     },
     LOAD_CONTROLLER_TIMEOUT_MS,
   );
@@ -304,6 +332,46 @@ export class UsersController {
   listUsers() {
     return [new UserDto()];
   }
+}
+`;
+}
+
+function getDuplicateControllerSource(controllerPath: string): string {
+  return `import 'reflect-metadata';
+
+const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
+const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
+
+declare namespace Reflect {
+  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
+  function getMetadata(metadataKey: unknown, target: object): unknown;
+}
+
+type RouteMetadata = {
+  readonly method: string;
+  readonly path: string;
+  readonly methodName: string | symbol;
+};
+
+function Controller(path: string): ClassDecorator {
+  return (target) => {
+    Reflect.defineMetadata(REST_CONTROLLER_KEY, { path, target }, target);
+  };
+}
+
+function Get(routePath: string): MethodDecorator {
+  return (target, propertyKey) => {
+    const ctor = target.constructor;
+    const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
+
+    Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, { method: 'GET', path: routePath, methodName: propertyKey }], ctor);
+  };
+}
+
+@Controller('${controllerPath}')
+export class DuplicateController {
+  @Get('/')
+  find(): void {}
 }
 `;
 }
