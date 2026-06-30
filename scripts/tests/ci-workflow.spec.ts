@@ -56,4 +56,28 @@ describe("CI package quality dashboard", () => {
     );
     expect(workflow).toContain('exit "$status"');
   });
+
+  it("publishes generated app smoke matrix artifacts after the smoke gate", () => {
+    const workflow = readCiWorkflow();
+    const orderedMarkers = [
+      "- name: create-croco-app generated app smoke",
+      "run: pnpm create-croco-app:smoke",
+      "- name: Publish generated app smoke summary",
+      "ci-reports/generated-apps/matrix.md",
+      "- name: Upload generated app smoke report",
+      "name: generated-app-smoke-report",
+      "path: ci-reports/generated-apps",
+      "- name: TypeScript check",
+    ];
+
+    let previousIndex = -1;
+    for (const marker of orderedMarkers) {
+      const index = workflow.indexOf(marker);
+      expect(index, `${marker} should be present`).toBeGreaterThan(-1);
+      expect(index, `${marker} should stay after generated app smoke`).toBeGreaterThan(
+        previousIndex,
+      );
+      previousIndex = index;
+    }
+  });
 });

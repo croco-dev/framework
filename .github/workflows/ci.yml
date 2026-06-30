@@ -154,7 +154,26 @@ jobs:
         run: pnpm package-bins:smoke
 
       - name: create-croco-app generated app smoke
+        id: generated_app_smoke
         run: pnpm create-croco-app:smoke
+
+      - name: Publish generated app smoke summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f ci-reports/generated-apps/matrix.md ]; then
+            cat ci-reports/generated-apps/matrix.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Generated app smoke matrix report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload generated app smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-app-smoke-report
+          path: ci-reports/generated-apps
+          if-no-files-found: warn
 
       - name: TypeScript check
         id: typecheck

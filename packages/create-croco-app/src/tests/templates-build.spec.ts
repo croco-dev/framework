@@ -775,6 +775,13 @@ describe("Base preset README templates", () => {
     checkFileContains("base-ddd", ["README.md.hbs"], /expected success state/);
     checkFileContains("base-ddd", ["README.md.hbs"], /Recovery/);
   });
+
+  it("uses pnpm's supported build-script allowlist key in generated workspaces", () => {
+    for (const template of ["blank", "ssr-lambda"]) {
+      checkFileContains(template, ["pnpm-workspace.yaml"], /^onlyBuiltDependencies:/m);
+      checkFileDoesNotContain(template, ["pnpm-workspace.yaml"], /^onlyBuiltDeps:/m);
+    }
+  });
 });
 
 describe.each([
