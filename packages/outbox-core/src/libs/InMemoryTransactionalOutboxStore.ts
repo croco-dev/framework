@@ -1,10 +1,18 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { Problem } from "@croco/problems-core";
+import {
+  createOutboxFailureProblemExtensions,
+  OutboxFailureMetadataProblem,
+  OutboxRecordIdConflictProblem,
+  OutboxUnitOfWorkContextProblem,
+  readOutboxFailureMetadata,
+} from "./problems/OutboxProblems";
 import type {
   ClaimBatchOptions,
   ClaimedOutboxRecord,
   DispatchResult,
-  OutboxFailureMetadata,
   OutboxClaim,
+  OutboxFailureMetadata,
   OutboxIntent,
   OutboxRecord,
   OutboxRecordOptions,
@@ -13,13 +21,6 @@ import type {
   TransactionalOutboxStore,
   TransactionalOutboxStoreContext,
 } from "./types";
-import {
-  OutboxFailureMetadataProblem,
-  OutboxRecordIdConflictProblem,
-  OutboxUnitOfWorkContextProblem,
-  createOutboxFailureProblemExtensions,
-  readOutboxFailureMetadata,
-} from "./problems/OutboxProblems";
 
 export type InMemoryTransactionalOutboxStoreState = {
   records: Map<string, OutboxRecord>;
@@ -116,7 +117,9 @@ function cloneOutboxRecord(record: OutboxRecord): OutboxRecord {
               ...record.failure.retry,
               failedAt: new Date(record.failure.retry.failedAt.getTime()),
               ...(record.failure.retry.nextVisibleAt
-                ? { nextVisibleAt: new Date(record.failure.retry.nextVisibleAt.getTime()) }
+                ? {
+                    nextVisibleAt: new Date(record.failure.retry.nextVisibleAt.getTime()),
+                  }
                 : {}),
             },
           },
@@ -184,45 +187,110 @@ function normalizeFailureMetadata(
 export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStore<InMemoryTransactionalOutboxStoreClient> {
   private rootState = createEmptyState();
   private readonly clients = new WeakSet<InMemoryTransactionalOutboxStoreClient>();
-  private unitOfWorkQueue: Promise<void> = Promise.resolve();
+  private readonly activeUnitOfWork =
+    new AsyncLocalStorage<InMemoryTransactionalOutboxStoreClient>();
+  private mutationQueue: Promise<void> = Promise.resolve();
 
   async runInUnitOfWork<T>(
     fn: (
       context: TransactionalOutboxStoreContext<InMemoryTransactionalOutboxStoreClient>,
     ) => Promise<T>,
   ): Promise<T> {
-    let release: () => void = () => {};
-    const previous = this.unitOfWorkQueue;
-    this.unitOfWorkQueue = new Promise<void>((resolve) => {
-      release = resolve;
+    this.assertNoActiveUnitOfWorkRootMutation();
+
+    return this.enqueue(async () => {
+      const client: InMemoryTransactionalOutboxStoreClient = {
+        state: cloneState(this.rootState),
+      };
+      this.clients.add(client);
+
+      try {
+        const result = await this.activeUnitOfWork.run(client, () => fn({ client }));
+        this.rootState = cloneState(client.state);
+        return result;
+      } finally {
+        this.clients.delete(client);
+      }
     });
-
-    await previous;
-
-    const client: InMemoryTransactionalOutboxStoreClient = {
-      state: cloneState(this.rootState),
-    };
-    this.clients.add(client);
-
-    try {
-      const result = await fn({ client });
-      this.rootState = cloneState(client.state);
-      return result;
-    } finally {
-      this.clients.delete(client);
-      release();
-    }
   }
 
-  clear(): void {
-    this.rootState = createEmptyState();
+  async clear(): Promise<void> {
+    this.assertNoActiveUnitOfWorkRootMutation();
+
+    await this.enqueue(() => {
+      this.rootState = createEmptyState();
+    });
   }
 
   async record(
     intent: OutboxIntent,
     options: OutboxRecordOptions<InMemoryTransactionalOutboxStoreClient>,
   ): Promise<OutboxRecord> {
-    const state = this.resolveState(options.context);
+    if (!options.context) {
+      this.assertNoActiveUnitOfWorkRootMutation();
+      return this.enqueue(() => this.recordInState(this.rootState, intent, options));
+    }
+
+    return this.recordInState(this.resolveState(options.context), intent, options);
+  }
+
+  async claimBatch(
+    options: ClaimBatchOptions<InMemoryTransactionalOutboxStoreClient>,
+  ): Promise<ClaimedOutboxRecord[]> {
+    if (!options.context) {
+      this.assertNoActiveUnitOfWorkRootMutation();
+      return this.enqueue(() => this.claimBatchInState(this.rootState, options));
+    }
+
+    return this.claimBatchInState(this.resolveState(options.context), options);
+  }
+
+  async markDispatched(id: string, result: DispatchResult): Promise<void> {
+    this.assertNoActiveUnitOfWorkRootMutation();
+
+    await this.enqueue(() => {
+      this.markDispatchedInState(this.rootState, id, result);
+    });
+  }
+
+  async markFailed(id: string, problem: Problem): Promise<void> {
+    this.assertNoActiveUnitOfWorkRootMutation();
+
+    const failure = readOutboxFailureMetadata(problem);
+    if (!failure) {
+      throw new OutboxFailureMetadataProblem();
+    }
+
+    await this.enqueue(() => {
+      this.markFailedInState(this.rootState, id, problem, failure);
+    });
+  }
+
+  async findRecord(id: string): Promise<OutboxRecord | null> {
+    const record = this.rootState.records.get(id);
+    return record ? cloneOutboxRecord(record) : null;
+  }
+
+  async listRecords(): Promise<OutboxRecord[]> {
+    return [...this.rootState.records.values()]
+      .sort((left, right) => compareDates(left.createdAt, right.createdAt))
+      .map(cloneOutboxRecord);
+  }
+
+  private enqueue<T>(task: () => T | Promise<T>): Promise<T> {
+    const run = this.mutationQueue.then(task, task);
+    this.mutationQueue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  }
+
+  private recordInState(
+    state: InMemoryTransactionalOutboxStoreState,
+    intent: OutboxIntent,
+    options: OutboxRecordOptions<InMemoryTransactionalOutboxStoreClient>,
+  ): OutboxRecord {
     const scopedKey = idempotencyScopeKey(intent);
     const existingId = state.idByIdempotencyScope.get(scopedKey);
     if (existingId) {
@@ -265,10 +333,10 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
     return cloneOutboxRecord(record);
   }
 
-  async claimBatch(
+  private claimBatchInState(
+    state: InMemoryTransactionalOutboxStoreState,
     options: ClaimBatchOptions<InMemoryTransactionalOutboxStoreClient>,
-  ): Promise<ClaimedOutboxRecord[]> {
-    const state = this.resolveState(options.context);
+  ): ClaimedOutboxRecord[] {
     const limit = Math.max(0, options.limit);
     const ready = [...state.records.values()]
       .filter((record) => this.isClaimable(record, options))
@@ -306,13 +374,17 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
     });
   }
 
-  async markDispatched(id: string, result: DispatchResult): Promise<void> {
-    const record = this.rootState.records.get(id);
+  private markDispatchedInState(
+    state: InMemoryTransactionalOutboxStoreState,
+    id: string,
+    result: DispatchResult,
+  ): void {
+    const record = state.records.get(id);
     if (!record || !this.isActiveClaim(record, result.expectedAttempt)) {
       return;
     }
 
-    this.rootState.records.set(
+    state.records.set(
       id,
       cloneOutboxRecord({
         ...record,
@@ -324,13 +396,13 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
     );
   }
 
-  async markFailed(id: string, problem: Problem): Promise<void> {
-    const failure = readOutboxFailureMetadata(problem);
-    if (!failure) {
-      throw new OutboxFailureMetadataProblem();
-    }
-
-    const record = this.rootState.records.get(id);
+  private markFailedInState(
+    state: InMemoryTransactionalOutboxStoreState,
+    id: string,
+    problem: Problem,
+    failure: OutboxFailureMetadata,
+  ): void {
+    const record = state.records.get(id);
     if (!record || !this.isActiveClaim(record, failure.attempt)) {
       return;
     }
@@ -342,7 +414,7 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
       ...createOutboxFailureProblemExtensions(normalizedFailure),
     };
 
-    this.rootState.records.set(
+    state.records.set(
       id,
       cloneOutboxRecord({
         ...record,
@@ -359,7 +431,9 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
           terminal: normalizedFailure.terminal,
           lastFailedAt: new Date(normalizedFailure.failedAt.getTime()),
           ...(shouldRetry && normalizedFailure.nextVisibleAt
-            ? { nextVisibleAt: new Date(normalizedFailure.nextVisibleAt.getTime()) }
+            ? {
+                nextVisibleAt: new Date(normalizedFailure.nextVisibleAt.getTime()),
+              }
             : {}),
         },
         availableAt:
@@ -369,17 +443,6 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
         updatedAt: new Date(normalizedFailure.failedAt.getTime()),
       }),
     );
-  }
-
-  async findRecord(id: string): Promise<OutboxRecord | null> {
-    const record = this.rootState.records.get(id);
-    return record ? cloneOutboxRecord(record) : null;
-  }
-
-  async listRecords(): Promise<OutboxRecord[]> {
-    return [...this.rootState.records.values()]
-      .sort((left, right) => compareDates(left.createdAt, right.createdAt))
-      .map(cloneOutboxRecord);
   }
 
   private resolveState(
@@ -395,6 +458,12 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
     }
 
     return client.state;
+  }
+
+  private assertNoActiveUnitOfWorkRootMutation(): void {
+    if (this.activeUnitOfWork.getStore()) {
+      throw new OutboxUnitOfWorkContextProblem();
+    }
   }
 
   private isClaimable(

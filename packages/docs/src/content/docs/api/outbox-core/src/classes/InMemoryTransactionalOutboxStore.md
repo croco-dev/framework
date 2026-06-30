@@ -45,11 +45,11 @@ In-memory transactional outbox store implementation for conformance tests and lo
 
 ### clear()
 
-> **clear**(): `void`
+> **clear**(): `Promise`\<`void`\>
 
 #### Returns
 
-`void`
+`Promise`\<`void`\>
 
 ---
 

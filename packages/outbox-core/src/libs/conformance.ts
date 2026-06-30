@@ -88,7 +88,9 @@ export function createTransactionalOutboxStoreContractSuite<
           await store.record(createIntent({ tenant: { tenantId: "tenant-a" } }), { id: "a", now });
           await store.record(createIntent({ tenant: { tenantId: "tenant-b" } }), { id: "b", now });
           await store.record(
-            createIntent({ tenant: { tenantId: "tenant-a", isolationKey: "shard-b" } }),
+            createIntent({
+              tenant: { tenantId: "tenant-a", isolationKey: "shard-b" },
+            }),
             {
               id: "tenant-a-shard-b",
               now,
@@ -172,6 +174,108 @@ export function createTransactionalOutboxStoreContractSuite<
             (await options.listRecords(store)).length,
             2,
             "concurrent Unit of Work commits must preserve independent writes",
+          );
+        },
+      },
+      {
+        name: "preserves root writes started while a Unit of Work is in flight",
+        run: async () => {
+          const store = await options.createStore();
+          const now = new Date("2026-01-01T00:00:00.000Z");
+          const tenantB: OutboxTenantBoundary = { tenantId: "tenant-b" };
+
+          await store.record(
+            createIntent({
+              idempotencyKey: "welcome:dispatch-after-uow",
+              tenant: tenantB,
+            }),
+            { id: "dispatch-after-uow", now },
+          );
+          await store.record(
+            createIntent({
+              idempotencyKey: "welcome:failure-after-uow",
+              tenant: tenantB,
+            }),
+            { id: "failure-after-uow", now },
+          );
+
+          const unitOfWorkReady = createDeferred<void>();
+          const releaseUnitOfWork = createDeferred<void>();
+          const unitOfWork = options.runInUnitOfWork(store, async (context) => {
+            await store.record(createIntent({ idempotencyKey: "welcome:uow" }), {
+              id: "uow",
+              context,
+              now,
+            });
+            unitOfWorkReady.resolve(undefined);
+            await releaseUnitOfWork.promise;
+          });
+
+          await unitOfWorkReady.promise;
+
+          const rootRecord = store.record(createIntent({ idempotencyKey: "welcome:root" }), {
+            id: "root",
+            now,
+          });
+          const rootClaimAndComplete = store
+            .claimBatch({
+              limit: 2,
+              now,
+              visibilityTimeoutMs: 1_000,
+              tenant: tenantB,
+            })
+            .then(async (claimed) => {
+              const claimedById = new Map(claimed.map((record) => [record.id, record]));
+              const dispatched = assertDefined(
+                claimedById.get("dispatch-after-uow"),
+                "dispatch record must be claimed",
+              );
+              const failed = assertDefined(
+                claimedById.get("failure-after-uow"),
+                "failure record must be claimed",
+              );
+
+              await store.markDispatched(dispatched.id, {
+                expectedAttempt: dispatched.claim.attempt,
+                dispatchedAt: new Date("2026-01-01T00:00:00.100Z"),
+              });
+              await store.markFailed(
+                failed.id,
+                new OutboxDispatchProblem({
+                  detail: "Provider temporarily rejected payload.",
+                  failure: {
+                    retryable: true,
+                    terminal: false,
+                    attempt: failed.claim.attempt,
+                    maxAttempts: failed.retry.maxAttempts,
+                    failedAt: new Date("2026-01-01T00:00:00.200Z"),
+                    nextVisibleAt: new Date("2026-01-01T00:00:05.000Z"),
+                  },
+                }),
+              );
+            });
+
+          releaseUnitOfWork.resolve(undefined);
+          await Promise.all([unitOfWork, rootRecord, rootClaimAndComplete]);
+
+          const recordsById = new Map(
+            (await options.listRecords(store)).map((record) => [record.id, record]),
+          );
+          assertEqual(recordsById.get("uow")?.status, "pending", "Unit of Work record must commit");
+          assertEqual(
+            recordsById.get("root")?.status,
+            "pending",
+            "root record started during Unit of Work must not be lost",
+          );
+          assertEqual(
+            recordsById.get("dispatch-after-uow")?.status,
+            "dispatched",
+            "dispatch completion started during Unit of Work must not be lost",
+          );
+          assertEqual(
+            recordsById.get("failure-after-uow")?.status,
+            "retrying",
+            "failure completion started during Unit of Work must not be lost",
           );
         },
       },
@@ -393,7 +497,11 @@ export function createTransactionalOutboxStoreContractSuite<
         run: async () => {
           const store = await options.createStore();
           const now = new Date("2026-01-01T00:00:00.000Z");
-          await store.record(createIntent(), { id: "retryable", now, retry: { maxAttempts: 3 } });
+          await store.record(createIntent(), {
+            id: "retryable",
+            now,
+            retry: { maxAttempts: 3 },
+          });
           const [claimed] = await store.claimBatch({
             limit: 1,
             now,
@@ -436,7 +544,10 @@ export function createTransactionalOutboxStoreContractSuite<
         run: async () => {
           const store = await options.createStore();
           const now = new Date("2026-01-01T00:00:00.000Z");
-          await store.record(createIntent(), { id: "missing-failure-metadata", now });
+          await store.record(createIntent(), {
+            id: "missing-failure-metadata",
+            now,
+          });
           const [claimed] = await store.claimBatch({
             limit: 1,
             now,
@@ -466,7 +577,11 @@ export function createTransactionalOutboxStoreContractSuite<
         run: async () => {
           const store = await options.createStore();
           const now = new Date("2026-01-01T00:00:00.000Z");
-          await store.record(createIntent(), { id: "exhausted", now, retry: { maxAttempts: 1 } });
+          await store.record(createIntent(), {
+            id: "exhausted",
+            now,
+            retry: { maxAttempts: 1 },
+          });
           const [claimed] = await store.claimBatch({
             limit: 1,
             now,
@@ -559,7 +674,11 @@ export function createTransactionalOutboxStoreContractSuite<
         run: async () => {
           const store = await options.createStore();
           const now = new Date("2026-01-01T00:00:00.000Z");
-          await store.record(createIntent(), { id: "terminal", now, retry: { maxAttempts: 1 } });
+          await store.record(createIntent(), {
+            id: "terminal",
+            now,
+            retry: { maxAttempts: 1 },
+          });
           const [claimed] = await store.claimBatch({
             limit: 1,
             now,
@@ -595,7 +714,9 @@ export function createTransactionalOutboxStoreContractSuite<
 }
 
 function createIntent(
-  overrides: Partial<OutboxIntent> & { readonly tenant?: OutboxTenantBoundary } = {},
+  overrides: Partial<OutboxIntent> & {
+    readonly tenant?: OutboxTenantBoundary;
+  } = {},
 ): OutboxIntent {
   return {
     type: overrides.type ?? "email.send",
@@ -621,6 +742,35 @@ function assertEqual<T>(actual: T, expected: T, message: string): void {
   if (actual !== expected) {
     throw new Error(`${message}. Expected ${String(expected)}, got ${String(actual)}.`);
   }
+}
+
+function assertDefined<T>(value: T | undefined, message: string): T {
+  if (value === undefined) {
+    throw new Error(message);
+  }
+
+  return value;
+}
+
+type Deferred<T> = {
+  readonly promise: Promise<T>;
+  resolve(value: T | PromiseLike<T>): void;
+  reject(reason?: unknown): void;
+};
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve: Deferred<T>["resolve"] = () => {
+    throw new Error("Deferred resolved before initialization.");
+  };
+  let reject: Deferred<T>["reject"] = () => {
+    throw new Error("Deferred rejected before initialization.");
+  };
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, resolve, reject };
 }
 
 async function assertRejects(
