@@ -3,9 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const generationModuleImports = vi.hoisted(() => ({
   generate: 0,
   generateClientFiles: 0,
+  manifestChecks: 0,
   loadRoutes: 0,
   loadContractGraph: 0,
+  lastCheckedManifestPath: null as null | string,
   lastGenerateOptions: null as null | Record<string, unknown>,
+  manifestCheckResult: {
+    ok: true,
+    status: "current",
+    path: "frontend-action-manifest.json",
+  } as
+    | { readonly ok: true; readonly status: "current"; readonly path: string }
+    | { readonly ok: false; readonly status: "missing" | "different"; readonly path: string },
+  frontendActionManifest: {
+    schemaVersion: "croco.frontend-action-manifest.v1",
+    actions: [],
+  },
   graph: {
     version: "croco.contract-graph.v1",
     controllers: [
@@ -39,6 +52,19 @@ vi.mock("../libs/generate", () => {
       generationModuleImports.lastGenerateOptions = options;
       return ["client/user.ts"];
     },
+    createFrontendActionManifestFromContractGraph: () => {
+      return generationModuleImports.frontendActionManifest;
+    },
+  };
+});
+
+vi.mock("@croco/presentation-preset", () => {
+  return {
+    checkFrontendActionManifestFile: (_manifest: unknown, manifestPath: string) => {
+      generationModuleImports.manifestChecks += 1;
+      generationModuleImports.lastCheckedManifestPath = manifestPath;
+      return generationModuleImports.manifestCheckResult;
+    },
   };
 });
 
@@ -70,9 +96,20 @@ describe("rpc-codegen CLI", () => {
     stdout = [];
     generationModuleImports.generate = 0;
     generationModuleImports.generateClientFiles = 0;
+    generationModuleImports.manifestChecks = 0;
     generationModuleImports.loadRoutes = 0;
     generationModuleImports.loadContractGraph = 0;
+    generationModuleImports.lastCheckedManifestPath = null;
     generationModuleImports.lastGenerateOptions = null;
+    generationModuleImports.manifestCheckResult = {
+      ok: true,
+      status: "current",
+      path: "frontend-action-manifest.json",
+    };
+    generationModuleImports.frontendActionManifest = {
+      schemaVersion: "croco.frontend-action-manifest.v1",
+      actions: [],
+    };
     generationModuleImports.graph = {
       version: "croco.contract-graph.v1",
       controllers: [
@@ -99,9 +136,13 @@ describe("rpc-codegen CLI", () => {
     expect(generationModuleImports).toEqual({
       generate: 0,
       generateClientFiles: 0,
+      manifestChecks: 0,
       loadRoutes: 0,
       loadContractGraph: 0,
+      lastCheckedManifestPath: null,
       lastGenerateOptions: null,
+      manifestCheckResult: generationModuleImports.manifestCheckResult,
+      frontendActionManifest: generationModuleImports.frontendActionManifest,
       graph: generationModuleImports.graph,
     });
   });
@@ -118,6 +159,10 @@ describe("rpc-codegen CLI", () => {
       "missing Problem runtime value",
       ["--controllers", "src/controllers/**/*.ts", "--out", "client", "--problem-runtime"],
     ],
+    [
+      "missing frontend action manifest path for check",
+      ["--controllers", "src/controllers/**/*.ts", "--frontend-action-manifest-check"],
+    ],
   ])("exits with failure for %s without loading generation modules", async (_name, args) => {
     const exitCode = await runCli(args, {
       stdout: (message) => stdout.push(message),
@@ -128,9 +173,13 @@ describe("rpc-codegen CLI", () => {
     expect(generationModuleImports).toEqual({
       generate: 0,
       generateClientFiles: 0,
+      manifestChecks: 0,
       loadRoutes: 0,
       loadContractGraph: 0,
+      lastCheckedManifestPath: null,
       lastGenerateOptions: null,
+      manifestCheckResult: generationModuleImports.manifestCheckResult,
+      frontendActionManifest: generationModuleImports.frontendActionManifest,
       graph: generationModuleImports.graph,
     });
   });
@@ -223,12 +272,68 @@ describe("rpc-codegen CLI", () => {
 
     expect(exitCode).toBe(0);
     expect(stdout).toEqual(["client/user.ts"]);
-    expect(generationModuleImports.generate).toBe(1);
     expect(generationModuleImports.generateClientFiles).toBe(1);
     expect(generationModuleImports.loadContractGraph).toBe(1);
     expect(generationModuleImports.lastGenerateOptions).toEqual({
       problemRuntime: "frontend-problems",
       reactQuery: false,
     });
+  });
+
+  it("passes the frontend action manifest path to client generation", async () => {
+    const exitCode = await runCli(
+      [
+        "--controllers",
+        "src/**/*.ts",
+        "--out",
+        "client",
+        "--frontend-action-manifest",
+        "client/frontend-action-manifest.json",
+      ],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toEqual(["client/user.ts"]);
+    expect(generationModuleImports.generateClientFiles).toBe(1);
+    expect(generationModuleImports.loadContractGraph).toBe(1);
+    expect(generationModuleImports.lastGenerateOptions).toEqual({
+      frontendActionManifestPath: "client/frontend-action-manifest.json",
+      problemRuntime: "inline",
+      reactQuery: false,
+    });
+  });
+
+  it("fails frontend action manifest check when the committed manifest drifts", async () => {
+    generationModuleImports.manifestCheckResult = {
+      ok: false,
+      status: "different",
+      path: "client/frontend-action-manifest.json",
+    };
+
+    const exitCode = await runCli(
+      [
+        "--controllers",
+        "src/**/*.ts",
+        "--frontend-action-manifest",
+        "client/frontend-action-manifest.json",
+        "--frontend-action-manifest-check",
+      ],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toContain(
+      "Frontend action manifest drift detected: client/frontend-action-manifest.json. Run croco-rpc-codegen with --frontend-action-manifest client/frontend-action-manifest.json and commit the generated file.",
+    );
+    expect(generationModuleImports.generateClientFiles).toBe(0);
+    expect(generationModuleImports.manifestChecks).toBe(1);
+    expect(generationModuleImports.lastCheckedManifestPath).toBe(
+      "client/frontend-action-manifest.json",
+    );
   });
 });

@@ -13,7 +13,7 @@ Server Action configuration.
 
 ```ts
 createServerAction({
-  name: 'submit-form',
+  name: "submit-form",
   schema: z.object({ email: z.string().email(), name: z.string() }),
   handler: async (data, context) => {
     // context may be undefined
@@ -34,7 +34,7 @@ createServerAction({
 
 ### TProblemCode
 
-`TProblemCode` *extends* `string` = `string`
+`TProblemCode` _extends_ `string` = `string`
 
 ## Properties
 
@@ -58,7 +58,15 @@ Action handler receiving parsed/validated data and optional runtime context
 
 `Promise`\<[`ServerActionHandlerResult`](/api/meta-vite/src/type-aliases/serveractionhandlerresult/)\<`TOutput`\>\> \| [`ServerActionHandlerResult`](/api/meta-vite/src/type-aliases/serveractionhandlerresult/)\<`TOutput`\>
 
-***
+---
+
+### invalidates?
+
+> `optional` **invalidates?**: readonly [`FrontendActionInvalidationHint`](/api/presentation-preset/src/type-aliases/frontendactioninvalidationhint/)[]
+
+Optional frontend cache invalidation hints emitted to the frontend action manifest
+
+---
 
 ### name
 
@@ -66,7 +74,7 @@ Action handler receiving parsed/validated data and optional runtime context
 
 Unique identifier for this action
 
-***
+---
 
 ### output?
 
@@ -74,7 +82,7 @@ Unique identifier for this action
 
 Optional output contract metadata for codegen and documentation
 
-***
+---
 
 ### problems?
 
@@ -82,7 +90,7 @@ Optional output contract metadata for codegen and documentation
 
 Optional declared domain Problems that the handler can surface
 
-***
+---
 
 ### schema?
 

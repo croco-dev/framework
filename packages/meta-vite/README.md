@@ -25,6 +25,7 @@ pnpm add ioredis
 - **API Co-location**: Define API routes alongside page routes with `defineApiRoute()`. Compose pages and APIs under a single fetch handler using `createMetaFetchHandler`'s `apiRoutes` option
 - **Server Actions**: `createServerAction()` for form POST handling with Zod validation. `createServerActionRegistry()` scopes actions for tests, HMR, and multi-app runtimes, while `createServerActionHandler()` integrates with the `apiRoutes` dispatch pipeline
 - **Route Manifest**: `createMetaViteRouteManifestFromRegistry()` emits deterministic build artifacts for page routes, API routes, server actions, component references, revalidation, and runtime capability requirements
+- **Frontend Action Manifest**: `createMetaViteFrontendActionManifestFromRegistry()` emits the shared action manifest for registered server actions, declared Problems, schema references, and invalidation hints
 - **Provider adapters**: Cloudflare Workers, AWS Lambda, Node.js with API-first/page-fallback composition
 - **Vite 6 plugin**: `crocoMetaVitePlugin` with client/ssr/rsc environment configuration
 
@@ -147,6 +148,38 @@ declared Problem contracts. `order` fields are diagnostic canonical-sort evidenc
 be used as a routing API. Handler functions, React components, and Zod schema objects are not
 serialized into the manifest. Page routes without `componentRef` fail manifest generation with
 `CROCO_META_VITE_ROUTE_MANIFEST_COMPONENT_REF_REQUIRED`.
+
+## Frontend Action Manifest
+
+Use the frontend action manifest when generated apps, CI, or LLM tooling need to inspect what
+server actions can do without importing runtime handlers:
+
+```typescript
+import {
+  createMetaViteFrontendActionManifestFromRegistry,
+  writeMetaViteFrontendActionManifest,
+} from "@croco/meta-vite";
+
+const manifest = createMetaViteFrontendActionManifestFromRegistry({
+  serverActionRegistry,
+});
+
+await writeMetaViteFrontendActionManifest(manifest, "dist/frontend-action-manifest.json");
+```
+
+Server actions can declare cache invalidation hints that are emitted to both the route manifest and
+the shared `croco.frontend-action-manifest.v1` artifact:
+
+```typescript
+createServerAction({
+  name: "signup",
+  invalidates: [{ kind: "query-key-prefix", target: "session", reason: "signup accepted" }],
+  handler: async () => ({ ok: true, data: { ok: true } }),
+});
+```
+
+Use `checkMetaViteFrontendActionManifestFile()` in CI to compare a committed manifest with the
+current server-action registry without rewriting the file.
 
 ## Route Modes
 

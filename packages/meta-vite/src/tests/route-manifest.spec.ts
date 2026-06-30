@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
+  createMetaViteRouteManifest,
   createMetaViteRouteManifestFromRegistry,
   MetaViteRouteManifestError,
   serializeMetaViteRouteManifest,
@@ -77,6 +78,13 @@ describe("createMetaViteRouteManifestFromRegistry", () => {
             status: 422,
             description: "Signup is disabled",
             type: "https://example.com/problems/signup-closed",
+          },
+        ],
+        invalidates: [
+          {
+            kind: "query-key-prefix",
+            target: "session",
+            reason: "signup accepted",
           },
         ],
         handler: async () => ({ ok: true, data: { ok: true } }),
@@ -210,6 +218,13 @@ describe("createMetaViteRouteManifestFromRegistry", () => {
                 "type": "https://example.com/problems/signup-closed"
               }
             ],
+            "invalidates": [
+              {
+                "kind": "query-key-prefix",
+                "target": "session",
+                "reason": "signup accepted"
+              }
+            ],
             "runtimeCapabilities": [
               "fetch",
               "server-action-dispatch",
@@ -220,6 +235,24 @@ describe("createMetaViteRouteManifestFromRegistry", () => {
       }
       "
     `);
+  });
+
+  it("normalizes older server action contracts without invalidation metadata", () => {
+    const manifest = createMetaViteRouteManifest({
+      pages: [],
+      serverActions: [
+        {
+          name: "refresh-session",
+          path: "/api/action/refresh-session",
+          method: "POST",
+          input: { schema: "none" },
+          output: { schema: "none" },
+          problems: [],
+        },
+      ],
+    });
+
+    expect(manifest.serverActions[0]?.invalidates).toEqual([]);
   });
 
   it("canonicalizes equivalent route sets regardless of registration order", () => {

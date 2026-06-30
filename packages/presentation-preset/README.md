@@ -3,6 +3,24 @@
 `@croco/presentation-preset` records the generated output contracts that back the Presentation
 runtime claims in `docs/package-catalog.json`.
 
+## Frontend Action Manifest
+
+The package also defines the shared `FrontendActionManifest` JSON contract used by generated
+frontend surfaces. The schema version is `croco.frontend-action-manifest.v1`.
+
+Each action entry records:
+
+- stable `id` and source metadata (`rest-rpc-route` or `meta-vite-server-action`)
+- HTTP `method` and `path`
+- input and output shape references (`generated-type`, `declared-schema`, or `none`)
+- declared Problem metadata
+- available permission metadata (`guards`, `roles`, `entitlements`)
+- cache invalidation hints such as query-key prefixes
+
+Use `serializeFrontendActionManifest()` for byte-stable JSON, `writeFrontendActionManifest()` to
+write build artifacts, and `checkFrontendActionManifestFile()` in CI to fail on committed manifest
+drift without rewriting the file.
+
 ## Supported Runtime Profiles
 
 The source of truth is `runtime-profiles.json`. Each profile names the runtime claim, target

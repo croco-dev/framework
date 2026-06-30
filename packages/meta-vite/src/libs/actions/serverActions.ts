@@ -1,5 +1,6 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { ProblemDetails } from "@croco/problems-core";
+import type { FrontendActionInvalidationHint } from "@croco/presentation-preset";
 import type { ZodSchema } from "zod";
 import type { RuntimeContext } from "../render/types";
 
@@ -36,6 +37,7 @@ export type ServerActionContractIR = {
     readonly description?: string;
   };
   readonly problems: readonly ServerActionProblemContract[];
+  readonly invalidates?: readonly FrontendActionInvalidationHint[];
 };
 
 export type ServerActionSuccessResult<TOutput = unknown> = {
@@ -127,6 +129,8 @@ export type ServerActionConfig<
   output?: ServerActionOutputContract<TOutput>;
   /** Optional declared domain Problems that the handler can surface */
   problems?: readonly ServerActionProblemContract<TProblemCode>[];
+  /** Optional frontend cache invalidation hints emitted to the frontend action manifest */
+  invalidates?: readonly FrontendActionInvalidationHint[];
   /** Action handler receiving parsed/validated data and optional runtime context */
   handler: (
     data: TInput,
@@ -230,6 +234,7 @@ function toServerActionContract(
     input: { schema: config.schema ? "declared" : "none" },
     output: normalizeServerActionOutputContract(config.output),
     problems: (config.problems ?? []).map(normalizeServerActionProblemContract),
+    invalidates: normalizeServerActionInvalidationHints(config.invalidates ?? []),
   };
 }
 
@@ -251,6 +256,33 @@ function normalizeServerActionProblemContract(
     ...(problem.description ? { description: problem.description } : {}),
     ...(problem.type ? { type: problem.type } : {}),
   };
+}
+
+function normalizeServerActionInvalidationHints(
+  invalidates: readonly FrontendActionInvalidationHint[],
+): readonly FrontendActionInvalidationHint[] {
+  return [...invalidates]
+    .map((hint) => ({
+      kind: hint.kind,
+      target: hint.target,
+      ...(hint.reason ? { reason: hint.reason } : {}),
+    }))
+    .sort(
+      (left, right) =>
+        compareStrings(left.kind, right.kind) ||
+        compareStrings(left.target, right.target) ||
+        compareStrings(left.reason ?? "", right.reason ?? ""),
+    );
+}
+
+function compareStrings(left: string, right: string): number {
+  if (left < right) {
+    return -1;
+  }
+  if (left > right) {
+    return 1;
+  }
+  return 0;
 }
 
 /**

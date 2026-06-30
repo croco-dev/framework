@@ -5315,7 +5315,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 78,
+          "line": 80,
           "column": 3,
           "kind": "problem-class"
         }
@@ -5342,7 +5342,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 64,
+          "line": 66,
           "column": 3,
           "kind": "problem-class"
         }
@@ -5369,7 +5369,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-          "line": 92,
+          "line": 94,
           "column": 3,
           "kind": "problem-class"
         }
@@ -7880,7 +7880,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 80,
+          "line": 101,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -7934,7 +7934,7 @@
       "sources": [
         {
           "file": "packages/rpc-codegen/src/libs/generate.ts",
-          "line": 86,
+          "line": 107,
           "column": 5,
           "kind": "problem-constructor"
         }

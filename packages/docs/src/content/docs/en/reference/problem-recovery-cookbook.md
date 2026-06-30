@@ -3766,7 +3766,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/actions/serverActions.ts:78:3` (problem-class)
+- `packages/meta-vite/src/libs/actions/serverActions.ts:80:3` (problem-class)
 
 <a id="meta-vite-server-action-not-found"></a>
 
@@ -3783,7 +3783,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/actions/serverActions.ts:64:3` (problem-class)
+- `packages/meta-vite/src/libs/actions/serverActions.ts:66:3` (problem-class)
 
 <a id="meta-vite-server-action-validation-failed"></a>
 
@@ -3800,7 +3800,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/actions/serverActions.ts:92:3` (problem-class)
+- `packages/meta-vite/src/libs/actions/serverActions.ts:94:3` (problem-class)
 
 <a id="meter-insert-failed"></a>
 
@@ -5381,7 +5381,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:80:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:101:5` (problem-constructor)
 
 <a id="rpc-codegen-no-rest-controllers-found"></a>
 
@@ -5415,7 +5415,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:86:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:107:5` (problem-constructor)
 
 <a id="saas-demo-demo-endpoint-disabled"></a>
 
