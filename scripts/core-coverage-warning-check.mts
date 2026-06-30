@@ -31,6 +31,7 @@ export type BaselineEntry = {
 export type PackageCatalog = {
   groups?: Record<string, { packages?: string[] }>;
   maturity?: Record<string, { packages?: string[] }>;
+  spine?: { packages?: string[] };
 };
 
 export type CoreCoverageSelectionStatus = "included" | "missing" | "temporarily-excluded";
@@ -122,7 +123,7 @@ function readCoreCoveragePackages(): string[] {
     throw new Error(`failed to read test:coverage:core script from ${packageJsonPath}`);
   }
 
-  const matches = coreCoverageCommand.matchAll(/--filter\s+(@croco\/[\w-]+)/g);
+  const matches = coreCoverageCommand.matchAll(/--filter\s+((?:@croco\/)?[\w-]+)/g);
   const packages = Array.from(matches, ([, packageName]) => packageName);
 
   if (packages.length === 0) {
@@ -199,7 +200,7 @@ function readWorkspacePackageNames(): Set<string> {
       private?: boolean;
     };
 
-    if (!manifest.name?.startsWith("@croco/") || manifest.private === true) {
+    if (!manifest.name || manifest.private === true) {
       return [];
     }
 
@@ -210,7 +211,11 @@ function readWorkspacePackageNames(): Set<string> {
 }
 
 function toPackagePath(packageName: string): string {
-  return join(projectRoot, packageName.replace("@croco/", "packages/"));
+  return join(projectRoot, "packages", toPackageSlug(packageName));
+}
+
+function toPackageSlug(packageName: string): string {
+  return packageName.replace(/^@croco\//, "");
 }
 
 function readCoverageSummary(packageName: string): PackageCoverageResult {
@@ -371,6 +376,10 @@ function getCatalogPackageMaturity(catalog: PackageCatalog): Map<string, string[
   return packageMaturity;
 }
 
+function getCatalogSpinePackages(catalog: PackageCatalog): Set<string> {
+  return new Set(catalog.spine?.packages ?? []);
+}
+
 function uniqueSignals(signals: string[]): string[] {
   return [...new Set(signals)].sort((left, right) => left.localeCompare(right));
 }
@@ -410,18 +419,23 @@ export function getCoreCoverageSelectionCandidates({
 }): CoreCoverageSelectionCandidate[] {
   const packageGroups = getCatalogPackageGroups(catalog);
   const packageMaturity = getCatalogPackageMaturity(catalog);
+  const spinePackages = getCatalogSpinePackages(catalog);
+  const workspacePackageBySlug = new Map(
+    [...workspacePackageNames].map((packageName) => [toPackageSlug(packageName), packageName]),
+  );
   const coreCoverageSet = new Set(coreCoveragePackages);
   const packageSlugs = new Set([
     ...packageGroups.keys(),
     ...packageMaturity.keys(),
-    ...[...workspacePackageNames].map((packageName) => packageName.replace("@croco/", "")),
+    ...spinePackages,
+    ...workspacePackageBySlug.keys(),
   ]);
 
   return [...packageSlugs]
     .flatMap<CoreCoverageSelectionCandidate>((packageSlug) => {
-      const packageName = `@croco/${packageSlug}`;
+      const packageName = workspacePackageBySlug.get(packageSlug);
 
-      if (!workspacePackageNames.has(packageName)) {
+      if (!packageName) {
         return [];
       }
 
@@ -431,9 +445,11 @@ export function getCoreCoverageSelectionCandidates({
       const maturitySignals = (packageMaturity.get(packageSlug) ?? [])
         .filter((maturityName) => maturityName === "production")
         .map(() => "production-ready maturity");
+      const spineSignals = spinePackages.has(packageSlug) ? ["1.0 spine package"] : [];
       const signals = uniqueSignals([
         ...groupSignals,
         ...maturitySignals,
+        ...spineSignals,
         ...getReleaseCriticalSignals(packageSlug),
       ]);
 
@@ -527,8 +543,8 @@ function writeReport(
     ...CORE_COVERAGE_PACKAGES.map((packageName) => `- ${packageName}`),
     "",
     "## Selection 정책 신호",
-    "- 후보 입력: `docs/package-catalog.json`, 공개 `@croco/*` package manifest, `package.json`의 `test:coverage:core` filter.",
-    "- 후보 신호: production-ready maturity, Core/Integration/Protocol/Transport catalog group, retry/events/context/auth/telemetry/transport/health/problem/framework contract package.",
+    "- 후보 입력: `docs/package-catalog.json`, public workspace package manifest, `package.json`의 `test:coverage:core` filter.",
+    "- 후보 신호: 1.0 spine package, production-ready maturity, Core/Integration/Protocol/Transport catalog group, retry/events/context/auth/telemetry/transport/health/problem/framework contract package.",
     "- 누락 후보는 warning-only로 보고한다. 기존 `pnpm test:coverage:core` threshold 동작은 변경하지 않는다.",
     "- 임시 제외가 필요하면 `scripts/core-coverage-warning-check.mts`의 `TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS`에 package name과 사유를 추가한다.",
     "",

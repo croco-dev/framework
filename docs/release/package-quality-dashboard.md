@@ -24,6 +24,11 @@ The protected `trunk` branch keeps the existing hard gates:
 - Package entrypoint and binary smoke checks.
 - Generated app smoke, CLI integration tests, and core coverage.
 
+The Croco 1.0 blocker scope comes from `docs/package-catalog.json` `spine.packages`.
+Spine membership is release scope, not maturity: a beta spine package can still require 1.0
+release-gate evidence, while a non-spine beta or alpha package does not block 1.0 unless it is
+pulled into a generated-app golden path or certified adapter path.
+
 Warning-only gates stay advisory until they have stable baselines and a clear owner:
 
 - Production dependency audit is advisory in CI and remains visible in the security report.
@@ -45,8 +50,8 @@ The first rollout is warning-only: missing selection candidates are visible in C
 
 Selection candidates come from executable repository signals:
 
-- public `@croco/*` package manifests under `packages/*/package.json`;
-- `docs/package-catalog.json` maturity and group membership;
+- public workspace package manifests under `packages/*/package.json`;
+- `docs/package-catalog.json` spine, maturity, and group membership;
 - the current `package.json` `test:coverage:core` filter list;
 - release-critical package names around framework contracts, retry/events/auth/telemetry/transport/health/problem surfaces.
 

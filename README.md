@@ -371,6 +371,33 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 
 현재 카탈로그는 **109개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
+### Croco 1.0 Spine
+
+Croco 1.0 spine은 18개 package를 release-critical compatibility scope로 고정합니다. Source of truth는 `docs/package-catalog.json`의 `spine.packages`이며, 운영 가이드와 후속 release-gate issue 목록은 [Croco 1.0 Spine](docs/release/croco-1.0-spine.md)에 있습니다.
+
+Spine membership is not a maturity claim: production-ready packages already have the strongest evidence gates, beta spine packages are allowed while their 1.0 gates harden, and non-spine beta/alpha packages do not block 1.0 unless they are pulled into a golden path or certified adapter path.
+
+| Package                     | Group       | Maturity            | Directory                     |
+| --------------------------- | ----------- | ------------------- | ----------------------------- |
+| `@croco/framework-context`  | Core        | 🟢 production-ready | `packages/framework-context`  |
+| `@croco/problems-core`      | Core        | 🟢 production-ready | `packages/problems-core`      |
+| `@croco/protocols-core`     | Protocol    | 🟡 beta             | `packages/protocols-core`     |
+| `@croco/protocols-rest`     | Protocol    | 🟢 production-ready | `packages/protocols-rest`     |
+| `@croco/openapi-spec`       | Protocol    | 🟡 beta             | `packages/openapi-spec`       |
+| `@croco/rpc-codegen`        | Protocol    | 🟡 beta             | `packages/rpc-codegen`        |
+| `@croco/transports-http`    | Transport   | 🟢 production-ready | `packages/transports-http`    |
+| `@croco/telemetry-api`      | Integration | 🟢 production-ready | `packages/telemetry-api`      |
+| `@croco/telemetry-sdk-node` | Integration | 🟢 production-ready | `packages/telemetry-sdk-node` |
+| `@croco/tx-core`            | Core        | 🟢 production-ready | `packages/tx-core`            |
+| `@croco/tx-drizzle`         | Core        | 🟢 production-ready | `packages/tx-drizzle`         |
+| `@croco/events-core`        | Core        | 🟢 production-ready | `packages/events-core`        |
+| `@croco/events-tx`          | Core        | 🟡 beta             | `packages/events-tx`          |
+| `@croco/retry-core`         | Core        | 🟢 production-ready | `packages/retry-core`         |
+| `@croco/idempotency-core`   | Core        | 🟡 beta             | `packages/idempotency-core`   |
+| `@croco/testing`            | Tooling     | 🟡 beta             | `packages/testing`            |
+| `create-croco-app`          | Tooling     | 🟡 beta             | `packages/create-croco-app`   |
+| `@croco/cli`                | Tooling     | 🟡 beta             | `packages/cli`                |
+
 ### Package Groups
 
 | 그룹         | 역할                                                                                       | 패키지 수 |
@@ -386,7 +413,7 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 
 ### Maturity Guide
 
-Adapter 경계와 공식 우선순위, compatibility certification checklist는 [Adapter Ecosystem](packages/docs/src/content/docs/en/reference/adapter-ecosystem.md)에 정의되어 있습니다. 성숙도 승급 기준은 [Provider Maturity Gates](packages/docs/src/content/docs/en/reference/provider-maturity.md)와 [Presentation Runtime Support](packages/docs/src/content/docs/en/reference/presentation-runtime-support.md)에 정의되어 있으며, package test 존재 여부만으로 production-ready나 certified compatibility를 의미하지 않습니다.
+Adapter 경계와 공식 우선순위, compatibility certification checklist는 [Adapter Ecosystem](packages/docs/src/content/docs/en/reference/adapter-ecosystem.md)에 정의되어 있습니다. 성숙도 승급 기준은 [Provider Maturity Gates](packages/docs/src/content/docs/en/reference/provider-maturity.md)와 [Presentation Runtime Support](packages/docs/src/content/docs/en/reference/presentation-runtime-support.md)에 정의되어 있으며, package test 존재 여부만으로 production-ready나 certified compatibility를 의미하지 않습니다. 1.0 spine은 release scope이고, production-ready는 package evidence state이며, certified adapter는 adapter/runtime/contract별 evidence state입니다.
 
 | 상태                | 의미                                | 전체 public 패키지 수 |
 | ------------------- | ----------------------------------- | --------------------: |
