@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   createWorkspacePackageIndex,
@@ -117,11 +117,64 @@ const generatedSmokeReportDir = resolve(
 const turboPath = join(rootDir, "node_modules", "turbo", "bin", "turbo");
 const smokeRoot = mkdtempSync(join(tmpdir(), "croco-generated-app-smoke-"));
 const commandTimeoutMs = 600_000;
+const sourceFileExtensions = new Set([
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+]);
+const securityValidationScanFileExtensions = new Set([
+  ...sourceFileExtensions,
+  ".json",
+  ".toml",
+  ".yaml",
+  ".yml",
+]);
+const securityValidationScanFileNames = new Set([
+  ".env",
+  ".env.local",
+  ".env.development",
+  ".env.production",
+]);
+const securityValidationScanIgnoredDirectories = new Set([
+  ".git",
+  ".output",
+  ".turbo",
+  ".wrangler",
+  "coverage",
+  "dist",
+  "node_modules",
+]);
+const unsafeSecurityValidationPatterns = [
+  /securityValidation\s*:\s*["']off["']/,
+  /unsafeSkipSecurityValidation\s*:\s*true/,
+  /\bCROCO_HTTP_SECURITY_VALIDATION\s*=\s*["']?off\b/,
+  /\bprocess\.env\.CROCO_HTTP_SECURITY_VALIDATION\b/,
+];
 const loadViteConfigScript = [
   'import { join } from "node:path";',
   'import { loadConfigFromFile } from "vite";',
   'const result = await loadConfigFromFile({ command: "build", mode: "production" }, join(process.cwd(), "vite.config.ts"));',
   'if (!result) throw new Error("vite.config.ts did not load");',
+].join(" ");
+const apiWorkerFetchSmokeScript = [
+  "void (async () => {",
+  'const workerModule = await import("../api-worker/src/index.ts");',
+  "let worker = workerModule.default;",
+  'while (worker && typeof worker === "object" && "default" in worker && !("fetch" in worker)) worker = worker.default;',
+  "const fetchHandler = typeof worker === 'function' ? worker : worker && typeof worker.fetch === 'function' " +
+    "? worker.fetch.bind(worker) : undefined;",
+  'if (typeof fetchHandler !== "function") throw new Error("API worker default export must be a fetch handler or Worker object");',
+  "const executionContext = { waitUntil: () => {}, passThroughOnException: () => {} };",
+  'const response = await fetchHandler(new Request("http://localhost/health", { headers: { origin: "http://localhost:5173", "cf-connecting-ip": "203.0.113.10" } }), { WEB_ORIGIN: "http://localhost:5173" }, executionContext);',
+  "const body = await response.json();",
+  "if (response.status !== 200) throw new Error(`Expected /health status 200, received ${response.status}`);",
+  'if (body.status !== "ok") throw new Error(`Expected /health body status ok, received ${JSON.stringify(body)}`);',
+  "})();",
 ].join(" ");
 const generatedSmokeExternalCrocoRangeExceptions = {} satisfies Record<
   string,
@@ -368,6 +421,21 @@ const smokeCases: readonly SmokeCase[] = [
     runtimeTarget: "cloudflare-workers",
     matrixTargets: ["base-ddd"],
     validations: [
+      {
+        label: "api-worker typecheck",
+        packagePath: ["api-worker"],
+        args: ["typecheck"],
+      },
+      {
+        label: "api-worker wrangler build",
+        packagePath: ["api-worker"],
+        args: ["build"],
+      },
+      {
+        label: "api-worker secure fetch smoke",
+        packagePath: ["ssr-worker"],
+        args: ["exec", "tsx", "--eval", apiWorkerFetchSmokeScript],
+      },
       {
         label: "ssr-worker vite config load",
         packagePath: ["ssr-worker"],
@@ -737,6 +805,7 @@ try {
       generatedSmokeExternalCrocoRangeExceptions,
     );
     assertGeneratedReadme(projectDir, smokeCase);
+    assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
     writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
     runSmokeCaseCommand(
       smokeReport,
@@ -1180,6 +1249,43 @@ function assertGeneratedReadme(projectDir: string, smokeCase: SmokeCase): void {
   }
 
   console.log(`create-croco-app-generated-smoke: ${smokeCase.name} README.md exists`);
+}
+
+function assertNoGeneratedSecurityValidationOptOut(projectDir: string, smokeCase: SmokeCase): void {
+  const unsafeFiles = collectGeneratedSecurityValidationScanFiles(projectDir)
+    .filter((filePath) =>
+      unsafeSecurityValidationPatterns.some((pattern) =>
+        pattern.test(readFileSync(filePath, "utf8")),
+      ),
+    )
+    .map((filePath) => relative(projectDir, filePath));
+
+  if (unsafeFiles.length > 0) {
+    throw new Error(
+      `${smokeCase.name} generated files disable HTTP security validation: ${unsafeFiles.join(", ")}`,
+    );
+  }
+
+  console.log(
+    `create-croco-app-generated-smoke: ${smokeCase.name} keeps HTTP security validation enabled`,
+  );
+}
+
+function collectGeneratedSecurityValidationScanFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      return securityValidationScanIgnoredDirectories.has(entry.name)
+        ? []
+        : collectGeneratedSecurityValidationScanFiles(entryPath);
+    }
+
+    return securityValidationScanFileExtensions.has(extname(entry.name)) ||
+      securityValidationScanFileNames.has(entry.name)
+      ? [entryPath]
+      : [];
+  });
 }
 
 function runValidation(

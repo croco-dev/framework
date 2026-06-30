@@ -329,6 +329,36 @@ function checkSsrLambdaStructure() {
   checkFileExists("ssr-lambda", "apps", "api-server", "package.json.hbs");
   checkFileContains(
     "ssr-lambda",
+    ["apps", "api-server", "package.json.hbs"],
+    /@croco\/ratelimit-core/,
+  );
+  checkFileContains(
+    "ssr-lambda",
+    ["apps", "api-server", "src", "app.ts"],
+    /securityHeadersMiddleware\(\)/,
+  );
+  checkFileContains(
+    "ssr-lambda",
+    ["apps", "api-server", "src", "app.ts"],
+    /corsMiddleware\(\{ origins: \[process\.env\.WEB_ORIGIN \?\? "http:\/\/localhost:3000"\] \}\)/,
+  );
+  checkFileContains(
+    "ssr-lambda",
+    ["apps", "api-server", "src", "app.ts"],
+    /bodyLimitMiddleware\(\{ limit: mb\(1\) \}\)/,
+  );
+  checkFileContains(
+    "ssr-lambda",
+    ["apps", "api-server", "src", "app.ts"],
+    /rateLimitHttpMiddleware\(\{/,
+  );
+  checkFileDoesNotContain(
+    "ssr-lambda",
+    ["apps", "api-server", "src", "app.ts"],
+    /securityValidation:\s*"off"/,
+  );
+  checkFileContains(
+    "ssr-lambda",
     ["apps", "api-server", "src", "lambda.ts"],
     /export { lambdaHandler as handler }/,
   );
@@ -343,6 +373,45 @@ function checkSsrLambdaStructure() {
     /export default function \w+\(/,
   );
   checkSsrRouteComponent("ssr-lambda");
+}
+
+function checkWebMetaViteFullstackAddonStructure() {
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["pnpm-workspace.yaml.hbs"],
+    /onlyBuiltDependencies:/,
+  );
+  checkFileContains("addons/web-meta-vite-fullstack", ["pnpm-workspace.yaml.hbs"], /- workerd/);
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "src", "index.ts"],
+    /WEB_ORIGIN\?: string/,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "src", "index.ts"],
+    /corsMiddleware\(\{ origins: \[webOrigin\] \}\)/,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "src", "index.ts"],
+    /OPERATIONAL_RATE_LIMIT_BYPASS_PATHS/,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "src", "index.ts"],
+    /new Set\(\[\s*"\/health",\s*"\/health\/live",\s*"\/health\/ready",\s*"\/ready",?\s*\]\)/,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "src", "index.ts"],
+    /skip: \(ctx\) => OPERATIONAL_RATE_LIMIT_BYPASS_PATHS\.has\(ctx\.req\.path\)/,
+  );
+  checkFileDoesNotContain(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "wrangler.toml.hbs"],
+    /^\s*\[build\]\s*$/m,
+  );
 }
 
 function checkContainerFullstackStructure() {
@@ -750,6 +819,12 @@ describe("GraphQL addon templates", () => {
       ["apps", "web", "src", "server", "graphql-contract.ts"],
       /diffGraphQLContractSnapshots/,
     );
+  });
+});
+
+describe("Web Meta Vite fullstack addon templates", () => {
+  it("keeps the API worker Wrangler build non-recursive", () => {
+    checkWebMetaViteFullstackAddonStructure();
   });
 });
 

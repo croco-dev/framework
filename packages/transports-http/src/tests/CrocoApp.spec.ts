@@ -548,7 +548,21 @@ describe("CrocoApp", () => {
       securityValidation: "enforce",
     });
 
-    expect(() => app.lambdaHandler()).toThrow(/Missing required security middleware/);
+    let error: unknown;
+    try {
+      app.lambdaHandler();
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toMatchObject({
+      code: "CROCO_HTTP_SECURITY_001",
+      extensions: {
+        legacyCode: "transports-http/security-middleware-validation",
+      },
+    });
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toMatch(/Missing required security middleware/);
   });
 
   it("should allow bootstrap when securityValidation is set to off", async () => {

@@ -520,11 +520,11 @@ describe("E2E: generate()", () => {
   );
 
   it(
-    "generates the legacy ddd-vike-fullstack compatibility profile with worker security validation opt-out",
+    "generates ddd-vike-fullstack with secure worker bootstrap middleware",
     { timeout: 120_000 },
     async () => {
       const options: GeneratorOptions = {
-        projectName: "my-worker-fullstack",
+        projectName: "my-vike-fullstack",
         scope: "@test",
         preset: "ddd-vike-fullstack",
         webApps: ["web"],
@@ -539,10 +539,31 @@ describe("E2E: generate()", () => {
       await generate(testDir, options);
 
       const workerContent = readFileSync(join(testDir, "api-worker", "src", "index.ts"), "utf8");
+      const workerPackageJson = readPackageJson(join(testDir, "api-worker", "package.json"));
+      const workspaceConfig = readFileSync(join(testDir, "pnpm-workspace.yaml"), "utf8");
+      const workerWranglerConfig = readFileSync(
+        join(testDir, "api-worker", "wrangler.toml"),
+        "utf8",
+      );
       const ssrWorkerDir = join(testDir, "ssr-worker");
       const ssrWorkerPackageJson = readPackageJson(join(ssrWorkerDir, "package.json"));
 
-      expect(workerContent).toContain('securityValidation: "off"');
+      expect(workerContent).not.toContain('securityValidation: "off"');
+      expect(workerContent).toContain("securityHeadersMiddleware()");
+      expect(workerContent).toContain("WEB_ORIGIN?: string");
+      expect(workerContent).toContain("corsMiddleware({ origins: [webOrigin] })");
+      expect(workerContent).toContain("bodyLimitMiddleware({ limit: mb(1) })");
+      expect(workerContent).toContain("rateLimitHttpMiddleware({");
+      expect(workerContent).toMatch(
+        /new Set\(\[\s*"\/health",\s*"\/health\/live",\s*"\/health\/ready",\s*"\/ready",?\s*\]\)/,
+      );
+      expect(workerContent).toContain(
+        "skip: (ctx) => OPERATIONAL_RATE_LIMIT_BYPASS_PATHS.has(ctx.req.path)",
+      );
+      expect(workerPackageJson.dependencies?.["@croco/ratelimit-core"]).toBe("^0.0.2");
+      expect(workspaceConfig).toContain("onlyBuiltDependencies:");
+      expect(workspaceConfig).toContain("- workerd");
+      expect(workerWranglerConfig).not.toMatch(/^\s*\[build\]\s*$/m);
       expect(ssrWorkerPackageJson.dependencies?.["@croco/meta-vite"]).toBe("^0.0.2");
       expect(ssrWorkerPackageJson.dependencies?.["@croco/problems-core"]).toBe("^0.0.2");
       expect(ssrWorkerPackageJson.scripts?.build).toBe(
@@ -559,6 +580,7 @@ describe("E2E: generate()", () => {
         ssrWorkerDir,
         "vite build --outDir dist/client && vite build --ssr src/index.ts --outDir dist --emptyOutDir false",
       );
+      assertSourceBareImportsDeclared(join(testDir, "api-worker"));
       assertViteConfigImportsDeclared(ssrWorkerDir);
       assertSourceBareImportsDeclared(ssrWorkerDir);
       assertNoHandlebarsPlaceholders(testDir);
