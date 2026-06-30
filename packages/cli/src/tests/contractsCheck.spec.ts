@@ -10,9 +10,13 @@ describe("contractsCheck", () => {
 
   it("should validate a contract graph with text output", async () => {
     const stdout: string[] = [];
+    let loadOptions: Record<string, unknown> | null = null;
 
-    const exitCode = await runContractsCheck(["--controllers", "src/**/*.ts"], {
-      loadContractGraph: async () => createGraph(),
+    const exitCode = await runContractsCheck(["--controllers", "src/**/*.ts", "--strict-schemas"], {
+      loadContractGraph: async (_glob, options) => {
+        loadOptions = options;
+        return createGraph();
+      },
       io: {
         stdout: (message) => stdout.push(message),
         stderr: (message) => stdout.push(message),
@@ -20,6 +24,7 @@ describe("contractsCheck", () => {
     });
 
     expect(exitCode).toBe(0);
+    expect(loadOptions).toEqual({ strictSchemas: true });
     expect(stdout).toEqual(["Contract graph check passed for 1 route(s) across 1 controller(s)."]);
   });
 

@@ -7,6 +7,7 @@ import {
   formatContractDiagnostic,
   getContractGraphErrors,
   isContractGraphSnapshot,
+  type BuildContractGraphOptions,
   type ContractGraph,
   type ContractGraphDiff,
   type ContractGraphDiffChange,
@@ -23,13 +24,17 @@ export type ContractsDiffIo = {
   readonly cwd: string;
 };
 
-type ContractGraphLoader = (glob: string) => Promise<ContractGraph>;
+type ContractGraphLoader = (
+  glob: string,
+  options: BuildContractGraphOptions,
+) => Promise<ContractGraph>;
 
 type ContractsDiffOptions = {
   readonly baseline: string;
   readonly controllers: string;
   readonly json: boolean;
   readonly out: string | null;
+  readonly strictSchemas: boolean;
 };
 
 type ContractsDiffParseResult =
@@ -82,7 +87,9 @@ export async function runContractsDiff(
 
   const baseline = readSnapshot(parsed.options.baseline, io);
   const loadContractGraph = options.loadContractGraph ?? loadContractGraphFromRpcCodegen;
-  const graph = await loadContractGraph(parsed.options.controllers);
+  const graph = await loadContractGraph(parsed.options.controllers, {
+    strictSchemas: parsed.options.strictSchemas,
+  });
   const errors = getContractGraphErrors(graph);
 
   if (errors.length > 0) {
@@ -139,6 +146,7 @@ export function parseContractsDiffArgs(args: readonly string[]): ContractsDiffPa
       controllers,
       out,
       json: args.includes("--json") || out !== null,
+      strictSchemas: args.includes("--strict-schemas"),
     },
   };
 }
@@ -151,6 +159,7 @@ Options:
   --controllers <glob>  Current controller files to load
   --json                Print a machine-readable diff report
   --out <path>          Write the diff report JSON to a file
+  --strict-schemas      Fail when generated routes omit response, body, or named parameter schemas
   --help, -h            Show this help message`);
 }
 
@@ -206,10 +215,13 @@ function readSnapshot(path: string, io: ContractsDiffIo): ContractGraphSnapshot 
   return parsed;
 }
 
-async function loadContractGraphFromRpcCodegen(glob: string): Promise<ContractGraph> {
+async function loadContractGraphFromRpcCodegen(
+  glob: string,
+  options: BuildContractGraphOptions,
+): Promise<ContractGraph> {
   const { loadContractGraph } = await import("@croco/rpc-codegen");
 
-  return loadContractGraph(glob);
+  return loadContractGraph(glob, options);
 }
 
 function writeOutputFile(path: string, content: string, io: ContractsDiffIo): void {

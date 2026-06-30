@@ -6,6 +6,7 @@ const generationModuleImports = vi.hoisted(() => ({
   manifestChecks: 0,
   loadRoutes: 0,
   loadContractGraph: 0,
+  lastLoadOptions: null as null | Record<string, unknown>,
   lastCheckedManifestPath: null as null | string,
   lastGenerateOptions: null as null | Record<string, unknown>,
   manifestCheckResult: {
@@ -80,8 +81,9 @@ vi.mock("../libs/loadRoutes", () => {
   generationModuleImports.loadRoutes += 1;
 
   return {
-    loadContractGraph: () => {
+    loadContractGraph: (_controllers: string, options: Record<string, unknown>) => {
       generationModuleImports.loadContractGraph += 1;
+      generationModuleImports.lastLoadOptions = options;
       return generationModuleImports.graph;
     },
   };
@@ -99,6 +101,7 @@ describe("rpc-codegen CLI", () => {
     generationModuleImports.manifestChecks = 0;
     generationModuleImports.loadRoutes = 0;
     generationModuleImports.loadContractGraph = 0;
+    generationModuleImports.lastLoadOptions = null;
     generationModuleImports.lastCheckedManifestPath = null;
     generationModuleImports.lastGenerateOptions = null;
     generationModuleImports.manifestCheckResult = {
@@ -139,6 +142,7 @@ describe("rpc-codegen CLI", () => {
       manifestChecks: 0,
       loadRoutes: 0,
       loadContractGraph: 0,
+      lastLoadOptions: null,
       lastCheckedManifestPath: null,
       lastGenerateOptions: null,
       manifestCheckResult: generationModuleImports.manifestCheckResult,
@@ -176,6 +180,7 @@ describe("rpc-codegen CLI", () => {
       manifestChecks: 0,
       loadRoutes: 0,
       loadContractGraph: 0,
+      lastLoadOptions: null,
       lastCheckedManifestPath: null,
       lastGenerateOptions: null,
       manifestCheckResult: generationModuleImports.manifestCheckResult,
@@ -208,9 +213,12 @@ describe("rpc-codegen CLI", () => {
       ],
     };
 
-    const exitCode = await runCli(["--controllers", "src/**/*.ts", "--check"], {
-      stdout: (message) => stdout.push(message),
-    });
+    const exitCode = await runCli(
+      ["--controllers", "src/**/*.ts", "--check", "--strict-problems", "--strict-schemas"],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
 
     expect(exitCode).toBe(1);
     expect(stdout).toContain(
@@ -220,6 +228,10 @@ describe("rpc-codegen CLI", () => {
     expect(generationModuleImports.generate).toBe(0);
     expect(generationModuleImports.generateClientFiles).toBe(0);
     expect(generationModuleImports.loadContractGraph).toBe(1);
+    expect(generationModuleImports.lastLoadOptions).toEqual({
+      strictProblemResponses: true,
+      strictSchemas: true,
+    });
   });
 
   it("fails client generation when the contract graph has errors", async () => {

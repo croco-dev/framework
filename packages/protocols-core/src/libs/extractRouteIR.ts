@@ -61,6 +61,7 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
       methodName: String(routeMeta.methodName),
       httpMethod: routeMeta.method,
       path: routeContract?.path ?? joinPaths(controllerMeta.path, routeMeta.path),
+      ...(routeMeta.sourceLocation ? { sourceLocation: routeMeta.sourceLocation } : {}),
       routeContract,
       params,
       inputSchema: inputSchemas.body,
@@ -187,6 +188,7 @@ function extractParams(paramsMeta: ParamMetadata[]): ParamIR[] {
       kind: mapParamKind(paramMeta.type),
       name: paramMeta.name ?? "",
       schema: extractSchema(paramMeta),
+      ...(paramMeta.sourceLocation ? { sourceLocation: paramMeta.sourceLocation } : {}),
     }));
 }
 

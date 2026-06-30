@@ -37,6 +37,7 @@ export interface RouteMetadata {
   methodName: string | symbol;
   statusCode?: number;
   contract?: RouteContractMetadata;
+  sourceLocation?: RouteContractSourceLocation;
 }
 
 export type RouteContractSourceLocation = {
@@ -87,4 +88,5 @@ export interface ParamMetadata {
   index: number;
   name?: string;
   pipes?: unknown[];
+  sourceLocation?: RouteContractSourceLocation;
 }

@@ -4,7 +4,7 @@ import type { HttpMethod, ParamType } from "./constants";
 import type { ExceptionFilter } from "./interfaces/ExceptionFilter";
 import type { Interceptor } from "./interfaces/Interceptor";
 import type { PipeTransform } from "./interfaces/PipeTransform";
-import type { RouteContractSpec } from "./types/RouteContract";
+import type { RouteContractSourceLocation, RouteContractSpec } from "./types/RouteContract";
 
 export interface ControllerMetadata {
   path: string;
@@ -17,6 +17,7 @@ export interface RouteMetadata {
   methodName: string | symbol;
   statusCode?: number;
   contract?: RouteContractSpec;
+  sourceLocation?: RouteContractSourceLocation;
 }
 
 export type ProblemResponseMetadata<
@@ -48,6 +49,7 @@ export interface ParamMetadata {
   index: number;
   name?: string;
   pipes?: (PipeTransformConstructor | PipeTransform)[];
+  sourceLocation?: RouteContractSourceLocation;
 }
 
 export interface HttpContext {

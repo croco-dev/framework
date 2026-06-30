@@ -118,6 +118,7 @@ export type ContractGraphRoute = RouteIR & {
 
 export type BuildContractGraphOptions = {
   readonly strictProblemResponses?: boolean;
+  readonly strictSchemas?: boolean;
   readonly problemRegistries?: readonly PackageProblemRegistry[];
 };
 
@@ -222,8 +223,11 @@ export function formatContractDiagnostics(diagnostics: readonly ContractDiagnost
 
 export function formatContractDiagnostic(diagnostic: ContractDiagnostic): string {
   const route = diagnostic.routeId ? ` ${diagnostic.routeId}` : "";
+  const location = diagnostic.sourceLocation
+    ? ` ${formatContractDiagnosticSourceLocation(diagnostic.sourceLocation)}`
+    : "";
 
-  return `${diagnostic.severity.toUpperCase()} ${diagnostic.code}${route}: ${diagnostic.message}`;
+  return `${diagnostic.severity.toUpperCase()} ${diagnostic.code}${route}${location}: ${diagnostic.message}`;
 }
 
 export function getContractPathParamNames(path: string): string[] {
@@ -404,12 +408,107 @@ function validateRoute(
   diagnostics.push(...validateNamedParams(route));
   diagnostics.push(...validateBodyParams(route));
   diagnostics.push(...validateRouteContract(route));
+  diagnostics.push(...validateStrictSchemas(route, options));
   diagnostics.push(...validateRouteSchemas(route));
   diagnostics.push(...validateProblemResponses(route));
   diagnostics.push(...validateProblemRegistryReferences(route, problemRegistryIndex));
   diagnostics.push(...validateStrictProblemResponses(route, options));
 
   return diagnostics;
+}
+
+function validateStrictSchemas(
+  route: ContractGraphRoute,
+  options: BuildContractGraphOptions,
+): ContractDiagnostic[] {
+  if (!options.strictSchemas) {
+    return [];
+  }
+
+  const diagnostics: ContractDiagnostic[] = [];
+
+  if (!route.outputSchema) {
+    diagnostics.push(
+      createRouteDiagnostic(
+        route,
+        "contract-route-missing-response-schema",
+        "error",
+        "Strict schema mode requires a success response schema before RPC/OpenAPI generation. Add @ResponseSchema(...), use an HTTP method route contract with response, or split no-content behavior into an explicit contract.",
+      ),
+    );
+  }
+
+  for (const param of route.params) {
+    if (param.kind === "ctx") {
+      continue;
+    }
+
+    if (param.kind === "body") {
+      if (!param.schema && !route.routeContract?.inputSchemas.body) {
+        diagnostics.push(
+          createRouteDiagnostic(
+            route,
+            "contract-route-missing-body-schema",
+            "error",
+            "Strict schema mode requires @Body() to receive a Zod schema or a route contract with a body schema so generated request contracts cannot widen to unknown.",
+            param.sourceLocation,
+          ),
+        );
+      }
+
+      continue;
+    }
+
+    if (param.name.length === 0 || isNamedParamSchemaBacked(route, param)) {
+      continue;
+    }
+
+    diagnostics.push(
+      createRouteDiagnostic(
+        route,
+        "contract-route-missing-named-param-schema",
+        "error",
+        getMissingNamedParamSchemaMessage(param),
+        param.sourceLocation,
+      ),
+    );
+  }
+
+  return diagnostics;
+}
+
+function getMissingNamedParamSchemaMessage(param: ContractGraphRoute["params"][number]): string {
+  const decorator = `@${getParamDecoratorName(param.kind)}("${param.name}")`;
+  const routeContractField =
+    param.kind === "path" ? "params" : param.kind === "query" ? "query" : null;
+
+  if (!routeContractField) {
+    return `Strict schema mode requires ${decorator} to receive a Zod schema so generated ${param.kind} contracts do not rely on implicit string fallback.`;
+  }
+
+  return `Strict schema mode requires ${decorator} to receive a Zod schema or a route contract ${routeContractField} field so generated ${param.kind} contracts do not rely on implicit string fallback.`;
+}
+
+function isNamedParamSchemaBacked(
+  route: ContractGraphRoute,
+  param: ContractGraphRoute["params"][number],
+): boolean {
+  if (param.schema) {
+    return true;
+  }
+
+  const contractSchema =
+    param.kind === "path"
+      ? route.routeContract?.inputSchemas.path
+      : param.kind === "query"
+        ? route.routeContract?.inputSchemas.query
+        : null;
+
+  if (!contractSchema) {
+    return false;
+  }
+
+  return Object.prototype.hasOwnProperty.call(getNamedSchemaShape(contractSchema), param.name);
 }
 
 function validateRouteContract(route: ContractGraphRoute): ContractDiagnostic[] {
@@ -506,7 +605,7 @@ function validateContractNamedParams(
       continue;
     }
 
-    if (param.schema !== contractShape[name]) {
+    if (param.schema && param.schema !== contractShape[name]) {
       diagnostics.push(
         createRouteDiagnostic(
           route,
@@ -575,7 +674,7 @@ function validateContractBody(route: ContractGraphRoute): ContractDiagnostic[] {
   }
 
   return bodyParams
-    .filter((param) => param.schema !== contractBody)
+    .filter((param) => param.schema && param.schema !== contractBody)
     .map((param) =>
       createRouteDiagnostic(
         route,
@@ -1117,7 +1216,11 @@ function createRouteDiagnostic(
   code: string,
   severity: ContractDiagnosticSeverity,
   message: string,
+  sourceLocation?: ContractDiagnosticSourceLocation,
 ): ContractDiagnostic {
+  const diagnosticSourceLocation =
+    sourceLocation ?? route.routeContract?.sourceLocation ?? route.sourceLocation;
+
   return {
     code,
     severity,
@@ -1128,10 +1231,32 @@ function createRouteDiagnostic(
     controllerName: route.controllerName,
     methodName: route.methodName,
     path: route.path,
-    ...(route.routeContract?.sourceLocation
-      ? { sourceLocation: route.routeContract.sourceLocation }
-      : {}),
+    ...(diagnosticSourceLocation ? { sourceLocation: diagnosticSourceLocation } : {}),
   };
+}
+
+function formatContractDiagnosticSourceLocation(
+  sourceLocation: ContractDiagnosticSourceLocation,
+): string {
+  const line = sourceLocation.line === undefined ? "" : `:${sourceLocation.line}`;
+  const column = sourceLocation.column === undefined ? "" : `:${sourceLocation.column}`;
+
+  return `${sourceLocation.path}${line}${column}`;
+}
+
+function getParamDecoratorName(kind: ContractGraphRoute["params"][number]["kind"]): string {
+  switch (kind) {
+    case "path":
+      return "Param";
+    case "query":
+      return "Query";
+    case "header":
+      return "Header";
+    case "body":
+      return "Body";
+    case "ctx":
+      return "Ctx";
+  }
 }
 
 function getDiagnosticTarget(code: string): ContractDiagnosticTarget {
