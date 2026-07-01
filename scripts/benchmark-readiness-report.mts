@@ -231,6 +231,8 @@ function toRowReadiness(report: BenchmarkReadinessReportRow): BenchmarkRowReadin
 
   if (report.baselineStatus === "skip") {
     notes.push(`baseline skipped (${getBaselineSkipReason(report)})`);
+  } else if (report.baselineStatus === "fail") {
+    notes.push("baseline drift advisory");
   } else if (!hasFiniteNumber(report.baseline)) {
     notes.push("baseline entry missing");
   }

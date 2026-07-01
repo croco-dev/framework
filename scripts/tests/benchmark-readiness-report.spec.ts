@@ -109,6 +109,51 @@ describe("benchmark-readiness-report.mts", () => {
     expect(evaluation.varianceEvidenceValid).toBe(true);
   });
 
+  it("keeps current-run baseline drift advisory when variance evidence is valid", () => {
+    const evaluation = evaluateBenchmarkReadiness(
+      {
+        allPassed: true,
+        gateFailures: [],
+        reports: [
+          {
+            name: "Passing benchmark",
+            p75: 1.3,
+            threshold: 2,
+            baseline: 1,
+            thresholdStatus: "pass",
+            baselineStatus: "fail",
+          },
+        ],
+      },
+      {
+        varianceEvidence: {
+          path: "ci-reports/benchmark/latest-five-green-runs.md",
+          content: validVarianceEvidenceContent([
+            {
+              name: "Passing benchmark",
+              min: 0.96,
+              median: 1,
+              max: 1.04,
+              spread: 0.08,
+              p75ByRun: {
+                "1": 0.96,
+                "2": 0.99,
+                "3": 1,
+                "4": 1.02,
+                "5": 1.04,
+              },
+            },
+          ]),
+        },
+      },
+    );
+
+    expect(evaluation.enforceReady).toBe(true);
+    expect(evaluation.blockingReasons).toEqual([]);
+    expect(evaluation.rows[0]?.baselineStatus).toBe("fail");
+    expect(evaluation.rows[0]?.notes).toContain("baseline drift advisory");
+  });
+
   it("rejects arbitrary non-empty variance evidence prose", () => {
     const evaluation = evaluateBenchmarkReadiness(greenResult(), {
       varianceEvidence: {

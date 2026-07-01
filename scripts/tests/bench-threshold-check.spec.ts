@@ -61,6 +61,42 @@ describe("bench-threshold-check.mts", () => {
     expect(result.gateFailures).toContain("Missing benchmark: benchmark report was not collected.");
   });
 
+  it("keeps baseline-only drift advisory when thresholds still pass", () => {
+    const result = evaluateBenchmarkGate([
+      {
+        name: "Drifted benchmark",
+        p75: 1.3,
+        threshold: 2,
+        baseline: 1,
+        thresholdStatus: "pass",
+        baselineStatus: "fail",
+        thresholdDiff: -0.7,
+        baselineDiff: 0.3,
+      },
+    ]);
+
+    expect(result.allPassed).toBe(true);
+    expect(result.gateFailures).toEqual([]);
+  });
+
+  it("still blocks threshold failures", () => {
+    const result = evaluateBenchmarkGate([
+      {
+        name: "Regressed benchmark",
+        p75: 3,
+        threshold: 2,
+        baseline: 1,
+        thresholdStatus: "fail",
+        baselineStatus: "fail",
+        thresholdDiff: 1,
+        baselineDiff: 2,
+      },
+    ]);
+
+    expect(result.allPassed).toBe(false);
+    expect(result.gateFailures).toContain("Regressed benchmark: p75 3.0ms exceeds threshold 2.0ms");
+  });
+
   it("blocks baseline updates when the runner failed or no reports were collected", () => {
     const result = evaluateBaselineUpdateReadiness(
       [],

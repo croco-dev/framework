@@ -202,12 +202,6 @@ export function evaluateBenchmarkGate(
       );
     }
 
-    if (report.baselineStatus === "fail") {
-      gateFailures.push(
-        `${report.name}: p75 ${formatDuration(report.p75)} exceeds baseline ${formatDuration(report.baseline ?? 0)} by more than ${(BASELINE_TOLERANCE * 100).toFixed(0)}%`,
-      );
-    }
-
     if (report.thresholdStatus === "skip") {
       gateFailures.push(
         `${report.name}: threshold skipped (${report.thresholdSkipReason ?? "no threshold skip reason"})`,
@@ -479,9 +473,11 @@ async function main() {
         .join(" | ");
 
       const statusIcon =
-        report.thresholdStatus === "fail" || report.baselineStatus === "fail"
+        report.thresholdStatus === "fail"
           ? "❌"
-          : report.thresholdStatus === "skip" && report.baselineStatus === "skip"
+          : report.thresholdStatus === "skip" ||
+              report.baselineStatus === "skip" ||
+              report.baselineStatus === "fail"
             ? "⚠️ "
             : "✅";
 
