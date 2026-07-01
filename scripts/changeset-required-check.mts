@@ -7,6 +7,7 @@
  * - package docs and tests do not require a changeset;
  * - private packages do not require a changeset;
  * - root-only lockfile/package-manager changes do not require a changeset here;
+ * - public API snapshot-only changes may instead carry an explicit no-release reason;
  * - .changeset/README.md is documentation and never counts as a release changeset.
  */
 
@@ -27,7 +28,24 @@ type PackageInfo = {
   readonly relativeDir: string;
 };
 
+type ReleaseSignificantChange = {
+  readonly files: string[];
+  readonly surface: string;
+};
+
+type PublicApiSnapshotPackage = {
+  readonly packageName: string;
+  readonly contentKey: string;
+};
+
+type NoReleaseJustification = {
+  readonly reason: string;
+  readonly source: string;
+};
+
 const realChangesetPattern = /^\.changeset\/[^/]+\.md$/;
+const noReleaseReasonLinePattern = /^Changeset-required no-release reason:\s*(.+)$/im;
+const publicApiSnapshotPath = "public-api-surface.snapshot.json";
 const testFilePattern = /(?:^|[.-])(spec|test)\.[cm]?[jt]sx?$/;
 
 function log(message: string): void {
@@ -215,6 +233,54 @@ function hasValidChangeset(options: CheckOptions, changedFiles: readonly string[
   return false;
 }
 
+function isMeaningfulNoReleaseReason(reason: string): boolean {
+  return reason.trim().length >= 12 && /[A-Za-z0-9]/.test(reason);
+}
+
+function readNoReleaseReasonFromText(text: string): string | null {
+  const match = noReleaseReasonLinePattern.exec(text);
+  if (!match) {
+    return null;
+  }
+
+  const reason = match[1]?.trim() ?? "";
+  return isMeaningfulNoReleaseReason(reason) ? reason : null;
+}
+
+function getNoReleaseJustification(rootDir: string): NoReleaseJustification | null {
+  const eventPath = env.GITHUB_EVENT_PATH?.trim();
+  if (!eventPath) {
+    return null;
+  }
+
+  try {
+    const event = JSON.parse(readFileSync(resolve(rootDir, eventPath), "utf-8")) as unknown;
+    if (typeof event !== "object" || event === null || !("pull_request" in event)) {
+      return null;
+    }
+
+    const pullRequest = (event as { readonly pull_request?: unknown }).pull_request;
+    if (typeof pullRequest !== "object" || pullRequest === null || !("body" in pullRequest)) {
+      return null;
+    }
+
+    const body = (pullRequest as { readonly body?: unknown }).body;
+    if (typeof body !== "string") {
+      return null;
+    }
+
+    const reason = readNoReleaseReasonFromText(body);
+    return reason
+      ? {
+          reason,
+          source: "pull request body",
+        }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function isPackageTestFile(packageRelativeFile: string): boolean {
   const fileName = basename(packageRelativeFile);
 
@@ -259,8 +325,8 @@ function isReleaseSignificantPackageFile(packageRelativeFile: string): boolean {
 function getReleaseSignificantChanges(
   changedFiles: readonly string[],
   packages: readonly PackageInfo[],
-): Map<string, string[]> {
-  const changes = new Map<string, string[]>();
+): Map<string, ReleaseSignificantChange> {
+  const changes = new Map<string, ReleaseSignificantChange>();
 
   for (const file of changedFiles) {
     const pkg = getOwningPackage(file, packages);
@@ -273,12 +339,118 @@ function getReleaseSignificantChanges(
       continue;
     }
 
-    const packageFiles = changes.get(pkg.name) ?? [];
-    packageFiles.push(file);
-    changes.set(pkg.name, packageFiles);
+    addReleaseSignificantChange(changes, pkg.name, file, "package files");
   }
 
   return changes;
+}
+
+function addReleaseSignificantChange(
+  changes: Map<string, ReleaseSignificantChange>,
+  packageName: string,
+  file: string,
+  surface: string,
+): void {
+  const packageFiles = changes.get(packageName) ?? {
+    files: [],
+    surface,
+  };
+  packageFiles.files.push(file);
+  changes.set(packageName, packageFiles);
+}
+
+function readPublicApiSnapshotPackages(
+  options: CheckOptions,
+  ref: string,
+): PublicApiSnapshotPackage[] | null {
+  let content: string;
+  try {
+    content = runGit(options.rootDir, ["show", `${ref}:${publicApiSnapshotPath}`]);
+  } catch {
+    return null;
+  }
+
+  const parsed = JSON.parse(content) as unknown;
+  if (typeof parsed !== "object" || parsed === null || !("packages" in parsed)) {
+    throw new Error(`${publicApiSnapshotPath} must contain a packages array`);
+  }
+
+  const packagesValue = (parsed as { readonly packages?: unknown }).packages;
+  if (!Array.isArray(packagesValue)) {
+    throw new Error(`${publicApiSnapshotPath} must contain a packages array`);
+  }
+
+  return packagesValue
+    .map((pkg) => {
+      if (typeof pkg !== "object" || pkg === null || !("packageName" in pkg)) {
+        throw new Error(`${publicApiSnapshotPath} contains an invalid package entry`);
+      }
+
+      const packageName = (pkg as { readonly packageName?: unknown }).packageName;
+      if (typeof packageName !== "string" || packageName.length === 0) {
+        throw new Error(`${publicApiSnapshotPath} contains an invalid package name`);
+      }
+
+      return {
+        packageName,
+        contentKey: JSON.stringify(pkg),
+      };
+    })
+    .sort((left, right) => left.packageName.localeCompare(right.packageName));
+}
+
+function getPublicApiSnapshotChanges(
+  options: CheckOptions,
+  changedFiles: readonly string[],
+): string[] {
+  if (!changedFiles.includes(publicApiSnapshotPath)) {
+    return [];
+  }
+
+  try {
+    const previousPackages = readPublicApiSnapshotPackages(options, options.baseRef);
+    const currentPackages = readPublicApiSnapshotPackages(options, options.headRef);
+
+    if (!previousPackages || !currentPackages) {
+      return ["public API snapshot"];
+    }
+
+    const previousByPackage = new Map(
+      previousPackages.map((pkg) => [pkg.packageName, pkg.contentKey] as const),
+    );
+    const currentByPackage = new Map(
+      currentPackages.map((pkg) => [pkg.packageName, pkg.contentKey] as const),
+    );
+    const packageNames = [...new Set([...previousByPackage.keys(), ...currentByPackage.keys()])];
+    const changedPackages = packageNames.filter(
+      (packageName) => previousByPackage.get(packageName) !== currentByPackage.get(packageName),
+    );
+
+    return changedPackages.length > 0 ? changedPackages.sort() : ["public API snapshot"];
+  } catch {
+    return ["public API snapshot"];
+  }
+}
+
+function addPublicApiSnapshotChanges(
+  changes: Map<string, ReleaseSignificantChange>,
+  options: CheckOptions,
+  changedFiles: readonly string[],
+): void {
+  for (const packageName of getPublicApiSnapshotChanges(options, changedFiles)) {
+    addReleaseSignificantChange(changes, packageName, publicApiSnapshotPath, "public API snapshot");
+  }
+}
+
+function isSnapshotOnlyReleaseChange(
+  significantChanges: ReadonlyMap<string, ReleaseSignificantChange>,
+): boolean {
+  return (
+    significantChanges.size > 0 &&
+    [...significantChanges.values()].every((change) =>
+      change.files.every((file) => file === publicApiSnapshotPath),
+    )
+  );
 }
 
 function main(): void {
@@ -287,6 +459,7 @@ function main(): void {
     const changedFiles = getChangedFiles(options);
     const packages = readPackages(options.rootDir);
     const significantChanges = getReleaseSignificantChanges(changedFiles, packages);
+    addPublicApiSnapshotChanges(significantChanges, options, changedFiles);
 
     if (significantChanges.size === 0) {
       log("changeset-required: no publishable package behavior changes detected (passing)");
@@ -298,14 +471,26 @@ function main(): void {
       exit(0);
     }
 
+    const noReleaseJustification = getNoReleaseJustification(options.rootDir);
+    if (isSnapshotOnlyReleaseChange(significantChanges) && noReleaseJustification) {
+      log(
+        "changeset-required: public API snapshot change has checked no-release justification (passing)",
+      );
+      log(`No-release source: ${noReleaseJustification.source}`);
+      log(`No-release reason: ${noReleaseJustification.reason}`);
+      exit(0);
+    }
+
     log("changeset-required: publishable package changes require a non-README changeset.");
-    log("Add .changeset/<name>.md for release-significant package changes.");
+    log(
+      "Add .changeset/<name>.md for release-significant package changes, or add `Changeset-required no-release reason: <reason>` to the PR body for snapshot-only corrections.",
+    );
     log("");
     log("Release-significant changes:");
 
-    for (const [packageName, files] of significantChanges) {
-      log(`- ${packageName}`);
-      for (const file of files) {
+    for (const [packageName, change] of significantChanges) {
+      log(`- ${packageName} (${change.surface})`);
+      for (const file of change.files) {
         log(`  - ${file}`);
       }
     }
