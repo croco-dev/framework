@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyBenchmarkEnvironmentDefaults,
   collectBenchmarkEntries,
   evaluateBaselineUpdateReadiness,
   evaluateBenchmarkGate,
@@ -121,6 +122,18 @@ describe("bench-threshold-check.mts", () => {
   it("reads existing numeric p75 threshold entries", () => {
     expect(getBenchmarkP75(10, "threshold fixture")).toBe(10);
     expect(getBenchmarkP75({ p75: 5 }, "threshold fixture")).toBe(5);
+  });
+
+  it("defaults telemetry off for deterministic benchmark runs without overriding explicit opt-in", () => {
+    const defaultEnv: Record<string, string | undefined> = {};
+    applyBenchmarkEnvironmentDefaults(defaultEnv);
+
+    expect(defaultEnv.TELEMETRY_ENABLED).toBe("false");
+
+    const explicitEnv: Record<string, string | undefined> = { TELEMETRY_ENABLED: "true" };
+    applyBenchmarkEnvironmentDefaults(explicitEnv);
+
+    expect(explicitEnv.TELEMETRY_ENABLED).toBe("true");
   });
 });
 

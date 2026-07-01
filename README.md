@@ -177,7 +177,7 @@ Croco는 Lambda 콜드스타트 및 실행 성능을 지속적으로 측정하�
 
 - 측정 방법론 및 시나리오 설명
 - 최신 기준선(baseline) 및 임계값(threshold) 데이터
-- CI 상에서 warning-only 모드로 동작 (현재 enforce 아님)
+- 전용 benchmark workflow에서 최신 5회 green evidence 기반 blocking gate로 동작
 
 자세한 내용은 [benchmark-gate-transition.md](benchmarks/benchmark-gate-transition.md)를 참조하세요.
 

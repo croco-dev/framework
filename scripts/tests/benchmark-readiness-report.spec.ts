@@ -82,7 +82,22 @@ describe("benchmark-readiness-report.mts", () => {
       {
         varianceEvidence: {
           path: "ci-reports/benchmark/latest-five-green-runs.md",
-          content: "latest five green runs reviewed; max spread 7%",
+          content: validVarianceEvidenceContent([
+            {
+              name: "Passing benchmark",
+              min: 0.96,
+              median: 1,
+              max: 1.04,
+              spread: 0.08,
+              p75ByRun: {
+                "1": 0.96,
+                "2": 0.99,
+                "3": 1,
+                "4": 1.02,
+                "5": 1.04,
+              },
+            },
+          ]),
         },
       },
     );
@@ -91,6 +106,128 @@ describe("benchmark-readiness-report.mts", () => {
     expect(evaluation.blockingReasons).toEqual([]);
     expect(evaluation.allRowsHaveThresholdEntries).toBe(true);
     expect(evaluation.allRowsHaveBaselineEntries).toBe(true);
+    expect(evaluation.varianceEvidenceValid).toBe(true);
+  });
+
+  it("rejects arbitrary non-empty variance evidence prose", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: "latest five green runs reviewed; max spread 7%",
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceProvided).toBe(true);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: structured evidence marker <!-- croco-benchmark-variance-evidence:v1 --> was not found.",
+    );
+  });
+
+  it("rejects variance evidence with row spread above the documented tolerance", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent([
+          {
+            name: "Passing benchmark",
+            min: 1,
+            median: 1,
+            max: 1.2,
+            spread: 0.2,
+            p75ByRun: {
+              "1": 1,
+              "2": 1,
+              "3": 1,
+              "4": 1.1,
+              "5": 1.2,
+            },
+          },
+        ]),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: Passing benchmark: spread 20.00% exceeds 15% tolerance.",
+    );
+  });
+
+  it("accepts warning-only artifacts that only failed stale pre-promotion baselines", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent(
+          [
+            {
+              name: "Passing benchmark",
+              min: 0.96,
+              median: 1,
+              max: 1.04,
+              spread: 0.08,
+              p75ByRun: {
+                "1": 0.96,
+                "2": 0.99,
+                "3": 1,
+                "4": 1.02,
+                "5": 1.04,
+              },
+            },
+          ],
+          {
+            artifactGateFailuresByRun: {
+              "1": ["Passing benchmark: p75 1.0ms exceeds baseline 0.5ms by more than 20%"],
+              "2": ["Passing benchmark: p75 1.0ms exceeds baseline 0.5ms by more than 20%"],
+              "3": ["Passing benchmark: p75 1.0ms exceeds baseline 0.5ms by more than 20%"],
+              "4": ["Passing benchmark: p75 1.0ms exceeds baseline 0.5ms by more than 20%"],
+              "5": ["Passing benchmark: p75 1.0ms exceeds baseline 0.5ms by more than 20%"],
+            },
+          },
+        ),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(true);
+    expect(evaluation.varianceEvidenceValid).toBe(true);
+  });
+
+  it("rejects warning-only artifacts with threshold failures", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent(
+          [
+            {
+              name: "Passing benchmark",
+              min: 0.96,
+              median: 1,
+              max: 1.04,
+              spread: 0.08,
+              p75ByRun: {
+                "1": 0.96,
+                "2": 0.99,
+                "3": 1,
+                "4": 1.02,
+                "5": 1.04,
+              },
+            },
+          ],
+          {
+            artifactGateFailuresByRun: {
+              "1": ["Passing benchmark: p75 3.0ms exceeds threshold 2.0ms"],
+            },
+          },
+        ),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: checks.thresholdFailures must be 0.",
+    );
   });
 
   it("renders an audit-only report with explicit reasons and the variance evidence input path", () => {
@@ -167,5 +304,142 @@ function withTempDir(run: (directory: string) => void): void {
     run(directory);
   } finally {
     rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+function greenResult() {
+  return {
+    allPassed: true,
+    gateFailures: [],
+    reports: [
+      {
+        name: "Passing benchmark",
+        p75: 1,
+        threshold: 2,
+        baseline: 1,
+        thresholdStatus: "pass" as const,
+        baselineStatus: "pass" as const,
+      },
+    ],
+  };
+}
+
+function validVarianceEvidenceContent(
+  rows: Array<{
+    name: string;
+    min: number;
+    median: number;
+    max: number;
+    spread: number;
+    p75ByRun: Record<string, number>;
+  }>,
+  options: {
+    artifactGateFailuresByRun?: Record<string, string[]>;
+  } = {},
+): string {
+  const runIds = ["1", "2", "3", "4", "5"];
+  const artifactGateFailuresByRun = options.artifactGateFailuresByRun ?? {};
+  const prePromotionBaselineFailures = Object.values(artifactGateFailuresByRun)
+    .flat()
+    .filter((failure) => failure.includes("exceeds baseline")).length;
+  const thresholdFailures = Object.values(artifactGateFailuresByRun)
+    .flat()
+    .filter((failure) => failure.includes("exceeds threshold")).length;
+
+  return [
+    "# Latest Five Green Benchmark Variance Evidence",
+    "",
+    "<!-- croco-benchmark-variance-evidence:v1 -->",
+    "```json",
+    JSON.stringify(
+      {
+        version: 1,
+        source: "github-actions",
+        reviewedAt: "2026-07-01T00:00:00Z",
+        tolerance: 0.15,
+        runs: [
+          {
+            id: 1,
+            url: "https://github.com/croco-dev/framework/actions/runs/1",
+            headSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            headBranch: "trunk",
+            createdAt: "2026-06-30T00:00:00Z",
+            workflowStatus: "completed",
+            workflowConclusion: "success",
+            artifact: artifactForRun("1", rows.length, artifactGateFailuresByRun),
+          },
+          {
+            id: 2,
+            url: "https://github.com/croco-dev/framework/actions/runs/2",
+            headSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            headBranch: "trunk",
+            createdAt: "2026-06-30T01:00:00Z",
+            workflowStatus: "completed",
+            workflowConclusion: "success",
+            artifact: artifactForRun("2", rows.length, artifactGateFailuresByRun),
+          },
+          {
+            id: 3,
+            url: "https://github.com/croco-dev/framework/actions/runs/3",
+            headSha: "cccccccccccccccccccccccccccccccccccccccc",
+            headBranch: "trunk",
+            createdAt: "2026-06-30T02:00:00Z",
+            workflowStatus: "completed",
+            workflowConclusion: "success",
+            artifact: artifactForRun("3", rows.length, artifactGateFailuresByRun),
+          },
+          {
+            id: 4,
+            url: "https://github.com/croco-dev/framework/actions/runs/4",
+            headSha: "dddddddddddddddddddddddddddddddddddddddd",
+            headBranch: "trunk",
+            createdAt: "2026-06-30T03:00:00Z",
+            workflowStatus: "completed",
+            workflowConclusion: "success",
+            artifact: artifactForRun("4", rows.length, artifactGateFailuresByRun),
+          },
+          {
+            id: 5,
+            url: "https://github.com/croco-dev/framework/actions/runs/5",
+            headSha: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            headBranch: "trunk",
+            createdAt: "2026-06-30T04:00:00Z",
+            workflowStatus: "completed",
+            workflowConclusion: "success",
+            artifact: artifactForRun("5", rows.length, artifactGateFailuresByRun),
+          },
+        ],
+        checks: {
+          sameRowSet: true,
+          runnerFailures: 0,
+          moduleFailures: 0,
+          emptyReports: 0,
+          missingReports: 0,
+          thresholdFailures,
+          thresholdSkips: 0,
+          baselineSkips: 0,
+          prePromotionBaselineFailures,
+          promotedBaselineFailures: 0,
+        },
+        rows: rows.map((row) => ({ ...row, status: "pass" })),
+      },
+      null,
+      2,
+    ),
+    "```",
+  ].join("\n");
+
+  function artifactForRun(
+    runId: string,
+    reportCount: number,
+    failuresByRun: Record<string, string[]>,
+  ) {
+    const gateFailures = failuresByRun[runId] ?? [];
+
+    return {
+      allPassed: gateFailures.length === 0,
+      reportCount,
+      gateFailures,
+    };
   }
 }

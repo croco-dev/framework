@@ -6,6 +6,7 @@ on:
     paths:
       - "packages/*/src/**"
       - "benchmarks/**"
+      - "ci-reports/benchmark/**"
       - "scripts/bench-threshold-check.mts"
       - "scripts/benchmark-readiness-report.mts"
       - "scripts/post-benchmark-comment.mjs"
@@ -19,7 +20,7 @@ on:
   workflow_dispatch:
 
 env:
-  BENCHMARK_GATE_MODE: warning-only
+  BENCHMARK_GATE_MODE: enforce
 
 jobs:
   benchmark:
@@ -44,22 +45,29 @@ jobs:
         env:
           CI: true
       - name: Publish benchmark enforce-readiness report
+        id: readiness
         if: always()
+        continue-on-error: true
         shell: bash
         env:
           BENCHMARK_STEP_OUTCOME: ${{ steps.bench.outcome }}
           BENCHMARK_STEP_CONCLUSION: ${{ steps.bench.conclusion }}
         run: |
+          set +e
           pnpm bench:readiness --input=benchmark-result.json --output=ci-reports/benchmark/summary.md --variance-evidence=ci-reports/benchmark/latest-five-green-runs.md
+          readiness_exit=$?
+          set -e
           cat ci-reports/benchmark/summary.md >> "$GITHUB_STEP_SUMMARY"
-      - name: Upload benchmark warning report
+          exit "$readiness_exit"
+      - name: Upload benchmark readiness report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-warning-report
+          name: benchmark-readiness-report
           path: |
             benchmark-result.json
             ci-reports/benchmark/summary.md
+            ci-reports/benchmark/latest-five-green-runs.md
           if-no-files-found: warn
       - name: Comment PR with benchmark results
         uses: actions/github-script@v7
@@ -69,6 +77,6 @@ jobs:
           script: |
             const { run } = await import('${{ github.workspace }}/scripts/post-benchmark-comment.mjs');
             await run({ github, context });
-      - name: Fail if benchmarks failed in enforce mode
-        if: env.BENCHMARK_GATE_MODE == 'enforce' && steps.bench.outcome == 'failure'
+      - name: Fail if benchmark enforcement failed
+        if: env.BENCHMARK_GATE_MODE == 'enforce' && (steps.bench.outcome == 'failure' || steps.readiness.outcome == 'failure')
         run: exit 1

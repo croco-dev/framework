@@ -68,6 +68,7 @@ const BASELINE_TOLERANCE = 0.2;
 const CI_THRESHOLD_MULTIPLIER = 2;
 const LOCAL_THRESHOLD_MULTIPLIER = 1;
 const BOX_WIDTH = 62;
+const DEFAULT_BENCHMARK_TELEMETRY_ENABLED = "false";
 
 export const BENCHMARK_EMPTY_REPORT_FAILURE = "No benchmark reports were collected.";
 export const BENCHMARK_MISSING_REPORT_SUFFIX = ": benchmark report was not collected.";
@@ -77,6 +78,12 @@ export const BENCHMARK_MODULE_FAILED_PREFIX = "benchmark module failed:";
 const EXPLICIT_THRESHOLD_SKIPS: Record<string, string> = {};
 
 const EXPLICIT_BASELINE_SKIPS: Record<string, string> = {};
+
+export function applyBenchmarkEnvironmentDefaults(
+  env: Record<string, string | undefined> = process.env,
+): void {
+  env.TELEMETRY_ENABLED ??= DEFAULT_BENCHMARK_TELEMETRY_ENABLED;
+}
 
 function getThresholdSkipReason(name: string): string {
   const explicitReason = EXPLICIT_THRESHOLD_SKIPS[name];
@@ -341,6 +348,8 @@ export function collectBenchmarkEntries(
 }
 
 async function main() {
+  applyBenchmarkEnvironmentDefaults();
+
   const thresholds = loadThresholds();
   const baseline = loadBaseline();
   const expectedBenchmarkNames = getConfiguredBenchmarkNames(thresholds, baseline);
