@@ -40,8 +40,26 @@ type CommandResult = {
   readonly stdout: string;
 };
 
+type PackageCatalog = {
+  readonly spine?: unknown;
+};
+
+export type AlphaReleaseImportExclusion = {
+  readonly checkedBy: string;
+  readonly packageName: string;
+  readonly reason: string;
+};
+
+export type AlphaReleaseSpineCoverage = {
+  readonly cleanInstallImportExclusions: readonly AlphaReleaseImportExclusion[];
+  readonly cleanInstallImports: readonly string[];
+  readonly spineRoots: readonly string[];
+};
+
 type SmokeReport = {
+  readonly cleanInstallImportExclusions: readonly AlphaReleaseImportExclusion[];
   readonly cleanInstallDirectory?: string;
+  readonly cleanInstallImports: readonly string[];
   readonly error?: string;
   readonly generatedAppDirectory?: string;
   readonly packedPackageCount: number;
@@ -55,24 +73,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const defaultRootDir = resolve(__dirname, "..");
 const commandTimeoutMs = 900_000;
+const packageCatalogPath = join("docs", "package-catalog.json");
 const skippedPackageJsonDirectories = new Set([".turbo", "coverage", "dist", "node_modules"]);
 
 export const alphaReleaseEvidenceReportPath = "ci-reports/release/alpha-release-smoke.md";
-
-export const alphaReleaseSpineRoots = [
-  "create-croco-app",
-  "@croco/cli",
-  "@croco/events-core",
-  "@croco/events-inmemory",
-  "@croco/framework-context",
-  "@croco/problems-core",
-  "@croco/protocols-rest",
-  "@croco/repository-core",
-  "@croco/retry-core",
-  "@croco/telemetry-api",
-  "@croco/telemetry-sdk-node",
-  "@croco/transports-http",
-] as const;
 
 export const alphaReleaseGeneratedAppSmoke = {
   args: ["--preset", "production-app", "--scope", "@alpha", "--no-install", "--no-git"],
@@ -88,17 +92,31 @@ export const alphaReleaseGeneratedAppValidations = [
   "dev:smoke",
 ] as const;
 
-export const alphaReleaseCleanInstallImportPackages = [
-  "@croco/diagnostics-core",
-  "@croco/events-core",
-  "@croco/framework-context",
-  "@croco/problems-core",
-  "@croco/protocols-core",
-  "@croco/protocols-rest",
-  "@croco/repository-core",
-  "@croco/retry-core",
-  "@croco/telemetry-api",
+export const alphaReleaseBinarySmokeCommands = [
+  "pnpm exec create-croco-app --version",
+  "pnpm exec create-croco-app <project> --preset production-app --scope @alpha --no-install --no-git",
+  "pnpm exec croco --help",
 ] as const;
+
+export const alphaReleaseCleanInstallImportExclusions = [
+  {
+    checkedBy:
+      "pnpm exec create-croco-app <project> --preset production-app --scope @alpha --no-install --no-git",
+    packageName: "create-croco-app",
+    reason: "CLI scaffold package is exercised through the packed generated-app smoke command.",
+  },
+  {
+    checkedBy: "pnpm exec croco --help",
+    packageName: "@croco/cli",
+    reason: "CLI package is exercised through the packed croco binary smoke command.",
+  },
+] as const satisfies readonly AlphaReleaseImportExclusion[];
+
+export const alphaReleaseSpineRoots = readCatalogSpinePackageNames(defaultRootDir);
+export const alphaReleaseCleanInstallImportPackages = deriveAlphaReleaseCleanInstallImportPackages(
+  alphaReleaseSpineRoots,
+  alphaReleaseCleanInstallImportExclusions,
+);
 
 function main(): void {
   const rootDir = parseArgs(process.argv.slice(2));
@@ -106,6 +124,8 @@ function main(): void {
   const packRoot = join(smokeRoot, "packs");
   const packedPackages = new Map<string, string>();
   let report: SmokeReport = {
+    cleanInstallImportExclusions: alphaReleaseCleanInstallImportExclusions,
+    cleanInstallImports: alphaReleaseCleanInstallImportPackages,
     packedPackageCount: 0,
     smokeCase: alphaReleaseGeneratedAppSmoke,
     spineRoots: alphaReleaseSpineRoots,
@@ -114,14 +134,24 @@ function main(): void {
   };
 
   try {
+    const spineCoverage = resolveAlphaReleaseSpineCoverage(rootDir);
+    assertAlphaReleaseSpineCoverage(spineCoverage);
+    report = {
+      ...report,
+      cleanInstallImportExclusions: spineCoverage.cleanInstallImportExclusions,
+      cleanInstallImports: spineCoverage.cleanInstallImports,
+      spineRoots: spineCoverage.spineRoots,
+    };
+
     const packageIndex = createReleasePackageIndex(rootDir);
-    const spinePackages = resolvePackageClosure(alphaReleaseSpineRoots, packageIndex);
+    const spinePackages = resolvePackageClosure(spineCoverage.spineRoots, packageIndex);
     buildPackages(spinePackages, rootDir);
     const spineOverrides = packPackages(spinePackages, packRoot, rootDir, packedPackages);
     const cleanInstallDirectory = runCleanSpineInstall(
       join(smokeRoot, "spine-consumer"),
       spinePackages,
       spineOverrides,
+      spineCoverage.cleanInstallImports,
       rootDir,
     );
     const generatedAppDirectory = runPackedCreateCrocoAppSmoke(
@@ -133,11 +163,13 @@ function main(): void {
     );
 
     report = {
+      cleanInstallImportExclusions: spineCoverage.cleanInstallImportExclusions,
       cleanInstallDirectory,
+      cleanInstallImports: spineCoverage.cleanInstallImports,
       generatedAppDirectory,
       packedPackageCount: packedPackages.size,
       smokeCase: alphaReleaseGeneratedAppSmoke,
-      spineRoots: alphaReleaseSpineRoots,
+      spineRoots: spineCoverage.spineRoots,
       status: "PASS",
       validations: alphaReleaseGeneratedAppValidations,
     };
@@ -178,6 +210,158 @@ function parseArgs(args: readonly string[]): string {
   }
 
   return rootDir;
+}
+
+export function readCatalogSpinePackageNames(rootDir = defaultRootDir): readonly string[] {
+  const catalogFile = join(rootDir, packageCatalogPath);
+  const catalog = JSON.parse(readFileSync(catalogFile, "utf8")) as PackageCatalog;
+  const spine = isRecord(catalog.spine) ? catalog.spine : undefined;
+  const packages = spine?.packages;
+
+  if (!Array.isArray(packages)) {
+    throw new Error(`${catalogFile}: spine.packages must be an array`);
+  }
+
+  return packages.map((packageName, index) => {
+    if (typeof packageName !== "string" || packageName.length === 0) {
+      throw new Error(`${catalogFile}: spine.packages[${index}] must be a non-empty string`);
+    }
+
+    return normalizeCatalogSpinePackageName(packageName);
+  });
+}
+
+export function normalizeCatalogSpinePackageName(packageName: string): string {
+  if (packageName === "create-croco-app" || packageName.startsWith("@")) {
+    return packageName;
+  }
+
+  return `@croco/${packageName}`;
+}
+
+export function deriveAlphaReleaseCleanInstallImportPackages(
+  spinePackageNames: readonly string[],
+  importExclusions: readonly AlphaReleaseImportExclusion[],
+): readonly string[] {
+  const excludedPackageNames = new Set(importExclusions.map(({ packageName }) => packageName));
+
+  return spinePackageNames.filter(
+    (packageName) => packageName.startsWith("@croco/") && !excludedPackageNames.has(packageName),
+  );
+}
+
+export function resolveAlphaReleaseSpineCoverage(
+  rootDir = defaultRootDir,
+): AlphaReleaseSpineCoverage {
+  const spineRoots = readCatalogSpinePackageNames(rootDir);
+
+  return {
+    cleanInstallImportExclusions: alphaReleaseCleanInstallImportExclusions,
+    cleanInstallImports: deriveAlphaReleaseCleanInstallImportPackages(
+      spineRoots,
+      alphaReleaseCleanInstallImportExclusions,
+    ),
+    spineRoots,
+  };
+}
+
+export function validateAlphaReleaseSpineCoverage(
+  coverage: AlphaReleaseSpineCoverage,
+  binarySmokeCommands: readonly string[] = alphaReleaseBinarySmokeCommands,
+): readonly string[] {
+  const violations: string[] = [];
+  const spineSet = new Set(coverage.spineRoots);
+  const importSet = new Set(coverage.cleanInstallImports);
+  const exclusionPackageNames = coverage.cleanInstallImportExclusions.map(
+    ({ packageName }) => packageName,
+  );
+  const exclusionSet = new Set(exclusionPackageNames);
+  const binarySmokeCommandSet = new Set(binarySmokeCommands);
+
+  for (const packageName of duplicateValues(coverage.spineRoots)) {
+    violations.push(`${packageName}: duplicate cataloged spine package`);
+  }
+
+  for (const packageName of duplicateValues(coverage.cleanInstallImports)) {
+    violations.push(`${packageName}: duplicate clean-install import smoke entry`);
+  }
+
+  for (const packageName of duplicateValues(exclusionPackageNames)) {
+    violations.push(`${packageName}: duplicate clean-install import exclusion`);
+  }
+
+  for (const packageName of coverage.cleanInstallImports) {
+    if (!spineSet.has(packageName)) {
+      violations.push(
+        `${packageName}: clean-install import smoke entry is not a cataloged spine package`,
+      );
+    }
+  }
+
+  for (const exclusion of coverage.cleanInstallImportExclusions) {
+    if (!spineSet.has(exclusion.packageName)) {
+      violations.push(
+        `${exclusion.packageName}: clean-install import exclusion is not a cataloged spine package`,
+      );
+    }
+    if (exclusion.reason.trim().length === 0) {
+      violations.push(
+        `${exclusion.packageName}: clean-install import exclusion must include a reason`,
+      );
+    }
+    if (exclusion.checkedBy.trim().length === 0) {
+      violations.push(
+        `${exclusion.packageName}: clean-install import exclusion must include checkedBy`,
+      );
+    } else if (!binarySmokeCommandSet.has(exclusion.checkedBy)) {
+      violations.push(
+        `${exclusion.packageName}: clean-install import exclusion checkedBy is not an alpha-release binary smoke command`,
+      );
+    }
+  }
+
+  for (const packageName of coverage.spineRoots) {
+    const isImported = importSet.has(packageName);
+    const isExcluded = exclusionSet.has(packageName);
+
+    if (isImported && isExcluded) {
+      violations.push(`${packageName}: cataloged spine package is both import-smoked and excluded`);
+    }
+    if (!isImported && !isExcluded) {
+      violations.push(
+        `${packageName}: cataloged spine package is neither import-smoked nor covered by a checked exclusion`,
+      );
+    }
+  }
+
+  return violations;
+}
+
+function assertAlphaReleaseSpineCoverage(coverage: AlphaReleaseSpineCoverage): void {
+  const violations = validateAlphaReleaseSpineCoverage(coverage);
+
+  if (violations.length > 0) {
+    throw new Error(
+      [
+        "Alpha release spine coverage is invalid:",
+        ...violations.map((violation) => `- ${violation}`),
+      ].join("\n"),
+    );
+  }
+}
+
+function duplicateValues(values: readonly string[]): readonly string[] {
+  const seen = new Set<string>();
+  const duplicates = new Set<string>();
+
+  for (const value of values) {
+    if (seen.has(value)) {
+      duplicates.add(value);
+    }
+    seen.add(value);
+  }
+
+  return [...duplicates].sort();
 }
 
 function createReleasePackageIndex(rootDir: string): ReadonlyMap<string, ReleasePackage> {
@@ -368,6 +552,7 @@ function runCleanSpineInstall(
   consumerDir: string,
   spinePackages: readonly ReleasePackage[],
   spineOverrides: Record<string, string>,
+  cleanInstallImportPackages: readonly string[],
   rootDir: string,
 ): string {
   mkdirSync(consumerDir, { recursive: true });
@@ -394,11 +579,7 @@ function runCleanSpineInstall(
 
   run(
     "node",
-    [
-      "--input-type=module",
-      "--eval",
-      alphaSpineImportSmoke(alphaReleaseCleanInstallImportPackages),
-    ],
+    ["--input-type=module", "--eval", alphaSpineImportSmoke(cleanInstallImportPackages)],
     consumerDir,
   );
   run("pnpm", ["exec", "create-croco-app", "--version"], consumerDir);
@@ -633,11 +814,22 @@ function runCommand(
 }
 
 export function formatAlphaReleaseSmokeReport(report: SmokeReport): string {
+  const cleanInstallImportExclusions =
+    report.cleanInstallImportExclusions.length > 0
+      ? report.cleanInstallImportExclusions
+          .map(
+            (exclusion) =>
+              `\`${exclusion.packageName}\` checked by \`${exclusion.checkedBy}\`: ${exclusion.reason}`,
+          )
+          .join("; ")
+      : "none";
   const lines = [
     "# Alpha release smoke",
     "",
     `- Status: ${report.status}`,
     `- Spine roots: ${report.spineRoots.map((packageName) => `\`${packageName}\``).join(", ")}`,
+    `- Clean install imports: ${report.cleanInstallImports.map((packageName) => `\`${packageName}\``).join(", ")}`,
+    `- Clean install import exclusions: ${cleanInstallImportExclusions}`,
     `- Packed package tarballs: ${report.packedPackageCount}`,
     `- Generated app preset: \`${report.smokeCase.preset}\``,
     `- Generated app validations: ${report.validations.map((validation) => `\`pnpm ${validation}\``).join(", ")}`,
