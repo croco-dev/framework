@@ -422,10 +422,18 @@ function writeConsumerPackageJson(
       {
         name: "croco-package-bin-smoke-consumer",
         private: true,
-        pnpm: {
-          overrides,
-        },
         type: "module",
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(consumerRoot, "pnpm-workspace.yaml"),
+    `${JSON.stringify(
+      {
+        packages: [],
+        overrides,
       },
       null,
       2,

@@ -98,21 +98,43 @@ describe("published RPC codegen CLI", () => {
 });
 
 function ensureBuilt(): void {
-  if (
-    existsSync(join(rootDir, "packages", "problems-core", "dist", "index.js")) &&
-    existsSync(join(rootDir, "packages", "protocols-core", "dist", "index.js")) &&
-    existsSync(join(rootDir, "packages", "framework-preset", "dist", "index.js")) &&
-    existsSync(join(rootDir, "packages", "presentation-preset", "dist", "index.js")) &&
-    existsSync(join(packageDir, "dist", "cli.js"))
-  ) {
-    return;
-  }
+  const packages = [
+    {
+      buildArgs: ["--filter", "@croco/problems-core", "build"],
+      files: ["index.js", "index.d.ts"],
+      root: join(rootDir, "packages", "problems-core"),
+    },
+    {
+      buildArgs: ["--filter", "@croco/protocols-core", "build"],
+      files: ["index.js", "index.d.ts"],
+      root: join(rootDir, "packages", "protocols-core"),
+    },
+    {
+      buildArgs: ["--filter", "@croco/framework-preset", "build"],
+      files: ["index.js", "index.d.ts"],
+      root: join(rootDir, "packages", "framework-preset"),
+    },
+    {
+      buildArgs: ["--filter", "@croco/presentation-preset", "build"],
+      files: ["index.js", "index.d.ts"],
+      root: join(rootDir, "packages", "presentation-preset"),
+    },
+    {
+      buildArgs: ["--filter", "@croco/rpc-codegen", "build"],
+      files: ["cli.js", "cli.d.ts", "index.js", "index.d.ts"],
+      root: packageDir,
+    },
+  ];
 
-  run("pnpm", ["--filter", "@croco/problems-core", "build"], rootDir);
-  run("pnpm", ["--filter", "@croco/protocols-core", "build"], rootDir);
-  run("pnpm", ["--filter", "@croco/framework-preset", "build"], rootDir);
-  run("pnpm", ["--filter", "@croco/presentation-preset", "build"], rootDir);
-  run("pnpm", ["--filter", "@croco/rpc-codegen", "build"], rootDir);
+  for (const packageBuild of packages) {
+    if (!hasBuiltFiles(packageBuild.root, packageBuild.files)) {
+      run("pnpm", packageBuild.buildArgs, rootDir);
+    }
+  }
+}
+
+function hasBuiltFiles(packageRoot: string, files: readonly string[]): boolean {
+  return files.every((file) => existsSync(join(packageRoot, "dist", file)));
 }
 
 function findTarball(directory: string, prefix: string): string {
