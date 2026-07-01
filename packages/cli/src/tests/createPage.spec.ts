@@ -1,13 +1,10 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Project, ts } from "ts-morph";
 import { describe, expect, it } from "vitest";
 import { runCreatePage } from "../commands/createPage.js";
 
-const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(TEST_DIR, "../../../..");
 const COMPILER_CONTRACT_TEST_TIMEOUT_MS = 30_000;
 const DEPENDENCY_FIELDS = [
   "dependencies",
@@ -123,9 +120,9 @@ describe("runCreatePage", () => {
   });
 
   it("should keep SSR generated imports declared by scaffold manifests", async () => {
-    for (const template of ["ssr-lambda", "container-fullstack"]) {
+    for (const dependencyField of ["dependencies", "devDependencies"] as const) {
       const cwd = await createWorkspace({
-        consoleWebManifest: await readConsoleWebTemplateManifest(template),
+        consoleWebManifest: consoleWebManifest(["@croco/meta-vite"], dependencyField),
       });
 
       const result = await runCreatePage("Dashboard", { cwd, mode: "ssr" });
@@ -136,7 +133,7 @@ describe("runCreatePage", () => {
 
   it("should keep SPA generated imports declared by scaffold manifests", async () => {
     const cwd = await createWorkspace({
-      consoleWebManifest: await readConsoleWebTemplateManifest("spa-be-split"),
+      consoleWebManifest: consoleWebManifest(["@croco/frontend-vite"], "devDependencies"),
     });
 
     const result = await runCreatePage("SettingsPanel", { cwd, mode: "spa" });
@@ -157,7 +154,7 @@ describe("runCreatePage", () => {
 
   it("should reject SSR pages in SPA scaffolds before writing files", async () => {
     const cwd = await createWorkspace({
-      consoleWebManifest: await readConsoleWebTemplateManifest("spa-be-split"),
+      consoleWebManifest: consoleWebManifest(["@croco/frontend-vite"], "devDependencies"),
     });
 
     await expect(runCreatePage("Dashboard", { cwd })).rejects.toThrow(
@@ -170,7 +167,7 @@ describe("runCreatePage", () => {
 
   it("should reject SPA pages in SSR scaffolds before writing files", async () => {
     const cwd = await createWorkspace({
-      consoleWebManifest: await readConsoleWebTemplateManifest("ssr-lambda"),
+      consoleWebManifest: consoleWebManifest(["@croco/meta-vite"], "devDependencies"),
     });
 
     await expect(runCreatePage("SettingsPanel", { cwd, mode: "spa" })).rejects.toThrow(
@@ -203,32 +200,19 @@ async function createWorkspace(options: { consoleWebManifest?: string } = {}): P
   return cwd;
 }
 
-function consoleWebManifest(packageNames: readonly string[]): string {
+function consoleWebManifest(
+  packageNames: readonly string[],
+  dependencyField: DependencyField = "dependencies",
+): string {
   return JSON.stringify(
     {
-      dependencies: Object.fromEntries(
+      [dependencyField]: Object.fromEntries(
         packageNames.map((packageName) => [packageName, "workspace:*"]),
       ),
     },
     null,
     2,
   );
-}
-
-async function readConsoleWebTemplateManifest(template: string): Promise<string> {
-  const manifestPath = path.join(
-    REPO_ROOT,
-    "packages",
-    "create-croco-app",
-    "templates",
-    template,
-    "apps",
-    "console-web",
-    "package.json.hbs",
-  );
-  const content = await fs.readFile(manifestPath, "utf-8");
-
-  return content.split("{{scope}}").join("@test").split("{{projectName}}").join("test-app");
 }
 
 async function expectMissingGeneratedDependencies(
