@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -79,8 +79,19 @@ describe("published migrate CLI", () => {
 });
 
 function ensureBuilt(): void {
-  run("pnpm", ["--filter", "@croco/problems-core", "build"], rootDir);
-  run("pnpm", ["--filter", "@croco/migration-runner", "build"], rootDir);
+  const problemsCoreDir = join(rootDir, "packages", "problems-core");
+
+  if (!hasBuiltFiles(problemsCoreDir, ["index.js", "index.d.ts"])) {
+    run("pnpm", ["--filter", "@croco/problems-core", "build"], rootDir);
+  }
+
+  if (!hasBuiltFiles(packageDir, ["cli.js", "cli.d.ts", "index.js", "index.d.ts"])) {
+    run("pnpm", ["--filter", "@croco/migration-runner", "build"], rootDir);
+  }
+}
+
+function hasBuiltFiles(packageRoot: string, files: readonly string[]): boolean {
+  return files.every((file) => existsSync(join(packageRoot, "dist", file)));
 }
 
 function findTarball(directory: string, prefix: string): string {

@@ -33,9 +33,12 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "should_publish=true" >> "$GITHUB_OUTPUT"
-            echo "should_verify_release_gate_maintenance=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "should_run=true"
+              echo "should_update_release_pr=true"
+              echo "should_run_publish_gates=true"
+              echo "should_verify_release_gate_maintenance=false"
+            } >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -44,30 +47,42 @@ jobs:
             base="$(git rev-parse HEAD^)"
           fi
 
-          release_work_pattern='^\.changeset/(pre\.json|[^/]+\.md)$|^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$'
-          release_gate_maintenance_pattern='^\.github/workflows/release\.yml$|^scripts/(changeset-required-check\.mts|normalize-packages\.mjs|package-bin-smoke\.mts|package-entrypoint-smoke\.mts|package-manifest-contracts\.mjs|release-docs-check\.mts)$|^scripts/tests/(changeset-required-check|normalize-packages|package-bin-smoke|package-entrypoint-smoke|release-docs-check|release-workflow)\.spec\.ts$'
+          release_pr_update_pattern='^\.changeset/(pre\.json|[^/]+\.md)$'
+          release_pr_update_ignore_pattern='^\.changeset/README\.md$'
+          publish_candidate_pattern='^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$'
+          release_gate_maintenance_pattern='^\.github/workflows/release\.yml$|^scripts/(changeset-required-check\.mts|normalize-packages\.mjs|package-bin-smoke\.mts|package-entrypoint-smoke\.mts|package-manifest-contracts\.mjs|release-docs-check\.mts|release-metadata-check\.mts)$|^scripts/tests/(changeset-required-check|normalize-packages|package-bin-smoke|package-entrypoint-smoke|release-docs-check|release-metadata-check|release-workflow)\.spec\.ts$'
 
           changed_files="$(git diff --name-only "$base" HEAD)"
-          should_publish=false
+          should_update_release_pr=false
+          should_run_publish_gates=false
           should_verify_release_gate_maintenance=false
+          should_run=false
 
-          if echo "$changed_files" | grep -Eq "$release_work_pattern"; then
-            should_publish=true
+          release_pr_update_files="$(echo "$changed_files" | grep -Ev "$release_pr_update_ignore_pattern" || true)"
+          if echo "$release_pr_update_files" | grep -Eq "$release_pr_update_pattern"; then
+            should_update_release_pr=true
+          fi
+
+          if echo "$changed_files" | grep -Eq "$publish_candidate_pattern"; then
+            should_run_publish_gates=true
           fi
 
           if echo "$changed_files" | grep -Eq "$release_gate_maintenance_pattern"; then
             should_verify_release_gate_maintenance=true
           fi
 
-          echo "should_publish=${should_publish}" >> "$GITHUB_OUTPUT"
-          echo "should_verify_release_gate_maintenance=${should_verify_release_gate_maintenance}" >> "$GITHUB_OUTPUT"
-
-          if [ "$should_publish" = "true" ] || [ "$should_verify_release_gate_maintenance" = "true" ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          if [ "$should_update_release_pr" = "true" ] || [ "$should_run_publish_gates" = "true" ] || [ "$should_verify_release_gate_maintenance" = "true" ]; then
+            should_run=true
           else
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "No changeset, prerelease state, manifest, changelog, lockfile, or release-gate maintenance changes detected; skipping release pipeline."
+            echo "No changeset release-PR update, publish candidate, or release-gate maintenance changes detected; skipping release pipeline."
           fi
+
+          {
+            echo "should_update_release_pr=${should_update_release_pr}"
+            echo "should_run_publish_gates=${should_run_publish_gates}"
+            echo "should_verify_release_gate_maintenance=${should_verify_release_gate_maintenance}"
+            echo "should_run=${should_run}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
         if: steps.release_work.outputs.should_run == 'true'
@@ -89,9 +104,10 @@ jobs:
         if: steps.release_work.outputs.should_verify_release_gate_maintenance == 'true'
         run: |
           pnpm build
-          pnpm exec vitest run scripts/tests/release-workflow.spec.ts scripts/tests/package-entrypoint-smoke.spec.ts scripts/tests/package-bin-smoke.spec.ts scripts/tests/release-docs-check.spec.ts scripts/tests/changeset-required-check.spec.ts scripts/tests/normalize-packages.spec.ts --config vitest.config.ts
+          pnpm exec vitest run scripts/tests/release-workflow.spec.ts scripts/tests/package-entrypoint-smoke.spec.ts scripts/tests/package-bin-smoke.spec.ts scripts/tests/release-docs-check.spec.ts scripts/tests/release-metadata-check.spec.ts scripts/tests/changeset-required-check.spec.ts scripts/tests/normalize-packages.spec.ts --config vitest.config.ts
           pnpm package-manifests:check
           pnpm release-docs:check
+          node --experimental-strip-types scripts/release-metadata-check.mts --allow-pending-changesets
           pnpm package-entrypoints:smoke
           pnpm package-bins:smoke
 
@@ -101,35 +117,35 @@ jobs:
       # audit:prod intentionally ignores GHSA-gv7w-rqvm-qjhr: it covers the
       # esbuild Deno API install path, while Croco release builds use Node/pnpm.
       - name: Production dependency audit
-        if: steps.release_work.outputs.should_publish == 'true'
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
         run: pnpm audit:prod
 
       - name: Lint, format, and repository policy checks
-        if: steps.release_work.outputs.should_publish == 'true'
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
         run: pnpm check
 
       - name: Build all packages
-        if: steps.release_work.outputs.should_publish == 'true'
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
         run: pnpm build
 
       - name: Package entrypoint smoke
-        if: steps.release_work.outputs.should_publish == 'true'
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
         run: pnpm package-entrypoints:smoke
 
       - name: Package binary smoke
-        if: steps.release_work.outputs.should_publish == 'true'
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
         run: pnpm package-bins:smoke
 
       - name: TypeScript check
-        if: steps.release_work.outputs.should_publish == 'true'
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
         run: pnpm typecheck
 
       - name: Test
-        if: steps.release_work.outputs.should_publish == 'true'
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
         run: pnpm test
 
       - name: Verify npm provenance configuration
-        if: steps.release_work.outputs.should_publish == 'true'
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
         shell: bash
         run: |
           npm_provenance="$(npm config get provenance)"
@@ -141,12 +157,16 @@ jobs:
             exit 1
           fi
 
+      - name: Release metadata check
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
+        run: node --experimental-strip-types scripts/release-metadata-check.mts
+
       - name: Dry-run publish gate
-        if: steps.release_work.outputs.should_publish == 'true'
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
         run: pnpm -r publish --dry-run --no-git-checks
 
       - name: Create Release Pull Request or Publish
-        if: steps.release_work.outputs.should_publish == 'true'
+        if: steps.release_work.outputs.should_update_release_pr == 'true' || steps.release_work.outputs.should_run_publish_gates == 'true'
         uses: changesets/action@v1
         with:
           publish: pnpm exec changeset publish
