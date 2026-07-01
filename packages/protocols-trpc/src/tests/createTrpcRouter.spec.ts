@@ -1,9 +1,10 @@
 import "reflect-metadata";
+import { ProblemCategory } from "@croco/problems-core";
 import type { RouteIR } from "@croco/protocols-core";
 import type { AnyRouter } from "@trpc/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { createTrpcRouter } from "../libs/createTrpcRouter";
+import { TrpcRouteHandlerError, createTrpcRouter } from "../libs/createTrpcRouter";
 
 const REST_CONTROLLER_KEY = Symbol.for("croco:rest:controller");
 const REST_ROUTES_KEY = Symbol.for("croco:rest:routes");
@@ -143,6 +144,52 @@ describe("createTrpcRouter", () => {
     expect(router._def.record).toHaveProperty("user");
     expect(router._def.record).toHaveProperty("order");
   });
+
+  it("should expose a coded error when route metadata points at a non-callable handler", async () => {
+    class UserController {
+      readonly listUsers = "not callable";
+    }
+
+    mocked.extractRouteIR = () => [
+      {
+        controllerName: "UserController",
+        methodName: "listUsers",
+        httpMethod: "GET",
+        path: "/users",
+        routeContract: null,
+        params: [],
+        inputSchema: null,
+        inputSchemas: { body: null, path: null, query: null, headers: null },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const router = createTrpcRouter([UserController]);
+    const caller = createCaller(router);
+    const request = caller.user.listUsers();
+
+    await expect(request).rejects.toThrow();
+
+    const error = await captureRejectedValue(request);
+    const codedError =
+      error instanceof TrpcRouteHandlerError
+        ? error
+        : (error as { readonly cause?: unknown }).cause;
+
+    expect(codedError).toBeInstanceOf(TrpcRouteHandlerError);
+    expect(codedError).toMatchObject({
+      category: ProblemCategory.InternalServerError,
+      code: "protocols-trpc/route-handler-not-callable",
+      methodName: "listUsers",
+      status: 500,
+    });
+    expect((codedError as TrpcRouteHandlerError).toJSON()).toMatchObject({
+      code: "protocols-trpc/route-handler-not-callable",
+      methodName: "listUsers",
+      status: 500,
+    });
+  });
 });
 
 function createCaller(router: AnyRouter): TrpcCaller {
@@ -157,6 +204,16 @@ function getProcedureType(router: AnyRouter, domain: string, procedureName: stri
   const procedure = procedures[procedureName] as { readonly _def: { readonly type: string } };
 
   return procedure._def.type;
+}
+
+async function captureRejectedValue(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+
+  expect.fail("Expected promise to reject.");
 }
 
 function extractTestRouteIR(controllerCtor: Function): RouteIR[] {

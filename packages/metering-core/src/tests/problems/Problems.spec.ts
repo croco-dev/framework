@@ -80,5 +80,16 @@ describe("Problems", () => {
 
       expect(problem.detail).toContain("Unknown error");
     });
+
+    it("should create with deterministic response diagnostics", () => {
+      const problem = new RedisProblem(
+        "ZRANGEBYSCORE",
+        "WITHSCORES returned an odd number of values",
+      );
+
+      expect(problem.code).toBe("metering/redis-error");
+      expect(problem.detail).toContain("WITHSCORES returned an odd number of values");
+      expect(problem.toJSON().originalMessage).toBe("WITHSCORES returned an odd number of values");
+    });
   });
 });

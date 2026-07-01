@@ -261,6 +261,185 @@ describe("static-misuse-check.mts", () => {
       }),
     );
   });
+
+  it("flags raw built-in Error throws in production package source", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      [
+        "export function loadRuntimeBoundary(): never {",
+        '  throw new Error("raw runtime failure");',
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "raw-error-runtime-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        code: "CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY",
+        status: "fail",
+      }),
+    );
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        file: "packages/runtime-boundary/src/index.ts",
+        line: 2,
+        message:
+          "Production package source cannot throw raw built-in Error subclasses at runtime boundaries.",
+      }),
+    ]);
+  });
+
+  it("does not flag raw built-in Error throws in package JavaScript test files", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.spec.js",
+      ["export function failFixture() {", '  throw new Error("raw test failure");', "}", ""].join(
+        "\n",
+      ),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/widget.test.jsx",
+      [
+        "export function failWidgetFixture() {",
+        '  throw new TypeError("raw jsx test failure");',
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "raw-error-runtime-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "pass",
+        diagnostics: [],
+      }),
+    );
+  });
+
+  it("honors reviewed raw-error allowlist entries for internal exceptions", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/internal-runtime/package.json",
+      JSON.stringify({ name: "@croco/internal-runtime" }),
+    );
+    writeFile(
+      repo,
+      "packages/internal-runtime/src/index.ts",
+      [
+        "export function assertInternalInvariant(): never {",
+        '  throw new Error("internal invariant");',
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "scripts/static-misuse-raw-error-allowlist.json",
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          entries: [
+            {
+              package: "@croco/internal-runtime",
+              file: "packages/internal-runtime/src/index.ts",
+              line: 2,
+              excerpt: 'throw new Error("internal invariant");',
+              reason:
+                "Internal programmer assertion that is not exposed as a runtime recovery boundary.",
+              owner: "framework-error-handling",
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    const result = findResult(repo, "raw-error-runtime-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "pass",
+        diagnostics: [],
+      }),
+    );
+  });
+
+  it("rejects raw-error allowlist entries without owner or expiration metadata", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/internal-runtime/package.json",
+      JSON.stringify({ name: "@croco/internal-runtime" }),
+    );
+    writeFile(
+      repo,
+      "packages/internal-runtime/src/index.ts",
+      [
+        "export function assertInternalInvariant(): never {",
+        '  throw new Error("internal invariant");',
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "scripts/static-misuse-raw-error-allowlist.json",
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          entries: [
+            {
+              package: "@croco/internal-runtime",
+              file: "packages/internal-runtime/src/index.ts",
+              line: 2,
+              excerpt: 'throw new Error("internal invariant");',
+              reason:
+                "Internal programmer assertion that is not exposed as a runtime recovery boundary.",
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    const result = findResult(repo, "raw-error-runtime-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "fail",
+      }),
+    );
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        file: "scripts/static-misuse-raw-error-allowlist.json",
+        message: expect.stringContaining("owner or expiresOn must be provided"),
+      }),
+      expect.objectContaining({
+        file: "packages/internal-runtime/src/index.ts",
+        line: 2,
+      }),
+    ]);
+  });
 });
 
 function createTempRepo(): string {

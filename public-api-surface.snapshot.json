@@ -7778,6 +7778,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "ProblemFetchUnavailableError",
+          "exportKind": "declaration",
+          "source": null,
+          "declarationKind": "class"
+        },
+        {
           "name": "ProblemResponseError",
           "exportKind": "declaration",
           "source": null,
@@ -15361,6 +15367,12 @@
           "exportKind": "named",
           "source": "./libs/createTrpcRouter",
           "declarationKind": "function"
+        },
+        {
+          "name": "TrpcRouteHandlerError",
+          "exportKind": "named",
+          "source": "./libs/createTrpcRouter",
+          "declarationKind": "class"
         }
       ],
       "typeExports": []

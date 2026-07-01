@@ -884,6 +884,7 @@ async function importGeneratedClient(fileName: string, source: string) {
   expect(output.diagnostics).toEqual([]);
 
   const modulePath = path.join(moduleDir, fileName.replace(/\.ts$/, ".mjs"));
+  writeProblemsCoreRuntime(moduleDir);
   fs.writeFileSync(path.join(moduleDir, "rpc.mjs"), rpcOutput.outputText);
   fs.writeFileSync(modulePath, output.outputText);
 
@@ -947,6 +948,42 @@ async function importGeneratedClient(fileName: string, source: string) {
       readonly fail: () => Promise<unknown>;
     };
   }>;
+}
+
+function writeProblemsCoreRuntime(parentDir: string): void {
+  const packageDir = path.join(parentDir, "node_modules", "@croco", "problems-core");
+  fs.mkdirSync(packageDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(packageDir, "package.json"),
+    JSON.stringify({ type: "module", exports: "./index.mjs" }),
+  );
+  fs.writeFileSync(
+    path.join(packageDir, "index.mjs"),
+    `export const ProblemCategory = {
+  ValidationError: 'ValidationError',
+};
+
+export class Problem extends Error {
+  constructor(code, category, detail, options = {}) {
+    super(detail ?? code ?? 'Problem');
+    this.name = this.constructor.name;
+    this.code = this.code ?? code;
+    this.category = this.category ?? category;
+    this.detail = detail;
+    this.extensions = options.extensions;
+  }
+
+  toJSON() {
+    return {
+      code: this.code,
+      category: this.category,
+      detail: this.detail,
+      ...(this.extensions ?? {}),
+    };
+  }
+}
+`,
+  );
 }
 
 function jsonResponse(body: unknown, status = 200): Response {

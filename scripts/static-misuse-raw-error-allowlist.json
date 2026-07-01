@@ -1,0 +1,606 @@
+{
+  "schemaVersion": 1,
+  "description": "Reviewed baseline for CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY. New production raw built-in Error throws must be converted or added with owner/expiration metadata.",
+  "entries": [
+    {
+      "package": "@croco/admin-ops",
+      "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
+      "line": 365,
+      "excerpt": "throw new Error(\"Execution manager does not support audit log append\");",
+      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/admin-ops",
+      "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
+      "line": 390,
+      "excerpt": "throw new Error(\"Execution manager does not support replay\");",
+      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/admin-ops",
+      "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
+      "line": 585,
+      "excerpt": "throw new Error(\"Lifecycle recovery provider is not configured\");",
+      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/admin-ops",
+      "file": "packages/admin-ops/src/libs/sourceAdapters.ts",
+      "line": 591,
+      "excerpt": "throw new Error(`Lifecycle run '${item.id}' was not found`);",
+      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/contractsDiff.ts",
+      "line": 212,
+      "excerpt": "throw new Error(`${path} is not a croco.contract-graph.snapshot.v1 JSON snapshot.`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/createDomain.ts",
+      "line": 34,
+      "excerpt": "throw new Error(`Invalid name: ${name}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/createPage.ts",
+      "line": 39,
+      "excerpt": "throw new Error(`Invalid name: ${name}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/createPage.ts",
+      "line": 42,
+      "excerpt": "throw new Error(`Invalid page mode: ${mode}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/createPage.ts",
+      "line": 59,
+      "excerpt": "throw new Error(",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/createPage.ts",
+      "line": 132,
+      "excerpt": "throw new Error(`Invalid page mode: ${String(value)}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/generateScaffold.ts",
+      "line": 33,
+      "excerpt": "throw new Error(\"Scaffold generation failed: domain generation failed.\");",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/generateScaffold.ts",
+      "line": 39,
+      "excerpt": "throw new Error(\"page generation failed\");",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/generateScaffold.ts",
+      "line": 43,
+      "excerpt": "throw new Error(",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/generateScaffold.ts",
+      "line": 86,
+      "excerpt": "throw new Error(`Invalid page mode: ${String(value)}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/generateUsageDashboard.ts",
+      "line": 257,
+      "excerpt": "throw new Error(`Invalid ${label}: ${value}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/generateUsageDashboard.ts",
+      "line": 266,
+      "excerpt": "throw new Error(`Invalid apiPath: ${path}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/generateUsageDashboard.ts",
+      "line": 913,
+      "excerpt": "throw new Error('Usage dashboard request failed with HTTP ' + response.status);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/makeController.ts",
+      "line": 28,
+      "excerpt": "throw new Error(`Invalid name: ${name}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/makeEntity.ts",
+      "line": 27,
+      "excerpt": "throw new Error(`Invalid name: ${name}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/makeEvent.ts",
+      "line": 28,
+      "excerpt": "throw new Error(`Invalid name: ${name}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/makeListener.ts",
+      "line": 28,
+      "excerpt": "throw new Error(`Invalid name: ${name}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/makeRepository.ts",
+      "line": 28,
+      "excerpt": "throw new Error(`Invalid name: ${name}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/projectMap.ts",
+      "line": 1411,
+      "excerpt": "throw new Error(",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/projectMap.ts",
+      "line": 1429,
+      "excerpt": "throw new Error(`Missing Contract Graph snapshot '${manifestPath}'.`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/projectMap.ts",
+      "line": 1438,
+      "excerpt": "throw new Error(",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/projectMap.ts",
+      "line": 1456,
+      "excerpt": "throw new Error(`Missing runtime policy manifest '${manifestPath}'.`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/projectMap.ts",
+      "line": 1478,
+      "excerpt": "throw new Error(`Missing provider profile manifest '${manifestPath}'.`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/projectMap.ts",
+      "line": 1516,
+      "excerpt": "throw new Error(`Runtime policy manifest at ${manifestPath} must be a JSON object.`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/projectMap.ts",
+      "line": 1612,
+      "excerpt": "throw new Error(`Unable to read JSON '${path}': ${message}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/runtimePolicy.ts",
+      "line": 195,
+      "excerpt": "throw new Error(`Runtime policy manifest at ${manifestPath} must be a JSON object.`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/runtimePolicy.ts",
+      "line": 216,
+      "excerpt": "throw new Error(\"Runtime policy manifest must contain table.plans or plans.\");",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/upgrade.ts",
+      "line": 473,
+      "excerpt": "throw new Error(`Upgrade target '${path}' does not exist.`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/upgrade.ts",
+      "line": 546,
+      "excerpt": "throw new Error(\"Upgrade codemod replacements overlap.\");",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/libs/generatedImportContract.ts",
+      "line": 39,
+      "excerpt": "throw new Error(",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/libs/naming.ts",
+      "line": 198,
+      "excerpt": "throw new Error(\"Invalid input: cannot normalize empty result\");",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/libs/naming.ts",
+      "line": 209,
+      "excerpt": "throw new Error(\"Unknown kind: \" + kind);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "create-croco-app",
+      "file": "packages/create-croco-app/src/generator.ts",
+      "line": 486,
+      "excerpt": "throw new Error(",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "create-croco-app",
+      "file": "packages/create-croco-app/src/helpers/manifest-normalizer.ts",
+      "line": 70,
+      "excerpt": "throw new Error(`No published range configured for generated dependency ${packageName}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "create-croco-app",
+      "file": "packages/create-croco-app/src/package-version.ts",
+      "line": 13,
+      "excerpt": "throw new Error(\"Missing package version in package.json\");",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "create-croco-app",
+      "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
+      "line": 474,
+      "excerpt": "throw new Error(",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "create-croco-app",
+      "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
+      "line": 487,
+      "excerpt": "throw new Error(`CROCO_SAAS_PROFILE_PACKAGE_RANGE_MISSING: ${packageName}`);",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "create-croco-app",
+      "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
+      "line": 506,
+      "excerpt": "throw new Error(",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/diagnostics-core",
+      "file": "packages/diagnostics-core/src/libs/ErrorHistoryRingBuffer.ts",
+      "line": 16,
+      "excerpt": "throw new Error(\"maxSize must be at least 1\");",
+      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/frontend-problems",
+      "file": "packages/frontend-problems/src/index.ts",
+      "line": 469,
+      "excerpt": "throw new Error(`Unhandled Problem variant${suffix}`);",
+      "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/idempotency-core",
+      "file": "packages/idempotency-core/src/libs/conformance.ts",
+      "line": 161,
+      "excerpt": "throw new Error(`${message}. Expected ${String(expected)}, got ${String(actual)}.`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/idempotency-core",
+      "file": "packages/idempotency-core/src/libs/conformance.ts",
+      "line": 173,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/idempotency-core",
+      "file": "packages/idempotency-core/src/libs/conformance.ts",
+      "line": 178,
+      "excerpt": "throw new Error(`Expected ${expected.name} to be thrown.`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
+      "line": 152,
+      "excerpt": "throw new Error(`ServerAction '${config.name}' already registered`);",
+      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/isr/isrMiddleware.ts",
+      "line": 37,
+      "excerpt": "throw new Error(\"CacheStore returned no ISR response\");",
+      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/migration-runner",
+      "file": "packages/migration-runner/src/package-version.ts",
+      "line": 11,
+      "excerpt": "throw new Error(\"Missing package version in package.json\");",
+      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/outbox-core",
+      "file": "packages/outbox-core/src/libs/conformance.ts",
+      "line": 295,
+      "excerpt": "throw new Error(\"rollback\");",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/problems-core",
+      "file": "packages/problems-core/src/libs/Problem.ts",
+      "line": 33,
+      "excerpt": "throw new Error(`Unhandled Problem variant${suffix}`);",
+      "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/protocols-core",
+      "file": "packages/protocols-core/src/libs/ContractGraphConsumerCoverage.ts",
+      "line": 592,
+      "excerpt": "throw new Error(`Unknown contract graph consumer '${consumerId}'.`);",
+      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/rpc-codegen",
+      "file": "packages/rpc-codegen/src/libs/generate.ts",
+      "line": 1349,
+      "excerpt": "throw new Error(\\`Unhandled RPC Problem variant\\${suffix}\\`);",
+      "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/failure-drill.ts",
+      "line": 356,
+      "excerpt": "throw new Error(`Failure drill '${scenario.id}' did not return a Problem.`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/failure-drill.ts",
+      "line": 359,
+      "excerpt": "throw new Error(`Failure drill '${scenario.id}' did not return a recovery action.`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/failure-drill.ts",
+      "line": 383,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/failure-drill.ts",
+      "line": 389,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/failure-drill.ts",
+      "line": 395,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/failure-drill.ts",
+      "line": 402,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/failure-drill.ts",
+      "line": 414,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/failure-drill.ts",
+      "line": 439,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/failure-drill.ts",
+      "line": 450,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/testing.ts",
+      "line": 536,
+      "excerpt": "throw new Error(\"Expected response body to be RFC 7807 Problem Details.\");",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/testing.ts",
+      "line": 547,
+      "excerpt": "throw new Error(`Expected HTTP status ${expected.status}, received ${response.status}.`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/testing.ts",
+      "line": 560,
+      "excerpt": "throw new Error(`Expected Problem detail to include \"${expectedDetail}\".`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/testing.ts",
+      "line": 582,
+      "excerpt": "throw new Error(`Expected OpenAPI operation ${method.toUpperCase()} ${path}.`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/testing.ts",
+      "line": 590,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/testing.ts",
+      "line": 596,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/testing.ts",
+      "line": 689,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/testing.ts",
+      "line": 796,
+      "excerpt": "throw new Error(`${label} expected ${String(expected)}, received ${String(actual)}.`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/webhooks-core",
+      "file": "packages/webhooks-core/src/libs/conformance.ts",
+      "line": 166,
+      "excerpt": "throw new Error(`${message}. Expected ${String(expected)}, got ${String(actual)}.`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/webhooks-core",
+      "file": "packages/webhooks-core/src/libs/conformance.ts",
+      "line": 174,
+      "excerpt": "throw new Error(`${message}. Expected ${expectedJson}, got ${actualJson}.`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/webhooks-core",
+      "file": "packages/webhooks-core/src/libs/conformance.ts",
+      "line": 190,
+      "excerpt": "throw new Error(",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/webhooks-core",
+      "file": "packages/webhooks-core/src/libs/conformance.ts",
+      "line": 195,
+      "excerpt": "throw new Error(`Expected ${expectedName} to be thrown.`);",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling"
+    }
+  ]
+}

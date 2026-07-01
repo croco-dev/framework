@@ -1,3 +1,5 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
+
 export type ProblemDetails<Code extends string = string, Status extends number = number> = {
   readonly type: string;
   readonly title: string;
@@ -197,6 +199,15 @@ export class ProblemResponseError extends Error {
   }
 }
 
+export class ProblemFetchUnavailableError extends Problem {
+  readonly code = "frontend-problems/fetch-unavailable";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super(undefined, undefined, "Problem-aware fetch requires globalThis.fetch or options.fetch.");
+  }
+}
+
 export async function fetchProblemJson<
   T = unknown,
   Problem extends ProblemDeclaration = ProblemDeclaration,
@@ -208,7 +219,7 @@ export async function fetchProblemJson<
   const fetchImpl = options.fetch ?? globalThis.fetch;
 
   if (!fetchImpl) {
-    throw new Error("Problem-aware fetch requires globalThis.fetch or options.fetch.");
+    throw new ProblemFetchUnavailableError();
   }
 
   const response = await fetchImpl(input, init);
@@ -226,7 +237,7 @@ export async function fetchOptionalProblemJson<
   const fetchImpl = options.fetch ?? globalThis.fetch;
 
   if (!fetchImpl) {
-    throw new Error("Problem-aware fetch requires globalThis.fetch or options.fetch.");
+    throw new ProblemFetchUnavailableError();
   }
 
   const response = await fetchImpl(input, init);

@@ -153,6 +153,31 @@ describe("RedisUsageStorage", () => {
 
       await expect(storage.record(usage)).rejects.toThrow(RedisProblem);
     });
+
+    it("should preserve string Redis rejection diagnostics", async () => {
+      vi.mocked(mockRedis.zadd).mockRejectedValue("BUSY loading Redis dataset");
+
+      const request = storage.record(createUsageRecord("key-123"));
+
+      await expect(request).rejects.toThrow(RedisProblem);
+      await expect(request).rejects.toMatchObject({
+        detail: expect.stringContaining("BUSY loading Redis dataset"),
+        extensions: { originalMessage: "BUSY loading Redis dataset" },
+      });
+    });
+
+    it("should label idempotency failures as SET errors", async () => {
+      vi.mocked(mockRedis.set).mockRejectedValue(new Error("SET failed"));
+
+      const request = storage.record(createUsageRecord("key-123"));
+
+      await expect(request).rejects.toThrow(RedisProblem);
+      await expect(request).rejects.toMatchObject({
+        detail: expect.stringContaining("Redis operation 'SET' failed"),
+        extensions: { operation: "SET", originalMessage: "SET failed" },
+      });
+      expect(mockRedis.zadd).not.toHaveBeenCalled();
+    });
   });
 
   describe("getUsage", () => {
@@ -382,6 +407,24 @@ describe("RedisUsageStorage", () => {
     it("should throw RedisProblem when Redis omits scores for fetched records", async () => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(["usage-1:5"]);
 
+      const request = storage.fetchUsageRecords({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "day",
+        startDate: new Date("2024-01-15T00:00:00Z"),
+        endDate: new Date("2024-01-15T23:59:59Z"),
+      });
+
+      await expect(request).rejects.toThrow(RedisProblem);
+      await expect(request).rejects.toMatchObject({
+        code: "metering/redis-error",
+        detail: expect.stringContaining("WITHSCORES returned an odd number of values"),
+      });
+    });
+
+    it("should throw RedisProblem when Redis returns invalid usage scores", async () => {
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(["usage-1:5", "not-a-score"]);
+
       await expect(
         storage.fetchUsageRecords({
           tenantId: "tenant-1",
@@ -589,6 +632,37 @@ describe("RedisUsageStorage", () => {
           },
         }),
       ).rejects.toThrow(RedisProblem);
+    });
+
+    it("should label cached idempotency reads as ZRANGEBYSCORE errors", async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValueOnce([0, 8]);
+      vi.mocked(mockRedis.zrangebyscore).mockRejectedValue(new Error("Read failed"));
+
+      const usageRecord = createUsageRecord("key-123");
+
+      await storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 10,
+        allowOverQuota: false,
+        usageRecord,
+      });
+
+      const request = storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 10,
+        allowOverQuota: false,
+        usageRecord: { ...usageRecord, id: "usage-456" },
+      });
+
+      await expect(request).rejects.toThrow(RedisProblem);
+      await expect(request).rejects.toMatchObject({
+        detail: expect.stringContaining("Redis operation 'ZRANGEBYSCORE' failed"),
+        extensions: { operation: "ZRANGEBYSCORE", originalMessage: "Read failed" },
+      });
     });
   });
 
