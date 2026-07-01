@@ -4,23 +4,45 @@ const { compileRoutes } = require("../dist/compiler.js");
 
 const scriptDir = dirname(__filename);
 const projectRoot = resolve(scriptDir, "..");
+const generatedFixtureDir = resolve(projectRoot, ".croco/build/fixtures");
+const generatedFixturePath = resolve(generatedFixtureDir, "SampleController.js");
 
 const controllerPaths = process.argv
   .slice(2)
   .map((controllerPath) => pathToFileURL(resolve(controllerPath)).href);
 const sourcePaths = [];
-if (controllerPaths.length === 0) {
-  controllerPaths.push(
-    pathToFileURL(resolve(projectRoot, "dist/__tests__/fixtures/SampleController.js")).href,
-  );
-  sourcePaths.push(
-    resolve(projectRoot, "src/__tests__/fixtures/SampleController.ts"),
-    resolve(projectRoot, "src/__tests__/fixtures/IntentMapModule.ts"),
-  );
+
+async function buildGeneratedControllerFixture() {
+  const { build } = await import("tsup");
+
+  await build({
+    entry: [resolve(projectRoot, "src/__tests__/fixtures/SampleController.ts")],
+    format: ["cjs"],
+    outDir: generatedFixtureDir,
+    clean: true,
+    dts: false,
+    silent: true,
+    external: ["reflect-metadata"],
+    noExternal: [
+      "@croco/framework-context",
+      "@croco/problems-core",
+      "@croco/protocols-core",
+      "@croco/protocols-rest",
+    ],
+  });
 }
 
 async function main() {
   try {
+    if (controllerPaths.length === 0) {
+      await buildGeneratedControllerFixture();
+      controllerPaths.push(pathToFileURL(generatedFixturePath).href);
+      sourcePaths.push(
+        resolve(projectRoot, "src/__tests__/fixtures/SampleController.ts"),
+        resolve(projectRoot, "src/__tests__/fixtures/IntentMapModule.ts"),
+      );
+    }
+
     await compileRoutes({
       controllerPaths,
       ...(sourcePaths.length > 0 ? { sourcePaths } : {}),

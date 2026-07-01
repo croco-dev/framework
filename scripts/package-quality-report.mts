@@ -156,6 +156,7 @@ const bundleSizeArtifactSuffixes = [
   ".json",
   ".d.ts",
 ];
+const hashedChunkArtifactPattern = /(^|\/)chunk-[A-Z0-9]{8}(\.(?:cjs|mjs|js)(?:\.map)?)$/;
 
 const DEPENDENCY_BOUNDARY_RULES: readonly DependencyBoundaryRule[] = [
   {
@@ -723,6 +724,10 @@ function isMeasuredBundleArtifact(path: string): boolean {
   return bundleSizeArtifactSuffixes.some((suffix) => path.endsWith(suffix));
 }
 
+function normalizeBundleArtifactPath(path: string): string {
+  return path.replace(hashedChunkArtifactPattern, "$1chunk-*$2");
+}
+
 function getBundleBaselineMatch(
   baselines: ReadonlyMap<string, number>,
   packageName: string,
@@ -806,14 +811,28 @@ function collectPackageBundleSizeArtifacts(
     return [createNotBuiltBundleSizeArtifact(pkg)];
   }
 
-  const artifacts = walkFiles(distDir)
-    .map((filePath) => toPosixPath(relative(rootDir, filePath)))
-    .filter(isMeasuredBundleArtifact)
-    .map((artifactPath) =>
+  const artifactSizes = new Map<string, number>();
+  for (const filePath of walkFiles(distDir)) {
+    const artifactPath = toPosixPath(relative(rootDir, filePath));
+
+    if (!isMeasuredBundleArtifact(artifactPath)) {
+      continue;
+    }
+
+    const normalizedArtifactPath = normalizeBundleArtifactPath(artifactPath);
+    artifactSizes.set(
+      normalizedArtifactPath,
+      (artifactSizes.get(normalizedArtifactPath) ?? 0) + statSync(filePath).size,
+    );
+  }
+
+  const artifacts = [...artifactSizes.entries()]
+    .sort(([leftPath], [rightPath]) => leftPath.localeCompare(rightPath))
+    .map(([artifactPath, sizeBytes]) =>
       createBundleSizeArtifact(
         pkg,
         artifactPath,
-        statSync(join(rootDir, artifactPath)).size,
+        sizeBytes,
         getBundleBaselineMatch(baselines, pkg.name, artifactPath),
       ),
     );
