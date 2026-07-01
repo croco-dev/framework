@@ -254,7 +254,6 @@ jobs:
       - name: Core package coverage warning report
         if: always()
         run: pnpm test:coverage:core:warning
-        continue-on-error: true
 
       - name: Publish core coverage warning summary
         if: always()
