@@ -35,4 +35,11 @@ describe("benchmark workflow", () => {
     expect(workflow).toContain("BENCHMARK_GATE_MODE: warning-only");
     expect(workflow).toContain('"scripts/benchmark-readiness-report.mts"');
   });
+
+  it("uses the repository Node version source for benchmark setup", () => {
+    const workflow = readBenchmarkWorkflow();
+
+    expect(workflow).toContain('node-version-file: ".nvmrc"');
+    expect(workflow).not.toMatch(/^\s*node-version\s*:/m);
+  });
 });
