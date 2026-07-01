@@ -1,12 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: [
-    "src/index.ts",
-    "src/metadata-reader.ts",
-    "src/compiler.ts",
-    "src/__tests__/fixtures/SampleController.ts",
-  ],
+  entry: ["src/index.ts", "src/metadata-reader.ts", "src/compiler.ts"],
   format: ["esm", "cjs"],
   dts: true,
   clean: true,
