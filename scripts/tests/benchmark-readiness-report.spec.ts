@@ -293,6 +293,36 @@ describe("benchmark-readiness-report.mts", () => {
     );
   });
 
+  it("rejects variance evidence whose reviewedAt timestamp is an impossible ISO date", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent([
+          {
+            name: "Passing benchmark",
+            min: 0.96,
+            median: 1,
+            max: 1.04,
+            spread: 0.08,
+            p75ByRun: {
+              "1": 0.96,
+              "2": 0.99,
+              "3": 1,
+              "4": 1.02,
+              "5": 1.04,
+            },
+          },
+        ]).replace('"reviewedAt": "2026-07-01T00:00:00Z"', '"reviewedAt": "2026-02-30T00:00:00Z"'),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: reviewedAt must be an ISO date/time string.",
+    );
+  });
+
   it("rejects variance evidence whose run createdAt timestamp is not strict ISO", () => {
     const evaluation = evaluateBenchmarkReadiness(greenResult(), {
       varianceEvidence: {
@@ -320,6 +350,132 @@ describe("benchmark-readiness-report.mts", () => {
     expect(evaluation.varianceEvidenceValid).toBe(false);
     expect(evaluation.blockingReasons).toContain(
       "Latest five green benchmark variance evidence is invalid: run 1 must include an ISO createdAt timestamp.",
+    );
+  });
+
+  it("rejects variance evidence whose run createdAt timestamp is an impossible ISO date", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent([
+          {
+            name: "Passing benchmark",
+            min: 0.96,
+            median: 1,
+            max: 1.04,
+            spread: 0.08,
+            p75ByRun: {
+              "1": 0.96,
+              "2": 0.99,
+              "3": 1,
+              "4": 1.02,
+              "5": 1.04,
+            },
+          },
+        ]).replace('"createdAt": "2026-06-30T04:00:00Z"', '"createdAt": "2026-02-30T04:00:00Z"'),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: run 1 must include an ISO createdAt timestamp.",
+    );
+  });
+
+  it("rejects variance evidence whose run id is not a positive integer", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent([
+          {
+            name: "Passing benchmark",
+            min: 0.96,
+            median: 1,
+            max: 1.04,
+            spread: 0.08,
+            p75ByRun: {
+              "1": 0.96,
+              "2": 0.99,
+              "3": 1,
+              "4": 1.02,
+              "5": 1.04,
+            },
+          },
+        ]).replace('"id": 1,', '"id": 1.5,'),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: each run must include a positive integer id.",
+    );
+  });
+
+  it("rejects variance evidence whose run URL only matches by id prefix", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent([
+          {
+            name: "Passing benchmark",
+            min: 0.96,
+            median: 1,
+            max: 1.04,
+            spread: 0.08,
+            p75ByRun: {
+              "1": 0.96,
+              "2": 0.99,
+              "3": 1,
+              "4": 1.02,
+              "5": 1.04,
+            },
+          },
+        ]).replace(
+          '"url": "https://github.com/croco-dev/framework/actions/runs/1"',
+          '"url": "https://github.com/croco-dev/framework/actions/runs/123"',
+        ),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: run 1 must include its GitHub Actions run URL.",
+    );
+  });
+
+  it("rejects variance evidence whose selected run id is not a positive integer", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent(
+          [
+            {
+              name: "Passing benchmark",
+              min: 0.96,
+              median: 1,
+              max: 1.04,
+              spread: 0.08,
+              p75ByRun: {
+                "1": 0.96,
+                "2": 0.99,
+                "3": 1,
+                "4": 1.02,
+                "5": 1.04,
+              },
+            },
+          ],
+          { latestGreenTrunkRunIds: [1.5, 2, 3, 4, 5] },
+        ),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: selection.latestGreenTrunkRunIds must contain only positive integer run ids.",
     );
   });
 

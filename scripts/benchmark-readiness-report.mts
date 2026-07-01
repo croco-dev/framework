@@ -149,7 +149,7 @@ const DEFAULT_BENCHMARK_COMMAND = "pnpm bench:check --output-json=benchmark-resu
 const VARIANCE_EVIDENCE_MARKER = "<!-- croco-benchmark-variance-evidence:v1 -->";
 const VARIANCE_EVIDENCE_RUN_COUNT = 5;
 const VARIANCE_SPREAD_TOLERANCE = 0.15;
-const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
+const ISO_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
 const PROMOTED_BASELINE_TOLERANCE = 0.2;
 
 function formatDuration(ms: number): string {
@@ -262,17 +262,64 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function isGitHubRunId(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+function matchesGitHubActionsRunUrl(value: unknown, runId: string): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    const expectedPath = `/croco-dev/framework/actions/runs/${runId}`;
+    return (
+      url.origin === "https://github.com" &&
+      (url.pathname === expectedPath || url.pathname.startsWith(`${expectedPath}/`))
+    );
+  } catch {
+    return false;
+  }
+}
+
 function nearlyEqual(actual: number, expected: number): boolean {
   return Math.abs(actual - expected) <= Math.max(1e-9, Math.abs(expected) * 1e-6);
 }
 
 function parseIsoTimestamp(value: unknown): number | null {
-  if (typeof value !== "string" || !ISO_TIMESTAMP_PATTERN.test(value)) {
+  if (typeof value !== "string") {
     return null;
   }
 
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? null : parsed;
+  const match = ISO_TIMESTAMP_PATTERN.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const millisecond = match[7] === undefined ? 0 : Number(match[7]);
+  const parsed = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+  const date = new Date(parsed);
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute ||
+    date.getUTCSeconds() !== second ||
+    date.getUTCMilliseconds() !== millisecond
+  ) {
+    return null;
+  }
+
+  return parsed;
 }
 
 function createGateFailureCounts(): BenchmarkVarianceGateFailureCounts {
@@ -406,8 +453,8 @@ function validateVarianceEvidenceContract(
   const orderedRunCreatedAt: number[] = [];
   const artifactFailureCounts = createGateFailureCounts();
   for (const run of Array.isArray(contract.runs) ? contract.runs : []) {
-    if (!isFiniteNumber(run.id)) {
-      failures.push("each run must include a numeric id");
+    if (!isGitHubRunId(run.id)) {
+      failures.push("each run must include a positive integer id");
       continue;
     }
     const runId = String(run.id);
@@ -417,10 +464,7 @@ function validateVarianceEvidenceContract(
     }
     runIds.add(runId);
 
-    if (
-      typeof run.url !== "string" ||
-      !run.url.startsWith(`https://github.com/croco-dev/framework/actions/runs/${runId}`)
-    ) {
+    if (!matchesGitHubActionsRunUrl(run.url, runId)) {
       failures.push(`run ${runId} must include its GitHub Actions run URL`);
     }
     if (typeof run.headSha !== "string" || !/^[0-9a-f]{40}$/.test(run.headSha)) {
@@ -510,8 +554,10 @@ function validateVarianceEvidenceContract(
       );
     } else {
       const selectedRunIds = selection.latestGreenTrunkRunIds;
-      if (selectedRunIds.some((runId) => !isFiniteNumber(runId))) {
-        failures.push("selection.latestGreenTrunkRunIds must contain only numeric run ids");
+      if (selectedRunIds.some((runId) => !isGitHubRunId(runId))) {
+        failures.push(
+          "selection.latestGreenTrunkRunIds must contain only positive integer run ids",
+        );
       }
       const selectedRunIdSet = new Set(selectedRunIds);
       if (selectedRunIdSet.size !== selectedRunIds.length) {

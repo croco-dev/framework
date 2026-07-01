@@ -5,6 +5,7 @@ import {
   collectBenchmarkEntries,
   evaluateBaselineUpdateReadiness,
   evaluateBenchmarkGate,
+  formatBenchmarkBaselineDriftWarning,
   getBenchmarkP75,
 } from "../bench-threshold-check.mts";
 
@@ -77,6 +78,15 @@ describe("bench-threshold-check.mts", () => {
 
     expect(result.allPassed).toBe(true);
     expect(result.gateFailures).toEqual([]);
+  });
+
+  it("formats baseline drift warnings with current, baseline, and diff details", () => {
+    const message = formatBenchmarkBaselineDriftWarning("Drifted benchmark", 1.3, 1, 0.3);
+
+    expect(message).toContain('Baseline drift for "Drifted benchmark"');
+    expect(message).toContain("p75 1.3ms");
+    expect(message).toContain("baseline 1.0ms");
+    expect(message).toContain("(+30.0%)");
   });
 
   it("still blocks threshold failures", () => {

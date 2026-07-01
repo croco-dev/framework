@@ -169,6 +169,15 @@ function formatDiff(actual: number, expected: number): string {
   return `${sign}${percent}%`;
 }
 
+export function formatBenchmarkBaselineDriftWarning(
+  name: string,
+  p75: number,
+  baselineP75: number,
+  baselineDiff: number,
+): string {
+  return `⚠️  Baseline drift for "${name}": p75 ${formatDuration(p75)} exceeds baseline ${formatDuration(baselineP75)} by ${formatDuration(baselineDiff)} (${formatDiff(p75, baselineP75)}).`;
+}
+
 function formatUnknownError(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -407,6 +416,9 @@ async function main() {
 
           if (p75 - baselineP75 > baselineP75 * BASELINE_TOLERANCE) {
             report.baselineStatus = "fail";
+            console.warn(
+              formatBenchmarkBaselineDriftWarning(name, p75, baselineP75, report.baselineDiff),
+            );
           } else {
             report.baselineStatus = "pass";
           }
