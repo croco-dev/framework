@@ -46,6 +46,12 @@ export type CoreCoverageSelectionCandidate = {
   recoveryAction: string;
 };
 
+export type CoreCoverageConfigurationInput = {
+  coreCoveragePackages: readonly string[];
+  thresholdPackages: readonly string[];
+  selectionCandidates: readonly CoreCoverageSelectionCandidate[];
+};
+
 const BASELINE_METRICS: CoverageMetric[] = ["statements", "branches", "functions", "lines"];
 const INTENTIONAL_ZERO_BASELINE_REASONS: Record<string, string> = {};
 const TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS: Record<string, string> = {};
@@ -109,6 +115,7 @@ const packagesDirectory = join(projectRoot, "packages");
 const vitestConfigPath = join(projectRoot, "vitest.config.ts");
 
 const CORE_COVERAGE_PACKAGES = readCoreCoveragePackages();
+const CORE_COVERAGE_THRESHOLD_PACKAGES = readVitestCoreCoveragePackages();
 const CORE_COVERAGE_THRESHOLDS = readCoreCoverageThresholds();
 const WORKSPACE_PACKAGE_NAMES = readWorkspacePackageNames();
 const PACKAGE_CATALOG = readPackageCatalog();
@@ -123,14 +130,45 @@ function readCoreCoveragePackages(): string[] {
     throw new Error(`failed to read test:coverage:core script from ${packageJsonPath}`);
   }
 
-  const matches = coreCoverageCommand.matchAll(/--filter\s+((?:@croco\/)?[\w-]+)/g);
-  const packages = Array.from(matches, ([, packageName]) => packageName);
+  const packages = parseCoreCoveragePackageFilters(coreCoverageCommand);
 
   if (packages.length === 0) {
     throw new Error(`failed to read core coverage package filters from ${packageJsonPath}`);
   }
 
   return packages;
+}
+
+export function parseCoreCoveragePackageFilters(coreCoverageCommand: string): string[] {
+  const coverageCommandStart = coreCoverageCommand.indexOf("CORE_COVERAGE=true");
+  const coverageCommand =
+    coverageCommandStart === -1
+      ? coreCoverageCommand
+      : coreCoverageCommand.slice(coverageCommandStart);
+  const matches = coverageCommand.matchAll(/--filter\s+((?:@croco\/)?[\w-]+)/g);
+
+  return Array.from(matches, ([, packageName]) => packageName);
+}
+
+function readVitestCoreCoveragePackages(): string[] {
+  return parseStringArrayExport(readFileSync(vitestConfigPath, "utf-8"), "CORE_COVERAGE_PACKAGES");
+}
+
+export function parseStringArrayExport(source: string, exportName: string): string[] {
+  const arrayDeclaration = source.match(
+    new RegExp(`export\\s+const\\s+${escapeRegExp(exportName)}\\s*=\\s*\\[([\\s\\S]*?)\\];`),
+  );
+  const arrayItems = arrayDeclaration?.[1];
+
+  if (!arrayItems) {
+    throw new Error(`failed to read ${exportName} from ${vitestConfigPath}`);
+  }
+
+  return [...arrayItems.matchAll(/["']([^"']+)["']/g)].map(([, value]) => value);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function readCoreCoverageThresholds(): Record<CoverageMetric, number> {
@@ -266,11 +304,17 @@ export function parseBaselineContent(source: string): Map<string, BaselineEntry>
       .map((cell) => cell.trim())
       .filter(Boolean);
 
-    if (cells.length !== 5 || !cells[0].startsWith("`@croco/")) {
+    const packageCell = cells[0];
+
+    if (cells.length !== 5 || !packageCell.startsWith("`") || !packageCell.endsWith("`")) {
       continue;
     }
 
-    const packageName = cells[0].slice(1, -1);
+    const packageName = packageCell.slice(1, -1);
+
+    if (!isBaselinePackageName(packageName)) {
+      continue;
+    }
 
     baselineEntries.set(packageName, {
       packageName,
@@ -282,6 +326,10 @@ export function parseBaselineContent(source: string): Map<string, BaselineEntry>
   }
 
   return baselineEntries;
+}
+
+function isBaselinePackageName(packageName: string): boolean {
+  return /^@croco\/[\w-]+$/.test(packageName) || /^[a-z][\w-]*$/.test(packageName);
 }
 
 function parseBaseline(): Map<string, BaselineEntry> {
@@ -491,6 +539,42 @@ export function getCoreCoverageSelectionWarnings(
     );
 }
 
+export function getCoreCoverageConfigurationErrors({
+  coreCoveragePackages,
+  thresholdPackages,
+  selectionCandidates,
+}: CoreCoverageConfigurationInput): string[] {
+  const coreCoverageSet = new Set(coreCoveragePackages);
+  const thresholdSet = new Set(thresholdPackages);
+  const errors: string[] = [];
+
+  for (const candidate of selectionCandidates) {
+    if (candidate.signals.includes("1.0 spine package") && candidate.status !== "included") {
+      errors.push(
+        `${candidate.packageName}: 1.0 spine package must be included in test:coverage:core. ${candidate.recoveryAction}`,
+      );
+    }
+  }
+
+  for (const packageName of coreCoveragePackages) {
+    if (!thresholdSet.has(packageName)) {
+      errors.push(
+        `${packageName}: test:coverage:core package is missing from vitest CORE_COVERAGE_PACKAGES, so core coverage thresholds would not apply.`,
+      );
+    }
+  }
+
+  for (const packageName of thresholdPackages) {
+    if (!coreCoverageSet.has(packageName)) {
+      errors.push(
+        `${packageName}: vitest CORE_COVERAGE_PACKAGES entry is missing from test:coverage:core filters.`,
+      );
+    }
+  }
+
+  return errors;
+}
+
 function formatWarnings(warnings: string[]): string {
   return warnings.length > 0 ? warnings.join("; ") : "없음";
 }
@@ -517,6 +601,7 @@ function formatSelectionStatus(candidate: CoreCoverageSelectionCandidate): strin
 function writeReport(
   results: PackageCoverageResult[],
   baselineValidationErrors: string[],
+  configurationErrors: string[],
   selectionCandidates: CoreCoverageSelectionCandidate[],
 ) {
   mkdirSync(reportDirectory, { recursive: true });
@@ -537,15 +622,18 @@ function writeReport(
     "",
     "- coverage 실행: gate step (`pnpm test:coverage:core`)에서 별도 실행",
     "- PR 표시: CI job summary와 `core-coverage-warning-report` artifact에 동일 report 게시",
-    "- warning-only 종료 코드: baseline data가 valid하면 selection/baseline warning 수와 무관하게 0, invalid baseline data는 1",
+    "- 종료 코드: 1.0 spine 누락, coverage/threshold set 불일치, invalid baseline data는 실패한다. 비-spine selection warning과 baseline regression warning은 advisory로 남긴다.",
     "",
     "## 현재 core coverage set",
     ...CORE_COVERAGE_PACKAGES.map((packageName) => `- ${packageName}`),
     "",
+    "## 현재 core coverage threshold set",
+    ...CORE_COVERAGE_THRESHOLD_PACKAGES.map((packageName) => `- ${packageName}`),
+    "",
     "## Selection 정책 신호",
     "- 후보 입력: `docs/package-catalog.json`, public workspace package manifest, `package.json`의 `test:coverage:core` filter.",
     "- 후보 신호: 1.0 spine package, production-ready maturity, Core/Integration/Protocol/Transport catalog group, retry/events/context/auth/telemetry/transport/health/problem/framework contract package.",
-    "- 누락 후보는 warning-only로 보고한다. 기존 `pnpm test:coverage:core` threshold 동작은 변경하지 않는다.",
+    "- 1.0 spine 누락과 coverage/threshold set 불일치는 실패한다. 비-spine 누락 후보는 warning-only로 보고한다.",
     "- 임시 제외가 필요하면 `scripts/core-coverage-warning-check.mts`의 `TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS`에 package name과 사유를 추가한다.",
     "",
     "## Core coverage selection candidates",
@@ -590,6 +678,11 @@ function writeReport(
     thresholdWarnings.length > 0 ? "### Threshold warnings" : "### Threshold warnings\n- 없음",
     ...(thresholdWarnings.length > 0 ? thresholdWarnings : []),
     "",
+    configurationErrors.length > 0
+      ? "### Core coverage configuration errors"
+      : "### Core coverage configuration errors\n- 없음",
+    ...configurationErrors.map((warning) => `- ${warning}`),
+    "",
     baselineValidationErrors.length > 0
       ? "### Baseline data errors"
       : "### Baseline data errors\n- 없음",
@@ -600,8 +693,9 @@ function writeReport(
     "",
     "## Enforce 전환 메모",
     "- 대상 유지: `CORE_COVERAGE_PACKAGES`에 포함된 패키지부터 threshold를 유지한다.",
-    "- 신규 core package는 selection warning, coverage summary, baseline row가 PR summary에 표시된 뒤 core set에 추가한다.",
-    "- selection warning을 blocking으로 전환하려면 누락 후보가 0이거나 각 후보에 만료 가능한 temporary exclusion 사유가 있어야 한다.",
+    "- 신규 1.0 spine package는 `test:coverage:core`, `CORE_COVERAGE_PACKAGES`, baseline row가 모두 준비되어야 한다.",
+    "- 비-spine core 후보는 selection warning, coverage summary, baseline row가 PR summary에 표시된 뒤 core set에 추가한다.",
+    "- 비-spine selection warning을 blocking으로 전환하려면 누락 후보가 0이거나 각 후보에 만료 가능한 temporary exclusion 사유가 있어야 한다.",
     "- baseline을 의도적으로 갱신할 때는 `pnpm test:coverage:core`를 먼저 실행하고, 생성된 `coverage-summary.json`의 total percentages를 `ci-reports/coverage/core-baseline.txt`에 반영한 뒤 `pnpm test:coverage:core:warning`을 실행한다.",
     "- threshold 상향은 `retry-core functions` 개선 이후 별도 태스크에서 검토한다.",
     "- baseline regression이 연속 0회가 아니라 안정적으로 해소된 이후에만 hard fail 전환을 검토한다.",
@@ -619,8 +713,13 @@ async function main() {
     coreCoveragePackages: CORE_COVERAGE_PACKAGES,
     temporaryExclusions: TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS,
   });
+  const configurationErrors = getCoreCoverageConfigurationErrors({
+    coreCoveragePackages: CORE_COVERAGE_PACKAGES,
+    thresholdPackages: CORE_COVERAGE_THRESHOLD_PACKAGES,
+    selectionCandidates,
+  });
 
-  writeReport(results, baselineValidationErrors, selectionCandidates);
+  writeReport(results, baselineValidationErrors, configurationErrors, selectionCandidates);
 
   console.log(`\n⚠️  Core coverage warning report written to ${resolve(reportPath)}`);
 
@@ -633,17 +732,20 @@ async function main() {
       result.baselineWarnings.length,
     totalSelectionWarnings,
   );
-  const totalErrors = baselineValidationErrors.length;
+  const totalErrors = baselineValidationErrors.length + configurationErrors.length;
 
   console.log(`⚠️  Total core coverage selection warnings: ${totalSelectionWarnings}`);
   console.log(`⚠️  Total core coverage warnings: ${totalWarnings}`);
   if (totalErrors > 0) {
+    for (const error of configurationErrors) {
+      console.error(`❌ ${error}`);
+    }
     for (const error of baselineValidationErrors) {
       console.error(`❌ ${error}`);
     }
-    console.error(`❌ Total core coverage baseline errors: ${totalErrors}`);
+    console.error(`❌ Total core coverage hard errors: ${totalErrors}`);
   } else {
-    console.log("✅ Total core coverage baseline errors: 0");
+    console.log("✅ Total core coverage hard errors: 0");
   }
   process.exit(totalErrors > 0 ? 1 : 0);
 }

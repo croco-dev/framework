@@ -48,7 +48,7 @@ Promote an advisory gate to a blocking trunk gate only when:
 ## Core Coverage Warning Report
 
 `pnpm test:coverage:core:warning` writes `ci-reports/coverage/core-warning/report.md`, appends it to the GitHub Actions job summary, and uploads it as the `core-coverage-warning-report` artifact.
-The first rollout is warning-only: missing selection candidates are visible in CI, but only invalid baseline data can make the reporter exit non-zero.
+The first rollout keeps non-spine selection candidates warning-only, but 1.0 spine package omissions, coverage/threshold set drift, and invalid baseline data make the reporter exit non-zero.
 
 Selection candidates come from executable repository signals:
 

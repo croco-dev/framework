@@ -133,7 +133,7 @@ describe("Transport Integration", () => {
     Container.set(ErrorHandler, new ErrorHandler(logger));
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
 
-    app = createApp({ controllers: [UserController] });
+    app = createApp({ controllers: [UserController], securityValidation: "off" });
   });
 
   describe("CRUD Operations", () => {

@@ -360,6 +360,7 @@ describe("RateLimitMiddleware", () => {
             policy: createSlidingWindowPolicy("api", 5, 60000),
           }),
         ],
+        securityValidation: "off",
       });
 
       const response = await app.fetch(

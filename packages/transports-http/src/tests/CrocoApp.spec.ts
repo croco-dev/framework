@@ -32,7 +32,7 @@ import {
 } from "@croco/ratelimit-core";
 import { serve } from "@hono/node-server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createApp } from "../libs/CrocoApp";
+import { createApp as createCrocoApp } from "../libs/CrocoApp";
 import {
   getLambdaContext,
   getLambdaEvent,
@@ -54,6 +54,10 @@ vi.mock("@hono/node-server", () => ({
     return {};
   }),
 }));
+
+function createApp(config: Parameters<typeof createCrocoApp>[0]) {
+  return createCrocoApp({ securityValidation: "off", ...config });
+}
 
 describe("CrocoApp", () => {
   let lambdaWaitUntilCompleted = false;

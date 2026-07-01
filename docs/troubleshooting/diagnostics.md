@@ -121,11 +121,11 @@ const app = createApp({
 
 ## CROCO\_\* 진단 코드 표준
 
-빌드타임 체크, codegen, doctor, runtime diagnostics가 사람이 읽는 문장만 출력하면 원인과 수정 위치가 바뀔 때 추적하기 어렵습니다. Croco 진단은 안정적인 `CROCO_<AREA>_<NNN>` 코드를 기준으로 같은 메시지 구조를 사용해야 합니다.
+빌드타임 체크, codegen, doctor, runtime diagnostics가 사람이 읽는 문장만 출력하면 원인과 수정 위치가 바뀔 때 추적하기 어렵습니다. Croco 진단은 안정적인 `CROCO_<AREA>_<NNN>` 코드 또는 `CROCO_DOCTOR_WORKSPACE_VERSION_CONFLICT`처럼 두 개 이상의 의미 세그먼트를 가진 symbolic 코드를 기준으로 같은 메시지 구조를 사용해야 합니다. `CROCO_ROUTE`, `CROCO_DOCTOR`처럼 영역만 있는 코드는 안정적인 복구 지점을 제공하지 못하므로 사용하지 않습니다.
 
 표준 메시지 필드:
 
-- `code`: `CROCO_DI_001`, `CROCO_ROUTE_004`처럼 대문자 영역과 세 자리 번호를 사용합니다.
+- `code`: `CROCO_DI_001`, `CROCO_ROUTE_004`처럼 대문자 영역과 세 자리 번호를 사용하거나, 세부 복구 지점을 드러내는 `CROCO_DOCTOR_SPINE_PACKAGE_NOT_INSTALLED` 같은 symbolic 코드를 사용합니다.
 - `severity`: `error`, `warning`, `info` 중 하나입니다. CI/build를 실패시키는 항목은 `error`를 사용합니다.
 - `category`: dependency-injection, routing, build-time, runtime, telemetry, events처럼 사용자가 수정 지점을 좁힐 수 있는 영역입니다.
 - `location`: 가능한 경우 `file`, `line`, `column`, `packageName`, `symbol`을 포함합니다. 위치를 모르면 `unknown`을 명시합니다.
