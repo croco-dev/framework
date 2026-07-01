@@ -2,10 +2,24 @@ import { defineConfig } from "vitest/config";
 
 export const CORE_COVERAGE_PACKAGES = [
   "@croco/framework-context",
-  "@croco/retry-core",
-  "@croco/events-core",
-  "@croco/auth-core",
+  "@croco/problems-core",
+  "@croco/protocols-core",
+  "@croco/protocols-rest",
+  "@croco/openapi-spec",
+  "@croco/rpc-codegen",
+  "@croco/transports-http",
   "@croco/telemetry-api",
+  "@croco/telemetry-sdk-node",
+  "@croco/tx-core",
+  "@croco/tx-drizzle",
+  "@croco/events-core",
+  "@croco/events-tx",
+  "@croco/retry-core",
+  "@croco/idempotency-core",
+  "@croco/testing",
+  "create-croco-app",
+  "@croco/cli",
+  "@croco/auth-core",
 ];
 
 export const CORE_COVERAGE_BASELINE_PATH = "ci-reports/coverage/core-baseline.txt";
@@ -18,8 +32,8 @@ export const CORE_COVERAGE_THRESHOLDS = {
 };
 
 const isCoreCoverageRun = process.env.CORE_COVERAGE === "true";
-const coreCoveragePackagePaths = CORE_COVERAGE_PACKAGES.map((packageName) =>
-  packageName.replace("@croco/", "packages/"),
+const coreCoveragePackagePaths = CORE_COVERAGE_PACKAGES.map(
+  (packageName) => `packages/${packageName.replace("@croco/", "")}`,
 );
 const currentWorkingDirectory = process.cwd().replace(/\\/g, "/");
 const shouldApplyCoreCoverageThresholds =

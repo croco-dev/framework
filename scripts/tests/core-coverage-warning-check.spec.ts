@@ -4,8 +4,11 @@ import type { CoverageTotals } from "../core-coverage-warning-check.mts";
 import {
   getCoreCoverageSelectionCandidates,
   getCoreCoverageSelectionWarnings,
+  getCoreCoverageConfigurationErrors,
   getBaselineWarnings,
   parseBaselineContent,
+  parseCoreCoveragePackageFilters,
+  parseStringArrayExport,
   validateBaselineEntries,
 } from "../core-coverage-warning-check.mts";
 
@@ -28,6 +31,44 @@ describe("core-coverage-warning-check.mts", () => {
       "functions 94.00% < baseline 95.00%",
       "lines 91.50% < baseline 92.00%",
     ]);
+  });
+
+  it("parses unscoped public package baseline rows", () => {
+    const baseline = parseBaselineContent(`
+| Package | Statements | Branches | Functions | Lines |
+|---------|-----------:|---------:|----------:|------:|
+| \`create-croco-app\` | 80 | 70 | 90 | 82 |
+`);
+
+    const warnings = getBaselineWarnings(
+      "create-croco-app",
+      coverageTotals({ statements: 80, branches: 70, functions: 90, lines: 82 }),
+      baseline,
+    );
+
+    expect(warnings).toEqual([]);
+  });
+
+  it("ignores prerequisite build filters when reading the core coverage package set", () => {
+    const packages = parseCoreCoveragePackageFilters(
+      "pnpm --filter @croco/problems-core build && CORE_COVERAGE=true pnpm --filter @croco/framework-context --filter create-croco-app exec vitest run",
+    );
+
+    expect(packages).toEqual(["@croco/framework-context", "create-croco-app"]);
+  });
+
+  it("parses the vitest core coverage threshold package export", () => {
+    expect(
+      parseStringArrayExport(
+        `
+export const CORE_COVERAGE_PACKAGES = [
+  "@croco/framework-context",
+  "create-croco-app",
+];
+`,
+        "CORE_COVERAGE_PACKAGES",
+      ),
+    ).toEqual(["@croco/framework-context", "create-croco-app"]);
   });
 
   it("rejects zero baseline metrics when a coverage summary exists", () => {
@@ -149,6 +190,30 @@ describe("core-coverage-warning-check.mts", () => {
     ]);
     expect(getCoreCoverageSelectionWarnings(candidates)).toEqual([
       expect.stringContaining("create-croco-app: candidate signals"),
+    ]);
+  });
+
+  it("fails configuration checks for missing spine and coverage-threshold drift", () => {
+    const candidates = getCoreCoverageSelectionCandidates({
+      catalog: {
+        spine: {
+          packages: ["framework-context", "create-croco-app"],
+        },
+      },
+      workspacePackageNames: new Set(["@croco/framework-context", "create-croco-app"]),
+      coreCoveragePackages: ["@croco/framework-context"],
+    });
+
+    expect(
+      getCoreCoverageConfigurationErrors({
+        coreCoveragePackages: ["@croco/framework-context", "@croco/auth-core"],
+        thresholdPackages: ["@croco/framework-context", "create-croco-app"],
+        selectionCandidates: candidates,
+      }),
+    ).toEqual([
+      expect.stringContaining("create-croco-app: 1.0 spine package must be included"),
+      expect.stringContaining("@croco/auth-core: test:coverage:core package is missing"),
+      expect.stringContaining("create-croco-app: vitest CORE_COVERAGE_PACKAGES entry is missing"),
     ]);
   });
 

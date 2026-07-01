@@ -24,7 +24,7 @@
     "prepare": "lefthook install",
     "release": "pnpm build && changeset publish",
     "test": "turbo test",
-    "test:coverage:core": "CORE_COVERAGE=true SKIP_ENV_VALIDATION=true pnpm --filter @croco/framework-context --filter @croco/retry-core --filter @croco/events-core --filter @croco/auth-core --filter @croco/telemetry-api exec vitest run --coverage --config ../../vitest.config.ts",
+    "test:coverage:core": "pnpm --filter @croco/problems-core --filter @croco/telemetry-api --filter @croco/tenant-core --filter @croco/dataloader-core --filter @croco/ratelimit-core --filter @croco/llm-core --filter @croco/storage-core --filter @croco/architecture-policy build && CORE_COVERAGE=true SKIP_ENV_VALIDATION=true pnpm --filter @croco/framework-context --filter @croco/problems-core --filter @croco/protocols-core --filter @croco/protocols-rest --filter @croco/openapi-spec --filter @croco/rpc-codegen --filter @croco/transports-http --filter @croco/telemetry-api --filter @croco/telemetry-sdk-node --filter @croco/tx-core --filter @croco/tx-drizzle --filter @croco/events-core --filter @croco/events-tx --filter @croco/retry-core --filter @croco/idempotency-core --filter @croco/testing --filter create-croco-app --filter @croco/cli --filter @croco/auth-core exec vitest run --coverage --config ../../vitest.config.ts",
     "test:coverage:core:warning": "node --experimental-strip-types scripts/core-coverage-warning-check.mts",
     "typecheck": "turbo typecheck",
     "version-packages": "changeset version",

@@ -11,6 +11,8 @@ import {
   DrizzleTransactionalEventStore,
   type DrizzleTransactionalEventStoreDb,
   InMemoryTransactionalEventStore,
+  normalizeTransactionalEventError,
+  OutboxStorageProblem,
   OutboxTransactionRequiredProblem,
   TransactionalInboxConsumer,
   TransactionalOutbox,
@@ -98,6 +100,21 @@ describe("TransactionalOutbox", () => {
     await expect(fixture.store.listOutboxMessages()).resolves.toHaveLength(0);
   });
 
+  it("rejects append when tx-core reports a transaction without a client", async () => {
+    const store = new InMemoryTransactionalEventStore();
+    const outbox = new TransactionalOutbox({
+      store,
+      txManager: {
+        isInTransaction: () => true,
+        getClient: () => undefined,
+      },
+    });
+
+    await expect(outbox.append(new AccountCreditedEvent("acct-1", 100))).rejects.toBeInstanceOf(
+      OutboxTransactionRequiredProblem,
+    );
+  });
+
   it("appends only one outbox message for the same idempotency key in a transaction", async () => {
     const fixture = createOutboxFixture();
 
@@ -122,6 +139,31 @@ describe("TransactionalOutbox", () => {
 });
 
 describe("TransactionalOutboxRelay", () => {
+  it("keeps exhausted messages poisoned when no dead-letter hook is configured", async () => {
+    const fixture = createOutboxFixture();
+    await appendMessage(fixture, { maxAttempts: 1 });
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish: async () => {
+        throw new Error("broker unavailable");
+      },
+      now: fixture.clock.now,
+    });
+
+    const result = await relay.publishBatch({ limit: 1, now: fixture.clock.now() });
+
+    expect(result).toMatchObject({
+      claimed: 1,
+      poisoned: 1,
+      deadLettered: 0,
+    });
+    expect(result.results[0].status).toBe("poisoned");
+    expect((await fixture.store.listOutboxMessages())[0]).toMatchObject({
+      status: "poisoned",
+      deadLetterReason: "broker unavailable",
+    });
+  });
+
   it("reschedules failed publishes, then moves exhausted messages through the dead-letter hook", async () => {
     const fixture = createOutboxFixture();
     await appendMessage(fixture, { maxAttempts: 2 });
@@ -270,6 +312,75 @@ describe("TransactionalOutboxRelay", () => {
     expect(result.results[0].status).toBe("stale_claim");
     expect((await fixture.store.listOutboxMessages())[0].status).toBe("published");
   });
+
+  it("reports stale claims when a publish failure is already completed by another relay", async () => {
+    const fixture = createOutboxFixture();
+    await appendMessage(fixture);
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish: async (message) => {
+        await fixture.store.markOutboxPublished({
+          id: message.id,
+          expectedAttempts: message.attempts,
+          now: fixture.clock.now(),
+        });
+        throw new Error("late failure");
+      },
+      now: fixture.clock.now,
+    });
+
+    const result = await relay.publishBatch({ limit: 1, now: fixture.clock.now() });
+
+    expect(result).toMatchObject({
+      claimed: 1,
+      staleClaimed: 1,
+    });
+    expect(result.results[0]).toMatchObject({
+      status: "stale_claim",
+      diagnostic: {
+        code: "events-tx/outbox-fail-stale-claim",
+      },
+    });
+  });
+
+  it("reports stale claims when a dead-letter hook completes the poisoned message first", async () => {
+    const fixture = createOutboxFixture();
+    await appendMessage(fixture, { maxAttempts: 1 });
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish: async () => {
+        throw new Error("broker unavailable");
+      },
+      deadLetter: async (message) => {
+        await fixture.store.markOutboxDeadLettered({
+          id: message.id,
+          expectedAttempts: message.attempts,
+          now: fixture.clock.now(),
+          reason: "handled elsewhere",
+          diagnostic: {
+            code: "events-tx/test-dead-lettered",
+            message: "handled elsewhere",
+            at: fixture.clock.now(),
+          },
+        });
+      },
+      now: fixture.clock.now,
+    });
+
+    const result = await relay.publishBatch({ limit: 1, now: fixture.clock.now() });
+
+    expect(result).toMatchObject({
+      claimed: 1,
+      staleClaimed: 1,
+    });
+    expect(result.results[0]).toMatchObject({
+      status: "stale_claim",
+      diagnostic: {
+        code: "events-tx/outbox-dead-letter-stale-claim",
+      },
+    });
+    expect((await fixture.store.listOutboxMessages())[0].status).toBe("dead_lettered");
+  });
 });
 
 describe("TransactionalInboxConsumer", () => {
@@ -309,6 +420,29 @@ describe("TransactionalInboxConsumer", () => {
     expect(retried.status).toBe("processed");
     expect(retried.record.attempts).toBe(2);
   });
+
+  it("persists inbox failures and rethrows by default", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const consumer = new TransactionalInboxConsumer({
+      store: fixture.store,
+      consumerId: "risk-projection",
+      now: fixture.clock.now,
+    });
+
+    await expect(
+      consumer.handle(message, async () => {
+        throw new Error("projection offline");
+      }),
+    ).rejects.toThrow("projection offline");
+
+    await expect(
+      fixture.store.findInboxRecord("risk-projection", message.idempotencyKey),
+    ).resolves.toMatchObject({
+      status: "failed",
+      failureReason: "projection offline",
+    });
+  });
 });
 
 describe("createEventBusOutboxPublisher", () => {
@@ -333,6 +467,47 @@ describe("createEventBusOutboxPublisher", () => {
     expect(published).toHaveLength(1);
     expect(published[0]).toBeInstanceOf(AccountCreditedEvent);
     expect((published[0] as AccountCreditedEvent).accountId).toBe("acct-1");
+  });
+
+  it("preserves trace context metadata when publishing to an EventBus", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const published: DomainEvent[] = [];
+    const eventBus: EventBus = {
+      publish: async (event) => {
+        published.push(event);
+      },
+      subscribe: () => {},
+      unsubscribe: () => {},
+      clear: () => {},
+    };
+    const serializer = new DefaultEventSerializer(
+      new EventRegistry().register(AccountCreditedEvent),
+    );
+
+    await createEventBusOutboxPublisher(
+      eventBus,
+      serializer,
+    )({
+      ...message,
+      metadata: {
+        source: "outbox",
+      },
+      traceContext: {
+        traceId: "trace-1",
+        spanId: "span-1",
+        traceFlags: 1,
+        isValid: true,
+      },
+    });
+
+    expect(published[0].metadata).toMatchObject({
+      source: "outbox",
+      traceContext: {
+        traceId: "trace-1",
+        spanId: "span-1",
+      },
+    });
   });
 });
 
@@ -382,6 +557,103 @@ describe("TransactionalEventStore conformance", () => {
       now: fixture.clock.now(),
     });
     expect(duplicate.status).toBe("duplicate");
+  });
+
+  it("keeps committed state isolated from mutated results and supports filtered inbox listing", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const [listed] = await fixture.store.listOutboxMessages();
+
+    listed.payload.amount = 999;
+    listed.metadata.changed = true;
+
+    await expect(fixture.store.findOutboxById(message.id)).resolves.toMatchObject({
+      payload: {
+        amount: 100,
+      },
+      metadata: {},
+    });
+
+    await fixture.store.startInboxProcessing({
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    });
+    await fixture.store.markInboxFailed({
+      consumerId: "ledger-projection",
+      inboxKey: message.idempotencyKey,
+      now: fixture.clock.now(),
+      error: {
+        name: "Error",
+        message: "projection offline",
+      },
+      reason: "projection offline",
+    });
+    await fixture.store.startInboxProcessing({
+      consumerId: "audit-projection",
+      messageId: "message-2",
+      inboxKey: "credit-acct-2",
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    });
+
+    await expect(
+      fixture.store.listInboxRecords({
+        consumerId: "ledger-projection",
+        status: "failed",
+        limit: 1,
+      }),
+    ).resolves.toMatchObject([
+      {
+        consumerId: "ledger-projection",
+        status: "failed",
+      },
+    ]);
+    await expect(fixture.store.listInboxRecords()).resolves.toHaveLength(2);
+  });
+
+  it("throws storage problems for missing outbox and inbox records", async () => {
+    const fixture = createOutboxFixture();
+
+    await expect(
+      fixture.store.markOutboxPublished({
+        id: "missing-message",
+        expectedAttempts: 1,
+        now: fixture.clock.now(),
+      }),
+    ).rejects.toBeInstanceOf(OutboxStorageProblem);
+    await expect(
+      fixture.store.markInboxProcessed({
+        consumerId: "projection",
+        inboxKey: "missing-key",
+        now: fixture.clock.now(),
+      }),
+    ).rejects.toBeInstanceOf(OutboxStorageProblem);
+    await expect(fixture.store.findOutboxById("missing-message")).resolves.toBeNull();
+  });
+
+  it("honors abort signals before and after in-memory transaction work", async () => {
+    const store = new InMemoryTransactionalEventStore();
+    const adapter = store.createTxAdapter();
+    const abortedBefore = new AbortController();
+    abortedBefore.abort(new Error("transaction cancelled"));
+
+    await expect(
+      adapter.transaction(async () => undefined, undefined, abortedBefore.signal),
+    ).rejects.toThrow("transaction cancelled");
+
+    const abortedAfter = new AbortController();
+    await expect(
+      adapter.transaction(
+        async () => {
+          abortedAfter.abort("cancelled");
+        },
+        undefined,
+        abortedAfter.signal,
+      ),
+    ).rejects.toThrow("Transaction aborted");
   });
 });
 
@@ -497,6 +769,113 @@ describe("DrizzleTransactionalEventStore", () => {
         status: "published",
       },
     ]);
+  });
+
+  it("maps persisted Drizzle JSON fields, diagnostics, and optional timestamps", async () => {
+    const db = createMockDrizzleDb({
+      selectResults: [
+        [
+          createOutboxRow({
+            aggregateId: null,
+            payload: JSON.stringify({ accountId: "acct-1", amount: 100 }),
+            metadata: JSON.stringify({ source: "db" }),
+            traceContext: JSON.stringify({
+              traceId: "trace-1",
+              spanId: "span-1",
+              traceFlags: 1,
+              isValid: true,
+            }),
+            attempts: undefined,
+            maxAttempts: undefined,
+            lockedUntil: "2026-01-01T00:00:10.000Z",
+            publishedAt: "2026-01-01T00:00:11.000Z",
+            lastError: JSON.stringify({
+              name: "BrokerError",
+              message: "broker unavailable",
+              stack: "stack",
+              code: "BROKER_UNAVAILABLE",
+            }),
+            deadLetteredAt: "2026-01-01T00:00:12.000Z",
+            deadLetterReason: "exhausted",
+            diagnostics: JSON.stringify([
+              {
+                code: "events-tx/test",
+                message: "diagnostic",
+                at: "2026-01-01T00:00:00.000Z",
+                details: {
+                  attempt: 1,
+                },
+              },
+              {
+                at: "2026-01-01T00:00:01.000Z",
+              },
+            ]),
+          }),
+        ],
+      ],
+    });
+    const store = new DrizzleTransactionalEventStore({
+      db,
+    });
+
+    await expect(store.findOutboxById("message-1")).resolves.toMatchObject({
+      id: "message-1",
+      payload: {
+        accountId: "acct-1",
+      },
+      metadata: {
+        source: "db",
+      },
+      traceContext: {
+        traceId: "trace-1",
+        spanId: "span-1",
+        traceFlags: 1,
+        isValid: true,
+      },
+      attempts: 0,
+      maxAttempts: 1,
+      lockedUntil: new Date("2026-01-01T00:00:10.000Z"),
+      publishedAt: new Date("2026-01-01T00:00:11.000Z"),
+      lastError: {
+        name: "BrokerError",
+        message: "broker unavailable",
+        code: "BROKER_UNAVAILABLE",
+      },
+      deadLetteredAt: new Date("2026-01-01T00:00:12.000Z"),
+      deadLetterReason: "exhausted",
+      diagnostics: [
+        {
+          code: "events-tx/test",
+          message: "diagnostic",
+          details: {
+            attempt: 1,
+          },
+        },
+        {
+          code: "events-tx/unknown-diagnostic",
+          message: "Unknown diagnostic",
+        },
+      ],
+    });
+  });
+});
+
+describe("transactional event helpers", () => {
+  it("normalizes non-Error publish failures and Error codes", () => {
+    const coded = new Error("broker unavailable");
+    Object.assign(coded, {
+      code: "BROKER_UNAVAILABLE",
+    });
+
+    expect(normalizeTransactionalEventError(coded)).toMatchObject({
+      name: "Error",
+      message: "broker unavailable",
+      code: "BROKER_UNAVAILABLE",
+    });
+    expect(normalizeTransactionalEventError("offline")).toEqual({
+      name: "Error",
+      message: "offline",
+    });
   });
 });
 

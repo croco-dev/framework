@@ -48,6 +48,24 @@ function readJsonTemplate(template: string, ...paths: string[]): Record<string, 
   return JSON.parse(content);
 }
 
+function checkConsoleWebManifestDependency(template: string, packageName: string) {
+  const manifest = readJsonTemplate(template, "apps", "console-web", "package.json.hbs");
+  const dependencyFields = [
+    manifest.dependencies,
+    manifest.devDependencies,
+    manifest.peerDependencies,
+    manifest.optionalDependencies,
+  ];
+
+  expect(
+    dependencyFields.some(
+      (dependencies) =>
+        dependencies !== null && typeof dependencies === "object" && packageName in dependencies,
+    ),
+    `${template} apps/console-web/package.json.hbs should declare ${packageName}`,
+  ).toBe(true);
+}
+
 function listPageFiles(template: string): string[] {
   const pagesDir = templatePath(template, "apps", "console-web", "pages");
 
@@ -105,6 +123,7 @@ function checkSpaBeSplitStructure() {
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "users.ts"], /EventPublisher/);
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "users.ts"], /InMemoryEventBus/);
   checkFileExists("spa-be-split", "apps", "console-web", "package.json.hbs");
+  checkConsoleWebManifestDependency("spa-be-split", "@croco/frontend-vite");
   checkFileExists("spa-be-split", "apps", "console-web", "src", "main.tsx");
   checkFileExists("spa-be-split", "apps", "console-web", "vite.config.ts.hbs");
   checkFileContains(
@@ -379,6 +398,7 @@ function checkSsrLambdaStructure() {
     /export { lambdaHandler as handler }/,
   );
   checkFileExists("ssr-lambda", "apps", "console-web", "package.json.hbs");
+  checkConsoleWebManifestDependency("ssr-lambda", "@croco/meta-vite");
 
   const pageFiles = listPageFiles("ssr-lambda");
   expect(pageFiles).toContain("route.ts");
@@ -447,6 +467,7 @@ function checkContainerFullstackStructure() {
     /\b(listen|createCrocoApp)\(/,
   );
   checkFileExists("container-fullstack", "apps", "console-web", "package.json.hbs");
+  checkConsoleWebManifestDependency("container-fullstack", "@croco/meta-vite");
 
   const pageFiles = listPageFiles("container-fullstack");
   expect(pageFiles).toContain("route.ts");

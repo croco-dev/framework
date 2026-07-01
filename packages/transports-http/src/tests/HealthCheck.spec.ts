@@ -48,7 +48,7 @@ describe("HealthCheck", () => {
 
   describe("GET /health", () => {
     it("should return 200 OK", async () => {
-      const app = createApp({ controllers: [] });
+      const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/health"));
 
       expect(response.status).toBe(200);
@@ -61,7 +61,7 @@ describe("HealthCheck", () => {
     it("should return the standard liveness contract", async () => {
       registry.register("db", async () => ({ status: "down", error: "not ready" }));
 
-      const app = createApp({ controllers: [] });
+      const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/health/live"));
 
       expect(response.status).toBe(200);
@@ -73,7 +73,7 @@ describe("HealthCheck", () => {
     it("should return the same readiness contract as /ready", async () => {
       registry.register("db", async () => ({ status: "up", latency: 10 }));
 
-      const app = createApp({ controllers: [] });
+      const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/health/ready"));
 
       expect(response.status).toBe(200);
@@ -92,7 +92,7 @@ describe("HealthCheck", () => {
 
   describe("GET /ready", () => {
     it("should return 200 OK when no checks registered", async () => {
-      const app = createApp({ controllers: [] });
+      const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/ready"));
 
       expect(response.status).toBe(200);
@@ -103,7 +103,7 @@ describe("HealthCheck", () => {
     it("should return 200 OK when all checks pass", async () => {
       registry.register("db", async () => ({ status: "up", latency: 10 }));
 
-      const app = createApp({ controllers: [] });
+      const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/ready"));
 
       expect(response.status).toBe(200);
@@ -152,7 +152,7 @@ describe("HealthCheck", () => {
         { timeout: 100 },
       );
 
-      const app = createApp({ controllers: [] });
+      const app = createApp({ controllers: [], securityValidation: "off" });
       const responsePromise = app.fetch(new Request("http://localhost/ready"));
 
       vi.advanceTimersByTime(100);
@@ -179,7 +179,7 @@ describe("HealthCheck", () => {
         throw new Error("Connection failed");
       });
 
-      const app = createApp({ controllers: [] });
+      const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/ready"));
 
       expect(response.status).toBe(503);
@@ -218,7 +218,7 @@ describe("HealthCheck", () => {
         return { status: "up" };
       });
 
-      const app = createApp({ controllers: [] });
+      const app = createApp({ controllers: [], securityValidation: "off" });
       const responsePromise = app.fetch(new Request("http://localhost/ready"));
 
       vi.advanceTimersByTime(6000);
@@ -241,7 +241,7 @@ describe("HealthCheck", () => {
         registry.register("db", async () => ({ status: "down" }));
       }).toThrow("Duplicate health check registration detected for 'db'");
 
-      const app = createApp({ controllers: [] });
+      const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/ready"));
       const json = await response.json();
 

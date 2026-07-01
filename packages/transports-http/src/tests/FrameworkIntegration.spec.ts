@@ -186,7 +186,10 @@ describe("Framework integration", () => {
     Container.set(ErrorHandler, new ErrorHandler(logger));
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
 
-    app = createApp({ controllers: [FrameworkIntegrationController] });
+    app = createApp({
+      controllers: [FrameworkIntegrationController],
+      securityValidation: "off",
+    });
   });
 
   it("binds request inputs while preserving framework context", async () => {

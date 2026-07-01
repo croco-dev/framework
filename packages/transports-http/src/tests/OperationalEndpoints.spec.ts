@@ -96,7 +96,7 @@ describe("Operational endpoints", () => {
   });
 
   it("does not register diagnostics when exposure is off", async () => {
-    const app = createApp({ controllers: [] });
+    const app = createApp({ controllers: [], securityValidation: "off" });
 
     const response = await app.fetch(new Request("http://localhost/health/diagnostics"));
 
@@ -104,7 +104,7 @@ describe("Operational endpoints", () => {
   });
 
   it("does not register the dev inspector when exposure is off", async () => {
-    const app = createApp({ controllers: [] });
+    const app = createApp({ controllers: [], securityValidation: "off" });
 
     const response = await app.fetch(new Request("http://localhost/dev/inspector"));
 
@@ -265,6 +265,7 @@ describe("Operational endpoints", () => {
   it("requires a token when the dev inspector uses token exposure", async () => {
     const app = createApp({
       controllers: [],
+      securityValidation: "off",
       devInspector: {
         exposure: "token",
         token: "dev-secret",
@@ -287,6 +288,7 @@ describe("Operational endpoints", () => {
     vi.stubEnv("NODE_ENV", "production");
     const app = createApp({
       controllers: [],
+      securityValidation: "off",
       devInspector: {
         exposure: "private",
         allowProduction: true,
@@ -301,6 +303,7 @@ describe("Operational endpoints", () => {
   it("requires the configured diagnostics token and returns no-store responses", async () => {
     const app = createApp({
       controllers: [],
+      securityValidation: "off",
       diagnostics: createDiagnosticsOptions({
         exposure: "token",
         token: "ops-secret",
@@ -327,6 +330,7 @@ describe("Operational endpoints", () => {
     collector.registerProvider(new StaticDiagnosticsProvider());
     const app = createApp({
       controllers: [],
+      securityValidation: "off",
       diagnostics: {
         exposure: "private",
         collector,
@@ -351,7 +355,7 @@ describe("Operational endpoints", () => {
   it("returns minimal operational metrics without exposing diagnostics details", async () => {
     const registry = Container.get(HealthCheckRegistry);
     registry.register("db", async () => ({ status: "up", latency: 10 }));
-    const app = createApp({ controllers: [] });
+    const app = createApp({ controllers: [], securityValidation: "off" });
 
     const response = await app.fetch(new Request("http://localhost/metrics"));
 
@@ -369,6 +373,7 @@ describe("Operational endpoints", () => {
   it("supports custom diagnostics guards", async () => {
     const app = createApp({
       controllers: [],
+      securityValidation: "off",
       diagnostics: createDiagnosticsOptions({
         exposure: "custom",
         guard: ({ header }) => header("X-Internal-Request") === "true",
@@ -406,6 +411,7 @@ describe("Operational endpoints", () => {
 
     const app = createApp({
       controllers: [],
+      securityValidation: "off",
       diagnostics: {
         exposure: "private",
         collector,
@@ -477,6 +483,7 @@ describe("Operational endpoints", () => {
   it("adds configured diagnostics providers to the default collector", async () => {
     const app = createApp({
       controllers: [],
+      securityValidation: "off",
       diagnostics: {
         exposure: "private",
         providers: [
@@ -510,7 +517,7 @@ describe("Operational endpoints", () => {
     vi.stubEnv("CROCO_DIAGNOSTICS_ENABLED", "true");
     vi.stubEnv("CROCO_DIAGNOSTICS_TOKEN", "legacy-token");
 
-    const app = createApp({ controllers: [] });
+    const app = createApp({ controllers: [], securityValidation: "off" });
     const denied = await app.fetch(new Request("http://localhost/health/diagnostics"));
     const allowed = await app.fetch(
       new Request("http://localhost/health/diagnostics", {

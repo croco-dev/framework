@@ -754,6 +754,30 @@ describe("@croco/testing", () => {
     )("$name", async ({ run }) => {
       await run();
     });
+
+    it("supports unsupported metadata expectations and custom URL assertions", async () => {
+      const signedUrlAssertion = vi.fn((url: string, context: { readonly key: string }) => {
+        expect(url).toContain(context.key);
+        expect(url).toContain("expires=");
+      });
+      const suite = createStorageProviderConformanceSuite({
+        createProvider: () => new InMemoryStorageProvider("https://storage.example.com"),
+        keyPrefix: "testing-custom-conformance",
+        metadata: {
+          contentType: "unsupported",
+          customMetadata: "unsupported",
+        },
+        providerName: "custom in-memory storage",
+        publicUrl: /storage\.example\.com/,
+        signedUrl: signedUrlAssertion,
+      });
+
+      for (const testCase of suite.cases) {
+        await testCase.run();
+      }
+
+      expect(signedUrlAssertion).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("auth provider conformance", () => {

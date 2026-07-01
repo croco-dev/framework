@@ -67,8 +67,11 @@ describe("DiagnosticCodes", () => {
 
   it("rejects unstable local code shapes while keeping definitions discoverable", () => {
     expect(isDiagnosticCode("doctor/workspace-not-found")).toBe(false);
+    expect(isDiagnosticCode("CROCO_ROUTE")).toBe(false);
     expect(isDiagnosticCode("CROCO_ROUTE_4")).toBe(false);
+    expect(isDiagnosticCode("CROCO_DOCTOR")).toBe(false);
     expect(isDiagnosticCode("CROCO_ROUTE_004")).toBe(true);
+    expect(isDiagnosticCode("CROCO_DOCTOR_WORKSPACE_VERSION_CONFLICT")).toBe(true);
     expect(getDiagnosticCodeDefinition("CROCO_DI_001")?.category).toBe("dependency-injection");
     expect(getDiagnosticCodeDefinition("CROCO_CLI_DOCTOR_001")?.legacyCodes).toEqual([
       "doctor/workspace-not-found",
