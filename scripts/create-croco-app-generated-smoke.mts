@@ -180,17 +180,6 @@ const generatedSmokeExternalCrocoRangeExceptions = {} satisfies Record<
   string,
   ExternalCrocoRangeException
 >;
-const generatedTemplateMatrixExclusions = {
-  "container-fullstack": {
-    reason:
-      "Template-only compatibility fixture is not reachable through the supported create-croco-app CLI preset or goal surface; structural coverage remains in templates-build.spec.ts until it is wired into generation.",
-  },
-  "ssr-lambda": {
-    reason:
-      "Template-only compatibility fixture is not reachable through the supported create-croco-app CLI preset or goal surface; lambda runtime coverage is exercised through graphql-lambda-api and saas-lambda-profile.",
-  },
-} as const satisfies Record<string, { readonly reason: string }>;
-
 const smokeCases: readonly SmokeCase[] = [
   {
     name: "blank-basic",
@@ -1063,17 +1052,11 @@ function readTemplateMatrixTargets(cases: readonly SmokeCase[]): readonly Templa
 }
 
 function readTemplateMatrixExclusions(): readonly TemplateMatrixExclusion[] {
-  return Object.entries(generatedTemplateMatrixExclusions)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([template, exclusion]) => ({
-      template,
-      reason: exclusion.reason,
-    }));
+  return [];
 }
 
 function assertTemplateMatrixAccountability(cases: readonly SmokeCase[]): void {
   const coveredTemplates = new Set(cases.flatMap(({ matrixTargets }) => matrixTargets));
-  const excludedTemplates = new Set(Object.keys(generatedTemplateMatrixExclusions));
   const topLevelTemplateDirectories = readdirSync(generatedAppTemplatesDir, {
     withFileTypes: true,
   })
@@ -1082,7 +1065,7 @@ function assertTemplateMatrixAccountability(cases: readonly SmokeCase[]): void {
     .sort();
 
   const missingTemplates = topLevelTemplateDirectories.filter(
-    (template) => !coveredTemplates.has(template) && !excludedTemplates.has(template),
+    (template) => !coveredTemplates.has(template),
   );
   if (missingTemplates.length > 0) {
     throw new Error(
@@ -1091,9 +1074,7 @@ function assertTemplateMatrixAccountability(cases: readonly SmokeCase[]): void {
   }
 
   const knownTemplates = new Set(topLevelTemplateDirectories);
-  const unknownTargets = [...coveredTemplates, ...excludedTemplates].filter(
-    (template) => !knownTemplates.has(template),
-  );
+  const unknownTargets = [...coveredTemplates].filter((template) => !knownTemplates.has(template));
   if (unknownTargets.length > 0) {
     throw new Error(
       `create-croco-app generated smoke matrix references unknown template directories: ${unknownTargets.join(", ")}`,

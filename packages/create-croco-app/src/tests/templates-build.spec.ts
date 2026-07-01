@@ -4,9 +4,17 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const TEMPLATES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../templates");
+const FIXTURE_TEMPLATES_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../test-fixtures",
+  "templates",
+);
+const FIXTURE_TEMPLATE_NAMES = new Set(["container-fullstack", "ssr-lambda"]);
 
 function templatePath(template: string, ...paths: string[]): string {
-  return join(TEMPLATES_DIR, template, ...paths);
+  const templatesDir = FIXTURE_TEMPLATE_NAMES.has(template) ? FIXTURE_TEMPLATES_DIR : TEMPLATES_DIR;
+
+  return join(templatesDir, template, ...paths);
 }
 
 function checkFileExists(template: string, ...paths: string[]) {
@@ -873,37 +881,34 @@ describe("Base preset README templates", () => {
   });
 });
 
-describe.each([
-  "spa-be-split",
-  "ssr-lambda",
-  "container-fullstack",
-  "saas",
-  "ai-saas",
-  "admin-console",
-])("Template: %s", (template) => {
-  it("should have required structure", () => {
-    if (template === "spa-be-split") {
-      checkSpaBeSplitStructure();
-      return;
-    }
+describe.each(["spa-be-split", "saas", "ai-saas", "admin-console"])(
+  "Shipped template: %s",
+  (template) => {
+    it("should have required structure", () => {
+      if (template === "spa-be-split") {
+        checkSpaBeSplitStructure();
+        return;
+      }
 
+      if (template === "saas") {
+        checkSaasStructure();
+        return;
+      }
+
+      if (template === "ai-saas") {
+        checkAiSaasStructure();
+        return;
+      }
+
+      checkAdminConsoleStructure();
+    });
+  },
+);
+
+describe.each(["ssr-lambda", "container-fullstack"])("Compatibility fixture: %s", (template) => {
+  it("should have required structure", () => {
     if (template === "ssr-lambda") {
       checkSsrLambdaStructure();
-      return;
-    }
-
-    if (template === "saas") {
-      checkSaasStructure();
-      return;
-    }
-
-    if (template === "ai-saas") {
-      checkAiSaasStructure();
-      return;
-    }
-
-    if (template === "admin-console") {
-      checkAdminConsoleStructure();
       return;
     }
 
