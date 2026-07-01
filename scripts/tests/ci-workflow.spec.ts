@@ -96,4 +96,22 @@ describe("CI package quality dashboard", () => {
       previousIndex = index;
     }
   });
+
+  it("keeps core coverage hard errors blocking in CI", () => {
+    const workflow = readCiWorkflow();
+    const warningStepStart = workflow.indexOf("- name: Core package coverage warning report");
+    const summaryStepStart = workflow.indexOf("- name: Publish core coverage warning summary");
+
+    expect(warningStepStart, "core coverage warning report step should be present").toBeGreaterThan(
+      -1,
+    );
+    expect(
+      summaryStepStart,
+      "core coverage summary step should follow the warning report",
+    ).toBeGreaterThan(warningStepStart);
+
+    const warningStep = workflow.slice(warningStepStart, summaryStepStart);
+    expect(warningStep).toContain("run: pnpm test:coverage:core:warning");
+    expect(warningStep).not.toContain("continue-on-error");
+  });
 });
