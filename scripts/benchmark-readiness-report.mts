@@ -149,6 +149,7 @@ const DEFAULT_BENCHMARK_COMMAND = "pnpm bench:check --output-json=benchmark-resu
 const VARIANCE_EVIDENCE_MARKER = "<!-- croco-benchmark-variance-evidence:v1 -->";
 const VARIANCE_EVIDENCE_RUN_COUNT = 5;
 const VARIANCE_SPREAD_TOLERANCE = 0.15;
+const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
 const PROMOTED_BASELINE_TOLERANCE = 0.2;
 
 function formatDuration(ms: number): string {
@@ -263,6 +264,15 @@ function nearlyEqual(actual: number, expected: number): boolean {
   return Math.abs(actual - expected) <= Math.max(1e-9, Math.abs(expected) * 1e-6);
 }
 
+function parseIsoTimestamp(value: unknown): number | null {
+  if (typeof value !== "string" || !ISO_TIMESTAMP_PATTERN.test(value)) {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
 function createGateFailureCounts(): BenchmarkVarianceGateFailureCounts {
   return {
     runnerFailures: 0,
@@ -372,7 +382,7 @@ function validateVarianceEvidenceContract(
     failures.push("source must be github-actions");
   }
 
-  if (typeof contract.reviewedAt !== "string" || Number.isNaN(Date.parse(contract.reviewedAt))) {
+  if (parseIsoTimestamp(contract.reviewedAt) === null) {
     failures.push("reviewedAt must be an ISO date/time string");
   }
 
@@ -420,10 +430,11 @@ function validateVarianceEvidenceContract(
     if (run.baseBranch !== "trunk") {
       failures.push(`run ${runId} must target trunk`);
     }
-    if (typeof run.createdAt !== "string" || Number.isNaN(Date.parse(run.createdAt))) {
+    const createdAt = parseIsoTimestamp(run.createdAt);
+    if (createdAt === null) {
       failures.push(`run ${runId} must include an ISO createdAt timestamp`);
     } else {
-      orderedRunCreatedAt.push(Date.parse(run.createdAt));
+      orderedRunCreatedAt.push(createdAt);
     }
     if (run.workflowStatus !== "completed") {
       failures.push(`run ${runId} workflowStatus must be completed`);

@@ -218,6 +218,66 @@ describe("benchmark-readiness-report.mts", () => {
     );
   });
 
+  it("rejects variance evidence whose reviewedAt timestamp is not strict ISO", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent([
+          {
+            name: "Passing benchmark",
+            min: 0.96,
+            median: 1,
+            max: 1.04,
+            spread: 0.08,
+            p75ByRun: {
+              "1": 0.96,
+              "2": 0.99,
+              "3": 1,
+              "4": 1.02,
+              "5": 1.04,
+            },
+          },
+        ]).replace('"reviewedAt": "2026-07-01T00:00:00Z"', '"reviewedAt": "July 1, 2026"'),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: reviewedAt must be an ISO date/time string.",
+    );
+  });
+
+  it("rejects variance evidence whose run createdAt timestamp is not strict ISO", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent([
+          {
+            name: "Passing benchmark",
+            min: 0.96,
+            median: 1,
+            max: 1.04,
+            spread: 0.08,
+            p75ByRun: {
+              "1": 0.96,
+              "2": 0.99,
+              "3": 1,
+              "4": 1.02,
+              "5": 1.04,
+            },
+          },
+        ]).replace('"createdAt": "2026-06-30T04:00:00Z"', '"createdAt": "June 30, 2026 04:00 UTC"'),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: run 1 must include an ISO createdAt timestamp.",
+    );
+  });
+
   it("rejects variance evidence whose run entries are not newest-to-oldest", () => {
     const evaluation = evaluateBenchmarkReadiness(greenResult(), {
       varianceEvidence: {
