@@ -20,10 +20,17 @@ export type StrictContractPackage = {
   readonly tsconfig: string;
 };
 
+export type StrictContractDeferral = {
+  readonly packageName: string;
+  readonly reason: string;
+  readonly owner: string;
+};
+
 export type StrictContractBaseline = {
   readonly version: 1;
   readonly strictOptions: readonly string[];
   readonly packages: readonly string[];
+  readonly deferrals: readonly StrictContractDeferral[];
   readonly diagnostics: readonly StrictContractDiagnostic[];
 };
 
@@ -42,6 +49,26 @@ const rolloutPackages: readonly StrictContractPackage[] = [
     name: "@croco/protocols-core",
     path: "packages/protocols-core",
     tsconfig: "packages/protocols-core/tsconfig.contract-strict.json",
+  },
+  {
+    name: "@croco/protocols-rest",
+    path: "packages/protocols-rest",
+    tsconfig: "packages/protocols-rest/tsconfig.contract-strict.json",
+  },
+  {
+    name: "@croco/openapi-spec",
+    path: "packages/openapi-spec",
+    tsconfig: "packages/openapi-spec/tsconfig.contract-strict.json",
+  },
+  {
+    name: "@croco/rpc-codegen",
+    path: "packages/rpc-codegen",
+    tsconfig: "packages/rpc-codegen/tsconfig.contract-strict.json",
+  },
+  {
+    name: "@croco/transports-http",
+    path: "packages/transports-http",
+    tsconfig: "packages/transports-http/tsconfig.contract-strict.json",
   },
 ];
 
@@ -184,6 +211,14 @@ function listsMatch(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 export function validateStrictContractBaselineConfiguration(
   baseline: StrictContractBaseline,
 ): void {
@@ -202,6 +237,96 @@ export function validateStrictContractBaselineConfiguration(
     throw new Error(
       `Baseline packages mismatch. Expected: ${describeList(rolloutPackageNames)}; Actual: ${describeList(baseline.packages)}`,
     );
+  }
+
+  if (!Array.isArray(baseline.deferrals)) {
+    throw new Error("Baseline deferrals must be an array");
+  }
+
+  const rolloutPackageNameSet = new Set(rolloutPackageNames);
+  const diagnosticPackageNames = new Set<string>();
+  for (const diagnostic of baseline.diagnostics) {
+    if (!rolloutPackageNameSet.has(diagnostic.packageName)) {
+      throw new Error(
+        `Baseline diagnostic references unknown rollout package: ${diagnostic.packageName}`,
+      );
+    }
+    diagnosticPackageNames.add(diagnostic.packageName);
+  }
+
+  const deferralPackageNames = new Set<string>();
+  for (const deferral of baseline.deferrals) {
+    if (!rolloutPackageNameSet.has(deferral.packageName)) {
+      throw new Error(
+        `Baseline deferral references unknown rollout package: ${deferral.packageName}`,
+      );
+    }
+    if (deferralPackageNames.has(deferral.packageName)) {
+      throw new Error(`Baseline deferral is duplicated for package: ${deferral.packageName}`);
+    }
+    if (!hasText(deferral.reason)) {
+      throw new Error(`Baseline deferral for ${deferral.packageName} must include a reason`);
+    }
+    if (!hasText(deferral.owner)) {
+      throw new Error(`Baseline deferral for ${deferral.packageName} must include an owner`);
+    }
+    if (!diagnosticPackageNames.has(deferral.packageName)) {
+      throw new Error(`Baseline deferral for ${deferral.packageName} has no matching diagnostics`);
+    }
+    deferralPackageNames.add(deferral.packageName);
+  }
+
+  for (const packageName of diagnosticPackageNames) {
+    if (!deferralPackageNames.has(packageName)) {
+      throw new Error(
+        `Baseline diagnostics for ${packageName} require deferral metadata with reason and owner`,
+      );
+    }
+  }
+}
+
+export function validateStrictContractPackageConfiguration(
+  rootDir: string,
+  pkg: StrictContractPackage,
+): void {
+  const tsconfigPath = join(rootDir, pkg.tsconfig);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(tsconfigPath, "utf-8"));
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      throw new Error(`Strict tsconfig missing for ${pkg.name}: ${pkg.tsconfig}`);
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Strict tsconfig invalid for ${pkg.name}: ${message}`);
+  }
+
+  if (!isRecord(parsed)) {
+    throw new Error(`Strict tsconfig for ${pkg.name} must be a JSON object: ${pkg.tsconfig}`);
+  }
+
+  const compilerOptions = parsed.compilerOptions;
+  if (!isRecord(compilerOptions)) {
+    throw new Error(
+      `Strict tsconfig for ${pkg.name} must include compilerOptions: ${pkg.tsconfig}`,
+    );
+  }
+
+  for (const option of strictOptions) {
+    if (compilerOptions[option] !== true) {
+      throw new Error(
+        `Strict tsconfig for ${pkg.name} must set compilerOptions.${option} to true: ${pkg.tsconfig}`,
+      );
+    }
+  }
+}
+
+export function validateStrictContractPackageConfigurations(
+  rootDir: string,
+  packages: readonly StrictContractPackage[] = rolloutPackages,
+): void {
+  for (const pkg of packages) {
+    validateStrictContractPackageConfiguration(rootDir, pkg);
   }
 }
 
@@ -247,6 +372,7 @@ function main(): void {
   const rootDir = process.cwd();
   const baseline = readBaseline(rootDir);
   validateStrictContractBaselineConfiguration(baseline);
+  validateStrictContractPackageConfigurations(rootDir);
   const current = rolloutPackages.flatMap((pkg) => runTypecheck(rootDir, pkg));
   const comparison = compareStrictContractDiagnostics(baseline.diagnostics, current);
 
@@ -256,6 +382,9 @@ function main(): void {
   console.log(`strict-contract-typecheck: options ${strictOptions.join(", ")}`);
   console.log(
     `strict-contract-typecheck: accepted baseline diagnostics ${baseline.diagnostics.length}`,
+  );
+  console.log(
+    `strict-contract-typecheck: accepted baseline deferrals ${baseline.deferrals.length}`,
   );
 
   for (const diagnostic of comparison.added) {
