@@ -13,6 +13,10 @@ type ScriptResult = {
   readonly status: number | null;
 };
 
+type RunScriptOptions = {
+  readonly env?: Record<string, string>;
+};
+
 describe("changeset-required-check.mts", () => {
   afterEach(() => {
     for (const repo of tempRepos.splice(0)) {
@@ -245,6 +249,124 @@ describe("changeset-required-check.mts", () => {
     expect(result.stdout).toContain("@croco/public");
     expect(result.stdout).toContain("packages/public/package.json");
   });
+
+  it("fails when the public API snapshot changes without release metadata", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/public-api-snapshot-without-changeset");
+    writePublicApiSnapshot(repo, ["nextValue"]);
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "fix: update public api snapshot"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "changeset-required: publishable package changes require a non-README changeset.",
+    );
+    expect(result.stdout).toContain("@croco/public (public API snapshot)");
+    expect(result.stdout).toContain("public-api-surface.snapshot.json");
+  });
+
+  it("passes when the public API snapshot changes with a release changeset", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/public-api-snapshot-with-changeset");
+    writePublicApiSnapshot(repo, ["nextValue"]);
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "fix: update public api snapshot"]);
+    commitFile(
+      repo,
+      ".changeset/public-api-snapshot.md",
+      "---\n'@croco/public': patch\n---\n\nUpdate public API snapshot.\n",
+      "chore: add public api changeset",
+    );
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: valid non-README changeset found (passing)",
+    );
+  });
+
+  it("passes when a snapshot-only correction carries a checked no-release reason", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/public-api-snapshot-no-release");
+    writePublicApiSnapshot(repo, ["nextValue"]);
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "fix: update public api snapshot"]);
+    writeFile(
+      repo,
+      "event.json",
+      JSON.stringify({
+        pull_request: {
+          body: "## Summary\n\nChangeset-required no-release reason: Snapshot normalization only; package source and runtime behavior are unchanged.",
+        },
+      }),
+    );
+
+    const result = runScript(repo, {
+      env: {
+        GITHUB_EVENT_PATH: "event.json",
+      },
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: public API snapshot change has checked no-release justification (passing)",
+    );
+    expect(result.stdout).toContain("No-release source: pull request body");
+  });
+
+  it("fails when a snapshot-only correction only has an environment no-release reason", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/public-api-snapshot-env-no-release");
+    writePublicApiSnapshot(repo, ["nextValue"]);
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "fix: update public api snapshot"]);
+
+    const result = runScript(repo, {
+      env: {
+        CHANGESET_REQUIRED_NO_RELEASE_REASON:
+          "Snapshot normalization only; package source and runtime behavior are unchanged.",
+      },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "changeset-required: publishable package changes require a non-README changeset.",
+    );
+    expect(result.stdout).toContain("@croco/public (public API snapshot)");
+  });
+
+  it("does not let a no-release reason bypass public package source changes", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/source-change-with-no-release-reason");
+    commitFile(
+      repo,
+      "packages/public/src/index.ts",
+      "export const value = 2;",
+      "fix: change public package",
+    );
+    writeFile(
+      repo,
+      "event.json",
+      JSON.stringify({
+        pull_request: {
+          body: "## Summary\n\nChangeset-required no-release reason: Snapshot normalization only; package source and runtime behavior are unchanged.",
+        },
+      }),
+    );
+
+    const result = runScript(repo, {
+      env: {
+        GITHUB_EVENT_PATH: "event.json",
+      },
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public");
+    expect(result.stdout).toContain("packages/public/src/index.ts");
+  });
 });
 
 function createTempRepo(): string {
@@ -278,6 +400,7 @@ function createTempRepo(): string {
     private: true,
     version: "0.0.2",
   });
+  writePublicApiSnapshot(repo, ["value"]);
 
   git(repo, ["add", "."]);
   git(repo, ["commit", "-m", "chore: initial commit"]);
@@ -288,6 +411,34 @@ function createTempRepo(): string {
 function writePackage(repo: string, packageDirName: string, pkg: Record<string, unknown>): void {
   writeFile(repo, `packages/${packageDirName}/package.json`, `${JSON.stringify(pkg, null, 2)}\n`);
   writeFile(repo, `packages/${packageDirName}/src/index.ts`, "export const value = 1;\n");
+}
+
+function writePublicApiSnapshot(repo: string, runtimeExportNames: readonly string[]): void {
+  writeFile(
+    repo,
+    "public-api-surface.snapshot.json",
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        packages: [
+          {
+            packageName: "@croco/public",
+            relativeDir: "packages/public",
+            entrypoint: "packages/public/src/index.ts",
+            runtimeExports: runtimeExportNames.map((name) => ({
+              name,
+              exportKind: "named",
+              source: "./index.js",
+              declarationKind: "const",
+            })),
+            typeExports: [],
+          },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 function checkoutBranch(repo: string, branch: string): void {
@@ -306,12 +457,16 @@ function writeFile(repo: string, fileName: string, content: string): void {
   writeFileSync(filePath, content);
 }
 
-function runScript(repo: string): ScriptResult {
+function runScript(repo: string, options: RunScriptOptions = {}): ScriptResult {
   const result = spawnSync(
     "node",
     ["--experimental-strip-types", scriptPath, "--root", repo, "--base", "trunk", "--head", "HEAD"],
     {
       encoding: "utf-8",
+      env: {
+        ...process.env,
+        ...options.env,
+      },
     },
   );
 
