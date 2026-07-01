@@ -1,7 +1,9 @@
 # Latest Five Green Benchmark Variance Evidence
 
 Reviewed on 2026-07-01 from successful GitHub Actions benchmark workflow runs targeting
-`trunk` pull requests. The five reviewed artifacts emitted the same 17 benchmark rows and
+`trunk` pull requests. The selected latest green trunk window is
+`28461533906`, `28459339571`, `28458476660`, `28456296473`, and `28455453392`
+in newest-to-oldest `createdAt` order. The five reviewed artifacts emitted the same 17 benchmark rows and
 recorded no runner/module failures, missing reports, empty reports, threshold failures, threshold skips, or
 baseline skips. Because the pre-promotion benchmark baseline was stale, the original warning-only artifacts
 recorded 80 baseline gate failures; this contract preserves those failures instead of
@@ -17,6 +19,20 @@ the documented 15% variance tolerance and below the benchmark gate's 20% baselin
   "source": "github-actions",
   "reviewedAt": "2026-07-01T02:51:18Z",
   "tolerance": 0.15,
+  "selection": {
+    "workflowName": "Performance Benchmark",
+    "qualifyingBaseBranch": "trunk",
+    "qualifyingWorkflowStatus": "completed",
+    "qualifyingWorkflowConclusion": "success",
+    "orderedBy": "createdAt-desc",
+    "latestGreenTrunkRunIds": [
+      28461533906,
+      28459339571,
+      28458476660,
+      28456296473,
+      28455453392
+    ]
+  },
   "runs": [
     {
       "id": 28461533906,

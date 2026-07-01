@@ -185,6 +185,69 @@ describe("benchmark-readiness-report.mts", () => {
     );
   });
 
+  it("rejects variance evidence whose latest green trunk run window omits the selected runs", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent(
+          [
+            {
+              name: "Passing benchmark",
+              min: 0.96,
+              median: 1,
+              max: 1.04,
+              spread: 0.08,
+              p75ByRun: {
+                "1": 0.96,
+                "2": 0.99,
+                "3": 1,
+                "4": 1.02,
+                "5": 1.04,
+              },
+            },
+          ],
+          { latestGreenTrunkRunIds: [6, 5, 4, 3, 2] },
+        ),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: selection.latestGreenTrunkRunIds must match runs in newest-to-oldest order.",
+    );
+  });
+
+  it("rejects variance evidence whose run entries are not newest-to-oldest", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent([
+          {
+            name: "Passing benchmark",
+            min: 0.96,
+            median: 1,
+            max: 1.04,
+            spread: 0.08,
+            p75ByRun: {
+              "1": 0.96,
+              "2": 0.99,
+              "3": 1,
+              "4": 1.02,
+              "5": 1.04,
+            },
+          },
+        ]).replace('"createdAt": "2026-06-30T03:00:00Z"', '"createdAt": "2026-06-30T05:00:00Z"'),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: runs must be ordered newest-to-oldest by createdAt.",
+    );
+  });
+
   it("rejects variance evidence with duplicate benchmark row names", () => {
     const evaluation = evaluateBenchmarkReadiness(greenResult(), {
       varianceEvidence: {
@@ -412,6 +475,7 @@ function validVarianceEvidenceContent(
   }>,
   options: {
     artifactGateFailuresByRun?: Record<string, string[]>;
+    latestGreenTrunkRunIds?: number[];
   } = {},
 ): string {
   const runIds = ["1", "2", "3", "4", "5"];
@@ -434,6 +498,14 @@ function validVarianceEvidenceContent(
         source: "github-actions",
         reviewedAt: "2026-07-01T00:00:00Z",
         tolerance: 0.15,
+        selection: {
+          workflowName: "Performance Benchmark",
+          qualifyingBaseBranch: "trunk",
+          qualifyingWorkflowStatus: "completed",
+          qualifyingWorkflowConclusion: "success",
+          orderedBy: "createdAt-desc",
+          latestGreenTrunkRunIds: options.latestGreenTrunkRunIds ?? [1, 2, 3, 4, 5],
+        },
         runs: [
           {
             id: 1,
@@ -441,7 +513,7 @@ function validVarianceEvidenceContent(
             headSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             headBranch: "trunk",
             baseBranch: "trunk",
-            createdAt: "2026-06-30T00:00:00Z",
+            createdAt: "2026-06-30T04:00:00Z",
             workflowStatus: "completed",
             workflowConclusion: "success",
             artifact: artifactForRun("1", rows.length, artifactGateFailuresByRun),
@@ -452,7 +524,7 @@ function validVarianceEvidenceContent(
             headSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             headBranch: "trunk",
             baseBranch: "trunk",
-            createdAt: "2026-06-30T01:00:00Z",
+            createdAt: "2026-06-30T03:00:00Z",
             workflowStatus: "completed",
             workflowConclusion: "success",
             artifact: artifactForRun("2", rows.length, artifactGateFailuresByRun),
@@ -474,7 +546,7 @@ function validVarianceEvidenceContent(
             headSha: "dddddddddddddddddddddddddddddddddddddddd",
             headBranch: "trunk",
             baseBranch: "trunk",
-            createdAt: "2026-06-30T03:00:00Z",
+            createdAt: "2026-06-30T01:00:00Z",
             workflowStatus: "completed",
             workflowConclusion: "success",
             artifact: artifactForRun("4", rows.length, artifactGateFailuresByRun),
@@ -485,7 +557,7 @@ function validVarianceEvidenceContent(
             headSha: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
             headBranch: "trunk",
             baseBranch: "trunk",
-            createdAt: "2026-06-30T04:00:00Z",
+            createdAt: "2026-06-30T00:00:00Z",
             workflowStatus: "completed",
             workflowConclusion: "success",
             artifact: artifactForRun("5", rows.length, artifactGateFailuresByRun),

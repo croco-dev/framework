@@ -47,11 +47,21 @@ type BenchmarkVarianceEvidenceRow = {
   p75ByRun: Record<string, number>;
 };
 
+type BenchmarkVarianceEvidenceSelection = {
+  workflowName: string;
+  qualifyingBaseBranch: string;
+  qualifyingWorkflowStatus: string;
+  qualifyingWorkflowConclusion: string;
+  orderedBy: string;
+  latestGreenTrunkRunIds: number[];
+};
+
 type BenchmarkVarianceEvidenceContract = {
   version: 1;
   source: string;
   reviewedAt: string;
   tolerance: number;
+  selection: BenchmarkVarianceEvidenceSelection;
   runs: BenchmarkVarianceEvidenceRun[];
   checks: {
     sameRowSet: boolean;
@@ -380,6 +390,8 @@ function validateVarianceEvidenceContract(
   }
 
   const runIds = new Set<string>();
+  const orderedRunIds: number[] = [];
+  const orderedRunCreatedAt: number[] = [];
   const artifactFailureCounts = createGateFailureCounts();
   for (const run of Array.isArray(contract.runs) ? contract.runs : []) {
     if (!isFiniteNumber(run.id)) {
@@ -387,6 +399,7 @@ function validateVarianceEvidenceContract(
       continue;
     }
     const runId = String(run.id);
+    orderedRunIds.push(run.id);
     if (runIds.has(runId)) {
       failures.push(`run id ${runId} is duplicated`);
     }
@@ -409,6 +422,8 @@ function validateVarianceEvidenceContract(
     }
     if (typeof run.createdAt !== "string" || Number.isNaN(Date.parse(run.createdAt))) {
       failures.push(`run ${runId} must include an ISO createdAt timestamp`);
+    } else {
+      orderedRunCreatedAt.push(Date.parse(run.createdAt));
     }
     if (run.workflowStatus !== "completed") {
       failures.push(`run ${runId} workflowStatus must be completed`);
@@ -452,6 +467,56 @@ function validateVarianceEvidenceContract(
     if (runFailureCounts.otherFailures > 0) {
       failures.push(`run ${runId} artifact contains unclassified gate failures`);
     }
+  }
+
+  const selection = contract.selection;
+  if (!selection || typeof selection !== "object") {
+    failures.push("selection must describe the latest green trunk run window");
+  } else {
+    if (selection.workflowName !== "Performance Benchmark") {
+      failures.push("selection.workflowName must be Performance Benchmark");
+    }
+    if (selection.qualifyingBaseBranch !== "trunk") {
+      failures.push("selection.qualifyingBaseBranch must be trunk");
+    }
+    if (selection.qualifyingWorkflowStatus !== "completed") {
+      failures.push("selection.qualifyingWorkflowStatus must be completed");
+    }
+    if (selection.qualifyingWorkflowConclusion !== "success") {
+      failures.push("selection.qualifyingWorkflowConclusion must be success");
+    }
+    if (selection.orderedBy !== "createdAt-desc") {
+      failures.push("selection.orderedBy must be createdAt-desc");
+    }
+    if (
+      !Array.isArray(selection.latestGreenTrunkRunIds) ||
+      selection.latestGreenTrunkRunIds.length !== VARIANCE_EVIDENCE_RUN_COUNT
+    ) {
+      failures.push(
+        `selection.latestGreenTrunkRunIds must contain exactly ${VARIANCE_EVIDENCE_RUN_COUNT} run id(s)`,
+      );
+    } else {
+      const selectedRunIds = selection.latestGreenTrunkRunIds;
+      if (selectedRunIds.some((runId) => !isFiniteNumber(runId))) {
+        failures.push("selection.latestGreenTrunkRunIds must contain only numeric run ids");
+      }
+      const selectedRunIdSet = new Set(selectedRunIds);
+      if (selectedRunIdSet.size !== selectedRunIds.length) {
+        failures.push("selection.latestGreenTrunkRunIds must not contain duplicates");
+      }
+      if (JSON.stringify(selectedRunIds) !== JSON.stringify(orderedRunIds)) {
+        failures.push("selection.latestGreenTrunkRunIds must match runs in newest-to-oldest order");
+      }
+    }
+  }
+
+  if (
+    orderedRunCreatedAt.length === VARIANCE_EVIDENCE_RUN_COUNT &&
+    orderedRunCreatedAt.some(
+      (createdAt, index, values) => index > 0 && createdAt >= values[index - 1],
+    )
+  ) {
+    failures.push("runs must be ordered newest-to-oldest by createdAt");
   }
 
   const checks = contract.checks;
