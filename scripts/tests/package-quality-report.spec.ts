@@ -141,6 +141,9 @@ describe("package-quality-report.mts", () => {
     expect(markdown).toContain(
       "| `bundle-size:warning` | publishable package generated artifact growth",
     );
+    expect(markdown).toContain(
+      "| `benchmark` | performance drift | blocking in dedicated benchmark workflow | n/a (separate workflow) | latest-five-green evidence and benchmark baselines are committed |",
+    );
     expect(markdown).toContain("- Runtime exports added/removed: 1 / 0");
     expect(markdown).toContain("- Type exports added/removed: 0 / 1");
     expect(markdown).toContain("run `pnpm public-api:write`");

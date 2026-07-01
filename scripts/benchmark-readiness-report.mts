@@ -26,6 +26,7 @@ type BenchmarkVarianceEvidenceRun = {
   url: string;
   headSha: string;
   headBranch: string;
+  baseBranch: string;
   createdAt: string;
   workflowStatus: string;
   workflowConclusion: string;
@@ -403,6 +404,9 @@ function validateVarianceEvidenceContract(
     if (typeof run.headBranch !== "string" || run.headBranch.length === 0) {
       failures.push(`run ${runId} must include a head branch`);
     }
+    if (run.baseBranch !== "trunk") {
+      failures.push(`run ${runId} must target trunk`);
+    }
     if (typeof run.createdAt !== "string" || Number.isNaN(Date.parse(run.createdAt))) {
       failures.push(`run ${runId} must include an ISO createdAt timestamp`);
     }
@@ -495,6 +499,20 @@ function validateVarianceEvidenceContract(
   if (!Array.isArray(contract.rows)) {
     failures.push("rows must be an array");
     return { provided, valid: failures.length === 0, failures };
+  }
+
+  if (contract.rows.length !== reports.length) {
+    failures.push(`rows must contain exactly ${reports.length} benchmark row(s)`);
+  }
+
+  const duplicateRowNames = contract.rows
+    .map((row) => row.name)
+    .filter((name, index, names) => names.indexOf(name) !== index);
+
+  if (duplicateRowNames.length > 0) {
+    failures.push(
+      `rows must not contain duplicate benchmark names: ${duplicateRowNames.join(", ")}`,
+    );
   }
 
   const evidenceRowsByName = new Map(contract.rows.map((row) => [row.name, row]));

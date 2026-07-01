@@ -55,8 +55,8 @@ enforce-ready when spread <= 0.15 across the latest five green runs
 - Current latest-five-green evidence tolerance: `VARIANCE_SPREAD_TOLERANCE = 0.15`.
 - Current baseline tolerance: `BASELINE_TOLERANCE = 0.2`.
 - Current threshold margin: local uses `1x`; CI uses `CI_THRESHOLD_MULTIPLIER = 2`.
-- Enforce promotion should not tighten either value in the same PR that flips `BENCHMARK_GATE_MODE`; first
-  prove stable warning-only output, then tighten in a follow-up.
+- Do not tighten either value in the same PR that preserves `BENCHMARK_GATE_MODE=enforce`; first verify stable
+  enforce-mode output, then tighten in a follow-up.
 
 ### PR Visibility
 
@@ -73,8 +73,8 @@ enforce-ready when spread <= 0.15 across the latest five green runs
 - Documentation-only changes rely on the benchmark workflow `paths` filter and should not run the benchmark job.
 - Source, benchmark, config, or lockfile changes that trigger the benchmark workflow must produce a report with no
   threshold or baseline skips.
-- New benchmark rows must land with both threshold and baseline entries, or the checker should remain non-zero in
-  warning-only mode until those entries are added.
+- New benchmark rows must land with both threshold and baseline entries; in enforce mode the checker remains
+  non-zero until those entries are added.
 - Manual benchmark skip is allowed only for unavailable external infrastructure, and the PR must state why the
   skipped run does not affect the changed code path.
 

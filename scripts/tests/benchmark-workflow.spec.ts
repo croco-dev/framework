@@ -17,8 +17,7 @@ describe("benchmark workflow", () => {
       "set +e",
       "pnpm bench:readiness --input=benchmark-result.json --output=ci-reports/benchmark/summary.md --variance-evidence=ci-reports/benchmark/latest-five-green-runs.md",
       "readiness_exit=$?",
-      "set -e",
-      'cat ci-reports/benchmark/summary.md >> "$GITHUB_STEP_SUMMARY"',
+      'cat ci-reports/benchmark/summary.md >> "$GITHUB_STEP_SUMMARY" || true',
       'exit "$readiness_exit"',
       "- name: Upload benchmark readiness report",
     ];

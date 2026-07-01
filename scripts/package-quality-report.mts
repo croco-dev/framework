@@ -1138,7 +1138,7 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     `| \`test\` | package test tasks | blocking on PR/trunk | ${report.gateOutcomes.test} | Turbo \`test\` summary below |`,
     `| \`provider-certification:check\` | provider, integration, transport, and presentation certification evidence | blocking on PR/trunk | ${report.gateOutcomes["provider-certification:check"]} | validates catalog certification records and writes \`ci-reports/package-quality/provider-certification.md\` plus JSON |`,
     `| \`bundle-size:warning\` | publishable package generated artifact growth | warning-only until baselines stabilize | ${formatBundleSizeStatus(report.bundleSize)} | ${formatBundleSizeEvidence(report.bundleSize)} |`,
-    "| benchmark | performance drift | blocking in dedicated benchmark workflow | enforce | latest-five-green evidence and benchmark baselines are committed |",
+    "| `benchmark` | performance drift | blocking in dedicated benchmark workflow | n/a (separate workflow) | latest-five-green evidence and benchmark baselines are committed |",
     "",
     "## Package task totals",
     "| Task | Pass | Fail | Not collected | Not configured | Not run |",

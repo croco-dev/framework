@@ -25,6 +25,7 @@ The protected `trunk` branch keeps the existing hard gates:
 - `production-ready:check` after Turbo summaries, blocking production-ready packages that lack required maturity evidence.
 - Package entrypoint and binary smoke checks.
 - Generated app smoke, CLI integration tests, and core coverage.
+- Benchmark drift in the dedicated benchmark workflow when `BENCHMARK_GATE_MODE=enforce`.
 
 The Croco 1.0 blocker scope comes from `docs/package-catalog.json` `spine.packages`.
 Spine membership is release scope, not maturity: a beta spine package can still require 1.0
@@ -35,7 +36,6 @@ Warning-only gates stay advisory until they have stable baselines and a clear ow
 
 - Production dependency audit is advisory in CI and remains visible in the security report.
 - Core coverage selection and baseline warnings are posted to the job summary and artifact.
-- Benchmark drift is blocking in the dedicated benchmark workflow when `BENCHMARK_GATE_MODE=enforce`.
 - Bundle-size warnings stay advisory while `ci-reports/bundle-size/baseline.json` is missing, incomplete, or still being stabilized.
 
 Promote an advisory gate to a blocking trunk gate only when:

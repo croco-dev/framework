@@ -155,6 +155,83 @@ describe("benchmark-readiness-report.mts", () => {
     );
   });
 
+  it("rejects variance evidence for runs that do not target trunk", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent([
+          {
+            name: "Passing benchmark",
+            min: 0.96,
+            median: 1,
+            max: 1.04,
+            spread: 0.08,
+            p75ByRun: {
+              "1": 0.96,
+              "2": 0.99,
+              "3": 1,
+              "4": 1.02,
+              "5": 1.04,
+            },
+          },
+        ]).replace('"baseBranch": "trunk"', '"baseBranch": "main"'),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: run 1 must target trunk.",
+    );
+  });
+
+  it("rejects variance evidence with duplicate benchmark row names", () => {
+    const evaluation = evaluateBenchmarkReadiness(greenResult(), {
+      varianceEvidence: {
+        path: "ci-reports/benchmark/latest-five-green-runs.md",
+        content: validVarianceEvidenceContent([
+          {
+            name: "Passing benchmark",
+            min: 0.96,
+            median: 1,
+            max: 1.04,
+            spread: 0.08,
+            p75ByRun: {
+              "1": 0.96,
+              "2": 0.99,
+              "3": 1,
+              "4": 1.02,
+              "5": 1.04,
+            },
+          },
+          {
+            name: "Passing benchmark",
+            min: 0.96,
+            median: 1,
+            max: 1.04,
+            spread: 0.08,
+            p75ByRun: {
+              "1": 0.96,
+              "2": 0.99,
+              "3": 1,
+              "4": 1.02,
+              "5": 1.04,
+            },
+          },
+        ]),
+      },
+    });
+
+    expect(evaluation.enforceReady).toBe(false);
+    expect(evaluation.varianceEvidenceValid).toBe(false);
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: rows must contain exactly 1 benchmark row(s).",
+    );
+    expect(evaluation.blockingReasons).toContain(
+      "Latest five green benchmark variance evidence is invalid: rows must not contain duplicate benchmark names: Passing benchmark.",
+    );
+  });
+
   it("accepts warning-only artifacts that only failed stale pre-promotion baselines", () => {
     const evaluation = evaluateBenchmarkReadiness(greenResult(), {
       varianceEvidence: {
@@ -363,6 +440,7 @@ function validVarianceEvidenceContent(
             url: "https://github.com/croco-dev/framework/actions/runs/1",
             headSha: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             headBranch: "trunk",
+            baseBranch: "trunk",
             createdAt: "2026-06-30T00:00:00Z",
             workflowStatus: "completed",
             workflowConclusion: "success",
@@ -373,6 +451,7 @@ function validVarianceEvidenceContent(
             url: "https://github.com/croco-dev/framework/actions/runs/2",
             headSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             headBranch: "trunk",
+            baseBranch: "trunk",
             createdAt: "2026-06-30T01:00:00Z",
             workflowStatus: "completed",
             workflowConclusion: "success",
@@ -383,6 +462,7 @@ function validVarianceEvidenceContent(
             url: "https://github.com/croco-dev/framework/actions/runs/3",
             headSha: "cccccccccccccccccccccccccccccccccccccccc",
             headBranch: "trunk",
+            baseBranch: "trunk",
             createdAt: "2026-06-30T02:00:00Z",
             workflowStatus: "completed",
             workflowConclusion: "success",
@@ -393,6 +473,7 @@ function validVarianceEvidenceContent(
             url: "https://github.com/croco-dev/framework/actions/runs/4",
             headSha: "dddddddddddddddddddddddddddddddddddddddd",
             headBranch: "trunk",
+            baseBranch: "trunk",
             createdAt: "2026-06-30T03:00:00Z",
             workflowStatus: "completed",
             workflowConclusion: "success",
@@ -403,6 +484,7 @@ function validVarianceEvidenceContent(
             url: "https://github.com/croco-dev/framework/actions/runs/5",
             headSha: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
             headBranch: "trunk",
+            baseBranch: "trunk",
             createdAt: "2026-06-30T04:00:00Z",
             workflowStatus: "completed",
             workflowConclusion: "success",
