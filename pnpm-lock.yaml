@@ -1607,6 +1607,10 @@ importers:
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
 
   packages/frontend-problems:
+    dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       vitest:
         specifier: 4.0.16
@@ -2557,6 +2561,9 @@ importers:
 
   packages/protocols-trpc:
     dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@croco/protocols-core':
         specifier: workspace:*
         version: link:../protocols-core

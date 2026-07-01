@@ -2,24 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "RedisProblem"
+title: "TrpcRouteHandlerError"
 ---
 
-Redis 연동 중 발생하는 문제 타입입니다.
-
-## Description
-
-Redis 연결 실패 또는 운영 중 오류가 발생한 경우 사용됩니다. HTTP 500 Internal Server Error 응답에 해당합니다.
-
-## Example
-
-```typescript
-try {
-  await redisClient.set(key, value);
-} catch (error) {
-  throw new RedisProblem("Redis 연결 실패", error);
-}
-```
+Problem thrown when a generated tRPC route resolves to a non-callable controller member.
 
 ## Extends
 
@@ -29,21 +15,17 @@ try {
 
 ### Constructor
 
-> **new RedisProblem**(`operation`, `originalError?`): `RedisProblem`
+> **new TrpcRouteHandlerError**(`methodName`): `TrpcRouteHandlerError`
 
 #### Parameters
 
-##### operation
+##### methodName
 
 `string`
 
-##### originalError?
-
-`string` \| `Error`
-
 #### Returns
 
-`RedisProblem`
+`TrpcRouteHandlerError`
 
 #### Overrides
 
@@ -53,9 +35,9 @@ try {
 
 ### category
 
-> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
-#### Inherited from
+#### Overrides
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
@@ -73,9 +55,9 @@ try {
 
 ### code
 
-> `readonly` **code**: `string`
+> `readonly` **code**: `"protocols-trpc/route-handler-not-callable"` = `"protocols-trpc/route-handler-not-callable"`
 
-#### Inherited from
+#### Overrides
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 
@@ -118,6 +100,12 @@ try {
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`message`](/api/problems-core/src/classes/problem/#message)
+
+---
+
+### methodName
+
+> `readonly` **methodName**: `string`
 
 ---
 

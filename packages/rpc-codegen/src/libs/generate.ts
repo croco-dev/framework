@@ -887,7 +887,8 @@ function getResponseHelperImports(options: ResponseHelperOptions): string {
 
 function generateRpcSupport(options: GenerateClientOptions = {}): string {
   if (options.problemRuntime === "frontend-problems") {
-    return `import {
+    return `import { Problem, ProblemCategory } from '@croco/problems-core';
+import {
   ProblemClientError as RpcClientProblemError,
   ProblemResponseError as RpcClientResponseError,
   assertProblemExhaustive as assertExhaustiveProblem,
@@ -948,7 +949,7 @@ export type {
   ProblemFormProblem as RpcFormProblem,
   ProblemValidationDeclaration as RpcValidationProblem,
 } from '@croco/frontend-problems';
-${generateRpcQueryKeySupport()}
+${generateRpcQueryKeySupport(false)}
 ${generateRpcTelemetrySupport()}
 
 export async function handleJsonResponse<T = unknown>(
@@ -1021,7 +1022,9 @@ function recordRpcTelemetryProblemRuntimeError(
 `;
   }
 
-  return `export type RpcProblemDetails<
+  return `import { Problem, ProblemCategory } from '@croco/problems-core';
+
+export type RpcProblemDetails<
   Code extends string = string,
   Status extends number = number,
 > = {
@@ -1217,6 +1220,19 @@ export class RpcClientResponseError extends Error {
   }
 }
 
+export class RpcQueryKeyInputError extends Problem {
+  readonly code = 'rpc-codegen/query-key-input-unsupported';
+  readonly category = ProblemCategory.ValidationError;
+  readonly path: string;
+
+  constructor(path: string, detail: string) {
+    super(undefined, undefined, \`RPC query key input \${detail}; unsupported value at \${path}.\`, {
+      extensions: { path },
+    });
+    this.path = path;
+  }
+}
+
 export async function handleJsonResponse<T = unknown>(
   response: Response,
   telemetry?: RpcTelemetryRequestState,
@@ -1351,7 +1367,7 @@ function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyVal
       return value;
     }
 
-    throw new Error(\`RPC query key input only supports finite numbers; unsupported value at \${path}.\`);
+    throw new RpcQueryKeyInputError(path, 'only supports finite numbers');
   }
 
   if (Array.isArray(value)) {
@@ -1376,9 +1392,7 @@ function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyVal
     return serialized;
   }
 
-  throw new Error(
-    \`RPC query key input only supports JSON-safe primitives, arrays, and plain objects; unsupported value at \${path}.\`,
-  );
+  throw new RpcQueryKeyInputError(path, 'only supports JSON-safe primitives, arrays, and plain objects');
 }
 
 function isRpcQueryKeyRecord(value: unknown): value is Record<string, unknown> {
@@ -1933,14 +1947,31 @@ function nowRpcTelemetry(): number {
 `;
 }
 
-function generateRpcQueryKeySupport(): string {
-  return `export type RpcQueryKeyValue =
+function generateRpcQueryKeySupport(includeProblemImport = true): string {
+  const problemImport = includeProblemImport
+    ? "import { Problem, ProblemCategory } from '@croco/problems-core';\n\n"
+    : "";
+
+  return `${problemImport}export type RpcQueryKeyValue =
   | string
   | number
   | boolean
   | null
   | readonly RpcQueryKeyValue[]
   | { readonly [key: string]: RpcQueryKeyValue };
+
+export class RpcQueryKeyInputError extends Problem {
+  readonly code = 'rpc-codegen/query-key-input-unsupported';
+  readonly category = ProblemCategory.ValidationError;
+  readonly path: string;
+
+  constructor(path: string, detail: string) {
+    super(undefined, undefined, \`RPC query key input \${detail}; unsupported value at \${path}.\`, {
+      extensions: { path },
+    });
+    this.path = path;
+  }
+}
 
 export function serializeRpcQueryKeyInput(value: unknown): RpcQueryKeyValue {
   return serializeRpcQueryKeyValue(value, 'input') ?? null;
@@ -1960,7 +1991,7 @@ function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyVal
       return value;
     }
 
-    throw new Error(\`RPC query key input only supports finite numbers; unsupported value at \${path}.\`);
+    throw new RpcQueryKeyInputError(path, 'only supports finite numbers');
   }
 
   if (Array.isArray(value)) {
@@ -1985,9 +2016,7 @@ function serializeRpcQueryKeyValue(value: unknown, path: string): RpcQueryKeyVal
     return serialized;
   }
 
-  throw new Error(
-    \`RPC query key input only supports JSON-safe primitives, arrays, and plain objects; unsupported value at \${path}.\`,
-  );
+  throw new RpcQueryKeyInputError(path, 'only supports JSON-safe primitives, arrays, and plain objects');
 }
 
 function isRpcQueryKeyRecord(value: unknown): value is Record<string, unknown> {

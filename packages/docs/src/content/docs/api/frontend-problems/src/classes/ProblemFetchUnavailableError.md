@@ -2,24 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "RedisProblem"
+title: "ProblemFetchUnavailableError"
 ---
 
-Redis 연동 중 발생하는 문제 타입입니다.
-
-## Description
-
-Redis 연결 실패 또는 운영 중 오류가 발생한 경우 사용됩니다. HTTP 500 Internal Server Error 응답에 해당합니다.
-
-## Example
-
-```typescript
-try {
-  await redisClient.set(key, value);
-} catch (error) {
-  throw new RedisProblem("Redis 연결 실패", error);
-}
-```
+RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
 
 ## Extends
 
@@ -29,21 +15,11 @@ try {
 
 ### Constructor
 
-> **new RedisProblem**(`operation`, `originalError?`): `RedisProblem`
-
-#### Parameters
-
-##### operation
-
-`string`
-
-##### originalError?
-
-`string` \| `Error`
+> **new ProblemFetchUnavailableError**(): `ProblemFetchUnavailableError`
 
 #### Returns
 
-`RedisProblem`
+`ProblemFetchUnavailableError`
 
 #### Overrides
 
@@ -53,9 +29,9 @@ try {
 
 ### category
 
-> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
-#### Inherited from
+#### Overrides
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
@@ -73,9 +49,9 @@ try {
 
 ### code
 
-> `readonly` **code**: `string`
+> `readonly` **code**: `"frontend-problems/fetch-unavailable"` = `"frontend-problems/fetch-unavailable"`
 
-#### Inherited from
+#### Overrides
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 

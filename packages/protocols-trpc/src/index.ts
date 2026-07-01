@@ -1,1 +1,1 @@
-export { createTrpcRouter } from "./libs/createTrpcRouter";
+export { TrpcRouteHandlerError, createTrpcRouter } from "./libs/createTrpcRouter";

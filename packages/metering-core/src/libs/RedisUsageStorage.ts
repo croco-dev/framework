@@ -89,38 +89,45 @@ return { exceeded and 1 or 0, newUsage }
 
   constructor(private readonly redis: RedisClient) {}
 
-  async record(usage: UsageRecord): Promise<void> {
-    try {
-      const dedupeKey = this.buildRecordIdempotencyKey(
-        usage.tenantId,
-        usage.meterId,
-        usage.idempotencyKey,
-      );
-      const acquired = await this.redis.set(
-        dedupeKey,
-        "1",
-        "NX",
-        "EX",
-        RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS,
-      );
-
-      if (acquired !== "OK") {
-        return;
-      }
-
-      const key = this.buildUsageKey(
-        usage.tenantId,
-        usage.meterId,
-        usage.timestamp,
-        "billing_cycle",
-      );
-      const member = this.serializeUsageMember(usage);
-      const score = usage.timestamp.getTime();
-
-      await this.redis.zadd(key, score, member);
-    } catch (error) {
-      throw new RedisProblem("ZADD", error instanceof Error ? error : undefined);
+  private toRedisProblem(operation: string, error: unknown): RedisProblem {
+    if (error instanceof RedisProblem) {
+      return error;
     }
+
+    if (error instanceof Error || typeof error === "string") {
+      return new RedisProblem(operation, error);
+    }
+
+    return new RedisProblem(operation, error == null ? undefined : String(error));
+  }
+
+  private async runRedisOperation<T>(operation: string, command: () => Promise<T>): Promise<T> {
+    try {
+      return await command();
+    } catch (error) {
+      throw this.toRedisProblem(operation, error);
+    }
+  }
+
+  async record(usage: UsageRecord): Promise<void> {
+    const dedupeKey = this.buildRecordIdempotencyKey(
+      usage.tenantId,
+      usage.meterId,
+      usage.idempotencyKey,
+    );
+    const acquired = await this.runRedisOperation("SET", () =>
+      this.redis.set(dedupeKey, "1", "NX", "EX", RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS),
+    );
+
+    if (acquired !== "OK") {
+      return;
+    }
+
+    const key = this.buildUsageKey(usage.tenantId, usage.meterId, usage.timestamp, "billing_cycle");
+    const member = this.serializeUsageMember(usage);
+    const score = usage.timestamp.getTime();
+
+    await this.runRedisOperation("ZADD", () => this.redis.zadd(key, score, member));
   }
 
   async getUsage(options: UsageQueryOptions): Promise<number> {
@@ -128,7 +135,7 @@ return { exceeded and 1 or 0, newUsage }
       const { members } = await this.readUsageMembers(options);
       return this.sumUsageMembers(members);
     } catch (error) {
-      throw new RedisProblem("ZRANGEBYSCORE", error instanceof Error ? error : undefined);
+      throw this.toRedisProblem("ZRANGEBYSCORE", error);
     }
   }
 
@@ -143,58 +150,54 @@ return { exceeded and 1 or 0, newUsage }
       const result = await this.redis.set(key, "1", "NX", "EX", ttlSeconds);
       return result === "OK";
     } catch (error) {
-      throw new RedisProblem("SET", error instanceof Error ? error : undefined);
+      throw this.toRedisProblem("SET", error);
     }
   }
 
   async checkAndRecordWithinQuota(
     options: AtomicQuotaCheckOptions,
   ): Promise<AtomicQuotaCheckResult> {
-    try {
-      const key = this.buildUsageKey(
-        options.tenantId,
-        options.meterId,
-        options.usageRecord.timestamp,
-        "billing_cycle",
+    const key = this.buildUsageKey(
+      options.tenantId,
+      options.meterId,
+      options.usageRecord.timestamp,
+      "billing_cycle",
+    );
+    const dedupeKey = this.buildRecordIdempotencyKey(
+      options.tenantId,
+      options.meterId,
+      options.usageRecord.idempotencyKey,
+    );
+    const score = options.usageRecord.timestamp.getTime();
+    const member = this.serializeUsageMember(options.usageRecord);
+    if (this.hasRecordedRecordKey(dedupeKey)) {
+      const records = await this.runRedisOperation("ZRANGEBYSCORE", () =>
+        this.redis.zrangebyscore(key, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY),
       );
-      const dedupeKey = this.buildRecordIdempotencyKey(
-        options.tenantId,
-        options.meterId,
-        options.usageRecord.idempotencyKey,
-      );
-      const score = options.usageRecord.timestamp.getTime();
-      const member = this.serializeUsageMember(options.usageRecord);
-      if (this.hasRecordedRecordKey(dedupeKey)) {
-        const records = await this.redis.zrangebyscore(
-          key,
-          Number.NEGATIVE_INFINITY,
-          Number.POSITIVE_INFINITY,
-        );
-        const currentUsage = this.sumUsageMembers(records);
+      const currentUsage = this.sumUsageMembers(records);
 
-        return {
-          exceeded: false,
-          newUsage: currentUsage,
-        };
-      }
+      return {
+        exceeded: false,
+        newUsage: currentUsage,
+      };
+    }
 
-      const [exceeded, newUsage] = await this.redis.eval<[number, number]>(
+    const [exceeded, newUsage] = await this.runRedisOperation("EVAL", () =>
+      this.redis.eval<[number, number]>(
         RedisUsageStorage.buildCheckAndRecordWithinQuotaScript(dedupeKey),
         [key],
         [options.quota, options.value, score, member, options.allowOverQuota ? 1 : 0],
-      );
+      ),
+    );
 
-      if (exceeded !== 1 || options.allowOverQuota) {
-        this.rememberRecordIdempotencyKey(dedupeKey);
-      }
-
-      return {
-        exceeded: exceeded === 1,
-        newUsage,
-      };
-    } catch (error) {
-      throw new RedisProblem("EVAL", error instanceof Error ? error : undefined);
+    if (exceeded !== 1 || options.allowOverQuota) {
+      this.rememberRecordIdempotencyKey(dedupeKey);
     }
+
+    return {
+      exceeded: exceeded === 1,
+      newUsage,
+    };
   }
 
   async fetchUsageRecords(options: UsageQueryOptions): Promise<UsageRecord[]> {
@@ -215,7 +218,7 @@ return { exceeded and 1 or 0, newUsage }
         };
       });
     } catch (error) {
-      throw new RedisProblem("ZRANGEBYSCORE", error instanceof Error ? error : undefined);
+      throw this.toRedisProblem("ZRANGEBYSCORE", error);
     }
   }
 
@@ -380,7 +383,7 @@ return { exceeded and 1 or 0, newUsage }
     membersWithScores: string[],
   ): Array<{ member: string; score: number }> {
     if (membersWithScores.length % 2 !== 0) {
-      throw new Error("Redis ZRANGEBYSCORE WITHSCORES returned an odd number of values");
+      throw new RedisProblem("ZRANGEBYSCORE", "WITHSCORES returned an odd number of values");
     }
 
     const members: Array<{ member: string; score: number }> = [];
@@ -390,8 +393,9 @@ return { exceeded and 1 or 0, newUsage }
       const score = Number(membersWithScores[index + 1]);
 
       if (!Number.isFinite(score)) {
-        throw new Error(
-          `Redis ZRANGEBYSCORE WITHSCORES returned invalid score '${membersWithScores[index + 1]}'`,
+        throw new RedisProblem(
+          "ZRANGEBYSCORE",
+          `WITHSCORES returned invalid score '${membersWithScores[index + 1]}'`,
         );
       }
 
@@ -405,7 +409,10 @@ return { exceeded and 1 or 0, newUsage }
     const timestamp = new Date(score);
 
     if (Number.isNaN(timestamp.getTime())) {
-      throw new Error(`Redis usage timestamp score '${score}' is not a valid Date`);
+      throw new RedisProblem(
+        "ZRANGEBYSCORE",
+        `Usage timestamp score '${score}' is not a valid Date`,
+      );
     }
 
     return timestamp;
@@ -497,7 +504,7 @@ return { exceeded and 1 or 0, newUsage }
         await this.deleteTenantBillingCycleUsageKeys(tenantId, periodKey);
       }
     } catch (error) {
-      throw new RedisProblem(meterId ? "DEL" : "SCAN", error instanceof Error ? error : undefined);
+      throw this.toRedisProblem(meterId ? "DEL" : "SCAN", error);
     }
   }
 
@@ -549,7 +556,7 @@ return removed
         await this.redis.eval<[number]>(script, [key], members);
       }
     } catch (error) {
-      throw new RedisProblem("ZREM", error instanceof Error ? error : undefined);
+      throw this.toRedisProblem("ZREM", error);
     }
   }
 }

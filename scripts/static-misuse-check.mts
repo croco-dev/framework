@@ -36,12 +36,29 @@ type StaticMisuseRule = {
   readonly limitation: string;
   readonly recovery: string;
   readonly detectors: readonly LineDetector[];
+  readonly includeFile?: (relativeFile: string) => boolean;
+  readonly allowlistPath?: string;
 };
 
 type LineDetector = {
   readonly match: (line: string) => RegExpMatchArray | null;
   readonly message: string;
   readonly action: string;
+};
+
+type StaticMisuseAllowlistEntry = {
+  readonly package: string;
+  readonly file: string;
+  readonly line: number;
+  readonly excerpt: string;
+  readonly reason: string;
+  readonly owner?: string;
+  readonly expiresOn?: string;
+};
+
+type LoadedStaticMisuseAllowlist = {
+  readonly entries: readonly StaticMisuseAllowlistEntry[];
+  readonly diagnostics: readonly StaticMisuseDiagnostic[];
 };
 
 type CheckOptions = {
@@ -123,9 +140,37 @@ const restGeneratedContractRule: StaticMisuseRule = {
   ],
 };
 
+const rawErrorRuntimeBoundaryRule: StaticMisuseRule = {
+  id: "raw-error-runtime-boundary",
+  code: "CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY",
+  title: "Production package runtime boundaries must not throw raw built-in Errors",
+  targetDir: "packages",
+  description:
+    "Croco runtime package failures should expose Problem-shaped failures or stable diagnostic-coded package errors instead of raw built-in Error subclasses.",
+  limitation:
+    "This first-pass checker is line-oriented and scoped to production packages/*/src files. Multiline throw expressions and generated output snapshots need dedicated future rules.",
+  recovery:
+    "Throw a Croco Problem subclass or a package-specific diagnostic-coded error class. If the throw is a reviewed internal programmer assertion, add it to scripts/static-misuse-raw-error-allowlist.json with package, file, reason, and owner or expiration.",
+  includeFile: isProductionPackageSourceFile,
+  allowlistPath: "scripts/static-misuse-raw-error-allowlist.json",
+  detectors: [
+    {
+      match: (line) =>
+        line.match(
+          /\bthrow\s+(?:new\s+)?(Error|TypeError|RangeError|ReferenceError|SyntaxError|EvalError|URIError|AggregateError)\s*\(/,
+        ),
+      message:
+        "Production package source cannot throw raw built-in Error subclasses at runtime boundaries.",
+      action:
+        "Use a Problem subclass or package-specific diagnostic-coded error class, or record a reviewed internal exception in the static misuse raw-error allowlist.",
+    },
+  ],
+};
+
 const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
   repositoryBoundaryRule,
   restGeneratedContractRule,
+  rawErrorRuntimeBoundaryRule,
 ];
 
 function matchImportSpecifier(line: string, specifierPattern: RegExp): RegExpMatchArray | null {
@@ -138,6 +183,25 @@ function matchImportSpecifier(line: string, specifierPattern: RegExp): RegExpMat
 
 function matchSchemaLessNamedParamDecorator(line: string): RegExpMatchArray | null {
   return line.match(/@(Param|Query|Header)\s*\(\s*(['"`])[^'"`]+\2\s*\)/);
+}
+
+function isProductionPackageSourceFile(relativeFile: string): boolean {
+  const parts = toPosixPath(relativeFile).split("/");
+
+  return (
+    parts[0] === "packages" &&
+    parts.length >= 4 &&
+    parts[2] === "src" &&
+    !parts.includes("tests") &&
+    !relativeFile.endsWith(".spec.js") &&
+    !relativeFile.endsWith(".test.js") &&
+    !relativeFile.endsWith(".spec.jsx") &&
+    !relativeFile.endsWith(".test.jsx") &&
+    !relativeFile.endsWith(".spec.ts") &&
+    !relativeFile.endsWith(".test.ts") &&
+    !relativeFile.endsWith(".spec.tsx") &&
+    !relativeFile.endsWith(".test.tsx")
+  );
 }
 
 function stripLineComment(line: string): string {
@@ -245,6 +309,226 @@ function isLineIgnored(lines: readonly string[], lineIndex: number, code: string
   return includesIgnoreCode(previousLineIgnoreCodes, code);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function readPackageName(rootDir: string, relativeFile: string): string | null {
+  const parts = toPosixPath(relativeFile).split("/");
+
+  if (parts[0] !== "packages" || !parts[1]) {
+    return null;
+  }
+
+  const packageJsonPath = join(rootDir, "packages", parts[1], "package.json");
+
+  if (!existsSync(packageJsonPath)) {
+    return null;
+  }
+
+  try {
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as unknown;
+
+    if (isRecord(packageJson) && typeof packageJson.name === "string") {
+      return packageJson.name;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function createAllowlistDiagnostic(
+  rule: StaticMisuseRule,
+  allowlistPath: string,
+  message: string,
+  action: string,
+): StaticMisuseDiagnostic {
+  return {
+    code: rule.code,
+    ruleId: rule.id,
+    file: allowlistPath,
+    line: 1,
+    column: 1,
+    message,
+    excerpt: allowlistPath,
+    action,
+  };
+}
+
+function loadAllowlist(rootDir: string, rule: StaticMisuseRule): LoadedStaticMisuseAllowlist {
+  const allowlistPath = rule.allowlistPath;
+
+  if (!allowlistPath) {
+    return { entries: [], diagnostics: [] };
+  }
+
+  const fullPath = join(rootDir, allowlistPath);
+
+  if (!existsSync(fullPath)) {
+    return { entries: [], diagnostics: [] };
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(readFileSync(fullPath, "utf-8")) as unknown;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    return {
+      entries: [],
+      diagnostics: [
+        createAllowlistDiagnostic(
+          rule,
+          allowlistPath,
+          `Static misuse allowlist is not valid JSON: ${message}`,
+          "Fix the allowlist JSON before relying on reviewed raw-error exceptions.",
+        ),
+      ],
+    };
+  }
+
+  if (!isRecord(parsed) || parsed.schemaVersion !== 1 || !Array.isArray(parsed.entries)) {
+    return {
+      entries: [],
+      diagnostics: [
+        createAllowlistDiagnostic(
+          rule,
+          allowlistPath,
+          "Static misuse allowlist must use schemaVersion 1 and an entries array.",
+          "Write the allowlist as { schemaVersion: 1, entries: [...] }.",
+        ),
+      ],
+    };
+  }
+
+  const entries: StaticMisuseAllowlistEntry[] = [];
+  const diagnostics: StaticMisuseDiagnostic[] = [];
+
+  parsed.entries.forEach((entry, index) => {
+    const validation = validateAllowlistEntry(rootDir, entry);
+
+    if (!validation.ok) {
+      diagnostics.push(
+        createAllowlistDiagnostic(
+          rule,
+          allowlistPath,
+          `Static misuse allowlist entry ${index} is invalid: ${validation.reason}`,
+          "Each allowlist entry must name package, file, line, excerpt, reason, and owner or expiresOn, and it must match the current source line.",
+        ),
+      );
+      return;
+    }
+
+    entries.push(validation.entry);
+  });
+
+  return { entries, diagnostics };
+}
+
+function validateAllowlistEntry(
+  rootDir: string,
+  entry: unknown,
+):
+  | { readonly ok: true; readonly entry: StaticMisuseAllowlistEntry }
+  | { readonly ok: false; readonly reason: string } {
+  if (!isRecord(entry)) {
+    return { ok: false, reason: "entry must be an object" };
+  }
+
+  if (!isNonEmptyString(entry.package)) {
+    return { ok: false, reason: "package must be a non-empty string" };
+  }
+
+  if (!isNonEmptyString(entry.file)) {
+    return { ok: false, reason: "file must be a non-empty string" };
+  }
+
+  const line = entry.line;
+
+  if (typeof line !== "number" || !Number.isInteger(line) || line < 1) {
+    return { ok: false, reason: "line must be a positive integer" };
+  }
+
+  if (!isNonEmptyString(entry.excerpt)) {
+    return { ok: false, reason: "excerpt must be a non-empty string" };
+  }
+
+  if (!isNonEmptyString(entry.reason)) {
+    return { ok: false, reason: "reason must be a non-empty string" };
+  }
+
+  if (!isNonEmptyString(entry.owner) && !isNonEmptyString(entry.expiresOn)) {
+    return { ok: false, reason: "owner or expiresOn must be provided" };
+  }
+
+  if (entry.expiresOn !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(entry.expiresOn))) {
+    return { ok: false, reason: "expiresOn must use YYYY-MM-DD format when provided" };
+  }
+
+  const relativeFile = toPosixPath(entry.file);
+
+  if (!isProductionPackageSourceFile(relativeFile)) {
+    return { ok: false, reason: "file must point at production packages/*/src source" };
+  }
+
+  const packageName = readPackageName(rootDir, relativeFile);
+
+  if (packageName !== entry.package) {
+    return {
+      ok: false,
+      reason: `package must match ${packageName ?? "the source package name"}`,
+    };
+  }
+
+  const fullPath = join(rootDir, relativeFile);
+
+  if (!existsSync(fullPath)) {
+    return { ok: false, reason: "file does not exist" };
+  }
+
+  const sourceLine = readFileSync(fullPath, "utf-8").split(/\r?\n/)[line - 1]?.trim();
+
+  if (sourceLine !== entry.excerpt) {
+    return { ok: false, reason: "excerpt does not match the current source line" };
+  }
+
+  return {
+    ok: true,
+    entry: {
+      package: entry.package,
+      file: relativeFile,
+      line,
+      excerpt: entry.excerpt,
+      reason: entry.reason,
+      ...(isNonEmptyString(entry.owner) ? { owner: entry.owner } : {}),
+      ...(isNonEmptyString(entry.expiresOn) ? { expiresOn: entry.expiresOn } : {}),
+    },
+  };
+}
+
+function isDiagnosticAllowlisted(
+  rootDir: string,
+  diagnostic: StaticMisuseDiagnostic,
+  entries: readonly StaticMisuseAllowlistEntry[],
+): boolean {
+  const packageName = readPackageName(rootDir, diagnostic.file);
+
+  return entries.some(
+    (entry) =>
+      entry.package === packageName &&
+      entry.file === diagnostic.file &&
+      entry.line === diagnostic.line &&
+      entry.excerpt === diagnostic.excerpt,
+  );
+}
+
 function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResult {
   const targetDir = join(rootDir, rule.targetDir);
 
@@ -262,10 +546,15 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
     };
   }
 
+  const allowlist = loadAllowlist(rootDir, rule);
   const diagnostics = walkSourceFiles(targetDir).flatMap((filePath) => {
     const source = readFileSync(filePath, "utf-8");
     const lines = source.split(/\r?\n/);
     const relativeFile = toPosixPath(relative(rootDir, filePath));
+
+    if (rule.includeFile && !rule.includeFile(relativeFile)) {
+      return [];
+    }
 
     return lines.flatMap((line, lineIndex) => {
       if (isLineIgnored(lines, lineIndex, rule.code)) {
@@ -282,34 +571,39 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
           continue;
         }
 
-        return [
-          {
-            code: rule.code,
-            ruleId: rule.id,
-            file: relativeFile,
-            line: lineIndex + 1,
-            column: match.index === undefined ? 1 : match.index + 1,
-            message: detector.message,
-            excerpt: line.trim(),
-            action: detector.action,
-          },
-        ];
+        const diagnostic = {
+          code: rule.code,
+          ruleId: rule.id,
+          file: relativeFile,
+          line: lineIndex + 1,
+          column: match.index === undefined ? 1 : match.index + 1,
+          message: detector.message,
+          excerpt: line.trim(),
+          action: detector.action,
+        };
+
+        if (isDiagnosticAllowlisted(rootDir, diagnostic, allowlist.entries)) {
+          return [];
+        }
+
+        return [diagnostic];
       }
 
       return [];
     });
   });
+  const allDiagnostics = [...allowlist.diagnostics, ...diagnostics];
 
   return {
     id: rule.id,
     code: rule.code,
     title: rule.title,
     targetDir: rule.targetDir,
-    status: diagnostics.length > 0 ? "fail" : "pass",
+    status: allDiagnostics.length > 0 ? "fail" : "pass",
     description: rule.description,
     limitation: rule.limitation,
     recovery: rule.recovery,
-    diagnostics,
+    diagnostics: allDiagnostics,
   };
 }
 

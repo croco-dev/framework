@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vm from "node:vm";
-import { ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
   type ContractGraph,
@@ -21,6 +21,60 @@ import {
 
 const TEMP_DIR = path.join(__dirname, "codegen-temp");
 const GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS = 15_000;
+const VIRTUAL_PROBLEMS_CORE_MODULE = "node_modules/@croco/problems-core/index.d.ts";
+type RpcQueryKeyInputProblemConstructor = new (path: string, detail: string) => Problem;
+const VIRTUAL_PROBLEMS_CORE_SOURCE = `
+export enum ProblemCategory {
+  BadRequest = "BadRequest",
+  Unauthorized = "Unauthorized",
+  Forbidden = "Forbidden",
+  NotFound = "NotFound",
+  Conflict = "Conflict",
+  Gone = "Gone",
+  ValidationError = "ValidationError",
+  BusinessRuleViolation = "BusinessRuleViolation",
+  TooManyRequests = "TooManyRequests",
+  InternalServerError = "InternalServerError",
+  NotImplemented = "NotImplemented",
+}
+
+export type ProblemDetails = {
+  readonly type: string;
+  readonly title: string;
+  readonly status: number;
+  readonly detail?: string;
+  readonly instance?: string;
+  readonly code: string;
+} & Record<string, unknown>;
+
+export type ProblemOptions = {
+  readonly type?: string;
+  readonly instance?: string;
+  readonly extensions?: Record<string, unknown>;
+  readonly cause?: Error;
+};
+
+export abstract class Problem extends Error {
+  readonly code: string;
+  readonly category: ProblemCategory;
+  readonly detail?: string;
+  readonly type: string;
+  readonly instance?: string;
+  readonly extensions?: Record<string, unknown>;
+  readonly cause?: Error;
+  readonly title: string;
+  readonly status: number;
+
+  protected constructor(
+    code?: string,
+    category?: ProblemCategory,
+    detail?: string,
+    options?: ProblemOptions,
+  );
+
+  toJSON(): ProblemDetails;
+}
+`;
 const VIRTUAL_REACT_QUERY_MODULE = "node_modules/@tanstack/react-query/index.d.ts";
 const VIRTUAL_REACT_QUERY_SOURCE = `
 export type QueryKey = readonly unknown[];
@@ -1050,7 +1104,7 @@ void createInvalidationRouteId;
 
     generateClientFiles(routes, TEMP_DIR);
 
-    const { serializeRpcQueryKeyInput } = loadGeneratedRpcSupport();
+    const { RpcQueryKeyInputError, serializeRpcQueryKeyInput } = loadGeneratedRpcSupport();
     const serialized = serializeRpcQueryKeyInput({
       query: { search: undefined, tags: ["vip", undefined, "new"], page: 2, active: false },
       path: { id: "42" },
@@ -1083,12 +1137,45 @@ void createInvalidationRouteId;
     }) as Record<string, unknown>;
 
     expect(Object.keys(ordered)).toEqual(["-", "A", "_", "a", "z"]);
-    expect(() =>
-      serializeRpcQueryKeyInput({ createdAt: new Date("2026-01-01T00:00:00.000Z") }),
-    ).toThrow("unsupported value at input.createdAt");
-    expect(() => serializeRpcQueryKeyInput({ page: Number.NaN })).toThrow(
-      "only supports finite numbers",
+    const unsupportedValueError = captureThrownProblem(
+      () => serializeRpcQueryKeyInput({ createdAt: new Date("2026-01-01T00:00:00.000Z") }),
+      RpcQueryKeyInputError,
     );
+    const finiteNumberError = captureThrownProblem(
+      () => serializeRpcQueryKeyInput({ page: Number.NaN }),
+      RpcQueryKeyInputError,
+    );
+
+    expect(unsupportedValueError).toMatchObject({
+      category: ProblemCategory.ValidationError,
+      code: "rpc-codegen/query-key-input-unsupported",
+      path: "input.createdAt",
+      status: 422,
+    });
+    expect(unsupportedValueError).toHaveProperty(
+      "message",
+      "RPC query key input only supports JSON-safe primitives, arrays, and plain objects; unsupported value at input.createdAt.",
+    );
+    expect(unsupportedValueError.toJSON()).toMatchObject({
+      code: "rpc-codegen/query-key-input-unsupported",
+      path: "input.createdAt",
+      status: 422,
+    });
+    expect(finiteNumberError).toMatchObject({
+      category: ProblemCategory.ValidationError,
+      code: "rpc-codegen/query-key-input-unsupported",
+      path: "input.page",
+      status: 422,
+    });
+    expect(finiteNumberError).toHaveProperty(
+      "message",
+      "RPC query key input only supports finite numbers; unsupported value at input.page.",
+    );
+    expect(finiteNumberError.toJSON()).toMatchObject({
+      code: "rpc-codegen/query-key-input-unsupported",
+      path: "input.page",
+      status: 422,
+    });
   });
 
   it("should generate query input types from inputSchemas", () => {
@@ -2371,6 +2458,7 @@ function assertGeneratedPackageTypechecks(fileNames: readonly string[]): void {
 }
 
 function loadGeneratedRpcSupport(): {
+  readonly RpcQueryKeyInputError: RpcQueryKeyInputProblemConstructor;
   readonly serializeRpcQueryKeyInput: (value: unknown) => unknown;
 } {
   const rpcSource = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
@@ -2380,23 +2468,61 @@ function loadGeneratedRpcSupport(): {
       target: ts.ScriptTarget.ES2022,
     },
   }).outputText;
-  const context = { exports: {} as Record<string, unknown> };
+  const context = {
+    exports: {} as Record<string, unknown>,
+    require(specifier: string): Record<string, unknown> {
+      expect(specifier).toBe("@croco/problems-core");
+
+      return { Problem, ProblemCategory };
+    },
+  };
 
   vm.runInNewContext(outputText, context);
 
+  const RpcQueryKeyInputError = context.exports.RpcQueryKeyInputError;
   const serializeRpcQueryKeyInput = context.exports.serializeRpcQueryKeyInput;
 
+  expect(RpcQueryKeyInputError).toBeTypeOf("function");
   expect(serializeRpcQueryKeyInput).toBeTypeOf("function");
 
   return {
+    RpcQueryKeyInputError: RpcQueryKeyInputError as RpcQueryKeyInputProblemConstructor,
     serializeRpcQueryKeyInput: serializeRpcQueryKeyInput as (value: unknown) => unknown,
   };
+}
+
+function captureThrownProblem(
+  action: () => unknown,
+  ErrorCtor: RpcQueryKeyInputProblemConstructor,
+): Problem {
+  const error = captureThrownError(action);
+
+  expect(error).toBeInstanceOf(ErrorCtor);
+  assertProblem(error);
+
+  return error;
+}
+
+function captureThrownError(action: () => unknown): unknown {
+  try {
+    action();
+  } catch (error) {
+    return error;
+  }
+
+  expect.fail("Expected action to throw.");
+}
+
+function assertProblem(error: unknown): asserts error is Problem {
+  expect(error).toBeInstanceOf(Problem);
 }
 
 function assertVirtualTypeScriptSourcesTypecheck(
   sources: ReadonlyMap<string, string>,
   rootFileNames: readonly string[],
 ): void {
+  const virtualSources = new Map(sources);
+  virtualSources.set(VIRTUAL_PROBLEMS_CORE_MODULE, VIRTUAL_PROBLEMS_CORE_SOURCE);
   const compilerOptions: ts.CompilerOptions = {
     baseUrl: path.resolve(__dirname, "../../.."),
     lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
@@ -2415,7 +2541,7 @@ function assertVirtualTypeScriptSourcesTypecheck(
   const host = ts.createCompilerHost(compilerOptions);
 
   host.getSourceFile = (name, languageVersion) => {
-    const text = getVirtualSource(sources, name);
+    const text = getVirtualSource(virtualSources, name);
 
     if (text !== undefined) {
       return ts.createSourceFile(name, text, languageVersion, true);
@@ -2428,13 +2554,20 @@ function assertVirtualTypeScriptSourcesTypecheck(
       : ts.createSourceFile(name, fileText, languageVersion, true);
   };
   host.fileExists = (name) =>
-    getVirtualSource(sources, name) !== undefined || ts.sys.fileExists(name);
-  host.readFile = (name) => getVirtualSource(sources, name) ?? ts.sys.readFile(name);
+    getVirtualSource(virtualSources, name) !== undefined || ts.sys.fileExists(name);
+  host.readFile = (name) => getVirtualSource(virtualSources, name) ?? ts.sys.readFile(name);
   host.resolveModuleNames = (moduleNames, containingFile) =>
     moduleNames.map((moduleName) => {
+      if (moduleName === "@croco/problems-core") {
+        return {
+          resolvedFileName: VIRTUAL_PROBLEMS_CORE_MODULE,
+          extension: ts.Extension.Dts,
+        };
+      }
+
       if (
         moduleName === "@tanstack/react-query" &&
-        getVirtualSource(sources, VIRTUAL_REACT_QUERY_MODULE) !== undefined
+        getVirtualSource(virtualSources, VIRTUAL_REACT_QUERY_MODULE) !== undefined
       ) {
         return {
           resolvedFileName: VIRTUAL_REACT_QUERY_MODULE,

@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,6 +33,8 @@ describe("published migrate CLI", () => {
 
         const problemsCoreTarball = findTarball(packRoot, "croco-problems-core-");
         const migrationRunnerTarball = findTarball(packRoot, "croco-migration-runner-");
+        assertTarballEntry(problemsCoreTarball, "package/dist/index.js");
+        assertTarballEntry(migrationRunnerTarball, "package/dist/cli.js");
         const packedManifest = JSON.parse(
           run("tar", ["-xOf", migrationRunnerTarball, "package/package.json"], rootDir).stdout,
         ) as {
@@ -77,13 +79,6 @@ describe("published migrate CLI", () => {
 });
 
 function ensureBuilt(): void {
-  if (
-    existsSync(join(rootDir, "packages", "problems-core", "dist", "index.js")) &&
-    existsSync(join(packageDir, "dist", "cli.js"))
-  ) {
-    return;
-  }
-
   run("pnpm", ["--filter", "@croco/problems-core", "build"], rootDir);
   run("pnpm", ["--filter", "@croco/migration-runner", "build"], rootDir);
 }
@@ -98,6 +93,11 @@ function findTarball(directory: string, prefix: string): string {
   }
 
   return join(directory, filename);
+}
+
+function assertTarballEntry(tarball: string, entry: string): void {
+  const listing = run("tar", ["-tzf", tarball], rootDir).stdout;
+  expect(listing.split("\n")).toContain(entry);
 }
 
 function readPackageVersion(): string {

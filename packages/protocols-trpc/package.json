@@ -33,6 +33,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "@trpc/server": "^11.0.0",
     "zod": "^3.23.8"

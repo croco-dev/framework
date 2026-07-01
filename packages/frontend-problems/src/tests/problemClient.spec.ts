@@ -1,6 +1,8 @@
+import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   ProblemClientError,
+  ProblemFetchUnavailableError,
   ProblemResponseError,
   assertProblemExhaustive,
   fetchProblemJson,
@@ -147,6 +149,42 @@ describe("frontend Problem client runtime", () => {
     });
   });
 
+  it("throws a stable coded error when no fetch implementation is available", async () => {
+    const originalFetch = globalThis.fetch;
+
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      value: undefined,
+      writable: true,
+    });
+
+    try {
+      const request = fetchProblemJson("/users/1");
+
+      await expect(request).rejects.toBeInstanceOf(ProblemFetchUnavailableError);
+      await expect(request).rejects.toMatchObject({
+        category: ProblemCategory.InternalServerError,
+        code: "frontend-problems/fetch-unavailable",
+        name: "ProblemFetchUnavailableError",
+        status: 500,
+      });
+
+      const error = await captureRejectedValue(request);
+      expectProblemFetchUnavailableError(error);
+      expect(error.toJSON()).toMatchObject({
+        code: "frontend-problems/fetch-unavailable",
+        status: 500,
+        title: "Internal Server Error",
+      });
+    } finally {
+      Object.defineProperty(globalThis, "fetch", {
+        configurable: true,
+        value: originalFetch,
+        writable: true,
+      });
+    }
+  });
+
   it("maps declared validation Problems to form field failures", async () => {
     const result = await handleJsonResult<unknown, DeclaredProblem>(
       jsonResponse(validationProblem, 422),
@@ -198,4 +236,20 @@ function jsonResponse(body: unknown, status = 200): Response {
     headers: { "Content-Type": "application/json" },
     status,
   });
+}
+
+async function captureRejectedValue(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+
+  expect.fail("Expected promise to reject.");
+}
+
+function expectProblemFetchUnavailableError(
+  error: unknown,
+): asserts error is ProblemFetchUnavailableError {
+  expect(error).toBeInstanceOf(ProblemFetchUnavailableError);
 }

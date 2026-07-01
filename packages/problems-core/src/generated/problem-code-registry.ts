@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 410,
+  problemCount: 412,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -4435,6 +4435,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "frontend-problems/fetch-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#frontend-problems-fetch-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/frontend-problems/src/index.ts",
+          line: 203,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "frontend-vite/missing-cloudflare-vite-plugin",
       category: "ValidationError",
       status: 422,
@@ -6446,7 +6478,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metering-core/src/libs/problems/RedisProblem.ts",
-          line: 5,
+          line: 8,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8708,6 +8740,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/protocols-rest/src/libs/validators/ValidationProblem.ts",
           line: 12,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "protocols-trpc/route-handler-not-callable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#protocols-trpc-route-handler-not-callable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
+          line: 20,
           column: 3,
           kind: "problem-class",
         },

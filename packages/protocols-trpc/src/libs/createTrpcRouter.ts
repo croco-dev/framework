@@ -1,3 +1,4 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { RouteIR } from "@croco/protocols-core";
 import { extractRouteIR } from "@croco/protocols-core";
 import {
@@ -11,6 +12,22 @@ type ControllerConstructor = (new () => object) & Function;
 type RouteHandler = (input?: unknown) => unknown;
 
 const t = initTRPC.create();
+
+/**
+ * Problem thrown when a generated tRPC route resolves to a non-callable controller member.
+ */
+export class TrpcRouteHandlerError extends Problem {
+  readonly code = "protocols-trpc/route-handler-not-callable";
+  readonly category = ProblemCategory.InternalServerError;
+  readonly methodName: string;
+
+  constructor(methodName: string) {
+    super(undefined, undefined, `Route handler '${methodName}' is not callable`, {
+      extensions: { methodName },
+    });
+    this.methodName = methodName;
+  }
+}
 
 export function createTrpcRouter(controllers: Function[]): AnyRouter {
   const domains: Record<string, TRPCCreateRouterOptions> = {};
@@ -54,7 +71,7 @@ function callRoute(controllerInstance: object, methodName: string, input: unknow
   const handler = Reflect.get(controllerInstance, methodName);
 
   if (!isRouteHandler(handler)) {
-    throw new TypeError(`Route handler '${methodName}' is not callable`);
+    throw new TrpcRouteHandlerError(methodName);
   }
 
   return handler.call(controllerInstance, input);
