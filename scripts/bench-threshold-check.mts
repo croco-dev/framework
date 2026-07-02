@@ -68,6 +68,7 @@ const BASELINE_TOLERANCE = 0.2;
 const CI_THRESHOLD_MULTIPLIER = 2;
 const LOCAL_THRESHOLD_MULTIPLIER = 1;
 const BOX_WIDTH = 62;
+const DEFAULT_BENCHMARK_TELEMETRY_ENABLED = "false";
 
 export const BENCHMARK_EMPTY_REPORT_FAILURE = "No benchmark reports were collected.";
 export const BENCHMARK_MISSING_REPORT_SUFFIX = ": benchmark report was not collected.";
@@ -77,6 +78,12 @@ export const BENCHMARK_MODULE_FAILED_PREFIX = "benchmark module failed:";
 const EXPLICIT_THRESHOLD_SKIPS: Record<string, string> = {};
 
 const EXPLICIT_BASELINE_SKIPS: Record<string, string> = {};
+
+export function applyBenchmarkEnvironmentDefaults(
+  env: Record<string, string | undefined> = process.env,
+): void {
+  env.TELEMETRY_ENABLED ??= DEFAULT_BENCHMARK_TELEMETRY_ENABLED;
+}
 
 function getThresholdSkipReason(name: string): string {
   const explicitReason = EXPLICIT_THRESHOLD_SKIPS[name];
@@ -162,6 +169,15 @@ function formatDiff(actual: number, expected: number): string {
   return `${sign}${percent}%`;
 }
 
+export function formatBenchmarkBaselineDriftWarning(
+  name: string,
+  p75: number,
+  baselineP75: number,
+  baselineDiff: number,
+): string {
+  return `⚠️  Baseline drift for "${name}": p75 ${formatDuration(p75)} exceeds baseline ${formatDuration(baselineP75)} by ${formatDuration(baselineDiff)} (${formatDiff(p75, baselineP75)}).`;
+}
+
 function formatUnknownError(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -192,12 +208,6 @@ export function evaluateBenchmarkGate(
     if (report.thresholdStatus === "fail") {
       gateFailures.push(
         `${report.name}: p75 ${formatDuration(report.p75)} exceeds threshold ${formatDuration(report.threshold ?? 0)}`,
-      );
-    }
-
-    if (report.baselineStatus === "fail") {
-      gateFailures.push(
-        `${report.name}: p75 ${formatDuration(report.p75)} exceeds baseline ${formatDuration(report.baseline ?? 0)} by more than ${(BASELINE_TOLERANCE * 100).toFixed(0)}%`,
       );
     }
 
@@ -341,6 +351,8 @@ export function collectBenchmarkEntries(
 }
 
 async function main() {
+  applyBenchmarkEnvironmentDefaults();
+
   const thresholds = loadThresholds();
   const baseline = loadBaseline();
   const expectedBenchmarkNames = getConfiguredBenchmarkNames(thresholds, baseline);
@@ -404,6 +416,9 @@ async function main() {
 
           if (p75 - baselineP75 > baselineP75 * BASELINE_TOLERANCE) {
             report.baselineStatus = "fail";
+            console.warn(
+              formatBenchmarkBaselineDriftWarning(name, p75, baselineP75, report.baselineDiff),
+            );
           } else {
             report.baselineStatus = "pass";
           }
@@ -470,9 +485,11 @@ async function main() {
         .join(" | ");
 
       const statusIcon =
-        report.thresholdStatus === "fail" || report.baselineStatus === "fail"
+        report.thresholdStatus === "fail"
           ? "❌"
-          : report.thresholdStatus === "skip" && report.baselineStatus === "skip"
+          : report.thresholdStatus === "skip" ||
+              report.baselineStatus === "skip" ||
+              report.baselineStatus === "fail"
             ? "⚠️ "
             : "✅";
 

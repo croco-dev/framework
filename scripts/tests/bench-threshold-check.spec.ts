@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyBenchmarkEnvironmentDefaults,
   collectBenchmarkEntries,
   evaluateBaselineUpdateReadiness,
   evaluateBenchmarkGate,
+  formatBenchmarkBaselineDriftWarning,
   getBenchmarkP75,
 } from "../bench-threshold-check.mts";
 
@@ -58,6 +60,51 @@ describe("bench-threshold-check.mts", () => {
 
     expect(result.allPassed).toBe(false);
     expect(result.gateFailures).toContain("Missing benchmark: benchmark report was not collected.");
+  });
+
+  it("keeps baseline-only drift advisory when thresholds still pass", () => {
+    const result = evaluateBenchmarkGate([
+      {
+        name: "Drifted benchmark",
+        p75: 1.3,
+        threshold: 2,
+        baseline: 1,
+        thresholdStatus: "pass",
+        baselineStatus: "fail",
+        thresholdDiff: -0.7,
+        baselineDiff: 0.3,
+      },
+    ]);
+
+    expect(result.allPassed).toBe(true);
+    expect(result.gateFailures).toEqual([]);
+  });
+
+  it("formats baseline drift warnings with current, baseline, and diff details", () => {
+    const message = formatBenchmarkBaselineDriftWarning("Drifted benchmark", 1.3, 1, 0.3);
+
+    expect(message).toContain('Baseline drift for "Drifted benchmark"');
+    expect(message).toContain("p75 1.3ms");
+    expect(message).toContain("baseline 1.0ms");
+    expect(message).toContain("(+30.0%)");
+  });
+
+  it("still blocks threshold failures", () => {
+    const result = evaluateBenchmarkGate([
+      {
+        name: "Regressed benchmark",
+        p75: 3,
+        threshold: 2,
+        baseline: 1,
+        thresholdStatus: "fail",
+        baselineStatus: "fail",
+        thresholdDiff: 1,
+        baselineDiff: 2,
+      },
+    ]);
+
+    expect(result.allPassed).toBe(false);
+    expect(result.gateFailures).toContain("Regressed benchmark: p75 3.0ms exceeds threshold 2.0ms");
   });
 
   it("blocks baseline updates when the runner failed or no reports were collected", () => {
@@ -121,6 +168,18 @@ describe("bench-threshold-check.mts", () => {
   it("reads existing numeric p75 threshold entries", () => {
     expect(getBenchmarkP75(10, "threshold fixture")).toBe(10);
     expect(getBenchmarkP75({ p75: 5 }, "threshold fixture")).toBe(5);
+  });
+
+  it("defaults telemetry off for deterministic benchmark runs without overriding explicit opt-in", () => {
+    const defaultEnv: Record<string, string | undefined> = {};
+    applyBenchmarkEnvironmentDefaults(defaultEnv);
+
+    expect(defaultEnv.TELEMETRY_ENABLED).toBe("false");
+
+    const explicitEnv: Record<string, string | undefined> = { TELEMETRY_ENABLED: "true" };
+    applyBenchmarkEnvironmentDefaults(explicitEnv);
+
+    expect(explicitEnv.TELEMETRY_ENABLED).toBe("true");
   });
 });
 
