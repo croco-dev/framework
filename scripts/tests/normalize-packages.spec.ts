@@ -582,6 +582,229 @@ describe("normalize-packages.mjs", () => {
     expect(result.stdout).toContain("drizzle-orm must be declared with catalog:");
   });
 
+  it("requires internal Croco workspace package ranges to use workspace:*", () => {
+    const root = createTempRoot();
+    writePackage(root, "internal-runtime", publishablePackage("@croco/internal-runtime"));
+    writePackage(
+      root,
+      "range-drift",
+      publishablePackage("@croco/range-drift", {
+        dependencies: {
+          "@croco/internal-runtime": "^0.0.3",
+        },
+        devDependencies: {
+          "@croco/internal-runtime": "^0.0.3",
+        },
+        optionalDependencies: {
+          "@croco/internal-runtime": "^0.0.3",
+        },
+        peerDependencies: {
+          "@croco/internal-runtime": "^0.0.3",
+        },
+      }),
+    );
+    writePackage(
+      root,
+      "workspace-ranges",
+      publishablePackage("@croco/workspace-ranges", {
+        dependencies: {
+          "@croco/internal-runtime": "workspace:*",
+        },
+        devDependencies: {
+          "@croco/internal-runtime": "workspace:*",
+        },
+        optionalDependencies: {
+          "@croco/internal-runtime": "workspace:*",
+        },
+        peerDependencies: {
+          "@croco/internal-runtime": "workspace:*",
+        },
+      }),
+    );
+    writePackage(
+      root,
+      "external-croco-scope",
+      publishablePackage("@croco/external-croco-scope", {
+        dependencies: {
+          "@croco/not-in-workspace": "^1.0.0",
+        },
+      }),
+    );
+    writePackage(
+      root,
+      "private-range-drift",
+      {
+        name: "@croco/private-range-drift",
+        private: true,
+        version: "0.0.3",
+        dependencies: {
+          "@croco/internal-runtime": "^0.0.3",
+        },
+      },
+      {
+        sourceIndex: false,
+      },
+    );
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("range-drift/package.json");
+    expect(result.stdout).toContain(
+      'dependencies.@croco/internal-runtime must use workspace:* for internal Croco workspace packages, not "^0.0.3"',
+    );
+    expect(result.stdout).toContain(
+      'devDependencies.@croco/internal-runtime must use workspace:* for internal Croco workspace packages, not "^0.0.3"',
+    );
+    expect(result.stdout).toContain(
+      'optionalDependencies.@croco/internal-runtime must use workspace:* for internal Croco workspace packages, not "^0.0.3"',
+    );
+    expect(result.stdout).toContain(
+      'peerDependencies.@croco/internal-runtime must use workspace:* for internal Croco workspace packages, not "^0.0.3"',
+    );
+    expect(result.stdout).toContain("private-range-drift/package.json");
+    expect(result.stdout).not.toContain("workspace-ranges/package.json");
+    expect(result.stdout).not.toContain("external-croco-scope/package.json");
+  });
+
+  it("allows checked peer-only internal semver range exceptions", () => {
+    const root = createTempRoot();
+    writePackage(root, "internal-runtime", publishablePackage("@croco/internal-runtime"));
+    writePackage(
+      root,
+      "peer-compat",
+      publishablePackage("@croco/peer-compat", {
+        peerDependencies: {
+          "@croco/internal-runtime": "^0.0.3",
+        },
+      }),
+    );
+    writeInternalPeerDependencyRangeExceptions(root, [
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: "@croco/internal-runtime",
+        range: "^0.0.3",
+        rationale: "Published peers intentionally accept the current compatible alpha line.",
+      },
+    ]);
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(0);
+  });
+
+  it("rejects malformed, empty, non-peer, and unused internal range exceptions", () => {
+    const root = createTempRoot();
+    writePackage(root, "internal-runtime", publishablePackage("@croco/internal-runtime"));
+    writePackage(
+      root,
+      "peer-compat",
+      publishablePackage("@croco/peer-compat", {
+        peerDependencies: {
+          "@croco/internal-runtime": "^0.0.3",
+        },
+      }),
+    );
+    writePackage(
+      root,
+      "dev-range",
+      publishablePackage("@croco/dev-range", {
+        devDependencies: {
+          "@croco/internal-runtime": "^0.0.3",
+        },
+      }),
+    );
+    writeInternalPeerDependencyRangeExceptions(root, [
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: "@croco/internal-runtime",
+        range: "^0.0.3",
+        rationale: "",
+      },
+      {
+        package: "@croco/dev-range",
+        section: "devDependencies",
+        dependency: "@croco/internal-runtime",
+        range: "^0.0.3",
+        rationale: "Dev dependency ranges are not allowed to use semver exceptions.",
+      },
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: 42,
+        range: "^0.0.3",
+        rationale: "Malformed entries must be rejected instead of ignored.",
+      },
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: "@croco/internal-runtime",
+        range: "",
+        rationale: "Blank ranges are not valid published compatibility ranges.",
+      },
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: "@croco/internal-runtime",
+        range: "file:../internal-runtime",
+        rationale: "Non-semver dependency specs are not published peer compatibility ranges.",
+      },
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: "@croco/internal-runtime",
+        range: "1.2.3-.",
+        rationale: "Malformed prerelease identifiers are not compatibility ranges.",
+      },
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: "@croco/internal-runtime",
+        range: "1.2.3+.",
+        rationale: "Malformed build identifiers are not compatibility ranges.",
+      },
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: "@croco/internal-runtime",
+        range: ">=0.0.3",
+        rationale: "This valid exception is intentionally unused by any manifest entry.",
+      },
+    ]);
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[0].rationale must be nonempty",
+    );
+    expect(result.stdout).toContain(
+      'scripts/internal-peer-dependency-range-exceptions.json[1].section must be "peerDependencies"; internal semver exceptions are peer-only',
+    );
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[2].dependency must be a string",
+    );
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[3].range must be nonempty",
+    );
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[4].range must be a semver compatibility range",
+    );
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[5].range must be a semver compatibility range",
+    );
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[6].range must be a semver compatibility range",
+    );
+    expect(result.stdout).toContain(
+      'scripts/internal-peer-dependency-range-exceptions.json: unused internal peer dependency range exception @croco/peer-compat peerDependencies.@croco/internal-runtime=">=0.0.3"',
+    );
+    expect(result.stdout).toContain("peer-compat/package.json");
+    expect(result.stdout).toContain("dev-range/package.json");
+  });
+
   it("requires production source runtime imports to be declared as published dependencies", () => {
     const root = createTempRoot();
 
@@ -777,6 +1000,17 @@ function writePackage(
   writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   return packagePath;
+}
+
+function writeInternalPeerDependencyRangeExceptions(
+  root: string,
+  entries: readonly Record<string, unknown>[],
+): string {
+  const exceptionPath = join(root, "scripts", "internal-peer-dependency-range-exceptions.json");
+  mkdirSync(dirname(exceptionPath), { recursive: true });
+  writeFileSync(exceptionPath, `${JSON.stringify(entries, null, 2)}\n`);
+
+  return exceptionPath;
 }
 
 function withRepositoryMetadata(

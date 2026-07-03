@@ -19,6 +19,16 @@ imports `reflect-metadata`, that package must declare `reflect-metadata` in runt
 `dependencies`. Keeping it only in `devDependencies`, or relying on another Croco package to hoist it
 for consumers, is not valid because strict package managers may isolate transitive dependencies.
 
+Internal Croco package references use `workspace:*` in source manifests across `dependencies`,
+`devDependencies`, `peerDependencies`, and `optionalDependencies`. This includes internal peer
+dependencies: pnpm rewrites `workspace:*` to the target workspace package version during
+[pack and publish](https://pnpm.io/workspaces#publishing-workspace-packages), so source manifests do
+not need hand-written internal semver ranges. If a future public peer compatibility range must stay
+as semver in source, add an exact checked exception to
+`scripts/internal-peer-dependency-range-exceptions.json` with the package name, `peerDependencies`
+section, internal dependency name, range, and compatibility rationale. Exceptions are peer-only;
+internal `dependencies`, `devDependencies`, and `optionalDependencies` still use `workspace:*`.
+
 The contract is enforced by:
 
 ```bash
