@@ -189,11 +189,22 @@ Croco는 Lambda 콜드스타트 및 실행 성능을 지속적으로 측정하�
 
 Aggregate Root에서 이벤트를 발행하고, 타입 안전한 핸들러에서 이를 처리합니다.
 
-```typescript
+```typescript typecheck
+import { DomainEvent, RegisterEventHandler, type EventHandler } from "@croco/events-core";
+
+class OrderPlacedEvent extends DomainEvent {
+  static readonly eventName = "order.placed";
+
+  constructor(public readonly orderId: string) {
+    super();
+  }
+}
+
 @RegisterEventHandler(OrderPlacedEvent)
 class OrderPlacedHandler implements EventHandler<OrderPlacedEvent> {
-  async handle(event: OrderPlacedEvent) {
+  async handle(event: OrderPlacedEvent): Promise<void> {
     // 비즈니스 로직 처리
+    console.log(`Order placed: ${event.orderId}`);
   }
 }
 ```
@@ -202,12 +213,20 @@ class OrderPlacedHandler implements EventHandler<OrderPlacedEvent> {
 
 데코레이터 하나로 트랜잭션 경계를 설정하고, `AsyncLocalStorage`를 통해 컨텍스트를 전파합니다.
 
-```typescript
-@Service()
+```typescript typecheck
+import { Component } from "@croco/framework-context";
+import { Transactional } from "@croco/tx-core";
+
+type CreateOrderDto = {
+  orderId: string;
+};
+
+@Component()
 class OrderService {
   @Transactional()
-  async placeOrder(dto: CreateOrderDto) {
+  async placeOrder(dto: CreateOrderDto): Promise<CreateOrderDto> {
     // 여러 리포지토리가 동일한 트랜잭션 내에서 동작합니다.
+    return dto;
   }
 }
 ```
@@ -216,8 +235,10 @@ class OrderService {
 
 RFC 7807 표준을 따르는 일관된 에러 응답 형식을 제공합니다.
 
-```typescript
-throw Problem.notFound("user/not-found", "사용자를 찾을 수 없습니다.");
+```typescript typecheck
+import { ProblemFactory } from "@croco/problems-core";
+
+throw ProblemFactory.notFound("user/not-found", "사용자를 찾을 수 없습니다.");
 ```
 
 실패 처리 기준은 [Failure Semantics](packages/docs/src/content/docs/en/guides/failure-semantics.mdx)를 따릅니다. `ProblemCategory`는 복구 가능성, `code`는 패키지별 안정 식별자를 나타내며, `retry-core`는 기본적으로 `InternalServerError`와 `TooManyRequests`만 재시도 가능한 실패로 소비합니다.
@@ -242,11 +263,10 @@ pnpm build
 
 ### 빠른 시작 - HTTP API 서버
 
-```typescript
-import { Controller, Get, Post, Body } from "@croco/protocols-rest";
-import { createApp } from "@croco/transports-http";
+```typescript typecheck
 import { Component } from "@croco/framework-context";
-import { Problem } from "@croco/problems-core";
+import { Body, Controller, Get, Post } from "@croco/protocols-rest";
+import { createApp } from "@croco/transports-http";
 
 @Component()
 @Controller("/users")
@@ -274,43 +294,48 @@ export const handler = app.lambdaHandler(); // AWS Lambda
 
 #### 1. 의존성 주입 (@croco/framework-context)
 
-```typescript
+```typescript typecheck
 import { Component, Container } from "@croco/framework-context";
 
 @Component()
 class UserService {
-  async getUser(id: string) {
+  async getUser(id: string): Promise<{ id: string; name: string }> {
     return { id, name: "John" };
   }
 }
 
 // 자동 singleton 등록, 생성자 주입 지원
+const service = Container.get(UserService);
+void service;
 ```
 
 #### 2. 에러 처리 (@croco/problems-core)
 
-```typescript
-import { Problem, NotFoundProblem } from "@croco/problems-core";
+```typescript typecheck
+import { ProblemFactory } from "@croco/problems-core";
 
 // RFC 7807 Problem 기반 에러
-throw new NotFoundProblem("User", userId);
+throw ProblemFactory.notFound("user/not-found", "사용자를 찾을 수 없습니다.");
 
 // 자동으로 404 + application/problem+json 응답
 ```
 
 #### 3. 재시도 & 서킷브레이커 (@croco/retry-core)
 
-```typescript
+```typescript typecheck
 import { Retryable, Recover } from "@croco/retry-core";
 
+type Data = { status: number } | { cached: true };
+
 class ExternalApiService {
-  @Retryable({ maxAttempts: 3, backoff: "exponential" })
+  @Retryable({ maxAttempts: 3, backoff: { delay: 100, multiplier: 2 } })
   async fetchData(): Promise<Data> {
-    return fetch("https://api.example.com/data");
+    return { status: (await fetch("https://api.example.com/data")).status };
   }
 
-  @Recover
+  @Recover()
   async recoverFromFailure(error: Error): Promise<Data> {
+    console.warn("All retries failed", error);
     return { cached: true };
   }
 }
@@ -318,13 +343,18 @@ class ExternalApiService {
 
 #### 4. 분산 추적 (@croco/telemetry-api)
 
-```typescript
+```typescript typecheck
 import { Trace } from "@croco/telemetry-api";
+
+type CreateOrderDto = {
+  orderId: string;
+};
 
 class OrderService {
   @Trace({ name: "order.create" })
-  async createOrder(dto: CreateOrderDto) {
+  async createOrder(dto: CreateOrderDto): Promise<CreateOrderDto> {
     // 자동으로 OpenTelemetry Span 생성
+    return dto;
   }
 }
 ```

@@ -48,7 +48,10 @@ Croco treats auth as a first-class concern. Wrap any controller method with `@Us
 
 First, register an auth provider and guard:
 
-```typescript
+`TestAuthProvider` is generated inside the quick-start project; this startup wiring is shown in the
+context of that generated application.
+
+```typescript no-check
 import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
 import { Container } from "@croco/framework-context";
 import { TestAuthProvider } from "../integrations/TestAuthProvider";
@@ -59,14 +62,19 @@ Container.set(AuthGuard, new AuthGuard());
 
 Now create a controller with a protected endpoint:
 
-```typescript
+```typescript typecheck
+import { AuthGuard } from "@croco/auth-core";
 import { Controller, Get, UseGuards } from "@croco/protocols-rest";
 
 @Controller("/api/users")
 class UserController {
+  private readonly users = {
+    list: () => [{ id: "user-123", email: "user@example.com" }],
+  };
+
   @Get()
   @UseGuards(AuthGuard)
-  list() {
+  list(): { id: string; email: string }[] {
     return this.users.list();
   }
 }
@@ -78,7 +86,10 @@ Any request without a valid API key gets a `401 Unauthorized` automatically. No 
 
 Track usage for billing with a single decorator. Croco's `@Metered` records every invocation against a named meter:
 
-```typescript
+The metering adapter below is generated in the quick-start project and bound once at application
+startup.
+
+```typescript no-check
 import { Meter, Metered, setMeteringService } from "@croco/metering-core";
 import { createMeteringService } from "../integrations/inMemoryMetering";
 
@@ -103,8 +114,17 @@ Now every `POST /api/users` call increments the `api_user_create` meter — read
 
 Export your app as a Lambda handler with one line:
 
-```typescript
+```typescript typecheck
+import { Controller, Get } from "@croco/protocols-rest";
 import { createApp } from "@croco/transports-http";
+
+@Controller("/api/users")
+class UserController {
+  @Get()
+  list(): { id: string; email: string }[] {
+    return [{ id: "user-123", email: "user@example.com" }];
+  }
+}
 
 const app = createApp({
   controllers: [UserController],
@@ -153,7 +173,7 @@ my-saas-api/
 
 `src/protocols/UserController.ts` owns protocol metadata and remains transport-neutral:
 
-```typescript
+```typescript no-check
 import { AuthGuard } from "@croco/auth-core";
 import { Container } from "@croco/framework-context";
 import { Meter, Metered } from "@croco/metering-core";
@@ -186,7 +206,7 @@ export class UserController {
 
 `src/app/bootstrap.ts` owns runtime composition, so auth and metering adapters can change without changing controller or domain code:
 
-```typescript
+```typescript no-check
 import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
 import { Container } from "@croco/framework-context";
 import { setMeteringService } from "@croco/metering-core";
@@ -210,7 +230,7 @@ export const app = createApp({
 
 `src/index.ts` stays thin and marks the Lambda transport boundary:
 
-```typescript
+```typescript no-check
 import "reflect-metadata";
 import { createLambdaExampleApp, startLocalServer } from "./app/bootstrap";
 
