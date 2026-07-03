@@ -19,17 +19,17 @@ depend on unversioned documentation paths:
 
 - Text generation uses the Responses API and the official Node SDK
   (`client.responses.create`, `response.output_text`):
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/guides/text
+  https://web.archive.org/web/20260618091123/https://developers.openai.com/api/docs/guides/text
 - Responses include usage fields for input, output, and total tokens:
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/reference/resources/responses/methods/create
+  https://web.archive.org/web/20260620031421/https://developers.openai.com/api/reference/resources/responses/methods/create
 - Streaming uses `stream=true` over server-sent events:
   https://web.archive.org/web/20260618090022/https://developers.openai.com/api/docs/guides/streaming-responses
 - Structured outputs use JSON schema response formats:
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/guides/structured-outputs
+  https://web.archive.org/web/20260618144051/https://developers.openai.com/api/docs/guides/structured-outputs
 - Function tools are supported through Responses API `tools`:
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/guides/function-calling
+  https://web.archive.org/web/20260622065352/https://developers.openai.com/api/docs/guides/function-calling
 - Embeddings remain a separate endpoint:
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/reference/resources/embeddings/methods/create
+  https://web.archive.org/web/20260622235929/https://developers.openai.com/api/reference/resources/embeddings/methods/create
 
 This PR intentionally does not ship a partial `@croco/llm-openai` package. The
 provider must normalize Responses events, function-tool outputs, structured output
@@ -84,7 +84,7 @@ const llmMetering = new LlmMeteringService({
 ```
 
 The authoritative pricing source should be checked when the registry is refreshed:
-https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/pricing
+https://web.archive.org/web/20260619115525/https://developers.openai.com/api/docs/pricing
 
 ## Quota And Failure Policy
 
