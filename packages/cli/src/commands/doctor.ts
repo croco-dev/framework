@@ -1135,6 +1135,13 @@ function readBenchmarkResultReports(
       };
     }
 
+    if (!isFiniteNumber(report.p75)) {
+      return {
+        kind: "invalid",
+        message: `${defaultBenchmarkResultPath} ${name} p75 entry missing.`,
+      };
+    }
+
     if (report.baselineStatus === "skip" || !isFiniteNumber(report.baseline)) {
       return {
         kind: "invalid",
@@ -3237,7 +3244,12 @@ function readNumber(value: Record<string, unknown>, key: string, fallback: numbe
 }
 
 function readOptionalString(value: unknown): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function toPackageSlug(packageName: string): string {
