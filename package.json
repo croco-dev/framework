@@ -55,6 +55,7 @@
     "package-manifests:write": "node scripts/normalize-packages.mjs --write",
     "pr-review-companion": "node --experimental-strip-types scripts/pr-review-companion.mts",
     "release-docs:check": "node --experimental-strip-types scripts/release-docs-check.mts",
+    "release:spine-evidence": "node --experimental-strip-types scripts/release-spine-evidence.mts",
     "security-allowlists:check": "node --experimental-strip-types scripts/security-allowlist-metadata-check.mts",
     "static-misuse:check": "node --experimental-strip-types scripts/static-misuse-check.mts",
     "strict-contract-typecheck": "node --experimental-strip-types scripts/strict-contract-typecheck.mts"
