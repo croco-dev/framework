@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Production dependency audit advisory
+      - name: Production dependency audit report
         id: security_audit_advisory
         shell: bash
         continue-on-error: true
@@ -59,7 +59,7 @@ jobs:
             echo "duration_seconds=$duration"
           } >> "$GITHUB_OUTPUT"
           if [ "$exit_code" -ne 0 ]; then
-            echo "::warning::pnpm audit:prod reported production vulnerabilities. Dependency audit is advisory-only in CI; see security-report artifact."
+            echo "::warning::pnpm audit:prod reported production vulnerabilities. CI keeps the audit advisory-only and uploads security-report; release publish gates run the same command as a blocker."
           fi
           exit "$exit_code"
 
@@ -97,7 +97,8 @@ jobs:
           {
             echo "# Security policy summary"
             echo ""
-            echo "- \`pnpm audit:prod\` dependency audit: advisory-only on pull requests, trunk pushes, and manual runs"
+            echo "- \`pnpm audit:prod\` dependency audit: advisory-only in CI on pull requests, trunk pushes, and manual runs"
+            echo "- \`pnpm audit:prod\` release enforcement: blocking in the Release workflow before publish"
             echo "- \`gitleaks\` secret scanning: warning-only on pull requests; blocking on trunk pushes and manual runs"
             echo "- Release path: release-triggering changes still pass through CI before merge; publish-specific gates live in the Release workflow"
             echo ""

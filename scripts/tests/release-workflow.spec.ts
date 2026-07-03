@@ -84,6 +84,16 @@ describe("release workflow quality gates", () => {
       expect(index, `${marker} should stay in release gate order`).toBeGreaterThan(previousIndex);
       previousIndex = index;
     }
+
+    const auditStepStart = workflow.indexOf("- name: Production dependency audit");
+    const lintStepStart = workflow.indexOf("- name: Lint, format, and repository policy checks");
+    const auditStep = workflow.slice(auditStepStart, lintStepStart);
+
+    expect(auditStep).toContain(
+      "if: steps.release_work.outputs.should_run_publish_gates == 'true'",
+    );
+    expect(auditStep).toContain("run: pnpm audit:prod");
+    expect(auditStep).not.toContain("continue-on-error");
   });
 
   it("documents CI-only differences in the release job", () => {
@@ -120,6 +130,7 @@ describe("release workflow quality gates", () => {
       "packages/framework-context/CHANGELOG.md",
       "package.json",
       "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
     ];
 
     for (const file of publishCandidateFiles) {

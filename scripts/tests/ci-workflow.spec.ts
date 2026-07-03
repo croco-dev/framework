@@ -3,8 +3,13 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ciWorkflowPath = resolve(__dirname, "../../.github/workflows/ci.yml");
+const rootPackageJsonPath = resolve(__dirname, "../../package.json");
+const pnpmWorkspacePath = resolve(__dirname, "../../pnpm-workspace.yaml");
 
 const readCiWorkflow = () => readFileSync(ciWorkflowPath, "utf-8");
+const readRootPackageJson = () =>
+  JSON.parse(readFileSync(rootPackageJsonPath, "utf-8")) as Record<string, unknown>;
+const readPnpmWorkspace = () => readFileSync(pnpmWorkspacePath, "utf-8");
 
 describe("CI package quality dashboard", () => {
   it("collects package-level Turbo summaries before publishing the dashboard", () => {
@@ -163,6 +168,56 @@ describe("CI package quality dashboard", () => {
     const warningStep = workflow.slice(warningStepStart, summaryStepStart);
     expect(warningStep).toContain("run: pnpm test:coverage:core:warning");
     expect(warningStep).not.toContain("continue-on-error");
+  });
+
+  it("keeps production dependency audit advisory in CI and publish-blocking in release", () => {
+    const workflow = readCiWorkflow();
+    const auditStepStart = workflow.indexOf("- name: Production dependency audit report");
+    const secretScanStart = workflow.indexOf("- name: Secret scan warning report");
+    const summaryStart = workflow.indexOf("- name: Assemble security policy summary");
+    const uploadStart = workflow.indexOf("- name: Upload security report");
+
+    expect(auditStepStart, "production dependency audit step should be present").toBeGreaterThan(
+      -1,
+    );
+    expect(
+      secretScanStart,
+      "secret scan step should follow production dependency audit",
+    ).toBeGreaterThan(auditStepStart);
+    expect(summaryStart, "security summary should follow security scans").toBeGreaterThan(
+      secretScanStart,
+    );
+    expect(uploadStart, "security report upload should follow the summary").toBeGreaterThan(
+      summaryStart,
+    );
+
+    const auditStep = workflow.slice(auditStepStart, secretScanStart);
+    expect(auditStep).toContain("id: security_audit_advisory");
+    expect(auditStep).toContain("continue-on-error: true");
+    expect(auditStep).toContain("pnpm audit:prod > ci-reports/security/pnpm-audit-prod.txt 2>&1");
+    expect(auditStep).toContain("CI keeps the audit advisory-only");
+    expect(auditStep).toContain("release publish gates run the same command as a blocker");
+    expect(auditStep).toContain('exit "$exit_code"');
+
+    const summaryStep = workflow.slice(summaryStart, uploadStart);
+    expect(summaryStep).toContain(
+      "- \\`pnpm audit:prod\\` dependency audit: advisory-only in CI on pull requests, trunk pushes, and manual runs",
+    );
+    expect(summaryStep).toContain(
+      "- \\`pnpm audit:prod\\` release enforcement: blocking in the Release workflow before publish",
+    );
+  });
+
+  it("keeps pnpm security policy in workspace-supported config", () => {
+    const rootPackageJson = readRootPackageJson();
+    const workspace = readPnpmWorkspace();
+
+    expect(rootPackageJson).not.toHaveProperty("pnpm");
+    expect(workspace).toContain("overrides:");
+    expect(workspace).toContain("linkify-it: 5.0.2");
+    expect(workspace).toContain("auditConfig:");
+    expect(workspace).toContain("ignoreGhsas:");
+    expect(workspace).toContain("- GHSA-gv7w-rqvm-qjhr");
   });
 
   it("triggers docs link checks for root docs and public package READMEs", () => {
