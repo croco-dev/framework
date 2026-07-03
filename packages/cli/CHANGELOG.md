@@ -1,5 +1,129 @@
 # @croco/cli
 
+## 0.0.4
+
+### Patch Changes
+
+- 08d8e56: `croco doctor` can now diagnose workspace package discovery, repository boundary violations, and Lambda telemetry flush gaps with stable recovery-focused diagnostic codes.
+- a88bbef: Generate controllers with the public CrocoHttpContext transport type instead of a nonexistent RouteContext import.
+- 511a850: CLI generators now validate generated imports against target app manifests before writing files, and API-server scaffolds declare the common generator dependencies.
+- ae98a01: Default page generation now emits the current meta-vite `defineRoute` route shape while keeping SPA route config generation explicit to `--mode spa`.
+- e7c759b: `croco migrate status` now delegates to `@croco/migration-runner`, forwards migration flags through the wrapper, and status reads real Drizzle node-postgres row results.
+- dce724a: Generated console web pages now avoid imports that are missing from the matching create-croco-app web scaffolds.
+- 9f14ead: Generated repository and entity templates now align with the public `@croco/repository-core` interface contract.
+- 52f8015: The Croco CLI now forwards `croco codegen rpc` to the RPC codegen binary instead of the package root export.
+- 529c7fd: Contract graph snapshots now include consumer coverage reports, OpenAPI/RPC generation verifies every graph route, generated RPC clients expose route metadata, and generated app CI contract scripts write `contract-graph.coverage.json`.
+- 6148ed3: Expose a canonical REST contract graph with route diagnostics and add a contract check path before OpenAPI and RPC client generation.
+- 988f072: Add deterministic contract graph snapshots and drift gates for contract-first release checks.
+- e12e825: Expose deterministic DI and module graph manifests with pre-start diagnostics, and add `croco di check` for CI manifest validation.
+- e57d094: `croco doctor` now reports minimum spine-readiness checks with stable `CROCO_DOCTOR_*` diagnostics.
+- d04a78e: Generated SaaS apps now prove Jobs v1 operator workflows through CLI-backed smoke coverage, including attention
+  exit codes and replay inspection semantics.
+- af9f355: - Expose Jobs v1 operations for listing, inspecting, logging, cancelling, and replaying executions.
+  - Add `croco jobs` commands for Jobs v1 operator inspection and recovery flows.
+  - Support QStash schedule sync dry-runs before applying schedule changes.
+  - Make batch chunk execution completion explicit for multi-step checkpoint flows.
+  - Include a smoke-tested billing sync background job in the SaaS app preset.
+- b50da61: Add `croco upgrade` to report version migration findings, show safe codemod diffs in dry-run mode, apply safe rewrites with `--write`, and leave uncertain changes as manual confirmations.
+- 9556d22: Add CI-oriented operational checks with token-guarded diagnostics smoke coverage and app-provided diagnostics provider registration.
+- f40eb63: Expose canonical operations endpoints and add `croco ops status` for machine-readable and human-readable runtime status checks.
+- a61dcd4: Public package manifests now expose normalized publish-time entrypoints for dist-based runtime and type resolution.
+- 9a2040b: Generated contract workflows now emit a schema-versioned `.croco/manifest` bundle, validate it through the Project Map drift gate and `croco doctor`, and reference it from generated OpenAPI and RPC outputs.
+- 1dbb0e8: Expose a Project Map manifest command and generated-app drift check scripts.
+- d707a0c: Published package manifests now declare the Croco framework GitHub repository metadata required for npm provenance verification.
+- 14bd9f8: - Runtime capability manifests can now be emitted and compared for Node, Lambda, and Cloudflare Workers with deterministic `RuntimeCapabilityManifest v1` output.
+  - Unsupported runtime capability use now carries the stable `CROCO_RUNTIME_CAPABILITY_001` diagnostic context.
+  - Generated apps now write `croco-runtime-capability.manifest.json`, and doctor/smoke checks validate the manifest for supported runtime targets.
+- c54e7b5: Runtime policy capability requirements can now be checked against typed runtime presets before app execution.
+- 3ca4a69: CLI diagnostics now emit registered `CROCO_*` codes while preserving previous slash-form identifiers as explicit legacy alias metadata.
+- e7c4ce7: Add a static architecture policy engine and CLI gate for package/layer boundaries, public entrypoint imports, and generated SaaS app policy manifests.
+- bb59160: - Generated REST contract gates can now run strict schema diagnostics that fail before RPC/OpenAPI
+  generation when routes omit response, body, path, query, or header schemas.
+- 53e9489: `croco generate usage-dashboard` now creates a tenant usage dashboard API with quota and overage states, and the SaaS preset seeds dashboard-ready normal and over-quota usage data without external credentials.
+- Updated dependencies [4d8f094]
+- Updated dependencies [6769a7f]
+- Updated dependencies [d281518]
+- Updated dependencies [ea14bd4]
+- Updated dependencies [73e430a]
+- Updated dependencies [a77425f]
+- Updated dependencies [e7c759b]
+- Updated dependencies [7db1d3f]
+- Updated dependencies [8b28607]
+- Updated dependencies [2a9d5b0]
+- Updated dependencies [2631037]
+- Updated dependencies [529c7fd]
+- Updated dependencies [f3951f3]
+- Updated dependencies [6148ed3]
+- Updated dependencies [779fa6f]
+- Updated dependencies [988f072]
+- Updated dependencies [0b43229]
+- Updated dependencies [ee924c0]
+- Updated dependencies [5403360]
+- Updated dependencies [e12e825]
+- Updated dependencies [6831875]
+- Updated dependencies [9cd8667]
+- Updated dependencies [2f0dae2]
+- Updated dependencies [ddfc6d1]
+- Updated dependencies [9c1bc2e]
+- Updated dependencies [a61dcd4]
+- Updated dependencies [6607359]
+- Updated dependencies [7a8de8c]
+- Updated dependencies [be5b2cd]
+- Updated dependencies [dc6723d]
+- Updated dependencies [9d6ef7c]
+- Updated dependencies [2e65be0]
+- Updated dependencies [0b49816]
+- Updated dependencies [0c20d29]
+- Updated dependencies [e27c8e2]
+- Updated dependencies [6d61236]
+- Updated dependencies [9075ab8]
+- Updated dependencies [2977874]
+- Updated dependencies [9ae8ab8]
+- Updated dependencies [40b024d]
+- Updated dependencies [4c7fcd9]
+- Updated dependencies [1dc1607]
+- Updated dependencies [8c5b00c]
+- Updated dependencies [48ce207]
+- Updated dependencies [6c26eb4]
+- Updated dependencies [f8842d3]
+- Updated dependencies [9a2040b]
+- Updated dependencies [d707a0c]
+- Updated dependencies [0ae5c7d]
+- Updated dependencies [dc5e4e9]
+- Updated dependencies [9c2ac20]
+- Updated dependencies [b5c525f]
+- Updated dependencies [53d4169]
+- Updated dependencies [d2b6dc3]
+- Updated dependencies [af8093b]
+- Updated dependencies [1489bfa]
+- Updated dependencies [27946c5]
+- Updated dependencies [a41d123]
+- Updated dependencies [0647644]
+- Updated dependencies [30e4f4a]
+- Updated dependencies [de7610e]
+- Updated dependencies [14bd9f8]
+- Updated dependencies [0618b12]
+- Updated dependencies [41ee87a]
+- Updated dependencies [c54e7b5]
+- Updated dependencies [d215344]
+- Updated dependencies [a3458cc]
+- Updated dependencies [d1552a5]
+- Updated dependencies [3ca4a69]
+- Updated dependencies [e7c4ce7]
+- Updated dependencies [f8e4056]
+- Updated dependencies [bb59160]
+- Updated dependencies [9ad65a3]
+- Updated dependencies [d314bd4]
+  - @croco/diagnostics-core@0.0.4
+  - @croco/framework-routes@0.0.4
+  - @croco/migration-runner@0.0.4
+  - @croco/openapi-spec@0.1.0
+  - @croco/protocols-core@0.1.0
+  - @croco/rpc-codegen@0.1.0
+  - @croco/framework-context@0.0.4
+  - @croco/problems-core@0.0.4
+  - @croco/architecture-policy@0.1.0
+
 ## 0.0.3
 
 ### Patch Changes

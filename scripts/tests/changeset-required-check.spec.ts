@@ -250,6 +250,543 @@ describe("changeset-required-check.mts", () => {
     expect(result.stdout).toContain("packages/public/package.json");
   });
 
+  it("passes generated Changesets version metadata that consumes pending changesets", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/public-version.md",
+      "---\n'@croco/public': patch\n---\n\nRelease public package behavior.\n",
+      "chore: add pending changeset",
+    );
+    checkoutBranch(repo, "version-packages");
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+      dependencies: {
+        "@croco/dependency": "^0.0.3",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n## 0.0.4\n\n### Patch Changes\n\n- Release public package behavior.\n",
+    );
+    git(repo, ["rm", ".changeset/public-version.md"]);
+    git(repo, ["add", "packages/public/package.json", "packages/public/CHANGELOG.md"]);
+    git(repo, ["commit", "-m", "chore: version packages"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: generated Changesets version metadata found (passing)",
+    );
+  });
+
+  it("passes generated internal dependency metadata for packages versioned together", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/public-version.md",
+      "---\n'@croco/public': patch\n'@croco/dependency': patch\n---\n\nRelease linked public package behavior.\n",
+      "chore: add pending changeset",
+    );
+    checkoutBranch(repo, "version-linked-packages");
+    writePackageJson(repo, "dependency", {
+      name: "@croco/dependency",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+      dependencies: {
+        "@croco/dependency": "^0.0.4",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/dependency/CHANGELOG.md",
+      "# @croco/dependency\n\n## 0.0.4\n\n### Patch Changes\n\n- Release linked public package behavior.\n",
+    );
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n## 0.0.4\n\n### Patch Changes\n\n- Updated dependencies.\n",
+    );
+    git(repo, ["rm", ".changeset/public-version.md"]);
+    git(repo, [
+      "add",
+      "packages/dependency/package.json",
+      "packages/dependency/CHANGELOG.md",
+      "packages/public/package.json",
+      "packages/public/CHANGELOG.md",
+    ]);
+    git(repo, ["commit", "-m", "chore: version linked packages"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: generated Changesets version metadata found (passing)",
+    );
+  });
+
+  it("passes generated dependent metadata when only the dependency has a consumed changeset", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/dependency-version.md",
+      "---\n'@croco/dependency': patch\n---\n\nRelease dependency package behavior.\n",
+      "chore: add dependency pending changeset",
+    );
+    checkoutBranch(repo, "version-dependent-package");
+    writePackageJson(repo, "dependency", {
+      name: "@croco/dependency",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+      dependencies: {
+        "@croco/dependency": "^0.0.4",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/dependency/CHANGELOG.md",
+      "# @croco/dependency\n\n## 0.0.4\n\n### Patch Changes\n\n- Release dependency package behavior.\n",
+    );
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n## 0.0.4\n\n### Patch Changes\n\n- Updated dependencies.\n",
+    );
+    git(repo, ["rm", ".changeset/dependency-version.md"]);
+    git(repo, [
+      "add",
+      "packages/dependency/package.json",
+      "packages/dependency/CHANGELOG.md",
+      "packages/public/package.json",
+      "packages/public/CHANGELOG.md",
+    ]);
+    git(repo, ["commit", "-m", "chore: version dependency and dependent"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: generated Changesets version metadata found (passing)",
+    );
+  });
+
+  it("passes generated dependent metadata with unchanged workspace dependency ranges", () => {
+    const repo = createTempRepo();
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.3",
+      publishConfig: {
+        access: "public",
+      },
+      dependencies: {
+        "@croco/dependency": "workspace:*",
+      },
+    });
+    git(repo, ["add", "packages/public/package.json"]);
+    git(repo, ["commit", "-m", "test: use workspace dependency range"]);
+    commitFile(
+      repo,
+      ".changeset/dependency-version.md",
+      "---\n'@croco/dependency': patch\n---\n\nRelease dependency package behavior.\n",
+      "chore: add dependency pending changeset",
+    );
+    checkoutBranch(repo, "version-workspace-dependent-package");
+    writePackageJson(repo, "dependency", {
+      name: "@croco/dependency",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+      dependencies: {
+        "@croco/dependency": "workspace:*",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/dependency/CHANGELOG.md",
+      "# @croco/dependency\n\n## 0.0.4\n\n### Patch Changes\n\n- Release dependency package behavior.\n",
+    );
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n## 0.0.4\n\n### Patch Changes\n\n- Updated dependencies.\n",
+    );
+    git(repo, ["rm", ".changeset/dependency-version.md"]);
+    git(repo, [
+      "add",
+      "packages/dependency/package.json",
+      "packages/dependency/CHANGELOG.md",
+      "packages/public/package.json",
+      "packages/public/CHANGELOG.md",
+    ]);
+    git(repo, ["commit", "-m", "chore: version workspace dependency and dependent"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: generated Changesets version metadata found (passing)",
+    );
+  });
+
+  it("passes generated create-croco-app range metadata for versioned Croco packages", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "create-croco-app", {
+      name: "create-croco-app",
+      version: "0.0.3",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writeCreateCrocoAppRanges(repo, {
+      "@croco/dependency": "^0.0.3",
+    });
+    git(repo, ["add", "packages/create-croco-app"]);
+    git(repo, ["commit", "-m", "chore: add generated app range metadata"]);
+    commitFile(
+      repo,
+      ".changeset/create-app-ranges.md",
+      "---\n'@croco/dependency': patch\n'create-croco-app': minor\n---\n\nRelease generated app range metadata.\n",
+      "chore: add generated app range changeset",
+    );
+    checkoutBranch(repo, "version-create-app-ranges");
+    writePackageJson(repo, "dependency", {
+      name: "@croco/dependency",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writePackageJson(repo, "create-croco-app", {
+      name: "create-croco-app",
+      version: "0.1.0",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/dependency/CHANGELOG.md",
+      "# @croco/dependency\n\n## 0.0.4\n\n### Patch Changes\n\n- Release generated app range metadata.\n",
+    );
+    writeFile(
+      repo,
+      "packages/create-croco-app/CHANGELOG.md",
+      "# create-croco-app\n\n## 0.1.0\n\n### Minor Changes\n\n- Release generated app range metadata.\n",
+    );
+    writeCreateCrocoAppRanges(repo, {
+      "@croco/dependency": "^0.0.4",
+    });
+    git(repo, ["rm", ".changeset/create-app-ranges.md"]);
+    git(repo, [
+      "add",
+      "packages/dependency/package.json",
+      "packages/dependency/CHANGELOG.md",
+      "packages/create-croco-app/package.json",
+      "packages/create-croco-app/CHANGELOG.md",
+      "packages/create-croco-app/src/helpers/croco-ranges.ts",
+    ]);
+    git(repo, ["commit", "-m", "chore: version generated app ranges"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: generated Changesets version metadata found (passing)",
+    );
+  });
+
+  it("fails generated create-croco-app range metadata when the range does not match the versioned package", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "create-croco-app", {
+      name: "create-croco-app",
+      version: "0.0.3",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writeCreateCrocoAppRanges(repo, {
+      "@croco/dependency": "^0.0.3",
+    });
+    git(repo, ["add", "packages/create-croco-app"]);
+    git(repo, ["commit", "-m", "chore: add generated app range metadata"]);
+    commitFile(
+      repo,
+      ".changeset/create-app-ranges.md",
+      "---\n'@croco/dependency': patch\n'create-croco-app': minor\n---\n\nRelease generated app range metadata.\n",
+      "chore: add generated app range changeset",
+    );
+    checkoutBranch(repo, "version-invalid-create-app-ranges");
+    writePackageJson(repo, "dependency", {
+      name: "@croco/dependency",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writePackageJson(repo, "create-croco-app", {
+      name: "create-croco-app",
+      version: "0.1.0",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/dependency/CHANGELOG.md",
+      "# @croco/dependency\n\n## 0.0.4\n\n### Patch Changes\n\n- Release generated app range metadata.\n",
+    );
+    writeFile(
+      repo,
+      "packages/create-croco-app/CHANGELOG.md",
+      "# create-croco-app\n\n## 0.1.0\n\n### Minor Changes\n\n- Release generated app range metadata.\n",
+    );
+    writeCreateCrocoAppRanges(repo, {
+      "@croco/dependency": "^0.0.5",
+    });
+    git(repo, ["rm", ".changeset/create-app-ranges.md"]);
+    git(repo, [
+      "add",
+      "packages/dependency/package.json",
+      "packages/dependency/CHANGELOG.md",
+      "packages/create-croco-app/package.json",
+      "packages/create-croco-app/CHANGELOG.md",
+      "packages/create-croco-app/src/helpers/croco-ranges.ts",
+    ]);
+    git(repo, ["commit", "-m", "chore: version invalid generated app ranges"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("create-croco-app");
+    expect(result.stdout).toContain("packages/create-croco-app/src/helpers/croco-ranges.ts");
+  });
+
+  it("fails generated-looking version metadata when no pending changeset was consumed", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/manual-version-bump");
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n## 0.0.4\n\n### Patch Changes\n\n- Manual version bump.\n",
+    );
+    git(repo, ["add", "packages/public/package.json", "packages/public/CHANGELOG.md"]);
+    git(repo, ["commit", "-m", "chore: bump package version"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public");
+    expect(result.stdout).toContain("packages/public/package.json");
+  });
+
+  it("fails generated-looking version metadata when consumed changesets cover another package", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/other-version.md",
+      "---\n'@croco/other': patch\n---\n\nRelease other package behavior.\n",
+      "chore: add unrelated pending changeset",
+    );
+    checkoutBranch(repo, "fix/unrelated-consumed-changeset");
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n## 0.0.4\n\n### Patch Changes\n\n- Manual version bump.\n",
+    );
+    git(repo, ["rm", ".changeset/other-version.md"]);
+    git(repo, ["add", "packages/public/package.json", "packages/public/CHANGELOG.md"]);
+    git(repo, ["commit", "-m", "chore: bump wrong package version"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public");
+    expect(result.stdout).toContain("packages/public/package.json");
+  });
+
+  it("fails generated-looking version metadata when the version does not increase", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/public-version.md",
+      "---\n'@croco/public': patch\n---\n\nRelease public package behavior.\n",
+      "chore: add pending changeset",
+    );
+    checkoutBranch(repo, "fix/version-downgrade");
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.2",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n## 0.0.2\n\n### Patch Changes\n\n- Invalid downgrade.\n",
+    );
+    git(repo, ["rm", ".changeset/public-version.md"]);
+    git(repo, ["add", "packages/public/package.json", "packages/public/CHANGELOG.md"]);
+    git(repo, ["commit", "-m", "chore: downgrade package version"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public");
+    expect(result.stdout).toContain("packages/public/package.json");
+  });
+
+  it("fails generated-looking version metadata when the changelog omits the head version", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/public-version.md",
+      "---\n'@croco/public': patch\n---\n\nRelease public package behavior.\n",
+      "chore: add pending changeset",
+    );
+    checkoutBranch(repo, "fix/changelog-without-version");
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n### Patch Changes\n\n- Missing version header.\n",
+    );
+    git(repo, ["rm", ".changeset/public-version.md"]);
+    git(repo, ["add", "packages/public/package.json", "packages/public/CHANGELOG.md"]);
+    git(repo, ["commit", "-m", "chore: bump package without changelog version"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public");
+    expect(result.stdout).toContain("packages/public/package.json");
+  });
+
+  it("fails generated-looking dependency metadata when the dependency was not versioned", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/public-version.md",
+      "---\n'@croco/public': patch\n---\n\nRelease public package behavior.\n",
+      "chore: add pending changeset",
+    );
+    checkoutBranch(repo, "fix/manual-internal-dependency-range");
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+      dependencies: {
+        "@croco/dependency": "^0.0.4",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n## 0.0.4\n\n### Patch Changes\n\n- Manual dependency range.\n",
+    );
+    git(repo, ["rm", ".changeset/public-version.md"]);
+    git(repo, ["add", "packages/public/package.json", "packages/public/CHANGELOG.md"]);
+    git(repo, ["commit", "-m", "chore: bump dependency range"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public");
+    expect(result.stdout).toContain("packages/public/package.json");
+  });
+
+  it("does not let consumed version metadata bypass public source changes", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/public-version.md",
+      "---\n'@croco/public': patch\n---\n\nRelease public package behavior.\n",
+      "chore: add pending changeset",
+    );
+    checkoutBranch(repo, "fix/version-and-source");
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n## 0.0.4\n\n### Patch Changes\n\n- Release public package behavior.\n",
+    );
+    writeFile(repo, "packages/public/src/index.ts", "export const value = 2;\n");
+    git(repo, ["rm", ".changeset/public-version.md"]);
+    git(repo, [
+      "add",
+      "packages/public/package.json",
+      "packages/public/CHANGELOG.md",
+      "packages/public/src/index.ts",
+    ]);
+    git(repo, ["commit", "-m", "fix: change source with version metadata"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public");
+    expect(result.stdout).toContain("packages/public/src/index.ts");
+  });
+
   it("fails when the public API snapshot changes without release metadata", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "fix/public-api-snapshot-without-changeset");
@@ -389,6 +926,23 @@ function createTempRepo(): string {
     publishConfig: {
       access: "public",
     },
+    dependencies: {
+      "@croco/dependency": "^0.0.3",
+    },
+  });
+  writePackage(repo, "dependency", {
+    name: "@croco/dependency",
+    version: "0.0.3",
+    publishConfig: {
+      access: "public",
+    },
+  });
+  writePackage(repo, "other", {
+    name: "@croco/other",
+    version: "0.0.3",
+    publishConfig: {
+      access: "public",
+    },
   });
   writePackage(repo, "private", {
     name: "@croco/private",
@@ -409,8 +963,16 @@ function createTempRepo(): string {
 }
 
 function writePackage(repo: string, packageDirName: string, pkg: Record<string, unknown>): void {
-  writeFile(repo, `packages/${packageDirName}/package.json`, `${JSON.stringify(pkg, null, 2)}\n`);
+  writePackageJson(repo, packageDirName, pkg);
   writeFile(repo, `packages/${packageDirName}/src/index.ts`, "export const value = 1;\n");
+}
+
+function writePackageJson(
+  repo: string,
+  packageDirName: string,
+  pkg: Record<string, unknown>,
+): void {
+  writeFile(repo, `packages/${packageDirName}/package.json`, `${JSON.stringify(pkg, null, 2)}\n`);
 }
 
 function writePublicApiSnapshot(repo: string, runtimeExportNames: readonly string[]): void {
@@ -438,6 +1000,25 @@ function writePublicApiSnapshot(repo: string, runtimeExportNames: readonly strin
       null,
       2,
     )}\n`,
+  );
+}
+
+function writeCreateCrocoAppRanges(repo: string, ranges: Record<string, string>): void {
+  const entries = Object.entries(ranges)
+    .map(([packageName, range]) => `  "${packageName}": "${range}",`)
+    .join("\n");
+
+  writeFile(
+    repo,
+    "packages/create-croco-app/src/helpers/croco-ranges.ts",
+    `const EXTERNAL_CROCO_PACKAGE_RANGES = {
+${entries}
+} as const satisfies Record<string, string>;
+
+export function getExternalCrocoPackageRange(packageName: string): string | undefined {
+  return EXTERNAL_CROCO_PACKAGE_RANGES[packageName as keyof typeof EXTERNAL_CROCO_PACKAGE_RANGES];
+}
+`,
   );
 }
 
