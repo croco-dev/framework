@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { getExternalCrocoPackageRange } from "../helpers/croco-ranges.js";
 
 const TEMPLATES_DIR = new URL("../../templates", import.meta.url).pathname;
+const REPO_ROOT_DIR = new URL("../../../../", import.meta.url).pathname;
 const CROCO_WORKSPACE_DEPENDENCY_PATTERN = /"(@croco\/[^"]+)":\s*"workspace:[^"]+"/g;
 const INSTALLABLE_VERSION_RANGE_PATTERN = /^\^\d+\.\d+\.\d+$/;
 
@@ -32,6 +33,14 @@ function collectTemplateCrocoWorkspaceDependencies(): string[] {
   return [...new Set(dependencies)].sort();
 }
 
+function readWorkspacePackageVersion(packageName: string): string {
+  const packageDir = packageName.replace("@croco/", "");
+  const packageJsonPath = join(REPO_ROOT_DIR, "packages", packageDir, "package.json");
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { version: string };
+
+  return packageJson.version;
+}
+
 describe("external Croco package ranges", () => {
   it("covers every external Croco workspace dependency used by templates", () => {
     const templateDependencies = collectTemplateCrocoWorkspaceDependencies();
@@ -52,9 +61,31 @@ describe("external Croco package ranges", () => {
         },
       ];
     });
+    const staleRanges = templateDependencies.flatMap((packageName) => {
+      const range = getExternalCrocoPackageRange(packageName);
+
+      if (range === undefined) {
+        return [];
+      }
+
+      const expectedRange = `^${readWorkspacePackageVersion(packageName)}`;
+
+      if (range === expectedRange) {
+        return [];
+      }
+
+      return [
+        {
+          packageName,
+          expected: expectedRange,
+          actual: range,
+        },
+      ];
+    });
 
     expect(templateDependencies).not.toEqual([]);
     expect(missingRanges).toEqual([]);
     expect(invalidRanges).toEqual([]);
+    expect(staleRanges).toEqual([]);
   });
 });

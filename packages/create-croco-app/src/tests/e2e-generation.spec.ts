@@ -3,6 +3,7 @@ import { basename, extname, join, relative } from "node:path";
 import { preProcessFile } from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
+import { getExternalCrocoPackageRange } from "../helpers/croco-ranges.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
 import { normalizeNonInteractiveOptions, parseCliOptions } from "../options.js";
 import type { GeneratorOptions } from "../types.js";
@@ -36,6 +37,17 @@ type PackageJson = {
   name?: string;
   scripts?: Record<string, string>;
 } & Partial<Record<DependencyField, Record<string, string>>>;
+
+function externalCrocoRange(packageName: string): string {
+  const range = getExternalCrocoPackageRange(packageName);
+
+  if (range === undefined) {
+    expect(range, packageName).toEqual(expect.any(String));
+    return "";
+  }
+
+  return range;
+}
 
 function collectFiles(directory: string): string[] {
   return readdirSync(directory, { recursive: true, withFileTypes: true })
@@ -421,7 +433,9 @@ describe("E2E: generate()", () => {
 
       expect(graphqlPackageJson.dependencies?.["@apollo/server"]).toBe("^4.12.2");
       expect(graphqlPackageJson.dependencies?.["@as-integrations/aws-lambda"]).toBeUndefined();
-      expect(graphqlPackageJson.dependencies?.["@croco/protocols-graphql"]).toBe("^0.0.3");
+      expect(graphqlPackageJson.dependencies?.["@croco/protocols-graphql"]).toBe(
+        externalCrocoRange("@croco/protocols-graphql"),
+      );
       expect(graphqlPackageJson.dependencies?.["apollo-server"]).toBeUndefined();
       expect(graphqlPackageJson.scripts?.["contract:check"]).toBe(
         "tsx src/graphql-contract.ts --check",
@@ -501,8 +515,12 @@ describe("E2E: generate()", () => {
       const webDir = join(testDir, "apps", "web");
       const packageJson = readPackageJson(join(webDir, "package.json"));
 
-      expect(packageJson.dependencies?.["@croco/meta-vite"]).toBe("^0.0.2");
-      expect(packageJson.dependencies?.["@croco/problems-core"]).toBe("^0.0.2");
+      expect(packageJson.dependencies?.["@croco/meta-vite"]).toBe(
+        externalCrocoRange("@croco/meta-vite"),
+      );
+      expect(packageJson.dependencies?.["@croco/problems-core"]).toBe(
+        externalCrocoRange("@croco/problems-core"),
+      );
       expect(packageJson.scripts?.build).toBe("vite build --outDir dist/client");
       expect(packageJson.scripts?.preview).toBe("vite preview --outDir dist/client");
       expect(packageJson.scripts?.["presentation:smoke"]).toBe(
@@ -560,12 +578,18 @@ describe("E2E: generate()", () => {
       expect(workerContent).toContain(
         "skip: (ctx) => OPERATIONAL_RATE_LIMIT_BYPASS_PATHS.has(ctx.req.path)",
       );
-      expect(workerPackageJson.dependencies?.["@croco/ratelimit-core"]).toBe("^0.0.2");
+      expect(workerPackageJson.dependencies?.["@croco/ratelimit-core"]).toBe(
+        externalCrocoRange("@croco/ratelimit-core"),
+      );
       expect(workspaceConfig).toContain("onlyBuiltDependencies:");
       expect(workspaceConfig).toContain("- workerd");
       expect(workerWranglerConfig).not.toMatch(/^\s*\[build\]\s*$/m);
-      expect(ssrWorkerPackageJson.dependencies?.["@croco/meta-vite"]).toBe("^0.0.2");
-      expect(ssrWorkerPackageJson.dependencies?.["@croco/problems-core"]).toBe("^0.0.2");
+      expect(ssrWorkerPackageJson.dependencies?.["@croco/meta-vite"]).toBe(
+        externalCrocoRange("@croco/meta-vite"),
+      );
+      expect(ssrWorkerPackageJson.dependencies?.["@croco/problems-core"]).toBe(
+        externalCrocoRange("@croco/problems-core"),
+      );
       expect(ssrWorkerPackageJson.scripts?.build).toBe(
         "vite build --outDir dist/client && vite build --ssr src/index.ts --outDir dist --emptyOutDir false",
       );
@@ -634,8 +658,12 @@ describe("E2E: generate()", () => {
     expect(packageJson.dependencies?.["@as-integrations/aws-lambda"]).toBe("^3.1.0");
     expect(packageJson.devDependencies?.["@types/aws-lambda"]).toBe("^8.10.146");
     expect(packageJson.dependencies?.["apollo-server"]).toBeUndefined();
-    expect(packageJson.dependencies?.["@croco/protocols-graphql"]).toBe("^0.0.3");
-    expect(packageJson.dependencies?.["@croco/telemetry-sdk-node"]).toBe("^0.0.2");
+    expect(packageJson.dependencies?.["@croco/protocols-graphql"]).toBe(
+      externalCrocoRange("@croco/protocols-graphql"),
+    );
+    expect(packageJson.dependencies?.["@croco/telemetry-sdk-node"]).toBe(
+      externalCrocoRange("@croco/telemetry-sdk-node"),
+    );
     expect(packageJson.dependencies?.["@test/provider-database"]).toBe("workspace:*");
     expect(packageJson.scripts?.["contract:check"]).toBe("tsx src/graphql-contract.ts --check");
     expect(packageJson.scripts?.["contract:snapshot"]).toBe("tsx src/graphql-contract.ts --write");
@@ -746,21 +774,21 @@ describe("E2E: generate()", () => {
         test: "vitest run",
       });
       expect(apiPackageJson.dependencies).toMatchObject({
-        "@croco/events-core": "^0.0.2",
-        "@croco/events-inmemory": "^0.0.3",
-        "@croco/problems-core": "^0.0.2",
-        "@croco/protocols-rest": "^0.0.2",
-        "@croco/repository-core": "^0.0.2",
-        "@croco/retry-core": "^0.0.3",
-        "@croco/telemetry-api": "^0.0.2",
-        "@croco/telemetry-sdk-node": "^0.0.2",
-        "@croco/transports-http": "^0.0.2",
+        "@croco/events-core": externalCrocoRange("@croco/events-core"),
+        "@croco/events-inmemory": externalCrocoRange("@croco/events-inmemory"),
+        "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
+        "@croco/protocols-rest": externalCrocoRange("@croco/protocols-rest"),
+        "@croco/repository-core": externalCrocoRange("@croco/repository-core"),
+        "@croco/retry-core": externalCrocoRange("@croco/retry-core"),
+        "@croco/telemetry-api": externalCrocoRange("@croco/telemetry-api"),
+        "@croco/telemetry-sdk-node": externalCrocoRange("@croco/telemetry-sdk-node"),
+        "@croco/transports-http": externalCrocoRange("@croco/transports-http"),
       });
       expect(consolePackageJson.dependencies).toMatchObject({
-        "@croco/frontend-problems": "^0.1.0",
+        "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
       });
       expect(rpcPackageJson.dependencies).toMatchObject({
-        "@croco/frontend-problems": "^0.1.0",
+        "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
       });
       expect(existsSync(join(testDir, "apps", "api-server", "src", "lambda.ts"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "env.ts"))).toBe(true);
@@ -907,22 +935,22 @@ describe("E2E: generate()", () => {
       "failure-drill:integration": "pnpm --filter @test/api-server failure-drill:integration",
     });
     expect(apiPackageJson.dependencies).toMatchObject({
-      "@croco/tenant-core": "^0.0.2",
-      "@croco/auth-core": "^0.0.2",
-      "@croco/access-core": "^0.0.2",
-      "@croco/billing-core": "^0.0.2",
-      "@croco/metering-core": "^0.0.2",
-      "@croco/entitlements-core": "^0.0.2",
-      "@croco/execution-core": "^0.0.2",
-      "@croco/health-core": "^0.0.2",
-      "@croco/framework-context": "^0.0.2",
-      "@croco/diagnostics-core": "^0.0.2",
-      "@croco/llm-core": "^0.0.2",
-      "@croco/llm-metering": "^0.0.2",
-      "@croco/problems-core": "^0.0.2",
-      "@croco/ratelimit-core": "^0.0.2",
-      "@croco/telemetry-api": "^0.0.2",
-      "@croco/telemetry-sdk-node": "^0.0.2",
+      "@croco/tenant-core": externalCrocoRange("@croco/tenant-core"),
+      "@croco/auth-core": externalCrocoRange("@croco/auth-core"),
+      "@croco/access-core": externalCrocoRange("@croco/access-core"),
+      "@croco/billing-core": externalCrocoRange("@croco/billing-core"),
+      "@croco/metering-core": externalCrocoRange("@croco/metering-core"),
+      "@croco/entitlements-core": externalCrocoRange("@croco/entitlements-core"),
+      "@croco/execution-core": externalCrocoRange("@croco/execution-core"),
+      "@croco/health-core": externalCrocoRange("@croco/health-core"),
+      "@croco/framework-context": externalCrocoRange("@croco/framework-context"),
+      "@croco/diagnostics-core": externalCrocoRange("@croco/diagnostics-core"),
+      "@croco/llm-core": externalCrocoRange("@croco/llm-core"),
+      "@croco/llm-metering": externalCrocoRange("@croco/llm-metering"),
+      "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
+      "@croco/ratelimit-core": externalCrocoRange("@croco/ratelimit-core"),
+      "@croco/telemetry-api": externalCrocoRange("@croco/telemetry-api"),
+      "@croco/telemetry-sdk-node": externalCrocoRange("@croco/telemetry-sdk-node"),
     });
     expect(apiPackageJson.dependencies?.["@croco/testing"]).toBeUndefined();
     expect(apiPackageJson.scripts).toMatchObject({
@@ -1114,13 +1142,13 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.dependencies?.[packageName], packageName).toEqual(expect.any(String));
     }
     expect(apiPackageJson.dependencies).toMatchObject({
-      "@croco/preset-cloudflare": "^0.0.2",
-      "@croco/auth-clerk": "^0.0.2",
-      "@croco/billing-polar": "^0.0.2",
-      "@croco/metering-upstash": "^0.0.2",
-      "@croco/storage-r2": "^0.0.2",
-      "@croco/tasks-qstash": "^0.0.2",
-      "@croco/triggers-qstash": "^0.0.2",
+      "@croco/preset-cloudflare": externalCrocoRange("@croco/preset-cloudflare"),
+      "@croco/auth-clerk": externalCrocoRange("@croco/auth-clerk"),
+      "@croco/billing-polar": externalCrocoRange("@croco/billing-polar"),
+      "@croco/metering-upstash": externalCrocoRange("@croco/metering-upstash"),
+      "@croco/storage-r2": externalCrocoRange("@croco/storage-r2"),
+      "@croco/tasks-qstash": externalCrocoRange("@croco/tasks-qstash"),
+      "@croco/triggers-qstash": externalCrocoRange("@croco/triggers-qstash"),
       "@clerk/backend": "^1.0.0",
       "@polar-sh/sdk": "^0.32.2",
       "@upstash/qstash": "^2.9.0",
@@ -1350,14 +1378,14 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(rootPackageJson.scripts?.["contract:openapi"]).toContain("--strict-schemas");
       expect(apiPackageJson.dependencies).toMatchObject({
-        "@croco/llm-core": "^0.0.2",
-        "@croco/llm-metering": "^0.0.2",
-        "@croco/framework-context": "^0.0.2",
-        "@croco/lifecycle-core": "^0.0.1",
-        "@croco/metering-core": "^0.0.2",
-        "@croco/protocols-rest": "^0.0.2",
-        "@croco/telemetry-api": "^0.0.2",
-        "@croco/tenant-core": "^0.0.2",
+        "@croco/llm-core": externalCrocoRange("@croco/llm-core"),
+        "@croco/llm-metering": externalCrocoRange("@croco/llm-metering"),
+        "@croco/framework-context": externalCrocoRange("@croco/framework-context"),
+        "@croco/lifecycle-core": externalCrocoRange("@croco/lifecycle-core"),
+        "@croco/metering-core": externalCrocoRange("@croco/metering-core"),
+        "@croco/protocols-rest": externalCrocoRange("@croco/protocols-rest"),
+        "@croco/telemetry-api": externalCrocoRange("@croco/telemetry-api"),
+        "@croco/tenant-core": externalCrocoRange("@croco/tenant-core"),
       });
       expect(apiPackageJson.dependencies?.["@croco/testing"]).toBeUndefined();
       expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
@@ -1415,8 +1443,12 @@ describe("E2E: generate()", () => {
 
       const packageJson = readPackageJson(join(testDir, "apps", "graphql-api", "package.json"));
 
-      expect(packageJson.dependencies?.["@croco/telemetry-sdk-node"]).toBe("^0.0.2");
-      expect(packageJson.dependencies?.["@croco/protocols-graphql"]).toBe("^0.0.3");
+      expect(packageJson.dependencies?.["@croco/telemetry-sdk-node"]).toBe(
+        externalCrocoRange("@croco/telemetry-sdk-node"),
+      );
+      expect(packageJson.dependencies?.["@croco/protocols-graphql"]).toBe(
+        externalCrocoRange("@croco/protocols-graphql"),
+      );
       expect(packageJson.dependencies?.["@croco/provider-database"]).toBe("workspace:*");
       assertNoExternalCrocoWorkspaceRanges(testDir);
     },

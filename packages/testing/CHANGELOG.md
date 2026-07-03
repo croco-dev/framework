@@ -1,5 +1,110 @@
 # @croco/testing
 
+## 0.0.1
+
+### Patch Changes
+
+- 6769a7f: - fix: enforce core coverage spine baseline
+- ca4c15a: - Expose shared auth provider conformance coverage with readiness diagnostics for Better Auth and Clerk adapters.
+- 5403360: HTTP apps now expose a DI bootstrap validation policy that fails fast by default, with explicit warn/off migration modes for legacy unregistered providers.
+- 6e165ab: Expose a shared Drizzle provider conformance suite and record initial metering and execution provider evidence for schema, transaction, tenant, and deterministic error gates.
+- 513188f: Drizzle-backed SaaS adapters now publish shared conformance evidence and redacted readiness diagnostics before beta maturity.
+- f8842d3: - Generated SaaS and AI SaaS apps now include failure drill smoke scripts backed by deterministic `@croco/testing` scenarios for Problem, recovery, telemetry, and audit evidence.
+- 15482d7: LLM usage governance now has provider conformance coverage, versioned pricing registries, quota enforcement, and generated SaaS smoke evidence.
+- 0ee7f3e: Provide the first-party OpenAI LLM provider with mocked conformance coverage, deterministic Problem normalization, telemetry events, metering-compatible usage mapping, env-gated live smoke verification, and abort-aware LLM provider conformance.
+- 9fb9db9: Add billing provider conformance coverage, Polar readiness diagnostics, and stable Polar gateway failure Problems.
+- d707a0c: Published package manifests now declare the Croco framework GitHub repository metadata required for npm provenance verification.
+- 0352ccb: Add provider conformance matrix profiles for required and optional adapter capabilities.
+- f27c1dd: Storage providers now share a conformance suite that verifies object lifecycle, metadata, key validation, and URL behavior.
+- 14bd9f8: - Runtime capability manifests can now be emitted and compared for Node, Lambda, and Cloudflare Workers with deterministic `RuntimeCapabilityManifest v1` output.
+  - Unsupported runtime capability use now carries the stable `CROCO_RUNTIME_CAPABILITY_001` diagnostic context.
+  - Generated apps now write `croco-runtime-capability.manifest.json`, and doctor/smoke checks validate the manifest for supported runtime targets.
+- 0618b12: Runtime capability support now includes explicit filesystem, Node API, and request lifecycle flags for Node, Lambda, and Cloudflare Workers request contexts.
+- ac9118b: Add a first-class Croco application testing harness with HTTP, event dispatch, request context, transaction, and telemetry helpers, and generate an API sample test that uses it.
+- 817218a: All Upstash Redis and QStash adapters now run reusable conformance coverage with redacted provider Problems and no-credential default test paths.
+- Updated dependencies [4d8f094]
+- Updated dependencies [6769a7f]
+- Updated dependencies [d281518]
+- Updated dependencies [2ceb6c4]
+- Updated dependencies [51b0f14]
+- Updated dependencies [a77425f]
+- Updated dependencies [8b28607]
+- Updated dependencies [2a9d5b0]
+- Updated dependencies [2631037]
+- Updated dependencies [529c7fd]
+- Updated dependencies [6148ed3]
+- Updated dependencies [779fa6f]
+- Updated dependencies [0b43229]
+- Updated dependencies [ee924c0]
+- Updated dependencies [5403360]
+- Updated dependencies [e12e825]
+- Updated dependencies [6831875]
+- Updated dependencies [9cd8667]
+- Updated dependencies [2f0dae2]
+- Updated dependencies [ddfc6d1]
+- Updated dependencies [9c1bc2e]
+- Updated dependencies [38727f9]
+- Updated dependencies [b524ca3]
+- Updated dependencies [4e39dc6]
+- Updated dependencies [a61dcd4]
+- Updated dependencies [9d6ef7c]
+- Updated dependencies [0b49816]
+- Updated dependencies [da861c8]
+- Updated dependencies [e108899]
+- Updated dependencies [c0c7215]
+- Updated dependencies [42bc50e]
+- Updated dependencies [9f7e769]
+- Updated dependencies [15482d7]
+- Updated dependencies [6ab7784]
+- Updated dependencies [000e999]
+- Updated dependencies [2977874]
+- Updated dependencies [9ae8ab8]
+- Updated dependencies [8a85c6a]
+- Updated dependencies [9556d22]
+- Updated dependencies [f40eb63]
+- Updated dependencies [a61dcd4]
+- Updated dependencies [4c7fcd9]
+- Updated dependencies [1dc1607]
+- Updated dependencies [8c5b00c]
+- Updated dependencies [48ce207]
+- Updated dependencies [6c26eb4]
+- Updated dependencies [f8842d3]
+- Updated dependencies [b6449cc]
+- Updated dependencies [9a2040b]
+- Updated dependencies [d707a0c]
+- Updated dependencies [58b689a]
+- Updated dependencies [eeebc70]
+- Updated dependencies [cac7e99]
+- Updated dependencies [aacdad6]
+- Updated dependencies [9c2ac20]
+- Updated dependencies [de7610e]
+- Updated dependencies [14bd9f8]
+- Updated dependencies [0618b12]
+- Updated dependencies [41ee87a]
+- Updated dependencies [c54e7b5]
+- Updated dependencies [a3458cc]
+- Updated dependencies [d1552a5]
+- Updated dependencies [3ca4a69]
+- Updated dependencies [0e7dd10]
+- Updated dependencies [bb59160]
+- Updated dependencies [ac9118b]
+- Updated dependencies [7442f1c]
+- Updated dependencies [bc5594d]
+  - @croco/diagnostics-core@0.0.4
+  - @croco/transports-http@0.0.4
+  - @croco/openapi-spec@0.1.0
+  - @croco/storage-core@0.0.4
+  - @croco/events-core@0.0.4
+  - @croco/framework-context@0.0.4
+  - @croco/events-inmemory@0.0.4
+  - @croco/telemetry-api@0.1.0
+  - @croco/llm-core@0.0.4
+  - @croco/problems-core@0.0.4
+  - @croco/auth-core@0.0.4
+  - @croco/billing-core@0.0.4
+  - @croco/framework-logger@0.0.4
+  - @croco/ratelimit-core@0.0.4
+
 ## 0.0.0
 
 Initial package placeholder. Published versions are managed by Changesets.

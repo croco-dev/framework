@@ -1,6 +1,6 @@
 {
   "name": "@croco/frontend-react",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/croco-dev/framework.git",
@@ -35,7 +35,7 @@
     "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
-    "@croco/meta-vite": "^0.0.3",
+    "@croco/meta-vite": "^0.0.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "react": "^19.0.0",
@@ -43,7 +43,7 @@
     "vitest": "4.0.16"
   },
   "peerDependencies": {
-    "@croco/meta-vite": "^0.0.3",
+    "@croco/meta-vite": "^0.0.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

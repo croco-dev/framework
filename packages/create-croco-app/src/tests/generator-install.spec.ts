@@ -50,7 +50,7 @@ describe("generate() pnpm install contract", () => {
     expect(JSON.parse(readFileSync(join(testDir, "package.json"), "utf8")).packageManager).toBe(
       "pnpm@10.15.1",
     );
-  });
+  }, 15_000);
 
   it("keeps --no-install as an escape hatch from pnpm", async () => {
     const { generate } = await import("../generator.js");

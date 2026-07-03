@@ -1,5 +1,12 @@
 # @croco/health-core
 
+## 0.0.4
+
+### Patch Changes
+
+- 8a85c6a: Formalize HTTP operational endpoint contracts and diagnostics exposure policy while routing HTTP readiness execution through `@croco/health-core`.
+- d707a0c: Published package manifests now declare the Croco framework GitHub repository metadata required for npm provenance verification.
+
 ## 0.0.3
 
 ### Patch Changes
