@@ -38,6 +38,7 @@
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
+    "reflect-metadata": "^0.2.2",
     "vitest": "4.0.16"
   },
   "vitest": {

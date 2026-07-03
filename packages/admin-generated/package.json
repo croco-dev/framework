@@ -38,6 +38,7 @@
   },
   "devDependencies": {
     "@croco/protocols-rest": "workspace:*",
+    "reflect-metadata": "^0.2.2",
     "vitest": "4.0.16",
     "zod": "^3.23.8"
   },

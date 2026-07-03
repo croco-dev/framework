@@ -789,6 +789,7 @@ describe("E2E: generate()", () => {
       });
       expect(rpcPackageJson.dependencies).toMatchObject({
         "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
+        "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
       });
       expect(existsSync(join(testDir, "apps", "api-server", "src", "lambda.ts"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "env.ts"))).toBe(true);
@@ -833,6 +834,9 @@ describe("E2E: generate()", () => {
 
       const rootPackageJson = readPackageJson(join(testDir, "package.json"));
       const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+      const rpcPackageJson = readPackageJson(
+        join(testDir, "libs", "shared", "provider-rpc", "package.json"),
+      );
       const readme = readFileSync(join(testDir, "README.md"), "utf8");
       const appSource = readFileSync(join(testDir, "apps", "api-server", "src", "app.ts"), "utf8");
       const webSource = readFileSync(
@@ -862,6 +866,10 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(apiPackageJson.scripts).toMatchObject({
         "admin:smoke": "tsx src/dev-smoke.ts",
+      });
+      expect(rpcPackageJson.dependencies).toMatchObject({
+        "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
+        "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
       });
       expect(appSource).toContain("AdminController");
       expect(viteConfig).toContain("'/admin': 'http://localhost:3000'");
@@ -907,6 +915,9 @@ describe("E2E: generate()", () => {
 
     const rootPackageJson = readPackageJson(join(testDir, "package.json"));
     const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+    const rpcPackageJson = readPackageJson(
+      join(testDir, "libs", "shared", "provider-rpc", "package.json"),
+    );
     const failureDrillSource = readFileSync(
       join(testDir, "apps", "api-server", "src", "demo", "failure-drill-smoke.ts"),
       "utf8",
@@ -953,6 +964,9 @@ describe("E2E: generate()", () => {
       "@croco/telemetry-sdk-node": externalCrocoRange("@croco/telemetry-sdk-node"),
     });
     expect(apiPackageJson.dependencies?.["@croco/testing"]).toBeUndefined();
+    expect(rpcPackageJson.dependencies).toMatchObject({
+      "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
+    });
     expect(apiPackageJson.scripts).toMatchObject({
       "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
       "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",

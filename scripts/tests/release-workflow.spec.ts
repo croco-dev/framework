@@ -55,7 +55,7 @@ describe("release workflow quality gates", () => {
       "- name: Security allowlist metadata check",
       "run: pnpm security-allowlists:check",
       "- name: Production dependency audit",
-      "run: pnpm audit:prod",
+      "run: pnpm security:audit-policy",
       "- name: Lint, format, and repository policy checks",
       "run: pnpm check",
       "- name: Build all packages",
@@ -94,7 +94,7 @@ describe("release workflow quality gates", () => {
     expect(auditStep).toContain(
       "if: steps.release_work.outputs.should_run_publish_gates == 'true'",
     );
-    expect(auditStep).toContain("run: pnpm audit:prod");
+    expect(auditStep).toContain("run: pnpm security:audit-policy");
     expect(auditStep).not.toContain("continue-on-error");
   });
 
@@ -102,9 +102,10 @@ describe("release workflow quality gates", () => {
     const workflow = readReleaseWorkflow();
 
     expect(workflow).toContain("PR-only checks, secret-scan reports, and docs/coverage");
-    expect(workflow).toContain("audit:prod intentionally ignores GHSA-gv7w-rqvm-qjhr");
-    expect(workflow).toContain("pnpm-workspace.yaml");
-    expect(workflow).toContain("scripts/security-allowlist-metadata.json");
+    expect(workflow).toContain(
+      "Release routes dependency audit enforcement through the path-aware",
+    );
+    expect(workflow).toContain("publish-blocking risk is classified by manifest/runtime edge");
   });
 
   it("enforces npm provenance in the Changesets publish path", () => {
@@ -166,6 +167,7 @@ describe("release workflow quality gates", () => {
     const releaseGateFiles = [
       ".github/workflows/release.yml",
       "scripts/changeset-required-check.mts",
+      "scripts/dependency-audit-policy.mts",
       "scripts/normalize-packages.mjs",
       "scripts/package-bin-smoke.mts",
       "scripts/package-entrypoint-smoke.mts",
@@ -174,6 +176,7 @@ describe("release workflow quality gates", () => {
       "scripts/release-metadata-check.mts",
       "scripts/security-allowlist-metadata-check.mts",
       "scripts/tests/changeset-required-check.spec.ts",
+      "scripts/tests/dependency-audit-policy.spec.ts",
       "scripts/tests/normalize-packages.spec.ts",
       "scripts/tests/package-bin-smoke.spec.ts",
       "scripts/tests/package-entrypoint-smoke.spec.ts",
@@ -199,6 +202,7 @@ describe("release workflow quality gates", () => {
       "if: steps.release_work.outputs.should_verify_release_gate_maintenance == 'true'",
     );
     expect(workflow).toContain("pnpm exec vitest run scripts/tests/release-workflow.spec.ts");
+    expect(workflow).toContain("scripts/tests/dependency-audit-policy.spec.ts");
     expect(workflow).toContain("scripts/tests/release-metadata-check.spec.ts");
     expect(workflow).toContain("scripts/tests/security-allowlist-metadata-check.spec.ts");
     expect(workflow).toContain("pnpm package-manifests:check");

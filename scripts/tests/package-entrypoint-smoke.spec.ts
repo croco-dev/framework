@@ -114,6 +114,23 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(`${result.stdout}\n${result.stderr}`).toContain("zod");
   });
 
+  it("resolves declared external dependencies from package-local node_modules", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "package-local-dependency", {
+      cjsContent: 'require("package-local-only");\nexports.value = "ok";\n',
+      dependencies: {
+        "package-local-only": "1.0.0",
+      },
+      esmContent: 'import "package-local-only";\nexport const value = "ok";\n',
+    });
+    writePackageLocalDependency(root, "package-local-dependency", "package-local-only");
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("✓ @croco/package-local-dependency: esm 1, cjs 1, types 1");
+  });
+
   it("fails when declarations import an undeclared type dependency", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "missing-type-dependency", {
@@ -157,6 +174,7 @@ function writeImportablePackage(
   options: {
     readonly cjsContent?: string;
     readonly declarationContent?: string;
+    readonly dependencies?: Record<string, string>;
     readonly esmContent?: string;
     readonly exportsValue?: unknown;
     readonly importTarget?: string;
@@ -185,6 +203,7 @@ function writeImportablePackage(
     join(packageDir, "package.json"),
     `${JSON.stringify(
       {
+        ...(options.dependencies ? { dependencies: options.dependencies } : {}),
         name: packageName,
         version: "0.0.0",
         files: ["dist"],
@@ -208,6 +227,35 @@ function writeImportablePackage(
       2,
     )}\n`,
   );
+}
+
+function writePackageLocalDependency(
+  root: string,
+  packageDirName: string,
+  dependencyName: string,
+): void {
+  const dependencyDir = join(
+    root,
+    "packages",
+    packageDirName,
+    "node_modules",
+    ...dependencyName.split("/"),
+  );
+
+  mkdirSync(dependencyDir, { recursive: true });
+  writeFileSync(
+    join(dependencyDir, "package.json"),
+    `${JSON.stringify(
+      {
+        name: dependencyName,
+        version: "1.0.0",
+        main: "./index.js",
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(join(dependencyDir, "index.js"), "module.exports = {};\n");
 }
 
 function writeUnbuiltPackage(root: string, packageDirName: string): void {

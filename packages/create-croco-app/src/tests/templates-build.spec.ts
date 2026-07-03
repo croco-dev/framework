@@ -231,6 +231,7 @@ function checkSpaBeSplitStructure() {
     }),
     dependencies: expect.objectContaining({
       "@croco/frontend-problems": "workspace:*",
+      "@croco/problems-core": "workspace:*",
       "@tanstack/react-query": expect.any(String),
     }),
   });
@@ -602,6 +603,9 @@ function checkSaasStructure() {
   expect(rpcPackageJson).toMatchObject({
     main: "./src/index.ts",
     types: "./src/index.ts",
+    dependencies: expect.objectContaining({
+      "@croco/problems-core": "workspace:*",
+    }),
   });
   checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /runSaasDemoFlow/);

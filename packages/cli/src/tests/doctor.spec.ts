@@ -798,7 +798,7 @@ function writeRootPackage(repo: string, manifest: Record<string, unknown> = {}):
   writeJson(repo, "package.json", {
     name: "croco-doctor-test",
     private: true,
-    packageManager: "pnpm@10.15.1",
+    packageManager: "pnpm@11.9.0",
     ...manifest,
   });
 }

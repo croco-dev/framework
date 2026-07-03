@@ -41,7 +41,7 @@
     "ts-morph": "^24.0.0"
   },
   "devDependencies": {
-    "reflect-metadata": "0.2.2",
+    "reflect-metadata": "^0.2.2",
     "tsup": "^8.5.1",
     "typescript": "^5.0.0",
     "vitest": "4.0.16",

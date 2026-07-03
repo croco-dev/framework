@@ -135,7 +135,7 @@ function main(): void {
       const plan = planPackageSmoke(packageInfo);
       diagnostics.push(...plan.diagnostics);
       if (plan.diagnostics.length === 0) {
-        runPackageSmoke(smokeRoot, packageInfo, packageIndex, plan);
+        runPackageSmoke(rootDir, smokeRoot, packageInfo, packageIndex, plan);
       }
       packageResults.push({
         cjsCount: plan.cjs.length,
@@ -289,6 +289,7 @@ function publishManifestFor(sourceManifest: PackageJson): PackageJson {
 }
 
 function runPackageSmoke(
+  rootDir: string,
   smokeRoot: string,
   packageInfo: PackageInfo,
   packageIndex: ReadonlyMap<string, PackageInfo>,
@@ -296,7 +297,7 @@ function runPackageSmoke(
 ): void {
   const packageSmokeRoot = join(smokeRoot, safeDirectoryName(packageInfo.packageName));
   mkdirSync(packageSmokeRoot, { recursive: true });
-  installPackageGraph(packageSmokeRoot, packageInfo, packageIndex, new Set());
+  installPackageGraph(rootDir, packageSmokeRoot, packageInfo, packageIndex, new Set());
 
   writeEsmConsumer(packageSmokeRoot, plan.esm);
   writeCjsConsumer(packageSmokeRoot, plan.cjs);
@@ -326,6 +327,7 @@ function safeDirectoryName(packageName: string): string {
 }
 
 function installPackageGraph(
+  rootDir: string,
   smokeRoot: string,
   packageInfo: PackageInfo,
   packageIndex: ReadonlyMap<string, PackageInfo>,
@@ -341,12 +343,14 @@ function installPackageGraph(
   for (const dependencyName of installDependencyNames(packageInfo.sourceManifest)) {
     const workspaceDependency = packageIndex.get(dependencyName);
     if (workspaceDependency) {
-      installPackageGraph(smokeRoot, workspaceDependency, packageIndex, installedPackages);
+      installPackageGraph(rootDir, smokeRoot, workspaceDependency, packageIndex, installedPackages);
       continue;
     }
 
     installExternalDependency(
+      rootDir,
       smokeRoot,
+      packageInfo.packageDir,
       dependencyName,
       optionalDependencyNames(packageInfo.sourceManifest).has(dependencyName),
     );
@@ -407,17 +411,21 @@ function installPackage(smokeRoot: string, packageInfo: PackageInfo): void {
 }
 
 function installExternalDependency(
+  rootDir: string,
   smokeRoot: string,
+  packageDir: string,
   dependencyName: string,
   optional: boolean,
 ): void {
-  const sourceDependencyDir = join(defaultRootDir, "node_modules", ...dependencyName.split("/"));
+  const sourceDependencyDir = installedDependencyDir(rootDir, packageDir, dependencyName);
   if (!existsSync(sourceDependencyDir)) {
     if (optional) {
       return;
     }
 
-    throw new Error(`${dependencyName}: declared dependency is missing from root node_modules`);
+    throw new Error(
+      `${dependencyName}: declared dependency is missing from package and root node_modules`,
+    );
   }
 
   const smokeDependencyDir = join(smokeRoot, "node_modules", ...dependencyName.split("/"));
@@ -427,6 +435,20 @@ function installExternalDependency(
 
   mkdirSync(dirname(smokeDependencyDir), { recursive: true });
   symlinkSync(sourceDependencyDir, smokeDependencyDir, "dir");
+}
+
+function installedDependencyDir(
+  rootDir: string,
+  packageDir: string,
+  dependencyName: string,
+): string {
+  const dependencyPathParts = dependencyName.split("/");
+  const candidateDirs = [
+    join(packageDir, "node_modules", ...dependencyPathParts),
+    join(rootDir, "node_modules", ...dependencyPathParts),
+  ];
+
+  return candidateDirs.find((candidateDir) => existsSync(candidateDir)) ?? candidateDirs[0];
 }
 
 function planPackageSmoke(packageInfo: PackageInfo): PackageSmokePlan {
