@@ -83,13 +83,36 @@ describe("CI package quality dashboard", () => {
 
   it("appends the beta spine promotion report before exiting the blocking gate", () => {
     const workflow = readCiWorkflow();
+    const gateStart = workflow.indexOf("- name: Beta spine promotion gate");
+    const dashboardStart = workflow.indexOf("- name: Publish package quality dashboard");
 
-    expect(workflow).toContain("ci-reports/package-quality/spine-promotion.md");
-    expect(workflow).toContain("pnpm spine-promotion:check");
-    expect(workflow).toContain(
+    expect(gateStart, "beta spine promotion gate step should be present").toBeGreaterThan(-1);
+    expect(
+      dashboardStart,
+      "package quality dashboard step should follow the beta spine promotion gate",
+    ).toBeGreaterThan(gateStart);
+
+    const gateStep = workflow.slice(gateStart, dashboardStart);
+    const orderedMarkers = [
+      "id: spine_promotion_gate",
+      "pnpm spine-promotion:check",
+      "status=$?",
+      "ci-reports/package-quality/spine-promotion.md",
       'cat ci-reports/package-quality/spine-promotion.md >> "$GITHUB_STEP_SUMMARY"',
-    );
-    expect(workflow).toContain('exit "$status"');
+      'exit "$status"',
+    ];
+
+    let previousIndex = -1;
+    for (const marker of orderedMarkers) {
+      const index = gateStep.indexOf(marker);
+      expect(index, `${marker} should be present in the beta spine promotion gate`).toBeGreaterThan(
+        -1,
+      );
+      expect(index, `${marker} should stay in beta spine promotion gate order`).toBeGreaterThan(
+        previousIndex,
+      );
+      previousIndex = index;
+    }
   });
 
   it("publishes generated app smoke matrix artifacts after the smoke gate", () => {
