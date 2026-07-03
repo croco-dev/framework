@@ -7,7 +7,11 @@ import { Aside } from "@astrojs/starlight/components";
 
 ## 1. Introduction
 
-Croco provides a **SaaS backend toolkit** — fully typed, Lambda-ready, with auth, metering, and billing built into the framework. The `ddd-api` preset gives you a basic DDD skeleton to start from; for a complete SaaS example with all primitives wired together, skip straight to the Quick Start Lambda example.
+Croco provides a **SaaS backend toolkit** — fully typed, Lambda-ready, with auth, metering, and
+billing built into the framework. The `ddd-api` preset gives you a basic DDD skeleton to start
+from; for a complete SaaS example with auth and metering wired together, skip straight to the Quick
+Start Lambda example, or use the SaaS Billing Golden Path for billing, retry, transactions, events,
+and Problem recovery.
 
 This guide takes you from zero to a deployed API: scaffold the project, add an authenticated endpoint, layer on metering, and export as a Lambda handler.
 
@@ -15,7 +19,8 @@ This guide takes you from zero to a deployed API: scaffold the project, add an a
   Jump straight to
   [`examples/quick-start-lambda`](https://github.com/croco-dev/framework/tree/trunk/examples/quick-start-lambda)
   — a complete, runnable SaaS backend with auth, metering, Lambda export, and DI wiring already in
-  place.
+  place. For the billing-oriented path, use
+  [`examples/saas-billing-golden-path`](https://github.com/croco-dev/framework/tree/trunk/examples/saas-billing-golden-path).
 </Aside>
 
 ## 2. Quick Start
@@ -112,13 +117,20 @@ That's it. `handler` is a standard AWS Lambda entrypoint — deploy it with SST,
 
 ## 6. Complete Example
 
-The quick-start-lambda example above is the **complete, runnable reference** for everything covered in this guide.
+The quick-start-lambda example above is the **complete, runnable reference** for everything covered
+in this guide. The `saas-billing-golden-path` example is the checked-in reference for the billing
+success path: checkout, transient payment retry, transactional event publication, audit projection,
+and explicit Problem recovery.
 
-The repository validates that reference with:
+The repository validates those references with:
 
 ```bash
 pnpm quick-start-lambda:smoke
+pnpm saas-billing-golden-path:smoke
 ```
+
+The SaaS smoke command builds the example and its workspace dependencies before it runs the
+checked-in golden-path tests.
 
 Here's the project structure from `quick-start-lambda`, bringing together auth, metering, protocol metadata, transport wiring, and Lambda export in one runnable reference:
 

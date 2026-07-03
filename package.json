@@ -46,6 +46,7 @@
     "public-api:check": "node --experimental-strip-types scripts/public-api-surface.mts --check",
     "public-api:write": "node --experimental-strip-types scripts/public-api-surface.mts --write",
     "quick-start-lambda:smoke": "node --experimental-strip-types scripts/quick-start-lambda-smoke.mts",
+    "saas-billing-golden-path:smoke": "pnpm --filter @croco-example/saas-billing-golden-path... build && pnpm --filter @croco-example/saas-billing-golden-path test",
     "package-entrypoints:smoke": "node --experimental-strip-types scripts/package-entrypoint-smoke.mts",
     "package-bins:smoke": "node --experimental-strip-types scripts/package-bin-smoke.mts",
     "package-manifests:check": "node scripts/normalize-packages.mjs --check",

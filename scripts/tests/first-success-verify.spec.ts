@@ -8,6 +8,15 @@ const scriptPath = resolve(__dirname, "../first-success-verify.mts");
 const tempRoots: string[] = [];
 const validCreateCommand =
   "npx create-croco-app@latest my-project --preset ddd-api --scope @myorg --api graphql --backend-deploy lambda --no-install --no-git";
+const saasPackageName = "@croco-example/saas-billing-golden-path";
+const saasSmokeScript = `pnpm --filter ${saasPackageName}... build && pnpm --filter ${saasPackageName} test`;
+const defaultSaasReadmeCommands = [
+  `pnpm --filter ${saasPackageName} dev`,
+  "pnpm saas-billing-golden-path:smoke",
+  `pnpm --filter ${saasPackageName} test`,
+  `pnpm --filter ${saasPackageName} typecheck`,
+  `pnpm --filter ${saasPackageName} build`,
+];
 
 type ScriptResult = {
   readonly stdout: string;
@@ -19,6 +28,9 @@ type FixtureOptions = {
   readonly rootReadmeCommand?: string;
   readonly docsIndexPackageCount?: number;
   readonly gettingStartedPackageCount?: number;
+  readonly includeSaasGettingStartedReference?: boolean;
+  readonly rootSaasSmokeScript?: string | null;
+  readonly saasReadmeCommands?: readonly string[];
 };
 
 describe("first-success-verify.mts", () => {
@@ -26,6 +38,15 @@ describe("first-success-verify.mts", () => {
     for (const root of tempRoots.splice(0)) {
       rmSync(root, { force: true, recursive: true });
     }
+  });
+
+  it("passes a complete first-success fixture", () => {
+    const root = createFixture();
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("first-success contract verification PASSED");
   });
 
   it("fails when a public scaffold command omits ddd-api noninteractive values", () => {
@@ -51,6 +72,60 @@ describe("first-success-verify.mts", () => {
     expect(result.stdout).toContain("getting-started guide package-count claim 98");
     expect(result.stdout).toContain("public package count 97");
   });
+
+  it("fails when the SaaS README drops the local test command", () => {
+    const root = createFixture({
+      saasReadmeCommands: defaultSaasReadmeCommands.filter(
+        (command) => command !== `pnpm --filter ${saasPackageName} test`,
+      ),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S1b");
+    expect(result.stdout).toContain("SaaS README missing local test command");
+  });
+
+  it("fails when the SaaS README drops the root smoke command", () => {
+    const root = createFixture({
+      saasReadmeCommands: defaultSaasReadmeCommands.filter(
+        (command) => command !== "pnpm saas-billing-golden-path:smoke",
+      ),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S1c");
+    expect(result.stdout).toContain("SaaS README missing root smoke command");
+  });
+
+  it("fails when the root SaaS smoke script no longer builds workspace dependencies before tests", () => {
+    const root = createFixture({
+      rootSaasSmokeScript: `pnpm --filter ${saasPackageName} test`,
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S3");
+    expect(result.stdout).toContain(
+      "does not build the example and workspace dependencies before running the checked-in example tests",
+    );
+  });
+
+  it("fails when getting-started docs drop the checked-in SaaS golden path reference", () => {
+    const root = createFixture({ includeSaasGettingStartedReference: false });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("S7a");
+    expect(result.stdout).toContain(
+      "Getting started docs missing reference to saas-billing-golden-path",
+    );
+  });
 });
 
 function createFixture(options: FixtureOptions = {}): string {
@@ -60,7 +135,20 @@ function createFixture(options: FixtureOptions = {}): string {
   const rootReadmeCommand = options.rootReadmeCommand ?? validCreateCommand;
   const docsIndexPackageCount = options.docsIndexPackageCount ?? 97;
   const gettingStartedPackageCount = options.gettingStartedPackageCount ?? 97;
+  const rootSaasSmokeScript =
+    options.rootSaasSmokeScript === undefined ? saasSmokeScript : options.rootSaasSmokeScript;
+  const saasReadmeCommands = options.saasReadmeCommands ?? defaultSaasReadmeCommands;
+  const includeSaasGettingStartedReference = options.includeSaasGettingStartedReference !== false;
+  const rootScripts: Record<string, string> = {
+    "first-success:verify": "node --experimental-strip-types scripts/first-success-verify.mts",
+    "quick-start-lambda:smoke":
+      "node --experimental-strip-types scripts/quick-start-lambda-smoke.mts",
+  };
+  if (rootSaasSmokeScript !== null) {
+    rootScripts["saas-billing-golden-path:smoke"] = rootSaasSmokeScript;
+  }
 
+  writeFile(root, "package.json", JSON.stringify({ scripts: rootScripts }, null, 2));
   writeFile(
     root,
     "README.md",
@@ -84,6 +172,7 @@ function createFixture(options: FixtureOptions = {}): string {
       "",
       "pnpm install",
       "pnpm dev",
+      "pnpm quick-start-lambda:smoke",
       "x-api-key: test-key",
       "401",
       "api_user_create",
@@ -94,6 +183,84 @@ function createFixture(options: FixtureOptions = {}): string {
     root,
     "examples/quick-start-lambda/package.json",
     JSON.stringify({ scripts: { dev: "tsx src/index.ts" } }, null, 2),
+  );
+  writeFile(
+    root,
+    "examples/saas-billing-golden-path/README.md",
+    [
+      "# SaaS Billing Golden Path Example",
+      "",
+      "Primary action: `POST /api/checkouts` creates a paid order.",
+      "",
+      "## Run Locally",
+      "",
+      "```bash",
+      ...saasReadmeCommands,
+      "```",
+      "",
+    ].join("\n"),
+  );
+  writeFile(
+    root,
+    "examples/saas-billing-golden-path/package.json",
+    JSON.stringify(
+      {
+        scripts: {
+          build: "tsc --noEmit",
+          dev: "tsx src/index.ts",
+          test: "vitest run src/tests",
+          typecheck: "tsc --noEmit",
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  writeFile(
+    root,
+    "examples/saas-billing-golden-path/src/protocols/BillingController.ts",
+    [
+      '@Controller("/api")',
+      "export class BillingController {",
+      '  @Post("/checkouts")',
+      "  checkout() { return {}; }",
+      "",
+      '  @Get("/orders/:id")',
+      "  getOrder() { return {}; }",
+      "",
+      '  @Get("/backoffice/audit")',
+      "  listAuditTrail() { return {}; }",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  writeFile(
+    root,
+    "examples/saas-billing-golden-path/src/domain/CheckoutService.ts",
+    [
+      "export class CheckoutService {",
+      "  private readonly retry = new RetryTemplate();",
+      "  checkout() {",
+      "    return withSpan(() => {",
+      "      this.publisher.publishAfterCommit();",
+      "      throw new CheckoutValidationProblem('invalid');",
+      "    });",
+      "  }",
+      "  getOrder() { throw new OrderNotFoundProblem('missing'); }",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  writeFile(
+    root,
+    "examples/saas-billing-golden-path/src/tests/golden-path.spec.ts",
+    [
+      "it('checks out an order, retries transient payment failure, and records audit', () => {});",
+      "expect(problem.code).toBe('golden-path/checkout-validation');",
+      "expect(problem.code).toBe('golden-path/payment-declined');",
+      "expect(problem.code).toBe('golden-path/order-not-found');",
+      "",
+    ].join("\n"),
   );
   writeFile(
     root,
@@ -156,6 +323,13 @@ function createFixture(options: FixtureOptions = {}): string {
       "# Getting Started",
       "",
       "See examples/quick-start-lambda for a working example.",
+      "pnpm quick-start-lambda:smoke",
+      ...(includeSaasGettingStartedReference
+        ? [
+            "See examples/saas-billing-golden-path for billing, retry, transactions, events, and Problems.",
+            "pnpm saas-billing-golden-path:smoke",
+          ]
+        : []),
       "",
       "```bash",
       validCreateCommand,

@@ -63,12 +63,16 @@ curl -X POST http://localhost:3000/api/checkouts \
 The example participates in workspace builds, typechecks, and tests:
 
 ```bash
+pnpm saas-billing-golden-path:smoke
 pnpm --filter @croco-example/saas-billing-golden-path test
 pnpm --filter @croco-example/saas-billing-golden-path typecheck
 pnpm --filter @croco-example/saas-billing-golden-path build
 ```
 
-The Vitest suite executes the real HTTP transport with `@croco/testing`, proving the success path, retry behavior, after-commit event projection, validation Problem, terminal payment Problem, and not-found Problem.
+The root smoke command builds the example and its workspace dependencies before running the
+checked-in Vitest suite. The suite executes the real HTTP transport with `@croco/testing`, proving
+the success path, retry behavior, after-commit event projection, validation Problem, terminal
+payment Problem, and not-found Problem.
 
 ## Deploy
 
