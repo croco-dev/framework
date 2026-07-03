@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "description": "Reviewed baseline for CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY. New production empty catch blocks must be converted or added with package/file/reason and owner/expiration metadata.",
+  "entries": [
+    {
+      "package": "@croco/cache-core",
+      "file": "packages/cache-core/src/libs/CacheInvalidationGraph.ts",
+      "line": 683,
+      "excerpt": "} catch {",
+      "reason": "Telemetry event delivery is best-effort and must not replace the cache invalidation outcome.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/cache-core",
+      "file": "packages/cache-core/src/libs/CacheInvalidationGraph.ts",
+      "line": 695,
+      "excerpt": "} catch {",
+      "reason": "Telemetry error reporting is best-effort and must not replace the original adapter failure evidence.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/framework-context",
+      "file": "packages/framework-context/src/libs/RuntimeInspector.ts",
+      "line": 527,
+      "excerpt": "} catch {",
+      "reason": "Runtime inspector failure reporters are optional instrumentation and must not affect application behavior.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/onboarding-core",
+      "file": "packages/onboarding-core/src/libs/OnboardingManager.ts",
+      "line": 107,
+      "excerpt": "} catch {",
+      "reason": "Analytics delivery is best-effort after onboarding state has already been persisted.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/testing.ts",
+      "line": 227,
+      "excerpt": "} catch {",
+      "reason": "Best-effort test logger failure must not hide the original after-commit hook failure.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/transports-graphql",
+      "file": "packages/transports-graphql/src/libs/GraphQLServer.ts",
+      "line": 149,
+      "excerpt": "} catch {",
+      "reason": "Startup logging is optional and must not prevent the GraphQL server from resolving a successful listen callback.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/transports-http",
+      "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+      "line": 594,
+      "excerpt": "} catch {",
+      "reason": "Dev inspector warning logging is best-effort and must not affect request handling.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/transports-http",
+      "file": "packages/transports-http/src/libs/PipelineRunner.ts",
+      "line": 213,
+      "excerpt": "} catch {",
+      "reason": "Exception filter failure intentionally falls through to the next filter or default error handler; changing this catch would alter recovery semantics.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/transports-http",
+      "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
+      "line": 316,
+      "excerpt": "} catch {",
+      "reason": "Telemetry degraded header emission is best-effort because telemetry setup has already failed and request handling should continue.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/transports-http",
+      "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
+      "line": 84,
+      "excerpt": "} catch {",
+      "reason": "Container diagnostics provider registration is optional; unavailable providers should not prevent default operational diagnostics.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/transports-http",
+      "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
+      "line": 90,
+      "excerpt": "} catch {",
+      "reason": "Event bus diagnostics provider registration is optional; unavailable providers should not prevent default operational diagnostics.",
+      "owner": "framework-error-handling"
+    },
+    {
+      "package": "@croco/tx-drizzle",
+      "file": "packages/tx-drizzle/src/libs/RlsTxAdapter.ts",
+      "line": 64,
+      "excerpt": "} catch {",
+      "reason": "Logger resolution is optional; RLS transaction behavior must continue when no logger is registered.",
+      "owner": "framework-error-handling"
+    }
+  ]
+}
