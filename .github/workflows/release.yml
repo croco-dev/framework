@@ -50,7 +50,7 @@ jobs:
           release_pr_update_pattern='^\.changeset/(pre\.json|[^/]+\.md)$'
           release_pr_update_ignore_pattern='^\.changeset/README\.md$'
           publish_candidate_pattern='^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$|^pnpm-workspace\.yaml$'
-          release_gate_maintenance_pattern='^\.github/workflows/release\.yml$|^scripts/(changeset-required-check\.mts|normalize-packages\.mjs|package-bin-smoke\.mts|package-entrypoint-smoke\.mts|package-manifest-contracts\.mjs|release-docs-check\.mts|release-metadata-check\.mts)$|^scripts/tests/(changeset-required-check|normalize-packages|package-bin-smoke|package-entrypoint-smoke|release-docs-check|release-metadata-check|release-workflow)\.spec\.ts$'
+          release_gate_maintenance_pattern='^\.github/workflows/release\.yml$|^scripts/(changeset-required-check\.mts|normalize-packages\.mjs|package-bin-smoke\.mts|package-entrypoint-smoke\.mts|package-manifest-contracts\.mjs|release-docs-check\.mts|release-metadata-check\.mts|security-allowlist-metadata-check\.mts)$|^scripts/tests/(changeset-required-check|normalize-packages|package-bin-smoke|package-entrypoint-smoke|release-docs-check|release-metadata-check|security-allowlist-metadata-check|release-workflow)\.spec\.ts$'
 
           changed_files="$(git diff --name-only "$base" HEAD)"
           should_update_release_pr=false
@@ -104,8 +104,9 @@ jobs:
         if: steps.release_work.outputs.should_verify_release_gate_maintenance == 'true'
         run: |
           pnpm build
-          pnpm exec vitest run scripts/tests/release-workflow.spec.ts scripts/tests/package-entrypoint-smoke.spec.ts scripts/tests/package-bin-smoke.spec.ts scripts/tests/release-docs-check.spec.ts scripts/tests/release-metadata-check.spec.ts scripts/tests/changeset-required-check.spec.ts scripts/tests/normalize-packages.spec.ts --config vitest.config.ts
+          pnpm exec vitest run scripts/tests/release-workflow.spec.ts scripts/tests/package-entrypoint-smoke.spec.ts scripts/tests/package-bin-smoke.spec.ts scripts/tests/release-docs-check.spec.ts scripts/tests/release-metadata-check.spec.ts scripts/tests/security-allowlist-metadata-check.spec.ts scripts/tests/changeset-required-check.spec.ts scripts/tests/normalize-packages.spec.ts --config vitest.config.ts
           pnpm package-manifests:check
+          pnpm security-allowlists:check
           pnpm release-docs:check
           node --experimental-strip-types scripts/release-metadata-check.mts --allow-pending-changesets
           pnpm package-entrypoints:smoke
@@ -114,8 +115,14 @@ jobs:
       # Release duplicates the publish-blocking CI quality gates that protect
       # npm publishing. PR-only checks, secret-scan reports, and docs/coverage
       # report artifact jobs stay in CI before release-triggering changes land.
-      # audit:prod intentionally ignores GHSA-gv7w-rqvm-qjhr: it covers the
-      # esbuild Deno API install path, while Croco release builds use Node/pnpm.
+      # audit:prod intentionally ignores GHSA-gv7w-rqvm-qjhr through
+      # pnpm-workspace.yaml: it covers the esbuild Deno API install path, while
+      # Croco release builds use Node/pnpm. Metadata for the exception is
+      # reviewed in scripts/security-allowlist-metadata.json.
+      - name: Security allowlist metadata check
+        if: steps.release_work.outputs.should_run_publish_gates == 'true'
+        run: pnpm security-allowlists:check
+
       - name: Production dependency audit
         if: steps.release_work.outputs.should_run_publish_gates == 'true'
         run: pnpm audit:prod

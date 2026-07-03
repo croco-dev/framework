@@ -52,6 +52,8 @@ describe("release workflow quality gates", () => {
     const orderedMarkers = [
       "- name: Install dependencies",
       "run: pnpm install --frozen-lockfile",
+      "- name: Security allowlist metadata check",
+      "run: pnpm security-allowlists:check",
       "- name: Production dependency audit",
       "run: pnpm audit:prod",
       "- name: Lint, format, and repository policy checks",
@@ -101,6 +103,8 @@ describe("release workflow quality gates", () => {
 
     expect(workflow).toContain("PR-only checks, secret-scan reports, and docs/coverage");
     expect(workflow).toContain("audit:prod intentionally ignores GHSA-gv7w-rqvm-qjhr");
+    expect(workflow).toContain("pnpm-workspace.yaml");
+    expect(workflow).toContain("scripts/security-allowlist-metadata.json");
   });
 
   it("enforces npm provenance in the Changesets publish path", () => {
@@ -168,12 +172,14 @@ describe("release workflow quality gates", () => {
       "scripts/package-manifest-contracts.mjs",
       "scripts/release-docs-check.mts",
       "scripts/release-metadata-check.mts",
+      "scripts/security-allowlist-metadata-check.mts",
       "scripts/tests/changeset-required-check.spec.ts",
       "scripts/tests/normalize-packages.spec.ts",
       "scripts/tests/package-bin-smoke.spec.ts",
       "scripts/tests/package-entrypoint-smoke.spec.ts",
       "scripts/tests/release-docs-check.spec.ts",
       "scripts/tests/release-metadata-check.spec.ts",
+      "scripts/tests/security-allowlist-metadata-check.spec.ts",
       "scripts/tests/release-workflow.spec.ts",
     ];
 
@@ -194,7 +200,9 @@ describe("release workflow quality gates", () => {
     );
     expect(workflow).toContain("pnpm exec vitest run scripts/tests/release-workflow.spec.ts");
     expect(workflow).toContain("scripts/tests/release-metadata-check.spec.ts");
+    expect(workflow).toContain("scripts/tests/security-allowlist-metadata-check.spec.ts");
     expect(workflow).toContain("pnpm package-manifests:check");
+    expect(workflow).toContain("pnpm security-allowlists:check");
     expect(workflow).toContain("pnpm release-docs:check");
     expect(workflow).toContain(
       "node --experimental-strip-types scripts/release-metadata-check.mts --allow-pending-changesets",

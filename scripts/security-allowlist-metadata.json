@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "audit": {
+    "ignoreGhsas": [
+      {
+        "id": "GHSA-gv7w-rqvm-qjhr",
+        "owner": "kang-heewon",
+        "reason": "esbuild's Deno API installation path is not used by Croco release builds, which run through Node and pnpm.",
+        "reviewBy": "2027-01-31"
+      }
+    ]
+  },
+  "secretScan": {
+    "gitleaks": {
+      "configPath": ".gitleaks.toml",
+      "allowlists": [
+        {
+          "kind": "path",
+          "value": "(^|/)packages/[^/]+/src/tests/.*\\.spec\\.ts$",
+          "owner": "kang-heewon",
+          "reason": "Test fixtures use dummy API and idempotency key strings under package test files; production source remains scanned.",
+          "reviewBy": "2027-01-31"
+        }
+      ],
+      "ignoreFingerprints": []
+    }
+  }
+}
