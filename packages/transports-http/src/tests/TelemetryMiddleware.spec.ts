@@ -15,6 +15,7 @@ import {
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { Context as HonoContext } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { HTTP_CONTEXT_KEYS } from "../libs/contextKeys";
 import { HttpContext } from "../libs/HttpContext";
 import { telemetryMiddleware } from "../libs/middleware/telemetry";
 
@@ -160,10 +161,10 @@ describe("TelemetryMiddleware", () => {
     await middleware(ctx, next);
 
     expect(next).toHaveBeenCalledTimes(1);
-    expect(ctx.get("telemetryDegraded")).toBe(true);
-    expect(ctx.get("traceId")).toMatch(/^telemetry-degraded-/);
-    expect(ctx.get("telemetryDegradedReason")).toBe("telemetry_setup_failed");
-    expect(ctx.get("telemetryDegradedError")).toEqual({
+    expect(ctx.get(HTTP_CONTEXT_KEYS.telemetryDegraded)).toBe(true);
+    expect(ctx.get(HTTP_CONTEXT_KEYS.traceId)).toMatch(/^telemetry-degraded-/);
+    expect(ctx.get(HTTP_CONTEXT_KEYS.telemetryDegradedReason)).toBe("telemetry_setup_failed");
+    expect(ctx.get(HTTP_CONTEXT_KEYS.telemetryDegradedError)).toEqual({
       name: "TypeError",
       message: setupError.message,
     });
@@ -180,7 +181,7 @@ describe("TelemetryMiddleware", () => {
         method: "GET",
         path: "/health",
         route: "/health",
-        traceId: ctx.get("traceId"),
+        traceId: ctx.get(HTTP_CONTEXT_KEYS.traceId),
       }),
     );
 
@@ -210,7 +211,7 @@ describe("TelemetryMiddleware", () => {
     await middleware(ctx, next);
 
     expect(next).toHaveBeenCalledTimes(1);
-    expect(ctx.get("telemetryDegraded")).toBe(true);
+    expect(ctx.get(HTTP_CONTEXT_KEYS.telemetryDegraded)).toBe(true);
     expect(logger.warn).toHaveBeenCalledTimes(1);
     expect(ctx.raw.header).toHaveBeenCalledWith(
       "X-Croco-Telemetry-Degraded",
@@ -221,7 +222,7 @@ describe("TelemetryMiddleware", () => {
       expect.objectContaining({
         errorCategory: "telemetry_setup_failed",
         route: "/health",
-        traceId: ctx.get("traceId"),
+        traceId: ctx.get(HTTP_CONTEXT_KEYS.traceId),
       }),
     );
   });
@@ -262,7 +263,7 @@ describe("TelemetryMiddleware", () => {
     await expect(middleware(ctx, next)).rejects.toThrow(nextError);
 
     expect(next).toHaveBeenCalledTimes(1);
-    expect(ctx.get("telemetryDegraded")).toBeUndefined();
+    expect(ctx.get(HTTP_CONTEXT_KEYS.telemetryDegraded)).toBeUndefined();
   });
 
   it("should expose server span trace metadata through the framework request context", async () => {
@@ -306,7 +307,7 @@ describe("TelemetryMiddleware", () => {
 
     expect(traceId).toBe("11111111111111111111111111111111");
     expect(runtimeTraceId).toBe("11111111111111111111111111111111");
-    expect(ctx.get("spanId")).toBe("3333333333333333");
+    expect(ctx.get(HTTP_CONTEXT_KEYS.spanId)).toBe("3333333333333333");
   });
 
   it("should record Problem metadata when the request pipeline fails", async () => {

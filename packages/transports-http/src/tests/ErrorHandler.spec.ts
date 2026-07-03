@@ -3,6 +3,7 @@ import { Container, Context as FrameworkContext } from "@croco/framework-context
 import type { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it } from "vitest";
+import { HTTP_CONTEXT_KEYS } from "../libs/contextKeys";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import type { CrocoHttpContext } from "../libs/types";
 
@@ -134,7 +135,7 @@ describe("ErrorHandler", () => {
     });
 
     it("should include request trace metadata in Problem Details", async () => {
-      const store = new Map<string, unknown>([["traceId", "trace-1"]]);
+      const store = new Map<string, unknown>([[HTTP_CONTEXT_KEYS.traceId, "trace-1"]]);
       mockCtx.get = ((key: string) => store.get(key)) as CrocoHttpContext["get"];
 
       const response = await FrameworkContext.run({ requestId: "request-1" }, () =>
@@ -152,10 +153,10 @@ describe("ErrorHandler", () => {
 
     it("should include sanitized telemetry degradation metadata in Problem Details", async () => {
       const store = new Map<string, unknown>([
-        ["telemetryDegraded", true],
-        ["telemetryDegradedReason", "telemetry_setup_failed"],
+        [HTTP_CONTEXT_KEYS.telemetryDegraded, true],
+        [HTTP_CONTEXT_KEYS.telemetryDegradedReason, "telemetry_setup_failed"],
         [
-          "telemetryDegradedError",
+          HTTP_CONTEXT_KEYS.telemetryDegradedError,
           {
             name: "TypeError",
             message: "header access failure",
@@ -176,6 +177,48 @@ describe("ErrorHandler", () => {
         }),
       );
       expect(JSON.stringify(body)).not.toContain("header access failure");
+    });
+
+    it("should keep safe transport correlation metadata ahead of Problem extensions", async () => {
+      const store = new Map<string, unknown>([
+        [HTTP_CONTEXT_KEYS.traceId, "safe-trace-1"],
+        [HTTP_CONTEXT_KEYS.telemetryDegraded, true],
+        [HTTP_CONTEXT_KEYS.telemetryDegradedReason, "telemetry_setup_failed"],
+        [
+          HTTP_CONTEXT_KEYS.telemetryDegradedError,
+          {
+            name: "TypeError",
+            message: "secret setup failure",
+          },
+        ],
+      ]);
+      mockCtx.get = ((key: string) => store.get(key)) as CrocoHttpContext["get"];
+
+      const response = await FrameworkContext.run({ requestId: "safe-request-1" }, () =>
+        errorHandler.handleError(
+          new TestProblem("metadata", {
+            extensions: {
+              traceId: "extension-trace",
+              requestId: "extension-request",
+              telemetry: { degraded: false, reason: "extension" },
+            },
+          }),
+          mockCtx,
+        ),
+      );
+      const body = await response.json();
+
+      expect(body).toEqual(
+        expect.objectContaining({
+          traceId: "safe-trace-1",
+          requestId: "safe-request-1",
+          telemetry: {
+            degraded: true,
+            reason: "telemetry_setup_failed",
+          },
+        }),
+      );
+      expect(JSON.stringify(body)).not.toContain("secret setup failure");
     });
   });
 });

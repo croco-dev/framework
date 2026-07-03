@@ -1,5 +1,6 @@
 import { Component, Context as FrameworkContext, type ILogger } from "@croco/framework-context";
 import { Problem, ProblemCategoryMapper, type ProblemDetails } from "@croco/problems-core";
+import { HTTP_CONTEXT_KEYS } from "./contextKeys";
 import type { CrocoHttpContext } from "./types";
 
 type TelemetryFailureMetadata = {
@@ -87,7 +88,7 @@ export class ErrorHandler {
   private createFailureMetadata(ctx: CrocoHttpContext): FailureMetadata {
     const metadata: FailureMetadata = {};
     const traceId =
-      this.readContextValue<string>(ctx, "traceId") ??
+      this.readContextValue<string>(ctx, HTTP_CONTEXT_KEYS.traceId) ??
       FrameworkContext.getActiveTraceId() ??
       undefined;
     const requestId = FrameworkContext.getRequestId() ?? undefined;
@@ -100,10 +101,12 @@ export class ErrorHandler {
       metadata.requestId = requestId;
     }
 
-    if (this.readContextValue<boolean>(ctx, "telemetryDegraded")) {
+    if (this.readContextValue<boolean>(ctx, HTTP_CONTEXT_KEYS.telemetryDegraded)) {
       metadata.telemetry = {
         degraded: true,
-        reason: this.readContextValue<string>(ctx, "telemetryDegradedReason") ?? "unknown",
+        reason:
+          this.readContextValue<string>(ctx, HTTP_CONTEXT_KEYS.telemetryDegradedReason) ??
+          "unknown",
       };
     }
 
