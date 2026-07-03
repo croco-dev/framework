@@ -1,3 +1,5 @@
+import { resolve } from "node:path";
+
 import { defineConfig } from "vitest/config";
 
 export const CORE_COVERAGE_PACKAGES = [
@@ -36,13 +38,23 @@ const coreCoveragePackagePaths = CORE_COVERAGE_PACKAGES.map(
   (packageName) => `packages/${packageName.replace("@croco/", "")}`,
 );
 const currentWorkingDirectory = process.cwd().replace(/\\/g, "/");
+const isTestingPackageRun = currentWorkingDirectory.endsWith("packages/testing");
 const shouldApplyCoreCoverageThresholds =
   isCoreCoverageRun &&
   coreCoveragePackagePaths.some((packagePath) => currentWorkingDirectory.endsWith(packagePath));
 
 const coverageThresholds = shouldApplyCoreCoverageThresholds ? CORE_COVERAGE_THRESHOLDS : undefined;
+const testingPackageAliases = isTestingPackageRun
+  ? {
+      "@croco/testing/drizzle": resolve(currentWorkingDirectory, "src/drizzle.ts"),
+      "@croco/testing": resolve(currentWorkingDirectory, "src/index.ts"),
+    }
+  : {};
 
 export default defineConfig({
+  resolve: {
+    alias: testingPackageAliases,
+  },
   test: {
     globals: true,
     environment: "node",
