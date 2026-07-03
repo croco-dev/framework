@@ -61,9 +61,6 @@
   "peerDependenciesMeta": {
     "ioredis": {
       "optional": true
-    },
-    "react-dom": {
-      "optional": true
     }
   },
   "vitest": {
