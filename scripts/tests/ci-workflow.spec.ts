@@ -114,4 +114,52 @@ describe("CI package quality dashboard", () => {
     expect(warningStep).toContain("run: pnpm test:coverage:core:warning");
     expect(warningStep).not.toContain("continue-on-error");
   });
+
+  it("triggers docs link checks for root docs and public package READMEs", () => {
+    const workflow = readCiWorkflow();
+    const docsFilterStart = workflow.indexOf("            docs:\n");
+    const apiSourceFilterStart = workflow.indexOf("            api-source:\n");
+
+    expect(docsFilterStart, "docs path filter should be present").toBeGreaterThan(-1);
+    expect(apiSourceFilterStart, "api-source path filter should follow docs").toBeGreaterThan(
+      docsFilterStart,
+    );
+
+    const docsFilter = workflow.slice(docsFilterStart, apiSourceFilterStart);
+    expect(docsFilter).toContain("- 'README.md'");
+    expect(docsFilter).toContain("- 'docs/**/*.md'");
+    expect(docsFilter).toContain("- 'packages/*/README.md'");
+    expect(docsFilter).toContain("- 'packages/docs/**'");
+  });
+
+  it("checks built docs, root docs, and public package READMEs with Lychee", () => {
+    const workflow = readCiWorkflow();
+    const linkCheckerStart = workflow.indexOf("- name: Link Checker");
+    const linkCheckerEnd = workflow.indexOf("        env:", linkCheckerStart);
+
+    expect(linkCheckerStart, "Lychee link checker step should be present").toBeGreaterThan(-1);
+    expect(linkCheckerEnd, "Lychee env block should follow args").toBeGreaterThan(linkCheckerStart);
+
+    const linkChecker = workflow.slice(linkCheckerStart, linkCheckerEnd);
+    expect(linkChecker).toContain("repository landing URL");
+    expect(linkChecker).toContain("current-commit blob/tree links");
+    expect(linkChecker).toContain("your-org/croco is scaffold placeholder text");
+    expect(linkChecker).toContain("diataxis.fr rate-limits");
+    expect(linkChecker).toContain("private docs app");
+    expect(linkChecker).toContain("rather than a public package README");
+    expect(linkChecker).toContain("--root-dir '${{ github.workspace }}/packages/docs/dist'");
+    expect(linkChecker).toContain(
+      "--exclude '^https://github\\.com/croco-dev/framework(#readme)?$'",
+    );
+    expect(linkChecker).toContain(
+      "--exclude '^https://github\\.com/croco-dev/framework/(blob|tree)/[0-9a-f]{40}/'",
+    );
+    expect(linkChecker).toContain("--exclude '^https://github\\.com/your-org/croco(#readme)?$'");
+    expect(linkChecker).toContain("--exclude '^https://diataxis\\.fr/(how-to-guides|reference)/$'");
+    expect(linkChecker).toContain("--exclude-path '(^|/)packages/docs/README\\.md$'");
+    expect(linkChecker).toContain("'README.md'");
+    expect(linkChecker).toContain("'docs/**/*.md'");
+    expect(linkChecker).toContain("'packages/*/README.md'");
+    expect(linkChecker).toContain("'packages/docs/dist/**/*.html'");
+  });
 });

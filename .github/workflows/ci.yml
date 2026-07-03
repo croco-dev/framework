@@ -286,6 +286,9 @@ jobs:
         with:
           filters: |
             docs:
+              - 'README.md'
+              - 'docs/**/*.md'
+              - 'packages/*/README.md'
               - 'packages/docs/**'
             api-source:
               - 'packages/access-core/src/**'
@@ -478,13 +481,23 @@ jobs:
       - name: Link Checker
         uses: lycheeverse/lychee-action@v2
         with:
+          # Exclusions are intentionally narrow: the repository landing URL is
+          # canonical, current-commit blob/tree links are generated docs anchors,
+          # your-org/croco is scaffold placeholder text, diataxis.fr rate-limits
+          # automated docs link checks, and packages/docs is a private docs app
+          # rather than a public package README.
           args: >-
             --verbose
             --no-progress
-            --root-dir 'packages/docs/dist'
+            --root-dir '${{ github.workspace }}/packages/docs/dist'
             --exclude '^https://github\.com/croco-dev/framework(#readme)?$'
             --exclude '^https://github\.com/croco-dev/framework/(blob|tree)/[0-9a-f]{40}/'
             --exclude '^https://github\.com/your-org/croco(#readme)?$'
+            --exclude '^https://diataxis\.fr/(how-to-guides|reference)/$'
+            --exclude-path '(^|/)packages/docs/README\.md$'
+            'README.md'
+            'docs/**/*.md'
+            'packages/*/README.md'
             'packages/docs/dist/**/*.html'
           fail: true
         env:
