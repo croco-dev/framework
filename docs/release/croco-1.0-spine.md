@@ -54,6 +54,7 @@ both spine membership and production-ready maturity.
 | Package entrypoint smoke | `pnpm package-entrypoints:smoke` scans public package publish contracts       | Every importable spine package must resolve ESM/CJS/types after build.                                                                  |
 | Contract tests           | `pnpm strict-contract-typecheck`, package tests, and generated contract smoke | Protocol/OpenAPI/RPC/transport spine changes must keep contract graph, generated OpenAPI, RPC client, and diagnostics checks green.     |
 | Generated app smoke      | `pnpm create-croco-app:smoke`                                                 | The golden generated app paths must exercise spine protocol, transport, CLI, and codegen packages without live third-party credentials. |
+| Spine promotion check    | `pnpm spine-promotion:check`                                                  | Beta spine packages must name an owner, target evidence, and recovery action before publish-sensitive dashboard steps.                  |
 | Coverage policy          | `pnpm test:coverage:core:warning`                                             | `spine.packages` is a deterministic selection signal; missing spine packages are reported until included or temporarily justified.      |
 
 Non-spine beta or alpha packages do not block 1.0 by default. They become blocking only when a

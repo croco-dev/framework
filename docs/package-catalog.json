@@ -22,7 +22,83 @@
       "testing",
       "create-croco-app",
       "cli"
-    ]
+    ],
+    "promotion": {
+      "packages": {
+        "cli": {
+          "owner": "operator-tooling",
+          "targetEvidence": [
+            "croco doctor spine-readiness command",
+            "CLI e2e smoke",
+            "diagnostic recovery docs"
+          ],
+          "recoveryAction": "Complete CLI spine-readiness diagnostics and smoke evidence, then move cli from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
+        },
+        "create-croco-app": {
+          "owner": "generated-app-tooling",
+          "targetEvidence": [
+            "generated app smoke matrix",
+            "clean install artifact provenance",
+            "CLI template compatibility evidence"
+          ],
+          "recoveryAction": "Complete generated app smoke and provenance evidence, then move create-croco-app from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
+        },
+        "events-tx": {
+          "owner": "events-reliability",
+          "targetEvidence": [
+            "transactional outbox dispatch coverage",
+            "retry and idempotency interaction tests",
+            "failure recovery diagnostics"
+          ],
+          "recoveryAction": "Complete transactional event dispatch and recovery evidence, then move events-tx from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
+        },
+        "idempotency-core": {
+          "owner": "reliability-core",
+          "targetEvidence": [
+            "idempotency key contract tests",
+            "retry interaction coverage",
+            "Problem diagnostics coverage"
+          ],
+          "recoveryAction": "Complete idempotency contract and diagnostics evidence, then move idempotency-core from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
+        },
+        "openapi-spec": {
+          "owner": "protocol-codegen",
+          "targetEvidence": [
+            "OpenAPI snapshot drift gate",
+            "contract-to-spec regression fixtures",
+            "public API docs"
+          ],
+          "recoveryAction": "Complete OpenAPI generation drift and docs evidence, then move openapi-spec from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
+        },
+        "protocols-core": {
+          "owner": "protocol-contracts",
+          "targetEvidence": [
+            "strict contract diagnostics baseline",
+            "route contract graph fixtures",
+            "generated protocol compatibility smoke"
+          ],
+          "recoveryAction": "Complete protocol contract hardening evidence, then move protocols-core from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
+        },
+        "rpc-codegen": {
+          "owner": "protocol-codegen",
+          "targetEvidence": [
+            "generated RPC client compatibility fixtures",
+            "query-key serialization tests",
+            "generated app smoke coverage"
+          ],
+          "recoveryAction": "Complete RPC codegen compatibility evidence, then move rpc-codegen from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
+        },
+        "testing": {
+          "owner": "release-tooling",
+          "targetEvidence": [
+            "test harness API docs",
+            "conformance utility coverage",
+            "consumer smoke fixtures"
+          ],
+          "recoveryAction": "Complete test harness docs and conformance evidence, then move testing from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
+        }
+      }
+    }
   },
   "groups": {
     "Core": {

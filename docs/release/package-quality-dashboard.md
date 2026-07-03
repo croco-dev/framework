@@ -8,6 +8,7 @@ The dashboard is written to `ci-reports/package-quality/report.md`, appended to 
 - Per-package `build`, `typecheck`, and `test` outcomes from the latest Turbo summaries.
 - Provider, integration, transport, and presentation certification evidence from `pnpm provider-certification:check`, written to `ci-reports/package-quality/provider-certification.md` and `provider-certification.json`.
 - Production-ready package evidence from `pnpm production-ready:check`, written to `ci-reports/package-quality/production-ready.md`.
+- Beta spine promotion accountability from `pnpm spine-promotion:check`, written to `ci-reports/package-quality/spine-promotion.md`.
 - Failure evidence narrowed to the package, check, and Turbo log path.
 - Repository dependency boundary results, starting with the `@croco/repository-core` Drizzle-free rule.
 - Release metadata linkage through the `changeset-required:check` PR gate.
@@ -23,6 +24,7 @@ The protected `trunk` branch keeps the existing hard gates:
 - `build`, `typecheck`, and `test` through Turbo package tasks.
 - `provider-certification:check` after package tests, blocking production-ready extension packages without certified catalog evidence.
 - `production-ready:check` after Turbo summaries, blocking production-ready packages that lack required maturity evidence.
+- `spine-promotion:check` after the production-ready gate, blocking beta packages in the Croco 1.0 spine that lack owner, target evidence, or recovery action.
 - Package entrypoint and binary smoke checks.
 - Generated app smoke, CLI integration tests, and core coverage.
 - Benchmark drift in the dedicated benchmark workflow when `BENCHMARK_GATE_MODE=enforce`.
@@ -126,6 +128,32 @@ pnpm provider-certification:check
 ```
 
 The CI gate appends `ci-reports/package-quality/provider-certification.md` to the GitHub Actions job summary and uploads both markdown and JSON with the package quality dashboard artifact.
+
+## Beta Spine Promotion Gate
+
+`pnpm spine-promotion:check` verifies promotion accountability for packages that are both in `docs/package-catalog.json` `spine.packages` and `maturity.beta.packages`.
+It also fails catalog entries that place alpha, deprecated, or uncategorized packages in the spine, because release-critical packages must reach beta before promotion accountability can be evaluated.
+The gate writes `ci-reports/package-quality/spine-promotion.md`, appends that report to the GitHub Actions job summary, and uploads it with the package quality dashboard artifact.
+
+For each beta spine package, `docs/package-catalog.json` must define `spine.promotion.packages.<name>` with:
+
+- `owner`;
+- `targetEvidence`;
+- `recoveryAction`.
+
+The gate is intentionally scoped to the beta spine. It does not fail unrelated beta, alpha, or deprecated packages outside `spine.packages`, and it does not require promotion metadata for spine packages already listed in `maturity.production.packages`.
+
+Local recovery:
+
+```bash
+pnpm spine-promotion:check
+```
+
+When the target evidence is complete, move the package from `maturity.beta.packages` to `maturity.production.packages`, remove stale promotion metadata, and run:
+
+```bash
+pnpm production-ready:check
+```
 
 ## Production-Ready Package Gate
 

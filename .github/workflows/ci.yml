@@ -219,6 +219,22 @@ jobs:
           fi
           exit "$status"
 
+      - name: Beta spine promotion gate
+        id: spine_promotion_gate
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          pnpm spine-promotion:check
+          status=$?
+          set -e
+          if [ -f ci-reports/package-quality/spine-promotion.md ]; then
+            cat ci-reports/package-quality/spine-promotion.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Beta spine promotion report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
       - name: Publish package quality dashboard
         if: always()
         env:
@@ -228,6 +244,8 @@ jobs:
           PACKAGE_QUALITY_TYPECHECK_STATUS: ${{ steps.typecheck.outcome || 'skipped' }}
           PACKAGE_QUALITY_TEST_STATUS: ${{ steps.test.outcome || 'skipped' }}
           PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS: ${{ steps.provider_certification_gate.outcome || 'skipped' }}
+          PACKAGE_QUALITY_PRODUCTION_READY_STATUS: ${{ steps.production_ready_package_gate.outcome || 'skipped' }}
+          PACKAGE_QUALITY_SPINE_PROMOTION_STATUS: ${{ steps.spine_promotion_gate.outcome || 'skipped' }}
         shell: bash
         run: |
           pnpm package-quality:report
@@ -483,8 +501,9 @@ jobs:
         with:
           # Exclusions are intentionally narrow: the repository landing URL is
           # canonical, current-commit blob/tree links are generated docs anchors,
-          # your-org/croco is scaffold placeholder text, diataxis.fr rate-limits
-          # automated docs link checks, and packages/docs is a private docs app
+          # your-org/croco is scaffold placeholder text, archived OpenAI API docs
+          # return transient 503s from Wayback, diataxis.fr rate-limits automated
+          # docs link checks, and packages/docs is a private docs app
           # rather than a public package README.
           args: >-
             --verbose
@@ -493,6 +512,7 @@ jobs:
             --exclude '^https://github\.com/croco-dev/framework(#readme)?$'
             --exclude '^https://github\.com/croco-dev/framework/(blob|tree)/[0-9a-f]{40}/'
             --exclude '^https://github\.com/your-org/croco(#readme)?$'
+            --exclude '^https://web\.archive\.org/web/[0-9]+/https://developers\.openai\.com/api/'
             --exclude '^https://diataxis\.fr/(how-to-guides|reference)/$'
             --exclude-path '(^|/)packages/docs/README\.md$'
             'README.md'

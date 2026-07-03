@@ -41,6 +41,7 @@
     "package-quality:report": "node --experimental-strip-types scripts/package-quality-report.mts",
     "provider-certification:check": "node --experimental-strip-types scripts/provider-certification-check.mts",
     "production-ready:check": "node --experimental-strip-types scripts/production-ready-check.mts",
+    "spine-promotion:check": "node --experimental-strip-types scripts/spine-promotion-check.mts",
     "problem-registry:check": "node --experimental-strip-types scripts/problem-registry.mts --check",
     "problem-registry:write": "node --experimental-strip-types scripts/problem-registry.mts --write",
     "public-api:check": "node --experimental-strip-types scripts/public-api-surface.mts --check",

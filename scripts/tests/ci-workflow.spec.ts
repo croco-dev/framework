@@ -21,6 +21,8 @@ describe("CI package quality dashboard", () => {
       "- name: Production-ready package gate",
       "production_ready_args+=(--require-task-summaries)",
       'pnpm production-ready:check -- "${production_ready_args[@]}"',
+      "- name: Beta spine promotion gate",
+      "pnpm spine-promotion:check",
       "- name: Publish package quality dashboard",
       "pnpm package-quality:report",
       "- name: Upload package quality dashboard",
@@ -49,6 +51,12 @@ describe("CI package quality dashboard", () => {
     expect(workflow).toContain(
       "PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS: ${{ steps.provider_certification_gate.outcome",
     );
+    expect(workflow).toContain(
+      "PACKAGE_QUALITY_PRODUCTION_READY_STATUS: ${{ steps.production_ready_package_gate.outcome",
+    );
+    expect(workflow).toContain(
+      "PACKAGE_QUALITY_SPINE_PROMOTION_STATUS: ${{ steps.spine_promotion_gate.outcome",
+    );
   });
 
   it("appends the provider certification matrix before exiting the blocking gate", () => {
@@ -73,6 +81,40 @@ describe("CI package quality dashboard", () => {
     expect(workflow).toContain('exit "$status"');
   });
 
+  it("appends the beta spine promotion report before exiting the blocking gate", () => {
+    const workflow = readCiWorkflow();
+    const gateStart = workflow.indexOf("- name: Beta spine promotion gate");
+    const dashboardStart = workflow.indexOf("- name: Publish package quality dashboard");
+
+    expect(gateStart, "beta spine promotion gate step should be present").toBeGreaterThan(-1);
+    expect(
+      dashboardStart,
+      "package quality dashboard step should follow the beta spine promotion gate",
+    ).toBeGreaterThan(gateStart);
+
+    const gateStep = workflow.slice(gateStart, dashboardStart);
+    const orderedMarkers = [
+      "id: spine_promotion_gate",
+      "pnpm spine-promotion:check",
+      "status=$?",
+      "ci-reports/package-quality/spine-promotion.md",
+      'cat ci-reports/package-quality/spine-promotion.md >> "$GITHUB_STEP_SUMMARY"',
+      'exit "$status"',
+    ];
+
+    let previousIndex = -1;
+    for (const marker of orderedMarkers) {
+      const index = gateStep.indexOf(marker);
+      expect(index, `${marker} should be present in the beta spine promotion gate`).toBeGreaterThan(
+        -1,
+      );
+      expect(index, `${marker} should stay in beta spine promotion gate order`).toBeGreaterThan(
+        previousIndex,
+      );
+      previousIndex = index;
+    }
+  });
+
   it("publishes generated app smoke matrix artifacts after the smoke gate", () => {
     const workflow = readCiWorkflow();
     const orderedMarkers = [
@@ -95,6 +137,14 @@ describe("CI package quality dashboard", () => {
       );
       previousIndex = index;
     }
+  });
+
+  it("excludes intentionally archived OpenAI API docs snapshots from docs link checks", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).toContain(
+      "--exclude '^https://web\\.archive\\.org/web/[0-9]+/https://developers\\.openai\\.com/api/'",
+    );
   });
 
   it("keeps core coverage hard errors blocking in CI", () => {
