@@ -38,6 +38,7 @@ describe("release-docs-check.mts", () => {
         "Run pnpm alpha-release:smoke before publish.",
         "Upload ci-reports/release/alpha-release-smoke.md as release evidence.",
         "Release notes state alpha stability and compatibility expectations.",
+        "Breaking changes to `croco.doctor.v1` doctor JSON output must either version the report schema or include release notes with a migration path.",
       ].join("\n"),
     );
 
@@ -118,6 +119,61 @@ describe("release-docs-check.mts", () => {
     expect(result.stdout).toContain("alpha release smoke command");
     expect(result.stdout).toContain("alpha release smoke evidence artifact");
     expect(result.stdout).toContain("alpha stability and compatibility expectations");
+  });
+
+  it("fails when the guide omits the doctor JSON compatibility rule", () => {
+    const root = createFixture(
+      {
+        fixed: [],
+        linked: [],
+      },
+      [
+        "# Release",
+        "`.changeset/config.json` is the source of truth.",
+        "- **Mode**: Independent",
+        "The fixed and linked arrays are empty.",
+        "Select each changed publishable package를 각각 when creating a changeset.",
+        "The release workflow exports NPM_CONFIG_PROVENANCE=true.",
+        "Maintainers verify provenance with npm audit signatures.",
+        "The npm Version field shows the provenance check mark.",
+        "Run pnpm alpha-release:smoke before publish.",
+        "Upload ci-reports/release/alpha-release-smoke.md as release evidence.",
+        "Release notes state alpha stability and compatibility expectations.",
+      ].join("\n"),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("breaking doctor JSON changes");
+  });
+
+  it("fails when the guide mentions doctor JSON without the breaking-change policy", () => {
+    const root = createFixture(
+      {
+        fixed: [],
+        linked: [],
+      },
+      [
+        "# Release",
+        "`.changeset/config.json` is the source of truth.",
+        "- **Mode**: Independent",
+        "The fixed and linked arrays are empty.",
+        "Select each changed publishable package를 각각 when creating a changeset.",
+        "The release workflow exports NPM_CONFIG_PROVENANCE=true.",
+        "Maintainers verify provenance with npm audit signatures.",
+        "The npm Version field shows the provenance check mark.",
+        "Run pnpm alpha-release:smoke before publish.",
+        "Upload ci-reports/release/alpha-release-smoke.md as release evidence.",
+        "Release notes state alpha stability and compatibility expectations.",
+        "The `croco.doctor.v1` doctor JSON schema is documented in the CLI README.",
+      ].join("\n"),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("breaking doctor JSON changes");
   });
 
   it("fails when configured fixed groups are missing from the guide", () => {

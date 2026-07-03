@@ -1,9 +1,10 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { renderUsage } from "citty";
 import { afterEach, describe, expect, it } from "vitest";
 import { doctor, formatDoctorReport, getDoctorExitCode, runDoctor } from "../commands/doctor.js";
+import type { DoctorDiagnostic, DoctorLocation, DoctorReport } from "../commands/doctor.js";
 import { createCrocoCommand } from "../commands/root.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
@@ -64,6 +65,177 @@ describe("doctor", () => {
     expect(report.diagnostics).toEqual([]);
     expect(formatDoctorReport(report)).toContain("Diagnostics: none");
     expect(getDoctorExitCode(report)).toBe(0);
+  });
+
+  it("snapshots the healthy croco.doctor.v1 JSON report", () => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "repository-core", "@croco/repository-core");
+    writeFile(repo, "packages/repository-core/src/index.ts", "export type Repository = {};\n");
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/handler.ts",
+      [
+        'import { lambdaPreset, TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const telemetryReady = telemetry.init(lambdaPreset({ serviceName: 'api' }));",
+        "export const handler = async () => {",
+        "  try {",
+        "    await telemetryReady;",
+        "    return { statusCode: 200 };",
+        "  } finally {",
+        "    await telemetry.forceFlush();",
+        "  }",
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: join(repo, "packages", "api") });
+
+    expect(normalizeDoctorReportForSnapshot(report, repo)).toMatchInlineSnapshot(`
+      {
+        "checks": [
+          {
+            "diagnostics": [],
+            "id": "workspace-discovery",
+            "note": "2 package(s) discovered from pnpm-workspace.yaml",
+            "status": "pass",
+            "title": "Workspace discovery",
+          },
+          {
+            "diagnostics": [],
+            "id": "workspace-version-consistency",
+            "note": "2 workspace package manifest(s) use consistent local dependency ranges.",
+            "status": "pass",
+            "title": "Workspace package version consistency",
+          },
+          {
+            "diagnostics": [],
+            "id": "spine-package-state",
+            "note": "No external @croco spine package dependencies were declared.",
+            "status": "skipped",
+            "title": "Spine package install and build state",
+          },
+          {
+            "diagnostics": [],
+            "id": "contract-graph-readiness",
+            "note": "No contract graph script or snapshot artifact was found.",
+            "status": "skipped",
+            "title": "ContractGraph artifact",
+          },
+          {
+            "diagnostics": [],
+            "id": "project-manifest-bundle",
+            "note": ".croco/manifest was not found.",
+            "status": "skipped",
+            "title": "Project manifest bundle",
+          },
+          {
+            "diagnostics": [],
+            "id": "problem-registry-readiness",
+            "note": "No ProblemRegistry artifact or drift-check script was found.",
+            "status": "skipped",
+            "title": "ProblemRegistry artifact drift gate",
+          },
+          {
+            "diagnostics": [],
+            "id": "runtime-capability-manifest",
+            "note": "No runtime capability manifest or runtime-policy check script was found.",
+            "status": "skipped",
+            "title": "RuntimeCapabilityManifest presence",
+          },
+          {
+            "diagnostics": [],
+            "id": "http-security-middleware-contract",
+            "note": "No @croco/transports-http createApp source was discovered.",
+            "status": "skipped",
+            "title": "HTTP security middleware contract",
+          },
+          {
+            "diagnostics": [],
+            "id": "di-graph-bootstrap",
+            "note": ".croco/build/di-graph.manifest.json was not found.",
+            "status": "skipped",
+            "title": "DI graph bootstrap errors",
+          },
+          {
+            "diagnostics": [],
+            "id": "provider-certification",
+            "note": "croco-saas-profile.manifest.json was not found.",
+            "status": "skipped",
+            "title": "Provider certification gaps",
+          },
+          {
+            "diagnostics": [],
+            "id": "repository-core-boundary",
+            "note": "No Drizzle references found in packages/repository-core/src.",
+            "status": "pass",
+            "title": "repository-core dependency boundary",
+          },
+          {
+            "diagnostics": [],
+            "id": "lambda-telemetry-flush",
+            "note": "No Lambda telemetry entrypoints are missing forceFlush().",
+            "status": "pass",
+            "title": "Lambda telemetry flush boundary",
+          },
+        ],
+        "diagnostics": [],
+        "packageCount": 2,
+        "rootDir": "<workspace-root>",
+        "summary": "healthy",
+        "version": "croco.doctor.v1",
+      }
+    `);
+  });
+
+  it("snapshots the failing croco.doctor.v1 JSON report", () => {
+    const repo = createTempRepo();
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(normalizeDoctorReportForSnapshot(report, repo)).toMatchInlineSnapshot(`
+      {
+        "checks": [
+          {
+            "diagnostics": [
+              {
+                "action": "Run croco doctor from inside a Croco monorepo, or pass --cwd to a directory under the workspace root.",
+                "cause": "croco doctor could not find pnpm-workspace.yaml by walking up from the execution directory.",
+                "checkId": "workspace-discovery",
+                "code": "CROCO_CLI_DOCTOR_001",
+                "legacyCode": "doctor/workspace-not-found",
+                "location": {
+                  "file": "<cwd>",
+                },
+                "severity": "error",
+              },
+            ],
+            "id": "workspace-discovery",
+            "status": "fail",
+            "title": "Workspace discovery",
+          },
+        ],
+        "diagnostics": [
+          {
+            "action": "Run croco doctor from inside a Croco monorepo, or pass --cwd to a directory under the workspace root.",
+            "cause": "croco doctor could not find pnpm-workspace.yaml by walking up from the execution directory.",
+            "checkId": "workspace-discovery",
+            "code": "CROCO_CLI_DOCTOR_001",
+            "legacyCode": "doctor/workspace-not-found",
+            "location": {
+              "file": "<cwd>",
+            },
+            "severity": "error",
+          },
+        ],
+        "packageCount": 0,
+        "rootDir": null,
+        "summary": "issues_detected",
+        "version": "croco.doctor.v1",
+      }
+    `);
   });
 
   it("discovers packages from inline workspace arrays and excludes negated globs", () => {
@@ -691,6 +863,69 @@ function writeProjectManifestBundle(repo: string): void {
 
 function writeJson(repo: string, relativePath: string, value: unknown): void {
   writeFile(repo, relativePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function normalizeDoctorReportForSnapshot(report: DoctorReport, rootDir: string): DoctorReport {
+  return {
+    ...report,
+    rootDir: normalizeRootDirForSnapshot(report.rootDir, rootDir),
+    checks: report.checks.map((check) => ({
+      ...check,
+      diagnostics: check.diagnostics.map((diagnostic) =>
+        normalizeDiagnosticForSnapshot(diagnostic, rootDir),
+      ),
+    })),
+    diagnostics: report.diagnostics.map((diagnostic) =>
+      normalizeDiagnosticForSnapshot(diagnostic, rootDir),
+    ),
+  };
+}
+
+function normalizeRootDirForSnapshot(
+  actualRootDir: string | null,
+  expectedRootDir: string,
+): string | null {
+  if (actualRootDir === null) {
+    return null;
+  }
+
+  if (actualRootDir !== expectedRootDir) {
+    throw new Error(`Expected doctor rootDir ${expectedRootDir}, received ${actualRootDir}`);
+  }
+
+  return "<workspace-root>";
+}
+
+function normalizeDiagnosticForSnapshot(
+  diagnostic: DoctorDiagnostic,
+  rootDir: string,
+): DoctorDiagnostic {
+  return {
+    ...diagnostic,
+    location: normalizeLocationForSnapshot(diagnostic.location, rootDir),
+  };
+}
+
+function normalizeLocationForSnapshot(
+  location: DoctorLocation | null,
+  rootDir: string,
+): DoctorLocation | null {
+  if (!location?.file) {
+    return location;
+  }
+
+  if (location.file === rootDir) {
+    return { ...location, file: "<cwd>" };
+  }
+
+  if (location.file.startsWith(`${rootDir}/`)) {
+    return {
+      ...location,
+      file: `<workspace-root>/${relative(rootDir, location.file).split("\\").join("/")}`,
+    };
+  }
+
+  return location;
 }
 
 function writeFile(repo: string, relativePath: string, content: string): void {
