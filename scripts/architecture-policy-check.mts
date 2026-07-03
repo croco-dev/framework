@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import {
   checkArchitecturePolicy,
   formatArchitecturePolicyDiagnostic,
@@ -44,10 +44,6 @@ type PackageCatalogGroupConsistencyReport = {
   readonly packageCount: number;
   readonly violationCount: number;
   readonly violations: readonly PackageCatalogGroupViolation[];
-};
-
-type RawManifest = {
-  readonly packageCatalogGroupOverrides?: unknown;
 };
 
 type CatalogMetadata = {
@@ -182,12 +178,18 @@ function checkPackageCatalogGroupConsistency(options: {
 }): PackageCatalogGroupConsistencyReport {
   const rootDir = resolve(options.rootDir);
   const violations: PackageCatalogGroupViolation[] = [];
-  const packages = readPublicWorkspacePackages(rootDir);
+  const packages = readPublicWorkspacePackages(
+    rootDir,
+    options.manifest.packageRoots ?? ["packages"],
+  );
   const packageByName = new Map(packages.map((pkg) => [pkg.name, pkg]));
   const packageByShortName = new Map(packages.map((pkg) => [pkg.shortName, pkg]));
   const catalogGroups = readPackageCatalogGroups(rootDir, packageByShortName, violations);
-  const rawManifest = readJsonFile<RawManifest>(options.manifestPath);
-  const overrides = readPackageCatalogGroupOverrides(rawManifest, packageByName, violations);
+  const overrides = readPackageCatalogGroupOverrides(
+    options.manifest.packageCatalogGroupOverrides,
+    packageByName,
+    violations,
+  );
   const overridesByPackage = new Map(overrides.map((override) => [override.packageName, override]));
 
   for (const pkg of packages) {
@@ -283,21 +285,15 @@ function checkPackageCatalogGroupConsistency(options: {
   };
 }
 
-function readPublicWorkspacePackages(rootDir: string): readonly WorkspacePackage[] {
-  const packagesDir = join(rootDir, "packages");
-  const entries = readdirSync(packagesDir, { withFileTypes: true });
+function readPublicWorkspacePackages(
+  rootDir: string,
+  packageRoots: readonly string[],
+): readonly WorkspacePackage[] {
   const packages: WorkspacePackage[] = [];
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    const packageJsonPath = join(packagesDir, entry.name, "package.json");
-    if (!existsSync(packageJsonPath)) {
-      continue;
-    }
-
+  for (const packageJsonPath of packageRoots.flatMap((packageRoot) =>
+    findPackageJsonFiles(join(rootDir, packageRoot)),
+  )) {
     const packageJson = readJsonFile<PackageJson>(packageJsonPath);
     if (typeof packageJson.name !== "string" || packageJson.name.length === 0) {
       throw new Error(`${relative(rootDir, packageJsonPath)} is missing a string name`);
@@ -309,12 +305,15 @@ function readPublicWorkspacePackages(rootDir: string): readonly WorkspacePackage
 
     packages.push({
       name: packageJson.name,
-      relativeDir: join("packages", entry.name),
+      relativeDir: toPosixPath(relative(rootDir, dirname(packageJsonPath))),
       shortName: toShortPackageName(packageJson.name),
     });
   }
 
-  return packages.sort((left, right) => left.shortName.localeCompare(right.shortName));
+  return packages.sort((left, right) => {
+    const byShortName = left.shortName.localeCompare(right.shortName);
+    return byShortName === 0 ? left.relativeDir.localeCompare(right.relativeDir) : byShortName;
+  });
 }
 
 function readPackageCatalogGroups(
@@ -322,7 +321,17 @@ function readPackageCatalogGroups(
   packageByShortName: ReadonlyMap<string, WorkspacePackage>,
   violations: PackageCatalogGroupViolation[],
 ): ReadonlyMap<string, readonly string[]> {
-  const metadata = readJsonFile<CatalogMetadata>(join(rootDir, packageCatalogPath));
+  const catalogPath = join(rootDir, packageCatalogPath);
+  if (!existsSync(catalogPath)) {
+    violations.push({
+      message: "docs/package-catalog.json is missing",
+      recovery: "Restore docs/package-catalog.json before running architecture policy checks.",
+      evidence: packageCatalogPath,
+    });
+    return new Map();
+  }
+
+  const metadata = readJsonFile<CatalogMetadata>(catalogPath);
   if (!isRecord(metadata.groups)) {
     violations.push({
       message: "docs/package-catalog.json groups must be an object",
@@ -373,11 +382,10 @@ function readPackageCatalogGroups(
 }
 
 function readPackageCatalogGroupOverrides(
-  rawManifest: RawManifest,
+  value: unknown,
   packageByName: ReadonlyMap<string, WorkspacePackage>,
   violations: PackageCatalogGroupViolation[],
 ): PackageCatalogGroupOverride[] {
-  const value = rawManifest.packageCatalogGroupOverrides;
   if (value === undefined) {
     return [];
   }
@@ -497,6 +505,38 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function toShortPackageName(packageName: string): string {
   return packageName.startsWith("@croco/") ? packageName.slice("@croco/".length) : packageName;
+}
+
+function findPackageJsonFiles(dir: string, results: string[] = []): string[] {
+  if (!existsSync(dir)) {
+    return results;
+  }
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (shouldSkipDirectory(entry.name)) {
+        continue;
+      }
+      findPackageJsonFiles(fullPath, results);
+      continue;
+    }
+
+    if (entry.isFile() && entry.name === "package.json") {
+      results.push(fullPath);
+    }
+  }
+
+  return results.sort();
+}
+
+function shouldSkipDirectory(name: string): boolean {
+  return name === "node_modules" || name === "dist" || name === "build" || name === ".turbo";
+}
+
+function toPosixPath(value: string): string {
+  return value.split("\\").join("/");
 }
 
 function matchesAnyPattern(value: string, patterns: readonly string[]): boolean {

@@ -65,6 +65,7 @@
         "@croco/storage-core",
         "@croco/tasks-core",
         "@croco/tenant-core",
+        "@croco/telemetry-api",
         "@croco/triggers-core",
         "@croco/tx-core",
         "@croco/webhooks-core",
@@ -102,7 +103,6 @@
         "@croco/storage-cloudflare",
         "@croco/storage-cloudinary",
         "@croco/storage-r2",
-        "@croco/telemetry-api",
         "@croco/telemetry-sdk-node",
         "@croco/tx-drizzle"
       ]
@@ -137,6 +137,12 @@
       "catalogGroup": "Core",
       "policyGroup": "integrations",
       "reason": "events-tx binds event contracts to transaction infrastructure, so architecture policy treats it as an adapter boundary."
+    },
+    {
+      "package": "@croco/telemetry-api",
+      "catalogGroup": "Integration",
+      "policyGroup": "framework",
+      "reason": "telemetry-api is the application-facing telemetry contract consumed by framework/core packages; telemetry-sdk-node remains the runtime integration."
     },
     {
       "package": "@croco/tx-drizzle",

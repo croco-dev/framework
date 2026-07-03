@@ -95,6 +95,22 @@ describe("architecture-policy-check.mts", () => {
     );
   });
 
+  it("fails with an actionable diagnostic when the package catalog file is missing", () => {
+    const root = createTempRoot();
+    writePackage(root, "alpha");
+    writeArchitectureManifest(root, {
+      framework: { packages: ["@croco/alpha"] },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain("docs/package-catalog.json is missing");
+    expect(result.output).toContain(
+      "Restore docs/package-catalog.json before running architecture policy checks.",
+    );
+  });
+
   it("fails when one public package appears in multiple catalog groups", () => {
     const root = createTempRoot();
     writePackage(root, "alpha");
@@ -146,6 +162,29 @@ describe("architecture-policy-check.mts", () => {
     expect(result.status).toBe(1);
     expect(result.output).toContain(
       "package @croco/alpha catalog group Tooling maps to policy group app but croco.arch.json assigns framework",
+    );
+  });
+
+  it("uses manifest packageRoots when discovering public packages", () => {
+    const root = createTempRoot();
+    writePackage(root, "alpha", "libs");
+    writePackageCatalog(root, {
+      Core: ["alpha"],
+    });
+    writeArchitectureManifest(
+      root,
+      {
+        framework: { packages: ["@croco/alpha"] },
+      },
+      [],
+      ["libs"],
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.output).toContain(
+      "architecture-policy: package catalog group consistency passed for 1 public package(s)",
     );
   });
 
@@ -235,8 +274,8 @@ function createTempRoot(): string {
   return root;
 }
 
-function writePackage(root: string, shortName: string): void {
-  const packageDir = join(root, "packages", shortName);
+function writePackage(root: string, shortName: string, packageRoot = "packages"): void {
+  const packageDir = join(root, packageRoot, shortName);
   mkdirSync(packageDir, { recursive: true });
   writeJson(join(packageDir, "package.json"), {
     name: `@croco/${shortName}`,
@@ -267,11 +306,12 @@ function writeArchitectureManifest(
   root: string,
   packageGroups: Readonly<Record<string, ArchitecturePackageGroup>>,
   overrides: readonly PackageCatalogGroupOverride[] = [],
+  packageRoots: readonly string[] = ["packages"],
 ): void {
   writeJson(join(root, "croco.arch.json"), {
     schemaVersion: "croco.architecture-policy/v1",
-    packageRoots: ["packages"],
-    include: ["packages/*/src/**/*.ts"],
+    packageRoots,
+    include: packageRoots.map((packageRoot) => `${packageRoot}/*/src/**/*.ts`),
     ignore: [],
     packageGroups,
     ...(overrides.length > 0 ? { packageCatalogGroupOverrides: overrides } : {}),
