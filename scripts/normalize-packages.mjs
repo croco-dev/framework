@@ -577,6 +577,7 @@ function readInternalPeerDependencyRangeException(
 
   if (range?.trim() && !isSemverCompatibilityRange(range)) {
     violations.push(`${fieldName}.range must be a semver compatibility range`);
+    return undefined;
   }
 
   if (!packageName || !sectionName || !dependencyName || !range?.trim() || !rationale?.trim()) {

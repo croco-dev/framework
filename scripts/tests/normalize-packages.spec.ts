@@ -715,6 +715,15 @@ describe("normalize-packages.mjs", () => {
         },
       }),
     );
+    writePackage(
+      root,
+      "invalid-peer-range",
+      publishablePackage("@croco/invalid-peer-range", {
+        peerDependencies: {
+          "@croco/internal-runtime": "file:../internal-runtime",
+        },
+      }),
+    );
     writeInternalPeerDependencyRangeExceptions(root, [
       {
         package: "@croco/peer-compat",
@@ -745,7 +754,7 @@ describe("normalize-packages.mjs", () => {
         rationale: "Blank ranges are not valid published compatibility ranges.",
       },
       {
-        package: "@croco/peer-compat",
+        package: "@croco/invalid-peer-range",
         section: "peerDependencies",
         dependency: "@croco/internal-runtime",
         range: "file:../internal-runtime",
@@ -803,6 +812,10 @@ describe("normalize-packages.mjs", () => {
     );
     expect(result.stdout).toContain("peer-compat/package.json");
     expect(result.stdout).toContain("dev-range/package.json");
+    expect(result.stdout).toContain("invalid-peer-range/package.json");
+    expect(result.stdout).toContain(
+      'peerDependencies.@croco/internal-runtime must use workspace:* for internal Croco workspace packages, not "file:../internal-runtime"',
+    );
   });
 
   it("requires production source runtime imports to be declared as published dependencies", () => {
