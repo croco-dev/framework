@@ -219,6 +219,22 @@ jobs:
           fi
           exit "$status"
 
+      - name: Beta spine promotion gate
+        id: spine_promotion_gate
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          pnpm spine-promotion:check
+          status=$?
+          set -e
+          if [ -f ci-reports/package-quality/spine-promotion.md ]; then
+            cat ci-reports/package-quality/spine-promotion.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Beta spine promotion report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
       - name: Publish package quality dashboard
         if: always()
         env:
@@ -228,6 +244,8 @@ jobs:
           PACKAGE_QUALITY_TYPECHECK_STATUS: ${{ steps.typecheck.outcome || 'skipped' }}
           PACKAGE_QUALITY_TEST_STATUS: ${{ steps.test.outcome || 'skipped' }}
           PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS: ${{ steps.provider_certification_gate.outcome || 'skipped' }}
+          PACKAGE_QUALITY_PRODUCTION_READY_STATUS: ${{ steps.production_ready_package_gate.outcome || 'skipped' }}
+          PACKAGE_QUALITY_SPINE_PROMOTION_STATUS: ${{ steps.spine_promotion_gate.outcome || 'skipped' }}
         shell: bash
         run: |
           pnpm package-quality:report

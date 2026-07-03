@@ -142,6 +142,15 @@ describe("package-quality-report.mts", () => {
       "| `bundle-size:warning` | publishable package generated artifact growth",
     );
     expect(markdown).toContain(
+      "| `production-ready:check` | production-ready package maturity evidence",
+    );
+    expect(markdown).toContain(
+      "| `spine-promotion:check` | beta Croco 1.0 spine promotion accountability",
+    );
+    expect(markdown).toContain(
+      "provider-certification, production-ready, spine-promotion, and the dedicated benchmark workflow",
+    );
+    expect(markdown).toContain(
       "| `benchmark` | performance drift | blocking in dedicated benchmark workflow | n/a (separate workflow) | latest-five-green evidence and benchmark baselines are committed |",
     );
     expect(markdown).toContain("- Runtime exports added/removed: 1 / 0");

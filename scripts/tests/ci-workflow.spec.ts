@@ -21,6 +21,8 @@ describe("CI package quality dashboard", () => {
       "- name: Production-ready package gate",
       "production_ready_args+=(--require-task-summaries)",
       'pnpm production-ready:check -- "${production_ready_args[@]}"',
+      "- name: Beta spine promotion gate",
+      "pnpm spine-promotion:check",
       "- name: Publish package quality dashboard",
       "pnpm package-quality:report",
       "- name: Upload package quality dashboard",
@@ -49,6 +51,12 @@ describe("CI package quality dashboard", () => {
     expect(workflow).toContain(
       "PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS: ${{ steps.provider_certification_gate.outcome",
     );
+    expect(workflow).toContain(
+      "PACKAGE_QUALITY_PRODUCTION_READY_STATUS: ${{ steps.production_ready_package_gate.outcome",
+    );
+    expect(workflow).toContain(
+      "PACKAGE_QUALITY_SPINE_PROMOTION_STATUS: ${{ steps.spine_promotion_gate.outcome",
+    );
   });
 
   it("appends the provider certification matrix before exiting the blocking gate", () => {
@@ -69,6 +77,17 @@ describe("CI package quality dashboard", () => {
     expect(workflow).toContain('if [ "${{ steps.build.outcome }}" != "skipped" ]');
     expect(workflow).toContain(
       'cat ci-reports/package-quality/production-ready.md >> "$GITHUB_STEP_SUMMARY"',
+    );
+    expect(workflow).toContain('exit "$status"');
+  });
+
+  it("appends the beta spine promotion report before exiting the blocking gate", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).toContain("ci-reports/package-quality/spine-promotion.md");
+    expect(workflow).toContain("pnpm spine-promotion:check");
+    expect(workflow).toContain(
+      'cat ci-reports/package-quality/spine-promotion.md >> "$GITHUB_STEP_SUMMARY"',
     );
     expect(workflow).toContain('exit "$status"');
   });
