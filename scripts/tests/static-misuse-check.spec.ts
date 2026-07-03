@@ -1,11 +1,18 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runStaticMisuseChecks } from "../static-misuse-check.mts";
 
 const tempRepos: string[] = [];
+const staticMisuseScriptPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "static-misuse-check.mts",
+);
 
 describe("static-misuse-check.mts", () => {
   afterEach(() => {
@@ -440,6 +447,347 @@ describe("static-misuse-check.mts", () => {
       }),
     ]);
   });
+
+  it("flags empty catch blocks in production package source", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      [
+        "export function swallowRuntimeFailure(risky: () => void): void {",
+        "  try {",
+        "    risky();",
+        "  } catch {}",
+        "",
+        "  try {",
+        "    risky();",
+        "  } catch {",
+        "    // comments are not reviewed failure evidence",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "empty-catch-runtime-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        code: "CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY",
+        status: "fail",
+      }),
+    );
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        file: "packages/runtime-boundary/src/index.ts",
+        line: 4,
+        message:
+          "Production package source cannot use an empty catch block without reviewed failure evidence.",
+      }),
+      expect.objectContaining({
+        file: "packages/runtime-boundary/src/index.ts",
+        line: 8,
+        message:
+          "Production package source cannot use an empty catch block without reviewed failure evidence.",
+      }),
+    ]);
+  });
+
+  it("does not flag non-empty catch blocks or package test files", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      [
+        "export function recoverRuntimeFailure(risky: () => void, report: (error: unknown) => void): void {",
+        "  try {",
+        "    risky();",
+        "  } catch (error) {",
+        "    report(error);",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.spec.ts",
+      [
+        "export function swallowTestFailure(risky: () => void): void {",
+        "  try {",
+        "    risky();",
+        "  } catch {",
+        "    // test fixtures can model swallowed failures",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "empty-catch-runtime-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "pass",
+        diagnostics: [],
+      }),
+    );
+  });
+
+  it("honors reviewed empty-catch allowlist entries", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      [
+        "export function bestEffortTelemetry(record: () => void): void {",
+        "  try {",
+        "    record();",
+        "  } catch {",
+        "    // telemetry must not replace the primary runtime outcome",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "scripts/static-misuse-empty-catch-allowlist.json",
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          entries: [
+            {
+              package: "@croco/runtime-boundary",
+              file: "packages/runtime-boundary/src/index.ts",
+              line: 4,
+              excerpt: "} catch {",
+              reason:
+                "Telemetry delivery is best-effort and must not replace the primary runtime outcome.",
+              owner: "framework-error-handling",
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    const result = findResult(repo, "empty-catch-runtime-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "pass",
+        diagnostics: [],
+      }),
+    );
+  });
+
+  it("rejects empty-catch allowlist entries without owner or expiration metadata", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      [
+        "export function bestEffortTelemetry(record: () => void): void {",
+        "  try {",
+        "    record();",
+        "  } catch {",
+        "    // telemetry must not replace the primary runtime outcome",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "scripts/static-misuse-empty-catch-allowlist.json",
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          entries: [
+            {
+              package: "@croco/runtime-boundary",
+              file: "packages/runtime-boundary/src/index.ts",
+              line: 4,
+              excerpt: "} catch {",
+              reason:
+                "Telemetry delivery is best-effort and must not replace the primary runtime outcome.",
+            },
+          ],
+        },
+        null,
+        2,
+      ),
+    );
+
+    const result = findResult(repo, "empty-catch-runtime-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "fail",
+      }),
+    );
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        file: "scripts/static-misuse-empty-catch-allowlist.json",
+        message: expect.stringContaining("owner or expiresOn must be provided"),
+      }),
+      expect.objectContaining({
+        file: "packages/runtime-boundary/src/index.ts",
+        line: 4,
+      }),
+    ]);
+  });
+
+  it("reports rule-neutral recovery for malformed empty-catch allowlists", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      "export function bestEffortTelemetry(record: () => void): void {\n  try {\n    record();\n  } catch {}\n}\n",
+    );
+    writeFile(repo, "scripts/static-misuse-empty-catch-allowlist.json", "{ invalid json");
+
+    const result = findResult(repo, "empty-catch-runtime-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "fail",
+      }),
+    );
+    expect(result?.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "Fix the allowlist JSON before relying on reviewed static misuse exceptions.",
+          file: "scripts/static-misuse-empty-catch-allowlist.json",
+          message: expect.stringContaining("Static misuse allowlist is not valid JSON"),
+        }),
+      ]),
+    );
+  });
+
+  it("does not allow inline comments to suppress empty-catch diagnostics", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      [
+        "export function swallowRuntimeFailure(risky: () => void): void {",
+        "  try {",
+        "    risky();",
+        "  } catch { // croco-static-misuse-ignore-line CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY -- must use structured baseline",
+        "    // comments are not reviewed failure evidence",
+        "  }",
+        "",
+        "  try {",
+        "    risky();",
+        "    // croco-static-misuse-ignore-next-line CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY -- must use structured baseline",
+        "  } catch {",
+        "    // comments are not reviewed failure evidence",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "empty-catch-runtime-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "fail",
+      }),
+    );
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        file: "packages/runtime-boundary/src/index.ts",
+        line: 4,
+      }),
+      expect.objectContaining({
+        file: "packages/runtime-boundary/src/index.ts",
+        line: 11,
+      }),
+    ]);
+  });
+
+  it("reports structured baseline guidance for empty-catch CLI failures", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      [
+        "export function swallowRuntimeFailure(risky: () => void): void {",
+        "  try {",
+        "    risky();",
+        "  } catch {",
+        "    // comments are not reviewed failure evidence",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = runStaticMisuseCli(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(
+      "reviewed baseline: scripts/static-misuse-empty-catch-allowlist.json",
+    );
+    expect(result.output).not.toContain(
+      "escape hatch: // croco-static-misuse-ignore-next-line CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY",
+    );
+  });
+
+  it("keeps inline escape hatch guidance for line-oriented CLI failures", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/repository-core/src/index.ts",
+      'import { drizzle } from "drizzle-orm/node-postgres";\nexport const value = drizzle;\n',
+    );
+
+    const result = runStaticMisuseCli(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.output).toContain(
+      "escape hatch: // croco-static-misuse-ignore-next-line CROCO_STATIC_REPOSITORY_CORE_IMPLEMENTATION_BOUNDARY",
+    );
+  });
 });
 
 function createTempRepo(): string {
@@ -458,4 +806,22 @@ function writeFile(repo: string, relativePath: string, content: string): void {
   const filePath = join(repo, relativePath);
   mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(filePath, content);
+}
+
+function runStaticMisuseCli(repo: string): {
+  readonly status: number | null;
+  readonly output: string;
+} {
+  const result = spawnSync(
+    process.execPath,
+    ["--experimental-strip-types", staticMisuseScriptPath, "--root", repo],
+    {
+      encoding: "utf8",
+    },
+  );
+
+  return {
+    status: result.status,
+    output: `${result.stdout}${result.stderr}`,
+  };
 }

@@ -3,6 +3,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import ts from "typescript";
 
 export type StaticMisuseDiagnostic = {
   readonly code: string;
@@ -36,14 +37,27 @@ type StaticMisuseRule = {
   readonly limitation: string;
   readonly recovery: string;
   readonly detectors: readonly LineDetector[];
+  readonly syntaxDetectors?: readonly SyntaxDetector[];
   readonly includeFile?: (relativeFile: string) => boolean;
   readonly allowlistPath?: string;
+  readonly allowInlineIgnore?: boolean;
 };
 
 type LineDetector = {
   readonly match: (line: string) => RegExpMatchArray | null;
   readonly message: string;
   readonly action: string;
+};
+
+type SyntaxDetectorContext = {
+  readonly rule: StaticMisuseRule;
+  readonly relativeFile: string;
+  readonly lines: readonly string[];
+  readonly sourceFile: ts.SourceFile;
+};
+
+type SyntaxDetector = {
+  readonly detect: (context: SyntaxDetectorContext) => readonly StaticMisuseDiagnostic[];
 };
 
 type StaticMisuseAllowlistEntry = {
@@ -60,6 +74,10 @@ type LoadedStaticMisuseAllowlist = {
   readonly entries: readonly StaticMisuseAllowlistEntry[];
   readonly diagnostics: readonly StaticMisuseDiagnostic[];
 };
+
+type StaticMisuseAllowlistEntryValidation =
+  | { readonly ok: true; readonly entry: StaticMisuseAllowlistEntry }
+  | { readonly ok: false; readonly reason: string };
 
 type CheckOptions = {
   readonly rootDir: string;
@@ -167,10 +185,33 @@ const rawErrorRuntimeBoundaryRule: StaticMisuseRule = {
   ],
 };
 
+const emptyCatchRuntimeBoundaryRule: StaticMisuseRule = {
+  id: "empty-catch-runtime-boundary",
+  code: "CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY",
+  title: "Production package runtime catches must preserve reviewed failure evidence",
+  targetDir: "packages",
+  description:
+    "Croco runtime package source must not silently swallow failures in empty catch blocks. Intentional best-effort recovery needs a reviewed baseline entry with owner or expiration metadata.",
+  limitation:
+    "This syntax-aware checker is scoped to production packages/*/src source files. It flags catch clauses whose block has no executable statements, including comments-only catch blocks.",
+  recovery:
+    "Handle the failure explicitly with Problem, diagnostic, telemetry, logging, or recovery behavior. If the catch is intentionally best-effort, add it to scripts/static-misuse-empty-catch-allowlist.json with package, file, reason, and owner or expiration.",
+  detectors: [],
+  syntaxDetectors: [
+    {
+      detect: detectEmptyCatchClauses,
+    },
+  ],
+  includeFile: isProductionPackageSourceFile,
+  allowlistPath: "scripts/static-misuse-empty-catch-allowlist.json",
+  allowInlineIgnore: false,
+};
+
 const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
   repositoryBoundaryRule,
   restGeneratedContractRule,
   rawErrorRuntimeBoundaryRule,
+  emptyCatchRuntimeBoundaryRule,
 ];
 
 function matchImportSpecifier(line: string, specifierPattern: RegExp): RegExpMatchArray | null {
@@ -183,6 +224,66 @@ function matchImportSpecifier(line: string, specifierPattern: RegExp): RegExpMat
 
 function matchSchemaLessNamedParamDecorator(line: string): RegExpMatchArray | null {
   return line.match(/@(Param|Query|Header)\s*\(\s*(['"`])[^'"`]+\2\s*\)/);
+}
+
+function detectEmptyCatchClauses({
+  lines,
+  relativeFile,
+  rule,
+  sourceFile,
+}: SyntaxDetectorContext): readonly StaticMisuseDiagnostic[] {
+  const diagnostics: StaticMisuseDiagnostic[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isCatchClause(node) && isCatchBlockEmpty(node.block)) {
+      const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+      const sourceLine = lines[start.line] ?? "";
+      const catchColumn = sourceLine.indexOf("catch", start.character);
+
+      diagnostics.push({
+        code: rule.code,
+        ruleId: rule.id,
+        file: relativeFile,
+        line: start.line + 1,
+        column: (catchColumn === -1 ? start.character : catchColumn) + 1,
+        message:
+          "Production package source cannot use an empty catch block without reviewed failure evidence.",
+        excerpt: sourceLine.trim(),
+        action:
+          "Handle the failure explicitly, or record a reviewed empty-catch allowlist entry with package, file, reason, and owner or expiration.",
+      });
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return diagnostics;
+}
+
+function isCatchBlockEmpty(block: ts.Block): boolean {
+  return block.statements.every((statement) => ts.isEmptyStatement(statement));
+}
+
+function getScriptKind(relativeFile: string): ts.ScriptKind {
+  if (relativeFile.endsWith(".tsx")) {
+    return ts.ScriptKind.TSX;
+  }
+
+  if (relativeFile.endsWith(".jsx")) {
+    return ts.ScriptKind.JSX;
+  }
+
+  if (
+    relativeFile.endsWith(".js") ||
+    relativeFile.endsWith(".cjs") ||
+    relativeFile.endsWith(".mjs")
+  ) {
+    return ts.ScriptKind.JS;
+  }
+
+  return ts.ScriptKind.TS;
 }
 
 function isProductionPackageSourceFile(relativeFile: string): boolean {
@@ -388,7 +489,7 @@ function loadAllowlist(rootDir: string, rule: StaticMisuseRule): LoadedStaticMis
           rule,
           allowlistPath,
           `Static misuse allowlist is not valid JSON: ${message}`,
-          "Fix the allowlist JSON before relying on reviewed raw-error exceptions.",
+          "Fix the allowlist JSON before relying on reviewed static misuse exceptions.",
         ),
       ],
     };
@@ -414,19 +515,19 @@ function loadAllowlist(rootDir: string, rule: StaticMisuseRule): LoadedStaticMis
   parsed.entries.forEach((entry, index) => {
     const validation = validateAllowlistEntry(rootDir, entry);
 
-    if (!validation.ok) {
-      diagnostics.push(
-        createAllowlistDiagnostic(
-          rule,
-          allowlistPath,
-          `Static misuse allowlist entry ${index} is invalid: ${validation.reason}`,
-          "Each allowlist entry must name package, file, line, excerpt, reason, and owner or expiresOn, and it must match the current source line.",
-        ),
-      );
+    if (isValidAllowlistEntry(validation)) {
+      entries.push(validation.entry);
       return;
     }
 
-    entries.push(validation.entry);
+    diagnostics.push(
+      createAllowlistDiagnostic(
+        rule,
+        allowlistPath,
+        `Static misuse allowlist entry ${index} is invalid: ${validation.reason}`,
+        "Each allowlist entry must name package, file, line, excerpt, reason, and owner or expiresOn, and it must match the current source line.",
+      ),
+    );
   });
 
   return { entries, diagnostics };
@@ -435,9 +536,7 @@ function loadAllowlist(rootDir: string, rule: StaticMisuseRule): LoadedStaticMis
 function validateAllowlistEntry(
   rootDir: string,
   entry: unknown,
-):
-  | { readonly ok: true; readonly entry: StaticMisuseAllowlistEntry }
-  | { readonly ok: false; readonly reason: string } {
+): StaticMisuseAllowlistEntryValidation {
   if (!isRecord(entry)) {
     return { ok: false, reason: "entry must be an object" };
   }
@@ -513,6 +612,12 @@ function validateAllowlistEntry(
   };
 }
 
+function isValidAllowlistEntry(
+  validation: StaticMisuseAllowlistEntryValidation,
+): validation is { readonly ok: true; readonly entry: StaticMisuseAllowlistEntry } {
+  return validation.ok;
+}
+
 function isDiagnosticAllowlisted(
   rootDir: string,
   diagnostic: StaticMisuseDiagnostic,
@@ -551,13 +656,14 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
     const source = readFileSync(filePath, "utf-8");
     const lines = source.split(/\r?\n/);
     const relativeFile = toPosixPath(relative(rootDir, filePath));
+    const allowInlineIgnore = rule.allowInlineIgnore ?? true;
 
     if (rule.includeFile && !rule.includeFile(relativeFile)) {
       return [];
     }
 
-    return lines.flatMap((line, lineIndex) => {
-      if (isLineIgnored(lines, lineIndex, rule.code)) {
+    const lineDiagnostics = lines.flatMap((line, lineIndex) => {
+      if (allowInlineIgnore && isLineIgnored(lines, lineIndex, rule.code)) {
         return [];
       }
       const analyzableLine = stripLineComment(line);
@@ -591,6 +697,28 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
 
       return [];
     });
+
+    const syntaxDiagnostics =
+      rule.syntaxDetectors?.flatMap((detector) => {
+        const sourceFile = ts.createSourceFile(
+          relativeFile,
+          source,
+          ts.ScriptTarget.Latest,
+          true,
+          getScriptKind(relativeFile),
+        );
+
+        return detector.detect({
+          lines,
+          relativeFile,
+          rule,
+          sourceFile,
+        });
+      }) ?? [];
+
+    return [...lineDiagnostics, ...syntaxDiagnostics].filter(
+      (diagnostic) => !isDiagnosticAllowlisted(rootDir, diagnostic, allowlist.entries),
+    );
   });
   const allDiagnostics = [...allowlist.diagnostics, ...diagnostics];
 
@@ -637,6 +765,8 @@ function parseArgs(args: readonly string[]): CheckOptions {
 
 function printTextReport(results: readonly StaticMisuseRuleResult[]): void {
   for (const result of results) {
+    const rule = STATIC_MISUSE_RULES.find((candidate) => candidate.code === result.code);
+
     console.log(`static-misuse: ${result.code} ${result.status}`);
 
     if (result.status === "missing-target") {
@@ -655,9 +785,13 @@ function printTextReport(results: readonly StaticMisuseRuleResult[]): void {
 
     if (result.diagnostics.length > 0) {
       console.error(`  limitation: ${result.limitation}`);
-      console.error(
-        `  escape hatch: // ${ignoreNextLinePrefix} ${result.code} -- explain why this direct reference is intentional`,
-      );
+      if (rule && rule.allowInlineIgnore === false && rule.allowlistPath) {
+        console.error(`  reviewed baseline: ${rule.allowlistPath}`);
+      } else {
+        console.error(
+          `  escape hatch: // ${ignoreNextLinePrefix} ${result.code} -- explain why this direct reference is intentional`,
+        );
+      }
     }
   }
 }

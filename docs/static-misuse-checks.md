@@ -5,6 +5,8 @@ and format pass. Current rules:
 
 - `CROCO_STATIC_REPOSITORY_CORE_IMPLEMENTATION_BOUNDARY`
 - `CROCO_STATIC_REST_GENERATED_CONTRACT_SCHEMA_BOUNDARY`
+- `CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY`
+- `CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY`
 
 ## Repository Boundary Rule
 
@@ -70,3 +72,40 @@ create(
 Compatibility-mode application code can still use loose decorators outside generated templates. Those
 paths remain covered by ContractGraph, RPC codegen, and OpenAPI diagnostics when generated contracts
 are emitted.
+
+## Runtime Failure Evidence Rules
+
+Production package source under `packages/*/src` is checked for runtime failure boundaries that hide
+failure evidence:
+
+- `CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY` flags raw built-in `Error` throws. Runtime package
+  failures should use Croco `Problem` subclasses or diagnostic-coded package errors.
+- `CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY` flags empty `catch` blocks, including catches whose
+  body only contains comments. Runtime package catches should either handle the failure explicitly or
+  preserve a reviewed reason for intentionally best-effort recovery.
+
+Reviewed exceptions use structured JSON baselines instead of ad hoc inline comments:
+
+- `scripts/static-misuse-raw-error-allowlist.json`
+- `scripts/static-misuse-empty-catch-allowlist.json`
+
+Each baseline entry must include the package name, source file, line, excerpt, reason, and either
+`owner` or `expiresOn`. The checker validates that the package matches the source package and that
+the excerpt still matches the current line, so stale exceptions fail the gate.
+
+Example empty-catch entry:
+
+```json
+{
+  "package": "@croco/transports-http",
+  "file": "packages/transports-http/src/libs/PipelineRunner.ts",
+  "line": 213,
+  "excerpt": "} catch {",
+  "reason": "Exception filter failure intentionally falls through to the next filter or default error handler.",
+  "owner": "framework-error-handling"
+}
+```
+
+Inline `croco-static-misuse-ignore-line` and `croco-static-misuse-ignore-next-line` comments remain
+available for line-oriented false positives, but they do not suppress the empty-catch rule. Add a
+structured baseline entry or make the catch handle the failure directly.
