@@ -23,7 +23,7 @@ depend on unversioned documentation paths:
 - Responses include usage fields for input, output, and total tokens:
   https://web.archive.org/web/20260618000000/https://developers.openai.com/api/reference/resources/responses/methods/create
 - Streaming uses `stream=true` over server-sent events:
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/guides/streaming-responses
+  https://web.archive.org/web/20260618090022/https://developers.openai.com/api/docs/guides/streaming-responses
 - Structured outputs use JSON schema response formats:
   https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/guides/structured-outputs
 - Function tools are supported through Responses API `tools`:
