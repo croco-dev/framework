@@ -152,15 +152,19 @@ const defaultDiGraphManifestPath = ".croco/build/di-graph.manifest.json";
 const defaultProviderProfileManifestPath = "croco-saas-profile.manifest.json";
 const defaultPackageCatalogPath = "docs/package-catalog.json";
 const defaultCoreCoverageWarningCheckPath = "scripts/core-coverage-warning-check.mts";
+const defaultVitestConfigPath = "vitest.config.ts";
 const defaultBundleSizeBaselinePath = "ci-reports/bundle-size/baseline.json";
+const defaultBenchmarkResultPath = "benchmark-result.json";
 const defaultBenchmarkVarianceEvidencePath = "ci-reports/benchmark/latest-five-green-runs.md";
 const benchmarkVarianceEvidenceMarker = "<!-- croco-benchmark-variance-evidence:v1 -->";
 const benchmarkVarianceEvidenceRunCount = 5;
 const benchmarkVarianceSpreadTolerance = 0.15;
+const benchmarkPromotedBaselineTolerance = 0.2;
 const benchmarkEmptyReportFailure = "No benchmark reports were collected.";
 const benchmarkMissingReportSuffix = ": benchmark report was not collected.";
 const benchmarkRunnerErrorPrefix = "benchmark runner error:";
 const benchmarkModuleFailedPrefix = "benchmark module failed:";
+const isoTimestampPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
 const defaultStaticMisuseAllowlistPath = "scripts/static-misuse-raw-error-allowlist.json";
 const coreCoverageFrameworkGroups = new Set(["Core", "Integration", "Protocol", "Transport"]);
 const coreCoverageReleaseCriticalRules = [
@@ -691,13 +695,15 @@ function coreCoverageCandidateReadiness(
   }
 
   const selectedPackages = new Set(parseCoreCoverageScriptFilters(coreCoverageScript));
+  const thresholdPackages = readCoreCoverageThresholdPackages(rootDir);
   const temporarilyExcludedPackages = readTemporaryCoreCoverageSelectionExclusions(rootDir);
   const candidates = collectCoreCoverageCandidates(catalog.value, packages);
-  const diagnostics = candidates
+  const selectionDiagnostics = candidates
     .filter(
       (candidate) =>
         !selectedPackages.has(candidate.packageName) &&
-        !temporarilyExcludedPackages.has(candidate.packageName),
+        (!temporarilyExcludedPackages.has(candidate.packageName) ||
+          candidate.signals.includes("1.0 spine package")),
     )
     .map((candidate) =>
       advisoryDiagnostic({
@@ -711,6 +717,15 @@ function coreCoverageCandidateReadiness(
           "If it is intentionally deferred, record a reason in TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS.",
       }),
     );
+  const thresholdDiagnostics =
+    thresholdPackages === null
+      ? []
+      : collectCoreCoverageConfigurationDiagnostics(
+          [...selectedPackages],
+          thresholdPackages,
+          checkId,
+        );
+  const diagnostics = [...selectionDiagnostics, ...thresholdDiagnostics];
 
   return { label: "core coverage selection", diagnostics };
 }
@@ -819,6 +834,67 @@ function readTemporaryCoreCoverageSelectionExclusions(rootDir: string): Readonly
   return new Set(uniqueStrings(exclusions));
 }
 
+function readCoreCoverageThresholdPackages(rootDir: string): string[] | null {
+  const configPath = join(rootDir, defaultVitestConfigPath);
+  if (!existsSync(configPath)) {
+    return null;
+  }
+
+  return parseStringArrayExport(readFileSync(configPath, "utf-8"), "CORE_COVERAGE_PACKAGES");
+}
+
+function parseStringArrayExport(source: string, exportName: string): string[] | null {
+  const declaration = source.match(
+    new RegExp(`export\\s+const\\s+${escapeRegExp(exportName)}\\s*=\\s*\\[([\\s\\S]*?)\\];`),
+  );
+  const declarationBody = declaration?.[1];
+  if (!declarationBody) {
+    return null;
+  }
+
+  return uniqueStrings(
+    [...declarationBody.matchAll(/["']([^"']+)["']/g)].map(([, packageName]) => packageName),
+  );
+}
+
+function collectCoreCoverageConfigurationDiagnostics(
+  coreCoveragePackages: readonly string[],
+  thresholdPackages: readonly string[],
+  checkId: string,
+): DoctorDiagnostic[] {
+  const coreCoverageSet = new Set(coreCoveragePackages);
+  const thresholdSet = new Set(thresholdPackages);
+  const missingThresholdPackages = coreCoveragePackages.filter(
+    (packageName) => !thresholdSet.has(packageName),
+  );
+  const missingFilterPackages = thresholdPackages.filter(
+    (packageName) => !coreCoverageSet.has(packageName),
+  );
+
+  return [
+    ...missingThresholdPackages.map((packageName) =>
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+        checkId,
+        cause: `${packageName} is selected by test:coverage:core but is missing from vitest CORE_COVERAGE_PACKAGES.`,
+        location: { file: defaultVitestConfigPath, packageName },
+        action:
+          "Add the package to CORE_COVERAGE_PACKAGES in vitest.config.ts or remove the stale test:coverage:core filter, then rerun pnpm test:coverage:core:warning.",
+      }),
+    ),
+    ...missingFilterPackages.map((packageName) =>
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+        checkId,
+        cause: `${packageName} is listed in vitest CORE_COVERAGE_PACKAGES but is missing from test:coverage:core filters.`,
+        location: { file: "package.json", packageName },
+        action:
+          "Add the package to the test:coverage:core filters or remove the stale CORE_COVERAGE_PACKAGES entry, then rerun pnpm test:coverage:core:warning.",
+      }),
+    ),
+  ];
+}
+
 function bundleSizeBaselineReadiness(
   rootDir: string,
   packages: readonly DoctorPackage[],
@@ -925,7 +1001,7 @@ function benchmarkVarianceEvidenceReadiness(
 
   const evidencePath = join(rootDir, defaultBenchmarkVarianceEvidencePath);
   const failure = existsSync(evidencePath)
-    ? validateBenchmarkVarianceEvidence(readFileSync(evidencePath, "utf-8"))
+    ? validateBenchmarkVarianceEvidence(rootDir, readFileSync(evidencePath, "utf-8"))
     : `${defaultBenchmarkVarianceEvidencePath} is missing.`;
   const diagnostics = failure
     ? [
@@ -943,7 +1019,7 @@ function benchmarkVarianceEvidenceReadiness(
   return { label: "benchmark variance evidence", diagnostics };
 }
 
-function validateBenchmarkVarianceEvidence(content: string): string | null {
+function validateBenchmarkVarianceEvidence(rootDir: string, content: string): string | null {
   const markerIndex = content.indexOf(benchmarkVarianceEvidenceMarker);
   if (markerIndex < 0) {
     return `structured evidence marker ${benchmarkVarianceEvidenceMarker} was not found`;
@@ -984,11 +1060,81 @@ function validateBenchmarkVarianceEvidence(content: string): string | null {
     return "structured evidence rows must be an array";
   }
 
-  const failures = getBenchmarkVarianceEvidenceFailures(parsed);
+  const benchmarkResult = readBenchmarkResultReports(rootDir);
+  if (benchmarkResult.kind === "invalid") {
+    return benchmarkResult.message;
+  }
+
+  const failures = getBenchmarkVarianceEvidenceFailures(parsed, benchmarkResult.reports);
   return failures.length > 0 ? failures.join("; ") : null;
 }
 
-function getBenchmarkVarianceEvidenceFailures(contract: Record<string, unknown>): string[] {
+type BenchmarkCurrentReport = {
+  readonly name: string;
+  readonly baseline: number | null;
+};
+
+function readBenchmarkResultReports(
+  rootDir: string,
+):
+  | { readonly kind: "valid"; readonly reports: readonly BenchmarkCurrentReport[] }
+  | { readonly kind: "invalid"; readonly message: string } {
+  const resultPath = join(rootDir, defaultBenchmarkResultPath);
+  if (!existsSync(resultPath)) {
+    return { kind: "invalid", message: `${defaultBenchmarkResultPath} is missing.` };
+  }
+
+  const result = readJsonObject(resultPath);
+  if (result.kind === "invalid") {
+    return {
+      kind: "invalid",
+      message: `${defaultBenchmarkResultPath} could not be parsed: ${result.message}`,
+    };
+  }
+
+  if (!Array.isArray(result.value.reports)) {
+    return {
+      kind: "invalid",
+      message: `${defaultBenchmarkResultPath} must contain a reports array.`,
+    };
+  }
+
+  const reports = result.value.reports.flatMap((entry): BenchmarkCurrentReport[] => {
+    const report = asRecord(entry);
+    const name = readOptionalString(report?.name);
+    if (!report || !name) {
+      return [];
+    }
+
+    return [
+      {
+        name,
+        baseline: isFiniteNumber(report.baseline) ? report.baseline : null,
+      },
+    ];
+  });
+
+  if (reports.length !== result.value.reports.length) {
+    return {
+      kind: "invalid",
+      message: `${defaultBenchmarkResultPath} reports must include benchmark names.`,
+    };
+  }
+
+  if (reports.length === 0) {
+    return {
+      kind: "invalid",
+      message: `${defaultBenchmarkResultPath} does not contain any benchmark reports.`,
+    };
+  }
+
+  return { kind: "valid", reports };
+}
+
+function getBenchmarkVarianceEvidenceFailures(
+  contract: Record<string, unknown>,
+  currentReports: readonly BenchmarkCurrentReport[],
+): string[] {
   const failures: string[] = [];
 
   if (contract.source !== "github-actions") {
@@ -1022,7 +1168,13 @@ function getBenchmarkVarianceEvidenceFailures(contract: Record<string, unknown>)
     artifactFailureCounts,
     failures,
   );
-  validateBenchmarkEvidenceRows(rows, orderedRunIds, failures);
+  validateBenchmarkEvidenceRows(
+    rows,
+    orderedRunIds,
+    currentReports,
+    contract.checks as Record<string, unknown>,
+    failures,
+  );
 
   return failures;
 }
@@ -1316,9 +1468,12 @@ function validateBenchmarkEvidenceChecks(
 function validateBenchmarkEvidenceRows(
   rows: readonly unknown[],
   orderedRunIds: readonly number[],
+  currentReports: readonly BenchmarkCurrentReport[],
+  checks: Record<string, unknown>,
   failures: string[],
 ): void {
   const rowNames = new Set<string>();
+  const rowsByName = new Map<string, Record<string, unknown>>();
   for (const [index, row] of rows.entries()) {
     const rowRecord = asRecord(row);
     const rowLabel = `structured evidence row ${index + 1}`;
@@ -1336,7 +1491,32 @@ function validateBenchmarkEvidenceRows(
       );
     } else {
       rowNames.add(rowName);
+      rowsByName.set(rowName, rowRecord);
     }
+  }
+
+  const expectedNames = currentReports.map((report) => report.name).sort(compareStrings);
+  const evidenceNames = [...rowsByName.keys()].sort(compareStrings);
+  if (rows.length !== currentReports.length) {
+    failures.push(
+      `structured evidence rows must contain exactly ${currentReports.length} current benchmark row(s)`,
+    );
+  }
+  if (JSON.stringify(evidenceNames) !== JSON.stringify(expectedNames)) {
+    failures.push(
+      `structured evidence row set must match ${defaultBenchmarkResultPath} (${evidenceNames.length} evidence row(s), ${expectedNames.length} result row(s))`,
+    );
+  }
+
+  let promotedBaselineFailures = 0;
+
+  for (const currentReport of currentReports) {
+    const rowRecord = rowsByName.get(currentReport.name);
+    if (!rowRecord) {
+      continue;
+    }
+
+    const rowLabel = `${currentReport.name}`;
 
     if (rowRecord.status !== "pass") {
       failures.push(`${rowLabel} status must be pass`);
@@ -1386,22 +1566,70 @@ function validateBenchmarkEvidenceRows(
         `${rowLabel}.spread ${(spread * 100).toFixed(2)}% exceeds ${(benchmarkVarianceSpreadTolerance * 100).toFixed(0)}% tolerance`,
       );
     }
+    const rowPromotedBaselineFailures =
+      currentReport.baseline === null
+        ? benchmarkVarianceEvidenceRunCount
+        : numericP75Values.filter(
+            (value) =>
+              currentReport.baseline !== null &&
+              value - currentReport.baseline >
+                currentReport.baseline * benchmarkPromotedBaselineTolerance,
+          ).length;
+    promotedBaselineFailures += rowPromotedBaselineFailures;
+    if (rowPromotedBaselineFailures > 0) {
+      failures.push(
+        `${currentReport.name}: ${rowPromotedBaselineFailures} reviewed run(s) fail the promoted baseline tolerance`,
+      );
+    }
+    if (currentReport.baseline === null || !numbersNearlyEqual(currentReport.baseline, median)) {
+      failures.push(`${currentReport.name}: committed baseline must match the reviewed median p75`);
+    }
+  }
+
+  if (checks.promotedBaselineFailures !== promotedBaselineFailures) {
+    failures.push(
+      "structured evidence checks.promotedBaselineFailures must match promoted baseline validation",
+    );
   }
 }
 
 function parseIsoTimestamp(value: unknown): number | null {
-  if (!isIsoTimestamp(value)) {
+  if (typeof value !== "string") {
     return null;
   }
 
-  const timestamp = Date.parse(value);
-  return Number.isFinite(timestamp) ? timestamp : null;
+  const match = isoTimestampPattern.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const millisecond = match[7] === undefined ? 0 : Number(match[7]);
+  const timestamp = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+  const date = new Date(timestamp);
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute ||
+    date.getUTCSeconds() !== second ||
+    date.getUTCMilliseconds() !== millisecond
+  ) {
+    return null;
+  }
+
+  return timestamp;
 }
 
 function isIsoTimestamp(value: unknown): value is string {
-  return (
-    typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
-  );
+  return parseIsoTimestamp(value) !== null;
 }
 
 function isCommitSha(value: unknown): value is string {
@@ -1409,10 +1637,20 @@ function isCommitSha(value: unknown): value is string {
 }
 
 function matchesGitHubActionsRunUrl(value: unknown, runId: number): boolean {
-  return (
-    typeof value === "string" &&
-    value === `https://github.com/croco-dev/framework/actions/runs/${runId}`
-  );
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    const expectedPath = `/croco-dev/framework/actions/runs/${runId}`;
+    return (
+      url.origin === "https://github.com" &&
+      (url.pathname === expectedPath || url.pathname.startsWith(`${expectedPath}/`))
+    );
+  } catch {
+    return false;
+  }
 }
 
 function readPositiveInteger(value: unknown): number | null {
@@ -1424,7 +1662,7 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 function numbersNearlyEqual(left: unknown, right: number): boolean {
-  return isFiniteNumber(left) && Math.abs(left - right) < 0.000_001;
+  return isFiniteNumber(left) && Math.abs(left - right) <= Math.max(1e-9, Math.abs(right) * 1e-6);
 }
 
 function securityAllowlistMetadataReadiness(
@@ -1470,13 +1708,14 @@ function securityAllowlistMetadataReadiness(
   }
 
   const diagnostics = entries.flatMap((entry, index) =>
-    validateSecurityAllowlistEntry(entry, index, checkId),
+    validateSecurityAllowlistEntry(rootDir, entry, index, checkId),
   );
 
   return { label: "security allowlist metadata", diagnostics };
 }
 
 function validateSecurityAllowlistEntry(
+  rootDir: string,
   entry: unknown,
   index: number,
   checkId: string,
@@ -1488,18 +1727,44 @@ function validateSecurityAllowlistEntry(
         (field) => !readOptionalString(entryRecord[field]),
       )
     : ["package", "file", "excerpt", "reason"];
-  const lineInvalid =
-    !entryRecord || typeof entryRecord.line !== "number" || !Number.isInteger(entryRecord.line);
+  const line = entryRecord?.line;
+  const validLine = typeof line === "number" && Number.isInteger(line) && line >= 1 ? line : null;
+  const lineInvalid = validLine === null;
   const owner = readOptionalString(entryRecord?.owner);
   const expiresOn = readOptionalString(entryRecord?.expiresOn);
   const expiresOnInvalid = Boolean(expiresOn && !/^\d{4}-\d{2}-\d{2}$/.test(expiresOn));
   const metadataMissing = !owner && !expiresOn;
   const failures = [
     ...(missingFields.length > 0 ? [`missing ${missingFields.join(", ")}`] : []),
-    ...(lineInvalid ? ["line must be an integer"] : []),
+    ...(lineInvalid ? ["line must be a positive integer"] : []),
     ...(metadataMissing ? ["owner or expiresOn metadata is required"] : []),
     ...(expiresOnInvalid ? ["expiresOn must use YYYY-MM-DD"] : []),
   ];
+
+  const packageName = readOptionalString(entryRecord?.package);
+  const file = readOptionalString(entryRecord?.file);
+  const excerpt = readOptionalString(entryRecord?.excerpt);
+  if (failures.length === 0 && packageName && file && excerpt && validLine !== null) {
+    const relativeFile = toPosixPath(file);
+    if (!isProductionPackageSourceFile(relativeFile)) {
+      failures.push("file must point at production packages/*/src source");
+    }
+
+    const sourcePackageName = readSourcePackageName(rootDir, relativeFile);
+    if (sourcePackageName !== packageName) {
+      failures.push(`package must match ${sourcePackageName ?? "the source package name"}`);
+    }
+
+    const fullPath = join(rootDir, relativeFile);
+    if (!existsSync(fullPath)) {
+      failures.push("file does not exist");
+    } else {
+      const sourceLine = readFileSync(fullPath, "utf-8").split(/\r?\n/)[validLine - 1]?.trim();
+      if (sourceLine !== excerpt) {
+        failures.push("excerpt does not match the current source line");
+      }
+    }
+  }
 
   if (failures.length === 0) {
     return [];
@@ -1512,12 +1777,47 @@ function validateSecurityAllowlistEntry(
       cause: `${defaultStaticMisuseAllowlistPath} ${entryLabel} is invalid: ${failures.join("; ")}.`,
       location: {
         file: defaultStaticMisuseAllowlistPath,
-        packageName: readOptionalString(entryRecord?.package) ?? undefined,
+        packageName: packageName ?? undefined,
       },
       action:
         "Add package, file, line, excerpt, reason, and owner or expiresOn metadata, or remove the stale allowlist entry after fixing the misuse.",
     }),
   ];
+}
+
+function isProductionPackageSourceFile(relativeFile: string): boolean {
+  const normalizedFile = toPosixPath(relativeFile);
+  const parts = normalizedFile.split("/");
+
+  return (
+    parts[0] === "packages" &&
+    parts.length >= 4 &&
+    parts[2] === "src" &&
+    !parts.includes("tests") &&
+    !normalizedFile.endsWith(".spec.js") &&
+    !normalizedFile.endsWith(".test.js") &&
+    !normalizedFile.endsWith(".spec.jsx") &&
+    !normalizedFile.endsWith(".test.jsx") &&
+    !normalizedFile.endsWith(".spec.ts") &&
+    !normalizedFile.endsWith(".test.ts") &&
+    !normalizedFile.endsWith(".spec.tsx") &&
+    !normalizedFile.endsWith(".test.tsx")
+  );
+}
+
+function readSourcePackageName(rootDir: string, relativeFile: string): string | null {
+  const parts = toPosixPath(relativeFile).split("/");
+  if (parts[0] !== "packages" || !parts[1]) {
+    return null;
+  }
+
+  const packageJsonPath = join(rootDir, "packages", parts[1], "package.json");
+  if (!existsSync(packageJsonPath)) {
+    return null;
+  }
+
+  const manifest = readJsonObject(packageJsonPath);
+  return manifest.kind === "valid" ? readPackageName(manifest.value) : null;
 }
 
 function advisoryDiagnostic(input: {
