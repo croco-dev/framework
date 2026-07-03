@@ -1046,6 +1046,7 @@ export type RpcDeclaredProblem<
   readonly status: Status;
   readonly description?: string;
   readonly type?: string;
+  readonly cookbookPath?: string;
 };
 
 export type RpcProblemDetailsFor<Problem extends RpcDeclaredProblem> =
@@ -2106,6 +2107,10 @@ function generateProblemDeclarations(route: GeneratedClientRoute): string {
 
       if (problem.type) {
         fields.push(`type: ${literalValueToTypeScript(problem.type)}`);
+      }
+
+      if (problem.cookbookPath) {
+        fields.push(`cookbookPath: ${literalValueToTypeScript(problem.cookbookPath)}`);
       }
 
       return `  { ${fields.join(", ")} }`;
