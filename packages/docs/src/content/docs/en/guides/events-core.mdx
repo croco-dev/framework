@@ -100,6 +100,7 @@ import {
   type EventHandler,
 } from "@croco/events-core";
 import { InMemoryEventBus } from "@croco/events-inmemory";
+import { Component } from "@croco/framework-context";
 
 class UserCreatedEvent extends DomainEvent {
   static readonly eventName = "user.created";
@@ -110,6 +111,7 @@ class UserCreatedEvent extends DomainEvent {
 }
 
 @RegisterEventHandler(UserCreatedEvent)
+@Component()
 class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
   async handle(event: UserCreatedEvent): Promise<void> {
     console.log(`User created: ${event.userId}`);
