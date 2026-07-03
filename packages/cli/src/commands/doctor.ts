@@ -81,6 +81,18 @@ type WorkspacePackageReadResult =
   | { readonly kind: "valid"; readonly package: DoctorPackage }
   | { readonly kind: "invalid"; readonly diagnostic: DoctorDiagnostic };
 
+type BenchmarkVarianceGateFailureCounts = {
+  runnerFailures: number;
+  moduleFailures: number;
+  emptyReports: number;
+  missingReports: number;
+  thresholdFailures: number;
+  thresholdSkips: number;
+  baselineFailures: number;
+  baselineSkips: number;
+  otherFailures: number;
+};
+
 type WorkspaceDiscoveryResult = {
   readonly packages: readonly DoctorPackage[];
   readonly patterns: readonly WorkspacePattern[];
@@ -144,6 +156,10 @@ const defaultBenchmarkVarianceEvidencePath = "ci-reports/benchmark/latest-five-g
 const benchmarkVarianceEvidenceMarker = "<!-- croco-benchmark-variance-evidence:v1 -->";
 const benchmarkVarianceEvidenceRunCount = 5;
 const benchmarkVarianceSpreadTolerance = 0.15;
+const benchmarkEmptyReportFailure = "No benchmark reports were collected.";
+const benchmarkMissingReportSuffix = ": benchmark report was not collected.";
+const benchmarkRunnerErrorPrefix = "benchmark runner error:";
+const benchmarkModuleFailedPrefix = "benchmark module failed:";
 const defaultStaticMisuseAllowlistPath = "scripts/static-misuse-raw-error-allowlist.json";
 const coreCoverageFrameworkGroups = new Set(["Core", "Integration", "Protocol", "Transport"]);
 const coreCoverageReleaseCriticalRules = [
@@ -935,22 +951,87 @@ function getBenchmarkVarianceEvidenceFailures(contract: Record<string, unknown>)
     failures.push("structured evidence rows must include at least one benchmark row");
   }
 
-  const runIds = validateBenchmarkEvidenceRuns(contract.runs as unknown[], rows.length, failures);
-  validateBenchmarkEvidenceSelection(contract.selection, runIds, failures);
-  validateBenchmarkEvidenceChecks(contract.checks as Record<string, unknown>, failures);
-  validateBenchmarkEvidenceRows(rows, runIds, failures);
+  const { orderedRunIds, artifactFailureCounts } = validateBenchmarkEvidenceRuns(
+    contract.runs as unknown[],
+    rows.length,
+    failures,
+  );
+  validateBenchmarkEvidenceSelection(contract.selection, orderedRunIds, failures);
+  validateBenchmarkEvidenceChecks(
+    contract.checks as Record<string, unknown>,
+    artifactFailureCounts,
+    failures,
+  );
+  validateBenchmarkEvidenceRows(rows, orderedRunIds, failures);
 
   return failures;
+}
+
+function createBenchmarkGateFailureCounts(): BenchmarkVarianceGateFailureCounts {
+  return {
+    runnerFailures: 0,
+    moduleFailures: 0,
+    emptyReports: 0,
+    missingReports: 0,
+    thresholdFailures: 0,
+    thresholdSkips: 0,
+    baselineFailures: 0,
+    baselineSkips: 0,
+    otherFailures: 0,
+  };
+}
+
+function addBenchmarkGateFailureCounts(
+  target: Record<keyof BenchmarkVarianceGateFailureCounts, number>,
+  source: BenchmarkVarianceGateFailureCounts,
+): void {
+  for (const key of Object.keys(target) as Array<keyof BenchmarkVarianceGateFailureCounts>) {
+    target[key] += source[key];
+  }
+}
+
+function countBenchmarkGateFailures(
+  gateFailures: readonly string[],
+): BenchmarkVarianceGateFailureCounts {
+  const counts = createBenchmarkGateFailureCounts();
+
+  for (const failure of gateFailures) {
+    if (failure.startsWith(benchmarkRunnerErrorPrefix)) {
+      counts.runnerFailures += 1;
+    } else if (failure.startsWith(benchmarkModuleFailedPrefix)) {
+      counts.moduleFailures += 1;
+    } else if (failure === benchmarkEmptyReportFailure) {
+      counts.emptyReports += 1;
+    } else if (failure.endsWith(benchmarkMissingReportSuffix)) {
+      counts.missingReports += 1;
+    } else if (failure.includes("threshold skipped")) {
+      counts.thresholdSkips += 1;
+    } else if (failure.includes("baseline skipped")) {
+      counts.baselineSkips += 1;
+    } else if (failure.includes("exceeds threshold")) {
+      counts.thresholdFailures += 1;
+    } else if (failure.includes("exceeds baseline")) {
+      counts.baselineFailures += 1;
+    } else {
+      counts.otherFailures += 1;
+    }
+  }
+
+  return counts;
 }
 
 function validateBenchmarkEvidenceRuns(
   runs: readonly unknown[],
   rowCount: number,
   failures: string[],
-): number[] {
+): {
+  readonly orderedRunIds: number[];
+  readonly artifactFailureCounts: BenchmarkVarianceGateFailureCounts;
+} {
   const orderedRunIds: number[] = [];
   const runIds = new Set<number>();
   const createdAtValues: number[] = [];
+  const artifactFailureCounts = createBenchmarkGateFailureCounts();
 
   if (runs.length !== benchmarkVarianceEvidenceRunCount) {
     failures.push(
@@ -1004,7 +1085,15 @@ function validateBenchmarkEvidenceRuns(
       failures.push(`structured evidence run ${runId} workflowConclusion must be success`);
     }
 
-    validateBenchmarkEvidenceRunArtifact(runRecord.artifact, runId, rowCount, failures);
+    const runFailureCounts = validateBenchmarkEvidenceRunArtifact(
+      runRecord.artifact,
+      runId,
+      rowCount,
+      failures,
+    );
+    if (runFailureCounts) {
+      addBenchmarkGateFailureCounts(artifactFailureCounts, runFailureCounts);
+    }
   }
 
   if (
@@ -1014,7 +1103,7 @@ function validateBenchmarkEvidenceRuns(
     failures.push("structured evidence runs must be ordered newest-to-oldest by createdAt");
   }
 
-  return orderedRunIds;
+  return { orderedRunIds, artifactFailureCounts };
 }
 
 function validateBenchmarkEvidenceRunArtifact(
@@ -1022,15 +1111,15 @@ function validateBenchmarkEvidenceRunArtifact(
   runId: number,
   rowCount: number,
   failures: string[],
-): void {
+): BenchmarkVarianceGateFailureCounts | null {
   const artifactRecord = asRecord(artifact);
   if (!artifactRecord) {
     failures.push(`structured evidence run ${runId} must include benchmark artifact evidence`);
-    return;
+    return null;
   }
 
-  if (artifactRecord.allPassed !== true) {
-    failures.push(`structured evidence run ${runId} artifact.allPassed must be true`);
+  if (typeof artifactRecord.allPassed !== "boolean") {
+    failures.push(`structured evidence run ${runId} artifact.allPassed must be boolean`);
   }
   if (!isFiniteNumber(artifactRecord.reportCount) || artifactRecord.reportCount !== rowCount) {
     failures.push(
@@ -1042,9 +1131,27 @@ function validateBenchmarkEvidenceRunArtifact(
     artifactRecord.gateFailures.some((failure) => typeof failure !== "string")
   ) {
     failures.push(`structured evidence run ${runId} artifact.gateFailures must be a string array`);
-  } else if (artifactRecord.gateFailures.length > 0) {
-    failures.push(`structured evidence run ${runId} artifact.gateFailures must be empty`);
+    return null;
   }
+
+  const gateFailures = artifactRecord.gateFailures;
+  const runFailureCounts = countBenchmarkGateFailures(gateFailures);
+
+  if (artifactRecord.allPassed === true && gateFailures.length > 0) {
+    failures.push(
+      `structured evidence run ${runId} artifact cannot be allPassed=true with gate failures`,
+    );
+  }
+  if (artifactRecord.allPassed === false && gateFailures.length === 0) {
+    failures.push(
+      `structured evidence run ${runId} artifact cannot be allPassed=false without gate failures`,
+    );
+  }
+  if (runFailureCounts.otherFailures > 0) {
+    failures.push(`structured evidence run ${runId} artifact contains unclassified gate failures`);
+  }
+
+  return runFailureCounts;
 }
 
 function validateBenchmarkEvidenceSelection(
@@ -1099,10 +1206,28 @@ function validateBenchmarkEvidenceSelection(
 
 function validateBenchmarkEvidenceChecks(
   checks: Record<string, unknown>,
+  artifactFailureCounts: BenchmarkVarianceGateFailureCounts,
   failures: string[],
 ): void {
   if (checks.sameRowSet !== true) {
     failures.push("structured evidence checks.sameRowSet must be true");
+  }
+
+  const expectedArtifactFailureCounts = {
+    runnerFailures: artifactFailureCounts.runnerFailures,
+    moduleFailures: artifactFailureCounts.moduleFailures,
+    emptyReports: artifactFailureCounts.emptyReports,
+    missingReports: artifactFailureCounts.missingReports,
+    thresholdFailures: artifactFailureCounts.thresholdFailures,
+    thresholdSkips: artifactFailureCounts.thresholdSkips,
+    baselineSkips: artifactFailureCounts.baselineSkips,
+    prePromotionBaselineFailures: artifactFailureCounts.baselineFailures,
+  };
+
+  for (const [key, expectedCount] of Object.entries(expectedArtifactFailureCounts)) {
+    if (checks[key] !== expectedCount) {
+      failures.push(`structured evidence checks.${key} must match reviewed artifact gate failures`);
+    }
   }
 
   for (const key of [

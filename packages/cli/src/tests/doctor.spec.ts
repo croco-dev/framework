@@ -358,6 +358,47 @@ describe("doctor", () => {
     expect(getDoctorExitCode(report)).toBe(0);
   });
 
+  it("accepts preserved benchmark pre-promotion baseline failures as advisory evidence", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
+      schemaVersion: 1,
+      packages: [],
+    });
+    writeBenchmarkVarianceEvidence(repo, { prePromotionBaselineFailuresPerRun: 1 });
+    writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
+      schemaVersion: 1,
+      entries: [
+        {
+          package: "@croco/framework-context",
+          file: "packages/framework-context/src/index.ts",
+          line: 1,
+          excerpt: "throw new Error('internal invariant');",
+          reason: "Reviewed internal invariant while migrating static misuse diagnostics.",
+          owner: "framework-error-handling",
+        },
+      ],
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const check = report.checks.find((candidate) => candidate.id === "advisory-gate-readiness");
+
+    expect(report.summary).toBe("healthy");
+    expect(check).toMatchObject({ status: "pass", diagnostics: [] });
+    expect(report.diagnostics).toEqual([]);
+    expect(getDoctorExitCode(report)).toBe(0);
+  });
+
   it("reports advisory release-hardening readiness warnings without failing the doctor summary", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -847,8 +888,21 @@ function writePackageCatalog(repo: string, packages: readonly string[]): void {
   });
 }
 
-function writeBenchmarkVarianceEvidence(repo: string): void {
+type BenchmarkVarianceEvidenceOptions = {
+  readonly prePromotionBaselineFailuresPerRun?: number;
+};
+
+function writeBenchmarkVarianceEvidence(
+  repo: string,
+  options: BenchmarkVarianceEvidenceOptions = {},
+): void {
   const runIds = [1, 2, 3, 4, 5];
+  const prePromotionBaselineFailuresPerRun = options.prePromotionBaselineFailuresPerRun ?? 0;
+  const gateFailures = Array.from(
+    { length: prePromotionBaselineFailuresPerRun },
+    (_, index) =>
+      `Example benchmark ${index + 1}: p75 10.0ms exceeds baseline 1.0ms by more than 20%`,
+  );
   const p75ByRun = {
     "1": 10,
     "2": 10.2,
@@ -888,9 +942,9 @@ function writeBenchmarkVarianceEvidence(repo: string): void {
           workflowStatus: "completed",
           workflowConclusion: "success",
           artifact: {
-            allPassed: true,
+            allPassed: gateFailures.length === 0,
             reportCount: 1,
-            gateFailures: [],
+            gateFailures,
           },
         })),
         checks: {
@@ -902,7 +956,7 @@ function writeBenchmarkVarianceEvidence(repo: string): void {
           thresholdFailures: 0,
           thresholdSkips: 0,
           baselineSkips: 0,
-          prePromotionBaselineFailures: 0,
+          prePromotionBaselineFailures: prePromotionBaselineFailuresPerRun * runIds.length,
           promotedBaselineFailures: 0,
         },
         rows: [
