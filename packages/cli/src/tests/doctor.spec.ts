@@ -306,6 +306,7 @@ describe("doctor", () => {
       "spine-package-state",
       "contract-graph-readiness",
       "project-manifest-bundle",
+      "advisory-gate-readiness",
       "problem-registry-readiness",
       "runtime-capability-manifest",
       "http-security-middleware-contract",
@@ -314,6 +315,150 @@ describe("doctor", () => {
       "repository-core-boundary",
       "lambda-telemetry-flush",
     ]);
+  });
+
+  it("passes advisory release-hardening readiness when local evidence is present", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
+      schemaVersion: 1,
+      packages: [],
+    });
+    writeBenchmarkVarianceEvidence(repo);
+    writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
+      schemaVersion: 1,
+      entries: [
+        {
+          package: "@croco/framework-context",
+          file: "packages/framework-context/src/index.ts",
+          line: 1,
+          excerpt: "throw new Error('internal invariant');",
+          reason: "Reviewed internal invariant while migrating static misuse diagnostics.",
+          owner: "framework-error-handling",
+        },
+      ],
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const check = report.checks.find((candidate) => candidate.id === "advisory-gate-readiness");
+
+    expect(report.summary).toBe("healthy");
+    expect(check).toMatchObject({ status: "pass", diagnostics: [] });
+    expect(report.diagnostics).toEqual([]);
+    expect(getDoctorExitCode(report)).toBe(0);
+  });
+
+  it("reports advisory release-hardening readiness warnings without failing the doctor summary", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/problems-core exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
+      schemaVersion: 1,
+      entries: [
+        {
+          package: "@croco/framework-context",
+          file: "packages/framework-context/src/index.ts",
+          line: 1,
+          excerpt: "throw new Error('internal invariant');",
+          reason: "Reviewed internal invariant while migrating static misuse diagnostics.",
+        },
+      ],
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const check = report.checks.find((candidate) => candidate.id === "advisory-gate-readiness");
+    const codes = report.diagnostics.map((diagnostic) => diagnostic.code);
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(check).toMatchObject({ status: "fail" });
+    expect(report.diagnostics.map((diagnostic) => diagnostic.severity)).toEqual([
+      "warning",
+      "warning",
+      "warning",
+      "warning",
+    ]);
+    expect(codes).toEqual([
+      CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+      CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+      CLI_DIAGNOSTIC_CODES.doctorBenchmarkVarianceEvidenceMissing,
+      CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+    ]);
+    expect(report.diagnostics[0].action).toContain("pnpm test:coverage:core");
+    expect(report.diagnostics[1].action).toContain("pnpm package-quality:report");
+    expect(report.diagnostics[2].action).toContain("pnpm bench:readiness");
+    expect(report.diagnostics[3].action).toContain("owner or expiresOn");
+  });
+
+  it("rejects incomplete benchmark variance evidence as advisory readiness warning", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
+      schemaVersion: 1,
+      packages: [],
+    });
+    writeFile(
+      repo,
+      "ci-reports/benchmark/latest-five-green-runs.md",
+      [
+        "# Benchmark variance evidence",
+        "",
+        "<!-- croco-benchmark-variance-evidence:v1 -->",
+        "```json",
+        JSON.stringify({
+          version: 1,
+          runs: [],
+          checks: {},
+          rows: [],
+        }),
+        "```",
+        "",
+      ].join("\n"),
+    );
+    writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
+      schemaVersion: 1,
+      entries: [],
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorBenchmarkVarianceEvidenceMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("exactly 5 GitHub Actions runs");
   });
 
   it("reads schema-versioned Project manifest bundle artifacts", () => {
@@ -687,6 +832,95 @@ function writeProjectManifestBundle(repo: string): void {
       },
     });
   }
+}
+
+function writePackageCatalog(repo: string, packages: readonly string[]): void {
+  writeJson(repo, "docs/package-catalog.json", {
+    schemaVersion: 1,
+    spine: { packages },
+    groups: {
+      Core: { packages },
+    },
+    maturity: {
+      production: { packages },
+    },
+  });
+}
+
+function writeBenchmarkVarianceEvidence(repo: string): void {
+  const runIds = [1, 2, 3, 4, 5];
+  const p75ByRun = {
+    "1": 10,
+    "2": 10.2,
+    "3": 9.9,
+    "4": 10.1,
+    "5": 10,
+  };
+
+  writeFile(
+    repo,
+    "ci-reports/benchmark/latest-five-green-runs.md",
+    [
+      "# Benchmark variance evidence",
+      "",
+      "<!-- croco-benchmark-variance-evidence:v1 -->",
+      "```json",
+      JSON.stringify({
+        version: 1,
+        source: "github-actions",
+        reviewedAt: "2026-07-01T00:00:00Z",
+        tolerance: 0.15,
+        selection: {
+          workflowName: "Performance Benchmark",
+          qualifyingBaseBranch: "trunk",
+          qualifyingWorkflowStatus: "completed",
+          qualifyingWorkflowConclusion: "success",
+          orderedBy: "createdAt-desc",
+          latestGreenTrunkRunIds: runIds,
+        },
+        runs: runIds.map((runId) => ({
+          id: runId,
+          url: `https://github.com/croco-dev/framework/actions/runs/${runId}`,
+          headSha: `${String.fromCharCode(96 + runId).repeat(40)}`,
+          headBranch: "trunk",
+          baseBranch: "trunk",
+          createdAt: `2026-06-30T0${5 - runId}:00:00Z`,
+          workflowStatus: "completed",
+          workflowConclusion: "success",
+          artifact: {
+            allPassed: true,
+            reportCount: 1,
+            gateFailures: [],
+          },
+        })),
+        checks: {
+          sameRowSet: true,
+          runnerFailures: 0,
+          moduleFailures: 0,
+          emptyReports: 0,
+          missingReports: 0,
+          thresholdFailures: 0,
+          thresholdSkips: 0,
+          baselineSkips: 0,
+          prePromotionBaselineFailures: 0,
+          promotedBaselineFailures: 0,
+        },
+        rows: [
+          {
+            name: "Example benchmark",
+            min: 9.9,
+            median: 10,
+            max: 10.2,
+            spread: 0.03,
+            status: "pass",
+            p75ByRun,
+          },
+        ],
+      }),
+      "```",
+      "",
+    ].join("\n"),
+  );
 }
 
 function writeJson(repo: string, relativePath: string, value: unknown): void {

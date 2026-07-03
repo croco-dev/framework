@@ -92,6 +92,11 @@ type SourceSlice = {
   readonly maskedSource: string;
 };
 
+type AdvisoryGateReadinessSection = {
+  readonly label: string;
+  readonly diagnostics: readonly DoctorDiagnostic[];
+};
+
 const sourceFileExtensions = [".ts", ".tsx", ".mts", ".cts", ".ts.hbs", ".tsx.hbs"];
 const packageDependencyFields = [
   "dependencies",
@@ -133,6 +138,25 @@ const defaultRuntimeCapabilityManifestPath = "croco-runtime-capability.manifest.
 const legacyRuntimePolicyManifestPath = "croco-runtime-policy.manifest.json";
 const defaultDiGraphManifestPath = ".croco/build/di-graph.manifest.json";
 const defaultProviderProfileManifestPath = "croco-saas-profile.manifest.json";
+const defaultPackageCatalogPath = "docs/package-catalog.json";
+const defaultBundleSizeBaselinePath = "ci-reports/bundle-size/baseline.json";
+const defaultBenchmarkVarianceEvidencePath = "ci-reports/benchmark/latest-five-green-runs.md";
+const benchmarkVarianceEvidenceMarker = "<!-- croco-benchmark-variance-evidence:v1 -->";
+const benchmarkVarianceEvidenceRunCount = 5;
+const benchmarkVarianceSpreadTolerance = 0.15;
+const defaultStaticMisuseAllowlistPath = "scripts/static-misuse-raw-error-allowlist.json";
+const coreCoverageFrameworkGroups = new Set(["Core", "Integration", "Protocol", "Transport"]);
+const coreCoverageReleaseCriticalRules = [
+  { signal: "framework-level contract", pattern: /^framework-/ },
+  { signal: "request/context contract", pattern: /context/ },
+  { signal: "retry/reliability contract", pattern: /^retry-/ },
+  { signal: "events contract", pattern: /^events-/ },
+  { signal: "auth contract", pattern: /^auth-/ },
+  { signal: "telemetry contract", pattern: /^telemetry-/ },
+  { signal: "transport runtime contract", pattern: /^transports-/ },
+  { signal: "health/readiness contract", pattern: /^health-/ },
+  { signal: "failure/problem contract", pattern: /^problems-/ },
+] as const;
 const projectManifestBundleFiles = [
   {
     path: PROJECT_MANIFEST_BUNDLE_ARTIFACTS.contractGraph,
@@ -203,6 +227,7 @@ export function runDoctor(options: RunDoctorOptions = {}): DoctorReport {
     spinePackageStateCheck(rootDir, workspace.packages),
     contractGraphReadinessCheck(rootDir),
     projectManifestBundleReadinessCheck(rootDir),
+    advisoryGateReadinessCheck(rootDir, workspace.packages),
     problemRegistryReadinessCheck(rootDir),
     runtimeCapabilityManifestCheck(rootDir),
     httpSecurityMiddlewareContractCheck(rootDir, workspace.packages),
@@ -579,6 +604,751 @@ function projectManifestBundleReadinessCheck(rootDir: string): DoctorCheckResult
       diagnostics.length > 0
         ? `${diagnostics.length} Project manifest bundle issue(s) found.`
         : `${projectManifestBundleFiles.length} schema-versioned manifest bundle artifact(s) are readable.`,
+  };
+}
+
+function advisoryGateReadinessCheck(
+  rootDir: string,
+  packages: readonly DoctorPackage[],
+): DoctorCheckResult {
+  const checkId = "advisory-gate-readiness";
+  const sections = [
+    coreCoverageCandidateReadiness(rootDir, packages, checkId),
+    bundleSizeBaselineReadiness(rootDir, packages, checkId),
+    benchmarkVarianceEvidenceReadiness(rootDir, checkId),
+    securityAllowlistMetadataReadiness(rootDir, checkId),
+  ].filter((section): section is AdvisoryGateReadinessSection => section !== null);
+
+  if (sections.length === 0) {
+    return {
+      id: checkId,
+      title: "Advisory release-hardening readiness",
+      status: "skipped",
+      diagnostics: [],
+      note: "No advisory release-hardening scripts or artifacts were found.",
+    };
+  }
+
+  const diagnostics = sections.flatMap((section) => section.diagnostics);
+
+  return {
+    id: checkId,
+    title: "Advisory release-hardening readiness",
+    status: diagnostics.length > 0 ? "fail" : "pass",
+    diagnostics,
+    note:
+      diagnostics.length > 0
+        ? `${diagnostics.length} advisory release-hardening readiness warning(s) found.`
+        : `${sections.map((section) => section.label).join(", ")} readiness evidence is present.`,
+  };
+}
+
+function coreCoverageCandidateReadiness(
+  rootDir: string,
+  packages: readonly DoctorPackage[],
+  checkId: string,
+): AdvisoryGateReadinessSection | null {
+  const rootScripts = readRootScripts(rootDir);
+  const coreCoverageScript = rootScripts["test:coverage:core"];
+  const catalogPath = join(rootDir, defaultPackageCatalogPath);
+
+  if (!coreCoverageScript || !existsSync(catalogPath)) {
+    return null;
+  }
+
+  const catalog = readJsonObject(catalogPath);
+  if (catalog.kind === "invalid") {
+    return {
+      label: "core coverage selection",
+      diagnostics: [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${defaultPackageCatalogPath} could not be parsed: ${catalog.message}`,
+          location: { file: defaultPackageCatalogPath },
+          action:
+            "Fix docs/package-catalog.json, rerun pnpm test:coverage:core:warning, and commit the refreshed coverage evidence.",
+        }),
+      ],
+    };
+  }
+
+  const selectedPackages = new Set(parseCoreCoverageScriptFilters(coreCoverageScript));
+  const candidates = collectCoreCoverageCandidates(catalog.value, packages);
+  const diagnostics = candidates
+    .filter((candidate) => !selectedPackages.has(candidate.packageName))
+    .map((candidate) =>
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+        checkId,
+        cause: `${candidate.packageName} has advisory core coverage signals [${candidate.signals.join(", ")}] but is not selected by test:coverage:core.`,
+        location: { file: "package.json", packageName: candidate.packageName },
+        action:
+          `Add --filter ${candidate.packageName} to test:coverage:core, run pnpm test:coverage:core, ` +
+          "update ci-reports/coverage/core-baseline.txt, then rerun pnpm test:coverage:core:warning. " +
+          "If it is intentionally deferred, record a reason in TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS.",
+      }),
+    );
+
+  return { label: "core coverage selection", diagnostics };
+}
+
+function collectCoreCoverageCandidates(
+  catalog: Record<string, unknown>,
+  packages: readonly DoctorPackage[],
+): Array<{ readonly packageName: string; readonly signals: readonly string[] }> {
+  const packageGroups = readCatalogPackageMembership(catalog.groups);
+  const packageMaturity = readCatalogPackageMembership(catalog.maturity);
+  const spinePackages = new Set(readStringArray(asRecord(catalog.spine)?.packages));
+  const workspacePackageBySlug = new Map(
+    packages.map((workspacePackage) => [
+      toPackageSlug(workspacePackage.name),
+      workspacePackage.name,
+    ]),
+  );
+  const packageSlugs = new Set([
+    ...packageGroups.keys(),
+    ...packageMaturity.keys(),
+    ...spinePackages,
+    ...workspacePackageBySlug.keys(),
+  ]);
+
+  return [...packageSlugs]
+    .flatMap((packageSlug) => {
+      const packageName = workspacePackageBySlug.get(packageSlug);
+      if (!packageName) {
+        return [];
+      }
+
+      const groupSignals = (packageGroups.get(packageSlug) ?? [])
+        .filter((groupName) => coreCoverageFrameworkGroups.has(groupName))
+        .map((groupName) => `catalog group: ${groupName}`);
+      const maturitySignals = (packageMaturity.get(packageSlug) ?? []).includes("production")
+        ? ["production-ready maturity"]
+        : [];
+      const spineSignals = spinePackages.has(packageSlug) ? ["1.0 spine package"] : [];
+      const releaseCriticalSignals = coreCoverageReleaseCriticalRules
+        .filter((rule) => rule.pattern.test(packageSlug))
+        .map((rule) => rule.signal);
+      const signals = uniqueStrings([
+        ...groupSignals,
+        ...maturitySignals,
+        ...spineSignals,
+        ...releaseCriticalSignals,
+      ]).sort(compareStrings);
+
+      return signals.length > 0 ? [{ packageName, signals }] : [];
+    })
+    .sort((left, right) => compareStrings(left.packageName, right.packageName));
+}
+
+function readCatalogPackageMembership(value: unknown): Map<string, string[]> {
+  const membership = new Map<string, string[]>();
+  if (!isRecord(value)) {
+    return membership;
+  }
+
+  for (const [label, section] of Object.entries(value)) {
+    const packageSlugs = readStringArray(asRecord(section)?.packages);
+    for (const packageSlug of packageSlugs) {
+      membership.set(packageSlug, [...(membership.get(packageSlug) ?? []), label]);
+    }
+  }
+
+  return membership;
+}
+
+function parseCoreCoverageScriptFilters(script: string): string[] {
+  const markerIndex = script.indexOf("CORE_COVERAGE=true");
+  const coverageSegment = markerIndex >= 0 ? script.slice(markerIndex) : script;
+  const filters: string[] = [];
+  const filterPattern = /--filter\s+(?:"([^"]+)"|'([^']+)'|([^\s]+))/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = filterPattern.exec(coverageSegment)) !== null) {
+    const packageName = match[1] ?? match[2] ?? match[3];
+    if (packageName) {
+      filters.push(packageName);
+    }
+  }
+
+  return uniqueStrings(filters);
+}
+
+function bundleSizeBaselineReadiness(
+  rootDir: string,
+  packages: readonly DoctorPackage[],
+  checkId: string,
+): AdvisoryGateReadinessSection | null {
+  const publicBuildPackages = packages.filter((workspacePackage) =>
+    packageHasPublicBuildScript(rootDir, workspacePackage),
+  );
+
+  if (publicBuildPackages.length === 0) {
+    return null;
+  }
+
+  const baselinePath = join(rootDir, defaultBundleSizeBaselinePath);
+  const diagnostics = !existsSync(baselinePath)
+    ? [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+          checkId,
+          cause: `${defaultBundleSizeBaselinePath} is missing for ${publicBuildPackages.length} public build package(s).`,
+          location: { file: defaultBundleSizeBaselinePath },
+          action:
+            "Run pnpm build && pnpm package-quality:report, then commit ci-reports/bundle-size/baseline.json.",
+        }),
+      ]
+    : invalidBundleBaselineDiagnostic(rootDir, checkId);
+
+  return { label: "bundle-size baseline", diagnostics };
+}
+
+function invalidBundleBaselineDiagnostic(rootDir: string, checkId: string): DoctorDiagnostic[] {
+  const baseline = readJsonObject(join(rootDir, defaultBundleSizeBaselinePath));
+  if (baseline.kind === "valid") {
+    return [];
+  }
+
+  return [
+    advisoryDiagnostic({
+      code: CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+      checkId,
+      cause: `${defaultBundleSizeBaselinePath} could not be parsed: ${baseline.message}`,
+      location: { file: defaultBundleSizeBaselinePath },
+      action: "Regenerate the bundle-size baseline with pnpm build && pnpm package-quality:report.",
+    }),
+  ];
+}
+
+function packageHasPublicBuildScript(rootDir: string, workspacePackage: DoctorPackage): boolean {
+  const manifest = readJsonObject(join(rootDir, workspacePackage.relativeDir, "package.json"));
+  if (manifest.kind === "invalid") {
+    return false;
+  }
+
+  const scripts = asRecord(manifest.value.scripts);
+  return manifest.value.private !== true && typeof scripts?.build === "string";
+}
+
+function benchmarkVarianceEvidenceReadiness(
+  rootDir: string,
+  checkId: string,
+): AdvisoryGateReadinessSection | null {
+  const rootScripts = readRootScripts(rootDir);
+  const expectsBenchmarkEvidence =
+    Boolean(rootScripts["bench:readiness"]) ||
+    Boolean(rootScripts["bench:check"]) ||
+    existsSync(join(rootDir, "benchmarks", "thresholds.json")) ||
+    existsSync(join(rootDir, "benchmarks", "baseline.json"));
+
+  if (!expectsBenchmarkEvidence) {
+    return null;
+  }
+
+  const evidencePath = join(rootDir, defaultBenchmarkVarianceEvidencePath);
+  const failure = existsSync(evidencePath)
+    ? validateBenchmarkVarianceEvidence(readFileSync(evidencePath, "utf-8"))
+    : `${defaultBenchmarkVarianceEvidencePath} is missing.`;
+  const diagnostics = failure
+    ? [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorBenchmarkVarianceEvidenceMissing,
+          checkId,
+          cause: `Benchmark variance evidence is not ready: ${failure}`,
+          location: { file: defaultBenchmarkVarianceEvidencePath },
+          action:
+            "Run pnpm bench:check and pnpm bench:readiness, then commit the structured latest-five-green-runs evidence.",
+        }),
+      ]
+    : [];
+
+  return { label: "benchmark variance evidence", diagnostics };
+}
+
+function validateBenchmarkVarianceEvidence(content: string): string | null {
+  const markerIndex = content.indexOf(benchmarkVarianceEvidenceMarker);
+  if (markerIndex < 0) {
+    return `structured evidence marker ${benchmarkVarianceEvidenceMarker} was not found`;
+  }
+
+  const evidenceBlock = content.slice(markerIndex + benchmarkVarianceEvidenceMarker.length);
+  const jsonBlock = /```json\s*([\s\S]*?)```/.exec(evidenceBlock);
+  if (!jsonBlock) {
+    return "structured evidence JSON block was not found after the evidence marker";
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonBlock[1]);
+  } catch (error) {
+    return `structured evidence JSON could not be parsed: ${
+      error instanceof Error ? error.message : String(error)
+    }`;
+  }
+
+  if (!isRecord(parsed)) {
+    return "structured evidence JSON must be an object";
+  }
+
+  if (parsed.version !== 1) {
+    return "structured evidence version must be 1";
+  }
+
+  if (!Array.isArray(parsed.runs)) {
+    return "structured evidence runs must be an array";
+  }
+
+  if (!isRecord(parsed.checks)) {
+    return "structured evidence checks must be an object";
+  }
+
+  if (!Array.isArray(parsed.rows)) {
+    return "structured evidence rows must be an array";
+  }
+
+  const failures = getBenchmarkVarianceEvidenceFailures(parsed);
+  return failures.length > 0 ? failures.join("; ") : null;
+}
+
+function getBenchmarkVarianceEvidenceFailures(contract: Record<string, unknown>): string[] {
+  const failures: string[] = [];
+
+  if (contract.source !== "github-actions") {
+    failures.push("structured evidence source must be github-actions");
+  }
+  if (!isIsoTimestamp(contract.reviewedAt)) {
+    failures.push("structured evidence reviewedAt must be an ISO timestamp");
+  }
+  if (
+    !isFiniteNumber(contract.tolerance) ||
+    !numbersNearlyEqual(contract.tolerance, benchmarkVarianceSpreadTolerance)
+  ) {
+    failures.push(
+      `structured evidence tolerance must be ${benchmarkVarianceSpreadTolerance.toFixed(2)}`,
+    );
+  }
+
+  const rows = contract.rows as unknown[];
+  if (rows.length === 0) {
+    failures.push("structured evidence rows must include at least one benchmark row");
+  }
+
+  const runIds = validateBenchmarkEvidenceRuns(contract.runs as unknown[], rows.length, failures);
+  validateBenchmarkEvidenceSelection(contract.selection, runIds, failures);
+  validateBenchmarkEvidenceChecks(contract.checks as Record<string, unknown>, failures);
+  validateBenchmarkEvidenceRows(rows, runIds, failures);
+
+  return failures;
+}
+
+function validateBenchmarkEvidenceRuns(
+  runs: readonly unknown[],
+  rowCount: number,
+  failures: string[],
+): number[] {
+  const orderedRunIds: number[] = [];
+  const runIds = new Set<number>();
+  const createdAtValues: number[] = [];
+
+  if (runs.length !== benchmarkVarianceEvidenceRunCount) {
+    failures.push(
+      `structured evidence runs must contain exactly ${benchmarkVarianceEvidenceRunCount} GitHub Actions runs`,
+    );
+  }
+
+  for (const run of runs) {
+    const runRecord = asRecord(run);
+    if (!runRecord) {
+      failures.push("each structured evidence run must be an object");
+      continue;
+    }
+
+    const runId = readPositiveInteger(runRecord.id);
+    if (runId === null) {
+      failures.push("each structured evidence run must include a positive integer id");
+      continue;
+    }
+
+    orderedRunIds.push(runId);
+    if (runIds.has(runId)) {
+      failures.push(`structured evidence run id ${runId} is duplicated`);
+    }
+    runIds.add(runId);
+
+    if (!matchesGitHubActionsRunUrl(runRecord.url, runId)) {
+      failures.push(`structured evidence run ${runId} must include its GitHub Actions run URL`);
+    }
+    if (!isCommitSha(runRecord.headSha)) {
+      failures.push(`structured evidence run ${runId} must include a 40-character head SHA`);
+    }
+    if (!readOptionalString(runRecord.headBranch)) {
+      failures.push(`structured evidence run ${runId} must include a head branch`);
+    }
+    if (runRecord.baseBranch !== "trunk") {
+      failures.push(`structured evidence run ${runId} must target trunk`);
+    }
+
+    const createdAt = parseIsoTimestamp(runRecord.createdAt);
+    if (createdAt === null) {
+      failures.push(`structured evidence run ${runId} must include an ISO createdAt timestamp`);
+    } else {
+      createdAtValues.push(createdAt);
+    }
+
+    if (runRecord.workflowStatus !== "completed") {
+      failures.push(`structured evidence run ${runId} workflowStatus must be completed`);
+    }
+    if (runRecord.workflowConclusion !== "success") {
+      failures.push(`structured evidence run ${runId} workflowConclusion must be success`);
+    }
+
+    validateBenchmarkEvidenceRunArtifact(runRecord.artifact, runId, rowCount, failures);
+  }
+
+  if (
+    createdAtValues.length === benchmarkVarianceEvidenceRunCount &&
+    createdAtValues.some((createdAt, index, values) => index > 0 && createdAt >= values[index - 1])
+  ) {
+    failures.push("structured evidence runs must be ordered newest-to-oldest by createdAt");
+  }
+
+  return orderedRunIds;
+}
+
+function validateBenchmarkEvidenceRunArtifact(
+  artifact: unknown,
+  runId: number,
+  rowCount: number,
+  failures: string[],
+): void {
+  const artifactRecord = asRecord(artifact);
+  if (!artifactRecord) {
+    failures.push(`structured evidence run ${runId} must include benchmark artifact evidence`);
+    return;
+  }
+
+  if (artifactRecord.allPassed !== true) {
+    failures.push(`structured evidence run ${runId} artifact.allPassed must be true`);
+  }
+  if (!isFiniteNumber(artifactRecord.reportCount) || artifactRecord.reportCount !== rowCount) {
+    failures.push(
+      `structured evidence run ${runId} artifact.reportCount must match evidence row count`,
+    );
+  }
+  if (
+    !Array.isArray(artifactRecord.gateFailures) ||
+    artifactRecord.gateFailures.some((failure) => typeof failure !== "string")
+  ) {
+    failures.push(`structured evidence run ${runId} artifact.gateFailures must be a string array`);
+  } else if (artifactRecord.gateFailures.length > 0) {
+    failures.push(`structured evidence run ${runId} artifact.gateFailures must be empty`);
+  }
+}
+
+function validateBenchmarkEvidenceSelection(
+  selection: unknown,
+  orderedRunIds: readonly number[],
+  failures: string[],
+): void {
+  const selectionRecord = asRecord(selection);
+  if (!selectionRecord) {
+    failures.push("structured evidence selection must describe the latest green trunk run window");
+    return;
+  }
+
+  const expectedFields: ReadonlyArray<readonly [string, string]> = [
+    ["workflowName", "Performance Benchmark"],
+    ["qualifyingBaseBranch", "trunk"],
+    ["qualifyingWorkflowStatus", "completed"],
+    ["qualifyingWorkflowConclusion", "success"],
+    ["orderedBy", "createdAt-desc"],
+  ];
+  for (const [field, expectedValue] of expectedFields) {
+    if (selectionRecord[field] !== expectedValue) {
+      failures.push(`structured evidence selection.${field} must be ${expectedValue}`);
+    }
+  }
+
+  const latestRunIds = selectionRecord.latestGreenTrunkRunIds;
+  if (!Array.isArray(latestRunIds) || latestRunIds.length !== benchmarkVarianceEvidenceRunCount) {
+    failures.push(
+      `structured evidence selection.latestGreenTrunkRunIds must contain exactly ${benchmarkVarianceEvidenceRunCount} run ids`,
+    );
+    return;
+  }
+
+  const normalizedRunIds = latestRunIds.map(readPositiveInteger);
+  if (normalizedRunIds.some((runId) => runId === null)) {
+    failures.push("structured evidence selection.latestGreenTrunkRunIds must be positive integers");
+    return;
+  }
+
+  if (new Set(normalizedRunIds).size !== normalizedRunIds.length) {
+    failures.push(
+      "structured evidence selection.latestGreenTrunkRunIds must not contain duplicates",
+    );
+  }
+  if (JSON.stringify(normalizedRunIds) !== JSON.stringify(orderedRunIds)) {
+    failures.push(
+      "structured evidence selection.latestGreenTrunkRunIds must match runs in newest-to-oldest order",
+    );
+  }
+}
+
+function validateBenchmarkEvidenceChecks(
+  checks: Record<string, unknown>,
+  failures: string[],
+): void {
+  if (checks.sameRowSet !== true) {
+    failures.push("structured evidence checks.sameRowSet must be true");
+  }
+
+  for (const key of [
+    "runnerFailures",
+    "moduleFailures",
+    "emptyReports",
+    "missingReports",
+    "thresholdFailures",
+    "thresholdSkips",
+    "baselineSkips",
+    "promotedBaselineFailures",
+  ] as const) {
+    if (checks[key] !== 0) {
+      failures.push(`structured evidence checks.${key} must be 0`);
+    }
+  }
+
+  if (
+    !isFiniteNumber(checks.prePromotionBaselineFailures) ||
+    checks.prePromotionBaselineFailures < 0
+  ) {
+    failures.push("structured evidence checks.prePromotionBaselineFailures must be non-negative");
+  }
+}
+
+function validateBenchmarkEvidenceRows(
+  rows: readonly unknown[],
+  orderedRunIds: readonly number[],
+  failures: string[],
+): void {
+  const rowNames = new Set<string>();
+  for (const [index, row] of rows.entries()) {
+    const rowRecord = asRecord(row);
+    const rowLabel = `structured evidence row ${index + 1}`;
+    if (!rowRecord) {
+      failures.push(`${rowLabel} must be an object`);
+      continue;
+    }
+
+    const rowName = readOptionalString(rowRecord.name);
+    if (!rowName) {
+      failures.push(`${rowLabel} must include a name`);
+    } else if (rowNames.has(rowName)) {
+      failures.push(
+        `structured evidence rows must not contain duplicate benchmark name ${rowName}`,
+      );
+    } else {
+      rowNames.add(rowName);
+    }
+
+    if (rowRecord.status !== "pass") {
+      failures.push(`${rowLabel} status must be pass`);
+    }
+    for (const field of ["min", "median", "max", "spread"] as const) {
+      if (!isFiniteNumber(rowRecord[field])) {
+        failures.push(`${rowLabel}.${field} must be numeric`);
+      }
+    }
+
+    const p75ByRun = asRecord(rowRecord.p75ByRun);
+    if (!p75ByRun) {
+      failures.push(`${rowLabel}.p75ByRun must map run ids to p75 values`);
+      continue;
+    }
+
+    const p75Values = orderedRunIds.map((runId) => p75ByRun[String(runId)]);
+    if (
+      p75Values.length !== benchmarkVarianceEvidenceRunCount ||
+      p75Values.some((value) => !isFiniteNumber(value))
+    ) {
+      failures.push(`${rowLabel}.p75ByRun must contain finite p75 values for every reviewed run`);
+      continue;
+    }
+
+    const numericP75Values = p75Values as number[];
+    const sortedValues = [...numericP75Values].sort((left, right) => left - right);
+    const min = Math.min(...numericP75Values);
+    const median = sortedValues[Math.floor(sortedValues.length / 2)];
+    const max = Math.max(...numericP75Values);
+    const spread = (max - min) / median;
+
+    if (!numbersNearlyEqual(rowRecord.min, min)) {
+      failures.push(`${rowLabel}.min must match p75ByRun values`);
+    }
+    if (!numbersNearlyEqual(rowRecord.median, median)) {
+      failures.push(`${rowLabel}.median must match p75ByRun values`);
+    }
+    if (!numbersNearlyEqual(rowRecord.max, max)) {
+      failures.push(`${rowLabel}.max must match p75ByRun values`);
+    }
+    if (!numbersNearlyEqual(rowRecord.spread, spread)) {
+      failures.push(`${rowLabel}.spread must match p75ByRun values`);
+    }
+    if (spread > benchmarkVarianceSpreadTolerance) {
+      failures.push(
+        `${rowLabel}.spread ${(spread * 100).toFixed(2)}% exceeds ${(benchmarkVarianceSpreadTolerance * 100).toFixed(0)}% tolerance`,
+      );
+    }
+  }
+}
+
+function parseIsoTimestamp(value: unknown): number | null {
+  if (!isIsoTimestamp(value)) {
+    return null;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function isIsoTimestamp(value: unknown): value is string {
+  return (
+    typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
+  );
+}
+
+function isCommitSha(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{40}$/.test(value);
+}
+
+function matchesGitHubActionsRunUrl(value: unknown, runId: number): boolean {
+  return (
+    typeof value === "string" &&
+    value === `https://github.com/croco-dev/framework/actions/runs/${runId}`
+  );
+}
+
+function readPositiveInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function numbersNearlyEqual(left: unknown, right: number): boolean {
+  return isFiniteNumber(left) && Math.abs(left - right) < 0.000_001;
+}
+
+function securityAllowlistMetadataReadiness(
+  rootDir: string,
+  checkId: string,
+): AdvisoryGateReadinessSection | null {
+  const allowlistPath = join(rootDir, defaultStaticMisuseAllowlistPath);
+  if (!existsSync(allowlistPath)) {
+    return null;
+  }
+
+  const allowlist = readJsonObject(allowlistPath);
+  if (allowlist.kind === "invalid") {
+    return {
+      label: "security allowlist metadata",
+      diagnostics: [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+          checkId,
+          cause: `${defaultStaticMisuseAllowlistPath} could not be parsed: ${allowlist.message}`,
+          location: { file: defaultStaticMisuseAllowlistPath },
+          action:
+            "Fix the static misuse allowlist JSON, then rerun the static misuse check and croco doctor.",
+        }),
+      ],
+    };
+  }
+
+  const entries = allowlist.value.entries;
+  if (allowlist.value.schemaVersion !== 1 || !Array.isArray(entries)) {
+    return {
+      label: "security allowlist metadata",
+      diagnostics: [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+          checkId,
+          cause: `${defaultStaticMisuseAllowlistPath} must declare schemaVersion 1 and an entries array.`,
+          location: { file: defaultStaticMisuseAllowlistPath },
+          action: "Regenerate or repair the static misuse allowlist metadata.",
+        }),
+      ],
+    };
+  }
+
+  const diagnostics = entries.flatMap((entry, index) =>
+    validateSecurityAllowlistEntry(entry, index, checkId),
+  );
+
+  return { label: "security allowlist metadata", diagnostics };
+}
+
+function validateSecurityAllowlistEntry(
+  entry: unknown,
+  index: number,
+  checkId: string,
+): DoctorDiagnostic[] {
+  const entryRecord = asRecord(entry);
+  const entryLabel = `entry ${index + 1}`;
+  const missingFields = entryRecord
+    ? ["package", "file", "excerpt", "reason"].filter(
+        (field) => !readOptionalString(entryRecord[field]),
+      )
+    : ["package", "file", "excerpt", "reason"];
+  const lineInvalid =
+    !entryRecord || typeof entryRecord.line !== "number" || !Number.isInteger(entryRecord.line);
+  const owner = readOptionalString(entryRecord?.owner);
+  const expiresOn = readOptionalString(entryRecord?.expiresOn);
+  const expiresOnInvalid = Boolean(expiresOn && !/^\d{4}-\d{2}-\d{2}$/.test(expiresOn));
+  const metadataMissing = !owner && !expiresOn;
+  const failures = [
+    ...(missingFields.length > 0 ? [`missing ${missingFields.join(", ")}`] : []),
+    ...(lineInvalid ? ["line must be an integer"] : []),
+    ...(metadataMissing ? ["owner or expiresOn metadata is required"] : []),
+    ...(expiresOnInvalid ? ["expiresOn must use YYYY-MM-DD"] : []),
+  ];
+
+  if (failures.length === 0) {
+    return [];
+  }
+
+  return [
+    advisoryDiagnostic({
+      code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+      checkId,
+      cause: `${defaultStaticMisuseAllowlistPath} ${entryLabel} is invalid: ${failures.join("; ")}.`,
+      location: {
+        file: defaultStaticMisuseAllowlistPath,
+        packageName: readOptionalString(entryRecord?.package) ?? undefined,
+      },
+      action:
+        "Add package, file, line, excerpt, reason, and owner or expiresOn metadata, or remove the stale allowlist entry after fixing the misuse.",
+    }),
+  ];
+}
+
+function advisoryDiagnostic(input: {
+  readonly code: CliDiagnosticCode;
+  readonly checkId: string;
+  readonly cause: string;
+  readonly location: DoctorLocation | null;
+  readonly action: string;
+}): DoctorDiagnostic {
+  return {
+    code: input.code,
+    severity: "warning",
+    checkId: input.checkId,
+    cause: input.cause,
+    location: input.location,
+    action: input.action,
   };
 }
 
@@ -1595,6 +2365,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return isRecord(value) ? value : null;
+}
+
 function readPackageDependencies(
   manifest: Record<string, unknown>,
   importerDir: string,
@@ -1945,6 +2719,10 @@ function readNumber(value: Record<string, unknown>, key: string, fallback: numbe
 
 function readOptionalString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function toPackageSlug(packageName: string): string {
+  return packageName.startsWith("@croco/") ? packageName.slice("@croco/".length) : packageName;
 }
 
 function formatLocation(location: DoctorLocation | null): string {
