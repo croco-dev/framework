@@ -23,10 +23,12 @@ pnpm add @croco/events-core @croco/events-inmemory
 
 Create a class that extends `DomainEvent`.
 
-```typescript
+```typescript typecheck
 import { DomainEvent } from "@croco/events-core";
 
 export class UserCreatedEvent extends DomainEvent {
+  static readonly eventName = "user.created";
+
   constructor(public readonly userId: string) {
     super();
   }
@@ -37,11 +39,19 @@ export class UserCreatedEvent extends DomainEvent {
 
 Use `AggregateRoot` to collect events and publish them transactionally.
 
-```typescript
-import { AggregateRoot } from "@croco/events-core";
+```typescript typecheck
+import { AggregateRoot, DomainEvent } from "@croco/events-core";
+
+class UserCreatedEvent extends DomainEvent {
+  static readonly eventName = "user.created";
+
+  constructor(public readonly userId: string) {
+    super();
+  }
+}
 
 class User extends AggregateRoot {
-  create(id: string) {
+  create(id: string): void {
     // Business logic
     this.addDomainEvent(new UserCreatedEvent(id));
   }
@@ -59,8 +69,16 @@ user.clearDomainEvents();
 
 Register handlers using the `@RegisterEventHandler` decorator.
 
-```typescript
-import { EventHandler, RegisterEventHandler } from "@croco/events-core";
+```typescript typecheck
+import { DomainEvent, RegisterEventHandler, type EventHandler } from "@croco/events-core";
+
+class UserCreatedEvent extends DomainEvent {
+  static readonly eventName = "user.created";
+
+  constructor(public readonly userId: string) {
+    super();
+  }
+}
 
 @RegisterEventHandler(UserCreatedEvent)
 class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
@@ -74,26 +92,64 @@ class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
 
 Configure the global `EventBus` instance.
 
-```typescript
-import { EventBusConfig } from "@croco/events-core";
+```typescript typecheck
+import {
+  DomainEvent,
+  EventBusConfig,
+  RegisterEventHandler,
+  type EventHandler,
+} from "@croco/events-core";
 import { InMemoryEventBus } from "@croco/events-inmemory";
+
+class UserCreatedEvent extends DomainEvent {
+  static readonly eventName = "user.created";
+
+  constructor(public readonly userId: string) {
+    super();
+  }
+}
+
+@RegisterEventHandler(UserCreatedEvent)
+class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
+  async handle(event: UserCreatedEvent): Promise<void> {
+    console.log(`User created: ${event.userId}`);
+  }
+}
 
 const config = EventBusConfig.getInstance();
 config.setEventBus(new InMemoryEventBus());
 
 // Register handlers
-await config.start({ handlers: [UserCreatedHandler] });
+async function startEventBus(): Promise<void> {
+  await config.start({ handlers: [UserCreatedHandler] });
+}
+
+void startEventBus();
 ```
 
 ### Publishing Events
 
 Use `EventPublisher` to dispatch events to the configured bus.
 
-```typescript
-import { EventPublisher } from "@croco/events-core";
+```typescript typecheck
+import { DomainEvent, EventBusConfig, EventPublisher } from "@croco/events-core";
 
-const publisher = new EventPublisher();
+class UserCreatedEvent extends DomainEvent {
+  static readonly eventName = "user.created";
 
-await publisher.publish(new UserCreatedEvent("user-123"));
-await publisher.publishMany([event1, event2]);
+  constructor(public readonly userId: string) {
+    super();
+  }
+}
+
+const publisher = new EventPublisher(EventBusConfig.getInstance());
+const event1 = new UserCreatedEvent("user-456");
+const event2 = new UserCreatedEvent("user-789");
+
+async function publishUserEvents(): Promise<void> {
+  await publisher.publishNow(new UserCreatedEvent("user-123"));
+  await publisher.publishMany([event1, event2]);
+}
+
+void publishUserEvents();
 ```

@@ -59,7 +59,10 @@ Do not rely on built-in prices as current production prices. `samplePricingRegis
 is versioned sample data for tests and demos. Applications should inject a current
 registry:
 
-```ts
+The underlying `meteringService` is supplied by the application from its current
+`@croco/metering-core` storage, quota, and idempotency adapters.
+
+```ts no-check
 import { LlmMeteringService, PricingTable } from "@croco/llm-metering";
 
 const pricingTable = PricingTable.fromRegistry({
@@ -93,7 +96,9 @@ LLM usage operation fails with evidence instead of silently dropping usage.
 
 Use `quotaPolicy` when an app needs pre-recording projected quota checks:
 
-```ts
+This example extends the same application-owned metering service and quota policy boundary.
+
+```ts no-check
 const llmMetering = new LlmMeteringService({
   meteringService,
   pricingTable,

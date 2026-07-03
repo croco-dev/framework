@@ -105,7 +105,9 @@ croco ops check http://localhost:3000 \
 
 새 코드에서는 환경변수보다 `createApp({ diagnostics: ... })` 설정을 권장합니다.
 
-```typescript
+```typescript typecheck
+import { createApp } from "@croco/transports-http";
+
 const app = createApp({
   controllers: [],
   diagnostics: {
