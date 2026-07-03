@@ -44,6 +44,18 @@ Downstream release gates should select this package set from `docs/package-catal
 | `create-croco-app`          | Tooling     | 🟡 beta             | `packages/create-croco-app`   |
 | `@croco/cli`                | Tooling     | 🟡 beta             | `packages/cli`                |
 
+## Certification Policy
+
+Certification scope is defined by `docs/package-catalog.json` `certification.policy.scope` and enforced by `pnpm provider-certification:check`.
+
+| Policy field                   | Value                                                                                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Extension groups in scope      | Provider<br>Integration<br>Transport<br>Presentation                                                                                                    |
+| Certified record required when | Extension package maturity is `production`, or public docs make a Croco compatibility claim.                                                            |
+| `certified-required`           | A certified record is required because the package is production-ready in the extension matrix or public docs make a Croco compatibility claim.         |
+| `candidate-optional`           | A certification record exists for an extension package that is still below production maturity and has not made a public certified compatibility claim. |
+| `not-applicable`               | No certification record is required until the extension package reaches production maturity or makes a public Croco compatibility claim.                |
+
 ## Certification Records
 
 Certification records are validated from `docs/package-catalog.json` `certification.records`. Each row links a package catalog entry to one contract, package version, runtime set, state, evidence checklist, and explicit known gaps.
