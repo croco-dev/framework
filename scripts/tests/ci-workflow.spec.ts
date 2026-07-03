@@ -139,6 +139,14 @@ describe("CI package quality dashboard", () => {
     }
   });
 
+  it("excludes intentionally archived OpenAI API docs snapshots from docs link checks", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).toContain(
+      "--exclude '^https://web\\.archive\\.org/web/[0-9]+/https://developers\\.openai\\.com/api/'",
+    );
+  });
+
   it("keeps core coverage hard errors blocking in CI", () => {
     const workflow = readCiWorkflow();
     const warningStepStart = workflow.indexOf("- name: Core package coverage warning report");

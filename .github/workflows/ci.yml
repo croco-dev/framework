@@ -501,8 +501,9 @@ jobs:
         with:
           # Exclusions are intentionally narrow: the repository landing URL is
           # canonical, current-commit blob/tree links are generated docs anchors,
-          # your-org/croco is scaffold placeholder text, diataxis.fr rate-limits
-          # automated docs link checks, and packages/docs is a private docs app
+          # your-org/croco is scaffold placeholder text, archived OpenAI API docs
+          # return transient 503s from Wayback, diataxis.fr rate-limits automated
+          # docs link checks, and packages/docs is a private docs app
           # rather than a public package README.
           args: >-
             --verbose
@@ -511,6 +512,7 @@ jobs:
             --exclude '^https://github\.com/croco-dev/framework(#readme)?$'
             --exclude '^https://github\.com/croco-dev/framework/(blob|tree)/[0-9a-f]{40}/'
             --exclude '^https://github\.com/your-org/croco(#readme)?$'
+            --exclude '^https://web\.archive\.org/web/[0-9]+/https://developers\.openai\.com/api/'
             --exclude '^https://diataxis\.fr/(how-to-guides|reference)/$'
             --exclude-path '(^|/)packages/docs/README\.md$'
             'README.md'
