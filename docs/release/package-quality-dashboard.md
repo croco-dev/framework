@@ -132,6 +132,7 @@ The CI gate appends `ci-reports/package-quality/provider-certification.md` to th
 ## Beta Spine Promotion Gate
 
 `pnpm spine-promotion:check` verifies promotion accountability for packages that are both in `docs/package-catalog.json` `spine.packages` and `maturity.beta.packages`.
+It also fails catalog entries that place alpha, deprecated, or uncategorized packages in the spine, because release-critical packages must reach beta before promotion accountability can be evaluated.
 The gate writes `ci-reports/package-quality/spine-promotion.md`, appends that report to the GitHub Actions job summary, and uploads it with the package quality dashboard artifact.
 
 For each beta spine package, `docs/package-catalog.json` must define `spine.promotion.packages.<name>` with:

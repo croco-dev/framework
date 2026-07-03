@@ -100,6 +100,24 @@ describe("spine-promotion-check.mts", () => {
     expect(markdown).toContain("Beta spine packages: 0");
   });
 
+  it("fails when an alpha package is added to the release spine", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "experimental-spine");
+    writeCatalogMetadata(repo, {
+      alphaPackages: ["experimental-spine"],
+      spinePackages: ["experimental-spine"],
+    });
+
+    const report = createReport(repo);
+    const markdown = buildSpinePromotionMarkdown(report);
+
+    expect(hasSpinePromotionFailures(report)).toBe(true);
+    expect(report.catalogErrors).toContain(
+      "docs/package-catalog.json: spine package experimental-spine is alpha; move it to maturity.beta.packages with spine.promotion.packages.experimental-spine metadata before 1.0 promotion, or remove it from spine.packages",
+    );
+    expect(markdown).toContain("spine package experimental-spine is alpha");
+  });
+
   it("warns without failing for stale promotion metadata outside the beta spine", () => {
     const repo = createTempRepo();
     writePackage(repo, "stable");
@@ -221,6 +239,7 @@ function writePackage(
 function writeCatalogMetadata(
   repo: string,
   options: {
+    readonly alphaPackages?: readonly string[];
     readonly betaPackages?: readonly string[];
     readonly groupName?: string;
     readonly productionPackages?: readonly string[];
@@ -235,11 +254,14 @@ function writeCatalogMetadata(
     readonly spinePackages?: readonly string[];
   },
 ): void {
+  const alphaPackages = options.alphaPackages ?? [];
   const groupName = options.groupName ?? "Core";
   const betaPackages = options.betaPackages ?? [];
   const productionPackages = options.productionPackages ?? [];
   const spinePackages = options.spinePackages ?? [];
-  const allPackageNames = [...new Set([...spinePackages, ...productionPackages, ...betaPackages])];
+  const allPackageNames = [
+    ...new Set([...spinePackages, ...productionPackages, ...betaPackages, ...alphaPackages]),
+  ];
   const spine =
     options.promotionPackages === undefined
       ? {
@@ -276,7 +298,7 @@ function writeCatalogMetadata(
       },
       alpha: {
         label: "alpha",
-        packages: [],
+        packages: alphaPackages,
       },
       deprecated: {
         label: "deprecated",

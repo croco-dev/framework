@@ -294,6 +294,29 @@ export function createSpinePromotionReport(options: {
     spinePackages.filter((packageName) => maturityByPackage.get(packageName) === "beta"),
   );
 
+  for (const packageName of spinePackages) {
+    const maturity = maturityByPackage.get(packageName);
+    if (maturity === undefined) {
+      catalogErrors.push(
+        `${catalogMetadataPath}: spine package ${packageName} must appear in a maturity bucket before promotion accountability can be evaluated`,
+      );
+      continue;
+    }
+
+    if (maturity === "alpha") {
+      catalogErrors.push(
+        `${catalogMetadataPath}: spine package ${packageName} is alpha; move it to maturity.beta.packages with spine.promotion.packages.${packageName} metadata before 1.0 promotion, or remove it from spine.packages`,
+      );
+      continue;
+    }
+
+    if (maturity === "deprecated") {
+      catalogErrors.push(
+        `${catalogMetadataPath}: spine package ${packageName} is deprecated; move it to maturity.beta.packages with spine.promotion.packages.${packageName} metadata before 1.0 promotion, or remove it from spine.packages`,
+      );
+    }
+  }
+
   for (const packageName of betaSpinePackageSet) {
     if (!workspaceByShortName.has(packageName)) {
       catalogErrors.push(
