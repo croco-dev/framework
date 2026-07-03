@@ -151,6 +151,7 @@ const legacyRuntimePolicyManifestPath = "croco-runtime-policy.manifest.json";
 const defaultDiGraphManifestPath = ".croco/build/di-graph.manifest.json";
 const defaultProviderProfileManifestPath = "croco-saas-profile.manifest.json";
 const defaultPackageCatalogPath = "docs/package-catalog.json";
+const defaultCoreCoverageWarningCheckPath = "scripts/core-coverage-warning-check.mts";
 const defaultBundleSizeBaselinePath = "ci-reports/bundle-size/baseline.json";
 const defaultBenchmarkVarianceEvidencePath = "ci-reports/benchmark/latest-five-green-runs.md";
 const benchmarkVarianceEvidenceMarker = "<!-- croco-benchmark-variance-evidence:v1 -->";
@@ -690,9 +691,14 @@ function coreCoverageCandidateReadiness(
   }
 
   const selectedPackages = new Set(parseCoreCoverageScriptFilters(coreCoverageScript));
+  const temporarilyExcludedPackages = readTemporaryCoreCoverageSelectionExclusions(rootDir);
   const candidates = collectCoreCoverageCandidates(catalog.value, packages);
   const diagnostics = candidates
-    .filter((candidate) => !selectedPackages.has(candidate.packageName))
+    .filter(
+      (candidate) =>
+        !selectedPackages.has(candidate.packageName) &&
+        !temporarilyExcludedPackages.has(candidate.packageName),
+    )
     .map((candidate) =>
       advisoryDiagnostic({
         code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
@@ -791,6 +797,28 @@ function parseCoreCoverageScriptFilters(script: string): string[] {
   return uniqueStrings(filters);
 }
 
+function readTemporaryCoreCoverageSelectionExclusions(rootDir: string): ReadonlySet<string> {
+  const scriptPath = join(rootDir, defaultCoreCoverageWarningCheckPath);
+  if (!existsSync(scriptPath)) {
+    return new Set();
+  }
+
+  const source = readFileSync(scriptPath, "utf-8");
+  const declaration = source.match(
+    /const\s+TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS(?:\s*:\s*Record<[^=]+>)?\s*=\s*\{([\s\S]*?)\};/,
+  );
+  const declarationBody = declaration?.[1];
+  if (!declarationBody) {
+    return new Set();
+  }
+
+  const exclusions = [...declarationBody.matchAll(/["']([^"']+)["']\s*:\s*["']([\s\S]*?)["']/g)]
+    .filter(([, , reason]) => reason.trim().length > 0)
+    .map(([, packageName]) => packageName);
+
+  return new Set(uniqueStrings(exclusions));
+}
+
 function bundleSizeBaselineReadiness(
   rootDir: string,
   packages: readonly DoctorPackage[],
@@ -823,7 +851,12 @@ function bundleSizeBaselineReadiness(
 
 function invalidBundleBaselineDiagnostic(rootDir: string, checkId: string): DoctorDiagnostic[] {
   const baseline = readJsonObject(join(rootDir, defaultBundleSizeBaselinePath));
-  if (baseline.kind === "valid") {
+  const failure =
+    baseline.kind === "valid"
+      ? validateBundleSizeBaselineEntries(baseline.value)
+      : `could not be parsed: ${baseline.message}`;
+
+  if (!failure) {
     return [];
   }
 
@@ -831,11 +864,38 @@ function invalidBundleBaselineDiagnostic(rootDir: string, checkId: string): Doct
     advisoryDiagnostic({
       code: CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
       checkId,
-      cause: `${defaultBundleSizeBaselinePath} could not be parsed: ${baseline.message}`,
+      cause: `${defaultBundleSizeBaselinePath} ${failure}`,
       location: { file: defaultBundleSizeBaselinePath },
       action: "Regenerate the bundle-size baseline with pnpm build && pnpm package-quality:report.",
     }),
   ];
+}
+
+function validateBundleSizeBaselineEntries(baseline: Record<string, unknown>): string | null {
+  const artifactEntries = isRecord(baseline.artifacts) ? baseline.artifacts : baseline;
+  const entries = Object.entries(artifactEntries);
+
+  if (entries.length === 0) {
+    return "does not contain any baseline entries.";
+  }
+
+  const invalidEntry = entries.find(([, value]) => !isBundleSizeBaselineEntry(value));
+  return invalidEntry
+    ? `entry ${invalidEntry[0]} must be a non-negative byte number or an object with a non-negative bytes number.`
+    : null;
+}
+
+function isBundleSizeBaselineEntry(value: unknown): boolean {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value >= 0;
+  }
+
+  return (
+    isRecord(value) &&
+    typeof value.bytes === "number" &&
+    Number.isFinite(value.bytes) &&
+    value.bytes >= 0
+  );
 }
 
 function packageHasPublicBuildScript(rootDir: string, workspacePackage: DoctorPackage): boolean {

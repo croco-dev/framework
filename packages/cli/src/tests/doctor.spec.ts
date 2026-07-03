@@ -330,10 +330,7 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-context"]);
-    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
-      schemaVersion: 1,
-      packages: [],
-    });
+    writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
       schemaVersion: 1,
@@ -371,10 +368,7 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-context"]);
-    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
-      schemaVersion: 1,
-      packages: [],
-    });
+    writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo, { prePromotionBaselineFailuresPerRun: 1 });
     writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
       schemaVersion: 1,
@@ -396,6 +390,143 @@ describe("doctor", () => {
     expect(report.summary).toBe("healthy");
     expect(check).toMatchObject({ status: "pass", diagnostics: [] });
     expect(report.diagnostics).toEqual([]);
+    expect(getDoctorExitCode(report)).toBe(0);
+  });
+
+  it("honors temporary core coverage selection exclusions", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/problems-core exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeCoreCoverageTemporaryExclusion(
+      repo,
+      "@croco/framework-context",
+      "Temporary baseline stabilization while coverage rows are reviewed.",
+    );
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
+      schemaVersion: 1,
+      entries: [
+        {
+          package: "@croco/framework-context",
+          file: "packages/framework-context/src/index.ts",
+          line: 1,
+          excerpt: "throw new Error('internal invariant');",
+          reason: "Reviewed internal invariant while migrating static misuse diagnostics.",
+          owner: "framework-error-handling",
+        },
+      ],
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const check = report.checks.find((candidate) => candidate.id === "advisory-gate-readiness");
+
+    expect(report.summary).toBe("healthy");
+    expect(check).toMatchObject({ status: "pass", diagnostics: [] });
+    expect(report.diagnostics).toEqual([]);
+    expect(getDoctorExitCode(report)).toBe(0);
+  });
+
+  it("rejects malformed bundle-size baseline entries as advisory readiness warning", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
+      schemaVersion: 1,
+      artifacts: {
+        "@croco/framework-context:packages/framework-context/dist/index.js": "1024",
+      },
+    });
+    writeBenchmarkVarianceEvidence(repo);
+    writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
+      schemaVersion: 1,
+      entries: [
+        {
+          package: "@croco/framework-context",
+          file: "packages/framework-context/src/index.ts",
+          line: 1,
+          excerpt: "throw new Error('internal invariant');",
+          reason: "Reviewed internal invariant while migrating static misuse diagnostics.",
+          owner: "framework-error-handling",
+        },
+      ],
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const check = report.checks.find((candidate) => candidate.id === "advisory-gate-readiness");
+
+    expect(report.summary).toBe("healthy");
+    expect(check).toMatchObject({ status: "fail" });
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+        cause: expect.stringContaining("must be a non-negative byte number"),
+      }),
+    ]);
+    expect(getDoctorExitCode(report)).toBe(0);
+  });
+
+  it("rejects empty bundle-size baseline artifacts as advisory readiness warning", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
+      schemaVersion: 1,
+      artifacts: {},
+    });
+    writeBenchmarkVarianceEvidence(repo);
+    writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
+      schemaVersion: 1,
+      entries: [
+        {
+          package: "@croco/framework-context",
+          file: "packages/framework-context/src/index.ts",
+          line: 1,
+          excerpt: "throw new Error('internal invariant');",
+          reason: "Reviewed internal invariant while migrating static misuse diagnostics.",
+          owner: "framework-error-handling",
+        },
+      ],
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const check = report.checks.find((candidate) => candidate.id === "advisory-gate-readiness");
+
+    expect(report.summary).toBe("healthy");
+    expect(check).toMatchObject({ status: "fail" });
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+        cause: expect.stringContaining("does not contain any baseline entries"),
+      }),
+    ]);
     expect(getDoctorExitCode(report)).toBe(0);
   });
 
@@ -463,10 +594,7 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-context"]);
-    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
-      schemaVersion: 1,
-      packages: [],
-    });
+    writeBundleSizeBaseline(repo);
     writeFile(
       repo,
       "ci-reports/benchmark/latest-five-green-runs.md",
@@ -884,6 +1012,35 @@ function writePackageCatalog(repo: string, packages: readonly string[]): void {
     },
     maturity: {
       production: { packages },
+    },
+  });
+}
+
+function writeCoreCoverageTemporaryExclusion(
+  repo: string,
+  packageName: string,
+  reason: string,
+): void {
+  writeFile(
+    repo,
+    "scripts/core-coverage-warning-check.mts",
+    [
+      "const TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS: Record<string, string> = {",
+      `  "${packageName}": "${reason}",`,
+      "};",
+      "",
+    ].join("\n"),
+  );
+}
+
+function writeBundleSizeBaseline(repo: string): void {
+  writeJson(repo, "ci-reports/bundle-size/baseline.json", {
+    schemaVersion: 1,
+    artifacts: {
+      "@croco/framework-context:packages/framework-context/dist/index.js": 1024,
+      "@croco/framework-context:packages/framework-context/dist/index.mjs": {
+        bytes: 768,
+      },
     },
   });
 }
