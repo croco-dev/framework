@@ -165,6 +165,7 @@ const benchmarkMissingReportSuffix = ": benchmark report was not collected.";
 const benchmarkRunnerErrorPrefix = "benchmark runner error:";
 const benchmarkModuleFailedPrefix = "benchmark module failed:";
 const isoTimestampPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
+const benchmarkGitHubActionsRunPathPrefix = "/croco-dev/framework/actions/runs";
 const defaultStaticMisuseAllowlistPath = "scripts/static-misuse-raw-error-allowlist.json";
 const coreCoverageFrameworkGroups = new Set(["Core", "Integration", "Protocol", "Transport"]);
 const coreCoverageReleaseCriticalRules = [
@@ -673,8 +674,24 @@ function coreCoverageCandidateReadiness(
   const coreCoverageScript = rootScripts["test:coverage:core"];
   const catalogPath = join(rootDir, defaultPackageCatalogPath);
 
-  if (!coreCoverageScript || !existsSync(catalogPath)) {
+  if (!coreCoverageScript) {
     return null;
+  }
+
+  if (!existsSync(catalogPath)) {
+    return {
+      label: "core coverage selection",
+      diagnostics: [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${defaultPackageCatalogPath} is missing.`,
+          location: { file: defaultPackageCatalogPath },
+          action:
+            "Restore docs/package-catalog.json, rerun pnpm test:coverage:core:warning, and commit the refreshed coverage evidence.",
+        }),
+      ],
+    };
   }
 
   const catalog = readJsonObject(catalogPath);
@@ -1071,6 +1088,7 @@ function validateBenchmarkVarianceEvidence(rootDir: string, content: string): st
 
 type BenchmarkCurrentReport = {
   readonly name: string;
+  readonly threshold: number;
   readonly baseline: number | null;
 };
 
@@ -1099,26 +1117,36 @@ function readBenchmarkResultReports(
     };
   }
 
-  const reports = result.value.reports.flatMap((entry): BenchmarkCurrentReport[] => {
+  const reports: BenchmarkCurrentReport[] = [];
+  for (const [index, entry] of result.value.reports.entries()) {
     const report = asRecord(entry);
     const name = readOptionalString(report?.name);
     if (!report || !name) {
-      return [];
+      return {
+        kind: "invalid",
+        message: `${defaultBenchmarkResultPath} report ${index + 1} must include a benchmark name.`,
+      };
     }
 
-    return [
-      {
-        name,
-        baseline: isFiniteNumber(report.baseline) ? report.baseline : null,
-      },
-    ];
-  });
+    if (report.thresholdStatus === "skip" || !isFiniteNumber(report.threshold)) {
+      return {
+        kind: "invalid",
+        message: `${defaultBenchmarkResultPath} ${name} threshold entry missing.`,
+      };
+    }
 
-  if (reports.length !== result.value.reports.length) {
-    return {
-      kind: "invalid",
-      message: `${defaultBenchmarkResultPath} reports must include benchmark names.`,
-    };
+    if (report.baselineStatus === "skip" || !isFiniteNumber(report.baseline)) {
+      return {
+        kind: "invalid",
+        message: `${defaultBenchmarkResultPath} ${name} baseline entry missing.`,
+      };
+    }
+
+    reports.push({
+      name,
+      threshold: report.threshold,
+      baseline: report.baseline,
+    });
   }
 
   if (reports.length === 0) {
@@ -1450,7 +1478,6 @@ function validateBenchmarkEvidenceChecks(
     "thresholdFailures",
     "thresholdSkips",
     "baselineSkips",
-    "promotedBaselineFailures",
   ] as const) {
     if (checks[key] !== 0) {
       failures.push(`structured evidence checks.${key} must be 0`);
@@ -1462,6 +1489,9 @@ function validateBenchmarkEvidenceChecks(
     checks.prePromotionBaselineFailures < 0
   ) {
     failures.push("structured evidence checks.prePromotionBaselineFailures must be non-negative");
+  }
+  if (!isFiniteNumber(checks.promotedBaselineFailures) || checks.promotedBaselineFailures < 0) {
+    failures.push("structured evidence checks.promotedBaselineFailures must be non-negative");
   }
 }
 
@@ -1643,7 +1673,7 @@ function matchesGitHubActionsRunUrl(value: unknown, runId: number): boolean {
 
   try {
     const url = new URL(value);
-    const expectedPath = `/croco-dev/framework/actions/runs/${runId}`;
+    const expectedPath = `${benchmarkGitHubActionsRunPathPrefix}/${runId}`;
     return (
       url.origin === "https://github.com" &&
       (url.pathname === expectedPath || url.pathname.startsWith(`${expectedPath}/`))
@@ -1732,7 +1762,11 @@ function validateSecurityAllowlistEntry(
   const lineInvalid = validLine === null;
   const owner = readOptionalString(entryRecord?.owner);
   const expiresOn = readOptionalString(entryRecord?.expiresOn);
-  const expiresOnInvalid = Boolean(expiresOn && !/^\d{4}-\d{2}-\d{2}$/.test(expiresOn));
+  const expiresOnInvalid = Boolean(
+    entryRecord &&
+    entryRecord.expiresOn !== undefined &&
+    !/^\d{4}-\d{2}-\d{2}$/.test(String(entryRecord.expiresOn)),
+  );
   const metadataMissing = !owner && !expiresOn;
   const failures = [
     ...(missingFields.length > 0 ? [`missing ${missingFields.join(", ")}`] : []),

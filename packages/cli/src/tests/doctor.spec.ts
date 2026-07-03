@@ -481,6 +481,33 @@ describe("doctor", () => {
     ]);
   });
 
+  it("reports a missing package catalog when core coverage readiness is configured", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("docs/package-catalog.json is missing");
+  });
+
   it("rejects malformed bundle-size baseline entries as advisory readiness warning", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -798,6 +825,72 @@ describe("doctor", () => {
     expect(diagnostics[0].cause).toContain("committed baseline must match");
   });
 
+  it("rejects benchmark readiness when current threshold entries are missing", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo, {
+      resultReports: [{ name: "Example benchmark", p75: 10, baseline: 10, threshold: null }],
+    });
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorBenchmarkVarianceEvidenceMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("threshold entry missing");
+  });
+
+  it("does not force promoted benchmark baseline failure evidence to zero", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo, {
+      promotedBaselineFailures: 5,
+      resultReports: [{ name: "Example benchmark", p75: 10, baseline: 1 }],
+    });
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorBenchmarkVarianceEvidenceMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain(
+      "5 reviewed run(s) fail the promoted baseline tolerance",
+    );
+    expect(diagnostics[0].cause).not.toContain("checks.promotedBaselineFailures must be 0");
+  });
+
   it("rejects non-positive security allowlist line numbers", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -854,6 +947,35 @@ describe("doctor", () => {
     expect(getDoctorExitCode(report)).toBe(0);
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0].cause).toContain("excerpt does not match the current source line");
+  });
+
+  it("rejects non-string security allowlist expiresOn metadata", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo, { expiresOn: 123 });
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("expiresOn must use YYYY-MM-DD");
   });
 
   it("reads schema-versioned Project manifest bundle artifacts", () => {
@@ -1290,6 +1412,7 @@ function writeBundleSizeBaseline(repo: string): void {
 
 type BenchmarkVarianceEvidenceOptions = {
   readonly prePromotionBaselineFailuresPerRun?: number;
+  readonly promotedBaselineFailures?: number;
   readonly reviewedAt?: string;
   readonly runUrlSuffix?: string;
   readonly resultReports?: readonly BenchmarkResultReport[];
@@ -1299,6 +1422,7 @@ type BenchmarkResultReport = {
   readonly name: string;
   readonly p75: number;
   readonly baseline: number;
+  readonly threshold?: number | null;
 };
 
 function writeBenchmarkVarianceEvidence(
@@ -1371,7 +1495,7 @@ function writeBenchmarkVarianceEvidence(
           thresholdSkips: 0,
           baselineSkips: 0,
           prePromotionBaselineFailures: prePromotionBaselineFailuresPerRun * runIds.length,
-          promotedBaselineFailures: 0,
+          promotedBaselineFailures: options.promotedBaselineFailures ?? 0,
         },
         rows: [
           {
@@ -1403,7 +1527,7 @@ function writeBenchmarkResult(
     reports: reports.map((report) => ({
       name: report.name,
       p75: report.p75,
-      threshold: report.p75 * 2,
+      ...(report.threshold === null ? {} : { threshold: report.threshold ?? report.p75 * 2 }),
       baseline: report.baseline,
       thresholdStatus: "pass",
       baselineStatus: "pass",
@@ -1420,6 +1544,7 @@ function writeValidStaticMisuseAllowlist(
     excerpt: string;
     reason: string;
     owner: string;
+    expiresOn: unknown;
   }> = {},
 ): void {
   writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
