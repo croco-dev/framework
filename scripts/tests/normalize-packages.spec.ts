@@ -645,6 +645,14 @@ describe("normalize-packages.mjs", () => {
         sourceIndex: false,
       },
     );
+    writeExamplePackage(root, "range-drift-example", {
+      name: "@croco-example/range-drift",
+      private: true,
+      version: "0.0.0",
+      dependencies: {
+        "@croco/internal-runtime": "^0.0.3",
+      },
+    });
 
     const result = runScript(root, "--check");
 
@@ -663,6 +671,7 @@ describe("normalize-packages.mjs", () => {
       'peerDependencies.@croco/internal-runtime must use workspace:* for internal Croco workspace packages, not "^0.0.3"',
     );
     expect(result.stdout).toContain("private-range-drift/package.json");
+    expect(result.stdout).toContain("examples/range-drift-example/package.json");
     expect(result.stdout).not.toContain("workspace-ranges/package.json");
     expect(result.stdout).not.toContain("external-croco-scope/package.json");
   });
@@ -1011,6 +1020,20 @@ function writePackage(
       : pkg;
 
   writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+  return packagePath;
+}
+
+function writeExamplePackage(
+  root: string,
+  exampleDirName: string,
+  pkg: Record<string, unknown>,
+): string {
+  const packageDir = join(root, "examples", exampleDirName);
+  mkdirSync(packageDir, { recursive: true });
+
+  const packagePath = join(packageDir, "package.json");
+  writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
 
   return packagePath;
 }

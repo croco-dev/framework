@@ -72,8 +72,7 @@ main();
 
 function main() {
   const rootDir = mode.rootDir;
-  const packagesDir = path.join(rootDir, "packages");
-  const packageJsonFiles = findPackageJsonFiles(packagesDir);
+  const packageJsonFiles = findWorkspacePackageJsonFiles(rootDir);
   const violations = [];
   const workspacePackageNames = readWorkspacePackageNames(packageJsonFiles);
   const internalWorkspacePackageNames = new Set(
@@ -164,6 +163,17 @@ function main() {
 
   console.log("");
   console.log("✓ Package manifest contracts are normalized.");
+}
+
+function findWorkspacePackageJsonFiles(rootDir) {
+  const workspacePackageDirs = [path.join(rootDir, "packages"), path.join(rootDir, "examples")];
+  return Array.from(
+    new Set(
+      workspacePackageDirs.flatMap((workspacePackageDir) =>
+        findPackageJsonFiles(workspacePackageDir),
+      ),
+    ),
+  ).sort();
 }
 
 function parseArgs(args) {
