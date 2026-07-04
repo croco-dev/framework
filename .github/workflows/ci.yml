@@ -59,12 +59,29 @@ jobs:
             echo "duration_seconds=$duration"
           } >> "$GITHUB_OUTPUT"
           if [ "$exit_code" -ne 0 ]; then
-            echo "::warning::pnpm audit:prod reported production vulnerabilities. CI keeps the audit advisory-only and uploads security-report; release publish gates run the same command as a blocker."
+            echo "::warning::pnpm audit:prod reported production vulnerabilities. CI keeps the raw audit advisory-only and uploads security-report; release publish gates run pnpm security:audit-policy as the blocker."
           fi
           exit "$exit_code"
 
+      - name: Dependency audit policy report
+        id: security_audit_policy
+        shell: bash
+        run: |
+          mkdir -p ci-reports/security
+          set +e
+          pnpm security:audit-policy
+          status=$?
+          set -e
+          if [ -f ci-reports/security/dependency-audit-policy.md ]; then
+            cat ci-reports/security/dependency-audit-policy.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Dependency audit policy report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
       - name: Secret scan warning report
         id: security_gitleaks_warning
+        if: always()
         shell: bash
         continue-on-error: ${{ github.event_name == 'pull_request' }}
         run: |
@@ -98,7 +115,8 @@ jobs:
             echo "# Security policy summary"
             echo ""
             echo "- \`pnpm audit:prod\` dependency audit: advisory-only in CI on pull requests, trunk pushes, and manual runs"
-            echo "- \`pnpm audit:prod\` release enforcement: blocking in the Release workflow before publish"
+            echo "- \`pnpm security:audit-policy\` dependency audit policy: blocks unreviewed runtime, generated-app, and release-evidence high-risk findings"
+            echo "- \`pnpm security:audit-policy\` release enforcement: blocking in the Release workflow before publish"
             echo "- \`gitleaks\` secret scanning: warning-only on pull requests; blocking on trunk pushes and manual runs"
             echo "- Security allowlist metadata: blocking; audit and secret-scan exceptions require owner, reason, and reviewBy/expiresOn"
             echo "- Release path: release-triggering changes still pass through CI before merge; publish-specific gates live in the Release workflow"
@@ -107,6 +125,7 @@ jobs:
             echo ""
             echo "- Audit advisory exit code: ${{ steps.security_audit_advisory.outputs.exit_code || 'unknown' }}"
             echo "- Audit advisory duration (seconds): ${{ steps.security_audit_advisory.outputs.duration_seconds || 'unknown' }}"
+            echo "- Audit policy result: ${{ steps.security_audit_policy.outcome || 'unknown' }}"
             echo "- Gitleaks exit code: ${{ steps.security_gitleaks_warning.outputs.exit_code || 'unknown' }}"
             echo "- Gitleaks duration (seconds): ${{ steps.security_gitleaks_warning.outputs.duration_seconds || 'unknown' }}"
             echo ""
@@ -120,6 +139,7 @@ jobs:
             echo "## Runtime impact"
             echo ""
             echo "- \`pnpm audit:prod\` advisory report reuses the existing dependency install and should add only the command runtime."
+            echo "- \`pnpm security:audit-policy\` reuses the full lockfile audit output and local manifests without installing extra tooling."
             echo "- \`ghcr.io/gitleaks/gitleaks\` adds one cold-start image pull plus repository scan time; use the recorded duration above as the baseline for enforce decisions."
           } > ci-reports/security/summary.md
 

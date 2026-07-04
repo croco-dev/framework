@@ -16,7 +16,7 @@ describe("projectMap", () => {
     const first = stringifyProjectMapManifest(
       createProjectMapManifest({
         projectRoot: "/workspace/app",
-        rootPackage: { name: "demo-app", packageManager: "pnpm@10.15.1" },
+        rootPackage: { name: "demo-app", packageManager: "pnpm@11.9.0" },
         packageGraph: [
           createPackage("@demo/api", "apps/api/package.json"),
           createPackage("demo-app", "package.json"),
@@ -35,7 +35,7 @@ describe("projectMap", () => {
     const second = stringifyProjectMapManifest(
       createProjectMapManifest({
         projectRoot: "/workspace/app",
-        rootPackage: { name: "demo-app", packageManager: "pnpm@10.15.1" },
+        rootPackage: { name: "demo-app", packageManager: "pnpm@11.9.0" },
         packageGraph: [
           createPackage("demo-app", "package.json"),
           createPackage("@demo/api", "apps/api/package.json"),
@@ -101,7 +101,7 @@ describe("projectMap", () => {
     const writes = new Map<string, string>();
     const manifest = createProjectMapManifest({
       projectRoot: "/workspace/app",
-      rootPackage: { name: "demo-app", packageManager: "pnpm@10.15.1" },
+      rootPackage: { name: "demo-app", packageManager: "pnpm@11.9.0" },
       packageGraph: [
         createPackage("demo-app", "package.json"),
         createPackage("@demo/api", "apps/api/package.json"),
@@ -422,7 +422,7 @@ function createWorkspaceIo(stdout: string[]): Partial<ProjectMapIo> {
       "/workspace/app/package.json",
       JSON.stringify({
         name: "demo-app",
-        packageManager: "pnpm@10.15.1",
+        packageManager: "pnpm@11.9.0",
         scripts: {
           "project-map:check": "croco project map --check --manifest croco.project-map.json",
         },

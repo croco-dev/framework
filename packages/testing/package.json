@@ -52,7 +52,7 @@
     "@croco/telemetry-api": "workspace:*",
     "@croco/transports-http": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
-    "reflect-metadata": "0.2.2"
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@croco/protocols-rest": "workspace:*",

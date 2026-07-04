@@ -40,7 +40,8 @@
   "devDependencies": {
     "@croco/problems-core": "workspace:*",
     "@croco/testing": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "reflect-metadata": "^0.2.2"
   },
   "peerDependencies": {
     "drizzle-orm": "catalog:"

@@ -143,7 +143,7 @@ function createTempRoot(): string {
     `${JSON.stringify(
       {
         name: "package-bin-smoke-workspace",
-        packageManager: "pnpm@10.15.1",
+        packageManager: "pnpm@11.9.0",
         private: true,
       },
       null,

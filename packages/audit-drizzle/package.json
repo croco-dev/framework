@@ -49,6 +49,8 @@
   },
   "devDependencies": {
     "@croco/testing": "workspace:*",
+    "@types/better-sqlite3": "7.6.13",
+    "better-sqlite3": "^11.10.0",
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",

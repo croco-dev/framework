@@ -41,6 +41,11 @@ type PackageManifest = {
   readonly publishConfig?: Record<string, unknown>;
 };
 
+type InstalledPackage = {
+  readonly manifest: PackageManifest;
+  readonly packageDir: string;
+};
+
 describe("published Workers type contract", () => {
   it(
     "typechecks exported handler declarations in a clean packed consumer",
@@ -67,13 +72,20 @@ describe("published Workers type contract", () => {
         expect(packedManifest.dependencies?.["@cloudflare/workers-types"]).toBe("^4.0.0");
         expect(packedManifest.devDependencies?.["@cloudflare/workers-types"]).toBeUndefined();
 
-        const installedManifests = [
-          packedManifest,
-          ...workspaceDependencyDirs.map((directory) =>
-            installWorkspacePackage(consumerRoot, join(rootDir, "packages", directory)),
-          ),
+        const installedPackages = [
+          {
+            manifest: packedManifest,
+            packageDir,
+          },
+          ...workspaceDependencyDirs.map((directory) => {
+            const workspacePackageDir = join(rootDir, "packages", directory);
+            return {
+              manifest: installWorkspacePackage(consumerRoot, workspacePackageDir),
+              packageDir: workspacePackageDir,
+            };
+          }),
         ];
-        installExternalDependencies(consumerRoot, installedManifests);
+        installExternalDependencies(consumerRoot, installedPackages);
         writeConsumerTypecheck(consumerRoot);
 
         run("node", [tscPath(), "-p", join(consumerRoot, "tsconfig.json")], consumerRoot);
@@ -150,28 +162,46 @@ function publishManifestFor(sourceManifest: PackageManifest): PackageManifest {
 
 function installExternalDependencies(
   consumerRoot: string,
-  manifests: readonly PackageManifest[],
+  packages: readonly InstalledPackage[],
 ): void {
-  const externalDependencies = new Set<string>();
+  const externalDependencyDirs = new Map<string, string>();
 
-  for (const manifest of manifests) {
-    for (const dependencyName of Object.keys(manifest.dependencies ?? {})) {
-      if (!dependencyName.startsWith("@croco/")) {
-        externalDependencies.add(dependencyName);
+  for (const installedPackage of packages) {
+    for (const dependencyName of Object.keys(installedPackage.manifest.dependencies ?? {})) {
+      if (dependencyName.startsWith("@croco/")) {
+        continue;
+      }
+      const sourceDir = installedDependencyDir(installedPackage.packageDir, dependencyName);
+      const currentSourceDir = externalDependencyDirs.get(dependencyName);
+      if (!currentSourceDir || (!existsSync(currentSourceDir) && existsSync(sourceDir))) {
+        externalDependencyDirs.set(dependencyName, sourceDir);
       }
     }
   }
 
-  for (const dependencyName of Array.from(externalDependencies).sort()) {
-    const sourceDir = join(rootDir, "node_modules", ...dependencyName.split("/"));
+  for (const [dependencyName, sourceDir] of Array.from(externalDependencyDirs).sort(
+    ([left], [right]) => left.localeCompare(right),
+  )) {
     const targetDir = packageInstallDir(consumerRoot, dependencyName);
     if (!existsSync(sourceDir)) {
-      throw new Error(`${dependencyName}: declared dependency is missing from root node_modules`);
+      throw new Error(
+        `${dependencyName}: declared dependency is missing from package and root node_modules`,
+      );
     }
 
     mkdirSync(dirname(targetDir), { recursive: true });
     symlinkSync(sourceDir, targetDir, "dir");
   }
+}
+
+function installedDependencyDir(packageDir: string, dependencyName: string): string {
+  const dependencyPathParts = dependencyName.split("/");
+  const candidateDirs = [
+    join(packageDir, "node_modules", ...dependencyPathParts),
+    join(rootDir, "node_modules", ...dependencyPathParts),
+  ];
+
+  return candidateDirs.find((candidateDir) => existsSync(candidateDir)) ?? candidateDirs[0];
 }
 
 function writeConsumerTypecheck(consumerRoot: string): void {

@@ -57,12 +57,13 @@ describe("PostHog Integration", () => {
     Container.set(PostHogClient, postHogClient);
     Container.set(LOGGER_TOKEN, logger as Logger);
     Container.register(PostHogAnalyticsManager, "singleton");
+    const captureSpy = vi.spyOn(postHogClient.getClient(), "capture");
 
     const resolved = Container.get(PostHogAnalyticsManager);
 
     expect(resolved).toBeInstanceOf(PostHogAnalyticsManager);
     resolved.capture("di-event", { userId: "user-di" });
-    expect(postHogClient.getClient().capture).toHaveBeenCalledWith(
+    expect(captureSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         distinctId: "user-di",
         event: "di-event",

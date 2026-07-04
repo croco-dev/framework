@@ -48,7 +48,7 @@ describe("generate() pnpm install contract", () => {
     });
     expect(existsSync(join(testDir, "pnpm-workspace.yaml"))).toBe(true);
     expect(JSON.parse(readFileSync(join(testDir, "package.json"), "utf8")).packageManager).toBe(
-      "pnpm@10.15.1",
+      "pnpm@11.9.0",
     );
   }, 15_000);
 

@@ -12,6 +12,38 @@ const readRootPackageJson = () =>
 const readPnpmWorkspace = () => readFileSync(pnpmWorkspacePath, "utf-8");
 
 describe("CI package quality dashboard", () => {
+  it("runs dependency audit policy after the advisory audit and publishes the report", () => {
+    const workflow = readCiWorkflow();
+    const orderedMarkers = [
+      "- name: Production dependency audit report",
+      "run: |\n          mkdir -p ci-reports/security",
+      "pnpm audit:prod > ci-reports/security/pnpm-audit-prod.txt 2>&1",
+      "- name: Dependency audit policy report",
+      "id: security_audit_policy",
+      "          pnpm security:audit-policy",
+      "ci-reports/security/dependency-audit-policy.md",
+      'cat ci-reports/security/dependency-audit-policy.md >> "$GITHUB_STEP_SUMMARY"',
+      'exit "$status"',
+      "- name: Secret scan warning report",
+      "if: always()",
+    ];
+
+    let previousIndex = -1;
+    for (const marker of orderedMarkers) {
+      const index = workflow.indexOf(marker);
+      expect(index, `${marker} should be present`).toBeGreaterThan(-1);
+      expect(index, `${marker} should stay in dependency audit policy order`).toBeGreaterThan(
+        previousIndex,
+      );
+      previousIndex = index;
+    }
+
+    expect(workflow).toContain(
+      "\\`pnpm security:audit-policy\\` dependency audit policy: blocks unreviewed runtime, generated-app, and release-evidence high-risk findings",
+    );
+    expect(workflow).toContain("Audit policy result: ${{ steps.security_audit_policy.outcome");
+  });
+
   it("collects package-level Turbo summaries before publishing the dashboard", () => {
     const workflow = readCiWorkflow();
     const orderedMarkers = [
@@ -195,8 +227,10 @@ describe("CI package quality dashboard", () => {
     expect(auditStep).toContain("id: security_audit_advisory");
     expect(auditStep).toContain("continue-on-error: true");
     expect(auditStep).toContain("pnpm audit:prod > ci-reports/security/pnpm-audit-prod.txt 2>&1");
-    expect(auditStep).toContain("CI keeps the audit advisory-only");
-    expect(auditStep).toContain("release publish gates run the same command as a blocker");
+    expect(auditStep).toContain("CI keeps the raw audit advisory-only");
+    expect(auditStep).toContain(
+      "release publish gates run pnpm security:audit-policy as the blocker",
+    );
     expect(auditStep).toContain('exit "$exit_code"');
 
     const summaryStep = workflow.slice(summaryStart, uploadStart);
@@ -204,20 +238,23 @@ describe("CI package quality dashboard", () => {
       "- \\`pnpm audit:prod\\` dependency audit: advisory-only in CI on pull requests, trunk pushes, and manual runs",
     );
     expect(summaryStep).toContain(
-      "- \\`pnpm audit:prod\\` release enforcement: blocking in the Release workflow before publish",
+      "- \\`pnpm security:audit-policy\\` dependency audit policy: blocks unreviewed runtime, generated-app, and release-evidence high-risk findings",
+    );
+    expect(summaryStep).toContain(
+      "- \\`pnpm security:audit-policy\\` release enforcement: blocking in the Release workflow before publish",
     );
   });
 
-  it("keeps pnpm security policy in workspace-supported config", () => {
+  it("keeps pnpm security policy in workspace-supported config without audit suppressions", () => {
     const rootPackageJson = readRootPackageJson();
     const workspace = readPnpmWorkspace();
 
     expect(rootPackageJson).not.toHaveProperty("pnpm");
     expect(workspace).toContain("overrides:");
     expect(workspace).toContain("linkify-it: 5.0.2");
-    expect(workspace).toContain("auditConfig:");
-    expect(workspace).toContain("ignoreGhsas:");
-    expect(workspace).toContain("- GHSA-gv7w-rqvm-qjhr");
+    expect(workspace).not.toContain("auditConfig:");
+    expect(workspace).not.toContain("ignoreGhsas:");
+    expect(workspace).not.toContain("GHSA-gv7w-rqvm-qjhr");
   });
 
   it("triggers docs link checks for root docs and public package READMEs", () => {

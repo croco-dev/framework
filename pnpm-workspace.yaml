@@ -45,10 +45,15 @@ overrides:
   validator: 13.15.22
   vitest>vite: 7.3.5
 
-auditConfig:
-  ignoreGhsas:
-    # esbuild Deno API install path; Croco release builds use Node/pnpm.
-    - GHSA-gv7w-rqvm-qjhr
-
 catalog:
   drizzle-orm: ^0.45.2
+
+allowBuilds:
+  "@clerk/shared": true
+  better-sqlite3: true
+  core-js: false
+  esbuild: true
+  lefthook: true
+  protobufjs: true
+  sharp: false
+  workerd: true

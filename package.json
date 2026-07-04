@@ -8,6 +8,7 @@
     "build": "turbo build",
     "setup": "pnpm install && pnpm build && pnpm typecheck && pnpm test",
     "audit:prod": "pnpm audit --audit-level high --prod",
+    "security:audit-policy": "node --experimental-strip-types scripts/dependency-audit-policy.mts",
     "check": "pnpm package-manifests:check && pnpm docs:catalog:check && pnpm provider-certification:check && pnpm docs:api-triggers:check && pnpm problem-registry:check && pnpm docs:examples:check && pnpm release-docs:check && pnpm architecture-policy:check && pnpm architecture:check:circular:allowlist && pnpm dependency-boundaries:check && pnpm security-allowlists:check && pnpm strict-contract-typecheck && pnpm static-misuse:check && pnpm public-api:check && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
     "changeset": "changeset",
     "deploy": "turbo deploy",
@@ -76,5 +77,5 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67"
+  "packageManager": "pnpm@11.9.0+sha512.bd682d5d03fe525ef7c9fd6780c6884d1e756ac4c9c9fe00c538782824310dcf90e3ddc4f53835f06dfaebd5085e41855e0bcbb3b60de2ac5bbab89e5036f03b"
 }

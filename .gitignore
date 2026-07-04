@@ -16,6 +16,7 @@ node_modules
 coverage
 /ci-reports/package-quality/
 /ci-reports/generated-apps/
+/ci-reports/security/
 
 # Turbo
 .turbo

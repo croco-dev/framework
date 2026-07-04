@@ -1,14 +1,7 @@
 {
   "schemaVersion": 1,
   "audit": {
-    "ignoreGhsas": [
-      {
-        "id": "GHSA-gv7w-rqvm-qjhr",
-        "owner": "kang-heewon",
-        "reason": "esbuild's Deno API installation path is not used by Croco release builds, which run through Node and pnpm.",
-        "reviewBy": "2027-01-31"
-      }
-    ]
+    "ignoreGhsas": []
   },
   "secretScan": {
     "gitleaks": {
