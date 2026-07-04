@@ -158,6 +158,31 @@ describe("CrocoApp", () => {
       });
     }
 
+    @Get("/single-cookie")
+    singleCookie(): Response {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: [
+          ["content-type", "application/json"],
+          ["set-cookie", "session=abc; Path=/; HttpOnly"],
+          ["x-cookie-test", "single"],
+        ],
+      });
+    }
+
+    @Get("/multiple-cookies")
+    multipleCookies(): Response {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: [
+          ["content-type", "application/json"],
+          ["set-cookie", "session=abc; Path=/; HttpOnly"],
+          ["set-cookie", "theme=dark; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/"],
+          ["x-cookie-test", "multiple"],
+        ],
+      });
+    }
+
     @Get("/trace-context")
     getTraceContext(): Record<string, string | null> {
       const context = FrameworkContext.get() as {
@@ -1097,6 +1122,53 @@ describe("CrocoApp", () => {
 
     const decoded = Buffer.from(response.body ?? "", "base64");
     expect(Buffer.compare(decoded, binaryBody)).toBe(0);
+  });
+
+  it("should map a single Lambda Set-Cookie response header to API Gateway v2 cookies", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        requestContext: createRequestContext("GET", "/lambda/single-cookie"),
+        rawPath: "/lambda/single-cookie",
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({
+      "content-type": "application/json",
+      "x-cookie-test": "single",
+    });
+    expect(response.cookies).toEqual(["session=abc; Path=/; HttpOnly"]);
+    expect(response.body).toBe(JSON.stringify({ ok: true }));
+    expect(response.isBase64Encoded).toBe(false);
+  });
+
+  it("should map multiple Lambda Set-Cookie response headers without comma splitting", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        requestContext: createRequestContext("GET", "/lambda/multiple-cookies"),
+        rawPath: "/lambda/multiple-cookies",
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({
+      "content-type": "application/json",
+      "x-cookie-test": "multiple",
+    });
+    expect(response.cookies).toEqual([
+      "session=abc; Path=/; HttpOnly",
+      "theme=dark; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/",
+    ]);
+    expect(response.body).toBe(JSON.stringify({ ok: true }));
+    expect(response.isBase64Encoded).toBe(false);
   });
 
   it("should fail fast for unsupported route methods instead of registering all routes", () => {

@@ -429,14 +429,6 @@
     },
     {
       "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
-      "line": 110,
-      "column": 13,
-      "code": "TS2375",
-      "message": "Type '{ platform: \"lambda\"; requestId: string; env: ProcessEnv; logger: ILogger | undefined; native: { event: LambdaEvent; lambdaContext: Context; }; waitUntil: (promise: Promise<...>) => void; flush: () => Promise<...>; capabilities: { ...; }; }' is not assignable to type 'RuntimeContextInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
       "line": 380,
       "column": 7,

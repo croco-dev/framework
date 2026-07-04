@@ -132,6 +132,17 @@ export const handler = app.lambdaHandler({
 });
 ```
 
+### Lambda 응답 헤더와 쿠키 매핑
+
+`app.lambdaHandler()`는 API Gateway HTTP API payload format v2 응답을 반환합니다. 일반 Fetch 응답
+헤더는 `LambdaResponse.headers`의 single-value header record로 매핑합니다. `Set-Cookie` 응답 헤더는
+single-value record에 넣지 않고 API Gateway v2 전용 `LambdaResponse.cookies: string[]`로 매핑합니다.
+API Gateway는 `cookies` 배열의 각 값을 개별 `set-cookie` 응답 헤더로 변환하므로, auth/session 응답에서
+여러 쿠키나 `Expires=Wed, 21 Oct ...`처럼 comma가 포함된 쿠키 값을 안전하게 보존할 수 있습니다.
+
+JSON 응답은 문자열 body와 `isBase64Encoded: false`를 유지하고, binary 응답은 기존처럼 body를 base64로
+인코딩한 뒤 `isBase64Encoded: true`를 반환합니다.
+
 ### Node 서버 실행
 
 ```typescript
