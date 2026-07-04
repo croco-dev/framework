@@ -116,6 +116,7 @@ export type ArchitecturePolicyManifest = {
   readonly include?: readonly string[];
   readonly ignore?: readonly string[];
   readonly packageGroups?: Readonly<Record<string, ArchitecturePolicyPackageGroup>>;
+  readonly packageCatalogGroupOverrides?: unknown;
   readonly rules?: {
     readonly forbiddenImports?: readonly ArchitectureForbiddenImportRule[];
     readonly allowedGroupImports?: readonly ArchitectureAllowedGroupImportRule[];
@@ -225,6 +226,7 @@ export function parseArchitecturePolicyManifest(content: string): ArchitecturePo
     include: readStringArray(parsed.include),
     ignore: readStringArray(parsed.ignore),
     packageGroups: readPackageGroups(parsed.packageGroups),
+    packageCatalogGroupOverrides: parsed.packageCatalogGroupOverrides,
     rules: readRules(parsed.rules),
   };
 }
