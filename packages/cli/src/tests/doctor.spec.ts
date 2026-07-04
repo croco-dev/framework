@@ -133,6 +133,13 @@ describe("doctor", () => {
           },
           {
             "diagnostics": [],
+            "id": "advisory-gate-readiness",
+            "note": "No advisory release-hardening scripts or artifacts were found.",
+            "status": "skipped",
+            "title": "Advisory release-hardening readiness",
+          },
+          {
+            "diagnostics": [],
             "id": "problem-registry-readiness",
             "note": "No ProblemRegistry artifact or drift-check script was found.",
             "status": "skipped",
