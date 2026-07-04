@@ -8,7 +8,7 @@
     "build": "turbo build",
     "setup": "pnpm install && pnpm build && pnpm typecheck && pnpm test",
     "audit:prod": "pnpm audit --audit-level high --prod",
-    "check": "pnpm package-manifests:check && pnpm docs:catalog:check && pnpm provider-certification:check && pnpm docs:api-triggers:check && pnpm problem-registry:check && pnpm docs:examples:check && pnpm release-docs:check && pnpm architecture-policy:check && pnpm architecture:check:circular:allowlist && pnpm dependency-boundaries:check && pnpm strict-contract-typecheck && pnpm static-misuse:check && pnpm public-api:check && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
+    "check": "pnpm package-manifests:check && pnpm docs:catalog:check && pnpm provider-certification:check && pnpm docs:api-triggers:check && pnpm problem-registry:check && pnpm docs:examples:check && pnpm release-docs:check && pnpm architecture-policy:check && pnpm architecture:check:circular:allowlist && pnpm dependency-boundaries:check && pnpm security-allowlists:check && pnpm strict-contract-typecheck && pnpm static-misuse:check && pnpm public-api:check && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
     "changeset": "changeset",
     "deploy": "turbo deploy",
     "dev": "turbo dev",
@@ -54,6 +54,7 @@
     "package-manifests:write": "node scripts/normalize-packages.mjs --write",
     "pr-review-companion": "node --experimental-strip-types scripts/pr-review-companion.mts",
     "release-docs:check": "node --experimental-strip-types scripts/release-docs-check.mts",
+    "security-allowlists:check": "node --experimental-strip-types scripts/security-allowlist-metadata-check.mts",
     "static-misuse:check": "node --experimental-strip-types scripts/static-misuse-check.mts",
     "strict-contract-typecheck": "node --experimental-strip-types scripts/strict-contract-typecheck.mts"
   },

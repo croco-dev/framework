@@ -267,4 +267,39 @@ describe("CI package quality dashboard", () => {
     expect(linkChecker).toContain("'packages/*/README.md'");
     expect(linkChecker).toContain("'packages/docs/dist/**/*.html'");
   });
+
+  it("keeps advisory reports before the blocking security allowlist metadata gate", () => {
+    const workflow = readCiWorkflow();
+    const auditStepStart = workflow.indexOf("- name: Production dependency audit advisory");
+    const secretScanStepStart = workflow.indexOf("- name: Secret scan warning report");
+    const uploadStepStart = workflow.indexOf("- name: Upload security report");
+    const metadataStepStart = workflow.indexOf("- name: Security allowlist metadata check");
+    const summaryStepStart = workflow.indexOf("- name: Assemble security policy summary");
+    const architectureStepStart = workflow.indexOf(
+      "- name: Architecture circular dependency check",
+    );
+    const metadataStep = workflow.slice(metadataStepStart, architectureStepStart);
+
+    expect(metadataStepStart, "security allowlist metadata step should be present").toBeGreaterThan(
+      -1,
+    );
+    expect(
+      secretScanStepStart,
+      "secret scan warning report should follow audit advisory",
+    ).toBeGreaterThan(auditStepStart);
+    expect(summaryStepStart, "security summary should follow advisory reports").toBeGreaterThan(
+      secretScanStepStart,
+    );
+    expect(uploadStepStart, "security report upload should follow summary").toBeGreaterThan(
+      summaryStepStart,
+    );
+    expect(
+      metadataStepStart,
+      "metadata gate should run after security report upload",
+    ).toBeGreaterThan(uploadStepStart);
+    expect(metadataStep).toContain("run: pnpm security-allowlists:check");
+    expect(metadataStep).not.toContain("continue-on-error");
+    expect(workflow.slice(summaryStepStart)).toContain("Security allowlist metadata: blocking");
+    expect(workflow.slice(summaryStepStart)).toContain("scripts/security-allowlist-metadata.json");
+  });
 });

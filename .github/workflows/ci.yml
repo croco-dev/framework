@@ -100,6 +100,7 @@ jobs:
             echo "- \`pnpm audit:prod\` dependency audit: advisory-only in CI on pull requests, trunk pushes, and manual runs"
             echo "- \`pnpm audit:prod\` release enforcement: blocking in the Release workflow before publish"
             echo "- \`gitleaks\` secret scanning: warning-only on pull requests; blocking on trunk pushes and manual runs"
+            echo "- Security allowlist metadata: blocking; audit and secret-scan exceptions require owner, reason, and reviewBy/expiresOn"
             echo "- Release path: release-triggering changes still pass through CI before merge; publish-specific gates live in the Release workflow"
             echo ""
             echo "## Current run"
@@ -112,8 +113,9 @@ jobs:
             echo "## False positive management"
             echo ""
             echo "1. Review the SARIF/text finding and confirm the secret or dependency path is non-production or test-only data."
-            echo "2. For confirmed false positives, add the fingerprint to \`.gitleaksignore\` or an explicit allowlist rule in a dedicated Gitleaks config file."
-            echo "3. Keep the ignore entry scoped to the exact fingerprint or path, and document the reason in the pull request before any future enforce rollout."
+            echo "2. For confirmed false positives, add the fingerprint to \`.gitleaksignore\` or an explicit allowlist rule in \`.gitleaks.toml\`."
+            echo "3. Add matching metadata in \`scripts/security-allowlist-metadata.json\` with owner, reason, and reviewBy/expiresOn."
+            echo "4. Keep the ignore entry scoped to the exact fingerprint or path, and document the reason in the pull request before any future enforce rollout."
             echo ""
             echo "## Runtime impact"
             echo ""
@@ -128,6 +130,9 @@ jobs:
           name: security-report
           path: ci-reports/security
           if-no-files-found: warn
+
+      - name: Security allowlist metadata check
+        run: pnpm security-allowlists:check
 
       - name: Architecture circular dependency check
         run: pnpm architecture:check:circular:allowlist
