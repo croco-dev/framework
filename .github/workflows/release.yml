@@ -19,8 +19,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     # release:spine-evidence has a 150-minute internal budget; the job keeps a
-    # 15-minute wrapper margin for setup, summary upload, and dry-run publish.
-    timeout-minutes: 165
+    # 45-minute wrapper budget for setup, install, audit, check, upload, and dry-run publish.
+    timeout-minutes: 195
     env:
       NPM_CONFIG_PROVENANCE: "true"
 

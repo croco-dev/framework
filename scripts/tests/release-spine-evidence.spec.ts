@@ -17,12 +17,14 @@ import {
   markReportInterrupted,
   parseArgs,
   runReleaseSpineEvidence,
-  type Clock,
-  type CommandRunResult,
-  type CommandRunner,
-  type EvidenceArtifactExpectation,
-  type EvidenceCommand,
-  type ReleaseSpineEvidenceReport,
+} from "../release-spine-evidence.mts";
+import type {
+  Clock,
+  CommandRunResult,
+  CommandRunner,
+  EvidenceArtifactExpectation,
+  EvidenceCommand,
+  ReleaseSpineEvidenceReport,
 } from "../release-spine-evidence.mts";
 
 const tempRepos: string[] = [];
@@ -203,6 +205,38 @@ describe("release-spine-evidence.mts", () => {
     expect(report.checks[0]?.stderrExcerpt).toContain("failed");
   });
 
+  it("reports command failure reasons before missing artifact reasons", async () => {
+    const repo = createTempRepo();
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "ci-reports", "release"),
+      totalTimeoutMs: 1_000,
+      commands: [
+        createCommand("release-metadata", {
+          artifacts: [
+            {
+              label: "Release metadata",
+              path: "ci-reports/release-metadata/report.md",
+              required: true,
+            },
+          ],
+        }),
+      ],
+      runner: () => ({
+        errorCode: null,
+        errorMessage: null,
+        signal: null,
+        status: 2,
+        stderr: "",
+        stdout: "",
+        timedOut: false,
+      }),
+    });
+
+    expect(report.status).toBe("failed");
+    expect(report.checks[0]?.failureReason).toBe("Command exited with status 2.");
+  });
+
   it("records command timeouts and skips remaining checks after total timeout exhaustion", async () => {
     const repo = createTempRepo();
     const fakeTime = createFakeClock();
@@ -347,6 +381,12 @@ describe("release-spine-evidence.mts", () => {
 
     expect(options.rootDir).toBe(repo);
     expect(options.outputDir).toBe(resolve(outputDir));
+  });
+
+  it("rejects partial numeric timeout option values", () => {
+    expect(() => parseArgs(["--total-timeout-ms", "25ms"])).toThrow(
+      "--total-timeout-ms must be a positive integer",
+    );
   });
 
   it("wires the root package script", () => {

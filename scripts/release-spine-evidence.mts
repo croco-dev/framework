@@ -490,7 +490,24 @@ function appendBoundedText(current: string, chunk: string): string {
 }
 
 function killActiveCommand(signal: NodeJS.Signals): void {
-  activeCommandProcess?.kill(signal);
+  if (activeCommandProcess) {
+    signalCommandProcessTree(activeCommandProcess, signal);
+  }
+}
+
+function signalCommandProcessTree(child: ChildProcess, signal: NodeJS.Signals): void {
+  if (child.pid && process.platform !== "win32") {
+    try {
+      process.kill(-child.pid, signal);
+      return;
+    } catch (error) {
+      if (getErrorCode(error instanceof Error ? error : undefined) === "ESRCH") {
+        return;
+      }
+    }
+  }
+
+  child.kill(signal);
 }
 
 export const defaultCommandRunner: CommandRunner = (check, context) =>
@@ -518,6 +535,7 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
     let timedOut = false;
     const child = spawn(command, args, {
       cwd: context.cwd,
+      detached: process.platform !== "win32",
       env: process.env,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -525,9 +543,9 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
 
     const timeoutTimer = setTimeout(() => {
       timedOut = true;
-      child.kill("SIGTERM");
+      signalCommandProcessTree(child, "SIGTERM");
       killTimer = setTimeout(() => {
-        child.kill("SIGKILL");
+        signalCommandProcessTree(child, "SIGKILL");
       }, commandTimeoutKillGraceMs);
     }, context.timeoutMs);
 
@@ -668,9 +686,6 @@ function resultStatus(result: CommandRunResult): EvidenceStatus {
 }
 
 function failureReason(result: CommandRunResult, artifactReason: string | null): string | null {
-  if (artifactReason) {
-    return artifactReason;
-  }
   if (result.timedOut) {
     return "Command timed out before it could produce passing evidence.";
   }
@@ -679,6 +694,9 @@ function failureReason(result: CommandRunResult, artifactReason: string | null):
   }
   if (result.status !== 0) {
     return `Command exited with status ${result.status ?? "unknown"}.`;
+  }
+  if (artifactReason) {
+    return artifactReason;
   }
 
   return null;
@@ -940,7 +958,11 @@ export function writeReleaseSpineEvidenceReport(
 }
 
 function parsePositiveInteger(value: string, flag: string): number {
-  const parsed = Number.parseInt(value, 10);
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new Error(`${flag} must be a positive integer`);
+  }
+
+  const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed <= 0) {
     throw new Error(`${flag} must be a positive integer`);
   }

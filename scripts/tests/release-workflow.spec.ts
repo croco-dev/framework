@@ -116,8 +116,8 @@ describe("release workflow quality gates", () => {
     const workflow = readReleaseWorkflow();
 
     expect(workflow).toContain("release:spine-evidence has a 150-minute internal budget");
-    expect(workflow).toContain("15-minute wrapper margin");
-    expect(workflow).toContain("timeout-minutes: 165");
+    expect(workflow).toContain("45-minute wrapper budget");
+    expect(workflow).toContain("timeout-minutes: 195");
   });
 
   it("routes raw changesets to release PR updates without publish gates", () => {
@@ -257,11 +257,15 @@ describe("release workflow quality gates", () => {
     const workflow = readReleaseWorkflow();
     const spineGateIndex = workflow.indexOf("- name: Release spine evidence");
     const summaryIndex = workflow.indexOf("- name: Publish release spine evidence summary");
+    const uploadIndex = workflow.indexOf("- name: Upload release spine evidence");
     const dryRunIndex = workflow.indexOf("- name: Dry-run publish gate");
     const spineGateStep = workflow.slice(spineGateIndex, summaryIndex);
+    const summaryStep = workflow.slice(summaryIndex, uploadIndex);
+    const uploadStep = workflow.slice(uploadIndex, dryRunIndex);
 
     expect(spineGateIndex).toBeGreaterThan(-1);
     expect(summaryIndex).toBeGreaterThan(spineGateIndex);
+    expect(uploadIndex).toBeGreaterThan(summaryIndex);
     expect(dryRunIndex).toBeGreaterThan(spineGateIndex);
     expect(workflow).toContain("id: release_spine_evidence");
     expect(workflow).toContain("run: pnpm release:spine-evidence");
@@ -269,7 +273,10 @@ describe("release workflow quality gates", () => {
       "if: steps.release_work.outputs.should_run_publish_gates == 'true'",
     );
     expect(spineGateStep).not.toContain("always()");
-    expect(workflow).toContain(
+    expect(summaryStep).toContain(
+      "if: always() && steps.release_work.outputs.should_run_publish_gates == 'true'",
+    );
+    expect(uploadStep).toContain(
       "if: always() && steps.release_work.outputs.should_run_publish_gates == 'true'",
     );
     expect(workflow).toContain("name: release-spine-evidence");
