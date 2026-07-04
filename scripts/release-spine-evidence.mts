@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -47,6 +47,8 @@ export type EvidenceArtifactReference = EvidenceArtifactExpectation & {
   readonly copiedPath: string | null;
   readonly copyError: string | null;
   readonly exists: boolean;
+  readonly fresh: boolean;
+  readonly modifiedAt: string | null;
   readonly sourcePath: string;
 };
 
@@ -316,6 +318,8 @@ function emptyArtifactReferences(command: EvidenceCommand): readonly EvidenceArt
     copiedPath: null,
     copyError: null,
     exists: false,
+    fresh: false,
+    modifiedAt: null,
     sourcePath: artifact.path,
   }));
 }
@@ -599,11 +603,14 @@ function collectArtifactReferences(
   check: EvidenceCommand,
   rootDir: string,
   outputDir: string,
+  startedMs: number,
 ): readonly EvidenceArtifactReference[] {
   return (check.artifacts ?? []).map((artifact) => {
     const sourcePath = resolve(rootDir, artifact.path);
     const exists = existsSync(sourcePath);
-    const copiedPath = exists ? artifactCopyPath(outputDir, check.id, sourcePath) : null;
+    const modifiedAtMs = exists ? statSync(sourcePath).mtimeMs : null;
+    const fresh = modifiedAtMs !== null && modifiedAtMs >= startedMs;
+    const copiedPath = exists && fresh ? artifactCopyPath(outputDir, check.id, sourcePath) : null;
     let copyError: string | null = null;
 
     if (copiedPath) {
@@ -620,6 +627,8 @@ function collectArtifactReferences(
       copiedPath: copiedPath ? relativeToRoot(rootDir, copiedPath) : null,
       copyError,
       exists,
+      fresh,
+      modifiedAt: modifiedAtMs !== null ? new Date(modifiedAtMs).toISOString() : null,
       sourcePath: artifact.path,
     };
   });
@@ -629,6 +638,13 @@ function artifactFailureReason(artifacts: readonly EvidenceArtifactReference[]):
   const missing = artifacts.filter((artifact) => artifact.required && !artifact.exists);
   if (missing.length > 0) {
     return `Required release evidence artifact(s) were not produced: ${missing
+      .map((artifact) => artifact.sourcePath)
+      .join(", ")}`;
+  }
+
+  const stale = artifacts.filter((artifact) => artifact.required && !artifact.fresh);
+  if (stale.length > 0) {
+    return `Required release evidence artifact(s) were not refreshed by their command: ${stale
       .map((artifact) => artifact.sourcePath)
       .join(", ")}`;
   }
@@ -767,7 +783,7 @@ export async function runReleaseSpineEvidence(
     });
     const completedAt = clock.nowIso();
     const durationMs = Math.max(0, clock.nowMs() - startedMs);
-    const artifacts = collectArtifactReferences(check, rootDir, outputDir);
+    const artifacts = collectArtifactReferences(check, rootDir, outputDir, startedMs);
     const artifactReason = artifactFailureReason(artifacts);
     const status =
       artifactReason && result.status === 0 && !result.timedOut ? "failed" : resultStatus(result);
@@ -835,10 +851,11 @@ function formatArtifacts(check: EvidenceCheckResult): string {
 
   return check.artifacts
     .map((artifact) => {
-      const status = artifact.exists ? "present" : "missing";
+      const status = !artifact.exists ? "missing" : artifact.fresh ? "present" : "stale";
       const copied = artifact.copiedPath ? `, copied: \`${artifact.copiedPath}\`` : "";
       const copyError = artifact.copyError ? `, copy error: ${artifact.copyError}` : "";
-      return `${artifact.label} (${status}${copied}${copyError})`;
+      const modified = artifact.modifiedAt ? `, modified: ${artifact.modifiedAt}` : "";
+      return `${artifact.label} (${status}${modified}${copied}${copyError})`;
     })
     .join("<br>");
 }
@@ -894,9 +911,11 @@ export function buildReleaseSpineEvidenceMarkdown(report: ReleaseSpineEvidenceRe
         ? ["- none"]
         : check.artifacts.map((artifact) => {
             const required = artifact.required ? "required" : "optional";
+            const status = !artifact.exists ? "missing" : artifact.fresh ? "present" : "stale";
+            const modified = artifact.modifiedAt ? `; modified at ${artifact.modifiedAt}` : "";
             const copied = artifact.copiedPath ? `; copied to \`${artifact.copiedPath}\`` : "";
             const copyError = artifact.copyError ? `; copy error: ${artifact.copyError}` : "";
-            return `- ${artifact.label} (${required}): \`${artifact.sourcePath}\` ${artifact.exists ? "present" : "missing"}${copied}${copyError}`;
+            return `- ${artifact.label} (${required}): \`${artifact.sourcePath}\` ${status}${modified}${copied}${copyError}`;
           })),
       ...formatOutputSection("stdout excerpt", check.stdoutExcerpt),
       ...formatOutputSection("stderr excerpt", check.stderrExcerpt),

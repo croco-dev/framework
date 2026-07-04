@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -129,6 +137,41 @@ describe("release-spine-evidence.mts", () => {
     expect(report.status).toBe("failed");
     expect(report.checks[0]?.status).toBe("failed");
     expect(report.checks[0]?.failureReason).toContain("Required release evidence artifact");
+  });
+
+  it("fails a passing command when a required artifact was not refreshed", async () => {
+    const repo = createTempRepo();
+    const artifactPath = join(repo, "ci-reports", "generated-apps", "matrix.md");
+    const fakeTime = createFakeClock();
+    fakeTime.advance(1_000);
+    mkdirSync(join(repo, "ci-reports", "generated-apps"), { recursive: true });
+    writeFileSync(artifactPath, "# stale matrix\n");
+    utimesSync(artifactPath, new Date(0), new Date(0));
+
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "ci-reports", "release"),
+      totalTimeoutMs: 1_000,
+      commands: [
+        createCommand("generated-app-smoke", {
+          artifacts: [
+            {
+              label: "Generated app matrix",
+              path: "ci-reports/generated-apps/matrix.md",
+              required: true,
+            },
+          ],
+        }),
+      ],
+      clock: fakeTime.clock,
+      runner: () => okResult("generated app ok"),
+    });
+
+    expect(report.status).toBe("failed");
+    expect(report.checks[0]?.artifacts[0]?.exists).toBe(true);
+    expect(report.checks[0]?.artifacts[0]?.fresh).toBe(false);
+    expect(report.checks[0]?.artifacts[0]?.copiedPath).toBeNull();
+    expect(report.checks[0]?.failureReason).toContain("were not refreshed");
   });
 
   it("records failed command output with bounded excerpts", async () => {
