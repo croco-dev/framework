@@ -1082,6 +1082,37 @@ describe("doctor", () => {
     expect(diagnostics).toEqual([]);
   });
 
+  it("rejects unsafe benchmark run ids as advisory readiness warning", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo, {
+      runIds: [Number.MAX_SAFE_INTEGER + 1, 2, 3, 4, 5],
+    });
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorBenchmarkVarianceEvidenceMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("positive safe integer id");
+  });
+
   it("rejects benchmark variance evidence that drifts from current benchmark rows", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -1957,6 +1988,7 @@ type BenchmarkVarianceEvidenceOptions = {
   readonly prePromotionBaselineFailuresPerRun?: number;
   readonly promotedBaselineFailures?: number;
   readonly reviewedAt?: string;
+  readonly runIds?: readonly number[];
   readonly runUrlSuffix?: string;
   readonly resultReports?: readonly BenchmarkResultReport[];
 };
@@ -1972,20 +2004,17 @@ function writeBenchmarkVarianceEvidence(
   repo: string,
   options: BenchmarkVarianceEvidenceOptions = {},
 ): void {
-  const runIds = [1, 2, 3, 4, 5];
+  const runIds = options.runIds ?? [1, 2, 3, 4, 5];
   const prePromotionBaselineFailuresPerRun = options.prePromotionBaselineFailuresPerRun ?? 0;
   const gateFailures = Array.from(
     { length: prePromotionBaselineFailuresPerRun },
     (_, index) =>
       `Example benchmark ${index + 1}: p75 10.0ms exceeds baseline 1.0ms by more than 20%`,
   );
-  const p75ByRun = {
-    "1": 10,
-    "2": 10.2,
-    "3": 9.9,
-    "4": 10.1,
-    "5": 10,
-  };
+  const p75Values = [10, 10.2, 9.9, 10.1, 10];
+  const p75ByRun = Object.fromEntries(
+    runIds.map((runId, index) => [String(runId), p75Values[index] ?? 10]),
+  );
   const resultReports = options.resultReports ?? [
     { name: "Example benchmark", p75: 10, baseline: 10 },
   ];
@@ -2013,13 +2042,13 @@ function writeBenchmarkVarianceEvidence(
           orderedBy: "createdAt-desc",
           latestGreenTrunkRunIds: runIds,
         },
-        runs: runIds.map((runId) => ({
+        runs: runIds.map((runId, index) => ({
           id: runId,
           url: `https://github.com/croco-dev/framework/actions/runs/${runId}${options.runUrlSuffix ?? ""}`,
-          headSha: `${String.fromCharCode(96 + runId).repeat(40)}`,
+          headSha: `${String.fromCharCode(97 + index).repeat(40)}`,
           headBranch: "trunk",
           baseBranch: "trunk",
-          createdAt: `2026-06-30T0${5 - runId}:00:00Z`,
+          createdAt: `2026-06-30T0${runIds.length - index}:00:00Z`,
           workflowStatus: "completed",
           workflowConclusion: "success",
           artifact: {

@@ -1461,9 +1461,9 @@ function validateBenchmarkEvidenceRuns(
       continue;
     }
 
-    const runId = readPositiveInteger(runRecord.id);
+    const runId = readPositiveSafeInteger(runRecord.id);
     if (runId === null) {
-      failures.push("each structured evidence run must include a positive integer id");
+      failures.push("each structured evidence run must include a positive safe integer id");
       continue;
     }
 
@@ -1601,9 +1601,11 @@ function validateBenchmarkEvidenceSelection(
     return;
   }
 
-  const normalizedRunIds = latestRunIds.map(readPositiveInteger);
+  const normalizedRunIds = latestRunIds.map(readPositiveSafeInteger);
   if (normalizedRunIds.some((runId) => runId === null)) {
-    failures.push("structured evidence selection.latestGreenTrunkRunIds must be positive integers");
+    failures.push(
+      "structured evidence selection.latestGreenTrunkRunIds must be positive safe integers",
+    );
     return;
   }
 
@@ -1858,8 +1860,8 @@ function matchesGitHubActionsRunUrl(value: unknown, runId: number): boolean {
   }
 }
 
-function readPositiveInteger(value: unknown): number | null {
-  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : null;
+function readPositiveSafeInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : null;
 }
 
 function isFiniteNumber(value: unknown): value is number {
