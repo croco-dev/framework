@@ -18,9 +18,10 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    # release:spine-evidence has a 150-minute internal budget; the job keeps a
-    # 45-minute wrapper budget for setup, install, audit, check, upload, and dry-run publish.
-    timeout-minutes: 195
+    # release:spine-evidence has a 150-minute internal budget; the job keeps
+    # 45-minute budgets for both publish setup/wrapper work and the optional
+    # release-gate maintenance self-check when both paths run in one job.
+    timeout-minutes: 240
     env:
       NPM_CONFIG_PROVENANCE: "true"
 

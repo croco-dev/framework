@@ -116,8 +116,9 @@ describe("release workflow quality gates", () => {
     const workflow = readReleaseWorkflow();
 
     expect(workflow).toContain("release:spine-evidence has a 150-minute internal budget");
-    expect(workflow).toContain("45-minute wrapper budget");
-    expect(workflow).toContain("timeout-minutes: 195");
+    expect(workflow).toContain("45-minute budgets for both publish setup/wrapper work");
+    expect(workflow).toContain("release-gate maintenance self-check");
+    expect(workflow).toContain("timeout-minutes: 240");
   });
 
   it("routes raw changesets to release PR updates without publish gates", () => {
