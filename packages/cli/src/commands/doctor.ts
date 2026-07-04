@@ -871,6 +871,8 @@ function collectCoreCoverageBaselineDiagnostics(
   const baselineEntries = existsSync(baselinePath)
     ? readCoreCoverageBaselineEntries(rootDir)
     : new Map<string, CoreCoverageBaselineEntry>();
+  const thresholdValues = readCoreCoverageThresholdValues(rootDir);
+
   return uniqueStrings(selectedPackages).flatMap((packageName) => {
     const coverageSummaryPath = join(
       rootDir,
@@ -880,16 +882,28 @@ function collectCoreCoverageBaselineDiagnostics(
       "coverage-summary.json",
     );
     if (!existsSync(coverageSummaryPath)) {
-      return [];
-    }
-
-    const coverageSummaryFailure = readCoreCoverageSummaryFailure(coverageSummaryPath);
-    if (coverageSummaryFailure) {
       return [
         advisoryDiagnostic({
           code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
           checkId,
-          cause: `${packageName}: ${coverageSummaryFailure}.`,
+          cause: `${packageName}: coverage summary not found.`,
+          location: {
+            file: toPosixPath(relative(rootDir, coverageSummaryPath)),
+            packageName,
+          },
+          action:
+            "Run pnpm test:coverage:core so coverage/coverage-summary.json exists, then rerun pnpm test:coverage:core:warning.",
+        }),
+      ];
+    }
+
+    const coverageSummary = readCoreCoverageSummaryTotals(coverageSummaryPath);
+    if (coverageSummary.kind === "invalid") {
+      return [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${packageName}: ${coverageSummary.message}.`,
           location: {
             file: toPosixPath(relative(rootDir, coverageSummaryPath)),
             packageName,
@@ -920,11 +934,39 @@ function collectCoreCoverageBaselineDiagnostics(
     const zeroMetrics = intentionalZeroBaselinePackages.has(packageName)
       ? []
       : coreCoverageBaselineMetrics.filter((metric) => baseline[metric] === 0);
+    const thresholdWarnings =
+      thresholdValues === null
+        ? []
+        : coreCoverageBaselineMetrics
+            .filter(
+              (metric) =>
+                Number.isFinite(thresholdValues[metric]) &&
+                coverageSummary.totals[metric] < thresholdValues[metric],
+            )
+            .map(
+              (metric) =>
+                `${metric} ${coverageSummary.totals[metric].toFixed(2)}% < ${thresholdValues[metric]}%`,
+            );
+    const baselineWarnings = coreCoverageBaselineMetrics
+      .filter(
+        (metric) =>
+          Number.isFinite(baseline[metric]) && coverageSummary.totals[metric] < baseline[metric],
+      )
+      .map(
+        (metric) =>
+          `${metric} ${coverageSummary.totals[metric].toFixed(2)}% < baseline ${baseline[metric].toFixed(2)}%`,
+      );
     const failures = [
       ...(nonNumericMetrics.length > 0
         ? [`baseline ${nonNumericMetrics.join(", ")} must be numeric`]
         : []),
       ...(zeroMetrics.length > 0 ? [`baseline ${zeroMetrics.join(", ")} cannot be 0`] : []),
+      ...(thresholdWarnings.length > 0
+        ? [`threshold warning(s): ${thresholdWarnings.join(", ")}`]
+        : []),
+      ...(baselineWarnings.length > 0
+        ? [`baseline warning(s): ${baselineWarnings.join(", ")}`]
+        : []),
     ];
 
     if (failures.length === 0) {
@@ -944,7 +986,13 @@ function collectCoreCoverageBaselineDiagnostics(
   });
 }
 
-type CoreCoverageBaselineEntry = Record<(typeof coreCoverageBaselineMetrics)[number], number>;
+type CoreCoverageMetric = (typeof coreCoverageBaselineMetrics)[number];
+type CoreCoverageMetricValues = Record<CoreCoverageMetric, number>;
+type CoreCoverageBaselineEntry = CoreCoverageMetricValues;
+
+type CoreCoverageSummaryTotalsResult =
+  | { readonly kind: "valid"; readonly totals: CoreCoverageMetricValues }
+  | { readonly kind: "invalid"; readonly message: string };
 
 function readCoreCoverageBaselineEntries(rootDir: string): Map<string, CoreCoverageBaselineEntry> {
   const entries = new Map<string, CoreCoverageBaselineEntry>();
@@ -973,25 +1021,33 @@ function readCoreCoverageBaselineEntries(rootDir: string): Map<string, CoreCover
   return entries;
 }
 
-function readCoreCoverageSummaryFailure(summaryPath: string): string | null {
+function readCoreCoverageSummaryTotals(summaryPath: string): CoreCoverageSummaryTotalsResult {
   const summary = readJsonObject(summaryPath);
   if (summary.kind === "invalid") {
-    return `coverage-summary.json is unreadable: ${summary.message}`;
+    return { kind: "invalid", message: `coverage-summary.json is unreadable: ${summary.message}` };
   }
 
   const totals = asRecord(summary.value.total);
   if (!totals) {
-    return "coverage-summary.json is missing total metrics";
+    return { kind: "invalid", message: "coverage-summary.json is missing total metrics" };
   }
 
+  const summaryTotals = Object.fromEntries(
+    coreCoverageBaselineMetrics.map((metric) => {
+      const metricTotals = asRecord(totals[metric]);
+      return [metric, Number(metricTotals?.pct)];
+    }),
+  ) as CoreCoverageMetricValues;
   const invalidMetrics = coreCoverageBaselineMetrics.filter((metric) => {
-    const metricTotals = asRecord(totals[metric]);
-    return !Number.isFinite(metricTotals?.pct);
+    return !Number.isFinite(summaryTotals[metric]);
   });
 
   return invalidMetrics.length > 0
-    ? `coverage-summary.json total ${invalidMetrics.join(", ")} pct must be numeric`
-    : null;
+    ? {
+        kind: "invalid",
+        message: `coverage-summary.json total ${invalidMetrics.join(", ")} pct must be numeric`,
+      }
+    : { kind: "valid", totals: summaryTotals };
 }
 
 function readCatalogPackageMembership(value: unknown): Map<string, string[]> {
@@ -1085,6 +1141,56 @@ function readCoreCoverageThresholdPackages(rootDir: string): CoreCoverageThresho
   }
 
   return { kind: "present", packages };
+}
+
+function readCoreCoverageThresholdValues(rootDir: string): CoreCoverageMetricValues | null {
+  const configPath = join(rootDir, defaultVitestConfigPath);
+  if (!existsSync(configPath)) {
+    return null;
+  }
+
+  return parseCoreCoverageThresholdValues(readFileSync(configPath, "utf-8"));
+}
+
+function parseCoreCoverageThresholdValues(source: string): CoreCoverageMetricValues | null {
+  const declaration = source.match(
+    /export\s+const\s+CORE_COVERAGE_THRESHOLDS\s*=\s*\{([\s\S]*?)\}\s*;?/,
+  );
+  const declarationBody = declaration?.[1];
+  if (!declarationBody) {
+    return null;
+  }
+
+  return declarationBody
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .reduce<CoreCoverageMetricValues>(
+      (thresholds, line) => {
+        const [metric, value] = line
+          .replace(",", "")
+          .split(":")
+          .map((part) => part.trim());
+
+        if (isCoreCoverageMetric(metric)) {
+          thresholds[metric] = Number.parseFloat(value ?? "");
+        }
+
+        return thresholds;
+      },
+      {
+        branches: 0,
+        functions: 0,
+        lines: 0,
+        statements: 0,
+      },
+    );
+}
+
+function isCoreCoverageMetric(value: unknown): value is CoreCoverageMetric {
+  return (
+    value === "branches" || value === "functions" || value === "lines" || value === "statements"
+  );
 }
 
 function parseStringArrayExport(source: string, exportName: string): string[] | null {

@@ -509,6 +509,7 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-context"], { spine: [] });
+    writePassingCoreCoverageEvidence(repo);
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
@@ -547,6 +548,7 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-context"], { spine: [] });
+    writePassingCoreCoverageEvidence(repo);
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo, { prePromotionBaselineFailuresPerRun: 1 });
     writeValidStaticMisuseAllowlist(repo);
@@ -578,6 +580,7 @@ describe("doctor", () => {
       "@croco/framework-context",
       "Temporary baseline stabilization while coverage rows are reviewed.",
     );
+    writePassingCoreCoverageEvidence(repo, "@croco/problems-core");
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeValidStaticMisuseAllowlist(repo);
@@ -605,6 +608,7 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-private"]);
+    writePassingCoreCoverageEvidence(repo, "@croco/problems-core");
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeValidStaticMisuseAllowlist(repo, {
@@ -640,6 +644,7 @@ describe("doctor", () => {
       "@croco/framework-context",
       "Temporary baseline stabilization while coverage rows are reviewed.",
     );
+    writePassingCoreCoverageEvidence(repo, "@croco/problems-core");
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeValidStaticMisuseAllowlist(repo);
@@ -672,6 +677,7 @@ describe("doctor", () => {
     });
     writePackageCatalog(repo, ["framework-context"]);
     writeCoreCoverageVitestConfig(repo, ["@croco/problems-core"]);
+    writePassingCoreCoverageEvidence(repo);
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeValidStaticMisuseAllowlist(repo);
@@ -705,6 +711,7 @@ describe("doctor", () => {
     });
     writePackageCatalog(repo, ["framework-context"], { spine: [] });
     rmSync(join(repo, "scripts/core-coverage-warning-check.mts"));
+    writePassingCoreCoverageEvidence(repo);
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeValidStaticMisuseAllowlist(repo);
@@ -765,6 +772,7 @@ describe("doctor", () => {
     });
     writePackageCatalog(repo, ["framework-context"]);
     writeFile(repo, "vitest.config.ts", "export const OTHER_COVERAGE_PACKAGES = [];\n");
+    writePassingCoreCoverageEvidence(repo);
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeValidStaticMisuseAllowlist(repo);
@@ -800,6 +808,7 @@ describe("doctor", () => {
         "\n",
       ),
     );
+    writePassingCoreCoverageEvidence(repo);
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeValidStaticMisuseAllowlist(repo);
@@ -845,6 +854,7 @@ describe("doctor", () => {
         "",
       ].join("\n"),
     );
+    writePassingCoreCoverageEvidence(repo);
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeValidStaticMisuseAllowlist(repo);
@@ -857,6 +867,86 @@ describe("doctor", () => {
     expect(report.summary).toBe("healthy");
     expect(getDoctorExitCode(report)).toBe(0);
     expect(diagnostics).toHaveLength(0);
+  });
+
+  it("reports missing core coverage summaries for selected packages", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].location?.file).toBe(
+      "packages/framework-context/coverage/coverage-summary.json",
+    );
+    expect(diagnostics[0].cause).toContain("coverage summary not found");
+  });
+
+  it("reports core coverage threshold and baseline regressions", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeJson(repo, "packages/framework-context/coverage/coverage-summary.json", {
+      total: {
+        statements: { pct: 70 },
+        branches: { pct: 70 },
+        functions: { pct: 70 },
+        lines: { pct: 70 },
+      },
+    });
+    writeFile(
+      repo,
+      "ci-reports/coverage/core-baseline.txt",
+      [
+        "| Package | Statements | Branches | Functions | Lines |",
+        "|---------|-----------:|---------:|----------:|------:|",
+        "| `@croco/framework-context` | 75 | 70 | 60 | 90 |",
+        "",
+      ].join("\n"),
+    );
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("threshold warning(s)");
+    expect(diagnostics[0].cause).toContain("lines 70.00% < 80%");
+    expect(diagnostics[0].cause).toContain("baseline warning(s)");
+    expect(diagnostics[0].cause).toContain("lines 70.00% < baseline 90.00%");
   });
 
   it("reports core coverage baseline hard errors", () => {
@@ -1044,7 +1134,7 @@ describe("doctor", () => {
       [
         "| Package | Statements | Branches | Functions | Lines |",
         "|---------|-----------:|---------:|----------:|------:|",
-        "| `@croco/framework-context` | 0 | 0 | 92.69 | 84.81 |",
+        "| `@croco/framework-context` | 0 | 0 | 80 | 80 |",
         "",
       ].join("\n"),
     );
@@ -1127,6 +1217,7 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-context"]);
+    writePassingCoreCoverageEvidence(repo);
     writeJson(repo, "ci-reports/bundle-size/baseline.json", {
       schemaVersion: 1,
       artifacts: {
@@ -1175,6 +1266,7 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-context"]);
+    writePassingCoreCoverageEvidence(repo);
     writeJson(repo, "ci-reports/bundle-size/baseline.json", {
       schemaVersion: 1,
       artifacts: {},
@@ -1446,7 +1538,20 @@ describe("doctor", () => {
     writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
       scripts: { build: "tsup" },
     });
+    writeWorkspacePackage(repo, "packages/problems-core", "@croco/problems-core");
+    writeFile(repo, "packages/problems-core/src/index.ts", "export {};\n");
     writePackageCatalog(repo, ["framework-context"]);
+    writePassingCoreCoverageEvidence(repo, "@croco/problems-core");
+    writeJson(repo, "docs/problem-code-registry.json", {
+      version: "croco.problem-code-registry.v1",
+      problemCount: 0,
+      problems: [],
+    });
+    writeFile(
+      repo,
+      "packages/docs/src/content/docs/en/reference/problem-recovery-cookbook.md",
+      "# Problem recovery cookbook\n",
+    );
     writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
       schemaVersion: 1,
       entries: [
@@ -2545,6 +2650,38 @@ function writeCoreCoverageIntentionalZeroBaselineReason(
       "const INTENTIONAL_ZERO_BASELINE_REASONS: Record<string, string> = {",
       `  "${packageName}": "${reason}",`,
       "};",
+      "",
+    ].join("\n"),
+  );
+}
+
+function writePassingCoreCoverageEvidence(
+  repo: string,
+  packageName = "@croco/framework-context",
+): void {
+  if (packageName === "@croco/problems-core") {
+    writeWorkspacePackage(repo, "packages/problems-core", "@croco/problems-core");
+    writeFile(repo, "packages/problems-core/src/index.ts", "export {};\n");
+    writeJson(repo, "docs/problem-code-registry.json", {
+      version: "croco.problem-code-registry.v1",
+      problemCount: 0,
+      problems: [],
+    });
+    writeFile(
+      repo,
+      "packages/docs/src/content/docs/en/reference/problem-recovery-cookbook.md",
+      "# Problem recovery cookbook\n",
+    );
+  }
+
+  writeCoreCoverageSummary(repo, packageName);
+  writeFile(
+    repo,
+    "ci-reports/coverage/core-baseline.txt",
+    [
+      "| Package | Statements | Branches | Functions | Lines |",
+      "|---------|-----------:|---------:|----------:|------:|",
+      `| \`${packageName}\` | 80 | 80 | 80 | 80 |`,
       "",
     ].join("\n"),
   );
