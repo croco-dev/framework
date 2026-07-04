@@ -100,6 +100,15 @@ export const CORE_COVERAGE_THRESHOLDS = {
     });
   });
 
+  it("uses the provided source label when threshold parsing fails", () => {
+    expect(() =>
+      parseCoreCoverageThresholds(
+        "export const OTHER_COVERAGE_THRESHOLDS = {};",
+        "inline vitest config",
+      ),
+    ).toThrow("failed to read core coverage config from inline vitest config");
+  });
+
   it("rejects zero baseline metrics when a coverage summary exists", () => {
     const baseline = parseBaselineContent(`
 | Package | Statements | Branches | Functions | Lines |

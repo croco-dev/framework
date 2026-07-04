@@ -4,6 +4,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { defineCommand } from "citty";
 import { PROJECT_MANIFEST_BUNDLE_ARTIFACTS } from "@croco/protocols-core";
 import { WORKSPACE_MAX_DEPTH } from "../libs/constants.js";
+import { parseCoreCoveragePackageFilters } from "../libs/coreCoverageFilters.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 import type { CliDiagnosticCode } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
@@ -731,7 +732,7 @@ function coreCoverageCandidateReadiness(
     };
   }
 
-  const selectedPackages = new Set(parseCoreCoverageScriptFilters(coreCoverageScript));
+  const selectedPackages = new Set(parseCoreCoveragePackageFilters(coreCoverageScript));
   const thresholdPackagesResult = readCoreCoverageThresholdPackages(rootDir);
   const temporarilyExcludedPackages = readTemporaryCoreCoverageSelectionExclusions(rootDir);
   const intentionalZeroBaselinePackages = readIntentionalCoreCoverageZeroBaselineReasons(rootDir);
@@ -977,27 +978,6 @@ function readCatalogPackageMembership(value: unknown): Map<string, string[]> {
   }
 
   return membership;
-}
-
-function parseCoreCoverageScriptFilters(script: string): string[] {
-  const markerIndex = script.indexOf("CORE_COVERAGE=true");
-  const coverageSegment = markerIndex >= 0 ? script.slice(markerIndex) : script;
-  const filters: string[] = [];
-  const packageFilter = "((?:@croco\\/)?[\\w-]+)";
-  const filterPattern = new RegExp(
-    `--filter\\s+(?:"${packageFilter}"|'${packageFilter}'|${packageFilter})`,
-    "g",
-  );
-  let match: RegExpExecArray | null;
-
-  while ((match = filterPattern.exec(coverageSegment)) !== null) {
-    const packageName = match[1] ?? match[2] ?? match[3];
-    if (packageName) {
-      filters.push(packageName);
-    }
-  }
-
-  return uniqueStrings(filters);
 }
 
 function readTemporaryCoreCoverageSelectionExclusions(rootDir: string): ReadonlySet<string> {
