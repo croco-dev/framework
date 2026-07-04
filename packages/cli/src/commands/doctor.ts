@@ -837,11 +837,9 @@ function collectCoreCoverageBaselineDiagnostics(
   intentionalZeroBaselinePackages: ReadonlySet<string>,
 ): DoctorDiagnostic[] {
   const baselinePath = join(rootDir, defaultCoreCoverageBaselinePath);
-  if (!existsSync(baselinePath)) {
-    return [];
-  }
-
-  const baselineEntries = readCoreCoverageBaselineEntries(rootDir);
+  const baselineEntries = existsSync(baselinePath)
+    ? readCoreCoverageBaselineEntries(rootDir)
+    : new Map<string, CoreCoverageBaselineEntry>();
   return uniqueStrings(selectedPackages).flatMap((packageName) => {
     const coverageSummaryPath = join(
       rootDir,
@@ -1428,7 +1426,7 @@ function readBenchmarkResultReports(
   const reports: BenchmarkCurrentReport[] = [];
   for (const [index, entry] of result.value.reports.entries()) {
     const report = asRecord(entry);
-    const name = readOptionalString(report?.name);
+    const name = readBenchmarkContractString(report?.name);
     if (!report || !name) {
       return {
         kind: "invalid",
@@ -1854,7 +1852,7 @@ function validateBenchmarkEvidenceRows(
       continue;
     }
 
-    const rowName = readOptionalString(rowRecord.name);
+    const rowName = readBenchmarkContractString(rowRecord.name);
     if (!rowName) {
       failures.push(`${rowLabel} must include a name`);
     } else if (rowNames.has(rowName)) {
@@ -3629,6 +3627,10 @@ function readOptionalString(value: unknown): string | null {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function readBenchmarkContractString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
 }
 
 function readRawString(value: unknown): string | null {
