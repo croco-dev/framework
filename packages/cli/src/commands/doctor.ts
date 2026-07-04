@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { defineCommand } from "citty";
 import { PROJECT_MANIFEST_BUNDLE_ARTIFACTS } from "@croco/protocols-core";
@@ -1284,7 +1284,7 @@ function collectMeasuredBundleArtifactPaths(
   workspacePackage: DoctorPackage,
 ): string[] {
   const distDir = join(rootDir, workspacePackage.relativeDir, "dist");
-  if (!existsSync(distDir)) {
+  if (!existsSync(distDir) || !statSync(distDir).isDirectory()) {
     return [];
   }
 

@@ -1160,6 +1160,40 @@ describe("doctor", () => {
     expect(diagnostics[0].cause).toContain("stale baseline key");
   });
 
+  it("reports missing bundle artifacts when dist exists as a file", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeFile(repo, "packages/framework-context/dist", "not a directory\n");
+    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
+      schemaVersion: 1,
+      artifacts: {
+        "@croco/framework-context:packages/framework-context/dist/index.js": 1024,
+      },
+    });
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("has no measured bundle artifact");
+  });
+
   it("normalizes lowercase hashed bundle chunks before comparing baselines", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
