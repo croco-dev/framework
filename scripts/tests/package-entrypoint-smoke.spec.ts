@@ -5,12 +5,17 @@ import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const scriptPath = resolve(__dirname, "../package-entrypoint-smoke.mts");
+const spawnTimeoutMs = 180_000;
 const tempRoots: string[] = [];
 
 type ScriptResult = {
   readonly stdout: string;
   readonly stderr: string;
   readonly status: number | null;
+};
+
+type TempRootOptions = {
+  readonly packageManager?: string | false;
 };
 
 describe("package-entrypoint-smoke.mts", () => {
@@ -28,8 +33,23 @@ describe("package-entrypoint-smoke.mts", () => {
     const result = runScript(root);
 
     expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "package-entrypoint-smoke: @croco/valid packed tarball installed with node-linker=isolated",
+    );
     expect(result.stdout).toContain("✓ @croco/valid: esm 1, cjs 1, types 1");
     expect(result.stdout).toContain("summary checked=1 exempt=0 skippedPrivate=1");
+  });
+
+  it("requires the root package manager pin for isolated consumers", () => {
+    const root = createTempRoot({ packageManager: false });
+    writeImportablePackage(root, "valid");
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      "packageManager must pin the pnpm version",
+    );
   });
 
   it("rejects a public docs site package without an entrypoint exemption", () => {
@@ -103,18 +123,103 @@ describe("package-entrypoint-smoke.mts", () => {
 
   it("fails when a runtime entrypoint imports an undeclared dependency", () => {
     const root = createTempRoot();
+    writeImportablePackage(root, "hidden-helper");
+    writeImportablePackage(root, "hidden-owner", {
+      cjsContent: 'exports.value = require("@croco/hidden-helper").value;\n',
+      dependencies: {
+        "@croco/hidden-helper": "0.0.0",
+      },
+      declarationContent:
+        'export type { Value } from "@croco/hidden-helper";\nexport declare const value: string;\n',
+      esmContent: 'export { value } from "@croco/hidden-helper";\n',
+    });
     writeImportablePackage(root, "missing-runtime-dependency", {
-      cjsContent: 'require("zod");\nexports.value = "ok";\n',
-      esmContent: 'import "zod";\nexport const value = "ok";\n',
+      cjsContent: 'exports.value = require("@croco/hidden-helper").value;\n',
+      dependencies: {
+        "@croco/hidden-owner": "0.0.0",
+      },
+      esmContent: 'export { value } from "@croco/hidden-helper";\n',
     });
 
     const result = runScript(root);
 
     expect(result.status).toBe(1);
-    expect(`${result.stdout}\n${result.stderr}`).toContain("zod");
+    expect(`${result.stdout}\n${result.stderr}`).toContain("@croco/hidden-helper");
   });
 
-  it("resolves declared external dependencies from package-local node_modules", () => {
+  it("installs transitive internal dependencies from packed tarball overrides", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "runtime-helper", {
+      declarationContent: "export type Value = string;\nexport declare const value: string;\n",
+    });
+    writeImportablePackage(root, "runtime-bridge", {
+      cjsContent: 'exports.value = require("@croco/runtime-helper").value;\n',
+      dependencies: {
+        "@croco/runtime-helper": "0.0.0",
+      },
+      declarationContent: 'export type { Value } from "@croco/runtime-helper";\n',
+      esmContent: 'export { value } from "@croco/runtime-helper";\n',
+    });
+    writeImportablePackage(root, "uses-runtime-bridge", {
+      cjsContent: 'exports.value = require("@croco/runtime-bridge").value;\n',
+      dependencies: {
+        "@croco/runtime-bridge": "0.0.0",
+      },
+      declarationContent: 'export type { Value } from "@croco/runtime-bridge";\n',
+      esmContent: 'export { value } from "@croco/runtime-bridge";\n',
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "package-entrypoint-smoke: @croco/uses-runtime-bridge packed tarball installed with node-linker=isolated",
+    );
+    expect(result.stdout).toContain("summary checked=3 exempt=0 skippedPrivate=0");
+  });
+
+  it("matches packed tarballs by manifest name when package names share a prefix", () => {
+    const root = createTempRoot();
+    const prefixedExport = {
+      import: "./dist/index.mjs",
+      require: "./dist/index.js",
+      types: "./dist/index.d.ts",
+    };
+    writeImportablePackage(root, "aaa-prefix-extra", {
+      exportsValue: {
+        ".": prefixedExport,
+        "./extra": {
+          import: "./dist/extra.mjs",
+          require: "./dist/extra.js",
+          types: "./dist/extra.d.ts",
+        },
+      },
+      packageName: "@croco/prefix-extra",
+    });
+    writeFileSync(
+      join(root, "packages", "aaa-prefix-extra", "dist", "extra.js"),
+      'exports.extra = "ok";\n',
+    );
+    writeFileSync(
+      join(root, "packages", "aaa-prefix-extra", "dist", "extra.mjs"),
+      'export const extra = "ok";\n',
+    );
+    writeFileSync(
+      join(root, "packages", "aaa-prefix-extra", "dist", "extra.d.ts"),
+      "export declare const extra: string;\n",
+    );
+    writeImportablePackage(root, "zzz-prefix", {
+      packageName: "@croco/prefix",
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("✓ @croco/prefix-extra: esm 2, cjs 2, types 2");
+    expect(result.stdout).toContain("✓ @croco/prefix: esm 1, cjs 1, types 1");
+  });
+
+  it("does not resolve dependencies from package-local node_modules", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "package-local-dependency", {
       cjsContent: 'require("package-local-only");\nexports.value = "ok";\n',
@@ -127,8 +232,8 @@ describe("package-entrypoint-smoke.mts", () => {
 
     const result = runScript(root);
 
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("✓ @croco/package-local-dependency: esm 1, cjs 1, types 1");
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("package-local-only");
   });
 
   it("fails when declarations import an undeclared type dependency", () => {
@@ -156,14 +261,50 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.status).toBe(0);
     expect(`${result.stdout}\n${result.stderr}`).not.toContain("undeclared type dependency");
   });
+
+  it("does not treat generated runtime source strings as runtime dependency imports", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "generated-source", {
+      cjsContent:
+        'const generated = `import { ProblemClientError } from "@croco/frontend-problems";\\n`;\nexports.value = generated;\n',
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(`${result.stdout}\n${result.stderr}`).not.toContain("undeclared runtime dependency");
+  });
 });
 
-function createTempRoot(): string {
+function createTempRoot(options: TempRootOptions = {}): string {
   const root = mkdtempSync(join(tmpdir(), "croco-entrypoint-smoke-test-"));
+  const packageManager = options.packageManager ?? "pnpm@10.15.1";
   tempRoots.push(root);
   mkdirSync(join(root, "packages"));
   mkdirSync(join(root, "node_modules", "reflect-metadata"), { recursive: true });
   writeFileSync(join(root, "node_modules", "reflect-metadata", "index.js"), "\n");
+  writeFileSync(
+    join(root, "package.json"),
+    `${JSON.stringify(
+      {
+        name: "croco-entrypoint-smoke-test-root",
+        ...(packageManager === false ? {} : { packageManager }),
+        private: true,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(root, "pnpm-workspace.yaml"),
+    `${JSON.stringify(
+      {
+        packages: ["packages/*"],
+      },
+      null,
+      2,
+    )}\n`,
+  );
 
   return root;
 }
@@ -178,6 +319,7 @@ function writeImportablePackage(
     readonly esmContent?: string;
     readonly exportsValue?: unknown;
     readonly importTarget?: string;
+    readonly packageName?: string;
     readonly typesTarget?: string;
   } = {},
 ): void {
@@ -185,7 +327,7 @@ function writeImportablePackage(
   mkdirSync(join(packageDir, "src"), { recursive: true });
   mkdirSync(join(packageDir, "dist"), { recursive: true });
 
-  const packageName = `@croco/${packageDirName}`;
+  const packageName = options.packageName ?? `@croco/${packageDirName}`;
   writeFileSync(join(packageDir, "src", "index.ts"), 'export const value = "ok";\n');
   writeFileSync(
     join(packageDir, "dist", "index.js"),
@@ -206,6 +348,7 @@ function writeImportablePackage(
         ...(options.dependencies ? { dependencies: options.dependencies } : {}),
         name: packageName,
         version: "0.0.0",
+        dependencies: options.dependencies,
         files: ["dist"],
         type: "commonjs",
         main: "./src/index.ts",
@@ -334,6 +477,7 @@ function writePublicDocsPackage(root: string): void {
 function runScript(root: string): ScriptResult {
   const result = spawnSync("node", ["--experimental-strip-types", scriptPath, "--root", root], {
     encoding: "utf-8",
+    timeout: spawnTimeoutMs,
   });
 
   return {

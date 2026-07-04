@@ -71,7 +71,9 @@ describe("published @croco/meta-vite contract", () => {
 
         expect(packedManifest.peerDependencies?.zod).toBe("^3.23.8");
         expect(packedManifest.peerDependencies?.ioredis).toBe("5.10.1");
+        expect(packedManifest.peerDependencies?.["react-dom"]).toBe("^19.0.0");
         expect(packedManifest.peerDependenciesMeta?.ioredis?.optional).toBe(true);
+        expect(packedManifest.peerDependenciesMeta?.["react-dom"]).toBeUndefined();
         expect(packedManifest.exports?.["./isr/adapters"]).toEqual({
           import: "./dist/libs/isr/adapters/index.mjs",
           require: "./dist/libs/isr/adapters/index.js",
