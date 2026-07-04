@@ -69,7 +69,7 @@
     {
       "package": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 316,
+      "line": 317,
       "excerpt": "} catch {",
       "reason": "Telemetry degraded header emission is best-effort because telemetry setup has already failed and request handling should continue.",
       "owner": "framework-error-handling"
