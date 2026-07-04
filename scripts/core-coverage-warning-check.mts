@@ -145,9 +145,16 @@ export function parseCoreCoveragePackageFilters(coreCoverageCommand: string): st
     coverageCommandStart === -1
       ? coreCoverageCommand
       : coreCoverageCommand.slice(coverageCommandStart);
-  const matches = coverageCommand.matchAll(/--filter\s+((?:@croco\/)?[\w-]+)/g);
+  const packageFilter = "((?:@croco\\/)?[\\w-]+)";
+  const filterPattern = new RegExp(
+    `--filter\\s+(?:"${packageFilter}"|'${packageFilter}'|${packageFilter})`,
+    "g",
+  );
+  const matches = coverageCommand.matchAll(filterPattern);
 
-  return Array.from(matches, ([, packageName]) => packageName);
+  return Array.from(matches, (match) => match[1] ?? match[2] ?? match[3]).filter(
+    (packageName): packageName is string => Boolean(packageName),
+  );
 }
 
 function readVitestCoreCoveragePackages(): string[] {
@@ -172,8 +179,13 @@ function escapeRegExp(value: string): string {
 }
 
 function readCoreCoverageThresholds(): Record<CoverageMetric, number> {
-  const source = readFileSync(vitestConfigPath, "utf-8");
-  const thresholdSection = source.match(/export const CORE_COVERAGE_THRESHOLDS = \{([\s\S]*?)\};/);
+  return parseCoreCoverageThresholds(readFileSync(vitestConfigPath, "utf-8"));
+}
+
+export function parseCoreCoverageThresholds(source: string): Record<CoverageMetric, number> {
+  const thresholdSection = source.match(
+    /export const CORE_COVERAGE_THRESHOLDS = \{([\s\S]*?)\}\s*;?/,
+  );
   const thresholdItems = thresholdSection?.[1];
 
   if (!thresholdItems) {

@@ -168,7 +168,7 @@ const bundleSizeArtifactSuffixes = [
   ".json",
   ".d.ts",
 ] as const;
-const hashedChunkArtifactPattern = /(^|\/)chunk-[A-Z0-9]{8}(\.(?:cjs|mjs|js)(?:\.map)?)$/;
+const hashedChunkArtifactPattern = /(^|\/)chunk-[A-Z0-9]{8}(\.(?:cjs|mjs|js)(?:\.map)?)$/i;
 const benchmarkVarianceEvidenceMarker = "<!-- croco-benchmark-variance-evidence:v1 -->";
 const benchmarkVarianceEvidenceRunCount = 5;
 const benchmarkVarianceSpreadTolerance = 0.15;
@@ -852,6 +852,23 @@ function collectCoreCoverageBaselineDiagnostics(
       return [];
     }
 
+    const coverageSummaryFailure = readCoreCoverageSummaryFailure(coverageSummaryPath);
+    if (coverageSummaryFailure) {
+      return [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${packageName}: ${coverageSummaryFailure}.`,
+          location: {
+            file: toPosixPath(relative(rootDir, coverageSummaryPath)),
+            packageName,
+          },
+          action:
+            "Run pnpm test:coverage:core so coverage/coverage-summary.json contains total statement, branch, function, and line percentages.",
+        }),
+      ];
+    }
+
     const baseline = baselineEntries.get(packageName);
     if (!baseline) {
       return [
@@ -925,6 +942,27 @@ function readCoreCoverageBaselineEntries(rootDir: string): Map<string, CoreCover
   return entries;
 }
 
+function readCoreCoverageSummaryFailure(summaryPath: string): string | null {
+  const summary = readJsonObject(summaryPath);
+  if (summary.kind === "invalid") {
+    return `coverage-summary.json is unreadable: ${summary.message}`;
+  }
+
+  const totals = asRecord(summary.value.total);
+  if (!totals) {
+    return "coverage-summary.json is missing total metrics";
+  }
+
+  const invalidMetrics = coreCoverageBaselineMetrics.filter((metric) => {
+    const metricTotals = asRecord(totals[metric]);
+    return !Number.isFinite(metricTotals?.pct);
+  });
+
+  return invalidMetrics.length > 0
+    ? `coverage-summary.json total ${invalidMetrics.join(", ")} pct must be numeric`
+    : null;
+}
+
 function readCatalogPackageMembership(value: unknown): Map<string, string[]> {
   const membership = new Map<string, string[]>();
   if (!isRecord(value)) {
@@ -945,7 +983,11 @@ function parseCoreCoverageScriptFilters(script: string): string[] {
   const markerIndex = script.indexOf("CORE_COVERAGE=true");
   const coverageSegment = markerIndex >= 0 ? script.slice(markerIndex) : script;
   const filters: string[] = [];
-  const filterPattern = /--filter\s+(?:"([^"]+)"|'([^']+)'|([^\s]+))/g;
+  const packageFilter = "((?:@croco\\/)?[\\w-]+)";
+  const filterPattern = new RegExp(
+    `--filter\\s+(?:"${packageFilter}"|'${packageFilter}'|${packageFilter})`,
+    "g",
+  );
   let match: RegExpExecArray | null;
 
   while ((match = filterPattern.exec(coverageSegment)) !== null) {
@@ -1051,7 +1093,7 @@ function parseStringArrayExport(source: string, exportName: string): string[] | 
 
 function hasObjectExport(source: string, exportName: string): boolean {
   const declaration = source.match(
-    new RegExp(`export\\s+const\\s+${escapeRegExp(exportName)}\\s*=\\s*\\{([\\s\\S]*?)\\};`),
+    new RegExp(`export\\s+const\\s+${escapeRegExp(exportName)}\\s*=\\s*\\{([\\s\\S]*?)\\}\\s*;?`),
   );
   return Boolean(declaration?.[1]?.trim());
 }

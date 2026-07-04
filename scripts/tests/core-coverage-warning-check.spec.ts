@@ -7,6 +7,7 @@ import {
   getCoreCoverageConfigurationErrors,
   getBaselineWarnings,
   parseBaselineContent,
+  parseCoreCoverageThresholds,
   parseCoreCoveragePackageFilters,
   parseStringArrayExport,
   validateBaselineEntries,
@@ -57,6 +58,14 @@ describe("core-coverage-warning-check.mts", () => {
     expect(packages).toEqual(["@croco/framework-context", "create-croco-app"]);
   });
 
+  it("parses quoted core coverage package filters", () => {
+    const packages = parseCoreCoveragePackageFilters(
+      "CORE_COVERAGE=true pnpm --filter \"@croco/framework-context\" --filter 'create-croco-app' exec vitest run",
+    );
+
+    expect(packages).toEqual(["@croco/framework-context", "create-croco-app"]);
+  });
+
   it("parses the vitest core coverage threshold package export", () => {
     expect(
       parseStringArrayExport(
@@ -69,6 +78,26 @@ export const CORE_COVERAGE_PACKAGES = [
         "CORE_COVERAGE_PACKAGES",
       ),
     ).toEqual(["@croco/framework-context", "create-croco-app"]);
+  });
+
+  it("parses semicolonless core coverage threshold exports", () => {
+    expect(
+      parseCoreCoverageThresholds(
+        `
+export const CORE_COVERAGE_THRESHOLDS = {
+  lines: 80,
+  branches: 81,
+  functions: 82,
+  statements: 83,
+}
+`,
+      ),
+    ).toEqual({
+      lines: 80,
+      branches: 81,
+      functions: 82,
+      statements: 83,
+    });
   });
 
   it("rejects zero baseline metrics when a coverage summary exists", () => {
