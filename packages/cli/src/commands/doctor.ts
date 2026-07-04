@@ -127,6 +127,7 @@ const ignoredDirectories = new Set([
   "tests",
   "__tests__",
 ]);
+const bundleArtifactIgnoredDirectories = new Set(["coverage", "dist", "node_modules"]);
 const requiredHttpSecurityMiddleware = [
   "securityHeadersMiddleware",
   "corsMiddleware",
@@ -733,6 +734,19 @@ function coreCoverageCandidateReadiness(
   }
 
   const selectedPackages = new Set(parseCoreCoveragePackageFilters(coreCoverageScript));
+  const warningScriptPath = join(rootDir, defaultCoreCoverageWarningCheckPath);
+  const warningScriptDiagnostics = existsSync(warningScriptPath)
+    ? []
+    : [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${defaultCoreCoverageWarningCheckPath} is missing while test:coverage:core is configured.`,
+          location: { file: defaultCoreCoverageWarningCheckPath },
+          action:
+            "Restore scripts/core-coverage-warning-check.mts, rerun pnpm test:coverage:core:warning, and commit the refreshed coverage evidence.",
+        }),
+      ];
   const thresholdPackagesResult = readCoreCoverageThresholdPackages(rootDir);
   const temporarilyExcludedPackages = readTemporaryCoreCoverageSelectionExclusions(rootDir);
   const intentionalZeroBaselinePackages = readIntentionalCoreCoverageZeroBaselineReasons(rootDir);
@@ -778,7 +792,12 @@ function coreCoverageCandidateReadiness(
     checkId,
     intentionalZeroBaselinePackages,
   );
-  const diagnostics = [...selectionDiagnostics, ...thresholdDiagnostics, ...baselineDiagnostics];
+  const diagnostics = [
+    ...warningScriptDiagnostics,
+    ...selectionDiagnostics,
+    ...thresholdDiagnostics,
+    ...baselineDiagnostics,
+  ];
 
   return { label: "core coverage selection", diagnostics };
 }
@@ -1278,7 +1297,7 @@ function listBundleArtifactFiles(rootDir: string, dir: string, results: string[]
     const fullPath = join(dir, entry.name);
 
     if (entry.isDirectory()) {
-      if (entry.name.startsWith(".")) {
+      if (bundleArtifactIgnoredDirectories.has(entry.name) || entry.name.startsWith(".")) {
         continue;
       }
       listBundleArtifactFiles(rootDir, fullPath, results);

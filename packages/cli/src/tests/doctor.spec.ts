@@ -691,6 +691,39 @@ describe("doctor", () => {
     ]);
   });
 
+  it("reports a missing core coverage warning script when core coverage is configured", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"], { spine: [] });
+    rmSync(join(repo, "scripts/core-coverage-warning-check.mts"));
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        location: { file: "scripts/core-coverage-warning-check.mts" },
+        cause: expect.stringContaining("core-coverage-warning-check.mts is missing"),
+      }),
+    ]);
+  });
+
   it("reports a missing package catalog when core coverage readiness is configured", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -1158,6 +1191,54 @@ describe("doctor", () => {
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0].cause).toContain("missing current artifact baseline");
     expect(diagnostics[0].cause).toContain("stale baseline key");
+  });
+
+  it("ignores package-quality skipped dist subtrees when comparing bundle baselines", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeFile(repo, "packages/framework-context/dist/index.js", "export const runtime = 'cjs';\n");
+    writeFile(
+      repo,
+      "packages/framework-context/dist/node_modules/internal/index.js",
+      "export const ignored = true;\n",
+    );
+    writeFile(
+      repo,
+      "packages/framework-context/dist/coverage/coverage-summary.json",
+      '{"total":{}}\n',
+    );
+    writeFile(
+      repo,
+      "packages/framework-context/dist/dist/generated.js",
+      "export const ignored = true;\n",
+    );
+    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
+      schemaVersion: 1,
+      artifacts: {
+        "@croco/framework-context:packages/framework-context/dist/index.js": 1024,
+      },
+    });
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(0);
   });
 
   it("reports missing bundle artifacts when dist exists as a file", () => {
@@ -2198,6 +2279,7 @@ function writeRootPackage(repo: string, manifest: Record<string, unknown> = {}):
   const coreCoverageScript = scriptsRecord?.["test:coverage:core"];
   if (typeof coreCoverageScript === "string") {
     writeCoreCoverageVitestConfig(repo, parseCoreCoverageScriptFilters(coreCoverageScript));
+    writeCoreCoverageWarningCheckScript(repo);
   }
 }
 
@@ -2312,6 +2394,18 @@ function writeCoreCoverageTemporaryExclusion(
       "const TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS: Record<string, string> = {",
       `  "${packageName}": "${reason}",`,
       "};",
+      "",
+    ].join("\n"),
+  );
+}
+
+function writeCoreCoverageWarningCheckScript(repo: string): void {
+  writeFile(
+    repo,
+    "scripts/core-coverage-warning-check.mts",
+    [
+      "const TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS: Record<string, string> = {};",
+      "const INTENTIONAL_ZERO_BASELINE_REASONS: Record<string, string> = {};",
       "",
     ].join("\n"),
   );
