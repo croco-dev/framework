@@ -10,6 +10,8 @@ const FIXTURE_TEMPLATES_DIR = join(
   "templates",
 );
 const FIXTURE_TEMPLATE_NAMES = new Set(["container-fullstack", "ssr-lambda"]);
+const GENERATED_API_DI_GRAPH_SCRIPT =
+  "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 
 function templatePath(template: string, ...paths: string[]): string {
   const templatesDir = FIXTURE_TEMPLATE_NAMES.has(template) ? FIXTURE_TEMPLATES_DIR : TEMPLATES_DIR;
@@ -168,6 +170,13 @@ function checkSpaBeSplitStructure() {
         /^pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
       "ci:contracts": "pnpm contract:verify",
+      "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
+      "di:check": "croco di check .croco/build/di-graph.manifest.json",
+      "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
+      doctor: "croco doctor --json",
+      "di:verify": expect.stringMatching(
+        /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+      ),
       "contract:openapi": expect.stringMatching(
         /^pnpm contract:check &&[\s\S]*croco-openapi-spec[\s\S]*--strict-schemas[\s\S]*--manifest-bundle \.croco\/manifest$/,
       ),
@@ -187,10 +196,12 @@ function checkSpaBeSplitStructure() {
   const apiPackageJson = readJsonTemplate("spa-be-split", "apps", "api-server", "package.json.hbs");
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
+      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
       "dev:smoke": "tsx src/dev-smoke.ts",
       test: "vitest run",
     }),
     devDependencies: expect.objectContaining({
+      "cross-env": "^10.1.0",
       vitest: expect.any(String),
     }),
     dependencies: expect.objectContaining({
@@ -308,6 +319,13 @@ function checkAdminConsoleStructure() {
       "contract:verify": expect.stringMatching(
         /contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check/,
       ),
+      "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
+      "di:check": "croco di check .croco/build/di-graph.manifest.json",
+      "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
+      doctor: "croco doctor --json",
+      "di:verify": expect.stringMatching(
+        /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+      ),
       "contract:client": expect.stringMatching(
         /admin\.ts,users\.ts,problems\.ts[\s\S]*--strict-schemas[\s\S]*--problem-runtime frontend-problems --manifest-bundle \.croco\/manifest/,
       ),
@@ -324,7 +342,11 @@ function checkAdminConsoleStructure() {
   );
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
+      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
       "admin:smoke": "tsx src/dev-smoke.ts",
+    }),
+    devDependencies: expect.objectContaining({
+      "cross-env": "^10.1.0",
     }),
   });
 
@@ -521,6 +543,13 @@ function checkSaasStructure() {
         /^pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
       "ci:contracts": "pnpm contract:verify",
+      "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
+      "di:check": "NODE_PATH=./node_modules croco di check .croco/build/di-graph.manifest.json",
+      "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
+      doctor: "NODE_PATH=./node_modules croco doctor --json",
+      "di:verify": expect.stringMatching(
+        /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+      ),
       "contract:client": expect.stringMatching(
         /^NODE_PATH=\.\/node_modules node \.\/node_modules\/@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--strict-schemas[\s\S]*--out[\s\S]*--manifest-bundle \.croco\/manifest$/,
       ),
@@ -555,6 +584,7 @@ function checkSaasStructure() {
   const apiPackageJson = readJsonTemplate("saas", "apps", "api-server", "package.json.hbs");
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
+      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
       "demo:seed": "tsx src/demo/seed.ts",
       "demo:smoke": "tsx src/demo/smoke.ts",
       "ops:smoke": "tsx src/demo/ops-smoke.ts",
@@ -589,6 +619,7 @@ function checkSaasStructure() {
     devDependencies: expect.objectContaining({
       "@croco/cli": "workspace:*",
       "@croco/testing": "workspace:*",
+      "cross-env": "^10.1.0",
       typedi: "^0.10.0",
     }),
   });
@@ -750,6 +781,13 @@ function checkAiSaasStructure() {
         /^pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check/,
       ),
       "ci:contracts": "pnpm contract:verify",
+      "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
+      "di:check": "NODE_PATH=./node_modules croco di check .croco/build/di-graph.manifest.json",
+      "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
+      doctor: "NODE_PATH=./node_modules croco doctor --json",
+      "di:verify": expect.stringMatching(
+        /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+      ),
       "contract:openapi": expect.stringMatching(
         /--strict-schemas[\s\S]*AI SaaS API[\s\S]*--manifest-bundle \.croco\/manifest$/,
       ),
@@ -759,6 +797,7 @@ function checkAiSaasStructure() {
   const apiPackageJson = readJsonTemplate("ai-saas", "apps", "api-server", "package.json.hbs");
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
+      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
       "ai:smoke": "tsx src/demo/ai-smoke.ts",
       "ops:smoke": "tsx src/demo/ops-smoke.ts",
       "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
@@ -776,6 +815,7 @@ function checkAiSaasStructure() {
     }),
     devDependencies: expect.objectContaining({
       "@croco/testing": "workspace:*",
+      "cross-env": "^10.1.0",
     }),
   });
   expect(apiPackageJson.dependencies).not.toHaveProperty("@croco/testing");

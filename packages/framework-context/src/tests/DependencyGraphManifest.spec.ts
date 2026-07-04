@@ -12,10 +12,11 @@ describe("Dependency graph manifest", () => {
     const configToken = new Token<string>("database.url");
 
     class UserService {
-      constructor(@Inject(configToken) readonly config: unknown) {}
+      constructor(readonly config: unknown) {}
     }
 
     Reflect.defineMetadata("design:paramtypes", [Object], UserService);
+    injectConstructorToken(UserService, 0, configToken);
     Component()(UserService);
 
     const manifest = Container.createDependencyGraphManifest({ roots: [UserService] });
@@ -26,7 +27,8 @@ describe("Dependency graph manifest", () => {
       roots: ["UserService"],
       diagnostics: [
         {
-          code: "framework-context/di-missing-provider",
+          code: "CROCO_DI_001",
+          legacyCode: "framework-context/di-missing-provider",
           severity: "error",
           token: "Token<database.url>",
           status: "missing",
@@ -35,6 +37,33 @@ describe("Dependency graph manifest", () => {
       ],
     });
     expect(Container.has(UserService)).toBe(false);
+  });
+
+  it("preserves legacy diagnostic codes when validation throws", () => {
+    const configToken = new Token<string>("database.url");
+
+    class UserService {
+      constructor(readonly config: unknown) {}
+    }
+
+    Reflect.defineMetadata("design:paramtypes", [Object], UserService);
+    injectConstructorToken(UserService, 0, configToken);
+    Component()(UserService);
+
+    try {
+      Container.validate({ force: true });
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "CROCO_DI_001",
+        extensions: {
+          legacyCode: "framework-context/di-missing-provider",
+          token: "Token<database.url>",
+        },
+      });
+      return;
+    }
+
+    throw new Error("Expected Container.validate to throw");
   });
 
   it("emits source-location diagnostics for circular component graphs", () => {
@@ -52,12 +81,11 @@ describe("Dependency graph manifest", () => {
     Component({ scope: "transient" })(ServiceB);
 
     const manifest = Container.createDependencyGraphManifest({ roots: [ServiceA] });
-    const diagnostic = manifest.diagnostics.find(
-      (entry) => entry.code === "framework-context/di-circular-dependency",
-    );
+    const diagnostic = manifest.diagnostics.find((entry) => entry.code === "CROCO_DI_002");
 
     expect(manifest.status).toBe("failed");
     expect(diagnostic).toMatchObject({
+      legacyCode: "framework-context/di-circular-dependency",
       token: "ServiceA",
       status: "circular",
       path: ["ServiceA", "ServiceB", "ServiceA"],
@@ -83,7 +111,8 @@ describe("Dependency graph manifest", () => {
     expect(manifest.status).toBe("failed");
     expect(manifest.diagnostics).toContainEqual(
       expect.objectContaining({
-        code: "framework-context/di-scope-mismatch",
+        code: "CROCO_DI_003",
+        legacyCode: "framework-context/di-scope-mismatch",
         token: "RequestRepository",
         status: "scope-mismatch",
         path: ["UserService", "RequestRepository"],
@@ -112,9 +141,64 @@ describe("Dependency graph manifest", () => {
     );
     expect(manifest.diagnostics).toContainEqual(
       expect.objectContaining({
-        code: "framework-context/di-unknown-provider",
+        code: "CROCO_DI_004",
+        legacyCode: "framework-context/di-unknown-provider",
         token: "Repository",
       }),
+    );
+  });
+
+  it("emits deterministic root, provider, dependency, and diagnostic ordering", () => {
+    const firstConfigToken = new Token<string>("config.url");
+    const secondConfigToken = new Token<string>("config.url");
+    const FirstSharedService = class SharedService {};
+    const SecondSharedService = class SharedService {};
+
+    class ZRoot {
+      constructor(
+        readonly shared: InstanceType<typeof SecondSharedService>,
+        readonly config: unknown,
+      ) {}
+    }
+
+    class ARoot {
+      constructor(
+        readonly shared: InstanceType<typeof FirstSharedService>,
+        readonly config: unknown,
+      ) {}
+    }
+
+    Reflect.defineMetadata("design:paramtypes", [], FirstSharedService);
+    Reflect.defineMetadata("design:paramtypes", [], SecondSharedService);
+    Reflect.defineMetadata("design:paramtypes", [FirstSharedService, Object], ARoot);
+    Reflect.defineMetadata("design:paramtypes", [SecondSharedService, Object], ZRoot);
+    injectConstructorToken(ARoot, 1, firstConfigToken);
+    injectConstructorToken(ZRoot, 1, secondConfigToken);
+    Component({ scope: "transient" })(FirstSharedService);
+    Component({ scope: "transient" })(SecondSharedService);
+    Component({ scope: "transient" })(ZRoot);
+    Component({ scope: "transient" })(ARoot);
+
+    const firstManifest = Container.createDependencyGraphManifest({ roots: [ZRoot, ARoot] });
+    const secondManifest = Container.createDependencyGraphManifest({ roots: [ARoot, ZRoot] });
+
+    expect(firstManifest.rootIds).toEqual(secondManifest.rootIds);
+    expect(firstManifest.providers.map((provider) => provider.tokenId)).toEqual(
+      secondManifest.providers.map((provider) => provider.tokenId),
+    );
+    expect(firstManifest.providers.map((provider) => provider.dependencyIds)).toEqual(
+      secondManifest.providers.map((provider) => provider.dependencyIds),
+    );
+    expect(firstManifest.diagnostics.map((diagnostic) => diagnostic.tokenId)).toEqual(
+      secondManifest.diagnostics.map((diagnostic) => diagnostic.tokenId),
+    );
+    expect(firstManifest.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "CROCO_DI_001",
+      "CROCO_DI_001",
+    ]);
+    expect(firstManifest.providers).toHaveLength(6);
+    expect(new Set(firstManifest.providers.map((provider) => provider.tokenId)).size).toBe(
+      firstManifest.providers.length,
     );
   });
 
@@ -187,3 +271,7 @@ describe("Dependency graph manifest", () => {
     }
   });
 });
+
+function injectConstructorToken(target: object, parameterIndex: number, token: unknown): void {
+  (Inject(token as never) as ParameterDecorator)(target, undefined, parameterIndex);
+}

@@ -91,6 +91,31 @@ export function createCrocoApp() {
     expect(content).toContain("return createApp({ controllers: [FooController, BarController] });");
   });
 
+  it("adds a controller to a named createApp controllers array", async () => {
+    await writeFixture(`
+import { createCrocoApp, createApp } from '@foo/bar';
+import { FooController } from './somewhere';
+
+const controllers = [FooController];
+
+export function createCrocoDiGraphRoots() {
+  return controllers;
+}
+
+export function createCrocoApp() {
+  return createApp({ controllers });
+}
+`);
+
+    const result = await registerBarController();
+    const content = await readFixture();
+
+    expect(result.status).toBe("updated");
+    expect(content).toContain("const controllers = [FooController, BarController];");
+    expect(content).toContain("return createApp({ controllers });");
+    expect(content).toContain("return controllers;");
+  });
+
   it("inserts addControllers before app.listen when no registration exists", async () => {
     await writeFixture(`
 import { createCrocoApp, createApp } from '@foo/bar';

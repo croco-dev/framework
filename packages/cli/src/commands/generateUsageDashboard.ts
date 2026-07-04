@@ -1,8 +1,10 @@
 import { defineCommand } from "citty";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { registerController } from "../libs/codemods/registerController.js";
 import type { RegisterControllerResult } from "../libs/codemods/registerController.js";
+import { CLI_DIAGNOSTIC_CODES, withLegacyCode } from "../libs/diagnosticCodes.js";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
 import {
@@ -16,6 +18,17 @@ import { GLOBAL_OPTIONS } from "./options.js";
 const DEFAULT_API_PATH = "/ops/usage";
 const DEFAULT_PAGE_PATH = "/usage";
 const CONTROLLER_CLASS_NAME = "UsageDashboardController";
+
+class InvalidUsageDashboardRoutePathProblem extends Problem {
+  constructor(label: string, value: string) {
+    super(
+      CLI_DIAGNOSTIC_CODES.usageDashboardInvalidRoutePath,
+      ProblemCategory.BadRequest,
+      `Invalid ${label}: ${value}`,
+      withLegacyCode("usageDashboardInvalidRoutePath"),
+    );
+  }
+}
 
 type GeneratedSource = {
   readonly path: string;
@@ -238,13 +251,21 @@ function resolveApiEntryPath(apiServerSrc: string): string {
   const appPath = join(apiServerSrc, "app.ts");
   if (existsSync(appPath)) {
     const content = readFileSync(appPath, "utf-8");
-    if (content.includes("controllers:") || content.includes(".addControllers(")) {
+    if (hasControllerRegistrationTarget(content)) {
       return appPath;
     }
   }
 
   const indexPath = join(apiServerSrc, "index.ts");
   return existsSync(indexPath) ? indexPath : appPath;
+}
+
+function hasControllerRegistrationTarget(content: string): boolean {
+  return (
+    content.includes("controllers:") ||
+    content.includes("createApp(") ||
+    content.includes(".addControllers(")
+  );
 }
 
 function normalizeRoutePath(value: string, label: string): string {
@@ -254,7 +275,7 @@ function normalizeRoutePath(value: string, label: string): string {
     withSlash.length > 1 && withSlash.endsWith("/") ? withSlash.slice(0, -1) : withSlash;
 
   if (!/^\/[A-Za-z0-9_./:-]+$/.test(withoutTrailingSlash)) {
-    throw new Error(`Invalid ${label}: ${value}`);
+    throw new InvalidUsageDashboardRoutePathProblem(label, value);
   }
 
   return withoutTrailingSlash;
@@ -263,7 +284,7 @@ function normalizeRoutePath(value: string, label: string): string {
 function splitRoutePath(path: string): RouteParts {
   const segments = path.split("/").filter(Boolean);
   if (segments.length === 0) {
-    throw new Error(`Invalid apiPath: ${path}`);
+    throw new InvalidUsageDashboardRoutePathProblem("apiPath", path);
   }
   if (segments.length === 1) {
     return {
@@ -734,7 +755,8 @@ function formatRuntimeImportError(error: unknown): string {
 }
 
 function controllerTemplate(route: RouteParts): string {
-  return `import { Controller, Ctx, Get, ResponseSchema } from "@croco/protocols-rest";
+  return `import { Component } from "@croco/framework-context";
+import { Controller, Ctx, Get, ResponseSchema } from "@croco/protocols-rest";
 import type { CrocoHttpContext } from "@croco/transports-http";
 import { z } from "zod";
 import type { UsageDashboardSnapshot } from "../usage-dashboard/UsageDashboardService";
@@ -789,6 +811,7 @@ const usageDashboardSnapshotSchema = z.object({
   lastUpdatedAt: z.string(),
 });
 
+@Component()
 @Controller("${route.controllerPath}")
 export class UsageDashboardController {
   @Get("${route.methodPath}")
@@ -910,12 +933,18 @@ export default function UsageDashboardPage() {
     })
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error('Usage dashboard request failed with HTTP ' + response.status);
+          return {
+            status: 'error',
+            message: 'Usage dashboard request failed with HTTP ' + response.status,
+          } satisfies ViewState;
         }
 
-        return (await response.json()) as UsageDashboardSnapshot;
+        return {
+          status: 'ready',
+          snapshot: (await response.json()) as UsageDashboardSnapshot,
+        } satisfies ViewState;
       })
-      .then((snapshot) => setState({ status: 'ready', snapshot }))
+      .then(setState)
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         setState({ status: 'error', message: error instanceof Error ? error.message : String(error) });

@@ -31,6 +31,7 @@ pnpm dev:web
 - API unavailable: resource table과 timeline은 마지막 성공 상태를 유지하고 상단 alert에 네트워크 실패를 표시합니다.
 - Missing user: generated `getUserResult` client가 declared Problem branch를 반환하며 UI는 `admin-console/user-not-found` code와 recovery action을 표시합니다.
 - Contract drift: `pnpm contract:verify`가 snapshot diff, consumer coverage report, Project Map manifest bundle, OpenAPI generation, generated client typecheck를 순서대로 실행합니다.
+- DI graph drift: `pnpm di:verify`가 API bootstrap에서 `.croco/build/di-graph.manifest.json`을 생성하고 `croco di check`, manifest 존재 확인, project-map bundle 갱신/검사, `croco doctor --json`을 순서대로 실행합니다.
 
 ## Contract Commands
 
@@ -61,4 +62,5 @@ pnpm test
 pnpm typecheck
 pnpm build
 pnpm contract:verify
+pnpm di:verify
 ```

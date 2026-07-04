@@ -564,7 +564,8 @@ describe("doctor", () => {
       status: "failed",
       diagnostics: [
         {
-          code: "framework-context/di-missing-provider",
+          code: "CROCO_DI_001",
+          legacyCode: "framework-context/di-missing-provider",
           severity: "error",
           message: "Provider ApiController is not registered",
         },

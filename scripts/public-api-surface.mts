@@ -213,7 +213,7 @@ const frameworkContextCompatibilityContract = {
       exports: [
         {
           source: "./libs/Container",
-          names: ["Container", "ContainerValidationOptions"],
+          names: ["Container", "ContainerValidationOptions", "TokenIdentifier"],
         },
         {
           source: "./libs/decorators/Component",
@@ -255,6 +255,7 @@ const frameworkContextCompatibilityContract = {
             "Constructor",
             "DependencyGraphDiagnostic",
             "DependencyGraphDiagnosticCode",
+            "DependencyGraphLegacyDiagnosticCode",
             "DependencyGraphManifest",
             "DependencyGraphManifestStatus",
             "DependencyGraphManifestVersion",

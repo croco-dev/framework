@@ -237,6 +237,7 @@ async function createWorkspace(): Promise<string> {
       "@croco/billing-core",
       "@croco/entitlements-core",
       "@croco/events-core",
+      "@croco/framework-context",
       "@croco/metering-core",
       "@croco/problems-core",
       "@croco/protocols-rest",
@@ -362,6 +363,12 @@ declare module '@croco/events-core' {
   }
 
   export function RegisterEventHandler(event: Function): ClassDecorator;
+}
+
+declare module '@croco/framework-context' {
+  export function Component(options?: {
+    readonly scope?: 'singleton' | 'request' | 'transient';
+  }): ClassDecorator;
 }
 
 declare module '@croco/meta-vite' {

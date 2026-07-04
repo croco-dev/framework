@@ -29,13 +29,13 @@ Croco 컴포넌트의 등록, 조회, 지연 생성, 요청 스코프 해석을 
 
 ###### roots?
 
-readonly `TokenIdentifier`\<`unknown`\>[]
+readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`unknown`\>[]
 
 #### Returns
 
 [`DependencyGraphManifest`](/api/framework-context/src/type-aliases/dependencygraphmanifest/)
 
-***
+---
 
 ### get()
 
@@ -51,13 +51,13 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 ##### token
 
-`TokenIdentifier`\<`T`\>
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
 
 #### Returns
 
 `T`
 
-***
+---
 
 ### getComponentMetadata()
 
@@ -73,7 +73,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 [`ComponentMetadata`](/api/framework-context/src/interfaces/componentmetadata/) \| `undefined`
 
-***
+---
 
 ### getDiagnosticsSnapshot()
 
@@ -99,7 +99,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 > **scopes**: `string`[]
 
-***
+---
 
 ### getLastResolutionTrace()
 
@@ -109,7 +109,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/) \| `undefined`
 
-***
+---
 
 ### getMany()
 
@@ -125,13 +125,13 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 ##### tokens
 
-`TokenIdentifier`\<`T`\>[]
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>[]
 
 #### Returns
 
 `T`[]
 
-***
+---
 
 ### getOptional()
 
@@ -147,13 +147,13 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 ##### token
 
-`TokenIdentifier`\<`T`\>
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
 
 #### Returns
 
 `T` \| `undefined`
 
-***
+---
 
 ### getResolutionTrace()
 
@@ -169,13 +169,13 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 ##### token
 
-`TokenIdentifier`\<`T`\>
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
 
 #### Returns
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
 
-***
+---
 
 ### has()
 
@@ -191,13 +191,13 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 ##### token
 
-`TokenIdentifier`\<`T`\>
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
 
 #### Returns
 
 `boolean`
 
-***
+---
 
 ### register()
 
@@ -223,7 +223,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `void`
 
-***
+---
 
 ### registerAsync()
 
@@ -239,7 +239,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 ##### token
 
-`TokenIdentifier`\<`T`\>
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
 
 ##### factory
 
@@ -249,7 +249,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `Promise`\<`T`\>
 
-***
+---
 
 ### registerLazy()
 
@@ -265,7 +265,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 ##### token
 
-`TokenIdentifier`\<`T`\>
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
 
 ##### factory
 
@@ -275,7 +275,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `void`
 
-***
+---
 
 ### remove()
 
@@ -291,13 +291,13 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 ##### token
 
-`TokenIdentifier`\<`T`\>
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
 
 #### Returns
 
 `void`
 
-***
+---
 
 ### reset()
 
@@ -307,7 +307,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `void`
 
-***
+---
 
 ### set()
 
@@ -323,7 +323,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 ##### token
 
-`TokenIdentifier`\<`T`\>
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
 
 ##### instance
 
@@ -333,7 +333,7 @@ readonly `TokenIdentifier`\<`unknown`\>[]
 
 `T`
 
-***
+---
 
 ### validate()
 

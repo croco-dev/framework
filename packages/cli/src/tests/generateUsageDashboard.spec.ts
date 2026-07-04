@@ -69,6 +69,8 @@ describe("runGenerateUsageDashboard", () => {
     ]);
     expect(result?.api.registration.status).toBe("updated");
     expect(result?.page?.files.map((file) => file.status)).toEqual(["created", "created"]);
+    expect(controllerContent).toContain('import { Component } from "@croco/framework-context";');
+    expect(controllerContent).toContain("@Component()");
     expect(controllerContent).toContain('@Controller("/ops")');
     expect(controllerContent).toContain('@Get("/usage")');
     expect(controllerContent).toContain("@ResponseSchema(usageDashboardSnapshotSchema)");
@@ -129,6 +131,99 @@ describe("runGenerateUsageDashboard", () => {
     await expect(
       fs.access(path.join(cwd, "apps", "console-web", "pages", "usage", "Page.tsx")),
     ).rejects.toThrow();
+  });
+
+  it("registers in app.ts when the server entrypoint only starts the app", async () => {
+    const cwd = await createWorkspace();
+    await fs.writeFile(
+      path.join(cwd, "apps", "api-server", "src", "app.ts"),
+      `import { createApp } from '@croco/transports-http';
+import { OperationsController } from './controllers/OperationsController';
+
+const controllers = [OperationsController];
+
+export function createCrocoDiGraphRoots() {
+  return controllers;
+}
+
+export function createCrocoApp() {
+  return createApp({
+    controllers,
+  });
+}
+`,
+    );
+    await fs.writeFile(
+      path.join(cwd, "apps", "api-server", "src", "index.ts"),
+      `import { createCrocoApp } from './app';
+
+const app = createCrocoApp();
+await app.listen(3000);
+`,
+    );
+
+    const result = await runGenerateUsageDashboard({ cwd, page: false });
+    const appContent = await fs.readFile(
+      path.join(cwd, "apps", "api-server", "src", "app.ts"),
+      "utf-8",
+    );
+    const indexContent = await fs.readFile(
+      path.join(cwd, "apps", "api-server", "src", "index.ts"),
+      "utf-8",
+    );
+
+    expect(result?.api.registration.status).toBe("updated");
+    expect(appContent).toContain(
+      "import { UsageDashboardController } from './controllers/UsageDashboardController';",
+    );
+    expect(appContent).toContain(
+      "const controllers = [OperationsController, UsageDashboardController];",
+    );
+    expect(indexContent).not.toContain("addControllers");
+  });
+
+  it("falls back to index.ts when app.ts only exposes DI graph roots", async () => {
+    const cwd = await createWorkspace();
+    await fs.writeFile(
+      path.join(cwd, "apps", "api-server", "src", "app.ts"),
+      `import { OperationsController } from './controllers/OperationsController';
+
+const controllers = [OperationsController];
+
+export function createCrocoDiGraphRoots() {
+  return controllers;
+}
+`,
+    );
+    await fs.writeFile(
+      path.join(cwd, "apps", "api-server", "src", "index.ts"),
+      `import { createApp } from '@croco/transports-http';
+import { OperationsController } from './controllers/OperationsController';
+
+const app = createApp({
+  controllers: [OperationsController],
+});
+
+await app.listen(3000);
+`,
+    );
+
+    const result = await runGenerateUsageDashboard({ cwd, page: false });
+    const appContent = await fs.readFile(
+      path.join(cwd, "apps", "api-server", "src", "app.ts"),
+      "utf-8",
+    );
+    const indexContent = await fs.readFile(
+      path.join(cwd, "apps", "api-server", "src", "index.ts"),
+      "utf-8",
+    );
+
+    expect(result?.api.registration.status).toBe("updated");
+    expect(appContent).not.toContain("UsageDashboardController");
+    expect(indexContent).toContain(
+      "import { UsageDashboardController } from './controllers/UsageDashboardController';",
+    );
+    expect(indexContent).toContain("controllers: [OperationsController, UsageDashboardController]");
   });
 
   it("should respect no-page mode when console web exists", async () => {
@@ -219,11 +314,19 @@ describe("runGenerateUsageDashboard", () => {
     expect(routeContent).toContain("path: '/admin/usage'");
   });
 
+  it("rejects invalid route paths with a stable diagnostic code", async () => {
+    const cwd = await createWorkspace();
+
+    await expect(runGenerateUsageDashboard({ cwd, apiPath: " " })).rejects.toMatchObject({
+      code: CLI_DIAGNOSTIC_CODES.usageDashboardInvalidRoutePath,
+    });
+  });
+
   it("should reject missing generated API dependencies before writing files", async () => {
     const cwd = await createWorkspace({ apiServerManifest: "{}" });
 
     await expect(runGenerateUsageDashboard({ cwd })).rejects.toThrow(
-      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/problems-core, @croco/billing-core, @croco/entitlements-core, @croco/metering-core, @croco/tenant-core, @croco/protocols-rest, @croco/transports-http, zod.",
+      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/problems-core, @croco/billing-core, @croco/entitlements-core, @croco/metering-core, @croco/tenant-core, @croco/framework-context, @croco/protocols-rest, @croco/transports-http, zod.",
     );
     await expect(
       fs.access(
@@ -329,6 +432,7 @@ async function createWorkspace(
       packageManifest([
         "@croco/billing-core",
         "@croco/entitlements-core",
+        "@croco/framework-context",
         "@croco/metering-core",
         "@croco/problems-core",
         "@croco/protocols-rest",
