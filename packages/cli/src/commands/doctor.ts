@@ -1019,7 +1019,7 @@ function readCoreCoverageWarningCheckStringMap(
     return new Set();
   }
 
-  const source = readFileSync(scriptPath, "utf-8");
+  const source = stripTypeScriptComments(readFileSync(scriptPath, "utf-8"));
   const declaration = source.match(
     new RegExp(
       `const\\s+${escapeRegExp(declarationName)}(?:\\s*:\\s*Record<[^=]+>)?\\s*=\\s*\\{([\\s\\S]*?)\\};`,
@@ -3199,7 +3199,66 @@ function findBalancedDelimitedEnd(
 }
 
 function stripTypeScriptComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  let result = "";
+  let quote: '"' | "'" | "`" | null = null;
+  let isEscaped = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    const nextChar = source[index + 1];
+
+    if (quote !== null) {
+      result += char;
+
+      if (isEscaped) {
+        isEscaped = false;
+      } else if (char === "\\") {
+        isEscaped = true;
+      } else if (char === quote) {
+        quote = null;
+      }
+
+      continue;
+    }
+
+    if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+      result += char;
+      continue;
+    }
+
+    if (char === "/" && nextChar === "/") {
+      result += " ";
+      index += 2;
+
+      while (index < source.length && source[index] !== "\n" && source[index] !== "\r") {
+        index += 1;
+      }
+
+      index -= 1;
+      continue;
+    }
+
+    if (char === "/" && nextChar === "*") {
+      result += " ";
+      index += 2;
+
+      while (index < source.length && !(source[index] === "*" && source[index + 1] === "/")) {
+        if (source[index] === "\n" || source[index] === "\r") {
+          result += source[index];
+        }
+
+        index += 1;
+      }
+
+      index += 1;
+      continue;
+    }
+
+    result += char;
+  }
+
+  return result;
 }
 
 function maskTypeScriptStringLiterals(source: string): string {

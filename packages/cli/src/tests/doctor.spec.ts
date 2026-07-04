@@ -1062,6 +1062,58 @@ describe("doctor", () => {
     expect(diagnostics).toHaveLength(0);
   });
 
+  it("ignores commented-out intentional core coverage zero-baseline reasons", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeCoreCoverageSummary(repo, "@croco/framework-context");
+    writeFile(
+      repo,
+      "scripts/core-coverage-warning-check.mts",
+      [
+        "const INTENTIONAL_ZERO_BASELINE_REASONS: Record<string, string> = {",
+        '  // "@croco/framework-context": "bootstrap package with no branchable statements yet",',
+        "  /*",
+        '  "@croco/framework-context": "commented block reason",',
+        "  */",
+        "};",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "ci-reports/coverage/core-baseline.txt",
+      [
+        "| Package | Statements | Branches | Functions | Lines |",
+        "|---------|-----------:|---------:|----------:|------:|",
+        "| `@croco/framework-context` | 0 | 0 | 92.69 | 84.81 |",
+        "",
+      ].join("\n"),
+    );
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("baseline statements, branches cannot be 0");
+  });
+
   it("rejects malformed bundle-size baseline entries as advisory readiness warning", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
