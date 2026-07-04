@@ -27,6 +27,12 @@ title: "DoctorPackage"
 
 ---
 
+### private
+
+> `readonly` **private**: `boolean`
+
+---
+
 ### relativeDir
 
 > `readonly` **relativeDir**: `string`
