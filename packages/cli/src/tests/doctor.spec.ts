@@ -591,6 +591,37 @@ describe("doctor", () => {
     expect(getDoctorExitCode(report)).toBe(0);
   });
 
+  it("does not report private packages as core coverage candidates", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/problems-core exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-private", "@croco/framework-private", {
+      private: true,
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-private"]);
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo, {
+      package: "@croco/framework-private",
+      file: "packages/framework-private/src/index.ts",
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toEqual([]);
+  });
+
   it("keeps spine packages visible even when temporary core coverage exclusions are configured", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -714,6 +745,46 @@ describe("doctor", () => {
     expect(getDoctorExitCode(report)).toBe(0);
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0].cause).toContain("vitest.config.ts is missing CORE_COVERAGE_PACKAGES");
+  });
+
+  it("reports core coverage baseline hard errors", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeCoreCoverageSummary(repo, "@croco/framework-context");
+    writeFile(
+      repo,
+      "ci-reports/coverage/core-baseline.txt",
+      [
+        "| Package | Statements | Branches | Functions | Lines |",
+        "|---------|-----------:|---------:|----------:|------:|",
+        "| `@croco/framework-context` | 0 | not-a-number | 92.69 | 84.81 |",
+        "",
+      ].join("\n"),
+    );
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("baseline branches must be numeric");
+    expect(diagnostics[0].cause).toContain("baseline statements cannot be 0");
   });
 
   it("rejects malformed bundle-size baseline entries as advisory readiness warning", () => {
@@ -1095,6 +1166,49 @@ describe("doctor", () => {
     expect(diagnostics[0].cause).toContain("p75 entry missing");
   });
 
+  it("rejects benchmark readiness when current result gate failures remain", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeJson(repo, "benchmark-result.json", {
+      allPassed: false,
+      gateFailures: ["Example benchmark: p75 30.0ms exceeds threshold 20.0ms"],
+      reports: [
+        {
+          name: "Example benchmark",
+          p75: 10,
+          threshold: 20,
+          baseline: 10,
+          thresholdStatus: "pass",
+          baselineStatus: "pass",
+        },
+      ],
+    });
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorBenchmarkVarianceEvidenceMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("benchmark-result.json gateFailures includes");
+  });
+
   it("does not force promoted benchmark baseline failure evidence to zero", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -1278,6 +1392,48 @@ describe("doctor", () => {
     expect(getDoctorExitCode(report)).toBe(0);
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0].cause).toContain("package must match @croco/framework-context");
+    expect(diagnostics[0].cause).toContain("excerpt does not match the current source line");
+  });
+
+  it("checks empty-catch static misuse allowlist metadata", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeJson(repo, "scripts/static-misuse-empty-catch-allowlist.json", {
+      schemaVersion: 1,
+      entries: [
+        {
+          package: "@croco/framework-context",
+          file: "packages/framework-context/src/index.ts",
+          line: 1,
+          excerpt: "throw new Error('stale');",
+          reason: "Reviewed empty catch while migrating static misuse diagnostics.",
+          owner: "framework-error-handling",
+        },
+      ],
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("scripts/static-misuse-empty-catch-allowlist.json");
     expect(diagnostics[0].cause).toContain("excerpt does not match the current source line");
   });
 
@@ -1725,6 +1881,18 @@ function writeBundleSizeBaseline(repo: string): void {
   });
 }
 
+function writeCoreCoverageSummary(repo: string, packageName: string): void {
+  const packageSlug = packageName.replace(/^@croco\//, "");
+  writeJson(repo, `packages/${packageSlug}/coverage/coverage-summary.json`, {
+    total: {
+      statements: { pct: 80 },
+      branches: { pct: 80 },
+      functions: { pct: 80 },
+      lines: { pct: 80 },
+    },
+  });
+}
+
 type BenchmarkVarianceEvidenceOptions = {
   readonly prePromotionBaselineFailuresPerRun?: number;
   readonly promotedBaselineFailures?: number;
@@ -1865,8 +2033,9 @@ function writeValidStaticMisuseAllowlist(
     owner: string;
     expiresOn: unknown;
   }> = {},
+  allowlistPath = "scripts/static-misuse-raw-error-allowlist.json",
 ): void {
-  writeJson(repo, "scripts/static-misuse-raw-error-allowlist.json", {
+  writeJson(repo, allowlistPath, {
     schemaVersion: 1,
     entries: [
       {

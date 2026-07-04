@@ -40,6 +40,7 @@ export type DoctorCheckResult = {
 export type DoctorPackage = {
   readonly name: string;
   readonly version: string | null;
+  readonly private: boolean;
   readonly relativeDir: string;
   readonly absoluteDir: string;
   readonly dependencies: readonly DoctorPackageDependency[];
@@ -153,6 +154,7 @@ const defaultProviderProfileManifestPath = "croco-saas-profile.manifest.json";
 const defaultPackageCatalogPath = "docs/package-catalog.json";
 const defaultCoreCoverageWarningCheckPath = "scripts/core-coverage-warning-check.mts";
 const defaultVitestConfigPath = "vitest.config.ts";
+const defaultCoreCoverageBaselinePath = "ci-reports/coverage/core-baseline.txt";
 const defaultBundleSizeBaselinePath = "ci-reports/bundle-size/baseline.json";
 const defaultBenchmarkResultPath = "benchmark-result.json";
 const defaultBenchmarkVarianceEvidencePath = "ci-reports/benchmark/latest-five-green-runs.md";
@@ -167,7 +169,14 @@ const benchmarkModuleFailedPrefix = "benchmark module failed:";
 const isoTimestampPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
 const benchmarkGitHubActionsRunPathPrefix = "/croco-dev/framework/actions/runs";
 const defaultStaticMisuseAllowlistPath = "scripts/static-misuse-raw-error-allowlist.json";
+const defaultStaticMisuseEmptyCatchAllowlistPath =
+  "scripts/static-misuse-empty-catch-allowlist.json";
+const staticMisuseAllowlistPaths = [
+  defaultStaticMisuseAllowlistPath,
+  defaultStaticMisuseEmptyCatchAllowlistPath,
+] as const;
 const coreCoverageFrameworkGroups = new Set(["Core", "Integration", "Protocol", "Transport"]);
+const coreCoverageBaselineMetrics = ["statements", "branches", "functions", "lines"] as const;
 const coreCoverageReleaseCriticalRules = [
   { signal: "framework-level contract", pattern: /^framework-/ },
   { signal: "request/context contract", pattern: /context/ },
@@ -751,7 +760,12 @@ function coreCoverageCandidateReadiness(
           thresholdPackagesResult.packages,
           checkId,
         );
-  const diagnostics = [...selectionDiagnostics, ...thresholdDiagnostics];
+  const baselineDiagnostics = collectCoreCoverageBaselineDiagnostics(
+    rootDir,
+    [...selectedPackages],
+    checkId,
+  );
+  const diagnostics = [...selectionDiagnostics, ...thresholdDiagnostics, ...baselineDiagnostics];
 
   return { label: "core coverage selection", diagnostics };
 }
@@ -764,10 +778,9 @@ function collectCoreCoverageCandidates(
   const packageMaturity = readCatalogPackageMembership(catalog.maturity);
   const spinePackages = new Set(readStringArray(asRecord(catalog.spine)?.packages));
   const workspacePackageBySlug = new Map(
-    packages.map((workspacePackage) => [
-      toPackageSlug(workspacePackage.name),
-      workspacePackage.name,
-    ]),
+    packages
+      .filter((workspacePackage) => !workspacePackage.private)
+      .map((workspacePackage) => [toPackageSlug(workspacePackage.name), workspacePackage.name]),
   );
   const packageSlugs = new Set([
     ...packageGroups.keys(),
@@ -803,6 +816,87 @@ function collectCoreCoverageCandidates(
       return signals.length > 0 ? [{ packageName, signals }] : [];
     })
     .sort((left, right) => compareStrings(left.packageName, right.packageName));
+}
+
+function collectCoreCoverageBaselineDiagnostics(
+  rootDir: string,
+  selectedPackages: readonly string[],
+  checkId: string,
+): DoctorDiagnostic[] {
+  const baselinePath = join(rootDir, defaultCoreCoverageBaselinePath);
+  if (!existsSync(baselinePath)) {
+    return [];
+  }
+
+  const baselineEntries = readCoreCoverageBaselineEntries(rootDir);
+  return uniqueStrings(selectedPackages).flatMap((packageName) => {
+    const coverageSummaryPath = join(
+      rootDir,
+      "packages",
+      toPackageSlug(packageName),
+      "coverage",
+      "coverage-summary.json",
+    );
+    const baseline = baselineEntries.get(packageName);
+    if (!existsSync(coverageSummaryPath) || !baseline) {
+      return [];
+    }
+
+    const nonNumericMetrics = coreCoverageBaselineMetrics.filter(
+      (metric) => !Number.isFinite(baseline[metric]),
+    );
+    const zeroMetrics = coreCoverageBaselineMetrics.filter((metric) => baseline[metric] === 0);
+    const failures = [
+      ...(nonNumericMetrics.length > 0
+        ? [`baseline ${nonNumericMetrics.join(", ")} must be numeric`]
+        : []),
+      ...(zeroMetrics.length > 0 ? [`baseline ${zeroMetrics.join(", ")} cannot be 0`] : []),
+    ];
+
+    if (failures.length === 0) {
+      return [];
+    }
+
+    return [
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+        checkId,
+        cause: `${packageName}: ${failures.join("; ")} when coverage summary exists.`,
+        location: { file: defaultCoreCoverageBaselinePath, packageName },
+        action:
+          "Run pnpm test:coverage:core, update ci-reports/coverage/core-baseline.txt from measured totals, then rerun pnpm test:coverage:core:warning.",
+      }),
+    ];
+  });
+}
+
+type CoreCoverageBaselineEntry = Record<(typeof coreCoverageBaselineMetrics)[number], number>;
+
+function readCoreCoverageBaselineEntries(rootDir: string): Map<string, CoreCoverageBaselineEntry> {
+  const entries = new Map<string, CoreCoverageBaselineEntry>();
+  const content = readFileSync(join(rootDir, defaultCoreCoverageBaselinePath), "utf-8");
+
+  for (const line of content.split(/\r?\n/)) {
+    const cells = line
+      .split("|")
+      .map((cell) => cell.trim())
+      .filter(Boolean);
+    const packageCell = cells[0];
+
+    if (cells.length !== 5 || !packageCell?.startsWith("`") || !packageCell.endsWith("`")) {
+      continue;
+    }
+
+    const packageName = packageCell.slice(1, -1);
+    entries.set(packageName, {
+      statements: Number.parseFloat(cells[1]),
+      branches: Number.parseFloat(cells[2]),
+      functions: Number.parseFloat(cells[3]),
+      lines: Number.parseFloat(cells[4]),
+    });
+  }
+
+  return entries;
 }
 
 function readCatalogPackageMembership(value: unknown): Map<string, string[]> {
@@ -1101,7 +1195,7 @@ function validateBenchmarkVarianceEvidence(rootDir: string, content: string): st
     return benchmarkResult.message;
   }
 
-  const failures = getBenchmarkVarianceEvidenceFailures(parsed, benchmarkResult.reports);
+  const failures = getBenchmarkVarianceEvidenceFailures(parsed, benchmarkResult.result);
   return failures.length > 0 ? failures.join("; ") : null;
 }
 
@@ -1111,10 +1205,16 @@ type BenchmarkCurrentReport = {
   readonly baseline: number | null;
 };
 
+type BenchmarkCurrentResult = {
+  readonly allPassed: boolean | undefined;
+  readonly gateFailures: readonly string[];
+  readonly reports: readonly BenchmarkCurrentReport[];
+};
+
 function readBenchmarkResultReports(
   rootDir: string,
 ):
-  | { readonly kind: "valid"; readonly reports: readonly BenchmarkCurrentReport[] }
+  | { readonly kind: "valid"; readonly result: BenchmarkCurrentResult }
   | { readonly kind: "invalid"; readonly message: string } {
   const resultPath = join(rootDir, defaultBenchmarkResultPath);
   if (!existsSync(resultPath)) {
@@ -1136,6 +1236,9 @@ function readBenchmarkResultReports(
     };
   }
 
+  const gateFailures = Array.isArray(result.value.gateFailures)
+    ? result.value.gateFailures.filter((failure): failure is string => typeof failure === "string")
+    : [];
   const reports: BenchmarkCurrentReport[] = [];
   for (const [index, entry] of result.value.reports.entries()) {
     const report = asRecord(entry);
@@ -1182,14 +1285,22 @@ function readBenchmarkResultReports(
     };
   }
 
-  return { kind: "valid", reports };
+  return {
+    kind: "valid",
+    result: {
+      allPassed: typeof result.value.allPassed === "boolean" ? result.value.allPassed : undefined,
+      gateFailures,
+      reports,
+    },
+  };
 }
 
 function getBenchmarkVarianceEvidenceFailures(
   contract: Record<string, unknown>,
-  currentReports: readonly BenchmarkCurrentReport[],
+  currentResult: BenchmarkCurrentResult,
 ): string[] {
   const failures: string[] = [];
+  const currentReports = currentResult.reports;
 
   if (contract.source !== "github-actions") {
     failures.push("structured evidence source must be github-actions");
@@ -1229,8 +1340,25 @@ function getBenchmarkVarianceEvidenceFailures(
     contract.checks as Record<string, unknown>,
     failures,
   );
+  validateCurrentBenchmarkResultState(currentResult, failures);
 
   return failures;
+}
+
+function validateCurrentBenchmarkResultState(
+  currentResult: BenchmarkCurrentResult,
+  failures: string[],
+): void {
+  for (const failure of currentResult.gateFailures) {
+    failures.push(`${defaultBenchmarkResultPath} gateFailures includes: ${failure}`);
+  }
+
+  if (currentResult.allPassed === false && currentResult.gateFailures.length === 0) {
+    failures.push(`${defaultBenchmarkResultPath} reports allPassed=false without gateFailures`);
+  }
+  if (currentResult.allPassed === true && currentResult.gateFailures.length > 0) {
+    failures.push(`${defaultBenchmarkResultPath} reports allPassed=true with gateFailures`);
+  }
 }
 
 function createBenchmarkGateFailureCounts(): BenchmarkVarianceGateFailureCounts {
@@ -1725,53 +1853,60 @@ function securityAllowlistMetadataReadiness(
   rootDir: string,
   checkId: string,
 ): AdvisoryGateReadinessSection | null {
-  const allowlistPath = join(rootDir, defaultStaticMisuseAllowlistPath);
-  if (!existsSync(allowlistPath)) {
+  const existingAllowlistPaths = staticMisuseAllowlistPaths.filter((allowlistPath) =>
+    existsSync(join(rootDir, allowlistPath)),
+  );
+  if (existingAllowlistPaths.length === 0) {
     return null;
   }
 
-  const allowlist = readJsonObject(allowlistPath);
-  if (allowlist.kind === "invalid") {
-    return {
-      label: "security allowlist metadata",
-      diagnostics: [
-        advisoryDiagnostic({
-          code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
-          checkId,
-          cause: `${defaultStaticMisuseAllowlistPath} could not be parsed: ${allowlist.message}`,
-          location: { file: defaultStaticMisuseAllowlistPath },
-          action:
-            "Fix the static misuse allowlist JSON, then rerun the static misuse check and croco doctor.",
-        }),
-      ],
-    };
-  }
-
-  const entries = allowlist.value.entries;
-  if (allowlist.value.schemaVersion !== 1 || !Array.isArray(entries)) {
-    return {
-      label: "security allowlist metadata",
-      diagnostics: [
-        advisoryDiagnostic({
-          code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
-          checkId,
-          cause: `${defaultStaticMisuseAllowlistPath} must declare schemaVersion 1 and an entries array.`,
-          location: { file: defaultStaticMisuseAllowlistPath },
-          action: "Regenerate or repair the static misuse allowlist metadata.",
-        }),
-      ],
-    };
-  }
-
-  const diagnostics = entries.flatMap((entry, index) =>
-    validateSecurityAllowlistEntry(rootDir, entry, index, checkId),
+  const diagnostics = existingAllowlistPaths.flatMap((allowlistPath) =>
+    validateSecurityAllowlistFile(rootDir, allowlistPath, checkId),
   );
 
   return { label: "security allowlist metadata", diagnostics };
 }
 
+function validateSecurityAllowlistFile(
+  rootDir: string,
+  allowlistPath: string,
+  checkId: string,
+): DoctorDiagnostic[] {
+  const allowlist = readJsonObject(join(rootDir, allowlistPath));
+  if (allowlist.kind === "invalid") {
+    return [
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+        checkId,
+        cause: `${allowlistPath} could not be parsed: ${allowlist.message}`,
+        location: { file: allowlistPath },
+        action:
+          "Fix the static misuse allowlist JSON, then rerun the static misuse check and croco doctor.",
+      }),
+    ];
+  }
+
+  const entries = allowlist.value.entries;
+  if (allowlist.value.schemaVersion !== 1 || !Array.isArray(entries)) {
+    return [
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+        checkId,
+        cause: `${allowlistPath} must declare schemaVersion 1 and an entries array.`,
+        location: { file: allowlistPath },
+        action: "Regenerate or repair the static misuse allowlist metadata.",
+      }),
+    ];
+  }
+
+  return entries.flatMap((entry, index) =>
+    validateSecurityAllowlistEntry(rootDir, allowlistPath, entry, index, checkId),
+  );
+}
+
 function validateSecurityAllowlistEntry(
   rootDir: string,
+  allowlistPath: string,
   entry: unknown,
   index: number,
   checkId: string,
@@ -1843,9 +1978,9 @@ function validateSecurityAllowlistEntry(
     advisoryDiagnostic({
       code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
       checkId,
-      cause: `${defaultStaticMisuseAllowlistPath} ${entryLabel} is invalid: ${failures.join("; ")}.`,
+      cause: `${allowlistPath} ${entryLabel} is invalid: ${failures.join("; ")}.`,
       location: {
-        file: defaultStaticMisuseAllowlistPath,
+        file: allowlistPath,
         packageName: packageName ?? undefined,
       },
       action:
@@ -2882,6 +3017,7 @@ function readPackage(rootDir: string, packageJsonPath: string): WorkspacePackage
       package: {
         name: parsed.name,
         version: typeof parsed.version === "string" ? parsed.version : null,
+        private: parsed.private === true,
         absoluteDir,
         relativeDir: toPosixPath(relative(rootDir, absoluteDir)),
         dependencies: readPackageDependencies(parsed, absoluteDir, parsed.name),
