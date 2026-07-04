@@ -750,10 +750,9 @@ function coreCoverageCandidateReadiness(
           advisoryDiagnostic({
             code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
             checkId,
-            cause: `${thresholdPackagesResult.path} is missing CORE_COVERAGE_PACKAGES.`,
+            cause: `${thresholdPackagesResult.path} is missing ${thresholdPackagesResult.exportName}.`,
             location: { file: thresholdPackagesResult.path },
-            action:
-              "Restore CORE_COVERAGE_PACKAGES in vitest.config.ts, then rerun pnpm test:coverage:core:warning.",
+            action: `Restore ${thresholdPackagesResult.exportName} in vitest.config.ts, then rerun pnpm test:coverage:core:warning.`,
           }),
         ]
       : collectCoreCoverageConfigurationDiagnostics(
@@ -840,9 +839,22 @@ function collectCoreCoverageBaselineDiagnostics(
       "coverage",
       "coverage-summary.json",
     );
-    const baseline = baselineEntries.get(packageName);
-    if (!existsSync(coverageSummaryPath) || !baseline) {
+    if (!existsSync(coverageSummaryPath)) {
       return [];
+    }
+
+    const baseline = baselineEntries.get(packageName);
+    if (!baseline) {
+      return [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${packageName}: baseline entry is missing when coverage summary exists.`,
+          location: { file: defaultCoreCoverageBaselinePath, packageName },
+          action:
+            "Run pnpm test:coverage:core, update ci-reports/coverage/core-baseline.txt from measured totals, then rerun pnpm test:coverage:core:warning.",
+        }),
+      ];
     }
 
     const nonNumericMetrics = coreCoverageBaselineMetrics.filter(
@@ -894,10 +906,10 @@ function readCoreCoverageBaselineEntries(rootDir: string): Map<string, CoreCover
 
     const packageName = packageCell.slice(1, -1);
     entries.set(packageName, {
-      statements: Number.parseFloat(cells[1]),
-      branches: Number.parseFloat(cells[2]),
-      functions: Number.parseFloat(cells[3]),
-      lines: Number.parseFloat(cells[4]),
+      statements: Number(cells[1]),
+      branches: Number(cells[2]),
+      functions: Number(cells[3]),
+      lines: Number(cells[4]),
     });
   }
 
@@ -977,21 +989,41 @@ function readCoreCoverageWarningCheckStringMap(
 
 type CoreCoverageThresholdPackagesResult =
   | { readonly kind: "present"; readonly packages: string[] }
-  | { readonly kind: "missing"; readonly path: string };
+  | {
+      readonly kind: "missing";
+      readonly path: string;
+      readonly exportName: "CORE_COVERAGE_PACKAGES" | "CORE_COVERAGE_THRESHOLDS";
+    };
 
 function readCoreCoverageThresholdPackages(rootDir: string): CoreCoverageThresholdPackagesResult {
   const configPath = join(rootDir, defaultVitestConfigPath);
   if (!existsSync(configPath)) {
-    return { kind: "missing", path: defaultVitestConfigPath };
+    return {
+      kind: "missing",
+      path: defaultVitestConfigPath,
+      exportName: "CORE_COVERAGE_PACKAGES",
+    };
   }
 
-  const packages = parseStringArrayExport(
-    readFileSync(configPath, "utf-8"),
-    "CORE_COVERAGE_PACKAGES",
-  );
-  return packages === null
-    ? { kind: "missing", path: defaultVitestConfigPath }
-    : { kind: "present", packages };
+  const source = readFileSync(configPath, "utf-8");
+  const packages = parseStringArrayExport(source, "CORE_COVERAGE_PACKAGES");
+  if (packages === null) {
+    return {
+      kind: "missing",
+      path: defaultVitestConfigPath,
+      exportName: "CORE_COVERAGE_PACKAGES",
+    };
+  }
+
+  if (!hasObjectExport(source, "CORE_COVERAGE_THRESHOLDS")) {
+    return {
+      kind: "missing",
+      path: defaultVitestConfigPath,
+      exportName: "CORE_COVERAGE_THRESHOLDS",
+    };
+  }
+
+  return { kind: "present", packages };
 }
 
 function parseStringArrayExport(source: string, exportName: string): string[] | null {
@@ -1006,6 +1038,13 @@ function parseStringArrayExport(source: string, exportName: string): string[] | 
   return uniqueStrings(
     [...declarationBody.matchAll(/["']([^"']+)["']/g)].map(([, packageName]) => packageName),
   );
+}
+
+function hasObjectExport(source: string, exportName: string): boolean {
+  const declaration = source.match(
+    new RegExp(`export\\s+const\\s+${escapeRegExp(exportName)}\\s*=\\s*\\{([\\s\\S]*?)\\};`),
+  );
+  return Boolean(declaration?.[1]?.trim());
 }
 
 function collectCoreCoverageConfigurationDiagnostics(
@@ -1945,18 +1984,21 @@ function validateSecurityAllowlistEntry(
   const validLine = typeof line === "number" && Number.isInteger(line) && line >= 1 ? line : null;
   const lineInvalid = validLine === null;
   const owner = readOptionalString(entryRecord?.owner);
-  const expiresOn = readOptionalString(entryRecord?.expiresOn);
+  const rawExpiresOn = entryRecord?.expiresOn;
+  const expiresOn = readOptionalString(rawExpiresOn);
+  const expiresOnTimestamp = expiresOn ? parseDateOnlyUtcTimestamp(expiresOn) : null;
   const expiresOnInvalid = Boolean(
-    entryRecord &&
-    entryRecord.expiresOn !== undefined &&
-    !/^\d{4}-\d{2}-\d{2}$/.test(String(entryRecord.expiresOn)),
+    entryRecord && rawExpiresOn !== undefined && expiresOnTimestamp === null,
   );
+  const expiresOnExpired =
+    expiresOnTimestamp !== null && expiresOnTimestamp < getTodayUtcDateOnlyTimestamp();
   const metadataMissing = !owner && !expiresOn;
   const failures = [
     ...(missingFields.length > 0 ? [`missing ${missingFields.join(", ")}`] : []),
     ...(lineInvalid ? ["line must be a positive integer"] : []),
     ...(metadataMissing ? ["owner or expiresOn metadata is required"] : []),
     ...(expiresOnInvalid ? ["expiresOn must use YYYY-MM-DD"] : []),
+    ...(expiresOnExpired ? ["expiresOn must not be in the past"] : []),
   ];
 
   const packageName = readRawString(entryRecord?.package);
@@ -2010,6 +2052,30 @@ function validateSecurityAllowlistEntry(
         "Add package, file, line, excerpt, reason, and owner or expiresOn metadata, or remove the stale allowlist entry after fixing the misuse.",
     }),
   ];
+}
+
+function parseDateOnlyUtcTimestamp(value: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const timestamp = Date.UTC(year, month - 1, day);
+  const date = new Date(timestamp);
+
+  return date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+    ? timestamp
+    : null;
+}
+
+function getTodayUtcDateOnlyTimestamp(): number {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 }
 
 function isProductionPackageSourceFile(relativeFile: string): boolean {
