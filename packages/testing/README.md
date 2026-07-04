@@ -31,8 +31,11 @@ const response = await app.get("/users");
 | `createProviderConformanceMatrixSuite(config)`        | Validates provider profile manifests for required capabilities, optional unsupported reasons, and method evidence.                         |
 | `createLlmProviderConformanceSuite(config)`           | Reusable LLM provider contract cases for mocked or live provider fixtures.                                                                 |
 | `createBillingProviderConformanceSuite(config)`       | Builds runner-neutral billing gateway and webhook conformance cases for provider packages.                                                 |
+| `createUpstashRedisMeteringConformanceSuite(config)`  | Reusable Upstash Redis metering cases for config, usage storage, idempotency, upstream errors, and live-smoke gating.                      |
 | `createUpstashRedisRateLimitConformanceSuite(config)` | Reusable Upstash Redis rate-limit cases for config, errors, refund idempotency, and live-smoke gating.                                     |
 | `createQStashTaskConformanceSuite(config)`            | Reusable QStash task publish cases for config, validation, idempotency, upstream errors, and live-smoke gating.                            |
+| `createQStashBatchConformanceSuite(config)`           | Reusable QStash batch chunk cases for terminal chunks, continuation envelopes, upstream errors, and live-smoke gating.                     |
+| `createQStashTriggerConformanceSuite(config)`         | Reusable QStash trigger cases for schedule sync, webhook verification, dispatch, upstream diagnostics, and live-smoke gating.              |
 | `createDrizzleProviderConformanceSuite(config)`       | Builds reusable Drizzle provider cases for schema, transaction, tenant, and error contracts.                                               |
 | `assertDrizzleProblem(operation, expected)`           | Verifies Drizzle provider failures surface stable Croco Problem codes, categories, or status.                                              |
 
@@ -106,6 +109,28 @@ test. Unsupported optional capabilities are passing documentation cases only whe
 reason in the manifest. Unsupported required capabilities fail with a package/category/capability
 message that includes the affected methods.
 
+### Conformance Compatibility Contract
+
+The conformance helpers are a public package contract for downstream provider packages. The root
+`@croco/testing` entrypoint exports every conformance helper, and `@croco/testing/drizzle` exports
+the Drizzle-specific helper pair for packages that only need Drizzle contracts.
+
+Downstream packages may depend on:
+
+- helper export names listed in the API table;
+- `suite.cases[].name` values for runner wiring, snapshots, and generated provider reports;
+- required provider matrix manifest fields `name`, `required`, `supported`, and `methods`, plus
+  optional fields `suite`, `reason`, and `evidence` when emitted;
+- auth tenant evidence field `externalOrgId`;
+- failure-drill evidence fields `kind` and `name`;
+- optional QStash publish and schedule evidence fields when emitted, plus required trigger sync
+  evidence fields `action` and `applied`.
+
+Removing or renaming a helper, removing an entrypoint, changing a case name, or changing a required
+evidence/manifest field is a breaking change. Removing or renaming a documented optional evidence
+field is also breaking when that field is emitted. Additive optional evidence and new optional cases
+are allowed when they remain documented and keep live smoke paths explicitly environment-gated.
+
 The billing provider helper currently covers:
 
 - `createBillingProviderConformanceSuite()` for `@croco/billing-core` providers: checkout
@@ -122,12 +147,21 @@ The auth provider helper currently covers:
 
 The serverless provider helpers currently cover:
 
+- `createUpstashRedisMeteringConformanceSuite()` for Upstash Redis-backed metering clients:
+  missing config, usage storage command adaptation, idempotency no-ops, redacted retryable and
+  terminal upstream failures, and no-credential live-smoke gates.
 - `createUpstashRedisRateLimitConformanceSuite()` for Upstash Redis-backed rate-limit stores:
   missing config, unsupported policy, allow/deny stats, refund idempotency, redacted retryable and
   terminal upstream failures, and no-credential live-smoke gates.
 - `createQStashTaskConformanceSuite()` for QStash task publishers: missing config, task envelope
   shape, delay/header/deduplication evidence, invalid task input, redacted retryable and terminal
   upstream failures, and no-credential live-smoke gates.
+- `createQStashBatchConformanceSuite()` for QStash-backed batch continuations: terminal chunks,
+  continuation envelopes, execution failure evidence, redacted retryable and terminal upstream
+  failures, and no-credential live-smoke gates.
+- `createQStashTriggerConformanceSuite()` for QStash-backed trigger schedules: schedule sync
+  evidence, webhook signature rejection, verified dispatch, redacted retryable and terminal
+  schedule diagnostics, and no-credential live-smoke gates.
 
 ## Drizzle Provider Conformance
 

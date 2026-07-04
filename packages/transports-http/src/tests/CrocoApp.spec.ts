@@ -10,6 +10,7 @@ import {
   LOGGER_TOKEN,
 } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   type ArgumentMetadata,
   Body,
@@ -59,6 +60,22 @@ function createApp(config: Parameters<typeof createCrocoApp>[0]) {
   return createCrocoApp({ securityValidation: "off", ...config });
 }
 
+type ProblemCorrelationResponse = {
+  title: string;
+  status: number;
+  code: string;
+  detail: string;
+  instance: string;
+  traceId?: string;
+  requestId?: string;
+};
+
+class TestProblem extends Problem {
+  constructor(detail: string) {
+    super("test/problem", ProblemCategory.BadRequest, detail);
+  }
+}
+
 describe("CrocoApp", () => {
   let lambdaWaitUntilCompleted = false;
 
@@ -104,6 +121,11 @@ describe("CrocoApp", () => {
         nodeApi: runtime?.capabilities.nodeApi ?? null,
         requestLifecycle: runtime?.capabilities.requestLifecycle ?? null,
       };
+    }
+
+    @Get("/problem")
+    getProblem() {
+      throw new TestProblem("Transport problem for correlation metadata");
     }
 
     @Get("/users/:id")
@@ -233,6 +255,11 @@ describe("CrocoApp", () => {
       );
 
       return { ok: true };
+    }
+
+    @Get("/problem")
+    getProblem() {
+      throw new TestProblem("Lambda transport problem for correlation metadata");
     }
   }
 
@@ -467,6 +494,34 @@ describe("CrocoApp", () => {
       logger: true,
       nodeApi: true,
       requestLifecycle: true,
+    });
+  });
+
+  it("should include Node traceparent and request id metadata in Problem responses", async () => {
+    const app = createApp({ controllers: [TestController] });
+    const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+    const spanId = "00f067aa0ba902b7";
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/problem", {
+        headers: {
+          traceparent: `00-${traceId}-${spanId}-01`,
+          "x-request-id": "node-problem-req-1",
+        },
+      }),
+    );
+
+    const body = (await response.json()) as ProblemCorrelationResponse;
+
+    expect(response.status).toBe(400);
+    expect(body).toMatchObject({
+      title: "Bad Request",
+      status: 400,
+      code: "test/problem",
+      detail: "Transport problem for correlation metadata",
+      instance: "http://localhost/api/problem",
+      traceId,
+      requestId: "node-problem-req-1",
     });
   });
 
@@ -1144,6 +1199,33 @@ describe("CrocoApp", () => {
       requestLifecycle: true,
     });
     expect(lambdaWaitUntilCompleted).toBe(true);
+  });
+
+  it("should include API Gateway request id metadata in Lambda Problem responses", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        requestContext: {
+          ...createRequestContext("GET", "/lambda/problem"),
+          requestId: "gateway-problem-req-123",
+        },
+        rawPath: "/lambda/problem",
+      }),
+      lambdaContext,
+    );
+    const body = JSON.parse(response.body ?? "{}") as ProblemCorrelationResponse;
+
+    expect(response.statusCode).toBe(400);
+    expect(body).toMatchObject({
+      title: "Bad Request",
+      status: 400,
+      code: "test/problem",
+      detail: "Lambda transport problem for correlation metadata",
+      instance: "https://lambda.local/lambda/problem",
+      requestId: "gateway-problem-req-123",
+    });
   });
 
   it("should log rejected Lambda waitUntil work after draining", async () => {

@@ -34,7 +34,9 @@ describe("provider-certification-check.mts", () => {
     const markdown = buildProviderCertificationMarkdown(report);
 
     expect(hasProviderCertificationFailures(report)).toBe(false);
-    expect(markdown).toContain("| `@croco/provider` | Provider | production | yes | certified |");
+    expect(markdown).toContain(
+      "| `@croco/provider` | Provider | production | certified-required | certified |",
+    );
   });
 
   it("fails when a production-ready extension package has no certification record", () => {
@@ -49,6 +51,64 @@ describe("provider-certification-check.mts", () => {
 
     expect(hasProviderCertificationFailures(report)).toBe(true);
     expect(markdown).toContain("has no certification.records.provider entry");
+  });
+
+  it("requires certification for production packages explicitly listed in the extension matrix", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "provider");
+    writeCatalogMetadata(repo, ["provider"], {
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Core",
+      productionPackages: ["provider"],
+    });
+
+    const report = createReport(repo);
+    const markdown = buildProviderCertificationMarkdown(report);
+
+    expect(hasProviderCertificationFailures(report)).toBe(true);
+    expect(markdown).toContain(
+      "| `@croco/provider` | Core | production | certified-required | missing |",
+    );
+    expect(markdown).toContain("has no certification.records.provider entry");
+  });
+
+  it("marks beta extension packages without certification records as not applicable", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "provider");
+    writeCatalogMetadata(repo, ["provider"], {
+      productionPackages: [],
+    });
+
+    const report = createReport(repo);
+    const markdown = buildProviderCertificationMarkdown(report);
+
+    expect(hasProviderCertificationFailures(report)).toBe(false);
+    expect(markdown).toContain(
+      "| `@croco/provider` | Provider | beta | not-applicable | missing |",
+    );
+    expect(markdown).toContain(
+      "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+    );
+  });
+
+  it("marks beta certification records as optional candidates until promotion or public claim", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "provider");
+    writeCatalogMetadata(repo, ["provider"], {
+      productionPackages: [],
+      certificationRecords: {
+        provider: createCertifiedRecord("provider", { state: "candidate" }),
+      },
+    });
+
+    const report = createReport(repo);
+    const markdown = buildProviderCertificationMarkdown(report);
+
+    expect(hasProviderCertificationFailures(report)).toBe(false);
+    expect(markdown).toContain(
+      "| `@croco/provider` | Provider | beta | candidate-optional | candidate |",
+    );
   });
 
   it("requires production-ready extension packages to use certified state", () => {
@@ -106,7 +166,9 @@ describe("provider-certification-check.mts", () => {
     const markdown = buildProviderCertificationMarkdown(report);
 
     expect(hasProviderCertificationFailures(report)).toBe(true);
-    expect(markdown).toContain("| `@croco/core` | Provider | beta | no | certified |");
+    expect(markdown).toContain(
+      "| `@croco/core` | Provider | beta | certified-required | certified |",
+    );
     expect(markdown).toContain("diagnostics: fail");
     expect(markdown).toContain(
       "blocking known gaps without package-scoped allowance: release-evidence-gap",
@@ -216,6 +278,64 @@ describe("provider-certification-check.mts", () => {
 
     expect(report.claimViolations).toHaveLength(1);
     expect(report.claimViolations[0]?.file).toBe("packages/provider/README.md");
+    expect(hasProviderCertificationFailures(report)).toBe(true);
+  });
+
+  it("treats public compatibility claims as certified-required policy scope", () => {
+    const repo = createTempRepo();
+    writePackage(
+      repo,
+      "provider",
+      ["# @croco/provider", "", "Croco compatible: @croco/provider provider contract"].join("\n"),
+    );
+    writeCatalogMetadata(repo, ["provider"], { productionPackages: [] });
+
+    const report = createReport(repo);
+    const markdown = buildProviderCertificationMarkdown(report);
+
+    expect(hasProviderCertificationFailures(report)).toBe(true);
+    expect(markdown).toContain(
+      "| `@croco/provider` | Provider | beta | certified-required | missing |",
+    );
+    expect(markdown).toContain(
+      "requires certified compatibility evidence and has no certification.records.provider entry",
+    );
+  });
+
+  it("fails when the certification policy scope is missing", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "provider");
+    writeCatalogMetadata(repo, ["provider"], {
+      certificationPolicy: null,
+      productionPackages: [],
+    });
+
+    const report = createReport(repo);
+
+    expect(report.catalogErrors).toContain(
+      "docs/package-catalog.json: certification.policy must define certification scope",
+    );
+    expect(hasProviderCertificationFailures(report)).toBe(true);
+  });
+
+  it("fails when the certification policy references a malformed scope group", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "provider");
+    writeCatalogMetadata(repo, ["provider"], {
+      certificationPolicy: {
+        scope: createCertificationPolicyScope(["Integration"]),
+      },
+      productionPackages: [],
+    });
+
+    const report = createReport(repo);
+
+    expect(report.catalogErrors).toContain(
+      "docs/package-catalog.json: certification.policy.scope.extensionGroups references non-extension group Integration",
+    );
+    expect(report.catalogErrors).toContain(
+      "docs/package-catalog.json: certification.policy.scope.extensionGroups must include extensionMatrix group Provider",
+    );
     expect(hasProviderCertificationFailures(report)).toBe(true);
   });
 
@@ -339,21 +459,24 @@ function writeCatalogMetadata(
   repo: string,
   packageNames: readonly string[],
   options: {
+    readonly certificationPolicy?: Record<string, unknown> | null;
     readonly certificationRecords?: Record<string, Record<string, unknown>>;
     readonly extensionGroups?: readonly string[];
     readonly extensionPackages?: readonly string[];
+    readonly groupName?: string;
     readonly knownGapAllowances?: Record<string, Record<string, unknown>>;
     readonly productionPackages: readonly string[];
   },
 ): void {
   const productionSet = new Set(options.productionPackages);
+  const groupName = options.groupName ?? "Provider";
   const extensionGroups = options.extensionGroups ?? ["Provider"];
   const extensionPackages = options.extensionPackages ?? packageNames;
 
   writeJson(join(repo, "docs", "package-catalog.json"), {
     schemaVersion: 1,
     groups: {
-      Provider: {
+      [groupName]: {
         description: "Fixture provider packages",
         packages: packageNames,
       },
@@ -392,16 +515,39 @@ function writeCatalogMetadata(
       ),
     },
     certification:
-      options.certificationRecords || options.knownGapAllowances
+      options.certificationPolicy === null
         ? {
             schemaVersion: 1,
-            policy: {
-              knownGapAllowances: options.knownGapAllowances ?? {},
-            },
             records: Object.values(options.certificationRecords ?? {}),
           }
-        : undefined,
+        : {
+            schemaVersion: 1,
+            policy: {
+              scope: createCertificationPolicyScope(extensionGroups),
+              knownGapAllowances: options.knownGapAllowances ?? {},
+              ...options.certificationPolicy,
+            },
+            records: Object.values(options.certificationRecords ?? {}),
+          },
   });
+}
+
+function createCertificationPolicyScope(
+  extensionGroups: readonly string[],
+): Record<string, unknown> {
+  return {
+    extensionGroups,
+    requiredMaturity: "production",
+    claimRequiresCertified: true,
+    states: {
+      "certified-required":
+        "A certified record is required for production-ready extension packages or public compatibility claims.",
+      "candidate-optional":
+        "A candidate record may track evidence before the extension package is production-ready.",
+      "not-applicable":
+        "No certification record is required until production-ready maturity or a public compatibility claim.",
+    },
+  };
 }
 
 function createCertifiedRecord(

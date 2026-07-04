@@ -518,7 +518,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/ErrorHandler.ts",
-      "line": 58,
+      "line": 59,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ traceId?: string; requestId?: string; telemetry?: TelemetryFailureMetadata; type: string; title: string; status: number; code: string; detail: string | undefined; instance: string; }' is not assignable to type 'ProblemDetails' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -574,7 +574,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 294,
+      "line": 295,
       "column": 3,
       "code": "TS2322",
       "message": "Type '{ name: string; message: string; stack: string | undefined; }' is not assignable to type 'Exception'."
@@ -582,7 +582,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 46,
+      "line": 47,
       "column": 31,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -590,7 +590,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 50,
+      "line": 51,
       "column": 31,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -598,7 +598,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 54,
+      "line": 55,
       "column": 30,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -606,7 +606,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 59,
+      "line": 61,
       "column": 5,
       "code": "TS2322",
       "message": "Type 'string | undefined' is not assignable to type 'string'."
@@ -622,7 +622,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 61,
+      "line": 62,
       "column": 33,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."

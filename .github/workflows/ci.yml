@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Production dependency audit advisory
+      - name: Production dependency audit report
         id: security_audit_advisory
         shell: bash
         continue-on-error: true
@@ -59,7 +59,7 @@ jobs:
             echo "duration_seconds=$duration"
           } >> "$GITHUB_OUTPUT"
           if [ "$exit_code" -ne 0 ]; then
-            echo "::warning::pnpm audit:prod reported production vulnerabilities. Dependency audit is advisory-only in CI; see security-report artifact."
+            echo "::warning::pnpm audit:prod reported production vulnerabilities. CI keeps the audit advisory-only and uploads security-report; release publish gates run the same command as a blocker."
           fi
           exit "$exit_code"
 
@@ -97,7 +97,8 @@ jobs:
           {
             echo "# Security policy summary"
             echo ""
-            echo "- \`pnpm audit:prod\` dependency audit: advisory-only on pull requests, trunk pushes, and manual runs"
+            echo "- \`pnpm audit:prod\` dependency audit: advisory-only in CI on pull requests, trunk pushes, and manual runs"
+            echo "- \`pnpm audit:prod\` release enforcement: blocking in the Release workflow before publish"
             echo "- \`gitleaks\` secret scanning: warning-only on pull requests; blocking on trunk pushes and manual runs"
             echo "- Release path: release-triggering changes still pass through CI before merge; publish-specific gates live in the Release workflow"
             echo ""
@@ -219,6 +220,22 @@ jobs:
           fi
           exit "$status"
 
+      - name: Beta spine promotion gate
+        id: spine_promotion_gate
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          pnpm spine-promotion:check
+          status=$?
+          set -e
+          if [ -f ci-reports/package-quality/spine-promotion.md ]; then
+            cat ci-reports/package-quality/spine-promotion.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Beta spine promotion report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
       - name: Publish package quality dashboard
         if: always()
         env:
@@ -228,6 +245,8 @@ jobs:
           PACKAGE_QUALITY_TYPECHECK_STATUS: ${{ steps.typecheck.outcome || 'skipped' }}
           PACKAGE_QUALITY_TEST_STATUS: ${{ steps.test.outcome || 'skipped' }}
           PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS: ${{ steps.provider_certification_gate.outcome || 'skipped' }}
+          PACKAGE_QUALITY_PRODUCTION_READY_STATUS: ${{ steps.production_ready_package_gate.outcome || 'skipped' }}
+          PACKAGE_QUALITY_SPINE_PROMOTION_STATUS: ${{ steps.spine_promotion_gate.outcome || 'skipped' }}
         shell: bash
         run: |
           pnpm package-quality:report
@@ -286,6 +305,9 @@ jobs:
         with:
           filters: |
             docs:
+              - 'README.md'
+              - 'docs/**/*.md'
+              - 'packages/*/README.md'
               - 'packages/docs/**'
             api-source:
               - 'packages/access-core/src/**'
@@ -478,13 +500,25 @@ jobs:
       - name: Link Checker
         uses: lycheeverse/lychee-action@v2
         with:
+          # Exclusions are intentionally narrow: the repository landing URL is
+          # canonical, current-commit blob/tree links are generated docs anchors,
+          # your-org/croco is scaffold placeholder text, archived OpenAI API docs
+          # return transient 503s from Wayback, diataxis.fr rate-limits automated
+          # docs link checks, and packages/docs is a private docs app
+          # rather than a public package README.
           args: >-
             --verbose
             --no-progress
-            --root-dir 'packages/docs/dist'
+            --root-dir '${{ github.workspace }}/packages/docs/dist'
             --exclude '^https://github\.com/croco-dev/framework(#readme)?$'
             --exclude '^https://github\.com/croco-dev/framework/(blob|tree)/[0-9a-f]{40}/'
             --exclude '^https://github\.com/your-org/croco(#readme)?$'
+            --exclude '^https://web\.archive\.org/web/[0-9]+/https://developers\.openai\.com/api/'
+            --exclude '^https://diataxis\.fr/(how-to-guides|reference)/$'
+            --exclude-path '(^|/)packages/docs/README\.md$'
+            'README.md'
+            'docs/**/*.md'
+            'packages/*/README.md'
             'packages/docs/dist/**/*.html'
           fail: true
         env:

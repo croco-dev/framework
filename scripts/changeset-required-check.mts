@@ -43,10 +43,24 @@ type NoReleaseJustification = {
   readonly source: string;
 };
 
+type ConsumedChangesetMetadata = {
+  readonly packageNames: ReadonlySet<string>;
+};
+
 const realChangesetPattern = /^\.changeset\/[^/]+\.md$/;
 const noReleaseReasonLinePattern = /^Changeset-required no-release reason:\s*(.+)$/im;
 const publicApiSnapshotPath = "public-api-surface.snapshot.json";
+const createCrocoAppRangeMetadataPath = "packages/create-croco-app/src/helpers/croco-ranges.ts";
 const testFilePattern = /(?:^|[.-])(spec|test)\.[cm]?[jt]sx?$/;
+const dependencyVersionFields = new Set([
+  "dependencies",
+  "devDependencies",
+  "optionalDependencies",
+  "peerDependencies",
+]);
+const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+const internalVersionRangePattern =
+  /^(?:workspace:)?(?:[\^~])?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$|^workspace:\*$/;
 
 function log(message: string): void {
   stdout.write(`${message}\n`);
@@ -196,22 +210,31 @@ function isRealChangesetPath(file: string): boolean {
 }
 
 function isValidChangesetContent(content: string): boolean {
+  return parseChangesetPackageNames(content).size > 0;
+}
+
+function parseChangesetPackageNames(content: string): Set<string> {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   if (lines[0] !== "---") {
-    return false;
+    return new Set();
   }
 
   const endIndex = lines.indexOf("---", 1);
   if (endIndex <= 1) {
-    return false;
+    return new Set();
   }
 
-  return lines
-    .slice(1, endIndex)
-    .map((line) => line.trim())
-    .some((line) =>
-      /^['"]?(@?[\w.-]+(?:\/[\w.-]+)?|[\w.-]+)['"]?: (major|minor|patch)$/.test(line),
-    );
+  const packageNames = new Set<string>();
+
+  for (const rawLine of lines.slice(1, endIndex)) {
+    const line = rawLine.trim();
+    const match = /^['"]?(@?[\w.-]+(?:\/[\w.-]+)?|[\w.-]+)['"]?: (major|minor|patch)$/.exec(line);
+    if (match?.[1]) {
+      packageNames.add(match[1]);
+    }
+  }
+
+  return packageNames;
 }
 
 function hasValidChangeset(options: CheckOptions, changedFiles: readonly string[]): boolean {
@@ -231,6 +254,568 @@ function hasValidChangeset(options: CheckOptions, changedFiles: readonly string[
   }
 
   return false;
+}
+
+function getConsumedChangesetMetadata(
+  options: CheckOptions,
+  changedFiles: readonly string[],
+): ConsumedChangesetMetadata {
+  const packageNames = new Set<string>();
+
+  for (const file of changedFiles) {
+    if (!isRealChangesetPath(file)) {
+      continue;
+    }
+
+    try {
+      runGit(options.rootDir, ["show", `${options.headRef}:${file}`]);
+      continue;
+    } catch {
+      // A generated Changesets version commit consumes pending changesets by deleting them.
+    }
+
+    try {
+      const baseContent = runGit(options.rootDir, ["show", `${options.baseRef}:${file}`]);
+      for (const packageName of parseChangesetPackageNames(baseContent)) {
+        packageNames.add(packageName);
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return {
+    packageNames,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readJsonObjectAtRef(
+  options: CheckOptions,
+  ref: string,
+  file: string,
+): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(runGit(options.rootDir, ["show", `${ref}:${file}`])) as unknown;
+    if (!isRecord(parsed)) {
+      throw new Error(`${file} at ${ref} must contain a JSON object`);
+    }
+
+    return parsed;
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw error;
+    }
+
+    return null;
+  }
+}
+
+function isEqualJson(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function parseSemver(value: string): readonly [number, number, number] | null {
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.exec(value);
+  if (!match?.[1] || !match[2] || !match[3]) {
+    return null;
+  }
+
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function isSemverIncrease(baseVersion: string, headVersion: string): boolean {
+  const base = parseSemver(baseVersion);
+  const head = parseSemver(headVersion);
+  if (!base || !head) {
+    return false;
+  }
+
+  for (let index = 0; index < base.length; index++) {
+    if (head[index] > base[index]) {
+      return true;
+    }
+
+    if (head[index] < base[index]) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+function normalizeInternalDependencyRange(range: string): string | null {
+  const match =
+    /^workspace:([\^~]?)(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$/.exec(range) ??
+    /^([\^~]?)(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$/.exec(range);
+
+  if (!match?.[2]) {
+    return null;
+  }
+
+  return `${match[1] ?? ""}${match[2]}`;
+}
+
+function internalDependencyRangeMatchesVersion(range: string, version: string): boolean {
+  const normalizedRange = normalizeInternalDependencyRange(range);
+  return (
+    normalizedRange === version ||
+    normalizedRange === `^${version}` ||
+    normalizedRange === `~${version}`
+  );
+}
+
+function isDependencyVersionMetadataChange(
+  baseValue: unknown,
+  headValue: unknown,
+  packageVersions: ReadonlyMap<string, string>,
+  versionedPackageNames: ReadonlySet<string>,
+): boolean {
+  if (!isRecord(baseValue) || !isRecord(headValue)) {
+    return false;
+  }
+
+  const dependencyNames = new Set([...Object.keys(baseValue), ...Object.keys(headValue)]);
+  for (const dependencyName of dependencyNames) {
+    const baseRange = baseValue[dependencyName];
+    const headRange = headValue[dependencyName];
+
+    if (isEqualJson(baseRange, headRange)) {
+      continue;
+    }
+
+    if (
+      !packageVersions.has(dependencyName) ||
+      !versionedPackageNames.has(dependencyName) ||
+      typeof baseRange !== "string" ||
+      typeof headRange !== "string" ||
+      !internalVersionRangePattern.test(baseRange) ||
+      !internalVersionRangePattern.test(headRange) ||
+      !internalDependencyRangeMatchesVersion(headRange, packageVersions.get(dependencyName) ?? "")
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isGeneratedVersionManifestChange(
+  options: CheckOptions,
+  file: string,
+  packageVersions: ReadonlyMap<string, string>,
+  versionedPackageNames: ReadonlySet<string>,
+): boolean {
+  const baseManifest = readJsonObjectAtRef(options, options.baseRef, file);
+  const headManifest = readJsonObjectAtRef(options, options.headRef, file);
+
+  if (!baseManifest || !headManifest) {
+    return false;
+  }
+
+  let sawGeneratedVersionMetadata = false;
+  const manifestKeys = new Set([...Object.keys(baseManifest), ...Object.keys(headManifest)]);
+
+  for (const key of manifestKeys) {
+    const baseValue = baseManifest[key];
+    const headValue = headManifest[key];
+
+    if (isEqualJson(baseValue, headValue)) {
+      continue;
+    }
+
+    if (key === "version") {
+      if (
+        typeof baseValue !== "string" ||
+        typeof headValue !== "string" ||
+        !semverPattern.test(baseValue) ||
+        !semverPattern.test(headValue) ||
+        !isSemverIncrease(baseValue, headValue)
+      ) {
+        return false;
+      }
+
+      sawGeneratedVersionMetadata = true;
+      continue;
+    }
+
+    if (dependencyVersionFields.has(key)) {
+      if (
+        !isDependencyVersionMetadataChange(
+          baseValue,
+          headValue,
+          packageVersions,
+          versionedPackageNames,
+        )
+      ) {
+        return false;
+      }
+
+      sawGeneratedVersionMetadata = true;
+      continue;
+    }
+
+    return false;
+  }
+
+  return sawGeneratedVersionMetadata;
+}
+
+function getChangedDependencyNamesForManifest(
+  options: CheckOptions,
+  file: string,
+): Set<string> | null {
+  const baseManifest = readJsonObjectAtRef(options, options.baseRef, file);
+  const headManifest = readJsonObjectAtRef(options, options.headRef, file);
+
+  if (!baseManifest || !headManifest) {
+    return null;
+  }
+
+  const dependencyNames = new Set<string>();
+  const manifestKeys = new Set([...Object.keys(baseManifest), ...Object.keys(headManifest)]);
+
+  for (const key of manifestKeys) {
+    const baseValue = baseManifest[key];
+    const headValue = headManifest[key];
+
+    if (isEqualJson(baseValue, headValue) || key === "version") {
+      continue;
+    }
+
+    if (!dependencyVersionFields.has(key)) {
+      return null;
+    }
+
+    if (!isRecord(baseValue) || !isRecord(headValue)) {
+      return null;
+    }
+
+    for (const dependencyName of new Set([...Object.keys(baseValue), ...Object.keys(headValue)])) {
+      if (!isEqualJson(baseValue[dependencyName], headValue[dependencyName])) {
+        dependencyNames.add(dependencyName);
+      }
+    }
+  }
+
+  return dependencyNames;
+}
+
+function getStableWorkspaceDependencyNamesForManifest(
+  options: CheckOptions,
+  file: string,
+  packageVersions: ReadonlyMap<string, string>,
+): Set<string> | null {
+  const baseManifest = readJsonObjectAtRef(options, options.baseRef, file);
+  const headManifest = readJsonObjectAtRef(options, options.headRef, file);
+
+  if (!baseManifest || !headManifest) {
+    return null;
+  }
+
+  const dependencyNames = new Set<string>();
+
+  for (const field of dependencyVersionFields) {
+    const baseValue = baseManifest[field];
+    const headValue = headManifest[field];
+
+    if (!isRecord(baseValue) || !isRecord(headValue)) {
+      continue;
+    }
+
+    for (const dependencyName of new Set([...Object.keys(baseValue), ...Object.keys(headValue)])) {
+      if (
+        packageVersions.has(dependencyName) &&
+        baseValue[dependencyName] === "workspace:*" &&
+        headValue[dependencyName] === "workspace:*"
+      ) {
+        dependencyNames.add(dependencyName);
+      }
+    }
+  }
+
+  return dependencyNames;
+}
+
+function getReleaseSignificantManifestFiles(
+  significantChanges: ReadonlyMap<string, ReleaseSignificantChange>,
+): string[] | null {
+  const files: string[] = [];
+
+  for (const change of significantChanges.values()) {
+    for (const file of change.files) {
+      if (isGeneratedReleaseMetadataFile(file)) {
+        continue;
+      }
+
+      if (!file.endsWith("/package.json")) {
+        return null;
+      }
+
+      files.push(file);
+    }
+  }
+
+  return files;
+}
+
+function getGeneratedReleaseMetadataFiles(
+  significantChanges: ReadonlyMap<string, ReleaseSignificantChange>,
+): string[] {
+  const files: string[] = [];
+
+  for (const change of significantChanges.values()) {
+    for (const file of change.files) {
+      if (isGeneratedReleaseMetadataFile(file)) {
+        files.push(file);
+      }
+    }
+  }
+
+  return files;
+}
+
+function isGeneratedReleaseMetadataFile(file: string): boolean {
+  return file === createCrocoAppRangeMetadataPath;
+}
+
+function parseCreateCrocoAppRangeMetadata(content: string): Map<string, string> | null {
+  const match =
+    /const EXTERNAL_CROCO_PACKAGE_RANGES = \{(?<body>[\s\S]*?)\} as const satisfies Record<string, string>;/.exec(
+      content,
+    );
+  const body = match?.groups?.body;
+  if (!body) {
+    return null;
+  }
+
+  const ranges = new Map<string, string>();
+  for (const rawLine of body.split("\n")) {
+    const line = rawLine.trim();
+    if (line.length === 0) {
+      continue;
+    }
+
+    const rangeMatch = /^"(@croco\/[^"]+)": "(\^\d+\.\d+\.\d+)",$/.exec(line);
+    if (!rangeMatch?.[1] || !rangeMatch[2]) {
+      return null;
+    }
+
+    ranges.set(rangeMatch[1], rangeMatch[2]);
+  }
+
+  return ranges;
+}
+
+function normalizeCreateCrocoAppRangeMetadata(content: string): string | null {
+  const normalized = content.replace(
+    /const EXTERNAL_CROCO_PACKAGE_RANGES = \{[\s\S]*?\} as const satisfies Record<string, string>;/,
+    "const EXTERNAL_CROCO_PACKAGE_RANGES = {__CROCO_RANGES__} as const satisfies Record<string, string>;",
+  );
+
+  return normalized === content ? null : normalized;
+}
+
+function isCreateCrocoAppRangeMetadataChange(
+  options: CheckOptions,
+  file: string,
+  packageVersions: ReadonlyMap<string, string>,
+  versionedPackageNames: ReadonlySet<string>,
+): boolean {
+  let baseContent: string;
+  let headContent: string;
+  try {
+    baseContent = runGit(options.rootDir, ["show", `${options.baseRef}:${file}`]);
+    headContent = runGit(options.rootDir, ["show", `${options.headRef}:${file}`]);
+  } catch {
+    return false;
+  }
+
+  if (
+    normalizeCreateCrocoAppRangeMetadata(baseContent) !==
+    normalizeCreateCrocoAppRangeMetadata(headContent)
+  ) {
+    return false;
+  }
+
+  const baseRanges = parseCreateCrocoAppRangeMetadata(baseContent);
+  const headRanges = parseCreateCrocoAppRangeMetadata(headContent);
+  if (!baseRanges || !headRanges) {
+    return false;
+  }
+
+  let sawGeneratedVersionMetadata = false;
+  const packageNames = new Set([...baseRanges.keys(), ...headRanges.keys()]);
+  for (const packageName of packageNames) {
+    const baseRange = baseRanges.get(packageName);
+    const headRange = headRanges.get(packageName);
+    if (baseRange === headRange) {
+      continue;
+    }
+
+    const version = packageVersions.get(packageName);
+    if (!version || !versionedPackageNames.has(packageName) || headRange !== `^${version}`) {
+      return false;
+    }
+
+    sawGeneratedVersionMetadata = true;
+  }
+
+  return sawGeneratedVersionMetadata;
+}
+
+function isGeneratedReleaseMetadataFileChange(
+  options: CheckOptions,
+  file: string,
+  packageVersions: ReadonlyMap<string, string>,
+  versionedPackageNames: ReadonlySet<string>,
+): boolean {
+  if (file === createCrocoAppRangeMetadataPath) {
+    return isCreateCrocoAppRangeMetadataChange(
+      options,
+      file,
+      packageVersions,
+      versionedPackageNames,
+    );
+  }
+
+  return false;
+}
+
+function readPackageVersions(
+  options: CheckOptions,
+  packages: readonly PackageInfo[],
+): ReadonlyMap<string, string> {
+  const packageVersions = new Map<string, string>();
+
+  for (const pkg of packages) {
+    const manifest = readJsonObjectAtRef(
+      options,
+      options.headRef,
+      `${pkg.relativeDir}/package.json`,
+    );
+    const version = manifest?.version;
+    if (typeof version === "string") {
+      packageVersions.set(pkg.name, version);
+    }
+  }
+
+  return packageVersions;
+}
+
+function getManifestPackageNames(
+  manifestFiles: readonly string[],
+  packages: readonly PackageInfo[],
+): Set<string> {
+  const packageNames = new Set<string>();
+
+  for (const file of manifestFiles) {
+    const pkg = getOwningPackage(file, packages);
+    if (pkg) {
+      packageNames.add(pkg.name);
+    }
+  }
+
+  return packageNames;
+}
+
+function changelogContainsVersion(options: CheckOptions, file: string, version: string): boolean {
+  try {
+    const changelog = runGit(options.rootDir, ["show", `${options.headRef}:${file}`]);
+    const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`^#{2,3}\\s+${escapedVersion}(?:\\s|$)`, "m").test(changelog);
+  } catch {
+    return false;
+  }
+}
+
+function isGeneratedDependentVersionUpdate(
+  changedDependencyNames: ReadonlySet<string>,
+  stableWorkspaceDependencyNames: ReadonlySet<string>,
+  consumedPackageNames: ReadonlySet<string>,
+  versionedPackageNames: ReadonlySet<string>,
+): boolean {
+  const isChangedDependencyUpdate =
+    changedDependencyNames.size > 0 &&
+    [...changedDependencyNames].every(
+      (dependencyName) =>
+        consumedPackageNames.has(dependencyName) && versionedPackageNames.has(dependencyName),
+    );
+
+  const isWorkspaceDependentUpdate = [...stableWorkspaceDependencyNames].some(
+    (dependencyName) =>
+      consumedPackageNames.has(dependencyName) && versionedPackageNames.has(dependencyName),
+  );
+
+  return isChangedDependencyUpdate || isWorkspaceDependentUpdate;
+}
+
+function isChangesetsVersionMetadataChange(
+  options: CheckOptions,
+  significantChanges: ReadonlyMap<string, ReleaseSignificantChange>,
+  changedFiles: readonly string[],
+  packages: readonly PackageInfo[],
+): boolean {
+  const manifestFiles = getReleaseSignificantManifestFiles(significantChanges);
+  if (!manifestFiles || manifestFiles.length === 0) {
+    return false;
+  }
+
+  const consumedChangesets = getConsumedChangesetMetadata(options, changedFiles);
+  if (consumedChangesets.packageNames.size === 0) {
+    return false;
+  }
+
+  const packageVersions = readPackageVersions(options, packages);
+  const versionedPackageNames = getManifestPackageNames(manifestFiles, packages);
+  const generatedMetadataFiles = getGeneratedReleaseMetadataFiles(significantChanges);
+
+  for (const file of manifestFiles) {
+    const pkg = getOwningPackage(file, packages);
+    const version = pkg ? packageVersions.get(pkg.name) : null;
+    const changelogFile = pkg ? `${pkg.relativeDir}/CHANGELOG.md` : "";
+    const changedDependencyNames = getChangedDependencyNamesForManifest(options, file);
+    const stableWorkspaceDependencyNames = getStableWorkspaceDependencyNamesForManifest(
+      options,
+      file,
+      packageVersions,
+    );
+
+    if (
+      !pkg ||
+      !version ||
+      !changedDependencyNames ||
+      !stableWorkspaceDependencyNames ||
+      (!consumedChangesets.packageNames.has(pkg.name) &&
+        !isGeneratedDependentVersionUpdate(
+          changedDependencyNames,
+          stableWorkspaceDependencyNames,
+          consumedChangesets.packageNames,
+          versionedPackageNames,
+        )) ||
+      !changedFiles.includes(changelogFile) ||
+      !changelogContainsVersion(options, changelogFile, version)
+    ) {
+      return false;
+    }
+
+    if (!isGeneratedVersionManifestChange(options, file, packageVersions, versionedPackageNames)) {
+      return false;
+    }
+  }
+
+  for (const file of generatedMetadataFiles) {
+    if (
+      !isGeneratedReleaseMetadataFileChange(options, file, packageVersions, versionedPackageNames)
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function isMeaningfulNoReleaseReason(reason: string): boolean {
@@ -468,6 +1053,11 @@ function main(): void {
 
     if (hasValidChangeset(options, changedFiles)) {
       log("changeset-required: valid non-README changeset found (passing)");
+      exit(0);
+    }
+
+    if (isChangesetsVersionMetadataChange(options, significantChanges, changedFiles, packages)) {
+      log("changeset-required: generated Changesets version metadata found (passing)");
       exit(0);
     }
 

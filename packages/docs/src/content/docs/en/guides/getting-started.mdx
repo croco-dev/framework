@@ -7,7 +7,11 @@ import { Aside } from "@astrojs/starlight/components";
 
 ## 1. Introduction
 
-Croco provides a **SaaS backend toolkit** — fully typed, Lambda-ready, with auth, metering, and billing built into the framework. The `ddd-api` preset gives you a basic DDD skeleton to start from; for a complete SaaS example with all primitives wired together, skip straight to the Quick Start Lambda example.
+Croco provides a **SaaS backend toolkit** — fully typed, Lambda-ready, with auth, metering, and
+billing built into the framework. The `ddd-api` preset gives you a basic DDD skeleton to start
+from; for a complete SaaS example with auth and metering wired together, skip straight to the Quick
+Start Lambda example, or use the SaaS Billing Golden Path for billing, retry, transactions, events,
+and Problem recovery.
 
 This guide takes you from zero to a deployed API: scaffold the project, add an authenticated endpoint, layer on metering, and export as a Lambda handler.
 
@@ -15,7 +19,8 @@ This guide takes you from zero to a deployed API: scaffold the project, add an a
   Jump straight to
   [`examples/quick-start-lambda`](https://github.com/croco-dev/framework/tree/trunk/examples/quick-start-lambda)
   — a complete, runnable SaaS backend with auth, metering, Lambda export, and DI wiring already in
-  place.
+  place. For the billing-oriented path, use
+  [`examples/saas-billing-golden-path`](https://github.com/croco-dev/framework/tree/trunk/examples/saas-billing-golden-path).
 </Aside>
 
 ## 2. Quick Start
@@ -43,7 +48,10 @@ Croco treats auth as a first-class concern. Wrap any controller method with `@Us
 
 First, register an auth provider and guard:
 
-```typescript
+`TestAuthProvider` is generated inside the quick-start project; this startup wiring is shown in the
+context of that generated application.
+
+```typescript no-check
 import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
 import { Container } from "@croco/framework-context";
 import { TestAuthProvider } from "../integrations/TestAuthProvider";
@@ -54,14 +62,19 @@ Container.set(AuthGuard, new AuthGuard());
 
 Now create a controller with a protected endpoint:
 
-```typescript
+```typescript typecheck
+import { AuthGuard } from "@croco/auth-core";
 import { Controller, Get, UseGuards } from "@croco/protocols-rest";
 
 @Controller("/api/users")
 class UserController {
+  private readonly users = {
+    list: () => [{ id: "user-123", email: "user@example.com" }],
+  };
+
   @Get()
   @UseGuards(AuthGuard)
-  list() {
+  list(): { id: string; email: string }[] {
     return this.users.list();
   }
 }
@@ -73,7 +86,10 @@ Any request without a valid API key gets a `401 Unauthorized` automatically. No 
 
 Track usage for billing with a single decorator. Croco's `@Metered` records every invocation against a named meter:
 
-```typescript
+The metering adapter below is generated in the quick-start project and bound once at application
+startup.
+
+```typescript no-check
 import { Meter, Metered, setMeteringService } from "@croco/metering-core";
 import { createMeteringService } from "../integrations/inMemoryMetering";
 
@@ -98,8 +114,17 @@ Now every `POST /api/users` call increments the `api_user_create` meter — read
 
 Export your app as a Lambda handler with one line:
 
-```typescript
+```typescript typecheck
+import { Controller, Get } from "@croco/protocols-rest";
 import { createApp } from "@croco/transports-http";
+
+@Controller("/api/users")
+class UserController {
+  @Get()
+  list(): { id: string; email: string }[] {
+    return [{ id: "user-123", email: "user@example.com" }];
+  }
+}
 
 const app = createApp({
   controllers: [UserController],
@@ -112,13 +137,20 @@ That's it. `handler` is a standard AWS Lambda entrypoint — deploy it with SST,
 
 ## 6. Complete Example
 
-The quick-start-lambda example above is the **complete, runnable reference** for everything covered in this guide.
+The quick-start-lambda example above is the **complete, runnable reference** for everything covered
+in this guide. The `saas-billing-golden-path` example is the checked-in reference for the billing
+success path: checkout, transient payment retry, transactional event publication, audit projection,
+and explicit Problem recovery.
 
-The repository validates that reference with:
+The repository validates those references with:
 
 ```bash
 pnpm quick-start-lambda:smoke
+pnpm saas-billing-golden-path:smoke
 ```
+
+The SaaS smoke command builds the example and its workspace dependencies before it runs the
+checked-in golden-path tests.
 
 Here's the project structure from `quick-start-lambda`, bringing together auth, metering, protocol metadata, transport wiring, and Lambda export in one runnable reference:
 
@@ -141,7 +173,7 @@ my-saas-api/
 
 `src/protocols/UserController.ts` owns protocol metadata and remains transport-neutral:
 
-```typescript
+```typescript no-check
 import { AuthGuard } from "@croco/auth-core";
 import { Container } from "@croco/framework-context";
 import { Meter, Metered } from "@croco/metering-core";
@@ -174,7 +206,7 @@ export class UserController {
 
 `src/app/bootstrap.ts` owns runtime composition, so auth and metering adapters can change without changing controller or domain code:
 
-```typescript
+```typescript no-check
 import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
 import { Container } from "@croco/framework-context";
 import { setMeteringService } from "@croco/metering-core";
@@ -198,7 +230,7 @@ export const app = createApp({
 
 `src/index.ts` stays thin and marks the Lambda transport boundary:
 
-```typescript
+```typescript no-check
 import "reflect-metadata";
 import { createLambdaExampleApp, startLocalServer } from "./app/bootstrap";
 

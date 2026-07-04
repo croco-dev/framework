@@ -124,6 +124,19 @@ function collectErrors(
     );
   }
 
+  const hasDoctorJsonBreakingChangeRule =
+    docs.includes("`croco.doctor.v1`") &&
+    docs.includes("doctor JSON") &&
+    docs.includes("Breaking changes") &&
+    docs.includes("version the report schema") &&
+    docs.includes("release notes") &&
+    docs.includes("migration path");
+  if (!hasDoctorJsonBreakingChangeRule) {
+    errors.push(
+      "RELEASING.md must require release notes or schema versioning for breaking doctor JSON changes.",
+    );
+  }
+
   if (!docs.includes("fixed") || !docs.includes("linked")) {
     errors.push("RELEASING.md must describe fixed/linked group behavior.");
   }

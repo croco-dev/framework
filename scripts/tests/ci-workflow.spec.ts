@@ -3,8 +3,13 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ciWorkflowPath = resolve(__dirname, "../../.github/workflows/ci.yml");
+const rootPackageJsonPath = resolve(__dirname, "../../package.json");
+const pnpmWorkspacePath = resolve(__dirname, "../../pnpm-workspace.yaml");
 
 const readCiWorkflow = () => readFileSync(ciWorkflowPath, "utf-8");
+const readRootPackageJson = () =>
+  JSON.parse(readFileSync(rootPackageJsonPath, "utf-8")) as Record<string, unknown>;
+const readPnpmWorkspace = () => readFileSync(pnpmWorkspacePath, "utf-8");
 
 describe("CI package quality dashboard", () => {
   it("collects package-level Turbo summaries before publishing the dashboard", () => {
@@ -21,6 +26,8 @@ describe("CI package quality dashboard", () => {
       "- name: Production-ready package gate",
       "production_ready_args+=(--require-task-summaries)",
       'pnpm production-ready:check -- "${production_ready_args[@]}"',
+      "- name: Beta spine promotion gate",
+      "pnpm spine-promotion:check",
       "- name: Publish package quality dashboard",
       "pnpm package-quality:report",
       "- name: Upload package quality dashboard",
@@ -49,6 +56,12 @@ describe("CI package quality dashboard", () => {
     expect(workflow).toContain(
       "PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS: ${{ steps.provider_certification_gate.outcome",
     );
+    expect(workflow).toContain(
+      "PACKAGE_QUALITY_PRODUCTION_READY_STATUS: ${{ steps.production_ready_package_gate.outcome",
+    );
+    expect(workflow).toContain(
+      "PACKAGE_QUALITY_SPINE_PROMOTION_STATUS: ${{ steps.spine_promotion_gate.outcome",
+    );
   });
 
   it("appends the provider certification matrix before exiting the blocking gate", () => {
@@ -71,6 +84,40 @@ describe("CI package quality dashboard", () => {
       'cat ci-reports/package-quality/production-ready.md >> "$GITHUB_STEP_SUMMARY"',
     );
     expect(workflow).toContain('exit "$status"');
+  });
+
+  it("appends the beta spine promotion report before exiting the blocking gate", () => {
+    const workflow = readCiWorkflow();
+    const gateStart = workflow.indexOf("- name: Beta spine promotion gate");
+    const dashboardStart = workflow.indexOf("- name: Publish package quality dashboard");
+
+    expect(gateStart, "beta spine promotion gate step should be present").toBeGreaterThan(-1);
+    expect(
+      dashboardStart,
+      "package quality dashboard step should follow the beta spine promotion gate",
+    ).toBeGreaterThan(gateStart);
+
+    const gateStep = workflow.slice(gateStart, dashboardStart);
+    const orderedMarkers = [
+      "id: spine_promotion_gate",
+      "pnpm spine-promotion:check",
+      "status=$?",
+      "ci-reports/package-quality/spine-promotion.md",
+      'cat ci-reports/package-quality/spine-promotion.md >> "$GITHUB_STEP_SUMMARY"',
+      'exit "$status"',
+    ];
+
+    let previousIndex = -1;
+    for (const marker of orderedMarkers) {
+      const index = gateStep.indexOf(marker);
+      expect(index, `${marker} should be present in the beta spine promotion gate`).toBeGreaterThan(
+        -1,
+      );
+      expect(index, `${marker} should stay in beta spine promotion gate order`).toBeGreaterThan(
+        previousIndex,
+      );
+      previousIndex = index;
+    }
   });
 
   it("publishes generated app smoke matrix artifacts after the smoke gate", () => {
@@ -97,6 +144,14 @@ describe("CI package quality dashboard", () => {
     }
   });
 
+  it("excludes intentionally archived OpenAI API docs snapshots from docs link checks", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).toContain(
+      "--exclude '^https://web\\.archive\\.org/web/[0-9]+/https://developers\\.openai\\.com/api/'",
+    );
+  });
+
   it("keeps core coverage hard errors blocking in CI", () => {
     const workflow = readCiWorkflow();
     const warningStepStart = workflow.indexOf("- name: Core package coverage warning report");
@@ -113,5 +168,103 @@ describe("CI package quality dashboard", () => {
     const warningStep = workflow.slice(warningStepStart, summaryStepStart);
     expect(warningStep).toContain("run: pnpm test:coverage:core:warning");
     expect(warningStep).not.toContain("continue-on-error");
+  });
+
+  it("keeps production dependency audit advisory in CI and publish-blocking in release", () => {
+    const workflow = readCiWorkflow();
+    const auditStepStart = workflow.indexOf("- name: Production dependency audit report");
+    const secretScanStart = workflow.indexOf("- name: Secret scan warning report");
+    const summaryStart = workflow.indexOf("- name: Assemble security policy summary");
+    const uploadStart = workflow.indexOf("- name: Upload security report");
+
+    expect(auditStepStart, "production dependency audit step should be present").toBeGreaterThan(
+      -1,
+    );
+    expect(
+      secretScanStart,
+      "secret scan step should follow production dependency audit",
+    ).toBeGreaterThan(auditStepStart);
+    expect(summaryStart, "security summary should follow security scans").toBeGreaterThan(
+      secretScanStart,
+    );
+    expect(uploadStart, "security report upload should follow the summary").toBeGreaterThan(
+      summaryStart,
+    );
+
+    const auditStep = workflow.slice(auditStepStart, secretScanStart);
+    expect(auditStep).toContain("id: security_audit_advisory");
+    expect(auditStep).toContain("continue-on-error: true");
+    expect(auditStep).toContain("pnpm audit:prod > ci-reports/security/pnpm-audit-prod.txt 2>&1");
+    expect(auditStep).toContain("CI keeps the audit advisory-only");
+    expect(auditStep).toContain("release publish gates run the same command as a blocker");
+    expect(auditStep).toContain('exit "$exit_code"');
+
+    const summaryStep = workflow.slice(summaryStart, uploadStart);
+    expect(summaryStep).toContain(
+      "- \\`pnpm audit:prod\\` dependency audit: advisory-only in CI on pull requests, trunk pushes, and manual runs",
+    );
+    expect(summaryStep).toContain(
+      "- \\`pnpm audit:prod\\` release enforcement: blocking in the Release workflow before publish",
+    );
+  });
+
+  it("keeps pnpm security policy in workspace-supported config", () => {
+    const rootPackageJson = readRootPackageJson();
+    const workspace = readPnpmWorkspace();
+
+    expect(rootPackageJson).not.toHaveProperty("pnpm");
+    expect(workspace).toContain("overrides:");
+    expect(workspace).toContain("linkify-it: 5.0.2");
+    expect(workspace).toContain("auditConfig:");
+    expect(workspace).toContain("ignoreGhsas:");
+    expect(workspace).toContain("- GHSA-gv7w-rqvm-qjhr");
+  });
+
+  it("triggers docs link checks for root docs and public package READMEs", () => {
+    const workflow = readCiWorkflow();
+    const docsFilterStart = workflow.indexOf("            docs:\n");
+    const apiSourceFilterStart = workflow.indexOf("            api-source:\n");
+
+    expect(docsFilterStart, "docs path filter should be present").toBeGreaterThan(-1);
+    expect(apiSourceFilterStart, "api-source path filter should follow docs").toBeGreaterThan(
+      docsFilterStart,
+    );
+
+    const docsFilter = workflow.slice(docsFilterStart, apiSourceFilterStart);
+    expect(docsFilter).toContain("- 'README.md'");
+    expect(docsFilter).toContain("- 'docs/**/*.md'");
+    expect(docsFilter).toContain("- 'packages/*/README.md'");
+    expect(docsFilter).toContain("- 'packages/docs/**'");
+  });
+
+  it("checks built docs, root docs, and public package READMEs with Lychee", () => {
+    const workflow = readCiWorkflow();
+    const linkCheckerStart = workflow.indexOf("- name: Link Checker");
+    const linkCheckerEnd = workflow.indexOf("        env:", linkCheckerStart);
+
+    expect(linkCheckerStart, "Lychee link checker step should be present").toBeGreaterThan(-1);
+    expect(linkCheckerEnd, "Lychee env block should follow args").toBeGreaterThan(linkCheckerStart);
+
+    const linkChecker = workflow.slice(linkCheckerStart, linkCheckerEnd);
+    expect(linkChecker).toContain("repository landing URL");
+    expect(linkChecker).toContain("current-commit blob/tree links");
+    expect(linkChecker).toContain("your-org/croco is scaffold placeholder text");
+    expect(linkChecker).toContain("diataxis.fr rate-limits");
+    expect(linkChecker).toContain("private docs app");
+    expect(linkChecker).toContain("rather than a public package README");
+    expect(linkChecker).toContain("--root-dir '${{ github.workspace }}/packages/docs/dist'");
+    expect(linkChecker).toContain(
+      "--exclude '^https://github\\.com/croco-dev/framework(#readme)?$'",
+    );
+    expect(linkChecker).toContain(
+      "--exclude '^https://github\\.com/croco-dev/framework/(blob|tree)/[0-9a-f]{40}/'",
+    );
+    expect(linkChecker).toContain("--exclude '^https://github\\.com/your-org/croco(#readme)?$'");
+    expect(linkChecker).toContain("--exclude '^https://diataxis\\.fr/(how-to-guides|reference)/$'");
+    expect(linkChecker).toContain("--exclude-path '(^|/)packages/docs/README\\.md$'");
+    expect(linkChecker).toContain("'README.md'");
+    expect(linkChecker).toContain("'docs/**/*.md'");
+    expect(linkChecker).toContain("'packages/*/README.md'");
+    expect(linkChecker).toContain("'packages/docs/dist/**/*.html'");
   });
 });

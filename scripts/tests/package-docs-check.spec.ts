@@ -65,9 +65,13 @@ describe("package-docs-check.mts", () => {
     expect(readme).toContain("Adapter Ecosystem");
     expect(readme).toContain("compatibility certification checklist");
     expect(readme).toContain("certified compatibility");
-    expect(readme).toContain("no certification record");
+    expect(readme).toContain("Certification policy:");
+    expect(readme).toContain("not-applicable");
     expect(readme).toContain("`@croco/alpha`");
     expect(report).toContain("## Croco 1.0 Spine");
+    expect(report).toContain("## Certification Policy");
+    expect(report).toContain("`certified-required`");
+    expect(report).toContain("`not-applicable`");
     expect(report).toContain("## Certification Records");
     expect(report).toContain("Croco 1.0 spine packages");
     expect(report).toContain("| `@croco/beta`");
@@ -79,8 +83,153 @@ describe("package-docs-check.mts", () => {
     expect(matrix).toContain("Adapter Ecosystem");
     expect(matrix).toContain("certification checklist");
     expect(matrix).toContain("compatibility certification claim");
-    expect(matrix).toContain("no certification record");
+    expect(matrix).toContain("Certification policy:");
+    expect(matrix).toContain("not-applicable<br>not required until production-ready");
     expect(matrix).toContain("`@croco/alpha`");
+  });
+
+  it("renders missing production certification records as certified-required", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", { name: "@croco/provider" });
+    writeGeneratedApiDocs(root, "provider");
+    writeCatalogMetadata(root, ["provider"], {
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+      productionPackages: ["provider"],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+    const matrix = readFileSync(
+      join(
+        root,
+        "packages",
+        "docs",
+        "src",
+        "content",
+        "docs",
+        "en",
+        "reference",
+        "extension-matrix.md",
+      ),
+      "utf-8",
+    );
+
+    expect(result.status).toBe(0);
+    expect(matrix).toContain("certified-required<br>missing certification record");
+  });
+
+  it("renders public compatibility claims without records as certified-required", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", { name: "@croco/provider" });
+    writeFileSync(
+      join(root, "packages", "provider", "README.md"),
+      "# @croco/provider\n\nCroco compatible: @croco/provider provider contract\n",
+    );
+    writeCatalogMetadata(root, ["provider"], {
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+      productionPackages: [],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+    const matrix = readFileSync(
+      join(
+        root,
+        "packages",
+        "docs",
+        "src",
+        "content",
+        "docs",
+        "en",
+        "reference",
+        "extension-matrix.md",
+      ),
+      "utf-8",
+    );
+
+    expect(result.status).toBe(0);
+    expect(matrix).toContain("certified-required<br>missing certification record");
+  });
+
+  it("renders prose certification claims without records as certified-required", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", { name: "@croco/provider" });
+    writeFileSync(
+      join(root, "packages", "provider", "README.md"),
+      "# @croco/provider\n\nThis package is certified for the Croco provider contract.\n",
+    );
+    writeCatalogMetadata(root, ["provider"], {
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+      productionPackages: [],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+    const matrix = readFileSync(
+      join(
+        root,
+        "packages",
+        "docs",
+        "src",
+        "content",
+        "docs",
+        "en",
+        "reference",
+        "extension-matrix.md",
+      ),
+      "utf-8",
+    );
+
+    expect(result.status).toBe(0);
+    expect(matrix).toContain("certified-required<br>missing certification record");
+  });
+
+  it("fails when the certification policy references a malformed scope group", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", { name: "@croco/provider" });
+    writeGeneratedApiDocs(root, "provider");
+    writeCatalogMetadata(root, ["provider"], {
+      certificationPolicy: {
+        scope: createCertificationPolicyScope(["Integration"]),
+      },
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+      productionPackages: [],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: [],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "certification.policy.scope.extensionGroups references non-extension group Integration",
+    );
+    expect(result.stdout).toContain(
+      "certification.policy.scope.extensionGroups must include extensionMatrix group Provider",
+    );
   });
 
   it("fails check mode when the README catalog was not regenerated", () => {
@@ -681,6 +830,7 @@ function writeCatalogMetadata(
   root: string,
   packageNames: readonly string[],
   options: {
+    readonly certificationPolicy?: Record<string, unknown> | null;
     readonly extensionGroups?: readonly string[];
     readonly extensionPackages?: readonly string[];
     readonly extensionRuntimesByPackage?: Record<string, readonly string[]>;
@@ -745,9 +895,35 @@ function writeCatalogMetadata(
     },
     certification: {
       schemaVersion: 1,
+      ...(options.certificationPolicy === null
+        ? {}
+        : {
+            policy: {
+              scope: createCertificationPolicyScope(options.extensionGroups ?? [groupName]),
+              ...options.certificationPolicy,
+            },
+          }),
       records: options.certificationRecords ?? [],
     },
   });
+}
+
+function createCertificationPolicyScope(
+  extensionGroups: readonly string[],
+): Record<string, unknown> {
+  return {
+    extensionGroups,
+    requiredMaturity: "production",
+    claimRequiresCertified: true,
+    states: {
+      "certified-required":
+        "A certified record is required for production-ready extension packages or public compatibility claims.",
+      "candidate-optional":
+        "A candidate record may track evidence before the extension package is production-ready.",
+      "not-applicable":
+        "No certification record is required until production-ready maturity or a public compatibility claim.",
+    },
+  };
 }
 
 function createCertificationRecord(

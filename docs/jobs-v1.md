@@ -16,7 +16,10 @@ Jobs v1 is built on `@croco/execution-core`.
 - `createExecutionJobsOperations(manager)` turns those capabilities into a stable Jobs operations
   contract: `list`, `show`, `logs`, `cancel`, and `replay`.
 
-```typescript
+The store below is application-owned infrastructure; the snippet focuses on the Jobs operations
+contract and is intentionally not standalone.
+
+```typescript no-check
 import { createExecutionJobsOperations, ExecutionManagerImpl } from "@croco/execution-core";
 import { MyExecutionStore } from "./MyExecutionStore";
 
@@ -83,7 +86,10 @@ deduplication.
 
 `@croco/triggers-qstash` supports previewing declared cron schedule changes before applying them:
 
-```typescript
+The scheduler instance is provided by the `@croco/triggers-qstash` adapter after credentials and
+schedule declarations are configured.
+
+```typescript no-check
 const diff = await scheduler.sync({ mode: "dry-run" });
 // diff.created / diff.updated / diff.deleted describe the planned changes.
 // No QStash create/delete calls are made in dry-run mode.
@@ -100,7 +106,9 @@ operators can distinguish planned changes from mutations that were actually sent
 Single-step jobs keep the default behavior and complete the execution when the step finishes.
 Multi-step jobs should keep the parent execution open for intermediate steps:
 
-```typescript
+The executor, execution id, and step definitions come from the surrounding batch job runtime.
+
+```typescript no-check
 await chunkExecutor.execute(executionId, firstStep, { completeExecution: false });
 await chunkExecutor.execute(executionId, finalStep, { startExecution: false });
 ```

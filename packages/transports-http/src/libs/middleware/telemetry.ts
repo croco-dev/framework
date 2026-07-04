@@ -16,6 +16,7 @@ import {
   type RuntimeTraceContext,
 } from "@croco/framework-context";
 import { Problem, ProblemCategoryMapper } from "@croco/problems-core";
+import { HTTP_CONTEXT_KEYS } from "../contextKeys";
 import type { CrocoHttpContext, MiddlewareFunction } from "../types";
 
 export interface TraceParent {
@@ -161,8 +162,8 @@ export const telemetryMiddleware =
 
       const fallbackTraceId = `telemetry-degraded-${Date.now().toString(36)}`;
 
-      ctx.set("traceId", fallbackTraceId);
-      ctx.set("telemetryDegraded", true);
+      ctx.set(HTTP_CONTEXT_KEYS.traceId, fallbackTraceId);
+      ctx.set(HTTP_CONTEXT_KEYS.telemetryDegraded, true);
       recordTelemetryDegradation(ctx, route, fallbackTraceId, error);
 
       try {
@@ -185,9 +186,9 @@ function applyRequestTraceContext(ctx: CrocoHttpContext, spanContext: SpanContex
     traceFlags: spanContext.traceFlags,
   };
 
-  ctx.set("traceId", spanContext.traceId);
-  ctx.set("spanId", spanContext.spanId);
-  ctx.set("traceFlags", spanContext.traceFlags);
+  ctx.set(HTTP_CONTEXT_KEYS.traceId, spanContext.traceId);
+  ctx.set(HTTP_CONTEXT_KEYS.spanId, spanContext.spanId);
+  ctx.set(HTTP_CONTEXT_KEYS.traceFlags, spanContext.traceFlags);
 
   const requestContext = FrameworkContext.get();
   if (!requestContext) {
@@ -212,14 +213,14 @@ function applyExistingTraceContext(ctx: CrocoHttpContext): void {
     return;
   }
 
-  ctx.set("traceId", traceContext.traceId);
+  ctx.set(HTTP_CONTEXT_KEYS.traceId, traceContext.traceId);
 
   if (traceContext.spanId) {
-    ctx.set("spanId", traceContext.spanId);
+    ctx.set(HTTP_CONTEXT_KEYS.spanId, traceContext.spanId);
   }
 
   if (traceContext.traceFlags !== undefined) {
-    ctx.set("traceFlags", traceContext.traceFlags);
+    ctx.set(HTTP_CONTEXT_KEYS.traceFlags, traceContext.traceFlags);
   }
 }
 
@@ -326,8 +327,8 @@ function recordTelemetryDegradation(
 ): void {
   const errorInfo = normalizeSetupError(error);
 
-  ctx.set("telemetryDegradedReason", TELEMETRY_DEGRADED_REASON);
-  ctx.set("telemetryDegradedError", errorInfo);
+  ctx.set(HTTP_CONTEXT_KEYS.telemetryDegradedReason, TELEMETRY_DEGRADED_REASON);
+  ctx.set(HTTP_CONTEXT_KEYS.telemetryDegradedError, errorInfo);
 
   warnTelemetryDegradation({
     route,

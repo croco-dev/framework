@@ -49,7 +49,7 @@ jobs:
 
           release_pr_update_pattern='^\.changeset/(pre\.json|[^/]+\.md)$'
           release_pr_update_ignore_pattern='^\.changeset/README\.md$'
-          publish_candidate_pattern='^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$'
+          publish_candidate_pattern='^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$|^pnpm-workspace\.yaml$'
           release_gate_maintenance_pattern='^\.github/workflows/release\.yml$|^scripts/(changeset-required-check\.mts|normalize-packages\.mjs|package-bin-smoke\.mts|package-entrypoint-smoke\.mts|package-manifest-contracts\.mjs|release-docs-check\.mts|release-metadata-check\.mts)$|^scripts/tests/(changeset-required-check|normalize-packages|package-bin-smoke|package-entrypoint-smoke|release-docs-check|release-metadata-check|release-workflow)\.spec\.ts$'
 
           changed_files="$(git diff --name-only "$base" HEAD)"

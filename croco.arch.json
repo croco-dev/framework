@@ -18,23 +18,58 @@
     "framework": {
       "description": "Build-time and runtime framework primitives without provider or transport implementations.",
       "packages": [
-        "@croco/*-core",
-        "@croco/architecture-policy",
+        "@croco/access-core",
+        "@croco/admin-core",
+        "@croco/admin-ops",
+        "@croco/analytics-core",
+        "@croco/audit-core",
+        "@croco/auth-core",
+        "@croco/batch-core",
+        "@croco/billing-core",
         "@croco/cache-core",
+        "@croco/customer-health-core",
         "@croco/dataloader-core",
         "@croco/diagnostics-core",
+        "@croco/entitlements-core",
         "@croco/events-core",
         "@croco/events-inmemory",
-        "@croco/framework-*",
+        "@croco/execution-core",
+        "@croco/features-core",
+        "@croco/framework-config",
+        "@croco/framework-context",
+        "@croco/framework-logger",
+        "@croco/framework-module",
+        "@croco/framework-preset",
+        "@croco/framework-routes",
         "@croco/gid-core",
+        "@croco/governance-core",
         "@croco/health-core",
         "@croco/idempotency-core",
+        "@croco/impersonation-core",
+        "@croco/invitation-core",
+        "@croco/lifecycle-core",
+        "@croco/llm-core",
+        "@croco/llm-metering",
+        "@croco/membership-core",
+        "@croco/metering-core",
+        "@croco/metrics-core",
+        "@croco/notifications-core",
+        "@croco/onboarding-core",
+        "@croco/outbox-core",
         "@croco/pagination-core",
         "@croco/problems-core",
+        "@croco/ratelimit-core",
         "@croco/repository-core",
         "@croco/retry-core",
+        "@croco/search-core",
+        "@croco/storage-core",
+        "@croco/tasks-core",
         "@croco/tenant-core",
-        "@croco/tx-core"
+        "@croco/telemetry-api",
+        "@croco/triggers-core",
+        "@croco/tx-core",
+        "@croco/webhooks-core",
+        "@croco/workflow-core"
       ]
     },
     "protocols": {
@@ -84,6 +119,7 @@
     "app": {
       "description": "Repository-owned CLIs, scaffolds, docs, and release tooling.",
       "packages": [
+        "@croco/architecture-policy",
         "@croco/cli",
         "@croco/docs",
         "@croco/esbuild-plugin",
@@ -95,6 +131,26 @@
       ]
     }
   },
+  "packageCatalogGroupOverrides": [
+    {
+      "package": "@croco/events-tx",
+      "catalogGroup": "Core",
+      "policyGroup": "integrations",
+      "reason": "events-tx binds event contracts to transaction infrastructure, so architecture policy treats it as an adapter boundary."
+    },
+    {
+      "package": "@croco/telemetry-api",
+      "catalogGroup": "Integration",
+      "policyGroup": "framework",
+      "reason": "telemetry-api is the application-facing telemetry contract consumed by framework/core packages; telemetry-sdk-node remains the runtime integration."
+    },
+    {
+      "package": "@croco/tx-drizzle",
+      "catalogGroup": "Core",
+      "policyGroup": "integrations",
+      "reason": "tx-drizzle is the Drizzle transaction implementation even though the package catalog keeps transaction packages in Core."
+    }
+  ],
   "rules": {
     "forbiddenImports": [
       {

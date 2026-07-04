@@ -64,10 +64,16 @@ export const handler = app.lambdaHandler();
 
 등록된 컨트롤러 요청은 기본 HTTP server span 안에서 실행됩니다. 요청 중 `Problem` 또는 일반 에러가
 발생하면 span에는 HTTP status와 Croco Problem code/category가 기록되고, Problem Details 응답에는
-추적에 사용할 `traceId`와 `requestId`가 포함됩니다.
+추적에 사용할 안전한 correlation metadata가 포함됩니다. `traceId`는 요청 trace가 있을 때 포함되고,
+`requestId`는 runtime request id가 있을 때 포함됩니다. Node runtime의 `requestId`는 요청의
+`x-request-id` 헤더를 우선 사용하고 없으면 transport가 생성한 id를 사용합니다. Lambda runtime의
+`requestId`는 API Gateway `event.requestContext.requestId`를 우선 사용하고 없으면 Lambda
+`awsRequestId`를 사용합니다.
 
 Telemetry 설정 자체가 실패하면 요청은 degraded mode로 계속 처리되지만 `X-Croco-Telemetry-Degraded`
-응답 헤더와 Problem Details의 `telemetry.degraded` 메타데이터로 실패 증거를 남깁니다.
+응답 헤더와 Problem Details의 `telemetry: { degraded: true, reason: "telemetry_setup_failed" }`
+메타데이터로 실패 증거를 남깁니다. 응답에는 안정적인 degradation reason만 직렬화하고 setup exception
+message, stack, raw header/body, secret 값은 포함하지 않습니다.
 
 ### RuntimeContext
 
@@ -181,7 +187,13 @@ Diagnostics 응답은 `Cache-Control: no-store`를 포함합니다. `recentError
 
 ## Failure response contract
 
-`ErrorHandler`는 Croco `Problem`을 만나면 `type`, `title`, `status`, `code`, `detail`, `instance`와 안전한 extension을 그대로 직렬화합니다. 일반 `Error`는 로그에 남기고 `500 Internal Server Error`의 opaque 응답으로 변환합니다. 따라서 컨트롤러, guard, interceptor, provider adapter는 사용자가 복구할 수 있는 실패를 transport까지 generic `Error`로 넘기지 말고 package-specific `Problem`으로 정규화해야 합니다.
+`ErrorHandler`는 Croco `Problem`을 만나면 `type`, `title`, `status`, `code`, `detail`, `instance`와
+안전한 extension을 직렬화합니다. RFC 7807 표준 필드는 Problem extension으로 덮어쓸 수 없고,
+transport가 만든 `traceId`, `requestId`, `telemetry` correlation metadata는 redaction 이후에도
+복구와 로그 검색에 사용할 수 있도록 응답에 남습니다. 일반 `Error`는 로그에 남기고
+`500 Internal Server Error`의 opaque 응답으로 변환합니다. 따라서 컨트롤러, guard, interceptor,
+provider adapter는 사용자가 복구할 수 있는 실패를 transport까지 generic `Error`로 넘기지 말고
+package-specific `Problem`으로 정규화해야 합니다.
 
 ## Security Middleware Contract
 

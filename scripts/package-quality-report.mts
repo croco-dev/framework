@@ -623,6 +623,8 @@ function readGateOutcomes(): Record<string, string> {
     test: process.env.PACKAGE_QUALITY_TEST_STATUS ?? "not provided",
     "provider-certification:check":
       process.env.PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS ?? "not provided",
+    "production-ready:check": process.env.PACKAGE_QUALITY_PRODUCTION_READY_STATUS ?? "not provided",
+    "spine-promotion:check": process.env.PACKAGE_QUALITY_SPINE_PROMOTION_STATUS ?? "not provided",
   };
 }
 
@@ -1156,6 +1158,8 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     `| \`typecheck\` | package TypeScript tasks | blocking on PR/trunk | ${report.gateOutcomes.typecheck} | Turbo \`typecheck\` summary below |`,
     `| \`test\` | package test tasks | blocking on PR/trunk | ${report.gateOutcomes.test} | Turbo \`test\` summary below |`,
     `| \`provider-certification:check\` | provider, integration, transport, and presentation certification evidence | blocking on PR/trunk | ${report.gateOutcomes["provider-certification:check"]} | validates catalog certification records and writes \`ci-reports/package-quality/provider-certification.md\` plus JSON |`,
+    `| \`production-ready:check\` | production-ready package maturity evidence | blocking on PR/trunk | ${report.gateOutcomes["production-ready:check"]} | validates \`maturity.production.packages\` evidence and writes \`ci-reports/package-quality/production-ready.md\` |`,
+    `| \`spine-promotion:check\` | beta Croco 1.0 spine promotion accountability | blocking on PR/trunk | ${report.gateOutcomes["spine-promotion:check"]} | validates owner, target evidence, and recovery action in \`docs/package-catalog.json\` and writes \`ci-reports/package-quality/spine-promotion.md\` |`,
     `| \`bundle-size:warning\` | publishable package generated artifact growth | warning-only until baselines stabilize | ${formatBundleSizeStatus(report.bundleSize)} | ${formatBundleSizeEvidence(report.bundleSize)} |`,
     "| `benchmark` | performance drift | blocking in dedicated benchmark workflow | n/a (separate workflow) | latest-five-green evidence and benchmark baselines are committed |",
     "",
@@ -1195,8 +1199,8 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     ),
     "",
     "## Trunk gate rollout",
-    "- Current blocking gates: changeset-required, architecture-policy, dependency-boundaries, static-misuse, lint/format/policy checks, build, typecheck, test, and the dedicated benchmark workflow.",
-    "- Current advisory gates: production audit on PRs, core coverage baseline warnings, and bundle-size warnings.",
+    "- Current blocking gates: changeset-required, architecture-policy, dependency-boundaries, static-misuse, lint/format/policy checks, build, typecheck, test, provider-certification, production-ready, spine-promotion, and the dedicated benchmark workflow.",
+    "- Current advisory gates: production audit in CI, core coverage baseline warnings, and bundle-size warnings. Release publish gates still run `pnpm audit:prod` as blocking.",
     "- Promote warning-only gates only after the dashboard shows stable package-level ownership, no unknown package rows, and documented baselines.",
     "- New packages should appear in this dashboard with explicit build/typecheck/test support or an intentional not-configured state.",
   ];

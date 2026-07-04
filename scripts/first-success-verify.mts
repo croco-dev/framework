@@ -369,10 +369,19 @@ function validatePackageCountClaims(source: PublicDocsSource, expected: number):
   return failures;
 }
 
+function parsePackageJson(content: string): PackageJsonWithScripts {
+  try {
+    return JSON.parse(content) as PackageJsonWithScripts;
+  } catch {
+    return {};
+  }
+}
+
 // ── Paths ────────────────────────────────────────────────────────────────────
 
 const ROOT = readRootArg();
 const QUICK_START_DIR = join(ROOT, "examples", "quick-start-lambda");
+const SAAS_BILLING_DIR = join(ROOT, "examples", "saas-billing-golden-path");
 
 const paths = {
   rootReadme: join(ROOT, "README.md"),
@@ -381,6 +390,11 @@ const paths = {
   userController: join(QUICK_START_DIR, "src", "protocols", "UserController.ts"),
   authProvider: join(QUICK_START_DIR, "src", "integrations", "TestAuthProvider.ts"),
   examplePkg: join(QUICK_START_DIR, "package.json"),
+  saasReadme: join(SAAS_BILLING_DIR, "README.md"),
+  saasPkg: join(SAAS_BILLING_DIR, "package.json"),
+  saasBillingController: join(SAAS_BILLING_DIR, "src", "protocols", "BillingController.ts"),
+  saasCheckoutService: join(SAAS_BILLING_DIR, "src", "domain", "CheckoutService.ts"),
+  saasGoldenPathSpec: join(SAAS_BILLING_DIR, "src", "tests", "golden-path.spec.ts"),
   gettingStarted: join(
     ROOT,
     "packages",
@@ -421,12 +435,7 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
   }
 
   // Example package.json dev script maps to tsx src/index.ts
-  let pkg: PackageJsonWithScripts;
-  try {
-    pkg = JSON.parse(examplePkg) as PackageJsonWithScripts;
-  } catch {
-    pkg = {};
-  }
+  const pkg = parsePackageJson(examplePkg);
   const devScript: string | undefined = pkg.scripts?.dev;
   if (!devScript) {
     fail("A1c", "example quick-start-lambda/package.json missing `scripts.dev`");
@@ -442,12 +451,7 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
     pass("A1d", "README documents `pnpm quick-start-lambda:smoke`");
   }
 
-  let rootPackageJson: PackageJsonWithScripts;
-  try {
-    rootPackageJson = JSON.parse(rootPkg) as PackageJsonWithScripts;
-  } catch {
-    rootPackageJson = {};
-  }
+  const rootPackageJson = parsePackageJson(rootPkg);
   const smokeScript: string | undefined = rootPackageJson.scripts?.["quick-start-lambda:smoke"];
   if (!smokeScript) {
     fail("A1e", "root package.json missing `quick-start-lambda:smoke` script");
@@ -604,9 +608,146 @@ console.log("\n📋 C. Metering contract\n");
   }
 }
 
-// ── D. Docs contract ────────────────────────────────────────────────────────
+// ── D. SaaS billing golden-path contract ────────────────────────────────────
 
-console.log("\n📋 D. Docs contract\n");
+console.log("\n📋 D. SaaS billing golden-path contract\n");
+
+{
+  const readme = read(paths.saasReadme);
+  const examplePkg = read(paths.saasPkg);
+  const rootPkg = read(join(ROOT, "package.json"));
+  const billingController = read(paths.saasBillingController);
+  const checkoutService = read(paths.saasCheckoutService);
+  const goldenPathSpec = read(paths.saasGoldenPathSpec);
+  const gettingStarted = read(paths.gettingStarted);
+  const pkg = parsePackageJson(examplePkg);
+  const rootPackageJson = parsePackageJson(rootPkg);
+
+  if (!readme.includes("pnpm --filter @croco-example/saas-billing-golden-path dev")) {
+    fail("S1a", "SaaS README missing local run command");
+  } else {
+    pass("S1a", "SaaS README documents local run command");
+  }
+
+  if (!readme.includes("pnpm --filter @croco-example/saas-billing-golden-path test")) {
+    fail("S1b", "SaaS README missing local test command");
+  } else {
+    pass("S1b", "SaaS README documents local test command");
+  }
+
+  if (!readme.includes("pnpm saas-billing-golden-path:smoke")) {
+    fail("S1c", "SaaS README missing root smoke command");
+  } else {
+    pass("S1c", "SaaS README documents root smoke command");
+  }
+
+  const devScript: string | undefined = pkg.scripts?.dev;
+  if (!devScript) {
+    fail("S2a", "example saas-billing-golden-path/package.json missing `scripts.dev`");
+  } else if (!devScript.includes("tsx") || !devScript.includes("src/index.ts")) {
+    fail("S2a", `scripts.dev="${devScript}" does not match expected "tsx src/index.ts"`);
+  } else {
+    pass("S2a", `SaaS scripts.dev matches expected pattern (${devScript})`);
+  }
+
+  const testScript: string | undefined = pkg.scripts?.test;
+  if (!testScript) {
+    fail("S2b", "example saas-billing-golden-path/package.json missing `scripts.test`");
+  } else if (!testScript.includes("vitest run src/tests")) {
+    fail("S2b", `scripts.test="${testScript}" does not run the checked-in golden path tests`);
+  } else {
+    pass("S2b", "SaaS scripts.test runs the checked-in golden path tests");
+  }
+
+  for (const [label, scriptName] of [
+    ["S2c", "typecheck"],
+    ["S2d", "build"],
+  ] as const) {
+    const script = pkg.scripts?.[scriptName];
+    if (!script) {
+      fail(label, `example saas-billing-golden-path/package.json missing scripts.${scriptName}`);
+    } else if (script !== "tsc --noEmit") {
+      fail(label, `scripts.${scriptName}="${script}" does not match expected "tsc --noEmit"`);
+    } else {
+      pass(label, `SaaS scripts.${scriptName} matches expected typecheck command`);
+    }
+  }
+
+  const smokeScript: string | undefined =
+    rootPackageJson.scripts?.["saas-billing-golden-path:smoke"];
+  if (!smokeScript) {
+    fail("S3", "root package.json missing `saas-billing-golden-path:smoke` script");
+  } else if (
+    smokeScript !==
+    "pnpm --filter @croco-example/saas-billing-golden-path... build && pnpm --filter @croco-example/saas-billing-golden-path test"
+  ) {
+    fail(
+      "S3",
+      `saas-billing-golden-path:smoke="${smokeScript}" does not build the example and workspace dependencies before running the checked-in example tests`,
+    );
+  } else {
+    pass("S3", "root package.json exposes `saas-billing-golden-path:smoke`");
+  }
+
+  for (const [label, snippet] of [
+    ["S4a", '@Controller("/api")'],
+    ["S4b", '@Post("/checkouts")'],
+    ["S4c", '@Get("/orders/:id")'],
+    ["S4d", '@Get("/backoffice/audit")'],
+  ] as const) {
+    if (!billingController.includes(snippet)) {
+      fail(label, `BillingController missing ${snippet}`);
+    } else {
+      pass(label, `BillingController includes ${snippet}`);
+    }
+  }
+
+  for (const [label, snippet] of [
+    ["S5a", "RetryTemplate"],
+    ["S5b", "publishAfterCommit"],
+    ["S5c", "withSpan"],
+    ["S5d", "CheckoutValidationProblem"],
+    ["S5e", "OrderNotFoundProblem"],
+  ] as const) {
+    if (!checkoutService.includes(snippet)) {
+      fail(label, `CheckoutService missing ${snippet}`);
+    } else {
+      pass(label, `CheckoutService includes ${snippet}`);
+    }
+  }
+
+  for (const [label, snippet] of [
+    ["S6a", "retries transient payment failure"],
+    ["S6b", "golden-path/checkout-validation"],
+    ["S6c", "golden-path/payment-declined"],
+    ["S6d", "golden-path/order-not-found"],
+  ] as const) {
+    if (!goldenPathSpec.includes(snippet)) {
+      fail(label, `golden-path.spec.ts missing ${snippet}`);
+    } else {
+      pass(label, `golden-path.spec.ts covers ${snippet}`);
+    }
+  }
+
+  if (!gettingStarted.includes("saas-billing-golden-path")) {
+    fail("S7a", "Getting started docs missing reference to saas-billing-golden-path");
+  } else {
+    pass("S7a", "Getting started docs reference saas-billing-golden-path");
+  }
+
+  if (!gettingStarted.includes("pnpm saas-billing-golden-path:smoke")) {
+    fail(
+      "S7b",
+      "Getting started docs missing `pnpm saas-billing-golden-path:smoke` validation command",
+    );
+  } else {
+    pass("S7b", "Getting started docs document SaaS billing golden-path smoke command");
+  }
+}
+
+// ── E. Docs contract ────────────────────────────────────────────────────────
+
+console.log("\n📋 E. Docs contract\n");
 
 {
   const rootReadme = read(paths.rootReadme);
@@ -695,9 +836,9 @@ console.log("\n📋 D. Docs contract\n");
   }
 }
 
-// ── E. Scaffold contract ─────────────────────────────────────────────────────
+// ── F. Scaffold contract ─────────────────────────────────────────────────────
 
-console.log("\n📋 E. Scaffold contract\n");
+console.log("\n📋 F. Scaffold contract\n");
 
 {
   const prompts = read(paths.prompts);

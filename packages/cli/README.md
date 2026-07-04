@@ -76,6 +76,63 @@ Creates a single source file under `apps/api-server/src/`:
 - Doctor checks workspace dependency ranges, installed/built Croco spine packages, ContractGraph snapshots, ProblemRegistry artifacts, runtime capability manifests, HTTP security middleware, DI graph manifests, provider profile certification, repository-core boundaries, and Lambda telemetry flush evidence.
 - Failures emit stable `CROCO_DOCTOR_*` diagnostic codes with cause, source location, and recovery action. Legacy slash-form codes remain in JSON as `legacyCode` only where they existed before.
 
+#### `croco.doctor.v1` JSON contract
+
+`croco doctor --json` returns a versioned report with `version: "croco.doctor.v1"`. Generated apps,
+CI release gates, and local machine checks may treat these fields as a 1.0 compatibility contract:
+
+| Field          | Contract                                                                                |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `version`      | Literal schema version, currently `croco.doctor.v1`.                                    |
+| `rootDir`      | Absolute workspace root path, or `null` when workspace discovery fails.                 |
+| `packageCount` | Number of discovered workspace packages.                                                |
+| `summary`      | `healthy` when no error diagnostics exist; otherwise `issues_detected`.                 |
+| `checks`       | Ordered check results with `id`, `title`, `status`, `diagnostics`, and optional `note`. |
+| `diagnostics`  | Flattened copy of every diagnostic emitted by every check.                              |
+
+Each check uses `status: "pass" | "fail" | "skipped"`. Each diagnostic uses
+`severity: "error" | "warning"`, a stable `code`, optional `legacyCode`, the emitting `checkId`,
+human-readable `cause`, a nullable `location`, and a recovery `action`. Diagnostic locations may
+include `file`, `line`, and `packageName`; new location fields must be additive.
+
+New doctor checks should be appended with a new stable check `id`. New diagnostics should use a new
+stable code. Removing or renaming existing report fields, check ids, diagnostic fields, severity
+values, status values, or diagnostic codes is a breaking JSON contract change and must either bump
+the report version or be called out in release notes with a migration path. Additive optional fields,
+new checks, and new stable codes remain compatible with `croco.doctor.v1`.
+
+Current stable doctor diagnostic codes are:
+
+- `CROCO_CLI_DOCTOR_001`
+- `CROCO_CLI_DOCTOR_002`
+- `CROCO_CLI_DOCTOR_003`
+- `CROCO_CLI_DOCTOR_004`
+- `CROCO_CLI_DOCTOR_005`
+- `CROCO_CLI_PROJECT_MAP_008`
+- `CROCO_CLI_PROJECT_MAP_009`
+- `CROCO_DOCTOR_WORKSPACE_VERSION_CONFLICT`
+- `CROCO_DOCTOR_SPINE_PACKAGE_NOT_INSTALLED`
+- `CROCO_DOCTOR_SPINE_PACKAGE_MANIFEST_INVALID`
+- `CROCO_DOCTOR_SPINE_PACKAGE_NOT_BUILT`
+- `CROCO_DOCTOR_CONTRACT_GRAPH_MISSING`
+- `CROCO_DOCTOR_CONTRACT_GRAPH_INVALID`
+- `CROCO_DOCTOR_CONTRACT_GRAPH_ERRORS`
+- `CROCO_DOCTOR_PROBLEM_REGISTRY_MISSING`
+- `CROCO_DOCTOR_PROBLEM_REGISTRY_INVALID`
+- `CROCO_DOCTOR_PROBLEM_REGISTRY_DRIFT`
+- `CROCO_DOCTOR_PROBLEM_REGISTRY_CHECK_TIMEOUT`
+- `CROCO_DOCTOR_PROBLEM_REGISTRY_CHECK_FAILED`
+- `CROCO_DOCTOR_RUNTIME_CAPABILITY_MANIFEST_MISSING`
+- `CROCO_DOCTOR_RUNTIME_CAPABILITY_MANIFEST_INVALID`
+- `CROCO_DOCTOR_HTTP_SECURITY_VALIDATION_DISABLED`
+- `CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING`
+- `CROCO_DOCTOR_DI_GRAPH_MANIFEST_INVALID`
+- `CROCO_DOCTOR_DI_BOOTSTRAP_ERRORS`
+- `CROCO_DOCTOR_PROVIDER_PROFILE_INVALID`
+- `CROCO_DOCTOR_PROVIDER_PACKAGE_MISSING`
+- `CROCO_DOCTOR_PROVIDER_CERTIFICATION_GAP`
+- `CROCO_DOCTOR_PROVIDER_CERTIFICATION_DOCUMENTED`
+
 In this repository, `pnpm run doctor` builds the CLI and runs `croco doctor` against the current workspace.
 
 ### jobs — Background Job Operations
