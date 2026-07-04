@@ -183,6 +183,13 @@ export function createReleaseSpineEvidenceManifest(): readonly EvidenceCommand[]
       timeoutMs: minutes(20),
     },
     {
+      id: "release-metadata",
+      label: "Release metadata",
+      category: "metadata",
+      command: ["node", "--experimental-strip-types", "scripts/release-metadata-check.mts"],
+      timeoutMs: minutes(10),
+    },
+    {
       id: "generated-app-smoke",
       label: "create-croco-app generated app smoke",
       category: "generated-app",
@@ -301,13 +308,6 @@ export function createReleaseSpineEvidenceManifest(): readonly EvidenceCommand[]
           required: true,
         },
       ],
-    },
-    {
-      id: "release-metadata",
-      label: "Release metadata",
-      category: "metadata",
-      command: ["node", "--experimental-strip-types", "scripts/release-metadata-check.mts"],
-      timeoutMs: minutes(10),
     },
   ];
 }
@@ -951,6 +951,7 @@ function parsePositiveInteger(value: string, flag: string): number {
 export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
   let rootDir = process.cwd();
   let outputDir = join(rootDir, defaultOutputDirectory);
+  let outputDirWasExplicit = false;
   let totalTimeoutMs = defaultTotalTimeoutMs;
 
   for (let index = 0; index < args.length; index++) {
@@ -965,7 +966,9 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
         throw new Error("--root requires a path");
       }
       rootDir = resolve(value);
-      outputDir = join(rootDir, defaultOutputDirectory);
+      if (!outputDirWasExplicit) {
+        outputDir = join(rootDir, defaultOutputDirectory);
+      }
       index++;
       continue;
     }
@@ -976,6 +979,7 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
         throw new Error("--output-dir requires a path");
       }
       outputDir = resolve(value);
+      outputDirWasExplicit = true;
       index++;
       continue;
     }

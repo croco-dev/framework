@@ -43,6 +43,7 @@ describe("release-spine-evidence.mts", () => {
       "first-success",
       "package-entrypoints-smoke",
       "package-bins-smoke",
+      "release-metadata",
       "generated-app-smoke",
       "typecheck",
       "test",
@@ -52,7 +53,6 @@ describe("release-spine-evidence.mts", () => {
       "core-coverage",
       "core-coverage-warning",
       "public-api",
-      "release-metadata",
     ]);
     expect(findCheck(manifest, "production-ready").command).toEqual([
       "pnpm",
@@ -68,6 +68,9 @@ describe("release-spine-evidence.mts", () => {
     expect(
       findCheck(manifest, "generated-app-smoke").artifacts?.map((artifact) => artifact.path),
     ).toEqual(["ci-reports/generated-apps/matrix.md", "ci-reports/generated-apps/matrix.json"]);
+    expect(manifest.findIndex((check) => check.id === "release-metadata")).toBeLessThan(
+      manifest.findIndex((check) => check.id === "generated-app-smoke"),
+    );
   });
 
   it("writes checkpointed markdown and JSON reports and copies required artifacts", async () => {
@@ -335,6 +338,15 @@ describe("release-spine-evidence.mts", () => {
     expect(options.rootDir).toBe(repo);
     expect(options.outputDir).toBe(resolve("ci-reports/custom-release"));
     expect(options.totalTimeoutMs).toBe(25);
+  });
+
+  it("preserves explicit output options when root is parsed later", () => {
+    const repo = createTempRepo();
+    const outputDir = "ci-reports/custom-release";
+    const options = parseArgs(["--output-dir", outputDir, "--root", repo]);
+
+    expect(options.rootDir).toBe(repo);
+    expect(options.outputDir).toBe(resolve(outputDir));
   });
 
   it("wires the root package script", () => {

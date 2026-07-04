@@ -171,7 +171,7 @@ jobs:
 
       - name: Upload release spine evidence
         if: always() && steps.release_work.outputs.should_run_publish_gates == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release-spine-evidence
           path: ci-reports/release
