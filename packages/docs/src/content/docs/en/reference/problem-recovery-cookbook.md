@@ -2998,7 +2998,7 @@ Sources:
 
 Sources:
 
-- `packages/frontend-problems/src/index.ts:203:3` (problem-class)
+- `packages/frontend-problems/src/index.ts:204:3` (problem-class)
 
 <a id="frontend-vite-missing-cloudflare-vite-plugin"></a>
 

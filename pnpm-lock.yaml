@@ -2726,6 +2726,12 @@ importers:
         specifier: ^24.0.0
         version: 24.0.0
     devDependencies:
+      '@asteasolutions/zod-to-openapi':
+        specifier: ^7.3.4
+        version: 7.3.4(zod@3.25.76)
+      '@croco/openapi-spec':
+        specifier: workspace:*
+        version: link:../openapi-spec
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
