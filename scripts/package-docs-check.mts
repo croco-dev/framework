@@ -839,6 +839,15 @@ function parseCertificationRecord(
     );
   }
 
+  if (state === "candidate") {
+    const liveSmoke = evidence.get("liveSmoke");
+    if (liveSmoke?.status !== "present") {
+      violations.push(
+        `${catalogMetadataPath}: ${label}.state candidate requires present liveSmoke evidence`,
+      );
+    }
+  }
+
   const unnamedGaps = missingEvidenceKeys.filter(
     (key) => !knownGaps.some((gap) => gap.includes(key)),
   );
@@ -2274,7 +2283,7 @@ function formatCertificationEvidenceItem(item: CertificationEvidenceItem): strin
 }
 
 function formatCertificationPolicySentence(policy: CertificationPolicy): string {
-  return `Certification policy: extension packages in ${formatInlineList(policy.scope.extensionGroups)} require a certified record when maturity is \`${policy.scope.requiredMaturity}\` or when public docs make a Croco compatibility claim; extension packages without those triggers render as not-applicable until candidate evidence is recorded.`;
+  return `Certification policy: extension packages in ${formatInlineList(policy.scope.extensionGroups)} require a certified record when maturity is \`${policy.scope.requiredMaturity}\` or when public docs make a Croco compatibility claim; candidate records require present liveSmoke evidence, and extension packages without those triggers render as not-applicable until candidate evidence is recorded.`;
 }
 
 function formatCertificationPolicyTable(policy: CertificationPolicy): readonly string[] {

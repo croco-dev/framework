@@ -868,7 +868,7 @@
         "claimRequiresCertified": true,
         "states": {
           "certified-required": "A certified record is required because the package is production-ready in the extension matrix or public docs make a Croco compatibility claim.",
-          "candidate-optional": "A certification record exists for an extension package that is still below production maturity and has not made a public certified compatibility claim.",
+          "candidate-optional": "A pre-production certification record exists for an extension package; state candidate requires present liveSmoke evidence.",
           "not-applicable": "No certification record is required until the extension package reaches production maturity or makes a public Croco compatibility claim."
         }
       }
@@ -880,7 +880,7 @@
         "adapterCategory": "provider",
         "runtimes": ["node", "lambda"],
         "packageVersion": "0.0.4",
-        "state": "candidate",
+        "state": "uncertified",
         "evidence": {
           "conformance": {
             "status": "present",
@@ -913,7 +913,7 @@
         "adapterCategory": "provider",
         "runtimes": ["node", "lambda"],
         "packageVersion": "0.0.4",
-        "state": "candidate",
+        "state": "uncertified",
         "evidence": {
           "conformance": {
             "status": "present",
@@ -946,7 +946,7 @@
         "adapterCategory": "provider",
         "runtimes": ["node", "lambda"],
         "packageVersion": "0.0.4",
-        "state": "candidate",
+        "state": "uncertified",
         "evidence": {
           "conformance": {
             "status": "present",

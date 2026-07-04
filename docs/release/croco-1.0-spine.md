@@ -28,6 +28,28 @@ The machine-readable source of truth is `docs/package-catalog.json` `spine.packa
 | `create-croco-app`          | Generated app first-success and smoke entrypoint                  |
 | `@croco/cli`                | Operator/developer command surface                                |
 
+## Framework Context Sub-Surfaces
+
+`@croco/framework-context` is intentionally a single import root for generated apps and framework
+packages, but its 1.0 compatibility review is grouped by sub-surface in
+`public-api-surface.snapshot.json`.
+
+`pnpm public-api:check` enforces the `compatibilityGroups` table and per-export
+`compatibilityGroup` tags for `@croco/framework-context`. A new public export must be explicitly
+assigned to exactly one group by source and export name, and moving an export between groups is
+reported as public API drift with the group owner, breaking-change policy, and generated app/doctor
+coverage.
+
+| Group                                          | Owner                                   | Breaking-change policy                                                                                                                                                 | Generated app / doctor coverage                                                 |
+| ---------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| DI and dependency graph (`di`)                 | Framework Context DI owner              | Renames, removals, scope semantics, diagnostic-code changes, or graph manifest changes are breaking for DI consumers and generated apps.                               | create-croco-app generator imports DI primitives; `croco doctor` DI diagnostics |
+| Request and runtime context (`context`)        | Framework Context request-context owner | `RequestContext`, `RuntimeContext`, transaction-context, and lifecycle field removals or semantic changes require a migration note and versioned compatibility review. | Generated app request context imports; doctor/project-map runtime context reads |
+| Runtime policy (`runtime-policy`)              | Runtime policy owner                    | Policy table shape, policy kind/target constants, capability diagnostics, and execution-plan semantics are release-blocking compatibility changes.                     | `croco runtime-policy check`; `croco project-map` policy validation             |
+| Runtime capability (`runtime-capability`)      | Runtime capability owner                | Capability names, platform names, manifest versions, diagnostic codes, and support matrix semantics are breaking unless versioned or explicitly migrated.              | `croco runtime-policy check`; generated app smoke workspace build               |
+| Runtime inspector (`runtime-inspector`)        | Runtime inspector owner                 | Inspector record/timeline/event shape changes must preserve additive compatibility or document a versioned diagnostic migration.                                       | Generated app smoke workspace build; doctor/project-map runtime diagnostics     |
+| Middleware and request pipeline (`middleware`) | Middleware pipeline owner               | Middleware callable shape, pipeline graph node/phase constants, and failure propagation changes require a documented migration path.                                   | Generated app request pipeline usage                                            |
+| Shutdown lifecycle (`shutdown`)                | Shutdown lifecycle owner                | Shutdown hook signatures, timeout/configuration problem behavior, and signal listener semantics are breaking without migration guidance.                               | Generated app smoke workspace build                                             |
+
 ## Scope Definitions
 
 `spine` is the 1.0 release-blocking compatibility scope. A spine package can be beta while stricter
@@ -48,15 +70,15 @@ both spine membership and production-ready maturity.
 
 ## Gate Mapping
 
-| Gate                     | Current selector                                                              | Spine expectation                                                                                                                           |
-| ------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Public API snapshot      | `pnpm public-api:check` scans publishable package entrypoints                 | Every spine package with `src/index.ts` participates in the snapshot or has an explicit package-level exemption.                            |
-| Package entrypoint smoke | `pnpm package-entrypoints:smoke` scans public package publish contracts       | Every importable spine package must resolve ESM/CJS/types after build.                                                                      |
-| Contract tests           | `pnpm strict-contract-typecheck`, package tests, and generated contract smoke | Protocol/OpenAPI/RPC/transport spine changes must keep contract graph, generated OpenAPI, RPC client, and diagnostics checks green.         |
-| Generated app smoke      | `pnpm create-croco-app:smoke`                                                 | The golden generated app paths must exercise spine protocol, transport, CLI, and codegen packages without live third-party credentials.     |
-| Doctor JSON contract     | `@croco/cli` doctor snapshots plus `pnpm release-docs:check`                  | `croco.doctor.v1` must keep healthy/failing JSON report snapshots stable; breaking doctor JSON changes require versioning or release notes. |
-| Spine promotion check    | `pnpm spine-promotion:check`                                                  | Beta spine packages must name an owner, target evidence, and recovery action before publish-sensitive dashboard steps.                      |
-| Coverage policy          | `pnpm test:coverage:core:warning`                                             | `spine.packages` is a deterministic selection signal; missing spine packages are reported until included or temporarily justified.          |
+| Gate                     | Current selector                                                              | Spine expectation                                                                                                                                                                           |
+| ------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public API snapshot      | `pnpm public-api:check` scans publishable package entrypoints                 | Every spine package with `src/index.ts` participates in the snapshot or has an explicit package-level exemption. `@croco/framework-context` additionally reports grouped sub-surface drift. |
+| Package entrypoint smoke | `pnpm package-entrypoints:smoke` scans public package publish contracts       | Every importable spine package must resolve ESM/CJS/types after build.                                                                                                                      |
+| Contract tests           | `pnpm strict-contract-typecheck`, package tests, and generated contract smoke | Protocol/OpenAPI/RPC/transport spine changes must keep contract graph, generated OpenAPI, RPC client, and diagnostics checks green.                                                         |
+| Generated app smoke      | `pnpm create-croco-app:smoke`                                                 | The golden generated app paths must exercise spine protocol, transport, CLI, and codegen packages without live third-party credentials.                                                     |
+| Doctor JSON contract     | `@croco/cli` doctor snapshots plus `pnpm release-docs:check`                  | `croco.doctor.v1` must keep healthy/failing JSON report snapshots stable; breaking doctor JSON changes require versioning or release notes.                                                 |
+| Spine promotion check    | `pnpm spine-promotion:check`                                                  | Beta spine packages must name an owner, target evidence, and recovery action before publish-sensitive dashboard steps.                                                                      |
+| Coverage policy          | `pnpm test:coverage:core:warning`                                             | `spine.packages` is a deterministic selection signal; missing spine packages are reported until included or temporarily justified.                                                          |
 
 Non-spine beta or alpha packages do not block 1.0 by default. They become blocking only when a
 golden generated app path, production-ready promotion, or certified adapter contract explicitly

@@ -135,6 +135,9 @@ export class CrocoLambdaAdapter {
           }
         }
       }
+      if (!headers.has("cookie") && event.cookies && event.cookies.length > 0) {
+        headers.set("cookie", event.cookies.join("; "));
+      }
 
       let body: BodyInit | null = null;
       if (event.body) {
