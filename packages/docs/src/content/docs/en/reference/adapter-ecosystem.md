@@ -117,6 +117,9 @@ evidence linked from package README, tests, docs, and release notes. The extensi
 runtime and maturity metadata, but maturity alone is not certification.
 `pnpm provider-certification:check` enforces this record in CI before a provider, integration,
 transport, or presentation package can remain production-ready with a certification claim.
+The catalog policy marks production-ready extension packages and public Croco compatibility claims as
+`certified-required`, pre-production records as `candidate-optional`, and extension packages without
+those triggers as `not-applicable`.
 
 ### Certification Checklist
 

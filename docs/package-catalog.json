@@ -861,6 +861,18 @@
   },
   "certification": {
     "schemaVersion": 1,
+    "policy": {
+      "scope": {
+        "extensionGroups": ["Provider", "Integration", "Transport", "Presentation"],
+        "requiredMaturity": "production",
+        "claimRequiresCertified": true,
+        "states": {
+          "certified-required": "A certified record is required because the package is production-ready in the extension matrix or public docs make a Croco compatibility claim.",
+          "candidate-optional": "A certification record exists for an extension package that is still below production maturity and has not made a public certified compatibility claim.",
+          "not-applicable": "No certification record is required until the extension package reaches production maturity or makes a public Croco compatibility claim."
+        }
+      }
+    },
     "records": [
       {
         "package": "@croco/storage-r2",
