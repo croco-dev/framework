@@ -508,6 +508,35 @@ describe("doctor", () => {
     expect(diagnostics[0].cause).toContain("docs/package-catalog.json is missing");
   });
 
+  it("reports missing core coverage threshold config when readiness is configured", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeFile(repo, "vitest.config.ts", "export const OTHER_COVERAGE_PACKAGES = [];\n");
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("vitest.config.ts is missing CORE_COVERAGE_PACKAGES");
+  });
+
   it("rejects malformed bundle-size baseline entries as advisory readiness warning", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -1039,6 +1068,40 @@ describe("doctor", () => {
     expect(diagnostics[0].cause).toContain("owner or expiresOn metadata is required");
   });
 
+  it("rejects padded security allowlist exact source fields", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo, {
+      package: " @croco/framework-context ",
+      file: "packages/framework-context/src/index.ts",
+      excerpt: " throw new Error('internal invariant'); ",
+    });
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("package must match @croco/framework-context");
+    expect(diagnostics[0].cause).toContain("excerpt does not match the current source line");
+  });
+
   it("reads schema-versioned Project manifest bundle artifacts", () => {
     const repo = createCrocoWorkspace();
     writePackage(repo, "api", "@croco/api");
@@ -1352,6 +1415,18 @@ function writeRootPackage(repo: string, manifest: Record<string, unknown> = {}):
     packageManager: "pnpm@10.15.1",
     ...manifest,
   });
+
+  const scripts = manifest.scripts;
+  const scriptsRecord =
+    scripts && typeof scripts === "object" ? (scripts as Record<string, unknown>) : null;
+  const coreCoverageScript = scriptsRecord?.["test:coverage:core"];
+  if (typeof coreCoverageScript === "string") {
+    writeCoreCoverageVitestConfig(repo, parseCoreCoverageScriptFilters(coreCoverageScript));
+  }
+}
+
+function parseCoreCoverageScriptFilters(script: string): string[] {
+  return [...script.matchAll(/--filter\s+(@croco\/[^\s]+)/g)].map(([, packageName]) => packageName);
 }
 
 function writePackage(

@@ -712,7 +712,7 @@ function coreCoverageCandidateReadiness(
   }
 
   const selectedPackages = new Set(parseCoreCoverageScriptFilters(coreCoverageScript));
-  const thresholdPackages = readCoreCoverageThresholdPackages(rootDir);
+  const thresholdPackagesResult = readCoreCoverageThresholdPackages(rootDir);
   const temporarilyExcludedPackages = readTemporaryCoreCoverageSelectionExclusions(rootDir);
   const candidates = collectCoreCoverageCandidates(catalog.value, packages);
   const selectionDiagnostics = candidates
@@ -735,11 +735,20 @@ function coreCoverageCandidateReadiness(
       }),
     );
   const thresholdDiagnostics =
-    thresholdPackages === null
-      ? []
+    thresholdPackagesResult.kind === "missing"
+      ? [
+          advisoryDiagnostic({
+            code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+            checkId,
+            cause: `${thresholdPackagesResult.path} is missing CORE_COVERAGE_PACKAGES.`,
+            location: { file: thresholdPackagesResult.path },
+            action:
+              "Restore CORE_COVERAGE_PACKAGES in vitest.config.ts, then rerun pnpm test:coverage:core:warning.",
+          }),
+        ]
       : collectCoreCoverageConfigurationDiagnostics(
           [...selectedPackages],
-          thresholdPackages,
+          thresholdPackagesResult.packages,
           checkId,
         );
   const diagnostics = [...selectionDiagnostics, ...thresholdDiagnostics];
@@ -851,13 +860,23 @@ function readTemporaryCoreCoverageSelectionExclusions(rootDir: string): Readonly
   return new Set(uniqueStrings(exclusions));
 }
 
-function readCoreCoverageThresholdPackages(rootDir: string): string[] | null {
+type CoreCoverageThresholdPackagesResult =
+  | { readonly kind: "present"; readonly packages: string[] }
+  | { readonly kind: "missing"; readonly path: string };
+
+function readCoreCoverageThresholdPackages(rootDir: string): CoreCoverageThresholdPackagesResult {
   const configPath = join(rootDir, defaultVitestConfigPath);
   if (!existsSync(configPath)) {
-    return null;
+    return { kind: "missing", path: defaultVitestConfigPath };
   }
 
-  return parseStringArrayExport(readFileSync(configPath, "utf-8"), "CORE_COVERAGE_PACKAGES");
+  const packages = parseStringArrayExport(
+    readFileSync(configPath, "utf-8"),
+    "CORE_COVERAGE_PACKAGES",
+  );
+  return packages === null
+    ? { kind: "missing", path: defaultVitestConfigPath }
+    : { kind: "present", packages };
 }
 
 function parseStringArrayExport(source: string, exportName: string): string[] | null {
@@ -1782,10 +1801,19 @@ function validateSecurityAllowlistEntry(
     ...(expiresOnInvalid ? ["expiresOn must use YYYY-MM-DD"] : []),
   ];
 
-  const packageName = readOptionalString(entryRecord?.package);
-  const file = readOptionalString(entryRecord?.file);
-  const excerpt = readOptionalString(entryRecord?.excerpt);
-  if (failures.length === 0 && packageName && file && excerpt && validLine !== null) {
+  const packageName = readRawString(entryRecord?.package);
+  const file = readRawString(entryRecord?.file);
+  const excerpt = readRawString(entryRecord?.excerpt);
+  if (
+    failures.length === 0 &&
+    packageName &&
+    packageName.trim() &&
+    file &&
+    file.trim() &&
+    excerpt &&
+    excerpt.trim() &&
+    validLine !== null
+  ) {
     const relativeFile = toPosixPath(file);
     if (!isProductionPackageSourceFile(relativeFile)) {
       failures.push("file must point at production packages/*/src source");
@@ -3250,6 +3278,10 @@ function readOptionalString(value: unknown): string | null {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function readRawString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
 }
 
 function toPackageSlug(packageName: string): string {
