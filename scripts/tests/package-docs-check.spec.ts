@@ -496,8 +496,40 @@ describe("package-docs-check.mts", () => {
     expect(report).toContain("`@croco/core/Provider`");
     expect(report).toContain("liveSmoke: missing");
     expect(report).toContain("liveSmoke evidence has not been recorded.");
-    expect(matrix).toContain("candidate (1.2.3)");
+    expect(matrix).toContain("uncertified (1.2.3)");
     expect(matrix).toContain("missing: liveSmoke");
+  });
+
+  it("fails when candidate certification records are missing live smoke evidence", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", {
+      name: "@croco/provider",
+      version: "1.2.3",
+    });
+    writeCatalogMetadata(root, ["provider"], {
+      certificationRecords: [
+        createCertificationRecord("@croco/provider", {
+          contract: "@croco/core/Provider",
+          packageVersion: "1.2.3",
+          state: "candidate",
+        }),
+      ],
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: ["provider"],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "certification.records[0].state candidate requires present liveSmoke evidence",
+    );
   });
 
   it("fails when certification records do not link to extension matrix entries", () => {
@@ -988,7 +1020,7 @@ function createCertificationPolicyScope(
       "certified-required":
         "A certified record is required for production-ready extension packages or public compatibility claims.",
       "candidate-optional":
-        "A candidate record may track evidence before the extension package is production-ready.",
+        "A pre-production record may track evidence before the extension package is production-ready; candidate state requires liveSmoke evidence.",
       "not-applicable":
         "No certification record is required until production-ready maturity or a public compatibility claim.",
     },
@@ -1040,7 +1072,7 @@ function createCertificationRecord(
     adapterCategory: overrides.adapterCategory ?? "provider",
     runtimes: overrides.runtimes ?? ["node"],
     packageVersion: overrides.packageVersion ?? "0.0.0",
-    state: overrides.state ?? "candidate",
+    state: overrides.state ?? "uncertified",
     evidence,
     knownGaps: overrides.knownGaps ?? ["liveSmoke evidence has not been recorded."],
   };

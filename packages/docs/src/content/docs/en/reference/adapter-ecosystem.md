@@ -118,8 +118,9 @@ runtime and maturity metadata, but maturity alone is not certification.
 `pnpm provider-certification:check` enforces this record in CI before a provider, integration,
 transport, or presentation package can remain production-ready with a certification claim.
 The catalog policy marks production-ready extension packages and public Croco compatibility claims as
-`certified-required`, pre-production records as `candidate-optional`, and extension packages without
-those triggers as `not-applicable`.
+`certified-required`, pre-production tracking records as `candidate-optional`, and extension packages
+without those triggers as `not-applicable`. A record may use `state: "candidate"` only after
+present live-smoke evidence is recorded.
 
 ### Certification Checklist
 
