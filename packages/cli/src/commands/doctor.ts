@@ -171,6 +171,17 @@ const bundleSizeArtifactSuffixes = [
   ".d.ts",
 ] as const;
 const hashedChunkArtifactPattern = /(^|\/)chunk-[A-Z0-9]{8}(\.(?:cjs|mjs|js)(?:\.map)?)$/i;
+
+type MeasuredBundleArtifact = {
+  readonly path: string;
+  readonly sizeBytes: number;
+};
+
+type BundleBaselineMatch = {
+  readonly key: string;
+  readonly bytes: number;
+};
+
 const benchmarkVarianceEvidenceMarker = "<!-- croco-benchmark-variance-evidence:v1 -->";
 const benchmarkVarianceEvidenceRunCount = 5;
 const benchmarkVarianceSpreadTolerance = 0.15;
@@ -1203,64 +1214,73 @@ function validateBundleSizeBaselineEntries(
     return "does not contain any baseline entries.";
   }
 
-  const invalidEntry = entries.find(([, value]) => !isBundleSizeBaselineEntry(value));
-  if (invalidEntry) {
-    return `entry ${invalidEntry[0]} must be a non-negative byte number or an object with a non-negative bytes number.`;
+  const baselineEntries = new Map<string, number>();
+  for (const [key, value] of entries) {
+    const bytes = readBundleSizeBaselineEntryBytes(value);
+    if (bytes === null) {
+      return `entry ${key} must be a non-negative byte number or an object with a non-negative bytes number.`;
+    }
+
+    baselineEntries.set(key, bytes);
   }
 
-  return validateBundleSizeBaselineKeys(
-    rootDir,
-    publicBuildPackages,
-    new Set(entries.map(([baselineKey]) => baselineKey)),
-  );
+  return validateBundleSizeBaselineKeys(rootDir, publicBuildPackages, baselineEntries);
 }
 
-function isBundleSizeBaselineEntry(value: unknown): boolean {
+function readBundleSizeBaselineEntryBytes(value: unknown): number | null {
   if (typeof value === "number") {
-    return Number.isFinite(value) && value >= 0;
+    return Number.isFinite(value) && value >= 0 ? value : null;
   }
 
-  return (
-    isRecord(value) &&
+  return isRecord(value) &&
     typeof value.bytes === "number" &&
     Number.isFinite(value.bytes) &&
     value.bytes >= 0
-  );
+    ? value.bytes
+    : null;
 }
 
 function validateBundleSizeBaselineKeys(
   rootDir: string,
   publicBuildPackages: readonly DoctorPackage[],
-  baselineKeys: ReadonlySet<string>,
+  baselineEntries: ReadonlyMap<string, number>,
 ): string | null {
   const measuredArtifacts = publicBuildPackages.map((workspacePackage) => ({
     workspacePackage,
-    artifactPaths: collectMeasuredBundleArtifactPaths(rootDir, workspacePackage),
+    artifacts: collectMeasuredBundleArtifacts(rootDir, workspacePackage),
   }));
   const packagesWithoutArtifacts = measuredArtifacts
-    .filter(({ artifactPaths }) => artifactPaths.length === 0)
+    .filter(({ artifacts }) => artifacts.length === 0)
     .map(({ workspacePackage }) => workspacePackage.name);
   const matchedBaselineKeys = new Set<string>();
   const missingArtifactBaselines: string[] = [];
+  const overBaselineArtifacts: string[] = [];
 
-  for (const { workspacePackage, artifactPaths } of measuredArtifacts) {
-    for (const artifactPath of artifactPaths) {
-      const packageArtifactKey = `${workspacePackage.name}:${artifactPath}`;
-      if (baselineKeys.has(packageArtifactKey)) {
-        matchedBaselineKeys.add(packageArtifactKey);
+  for (const { workspacePackage, artifacts } of measuredArtifacts) {
+    for (const artifact of artifacts) {
+      const packageArtifactKey = `${workspacePackage.name}:${artifact.path}`;
+      const baselineMatch = getBundleSizeBaselineMatch(
+        baselineEntries,
+        workspacePackage.name,
+        artifact.path,
+      );
+
+      if (baselineMatch === null) {
+        missingArtifactBaselines.push(packageArtifactKey);
         continue;
       }
 
-      if (baselineKeys.has(artifactPath)) {
-        matchedBaselineKeys.add(artifactPath);
-        continue;
-      }
+      matchedBaselineKeys.add(baselineMatch.key);
 
-      missingArtifactBaselines.push(packageArtifactKey);
+      if (artifact.sizeBytes > baselineMatch.bytes) {
+        overBaselineArtifacts.push(
+          `${packageArtifactKey} (${artifact.sizeBytes} B > ${baselineMatch.bytes} B)`,
+        );
+      }
     }
   }
 
-  const unmatchedBaselineKeys = [...baselineKeys]
+  const unmatchedBaselineKeys = [...baselineEntries.keys()]
     .filter((baselineKey) => !matchedBaselineKeys.has(baselineKey))
     .sort(compareStrings);
   const failures = [
@@ -1270,6 +1290,9 @@ function validateBundleSizeBaselineKeys(
     ...(missingArtifactBaselines.length > 0
       ? [`is missing current artifact baseline(s): ${formatSampleList(missingArtifactBaselines)}`]
       : []),
+    ...(overBaselineArtifacts.length > 0
+      ? [`contains artifact(s) over baseline: ${formatSampleList(overBaselineArtifacts)}`]
+      : []),
     ...(unmatchedBaselineKeys.length > 0
       ? [`contains stale baseline key(s): ${formatSampleList(unmatchedBaselineKeys)}`]
       : []),
@@ -1278,18 +1301,42 @@ function validateBundleSizeBaselineKeys(
   return failures.length > 0 ? `${failures.join("; ")}.` : null;
 }
 
-function collectMeasuredBundleArtifactPaths(
+function getBundleSizeBaselineMatch(
+  baselineEntries: ReadonlyMap<string, number>,
+  packageName: string,
+  artifactPath: string,
+): BundleBaselineMatch | null {
+  const packageArtifactKey = `${packageName}:${artifactPath}`;
+  const packageArtifactBytes = baselineEntries.get(packageArtifactKey);
+  if (packageArtifactBytes !== undefined) {
+    return { key: packageArtifactKey, bytes: packageArtifactBytes };
+  }
+
+  const artifactBytes = baselineEntries.get(artifactPath);
+  return artifactBytes === undefined ? null : { key: artifactPath, bytes: artifactBytes };
+}
+
+function collectMeasuredBundleArtifacts(
   rootDir: string,
   workspacePackage: DoctorPackage,
-): string[] {
+): MeasuredBundleArtifact[] {
   const distDir = join(rootDir, workspacePackage.relativeDir, "dist");
   if (!existsSync(distDir) || !statSync(distDir).isDirectory()) {
     return [];
   }
 
-  return uniqueStrings(
-    listBundleArtifactFiles(rootDir, distDir).map(normalizeBundleArtifactPath).sort(compareStrings),
-  );
+  const artifactSizes = new Map<string, number>();
+  for (const artifactPath of listBundleArtifactFiles(rootDir, distDir)) {
+    const normalizedArtifactPath = normalizeBundleArtifactPath(artifactPath);
+    artifactSizes.set(
+      normalizedArtifactPath,
+      (artifactSizes.get(normalizedArtifactPath) ?? 0) + statSync(join(rootDir, artifactPath)).size,
+    );
+  }
+
+  return [...artifactSizes.entries()]
+    .sort(([leftPath], [rightPath]) => compareStrings(leftPath, rightPath))
+    .map(([path, sizeBytes]) => ({ path, sizeBytes }));
 }
 
 function listBundleArtifactFiles(rootDir: string, dir: string, results: string[] = []): string[] {

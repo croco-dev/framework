@@ -1245,6 +1245,43 @@ describe("doctor", () => {
     expect(diagnostics[0].cause).toContain("stale baseline key");
   });
 
+  it("rejects bundle-size artifacts that exceed committed baselines", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeFile(repo, "packages/framework-context/dist/index.js", "export const runtime = 'cjs';\n");
+    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
+      schemaVersion: 1,
+      artifacts: {
+        "@croco/framework-context:packages/framework-context/dist/index.js": 1,
+      },
+    });
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("artifact(s) over baseline");
+    expect(diagnostics[0].cause).toContain(
+      "@croco/framework-context:packages/framework-context/dist/index.js",
+    );
+  });
+
   it("ignores package-quality skipped dist subtrees when comparing bundle baselines", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
