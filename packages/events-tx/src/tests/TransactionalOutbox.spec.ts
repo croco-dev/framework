@@ -3,15 +3,26 @@ import {
   DomainEvent,
   type EventBus,
   EventRegistry,
+  type EventSubscription,
 } from "@croco/events-core";
+import {
+  createIdempotencyCoordinator,
+  deriveIdempotencyKey,
+  type IdempotencyFailedRecord,
+  type IdempotencyFailOptions,
+  InMemoryIdempotencyStore,
+  InvalidIdempotencyKeyProblem,
+} from "@croco/idempotency-core";
+import * as telemetry from "@croco/telemetry-api";
 import { TxManager } from "@croco/tx-core";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createEventBusOutboxPublisher,
   DrizzleTransactionalEventStore,
   type DrizzleTransactionalEventStoreDb,
   InMemoryTransactionalEventStore,
   normalizeTransactionalEventError,
+  OutboxPublishExhaustedProblem,
   OutboxStorageProblem,
   OutboxTransactionRequiredProblem,
   TransactionalInboxConsumer,
@@ -78,6 +89,413 @@ async function appendMessage(
     }),
   );
 }
+
+class ObservedIdempotencyStore<TResult> extends InMemoryIdempotencyStore<TResult> {
+  readonly failures: IdempotencyFailOptions[] = [];
+
+  override async fail(options: IdempotencyFailOptions): Promise<IdempotencyFailedRecord> {
+    this.failures.push(options);
+    return super.fail(options);
+  }
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("transactional event spine smoke", () => {
+  it("proves commit dispatch, rollback isolation, retry evidence, and idempotency behavior", async () => {
+    const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+    const fixture = createOutboxFixture();
+    const publishedEvents: DomainEvent[] = [];
+    const eventBusSubscriptions: EventSubscription[] = [];
+    const projectedMessageIds: string[] = [];
+    const inboxConsumer = new TransactionalInboxConsumer({
+      store: fixture.store,
+      consumerId: "ledger-projection",
+      now: fixture.clock.now,
+    });
+    const eventBus: EventBus = {
+      publish: async (event) => {
+        publishedEvents.push(event);
+        for (const subscription of eventBusSubscriptions) {
+          if (subscription.eventName === event.eventName) {
+            await subscription.handler?.handle(event);
+          }
+        }
+      },
+      subscribe: (subscription) => {
+        eventBusSubscriptions.push(subscription);
+      },
+      unsubscribe: (subscription) => {
+        const index = eventBusSubscriptions.indexOf(subscription);
+        if (index >= 0) {
+          eventBusSubscriptions.splice(index, 1);
+        }
+      },
+      clear: () => {
+        publishedEvents.length = 0;
+        eventBusSubscriptions.length = 0;
+      },
+    };
+    const serializer = new DefaultEventSerializer(
+      new EventRegistry().register(AccountCreditedEvent),
+    );
+    const publishToEventBus = createEventBusOutboxPublisher(eventBus, serializer);
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish: publishToEventBus,
+      now: fixture.clock.now,
+      retry: {
+        baseDelayMs: 1_000,
+      },
+    });
+    eventBus.subscribe({
+      eventName: AccountCreditedEvent.eventName,
+      handlerClass: class LedgerProjectionHandler {
+        handle(): void {}
+      },
+      handler: {
+        handle: async (event) => {
+          const messages = await fixture.store.listOutboxMessages();
+          const message = messages.find((candidate) => candidate.eventId === event.eventId);
+          if (message) {
+            await inboxConsumer.handle(message, async (handledMessage) => {
+              projectedMessageIds.push(handledMessage.id);
+            });
+          }
+        },
+      },
+    });
+    const commandStore = new InMemoryIdempotencyStore<{ messageId: string }>();
+    const commandCoordinator = createIdempotencyCoordinator({
+      store: commandStore,
+    });
+    const commandKey = deriveIdempotencyKey({
+      namespace: "transactional-events",
+      tenantId: "tenant-a",
+      source: {
+        kind: "explicit",
+        key: "credit-acct-1",
+        fingerprint: "acct-1:100",
+      },
+    });
+
+    expect(commandKey.telemetryAttributes).toMatchObject({
+      "croco.idempotency.key": "credit-acct-1",
+      "croco.idempotency.namespace": "transactional-events",
+      "croco.idempotency.scope": "tenant",
+      "croco.idempotency.tenant_id": "tenant-a",
+      "croco.idempotency.source": "explicit",
+      "croco.idempotency.fingerprint": "acct-1:100",
+    });
+
+    const committed = await commandCoordinator.execute(
+      {
+        key: commandKey,
+        metadata: {
+          operation: "credit-account",
+        },
+      },
+      async () => {
+        const message = await fixture.txManager.run(() =>
+          fixture.outbox.append(new AccountCreditedEvent("acct-1", 100), {
+            aggregateId: "acct-1",
+            idempotencyKey: commandKey.storageKey,
+            metadata: commandKey.telemetryAttributes,
+          }),
+        );
+
+        return {
+          messageId: message.id,
+        };
+      },
+    );
+
+    expect(committed).toMatchObject({
+      outcome: "executed",
+      response: {
+        messageId: "message-1",
+      },
+    });
+
+    await expect(
+      relay.publishBatch({ limit: 10, now: fixture.clock.now() }),
+    ).resolves.toMatchObject({
+      claimed: 1,
+      published: 1,
+    });
+    expect(publishedEvents).toHaveLength(1);
+    expect(publishedEvents[0]).toBeInstanceOf(AccountCreditedEvent);
+    expect(recordEventSpy).toHaveBeenCalledWith("events-tx.outbox.appended", {
+      "events-tx.message_id": "message-1",
+      "events-tx.event_type": AccountCreditedEvent.eventName,
+    });
+    expect(recordEventSpy).toHaveBeenCalledWith("events-tx.outbox.published", {
+      "events-tx.message_id": "message-1",
+      "events-tx.event_type": AccountCreditedEvent.eventName,
+    });
+
+    const [publishedMessage] = await fixture.store.listOutboxMessages({ status: "published" });
+    expect(publishedMessage).toMatchObject({
+      id: "message-1",
+      idempotencyKey: commandKey.storageKey,
+      diagnostics: expect.arrayContaining([
+        expect.objectContaining({
+          code: "events-tx/outbox-appended",
+        }),
+        expect.objectContaining({
+          code: "events-tx/outbox-published",
+        }),
+      ]),
+    });
+
+    const [processedRecord] = await fixture.store.listInboxRecords({
+      consumerId: "ledger-projection",
+    });
+    const duplicate = await inboxConsumer.handle(publishedMessage, async () => {
+      projectedMessageIds.push("duplicate-side-effect");
+    });
+
+    expect(processedRecord).toMatchObject({
+      status: "processed",
+      attempts: 1,
+      diagnostics: expect.arrayContaining([
+        expect.objectContaining({
+          code: "events-tx/inbox-processed",
+        }),
+      ]),
+    });
+    expect(duplicate.status).toBe("duplicate");
+    expect(projectedMessageIds).toEqual(["message-1"]);
+
+    const replayed = await commandCoordinator.execute({ key: commandKey }, async () => {
+      const message = await fixture.txManager.run(() =>
+        fixture.outbox.append(new AccountCreditedEvent("acct-1", 100), {
+          aggregateId: "acct-1",
+          idempotencyKey: commandKey.storageKey,
+        }),
+      );
+
+      return {
+        messageId: message.id,
+      };
+    });
+
+    expect(replayed).toMatchObject({
+      outcome: "replayed",
+      response: {
+        messageId: "message-1",
+      },
+    });
+    await expect(fixture.store.listOutboxMessages()).resolves.toHaveLength(1);
+    await expect(
+      relay.publishBatch({ limit: 10, now: fixture.clock.now() }),
+    ).resolves.toMatchObject({
+      claimed: 0,
+    });
+    expect(publishedEvents).toHaveLength(1);
+
+    await expect(
+      fixture.txManager.run(async () => {
+        await fixture.outbox.append(new AccountCreditedEvent("acct-rollback", 50), {
+          aggregateId: "acct-rollback",
+          idempotencyKey: "rollback-credit",
+        });
+        throw new Error("business rollback");
+      }),
+    ).rejects.toThrow("business rollback");
+    await expect(fixture.store.findOutboxByIdempotencyKey("rollback-credit")).resolves.toBeNull();
+    await expect(
+      relay.publishBatch({ limit: 10, now: fixture.clock.now() }),
+    ).resolves.toMatchObject({
+      claimed: 0,
+    });
+    expect(publishedEvents).toHaveLength(1);
+
+    const retryMessage = await fixture.txManager.run(() =>
+      fixture.outbox.append(new AccountCreditedEvent("acct-retry", 75), {
+        aggregateId: "acct-retry",
+        idempotencyKey: "relay-retry-credit",
+        maxAttempts: 2,
+      }),
+    );
+    let relayAttempts = 0;
+    const retryRelay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      now: fixture.clock.now,
+      retry: {
+        baseDelayMs: 1_000,
+      },
+      publish: async (message) => {
+        relayAttempts += 1;
+        if (relayAttempts === 1) {
+          throw new Error("broker unavailable");
+        }
+        await publishToEventBus(message);
+      },
+    });
+
+    await expect(
+      retryRelay.publishBatch({ limit: 10, now: fixture.clock.now() }),
+    ).resolves.toMatchObject({
+      claimed: 1,
+      scheduledRetry: 1,
+    });
+    expect(publishedEvents).toHaveLength(1);
+    expect(recordErrorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "broker unavailable" }),
+    );
+    await expect(fixture.store.findOutboxById(retryMessage.id)).resolves.toMatchObject({
+      status: "retrying",
+      lastError: {
+        message: "broker unavailable",
+      },
+      diagnostics: expect.arrayContaining([
+        expect.objectContaining({
+          code: "events-tx/outbox-publish-failed",
+        }),
+      ]),
+    });
+
+    fixture.clock.advance(1_000);
+    await expect(
+      retryRelay.publishBatch({ limit: 10, now: fixture.clock.now() }),
+    ).resolves.toMatchObject({
+      claimed: 1,
+      published: 1,
+    });
+    expect(relayAttempts).toBe(2);
+    expect(publishedEvents).toHaveLength(2);
+
+    const poisonMessage = await fixture.txManager.run(() =>
+      fixture.outbox.append(new AccountCreditedEvent("acct-poison", 25), {
+        aggregateId: "acct-poison",
+        idempotencyKey: "relay-poison-credit",
+        maxAttempts: 1,
+      }),
+    );
+    const poisonRelay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      now: fixture.clock.now,
+      publish: async () => {
+        throw new Error("poison broker unavailable");
+      },
+    });
+    const poisoned = await poisonRelay.publishBatch({ limit: 10, now: fixture.clock.now() });
+
+    expect(poisoned).toMatchObject({
+      claimed: 1,
+      poisoned: 1,
+      deadLettered: 0,
+    });
+    const [poisonResult] = poisoned.results;
+    expect(poisonResult.status).toBe("poisoned");
+    if (poisonResult.status !== "poisoned") {
+      throw new Error("Expected poisoned relay result.");
+    }
+    expect(poisonResult.problem).toBeInstanceOf(OutboxPublishExhaustedProblem);
+    expect(poisonResult.problem.toJSON()).toMatchObject({
+      code: "events-tx/outbox-publish-exhausted",
+      status: 500,
+      detail: `Outbox message '${poisonMessage.id}' exhausted 1 publish attempt(s).`,
+    });
+    expect(recordErrorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "poison broker unavailable" }),
+    );
+    await expect(fixture.store.findOutboxById(poisonMessage.id)).resolves.toMatchObject({
+      status: "poisoned",
+      diagnostics: expect.arrayContaining([
+        expect.objectContaining({
+          code: "events-tx/outbox-publish-failed",
+        }),
+        expect.objectContaining({
+          code: "events-tx/outbox-poisoned",
+        }),
+      ]),
+    });
+
+    const inboxRetryMessage = await appendMessage(fixture, {
+      idempotencyKey: "inbox-retry-credit",
+    });
+    const inboxSideEffects: string[] = [];
+    const retryingConsumer = new TransactionalInboxConsumer({
+      store: fixture.store,
+      consumerId: "risk-projection",
+      now: fixture.clock.now,
+      throwOnError: false,
+    });
+    const failedInbox = await retryingConsumer.handle(inboxRetryMessage, async () => {
+      throw new Error("projection offline");
+    });
+    const retriedInbox = await retryingConsumer.handle(inboxRetryMessage, async (message) => {
+      inboxSideEffects.push(message.id);
+    });
+
+    expect(failedInbox).toMatchObject({
+      status: "failed",
+      record: {
+        attempts: 1,
+        failureReason: "projection offline",
+        diagnostics: expect.arrayContaining([
+          expect.objectContaining({
+            code: "events-tx/inbox-failed",
+          }),
+        ]),
+      },
+    });
+    expect(retriedInbox).toMatchObject({
+      status: "processed",
+      record: {
+        attempts: 2,
+      },
+    });
+    expect(inboxSideEffects).toEqual([inboxRetryMessage.id]);
+
+    const failureStore = new ObservedIdempotencyStore<string>();
+    const failureCoordinator = createIdempotencyCoordinator({
+      store: failureStore,
+    });
+    const failureKey = deriveIdempotencyKey({
+      namespace: "transactional-events",
+      tenantId: "tenant-a",
+      source: {
+        kind: "explicit",
+        key: "failure-credit",
+        fingerprint: "invalid-amount",
+      },
+    });
+
+    await expect(
+      failureCoordinator.execute({ key: failureKey }, () => {
+        throw new InvalidIdempotencyKeyProblem("amount must be positive", {
+          ...failureKey.telemetryAttributes,
+        });
+      }),
+    ).rejects.toBeInstanceOf(InvalidIdempotencyKeyProblem);
+    expect(failureStore.failures).toHaveLength(1);
+    expect(failureStore.failures[0]).toMatchObject({
+      retryable: true,
+      problem: {
+        code: "idempotency-core/invalid-key",
+        status: 400,
+        detail: "Invalid idempotency key: amount must be positive",
+      },
+    });
+    expect(failureKey.telemetryAttributes).toMatchObject({
+      "croco.idempotency.source": "explicit",
+      "croco.idempotency.fingerprint": "invalid-amount",
+    });
+
+    await expect(
+      failureCoordinator.execute({ key: failureKey }, () => "recovered"),
+    ).resolves.toMatchObject({
+      outcome: "executed",
+      response: "recovered",
+    });
+  });
+});
 
 describe("TransactionalOutbox", () => {
   it("requires an active tx-core transaction and rolls back appended messages with the transaction", async () => {
