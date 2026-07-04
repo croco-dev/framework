@@ -106,7 +106,7 @@ Promote bundle-size warnings to a blocking trunk gate only after:
 
 `pnpm provider-certification:check` validates the certification source of truth in `docs/package-catalog.json`.
 Certification is separate from maturity, but a production-ready package in the extension matrix groups (`Provider`, `Integration`, `Transport`, or `Presentation`) must have a `certification.records.<package>` entry with `state: "certified"`.
-The explicit scope lives in `certification.policy.scope`: extension packages are `certified-required` when they are production-ready or public docs make a Croco compatibility claim, `candidate-optional` when a pre-production record tracks in-progress evidence, and `not-applicable` when no record is required yet.
+The explicit scope lives in `certification.policy.scope`: extension packages are `certified-required` when they are production-ready or public docs make a Croco compatibility claim, `candidate-optional` when a pre-production record tracks in-progress evidence, and `not-applicable` when no record is required yet. Candidate state is reserved for records with present live-smoke evidence.
 
 For each certified or production-ready extension package, the gate requires package-scoped evidence for:
 

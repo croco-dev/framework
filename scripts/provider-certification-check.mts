@@ -957,17 +957,17 @@ function createLiveSmokeCheck(
   rootDir: string,
   pkg: WorkspacePackage,
   record: CertificationRecord | undefined,
-  requiresCompleteEvidence: boolean,
+  requiresLiveSmokeEvidence: boolean,
 ): ProviderCertificationCheck {
   if (!record) {
     return notApplicable("liveSmoke", "liveSmoke", "no certification record");
   }
 
-  if (!requiresCompleteEvidence) {
+  if (!requiresLiveSmokeEvidence) {
     return notApplicable(
       "liveSmoke",
       "liveSmoke",
-      "complete evidence is required only for certified or production-ready extension packages",
+      "liveSmoke evidence is required only for candidate, certified, or certified-required extension packages",
     );
   }
 
@@ -1114,6 +1114,11 @@ function createCertificationRow(
   );
   const requiresCompleteEvidence =
     certificationRequirement === "certified-required" || record?.state === "certified";
+  const requiresLiveSmokeEvidence = requiresCompleteEvidence || record?.state === "candidate";
+  const blocksKnownGaps =
+    certificationRequirement === "certified-required" ||
+    record?.state === "candidate" ||
+    record?.state === "certified";
   const checks = [
     createRecordCheck(pkg, record, certificationRequirement),
     createStateCheck(pkg, record, certificationRequirement),
@@ -1121,13 +1126,8 @@ function createCertificationRow(
     ...commandEvidenceKeys.map((key) =>
       createCommandEvidenceCheck(rootDir, pkg, record, key, requiresCompleteEvidence),
     ),
-    createLiveSmokeCheck(rootDir, pkg, record, requiresCompleteEvidence),
-    createKnownGapsCheck(
-      pkg,
-      record,
-      catalog,
-      requiredForProduction || record?.state === "certified",
-    ),
+    createLiveSmokeCheck(rootDir, pkg, record, requiresLiveSmokeEvidence),
+    createKnownGapsCheck(pkg, record, catalog, blocksKnownGaps),
   ];
 
   return {
@@ -1464,7 +1464,7 @@ export function buildProviderCertificationMarkdown(report: ProviderCertification
     "## Recovery",
     "",
     "- Add or update `docs/package-catalog.json` `certification.records.<package>` for production-ready extension packages.",
-    '- Keep certification separate from maturity: extension packages in `certified-required` scope require `state: "certified"`, while `not-applicable` packages may remain without records.',
+    '- Keep certification separate from maturity: extension packages in `certified-required` scope require `state: "certified"`, candidate records require recorded live-smoke evidence, and `not-applicable` packages may remain without records.',
     "- Provide package-scoped command/path evidence for conformance, no-credential smoke, diagnostics, and redaction checks.",
     "- Document package-scoped live-smoke behavior, including optional, credential, env-gated, or skipped behavior.",
     "- Close `knownGaps` before certified/production-ready promotion, or add a package-scoped allowance with non-empty reason and owner.",
