@@ -169,6 +169,7 @@ describe("release workflow quality gates", () => {
     const workflow = readReleaseWorkflow();
     const releaseGateFiles = [
       ".github/workflows/release.yml",
+      "scripts/certification-policy.mts",
       "scripts/changeset-required-check.mts",
       "scripts/core-coverage-warning-check.mts",
       "scripts/create-croco-app-generated-smoke-support.mts",
@@ -179,6 +180,7 @@ describe("release workflow quality gates", () => {
       "scripts/package-bin-smoke.mts",
       "scripts/package-entrypoint-smoke.mts",
       "scripts/package-manifest-contracts.mjs",
+      "scripts/package-quality-report.mts",
       "scripts/production-ready-check.mts",
       "scripts/provider-certification-check.mts",
       "scripts/public-api-surface.mts",
@@ -196,6 +198,7 @@ describe("release workflow quality gates", () => {
       "scripts/tests/normalize-packages.spec.ts",
       "scripts/tests/package-bin-smoke.spec.ts",
       "scripts/tests/package-entrypoint-smoke.spec.ts",
+      "scripts/tests/package-quality-report.spec.ts",
       "scripts/tests/production-ready-check.spec.ts",
       "scripts/tests/provider-certification-check.spec.ts",
       "scripts/tests/public-api-surface.spec.ts",
@@ -229,6 +232,7 @@ describe("release workflow quality gates", () => {
     expect(workflow).toContain("scripts/tests/security-allowlist-metadata-check.spec.ts");
     expect(workflow).toContain("scripts/tests/create-croco-app-generated-smoke.spec.ts");
     expect(workflow).toContain("scripts/tests/first-success-verify.spec.ts");
+    expect(workflow).toContain("scripts/tests/package-quality-report.spec.ts");
     expect(workflow).toContain("scripts/tests/provider-certification-check.spec.ts");
     expect(workflow).toContain("scripts/tests/production-ready-check.spec.ts");
     expect(workflow).toContain("scripts/tests/spine-promotion-check.spec.ts");
