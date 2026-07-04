@@ -175,6 +175,83 @@ describe("problem-registry.mts", () => {
     ]);
   });
 
+  it("ignores defineRouteProblem metadata projections of Problem classes", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AlphaNotFoundProblem extends Problem {",
+        '  readonly code = "alpha/not-found";',
+        "  readonly category = ProblemCategory.NotFound;",
+        "  constructor() {",
+        '    super(undefined, undefined, "missing");',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/alpha/src/routes.ts",
+      [
+        'import { ProblemCategory } from "@croco/problems-core";',
+        'import { defineRouteProblem } from "@croco/protocols-rest";',
+        'import { AlphaNotFoundProblem } from "./problems";',
+        "export const alphaNotFoundRouteProblem = defineRouteProblem(AlphaNotFoundProblem, {",
+        '  code: "alpha/not-found",',
+        "  category: ProblemCategory.NotFound,",
+        '  description: "The requested alpha resource does not exist.",',
+        "});",
+        "",
+      ].join("\n"),
+    );
+
+    expect(discoverProblemCodes(repo)).toEqual([
+      expect.objectContaining({
+        code: "alpha/not-found",
+        sources: [
+          expect.objectContaining({
+            file: "packages/alpha/src/problems.ts",
+            kind: "problem-class",
+          }),
+        ],
+      }),
+    ]);
+  });
+
+  it("keeps defineRouteProblem metadata when no implementation source is visible", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/routes.ts",
+      [
+        'import { ProblemCategory } from "@croco/problems-core";',
+        'import { defineRouteProblem } from "@croco/protocols-rest";',
+        "declare class GeneratedAlphaNotFoundProblem {}",
+        "export const alphaNotFoundRouteProblem = defineRouteProblem(GeneratedAlphaNotFoundProblem, {",
+        '  code: "alpha/generated-not-found",',
+        "  category: ProblemCategory.NotFound,",
+        '  description: "The generated alpha resource does not exist.",',
+        "});",
+        "",
+      ].join("\n"),
+    );
+
+    expect(discoverProblemCodes(repo)).toEqual([
+      expect.objectContaining({
+        code: "alpha/generated-not-found",
+        sources: [
+          expect.objectContaining({
+            file: "packages/alpha/src/routes.ts",
+            kind: "problem-metadata",
+          }),
+        ],
+      }),
+    ]);
+  });
+
   it("discovers class-field, static-code, and local constant Problem codes", () => {
     const repo = createTempRepo();
     writeFile(

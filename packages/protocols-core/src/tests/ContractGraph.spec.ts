@@ -1545,6 +1545,47 @@ describe("buildContractGraph", () => {
     expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
   });
 
+  it("should report a single missing metadata diagnostic for duplicate route contract Problem codes", () => {
+    const userIdSchema = z.string();
+
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      getUser(@Param("id", userIdSchema) _id: string): void {}
+    }
+
+    attachRouteContract(UsersController, "getUser", {
+      method: "GET",
+      path: "/users/:id",
+      params: z.object({ id: userIdSchema }),
+      problems: [
+        {
+          code: "USER_NOT_FOUND",
+          category: ProblemCategory.NotFound,
+          status: 404,
+        },
+        {
+          code: "USER_NOT_FOUND",
+          category: ProblemCategory.NotFound,
+          status: 404,
+        },
+      ],
+    });
+
+    const graph = buildContractGraph([UsersController], { strictProblemResponses: true });
+
+    expect(
+      graph.diagnostics.filter(
+        (diagnostic) => diagnostic.code === "contract-route-missing-problem-response",
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        routeId: "UsersController.getUser",
+      }),
+    ]);
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
+
   it("should reject Problem responses that are not declared by the route contract", () => {
     const routeContractProblems = [
       {
@@ -1696,6 +1737,53 @@ describe("buildContractGraph", () => {
       }),
     ]);
     expect(() => assertContractGraphHasNoErrors(graph)).not.toThrow();
+  });
+
+  it("should accept explicit empty route contract Problem declarations in strict Problem mode", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/")
+      listUsers(): void {}
+    }
+
+    attachRouteContract(UsersController, "listUsers", {
+      method: "GET",
+      path: "/users",
+      problems: [],
+    });
+
+    const graph = buildContractGraph([UsersController], { strictProblemResponses: true });
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(() => assertContractGraphHasNoErrors(graph)).not.toThrow();
+  });
+
+  it("should reject Problem responses outside explicit empty route contract declarations", () => {
+    const userIdSchema = z.string();
+
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ProblemResponse({ code: "USER_NOT_FOUND", category: ProblemCategory.NotFound })
+      getUser(@Param("id", userIdSchema) _id: string): void {}
+    }
+
+    attachRouteContract(UsersController, "getUser", {
+      method: "GET",
+      path: "/users/:id",
+      params: z.object({ id: userIdSchema }),
+      problems: [],
+    });
+
+    const graph = buildContractGraph([UsersController], { strictProblemResponses: true });
+
+    expect(graph.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "contract-route-problem-response-not-in-contract",
+        routeId: "UsersController.getUser",
+      }),
+    ]);
+    expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
   });
 
   it("should classify added routes as non-breaking and removed routes as breaking", () => {

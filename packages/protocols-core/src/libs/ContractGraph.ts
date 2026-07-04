@@ -798,12 +798,11 @@ function validateProblemRegistryReferences(
 function validateRouteContractProblemResponses(route: ContractGraphRoute): ContractDiagnostic[] {
   const diagnostics: ContractDiagnostic[] = [];
   const problemResponses = route.problemResponses ?? [];
-  const contractResponses =
-    route.routeContract && route.routeContract.problemResponses.length > 0
-      ? route.routeContract.problemResponses
-      : getRouteContractProblemResponses(problemResponses);
+  const contractResponses = route.routeContract?.problemResponsesDeclared
+    ? dedupeProblemResponsesByCode(route.routeContract.problemResponses)
+    : getRouteContractProblemResponses(problemResponses);
 
-  if (contractResponses.length === 0) {
+  if (contractResponses.length === 0 && !route.routeContract?.problemResponsesDeclared) {
     return diagnostics;
   }
 
@@ -862,7 +861,7 @@ function validateStrictProblemResponses(
   if (
     !options.strictProblemResponses ||
     (route.problemResponses?.length ?? 0) > 0 ||
-    (route.routeContract?.problemResponses.length ?? 0) > 0
+    route.routeContract?.problemResponsesDeclared
   ) {
     return [];
   }
@@ -896,6 +895,21 @@ function getRouteContractProblemResponses(
 
       responsesByCode.set(contractResponse.code, contractResponse);
     }
+  }
+
+  return [...responsesByCode.values()].sort(compareProblemResponses);
+}
+
+function dedupeProblemResponsesByCode(
+  responses: readonly NonNullable<ContractGraphRoute["problemResponses"]>[number][],
+): NonNullable<ContractGraphRoute["problemResponses"]> {
+  const responsesByCode = new Map<
+    string,
+    NonNullable<ContractGraphRoute["problemResponses"]>[number]
+  >();
+
+  for (const response of responses) {
+    responsesByCode.set(response.code, response);
   }
 
   return [...responsesByCode.values()].sort(compareProblemResponses);

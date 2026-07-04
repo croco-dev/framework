@@ -82,6 +82,26 @@ vi.mock("@croco/protocols-core", () => {
       `${diagnostic.severity.toUpperCase()} ${diagnostic.code}${diagnostic.routeId ? ` ${diagnostic.routeId}` : ""}: ${diagnostic.message}`,
     getContractGraphErrors: (graph: typeof generationModuleImports.graph) =>
       graph.diagnostics.filter((diagnostic) => diagnostic.severity === "error"),
+    parseContractGraphStrictModeFlag: (
+      args: readonly string[],
+      flags: { readonly strict: string; readonly compatibility: string },
+    ) => {
+      const strict = args.includes(flags.strict);
+      const compatibility = args.includes(flags.compatibility);
+
+      return strict && compatibility ? null : !compatibility;
+    },
+    resolveContractGraphBlockingDiagnostics: (
+      graph: typeof generationModuleImports.graph,
+      failOnDiagnostics: boolean,
+    ) => {
+      const errors = graph.diagnostics.filter((diagnostic) => diagnostic.severity === "error");
+
+      return {
+        errors,
+        blockingDiagnostics: failOnDiagnostics ? graph.diagnostics : errors,
+      };
+    },
   };
 });
 
@@ -139,6 +159,28 @@ describe("openapi-spec CLI", () => {
     ["no arguments", []],
     ["missing controllers", ["--out", "openapi.json"]],
     ["missing output", ["--controllers", "src/controllers/**/*.ts"]],
+    [
+      "conflicting schema modes",
+      [
+        "--controllers",
+        "src/controllers/**/*.ts",
+        "--out",
+        "openapi.json",
+        "--strict-schemas",
+        "--compatibility-schemas",
+      ],
+    ],
+    [
+      "conflicting Problem modes",
+      [
+        "--controllers",
+        "src/controllers/**/*.ts",
+        "--out",
+        "openapi.json",
+        "--strict-problems",
+        "--compatibility-problems",
+      ],
+    ],
   ])("exits with failure for %s without loading generation modules", async (_name, args) => {
     const exitCode = await runCli(args, {
       stdout: (message) => stdout.push(message),
@@ -266,12 +308,9 @@ describe("openapi-spec CLI", () => {
       ],
     };
 
-    const exitCode = await runCli(
-      ["--controllers", "src/**/*.ts", "--out", "openapi.json", "--strict-problems"],
-      {
-        stdout: (message) => stdout.push(message),
-      },
-    );
+    const exitCode = await runCli(["--controllers", "src/**/*.ts", "--out", "openapi.json"], {
+      stdout: (message) => stdout.push(message),
+    });
 
     expect(exitCode).toBe(0);
     expect(stdout).toContain(
@@ -279,7 +318,7 @@ describe("openapi-spec CLI", () => {
     );
     expect(generationModuleImports.lastBuildOptions).toEqual({
       strictProblemResponses: true,
-      strictSchemas: false,
+      strictSchemas: true,
     });
     expect(generationModuleImports.emitOpenAPIFromContractGraph).toBe(1);
     expect(generationModuleImports.lastEmitOptions).toMatchObject({
@@ -288,6 +327,74 @@ describe("openapi-spec CLI", () => {
     expect(fileSystemImports.writeFile).toBe(1);
     expect(fileSystemImports.lastWritePath).toBe("openapi.json");
     expect(fileSystemImports.lastWriteContents).toContain('"openapi": "3.1.0"');
+  });
+
+  it("fails OpenAPI generation on warnings when diagnostics are blocking", async () => {
+    generationModuleImports.graph = {
+      version: "croco.contract-graph.v1",
+      controllers: [
+        {
+          name: "UsersController",
+          path: "/users",
+          guards: [],
+          roles: [],
+          routeIds: ["UsersController.list"],
+        },
+      ],
+      routes: [{ routeId: "UsersController.list" }],
+      diagnostics: [
+        {
+          code: "contract-route-missing-problem-union",
+          severity: "warning",
+          target: "route",
+          message: "Declare generated client Problem responses.",
+          routeId: "UsersController.list",
+        },
+      ],
+    };
+
+    const exitCode = await runCli(
+      ["--controllers", "src/**/*.ts", "--out", "openapi.json", "--fail-on-diagnostics"],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([
+      "WARNING contract-route-missing-problem-union UsersController.list: Declare generated client Problem responses.",
+      "Contract graph contains 1 diagnostic(s); fix them before generating OpenAPI.",
+    ]);
+    expect(generationModuleImports.lastBuildOptions).toEqual({
+      strictProblemResponses: true,
+      strictSchemas: true,
+    });
+    expect(generationModuleImports.emitOpenAPIFromContractGraph).toBe(0);
+    expect(fileSystemImports.writeFile).toBe(0);
+  });
+
+  it("allows compatibility mode only through explicit opt-out flags", async () => {
+    const exitCode = await runCli(
+      [
+        "--controllers",
+        "src/**/*.ts",
+        "--out",
+        "openapi.json",
+        "--compatibility-problems",
+        "--compatibility-schemas",
+      ],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(generationModuleImports.lastBuildOptions).toEqual({
+      strictProblemResponses: false,
+      strictSchemas: false,
+    });
+    expect(generationModuleImports.emitOpenAPIFromContractGraph).toBe(1);
+    expect(fileSystemImports.writeFile).toBe(1);
   });
 
   it("passes the Project manifest bundle source to OpenAPI generation", async () => {

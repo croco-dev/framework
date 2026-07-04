@@ -44,6 +44,7 @@ pnpm codegen
 `contract:client`는 admin controller 계약에서 React Query hook을 포함한 fetch client를 생성합니다. Admin web은 `{{scope}}/provider-rpc`의 `adminClient`와 generated output types를 직접 사용하므로 `typecheck`와 `build`는 codegen을 먼저 실행합니다.
 `contract:coverage`는 같은 controller 계약에서 `contract-graph.coverage.json`을 써서 OpenAPI/RPC consumer coverage diagnostics를 남깁니다.
 `contract:verify`는 `project-map:write`와 `project-map:check`를 실행해 `.croco/manifest` inspectable bundle을 갱신하고 검증합니다. Generated OpenAPI/RPC outputs는 같은 bundle 경로를 source reference로 남깁니다.
+Generated OpenAPI/RPC commands run strict ContractGraph schema checks by default and pass `--fail-on-diagnostics`, so strict Problem contract diagnostics block generated artifacts. `--compatibility-schemas` and `--compatibility-problems` are migration-only opt-outs for legacy routes, not generated app CI settings.
 
 ## Structure
 

@@ -1,22 +1,29 @@
 import { Component } from "@croco/framework-context";
-import { Body, Controller, Get, Header, Post, ResponseSchema } from "@croco/protocols-rest";
 import {
-  aiGenerateRequestSchema,
-  aiGenerateResponseSchema,
-  aiInvocationLogListSchema,
-  aiUsageStateSchema,
+  Body,
+  Controller,
+  Get,
+  Header,
+  Post,
+  ProblemResponses,
+  type RouteBody,
+  routeProblemResponses,
+} from "@croco/protocols-rest";
+import {
+  aiInvocationsRoute,
+  aiUsageRoute,
+  generateAiRoute,
   OPTIONAL_TENANT_ID_HEADER_SCHEMA,
-  type AiGenerateRequestDto,
 } from "./aiSchemas";
 
 @Component()
 @Controller("/ai")
 export class AiController {
-  @Post("/generate")
-  @ResponseSchema(aiGenerateResponseSchema)
+  @Post(generateAiRoute)
+  @ProblemResponses(...routeProblemResponses(generateAiRoute))
   async generate(
     @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
-    @Body(aiGenerateRequestSchema) body: AiGenerateRequestDto,
+    @Body(generateAiRoute) body: RouteBody<typeof generateAiRoute>,
   ) {
     const { defaultAiSaasRuntime } = await import("../aiSaas");
     return defaultAiSaasRuntime.service.generateText({
@@ -27,8 +34,8 @@ export class AiController {
     });
   }
 
-  @Get("/usage")
-  @ResponseSchema(aiUsageStateSchema)
+  @Get(aiUsageRoute)
+  @ProblemResponses(...routeProblemResponses(aiUsageRoute))
   async usage(
     @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
   ) {
@@ -36,8 +43,8 @@ export class AiController {
     return defaultAiSaasRuntime.service.getUsageState(tenantId);
   }
 
-  @Get("/invocations")
-  @ResponseSchema(aiInvocationLogListSchema)
+  @Get(aiInvocationsRoute)
+  @ProblemResponses(...routeProblemResponses(aiInvocationsRoute))
   async invocations(
     @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
   ) {

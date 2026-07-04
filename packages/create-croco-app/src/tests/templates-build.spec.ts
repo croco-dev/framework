@@ -357,7 +357,7 @@ function checkAdminConsoleStructure() {
   );
   checkFileContains(
     "admin-console",
-    ["apps", "api-server", "src", "controllers", "AdminController.ts"],
+    ["apps", "api-server", "src", "controllers", "adminSchemas.ts"],
     /admin-console\/user-not-found/,
   );
   checkFileContains("admin-console", ["apps", "console-web", "src", "App.tsx.hbs"], /adminClient/);
@@ -702,7 +702,7 @@ function checkSaasStructure() {
   );
   checkFileContains(
     "saas",
-    ["apps", "api-server", "src", "controllers", "OperationsController.ts"],
+    ["apps", "api-server", "src", "controllers", "schemas.ts"],
     /\/diagnostics/,
   );
   checkFileContains(

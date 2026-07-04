@@ -38,8 +38,12 @@ reported as non-breaking.
 
 `contract:openapi` and `contract:client` should run after the check and diff gates so generated
 artifacts are produced only from an accepted contract graph.
-Generated REST app templates pass `--strict-schemas` to both generators so schema-less routes fail
+Generated REST app templates run schema-strict ContractGraph validation for both generators and pass
+`--fail-on-diagnostics` so schema-less routes or missing generated-client Problem contracts fail
 before OpenAPI output or permissive `unknown | undefined` RPC success types are written.
+`croco-openapi-spec` and `croco-rpc-codegen` default to strict schema mode and strict Problem
+contract diagnostics; use `--compatibility-schemas` or `--compatibility-problems` only as explicit
+migration opt-outs for legacy routes that are not part of the generated 1.0 app path.
 
 `contract:coverage` writes `contract-graph.coverage.json` with the same route graph plus consumer
 coverage diagnostics. Unsupported graph fields are reported explicitly so generator omissions do not
@@ -86,10 +90,17 @@ croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts' --
 croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts' --json --out contract-graph.snapshot.json
 croco contracts check --controllers 'apps/api-server/src/controllers/**/*.ts' --json --out contract-graph.coverage.json
 croco contracts diff --baseline contract-graph.snapshot.json --controllers 'apps/api-server/src/controllers/**/*.ts' --strict-schemas
-croco-openapi-spec --controllers 'apps/api-server/src/controllers/**/*.ts' --strict-schemas --out openapi.json
-croco-rpc-codegen --controllers 'apps/api-server/src/controllers/**/*.ts' --strict-schemas --out libs/shared/provider-rpc/src
+croco-openapi-spec --controllers 'apps/api-server/src/controllers/**/*.ts' --out openapi.json
+croco-rpc-codegen --controllers 'apps/api-server/src/controllers/**/*.ts' --out libs/shared/provider-rpc/src
 ```
 
 `croco contracts check --json` prints the same stable JSON snapshot to stdout when `--out` is not
 provided. `croco contracts diff --json` prints a machine-readable diff report and exits non-zero
 when breaking changes exist.
+
+For legacy migration only, `croco-openapi-spec --compatibility-schemas` and
+`croco-rpc-codegen --compatibility-schemas` keep the old schema-less generator behavior available.
+`--compatibility-problems` similarly keeps missing generated client Problem unions out of the
+strict diagnostic report. `--fail-on-diagnostics` is the generated-app gate that treats warnings and
+errors as blocking before writing OpenAPI or RPC output. Do not use compatibility opt-outs in
+generated app CI or 1.0 release evidence.

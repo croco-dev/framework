@@ -1,6 +1,7 @@
 import {
   formatContractDiagnostic,
-  getContractGraphErrors,
+  parseContractGraphStrictModeFlag,
+  resolveContractGraphBlockingDiagnostics,
   type ContractGraph,
 } from "@croco/protocols-core";
 import type { GenerateClientProblemRuntime } from "./generate";
@@ -15,6 +16,7 @@ type CliOptions = {
   readonly reactQuery: boolean;
   readonly strictProblems: boolean;
   readonly strictSchemas: boolean;
+  readonly failOnDiagnostics: boolean;
   readonly check: boolean;
 };
 
@@ -51,15 +53,20 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
   });
 
   if (result.options.check) {
-    return reportContractGraph(graph, io);
+    return reportContractGraph(graph, io, result.options.failOnDiagnostics);
   }
 
-  const errors = getContractGraphErrors(graph);
+  const { blockingDiagnostics, errors } = resolveContractGraphBlockingDiagnostics(
+    graph,
+    result.options.failOnDiagnostics,
+  );
+  reportContractDiagnostics(graph, io);
 
-  if (errors.length > 0) {
-    reportContractDiagnostics(graph, io);
+  if (blockingDiagnostics.length > 0) {
     io.stdout(
-      `Contract graph contains ${errors.length} error(s); fix them before generating clients.`,
+      result.options.failOnDiagnostics
+        ? `Contract graph contains ${blockingDiagnostics.length} diagnostic(s); fix them before generating clients.`
+        : `Contract graph contains ${errors.length} error(s); fix them before generating clients.`,
     );
     return 1;
   }
@@ -105,14 +112,16 @@ export function parseArgs(args: readonly string[]): CliParseResult {
   const manifestBundlePath = getFlagValue(args, "--manifest-bundle");
   const outDir = getFlagValue(args, "--out");
   const check = args.includes("--check");
-  const strictProblems = args.includes("--strict-problems");
-  const strictSchemas = args.includes("--strict-schemas");
+  const strictProblems = parseStrictProblems(args);
+  const strictSchemas = parseStrictSchemas(args);
   const problemRuntime = parseProblemRuntime(args);
 
   if (
     !controllers ||
     (!outDir && !check && !frontendActionManifestCheck) ||
     (frontendActionManifestCheck && !frontendActionManifestPath) ||
+    strictProblems === null ||
+    strictSchemas === null ||
     !problemRuntime
   ) {
     return { kind: "invalid" };
@@ -130,9 +139,24 @@ export function parseArgs(args: readonly string[]): CliParseResult {
       reactQuery: args.includes("--react-query"),
       strictProblems,
       strictSchemas,
+      failOnDiagnostics: args.includes("--fail-on-diagnostics"),
       check,
     },
   };
+}
+
+function parseStrictProblems(args: readonly string[]): boolean | null {
+  return parseContractGraphStrictModeFlag(args, {
+    strict: "--strict-problems",
+    compatibility: "--compatibility-problems",
+  });
+}
+
+function parseStrictSchemas(args: readonly string[]): boolean | null {
+  return parseContractGraphStrictModeFlag(args, {
+    strict: "--strict-schemas",
+    compatibility: "--compatibility-schemas",
+  });
 }
 
 function getFlagValue(args: readonly string[], flag: string): string | null {
@@ -170,18 +194,31 @@ Options:
   --manifest-bundle <dir>
                        Generate a source reference to the shared Project manifest bundle
   --check               Validate the canonical contract graph without writing clients
-  --strict-problems     Warn when routes do not declare generated client Problem unions
-  --strict-schemas      Fail when generated routes omit response, body, or named parameter schemas
+  --strict-problems     Warn when routes do not declare generated client Problem unions (default)
+  --compatibility-problems
+                       Allow legacy routes without declared generated client Problem unions
+  --strict-schemas      Require response, body, and named parameter schemas (default)
+  --compatibility-schemas
+                       Allow legacy schema-less routes during migration
+  --fail-on-diagnostics
+                       Treat warnings and errors as blocking before writing generated artifacts
   --help, -h            Show this help message`);
 }
 
-function reportContractGraph(graph: ContractGraph, io: CliIo): number {
+function reportContractGraph(graph: ContractGraph, io: CliIo, failOnDiagnostics: boolean): number {
   reportContractDiagnostics(graph, io);
 
-  const errors = getContractGraphErrors(graph);
+  const { blockingDiagnostics, errors } = resolveContractGraphBlockingDiagnostics(
+    graph,
+    failOnDiagnostics,
+  );
 
-  if (errors.length > 0) {
-    io.stdout(`Contract graph check failed with ${errors.length} error(s).`);
+  if (blockingDiagnostics.length > 0) {
+    io.stdout(
+      failOnDiagnostics
+        ? `Contract graph check failed with ${blockingDiagnostics.length} diagnostic(s).`
+        : `Contract graph check failed with ${errors.length} error(s).`,
+    );
     return 1;
   }
 

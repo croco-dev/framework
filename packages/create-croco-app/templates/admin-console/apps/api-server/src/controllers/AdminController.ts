@@ -1,75 +1,68 @@
 import { Component } from "@croco/framework-context";
-import { ProblemCategory } from "@croco/problems-core";
 import {
   Body,
   Controller,
   Get,
   Param,
   Post,
-  ProblemResponse,
+  ProblemResponses,
   Query,
-  ResponseSchema,
+  type RouteBody,
+  type RouteParam,
+  type RouteQueryParam,
+  type RouteResponse,
+  routeProblemResponses,
 } from "@croco/protocols-rest";
-import { z } from "zod";
 import { getAdminConsoleService } from "../admin";
 import {
-  adminConsoleSnapshotSchema,
-  adminOperationSchema,
-  adminUserSchema,
-  createAdminUserInputSchema,
-  tenantIdSchema,
-  type AdminConsoleSnapshot,
-  type AdminOperation,
-  type AdminUser,
-  type CreateAdminUserInput,
+  adminCreateUserRoute,
+  adminGetUserRoute,
+  adminListOperationsRoute,
+  adminListUsersRoute,
+  adminSnapshotRoute,
 } from "./adminSchemas";
 
 @Component()
 @Controller("/admin")
 export class AdminController {
-  @Get("/snapshot")
-  @ResponseSchema(adminConsoleSnapshotSchema)
+  @Get(adminSnapshotRoute)
   async snapshot(
-    @Query("tenantId", tenantIdSchema.optional()) tenantId?: string,
-  ): Promise<AdminConsoleSnapshot> {
+    @Query(adminSnapshotRoute, "tenantId")
+    tenantId?: RouteQueryParam<typeof adminSnapshotRoute, "tenantId">,
+  ): Promise<RouteResponse<typeof adminSnapshotRoute>> {
     return await getAdminConsoleService().snapshot(tenantId);
   }
 
-  @Get("/users")
-  @ResponseSchema(z.array(adminUserSchema))
+  @Get(adminListUsersRoute)
   async listUsers(
-    @Query("tenantId", tenantIdSchema.optional()) tenantId?: string,
-  ): Promise<ReadonlyArray<AdminUser>> {
+    @Query(adminListUsersRoute, "tenantId")
+    tenantId?: RouteQueryParam<typeof adminListUsersRoute, "tenantId">,
+  ): Promise<RouteResponse<typeof adminListUsersRoute>> {
     return await getAdminConsoleService().listUsers(tenantId);
   }
 
-  @Get("/users/:id")
-  @ProblemResponse({
-    code: "admin-console/user-not-found",
-    category: ProblemCategory.NotFound,
-    description: "The requested admin user does not exist in the selected tenant context.",
-  })
-  @ResponseSchema(adminUserSchema)
+  @Get(adminGetUserRoute)
+  @ProblemResponses(...routeProblemResponses(adminGetUserRoute))
   async getUser(
-    @Param("id", z.string().min(1)) id: string,
-    @Query("tenantId", tenantIdSchema.optional()) tenantId?: string,
-  ): Promise<AdminUser> {
+    @Param(adminGetUserRoute, "id") id: RouteParam<typeof adminGetUserRoute, "id">,
+    @Query(adminGetUserRoute, "tenantId")
+    tenantId?: RouteQueryParam<typeof adminGetUserRoute, "tenantId">,
+  ): Promise<RouteResponse<typeof adminGetUserRoute>> {
     return await getAdminConsoleService().getUser(id, tenantId);
   }
 
-  @Post("/users")
-  @ResponseSchema(adminUserSchema)
+  @Post(adminCreateUserRoute)
   async createUser(
-    @Body(createAdminUserInputSchema) input: CreateAdminUserInput,
-  ): Promise<AdminUser> {
+    @Body(adminCreateUserRoute) input: RouteBody<typeof adminCreateUserRoute>,
+  ): Promise<RouteResponse<typeof adminCreateUserRoute>> {
     return await getAdminConsoleService().createUser(input);
   }
 
-  @Get("/operations")
-  @ResponseSchema(z.array(adminOperationSchema))
+  @Get(adminListOperationsRoute)
   async listOperations(
-    @Query("tenantId", tenantIdSchema.optional()) tenantId?: string,
-  ): Promise<ReadonlyArray<AdminOperation>> {
+    @Query(adminListOperationsRoute, "tenantId")
+    tenantId?: RouteQueryParam<typeof adminListOperationsRoute, "tenantId">,
+  ): Promise<RouteResponse<typeof adminListOperationsRoute>> {
     return await getAdminConsoleService().listOperations(tenantId);
   }
 }

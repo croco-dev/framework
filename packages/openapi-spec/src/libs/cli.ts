@@ -1,4 +1,8 @@
-import { formatContractDiagnostic, getContractGraphErrors } from "@croco/protocols-core";
+import {
+  formatContractDiagnostic,
+  parseContractGraphStrictModeFlag,
+  resolveContractGraphBlockingDiagnostics,
+} from "@croco/protocols-core";
 import type { ContractGraph } from "@croco/protocols-core";
 import type { EmitOpenAPIOptions } from "./emitOpenAPI";
 
@@ -11,6 +15,7 @@ type CliOptions = {
   readonly bearerAuthScheme: string | null;
   readonly strictProblems: boolean;
   readonly strictSchemas: boolean;
+  readonly failOnDiagnostics: boolean;
   readonly check: boolean;
   readonly manifestBundlePath: string | null;
 };
@@ -59,15 +64,20 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
   });
 
   if (result.options.check) {
-    return reportContractGraph(graph, io);
+    return reportContractGraph(graph, io, result.options.failOnDiagnostics);
   }
 
-  const errors = getContractGraphErrors(graph);
+  const { blockingDiagnostics, errors } = resolveContractGraphBlockingDiagnostics(
+    graph,
+    result.options.failOnDiagnostics,
+  );
   reportContractDiagnostics(graph, io);
 
-  if (errors.length > 0) {
+  if (blockingDiagnostics.length > 0) {
     io.stdout(
-      `Contract graph contains ${errors.length} error(s); fix them before generating OpenAPI.`,
+      result.options.failOnDiagnostics
+        ? `Contract graph contains ${blockingDiagnostics.length} diagnostic(s); fix them before generating OpenAPI.`
+        : `Contract graph contains ${errors.length} error(s); fix them before generating OpenAPI.`,
     );
     return 1;
   }
@@ -94,8 +104,10 @@ export function parseArgs(args: readonly string[]): CliParseResult {
   const controllers = getFlagValue(args, "--controllers");
   const outFile = getFlagValue(args, "--out");
   const check = args.includes("--check");
+  const strictProblems = parseStrictProblems(args);
+  const strictSchemas = parseStrictSchemas(args);
 
-  if (!controllers || (!outFile && !check)) {
+  if (!controllers || (!outFile && !check) || strictProblems === null || strictSchemas === null) {
     return { kind: "invalid" };
   }
 
@@ -110,12 +122,27 @@ export function parseArgs(args: readonly string[]): CliParseResult {
       bearerAuthScheme: args.includes("--bearer-auth")
         ? (getFlagValue(args, "--bearer-auth") ?? "bearerAuth")
         : null,
-      strictProblems: args.includes("--strict-problems"),
-      strictSchemas: args.includes("--strict-schemas"),
+      strictProblems,
+      strictSchemas,
+      failOnDiagnostics: args.includes("--fail-on-diagnostics"),
       check,
       manifestBundlePath: getFlagValue(args, "--manifest-bundle"),
     },
   };
+}
+
+function parseStrictProblems(args: readonly string[]): boolean | null {
+  return parseContractGraphStrictModeFlag(args, {
+    strict: "--strict-problems",
+    compatibility: "--compatibility-problems",
+  });
+}
+
+function parseStrictSchemas(args: readonly string[]): boolean | null {
+  return parseContractGraphStrictModeFlag(args, {
+    strict: "--strict-schemas",
+    compatibility: "--compatibility-schemas",
+  });
 }
 
 function toEmitOpenAPIOptions(options: CliOptions): EmitOpenAPIOptions {
@@ -174,18 +201,31 @@ Options:
   --manifest-bundle <dir>
                        Reference the shared Project manifest bundle in generated OpenAPI
   --check               Validate the canonical contract graph without writing OpenAPI
-  --strict-problems     Warn when routes do not declare generated client Problem unions
-  --strict-schemas      Fail when generated routes omit response, body, or named parameter schemas
+  --strict-problems     Warn when routes do not declare generated client Problem unions (default)
+  --compatibility-problems
+                       Allow legacy routes without declared generated client Problem unions
+  --strict-schemas      Require response, body, and named parameter schemas (default)
+  --compatibility-schemas
+                       Allow legacy schema-less routes during migration
+  --fail-on-diagnostics
+                       Treat warnings and errors as blocking before writing generated artifacts
   --help, -h            Show this help message`);
 }
 
-function reportContractGraph(graph: ContractGraph, io: CliIo): number {
+function reportContractGraph(graph: ContractGraph, io: CliIo, failOnDiagnostics: boolean): number {
   reportContractDiagnostics(graph, io);
 
-  const errors = getContractGraphErrors(graph);
+  const { blockingDiagnostics, errors } = resolveContractGraphBlockingDiagnostics(
+    graph,
+    failOnDiagnostics,
+  );
 
-  if (errors.length > 0) {
-    io.stdout(`Contract graph check failed with ${errors.length} error(s).`);
+  if (blockingDiagnostics.length > 0) {
+    io.stdout(
+      failOnDiagnostics
+        ? `Contract graph check failed with ${blockingDiagnostics.length} diagnostic(s).`
+        : `Contract graph check failed with ${errors.length} error(s).`,
+    );
     return 1;
   }
 

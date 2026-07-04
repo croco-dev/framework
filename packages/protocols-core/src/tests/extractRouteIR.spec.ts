@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractRouteIR } from "../libs/extractRouteIR";
@@ -16,6 +16,12 @@ import {
 } from "./helpers/test-decorators";
 
 const RESPONSE_SCHEMA_KEY = Symbol.for("croco:rest:responseSchema");
+
+class UserNotFoundProblem extends Problem {
+  constructor() {
+    super("USER_NOT_FOUND", ProblemCategory.NotFound, "User not found");
+  }
+}
 
 function ResponseSchema(schema: z.ZodType): MethodDecorator {
   return (target, propertyKey) => {
@@ -228,6 +234,7 @@ describe("extractRouteIR", () => {
         path: "/users/:id",
         operationId: "getUser",
         sourceLocation: { path: "src/controllers/UserController.ts", line: 12 },
+        problemResponsesDeclared: false,
       },
     });
     expect(routes[0]?.inputSchemas.path).toBe(paramsSchema);
@@ -273,6 +280,52 @@ describe("extractRouteIR", () => {
         status: 404,
       },
     ]);
+    expect(routes[0]?.routeContract?.problemResponsesDeclared).toBe(true);
+  });
+
+  it("should extract route contract Problem responses from Problem constructors", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    attachRouteContract(UsersController, "getUser", {
+      method: "GET",
+      path: "/users/:id",
+      problems: [UserNotFoundProblem],
+    });
+
+    const routes = extractRouteIR(UsersController);
+
+    expect(routes[0]?.routeContract?.problemResponses).toEqual([
+      {
+        code: "USER_NOT_FOUND",
+        category: ProblemCategory.NotFound,
+        cookbookPath: "/reference/problem-recovery-cookbook/#user-not-found",
+        status: 404,
+      },
+    ]);
+    expect(routes[0]?.routeContract?.problemResponsesDeclared).toBe(true);
+  });
+
+  it("should preserve explicit empty route contract Problem declarations", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/")
+      listUsers(): void {}
+    }
+
+    attachRouteContract(UsersController, "listUsers", {
+      method: "GET",
+      path: "/users",
+      problems: [],
+    });
+
+    const routes = extractRouteIR(UsersController);
+
+    expect(routes[0]?.routeContract?.problemResponses).toEqual([]);
+    expect(routes[0]?.routeContract?.problemResponsesDeclared).toBe(true);
   });
 
   it("should set outputSchema to null when response schema metadata is missing", () => {

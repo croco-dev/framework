@@ -1,4 +1,4 @@
-import type { ProblemCategory } from "@croco/problems-core";
+import type { Problem, ProblemCategory } from "@croco/problems-core";
 import type { z } from "zod";
 
 /**
@@ -46,13 +46,22 @@ export type RouteContractSourceLocation = {
   readonly column?: number;
 };
 
-export type RouteContractProblemMetadata = {
+export type RouteContractProblemDeclarationMetadata = {
   readonly code: string;
   readonly category: ProblemCategory;
   readonly status?: number;
   readonly description?: string;
   readonly type?: string;
 };
+
+export type RouteContractProblemConstructorMetadata = {
+  readonly name: string;
+  readonly prototype: Problem;
+};
+
+export type RouteContractProblemMetadata =
+  | RouteContractProblemDeclarationMetadata
+  | RouteContractProblemConstructorMetadata;
 
 export type RouteContractMetadata = {
   readonly id?: string;
@@ -67,7 +76,7 @@ export type RouteContractMetadata = {
   readonly problems?: readonly RouteContractProblemMetadata[];
 };
 
-export type ProblemResponseMetadata = RouteContractProblemMetadata & {
+export type ProblemResponseMetadata = RouteContractProblemDeclarationMetadata & {
   readonly routeContractProblems?: readonly RouteContractProblemMetadata[];
 };
 

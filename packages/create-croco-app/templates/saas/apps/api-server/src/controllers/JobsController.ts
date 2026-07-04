@@ -1,16 +1,24 @@
 import { Component } from "@croco/framework-context";
-import { Body, Controller, Get, Param, Post, Query, ResponseSchema } from "@croco/protocols-rest";
 import type { ExecutionStatus } from "@croco/execution-core";
-import type { JobActionDto } from "./schemas";
 import {
-  JOB_ID_SCHEMA,
-  OPTIONAL_JOBS_INTEGER_QUERY_SCHEMA,
-  OPTIONAL_JOB_STATUS_QUERY_SCHEMA,
-  OPTIONAL_JOB_TYPE_QUERY_SCHEMA,
-  jobActionSchema,
-  jobDetailsSchema,
-  jobListReportSchema,
-  jobLogEntrySchema,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  ProblemResponses,
+  Query,
+  type RouteBody,
+  type RouteParam,
+  type RouteQueryParam,
+  routeProblemResponses,
+} from "@croco/protocols-rest";
+import {
+  cancelJobRoute,
+  jobLogsRoute,
+  listJobsRoute,
+  replayJobRoute,
+  showJobRoute,
 } from "./schemas";
 
 const JOB_STATUSES = new Set<ExecutionStatus>([
@@ -61,14 +69,14 @@ async function parseOptionalJobsInteger(
 @Component()
 @Controller("/ops/jobs")
 export class JobsController {
-  @Get()
-  @ResponseSchema(jobListReportSchema)
+  @Get(listJobsRoute)
+  @ProblemResponses(...routeProblemResponses(listJobsRoute))
   async list(
-    @Query("status", OPTIONAL_JOB_STATUS_QUERY_SCHEMA) status?: string,
-    @Query("type", OPTIONAL_JOB_TYPE_QUERY_SCHEMA) type?: string,
-    @Query("replayOf", OPTIONAL_JOB_TYPE_QUERY_SCHEMA) replayOf?: string,
-    @Query("limit", OPTIONAL_JOBS_INTEGER_QUERY_SCHEMA) limit?: string,
-    @Query("offset", OPTIONAL_JOBS_INTEGER_QUERY_SCHEMA) offset?: string,
+    @Query(listJobsRoute, "status") status?: RouteQueryParam<typeof listJobsRoute, "status">,
+    @Query(listJobsRoute, "type") type?: RouteQueryParam<typeof listJobsRoute, "type">,
+    @Query(listJobsRoute, "replayOf") replayOf?: RouteQueryParam<typeof listJobsRoute, "replayOf">,
+    @Query(listJobsRoute, "limit") limit?: RouteQueryParam<typeof listJobsRoute, "limit">,
+    @Query(listJobsRoute, "offset") offset?: RouteQueryParam<typeof listJobsRoute, "offset">,
   ) {
     const { defaultSaasRuntime } = await import("../saasDemo");
 
@@ -81,30 +89,36 @@ export class JobsController {
     });
   }
 
-  @Get("/:id")
-  @ResponseSchema(jobDetailsSchema)
-  async show(@Param("id", JOB_ID_SCHEMA) id: string) {
+  @Get(showJobRoute)
+  @ProblemResponses(...routeProblemResponses(showJobRoute))
+  async show(@Param(showJobRoute, "id") id: RouteParam<typeof showJobRoute, "id">) {
     const { defaultSaasRuntime } = await import("../saasDemo");
     return defaultSaasRuntime.jobs.show(id);
   }
 
-  @Get("/:id/logs")
-  @ResponseSchema(jobLogEntrySchema.array())
-  async logs(@Param("id", JOB_ID_SCHEMA) id: string) {
+  @Get(jobLogsRoute)
+  @ProblemResponses(...routeProblemResponses(jobLogsRoute))
+  async logs(@Param(jobLogsRoute, "id") id: RouteParam<typeof jobLogsRoute, "id">) {
     const { defaultSaasRuntime } = await import("../saasDemo");
     return defaultSaasRuntime.jobs.logs(id);
   }
 
-  @Post("/:id/cancel")
-  @ResponseSchema(jobDetailsSchema)
-  async cancel(@Param("id", JOB_ID_SCHEMA) id: string, @Body(jobActionSchema) body: JobActionDto) {
+  @Post(cancelJobRoute)
+  @ProblemResponses(...routeProblemResponses(cancelJobRoute))
+  async cancel(
+    @Param(cancelJobRoute, "id") id: RouteParam<typeof cancelJobRoute, "id">,
+    @Body(cancelJobRoute) body: RouteBody<typeof cancelJobRoute>,
+  ) {
     const { defaultSaasRuntime } = await import("../saasDemo");
     return defaultSaasRuntime.jobs.cancel(id, { reason: body.reason });
   }
 
-  @Post("/:id/replay")
-  @ResponseSchema(jobDetailsSchema)
-  async replay(@Param("id", JOB_ID_SCHEMA) id: string, @Body(jobActionSchema) body: JobActionDto) {
+  @Post(replayJobRoute)
+  @ProblemResponses(...routeProblemResponses(replayJobRoute))
+  async replay(
+    @Param(replayJobRoute, "id") id: RouteParam<typeof replayJobRoute, "id">,
+    @Body(replayJobRoute) body: RouteBody<typeof replayJobRoute>,
+  ) {
     const { defaultSaasRuntime } = await import("../saasDemo");
     return defaultSaasRuntime.jobs.replay(id, { reason: body.reason });
   }

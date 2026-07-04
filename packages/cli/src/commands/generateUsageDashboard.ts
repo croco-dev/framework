@@ -755,10 +755,30 @@ function formatRuntimeImportError(error: unknown): string {
 }
 
 function controllerTemplate(route: RouteParts): string {
+  const contractPath =
+    route.methodPath === "/" ? route.controllerPath : `${route.controllerPath}${route.methodPath}`;
+
   return `import { Component } from "@croco/framework-context";
-import { Controller, Ctx, Get, ResponseSchema } from "@croco/protocols-rest";
+import { ProblemCategory } from "@croco/problems-core";
+import {
+  Controller,
+  Ctx,
+  defineRouteContract,
+  defineRouteProblem,
+  Get,
+  HttpMethod,
+  ProblemResponses,
+  ResponseSchema,
+  routeProblemResponses,
+} from "@croco/protocols-rest";
 import type { CrocoHttpContext } from "@croco/transports-http";
 import { z } from "zod";
+import {
+  UsageDashboardMeterNotFoundProblem,
+  UsageDashboardProviderUnavailableProblem,
+  UsageDashboardTenantNotFoundProblem,
+  UsageDashboardTenantRequiredProblem,
+} from "../usage-dashboard/UsageDashboardProblems";
 import type { UsageDashboardSnapshot } from "../usage-dashboard/UsageDashboardService";
 
 const usageDashboardOveragePolicySchema = z.enum(["BLOCK", "WARN", "ALLOW_WITH_OVERAGE"]);
@@ -811,10 +831,46 @@ const usageDashboardSnapshotSchema = z.object({
   lastUpdatedAt: z.string(),
 });
 
+const usageDashboardTenantRequiredProblem = defineRouteProblem(UsageDashboardTenantRequiredProblem, {
+  code: "CROCO_CLI_USAGE_DASHBOARD_001",
+  category: ProblemCategory.ValidationError,
+  description: "Usage dashboard requires tenant context.",
+});
+const usageDashboardTenantNotFoundProblem = defineRouteProblem(UsageDashboardTenantNotFoundProblem, {
+  code: "CROCO_CLI_USAGE_DASHBOARD_002",
+  category: ProblemCategory.NotFound,
+  description: "The requested tenant does not exist.",
+});
+const usageDashboardMeterNotFoundProblem = defineRouteProblem(UsageDashboardMeterNotFoundProblem, {
+  code: "CROCO_CLI_USAGE_DASHBOARD_003",
+  category: ProblemCategory.NotFound,
+  description: "A requested meter does not exist.",
+});
+const usageDashboardProviderUnavailableProblem = defineRouteProblem(UsageDashboardProviderUnavailableProblem, {
+  code: "CROCO_CLI_USAGE_DASHBOARD_004",
+  category: ProblemCategory.InternalServerError,
+  description: "Usage dashboard dependencies are unavailable.",
+});
+
+const usageDashboardSnapshotRoute = defineRouteContract({
+  id: "usage-dashboard.snapshot",
+  method: HttpMethod.GET,
+  path: "${contractPath}",
+  operationId: "getUsageDashboardSnapshot",
+  response: usageDashboardSnapshotSchema,
+  problems: [
+    usageDashboardTenantRequiredProblem,
+    usageDashboardTenantNotFoundProblem,
+    usageDashboardMeterNotFoundProblem,
+    usageDashboardProviderUnavailableProblem,
+  ],
+});
+
 @Component()
 @Controller("${route.controllerPath}")
 export class UsageDashboardController {
-  @Get("${route.methodPath}")
+  @Get(usageDashboardSnapshotRoute)
+  @ProblemResponses(...routeProblemResponses(usageDashboardSnapshotRoute))
   @ResponseSchema(usageDashboardSnapshotSchema)
   async snapshot(@Ctx() ctx: CrocoHttpContext): Promise<UsageDashboardSnapshot> {
     const { createUsageDashboardService } = await import("../usage-dashboard/UsageDashboardRuntime");
@@ -935,7 +991,7 @@ export default function UsageDashboardPage() {
         if (!response.ok) {
           return {
             status: 'error',
-            message: 'Usage dashboard request failed with HTTP ' + response.status,
+            message: 'CROCO_USAGE_DASHBOARD_REQUEST_FAILED: HTTP ' + response.status,
           } satisfies ViewState;
         }
 
