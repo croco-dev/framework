@@ -999,6 +999,43 @@ describe("doctor", () => {
     expect(getDoctorExitCode(report)).toBe(0);
   });
 
+  it("rejects bundle-size baselines that drift from measured artifacts", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "CORE_COVERAGE=true pnpm --filter @croco/framework-context exec vitest run",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeFile(repo, "packages/framework-context/dist/index.js", "export const runtime = 'cjs';\n");
+    writeFile(repo, "packages/framework-context/dist/index.mjs", "export const runtime = 'esm';\n");
+    writeJson(repo, "ci-reports/bundle-size/baseline.json", {
+      schemaVersion: 1,
+      artifacts: {
+        "@croco/framework-context:packages/framework-context/dist/index.js": 1024,
+        "@croco/framework-context:packages/framework-context/dist/legacy.js": 512,
+      },
+    });
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const diagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0].cause).toContain("missing current artifact baseline");
+    expect(diagnostics[0].cause).toContain("stale baseline key");
+  });
+
   it("reports advisory release-hardening readiness warnings without failing the doctor summary", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -2072,6 +2109,8 @@ function writeCoreCoverageIntentionalZeroBaselineReason(
 }
 
 function writeBundleSizeBaseline(repo: string): void {
+  writeFile(repo, "packages/framework-context/dist/index.js", "export const runtime = 'cjs';\n");
+  writeFile(repo, "packages/framework-context/dist/index.mjs", "export const runtime = 'esm';\n");
   writeJson(repo, "ci-reports/bundle-size/baseline.json", {
     schemaVersion: 1,
     artifacts: {

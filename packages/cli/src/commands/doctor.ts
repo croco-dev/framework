@@ -158,6 +158,17 @@ const defaultCoreCoverageBaselinePath = "ci-reports/coverage/core-baseline.txt";
 const defaultBundleSizeBaselinePath = "ci-reports/bundle-size/baseline.json";
 const defaultBenchmarkResultPath = "benchmark-result.json";
 const defaultBenchmarkVarianceEvidencePath = "ci-reports/benchmark/latest-five-green-runs.md";
+const bundleSizeArtifactSuffixes = [
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".css",
+  ".wasm",
+  ".map",
+  ".json",
+  ".d.ts",
+] as const;
+const hashedChunkArtifactPattern = /(^|\/)chunk-[A-Z0-9]{8}(\.(?:cjs|mjs|js)(?:\.map)?)$/;
 const benchmarkVarianceEvidenceMarker = "<!-- croco-benchmark-variance-evidence:v1 -->";
 const benchmarkVarianceEvidenceRunCount = 5;
 const benchmarkVarianceSpreadTolerance = 0.15;
@@ -1110,16 +1121,20 @@ function bundleSizeBaselineReadiness(
             "Run pnpm build && pnpm package-quality:report, then commit ci-reports/bundle-size/baseline.json.",
         }),
       ]
-    : invalidBundleBaselineDiagnostic(rootDir, checkId);
+    : invalidBundleBaselineDiagnostic(rootDir, publicBuildPackages, checkId);
 
   return { label: "bundle-size baseline", diagnostics };
 }
 
-function invalidBundleBaselineDiagnostic(rootDir: string, checkId: string): DoctorDiagnostic[] {
+function invalidBundleBaselineDiagnostic(
+  rootDir: string,
+  publicBuildPackages: readonly DoctorPackage[],
+  checkId: string,
+): DoctorDiagnostic[] {
   const baseline = readJsonObject(join(rootDir, defaultBundleSizeBaselinePath));
   const failure =
     baseline.kind === "valid"
-      ? validateBundleSizeBaselineEntries(baseline.value)
+      ? validateBundleSizeBaselineEntries(rootDir, baseline.value, publicBuildPackages)
       : `could not be parsed: ${baseline.message}`;
 
   if (!failure) {
@@ -1137,7 +1152,11 @@ function invalidBundleBaselineDiagnostic(rootDir: string, checkId: string): Doct
   ];
 }
 
-function validateBundleSizeBaselineEntries(baseline: Record<string, unknown>): string | null {
+function validateBundleSizeBaselineEntries(
+  rootDir: string,
+  baseline: Record<string, unknown>,
+  publicBuildPackages: readonly DoctorPackage[],
+): string | null {
   const artifactEntries = isRecord(baseline.artifacts) ? baseline.artifacts : baseline;
   const entries = Object.entries(artifactEntries);
 
@@ -1146,9 +1165,15 @@ function validateBundleSizeBaselineEntries(baseline: Record<string, unknown>): s
   }
 
   const invalidEntry = entries.find(([, value]) => !isBundleSizeBaselineEntry(value));
-  return invalidEntry
-    ? `entry ${invalidEntry[0]} must be a non-negative byte number or an object with a non-negative bytes number.`
-    : null;
+  if (invalidEntry) {
+    return `entry ${invalidEntry[0]} must be a non-negative byte number or an object with a non-negative bytes number.`;
+  }
+
+  return validateBundleSizeBaselineKeys(
+    rootDir,
+    publicBuildPackages,
+    new Set(entries.map(([baselineKey]) => baselineKey)),
+  );
 }
 
 function isBundleSizeBaselineEntry(value: unknown): boolean {
@@ -1162,6 +1187,107 @@ function isBundleSizeBaselineEntry(value: unknown): boolean {
     Number.isFinite(value.bytes) &&
     value.bytes >= 0
   );
+}
+
+function validateBundleSizeBaselineKeys(
+  rootDir: string,
+  publicBuildPackages: readonly DoctorPackage[],
+  baselineKeys: ReadonlySet<string>,
+): string | null {
+  const measuredArtifacts = publicBuildPackages.map((workspacePackage) => ({
+    workspacePackage,
+    artifactPaths: collectMeasuredBundleArtifactPaths(rootDir, workspacePackage),
+  }));
+  const packagesWithoutArtifacts = measuredArtifacts
+    .filter(({ artifactPaths }) => artifactPaths.length === 0)
+    .map(({ workspacePackage }) => workspacePackage.name);
+  const matchedBaselineKeys = new Set<string>();
+  const missingArtifactBaselines: string[] = [];
+
+  for (const { workspacePackage, artifactPaths } of measuredArtifacts) {
+    for (const artifactPath of artifactPaths) {
+      const packageArtifactKey = `${workspacePackage.name}:${artifactPath}`;
+      if (baselineKeys.has(packageArtifactKey)) {
+        matchedBaselineKeys.add(packageArtifactKey);
+        continue;
+      }
+
+      if (baselineKeys.has(artifactPath)) {
+        matchedBaselineKeys.add(artifactPath);
+        continue;
+      }
+
+      missingArtifactBaselines.push(packageArtifactKey);
+    }
+  }
+
+  const unmatchedBaselineKeys = [...baselineKeys]
+    .filter((baselineKey) => !matchedBaselineKeys.has(baselineKey))
+    .sort(compareStrings);
+  const failures = [
+    ...(packagesWithoutArtifacts.length > 0
+      ? [`has no measured bundle artifact for ${formatSampleList(packagesWithoutArtifacts)}`]
+      : []),
+    ...(missingArtifactBaselines.length > 0
+      ? [`is missing current artifact baseline(s): ${formatSampleList(missingArtifactBaselines)}`]
+      : []),
+    ...(unmatchedBaselineKeys.length > 0
+      ? [`contains stale baseline key(s): ${formatSampleList(unmatchedBaselineKeys)}`]
+      : []),
+  ];
+
+  return failures.length > 0 ? `${failures.join("; ")}.` : null;
+}
+
+function collectMeasuredBundleArtifactPaths(
+  rootDir: string,
+  workspacePackage: DoctorPackage,
+): string[] {
+  const distDir = join(rootDir, workspacePackage.relativeDir, "dist");
+  if (!existsSync(distDir)) {
+    return [];
+  }
+
+  return uniqueStrings(
+    listBundleArtifactFiles(rootDir, distDir).map(normalizeBundleArtifactPath).sort(compareStrings),
+  );
+}
+
+function listBundleArtifactFiles(rootDir: string, dir: string, results: string[] = []): string[] {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (entry.name.startsWith(".")) {
+        continue;
+      }
+      listBundleArtifactFiles(rootDir, fullPath, results);
+      continue;
+    }
+
+    const relativePath = toPosixPath(relative(rootDir, fullPath));
+    if (entry.isFile() && isMeasuredBundleArtifact(relativePath)) {
+      results.push(relativePath);
+    }
+  }
+
+  return results;
+}
+
+function isMeasuredBundleArtifact(path: string): boolean {
+  return bundleSizeArtifactSuffixes.some((suffix) => path.endsWith(suffix));
+}
+
+function normalizeBundleArtifactPath(path: string): string {
+  return path.replace(hashedChunkArtifactPattern, "$1chunk-*$2");
+}
+
+function formatSampleList(values: readonly string[]): string {
+  const sorted = [...values].sort(compareStrings);
+  const sample = sorted.slice(0, 5).join(", ");
+  const remainingCount = sorted.length - 5;
+
+  return remainingCount > 0 ? `${sample}, and ${remainingCount} more` : sample;
 }
 
 function packageHasPublicBuildScript(rootDir: string, workspacePackage: DoctorPackage): boolean {
