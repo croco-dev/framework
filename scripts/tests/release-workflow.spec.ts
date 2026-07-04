@@ -58,21 +58,15 @@ describe("release workflow quality gates", () => {
       "run: pnpm security:audit-policy",
       "- name: Lint, format, and repository policy checks",
       "run: pnpm check",
-      "- name: Build all packages",
-      "run: pnpm build",
-      "- name: Package entrypoint smoke",
-      "run: pnpm package-entrypoints:smoke",
-      "- name: Package binary smoke",
-      "run: pnpm package-bins:smoke",
-      "- name: TypeScript check",
-      "run: pnpm typecheck",
-      "- name: Test",
-      "run: pnpm test",
       "- name: Verify npm provenance configuration",
       'npm_provenance="$(npm config get provenance)"',
       'pnpm_provenance="$(pnpm config get provenance)"',
-      "- name: Release metadata check",
-      "run: node --experimental-strip-types scripts/release-metadata-check.mts",
+      "- name: Release spine evidence",
+      "run: pnpm release:spine-evidence",
+      "- name: Publish release spine evidence summary",
+      'cat ci-reports/release/spine-evidence.md >> "$GITHUB_STEP_SUMMARY"',
+      "- name: Upload release spine evidence",
+      "path: ci-reports/release",
       "- name: Dry-run publish gate",
       "run: pnpm -r publish --dry-run --no-git-checks",
       "- name: Create Release Pull Request or Publish",
@@ -116,6 +110,15 @@ describe("release workflow quality gates", () => {
     expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}");
     expect(workflow).toContain("NPM_CONFIG_PROVENANCE must resolve to true before publishing.");
     expect(workflow).toContain("id-token: write");
+  });
+
+  it("bounds the consolidated release spine evidence runtime", () => {
+    const workflow = readReleaseWorkflow();
+
+    expect(workflow).toContain("release:spine-evidence has a 150-minute internal budget");
+    expect(workflow).toContain("45-minute budgets for both publish setup/wrapper work");
+    expect(workflow).toContain("release-gate maintenance self-check");
+    expect(workflow).toContain("timeout-minutes: 240");
   });
 
   it("routes raw changesets to release PR updates without publish gates", () => {
@@ -166,24 +169,45 @@ describe("release workflow quality gates", () => {
     const workflow = readReleaseWorkflow();
     const releaseGateFiles = [
       ".github/workflows/release.yml",
+      "scripts/certification-policy.mts",
       "scripts/changeset-required-check.mts",
+      "scripts/core-coverage-warning-check.mts",
+      "scripts/create-croco-app-generated-smoke-support.mts",
+      "scripts/create-croco-app-generated-smoke.mts",
       "scripts/dependency-audit-policy.mts",
+      "scripts/first-success-verify.mts",
       "scripts/normalize-packages.mjs",
       "scripts/package-bin-smoke.mts",
       "scripts/package-entrypoint-smoke.mts",
       "scripts/package-manifest-contracts.mjs",
+      "scripts/package-quality-report.mts",
+      "scripts/production-ready-check.mts",
+      "scripts/provider-certification-check.mts",
+      "scripts/public-api-surface.mts",
+      "scripts/quick-start-lambda-smoke.mts",
       "scripts/release-docs-check.mts",
       "scripts/release-metadata-check.mts",
+      "scripts/release-spine-evidence.mts",
       "scripts/security-allowlist-metadata-check.mts",
+      "scripts/spine-promotion-check.mts",
       "scripts/tests/changeset-required-check.spec.ts",
+      "scripts/tests/core-coverage-warning-check.spec.ts",
+      "scripts/tests/create-croco-app-generated-smoke.spec.ts",
       "scripts/tests/dependency-audit-policy.spec.ts",
+      "scripts/tests/first-success-verify.spec.ts",
       "scripts/tests/normalize-packages.spec.ts",
       "scripts/tests/package-bin-smoke.spec.ts",
       "scripts/tests/package-entrypoint-smoke.spec.ts",
+      "scripts/tests/package-quality-report.spec.ts",
+      "scripts/tests/production-ready-check.spec.ts",
+      "scripts/tests/provider-certification-check.spec.ts",
+      "scripts/tests/public-api-surface.spec.ts",
       "scripts/tests/release-docs-check.spec.ts",
       "scripts/tests/release-metadata-check.spec.ts",
-      "scripts/tests/security-allowlist-metadata-check.spec.ts",
+      "scripts/tests/release-spine-evidence.spec.ts",
       "scripts/tests/release-workflow.spec.ts",
+      "scripts/tests/security-allowlist-metadata-check.spec.ts",
+      "scripts/tests/spine-promotion-check.spec.ts",
     ];
 
     for (const file of releaseGateFiles) {
@@ -203,9 +227,19 @@ describe("release workflow quality gates", () => {
     );
     expect(workflow).toContain("pnpm exec vitest run scripts/tests/release-workflow.spec.ts");
     expect(workflow).toContain("scripts/tests/dependency-audit-policy.spec.ts");
+    expect(workflow).toContain("scripts/tests/release-spine-evidence.spec.ts");
     expect(workflow).toContain("scripts/tests/release-metadata-check.spec.ts");
     expect(workflow).toContain("scripts/tests/security-allowlist-metadata-check.spec.ts");
+    expect(workflow).toContain("scripts/tests/create-croco-app-generated-smoke.spec.ts");
+    expect(workflow).toContain("scripts/tests/first-success-verify.spec.ts");
+    expect(workflow).toContain("scripts/tests/package-quality-report.spec.ts");
+    expect(workflow).toContain("scripts/tests/provider-certification-check.spec.ts");
+    expect(workflow).toContain("scripts/tests/production-ready-check.spec.ts");
+    expect(workflow).toContain("scripts/tests/spine-promotion-check.spec.ts");
+    expect(workflow).toContain("scripts/tests/core-coverage-warning-check.spec.ts");
+    expect(workflow).toContain("scripts/tests/public-api-surface.spec.ts");
     expect(workflow).toContain("pnpm package-manifests:check");
+    expect(workflow).toContain("pnpm provider-certification:check");
     expect(workflow).toContain("pnpm security-allowlists:check");
     expect(workflow).toContain("pnpm release-docs:check");
     expect(workflow).toContain(
@@ -213,7 +247,71 @@ describe("release workflow quality gates", () => {
     );
     expect(workflow).toContain("pnpm package-entrypoints:smoke");
     expect(workflow).toContain("pnpm package-bins:smoke");
+    expect(workflow).toContain("pnpm create-croco-app:smoke");
+    expect(workflow).toContain("pnpm quick-start-lambda:smoke");
+    expect(workflow).toContain("pnpm first-success:verify");
+    expect(workflow).toContain("pnpm production-ready:check");
+    expect(workflow).not.toContain("pnpm production-ready:check -- --require-task-summaries");
+    expect(workflow).toContain("pnpm spine-promotion:check");
+    expect(workflow).toContain("pnpm test:coverage:core:warning");
+    expect(workflow).toContain("pnpm public-api:check");
     expect(workflow).toContain("if: steps.release_work.outputs.should_run_publish_gates == 'true'");
+  });
+
+  it("uses release:spine-evidence as the final consolidated spine gate before publish", () => {
+    const workflow = readReleaseWorkflow();
+    const spineGateIndex = workflow.indexOf("- name: Release spine evidence");
+    const summaryIndex = workflow.indexOf("- name: Publish release spine evidence summary");
+    const uploadIndex = workflow.indexOf("- name: Upload release spine evidence");
+    const dryRunIndex = workflow.indexOf("- name: Dry-run publish gate");
+    const spineGateStep = workflow.slice(spineGateIndex, summaryIndex);
+    const summaryStep = workflow.slice(summaryIndex, uploadIndex);
+    const uploadStep = workflow.slice(uploadIndex, dryRunIndex);
+
+    expect(spineGateIndex).toBeGreaterThan(-1);
+    expect(summaryIndex).toBeGreaterThan(spineGateIndex);
+    expect(uploadIndex).toBeGreaterThan(summaryIndex);
+    expect(dryRunIndex).toBeGreaterThan(spineGateIndex);
+    expect(workflow).toContain("id: release_spine_evidence");
+    expect(workflow).toContain("run: pnpm release:spine-evidence");
+    expect(spineGateStep).toContain(
+      "if: steps.release_work.outputs.should_run_publish_gates == 'true'",
+    );
+    expect(spineGateStep).not.toContain("always()");
+    expect(summaryStep).toContain(
+      "if: always() && steps.release_work.outputs.should_run_publish_gates == 'true'",
+    );
+    expect(uploadStep).toContain(
+      "if: always() && steps.release_work.outputs.should_run_publish_gates == 'true'",
+    );
+    expect(workflow).toContain("name: release-spine-evidence");
+    expect(workflow).toContain(
+      "uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+    );
+    expect(workflow).toContain("if-no-files-found: warn");
+  });
+
+  it("does not duplicate heavy gates already owned by release:spine-evidence", () => {
+    const workflow = readReleaseWorkflow();
+    const publishGateSection = workflow.slice(
+      workflow.indexOf("- name: Production dependency audit"),
+      workflow.indexOf("- name: Dry-run publish gate"),
+    );
+
+    expect(publishGateSection).not.toContain("- name: Build all packages");
+    expect(publishGateSection).not.toContain("run: pnpm build");
+    expect(publishGateSection).not.toContain("- name: Package entrypoint smoke");
+    expect(publishGateSection).not.toContain("run: pnpm package-entrypoints:smoke");
+    expect(publishGateSection).not.toContain("- name: Package binary smoke");
+    expect(publishGateSection).not.toContain("run: pnpm package-bins:smoke");
+    expect(publishGateSection).not.toContain("- name: TypeScript check");
+    expect(publishGateSection).not.toContain("run: pnpm typecheck");
+    expect(publishGateSection).not.toContain("- name: Test");
+    expect(publishGateSection).not.toContain("run: pnpm test");
+    expect(publishGateSection).not.toContain("- name: Release metadata check");
+    expect(publishGateSection).not.toContain(
+      "run: node --experimental-strip-types scripts/release-metadata-check.mts",
+    );
   });
 
   it("skips non-release-only changes", () => {

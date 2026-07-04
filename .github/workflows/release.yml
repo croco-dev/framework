@@ -18,7 +18,10 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # release:spine-evidence has a 150-minute internal budget; the job keeps
+    # 45-minute budgets for both publish setup/wrapper work and the optional
+    # release-gate maintenance self-check when both paths run in one job.
+    timeout-minutes: 240
     env:
       NPM_CONFIG_PROVENANCE: "true"
 
@@ -50,7 +53,7 @@ jobs:
           release_pr_update_pattern='^\.changeset/(pre\.json|[^/]+\.md)$'
           release_pr_update_ignore_pattern='^\.changeset/README\.md$'
           publish_candidate_pattern='^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$|^pnpm-workspace\.yaml$'
-          release_gate_maintenance_pattern='^\.github/workflows/release\.yml$|^scripts/(changeset-required-check\.mts|dependency-audit-policy\.mts|normalize-packages\.mjs|package-bin-smoke\.mts|package-entrypoint-smoke\.mts|package-manifest-contracts\.mjs|release-docs-check\.mts|release-metadata-check\.mts|security-allowlist-metadata-check\.mts)$|^scripts/tests/(changeset-required-check|dependency-audit-policy|normalize-packages|package-bin-smoke|package-entrypoint-smoke|release-docs-check|release-metadata-check|security-allowlist-metadata-check|release-workflow)\.spec\.ts$'
+          release_gate_maintenance_pattern='^\.github/workflows/release\.yml$|^scripts/(certification-policy\.mts|changeset-required-check\.mts|core-coverage-warning-check\.mts|create-croco-app-generated-smoke(-support)?\.mts|dependency-audit-policy\.mts|first-success-verify\.mts|normalize-packages\.mjs|package-bin-smoke\.mts|package-entrypoint-smoke\.mts|package-manifest-contracts\.mjs|package-quality-report\.mts|production-ready-check\.mts|provider-certification-check\.mts|public-api-surface\.mts|quick-start-lambda-smoke\.mts|release-docs-check\.mts|release-metadata-check\.mts|release-spine-evidence\.mts|security-allowlist-metadata-check\.mts|spine-promotion-check\.mts)$|^scripts/tests/(changeset-required-check|core-coverage-warning-check|create-croco-app-generated-smoke|dependency-audit-policy|first-success-verify|normalize-packages|package-bin-smoke|package-entrypoint-smoke|package-quality-report|production-ready-check|provider-certification-check|public-api-surface|release-docs-check|release-metadata-check|release-spine-evidence|release-workflow|security-allowlist-metadata-check|spine-promotion-check)\.spec\.ts$'
 
           changed_files="$(git diff --name-only "$base" HEAD)"
           should_update_release_pr=false
@@ -104,13 +107,22 @@ jobs:
         if: steps.release_work.outputs.should_verify_release_gate_maintenance == 'true'
         run: |
           pnpm build
-          pnpm exec vitest run scripts/tests/release-workflow.spec.ts scripts/tests/package-entrypoint-smoke.spec.ts scripts/tests/package-bin-smoke.spec.ts scripts/tests/release-docs-check.spec.ts scripts/tests/release-metadata-check.spec.ts scripts/tests/security-allowlist-metadata-check.spec.ts scripts/tests/changeset-required-check.spec.ts scripts/tests/dependency-audit-policy.spec.ts scripts/tests/normalize-packages.spec.ts --config vitest.config.ts
+          pnpm exec vitest run scripts/tests/release-workflow.spec.ts scripts/tests/release-spine-evidence.spec.ts scripts/tests/package-entrypoint-smoke.spec.ts scripts/tests/package-bin-smoke.spec.ts scripts/tests/release-docs-check.spec.ts scripts/tests/release-metadata-check.spec.ts scripts/tests/security-allowlist-metadata-check.spec.ts scripts/tests/changeset-required-check.spec.ts scripts/tests/dependency-audit-policy.spec.ts scripts/tests/normalize-packages.spec.ts scripts/tests/create-croco-app-generated-smoke.spec.ts scripts/tests/first-success-verify.spec.ts scripts/tests/package-quality-report.spec.ts scripts/tests/provider-certification-check.spec.ts scripts/tests/production-ready-check.spec.ts scripts/tests/spine-promotion-check.spec.ts scripts/tests/core-coverage-warning-check.spec.ts scripts/tests/public-api-surface.spec.ts --config vitest.config.ts
           pnpm package-manifests:check
+          pnpm provider-certification:check
           pnpm security-allowlists:check
           pnpm release-docs:check
           node --experimental-strip-types scripts/release-metadata-check.mts --allow-pending-changesets
           pnpm package-entrypoints:smoke
           pnpm package-bins:smoke
+          pnpm create-croco-app:smoke
+          pnpm quick-start-lambda:smoke
+          pnpm first-success:verify
+          # CI and release:spine-evidence cover --require-task-summaries after summarized build/typecheck/test.
+          pnpm production-ready:check
+          pnpm spine-promotion:check
+          pnpm test:coverage:core:warning
+          pnpm public-api:check
 
       # Release duplicates the publish-blocking CI quality gates that protect
       # npm publishing. PR-only checks, secret-scan reports, and docs/coverage
@@ -130,26 +142,6 @@ jobs:
         if: steps.release_work.outputs.should_run_publish_gates == 'true'
         run: pnpm check
 
-      - name: Build all packages
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: pnpm build
-
-      - name: Package entrypoint smoke
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: pnpm package-entrypoints:smoke
-
-      - name: Package binary smoke
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: pnpm package-bins:smoke
-
-      - name: TypeScript check
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: pnpm typecheck
-
-      - name: Test
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: pnpm test
-
       - name: Verify npm provenance configuration
         if: steps.release_work.outputs.should_run_publish_gates == 'true'
         shell: bash
@@ -163,9 +155,28 @@ jobs:
             exit 1
           fi
 
-      - name: Release metadata check
+      - name: Release spine evidence
+        id: release_spine_evidence
         if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: node --experimental-strip-types scripts/release-metadata-check.mts
+        run: pnpm release:spine-evidence
+
+      - name: Publish release spine evidence summary
+        if: always() && steps.release_work.outputs.should_run_publish_gates == 'true'
+        shell: bash
+        run: |
+          if [ -f ci-reports/release/spine-evidence.md ]; then
+            cat ci-reports/release/spine-evidence.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Release spine evidence report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload release spine evidence
+        if: always() && steps.release_work.outputs.should_run_publish_gates == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-spine-evidence
+          path: ci-reports/release
+          if-no-files-found: warn
 
       - name: Dry-run publish gate
         if: steps.release_work.outputs.should_run_publish_gates == 'true'
