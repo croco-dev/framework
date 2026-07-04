@@ -723,6 +723,7 @@ function coreCoverageCandidateReadiness(
   const selectedPackages = new Set(parseCoreCoverageScriptFilters(coreCoverageScript));
   const thresholdPackagesResult = readCoreCoverageThresholdPackages(rootDir);
   const temporarilyExcludedPackages = readTemporaryCoreCoverageSelectionExclusions(rootDir);
+  const intentionalZeroBaselinePackages = readIntentionalCoreCoverageZeroBaselineReasons(rootDir);
   const candidates = collectCoreCoverageCandidates(catalog.value, packages);
   const selectionDiagnostics = candidates
     .filter(
@@ -764,6 +765,7 @@ function coreCoverageCandidateReadiness(
     rootDir,
     [...selectedPackages],
     checkId,
+    intentionalZeroBaselinePackages,
   );
   const diagnostics = [...selectionDiagnostics, ...thresholdDiagnostics, ...baselineDiagnostics];
 
@@ -822,6 +824,7 @@ function collectCoreCoverageBaselineDiagnostics(
   rootDir: string,
   selectedPackages: readonly string[],
   checkId: string,
+  intentionalZeroBaselinePackages: ReadonlySet<string>,
 ): DoctorDiagnostic[] {
   const baselinePath = join(rootDir, defaultCoreCoverageBaselinePath);
   if (!existsSync(baselinePath)) {
@@ -845,7 +848,9 @@ function collectCoreCoverageBaselineDiagnostics(
     const nonNumericMetrics = coreCoverageBaselineMetrics.filter(
       (metric) => !Number.isFinite(baseline[metric]),
     );
-    const zeroMetrics = coreCoverageBaselineMetrics.filter((metric) => baseline[metric] === 0);
+    const zeroMetrics = intentionalZeroBaselinePackages.has(packageName)
+      ? []
+      : coreCoverageBaselineMetrics.filter((metric) => baseline[metric] === 0);
     const failures = [
       ...(nonNumericMetrics.length > 0
         ? [`baseline ${nonNumericMetrics.join(", ")} must be numeric`]
@@ -933,6 +938,20 @@ function parseCoreCoverageScriptFilters(script: string): string[] {
 }
 
 function readTemporaryCoreCoverageSelectionExclusions(rootDir: string): ReadonlySet<string> {
+  return readCoreCoverageWarningCheckStringMap(
+    rootDir,
+    "TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS",
+  );
+}
+
+function readIntentionalCoreCoverageZeroBaselineReasons(rootDir: string): ReadonlySet<string> {
+  return readCoreCoverageWarningCheckStringMap(rootDir, "INTENTIONAL_ZERO_BASELINE_REASONS");
+}
+
+function readCoreCoverageWarningCheckStringMap(
+  rootDir: string,
+  declarationName: string,
+): ReadonlySet<string> {
   const scriptPath = join(rootDir, defaultCoreCoverageWarningCheckPath);
   if (!existsSync(scriptPath)) {
     return new Set();
@@ -940,18 +959,20 @@ function readTemporaryCoreCoverageSelectionExclusions(rootDir: string): Readonly
 
   const source = readFileSync(scriptPath, "utf-8");
   const declaration = source.match(
-    /const\s+TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS(?:\s*:\s*Record<[^=]+>)?\s*=\s*\{([\s\S]*?)\};/,
+    new RegExp(
+      `const\\s+${escapeRegExp(declarationName)}(?:\\s*:\\s*Record<[^=]+>)?\\s*=\\s*\\{([\\s\\S]*?)\\};`,
+    ),
   );
   const declarationBody = declaration?.[1];
   if (!declarationBody) {
     return new Set();
   }
 
-  const exclusions = [...declarationBody.matchAll(/["']([^"']+)["']\s*:\s*["']([\s\S]*?)["']/g)]
+  const packages = [...declarationBody.matchAll(/["']([^"']+)["']\s*:\s*["']([\s\S]*?)["']/g)]
     .filter(([, , reason]) => reason.trim().length > 0)
     .map(([, packageName]) => packageName);
 
-  return new Set(uniqueStrings(exclusions));
+  return new Set(uniqueStrings(packages));
 }
 
 type CoreCoverageThresholdPackagesResult =
