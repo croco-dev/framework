@@ -6239,859 +6239,1087 @@
       "packageName": "@croco/framework-context",
       "relativeDir": "packages/framework-context",
       "entrypoint": "packages/framework-context/src/index.ts",
+      "compatibilityGroups": [
+        {
+          "id": "di",
+          "title": "DI and dependency graph",
+          "owner": "Framework Context DI owner",
+          "breakingChangePolicy": "Renames, removals, scope semantics, diagnostic-code changes, or graph manifest changes are breaking for DI consumers and generated apps.",
+          "coverage": [
+            "public-api:check grouped snapshot",
+            "create-croco-app generator imports DI primitives",
+            "croco doctor DI diagnostics"
+          ]
+        },
+        {
+          "id": "context",
+          "title": "Request and runtime context",
+          "owner": "Framework Context request-context owner",
+          "breakingChangePolicy": "RequestContext, RuntimeContext, transaction-context, and lifecycle field removals or semantic changes require a migration note and versioned compatibility review.",
+          "coverage": [
+            "public-api:check grouped snapshot",
+            "generated app request context imports",
+            "doctor/project-map runtime context reads"
+          ]
+        },
+        {
+          "id": "runtime-policy",
+          "title": "Runtime policy",
+          "owner": "Runtime policy owner",
+          "breakingChangePolicy": "Policy table shape, policy kind/target constants, capability diagnostics, and execution-plan semantics are release-blocking compatibility changes.",
+          "coverage": [
+            "public-api:check grouped snapshot",
+            "croco runtime-policy check",
+            "croco project-map policy validation"
+          ]
+        },
+        {
+          "id": "runtime-capability",
+          "title": "Runtime capability",
+          "owner": "Runtime capability owner",
+          "breakingChangePolicy": "Capability names, platform names, manifest versions, diagnostic codes, and support matrix semantics are breaking unless versioned or explicitly migrated.",
+          "coverage": [
+            "public-api:check grouped snapshot",
+            "croco runtime-policy check",
+            "generated app smoke workspace build"
+          ]
+        },
+        {
+          "id": "runtime-inspector",
+          "title": "Runtime inspector",
+          "owner": "Runtime inspector owner",
+          "breakingChangePolicy": "Inspector record/timeline/event shape changes must preserve additive compatibility or document a versioned diagnostic migration.",
+          "coverage": [
+            "public-api:check grouped snapshot",
+            "generated app smoke workspace build",
+            "doctor/project-map runtime diagnostics"
+          ]
+        },
+        {
+          "id": "middleware",
+          "title": "Middleware and request pipeline",
+          "owner": "Middleware pipeline owner",
+          "breakingChangePolicy": "Middleware callable shape, pipeline graph node/phase constants, and failure propagation changes require a documented migration path.",
+          "coverage": ["public-api:check grouped snapshot", "generated app request pipeline usage"]
+        },
+        {
+          "id": "shutdown",
+          "title": "Shutdown lifecycle",
+          "owner": "Shutdown lifecycle owner",
+          "breakingChangePolicy": "Shutdown hook signatures, timeout/configuration problem behavior, and signal listener semantics are breaking without migration guidance.",
+          "coverage": ["public-api:check grouped snapshot", "generated app smoke workspace build"]
+        }
+      ],
       "runtimeExports": [
         {
           "name": "assertPolicyRuntimeCapabilities",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "assertPolicyRuntimeCapabilityManifest",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "assertPolicyTableRuntimeCapabilities",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "assertPolicyTableRuntimeCapabilityManifest",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "checkPolicyRuntimeCapabilities",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "checkPolicyRuntimeCapabilityManifest",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "checkPolicyTableRuntimeCapabilities",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "checkPolicyTableRuntimeCapabilityManifest",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "checkRuntimeCapabilityRequirements",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "CircularDependencyProblem",
           "exportKind": "named",
           "source": "./libs/problems/CircularDependencyProblem",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "di"
         },
         {
           "name": "compilePolicyTable",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "compilePolicyTableForRuntime",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "compileRequestPipelineGraph",
           "exportKind": "named",
           "source": "./libs/RequestPipelineGraph",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "Component",
           "exportKind": "named",
           "source": "./libs/decorators/Component",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "di"
         },
         {
           "name": "Container",
           "exportKind": "named",
           "source": "./libs/Container",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "di"
         },
         {
           "name": "ContainerDiagnosticsProvider",
           "exportKind": "named",
           "source": "./libs/diagnostics/ContainerDiagnosticsProvider",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "di"
         },
         {
           "name": "ContainerInstance",
           "exportKind": "named",
-          "source": "typedi"
+          "source": "typedi",
+          "compatibilityGroup": "di"
         },
         {
           "name": "ContainerResolutionProblem",
           "exportKind": "named",
           "source": "./libs/problems/ContainerResolutionProblem",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "di"
         },
         {
           "name": "ContainerScopeMismatchProblem",
           "exportKind": "named",
           "source": "./libs/problems/ContainerResolutionProblem",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "di"
         },
         {
           "name": "Context",
           "exportKind": "named",
           "source": "./libs/Context",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "context"
         },
         {
           "name": "createPolicyTarget",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "createRuntimeCapabilityDiagnostic",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "createRuntimeCapabilityManifest",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "createRuntimeCapabilityManifestFromSupport",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "definePolicy",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "definePolicyForRuntime",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "defineRuntimePolicyPreset",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "DEV_INSPECTOR_TOKEN",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "dumpRequestPipelineGraph",
           "exportKind": "named",
           "source": "./libs/RequestPipelineGraph",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "finishRuntimeInspectionRequest",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "formatPolicyCapabilityDiagnostic",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "getPolicyExecutionPlan",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "getRuntimeCapabilitySupport",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "getRuntimePolicyPresetCapabilities",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "Inject",
           "exportKind": "named",
           "source": "./libs/decorators/Inject",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "di"
         },
         {
           "name": "isKnownRuntimePlatform",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "isRuntimeCapabilitySupported",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "LOGGER_TOKEN",
           "exportKind": "named",
           "source": "./libs/ILogger",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "di"
         },
         {
           "name": "MetadataStorage",
           "exportKind": "named",
           "source": "./libs/MetadataStorage",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "di"
         },
         {
           "name": "MiddlewareChain",
           "exportKind": "named",
           "source": "./libs/Middleware",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "MiddlewareProblem",
           "exportKind": "named",
           "source": "./libs/problems/MiddlewareProblems",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "OnShutdown",
           "exportKind": "named",
           "source": "./libs/decorators/OnShutdown",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "shutdown"
         },
         {
           "name": "PipelineGraphProblem",
           "exportKind": "named",
           "source": "./libs/problems/PipelineGraphProblems",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "POLICY_CAPABILITY_UNAVAILABLE_CODE",
           "exportKind": "named",
           "source": "./libs/problems/RuntimePolicyProblems",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "POLICY_EXECUTION_ORDER",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "POLICY_KINDS",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "POLICY_TARGET_KINDS",
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyCapabilityProblem",
           "exportKind": "named",
           "source": "./libs/problems/RuntimePolicyProblems",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyConflictProblem",
           "exportKind": "named",
           "source": "./libs/problems/RuntimePolicyProblems",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyDefinitionProblem",
           "exportKind": "named",
           "source": "./libs/problems/RuntimePolicyProblems",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "recordRuntimeInspectionEvent",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "REQUEST_PIPELINE_FAILURE_PROPAGATIONS",
           "exportKind": "named",
           "source": "./libs/RequestPipelineGraph",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "REQUEST_PIPELINE_NODE_KINDS",
           "exportKind": "named",
           "source": "./libs/RequestPipelineGraph",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "REQUEST_PIPELINE_PHASES",
           "exportKind": "named",
           "source": "./libs/RequestPipelineGraph",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "requestPipelineNodesFromPolicyPlan",
           "exportKind": "named",
           "source": "./libs/RequestPipelineGraph",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "RUNTIME_CAPABILITY_MANIFEST_VERSION",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RUNTIME_CAPABILITY_NAMES",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RUNTIME_CAPABILITY_SUPPORT",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RUNTIME_PLATFORMS",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeInspector",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "ShutdownConfigurationConflictProblem",
           "exportKind": "named",
           "source": "./libs/problems/ShutdownProblems",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "shutdown"
         },
         {
           "name": "ShutdownManager",
           "exportKind": "named",
           "source": "./libs/ShutdownManager",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "shutdown"
         },
         {
           "name": "ShutdownTimeoutProblem",
           "exportKind": "named",
           "source": "./libs/problems/ShutdownProblems",
-          "declarationKind": "class"
+          "declarationKind": "class",
+          "compatibilityGroup": "shutdown"
         },
         {
           "name": "startRuntimeInspectionRequest",
           "exportKind": "named",
           "source": "./libs/RuntimeInspector",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "stringifyRuntimeCapabilityManifest",
           "exportKind": "named",
           "source": "./libs/runtimeCapabilities",
-          "declarationKind": "function"
+          "declarationKind": "function",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "Token",
           "exportKind": "named",
-          "source": "typedi"
+          "source": "typedi",
+          "compatibilityGroup": "di"
         },
         {
           "name": "TRANSACTION_CONTEXT_TOKEN",
           "exportKind": "named",
           "source": "./libs/TransactionContext",
-          "declarationKind": "const"
+          "declarationKind": "const",
+          "compatibilityGroup": "context"
         }
       ],
       "typeExports": [
         {
           "name": "CompileRequestPipelineGraphOptions",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "ComponentMetadata",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "ComponentOptions",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "Constructor",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "ContainerResolutionFailureReason",
           "exportKind": "named",
-          "source": "./libs/problems/ContainerResolutionProblem"
+          "source": "./libs/problems/ContainerResolutionProblem",
+          "compatibilityGroup": "di"
         },
         {
           "name": "ContainerValidationOptions",
           "exportKind": "named",
-          "source": "./libs/Container"
+          "source": "./libs/Container",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DefinePolicyOptions",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "DefineRuntimePolicyOptions",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "DependencyGraphDiagnostic",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyGraphDiagnosticCode",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyGraphManifest",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyGraphManifestStatus",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyGraphManifestVersion",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyGraphProvider",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyProviderKind",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyResolutionStep",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyResolutionStepStatus",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyResolutionTrace",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyResolutionTraceStatus",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencySourceLocation",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "DependencyTokenKind",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "Guard",
           "exportKind": "named",
-          "source": "./libs/Guard"
+          "source": "./libs/Guard",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "ILogger",
           "exportKind": "named",
-          "source": "./libs/ILogger"
+          "source": "./libs/ILogger",
+          "compatibilityGroup": "di"
         },
         {
           "name": "KnownRuntimePlatform",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "LifecycleHooks",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "context"
         },
         {
           "name": "Middleware",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "PolicyCapabilityDiagnostic",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyDefinition",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyExecutionEntry",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyExecutionPlan",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyFailurePropagation",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyFailurePropagationEntry",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyKind",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyPipelineNodeOptions",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "PolicyRuntimeCapability",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicySource",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyTable",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyTarget",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "PolicyTargetKind",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "RequestContext",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "context"
         },
         {
           "name": "RequestPipelineFailurePropagation",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "RequestPipelineGraph",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "RequestPipelineGraphEdge",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "RequestPipelineGraphEdgeReason",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "RequestPipelineNode",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "RequestPipelineNodeKind",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "RequestPipelinePath",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "RequestPipelinePhase",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "RequestPipelinePhaseOrder",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "ResolvedRequestPipelineNode",
           "exportKind": "named",
-          "source": "./libs/RequestPipelineGraph"
+          "source": "./libs/RequestPipelineGraph",
+          "compatibilityGroup": "middleware"
         },
         {
           "name": "RetryPolicyDefinition",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "RuntimeCapabilities",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilitiesForPlatform",
           "exportKind": "named",
-          "source": "./libs/runtimeCapabilities"
+          "source": "./libs/runtimeCapabilities",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilityDiagnostic",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilityDiagnosticCode",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilityManifest",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilityManifestVersion",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilityName",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilityOverridesFor",
           "exportKind": "named",
-          "source": "./libs/runtimeCapabilities"
+          "source": "./libs/runtimeCapabilities",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilityRequirement",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilitySupport",
           "exportKind": "named",
-          "source": "./libs/runtimeCapabilities"
+          "source": "./libs/runtimeCapabilities",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilitySupportForPlatform",
           "exportKind": "named",
-          "source": "./libs/runtimeCapabilities"
+          "source": "./libs/runtimeCapabilities",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeCapabilitySupportMatrix",
           "exportKind": "named",
-          "source": "./libs/runtimeCapabilities"
+          "source": "./libs/runtimeCapabilities",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimeContext",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "context"
         },
         {
           "name": "RuntimeInspectionOutcome",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectionRecord",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorEventInput",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorEventKind",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorEventOutcome",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorFailureReporter",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorOptions",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorRecorder",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorRecorderEventInput",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorRequestFinish",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorRequestStart",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorSnapshot",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeInspectorTimelineEvent",
           "exportKind": "named",
-          "source": "./libs/RuntimeInspector"
+          "source": "./libs/RuntimeInspector",
+          "compatibilityGroup": "runtime-inspector"
         },
         {
           "name": "RuntimeNativeContext",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "context"
         },
         {
           "name": "RuntimePlatform",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "RuntimePolicy",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "RuntimePolicyPresetConfig",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "RuntimeTraceContext",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "context"
         },
         {
           "name": "Scope",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
         },
         {
           "name": "ShutdownHook",
           "exportKind": "named",
-          "source": "./libs/types"
+          "source": "./libs/types",
+          "compatibilityGroup": "shutdown"
         },
         {
           "name": "SupportedRuntimeCapabilityName",
           "exportKind": "named",
-          "source": "./libs/runtimeCapabilities"
+          "source": "./libs/runtimeCapabilities",
+          "compatibilityGroup": "runtime-capability"
         },
         {
           "name": "TimeoutPolicy",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "TracingPolicy",
           "exportKind": "named",
-          "source": "./libs/RuntimePolicy"
+          "source": "./libs/RuntimePolicy",
+          "compatibilityGroup": "runtime-policy"
         },
         {
           "name": "TransactionContext",
           "exportKind": "named",
-          "source": "./libs/TransactionContext"
+          "source": "./libs/TransactionContext",
+          "compatibilityGroup": "context"
         },
         {
           "name": "UnsupportedRuntimeCapabilityName",
           "exportKind": "named",
-          "source": "./libs/runtimeCapabilities"
+          "source": "./libs/runtimeCapabilities",
+          "compatibilityGroup": "runtime-capability"
         }
       ]
     },
