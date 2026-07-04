@@ -1297,7 +1297,7 @@ function listBundleArtifactFiles(rootDir: string, dir: string, results: string[]
     const fullPath = join(dir, entry.name);
 
     if (entry.isDirectory()) {
-      if (bundleArtifactIgnoredDirectories.has(entry.name) || entry.name.startsWith(".")) {
+      if (bundleArtifactIgnoredDirectories.has(entry.name)) {
         continue;
       }
       listBundleArtifactFiles(rootDir, fullPath, results);
