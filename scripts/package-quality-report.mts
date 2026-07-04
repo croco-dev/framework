@@ -1200,7 +1200,7 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     "",
     "## Trunk gate rollout",
     "- Current blocking gates: changeset-required, architecture-policy, dependency-boundaries, static-misuse, lint/format/policy checks, build, typecheck, test, provider-certification, production-ready, spine-promotion, and the dedicated benchmark workflow.",
-    "- Current advisory gates: production audit on PRs, core coverage baseline warnings, and bundle-size warnings.",
+    "- Current advisory gates: production audit in CI, core coverage baseline warnings, and bundle-size warnings. Release publish gates still run `pnpm audit:prod` as blocking.",
     "- Promote warning-only gates only after the dashboard shows stable package-level ownership, no unknown package rows, and documented baselines.",
     "- New packages should appear in this dashboard with explicit build/typecheck/test support or an intentional not-configured state.",
   ];

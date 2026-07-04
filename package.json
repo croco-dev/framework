@@ -75,49 +75,5 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
-  "pnpm": {
-    "overrides": {
-      "@clerk/shared": "3.47.7",
-      "@hono/node-server": "1.19.10",
-      "@opentelemetry/auto-instrumentations-node": "0.76.0",
-      "@opentelemetry/exporter-prometheus": "0.218.0",
-      "@opentelemetry/sdk-node": "0.218.0",
-      "@grpc/grpc-js": "1.14.4",
-      "@isaacs/brace-expansion": "5.0.1",
-      "@croco/auth-better-auth>@vitest/coverage-v8": "4.1.8",
-      "@croco/auth-better-auth>vitest": "4.1.8",
-      "@croco/frontend-vite>vite": "6.4.3",
-      "anymatch>picomatch": "2.3.2",
-      "astro>vite": "7.3.5",
-      "axios": "1.16.1",
-      "better-auth>next": "16.2.3",
-      "better-auth>vitest": "4.1.8",
-      "defu": "6.1.7",
-      "eslint-plugin-import-x>minimatch": "10.2.3",
-      "fast-xml-builder": "1.1.7",
-      "flatted": "3.4.2",
-      "glob": "11.1.0",
-      "h3": "1.15.6",
-      "js-cookie": "3.0.8",
-      "kysely": "0.28.17",
-      "lodash": "4.18.1",
-      "miniflare>undici": "7.24.0",
-      "path-to-regexp": "0.1.13",
-      "picomatch": "4.0.4",
-      "form-data": "4.0.6",
-      "openai>ws": "8.21.0",
-      "protobufjs": "7.6.1",
-      "rollup": "4.59.0",
-      "svgo": "4.0.1",
-      "typedoc>minimatch": "9.0.7",
-      "validator": "13.15.22",
-      "vitest>vite": "7.3.5"
-    },
-    "auditConfig": {
-      "ignoreGhsas": [
-        "GHSA-gv7w-rqvm-qjhr"
-      ]
-    }
-  }
+  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67"
 }

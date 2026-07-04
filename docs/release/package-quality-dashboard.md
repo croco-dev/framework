@@ -36,7 +36,7 @@ pulled into a generated-app golden path or certified adapter path.
 
 Warning-only gates stay advisory until they have stable baselines and a clear owner:
 
-- Production dependency audit is advisory in CI and remains visible in the security report.
+- Production dependency audit is advisory in CI and remains visible in the security report; the Release workflow runs the same `pnpm audit:prod` command as a blocking publish gate.
 - Core coverage selection and baseline warnings are posted to the job summary and artifact.
 - Bundle-size warnings stay advisory while `ci-reports/bundle-size/baseline.json` is missing, incomplete, or still being stabilized.
 
