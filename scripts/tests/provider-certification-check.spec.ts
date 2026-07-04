@@ -339,6 +339,31 @@ describe("provider-certification-check.mts", () => {
     expect(hasProviderCertificationFailures(report)).toBe(true);
   });
 
+  it("fails when certification policy state descriptions are blank", () => {
+    const repo = createTempRepo();
+    const policyScope = createCertificationPolicyScope(["Provider"]);
+    writePackage(repo, "provider");
+    writeCatalogMetadata(repo, ["provider"], {
+      certificationPolicy: {
+        scope: {
+          ...policyScope,
+          states: {
+            ...(policyScope.states as Record<string, unknown>),
+            "candidate-optional": "  ",
+          },
+        },
+      },
+      productionPackages: [],
+    });
+
+    const report = createReport(repo);
+
+    expect(report.catalogErrors).toContain(
+      "docs/package-catalog.json: certification.policy.scope.states.candidate-optional must be a non-empty string",
+    );
+    expect(hasProviderCertificationFailures(report)).toBe(true);
+  });
+
   it("fails badge and prose certification claims without a certified catalog record", () => {
     const repo = createTempRepo();
     writePackage(

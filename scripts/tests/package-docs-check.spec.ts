@@ -232,6 +232,65 @@ describe("package-docs-check.mts", () => {
     );
   });
 
+  it("fails when certification policy state descriptions are blank", () => {
+    const root = createTempRoot();
+    const policyScope = createCertificationPolicyScope(["Provider"]);
+    writePackage(root, "provider", { name: "@croco/provider" });
+    writeGeneratedApiDocs(root, "provider");
+    writeCatalogMetadata(root, ["provider"], {
+      certificationPolicy: {
+        scope: {
+          ...policyScope,
+          states: {
+            ...(policyScope.states as Record<string, unknown>),
+            "candidate-optional": "  ",
+          },
+        },
+      },
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Provider",
+      productionPackages: [],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: [],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "certification.policy.scope.states.candidate-optional must be a non-empty string",
+    );
+  });
+
+  it("fails when extension matrix packages are outside extension groups", () => {
+    const root = createTempRoot();
+    writePackage(root, "provider", { name: "@croco/provider" });
+    writeGeneratedApiDocs(root, "provider");
+    writeCatalogMetadata(root, ["provider"], {
+      additionalGroups: { Provider: [] },
+      extensionGroups: ["Provider"],
+      extensionPackages: ["provider"],
+      groupName: "Core",
+      productionPackages: ["provider"],
+    });
+    writeDocsBaseline(root, {
+      allowedMissingApiDocs: [],
+      allowedMissingReadme: [],
+      allowedMissingTests: [],
+    });
+
+    const result = runScript(root, "--write");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "extensionMatrix.packages.provider is not in an extension group",
+    );
+  });
+
   it("fails check mode when the README catalog was not regenerated", () => {
     const root = createTempRoot();
     writePackage(root, "alpha", { name: "@croco/alpha" });
@@ -830,6 +889,7 @@ function writeCatalogMetadata(
   root: string,
   packageNames: readonly string[],
   options: {
+    readonly additionalGroups?: Record<string, readonly string[]>;
     readonly certificationPolicy?: Record<string, unknown> | null;
     readonly extensionGroups?: readonly string[];
     readonly extensionPackages?: readonly string[];
@@ -859,6 +919,15 @@ function writeCatalogMetadata(
         description: "Fixture core packages",
         packages: packageNames,
       },
+      ...Object.fromEntries(
+        Object.entries(options.additionalGroups ?? {}).map(([name, packages]) => [
+          name,
+          {
+            description: "Fixture extension package set",
+            packages,
+          },
+        ]),
+      ),
     },
     maturity: {
       production: {

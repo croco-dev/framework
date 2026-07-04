@@ -11,6 +11,13 @@ import { dirname, join, relative, resolve } from "node:path";
 import { exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
+import {
+  createDefaultCertificationPolicy,
+  isCertificationClaimLine,
+  parseCertificationPolicy as parseSharedCertificationPolicy,
+  type CertificationPolicy as SharedCertificationPolicy,
+} from "./certification-policy.mts";
+
 type Mode = "check" | "write";
 
 type Options = {
@@ -90,8 +97,6 @@ type AdapterCategoryKey = (typeof adapterCategoryOrder)[number];
 
 type CertificationStateKey = (typeof certificationStateOrder)[number];
 
-type CertificationRequirementKey = (typeof certificationRequirementOrder)[number];
-
 type CertificationEvidenceKey = (typeof certificationEvidenceKeyOrder)[number];
 
 type CertificationEvidenceStatus = (typeof certificationEvidenceStatusOrder)[number];
@@ -123,16 +128,7 @@ type CertificationCatalogState = {
   readonly schemaVersion: number;
 };
 
-type CertificationPolicy = {
-  readonly scope: CertificationPolicyScope;
-};
-
-type CertificationPolicyScope = {
-  readonly claimRequiresCertified: boolean;
-  readonly extensionGroups: readonly string[];
-  readonly requiredMaturity: MaturityKey;
-  readonly states: Readonly<Record<CertificationRequirementKey, string>>;
-};
+type CertificationPolicy = SharedCertificationPolicy<MaturityKey>;
 
 type RuntimeProfileCatalog = {
   readonly schemaVersion?: unknown;
@@ -209,11 +205,6 @@ const adapterCategoryOrder = [
   "community",
 ] as const;
 const certificationStateOrder = ["uncertified", "candidate", "certified"] as const;
-const certificationRequirementOrder = [
-  "certified-required",
-  "candidate-optional",
-  "not-applicable",
-] as const;
 const certificationEvidenceStatusOrder = ["present", "missing", "not-applicable"] as const;
 const certificationEvidenceKeyOrder = [
   "conformance",
@@ -222,31 +213,14 @@ const certificationEvidenceKeyOrder = [
   "diagnostics",
   "redactionTests",
 ] as const;
-const certificationClaimPatterns: readonly RegExp[] = [
-  /Croco compatible\s*:/i,
-  /!\[[^\]]*\b(?:certified|certification|Croco compatible)\b[^\]]*\]/i,
-  /\[[^\]]*\b(?:certified|certification|Croco compatible)\b[^\]]*\]\([^)]+\)/i,
-  /\bcertified\s+(?:for|against|with)\s+(?:the\s+)?Croco\b/i,
-  /\bCroco\s+certified\b/i,
-];
 const artifactFormatOrder = ["esm", "cjs", "dual", "neutral"] as const;
 const artifactTypeOrder = ["code", "types", "config", "asset"] as const;
 const scriptRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
 type MaturityKey = (typeof maturityOrder)[number];
 
-const defaultCertificationPolicy: CertificationPolicy = {
-  scope: {
-    claimRequiresCertified: true,
-    extensionGroups: [],
-    requiredMaturity: "production",
-    states: {
-      "certified-required": "",
-      "candidate-optional": "",
-      "not-applicable": "",
-    },
-  },
-};
+const defaultCertificationPolicy: CertificationPolicy =
+  createDefaultCertificationPolicy("production");
 
 main();
 
@@ -736,7 +710,14 @@ function parseCertification(
     violations.push(`${catalogMetadataPath}: certification.schemaVersion must be 1`);
   }
 
-  const policy = parseCertificationPolicy(value.policy, extensionMatrix.groups, violations);
+  const policy = parseSharedCertificationPolicy({
+    catalogMetadataPath,
+    defaultRequiredMaturity: "production",
+    diagnostics: violations,
+    extensionGroups: extensionMatrix.groups,
+    policyValue: value.policy,
+    validRequiredMaturities: maturityOrder,
+  });
   const recordsValue = value.records;
   if (!Array.isArray(recordsValue)) {
     violations.push(`${catalogMetadataPath}: certification.records must be an array`);
@@ -778,107 +759,6 @@ function parseCertification(
     records,
     recordsByPackage,
     schemaVersion: schemaVersion === 1 ? 1 : 0,
-  };
-}
-
-function parseCertificationPolicy(
-  value: unknown,
-  extensionGroups: readonly string[],
-  violations: string[],
-): CertificationPolicy {
-  if (!isRecord(value)) {
-    violations.push(`${catalogMetadataPath}: certification.policy must be an object`);
-    return defaultCertificationPolicy;
-  }
-
-  const scopeValue = value.scope;
-  if (!isRecord(scopeValue)) {
-    violations.push(`${catalogMetadataPath}: certification.policy.scope must be an object`);
-    return defaultCertificationPolicy;
-  }
-
-  const extensionGroupList = readRequiredStringArray(
-    scopeValue.extensionGroups,
-    "certification.policy.scope.extensionGroups",
-    violations,
-  );
-  if (extensionGroupList.length === 0) {
-    violations.push(
-      `${catalogMetadataPath}: certification.policy.scope.extensionGroups must be non-empty`,
-    );
-  }
-
-  for (const group of extensionGroupList) {
-    if (!extensionGroups.includes(group)) {
-      violations.push(
-        `${catalogMetadataPath}: certification.policy.scope.extensionGroups references non-extension group ${group}`,
-      );
-    }
-  }
-
-  for (const group of extensionGroups) {
-    if (!extensionGroupList.includes(group)) {
-      violations.push(
-        `${catalogMetadataPath}: certification.policy.scope.extensionGroups must include extensionMatrix group ${group}`,
-      );
-    }
-  }
-
-  const requiredMaturity = readRequiredString(
-    scopeValue.requiredMaturity,
-    "certification.policy.scope.requiredMaturity",
-    violations,
-  );
-  if (requiredMaturity && !maturityOrder.includes(requiredMaturity as MaturityKey)) {
-    violations.push(
-      `${catalogMetadataPath}: certification.policy.scope.requiredMaturity must be one of ${maturityOrder.join(", ")}`,
-    );
-  }
-
-  if (scopeValue.claimRequiresCertified !== true) {
-    violations.push(
-      `${catalogMetadataPath}: certification.policy.scope.claimRequiresCertified must be true`,
-    );
-  }
-
-  const statesValue = scopeValue.states;
-  if (!isRecord(statesValue)) {
-    violations.push(`${catalogMetadataPath}: certification.policy.scope.states must be an object`);
-    return {
-      scope: {
-        claimRequiresCertified: scopeValue.claimRequiresCertified === true,
-        extensionGroups: extensionGroupList,
-        requiredMaturity: maturityOrder.includes(requiredMaturity as MaturityKey)
-          ? (requiredMaturity as MaturityKey)
-          : "production",
-        states: defaultCertificationPolicy.scope.states,
-      },
-    };
-  }
-
-  const states = Object.fromEntries(
-    certificationRequirementOrder.map((requirement) => {
-      const description = statesValue[requirement];
-      if (typeof description !== "string" || description.length === 0) {
-        violations.push(
-          `${catalogMetadataPath}: certification.policy.scope.states.${requirement} must be a non-empty string`,
-        );
-        return [requirement, ""];
-      }
-
-      return [requirement, description];
-    }),
-  ) as Record<CertificationRequirementKey, string>;
-
-  return {
-    scope: {
-      claimRequiresCertified: scopeValue.claimRequiresCertified === true,
-      extensionGroups: extensionGroupList,
-      requiredMaturity: maturityOrder.includes(requiredMaturity as MaturityKey)
-        ? (requiredMaturity as MaturityKey)
-        : "production",
-      states,
-    },
   };
 }
 
@@ -1918,7 +1798,7 @@ function isFenceToggle(line: string): boolean {
 }
 
 function hasCertificationClaim(line: string): boolean {
-  return certificationClaimPatterns.some((pattern) => pattern.test(line));
+  return isCertificationClaimLine(line);
 }
 
 function packageRefsForCertificationClaim(file: string, line: string): readonly string[] {
