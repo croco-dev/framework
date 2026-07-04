@@ -3,6 +3,15 @@ import type { Hono } from "hono";
 import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
 import type { LambdaContext, LambdaEvent, LambdaHandler } from "./types";
 
+type HeadersWithSetCookie = Headers & {
+  getSetCookie?: () => string[];
+};
+
+type LambdaResponseHeaders = {
+  headers: Record<string, string>;
+  cookies: string[];
+};
+
 function isBinaryContentType(contentType: string): boolean {
   const mimeType = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
 
@@ -26,6 +35,40 @@ function isBinaryContentType(contentType: string): boolean {
   return true;
 }
 
+function getSetCookieHeaders(headers: Headers): string[] {
+  const getSetCookie = (headers as HeadersWithSetCookie).getSetCookie;
+  if (typeof getSetCookie === "function") {
+    const cookies = getSetCookie.call(headers);
+    if (cookies.length > 0) {
+      return cookies;
+    }
+  }
+
+  const cookies: string[] = [];
+  headers.forEach((value, key) => {
+    if (key.toLowerCase() === "set-cookie") {
+      cookies.push(value);
+    }
+  });
+
+  return cookies;
+}
+
+function toLambdaResponseHeaders(headers: Headers): LambdaResponseHeaders {
+  const responseHeaders: Record<string, string> = {};
+  const cookies = getSetCookieHeaders(headers);
+
+  headers.forEach((value, key) => {
+    if (key.toLowerCase() === "set-cookie") {
+      return;
+    }
+
+    responseHeaders[key] = value;
+  });
+
+  return { headers: responseHeaders, cookies };
+}
+
 export interface LambdaExecutionEnv {
   event: LambdaEvent;
   lambdaContext: LambdaContext;
@@ -41,6 +84,7 @@ export type TypedLambdaHandler = (
 ) => Promise<{
   statusCode: number;
   headers?: Record<string, string>;
+  cookies?: string[];
   body?: string;
   isBase64Encoded?: boolean;
 }>;
@@ -108,7 +152,7 @@ export class CrocoLambdaAdapter {
         platform: "lambda",
         requestId: event.requestContext?.requestId ?? lambdaContext.awsRequestId,
         env: process.env,
-        logger: options.logger,
+        ...(options.logger !== undefined ? { logger: options.logger } : {}),
         native: {
           event,
           lambdaContext,
@@ -151,15 +195,12 @@ export class CrocoLambdaAdapter {
       const responseBody = isBinary
         ? Buffer.from(await response.arrayBuffer()).toString("base64")
         : await response.text();
-      const responseHeaders: Record<string, string> = {};
-
-      response.headers.forEach((value, key) => {
-        responseHeaders[key] = value;
-      });
+      const { headers: responseHeaders, cookies } = toLambdaResponseHeaders(response.headers);
 
       return {
         statusCode: response.status,
         headers: responseHeaders,
+        ...(cookies.length > 0 ? { cookies } : {}),
         body: responseBody,
         isBase64Encoded: isBinary,
       };

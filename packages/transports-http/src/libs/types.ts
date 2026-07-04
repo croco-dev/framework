@@ -111,6 +111,7 @@ export type LambdaHandler = (event: LambdaEvent, context: LambdaContext) => Prom
 export interface LambdaResponse {
   statusCode: number;
   headers?: Record<string, string>;
+  cookies?: string[];
   body?: string;
   isBase64Encoded?: boolean;
 }

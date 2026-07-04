@@ -13,6 +13,12 @@ title: "LambdaResponse"
 
 ***
 
+### cookies?
+
+> `optional` **cookies?**: `string`[]
+
+***
+
 ### headers?
 
 > `optional` **headers?**: `Record`\<`string`, `string`\>
