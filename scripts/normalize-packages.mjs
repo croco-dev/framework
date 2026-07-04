@@ -17,8 +17,9 @@ import ts from "typescript";
 import {
   DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
-  FILES_EXEMPTIONS,
   expectedFilesFor,
+  FILES_EXEMPTIONS,
+  fieldMatchesPath,
   findPackageJsonFiles,
   packageHasSourceEntrypoint,
 } from "./package-manifest-contracts.mjs";
@@ -51,6 +52,7 @@ const DEPENDENCY_RANGE_POLICY_SECTIONS = [
 ];
 const RUNTIME_DEPENDENCY_SECTIONS = ["dependencies", "peerDependencies", "optionalDependencies"];
 const INTERNAL_CROCO_PACKAGE_PREFIX = "@croco/";
+const CATALOG_METADATA_PATH = path.join("docs", "package-catalog.json");
 const INTERNAL_WORKSPACE_DEPENDENCY_RANGE = "workspace:*";
 const INTERNAL_PEER_DEPENDENCY_RANGE_EXCEPTIONS_PATH =
   "scripts/internal-peer-dependency-range-exceptions.json";
@@ -74,7 +76,9 @@ function main() {
   const rootDir = mode.rootDir;
   const packageJsonFiles = findWorkspacePackageJsonFiles(rootDir);
   const violations = [];
+  const workspacePackageRecords = readWorkspacePackageRecords(packageJsonFiles, rootDir);
   const workspacePackageNames = readWorkspacePackageNames(packageJsonFiles);
+  const spinePackageNames = readSpinePackageNames(rootDir, workspacePackageRecords, violations);
   const internalWorkspacePackageNames = new Set(
     Array.from(workspacePackageNames).filter((packageName) =>
       packageName.startsWith(INTERNAL_CROCO_PACKAGE_PREFIX),
@@ -111,7 +115,9 @@ function main() {
 
     checkedCount++;
 
-    const normalized = normalizePackage(pkg, pkgPath, rootDir);
+    const normalized = normalizePackage(pkg, pkgPath, rootDir, {
+      spinePackageNames,
+    });
     const normalizedContent = `${JSON.stringify(normalized, null, 2)}\n`;
     const changed = content !== normalizedContent;
 
@@ -122,7 +128,9 @@ function main() {
     }
 
     const packageToValidate = mode.write ? normalized : pkg;
-    for (const violation of validatePackage(packageToValidate, pkgPath, rootDir)) {
+    for (const violation of validatePackage(packageToValidate, pkgPath, rootDir, {
+      spinePackageNames,
+    })) {
       violations.push(`${relativePath}: ${violation}`);
     }
 
@@ -218,12 +226,15 @@ function parseArgs(args) {
   };
 }
 
-function normalizePackage(pkg, pkgPath, rootDir) {
+function normalizePackage(pkg, pkgPath, rootDir, options = {}) {
   const normalized = withRepositoryMetadata(
     structuredClone(pkg),
     expectedRepositoryFor(pkgPath, rootDir),
   );
   const hasSourceEntrypoint = packageHasSourceEntrypoint(pkgPath);
+  const directDistRoot = DIRECT_DIST_ENTRYPOINT_PACKAGES.has(normalized.name);
+  const spineSourceRoot =
+    options.spinePackageNames?.has(normalized.name) === true && !directDistRoot;
 
   normalized.publishConfig = normalizeObject(normalized.publishConfig);
   normalized.publishConfig.access = "public";
@@ -237,7 +248,8 @@ function normalizePackage(pkg, pkgPath, rootDir) {
 
   if (!ENTRYPOINT_EXEMPTIONS.has(normalized.name) && hasSourceEntrypoint) {
     normalizeEntrypointFields(normalized, {
-      directDistRoot: DIRECT_DIST_ENTRYPOINT_PACKAGES.has(normalized.name),
+      directDistRoot,
+      spineSourceRoot,
     });
   }
 
@@ -337,6 +349,109 @@ function readWorkspacePackageNames(packageJsonFiles) {
   return workspacePackageNames;
 }
 
+function readWorkspacePackageRecords(packageJsonFiles, rootDir) {
+  const records = [];
+
+  for (const pkgPath of packageJsonFiles) {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+    if (typeof pkg.name !== "string" || pkg.name.length === 0) {
+      continue;
+    }
+
+    records.push({
+      directoryName: path.basename(path.dirname(pkgPath)),
+      name: pkg.name,
+      packagePath: pkgPath,
+      relativePath: toPosixPath(path.relative(rootDir, pkgPath)),
+    });
+  }
+
+  return records;
+}
+
+function readSpinePackageNames(rootDir, workspacePackageRecords, violations) {
+  const catalogPath = path.join(rootDir, CATALOG_METADATA_PATH);
+  if (!fs.existsSync(catalogPath)) {
+    return new Set();
+  }
+
+  let catalog;
+  try {
+    catalog = JSON.parse(fs.readFileSync(catalogPath, "utf-8"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    violations.push(`${CATALOG_METADATA_PATH}: must contain valid JSON: ${message}`);
+    return new Set();
+  }
+
+  const spine = catalog.spine;
+  if (!spine || typeof spine !== "object" || Array.isArray(spine)) {
+    violations.push(`${CATALOG_METADATA_PATH}: spine must be an object`);
+    return new Set();
+  }
+
+  if (!Array.isArray(spine.packages)) {
+    violations.push(`${CATALOG_METADATA_PATH}: spine.packages must be a string array`);
+    return new Set();
+  }
+
+  const packageNames = new Set();
+  const seenEntries = new Set();
+
+  for (const [index, entry] of spine.packages.entries()) {
+    if (typeof entry !== "string" || entry.length === 0) {
+      violations.push(
+        `${CATALOG_METADATA_PATH}: spine.packages[${index}] must be a nonempty string`,
+      );
+      continue;
+    }
+
+    if (seenEntries.has(entry)) {
+      violations.push(`${CATALOG_METADATA_PATH}: spine.packages contains duplicate ${entry}`);
+      continue;
+    }
+    seenEntries.add(entry);
+
+    const matches = workspacePackageRecords.filter((record) =>
+      spineCatalogEntryMatchesPackage(entry, record),
+    );
+
+    if (matches.length === 0) {
+      violations.push(
+        `${CATALOG_METADATA_PATH}: spine.packages references missing package ${entry}`,
+      );
+      continue;
+    }
+
+    if (matches.length > 1) {
+      violations.push(
+        `${CATALOG_METADATA_PATH}: spine.packages entry ${entry} is ambiguous across ${matches.map((record) => record.relativePath).join(", ")}`,
+      );
+      continue;
+    }
+
+    const [record] = matches;
+    if (entry !== record.directoryName) {
+      violations.push(
+        `${CATALOG_METADATA_PATH}: spine.packages entry ${entry} must use package directory name ${record.directoryName}`,
+      );
+      continue;
+    }
+
+    packageNames.add(record.name);
+  }
+
+  return packageNames;
+}
+
+function spineCatalogEntryMatchesPackage(entry, record) {
+  return (
+    entry === record.directoryName ||
+    entry === record.name ||
+    `${INTERNAL_CROCO_PACKAGE_PREFIX}${entry}` === record.name
+  );
+}
+
 function normalizeDistSpecifier(value) {
   if (typeof value === "string" && value.startsWith("dist/")) {
     return `./${value}`;
@@ -350,25 +465,19 @@ function normalizeEntrypointFields(pkg, options = {}) {
     pkg.type = "commonjs";
   }
 
-  if (options.directDistRoot) {
-    const directRootExport = directRootExportFor(pkg);
-    pkg.main = DIST_INDEX_MAIN;
-    pkg.module = DIST_INDEX_MODULE;
-    pkg.types = DIST_INDEX_TYPES;
-    pkg.exports = {
-      ".": directRootExport,
-    };
-    pkg.publishConfig.exports = {
-      ".": directRootExport,
-    };
-  }
-
-  if (!pkg.main) {
+  if (options.spineSourceRoot) {
     pkg.main = SRC_INDEX;
-  }
-
-  if (!pkg.types) {
     pkg.types = SRC_INDEX;
+    delete pkg.module;
+    delete pkg.exports;
+  } else {
+    if (!pkg.main) {
+      pkg.main = SRC_INDEX;
+    }
+
+    if (!pkg.types) {
+      pkg.types = SRC_INDEX;
+    }
   }
 
   if (!isDistPath(pkg.publishConfig.main)) {
@@ -379,13 +488,59 @@ function normalizeEntrypointFields(pkg, options = {}) {
     pkg.publishConfig.types = DIST_INDEX_TYPES;
   }
 
-  if (!pkg.publishConfig.exports) {
-    pkg.publishConfig.exports = {};
+  if (options.directDistRoot) {
+    pkg.publishConfig.exports = {
+      ".": directDistPublishedRootExportFor(pkg),
+    };
+  } else {
+    if (!pkg.publishConfig.exports) {
+      pkg.publishConfig.exports = {};
+    }
+
+    if (!pkg.publishConfig.exports["."]) {
+      pkg.publishConfig.exports["."] = publishedRootExportFor(pkg);
+    }
   }
 
-  if (!pkg.publishConfig.exports["."]) {
-    pkg.publishConfig.exports["."] = publishedRootExportFor(pkg);
+  if (options.directDistRoot) {
+    pkg.main = pkg.publishConfig.main;
+    pkg.types = pkg.publishConfig.types;
+    pkg.exports = structuredClone(pkg.publishConfig.exports);
+
+    const moduleTarget = rootImportTargetFor(pkg.exports);
+    if (typeof moduleTarget === "string" && moduleTarget.endsWith(".mjs")) {
+      pkg.module = moduleTarget;
+    } else {
+      delete pkg.module;
+    }
   }
+}
+
+function directDistPublishedRootExportFor(pkg) {
+  const rootExport = pkg.publishConfig.exports?.["."];
+
+  if (typeof rootExport === "string") {
+    return isDistPath(rootExport) ? rootExport : publishedRootExportFor(pkg);
+  }
+
+  if (!rootExport || typeof rootExport !== "object" || Array.isArray(rootExport)) {
+    return publishedRootExportFor(pkg);
+  }
+
+  const normalizedRootExport = {};
+  for (const [conditionName, target] of Object.entries(rootExport)) {
+    if (isDistPath(target)) {
+      normalizedRootExport[conditionName] = target;
+    }
+  }
+
+  for (const [conditionName, target] of Object.entries(publishedRootExportFor(pkg))) {
+    if (!Object.hasOwn(normalizedRootExport, conditionName)) {
+      normalizedRootExport[conditionName] = target;
+    }
+  }
+
+  return normalizedRootExport;
 }
 
 function publishedRootExportFor(pkg) {
@@ -403,19 +558,17 @@ function publishedRootExportFor(pkg) {
   };
 }
 
-function directRootExportFor(pkg) {
-  if (pkg.type === "module") {
-    return {
-      types: DIST_INDEX_TYPES,
-      import: DIST_INDEX_MAIN,
-    };
+function rootImportTargetFor(exportsValue) {
+  const rootExport = exportsValue?.["."];
+  if (typeof rootExport === "string") {
+    return rootExport;
   }
 
-  return {
-    types: DIST_INDEX_TYPES,
-    import: DIST_INDEX_MODULE,
-    require: DIST_INDEX_MAIN,
-  };
+  if (!rootExport || typeof rootExport !== "object" || Array.isArray(rootExport)) {
+    return undefined;
+  }
+
+  return rootExport.import;
 }
 
 function validateWorkspacePackagePolicy(pkg, policyContext) {
@@ -424,7 +577,7 @@ function validateWorkspacePackagePolicy(pkg, policyContext) {
   return violations;
 }
 
-function validatePackage(pkg, pkgPath, rootDir) {
+function validatePackage(pkg, pkgPath, rootDir, context = {}) {
   const hasSourceEntrypoint = packageHasSourceEntrypoint(pkgPath);
   const violations = [];
   const expectedRepository = expectedRepositoryFor(pkgPath, rootDir);
@@ -474,6 +627,7 @@ function validatePackage(pkg, pkgPath, rootDir) {
   validateNoArrayTypes(pkg, "root", violations);
   validateNoArrayTypes(pkg.publishConfig, "publishConfig", violations);
   validateExportMap(pkg.publishConfig?.exports, "publishConfig.exports", violations);
+  validateSpineEntrypointPolicy(pkg, context, violations);
   validateDrizzleOrmCatalogPolicy(pkg, pkgPath, violations);
   validateDirectDistEntrypoints(pkg, violations);
   validateReflectMetadataDependency(pkg, path.dirname(pkgPath), violations);
@@ -750,17 +904,59 @@ function formatInternalPeerDependencyRangeException(exception) {
   return `${exception.packageName} peerDependencies.${exception.dependencyName}=${JSON.stringify(exception.range)}`;
 }
 
+function validateSpineEntrypointPolicy(pkg, context, violations) {
+  if (!context.spinePackageNames?.has(pkg.name)) {
+    return;
+  }
+
+  if (ENTRYPOINT_EXEMPTIONS.has(pkg.name) || DIRECT_DIST_ENTRYPOINT_PACKAGES.has(pkg.name)) {
+    return;
+  }
+
+  if (pkg.main !== SRC_INDEX) {
+    violations.push(
+      `spine root main must be ${SRC_INDEX} unless the package has a direct-dist entrypoint exception`,
+    );
+  }
+
+  if (pkg.types !== SRC_INDEX) {
+    violations.push(
+      `spine root types must be ${SRC_INDEX} unless the package has a direct-dist entrypoint exception`,
+    );
+  }
+
+  if (pkg.module !== undefined) {
+    violations.push("spine root module is only allowed for direct-dist entrypoint exceptions");
+  }
+
+  if (pkg.exports !== undefined) {
+    violations.push("spine root exports is only allowed for direct-dist entrypoint exceptions");
+  }
+}
+
 function validateDirectDistEntrypoints(pkg, violations) {
   if (!DIRECT_DIST_ENTRYPOINT_PACKAGES.has(pkg.name)) {
     return;
   }
 
+  validateRootPublishFieldParity(pkg, "main", "publishConfig.main", violations);
+  validateRootPublishFieldParity(pkg, "types", "publishConfig.types", violations);
+  validateRootPublishFieldParity(pkg, "exports", "publishConfig.exports", violations);
+
   validateDistPath(pkg.main, "main", violations);
-  validateDistPath(pkg.module, "module", violations, { mustEndWith: ".mjs" });
   validateDistPath(pkg.types, "types", violations, { mustEndWith: ".d.ts" });
 
   if (!pkg.exports?.["."]) {
     violations.push('exports["."] is required');
+  }
+
+  if (pkg.module !== undefined) {
+    validateDistPath(pkg.module, "module", violations, { mustEndWith: ".mjs" });
+
+    const rootImportTarget = rootImportTargetFor(pkg.exports);
+    if (pkg.module !== rootImportTarget) {
+      violations.push('module must match exports["."].import for direct-dist entrypoint packages');
+    }
   }
 
   validateNoSrcReferences(
@@ -774,6 +970,12 @@ function validateDirectDistEntrypoints(pkg, violations) {
     violations,
   );
   validateExportMap(pkg.exports, "exports", violations);
+}
+
+function validateRootPublishFieldParity(pkg, rootFieldName, publishFieldName, violations) {
+  if (!fieldMatchesPath(pkg, rootFieldName, publishFieldName)) {
+    violations.push(`${rootFieldName} must match ${publishFieldName}`);
+  }
 }
 
 function isDistPath(value) {

@@ -121,6 +121,24 @@ describe("package-entrypoint-smoke.mts", () => {
     );
   });
 
+  it("reports direct-dist root and publishConfig face mismatches", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "telemetry-api");
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "@croco/telemetry-api: root main must match publishConfig.main",
+    );
+    expect(result.stdout).toContain(
+      "@croco/telemetry-api: root types must match publishConfig.types",
+    );
+    expect(result.stdout).toContain(
+      "@croco/telemetry-api: root exports must match publishConfig.exports",
+    );
+  });
+
   it("fails when a runtime entrypoint imports an undeclared dependency", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "hidden-helper");

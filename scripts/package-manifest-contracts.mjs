@@ -7,11 +7,31 @@ export const ENTRYPOINT_EXEMPTIONS = new Map([
 
 export const FILES_EXEMPTIONS = new Map();
 
-export const DIRECT_DIST_ENTRYPOINT_PACKAGES = new Set([
-  "@croco/storage-cloudinary",
-  "@croco/storage-core",
-  "@croco/storage-r2",
+export const DIRECT_DIST_ENTRYPOINT_EXCEPTIONS = new Map([
+  [
+    "@croco/problems-core",
+    "Problem contracts are imported by ESM runtime policy checks while the package keeps CommonJS publish semantics.",
+  ],
+  ["@croco/rpc-codegen", "Codegen exposes a built CLI and dual ESM/CJS library surface from dist."],
+  [
+    "@croco/storage-cloudinary",
+    "Storage adapters keep root entrypoints aligned with packed dist artifacts for provider smoke checks.",
+  ],
+  [
+    "@croco/storage-core",
+    "Storage packages use direct dist roots so adapter consumers resolve the same files locally and from npm.",
+  ],
+  [
+    "@croco/storage-r2",
+    "Storage adapters keep root entrypoints aligned with packed dist artifacts for provider smoke checks.",
+  ],
+  [
+    "@croco/telemetry-api",
+    "Telemetry decorators and helpers are consumed as built runtime artifacts across Node and browser smokes.",
+  ],
 ]);
+
+export const DIRECT_DIST_ENTRYPOINT_PACKAGES = new Set(DIRECT_DIST_ENTRYPOINT_EXCEPTIONS.keys());
 
 export const EXPECTED_FILES_BY_PACKAGE = new Map([
   ["create-croco-app", ["dist", "templates"]],
@@ -20,6 +40,19 @@ export const EXPECTED_FILES_BY_PACKAGE = new Map([
 
 export function expectedFilesFor(packageName) {
   return EXPECTED_FILES_BY_PACKAGE.get(packageName) ?? ["dist"];
+}
+
+export function fieldMatchesPath(source, rootFieldName, publishFieldPath) {
+  const rootValue = source[rootFieldName];
+  const publishValue = publishFieldPath.split(".").reduce((value, propertyName) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return undefined;
+    }
+
+    return value[propertyName];
+  }, source);
+
+  return JSON.stringify(rootValue) === JSON.stringify(publishValue);
 }
 
 export function findPackageJsonFiles(dir, results = []) {

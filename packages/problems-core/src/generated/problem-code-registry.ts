@@ -8301,7 +8301,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/problems-core/src/libs/ProblemCategoryMapper.ts",
-          line: 10,
+          line: 19,
           column: 5,
           kind: "problem-class",
         },

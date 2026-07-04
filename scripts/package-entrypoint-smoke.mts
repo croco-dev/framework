@@ -13,7 +13,9 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
+  fieldMatchesPath,
   findPackageJsonFiles,
   packageHasSourceEntrypoint,
 } from "./package-manifest-contracts.mjs";
@@ -129,6 +131,7 @@ function main(): void {
         packagePath,
         sourceManifest,
       });
+      diagnostics.push(...directDistRootPublishFaceDiagnostics(sourceManifest, packageName));
     }
 
     if (diagnostics.length > 0) {
@@ -318,6 +321,52 @@ function packageIndexFor(packageJsonFiles: readonly string[]): ReadonlyMap<strin
   }
 
   return packageIndex;
+}
+
+function directDistRootPublishFaceDiagnostics(
+  sourceManifest: PackageJson,
+  packageName: string,
+): string[] {
+  if (!DIRECT_DIST_ENTRYPOINT_PACKAGES.has(packageName)) {
+    return [];
+  }
+
+  const diagnostics: string[] = [];
+  pushRootPublishFieldDiagnostic(
+    sourceManifest,
+    packageName,
+    "main",
+    "publishConfig.main",
+    diagnostics,
+  );
+  pushRootPublishFieldDiagnostic(
+    sourceManifest,
+    packageName,
+    "types",
+    "publishConfig.types",
+    diagnostics,
+  );
+  pushRootPublishFieldDiagnostic(
+    sourceManifest,
+    packageName,
+    "exports",
+    "publishConfig.exports",
+    diagnostics,
+  );
+
+  return diagnostics;
+}
+
+function pushRootPublishFieldDiagnostic(
+  sourceManifest: PackageJson,
+  packageName: string,
+  rootFieldName: string,
+  publishFieldName: string,
+  diagnostics: string[],
+): void {
+  if (!fieldMatchesPath(sourceManifest, rootFieldName, publishFieldName)) {
+    diagnostics.push(`${packageName}: root ${rootFieldName} must match ${publishFieldName}`);
+  }
 }
 
 function runPackageSmoke(
@@ -878,7 +927,11 @@ function collectExportEntries(
   packageName: string,
   exportsValue: unknown,
   diagnostics: string[],
-): Array<{ readonly fieldName: string; readonly specifier: string; readonly value: unknown }> {
+): Array<{
+  readonly fieldName: string;
+  readonly specifier: string;
+  readonly value: unknown;
+}> {
   if (!exportsValue) {
     return [];
   }

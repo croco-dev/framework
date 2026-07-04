@@ -5214,7 +5214,7 @@ Sources:
 
 Sources:
 
-- `packages/problems-core/src/libs/ProblemCategoryMapper.ts:10:5` (problem-class)
+- `packages/problems-core/src/libs/ProblemCategoryMapper.ts:19:5` (problem-class)
 
 <a id="protocols-core-contract-graph-diagnostics"></a>
 
