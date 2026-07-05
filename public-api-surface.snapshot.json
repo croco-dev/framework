@@ -18998,6 +18998,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "declareSecurityMiddlewareCapabilities",
+          "exportKind": "named",
+          "source": "./libs/middleware/SecurityMiddlewareMarker",
+          "declarationKind": "function"
+        },
+        {
           "name": "describeHttpPipelineGraph",
           "exportKind": "named",
           "source": null
@@ -19044,10 +19050,22 @@
           "declarationKind": "function"
         },
         {
+          "name": "getSecurityMiddlewareCapabilities",
+          "exportKind": "named",
+          "source": "./libs/middleware/SecurityMiddlewareMarker",
+          "declarationKind": "function"
+        },
+        {
           "name": "gracefulShutdownMiddleware",
           "exportKind": "named",
           "source": "./libs/middleware/GracefulShutdownMiddleware",
           "declarationKind": "const"
+        },
+        {
+          "name": "hasSecurityMiddlewareCapability",
+          "exportKind": "named",
+          "source": "./libs/middleware/SecurityMiddlewareMarker",
+          "declarationKind": "function"
         },
         {
           "name": "HealthCheckRegistry",
@@ -19414,6 +19432,11 @@
           "name": "SecurityHeadersOptions",
           "exportKind": "named",
           "source": "./libs/middleware/SecurityHeadersMiddleware"
+        },
+        {
+          "name": "SecurityMiddlewareCapability",
+          "exportKind": "named",
+          "source": "./libs/middleware/SecurityMiddlewareMarker"
         },
         {
           "name": "TypedLambdaHandler",

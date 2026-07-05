@@ -163,6 +163,12 @@ export {
   type SecurityHeadersOptions,
   securityHeadersMiddleware,
 } from "./libs/middleware/SecurityHeadersMiddleware";
+export {
+  declareSecurityMiddlewareCapabilities,
+  getSecurityMiddlewareCapabilities,
+  hasSecurityMiddlewareCapability,
+  type SecurityMiddlewareCapability,
+} from "./libs/middleware/SecurityMiddlewareMarker";
 export type { PipelineConfig } from "./libs/PipelineRunner";
 export type { HttpPipelineGraphConfig } from "./libs/PipelineRunner";
 export type { CompileOptions } from "./libs/RouteCompiler";

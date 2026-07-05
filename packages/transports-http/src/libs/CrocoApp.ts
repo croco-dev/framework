@@ -43,18 +43,13 @@ import {
 } from "./operationalEndpoints";
 
 import {
-  isSecurityMiddleware,
+  hasSecurityMiddlewareCapability,
+  type SecurityMiddlewareCapability,
   type SecurityMiddlewareExportName,
 } from "./middleware/SecurityMiddlewareMarker";
 import { type CompileOptions, RouteCompiler } from "./RouteCompiler";
 import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
-import type {
-  AppConfig,
-  CompiledRoute,
-  LambdaHandler,
-  ListenOptions,
-  MiddlewareFunction,
-} from "./types";
+import type { AppConfig, CompiledRoute, LambdaHandler, ListenOptions } from "./types";
 
 type SecurityValidationMode = NonNullable<AppConfig["securityValidation"]>;
 type DiValidationMode = NonNullable<AppConfig["diValidation"]>;
@@ -72,8 +67,8 @@ type DiBootstrapDiagnostic = {
 };
 
 type RequiredSecurityMiddleware = {
+  readonly capability: SecurityMiddlewareCapability;
   readonly exportName: SecurityMiddlewareExportName;
-  readonly matches: (middleware: MiddlewareFunction) => boolean;
 };
 
 const SECURITY_MIDDLEWARE_VALIDATION_CODE = "CROCO_HTTP_SECURITY_001";
@@ -85,29 +80,20 @@ const LEGACY_SECURITY_MIDDLEWARE_VALIDATION_PROBLEM = {
 
 const REQUIRED_SECURITY_MIDDLEWARES: readonly RequiredSecurityMiddleware[] = [
   {
+    capability: "security-headers",
     exportName: "securityHeadersMiddleware",
-    matches: (middleware) =>
-      isSecurityMiddleware(middleware, "securityHeadersMiddleware") ||
-      middleware.toString().includes("X-Content-Type-Options"),
   },
   {
+    capability: "cors",
     exportName: "corsMiddleware",
-    matches: (middleware) =>
-      isSecurityMiddleware(middleware, "corsMiddleware") ||
-      middleware.toString().includes("Access-Control-Allow-Origin"),
   },
   {
+    capability: "body-limit",
     exportName: "bodyLimitMiddleware",
-    matches: (middleware) =>
-      isSecurityMiddleware(middleware, "bodyLimitMiddleware") ||
-      middleware.toString().includes("content-length"),
   },
   {
+    capability: "rate-limit",
     exportName: "rateLimitHttpMiddleware",
-    matches: (middleware) =>
-      isSecurityMiddleware(middleware, "rateLimitHttpMiddleware") ||
-      middleware.toString().includes("rateLimitHeaders") ||
-      middleware.toString().includes("applyRateLimitHeaders"),
   },
 ] as const;
 
@@ -175,7 +161,9 @@ export class CrocoApp {
     const middlewares = this.config.middlewares ?? [];
     const missingMiddlewares = REQUIRED_SECURITY_MIDDLEWARES.filter(
       (requiredMiddleware) =>
-        !middlewares.some((middleware) => requiredMiddleware.matches(middleware)),
+        !middlewares.some((middleware) =>
+          hasSecurityMiddlewareCapability(middleware, requiredMiddleware.capability),
+        ),
     );
 
     if (missingMiddlewares.length === 0) {

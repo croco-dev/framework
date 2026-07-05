@@ -162,6 +162,7 @@ Search: CROCO_ROUTE_004, missing path param, @Param, route contract
 | `CROCO_BUILD_002`              | build-time           | error    | generated artifact가 source와 drift됨            | package-specific write command 실행 후 diff 검토               |
 | `CROCO_BUILD_003`              | build-time           | error    | controller source에 TypeScript 오류가 있음       | controller type error 수정 후 contract 재실행                  |
 | `CROCO_HTTP_SECURITY_001`      | runtime              | error    | HTTP bootstrap에 필수 security middleware가 없음 | security headers, CORS, body limit, rate limit middleware 등록 |
+| `CROCO_HTTP_SECURITY_002`      | runtime              | error    | 지원하지 않는 security capability를 선언함       | supported capability literal로 수정                            |
 
 ### CLI diagnostic code migration
 
@@ -273,13 +274,25 @@ Fix: 출력된 source file, line/column, `TS####` diagnostic을 기준으로 con
 ### `CROCO_HTTP_SECURITY_001`
 
 Cause: HTTP app bootstrap이 `securityHeadersMiddleware`, `corsMiddleware`, `bodyLimitMiddleware`,
-`rateLimitHttpMiddleware` 중 하나 이상이 빠진 상태를 발견했습니다.
-Fix: 운영 및 generated app 기본 경로에서는 네 가지 middleware를 모두 등록합니다. 로컬 마이그레이션이나
+`rateLimitHttpMiddleware` 중 하나 이상이 빠졌거나, custom/wrapper middleware가 명시적인 security
+capability metadata를 선언하지 않은 상태를 발견했습니다. 검증은 middleware source text를 검사하지 않습니다.
+Fix: 운영 및 generated app 기본 경로에서는 네 가지 built-in middleware를 모두 등록합니다. Custom 또는
+wrapper middleware를 사용하는 경우 `declareSecurityMiddlewareCapabilities()`로 `security-headers`,
+`cors`, `body-limit`, `rate-limit` 중 제공하는 capability를 선언하거나,
+`getSecurityMiddlewareCapabilities()`로 감싼 middleware의 metadata를 복사합니다. 로컬 마이그레이션이나
 테스트 fixture처럼 실패를 의도적으로 확인하는 경우에만 `securityValidation: "off"` 또는
 `CROCO_HTTP_SECURITY_VALIDATION=off`를 사용하고, PR 설명이나 fixture 이름에 그 이유를 남깁니다.
 이전 slash-form code인 `transports-http/security-middleware-validation`을 매칭하던 코드는
 `CROCO_HTTP_SECURITY_001`로 옮기고, 전환 기간에는 Problem `extensions.legacyCode`에서 이전 값을
 확인할 수 있습니다.
+
+### `CROCO_HTTP_SECURITY_002`
+
+Cause: `declareSecurityMiddlewareCapabilities()` 호출이 지원하지 않는 security capability literal을
+받았습니다. 지원되는 값은 `security-headers`, `cors`, `body-limit`, `rate-limit`입니다.
+Fix: Custom 또는 wrapper middleware 선언을 지원되는 literal 중 하나 이상으로 수정합니다. JavaScript
+호출자는 오타가 runtime에서 `extensions.capability`와 함께 실패하므로, 해당 값을 기준으로 선언 코드를
+고칩니다.
 
 ### 변경 정책
 
