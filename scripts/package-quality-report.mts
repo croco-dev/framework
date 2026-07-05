@@ -156,7 +156,7 @@ const bundleSizeArtifactSuffixes = [
   ".json",
   ".d.ts",
 ];
-const hashedChunkArtifactPattern = /(^|\/)chunk-[A-Z0-9]{8}(\.(?:cjs|mjs|js)(?:\.map)?)$/;
+const hashedChunkArtifactPattern = /(^|\/)chunk-[A-Z0-9]{8}(\.(?:cjs|mjs|js)(?:\.map)?)$/i;
 
 const DEPENDENCY_BOUNDARY_RULES: readonly DependencyBoundaryRule[] = [
   {

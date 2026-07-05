@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { parseCoreCoveragePackageFilters } from "../packages/cli/src/libs/coreCoverageFilters.ts";
+
+export { parseCoreCoveragePackageFilters } from "../packages/cli/src/libs/coreCoverageFilters.ts";
 
 export type CoverageMetric = "lines" | "branches" | "functions" | "statements";
 
@@ -139,17 +142,6 @@ function readCoreCoveragePackages(): string[] {
   return packages;
 }
 
-export function parseCoreCoveragePackageFilters(coreCoverageCommand: string): string[] {
-  const coverageCommandStart = coreCoverageCommand.indexOf("CORE_COVERAGE=true");
-  const coverageCommand =
-    coverageCommandStart === -1
-      ? coreCoverageCommand
-      : coreCoverageCommand.slice(coverageCommandStart);
-  const matches = coverageCommand.matchAll(/--filter\s+((?:@croco\/)?[\w-]+)/g);
-
-  return Array.from(matches, ([, packageName]) => packageName);
-}
-
 function readVitestCoreCoveragePackages(): string[] {
   return parseStringArrayExport(readFileSync(vitestConfigPath, "utf-8"), "CORE_COVERAGE_PACKAGES");
 }
@@ -172,12 +164,20 @@ function escapeRegExp(value: string): string {
 }
 
 function readCoreCoverageThresholds(): Record<CoverageMetric, number> {
-  const source = readFileSync(vitestConfigPath, "utf-8");
-  const thresholdSection = source.match(/export const CORE_COVERAGE_THRESHOLDS = \{([\s\S]*?)\};/);
+  return parseCoreCoverageThresholds(readFileSync(vitestConfigPath, "utf-8"), vitestConfigPath);
+}
+
+export function parseCoreCoverageThresholds(
+  source: string,
+  sourceLabel = "the provided vitest config source",
+): Record<CoverageMetric, number> {
+  const thresholdSection = source.match(
+    /export const CORE_COVERAGE_THRESHOLDS = \{([\s\S]*?)\}\s*;?/,
+  );
   const thresholdItems = thresholdSection?.[1];
 
   if (!thresholdItems) {
-    throw new Error(`failed to read core coverage config from ${vitestConfigPath}`);
+    throw new Error(`failed to read core coverage config from ${sourceLabel}`);
   }
 
   const coreCoverageThresholds = thresholdItems
