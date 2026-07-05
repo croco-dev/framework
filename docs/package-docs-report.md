@@ -23,6 +23,17 @@ Release-critical package set whose public API, diagnostics, generated artifacts,
 
 Downstream release gates should select this package set from `docs/package-catalog.json` `spine.packages`. Spine membership is independent from maturity: non-spine alpha/beta packages can remain outside the 1.0 blocker set unless a golden path or certified adapter contract explicitly pulls them in.
 
+Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alpha/WIP, 0 deprecated; 8 beta promotion records.
+
+| Generated status                | Count | Source                                       |
+| ------------------------------- | ----: | -------------------------------------------- |
+| Spine packages                  |    18 | `docs/package-catalog.json` `spine.packages` |
+| Production-ready spine packages |    10 | `maturity.production.packages`               |
+| Beta spine packages             |     8 | `maturity.beta.packages`                     |
+| Alpha/WIP spine packages        |     0 | `maturity.alpha.packages`                    |
+| Deprecated spine packages       |     0 | `maturity.deprecated.packages`               |
+| Beta promotion records          |     8 | `spine.promotion.packages`                   |
+
 | Package                     | Group       | Maturity            | Directory                     |
 | --------------------------- | ----------- | ------------------- | ----------------------------- |
 | `@croco/framework-context`  | Core        | 🟢 production-ready | `packages/framework-context`  |
