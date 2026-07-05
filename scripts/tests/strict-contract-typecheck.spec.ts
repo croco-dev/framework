@@ -58,7 +58,7 @@ describe("strict-contract-typecheck.mts", () => {
       protocolsCorePackage,
       [
         "packages/problems-core/src/libs/Problem.ts(56,5): error TS2412: dependency strict diagnostic",
-        "packages/protocols-core/src/libs/ContractGraph.ts(183,3): error TS2322: target strict diagnostic",
+        "packages/protocols-core/src/libs/ContractGraph.ts(183,3): error TS6059: File '/repo/packages/problems-core/src/index.ts' is not under 'rootDir' '/repo/packages/protocols-core/src'. 'rootDir' is expected to contain all source files.",
         "",
       ].join("\n"),
     );
@@ -69,8 +69,9 @@ describe("strict-contract-typecheck.mts", () => {
         file: "packages/protocols-core/src/libs/ContractGraph.ts",
         line: 183,
         column: 3,
-        code: "TS2322",
-        message: "target strict diagnostic",
+        code: "TS6059",
+        message:
+          "File 'packages/problems-core/src/index.ts' is not under 'rootDir' 'packages/protocols-core/src'. 'rootDir' is expected to contain all source files.",
       },
     ]);
   });

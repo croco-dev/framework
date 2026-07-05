@@ -83,6 +83,11 @@ function toRelativeDiagnosticFile(rootDir: string, file: string): string {
   return toPosixPath(relative(rootDir, absoluteFile));
 }
 
+function normalizeDiagnosticMessage(rootDir: string, message: string): string {
+  const rootPrefix = `${toPosixPath(resolve(rootDir))}/`;
+  return toPosixPath(message).split(rootPrefix).join("");
+}
+
 function normalizeDiagnosticLine(
   rootDir: string,
   pkg: StrictContractPackage,
@@ -107,7 +112,7 @@ function normalizeDiagnosticLine(
     line: Number(groups.line ?? 0),
     column: Number(groups.column ?? 0),
     code: `TS${groups.code ?? ""}`,
-    message: groups.message ?? "",
+    message: normalizeDiagnosticMessage(rootDir, groups.message ?? ""),
   };
 }
 

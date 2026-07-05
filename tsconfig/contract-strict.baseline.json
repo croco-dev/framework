@@ -163,7 +163,7 @@
       "line": 8,
       "column": 8,
       "code": "TS6059",
-      "message": "File '/Users/owen/.codex/worktrees/ad74/framework/packages/architecture-policy/src/index.ts' is not under 'rootDir' '/Users/owen/.codex/worktrees/ad74/framework/packages/cli/src'. 'rootDir' is expected to contain all source files."
+      "message": "File 'packages/architecture-policy/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "@croco/cli",
@@ -171,7 +171,7 @@
       "line": 11,
       "column": 8,
       "code": "TS6059",
-      "message": "File '/Users/owen/.codex/worktrees/ad74/framework/packages/protocols-core/src/index.ts' is not under 'rootDir' '/Users/owen/.codex/worktrees/ad74/framework/packages/cli/src'. 'rootDir' is expected to contain all source files."
+      "message": "File 'packages/protocols-core/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "@croco/cli",
@@ -179,7 +179,7 @@
       "line": 167,
       "column": 46,
       "code": "TS6059",
-      "message": "File '/Users/owen/.codex/worktrees/ad74/framework/packages/rpc-codegen/src/index.ts' is not under 'rootDir' '/Users/owen/.codex/worktrees/ad74/framework/packages/cli/src'. 'rootDir' is expected to contain all source files."
+      "message": "File 'packages/rpc-codegen/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "@croco/cli",
@@ -363,7 +363,7 @@
       "line": 9,
       "column": 8,
       "code": "TS6059",
-      "message": "File '/Users/owen/.codex/worktrees/ad74/framework/packages/framework-context/src/index.ts' is not under 'rootDir' '/Users/owen/.codex/worktrees/ad74/framework/packages/cli/src'. 'rootDir' is expected to contain all source files."
+      "message": "File 'packages/framework-context/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "@croco/cli",
@@ -1331,7 +1331,7 @@
       "line": 17,
       "column": 40,
       "code": "TS6059",
-      "message": "File '/Users/owen/.codex/worktrees/ad74/framework/packages/framework-routes/src/index.ts' is not under 'rootDir' '/Users/owen/.codex/worktrees/ad74/framework/packages/cli/src'. 'rootDir' is expected to contain all source files."
+      "message": "File 'packages/framework-routes/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "@croco/cli",
@@ -1483,7 +1483,7 @@
       "line": 1,
       "column": 37,
       "code": "TS6059",
-      "message": "File '/Users/owen/.codex/worktrees/ad74/framework/packages/diagnostics-core/src/index.ts' is not under 'rootDir' '/Users/owen/.codex/worktrees/ad74/framework/packages/cli/src'. 'rootDir' is expected to contain all source files."
+      "message": "File 'packages/diagnostics-core/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "@croco/cli",
@@ -3931,7 +3931,7 @@
       "line": 1,
       "column": 63,
       "code": "TS6059",
-      "message": "File '/Users/owen/.codex/worktrees/ad74/framework/packages/problems-core/src/index.ts' is not under 'rootDir' '/Users/owen/.codex/worktrees/ad74/framework/packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
+      "message": "File 'packages/problems-core/src/index.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "create-croco-app",
@@ -3955,7 +3955,7 @@
       "line": 11,
       "column": 8,
       "code": "TS6059",
-      "message": "File '/Users/owen/.codex/worktrees/ad74/framework/packages/framework-context/src/index.ts' is not under 'rootDir' '/Users/owen/.codex/worktrees/ad74/framework/packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
+      "message": "File 'packages/framework-context/src/index.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "create-croco-app",
@@ -4275,7 +4275,7 @@
       "line": 1,
       "column": 38,
       "code": "TS6059",
-      "message": "File '/Users/owen/.codex/worktrees/ad74/framework/packages/tenant-core/src/tenant-model.ts' is not under 'rootDir' '/Users/owen/.codex/worktrees/ad74/framework/packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
+      "message": "File 'packages/tenant-core/src/tenant-model.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
     }
   ]
 }
