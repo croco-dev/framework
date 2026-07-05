@@ -22,6 +22,8 @@ const PARAM_TYPE_MAP: Record<ParamType, ArgumentMetadata["type"]> = {
   [ParamType.RAW]: "custom",
 };
 
+const BODY_PARSE_FAILURE_MESSAGE = "Request body must contain valid JSON";
+
 class ZodValidationPipe implements PipeTransform<unknown, unknown> {
   constructor(private readonly schema: z.ZodType) {}
 
@@ -106,10 +108,23 @@ export class ParamResolver {
       return cachedBodyPromise;
     }
 
-    const bodyPromise = ctx.json();
+    const bodyPromise = this.parseBody(ctx);
     ctx.set(ParamResolver.PARSED_BODY_PROMISE_KEY, bodyPromise);
 
     return bodyPromise;
+  }
+
+  private async parseBody(ctx: CrocoHttpContext): Promise<unknown> {
+    try {
+      return await ctx.json();
+    } catch {
+      throw new RequestValidationProblem("body", [
+        {
+          path: "value",
+          message: BODY_PARSE_FAILURE_MESSAGE,
+        },
+      ]);
+    }
   }
 
   private async resolveParam(
@@ -148,7 +163,7 @@ export class ParamResolver {
 
     const metadata: ArgumentMetadata = {
       type: PARAM_TYPE_MAP[param.type] ?? "custom",
-      name: param.name,
+      ...(param.name ? { name: param.name } : {}),
     };
 
     let result = value;

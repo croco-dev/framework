@@ -11672,7 +11672,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/ParamResolver.ts",
-          line: 177,
+          line: 192,
           column: 13,
           kind: "problem-factory",
         },

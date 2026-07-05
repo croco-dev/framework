@@ -653,14 +653,6 @@
     },
     {
       "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/ParamResolver.ts",
-      "line": 149,
-      "column": 11,
-      "code": "TS2375",
-      "message": "Type '{ type: \"query\" | \"body\" | \"header\" | \"param\" | \"custom\"; name: string | undefined; }' is not assignable to type 'ArgumentMetadata' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/PipelineRunner.ts",
       "line": 127,
       "column": 45,
