@@ -6,10 +6,12 @@ import {
   Get,
   Param,
   Post,
+  ProblemResponses,
   Put,
   type RouteBody,
   type RouteParam,
   type RouteResponse,
+  routeProblemResponses,
 } from "@croco/protocols-rest";
 import {
   createUserRoute,
@@ -29,6 +31,7 @@ export class UserController {
   }
 
   @Get(getUserRoute)
+  @ProblemResponses(...routeProblemResponses(getUserRoute))
   async getById(
     @Param(getUserRoute, "id") id: RouteParam<typeof getUserRoute, "id">,
   ): Promise<RouteResponse<typeof getUserRoute>> {
@@ -43,6 +46,7 @@ export class UserController {
   }
 
   @Put(updateUserRoute)
+  @ProblemResponses(...routeProblemResponses(updateUserRoute))
   async update(
     @Param(updateUserRoute, "id") id: RouteParam<typeof updateUserRoute, "id">,
     @Body(updateUserRoute) input: RouteBody<typeof updateUserRoute>,
@@ -51,6 +55,7 @@ export class UserController {
   }
 
   @Delete(deleteUserRoute)
+  @ProblemResponses(...routeProblemResponses(deleteUserRoute))
   async delete(
     @Param(deleteUserRoute, "id") id: RouteParam<typeof deleteUserRoute, "id">,
   ): Promise<RouteResponse<typeof deleteUserRoute>> {

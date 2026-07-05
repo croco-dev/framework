@@ -26,6 +26,12 @@ type ExtractedCommand = {
   readonly line: number;
 };
 
+type RootReadmeToolingCommand = {
+  readonly command: string;
+  readonly line: number;
+  readonly scriptName: string;
+};
+
 type ParsedCreateCrocoAppCommand = {
   readonly projectName?: string;
   readonly flags: Map<string, string | boolean>;
@@ -34,6 +40,52 @@ type ParsedCreateCrocoAppCommand = {
 type PackageJsonWithScripts = {
   readonly scripts?: Record<string, string | undefined>;
 };
+
+type PackageCatalog = {
+  readonly maturity?: unknown;
+  readonly spine?: unknown;
+};
+
+type SpineStatusCounts = {
+  readonly alpha: number;
+  readonly beta: number;
+  readonly betaPromotionRecords: number;
+  readonly deprecated: number;
+  readonly production: number;
+  readonly total: number;
+};
+
+const requiredRootReadmeScriptNames = [
+  "build",
+  "lint",
+  "format",
+  "check",
+  "docs:catalog:check",
+  "first-success:verify",
+  "release-docs:check",
+  "release:spine-evidence",
+  "test",
+  "typecheck",
+] as const;
+
+const allowedRootReadmeNonScriptCommands = new Set(["install"]);
+const rootReadmeReadinessHeading = "## 🗺️ 로드맵 — 1.0 readiness status";
+const rootReadmeToolingHeading = "### 주요 명령어";
+
+const firstSuccessCommandContracts = [
+  {
+    command: "pnpm quick-start-lambda:smoke",
+    scriptName: "quick-start-lambda:smoke",
+  },
+  {
+    command: "pnpm saas-billing-golden-path:smoke",
+    scriptName: "saas-billing-golden-path:smoke",
+  },
+  {
+    command: "pnpm first-success:verify",
+    scriptName: "first-success:verify",
+  },
+] as const;
 
 const CREATE_CROCO_APP_CHOICES = new Map<string, readonly string[]>([
   ["--preset", ["blank", "ddd-api", "ddd-fullstack", "ddd-vike-fullstack", "production-app"]],
@@ -81,6 +133,119 @@ function readRootArg(): string {
 
 function normalizeMarkdownShellLine(line: string): string {
   return line.trim().replace(/^>\s?/, "").trim();
+}
+
+function extractMarkdownSection(
+  content: string,
+  heading: string,
+  boundaryPattern: RegExp,
+): string | undefined {
+  const startIndex = content.indexOf(heading);
+  if (startIndex === -1) {
+    return undefined;
+  }
+
+  const body = content.slice(startIndex + heading.length);
+  const boundaryIndex = body.search(boundaryPattern);
+
+  return boundaryIndex === -1 ? body : body.slice(0, boundaryIndex);
+}
+
+function extractFirstMarkdownFence(section: string): string | undefined {
+  return /```(?:bash|sh|shell)?\r?\n([\s\S]*?)\r?\n```/.exec(section)?.[1];
+}
+
+function stripInlineShellComment(command: string): string {
+  const [beforeComment] = command.split("#", 1);
+
+  return beforeComment.trim();
+}
+
+function parseRootPnpmCommandName(command: string): string | undefined {
+  const args = splitShellWords(command);
+
+  if (args[0] !== "pnpm") {
+    return undefined;
+  }
+
+  if (args[1] === "run") {
+    return args[2];
+  }
+
+  return args[1];
+}
+
+function extractRootReadmeToolingCommands(rootReadme: string): {
+  readonly commands: readonly RootReadmeToolingCommand[];
+  readonly failures: readonly string[];
+} {
+  const toolingSection = extractMarkdownSection(rootReadme, rootReadmeToolingHeading, /\n#{1,3}\s/);
+  if (!toolingSection) {
+    return {
+      commands: [],
+      failures: [`README.md missing ${rootReadmeToolingHeading} section`],
+    };
+  }
+
+  const toolingFence = extractFirstMarkdownFence(toolingSection);
+  if (!toolingFence) {
+    return {
+      commands: [],
+      failures: [`README.md ${rootReadmeToolingHeading} section missing a shell command block`],
+    };
+  }
+
+  const commands: RootReadmeToolingCommand[] = [];
+  for (const [index, rawLine] of toolingFence.split(/\r?\n/).entries()) {
+    const line = normalizeMarkdownShellLine(rawLine);
+    if (!line.startsWith("pnpm ")) {
+      continue;
+    }
+
+    const command = stripInlineShellComment(line);
+    const scriptName = parseRootPnpmCommandName(command);
+    if (scriptName) {
+      commands.push({ command, line: index + 1, scriptName });
+    }
+  }
+
+  return { commands, failures: [] };
+}
+
+function validateRootReadmeTooling(
+  rootReadme: string,
+  rootPackageJson: PackageJsonWithScripts,
+): string[] {
+  const extraction = extractRootReadmeToolingCommands(rootReadme);
+  const failures = [...extraction.failures];
+  const documentedScriptNames = new Set(extraction.commands.map((command) => command.scriptName));
+
+  for (const scriptName of requiredRootReadmeScriptNames) {
+    if (!rootPackageJson.scripts?.[scriptName]) {
+      failures.push(`root package.json missing required script \`${scriptName}\``);
+      continue;
+    }
+
+    if (!documentedScriptNames.has(scriptName)) {
+      failures.push(
+        `README.md missing root tooling command \`pnpm ${scriptName}\` in ${rootReadmeToolingHeading}`,
+      );
+    }
+  }
+
+  for (const command of extraction.commands) {
+    if (allowedRootReadmeNonScriptCommands.has(command.scriptName)) {
+      continue;
+    }
+
+    if (!rootPackageJson.scripts?.[command.scriptName]) {
+      failures.push(
+        `README.md documents unknown root tooling command \`${command.command}\` in ${rootReadmeToolingHeading}`,
+      );
+    }
+  }
+
+  return failures;
 }
 
 function extractCreateCrocoAppCommands(content: string): ExtractedCommand[] {
@@ -377,6 +542,79 @@ function parsePackageJson(content: string): PackageJsonWithScripts {
   }
 }
 
+function parsePackageCatalog(content: string): PackageCatalog | undefined {
+  try {
+    return JSON.parse(content) as PackageCatalog;
+  } catch {
+    return undefined;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function readStringArray(value: unknown): readonly string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function readCatalogPackageSet(catalog: PackageCatalog, maturity: string): ReadonlySet<string> {
+  if (!isRecord(catalog.maturity)) {
+    return new Set();
+  }
+
+  const maturityConfig = catalog.maturity[maturity];
+  if (!isRecord(maturityConfig)) {
+    return new Set();
+  }
+
+  return new Set(readStringArray(maturityConfig.packages));
+}
+
+function getSpineStatusCounts(catalog: PackageCatalog): SpineStatusCounts | undefined {
+  if (!isRecord(catalog.spine)) {
+    return undefined;
+  }
+
+  const spinePackages = readStringArray(catalog.spine.packages);
+  if (spinePackages.length === 0) {
+    return undefined;
+  }
+
+  const packageMaturity = {
+    alpha: readCatalogPackageSet(catalog, "alpha"),
+    beta: readCatalogPackageSet(catalog, "beta"),
+    deprecated: readCatalogPackageSet(catalog, "deprecated"),
+    production: readCatalogPackageSet(catalog, "production"),
+  };
+  const promotion = isRecord(catalog.spine.promotion) ? catalog.spine.promotion : {};
+  const promotionPackages = isRecord(promotion.packages)
+    ? new Set(Object.keys(promotion.packages))
+    : new Set<string>();
+  const betaSpinePackages = spinePackages.filter((packageName) =>
+    packageMaturity.beta.has(packageName),
+  );
+
+  return {
+    alpha: spinePackages.filter((packageName) => packageMaturity.alpha.has(packageName)).length,
+    beta: betaSpinePackages.length,
+    betaPromotionRecords: betaSpinePackages.filter((packageName) =>
+      promotionPackages.has(packageName),
+    ).length,
+    deprecated: spinePackages.filter((packageName) => packageMaturity.deprecated.has(packageName))
+      .length,
+    production: spinePackages.filter((packageName) => packageMaturity.production.has(packageName))
+      .length,
+    total: spinePackages.length,
+  };
+}
+
+function formatSpineStatusSummary(status: SpineStatusCounts): string {
+  return `Current 1.0 spine status: ${status.total} spine packages; ${status.production} production-ready, ${status.beta} beta, ${status.alpha} alpha/WIP, ${status.deprecated} deprecated; ${status.betaPromotionRecords} beta promotion records.`;
+}
+
 // ── Paths ────────────────────────────────────────────────────────────────────
 
 const ROOT = readRootArg();
@@ -407,8 +645,10 @@ const paths = {
     "getting-started.mdx",
   ),
   docsIndex: join(ROOT, "packages", "docs", "src", "content", "docs", "en", "index.mdx"),
+  packageCatalog: join(ROOT, "docs", "package-catalog.json"),
   packageDocsReport: join(ROOT, "docs", "package-docs-report.md"),
   prompts: join(ROOT, "packages", "create-croco-app", "src", "prompts.ts"),
+  releaseSpineDocs: join(ROOT, "docs", "release", "croco-1.0-spine.md"),
 };
 
 // ── A. Quick-start-lambda endpoint contract ──────────────────────────────────
@@ -753,7 +993,10 @@ console.log("\n📋 E. Docs contract\n");
   const rootReadme = read(paths.rootReadme);
   const docsIndex = read(paths.docsIndex);
   const gettingStarted = read(paths.gettingStarted);
+  const packageCatalog = read(paths.packageCatalog);
   const packageDocsReport = read(paths.packageDocsReport);
+  const releaseSpineDocs = read(paths.releaseSpineDocs);
+  const rootPackageJson = parsePackageJson(read(join(ROOT, "package.json")));
   const publicDocsSources: PublicDocsSource[] = [
     {
       label: "README.md",
@@ -768,6 +1011,20 @@ console.log("\n📋 E. Docs contract\n");
       label: "getting-started guide",
       content: gettingStarted,
       requireSkipFlags: true,
+    },
+  ];
+  const firstSuccessDocsSources: PublicDocsSource[] = [
+    {
+      label: "README.md",
+      content: rootReadme,
+    },
+    {
+      label: "getting-started guide",
+      content: gettingStarted,
+    },
+    {
+      label: "Croco 1.0 spine release docs",
+      content: releaseSpineDocs,
     },
   ];
 
@@ -832,6 +1089,84 @@ console.log("\n📋 E. Docs contract\n");
         "D5",
         `Public package-count claims match generated catalog count (${publicPackageCount})`,
       );
+    }
+  }
+
+  const firstSuccessCommandFailures: string[] = [];
+  for (const contract of firstSuccessCommandContracts) {
+    if (!rootPackageJson.scripts?.[contract.scriptName]) {
+      firstSuccessCommandFailures.push(
+        `root package.json missing \`${contract.scriptName}\` script for ${contract.command}`,
+      );
+      continue;
+    }
+
+    for (const source of firstSuccessDocsSources) {
+      if (!source.content.includes(contract.command)) {
+        firstSuccessCommandFailures.push(
+          `${source.label} missing first-success command \`${contract.command}\``,
+        );
+      }
+    }
+  }
+
+  if (firstSuccessCommandFailures.length > 0) {
+    for (const commandFailure of firstSuccessCommandFailures) {
+      fail("D6", commandFailure);
+    }
+  } else {
+    pass("D6", "README, getting-started docs, and release spine docs share first-success commands");
+  }
+
+  const toolingFailures = validateRootReadmeTooling(rootReadme, rootPackageJson);
+
+  if (rootReadme.includes("Biome")) {
+    toolingFailures.push(
+      "README.md still references Biome, but root quality scripts use oxlint/oxfmt",
+    );
+  }
+
+  if (toolingFailures.length > 0) {
+    for (const toolingFailure of toolingFailures) {
+      fail("D7", toolingFailure);
+    }
+  } else {
+    pass("D7", "README tooling commands match required root package scripts");
+  }
+
+  const catalog = parsePackageCatalog(packageCatalog);
+  const spineStatus = catalog ? getSpineStatusCounts(catalog) : undefined;
+  if (!spineStatus) {
+    fail("D8", "docs/package-catalog.json missing readable spine status metadata");
+  } else {
+    const expectedStatus = formatSpineStatusSummary(spineStatus);
+    const rootReadmeReadinessSection = extractMarkdownSection(
+      rootReadme,
+      rootReadmeReadinessHeading,
+      /\n(?:---|## )/,
+    );
+    const statusFailures: string[] = [];
+
+    if (!rootReadmeReadinessSection) {
+      statusFailures.push(`README.md missing ${rootReadmeReadinessHeading} section`);
+    } else if (!rootReadmeReadinessSection.includes(expectedStatus)) {
+      statusFailures.push(
+        `README.md readiness status section missing generated spine status: ${expectedStatus}`,
+      );
+    }
+
+    if (!releaseSpineDocs.includes(expectedStatus)) {
+      statusFailures.push(
+        `Croco 1.0 spine release docs missing generated spine status: ${expectedStatus}`,
+      );
+    }
+
+    if (statusFailures.length > 0) {
+      for (const statusFailure of statusFailures) {
+        fail("D8", statusFailure);
+      }
+    } else {
+      pass("D8", "Public 1.0 spine status matches docs/package-catalog.json");
     }
   }
 }

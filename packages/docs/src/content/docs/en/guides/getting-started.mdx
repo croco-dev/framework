@@ -147,10 +147,12 @@ The repository validates those references with:
 ```bash
 pnpm quick-start-lambda:smoke
 pnpm saas-billing-golden-path:smoke
+pnpm first-success:verify
 ```
 
 The SaaS smoke command builds the example and its workspace dependencies before it runs the
-checked-in golden-path tests.
+checked-in golden-path tests. The first-success verifier keeps this guide, the root README, release
+spine docs, public scaffold commands, and checked examples pointed at the same commands.
 
 Here's the project structure from `quick-start-lambda`, bringing together auth, metering, protocol metadata, transport wiring, and Lambda export in one runnable reference:
 

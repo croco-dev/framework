@@ -327,11 +327,31 @@ declare module 'react' {
 declare module '@croco/protocols-rest' {
   export function Controller(path: string): ClassDecorator;
   export function Ctx(): ParameterDecorator;
-  export function Delete(path: string): MethodDecorator;
-  export function Get(path: string): MethodDecorator;
-  export function Post(path: string): MethodDecorator;
-  export function Put(path: string): MethodDecorator;
+  export enum HttpMethod {
+    DELETE = 'DELETE',
+    GET = 'GET',
+    POST = 'POST',
+    PUT = 'PUT',
+  }
+
+  export type RouteContractFixture = {
+    readonly path: string;
+    readonly problems?: readonly unknown[];
+  };
+
+  export function defineRouteContract<const TContract extends RouteContractFixture>(
+    contract: TContract,
+  ): TContract;
+  export function defineRouteProblem(problem: Function, metadata: unknown): unknown;
+  export function Delete(path: string | RouteContractFixture): MethodDecorator;
+  export function Get(path: string | RouteContractFixture): MethodDecorator;
+  export function Post(path: string | RouteContractFixture): MethodDecorator;
+  export function Put(path: string | RouteContractFixture): MethodDecorator;
+  export function ProblemResponses(...responses: readonly unknown[]): MethodDecorator;
   export function ResponseSchema(schema: unknown): MethodDecorator;
+  export function routeProblemResponses(
+    contract: { readonly problems: readonly unknown[] },
+  ): readonly unknown[];
 }
 
 declare module '@croco/transports-http' {

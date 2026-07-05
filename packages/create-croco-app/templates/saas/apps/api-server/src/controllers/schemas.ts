@@ -1,4 +1,45 @@
 import { z } from "zod";
+import { ProblemCategory } from "@croco/problems-core";
+import { defineRouteContract, defineRouteProblem, HttpMethod } from "@croco/protocols-rest";
+import {
+  DemoEndpointDisabledProblem,
+  InvalidJobsQueryProblem,
+  JobNotFoundProblem,
+  SaasDemoSmokeProblem,
+  TenantAlreadyExistsProblem,
+  TenantNotFoundProblem,
+} from "../problems";
+
+const demoEndpointDisabledProblem = defineRouteProblem(DemoEndpointDisabledProblem, {
+  code: "saas-demo/demo-endpoint-disabled",
+  category: ProblemCategory.Forbidden,
+  description: "Demo endpoints are disabled for this environment.",
+});
+const invalidJobsQueryProblem = defineRouteProblem(InvalidJobsQueryProblem, {
+  code: "saas-demo/invalid-jobs-query",
+  category: ProblemCategory.ValidationError,
+  description: "A jobs query parameter is invalid.",
+});
+const jobNotFoundProblem = defineRouteProblem(JobNotFoundProblem, {
+  code: "saas-demo/job-not-found",
+  category: ProblemCategory.NotFound,
+  description: "The requested job does not exist.",
+});
+const tenantAlreadyExistsProblem = defineRouteProblem(TenantAlreadyExistsProblem, {
+  code: "saas-demo/tenant-already-exists",
+  category: ProblemCategory.Conflict,
+  description: "The demo tenant already exists.",
+});
+const tenantNotFoundProblem = defineRouteProblem(TenantNotFoundProblem, {
+  code: "saas-demo/tenant-not-found",
+  category: ProblemCategory.NotFound,
+  description: "The requested tenant does not exist.",
+});
+const saasDemoSmokeProblem = defineRouteProblem(SaasDemoSmokeProblem, {
+  code: "saas-demo/smoke-failed",
+  category: ProblemCategory.InternalServerError,
+  description: "The SaaS demo smoke flow failed.",
+});
 
 export const healthSchema = z.object({
   status: z.enum(["up", "down"]),
@@ -174,5 +215,110 @@ export const JOB_ID_SCHEMA = z.string().min(1);
 export const OPTIONAL_JOB_STATUS_QUERY_SCHEMA = z.string().optional();
 export const OPTIONAL_JOB_TYPE_QUERY_SCHEMA = z.string().optional();
 export const OPTIONAL_JOBS_INTEGER_QUERY_SCHEMA = z.string().optional();
+
+const jobsListQuerySchema = z.object({
+  status: OPTIONAL_JOB_STATUS_QUERY_SCHEMA,
+  type: OPTIONAL_JOB_TYPE_QUERY_SCHEMA,
+  replayOf: OPTIONAL_JOB_TYPE_QUERY_SCHEMA,
+  limit: OPTIONAL_JOBS_INTEGER_QUERY_SCHEMA,
+  offset: OPTIONAL_JOBS_INTEGER_QUERY_SCHEMA,
+});
+const jobIdParamsSchema = z.object({
+  id: JOB_ID_SCHEMA,
+});
+const saasDemoProblems = [
+  demoEndpointDisabledProblem,
+  tenantAlreadyExistsProblem,
+  tenantNotFoundProblem,
+  saasDemoSmokeProblem,
+] as const;
+
+export const healthRoute = defineRouteContract({
+  id: "operations.health",
+  method: HttpMethod.GET,
+  path: "/ops/health",
+  operationId: "getOperationsHealth",
+  response: healthSchema,
+  problems: [],
+});
+
+export const diagnosticsRoute = defineRouteContract({
+  id: "operations.diagnostics",
+  method: HttpMethod.GET,
+  path: "/ops/diagnostics",
+  operationId: "getOperationsDiagnostics",
+  response: diagnosticsSchema,
+  problems: [],
+});
+
+export const listJobsRoute = defineRouteContract({
+  id: "jobs.list",
+  method: HttpMethod.GET,
+  path: "/ops/jobs",
+  operationId: "listJobs",
+  query: jobsListQuerySchema,
+  response: jobListReportSchema,
+  problems: [invalidJobsQueryProblem],
+});
+
+export const showJobRoute = defineRouteContract({
+  id: "jobs.show",
+  method: HttpMethod.GET,
+  path: "/ops/jobs/:id",
+  operationId: "showJob",
+  params: jobIdParamsSchema,
+  response: jobDetailsSchema,
+  problems: [jobNotFoundProblem],
+});
+
+export const jobLogsRoute = defineRouteContract({
+  id: "jobs.logs",
+  method: HttpMethod.GET,
+  path: "/ops/jobs/:id/logs",
+  operationId: "listJobLogs",
+  params: jobIdParamsSchema,
+  response: jobLogEntrySchema.array(),
+  problems: [jobNotFoundProblem],
+});
+
+export const cancelJobRoute = defineRouteContract({
+  id: "jobs.cancel",
+  method: HttpMethod.POST,
+  path: "/ops/jobs/:id/cancel",
+  operationId: "cancelJob",
+  params: jobIdParamsSchema,
+  body: jobActionSchema,
+  response: jobDetailsSchema,
+  problems: [jobNotFoundProblem],
+});
+
+export const replayJobRoute = defineRouteContract({
+  id: "jobs.replay",
+  method: HttpMethod.POST,
+  path: "/ops/jobs/:id/replay",
+  operationId: "replayJob",
+  params: jobIdParamsSchema,
+  body: jobActionSchema,
+  response: jobDetailsSchema,
+  problems: [jobNotFoundProblem],
+});
+
+export const seedSaasDemoRoute = defineRouteContract({
+  id: "saas.demo.seed",
+  method: HttpMethod.POST,
+  path: "/saas/demo/seed",
+  operationId: "seedSaasDemo",
+  response: saasDemoSnapshotSchema,
+  problems: saasDemoProblems,
+});
+
+export const smokeSaasDemoRoute = defineRouteContract({
+  id: "saas.demo.smoke",
+  method: HttpMethod.GET,
+  path: "/saas/demo/smoke",
+  operationId: "smokeSaasDemo",
+  response: saasDemoSnapshotSchema,
+  problems: saasDemoProblems,
+});
 
 export type JobActionDto = z.infer<typeof jobActionSchema>;

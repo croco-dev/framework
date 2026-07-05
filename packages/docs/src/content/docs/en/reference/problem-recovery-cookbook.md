@@ -480,7 +480,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/admin-console/apps/api-server/src/controllers/AdminController.ts:47:20` (problem-metadata)
+- `packages/create-croco-app/templates/admin-console/apps/api-server/src/controllers/adminSchemas.ts:6:79` (problem-metadata)
 
 <a id="admin-core-resource-validation-failed"></a>
 

@@ -29,6 +29,10 @@ export const CLI_DIAGNOSTIC_CODES = {
   doctorProviderPackageMissing: "CROCO_DOCTOR_PROVIDER_PACKAGE_MISSING",
   doctorProviderCertificationGap: "CROCO_DOCTOR_PROVIDER_CERTIFICATION_GAP",
   doctorProviderCertificationDocumented: "CROCO_DOCTOR_PROVIDER_CERTIFICATION_DOCUMENTED",
+  doctorCoreCoverageCandidateMissing: "CROCO_DOCTOR_CORE_COVERAGE_CANDIDATE_MISSING",
+  doctorBundleSizeBaselineMissing: "CROCO_DOCTOR_BUNDLE_SIZE_BASELINE_MISSING",
+  doctorBenchmarkVarianceEvidenceMissing: "CROCO_DOCTOR_BENCHMARK_VARIANCE_EVIDENCE_MISSING",
+  doctorSecurityAllowlistMetadataInvalid: "CROCO_DOCTOR_SECURITY_ALLOWLIST_METADATA_INVALID",
   usageDashboardTenantRequired: "CROCO_CLI_USAGE_DASHBOARD_001",
   usageDashboardTenantNotFound: "CROCO_CLI_USAGE_DASHBOARD_002",
   usageDashboardMeterNotFound: "CROCO_CLI_USAGE_DASHBOARD_003",
@@ -110,6 +114,10 @@ type CliNonLegacyDiagnosticKey =
   | "doctorProviderPackageMissing"
   | "doctorProviderCertificationGap"
   | "doctorProviderCertificationDocumented"
+  | "doctorCoreCoverageCandidateMissing"
+  | "doctorBundleSizeBaselineMissing"
+  | "doctorBenchmarkVarianceEvidenceMissing"
+  | "doctorSecurityAllowlistMetadataInvalid"
   | "projectMapFrameworkManifestDiagnostic"
   | "projectMapContractGraphDiagnostic";
 export type CliStaticLegacyDiagnosticKey = Exclude<CliDiagnosticKey, CliNonLegacyDiagnosticKey>;

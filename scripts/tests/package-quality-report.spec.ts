@@ -242,6 +242,47 @@ describe("package-quality-report.mts", () => {
     expect(bundleMarkdown).toContain("ci-reports/bundle-size/baseline.json");
   });
 
+  it("normalizes lowercase hashed chunks when matching bundle-size baselines", () => {
+    const repo = createTempRepo();
+    const artifactSource = "console.log('chunk');\n";
+    writePackage(repo, "alpha", "@croco/alpha", {
+      build: "tsup",
+    });
+    writeFile(repo, "packages/alpha/dist/chunk-abcdef12.js", artifactSource);
+    writeFile(
+      repo,
+      "ci-reports/bundle-size/baseline.json",
+      `${JSON.stringify(
+        {
+          artifacts: {
+            "@croco/alpha:packages/alpha/dist/chunk-*.js": 64,
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+    });
+    const artifact = report.bundleSize.artifacts.find(
+      (entry) => entry.artifactPath === "packages/alpha/dist/chunk-*.js",
+    );
+
+    expect(artifact).toEqual(
+      expect.objectContaining({
+        packageName: "@croco/alpha",
+        baselineKey: "@croco/alpha:packages/alpha/dist/chunk-*.js",
+        baselineBytes: 64,
+        status: "within-baseline",
+      }),
+    );
+    expect(report.bundleSize.missingBaselineCount).toBe(0);
+    expect(report.bundleSize.unmatchedBaselineCount).toBe(0);
+  });
+
   it("reports unmatched bundle-size baselines as warning-only stale setup work", () => {
     const repo = createTempRepo();
     writePackage(repo, "alpha", "@croco/alpha", {

@@ -1,4 +1,51 @@
 import { z } from "zod";
+import { ProblemCategory } from "@croco/problems-core";
+import { defineRouteContract, defineRouteProblem, HttpMethod } from "@croco/protocols-rest";
+import {
+  AiModelNotFoundProblem,
+  AiModelRequiredProblem,
+  AiProviderUnavailableProblem,
+  AiQuotaExceededProblem,
+  AiRateLimitExceededProblem,
+  AiTenantNotFoundProblem,
+  AiTenantRequiredProblem,
+} from "../aiProblems";
+
+const tenantRequiredProblem = defineRouteProblem(AiTenantRequiredProblem, {
+  code: "ai-saas/tenant-required",
+  category: ProblemCategory.ValidationError,
+  description: "AI requests require an x-tenant-id header.",
+});
+const tenantNotFoundProblem = defineRouteProblem(AiTenantNotFoundProblem, {
+  code: "ai-saas/tenant-not-found",
+  category: ProblemCategory.NotFound,
+  description: "The requested tenant does not exist.",
+});
+const modelRequiredProblem = defineRouteProblem(AiModelRequiredProblem, {
+  code: "ai-saas/model-required",
+  category: ProblemCategory.ValidationError,
+  description: "AI generation requires a model id.",
+});
+const modelNotFoundProblem = defineRouteProblem(AiModelNotFoundProblem, {
+  code: "ai-saas/model-not-found",
+  category: ProblemCategory.NotFound,
+  description: "The requested AI model is not registered.",
+});
+const quotaExceededProblem = defineRouteProblem(AiQuotaExceededProblem, {
+  code: "ai-saas/quota-exceeded",
+  category: ProblemCategory.TooManyRequests,
+  description: "AI generation would exceed the tenant quota.",
+});
+const rateLimitExceededProblem = defineRouteProblem(AiRateLimitExceededProblem, {
+  code: "ai-saas/rate-limit-exceeded",
+  category: ProblemCategory.TooManyRequests,
+  description: "AI generation exceeded the rate-limit window.",
+});
+const providerUnavailableProblem = defineRouteProblem(AiProviderUnavailableProblem, {
+  code: "ai-saas/provider-unavailable",
+  category: ProblemCategory.InternalServerError,
+  description: "The configured AI provider is unavailable.",
+});
 
 export const OPTIONAL_TENANT_ID_HEADER_SCHEMA = z.string().min(1).optional();
 
@@ -81,3 +128,39 @@ export const aiGenerateResponseSchema = z.object({
 });
 
 export const aiInvocationLogListSchema = z.array(aiInvocationLogSchema);
+
+export const generateAiRoute = defineRouteContract({
+  id: "ai.generate",
+  method: HttpMethod.POST,
+  path: "/ai/generate",
+  operationId: "generateAiText",
+  body: aiGenerateRequestSchema,
+  response: aiGenerateResponseSchema,
+  problems: [
+    tenantRequiredProblem,
+    tenantNotFoundProblem,
+    modelRequiredProblem,
+    modelNotFoundProblem,
+    quotaExceededProblem,
+    rateLimitExceededProblem,
+    providerUnavailableProblem,
+  ],
+});
+
+export const aiUsageRoute = defineRouteContract({
+  id: "ai.usage",
+  method: HttpMethod.GET,
+  path: "/ai/usage",
+  operationId: "getAiUsage",
+  response: aiUsageStateSchema,
+  problems: [tenantRequiredProblem, tenantNotFoundProblem],
+});
+
+export const aiInvocationsRoute = defineRouteContract({
+  id: "ai.invocations",
+  method: HttpMethod.GET,
+  path: "/ai/invocations",
+  operationId: "listAiInvocations",
+  response: aiInvocationLogListSchema,
+  problems: [tenantRequiredProblem, tenantNotFoundProblem],
+});

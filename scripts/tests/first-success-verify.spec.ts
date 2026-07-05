@@ -10,6 +10,25 @@ const validCreateCommand =
   "npx create-croco-app@latest my-project --preset ddd-api --scope @myorg --api graphql --backend-deploy lambda --no-install --no-git";
 const saasPackageName = "@croco-example/saas-billing-golden-path";
 const saasSmokeScript = `pnpm --filter ${saasPackageName}... build && pnpm --filter ${saasPackageName} test`;
+const fixtureSpineStatusSummary =
+  "Current 1.0 spine status: 2 spine packages; 1 production-ready, 1 beta, 0 alpha/WIP, 0 deprecated; 1 beta promotion records.";
+const firstSuccessCommands = [
+  "pnpm quick-start-lambda:smoke",
+  "pnpm saas-billing-golden-path:smoke",
+  "pnpm first-success:verify",
+];
+const rootReadmeToolingCommands = [
+  "pnpm build",
+  "pnpm lint",
+  "pnpm format",
+  "pnpm check",
+  "pnpm docs:catalog:check",
+  "pnpm first-success:verify",
+  "pnpm release-docs:check",
+  "pnpm release:spine-evidence",
+  "pnpm test",
+  "pnpm typecheck",
+];
 const defaultSaasReadmeCommands = [
   `pnpm --filter ${saasPackageName} dev`,
   "pnpm saas-billing-golden-path:smoke",
@@ -27,10 +46,15 @@ type ScriptResult = {
 type FixtureOptions = {
   readonly rootReadmeCommand?: string;
   readonly docsIndexPackageCount?: number;
+  readonly extraReadmeToolingCommand?: string;
   readonly gettingStartedPackageCount?: number;
   readonly includeSaasGettingStartedReference?: boolean;
+  readonly omitReleaseFirstSuccessCommand?: string;
+  readonly omittedReadmeToolingCommand?: string;
   readonly rootSaasSmokeScript?: string | null;
   readonly saasReadmeCommands?: readonly string[];
+  readonly staleReadmeRoadmapStatus?: boolean;
+  readonly staleSpineStatus?: boolean;
 };
 
 describe("first-success-verify.mts", () => {
@@ -126,6 +150,66 @@ describe("first-success-verify.mts", () => {
       "Getting started docs missing reference to saas-billing-golden-path",
     );
   });
+
+  it("fails when the root README drops a checked tooling command", () => {
+    const root = createFixture({ omittedReadmeToolingCommand: "pnpm docs:catalog:check" });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("D7");
+    expect(result.stdout).toContain(
+      "README.md missing root tooling command `pnpm docs:catalog:check` in ### 주요 명령어",
+    );
+  });
+
+  it("fails when the root README documents an unknown tooling command", () => {
+    const root = createFixture({ extraReadmeToolingCommand: "pnpm made-up-tooling-command" });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("D7");
+    expect(result.stdout).toContain(
+      "README.md documents unknown root tooling command `pnpm made-up-tooling-command`",
+    );
+  });
+
+  it("fails when release spine docs drop a first-success command", () => {
+    const root = createFixture({ omitReleaseFirstSuccessCommand: "pnpm first-success:verify" });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("D6");
+    expect(result.stdout).toContain(
+      "Croco 1.0 spine release docs missing first-success command `pnpm first-success:verify`",
+    );
+  });
+
+  it("fails when public spine status drifts from the catalog", () => {
+    const root = createFixture({ staleSpineStatus: true });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("D8");
+    expect(result.stdout).toContain("missing generated spine status");
+    expect(result.stdout).toContain(fixtureSpineStatusSummary);
+  });
+
+  it("fails when README roadmap status drifts while the generated catalog status is current", () => {
+    const root = createFixture({ staleReadmeRoadmapStatus: true });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("D8");
+    expect(result.stdout).toContain(
+      "README.md readiness status section missing generated spine status",
+    );
+    expect(result.stdout).toContain(fixtureSpineStatusSummary);
+  });
 });
 
 function createFixture(options: FixtureOptions = {}): string {
@@ -139,10 +223,34 @@ function createFixture(options: FixtureOptions = {}): string {
     options.rootSaasSmokeScript === undefined ? saasSmokeScript : options.rootSaasSmokeScript;
   const saasReadmeCommands = options.saasReadmeCommands ?? defaultSaasReadmeCommands;
   const includeSaasGettingStartedReference = options.includeSaasGettingStartedReference !== false;
+  const staleSpineStatusSummary =
+    "Current 1.0 spine status: 2 spine packages; 0 production-ready, 2 beta, 0 alpha/WIP, 0 deprecated; 0 beta promotion records.";
+  const readmeRoadmapStatusSummary =
+    options.staleSpineStatus || options.staleReadmeRoadmapStatus
+      ? staleSpineStatusSummary
+      : fixtureSpineStatusSummary;
+  const releaseSpineStatusSummary = options.staleSpineStatus
+    ? staleSpineStatusSummary
+    : fixtureSpineStatusSummary;
+  const readmeToolingCommands = rootReadmeToolingCommands.filter(
+    (command) => command !== options.omittedReadmeToolingCommand,
+  );
+  if (options.extraReadmeToolingCommand) {
+    readmeToolingCommands.push(options.extraReadmeToolingCommand);
+  }
   const rootScripts: Record<string, string> = {
+    build: "turbo build",
+    check: "pnpm docs:catalog:check && pnpm first-success:verify",
+    "docs:catalog:check": "node --experimental-strip-types scripts/package-docs-check.mts --check",
     "first-success:verify": "node --experimental-strip-types scripts/first-success-verify.mts",
+    format: "oxfmt --write .",
+    lint: "turbo lint",
     "quick-start-lambda:smoke":
       "node --experimental-strip-types scripts/quick-start-lambda-smoke.mts",
+    "release-docs:check": "node --experimental-strip-types scripts/release-docs-check.mts",
+    "release:spine-evidence": "node --experimental-strip-types scripts/release-spine-evidence.mts",
+    test: "turbo test",
+    typecheck: "turbo typecheck",
   };
   if (rootSaasSmokeScript !== null) {
     rootScripts["saas-billing-golden-path:smoke"] = rootSaasSmokeScript;
@@ -161,6 +269,30 @@ function createFixture(options: FixtureOptions = {}): string {
       rootReadmeCommand,
       "cd my-project && pnpm install && pnpm dev",
       "```",
+      "",
+      "## 🗺️ 로드맵 — 1.0 readiness status",
+      "",
+      readmeRoadmapStatusSummary,
+      "",
+      "```bash",
+      ...firstSuccessCommands,
+      "```",
+      "",
+      "---",
+      "",
+      "<!-- CROCO:PACKAGE-CATALOG:START -->",
+      fixtureSpineStatusSummary,
+      "<!-- CROCO:PACKAGE-CATALOG:END -->",
+      "",
+      "## 🛠 개발 환경",
+      "",
+      "### 주요 명령어",
+      "",
+      "```bash",
+      ...readmeToolingCommands,
+      "```",
+      "",
+      "### Git Hooks",
       "",
     ].join("\n"),
   );
@@ -324,6 +456,7 @@ function createFixture(options: FixtureOptions = {}): string {
       "",
       "See examples/quick-start-lambda for a working example.",
       "pnpm quick-start-lambda:smoke",
+      "pnpm first-success:verify",
       ...(includeSaasGettingStartedReference
         ? [
             "See examples/saas-billing-golden-path for billing, retry, transactions, events, and Problems.",
@@ -341,6 +474,34 @@ function createFixture(options: FixtureOptions = {}): string {
   );
   writeFile(
     root,
+    "docs/package-catalog.json",
+    JSON.stringify(
+      {
+        maturity: {
+          alpha: { packages: [] },
+          beta: { packages: ["beta"] },
+          deprecated: { packages: [] },
+          production: { packages: ["alpha"] },
+        },
+        spine: {
+          packages: ["alpha", "beta"],
+          promotion: {
+            packages: {
+              beta: {
+                owner: "fixture-owner",
+                recoveryAction: "Complete fixture evidence.",
+                targetEvidence: ["fixture evidence"],
+              },
+            },
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  writeFile(
+    root,
     "docs/package-docs-report.md",
     [
       "# Package Documentation Report",
@@ -351,6 +512,22 @@ function createFixture(options: FixtureOptions = {}): string {
       "| --- | ---: |",
       "| Public packages | 97 |",
       "| Private packages skipped | 2 |",
+      "",
+    ].join("\n"),
+  );
+  writeFile(
+    root,
+    "docs/release/croco-1.0-spine.md",
+    [
+      "# Croco 1.0 Spine",
+      "",
+      releaseSpineStatusSummary,
+      "",
+      "```bash",
+      ...firstSuccessCommands.filter(
+        (command) => command !== options.omitReleaseFirstSuccessCommand,
+      ),
+      "```",
       "",
     ].join("\n"),
   );

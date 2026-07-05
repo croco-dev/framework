@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { defineCommand } from "citty";
 import { PROJECT_MANIFEST_BUNDLE_ARTIFACTS } from "@croco/protocols-core";
 import { WORKSPACE_MAX_DEPTH } from "../libs/constants.js";
+import { parseCoreCoveragePackageFilters } from "../libs/coreCoverageFilters.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 import type { CliDiagnosticCode } from "../libs/diagnosticCodes.js";
 import { GLOBAL_OPTIONS } from "./options.js";
@@ -40,6 +41,7 @@ export type DoctorCheckResult = {
 export type DoctorPackage = {
   readonly name: string;
   readonly version: string | null;
+  readonly private: boolean;
   readonly relativeDir: string;
   readonly absoluteDir: string;
   readonly dependencies: readonly DoctorPackageDependency[];
@@ -81,6 +83,18 @@ type WorkspacePackageReadResult =
   | { readonly kind: "valid"; readonly package: DoctorPackage }
   | { readonly kind: "invalid"; readonly diagnostic: DoctorDiagnostic };
 
+type BenchmarkVarianceGateFailureCounts = {
+  runnerFailures: number;
+  moduleFailures: number;
+  emptyReports: number;
+  missingReports: number;
+  thresholdFailures: number;
+  thresholdSkips: number;
+  baselineFailures: number;
+  baselineSkips: number;
+  otherFailures: number;
+};
+
 type WorkspaceDiscoveryResult = {
   readonly packages: readonly DoctorPackage[];
   readonly patterns: readonly WorkspacePattern[];
@@ -90,6 +104,11 @@ type WorkspaceDiscoveryResult = {
 type SourceSlice = {
   readonly source: string;
   readonly maskedSource: string;
+};
+
+type AdvisoryGateReadinessSection = {
+  readonly label: string;
+  readonly diagnostics: readonly DoctorDiagnostic[];
 };
 
 const sourceFileExtensions = [".ts", ".tsx", ".mts", ".cts", ".ts.hbs", ".tsx.hbs"];
@@ -108,6 +127,7 @@ const ignoredDirectories = new Set([
   "tests",
   "__tests__",
 ]);
+const bundleArtifactIgnoredDirectories = new Set(["coverage", "dist", "node_modules"]);
 const requiredHttpSecurityMiddleware = [
   "securityHeadersMiddleware",
   "corsMiddleware",
@@ -133,6 +153,65 @@ const defaultRuntimeCapabilityManifestPath = "croco-runtime-capability.manifest.
 const legacyRuntimePolicyManifestPath = "croco-runtime-policy.manifest.json";
 const defaultDiGraphManifestPath = ".croco/build/di-graph.manifest.json";
 const defaultProviderProfileManifestPath = "croco-saas-profile.manifest.json";
+const defaultPackageCatalogPath = "docs/package-catalog.json";
+const defaultCoreCoverageWarningCheckPath = "scripts/core-coverage-warning-check.mts";
+const defaultVitestConfigPath = "vitest.config.ts";
+const defaultCoreCoverageBaselinePath = "ci-reports/coverage/core-baseline.txt";
+const defaultBundleSizeBaselinePath = "ci-reports/bundle-size/baseline.json";
+const defaultBenchmarkResultPath = "benchmark-result.json";
+const defaultBenchmarkVarianceEvidencePath = "ci-reports/benchmark/latest-five-green-runs.md";
+const bundleSizeArtifactSuffixes = [
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".css",
+  ".wasm",
+  ".map",
+  ".json",
+  ".d.ts",
+] as const;
+const hashedChunkArtifactPattern = /(^|\/)chunk-[A-Z0-9]{8}(\.(?:cjs|mjs|js)(?:\.map)?)$/i;
+
+type MeasuredBundleArtifact = {
+  readonly path: string;
+  readonly sizeBytes: number;
+};
+
+type BundleBaselineMatch = {
+  readonly key: string;
+  readonly bytes: number;
+};
+
+const benchmarkVarianceEvidenceMarker = "<!-- croco-benchmark-variance-evidence:v1 -->";
+const benchmarkVarianceEvidenceRunCount = 5;
+const benchmarkVarianceSpreadTolerance = 0.15;
+const benchmarkPromotedBaselineTolerance = 0.2;
+const benchmarkEmptyReportFailure = "No benchmark reports were collected.";
+const benchmarkMissingReportSuffix = ": benchmark report was not collected.";
+const benchmarkRunnerErrorPrefix = "benchmark runner error:";
+const benchmarkModuleFailedPrefix = "benchmark module failed:";
+const isoTimestampPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/;
+const benchmarkGitHubActionsRunPathPrefix = "/croco-dev/framework/actions/runs";
+const defaultStaticMisuseAllowlistPath = "scripts/static-misuse-raw-error-allowlist.json";
+const defaultStaticMisuseEmptyCatchAllowlistPath =
+  "scripts/static-misuse-empty-catch-allowlist.json";
+const staticMisuseAllowlistPaths = [
+  defaultStaticMisuseAllowlistPath,
+  defaultStaticMisuseEmptyCatchAllowlistPath,
+] as const;
+const coreCoverageFrameworkGroups = new Set(["Core", "Integration", "Protocol", "Transport"]);
+const coreCoverageBaselineMetrics = ["statements", "branches", "functions", "lines"] as const;
+const coreCoverageReleaseCriticalRules = [
+  { signal: "framework-level contract", pattern: /^framework-/ },
+  { signal: "request/context contract", pattern: /context/ },
+  { signal: "retry/reliability contract", pattern: /^retry-/ },
+  { signal: "events contract", pattern: /^events-/ },
+  { signal: "auth contract", pattern: /^auth-/ },
+  { signal: "telemetry contract", pattern: /^telemetry-/ },
+  { signal: "transport runtime contract", pattern: /^transports-/ },
+  { signal: "health/readiness contract", pattern: /^health-/ },
+  { signal: "failure/problem contract", pattern: /^problems-/ },
+] as const;
 const projectManifestBundleFiles = [
   {
     path: PROJECT_MANIFEST_BUNDLE_ARTIFACTS.contractGraph,
@@ -203,6 +282,7 @@ export function runDoctor(options: RunDoctorOptions = {}): DoctorReport {
     spinePackageStateCheck(rootDir, workspace.packages),
     contractGraphReadinessCheck(rootDir),
     projectManifestBundleReadinessCheck(rootDir),
+    advisoryGateReadinessCheck(rootDir, workspace.packages),
     problemRegistryReadinessCheck(rootDir),
     runtimeCapabilityManifestCheck(rootDir),
     httpSecurityMiddlewareContractCheck(rootDir, workspace.packages),
@@ -579,6 +659,1792 @@ function projectManifestBundleReadinessCheck(rootDir: string): DoctorCheckResult
       diagnostics.length > 0
         ? `${diagnostics.length} Project manifest bundle issue(s) found.`
         : `${projectManifestBundleFiles.length} schema-versioned manifest bundle artifact(s) are readable.`,
+  };
+}
+
+function advisoryGateReadinessCheck(
+  rootDir: string,
+  packages: readonly DoctorPackage[],
+): DoctorCheckResult {
+  const checkId = "advisory-gate-readiness";
+  const sections = [
+    coreCoverageCandidateReadiness(rootDir, packages, checkId),
+    bundleSizeBaselineReadiness(rootDir, packages, checkId),
+    benchmarkVarianceEvidenceReadiness(rootDir, checkId),
+    securityAllowlistMetadataReadiness(rootDir, checkId),
+  ].filter((section): section is AdvisoryGateReadinessSection => section !== null);
+
+  if (sections.length === 0) {
+    return {
+      id: checkId,
+      title: "Advisory release-hardening readiness",
+      status: "skipped",
+      diagnostics: [],
+      note: "No advisory release-hardening scripts or artifacts were found.",
+    };
+  }
+
+  const diagnostics = sections.flatMap((section) => section.diagnostics);
+
+  return {
+    id: checkId,
+    title: "Advisory release-hardening readiness",
+    status: diagnostics.length > 0 ? "fail" : "pass",
+    diagnostics,
+    note:
+      diagnostics.length > 0
+        ? `${diagnostics.length} advisory release-hardening readiness warning(s) found.`
+        : `${sections.map((section) => section.label).join(", ")} readiness evidence is present.`,
+  };
+}
+
+function coreCoverageCandidateReadiness(
+  rootDir: string,
+  packages: readonly DoctorPackage[],
+  checkId: string,
+): AdvisoryGateReadinessSection | null {
+  const rootScripts = readRootScripts(rootDir);
+  const coreCoverageScript = rootScripts["test:coverage:core"];
+  const catalogPath = join(rootDir, defaultPackageCatalogPath);
+
+  if (!coreCoverageScript) {
+    return null;
+  }
+
+  if (!existsSync(catalogPath)) {
+    return {
+      label: "core coverage selection",
+      diagnostics: [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${defaultPackageCatalogPath} is missing.`,
+          location: { file: defaultPackageCatalogPath },
+          action:
+            "Restore docs/package-catalog.json, rerun pnpm test:coverage:core:warning, and commit the refreshed coverage evidence.",
+        }),
+      ],
+    };
+  }
+
+  const catalog = readJsonObject(catalogPath);
+  if (catalog.kind === "invalid") {
+    return {
+      label: "core coverage selection",
+      diagnostics: [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${defaultPackageCatalogPath} could not be parsed: ${catalog.message}`,
+          location: { file: defaultPackageCatalogPath },
+          action:
+            "Fix docs/package-catalog.json, rerun pnpm test:coverage:core:warning, and commit the refreshed coverage evidence.",
+        }),
+      ],
+    };
+  }
+
+  const selectedPackages = new Set(parseCoreCoveragePackageFilters(coreCoverageScript));
+  const warningScriptPath = join(rootDir, defaultCoreCoverageWarningCheckPath);
+  const warningScriptDiagnostics = existsSync(warningScriptPath)
+    ? []
+    : [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${defaultCoreCoverageWarningCheckPath} is missing while test:coverage:core is configured.`,
+          location: { file: defaultCoreCoverageWarningCheckPath },
+          action:
+            "Restore scripts/core-coverage-warning-check.mts, rerun pnpm test:coverage:core:warning, and commit the refreshed coverage evidence.",
+        }),
+      ];
+  const thresholdPackagesResult = readCoreCoverageThresholdPackages(rootDir);
+  const temporarilyExcludedPackages = readTemporaryCoreCoverageSelectionExclusions(rootDir);
+  const intentionalZeroBaselinePackages = readIntentionalCoreCoverageZeroBaselineReasons(rootDir);
+  const candidates = collectCoreCoverageCandidates(catalog.value, packages);
+  const selectionDiagnostics = candidates
+    .filter(
+      (candidate) =>
+        !selectedPackages.has(candidate.packageName) &&
+        (!temporarilyExcludedPackages.has(candidate.packageName) ||
+          candidate.signals.includes("1.0 spine package")),
+    )
+    .map((candidate) =>
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+        checkId,
+        cause: `${candidate.packageName} has advisory core coverage signals [${candidate.signals.join(", ")}] but is not selected by test:coverage:core.`,
+        location: { file: "package.json", packageName: candidate.packageName },
+        action:
+          `Add --filter ${candidate.packageName} to test:coverage:core, run pnpm test:coverage:core, ` +
+          "update ci-reports/coverage/core-baseline.txt, then rerun pnpm test:coverage:core:warning. " +
+          "If it is intentionally deferred, record a reason in TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS.",
+      }),
+    );
+  const thresholdDiagnostics =
+    thresholdPackagesResult.kind === "missing"
+      ? [
+          advisoryDiagnostic({
+            code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+            checkId,
+            cause: `${thresholdPackagesResult.path} is missing ${thresholdPackagesResult.exportName}.`,
+            location: { file: thresholdPackagesResult.path },
+            action: `Restore ${thresholdPackagesResult.exportName} in vitest.config.ts, then rerun pnpm test:coverage:core:warning.`,
+          }),
+        ]
+      : collectCoreCoverageConfigurationDiagnostics(
+          [...selectedPackages],
+          thresholdPackagesResult.packages,
+          checkId,
+        );
+  const baselineDiagnostics = collectCoreCoverageBaselineDiagnostics(
+    rootDir,
+    [...selectedPackages],
+    checkId,
+    intentionalZeroBaselinePackages,
+  );
+  const diagnostics = [
+    ...warningScriptDiagnostics,
+    ...selectionDiagnostics,
+    ...thresholdDiagnostics,
+    ...baselineDiagnostics,
+  ];
+
+  return { label: "core coverage selection", diagnostics };
+}
+
+function collectCoreCoverageCandidates(
+  catalog: Record<string, unknown>,
+  packages: readonly DoctorPackage[],
+): Array<{ readonly packageName: string; readonly signals: readonly string[] }> {
+  const packageGroups = readCatalogPackageMembership(catalog.groups);
+  const packageMaturity = readCatalogPackageMembership(catalog.maturity);
+  const spinePackages = new Set(readStringArray(asRecord(catalog.spine)?.packages));
+  const workspacePackageBySlug = new Map(
+    packages
+      .filter((workspacePackage) => !workspacePackage.private)
+      .map((workspacePackage) => [toPackageSlug(workspacePackage.name), workspacePackage.name]),
+  );
+  const packageSlugs = new Set([
+    ...packageGroups.keys(),
+    ...packageMaturity.keys(),
+    ...spinePackages,
+    ...workspacePackageBySlug.keys(),
+  ]);
+
+  return [...packageSlugs]
+    .flatMap((packageSlug) => {
+      const packageName = workspacePackageBySlug.get(packageSlug);
+      if (!packageName) {
+        return [];
+      }
+
+      const groupSignals = (packageGroups.get(packageSlug) ?? [])
+        .filter((groupName) => coreCoverageFrameworkGroups.has(groupName))
+        .map((groupName) => `catalog group: ${groupName}`);
+      const maturitySignals = (packageMaturity.get(packageSlug) ?? []).includes("production")
+        ? ["production-ready maturity"]
+        : [];
+      const spineSignals = spinePackages.has(packageSlug) ? ["1.0 spine package"] : [];
+      const releaseCriticalSignals = coreCoverageReleaseCriticalRules
+        .filter((rule) => rule.pattern.test(packageSlug))
+        .map((rule) => rule.signal);
+      const signals = uniqueStrings([
+        ...groupSignals,
+        ...maturitySignals,
+        ...spineSignals,
+        ...releaseCriticalSignals,
+      ]).sort(compareStrings);
+
+      return signals.length > 0 ? [{ packageName, signals }] : [];
+    })
+    .sort((left, right) => compareStrings(left.packageName, right.packageName));
+}
+
+function collectCoreCoverageBaselineDiagnostics(
+  rootDir: string,
+  selectedPackages: readonly string[],
+  checkId: string,
+  intentionalZeroBaselinePackages: ReadonlySet<string>,
+): DoctorDiagnostic[] {
+  const baselinePath = join(rootDir, defaultCoreCoverageBaselinePath);
+  const baselineEntries = existsSync(baselinePath)
+    ? readCoreCoverageBaselineEntries(rootDir)
+    : new Map<string, CoreCoverageBaselineEntry>();
+  const thresholdValues = readCoreCoverageThresholdValues(rootDir);
+
+  return uniqueStrings(selectedPackages).flatMap((packageName) => {
+    const coverageSummaryPath = join(
+      rootDir,
+      "packages",
+      toPackageSlug(packageName),
+      "coverage",
+      "coverage-summary.json",
+    );
+    if (!existsSync(coverageSummaryPath)) {
+      return [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${packageName}: coverage summary not found.`,
+          location: {
+            file: toPosixPath(relative(rootDir, coverageSummaryPath)),
+            packageName,
+          },
+          action:
+            "Run pnpm test:coverage:core so coverage/coverage-summary.json exists, then rerun pnpm test:coverage:core:warning.",
+        }),
+      ];
+    }
+
+    const coverageSummary = readCoreCoverageSummaryTotals(coverageSummaryPath);
+    if (coverageSummary.kind === "invalid") {
+      return [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${packageName}: ${coverageSummary.message}.`,
+          location: {
+            file: toPosixPath(relative(rootDir, coverageSummaryPath)),
+            packageName,
+          },
+          action:
+            "Run pnpm test:coverage:core so coverage/coverage-summary.json contains total statement, branch, function, and line percentages.",
+        }),
+      ];
+    }
+
+    const baseline = baselineEntries.get(packageName);
+    if (!baseline) {
+      return [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+          checkId,
+          cause: `${packageName}: baseline entry is missing when coverage summary exists.`,
+          location: { file: defaultCoreCoverageBaselinePath, packageName },
+          action:
+            "Run pnpm test:coverage:core, update ci-reports/coverage/core-baseline.txt from measured totals, then rerun pnpm test:coverage:core:warning.",
+        }),
+      ];
+    }
+
+    const nonNumericMetrics = coreCoverageBaselineMetrics.filter(
+      (metric) => !Number.isFinite(baseline[metric]),
+    );
+    const zeroMetrics = intentionalZeroBaselinePackages.has(packageName)
+      ? []
+      : coreCoverageBaselineMetrics.filter((metric) => baseline[metric] === 0);
+    const thresholdWarnings =
+      thresholdValues === null
+        ? []
+        : coreCoverageBaselineMetrics
+            .filter(
+              (metric) =>
+                Number.isFinite(thresholdValues[metric]) &&
+                coverageSummary.totals[metric] < thresholdValues[metric],
+            )
+            .map(
+              (metric) =>
+                `${metric} ${coverageSummary.totals[metric].toFixed(2)}% < ${thresholdValues[metric]}%`,
+            );
+    const baselineWarnings = coreCoverageBaselineMetrics
+      .filter(
+        (metric) =>
+          Number.isFinite(baseline[metric]) && coverageSummary.totals[metric] < baseline[metric],
+      )
+      .map(
+        (metric) =>
+          `${metric} ${coverageSummary.totals[metric].toFixed(2)}% < baseline ${baseline[metric].toFixed(2)}%`,
+      );
+    const failures = [
+      ...(nonNumericMetrics.length > 0
+        ? [`baseline ${nonNumericMetrics.join(", ")} must be numeric`]
+        : []),
+      ...(zeroMetrics.length > 0 ? [`baseline ${zeroMetrics.join(", ")} cannot be 0`] : []),
+      ...(thresholdWarnings.length > 0
+        ? [`threshold warning(s): ${thresholdWarnings.join(", ")}`]
+        : []),
+      ...(baselineWarnings.length > 0
+        ? [`baseline warning(s): ${baselineWarnings.join(", ")}`]
+        : []),
+    ];
+
+    if (failures.length === 0) {
+      return [];
+    }
+
+    return [
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+        checkId,
+        cause: `${packageName}: ${failures.join("; ")} when coverage summary exists.`,
+        location: { file: defaultCoreCoverageBaselinePath, packageName },
+        action:
+          "Run pnpm test:coverage:core, update ci-reports/coverage/core-baseline.txt from measured totals, then rerun pnpm test:coverage:core:warning.",
+      }),
+    ];
+  });
+}
+
+type CoreCoverageMetric = (typeof coreCoverageBaselineMetrics)[number];
+type CoreCoverageMetricValues = Record<CoreCoverageMetric, number>;
+type CoreCoverageBaselineEntry = CoreCoverageMetricValues;
+
+type CoreCoverageSummaryTotalsResult =
+  | { readonly kind: "valid"; readonly totals: CoreCoverageMetricValues }
+  | { readonly kind: "invalid"; readonly message: string };
+
+function readCoreCoverageBaselineEntries(rootDir: string): Map<string, CoreCoverageBaselineEntry> {
+  const entries = new Map<string, CoreCoverageBaselineEntry>();
+  const content = readFileSync(join(rootDir, defaultCoreCoverageBaselinePath), "utf-8");
+
+  for (const line of content.split(/\r?\n/)) {
+    const cells = line
+      .split("|")
+      .map((cell) => cell.trim())
+      .filter(Boolean);
+    const packageCell = cells[0];
+
+    if (cells.length !== 5 || !packageCell?.startsWith("`") || !packageCell.endsWith("`")) {
+      continue;
+    }
+
+    const packageName = packageCell.slice(1, -1);
+    entries.set(packageName, {
+      statements: Number(cells[1]),
+      branches: Number(cells[2]),
+      functions: Number(cells[3]),
+      lines: Number(cells[4]),
+    });
+  }
+
+  return entries;
+}
+
+function readCoreCoverageSummaryTotals(summaryPath: string): CoreCoverageSummaryTotalsResult {
+  const summary = readJsonObject(summaryPath);
+  if (summary.kind === "invalid") {
+    return { kind: "invalid", message: `coverage-summary.json is unreadable: ${summary.message}` };
+  }
+
+  const totals = asRecord(summary.value.total);
+  if (!totals) {
+    return { kind: "invalid", message: "coverage-summary.json is missing total metrics" };
+  }
+
+  const summaryTotals = Object.fromEntries(
+    coreCoverageBaselineMetrics.map((metric) => {
+      const metricTotals = asRecord(totals[metric]);
+      return [metric, Number(metricTotals?.pct)];
+    }),
+  ) as CoreCoverageMetricValues;
+  const invalidMetrics = coreCoverageBaselineMetrics.filter((metric) => {
+    return !Number.isFinite(summaryTotals[metric]);
+  });
+
+  return invalidMetrics.length > 0
+    ? {
+        kind: "invalid",
+        message: `coverage-summary.json total ${invalidMetrics.join(", ")} pct must be numeric`,
+      }
+    : { kind: "valid", totals: summaryTotals };
+}
+
+function readCatalogPackageMembership(value: unknown): Map<string, string[]> {
+  const membership = new Map<string, string[]>();
+  if (!isRecord(value)) {
+    return membership;
+  }
+
+  for (const [label, section] of Object.entries(value)) {
+    const packageSlugs = readStringArray(asRecord(section)?.packages);
+    for (const packageSlug of packageSlugs) {
+      membership.set(packageSlug, [...(membership.get(packageSlug) ?? []), label]);
+    }
+  }
+
+  return membership;
+}
+
+function readTemporaryCoreCoverageSelectionExclusions(rootDir: string): ReadonlySet<string> {
+  return readCoreCoverageWarningCheckStringMap(
+    rootDir,
+    "TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS",
+  );
+}
+
+function readIntentionalCoreCoverageZeroBaselineReasons(rootDir: string): ReadonlySet<string> {
+  return readCoreCoverageWarningCheckStringMap(rootDir, "INTENTIONAL_ZERO_BASELINE_REASONS");
+}
+
+function readCoreCoverageWarningCheckStringMap(
+  rootDir: string,
+  declarationName: string,
+): ReadonlySet<string> {
+  const scriptPath = join(rootDir, defaultCoreCoverageWarningCheckPath);
+  if (!existsSync(scriptPath)) {
+    return new Set();
+  }
+
+  const source = stripTypeScriptComments(readFileSync(scriptPath, "utf-8"));
+  const declaration = source.match(
+    new RegExp(
+      `const\\s+${escapeRegExp(declarationName)}(?:\\s*:\\s*Record<[^=]+>)?\\s*=\\s*\\{([\\s\\S]*?)\\};`,
+    ),
+  );
+  const declarationBody = declaration?.[1];
+  if (!declarationBody) {
+    return new Set();
+  }
+
+  const packages = [...declarationBody.matchAll(/["']([^"']+)["']\s*:\s*["']([\s\S]*?)["']/g)]
+    .filter(([, , reason]) => reason.trim().length > 0)
+    .map(([, packageName]) => packageName);
+
+  return new Set(uniqueStrings(packages));
+}
+
+type CoreCoverageThresholdPackagesResult =
+  | { readonly kind: "present"; readonly packages: string[] }
+  | {
+      readonly kind: "missing";
+      readonly path: string;
+      readonly exportName: "CORE_COVERAGE_PACKAGES" | "CORE_COVERAGE_THRESHOLDS";
+    };
+
+function readCoreCoverageThresholdPackages(rootDir: string): CoreCoverageThresholdPackagesResult {
+  const configPath = join(rootDir, defaultVitestConfigPath);
+  if (!existsSync(configPath)) {
+    return {
+      kind: "missing",
+      path: defaultVitestConfigPath,
+      exportName: "CORE_COVERAGE_PACKAGES",
+    };
+  }
+
+  const source = readFileSync(configPath, "utf-8");
+  const packages = parseStringArrayExport(source, "CORE_COVERAGE_PACKAGES");
+  if (packages === null) {
+    return {
+      kind: "missing",
+      path: defaultVitestConfigPath,
+      exportName: "CORE_COVERAGE_PACKAGES",
+    };
+  }
+
+  if (!hasObjectExport(source, "CORE_COVERAGE_THRESHOLDS")) {
+    return {
+      kind: "missing",
+      path: defaultVitestConfigPath,
+      exportName: "CORE_COVERAGE_THRESHOLDS",
+    };
+  }
+
+  return { kind: "present", packages };
+}
+
+function readCoreCoverageThresholdValues(rootDir: string): CoreCoverageMetricValues | null {
+  const configPath = join(rootDir, defaultVitestConfigPath);
+  if (!existsSync(configPath)) {
+    return null;
+  }
+
+  return parseCoreCoverageThresholdValues(readFileSync(configPath, "utf-8"));
+}
+
+function parseCoreCoverageThresholdValues(source: string): CoreCoverageMetricValues | null {
+  const declaration = source.match(
+    /export\s+const\s+CORE_COVERAGE_THRESHOLDS\s*=\s*\{([\s\S]*?)\}\s*;?/,
+  );
+  const declarationBody = declaration?.[1];
+  if (!declarationBody) {
+    return null;
+  }
+
+  return declarationBody
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .reduce<CoreCoverageMetricValues>(
+      (thresholds, line) => {
+        const [metric, value] = line
+          .replace(",", "")
+          .split(":")
+          .map((part) => part.trim());
+
+        if (isCoreCoverageMetric(metric)) {
+          thresholds[metric] = Number.parseFloat(value ?? "");
+        }
+
+        return thresholds;
+      },
+      {
+        branches: 0,
+        functions: 0,
+        lines: 0,
+        statements: 0,
+      },
+    );
+}
+
+function isCoreCoverageMetric(value: unknown): value is CoreCoverageMetric {
+  return (
+    value === "branches" || value === "functions" || value === "lines" || value === "statements"
+  );
+}
+
+function parseStringArrayExport(source: string, exportName: string): string[] | null {
+  const declaration = source.match(
+    new RegExp(`export\\s+const\\s+${escapeRegExp(exportName)}\\s*=\\s*\\[([\\s\\S]*?)\\];`),
+  );
+  const declarationBody = declaration?.[1];
+  if (!declarationBody) {
+    return null;
+  }
+
+  return uniqueStrings(
+    [...declarationBody.matchAll(/["']([^"']+)["']/g)].map(([, packageName]) => packageName),
+  );
+}
+
+function hasObjectExport(source: string, exportName: string): boolean {
+  const declaration = source.match(
+    new RegExp(`export\\s+const\\s+${escapeRegExp(exportName)}\\s*=\\s*\\{([\\s\\S]*?)\\}\\s*;?`),
+  );
+  return Boolean(declaration?.[1]?.trim());
+}
+
+function collectCoreCoverageConfigurationDiagnostics(
+  coreCoveragePackages: readonly string[],
+  thresholdPackages: readonly string[],
+  checkId: string,
+): DoctorDiagnostic[] {
+  const coreCoverageSet = new Set(coreCoveragePackages);
+  const thresholdSet = new Set(thresholdPackages);
+  const missingThresholdPackages = coreCoveragePackages.filter(
+    (packageName) => !thresholdSet.has(packageName),
+  );
+  const missingFilterPackages = thresholdPackages.filter(
+    (packageName) => !coreCoverageSet.has(packageName),
+  );
+
+  return [
+    ...missingThresholdPackages.map((packageName) =>
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+        checkId,
+        cause: `${packageName} is selected by test:coverage:core but is missing from vitest CORE_COVERAGE_PACKAGES.`,
+        location: { file: defaultVitestConfigPath, packageName },
+        action:
+          "Add the package to CORE_COVERAGE_PACKAGES in vitest.config.ts or remove the stale test:coverage:core filter, then rerun pnpm test:coverage:core:warning.",
+      }),
+    ),
+    ...missingFilterPackages.map((packageName) =>
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+        checkId,
+        cause: `${packageName} is listed in vitest CORE_COVERAGE_PACKAGES but is missing from test:coverage:core filters.`,
+        location: { file: "package.json", packageName },
+        action:
+          "Add the package to the test:coverage:core filters or remove the stale CORE_COVERAGE_PACKAGES entry, then rerun pnpm test:coverage:core:warning.",
+      }),
+    ),
+  ];
+}
+
+function bundleSizeBaselineReadiness(
+  rootDir: string,
+  packages: readonly DoctorPackage[],
+  checkId: string,
+): AdvisoryGateReadinessSection | null {
+  const publicBuildPackages = packages.filter((workspacePackage) =>
+    packageHasPublicBuildScript(rootDir, workspacePackage),
+  );
+
+  if (publicBuildPackages.length === 0) {
+    return null;
+  }
+
+  const baselinePath = join(rootDir, defaultBundleSizeBaselinePath);
+  const diagnostics = !existsSync(baselinePath)
+    ? [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+          checkId,
+          cause: `${defaultBundleSizeBaselinePath} is missing for ${publicBuildPackages.length} public build package(s).`,
+          location: { file: defaultBundleSizeBaselinePath },
+          action:
+            "Run pnpm build && pnpm package-quality:report, then commit ci-reports/bundle-size/baseline.json.",
+        }),
+      ]
+    : invalidBundleBaselineDiagnostic(rootDir, publicBuildPackages, checkId);
+
+  return { label: "bundle-size baseline", diagnostics };
+}
+
+function invalidBundleBaselineDiagnostic(
+  rootDir: string,
+  publicBuildPackages: readonly DoctorPackage[],
+  checkId: string,
+): DoctorDiagnostic[] {
+  const baseline = readJsonObject(join(rootDir, defaultBundleSizeBaselinePath));
+  const failure =
+    baseline.kind === "valid"
+      ? validateBundleSizeBaselineEntries(rootDir, baseline.value, publicBuildPackages)
+      : `could not be parsed: ${baseline.message}`;
+
+  if (!failure) {
+    return [];
+  }
+
+  return [
+    advisoryDiagnostic({
+      code: CLI_DIAGNOSTIC_CODES.doctorBundleSizeBaselineMissing,
+      checkId,
+      cause: `${defaultBundleSizeBaselinePath} ${failure}`,
+      location: { file: defaultBundleSizeBaselinePath },
+      action: "Regenerate the bundle-size baseline with pnpm build && pnpm package-quality:report.",
+    }),
+  ];
+}
+
+function validateBundleSizeBaselineEntries(
+  rootDir: string,
+  baseline: Record<string, unknown>,
+  publicBuildPackages: readonly DoctorPackage[],
+): string | null {
+  const artifactEntries = isRecord(baseline.artifacts) ? baseline.artifacts : baseline;
+  const entries = Object.entries(artifactEntries);
+
+  if (entries.length === 0) {
+    return "does not contain any baseline entries.";
+  }
+
+  const baselineEntries = new Map<string, number>();
+  for (const [key, value] of entries) {
+    const bytes = readBundleSizeBaselineEntryBytes(value);
+    if (bytes === null) {
+      return `entry ${key} must be a non-negative byte number or an object with a non-negative bytes number.`;
+    }
+
+    baselineEntries.set(key, bytes);
+  }
+
+  return validateBundleSizeBaselineKeys(rootDir, publicBuildPackages, baselineEntries);
+}
+
+function readBundleSizeBaselineEntryBytes(value: unknown): number | null {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  }
+
+  return isRecord(value) &&
+    typeof value.bytes === "number" &&
+    Number.isFinite(value.bytes) &&
+    value.bytes >= 0
+    ? value.bytes
+    : null;
+}
+
+function validateBundleSizeBaselineKeys(
+  rootDir: string,
+  publicBuildPackages: readonly DoctorPackage[],
+  baselineEntries: ReadonlyMap<string, number>,
+): string | null {
+  const measuredArtifacts = publicBuildPackages.map((workspacePackage) => ({
+    workspacePackage,
+    artifacts: collectMeasuredBundleArtifacts(rootDir, workspacePackage),
+  }));
+  const packagesWithoutArtifacts = measuredArtifacts
+    .filter(({ artifacts }) => artifacts.length === 0)
+    .map(({ workspacePackage }) => workspacePackage.name);
+  const matchedBaselineKeys = new Set<string>();
+  const missingArtifactBaselines: string[] = [];
+  const overBaselineArtifacts: string[] = [];
+
+  for (const { workspacePackage, artifacts } of measuredArtifacts) {
+    for (const artifact of artifacts) {
+      const packageArtifactKey = `${workspacePackage.name}:${artifact.path}`;
+      const baselineMatch = getBundleSizeBaselineMatch(
+        baselineEntries,
+        workspacePackage.name,
+        artifact.path,
+      );
+
+      if (baselineMatch === null) {
+        missingArtifactBaselines.push(packageArtifactKey);
+        continue;
+      }
+
+      matchedBaselineKeys.add(baselineMatch.key);
+
+      if (artifact.sizeBytes > baselineMatch.bytes) {
+        overBaselineArtifacts.push(
+          `${packageArtifactKey} (${artifact.sizeBytes} B > ${baselineMatch.bytes} B)`,
+        );
+      }
+    }
+  }
+
+  const unmatchedBaselineKeys = [...baselineEntries.keys()]
+    .filter((baselineKey) => !matchedBaselineKeys.has(baselineKey))
+    .sort(compareStrings);
+  const failures = [
+    ...(packagesWithoutArtifacts.length > 0
+      ? [`has no measured bundle artifact for ${formatSampleList(packagesWithoutArtifacts)}`]
+      : []),
+    ...(missingArtifactBaselines.length > 0
+      ? [`is missing current artifact baseline(s): ${formatSampleList(missingArtifactBaselines)}`]
+      : []),
+    ...(overBaselineArtifacts.length > 0
+      ? [`contains artifact(s) over baseline: ${formatSampleList(overBaselineArtifacts)}`]
+      : []),
+    ...(unmatchedBaselineKeys.length > 0
+      ? [`contains stale baseline key(s): ${formatSampleList(unmatchedBaselineKeys)}`]
+      : []),
+  ];
+
+  return failures.length > 0 ? `${failures.join("; ")}.` : null;
+}
+
+function getBundleSizeBaselineMatch(
+  baselineEntries: ReadonlyMap<string, number>,
+  packageName: string,
+  artifactPath: string,
+): BundleBaselineMatch | null {
+  const packageArtifactKey = `${packageName}:${artifactPath}`;
+  const packageArtifactBytes = baselineEntries.get(packageArtifactKey);
+  if (packageArtifactBytes !== undefined) {
+    return { key: packageArtifactKey, bytes: packageArtifactBytes };
+  }
+
+  const artifactBytes = baselineEntries.get(artifactPath);
+  return artifactBytes === undefined ? null : { key: artifactPath, bytes: artifactBytes };
+}
+
+function collectMeasuredBundleArtifacts(
+  rootDir: string,
+  workspacePackage: DoctorPackage,
+): MeasuredBundleArtifact[] {
+  const distDir = join(rootDir, workspacePackage.relativeDir, "dist");
+  if (!existsSync(distDir) || !statSync(distDir).isDirectory()) {
+    return [];
+  }
+
+  const artifactSizes = new Map<string, number>();
+  for (const artifactPath of listBundleArtifactFiles(rootDir, distDir)) {
+    const normalizedArtifactPath = normalizeBundleArtifactPath(artifactPath);
+    artifactSizes.set(
+      normalizedArtifactPath,
+      (artifactSizes.get(normalizedArtifactPath) ?? 0) + statSync(join(rootDir, artifactPath)).size,
+    );
+  }
+
+  return [...artifactSizes.entries()]
+    .sort(([leftPath], [rightPath]) => compareStrings(leftPath, rightPath))
+    .map(([path, sizeBytes]) => ({ path, sizeBytes }));
+}
+
+function listBundleArtifactFiles(rootDir: string, dir: string, results: string[] = []): string[] {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (bundleArtifactIgnoredDirectories.has(entry.name)) {
+        continue;
+      }
+      listBundleArtifactFiles(rootDir, fullPath, results);
+      continue;
+    }
+
+    const relativePath = toPosixPath(relative(rootDir, fullPath));
+    if (entry.isFile() && isMeasuredBundleArtifact(relativePath)) {
+      results.push(relativePath);
+    }
+  }
+
+  return results;
+}
+
+function isMeasuredBundleArtifact(path: string): boolean {
+  return bundleSizeArtifactSuffixes.some((suffix) => path.endsWith(suffix));
+}
+
+function normalizeBundleArtifactPath(path: string): string {
+  return path.replace(hashedChunkArtifactPattern, "$1chunk-*$2");
+}
+
+function formatSampleList(values: readonly string[]): string {
+  const sorted = [...values].sort(compareStrings);
+  const sample = sorted.slice(0, 5).join(", ");
+  const remainingCount = sorted.length - 5;
+
+  return remainingCount > 0 ? `${sample}, and ${remainingCount} more` : sample;
+}
+
+function packageHasPublicBuildScript(rootDir: string, workspacePackage: DoctorPackage): boolean {
+  const manifest = readJsonObject(join(rootDir, workspacePackage.relativeDir, "package.json"));
+  if (manifest.kind === "invalid") {
+    return false;
+  }
+
+  const scripts = asRecord(manifest.value.scripts);
+  return manifest.value.private !== true && typeof scripts?.build === "string";
+}
+
+function benchmarkVarianceEvidenceReadiness(
+  rootDir: string,
+  checkId: string,
+): AdvisoryGateReadinessSection | null {
+  const rootScripts = readRootScripts(rootDir);
+  const expectsBenchmarkEvidence =
+    Boolean(rootScripts["bench:readiness"]) ||
+    Boolean(rootScripts["bench:check"]) ||
+    existsSync(join(rootDir, "benchmarks", "thresholds.json")) ||
+    existsSync(join(rootDir, "benchmarks", "baseline.json"));
+
+  if (!expectsBenchmarkEvidence) {
+    return null;
+  }
+
+  const evidencePath = join(rootDir, defaultBenchmarkVarianceEvidencePath);
+  const failure = existsSync(evidencePath)
+    ? validateBenchmarkVarianceEvidence(rootDir, readFileSync(evidencePath, "utf-8"))
+    : `${defaultBenchmarkVarianceEvidencePath} is missing.`;
+  const diagnostics = failure
+    ? [
+        advisoryDiagnostic({
+          code: CLI_DIAGNOSTIC_CODES.doctorBenchmarkVarianceEvidenceMissing,
+          checkId,
+          cause: `Benchmark variance evidence is not ready: ${failure}`,
+          location: { file: defaultBenchmarkVarianceEvidencePath },
+          action:
+            "Run pnpm bench:check and pnpm bench:readiness, then commit the structured latest-five-green-runs evidence.",
+        }),
+      ]
+    : [];
+
+  return { label: "benchmark variance evidence", diagnostics };
+}
+
+function validateBenchmarkVarianceEvidence(rootDir: string, content: string): string | null {
+  const markerIndex = content.indexOf(benchmarkVarianceEvidenceMarker);
+  if (markerIndex < 0) {
+    return `structured evidence marker ${benchmarkVarianceEvidenceMarker} was not found`;
+  }
+
+  const evidenceBlock = content.slice(markerIndex + benchmarkVarianceEvidenceMarker.length);
+  const jsonBlock = /```json\s*([\s\S]*?)```/.exec(evidenceBlock);
+  if (!jsonBlock) {
+    return "structured evidence JSON block was not found after the evidence marker";
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonBlock[1]);
+  } catch (error) {
+    return `structured evidence JSON could not be parsed: ${
+      error instanceof Error ? error.message : String(error)
+    }`;
+  }
+
+  if (!isRecord(parsed)) {
+    return "structured evidence JSON must be an object";
+  }
+
+  if (parsed.version !== 1) {
+    return "structured evidence version must be 1";
+  }
+
+  if (!Array.isArray(parsed.runs)) {
+    return "structured evidence runs must be an array";
+  }
+
+  if (!isRecord(parsed.checks)) {
+    return "structured evidence checks must be an object";
+  }
+
+  if (!Array.isArray(parsed.rows)) {
+    return "structured evidence rows must be an array";
+  }
+
+  const benchmarkResult = readBenchmarkResultReports(rootDir);
+  if (benchmarkResult.kind === "invalid") {
+    return benchmarkResult.message;
+  }
+
+  const failures = getBenchmarkVarianceEvidenceFailures(parsed, benchmarkResult.result);
+  return failures.length > 0 ? failures.join("; ") : null;
+}
+
+type BenchmarkCurrentReport = {
+  readonly name: string;
+  readonly threshold: number;
+  readonly baseline: number | null;
+};
+
+type BenchmarkCurrentResult = {
+  readonly allPassed: boolean | undefined;
+  readonly gateFailures: readonly string[];
+  readonly reports: readonly BenchmarkCurrentReport[];
+};
+
+function readBenchmarkResultReports(
+  rootDir: string,
+):
+  | { readonly kind: "valid"; readonly result: BenchmarkCurrentResult }
+  | { readonly kind: "invalid"; readonly message: string } {
+  const resultPath = join(rootDir, defaultBenchmarkResultPath);
+  if (!existsSync(resultPath)) {
+    return { kind: "invalid", message: `${defaultBenchmarkResultPath} is missing.` };
+  }
+
+  const result = readJsonObject(resultPath);
+  if (result.kind === "invalid") {
+    return {
+      kind: "invalid",
+      message: `${defaultBenchmarkResultPath} could not be parsed: ${result.message}`,
+    };
+  }
+
+  if (!Array.isArray(result.value.reports)) {
+    return {
+      kind: "invalid",
+      message: `${defaultBenchmarkResultPath} must contain a reports array.`,
+    };
+  }
+
+  const gateFailures = Array.isArray(result.value.gateFailures)
+    ? result.value.gateFailures.filter((failure): failure is string => typeof failure === "string")
+    : [];
+  const reports: BenchmarkCurrentReport[] = [];
+  for (const [index, entry] of result.value.reports.entries()) {
+    const report = asRecord(entry);
+    const name = readBenchmarkContractString(report?.name);
+    if (!report || !name) {
+      return {
+        kind: "invalid",
+        message: `${defaultBenchmarkResultPath} report ${index + 1} must include a benchmark name.`,
+      };
+    }
+
+    if (report.thresholdStatus === "skip" || !isFiniteNumber(report.threshold)) {
+      return {
+        kind: "invalid",
+        message: `${defaultBenchmarkResultPath} ${name} threshold entry missing.`,
+      };
+    }
+
+    if (!isFiniteNumber(report.p75)) {
+      return {
+        kind: "invalid",
+        message: `${defaultBenchmarkResultPath} ${name} p75 entry missing.`,
+      };
+    }
+
+    if (report.baselineStatus === "skip" || !isFiniteNumber(report.baseline)) {
+      return {
+        kind: "invalid",
+        message: `${defaultBenchmarkResultPath} ${name} baseline entry missing.`,
+      };
+    }
+
+    reports.push({
+      name,
+      threshold: report.threshold,
+      baseline: report.baseline,
+    });
+  }
+
+  if (reports.length === 0) {
+    return {
+      kind: "invalid",
+      message: `${defaultBenchmarkResultPath} does not contain any benchmark reports.`,
+    };
+  }
+
+  return {
+    kind: "valid",
+    result: {
+      allPassed: typeof result.value.allPassed === "boolean" ? result.value.allPassed : undefined,
+      gateFailures,
+      reports,
+    },
+  };
+}
+
+function getBenchmarkVarianceEvidenceFailures(
+  contract: Record<string, unknown>,
+  currentResult: BenchmarkCurrentResult,
+): string[] {
+  const failures: string[] = [];
+  const currentReports = currentResult.reports;
+
+  if (contract.source !== "github-actions") {
+    failures.push("structured evidence source must be github-actions");
+  }
+  if (!isIsoTimestamp(contract.reviewedAt)) {
+    failures.push("structured evidence reviewedAt must be an ISO timestamp");
+  }
+  if (
+    !isFiniteNumber(contract.tolerance) ||
+    !numbersNearlyEqual(contract.tolerance, benchmarkVarianceSpreadTolerance)
+  ) {
+    failures.push(
+      `structured evidence tolerance must be ${benchmarkVarianceSpreadTolerance.toFixed(2)}`,
+    );
+  }
+
+  const rows = contract.rows as unknown[];
+  if (rows.length === 0) {
+    failures.push("structured evidence rows must include at least one benchmark row");
+  }
+
+  const { orderedRunIds, artifactFailureCounts } = validateBenchmarkEvidenceRuns(
+    contract.runs as unknown[],
+    rows.length,
+    failures,
+  );
+  validateBenchmarkEvidenceSelection(contract.selection, orderedRunIds, failures);
+  validateBenchmarkEvidenceChecks(
+    contract.checks as Record<string, unknown>,
+    artifactFailureCounts,
+    failures,
+  );
+  validateBenchmarkEvidenceRows(
+    rows,
+    orderedRunIds,
+    currentReports,
+    contract.checks as Record<string, unknown>,
+    failures,
+  );
+  validateCurrentBenchmarkResultState(currentResult, failures);
+
+  return failures;
+}
+
+function validateCurrentBenchmarkResultState(
+  currentResult: BenchmarkCurrentResult,
+  failures: string[],
+): void {
+  for (const failure of currentResult.gateFailures) {
+    failures.push(`${defaultBenchmarkResultPath} gateFailures includes: ${failure}`);
+  }
+
+  if (currentResult.allPassed === false && currentResult.gateFailures.length === 0) {
+    failures.push(`${defaultBenchmarkResultPath} reports allPassed=false without gateFailures`);
+  }
+  if (currentResult.allPassed === true && currentResult.gateFailures.length > 0) {
+    failures.push(`${defaultBenchmarkResultPath} reports allPassed=true with gateFailures`);
+  }
+}
+
+function createBenchmarkGateFailureCounts(): BenchmarkVarianceGateFailureCounts {
+  return {
+    runnerFailures: 0,
+    moduleFailures: 0,
+    emptyReports: 0,
+    missingReports: 0,
+    thresholdFailures: 0,
+    thresholdSkips: 0,
+    baselineFailures: 0,
+    baselineSkips: 0,
+    otherFailures: 0,
+  };
+}
+
+function addBenchmarkGateFailureCounts(
+  target: Record<keyof BenchmarkVarianceGateFailureCounts, number>,
+  source: BenchmarkVarianceGateFailureCounts,
+): void {
+  for (const key of Object.keys(target) as Array<keyof BenchmarkVarianceGateFailureCounts>) {
+    target[key] += source[key];
+  }
+}
+
+function countBenchmarkGateFailures(
+  gateFailures: readonly string[],
+): BenchmarkVarianceGateFailureCounts {
+  const counts = createBenchmarkGateFailureCounts();
+
+  for (const failure of gateFailures) {
+    if (failure.startsWith(benchmarkRunnerErrorPrefix)) {
+      counts.runnerFailures += 1;
+    } else if (failure.startsWith(benchmarkModuleFailedPrefix)) {
+      counts.moduleFailures += 1;
+    } else if (failure === benchmarkEmptyReportFailure) {
+      counts.emptyReports += 1;
+    } else if (failure.endsWith(benchmarkMissingReportSuffix)) {
+      counts.missingReports += 1;
+    } else if (failure.includes("threshold skipped")) {
+      counts.thresholdSkips += 1;
+    } else if (failure.includes("baseline skipped")) {
+      counts.baselineSkips += 1;
+    } else if (failure.includes("exceeds threshold")) {
+      counts.thresholdFailures += 1;
+    } else if (failure.includes("exceeds baseline")) {
+      counts.baselineFailures += 1;
+    } else {
+      counts.otherFailures += 1;
+    }
+  }
+
+  return counts;
+}
+
+function validateBenchmarkEvidenceRuns(
+  runs: readonly unknown[],
+  rowCount: number,
+  failures: string[],
+): {
+  readonly orderedRunIds: number[];
+  readonly artifactFailureCounts: BenchmarkVarianceGateFailureCounts;
+} {
+  const orderedRunIds: number[] = [];
+  const runIds = new Set<number>();
+  const createdAtValues: number[] = [];
+  const artifactFailureCounts = createBenchmarkGateFailureCounts();
+
+  if (runs.length !== benchmarkVarianceEvidenceRunCount) {
+    failures.push(
+      `structured evidence runs must contain exactly ${benchmarkVarianceEvidenceRunCount} GitHub Actions runs`,
+    );
+  }
+
+  for (const run of runs) {
+    const runRecord = asRecord(run);
+    if (!runRecord) {
+      failures.push("each structured evidence run must be an object");
+      continue;
+    }
+
+    const runId = readPositiveSafeInteger(runRecord.id);
+    if (runId === null) {
+      failures.push("each structured evidence run must include a positive safe integer id");
+      continue;
+    }
+
+    orderedRunIds.push(runId);
+    if (runIds.has(runId)) {
+      failures.push(`structured evidence run id ${runId} is duplicated`);
+    }
+    runIds.add(runId);
+
+    if (!matchesGitHubActionsRunUrl(runRecord.url, runId)) {
+      failures.push(`structured evidence run ${runId} must include its GitHub Actions run URL`);
+    }
+    if (!isCommitSha(runRecord.headSha)) {
+      failures.push(`structured evidence run ${runId} must include a 40-character head SHA`);
+    }
+    if (!readOptionalString(runRecord.headBranch)) {
+      failures.push(`structured evidence run ${runId} must include a head branch`);
+    }
+    if (runRecord.baseBranch !== "trunk") {
+      failures.push(`structured evidence run ${runId} must target trunk`);
+    }
+
+    const createdAt = parseIsoTimestamp(runRecord.createdAt);
+    if (createdAt === null) {
+      failures.push(`structured evidence run ${runId} must include an ISO createdAt timestamp`);
+    } else {
+      createdAtValues.push(createdAt);
+    }
+
+    if (runRecord.workflowStatus !== "completed") {
+      failures.push(`structured evidence run ${runId} workflowStatus must be completed`);
+    }
+    if (runRecord.workflowConclusion !== "success") {
+      failures.push(`structured evidence run ${runId} workflowConclusion must be success`);
+    }
+
+    const runFailureCounts = validateBenchmarkEvidenceRunArtifact(
+      runRecord.artifact,
+      runId,
+      rowCount,
+      failures,
+    );
+    if (runFailureCounts) {
+      addBenchmarkGateFailureCounts(artifactFailureCounts, runFailureCounts);
+    }
+  }
+
+  if (
+    createdAtValues.length === benchmarkVarianceEvidenceRunCount &&
+    createdAtValues.some((createdAt, index, values) => index > 0 && createdAt >= values[index - 1])
+  ) {
+    failures.push("structured evidence runs must be ordered newest-to-oldest by createdAt");
+  }
+
+  return { orderedRunIds, artifactFailureCounts };
+}
+
+function validateBenchmarkEvidenceRunArtifact(
+  artifact: unknown,
+  runId: number,
+  rowCount: number,
+  failures: string[],
+): BenchmarkVarianceGateFailureCounts | null {
+  const artifactRecord = asRecord(artifact);
+  if (!artifactRecord) {
+    failures.push(`structured evidence run ${runId} must include benchmark artifact evidence`);
+    return null;
+  }
+
+  if (typeof artifactRecord.allPassed !== "boolean") {
+    failures.push(`structured evidence run ${runId} artifact.allPassed must be boolean`);
+  }
+  if (!isFiniteNumber(artifactRecord.reportCount) || artifactRecord.reportCount !== rowCount) {
+    failures.push(
+      `structured evidence run ${runId} artifact.reportCount must match evidence row count`,
+    );
+  }
+  if (
+    !Array.isArray(artifactRecord.gateFailures) ||
+    artifactRecord.gateFailures.some((failure) => typeof failure !== "string")
+  ) {
+    failures.push(`structured evidence run ${runId} artifact.gateFailures must be a string array`);
+    return null;
+  }
+
+  const gateFailures = artifactRecord.gateFailures;
+  const runFailureCounts = countBenchmarkGateFailures(gateFailures);
+
+  if (artifactRecord.allPassed === true && gateFailures.length > 0) {
+    failures.push(
+      `structured evidence run ${runId} artifact cannot be allPassed=true with gate failures`,
+    );
+  }
+  if (artifactRecord.allPassed === false && gateFailures.length === 0) {
+    failures.push(
+      `structured evidence run ${runId} artifact cannot be allPassed=false without gate failures`,
+    );
+  }
+  if (runFailureCounts.otherFailures > 0) {
+    failures.push(`structured evidence run ${runId} artifact contains unclassified gate failures`);
+  }
+
+  return runFailureCounts;
+}
+
+function validateBenchmarkEvidenceSelection(
+  selection: unknown,
+  orderedRunIds: readonly number[],
+  failures: string[],
+): void {
+  const selectionRecord = asRecord(selection);
+  if (!selectionRecord) {
+    failures.push("structured evidence selection must describe the latest green trunk run window");
+    return;
+  }
+
+  const expectedFields: ReadonlyArray<readonly [string, string]> = [
+    ["workflowName", "Performance Benchmark"],
+    ["qualifyingBaseBranch", "trunk"],
+    ["qualifyingWorkflowStatus", "completed"],
+    ["qualifyingWorkflowConclusion", "success"],
+    ["orderedBy", "createdAt-desc"],
+  ];
+  for (const [field, expectedValue] of expectedFields) {
+    if (selectionRecord[field] !== expectedValue) {
+      failures.push(`structured evidence selection.${field} must be ${expectedValue}`);
+    }
+  }
+
+  const latestRunIds = selectionRecord.latestGreenTrunkRunIds;
+  if (!Array.isArray(latestRunIds) || latestRunIds.length !== benchmarkVarianceEvidenceRunCount) {
+    failures.push(
+      `structured evidence selection.latestGreenTrunkRunIds must contain exactly ${benchmarkVarianceEvidenceRunCount} run ids`,
+    );
+    return;
+  }
+
+  const normalizedRunIds = latestRunIds.map(readPositiveSafeInteger);
+  if (normalizedRunIds.some((runId) => runId === null)) {
+    failures.push(
+      "structured evidence selection.latestGreenTrunkRunIds must be positive safe integers",
+    );
+    return;
+  }
+
+  if (new Set(normalizedRunIds).size !== normalizedRunIds.length) {
+    failures.push(
+      "structured evidence selection.latestGreenTrunkRunIds must not contain duplicates",
+    );
+  }
+  if (JSON.stringify(normalizedRunIds) !== JSON.stringify(orderedRunIds)) {
+    failures.push(
+      "structured evidence selection.latestGreenTrunkRunIds must match runs in newest-to-oldest order",
+    );
+  }
+}
+
+function validateBenchmarkEvidenceChecks(
+  checks: Record<string, unknown>,
+  artifactFailureCounts: BenchmarkVarianceGateFailureCounts,
+  failures: string[],
+): void {
+  if (checks.sameRowSet !== true) {
+    failures.push("structured evidence checks.sameRowSet must be true");
+  }
+
+  const expectedArtifactFailureCounts = {
+    runnerFailures: artifactFailureCounts.runnerFailures,
+    moduleFailures: artifactFailureCounts.moduleFailures,
+    emptyReports: artifactFailureCounts.emptyReports,
+    missingReports: artifactFailureCounts.missingReports,
+    thresholdFailures: artifactFailureCounts.thresholdFailures,
+    thresholdSkips: artifactFailureCounts.thresholdSkips,
+    baselineSkips: artifactFailureCounts.baselineSkips,
+    prePromotionBaselineFailures: artifactFailureCounts.baselineFailures,
+  };
+
+  for (const [key, expectedCount] of Object.entries(expectedArtifactFailureCounts)) {
+    if (checks[key] !== expectedCount) {
+      failures.push(`structured evidence checks.${key} must match reviewed artifact gate failures`);
+    }
+  }
+
+  for (const key of [
+    "runnerFailures",
+    "moduleFailures",
+    "emptyReports",
+    "missingReports",
+    "thresholdFailures",
+    "thresholdSkips",
+    "baselineSkips",
+  ] as const) {
+    if (checks[key] !== 0) {
+      failures.push(`structured evidence checks.${key} must be 0`);
+    }
+  }
+
+  if (
+    !isFiniteNumber(checks.prePromotionBaselineFailures) ||
+    checks.prePromotionBaselineFailures < 0
+  ) {
+    failures.push("structured evidence checks.prePromotionBaselineFailures must be non-negative");
+  }
+  if (!isFiniteNumber(checks.promotedBaselineFailures) || checks.promotedBaselineFailures < 0) {
+    failures.push("structured evidence checks.promotedBaselineFailures must be non-negative");
+  }
+}
+
+function validateBenchmarkEvidenceRows(
+  rows: readonly unknown[],
+  orderedRunIds: readonly number[],
+  currentReports: readonly BenchmarkCurrentReport[],
+  checks: Record<string, unknown>,
+  failures: string[],
+): void {
+  const rowNames = new Set<string>();
+  const rowsByName = new Map<string, Record<string, unknown>>();
+  for (const [index, row] of rows.entries()) {
+    const rowRecord = asRecord(row);
+    const rowLabel = `structured evidence row ${index + 1}`;
+    if (!rowRecord) {
+      failures.push(`${rowLabel} must be an object`);
+      continue;
+    }
+
+    const rowName = readBenchmarkContractString(rowRecord.name);
+    if (!rowName) {
+      failures.push(`${rowLabel} must include a name`);
+    } else if (rowNames.has(rowName)) {
+      failures.push(
+        `structured evidence rows must not contain duplicate benchmark name ${rowName}`,
+      );
+    } else {
+      rowNames.add(rowName);
+      rowsByName.set(rowName, rowRecord);
+    }
+  }
+
+  const expectedNames = currentReports.map((report) => report.name).sort(compareStrings);
+  const evidenceNames = [...rowsByName.keys()].sort(compareStrings);
+  if (rows.length !== currentReports.length) {
+    failures.push(
+      `structured evidence rows must contain exactly ${currentReports.length} current benchmark row(s)`,
+    );
+  }
+  if (JSON.stringify(evidenceNames) !== JSON.stringify(expectedNames)) {
+    failures.push(
+      `structured evidence row set must match ${defaultBenchmarkResultPath} (${evidenceNames.length} evidence row(s), ${expectedNames.length} result row(s))`,
+    );
+  }
+
+  let promotedBaselineFailures = 0;
+
+  for (const currentReport of currentReports) {
+    const rowRecord = rowsByName.get(currentReport.name);
+    if (!rowRecord) {
+      continue;
+    }
+
+    const rowLabel = `${currentReport.name}`;
+
+    if (rowRecord.status !== "pass") {
+      failures.push(`${rowLabel} status must be pass`);
+    }
+    for (const field of ["min", "median", "max", "spread"] as const) {
+      if (!isFiniteNumber(rowRecord[field])) {
+        failures.push(`${rowLabel}.${field} must be numeric`);
+      }
+    }
+
+    const p75ByRun = asRecord(rowRecord.p75ByRun);
+    if (!p75ByRun) {
+      failures.push(`${rowLabel}.p75ByRun must map run ids to p75 values`);
+      continue;
+    }
+
+    const p75Values = orderedRunIds.map((runId) => p75ByRun[String(runId)]);
+    if (
+      p75Values.length !== benchmarkVarianceEvidenceRunCount ||
+      p75Values.some((value) => !isFiniteNumber(value))
+    ) {
+      failures.push(`${rowLabel}.p75ByRun must contain finite p75 values for every reviewed run`);
+      continue;
+    }
+
+    const numericP75Values = p75Values as number[];
+    const sortedValues = [...numericP75Values].sort((left, right) => left - right);
+    const min = Math.min(...numericP75Values);
+    const median = sortedValues[Math.floor(sortedValues.length / 2)];
+    const max = Math.max(...numericP75Values);
+    const spread = (max - min) / median;
+
+    if (!numbersNearlyEqual(rowRecord.min, min)) {
+      failures.push(`${rowLabel}.min must match p75ByRun values`);
+    }
+    if (!numbersNearlyEqual(rowRecord.median, median)) {
+      failures.push(`${rowLabel}.median must match p75ByRun values`);
+    }
+    if (!numbersNearlyEqual(rowRecord.max, max)) {
+      failures.push(`${rowLabel}.max must match p75ByRun values`);
+    }
+    if (!numbersNearlyEqual(rowRecord.spread, spread)) {
+      failures.push(`${rowLabel}.spread must match p75ByRun values`);
+    }
+    if (spread > benchmarkVarianceSpreadTolerance) {
+      failures.push(
+        `${rowLabel}.spread ${(spread * 100).toFixed(2)}% exceeds ${(benchmarkVarianceSpreadTolerance * 100).toFixed(0)}% tolerance`,
+      );
+    }
+    const rowPromotedBaselineFailures =
+      currentReport.baseline === null
+        ? benchmarkVarianceEvidenceRunCount
+        : numericP75Values.filter(
+            (value) =>
+              currentReport.baseline !== null &&
+              value - currentReport.baseline >
+                currentReport.baseline * benchmarkPromotedBaselineTolerance,
+          ).length;
+    promotedBaselineFailures += rowPromotedBaselineFailures;
+    if (rowPromotedBaselineFailures > 0) {
+      failures.push(
+        `${currentReport.name}: ${rowPromotedBaselineFailures} reviewed run(s) fail the promoted baseline tolerance`,
+      );
+    }
+    if (currentReport.baseline === null || !numbersNearlyEqual(currentReport.baseline, median)) {
+      failures.push(`${currentReport.name}: committed baseline must match the reviewed median p75`);
+    }
+  }
+
+  if (checks.promotedBaselineFailures !== promotedBaselineFailures) {
+    failures.push(
+      "structured evidence checks.promotedBaselineFailures must match promoted baseline validation",
+    );
+  }
+}
+
+function parseIsoTimestamp(value: unknown): number | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const match = isoTimestampPattern.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const millisecond = match[7] === undefined ? 0 : Number(match[7]);
+  const timestamp = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+  const date = new Date(timestamp);
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute ||
+    date.getUTCSeconds() !== second ||
+    date.getUTCMilliseconds() !== millisecond
+  ) {
+    return null;
+  }
+
+  return timestamp;
+}
+
+function isIsoTimestamp(value: unknown): value is string {
+  return parseIsoTimestamp(value) !== null;
+}
+
+function isCommitSha(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{40}$/.test(value);
+}
+
+function matchesGitHubActionsRunUrl(value: unknown, runId: number): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    const expectedPath = `${benchmarkGitHubActionsRunPathPrefix}/${runId}`;
+    return (
+      url.origin === "https://github.com" &&
+      (url.pathname === expectedPath || url.pathname.startsWith(`${expectedPath}/`))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function readPositiveSafeInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function numbersNearlyEqual(left: unknown, right: number): boolean {
+  return isFiniteNumber(left) && Math.abs(left - right) <= Math.max(1e-9, Math.abs(right) * 1e-6);
+}
+
+function securityAllowlistMetadataReadiness(
+  rootDir: string,
+  checkId: string,
+): AdvisoryGateReadinessSection | null {
+  const existingAllowlistPaths = staticMisuseAllowlistPaths.filter((allowlistPath) =>
+    existsSync(join(rootDir, allowlistPath)),
+  );
+  if (existingAllowlistPaths.length === 0) {
+    return null;
+  }
+
+  const diagnostics = existingAllowlistPaths.flatMap((allowlistPath) =>
+    validateSecurityAllowlistFile(rootDir, allowlistPath, checkId),
+  );
+
+  return { label: "security allowlist metadata", diagnostics };
+}
+
+function validateSecurityAllowlistFile(
+  rootDir: string,
+  allowlistPath: string,
+  checkId: string,
+): DoctorDiagnostic[] {
+  const allowlist = readJsonObject(join(rootDir, allowlistPath));
+  if (allowlist.kind === "invalid") {
+    return [
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+        checkId,
+        cause: `${allowlistPath} could not be parsed: ${allowlist.message}`,
+        location: { file: allowlistPath },
+        action:
+          "Fix the static misuse allowlist JSON, then rerun the static misuse check and croco doctor.",
+      }),
+    ];
+  }
+
+  const entries = allowlist.value.entries;
+  if (allowlist.value.schemaVersion !== 1 || !Array.isArray(entries)) {
+    return [
+      advisoryDiagnostic({
+        code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+        checkId,
+        cause: `${allowlistPath} must declare schemaVersion 1 and an entries array.`,
+        location: { file: allowlistPath },
+        action: "Regenerate or repair the static misuse allowlist metadata.",
+      }),
+    ];
+  }
+
+  return entries.flatMap((entry, index) =>
+    validateSecurityAllowlistEntry(rootDir, allowlistPath, entry, index, checkId),
+  );
+}
+
+function validateSecurityAllowlistEntry(
+  rootDir: string,
+  allowlistPath: string,
+  entry: unknown,
+  index: number,
+  checkId: string,
+): DoctorDiagnostic[] {
+  const entryRecord = asRecord(entry);
+  const entryLabel = `entry ${index + 1}`;
+  const missingFields = entryRecord
+    ? ["package", "file", "excerpt", "reason"].filter(
+        (field) => !readOptionalString(entryRecord[field]),
+      )
+    : ["package", "file", "excerpt", "reason"];
+  const line = entryRecord?.line;
+  const validLine = typeof line === "number" && Number.isInteger(line) && line >= 1 ? line : null;
+  const lineInvalid = validLine === null;
+  const owner = readOptionalString(entryRecord?.owner);
+  const rawExpiresOn = entryRecord?.expiresOn;
+  const expiresOn = readOptionalString(rawExpiresOn);
+  const expiresOnTimestamp = expiresOn ? parseDateOnlyUtcTimestamp(expiresOn) : null;
+  const expiresOnInvalid = Boolean(
+    entryRecord && rawExpiresOn !== undefined && expiresOnTimestamp === null,
+  );
+  const expiresOnExpired =
+    expiresOnTimestamp !== null && expiresOnTimestamp < getTodayUtcDateOnlyTimestamp();
+  const metadataMissing = !owner && !expiresOn;
+  const failures = [
+    ...(missingFields.length > 0 ? [`missing ${missingFields.join(", ")}`] : []),
+    ...(lineInvalid ? ["line must be a positive integer"] : []),
+    ...(metadataMissing ? ["owner or expiresOn metadata is required"] : []),
+    ...(expiresOnInvalid ? ["expiresOn must use YYYY-MM-DD"] : []),
+    ...(expiresOnExpired ? ["expiresOn must not be in the past"] : []),
+  ];
+
+  const packageName = readRawString(entryRecord?.package);
+  const file = readRawString(entryRecord?.file);
+  const excerpt = readRawString(entryRecord?.excerpt);
+  if (
+    failures.length === 0 &&
+    packageName &&
+    packageName.trim() &&
+    file &&
+    file.trim() &&
+    excerpt &&
+    excerpt.trim() &&
+    validLine !== null
+  ) {
+    const relativeFile = toPosixPath(file);
+    if (!isProductionPackageSourceFile(relativeFile)) {
+      failures.push("file must point at production packages/*/src source");
+    }
+
+    const sourcePackageName = readSourcePackageName(rootDir, relativeFile);
+    if (sourcePackageName !== packageName) {
+      failures.push(`package must match ${sourcePackageName ?? "the source package name"}`);
+    }
+
+    const fullPath = join(rootDir, relativeFile);
+    if (!existsSync(fullPath)) {
+      failures.push("file does not exist");
+    } else {
+      const sourceLine = readFileSync(fullPath, "utf-8").split(/\r?\n/)[validLine - 1]?.trim();
+      if (sourceLine !== excerpt) {
+        failures.push("excerpt does not match the current source line");
+      }
+    }
+  }
+
+  if (failures.length === 0) {
+    return [];
+  }
+
+  return [
+    advisoryDiagnostic({
+      code: CLI_DIAGNOSTIC_CODES.doctorSecurityAllowlistMetadataInvalid,
+      checkId,
+      cause: `${allowlistPath} ${entryLabel} is invalid: ${failures.join("; ")}.`,
+      location: {
+        file: allowlistPath,
+        packageName: packageName ?? undefined,
+      },
+      action:
+        "Add package, file, line, excerpt, reason, and owner or expiresOn metadata, or remove the stale allowlist entry after fixing the misuse.",
+    }),
+  ];
+}
+
+function parseDateOnlyUtcTimestamp(value: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const timestamp = Date.UTC(year, month - 1, day);
+  const date = new Date(timestamp);
+
+  return date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+    ? timestamp
+    : null;
+}
+
+function getTodayUtcDateOnlyTimestamp(): number {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+}
+
+function isProductionPackageSourceFile(relativeFile: string): boolean {
+  const normalizedFile = toPosixPath(relativeFile);
+  const parts = normalizedFile.split("/");
+
+  return (
+    parts[0] === "packages" &&
+    parts.length >= 4 &&
+    parts[2] === "src" &&
+    !parts.includes("tests") &&
+    !normalizedFile.endsWith(".spec.js") &&
+    !normalizedFile.endsWith(".test.js") &&
+    !normalizedFile.endsWith(".spec.jsx") &&
+    !normalizedFile.endsWith(".test.jsx") &&
+    !normalizedFile.endsWith(".spec.ts") &&
+    !normalizedFile.endsWith(".test.ts") &&
+    !normalizedFile.endsWith(".spec.tsx") &&
+    !normalizedFile.endsWith(".test.tsx")
+  );
+}
+
+function readSourcePackageName(rootDir: string, relativeFile: string): string | null {
+  const parts = toPosixPath(relativeFile).split("/");
+  if (parts[0] !== "packages" || !parts[1]) {
+    return null;
+  }
+
+  const packageJsonPath = join(rootDir, "packages", parts[1], "package.json");
+  if (!existsSync(packageJsonPath)) {
+    return null;
+  }
+
+  const manifest = readJsonObject(packageJsonPath);
+  return manifest.kind === "valid" ? readPackageName(manifest.value) : null;
+}
+
+function advisoryDiagnostic(input: {
+  readonly code: CliDiagnosticCode;
+  readonly checkId: string;
+  readonly cause: string;
+  readonly location: DoctorLocation | null;
+  readonly action: string;
+}): DoctorDiagnostic {
+  return {
+    code: input.code,
+    severity: "warning",
+    checkId: input.checkId,
+    cause: input.cause,
+    location: input.location,
+    action: input.action,
   };
 }
 
@@ -1486,7 +3352,66 @@ function findBalancedDelimitedEnd(
 }
 
 function stripTypeScriptComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  let result = "";
+  let quote: '"' | "'" | "`" | null = null;
+  let isEscaped = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    const nextChar = source[index + 1];
+
+    if (quote !== null) {
+      result += char;
+
+      if (isEscaped) {
+        isEscaped = false;
+      } else if (char === "\\") {
+        isEscaped = true;
+      } else if (char === quote) {
+        quote = null;
+      }
+
+      continue;
+    }
+
+    if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+      result += char;
+      continue;
+    }
+
+    if (char === "/" && nextChar === "/") {
+      result += " ";
+      index += 2;
+
+      while (index < source.length && source[index] !== "\n" && source[index] !== "\r") {
+        index += 1;
+      }
+
+      index -= 1;
+      continue;
+    }
+
+    if (char === "/" && nextChar === "*") {
+      result += " ";
+      index += 2;
+
+      while (index < source.length && !(source[index] === "*" && source[index + 1] === "/")) {
+        if (source[index] === "\n" || source[index] === "\r") {
+          result += source[index];
+        }
+
+        index += 1;
+      }
+
+      index += 1;
+      continue;
+    }
+
+    result += char;
+  }
+
+  return result;
 }
 
 function maskTypeScriptStringLiterals(source: string): string {
@@ -1558,6 +3483,7 @@ function readPackage(rootDir: string, packageJsonPath: string): WorkspacePackage
       package: {
         name: parsed.name,
         version: typeof parsed.version === "string" ? parsed.version : null,
+        private: parsed.private === true,
         absoluteDir,
         relativeDir: toPosixPath(relative(rootDir, absoluteDir)),
         dependencies: readPackageDependencies(parsed, absoluteDir, parsed.name),
@@ -1593,6 +3519,10 @@ function invalidPackageDiagnostic(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return isRecord(value) ? value : null;
 }
 
 function readPackageDependencies(
@@ -1944,7 +3874,24 @@ function readNumber(value: Record<string, unknown>, key: string, fallback: numbe
 }
 
 function readOptionalString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function readBenchmarkContractString(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function readRawString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function toPackageSlug(packageName: string): string {
+  return packageName.startsWith("@croco/") ? packageName.slice("@croco/".length) : packageName;
 }
 
 function formatLocation(location: DoctorLocation | null): string {

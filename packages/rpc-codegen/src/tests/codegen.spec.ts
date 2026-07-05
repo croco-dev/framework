@@ -786,6 +786,7 @@ describe("generateClientFiles", () => {
           operationId: "createUser",
           inputSchemas,
           outputSchema: userSchema,
+          problemResponsesDeclared: true,
           problemResponses: [],
         },
         params: [{ kind: "body", name: "", schema: createUserSchema }],

@@ -14,22 +14,22 @@ call abstraction. The supported control path is:
 
 OpenAI is the first real provider target for a follow-up provider package because the
 official API surface checked on 2026-06-18 covers the required Croco operations.
-The links below use dated Web Archive snapshots so the provider decision does not
-depend on unversioned documentation paths:
+The links below are the official documentation paths used for that provider
+decision and are validated by the docs link check:
 
 - Text generation uses the Responses API and the official Node SDK
   (`client.responses.create`, `response.output_text`):
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/guides/text
+  https://developers.openai.com/api/docs/guides/text
 - Responses include usage fields for input, output, and total tokens:
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/reference/resources/responses/methods/create
+  https://developers.openai.com/api/reference/resources/responses/methods/create
 - Streaming uses `stream=true` over server-sent events:
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/guides/streaming-responses
+  https://developers.openai.com/api/docs/guides/streaming-responses
 - Structured outputs use JSON schema response formats:
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/guides/structured-outputs
+  https://developers.openai.com/api/docs/guides/structured-outputs
 - Function tools are supported through Responses API `tools`:
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/guides/function-calling
+  https://developers.openai.com/api/docs/guides/function-calling
 - Embeddings remain a separate endpoint:
-  https://web.archive.org/web/20260618000000/https://developers.openai.com/api/reference/resources/embeddings/methods/create
+  https://developers.openai.com/api/reference/resources/embeddings/methods/create
 
 This PR intentionally does not ship a partial `@croco/llm-openai` package. The
 provider must normalize Responses events, function-tool outputs, structured output
@@ -87,7 +87,7 @@ const llmMetering = new LlmMeteringService({
 ```
 
 The authoritative pricing source should be checked when the registry is refreshed:
-https://web.archive.org/web/20260618000000/https://developers.openai.com/api/docs/pricing
+https://developers.openai.com/api/docs/pricing
 
 ## Quota And Failure Policy
 

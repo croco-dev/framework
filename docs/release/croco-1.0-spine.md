@@ -5,6 +5,8 @@ artifacts, runtime contracts, and release evidence define the 1.0 compatibility 
 
 The machine-readable source of truth is `docs/package-catalog.json` `spine.packages`.
 
+Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alpha/WIP, 0 deprecated; 8 beta promotion records.
+
 ## Package Set
 
 | Package                     | Gate role                                                         |
@@ -70,15 +72,16 @@ both spine membership and production-ready maturity.
 
 ## Gate Mapping
 
-| Gate                     | Current selector                                                              | Spine expectation                                                                                                                                                                           |
-| ------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Public API snapshot      | `pnpm public-api:check` scans publishable package entrypoints                 | Every spine package with `src/index.ts` participates in the snapshot or has an explicit package-level exemption. `@croco/framework-context` additionally reports grouped sub-surface drift. |
-| Package entrypoint smoke | `pnpm package-entrypoints:smoke` scans public package publish contracts       | Every importable spine package must resolve ESM/CJS/types after build.                                                                                                                      |
-| Contract tests           | `pnpm strict-contract-typecheck`, package tests, and generated contract smoke | Protocol/OpenAPI/RPC/transport spine changes must keep contract graph, generated OpenAPI, RPC client, and diagnostics checks green.                                                         |
-| Generated app smoke      | `pnpm create-croco-app:smoke`                                                 | The golden generated app paths must exercise spine protocol, transport, CLI, and codegen packages without live third-party credentials.                                                     |
-| Doctor JSON contract     | `@croco/cli` doctor snapshots plus `pnpm release-docs:check`                  | `croco.doctor.v1` must keep healthy/failing JSON report snapshots stable; breaking doctor JSON changes require versioning or release notes.                                                 |
-| Spine promotion check    | `pnpm spine-promotion:check`                                                  | Beta spine packages must name an owner, target evidence, and recovery action before publish-sensitive dashboard steps.                                                                      |
-| Coverage policy          | `pnpm test:coverage:core:warning`                                             | `spine.packages` is a deterministic selection signal; missing spine packages are reported until included or temporarily justified.                                                          |
+| Gate                     | Current selector                                                                                    | Spine expectation                                                                                                                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public API snapshot      | `pnpm public-api:check` scans publishable package entrypoints                                       | Every spine package with `src/index.ts` participates in the snapshot or has an explicit package-level exemption. `@croco/framework-context` additionally reports grouped sub-surface drift. |
+| Package entrypoint smoke | `pnpm package-entrypoints:smoke` scans public package publish contracts                             | Every importable spine package must resolve ESM/CJS/types after build.                                                                                                                      |
+| First-success contract   | `pnpm first-success:verify`, `pnpm quick-start-lambda:smoke`, `pnpm saas-billing-golden-path:smoke` | Root README, getting-started docs, release spine docs, scaffold commands, and checked examples must point to the same first-success commands.                                               |
+| Contract tests           | `pnpm strict-contract-typecheck`, package tests, and generated contract smoke                       | Protocol/OpenAPI/RPC/transport spine changes must keep contract graph, generated OpenAPI, RPC client, and diagnostics checks green.                                                         |
+| Generated app smoke      | `pnpm create-croco-app:smoke`                                                                       | The golden generated app paths must exercise spine protocol, transport, CLI, and codegen packages without live third-party credentials.                                                     |
+| Doctor JSON contract     | `@croco/cli` doctor snapshots plus `pnpm release-docs:check`                                        | `croco.doctor.v1` must keep healthy/failing JSON report snapshots stable; breaking doctor JSON changes require versioning or release notes.                                                 |
+| Spine promotion check    | `pnpm spine-promotion:check`                                                                        | Beta spine packages must name an owner, target evidence, and recovery action before publish-sensitive dashboard steps.                                                                      |
+| Coverage policy          | `pnpm test:coverage:core:warning`                                                                   | `spine.packages` is a deterministic selection signal; missing spine packages are reported until included or temporarily justified.                                                          |
 
 Non-spine beta or alpha packages do not block 1.0 by default. They become blocking only when a
 golden generated app path, production-ready promotion, or certified adapter contract explicitly

@@ -14041,6 +14041,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "parseContractGraphStrictModeFlag",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphCli",
+          "declarationKind": "function"
+        },
+        {
           "name": "PROJECT_MANIFEST_BUNDLE_ARTIFACT_ENTRIES",
           "exportKind": "named",
           "source": "./libs/ProjectManifestBundle",
@@ -14051,6 +14057,12 @@
           "exportKind": "named",
           "source": "./libs/ProjectManifestBundle",
           "declarationKind": "const"
+        },
+        {
+          "name": "resolveContractGraphBlockingDiagnostics",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphCli",
+          "declarationKind": "function"
         },
         {
           "name": "snapshotZodSchema",
@@ -14127,6 +14139,11 @@
           "name": "ContractGraph",
           "exportKind": "named",
           "source": "./libs/ContractGraph"
+        },
+        {
+          "name": "ContractGraphBlockingDiagnostics",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphCli"
         },
         {
           "name": "ContractGraphConsumerCoverage",

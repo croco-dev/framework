@@ -76,6 +76,7 @@ export const DIAGNOSTIC_CODE_CHANGE_POLICY = {
 type CliDiagnosticCodeDefinitionInput = {
   readonly code: DiagnosticCode;
   readonly category: DiagnosticCategory;
+  readonly severity?: DiagnosticSeverity;
   readonly title: string;
   readonly cause: string;
   readonly action: string;
@@ -90,7 +91,7 @@ function createCliDiagnosticCodeDefinition(
   return {
     code: input.code,
     category: input.category,
-    severity: "error",
+    severity: input.severity ?? "error",
     title: input.title,
     cause: input.cause,
     action: input.action,
@@ -582,6 +583,62 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     legacyCodes: [],
     searchKeywords: ["croco doctor", "provider certification", "documented capability"],
     fixExample: { label: "Run doctor", command: "pnpm exec croco doctor" },
+  }),
+  createCliDiagnosticCodeDefinition({
+    code: "CROCO_DOCTOR_CORE_COVERAGE_CANDIDATE_MISSING",
+    category: "build-time",
+    severity: "warning",
+    title: "Core coverage candidate is missing",
+    cause:
+      "croco doctor found a release-critical workspace package that is not selected by test:coverage:core.",
+    action:
+      "Add the package to test:coverage:core, run pnpm test:coverage:core, and refresh the committed core coverage baseline.",
+    legacyCodes: [],
+    searchKeywords: ["croco doctor", "core coverage", "release-hardening"],
+    fixExample: {
+      label: "Check core coverage selection",
+      command: "pnpm test:coverage:core:warning",
+    },
+  }),
+  createCliDiagnosticCodeDefinition({
+    code: "CROCO_DOCTOR_BUNDLE_SIZE_BASELINE_MISSING",
+    category: "build-time",
+    severity: "warning",
+    title: "Bundle-size baseline is missing",
+    cause:
+      "croco doctor could not read the advisory bundle-size baseline required by package-quality reporting.",
+    action: "Run pnpm build && pnpm package-quality:report, then commit the baseline artifact.",
+    legacyCodes: [],
+    searchKeywords: ["croco doctor", "bundle size", "package quality"],
+    fixExample: { label: "Refresh package quality report", command: "pnpm package-quality:report" },
+  }),
+  createCliDiagnosticCodeDefinition({
+    code: "CROCO_DOCTOR_BENCHMARK_VARIANCE_EVIDENCE_MISSING",
+    category: "build-time",
+    severity: "warning",
+    title: "Benchmark variance evidence is missing",
+    cause: "croco doctor could not verify the structured benchmark variance evidence artifact.",
+    action:
+      "Run pnpm bench:check and pnpm bench:readiness, then commit the latest five-green-runs evidence artifact.",
+    legacyCodes: [],
+    searchKeywords: ["croco doctor", "benchmark readiness", "variance evidence"],
+    fixExample: { label: "Check benchmark readiness", command: "pnpm bench:readiness" },
+  }),
+  createCliDiagnosticCodeDefinition({
+    code: "CROCO_DOCTOR_SECURITY_ALLOWLIST_METADATA_INVALID",
+    category: "build-time",
+    severity: "warning",
+    title: "Security allowlist metadata is invalid",
+    cause:
+      "croco doctor found static-misuse allowlist entries without the required owner or expiry metadata.",
+    action:
+      "Add owner or expiresOn metadata to each allowlist entry, or remove stale entries after fixing the misuse.",
+    legacyCodes: [],
+    searchKeywords: ["croco doctor", "security allowlist", "static misuse"],
+    fixExample: {
+      label: "Check static misuse allowlist",
+      command: "pnpm static-misuse:check",
+    },
   }),
   createCliDiagnosticCodeDefinition({
     code: "CROCO_CLI_USAGE_DASHBOARD_001",
