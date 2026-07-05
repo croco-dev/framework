@@ -1,6 +1,10 @@
 import { Component, Context as FrameworkContext, type ILogger } from "@croco/framework-context";
-import { Problem, ProblemCategoryMapper, type ProblemDetails } from "@croco/problems-core";
+import { Problem, type ProblemDetails } from "@croco/problems-core";
 import { HTTP_CONTEXT_KEYS } from "./contextKeys";
+import {
+  createHttpProblemDetails,
+  redactHttpProblemDetailsBody,
+} from "./problemResponseSerializer";
 import type { CrocoHttpContext } from "./types";
 
 type TelemetryFailureMetadata = {
@@ -43,31 +47,38 @@ export class ErrorHandler {
   }
 
   private handleProblem(problem: Problem, ctx: CrocoHttpContext): Response {
-    const status = ProblemCategoryMapper.toHttpStatus(problem.category);
-    const reservedFields = new Set(["type", "title", "status", "code", "detail", "instance"]);
+    const body = this.createProblemResponseBody(problem, ctx);
 
-    const safeExtensions = Object.entries(problem.extensions ?? {}).reduce(
-      (acc, [key, value]) => {
-        if (!reservedFields.has(key)) {
-          acc[key] = value;
-        }
-        return acc;
-      },
-      {} as Record<string, unknown>,
-    );
+    return ctx.jsonResponse(body, body.status);
+  }
 
-    const body: ProblemDetails = {
-      type: problem.type,
-      title: problem.title,
-      status,
-      code: problem.code,
-      detail: problem.detail,
-      instance: ctx.req.url,
-      ...safeExtensions,
+  createProblemResponseBody(problem: Problem, ctx: CrocoHttpContext): ProblemDetails {
+    return {
+      ...createHttpProblemDetails(problem, ctx.req.url),
       ...this.createFailureMetadata(ctx),
     };
+  }
 
-    return ctx.jsonResponse(body, status);
+  createFilterResponseBody(
+    error: unknown,
+    body: Record<string, unknown>,
+    ctx: CrocoHttpContext,
+  ): Record<string, unknown> {
+    const redactedBody = redactHttpProblemDetailsBody(
+      body,
+      error instanceof Problem
+        ? { instance: ctx.req.url, sourceProblem: error }
+        : { instance: ctx.req.url },
+    );
+
+    if (redactedBody === undefined) {
+      return body;
+    }
+
+    return {
+      ...redactedBody,
+      ...this.createFailureMetadata(ctx),
+    };
   }
 
   private handleGenericError(error: Error, ctx: CrocoHttpContext): Response {

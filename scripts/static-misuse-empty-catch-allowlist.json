@@ -60,14 +60,6 @@
     },
     {
       "package": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/PipelineRunner.ts",
-      "line": 213,
-      "excerpt": "} catch {",
-      "reason": "Exception filter failure intentionally falls through to the next filter or default error handler; changing this catch would alter recovery semantics.",
-      "owner": "framework-error-handling"
-    },
-    {
-      "package": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
       "line": 317,
       "excerpt": "} catch {",

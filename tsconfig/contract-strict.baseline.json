@@ -4439,14 +4439,6 @@
     },
     {
       "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/ErrorHandler.ts",
-      "line": 59,
-      "column": 11,
-      "code": "TS2375",
-      "message": "Type '{ traceId?: string; requestId?: string; telemetry?: TelemetryFailureMetadata; type: string; title: string; status: number; code: string; detail: string | undefined; instance: string; }' is not assignable to type 'ProblemDetails' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/HealthCheckRegistry.ts",
       "line": 68,
       "column": 5,
@@ -4580,30 +4572,6 @@
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ exposure: DiagnosticsExposureMode; token: string | undefined; tokenHeader: string; guard: DiagnosticsGuard | undefined; collector: DiagnosticsCollector | undefined; providers: readonly DiagnosticsProvider[] | undefined; recentErrorLimit: number; messageLimit: number; }' is not assignable to type 'DiagnosticsEndpointPolicy' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/PipelineRunner.ts",
-      "line": 127,
-      "column": 45,
-      "code": "TS2379",
-      "message": "Argument of type '{ target: string | undefined; policyPlan: PolicyExecutionPlan | undefined; }' is not assignable to parameter of type 'CompileRequestPipelineGraphOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/PipelineRunner.ts",
-      "line": 181,
-      "column": 23,
-      "code": "TS18048",
-      "message": "'interceptor' is possibly 'undefined'."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/PipelineRunner.ts",
-      "line": 266,
-      "column": 3,
-      "code": "TS2375",
-      "message": "Type '{ id: string; kind: \"filter\" | \"policy\" | \"middleware\" | \"guard\" | \"interceptor\" | \"handler\"; phase: \"error\" | \"handler\" | \"before\" | \"after\"; order: number; label: string; failurePropagation: RequestPipelineFailurePropagation | undefined; }' is not assignable to type 'RequestPipelineNode' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/transports-http",

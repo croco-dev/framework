@@ -218,8 +218,18 @@ Diagnostics 응답은 `Cache-Control: no-store`를 포함합니다. `recentError
 
 ## Failure response contract
 
-`ErrorHandler`는 Croco `Problem`을 만나면 `type`, `title`, `status`, `code`, `detail`, `instance`와
-안전한 extension을 직렬화합니다. RFC 7807 표준 필드는 Problem extension으로 덮어쓸 수 없고,
+HTTP transport는 Croco `Problem` 또는 exception filter가 반환한 Problem Details 응답을
+`type`, `title`, `status`, `code`, `detail`, `instance`와 registry redaction policy가 허용한
+public extension만으로 직렬화합니다. 등록된 code는 generated
+Problem registry의 `recovery.redactionPolicy`를 따르고, 등록되지 않은 code는 `ProblemCategory`
+기본 recovery metadata로 fallback합니다. `public`과 `safe-message` 응답은 `detail`을 유지하되
+`errors`, `issues`, `fields`, `field`, `formErrors`, `limit`, `remaining`, `resetAt`, `retryAfter`,
+`retryAfterMs`, `retryAfterSeconds`, `retryAt`, `requested`, `current`, `max`, `currentSeats`,
+`maxSeats`, `reason`, `recoveryAction`, `legacyCode`만 extension으로 노출합니다. `operator-only`
+응답은 `detail`을 opaque 메시지로 바꾸고 Problem extension을 노출하지 않습니다.
+
+RFC 7807 표준 필드와 transport correlation 필드(`type`, `title`, `status`, `code`, `detail`,
+`instance`, `traceId`, `requestId`, `telemetry`)는 Problem extension으로 덮어쓸 수 없습니다.
 transport가 만든 `traceId`, `requestId`, `telemetry` correlation metadata는 redaction 이후에도
 복구와 로그 검색에 사용할 수 있도록 응답에 남습니다. 일반 `Error`는 로그에 남기고
 `500 Internal Server Error`의 opaque 응답으로 변환합니다. 따라서 컨트롤러, guard, interceptor,
