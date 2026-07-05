@@ -2,10 +2,6 @@ import { ProblemCategory } from "./ProblemCategory";
 import { ProblemCategoryMapper } from "./ProblemCategoryMapper";
 import type { ProblemExtensions } from "./ProblemExtensions";
 
-type ErrorConstructorWithCaptureStackTrace = ErrorConstructor & {
-  captureStackTrace?: (targetObject: object, constructorOpt?: object) => void;
-};
-
 export type ProblemOptions = {
   type?: string;
   instance?: string;
@@ -74,7 +70,9 @@ export abstract class Problem extends Error {
 
     Object.setPrototypeOf(this, new.target.prototype);
 
-    const errorConstructor = Error as ErrorConstructorWithCaptureStackTrace;
+    const errorConstructor = Error as ErrorConstructor & {
+      captureStackTrace?: (targetObject: object, constructorOpt?: object) => void;
+    };
 
     if (errorConstructor.captureStackTrace) {
       errorConstructor.captureStackTrace(this, new.target);
