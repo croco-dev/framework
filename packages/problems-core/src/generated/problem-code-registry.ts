@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 413,
+  problemCount: 414,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -2826,7 +2826,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 195,
+          line: 183,
+          column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CROCO_HTTP_SECURITY_002",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-security-002",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/middleware/SecurityMiddlewareMarker.ts",
+          line: 148,
           column: 11,
           kind: "problem-factory",
         },
@@ -11542,7 +11573,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 232,
+          line: 220,
           column: 11,
           kind: "problem-factory",
         },
@@ -11803,7 +11834,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 81,
+          line: 76,
           column: 55,
           kind: "problem-metadata",
         },

@@ -49,6 +49,10 @@ import { bodyLimitMiddleware, mb } from "../libs/middleware/BodyLimitMiddleware"
 import { corsMiddleware } from "../libs/middleware/CorsMiddleware";
 import { rateLimitHttpMiddleware } from "../libs/middleware/RateLimitMiddleware";
 import { securityHeadersMiddleware } from "../libs/middleware/SecurityHeadersMiddleware";
+import {
+  declareSecurityMiddlewareCapabilities,
+  getSecurityMiddlewareCapabilities,
+} from "../libs/middleware/SecurityMiddlewareMarker";
 import { getRuntimeContextInitFromEnv } from "../libs/runtimeContext";
 import type { LambdaContext, LambdaEvent, MiddlewareFunction } from "../libs/types";
 
@@ -386,6 +390,38 @@ describe("CrocoApp", () => {
     });
 
     return middleware;
+  }
+
+  function wrapSecurityMiddlewareWithDeclaredCapabilities(
+    middleware: MiddlewareFunction,
+  ): MiddlewareFunction {
+    const wrapped: MiddlewareFunction = async (ctx, next) => middleware(ctx, next);
+
+    declareSecurityMiddlewareCapabilities(wrapped, getSecurityMiddlewareCapabilities(middleware));
+
+    return hideMiddlewareSource(wrapped);
+  }
+
+  function createSourceSpoofingMiddleware(source: string): MiddlewareFunction {
+    const middleware: MiddlewareFunction = async (_ctx, next) => {
+      await next();
+    };
+
+    Object.defineProperty(middleware, "toString", {
+      configurable: true,
+      value: () => source,
+    });
+
+    return middleware;
+  }
+
+  function createSourceSpoofingSecurityMiddlewares(): MiddlewareFunction[] {
+    return [
+      createSourceSpoofingMiddleware("X-Content-Type-Options"),
+      createSourceSpoofingMiddleware("Access-Control-Allow-Origin"),
+      createSourceSpoofingMiddleware("content-length"),
+      createSourceSpoofingMiddleware("rateLimitHeaders applyRateLimitHeaders"),
+    ];
   }
 
   async function createStaticFixture(files: Record<string, string>): Promise<string> {
@@ -733,6 +769,57 @@ describe("CrocoApp", () => {
     const response = await app.fetch(new Request("http://localhost/api/hello"));
 
     expect(response.status).toBe(200);
+  });
+
+  it("should bootstrap when wrapped security middleware copies declared capabilities", async () => {
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: createRequiredSecurityMiddlewares().map(
+        wrapSecurityMiddlewareWithDeclaredCapabilities,
+      ),
+      securityValidation: "enforce",
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+
+    expect(response.status).toBe(200);
+  });
+
+  it("should bootstrap when custom middleware declares required security capabilities", async () => {
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [
+        declareSecurityMiddlewareCapabilities(async (_ctx, next) => next(), ["security-headers"]),
+        declareSecurityMiddlewareCapabilities(async (_ctx, next) => next(), ["cors"]),
+        declareSecurityMiddlewareCapabilities(async (_ctx, next) => next(), ["body-limit"]),
+        declareSecurityMiddlewareCapabilities(async (_ctx, next) => next(), ["rate-limit"]),
+      ],
+      securityValidation: "enforce",
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+
+    expect(response.status).toBe(200);
+  });
+
+  it("should reject unmarked middleware that only mimics security source text", () => {
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: createSourceSpoofingSecurityMiddlewares(),
+      securityValidation: "enforce",
+    });
+
+    let error: unknown;
+    try {
+      app.lambdaHandler();
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toMatchObject({
+      code: "CROCO_HTTP_SECURITY_001",
+    });
+    expect((error as Error).message).toMatch(/Missing required security middleware/);
   });
 
   it("should fail bootstrap when required security middlewares are missing", () => {

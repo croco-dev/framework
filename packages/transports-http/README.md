@@ -297,6 +297,42 @@ const app = createApp({
 
 기존 `unsafeSkipSecurityValidation: true` 플래그도 하위 호환용으로 지원되지만, 새 설정에는 `securityValidation: 'off'` 사용을 권장합니다.
 
+Security validation uses explicit middleware capability metadata only. It does not inspect
+`Function#toString()` output, so minified, bundled, or wrapped middleware must keep or copy the
+metadata instead of depending on source text.
+
+```typescript
+import {
+  declareSecurityMiddlewareCapabilities,
+  getSecurityMiddlewareCapabilities,
+  securityHeadersMiddleware,
+  type MiddlewareFunction,
+} from "@croco/transports-http";
+
+const securityHeaders = securityHeadersMiddleware();
+
+const wrappedSecurityHeaders: MiddlewareFunction = async (ctx, next) => {
+  return securityHeaders(ctx, next);
+};
+
+declareSecurityMiddlewareCapabilities(
+  wrappedSecurityHeaders,
+  getSecurityMiddlewareCapabilities(securityHeaders),
+);
+```
+
+Custom middleware can declare the capability it provides:
+
+```typescript
+const customCorsMiddleware = declareSecurityMiddlewareCapabilities(
+  async (ctx, next) => {
+    ctx.res.headers["Access-Control-Allow-Origin"] = "https://example.com";
+    await next();
+  },
+  ["cors"],
+);
+```
+
 DI graph도 HTTP bootstrap에서 같은 정책으로 검증됩니다. production 기본값은 `enforce`,
 development/test 기본값은 `warn`이며, `Container.validate({ force: true })`를 실행하고
 컨트롤러, guard, interceptor, filter, pipe constructor가 Croco DI에 등록되어 있는지 route
@@ -324,14 +360,16 @@ fallback 차단을 모두 끕니다. 운영 경로에서는 `enforce`를 권장�
 | `rateLimitHttpMiddleware`   | `@croco/transports-http` | Applies rate limiting to HTTP requests                                         |
 
 All four are part of the public API and can be imported directly from `@croco/transports-http`.
-Generated applications should register all four by default. Missing middleware fails bootstrap with
-`CROCO_HTTP_SECURITY_001` and `legacyCode: "transports-http/security-middleware-validation"`.
+Generated applications should register all four by default. Built-in middleware declares the
+required security capability metadata automatically. Missing or unmarked middleware fails bootstrap
+with `CROCO_HTTP_SECURITY_001` and `legacyCode: "transports-http/security-middleware-validation"`.
 Consumers that matched the previous slash-form code should migrate to `CROCO_HTTP_SECURITY_001`;
 the legacy value is preserved in `extensions.legacyCode` for compatibility during that migration.
 
 Use `securityValidation: 'off'` or `CROCO_HTTP_SECURITY_VALIDATION=off` only for explicit local
-migration/testing fixtures where the unsafe path is the behavior under test. Do not depend on the
-opt-out for normal first-run or production bootstrap.
+migration/testing fixtures where the unsafe path is the behavior under test. For custom or wrapped
+middleware, prefer `declareSecurityMiddlewareCapabilities()` over disabling validation. Do not
+depend on the opt-out for normal first-run or production bootstrap.
 
 ## API 레퍼런스
 
@@ -346,4 +384,6 @@ opt-out for normal first-run or production bootstrap.
   `resetShutdownState`
 - 레이트 리밋: `rateLimitHttpMiddleware`, `createRateLimitMiddlewareFactory`
 - 보안 헤더: `securityHeadersMiddleware`
+- 보안 middleware capability: `declareSecurityMiddlewareCapabilities`, `getSecurityMiddlewareCapabilities`,
+  `hasSecurityMiddlewareCapability`
 - 타입: `AppConfig`, `CrocoHttpContext`, `CrocoRequest`, `CrocoResponse`, `LambdaEvent`, `LambdaResponse`
