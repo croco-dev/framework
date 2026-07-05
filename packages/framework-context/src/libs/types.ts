@@ -55,6 +55,12 @@ export type DependencyGraphManifestVersion = "croco.di-graph.manifest.v1";
 export type DependencyGraphManifestStatus = "ready" | "failed";
 
 export type DependencyGraphDiagnosticCode =
+  | "CROCO_DI_001"
+  | "CROCO_DI_002"
+  | "CROCO_DI_003"
+  | "CROCO_DI_004";
+
+export type DependencyGraphLegacyDiagnosticCode =
   | "framework-context/di-missing-provider"
   | "framework-context/di-circular-dependency"
   | "framework-context/di-scope-mismatch"
@@ -62,6 +68,7 @@ export type DependencyGraphDiagnosticCode =
 
 export type DependencyGraphDiagnostic = {
   readonly code: DependencyGraphDiagnosticCode;
+  readonly legacyCode: DependencyGraphLegacyDiagnosticCode;
   readonly severity: "error";
   readonly token: string;
   readonly tokenId: string;

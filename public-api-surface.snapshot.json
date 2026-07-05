@@ -3919,6 +3919,12 @@
           "declarationKind": "const"
         },
         {
+          "name": "diGraph",
+          "exportKind": "named",
+          "source": "./commands/diGraph",
+          "declarationKind": "const"
+        },
+        {
           "name": "doctor",
           "exportKind": "named",
           "source": "./commands/doctor",
@@ -4099,6 +4105,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "parseDiGraphArgs",
+          "exportKind": "named",
+          "source": "./commands/diGraph",
+          "declarationKind": "function"
+        },
+        {
           "name": "parseRuntimePolicyCheckArgs",
           "exportKind": "named",
           "source": "./commands/runtimePolicy",
@@ -4126,6 +4138,12 @@
           "name": "runDiCheck",
           "exportKind": "named",
           "source": "./commands/diCheck",
+          "declarationKind": "function"
+        },
+        {
+          "name": "runDiGraph",
+          "exportKind": "named",
+          "source": "./commands/diGraph",
           "declarationKind": "function"
         },
         {
@@ -4276,6 +4294,21 @@
           "name": "DiCheckReport",
           "exportKind": "named",
           "source": "./commands/diCheck"
+        },
+        {
+          "name": "DiGraphFrameworkContextLoader",
+          "exportKind": "named",
+          "source": "./commands/diGraph"
+        },
+        {
+          "name": "DiGraphIo",
+          "exportKind": "named",
+          "source": "./commands/diGraph"
+        },
+        {
+          "name": "DiGraphModuleLoader",
+          "exportKind": "named",
+          "source": "./commands/diGraph"
         },
         {
           "name": "DoctorCheckResult",
@@ -6848,6 +6881,12 @@
           "compatibilityGroup": "di"
         },
         {
+          "name": "DependencyGraphLegacyDiagnosticCode",
+          "exportKind": "named",
+          "source": "./libs/types",
+          "compatibilityGroup": "di"
+        },
+        {
           "name": "DependencyGraphManifest",
           "exportKind": "named",
           "source": "./libs/types",
@@ -7302,6 +7341,12 @@
           "exportKind": "named",
           "source": "./libs/RuntimePolicy",
           "compatibilityGroup": "runtime-policy"
+        },
+        {
+          "name": "TokenIdentifier",
+          "exportKind": "named",
+          "source": "./libs/Container",
+          "compatibilityGroup": "di"
         },
         {
           "name": "TracingPolicy",

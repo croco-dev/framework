@@ -14,6 +14,7 @@
     "jobs:smoke": "tsx src/demo/jobs-smoke.ts",
     "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
     "failure-drill:integration": "tsx src/provider-profile-check.ts --mode=real-provider",
+    "di:graph": "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json",
     "build": "tsup src/index.ts --format esm,cjs --clean --dts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -50,6 +51,7 @@
     "@croco/cli": "workspace:*",
     "@croco/testing": "workspace:*",
     "@types/node": "^22",
+    "cross-env": "^10.1.0",
     "tsup": "^8.5.1",
     "tsx": "^4.0.0",
     "typedi": "^0.10.0",

@@ -12,7 +12,8 @@ describe("diCheck", () => {
       status: "failed",
       diagnostics: [
         {
-          code: "framework-context/di-missing-provider",
+          code: "CROCO_DI_001",
+          legacyCode: "framework-context/di-missing-provider",
           severity: "error",
           token: "Token<database.url>",
           message: "Provider 'Token<database.url>' is not registered.",
@@ -28,7 +29,7 @@ describe("diCheck", () => {
     expect(exitCode).toBe(1);
     expect(stderr).toEqual([]);
     expect(stdout).toEqual([
-      "framework-context/di-missing-provider token=Token<database.url>: Provider 'Token<database.url>' is not registered.",
+      "CROCO_DI_001 token=Token<database.url>: Provider 'Token<database.url>' is not registered.",
       "DI graph check failed for croco.di-graph.manifest.v1 with 1 diagnostic(s).",
     ]);
   });
@@ -126,6 +127,36 @@ describe("diCheck", () => {
     });
   });
 
+  it("does not normalize inherited object property names as legacy graph codes", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const manifest = {
+      version: "croco.di-graph.manifest.v1",
+      status: "failed",
+      diagnostics: [
+        {
+          code: "constructor",
+          severity: "error",
+          message: "Synthetic diagnostic from an untrusted manifest.",
+        },
+      ],
+    };
+
+    const exitCode = await runDiCheck(["di-graph.json", "--json"], {
+      io: createIo(JSON.stringify(manifest), stdout, stderr),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(stdout[0] ?? "{}")).toMatchObject({
+      diagnostics: [
+        {
+          code: "constructor",
+          message: "Synthetic diagnostic from an untrusted manifest.",
+        },
+      ],
+    });
+  });
+
   it("normalizes legacy manifest diagnostic codes to stable CLI codes", async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
@@ -152,6 +183,67 @@ describe("diCheck", () => {
           code: CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
           legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown,
           message: "Legacy DI diagnostic.",
+        },
+      ],
+    });
+  });
+
+  it("normalizes legacy DI graph diagnostic codes to stable graph codes", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const manifest = {
+      version: "croco.di-graph.manifest.v1",
+      status: "failed",
+      diagnostics: [
+        {
+          code: "framework-context/di-missing-provider",
+          severity: "error",
+          message: "Missing provider.",
+        },
+        {
+          code: "framework-context/di-circular-dependency",
+          severity: "error",
+          message: "Circular dependency.",
+        },
+        {
+          code: "framework-context/di-scope-mismatch",
+          severity: "error",
+          message: "Scope mismatch.",
+        },
+        {
+          code: "framework-context/di-unknown-provider",
+          severity: "error",
+          message: "Unknown provider.",
+        },
+      ],
+    };
+
+    const exitCode = await runDiCheck(["di-graph.json", "--json"], {
+      io: createIo(JSON.stringify(manifest), stdout, stderr),
+    });
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(stdout[0] ?? "{}")).toMatchObject({
+      diagnostics: [
+        {
+          code: "CROCO_DI_001",
+          legacyCode: "framework-context/di-missing-provider",
+          message: "Missing provider.",
+        },
+        {
+          code: "CROCO_DI_002",
+          legacyCode: "framework-context/di-circular-dependency",
+          message: "Circular dependency.",
+        },
+        {
+          code: "CROCO_DI_003",
+          legacyCode: "framework-context/di-scope-mismatch",
+          message: "Scope mismatch.",
+        },
+        {
+          code: "CROCO_DI_004",
+          legacyCode: "framework-context/di-unknown-provider",
+          message: "Unknown provider.",
         },
       ],
     });

@@ -5,4 +5,4 @@ prev: false
 title: "DependencyGraphDiagnosticCode"
 ---
 
-> **DependencyGraphDiagnosticCode** = `"framework-context/di-missing-provider"` \| `"framework-context/di-circular-dependency"` \| `"framework-context/di-scope-mismatch"` \| `"framework-context/di-unknown-provider"`
+> **DependencyGraphDiagnosticCode** = `"CROCO_DI_001"` \| `"CROCO_DI_002"` \| `"CROCO_DI_003"` \| `"CROCO_DI_004"`

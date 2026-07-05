@@ -1,3 +1,4 @@
+import { Component } from "@croco/framework-context";
 import { ProblemCategory } from "@croco/problems-core";
 import {
   Body,
@@ -23,6 +24,7 @@ import {
   type CreateAdminUserInput,
 } from "./adminSchemas";
 
+@Component()
 @Controller("/admin")
 export class AdminController {
   @Get("/snapshot")

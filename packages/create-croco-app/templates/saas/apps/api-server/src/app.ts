@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import type { Constructor } from "@croco/framework-context";
 import {
   createSlidingWindowPolicy,
   RateLimiter,
@@ -20,6 +21,12 @@ import { SaasController } from "./controllers/SaasController";
 import { defaultSaasRuntime } from "./saasDemo";
 
 const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/diagnostics"]);
+const controllers = [OperationsController, JobsController, SaasController];
+const diGraphRootControllers: readonly Constructor[] = controllers;
+
+export function createCrocoDiGraphRoots(): readonly Constructor[] {
+  return [...diGraphRootControllers];
+}
 
 export function createCrocoApp() {
   const rateLimiter = new RateLimiter(
@@ -28,7 +35,7 @@ export function createCrocoApp() {
   );
 
   return createApp({
-    controllers: [OperationsController, JobsController, SaasController],
+    controllers,
     diValidation: "off",
     diagnostics: {
       providers: defaultSaasRuntime.diagnosticsCollector.getProviders(),

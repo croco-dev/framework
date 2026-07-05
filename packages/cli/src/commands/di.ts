@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
 import { diCheck } from "./diCheck.js";
+import { diGraph } from "./diGraph.js";
 
 export const di = defineCommand({
   meta: {
@@ -8,5 +9,6 @@ export const di = defineCommand({
   },
   subCommands: {
     check: diCheck,
+    graph: diGraph,
   },
 });

@@ -52,6 +52,13 @@ type DiCheckParseResult =
   | { readonly kind: "invalid"; readonly message: string }
   | { readonly kind: "run"; readonly options: DiCheckOptions };
 
+const DI_GRAPH_LEGACY_DIAGNOSTIC_CODES = new Map<string, string>([
+  ["framework-context/di-missing-provider", "CROCO_DI_001"],
+  ["framework-context/di-circular-dependency", "CROCO_DI_002"],
+  ["framework-context/di-scope-mismatch", "CROCO_DI_003"],
+  ["framework-context/di-unknown-provider", "CROCO_DI_004"],
+]);
+
 const defaultIo: DiCheckIo = {
   stdout: (message) => console.log(message),
   stderr: (message) => console.error(message),
@@ -211,15 +218,19 @@ function normalizeDiagnostic(value: unknown): DiCheckDiagnostic {
   const moduleName = readOptionalString(record, "moduleName");
   const rawCode = readOptionalString(record, "code");
   const rawLegacyCode = readOptionalString(record, "legacyCode");
-  const stableCode = rawCode ? getStableCliDiagnosticCodeForLegacyCode(rawCode) : undefined;
+  const stableCode =
+    (rawCode ? getStableCliDiagnosticCodeForLegacyCode(rawCode) : undefined) ??
+    (rawCode ? getStableDiGraphDiagnosticCodeForLegacyCode(rawCode) : undefined) ??
+    (rawLegacyCode ? getStableDiGraphDiagnosticCodeForLegacyCode(rawLegacyCode) : undefined);
   const isUnmappedCliLegacyCode = rawCode !== undefined && isCliLegacyDiagnosticCode(rawCode);
+  const isMappedDiGraphLegacyCode =
+    rawCode !== undefined && getStableDiGraphDiagnosticCodeForLegacyCode(rawCode) !== undefined;
   const code =
     stableCode ??
     (isUnmappedCliLegacyCode ? CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown : rawCode) ??
     CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown;
   const legacyCode =
-    (isUnmappedCliLegacyCode ? rawCode : rawLegacyCode) ??
-    (stableCode && rawCode ? rawCode : undefined) ??
+    (isUnmappedCliLegacyCode || isMappedDiGraphLegacyCode ? rawCode : rawLegacyCode) ??
     (code === CLI_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown
       ? CLI_LEGACY_DIAGNOSTIC_CODES.diCheckDiagnosticUnknown
       : undefined);
@@ -248,6 +259,10 @@ const CLI_LEGACY_DIAGNOSTIC_PREFIXES = [
 
 function isCliLegacyDiagnosticCode(code: string): boolean {
   return CLI_LEGACY_DIAGNOSTIC_PREFIXES.some((prefix) => code.startsWith(prefix));
+}
+
+function getStableDiGraphDiagnosticCodeForLegacyCode(code: string): string | undefined {
+  return DI_GRAPH_LEGACY_DIAGNOSTIC_CODES.get(code);
 }
 
 function asSourceLocation(value: unknown): DiCheckDiagnostic["sourceLocation"] | undefined {

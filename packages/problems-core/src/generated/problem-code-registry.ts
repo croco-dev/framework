@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 412,
+  problemCount: 413,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -90,7 +90,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/admin-console/apps/api-server/src/controllers/AdminController.ts",
-          line: 45,
+          line: 47,
           column: 20,
           kind: "problem-metadata",
         },
@@ -2769,6 +2769,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "CROCO_CLI_USAGE_DASHBOARD_005",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-usage-dashboard-005",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/generateUsageDashboard.ts",
+          line: 24,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "CROCO_HTTP_SECURITY_001",
       category: "InternalServerError",
       status: 500,
@@ -4238,7 +4269,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 1171,
+          line: 1220,
           column: 13,
           kind: "problem-factory",
         },
