@@ -32,9 +32,11 @@ import {
   SlidingWindowInMemoryStore,
 } from "@croco/ratelimit-core";
 import { serve } from "@hono/node-server";
+import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp as createCrocoApp } from "../libs/CrocoApp";
 import {
+  CrocoLambdaAdapter,
   getLambdaContext,
   getLambdaEvent,
   type LambdaExecutionContext,
@@ -47,6 +49,7 @@ import { bodyLimitMiddleware, mb } from "../libs/middleware/BodyLimitMiddleware"
 import { corsMiddleware } from "../libs/middleware/CorsMiddleware";
 import { rateLimitHttpMiddleware } from "../libs/middleware/RateLimitMiddleware";
 import { securityHeadersMiddleware } from "../libs/middleware/SecurityHeadersMiddleware";
+import { getRuntimeContextInitFromEnv } from "../libs/runtimeContext";
 import type { LambdaContext, LambdaEvent, MiddlewareFunction } from "../libs/types";
 
 vi.mock("@hono/node-server", () => ({
@@ -609,6 +612,103 @@ describe("CrocoApp", () => {
         lambdaContext,
       ),
     ).rejects.toThrow("telemetry flush failed");
+  });
+
+  it("should drain Lambda waitUntil work when Hono fetch throws", async () => {
+    let waitUntilCompleted = false;
+    const routeError = new Error("lambda fetch failed");
+    const hono = new Hono();
+    hono.onError((error) => {
+      throw error;
+    });
+    hono.get("/lambda/fetch-throws", (c) => {
+      const runtime = getRuntimeContextInitFromEnv(c.env);
+      runtime?.waitUntil?.(
+        new Promise<void>((resolve) => {
+          setTimeout(() => {
+            waitUntilCompleted = true;
+            resolve();
+          }, 0);
+        }),
+      );
+
+      throw routeError;
+    });
+    const handler = new CrocoLambdaAdapter(hono).createHandler();
+
+    await expect(
+      handler(
+        createLambdaEvent({
+          rawPath: "/lambda/fetch-throws",
+          requestContext: createRequestContext("GET", "/lambda/fetch-throws"),
+        }),
+        lambdaContext,
+      ),
+    ).rejects.toBe(routeError);
+    expect(waitUntilCompleted).toBe(true);
+  });
+
+  it("should run the Lambda handler flush callback when Hono fetch throws", async () => {
+    const routeError = new Error("lambda fetch failed");
+    const flush = vi.fn().mockResolvedValue(undefined);
+    const hono = new Hono();
+    hono.onError((error) => {
+      throw error;
+    });
+    hono.get("/lambda/fetch-throws", () => {
+      throw routeError;
+    });
+    const handler = new CrocoLambdaAdapter(hono).createHandler({ flush });
+
+    await expect(
+      handler(
+        createLambdaEvent({
+          rawPath: "/lambda/fetch-throws",
+          requestContext: createRequestContext("GET", "/lambda/fetch-throws"),
+        }),
+        lambdaContext,
+      ),
+    ).rejects.toBe(routeError);
+    expect(flush).toHaveBeenCalledTimes(1);
+  });
+
+  it("should preserve Lambda fetch and flush failures together", async () => {
+    const routeError = new Error("lambda fetch failed");
+    const flushError = new Error("telemetry flush failed");
+    const flush = vi.fn().mockRejectedValue(flushError);
+    const hono = new Hono();
+    hono.onError((error) => {
+      throw error;
+    });
+    hono.get("/lambda/fetch-throws", () => {
+      throw routeError;
+    });
+    const handler = new CrocoLambdaAdapter(hono).createHandler({ flush });
+
+    let thrownError: unknown;
+    try {
+      await handler(
+        createLambdaEvent({
+          rawPath: "/lambda/fetch-throws",
+          requestContext: createRequestContext("GET", "/lambda/fetch-throws"),
+        }),
+        lambdaContext,
+      );
+    } catch (error) {
+      thrownError = error;
+    }
+
+    expect(thrownError).toBeInstanceOf(Error);
+    const boundaryError = thrownError as Error & {
+      code?: string;
+      originalError?: unknown;
+      flushErrors?: readonly unknown[];
+    };
+    expect(boundaryError.name).toBe("LambdaFlushBoundaryError");
+    expect(boundaryError.code).toBe("transports-http/lambda-flush-boundary-failed");
+    expect(boundaryError.originalError).toBe(routeError);
+    expect(boundaryError.flushErrors).toEqual([flushError]);
+    expect(flush).toHaveBeenCalledTimes(1);
   });
 
   it("should bootstrap when all required security middlewares are configured", async () => {

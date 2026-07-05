@@ -115,6 +115,10 @@ Lambda handler는 API Gateway v2 이벤트를 Fetch `Request`로 변환합니다
 Lambda에서 OpenTelemetry span export까지 보장하려면 `@croco/telemetry-sdk-node`의
 `TelemetryRuntime.forceFlush()`를 handler flush callback으로 연결합니다. 이 callback이 실패하면 Lambda
 handler도 실패하므로 관측 실패가 성공 응답으로 숨겨지지 않습니다.
+Lambda handler는 요청 실행을 `finally` 경계로 감싸므로 Hono fetch 또는 route 실행이 응답 생성 전에
+실패해도 queued `waitUntil` 작업을 먼저 drain하고 handler flush callback을 실행한 뒤 실패를 전파합니다.
+요청 실패와 flush 실패가 함께 발생하면 원래 요청 실패와 flush 실패 목록을 모두 담은 diagnostic-coded
+`LambdaFlushBoundaryError`로 실패합니다.
 
 ```typescript
 import { TelemetryRuntime, lambdaPreset } from "@croco/telemetry-sdk-node";

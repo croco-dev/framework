@@ -95,6 +95,30 @@ export type LambdaHandlerOptions = {
 };
 
 const WAIT_UNTIL_REJECTION_MESSAGE = "Lambda waitUntil task rejected";
+const LAMBDA_FLUSH_BOUNDARY_ERROR_CODE = "transports-http/lambda-flush-boundary-failed";
+
+class LambdaFlushBoundaryError extends Error {
+  readonly code = LAMBDA_FLUSH_BOUNDARY_ERROR_CODE;
+  readonly originalError: unknown;
+  readonly flushErrors: readonly unknown[];
+
+  constructor({
+    originalError,
+    flushErrors,
+  }: {
+    originalError: unknown;
+    flushErrors: readonly unknown[];
+  }) {
+    super(
+      originalError === undefined
+        ? "Lambda handler flush callbacks failed"
+        : "Lambda handler failed before flush callbacks completed",
+    );
+    this.name = "LambdaFlushBoundaryError";
+    this.originalError = originalError;
+    this.flushErrors = [...flushErrors];
+  }
+}
 
 function reportWaitUntilRejections(
   results: PromiseSettledResult<unknown>[],
@@ -112,6 +136,64 @@ function reportWaitUntilRejections(
 
     console.error(WAIT_UNTIL_REJECTION_MESSAGE, result.reason);
   });
+}
+
+async function collectLambdaFlushErrors(
+  runtimeContext: RuntimeContextInit,
+  options: LambdaHandlerOptions,
+): Promise<unknown[]> {
+  const errors: unknown[] = [];
+
+  try {
+    await runtimeContext.flush?.();
+  } catch (error) {
+    errors.push(error);
+  }
+
+  try {
+    await options.flush?.();
+  } catch (error) {
+    errors.push(error);
+  }
+
+  return errors;
+}
+
+async function runWithLambdaFlushBoundary<T>(
+  execute: () => Promise<T> | T,
+  runtimeContext: RuntimeContextInit,
+  options: LambdaHandlerOptions,
+): Promise<T> {
+  let hasOriginalError = false;
+  let originalError: unknown;
+  let result: T | undefined;
+  let flushErrors: unknown[] = [];
+
+  try {
+    result = await execute();
+  } catch (error) {
+    hasOriginalError = true;
+    originalError = error;
+  } finally {
+    flushErrors = await collectLambdaFlushErrors(runtimeContext, options);
+  }
+
+  if (flushErrors.length > 0) {
+    if (!hasOriginalError && flushErrors.length === 1) {
+      throw flushErrors[0];
+    }
+
+    throw new LambdaFlushBoundaryError({
+      originalError: hasOriginalError ? originalError : undefined,
+      flushErrors,
+    });
+  }
+
+  if (hasOriginalError) {
+    throw originalError;
+  }
+
+  return result as T;
 }
 
 /**
@@ -189,9 +271,11 @@ export class CrocoLambdaAdapter {
         runtimeContext,
       ) as LambdaExecutionEnv & Record<string, unknown>;
 
-      const response = await this.hono.fetch(request, executionEnv);
-      await runtimeContext.flush?.();
-      await options.flush?.();
+      const response = await runWithLambdaFlushBoundary(
+        () => this.hono.fetch(request, executionEnv),
+        runtimeContext,
+        options,
+      );
 
       const contentType = response.headers.get("content-type") ?? "";
       const isBinary = isBinaryContentType(contentType);
