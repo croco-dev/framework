@@ -70,8 +70,12 @@ export abstract class Problem extends Error {
 
     Object.setPrototypeOf(this, new.target.prototype);
 
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, new.target);
+    const errorConstructor = Error as ErrorConstructor & {
+      captureStackTrace?: (targetObject: object, constructorOpt?: object) => void;
+    };
+
+    if (errorConstructor.captureStackTrace) {
+      errorConstructor.captureStackTrace(this, new.target);
     }
   }
 

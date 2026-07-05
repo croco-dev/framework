@@ -165,9 +165,212 @@ describe("normalize-packages.mjs", () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("storage-core/package.json");
+    expect(result.stdout).toContain("main must match publishConfig.main");
+    expect(result.stdout).toContain("types must match publishConfig.types");
+    expect(result.stdout).toContain("exports must match publishConfig.exports");
     expect(result.stdout).toContain("main must point at ./dist");
-    expect(result.stdout).toContain("module must be a string");
     expect(result.stdout).toContain('exports["."] is required');
+  });
+
+  it("requires spine packages to use source root entrypoints unless they have a checked exception", () => {
+    const root = createTempRoot();
+    writePackageCatalog(root, ["protocols-core"]);
+    writePackage(root, "protocols-core", {
+      name: "@croco/protocols-core",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./dist/index.js",
+      module: "./dist/index.mjs",
+      types: "./dist/index.d.ts",
+      exports: {
+        ".": {
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+          types: "./dist/index.d.ts",
+        },
+      },
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("protocols-core/package.json");
+    expect(result.stdout).toContain("spine root main must be ./src/index.ts");
+    expect(result.stdout).toContain("spine root types must be ./src/index.ts");
+    expect(result.stdout).toContain(
+      "spine root module is only allowed for direct-dist entrypoint exceptions",
+    );
+    expect(result.stdout).toContain(
+      "spine root exports is only allowed for direct-dist entrypoint exceptions",
+    );
+  });
+
+  it("normalizes spine packages back to source root entrypoints in write mode", () => {
+    const root = createTempRoot();
+    writePackageCatalog(root, ["protocols-core"]);
+    const packagePath = writePackage(root, "protocols-core", {
+      name: "@croco/protocols-core",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./dist/index.js",
+      module: "./dist/index.mjs",
+      types: "./dist/index.d.ts",
+      exports: {
+        ".": {
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+          types: "./dist/index.d.ts",
+        },
+      },
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+    });
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status).toBe(0);
+    expect(pkg.main).toBe("./src/index.ts");
+    expect(pkg.types).toBe("./src/index.ts");
+    expect(pkg.module).toBeUndefined();
+    expect(pkg.exports).toBeUndefined();
+    expect(pkg.publishConfig.main).toBe("./dist/index.js");
+    expect(pkg.publishConfig.types).toBe("./dist/index.d.ts");
+  });
+
+  it("rejects unmapped and noncanonical spine catalog entries", () => {
+    const root = createTempRoot();
+    writePackage(root, "retry-core", publishablePackage("@croco/retry-core"));
+    writePackageCatalog(root, ["@croco/retry-core", "missing-spine"]);
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "docs/package-catalog.json: spine.packages entry @croco/retry-core must use package directory name retry-core",
+    );
+    expect(result.stdout).toContain(
+      "docs/package-catalog.json: spine.packages references missing package missing-spine",
+    );
+  });
+
+  it("requires package catalog metadata for spine validation", () => {
+    const root = createTempRoot();
+    rmSync(join(root, "docs", "package-catalog.json"), { force: true });
+    writePackage(root, "retry-core", publishablePackage("@croco/retry-core"));
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "docs/package-catalog.json: package catalog is required for spine entrypoint policy",
+    );
+  });
+
+  it("requires direct-dist entrypoints to match the publishConfig face", () => {
+    const root = createTempRoot();
+    writePackage(root, "telemetry-api", {
+      name: "@croco/telemetry-api",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "commonjs",
+      main: "./dist/index.js",
+      module: "./dist/index.mjs",
+      types: "./dist/index.d.ts",
+      exports: {
+        ".": {
+          development: "./src/index.ts",
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+          types: "./dist/index.d.ts",
+        },
+      },
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            import: "./dist/index.mjs",
+            require: "./dist/index.js",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("telemetry-api/package.json");
+    expect(result.stdout).toContain("exports must match publishConfig.exports");
+    expect(result.stdout).toContain('exports["."].development must point at ./dist');
+  });
+
+  it("derives direct-dist root exports from publishConfig without losing CJS conditions", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(root, "rpc-codegen", {
+      name: "@croco/rpc-codegen",
+      version: "0.0.3",
+      files: ["dist"],
+      type: "module",
+      main: "./src/index.ts",
+      types: "./src/index.ts",
+      publishConfig: {
+        access: "public",
+        main: "./dist/index.js",
+        types: "./dist/index.d.ts",
+        exports: {
+          ".": {
+            development: "./src/index.ts",
+            import: "./dist/index.js",
+            require: "./dist/index.cjs",
+            types: "./dist/index.d.ts",
+          },
+        },
+      },
+    });
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status).toBe(0);
+    expect(pkg.main).toBe("./dist/index.js");
+    expect(pkg.types).toBe("./dist/index.d.ts");
+    expect(pkg.module).toBeUndefined();
+    expect(pkg.exports).toEqual({
+      ".": {
+        types: "./dist/index.d.ts",
+        import: "./dist/index.js",
+        require: "./dist/index.cjs",
+      },
+    });
+    expect(Object.keys(pkg.exports["."])).toEqual(["types", "import", "require"]);
+    expect(pkg.publishConfig.exports).toEqual(pkg.exports);
   });
 
   it("skips the private docs site and allows documented public non-library package exceptions", () => {
@@ -990,6 +1193,7 @@ function createTempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "croco-package-manifests-"));
   tempRoots.push(root);
   mkdirSync(join(root, "packages"));
+  writePackageCatalog(root, []);
 
   return root;
 }
@@ -1047,6 +1251,27 @@ function writeInternalPeerDependencyRangeExceptions(
   writeFileSync(exceptionPath, `${JSON.stringify(entries, null, 2)}\n`);
 
   return exceptionPath;
+}
+
+function writePackageCatalog(root: string, spinePackages: readonly string[]): string {
+  const catalogPath = join(root, "docs", "package-catalog.json");
+  mkdirSync(dirname(catalogPath), { recursive: true });
+  writeFileSync(
+    catalogPath,
+    `${JSON.stringify(
+      {
+        spine: {
+          description: "Release-critical package set for tests.",
+          label: "Croco 1.0 spine",
+          packages: spinePackages,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  return catalogPath;
 }
 
 function withRepositoryMetadata(

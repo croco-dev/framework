@@ -1,5 +1,14 @@
 import { ProblemCategory } from "./ProblemCategory";
 
+type Constructor<T = unknown, Args extends unknown[] = never[]> = new (...args: Args) => T;
+type ProblemConstructorArgs = [code?: string, category?: ProblemCategory, detail?: string];
+
+type ProblemModule = {
+  Problem: Constructor<Error, ProblemConstructorArgs>;
+};
+
+declare const require: (id: string) => ProblemModule;
+
 function throwUnhandledCategory(categoryValue: string): never {
   // Use runtime require to avoid circular dependency:
   // Problem.ts imports ProblemCategoryMapper, so any module-level

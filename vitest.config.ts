@@ -38,12 +38,18 @@ const coreCoveragePackagePaths = CORE_COVERAGE_PACKAGES.map(
   (packageName) => `packages/${packageName.replace("@croco/", "")}`,
 );
 const currentWorkingDirectory = process.cwd().replace(/\\/g, "/");
+const isFrameworkContextPackageRun = currentWorkingDirectory.endsWith("packages/framework-context");
 const isTestingPackageRun = currentWorkingDirectory.endsWith("packages/testing");
 const shouldApplyCoreCoverageThresholds =
   isCoreCoverageRun &&
   coreCoveragePackagePaths.some((packagePath) => currentWorkingDirectory.endsWith(packagePath));
 
 const coverageThresholds = shouldApplyCoreCoverageThresholds ? CORE_COVERAGE_THRESHOLDS : undefined;
+const frameworkContextPackageAliases = isFrameworkContextPackageRun
+  ? {
+      "@croco/problems-core": resolve(currentWorkingDirectory, "../problems-core/src/index.ts"),
+    }
+  : {};
 const testingPackageAliases = isTestingPackageRun
   ? {
       "@croco/testing/drizzle": resolve(currentWorkingDirectory, "src/drizzle.ts"),
@@ -53,7 +59,10 @@ const testingPackageAliases = isTestingPackageRun
 
 export default defineConfig({
   resolve: {
-    alias: testingPackageAliases,
+    alias: {
+      ...frameworkContextPackageAliases,
+      ...testingPackageAliases,
+    },
   },
   test: {
     globals: true,

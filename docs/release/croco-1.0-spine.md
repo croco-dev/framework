@@ -74,6 +74,7 @@ both spine membership and production-ready maturity.
 
 | Gate                     | Current selector                                                                                    | Spine expectation                                                                                                                                                                                                                                                                                                                      |
 | ------------------------ | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package manifest policy  | `pnpm package-manifests:check` validates package catalog and manifests                              | Importable spine packages use source-root `main`/`types` plus dist-only `publishConfig`, unless a checked direct-dist exception applies.                                                                                                                                                                                               |
 | Public API snapshot      | `pnpm public-api:check` scans publishable package entrypoints                                       | Every spine package with `src/index.ts` participates in the snapshot or has an explicit package-level exemption. `@croco/framework-context` additionally reports grouped sub-surface drift.                                                                                                                                            |
 | Package entrypoint smoke | `pnpm package-entrypoints:smoke` scans public package publish contracts                             | Every importable spine package must resolve ESM/CJS/types after build.                                                                                                                                                                                                                                                                 |
 | First-success contract   | `pnpm first-success:verify`, `pnpm quick-start-lambda:smoke`, `pnpm saas-billing-golden-path:smoke` | Root README, getting-started docs, release spine docs, scaffold commands, and checked examples must point to the same first-success commands.                                                                                                                                                                                          |
@@ -103,6 +104,16 @@ Diagnostic `deferrals` distinguish staged rollout debt from accepted 1.0 release
 Run `pnpm strict-contract-typecheck --rc` or set `CROCO_STRICT_CONTRACT_RC=1` for the RC contract.
 RC mode rejects added or removed diagnostics and rejects unchanged diagnostics unless their package
 deferral is marked `accepted-release-debt`.
+
+## Package Entrypoint Policy
+
+Spine package root entrypoints follow the package entrypoint contract in
+[Package Entrypoint Contract](package-entrypoint-contract.md). The default importable spine pattern
+keeps root `main` and `types` on `./src/index.ts` for workspace tooling and keeps npm-facing
+entrypoints under `publishConfig` on `./dist`. Any spine package that exposes `./dist` directly from
+the root manifest must be listed as a rationale-bearing direct-dist exception in
+`scripts/package-manifest-contracts.mjs`, and both `package-manifests:check` and
+`package-entrypoints:smoke` check that the root face stays aligned with `publishConfig`.
 
 ## Follow-Up Issues
 
