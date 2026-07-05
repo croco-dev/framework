@@ -163,6 +163,10 @@ export {
   type SecurityHeadersOptions,
   securityHeadersMiddleware,
 } from "./libs/middleware/SecurityHeadersMiddleware";
+
+/**
+ * 보안 미들웨어 capability 메타데이터를 선언하고 조회하는 공개 API입니다.
+ */
 export {
   declareSecurityMiddlewareCapabilities,
   getSecurityMiddlewareCapabilities,
