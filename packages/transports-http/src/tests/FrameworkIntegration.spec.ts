@@ -113,6 +113,18 @@ class FrameworkIntegrationController {
     };
   }
 
+  @Post("/widgets/repeated")
+  createRepeatedWidget(
+    @Body(CreateWidgetSchema) first: CreateWidgetBody,
+    @Body(CreateWidgetSchema) second: CreateWidgetBody,
+  ) {
+    return {
+      created: true,
+      firstName: first.name,
+      secondName: second.name,
+    };
+  }
+
   @Get("/lifecycle")
   @UseInterceptors(ResponseEnvelopeInterceptor)
   lifecycle() {
@@ -172,6 +184,23 @@ describe("Framework integration", () => {
 
   async function readJson<T>(response: Response): Promise<T> {
     return (await response.json()) as T;
+  }
+
+  async function expectBodyValidationProblem(
+    response: Response,
+    instance: string,
+  ): Promise<ValidationProblemResponse> {
+    expect(response.status).toBe(422);
+
+    const problem = await readJson<ValidationProblemResponse>(response);
+    expect(problem).toMatchObject({
+      title: "Validation Error",
+      status: 422,
+      code: "protocols-rest/request-validation-failed",
+      instance,
+    });
+
+    return problem;
   }
 
   beforeEach(() => {
@@ -238,6 +267,94 @@ describe("Framework integration", () => {
     expect(problem.issues.map((issue) => issue.path)).toEqual(
       expect.arrayContaining(["body.name", "body.quantity"]),
     );
+  });
+
+  it("serializes malformed JSON body parse failures as Problem Details", async () => {
+    const response = await app.fetch(
+      new Request("http://localhost/framework/integration/widgets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: '{"name":',
+      }),
+    );
+
+    const problem = await expectBodyValidationProblem(
+      response,
+      "http://localhost/framework/integration/widgets",
+    );
+    expect(problem.detail).toContain("body.value");
+    expect(problem.issues).toEqual([
+      {
+        path: "body.value",
+        message: "Request body must contain valid JSON",
+      },
+    ]);
+  });
+
+  it("serializes empty required JSON body failures as Problem Details", async () => {
+    const response = await app.fetch(
+      new Request("http://localhost/framework/integration/widgets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "",
+      }),
+    );
+
+    const problem = await expectBodyValidationProblem(
+      response,
+      "http://localhost/framework/integration/widgets",
+    );
+    expect(problem.detail).toContain("body.value");
+    expect(problem.issues).toEqual([
+      {
+        path: "body.value",
+        message: "Request body must contain valid JSON",
+      },
+    ]);
+  });
+
+  it("serializes unexpected content-type parse failures as Problem Details", async () => {
+    const response = await app.fetch(
+      new Request("http://localhost/framework/integration/widgets", {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: "not-json",
+      }),
+    );
+
+    const problem = await expectBodyValidationProblem(
+      response,
+      "http://localhost/framework/integration/widgets",
+    );
+    expect(problem.detail).toContain("body.value");
+    expect(problem.issues).toEqual([
+      {
+        path: "body.value",
+        message: "Request body must contain valid JSON",
+      },
+    ]);
+  });
+
+  it("serializes repeated body parse failures as Problem Details", async () => {
+    const response = await app.fetch(
+      new Request("http://localhost/framework/integration/widgets/repeated", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: '{"name":',
+      }),
+    );
+
+    const problem = await expectBodyValidationProblem(
+      response,
+      "http://localhost/framework/integration/widgets/repeated",
+    );
+    expect(problem.detail).toContain("body.value");
+    expect(problem.issues).toEqual([
+      {
+        path: "body.value",
+        message: "Request body must contain valid JSON",
+      },
+    ]);
   });
 
   it("runs route interceptors through the compiled lifecycle pipeline", async () => {

@@ -226,6 +226,22 @@ transport가 만든 `traceId`, `requestId`, `telemetry` correlation metadata는 
 provider adapter는 사용자가 복구할 수 있는 실패를 transport까지 generic `Error`로 넘기지 말고
 package-specific `Problem`으로 정규화해야 합니다.
 
+### Request body parse failures
+
+`@Body()` 파라미터가 있는 라우트에서 transport는 Hono `ctx.json()`으로 요청 본문을 한 번 읽고,
+성공 또는 실패한 parse promise를 같은 요청 컨텍스트에 캐시합니다. malformed JSON, 빈 JSON body,
+그리고 Hono parser 경계에서 JSON으로 해석할 수 없는 unexpected content type payload는 모두
+`RequestValidationProblem`으로 정규화됩니다.
+
+이 응답은 `422 Validation Error`, `code: "protocols-rest/request-validation-failed"`를 사용하고,
+`issues`는 `body.value` 경로와 `Request body must contain valid JSON` 메시지를 포함합니다. 이
+계약은 body parse 실패에만 적용되며, Zod schema validation, guard, interceptor, controller,
+filter가 명시적으로 던진 Croco `Problem`은 다시 감싸지 않습니다.
+
+transport는 이 계약만으로 strict `415 Unsupported Media Type` negotiation을 추가하지 않습니다.
+애플리케이션이 media type을 강제해야 한다면 라우트 앞단 middleware나 policy에서 별도로 검증해야
+합니다.
+
 ## Security Middleware Contract
 
 `createApp`는 기본적으로 아래 4개 보안 미들웨어가 모두 등록되어 있는지 부트스트랩 시점에 검증합니다. 하나라도 누락되면 앱 생성은 fail-closed로 중단됩니다.
