@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -249,6 +250,7 @@ describe("package-quality-report.mts", () => {
       build: "tsup",
     });
     writeFile(repo, "packages/alpha/dist/chunk-abcdef12.js", artifactSource);
+
     writeFile(
       repo,
       "ci-reports/bundle-size/baseline.json",
@@ -281,6 +283,278 @@ describe("package-quality-report.mts", () => {
     );
     expect(report.bundleSize.missingBaselineCount).toBe(0);
     expect(report.bundleSize.unmatchedBaselineCount).toBe(0);
+  });
+
+  it("blocks spine bundle-size regressions in enforcement mode while non-spine packages stay advisory", () => {
+    const repo = createTempRepo();
+    const spineArtifactSource = "console.log('larger spine bundle');\n";
+    const nonSpineArtifactSource = "console.log('larger non-spine bundle');\n";
+    writePackage(repo, "spine", "@croco/spine", {
+      build: "tsup",
+    });
+    writePackage(repo, "non-spine", "@croco/non-spine", {
+      build: "tsup",
+    });
+    writeCatalog(repo, ["spine"]);
+    writeFile(repo, "packages/spine/dist/index.js", spineArtifactSource);
+    writeFile(repo, "packages/non-spine/dist/index.js", nonSpineArtifactSource);
+    writeFile(
+      repo,
+      "ci-reports/bundle-size/baseline.json",
+      `${JSON.stringify(
+        {
+          artifacts: {
+            "@croco/spine:packages/spine/dist/index.js": 10,
+            "@croco/non-spine:packages/non-spine/dist/index.js": 10,
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+      enforceSpineBundleSize: true,
+    });
+    const spineArtifact = report.bundleSize.artifacts.find(
+      (entry) => entry.artifactPath === "packages/spine/dist/index.js",
+    );
+    const nonSpineArtifact = report.bundleSize.artifacts.find(
+      (entry) => entry.artifactPath === "packages/non-spine/dist/index.js",
+    );
+    const dashboard = buildReportMarkdown(report);
+    const bundleMarkdown = buildBundleSizeMarkdown(report.bundleSize);
+
+    expect(report.bundleSize.ciMode).toBe("spine-blocking");
+    expect(report.bundleSize.spineBlockingRegressionCount).toBe(1);
+    expect(report.bundleSize.spineBlockingIssueCount).toBe(1);
+    expect(report.bundleSize.nonSpineAdvisoryWarningCount).toBe(1);
+    expect(spineArtifact).toEqual(
+      expect.objectContaining({
+        blocking: true,
+        scope: "spine",
+        status: "over-baseline",
+      }),
+    );
+    expect(nonSpineArtifact).toEqual(
+      expect.objectContaining({
+        blocking: false,
+        scope: "non-spine",
+        status: "over-baseline",
+      }),
+    );
+    expect(dashboard).toContain("spine-blocking; 1 spine blocking issue(s); 1 advisory warning(s)");
+    expect(bundleMarkdown).toContain("## Spine blocking enforcement");
+    expect(bundleMarkdown).toContain("| `@croco/spine` | `packages/spine/dist/index.js`");
+    expect(bundleMarkdown).toContain("| `@croco/non-spine` | `packages/non-spine/dist/index.js`");
+  });
+
+  it("blocks spine baseline coverage gaps in enforcement mode", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "missing-baseline", "@croco/missing-baseline", {
+      build: "tsup",
+    });
+    writePackage(repo, "not-built", "@croco/not-built", {
+      build: "tsup",
+    });
+    writeCatalog(repo, ["missing-baseline", "not-built"]);
+    writeFile(repo, "packages/missing-baseline/dist/index.js", "console.log('missing');\n");
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+      enforceSpineBundleSize: true,
+    });
+
+    expect(report.bundleSize.spineBlockingSetupIssueCount).toBe(2);
+    expect(report.bundleSize.spineBlockingIssueCount).toBe(2);
+    expect(report.bundleSize.artifacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          packageName: "@croco/missing-baseline",
+          blocking: true,
+          status: "missing-baseline",
+        }),
+        expect.objectContaining({
+          packageName: "@croco/not-built",
+          blocking: true,
+          status: "not-built",
+        }),
+      ]),
+    );
+  });
+
+  it("blocks spine-owned unmatched baselines while ambiguous unmatched baselines stay advisory", () => {
+    const repo = createTempRepo();
+    const artifactSource = "console.log('stable spine bundle');\n";
+    writePackage(repo, "spine", "@croco/spine", {
+      build: "tsup",
+    });
+    writeCatalog(repo, ["spine"]);
+    writeFile(repo, "packages/spine/dist/index.js", artifactSource);
+    writeFile(
+      repo,
+      "ci-reports/bundle-size/baseline.json",
+      `${JSON.stringify(
+        {
+          artifacts: {
+            "@croco/spine:packages/spine/dist/index.js": Buffer.byteLength(artifactSource),
+            "@croco/spine:packages/spine/dist/stale.js": 10,
+            "packages/spine/dist/stale.css": 10,
+            "dist/ambiguous.js": 10,
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+      enforceSpineBundleSize: true,
+    });
+
+    expect(report.bundleSize.unmatchedBaselineCount).toBe(3);
+    expect(report.bundleSize.spineBlockingUnmatchedBaselineCount).toBe(2);
+    expect(report.bundleSize.spineBlockingIssueCount).toBe(2);
+    expect(report.bundleSize.advisoryWarningCount).toBe(1);
+    expect(report.bundleSize.blockingUnmatchedBaselines).toEqual([
+      "@croco/spine:packages/spine/dist/stale.js",
+      "packages/spine/dist/stale.css",
+    ]);
+  });
+
+  it("keeps hashed chunk normalization stable under spine enforcement", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "cli", "@croco/cli", {
+      build: "tsup",
+    });
+    writeCatalog(repo, ["cli"]);
+    writeFile(repo, "packages/cli/dist/chunk-ABCDEFGH.js", "1234567890");
+    writeFile(repo, "packages/cli/dist/chunk-ZYXWVUTS.js", "12345");
+    writeFile(repo, "packages/cli/dist/create-ZYXWVUTS.js", "1234567890");
+    writeFile(
+      repo,
+      "ci-reports/bundle-size/baseline.json",
+      `${JSON.stringify(
+        {
+          artifacts: {
+            "@croco/cli:packages/cli/dist/chunk-*.js": 10,
+            "@croco/cli:packages/cli/dist/create-ABCDEFGH.js": 10,
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+      enforceSpineBundleSize: true,
+    });
+    const chunkArtifact = report.bundleSize.artifacts.find(
+      (entry) => entry.artifactPath === "packages/cli/dist/chunk-*.js",
+    );
+    const namedChunkArtifact = report.bundleSize.artifacts.find(
+      (entry) => entry.artifactPath === "packages/cli/dist/create-*.js",
+    );
+
+    expect(chunkArtifact).toEqual(
+      expect.objectContaining({
+        baselineKey: "@croco/cli:packages/cli/dist/chunk-*.js",
+        blocking: true,
+        sizeBytes: 15,
+        status: "over-baseline",
+      }),
+    );
+    expect(namedChunkArtifact).toEqual(
+      expect.objectContaining({
+        baselineKey: "@croco/cli:packages/cli/dist/create-*.js",
+        blocking: false,
+        sizeBytes: 10,
+        status: "within-baseline",
+      }),
+    );
+    expect(report.bundleSize.unmatchedBaselines).toEqual([]);
+  });
+
+  it("exits non-zero only when bundle-size spine enforcement is requested", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "spine", "@croco/spine", {
+      build: "tsup",
+    });
+    writeCatalog(repo, ["spine"]);
+    writeFile(repo, "packages/spine/dist/index.js", "console.log('larger spine bundle');\n");
+    writeFile(
+      repo,
+      "ci-reports/bundle-size/baseline.json",
+      `${JSON.stringify(
+        {
+          artifacts: {
+            "@croco/spine:packages/spine/dist/index.js": 10,
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const scriptPath = join(process.cwd(), "scripts/package-quality-report.mts");
+    const outputDir = join(repo, "ci-reports", "package-quality");
+    const advisoryResult = spawnSync(
+      process.execPath,
+      ["--experimental-strip-types", scriptPath, "--root", repo, "--output-dir", outputDir],
+      {
+        encoding: "utf-8",
+      },
+    );
+    const enforcedResult = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        scriptPath,
+        "--root",
+        repo,
+        "--output-dir",
+        outputDir,
+        "--",
+        "--enforce-spine-bundle-size",
+      ],
+      {
+        encoding: "utf-8",
+      },
+    );
+
+    expect(advisoryResult.status).toBe(0);
+    expect(enforcedResult.status).toBe(1);
+    expect(enforcedResult.stdout).toContain("spine bundle-size blocking issues=1");
+  });
+
+  it("keeps boundary-check-only isolated from bundle-size enforcement", () => {
+    const repo = createTempRepo();
+    writeFile(repo, "packages/repository-core/src/index.ts", "export const value = 1;\n");
+    const scriptPath = join(process.cwd(), "scripts/package-quality-report.mts");
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        scriptPath,
+        "--root",
+        repo,
+        "--boundary-check-only",
+        "--enforce-spine-bundle-size",
+      ],
+      {
+        encoding: "utf-8",
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("dependency-boundaries: all rules passed");
   });
 
   it("reports unmatched bundle-size baselines as warning-only stale setup work", () => {
@@ -399,6 +673,25 @@ function writeWorkspacePackage(
     )}\n`,
   );
   writeFile(repo, `${relativeDir}/src/index.ts`, "export const value = 1;\n");
+}
+
+function writeCatalog(repo: string, spinePackages: readonly string[]): void {
+  writeFile(
+    repo,
+    "docs/package-catalog.json",
+    `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        spine: {
+          label: "Croco 1.0 spine",
+          description: "Fixture spine",
+          packages: spinePackages,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 function writeTurboSummary(

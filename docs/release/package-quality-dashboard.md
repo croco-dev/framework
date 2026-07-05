@@ -95,6 +95,17 @@ pnpm build
 pnpm package-quality:report
 ```
 
+Spine enforcement:
+
+```bash
+pnpm package-quality:report -- --enforce-spine-bundle-size
+```
+
+The enforcement mode resolves `docs/package-catalog.json` `spine.packages` to public workspace
+package names, applies a global `allowedPositiveDeltaBytes = 0` policy, and exits non-zero for
+spine-owned bundle-size regressions or missing evidence that would prevent regression checks.
+Non-spine packages remain advisory in the same report.
+
 Promote bundle-size warnings to a blocking trunk gate only after:
 
 1. `ci-reports/bundle-size/baseline.json` is committed from a green protected-branch build or another reproducible protected-branch source.

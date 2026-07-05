@@ -52,6 +52,7 @@ describe("release-spine-evidence.mts", () => {
       "provider-certification",
       "production-ready",
       "spine-promotion",
+      "spine-bundle-size",
       "core-coverage",
       "core-coverage-warning",
       "public-api",
@@ -70,6 +71,19 @@ describe("release-spine-evidence.mts", () => {
     expect(
       findCheck(manifest, "generated-app-smoke").artifacts?.map((artifact) => artifact.path),
     ).toEqual(["ci-reports/generated-apps/matrix.md", "ci-reports/generated-apps/matrix.json"]);
+    expect(findCheck(manifest, "spine-bundle-size").command).toEqual([
+      "pnpm",
+      "package-quality:report",
+      "--",
+      "--enforce-spine-bundle-size",
+    ]);
+    expect(
+      findCheck(manifest, "spine-bundle-size").artifacts?.map((artifact) => artifact.path),
+    ).toEqual([
+      "ci-reports/package-quality/report.md",
+      "ci-reports/package-quality/summary.json",
+      "ci-reports/package-quality/bundle-size.md",
+    ]);
     expect(manifest.findIndex((check) => check.id === "release-metadata")).toBeLessThan(
       manifest.findIndex((check) => check.id === "generated-app-smoke"),
     );

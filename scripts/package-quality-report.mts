@@ -60,32 +60,54 @@ export type BundleSizeStatus =
   | "over-baseline"
   | "missing-baseline"
   | "not-built";
+export type BundleSizeScope = "spine" | "non-spine";
+export type BundleSizeCiMode = "warning-only" | "spine-blocking";
+
+export type BundleSizeDeltaPolicy = {
+  readonly kind: "global";
+  readonly allowedPositiveDeltaBytes: number;
+  readonly description: string;
+};
 
 export type BundleSizeArtifact = {
   readonly packageName: string;
   readonly relativeDir: string;
+  readonly scope: BundleSizeScope;
   readonly artifactPath: string | null;
   readonly baselineKey: string | null;
   readonly sizeBytes: number | null;
   readonly baselineBytes: number | null;
   readonly deltaBytes: number | null;
   readonly deltaPercent: number | null;
+  readonly allowedPositiveDeltaBytes: number | null;
   readonly status: BundleSizeStatus;
+  readonly blocking: boolean;
+  readonly blockingReason: string | null;
   readonly recoveryCommand: string;
 };
 
 export type BundleSizeWarningReport = {
-  readonly ciMode: "warning-only";
+  readonly ciMode: BundleSizeCiMode;
+  readonly enforceSpineBundleSize: boolean;
   readonly baselinePath: string;
   readonly reportPath: string;
   readonly localCommand: string;
+  readonly deltaPolicy: BundleSizeDeltaPolicy;
+  readonly spinePackageNames: readonly string[];
   readonly measuredPackageCount: number;
   readonly artifactCount: number;
   readonly missingBaselineCount: number;
   readonly overBaselineCount: number;
   readonly unmatchedBaselineCount: number;
   readonly notBuiltPackageCount: number;
+  readonly spineBlockingRegressionCount: number;
+  readonly spineBlockingSetupIssueCount: number;
+  readonly spineBlockingUnmatchedBaselineCount: number;
+  readonly spineBlockingIssueCount: number;
+  readonly nonSpineAdvisoryWarningCount: number;
+  readonly advisoryWarningCount: number;
   readonly unmatchedBaselines: readonly string[];
+  readonly blockingUnmatchedBaselines: readonly string[];
   readonly artifacts: readonly BundleSizeArtifact[];
 };
 
@@ -105,6 +127,7 @@ type CheckOptions = {
   readonly outputDir: string;
   readonly summaryDir: string;
   readonly boundaryCheckOnly: boolean;
+  readonly enforceSpineBundleSize: boolean;
 };
 
 type TurboTaskSummary = {
@@ -142,10 +165,19 @@ const QUALITY_TASKS: readonly QualityTask[] = ["build", "typecheck", "test"];
 const reportDirectory = join("ci-reports", "package-quality");
 const bundleSizeBaselinePath = join("ci-reports", "bundle-size", "baseline.json");
 const bundleSizeReportPath = join(reportDirectory, "bundle-size.md");
+const packageCatalogPath = join("docs", "package-catalog.json");
 const turboRunsDirectory = join(".turbo", "runs");
 const workspaceFileName = "pnpm-workspace.yaml";
 const publicApiSummaryPath = join(reportDirectory, "public-api-summary.json");
 const bundleSizeRecoveryCommand = "pnpm build && pnpm package-quality:report";
+const spineBundleSizeEnforcementCommand =
+  "pnpm package-quality:report -- --enforce-spine-bundle-size";
+const spineBundleSizeDeltaPolicy: BundleSizeDeltaPolicy = {
+  kind: "global",
+  allowedPositiveDeltaBytes: 0,
+  description:
+    "Spine package artifacts may not grow by any positive byte delta over the committed baseline.",
+};
 const bundleSizeArtifactSuffixes = [
   ".js",
   ".mjs",
@@ -156,7 +188,7 @@ const bundleSizeArtifactSuffixes = [
   ".json",
   ".d.ts",
 ];
-const hashedChunkArtifactPattern = /(^|\/)chunk-[A-Z0-9]{8}(\.(?:cjs|mjs|js)(?:\.map)?)$/i;
+const hashedBuildArtifactPattern = /(^|\/)([^/]+)-[A-Z0-9]{8}(\.(?:cjs|mjs|js)(?:\.map)?)$/i;
 
 const DEPENDENCY_BOUNDARY_RULES: readonly DependencyBoundaryRule[] = [
   {
@@ -336,6 +368,81 @@ export function readPackages(rootDir: string): PackageInfo[] {
       };
     })
     .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function normalizeCatalogSpinePackageName(packageName: string): string {
+  if (packageName === "create-croco-app" || packageName.startsWith("@")) {
+    return packageName;
+  }
+
+  return `@croco/${packageName}`;
+}
+
+function readCatalogSpineEntries(rootDir: string): string[] {
+  const catalogFilePath = join(rootDir, packageCatalogPath);
+  const catalog = readJsonFile(catalogFilePath);
+
+  if (!isRecord(catalog) || !isRecord(catalog.spine)) {
+    throw new Error(`${packageCatalogPath}: spine must be an object`);
+  }
+
+  const spinePackages = catalog.spine.packages;
+  if (!Array.isArray(spinePackages)) {
+    throw new Error(`${packageCatalogPath}: spine.packages must be an array`);
+  }
+
+  return spinePackages.map((packageName, index) => {
+    if (typeof packageName !== "string" || packageName.length === 0) {
+      throw new Error(`${packageCatalogPath}: spine.packages[${index}] must be a non-empty string`);
+    }
+
+    return normalizeCatalogSpinePackageName(packageName);
+  });
+}
+
+function resolveSpinePackages(
+  rootDir: string,
+  packages: readonly PackageInfo[],
+  required: boolean,
+): {
+  readonly packageDirs: ReadonlySet<string>;
+  readonly packageNames: ReadonlySet<string>;
+} {
+  if (!required) {
+    return {
+      packageDirs: new Set(),
+      packageNames: new Set(),
+    };
+  }
+
+  const catalogFilePath = join(rootDir, packageCatalogPath);
+  if (!existsSync(catalogFilePath)) {
+    throw new Error(`${packageCatalogPath} is required for spine bundle-size enforcement`);
+  }
+
+  const publicPackagesByName = new Map(
+    packages.filter((pkg) => !pkg.private).map((pkg) => [pkg.name, pkg]),
+  );
+  const packageNames = new Set<string>();
+  const packageDirs = new Set<string>();
+
+  for (const packageName of readCatalogSpineEntries(rootDir)) {
+    const pkg = publicPackagesByName.get(packageName);
+
+    if (!pkg) {
+      throw new Error(
+        `${packageCatalogPath}: spine package ${packageName} must map to a public workspace package`,
+      );
+    }
+
+    packageNames.add(pkg.name);
+    packageDirs.add(pkg.relativeDir);
+  }
+
+  return {
+    packageDirs,
+    packageNames,
+  };
 }
 
 function parseTurboTask(task: unknown): TurboTaskSummary | null {
@@ -700,7 +807,8 @@ function readBundleSizeBaselines(rootDir: string): ReadonlyMap<string, number> {
 
   for (const [key, value] of Object.entries(artifactEntries)) {
     if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
-      baselines.set(key, value);
+      const normalizedKey = normalizeBundleArtifactPath(key);
+      baselines.set(normalizedKey, (baselines.get(normalizedKey) ?? 0) + value);
       continue;
     }
 
@@ -710,7 +818,8 @@ function readBundleSizeBaselines(rootDir: string): ReadonlyMap<string, number> {
       Number.isFinite(value.bytes) &&
       value.bytes >= 0
     ) {
-      baselines.set(key, value.bytes);
+      const normalizedKey = normalizeBundleArtifactPath(key);
+      baselines.set(normalizedKey, (baselines.get(normalizedKey) ?? 0) + value.bytes);
       continue;
     }
 
@@ -727,7 +836,7 @@ function isMeasuredBundleArtifact(path: string): boolean {
 }
 
 function normalizeBundleArtifactPath(path: string): string {
-  return path.replace(hashedChunkArtifactPattern, "$1chunk-*$2");
+  return path.replace(hashedBuildArtifactPattern, "$1$2-*$3");
 }
 
 function getBundleBaselineMatch(
@@ -753,8 +862,75 @@ function getBundleBaselineMatch(
       };
 }
 
+function getBaselineKeyPackageName(baselineKey: string): string | null {
+  const separatorIndex = baselineKey.indexOf(":");
+  return separatorIndex === -1 ? null : baselineKey.slice(0, separatorIndex);
+}
+
+function getBaselineKeyArtifactPath(baselineKey: string): string {
+  const separatorIndex = baselineKey.indexOf(":");
+  return separatorIndex === -1 ? baselineKey : baselineKey.slice(separatorIndex + 1);
+}
+
+function isArtifactPathUnderPackageDist(artifactPath: string, packageDir: string): boolean {
+  return artifactPath.startsWith(`${packageDir}/dist/`);
+}
+
+function isSpineOwnedBaselineKey(
+  baselineKey: string,
+  spinePackageNames: ReadonlySet<string>,
+  spinePackageDirs: ReadonlySet<string>,
+): boolean {
+  const packageName = getBaselineKeyPackageName(baselineKey);
+  if (packageName !== null) {
+    return spinePackageNames.has(packageName);
+  }
+
+  const artifactPath = getBaselineKeyArtifactPath(baselineKey);
+  return [...spinePackageDirs].some((packageDir) =>
+    isArtifactPathUnderPackageDist(artifactPath, packageDir),
+  );
+}
+
 function getBundleSizeRecoveryCommand(packageName: string): string {
   return `pnpm --filter ${packageName} build && pnpm package-quality:report`;
+}
+
+function getBundleSizeStatus(
+  sizeBytes: number,
+  baselineBytes: number | null,
+  allowedPositiveDeltaBytes: number,
+): BundleSizeStatus {
+  if (baselineBytes === null) {
+    return "missing-baseline";
+  }
+
+  return sizeBytes - baselineBytes > allowedPositiveDeltaBytes
+    ? "over-baseline"
+    : "within-baseline";
+}
+
+function getBlockingReason(
+  artifact: Pick<BundleSizeArtifact, "scope" | "status">,
+  enforceSpineBundleSize: boolean,
+): string | null {
+  if (!enforceSpineBundleSize || artifact.scope !== "spine") {
+    return null;
+  }
+
+  if (artifact.status === "over-baseline") {
+    return "spine artifact exceeds the allowed bundle-size delta";
+  }
+
+  if (artifact.status === "missing-baseline") {
+    return "spine artifact is missing a bundle-size baseline";
+  }
+
+  if (artifact.status === "not-built") {
+    return "spine package has no measured dist artifact";
+  }
+
+  return null;
 }
 
 function createBundleSizeArtifact(
@@ -762,42 +938,58 @@ function createBundleSizeArtifact(
   artifactPath: string,
   sizeBytes: number,
   baselineMatch: BundleBaselineMatch | null,
+  scope: BundleSizeScope,
+  enforceSpineBundleSize: boolean,
 ): BundleSizeArtifact {
   const baselineBytes = baselineMatch?.bytes ?? null;
   const deltaBytes = baselineBytes === null ? null : sizeBytes - baselineBytes;
   const deltaPercent =
     baselineBytes === null || baselineBytes === 0 ? null : (deltaBytes / baselineBytes) * 100;
+  const allowedPositiveDeltaBytes =
+    scope === "spine" ? spineBundleSizeDeltaPolicy.allowedPositiveDeltaBytes : null;
+  const status = getBundleSizeStatus(sizeBytes, baselineBytes, allowedPositiveDeltaBytes ?? 0);
+  const blockingReason = getBlockingReason({ scope, status }, enforceSpineBundleSize);
 
   return {
     packageName: pkg.name,
     relativeDir: pkg.relativeDir,
+    scope,
     artifactPath,
     baselineKey: baselineMatch?.key ?? null,
     sizeBytes,
     baselineBytes,
     deltaBytes,
     deltaPercent,
-    status:
-      baselineBytes === null
-        ? "missing-baseline"
-        : sizeBytes > baselineBytes
-          ? "over-baseline"
-          : "within-baseline",
+    allowedPositiveDeltaBytes,
+    status,
+    blocking: blockingReason !== null,
+    blockingReason,
     recoveryCommand: getBundleSizeRecoveryCommand(pkg.name),
   };
 }
 
-function createNotBuiltBundleSizeArtifact(pkg: PackageInfo): BundleSizeArtifact {
+function createNotBuiltBundleSizeArtifact(
+  pkg: PackageInfo,
+  scope: BundleSizeScope,
+  enforceSpineBundleSize: boolean,
+): BundleSizeArtifact {
+  const blockingReason = getBlockingReason({ scope, status: "not-built" }, enforceSpineBundleSize);
+
   return {
     packageName: pkg.name,
     relativeDir: pkg.relativeDir,
+    scope,
     artifactPath: null,
     baselineKey: null,
     sizeBytes: null,
     baselineBytes: null,
     deltaBytes: null,
     deltaPercent: null,
+    allowedPositiveDeltaBytes:
+      scope === "spine" ? spineBundleSizeDeltaPolicy.allowedPositiveDeltaBytes : null,
     status: "not-built",
+    blocking: blockingReason !== null,
+    blockingReason,
     recoveryCommand: getBundleSizeRecoveryCommand(pkg.name),
   };
 }
@@ -806,11 +998,14 @@ function collectPackageBundleSizeArtifacts(
   rootDir: string,
   pkg: PackageInfo,
   baselines: ReadonlyMap<string, number>,
+  spinePackageNames: ReadonlySet<string>,
+  enforceSpineBundleSize: boolean,
 ): BundleSizeArtifact[] {
   const distDir = join(rootDir, pkg.relativeDir, "dist");
+  const scope: BundleSizeScope = spinePackageNames.has(pkg.name) ? "spine" : "non-spine";
 
   if (!existsSync(distDir) || !statSync(distDir).isDirectory()) {
-    return [createNotBuiltBundleSizeArtifact(pkg)];
+    return [createNotBuiltBundleSizeArtifact(pkg, scope, enforceSpineBundleSize)];
   }
 
   const artifactSizes = new Map<string, number>();
@@ -836,20 +1031,35 @@ function collectPackageBundleSizeArtifacts(
         artifactPath,
         sizeBytes,
         getBundleBaselineMatch(baselines, pkg.name, artifactPath),
+        scope,
+        enforceSpineBundleSize,
       ),
     );
 
-  return artifacts.length > 0 ? artifacts : [createNotBuiltBundleSizeArtifact(pkg)];
+  return artifacts.length > 0
+    ? artifacts
+    : [createNotBuiltBundleSizeArtifact(pkg, scope, enforceSpineBundleSize)];
 }
 
 export function createBundleSizeWarningReport(
   rootDir: string,
   packages: readonly PackageInfo[],
+  options: {
+    readonly enforceSpineBundleSize?: boolean;
+  } = {},
 ): BundleSizeWarningReport {
+  const enforceSpineBundleSize = options.enforceSpineBundleSize === true;
   const baselines = readBundleSizeBaselines(rootDir);
   const measuredPackages = packages.filter((pkg) => !pkg.private && Boolean(pkg.scripts.build));
+  const spinePackages = resolveSpinePackages(rootDir, packages, enforceSpineBundleSize);
   const artifacts = measuredPackages.flatMap((pkg) =>
-    collectPackageBundleSizeArtifacts(rootDir, pkg, baselines),
+    collectPackageBundleSizeArtifacts(
+      rootDir,
+      pkg,
+      baselines,
+      spinePackages.packageNames,
+      enforceSpineBundleSize,
+    ),
   );
   const matchedBaselineKeys = new Set(
     artifacts
@@ -859,12 +1069,38 @@ export function createBundleSizeWarningReport(
   const unmatchedBaselines = [...baselines.keys()]
     .filter((baselineKey) => !matchedBaselineKeys.has(baselineKey))
     .sort();
+  const blockingUnmatchedBaselines = enforceSpineBundleSize
+    ? unmatchedBaselines.filter((baselineKey) =>
+        isSpineOwnedBaselineKey(baselineKey, spinePackages.packageNames, spinePackages.packageDirs),
+      )
+    : [];
+  const spineBlockingRegressionCount = artifacts.filter(
+    (artifact) => artifact.blocking && artifact.status === "over-baseline",
+  ).length;
+  const spineBlockingSetupIssueCount = artifacts.filter(
+    (artifact) =>
+      artifact.blocking &&
+      (artifact.status === "missing-baseline" || artifact.status === "not-built"),
+  ).length;
+  const nonSpineAdvisoryWarningCount = artifacts.filter(
+    (artifact) => artifact.scope === "non-spine" && artifact.status !== "within-baseline",
+  ).length;
+  const advisoryWarningCount =
+    artifacts.filter((artifact) => !artifact.blocking && artifact.status !== "within-baseline")
+      .length +
+    unmatchedBaselines.length -
+    blockingUnmatchedBaselines.length;
 
   return {
-    ciMode: "warning-only",
+    ciMode: enforceSpineBundleSize ? "spine-blocking" : "warning-only",
+    enforceSpineBundleSize,
     baselinePath: bundleSizeBaselinePath,
     reportPath: bundleSizeReportPath,
-    localCommand: bundleSizeRecoveryCommand,
+    localCommand: enforceSpineBundleSize
+      ? spineBundleSizeEnforcementCommand
+      : bundleSizeRecoveryCommand,
+    deltaPolicy: spineBundleSizeDeltaPolicy,
+    spinePackageNames: [...spinePackages.packageNames].sort(),
     measuredPackageCount: measuredPackages.length,
     artifactCount: artifacts.filter((artifact) => artifact.artifactPath !== null).length,
     missingBaselineCount: artifacts.filter((artifact) => artifact.status === "missing-baseline")
@@ -872,13 +1108,25 @@ export function createBundleSizeWarningReport(
     overBaselineCount: artifacts.filter((artifact) => artifact.status === "over-baseline").length,
     unmatchedBaselineCount: unmatchedBaselines.length,
     notBuiltPackageCount: artifacts.filter((artifact) => artifact.status === "not-built").length,
+    spineBlockingRegressionCount,
+    spineBlockingSetupIssueCount,
+    spineBlockingUnmatchedBaselineCount: blockingUnmatchedBaselines.length,
+    spineBlockingIssueCount:
+      spineBlockingRegressionCount +
+      spineBlockingSetupIssueCount +
+      blockingUnmatchedBaselines.length,
+    nonSpineAdvisoryWarningCount,
+    advisoryWarningCount,
     unmatchedBaselines,
+    blockingUnmatchedBaselines,
     artifacts,
   };
 }
 
 export function createPackageQualityReport(
-  options: Pick<CheckOptions, "rootDir" | "summaryDir">,
+  options: Pick<CheckOptions, "rootDir" | "summaryDir"> & {
+    readonly enforceSpineBundleSize?: boolean;
+  },
 ): PackageQualityReport {
   const summaries = readTurboRunSummaries(options.summaryDir);
   const summaryByTask = getLatestSummaryByTask(summaries);
@@ -892,7 +1140,9 @@ export function createPackageQualityReport(
     rows,
     boundaries: scanDependencyBoundaries(options.rootDir),
     publicApi: readPublicApiGuardResult(options.rootDir),
-    bundleSize: createBundleSizeWarningReport(options.rootDir, packages),
+    bundleSize: createBundleSizeWarningReport(options.rootDir, packages, {
+      enforceSpineBundleSize: options.enforceSpineBundleSize,
+    }),
     gateOutcomes: readGateOutcomes(),
   };
 }
@@ -1054,7 +1304,18 @@ function formatBundleBaseline(artifact: BundleSizeArtifact): string {
 
 function formatBundleSizeStatus(report: BundleSizeWarningReport): string {
   if (report.measuredPackageCount === 0) {
-    return "warning-only; no publishable build packages in scope";
+    return `${report.ciMode}; no publishable build packages in scope`;
+  }
+
+  if (report.enforceSpineBundleSize) {
+    const advisorySummary =
+      report.advisoryWarningCount > 0 ? `; ${report.advisoryWarningCount} advisory warning(s)` : "";
+
+    if (report.spineBlockingIssueCount > 0) {
+      return `spine-blocking; ${report.spineBlockingIssueCount} spine blocking issue(s)${advisorySummary}`;
+    }
+
+    return `spine-blocking; spine artifacts within policy${advisorySummary}`;
   }
 
   const warnings = [
@@ -1093,7 +1354,42 @@ function formatBundleSizeEvidence(report: BundleSizeWarningReport): string {
   return `report \`${report.reportPath}\`; baseline \`${report.baselinePath}\`; run \`${report.localCommand}\``;
 }
 
+function formatBundleIssueRows(artifacts: readonly BundleSizeArtifact[]): string[] {
+  if (artifacts.length === 0) {
+    return ["| _none_ | _none_ | - | - | - | - | - |"];
+  }
+
+  return artifacts.map((artifact) => {
+    const reason =
+      artifact.blockingReason ??
+      (artifact.scope === "non-spine"
+        ? "non-spine package remains advisory"
+        : "spine package remains advisory");
+
+    return `| \`${artifact.packageName}\` | ${formatBundleArtifactPath(artifact)} | ${formatBytes(artifact.sizeBytes)} | ${formatBundleBaseline(artifact)} | ${formatBundleDelta(artifact)} | ${artifact.status} | ${reason} |`;
+  });
+}
+
+function formatBlockingUnmatchedBaselineRows(report: BundleSizeWarningReport): string[] {
+  if (report.blockingUnmatchedBaselines.length === 0) {
+    return ["| _none_ | - |"];
+  }
+
+  return report.blockingUnmatchedBaselines.map(
+    (baselineKey) =>
+      `| \`${baselineKey}\` | spine baseline key no longer matches a measured artifact |`,
+  );
+}
+
 export function buildBundleSizeMarkdown(report: BundleSizeWarningReport): string {
+  const blockingArtifactRows = formatBundleIssueRows(
+    report.artifacts.filter((artifact) => artifact.blocking),
+  );
+  const nonSpineAdvisoryRows = formatBundleIssueRows(
+    report.artifacts.filter(
+      (artifact) => artifact.scope === "non-spine" && artifact.status !== "within-baseline",
+    ),
+  );
   const artifactRows =
     report.artifacts.length === 0
       ? ["| _none_ | _none_ | - | - | - | - | warning-only | - |"]
@@ -1109,6 +1405,7 @@ export function buildBundleSizeMarkdown(report: BundleSizeWarningReport): string
     "- Scope: publishable workspace packages with a `build` script and generated `dist` artifacts (`.js`, `.mjs`, `.cjs`, `.css`, `.wasm`, `.map`, `.json`, `.d.ts`).",
     `- Baseline input: \`${report.baselinePath}\``,
     `- Local recovery command: \`${report.localCommand}\``,
+    `- Allowed spine positive delta: ${formatBytes(report.deltaPolicy.allowedPositiveDeltaBytes)}`,
     "",
     "## Warning summary",
     `- Measured packages: ${report.measuredPackageCount}`,
@@ -1117,6 +1414,31 @@ export function buildBundleSizeMarkdown(report: BundleSizeWarningReport): string
     `- Over-baseline artifacts: ${report.overBaselineCount}`,
     `- Unmatched baselines: ${report.unmatchedBaselineCount}`,
     `- Packages without measured dist artifacts: ${report.notBuiltPackageCount}`,
+    `- Spine blocking regressions: ${report.spineBlockingRegressionCount}`,
+    `- Spine blocking setup issues: ${report.spineBlockingSetupIssueCount}`,
+    `- Spine blocking unmatched baselines: ${report.spineBlockingUnmatchedBaselineCount}`,
+    `- Advisory warnings: ${report.advisoryWarningCount}`,
+    "",
+    "## Spine blocking enforcement",
+    `- Mode: ${report.ciMode}`,
+    `- Policy: ${report.deltaPolicy.description}`,
+    `- Spine packages: ${report.spinePackageNames.length === 0 ? "_none_" : report.spinePackageNames.map((packageName) => `\`${packageName}\``).join(", ")}`,
+    "",
+    "| Package | Artifact | Size | Baseline | Delta | Status | Reason |",
+    "| --- | --- | ---: | ---: | ---: | --- | --- |",
+    ...blockingArtifactRows,
+    "",
+    "### Blocking unmatched baselines",
+    "| Baseline key | Reason |",
+    "| --- | --- |",
+    ...formatBlockingUnmatchedBaselineRows(report),
+    "",
+    "## Non-spine advisory warnings",
+    "Non-spine packages stay advisory in spine enforcement mode.",
+    "",
+    "| Package | Artifact | Size | Baseline | Delta | Status | Reason |",
+    "| --- | --- | ---: | ---: | ---: | --- | --- |",
+    ...nonSpineAdvisoryRows,
     "",
     "## Artifact responsibility",
     "| Package | Artifact | Size | Baseline | Baseline key | Delta | Status | Recovery |",
@@ -1227,9 +1549,14 @@ function parseArgs(args: readonly string[]): CheckOptions {
   let outputDir = join(rootDir, reportDirectory);
   let summaryDir = join(rootDir, turboRunsDirectory);
   let boundaryCheckOnly = false;
+  let enforceSpineBundleSize = false;
 
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
+
+    if (arg === "--") {
+      continue;
+    }
 
     if (arg === "--root") {
       const value = args[index + 1];
@@ -1268,6 +1595,11 @@ function parseArgs(args: readonly string[]): CheckOptions {
       continue;
     }
 
+    if (arg === "--enforce-spine-bundle-size") {
+      enforceSpineBundleSize = true;
+      continue;
+    }
+
     throw new Error(`Unknown option: ${arg}`);
   }
 
@@ -1276,6 +1608,7 @@ function parseArgs(args: readonly string[]): CheckOptions {
     outputDir,
     summaryDir,
     boundaryCheckOnly,
+    enforceSpineBundleSize,
   };
 }
 
@@ -1309,6 +1642,7 @@ async function main(): Promise<void> {
   const report = createPackageQualityReport({
     rootDir: options.rootDir,
     summaryDir: options.summaryDir,
+    enforceSpineBundleSize: options.enforceSpineBundleSize,
   });
   const markdownPath = writePackageQualityReport(report, options.outputDir);
   const failureCount = report.rows.reduce(
@@ -1323,6 +1657,13 @@ async function main(): Promise<void> {
   console.log(`package-quality-report: wrote ${markdownPath}`);
   console.log(`package-quality-report: package task failures=${failureCount}`);
   console.log(`package-quality-report: dependency boundary failures=${boundaryFailureCount}`);
+  console.log(
+    `package-quality-report: spine bundle-size blocking issues=${report.bundleSize.spineBlockingIssueCount}`,
+  );
+
+  if (report.bundleSize.spineBlockingIssueCount > 0) {
+    process.exit(1);
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
