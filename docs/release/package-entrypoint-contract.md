@@ -59,6 +59,14 @@ Direct-dist root exceptions live in `scripts/package-manifest-contracts.mjs`
 the root import target. `pnpm package-entrypoints:smoke` also reports root/publish face mismatches
 for those exceptions before it smokes the merged publish manifest.
 
+Direct-dist exceptions may only keep `exports["."].development` when that condition points at a
+`./dist` entrypoint. `pnpm package-manifests:check` rejects source-backed `development` conditions
+because they would make the root package face diverge from `publishConfig.exports`; `pnpm
+package-manifests:write` removes non-dist `development` conditions while preserving dist-backed
+runtime conditions and writing `exports["."].types` before runtime conditions. This keeps
+`development`, root `main`, root `types`, root `exports`, and `publishConfig` under the same
+packed-package contract.
+
 `@croco/docs` is an Astro documentation site, not an importable runtime package or npm artifact. It
 must remain `private: true`, with no `publishConfig.access`, so npm, pnpm recursive publish, and
 Changesets cannot select it for publish or tagging work. If the docs manifest becomes public again,

@@ -540,22 +540,40 @@ function directDistPublishedRootExportFor(pkg) {
     }
   }
 
-  return normalizedRootExport;
+  return withTypesFirstExportCondition(normalizedRootExport);
 }
 
 function publishedRootExportFor(pkg) {
   if (pkg.type === "module") {
     return {
-      import: DIST_INDEX_MAIN,
       types: DIST_INDEX_TYPES,
+      import: DIST_INDEX_MAIN,
     };
   }
 
   return {
+    types: DIST_INDEX_TYPES,
     import: DIST_INDEX_MODULE,
     require: DIST_INDEX_MAIN,
-    types: DIST_INDEX_TYPES,
   };
+}
+
+function withTypesFirstExportCondition(rootExport) {
+  if (!Object.hasOwn(rootExport, "types")) {
+    return rootExport;
+  }
+
+  const orderedRootExport = {
+    types: rootExport.types,
+  };
+
+  for (const [conditionName, target] of Object.entries(rootExport)) {
+    if (conditionName !== "types") {
+      orderedRootExport[conditionName] = target;
+    }
+  }
+
+  return orderedRootExport;
 }
 
 function rootImportTargetFor(exportsValue) {

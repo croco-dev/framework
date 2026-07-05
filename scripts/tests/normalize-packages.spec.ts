@@ -364,11 +364,12 @@ describe("normalize-packages.mjs", () => {
     expect(pkg.module).toBeUndefined();
     expect(pkg.exports).toEqual({
       ".": {
+        types: "./dist/index.d.ts",
         import: "./dist/index.js",
         require: "./dist/index.cjs",
-        types: "./dist/index.d.ts",
       },
     });
+    expect(Object.keys(pkg.exports["."])).toEqual(["types", "import", "require"]);
     expect(pkg.publishConfig.exports).toEqual(pkg.exports);
   });
 
