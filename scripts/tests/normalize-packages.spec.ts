@@ -278,6 +278,19 @@ describe("normalize-packages.mjs", () => {
     );
   });
 
+  it("requires package catalog metadata for spine validation", () => {
+    const root = createTempRoot();
+    rmSync(join(root, "docs", "package-catalog.json"), { force: true });
+    writePackage(root, "retry-core", publishablePackage("@croco/retry-core"));
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "docs/package-catalog.json: package catalog is required for spine entrypoint policy",
+    );
+  });
+
   it("requires direct-dist entrypoints to match the publishConfig face", () => {
     const root = createTempRoot();
     writePackage(root, "telemetry-api", {
@@ -1179,6 +1192,7 @@ function createTempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "croco-package-manifests-"));
   tempRoots.push(root);
   mkdirSync(join(root, "packages"));
+  writePackageCatalog(root, []);
 
   return root;
 }

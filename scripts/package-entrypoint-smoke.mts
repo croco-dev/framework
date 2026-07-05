@@ -365,7 +365,7 @@ function pushRootPublishFieldDiagnostic(
   diagnostics: string[],
 ): void {
   if (!fieldMatchesPath(sourceManifest, rootFieldName, publishFieldName)) {
-    diagnostics.push(`${packageName}: root ${rootFieldName} must match ${publishFieldName}`);
+    diagnostics.push(`${packageName}: ${rootFieldName} must match ${publishFieldName}`);
   }
 }
 

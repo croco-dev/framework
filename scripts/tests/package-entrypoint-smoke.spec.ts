@@ -128,14 +128,10 @@ describe("package-entrypoint-smoke.mts", () => {
     const result = runScript(root);
 
     expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/telemetry-api: main must match publishConfig.main");
+    expect(result.stdout).toContain("@croco/telemetry-api: types must match publishConfig.types");
     expect(result.stdout).toContain(
-      "@croco/telemetry-api: root main must match publishConfig.main",
-    );
-    expect(result.stdout).toContain(
-      "@croco/telemetry-api: root types must match publishConfig.types",
-    );
-    expect(result.stdout).toContain(
-      "@croco/telemetry-api: root exports must match publishConfig.exports",
+      "@croco/telemetry-api: exports must match publishConfig.exports",
     );
   });
 

@@ -372,6 +372,9 @@ function readWorkspacePackageRecords(packageJsonFiles, rootDir) {
 function readSpinePackageNames(rootDir, workspacePackageRecords, violations) {
   const catalogPath = path.join(rootDir, CATALOG_METADATA_PATH);
   if (!fs.existsSync(catalogPath)) {
+    violations.push(
+      `${CATALOG_METADATA_PATH}: package catalog is required for spine entrypoint policy`,
+    );
     return new Set();
   }
 
@@ -492,17 +495,6 @@ function normalizeEntrypointFields(pkg, options = {}) {
     pkg.publishConfig.exports = {
       ".": directDistPublishedRootExportFor(pkg),
     };
-  } else {
-    if (!pkg.publishConfig.exports) {
-      pkg.publishConfig.exports = {};
-    }
-
-    if (!pkg.publishConfig.exports["."]) {
-      pkg.publishConfig.exports["."] = publishedRootExportFor(pkg);
-    }
-  }
-
-  if (options.directDistRoot) {
     pkg.main = pkg.publishConfig.main;
     pkg.types = pkg.publishConfig.types;
     pkg.exports = structuredClone(pkg.publishConfig.exports);
@@ -512,6 +504,14 @@ function normalizeEntrypointFields(pkg, options = {}) {
       pkg.module = moduleTarget;
     } else {
       delete pkg.module;
+    }
+  } else {
+    if (!pkg.publishConfig.exports) {
+      pkg.publishConfig.exports = {};
+    }
+
+    if (!pkg.publishConfig.exports["."]) {
+      pkg.publishConfig.exports["."] = publishedRootExportFor(pkg);
     }
   }
 }
@@ -909,7 +909,7 @@ function validateSpineEntrypointPolicy(pkg, context, violations) {
     return;
   }
 
-  if (ENTRYPOINT_EXEMPTIONS.has(pkg.name) || DIRECT_DIST_ENTRYPOINT_PACKAGES.has(pkg.name)) {
+  if (DIRECT_DIST_ENTRYPOINT_PACKAGES.has(pkg.name)) {
     return;
   }
 
