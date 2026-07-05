@@ -10,6 +10,7 @@ import { Controller } from "../../libs/decorators/Controller";
 import { Get, Post } from "../../libs/decorators/HttpMethod";
 import { UseFilters, UseGuards, UseInterceptors, UsePipes } from "../../libs/decorators/Lifecycle";
 import type { CallHandler } from "../../libs/interfaces/CallHandler";
+import type { ExceptionFilterResult } from "../../libs/interfaces/ExceptionFilter";
 import type { ArgumentMetadata } from "../../libs/interfaces/PipeTransform";
 
 class MockGuard {
@@ -31,7 +32,7 @@ class MockInterceptor {
 }
 
 class MockFilter {
-  catch(_exception: unknown, _context: unknown): unknown {
+  catch(_exception: unknown, _context: unknown): ExceptionFilterResult {
     return undefined;
   }
 }

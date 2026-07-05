@@ -7,6 +7,7 @@ import {
   Controller,
   type ExceptionFilter,
   type ExceptionFilterConstructor,
+  type ExceptionFilterResult,
   Get,
   type GuardConstructor,
   type Interceptor,
@@ -152,11 +153,11 @@ describe("RouteCompiler", () => {
     class RouteLevelFilter implements ExceptionFilter {
       constructor(private readonly dependency: GuardDependency) {}
 
-      catch(exception: unknown) {
+      catch(exception: unknown): ExceptionFilterResult {
         if (!this.dependency.allowed) {
           throw exception;
         }
-        return exception;
+        return undefined;
       }
     }
 

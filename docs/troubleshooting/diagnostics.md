@@ -163,6 +163,7 @@ Search: CROCO_ROUTE_004, missing path param, @Param, route contract
 | `CROCO_BUILD_003`              | build-time           | error    | controller source에 TypeScript 오류가 있음       | controller type error 수정 후 contract 재실행                  |
 | `CROCO_HTTP_SECURITY_001`      | runtime              | error    | HTTP bootstrap에 필수 security middleware가 없음 | security headers, CORS, body limit, rate limit middleware 등록 |
 | `CROCO_HTTP_SECURITY_002`      | runtime              | error    | 지원하지 않는 security capability를 선언함       | supported capability literal로 수정                            |
+| `CROCO_HTTP_FILTER_001`        | runtime              | error    | HTTP exception filter 결과가 계약 밖이거나 throw | 공식 filter result 반환 또는 `undefined`로 다음 filter에 위임  |
 
 ### CLI diagnostic code migration
 
@@ -293,6 +294,22 @@ Cause: `declareSecurityMiddlewareCapabilities()` 호출이 지원하지 않는 s
 Fix: Custom 또는 wrapper middleware 선언을 지원되는 literal 중 하나 이상으로 수정합니다. JavaScript
 호출자는 오타가 runtime에서 `extensions.capability`와 함께 실패하므로, 해당 값을 기준으로 선언 코드를
 고칩니다.
+
+### `CROCO_HTTP_FILTER_001`
+
+Cause: `@croco/transports-http`의 exception filter가 route error를 처리하는 중 throw했거나,
+`Response`, `HttpExceptionFilterResponse`, `undefined`가 아닌 값을 반환했습니다.
+Fix: filter가 직접 처리할 수 있으면 native `Response`나 `{ status, headers, body }` 형태의
+`HttpExceptionFilterResponse`를 반환합니다. 처리하지 않는 filter는 `undefined`를 반환해 다음
+filter로 위임합니다. `status`는 유한한 number, `headers`는 string record, `body`는 배열이 아닌
+object여야 합니다.
+
+Filter 실행 순서는 등록 순서입니다. `Response`나 유효한 `HttpExceptionFilterResponse`를 반환한 첫
+filter가 응답을 확정합니다. `undefined`는 실패가 아니라 pass-through로 취급됩니다. filter가 throw하거나
+계약 밖 값을 반환하면 `CROCO_HTTP_FILTER_001`이 logger, runtime inspector, active OpenTelemetry span에
+기록되고 runner는 원래 route error를 유지한 채 다음 filter 또는 기본 `ErrorHandler`로 진행합니다.
+원래 route error가 `Problem`이면 diagnostic payload와 span attribute에는 minification에 영향받지 않는
+`originalProblemCode`, `originalProblemCategory`, `originalProblemStatus`도 함께 기록됩니다.
 
 ### 변경 정책
 

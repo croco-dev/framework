@@ -1,15 +1,10 @@
 import { Problem, ProblemSerializer } from "@croco/problems-core";
 import type { ProblemDetails } from "@croco/problems-core";
-import type { ExceptionFilter } from "../interfaces/ExceptionFilter";
+import type { ExceptionFilter, HttpExceptionFilterResponse } from "../interfaces/ExceptionFilter";
 import type { ExecutionContext } from "../interfaces/ExecutionContext";
 
 export type ProblemLike = Problem | ProblemDetails;
-
-export type HttpExceptionFilterResponse = {
-  status: number;
-  headers: Record<string, string>;
-  body: Record<string, unknown>;
-};
+export type { HttpExceptionFilterResponse } from "../interfaces/ExceptionFilter";
 
 function parseProblemDetails(exception: unknown): ProblemDetails | undefined {
   if (exception instanceof Problem) {

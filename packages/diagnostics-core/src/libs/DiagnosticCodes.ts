@@ -986,6 +986,33 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
       },
     ],
   },
+  {
+    code: "CROCO_HTTP_FILTER_001",
+    category: "runtime",
+    severity: "error",
+    title: "HTTP exception filter failed to handle deterministically",
+    cause:
+      "An HTTP exception filter threw while handling a route error or returned a value outside the official filter result contract.",
+    action:
+      "Return a native Response, a valid HttpExceptionFilterResponse, or undefined to pass handling to the next filter; fix throwing filters without replacing the original route error.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_http_filter_001",
+    searchKeywords: [
+      "CROCO_HTTP_FILTER_001",
+      "ExceptionFilter",
+      "HttpExceptionFilterResponse",
+      "exception filter invalid return",
+      "exception filter threw",
+      "transports-http filter diagnostics",
+    ],
+    fixExamples: [
+      {
+        label: "Return an official filter response or pass through",
+        before: "catch(error) {\n  return { handled: true };\n}",
+        after:
+          'catch(error) {\n  if (!canHandle(error)) return undefined;\n  return { status: 400, headers: { "Content-Type": "application/problem+json" }, body: problem };\n}',
+      },
+    ],
+  },
 ] as const satisfies readonly DiagnosticCodeDefinition[];
 
 const diagnosticCodeDefinitionByCode = new Map<string, DiagnosticCodeDefinition>(
