@@ -40,9 +40,10 @@
     "@croco/tasks-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*",
     "@croco/triggers-core": "workspace:*",
-    "reflect-metadata": "^0.1.13"
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
+    "@opentelemetry/api": "^1.9.0",
     "vitest": "4.0.16"
   }
 }

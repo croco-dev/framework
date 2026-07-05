@@ -113,13 +113,44 @@ function addToCreateAppControllers(call: CallExpression, className: string): Upd
   if (!options || !Node.isObjectLiteralExpression(options)) return "not-found";
 
   const controllers = options.getProperty("controllers");
-  if (!controllers || !Node.isPropertyAssignment(controllers)) return "not-found";
+  if (!controllers) return "not-found";
 
-  return addToPropertyArray(controllers, className);
+  if (Node.isPropertyAssignment(controllers)) {
+    return addToPropertyArray(controllers, className);
+  }
+
+  if (Node.isShorthandPropertyAssignment(controllers)) {
+    return addToNamedArray(call.getSourceFile(), controllers.getName(), className);
+  }
+
+  return "not-found";
 }
 
 function addToPropertyArray(property: PropertyAssignment, className: string): UpdateResult {
   const initializer = property.getInitializer();
+
+  if (!initializer) {
+    return "unsupported-pattern";
+  }
+
+  if (Node.isIdentifier(initializer)) {
+    return addToNamedArray(property.getSourceFile(), initializer.getText(), className);
+  }
+
+  if (!Node.isArrayLiteralExpression(initializer)) {
+    return "unsupported-pattern";
+  }
+
+  return addToArray(initializer, className);
+}
+
+function addToNamedArray(
+  sourceFile: SourceFile,
+  identifierName: string,
+  className: string,
+): UpdateResult {
+  const declaration = sourceFile.getVariableDeclaration(identifierName);
+  const initializer = declaration?.getInitializer();
 
   if (!initializer || !Node.isArrayLiteralExpression(initializer)) {
     return "unsupported-pattern";

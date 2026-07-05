@@ -158,6 +158,31 @@ describe("CrocoApp", () => {
       });
     }
 
+    @Get("/single-cookie")
+    singleCookie(): Response {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: [
+          ["content-type", "application/json"],
+          ["set-cookie", "session=abc; Path=/; HttpOnly"],
+          ["x-cookie-test", "single"],
+        ],
+      });
+    }
+
+    @Get("/multiple-cookies")
+    multipleCookies(): Response {
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: [
+          ["content-type", "application/json"],
+          ["set-cookie", "session=abc; Path=/; HttpOnly"],
+          ["set-cookie", "theme=dark; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/"],
+          ["x-cookie-test", "multiple"],
+        ],
+      });
+    }
+
     @Get("/trace-context")
     getTraceContext(): Record<string, string | null> {
       const context = FrameworkContext.get() as {
@@ -213,6 +238,16 @@ describe("CrocoApp", () => {
         stage: event?.requestContext?.stage ?? null,
         cookies: event?.cookies ?? [],
         awsRequestId: context?.awsRequestId ?? null,
+      };
+    }
+
+    @Get("/request-headers")
+    getRequestHeaders(@Raw() raw: unknown) {
+      const request = (raw as { req: { raw: Request } }).req.raw;
+
+      return {
+        cookie: request.headers.get("cookie"),
+        customHeader: request.headers.get("x-custom-header"),
       };
     }
 
@@ -1089,6 +1124,53 @@ describe("CrocoApp", () => {
     expect(Buffer.compare(decoded, binaryBody)).toBe(0);
   });
 
+  it("should map a single Lambda Set-Cookie response header to API Gateway v2 cookies", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        requestContext: createRequestContext("GET", "/lambda/single-cookie"),
+        rawPath: "/lambda/single-cookie",
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({
+      "content-type": "application/json",
+      "x-cookie-test": "single",
+    });
+    expect(response.cookies).toEqual(["session=abc; Path=/; HttpOnly"]);
+    expect(response.body).toBe(JSON.stringify({ ok: true }));
+    expect(response.isBase64Encoded).toBe(false);
+  });
+
+  it("should map multiple Lambda Set-Cookie response headers without comma splitting", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        requestContext: createRequestContext("GET", "/lambda/multiple-cookies"),
+        rawPath: "/lambda/multiple-cookies",
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers).toEqual({
+      "content-type": "application/json",
+      "x-cookie-test": "multiple",
+    });
+    expect(response.cookies).toEqual([
+      "session=abc; Path=/; HttpOnly",
+      "theme=dark; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Path=/",
+    ]);
+    expect(response.body).toBe(JSON.stringify({ ok: true }));
+    expect(response.isBase64Encoded).toBe(false);
+  });
+
   it("should fail fast for unsupported route methods instead of registering all routes", () => {
     const hono = {
       all: () => {
@@ -1323,6 +1405,99 @@ describe("CrocoApp", () => {
       traceId,
       spanId,
       traceFlags: expectedTraceFlags,
+    });
+  });
+
+  it("should join API Gateway v2 cookies into the Lambda Fetch Cookie header", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        routeKey: "GET /lambda/request-headers",
+        rawPath: "/lambda/request-headers",
+        cookies: ["session=abc", "theme=dark"],
+        headers: {
+          "X-Custom-Header": "case-insensitive-value",
+        },
+        requestContext: createRequestContext("GET", "/lambda/request-headers"),
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "{}")).toEqual({
+      cookie: "session=abc; theme=dark",
+      customHeader: "case-insensitive-value",
+    });
+  });
+
+  it("should preserve an explicit Cookie header over API Gateway v2 cookies", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        routeKey: "GET /lambda/request-headers",
+        rawPath: "/lambda/request-headers",
+        cookies: ["session=event", "theme=event"],
+        headers: {
+          Cookie: "session=header; theme=header",
+        },
+        requestContext: createRequestContext("GET", "/lambda/request-headers"),
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "{}")).toEqual({
+      cookie: "session=header; theme=header",
+      customHeader: null,
+    });
+  });
+
+  it("should preserve an explicit lowercase cookie header over API Gateway v2 cookies", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        routeKey: "GET /lambda/request-headers",
+        rawPath: "/lambda/request-headers",
+        cookies: ["session=event"],
+        headers: {
+          cookie: "session=lowercase-header",
+        },
+        requestContext: createRequestContext("GET", "/lambda/request-headers"),
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "{}")).toEqual({
+      cookie: "session=lowercase-header",
+      customHeader: null,
+    });
+  });
+
+  it("should not synthesize a Cookie header from an empty API Gateway v2 cookies array", async () => {
+    const app = createApp({ controllers: [LambdaController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        routeKey: "GET /lambda/request-headers",
+        rawPath: "/lambda/request-headers",
+        cookies: [],
+        requestContext: createRequestContext("GET", "/lambda/request-headers"),
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? "{}")).toEqual({
+      cookie: null,
+      customHeader: null,
     });
   });
 

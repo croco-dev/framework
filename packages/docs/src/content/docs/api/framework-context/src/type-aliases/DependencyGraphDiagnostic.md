@@ -13,55 +13,61 @@ title: "DependencyGraphDiagnostic"
 
 > `readonly` **code**: [`DependencyGraphDiagnosticCode`](/api/framework-context/src/type-aliases/dependencygraphdiagnosticcode/)
 
-***
+---
+
+### legacyCode
+
+> `readonly` **legacyCode**: [`DependencyGraphLegacyDiagnosticCode`](/api/framework-context/src/type-aliases/dependencygraphlegacydiagnosticcode/)
+
+---
 
 ### message
 
 > `readonly` **message**: `string`
 
-***
+---
 
 ### path
 
 > `readonly` **path**: readonly `string`[]
 
-***
+---
 
 ### pathIds
 
 > `readonly` **pathIds**: readonly `string`[]
 
-***
+---
 
 ### severity
 
 > `readonly` **severity**: `"error"`
 
-***
+---
 
 ### sourceLocation?
 
 > `readonly` `optional` **sourceLocation?**: [`DependencySourceLocation`](/api/framework-context/src/type-aliases/dependencysourcelocation/)
 
-***
+---
 
 ### status
 
 > `readonly` **status**: `Exclude`\<[`DependencyResolutionTraceStatus`](/api/framework-context/src/type-aliases/dependencyresolutiontracestatus/), `"ready"` \| `"resolved"`\>
 
-***
+---
 
 ### token
 
 > `readonly` **token**: `string`
 
-***
+---
 
 ### tokenId
 
 > `readonly` **tokenId**: `string`
 
-***
+---
 
 ### trace
 

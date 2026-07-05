@@ -41,7 +41,12 @@ const validationProblem = {
 };
 
 const declaredProblems = [
-  { code: "USER_NOT_FOUND", category: "NotFound", status: 404 },
+  {
+    code: "USER_NOT_FOUND",
+    category: "NotFound",
+    status: 404,
+    cookbookPath: "/reference/problem-recovery-cookbook/#user-not-found",
+  },
   { code: "VALIDATION_FAILED", category: "ValidationError", status: 422 },
 ] as const satisfies readonly ProblemDeclaration[];
 
@@ -78,6 +83,13 @@ describe("frontend Problem client runtime", () => {
       expect(result.category).toBe("NotFound");
       expect(result.problem.detail).toBe("User 1 was not found.");
       expect(result.problem.traceId).toBe("trace-1");
+      if (result.declaration.code === "USER_NOT_FOUND") {
+        expect(result.declaration.cookbookPath).toBe(
+          "/reference/problem-recovery-cookbook/#user-not-found",
+        );
+      } else {
+        throw new Error("Expected USER_NOT_FOUND declaration.");
+      }
       expectTypeOf(result.problem.code).toEqualTypeOf<"USER_NOT_FOUND" | "VALIDATION_FAILED">();
     } else {
       throw new Error("Expected declared Problem result.");

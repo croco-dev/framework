@@ -51,7 +51,7 @@ export { Inject } from "./libs/decorators/Inject";
  * ```
  */
 export { Container } from "./libs/Container";
-export type { ContainerValidationOptions } from "./libs/Container";
+export type { ContainerValidationOptions, TokenIdentifier } from "./libs/Container";
 
 export { ContainerDiagnosticsProvider } from "./libs/diagnostics/ContainerDiagnosticsProvider";
 export {
@@ -297,6 +297,7 @@ export type { ContainerResolutionFailureReason } from "./libs/problems/Container
 export type {
   DependencyGraphDiagnostic,
   DependencyGraphDiagnosticCode,
+  DependencyGraphLegacyDiagnosticCode,
   DependencyGraphManifest,
   DependencyGraphManifestStatus,
   DependencyGraphManifestVersion,

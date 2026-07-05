@@ -111,6 +111,33 @@ describe("provider-certification-check.mts", () => {
     );
   });
 
+  it("fails candidate records with missing live smoke evidence", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "provider");
+    writeCatalogMetadata(repo, ["provider"], {
+      productionPackages: [],
+      certificationRecords: {
+        provider: createCertifiedRecord("provider", {
+          evidence: {
+            liveSmoke: {
+              status: "missing",
+              reason: "Real credential live smoke has not been recorded.",
+            },
+          },
+          knownGaps: ["liveSmoke evidence has not been recorded."],
+          state: "candidate",
+        }),
+      },
+    });
+
+    const report = createReport(repo);
+    const markdown = buildProviderCertificationMarkdown(report);
+
+    expect(hasProviderCertificationFailures(report)).toBe(true);
+    expect(markdown).toContain("evidence.liveSmoke status is missing");
+    expect(markdown).toContain("blocking known gaps without package-scoped allowance");
+  });
+
   it("requires production-ready extension packages to use certified state", () => {
     const repo = createTempRepo();
     writePackage(repo, "provider");
@@ -339,6 +366,31 @@ describe("provider-certification-check.mts", () => {
     expect(hasProviderCertificationFailures(report)).toBe(true);
   });
 
+  it("fails when certification policy state descriptions are blank", () => {
+    const repo = createTempRepo();
+    const policyScope = createCertificationPolicyScope(["Provider"]);
+    writePackage(repo, "provider");
+    writeCatalogMetadata(repo, ["provider"], {
+      certificationPolicy: {
+        scope: {
+          ...policyScope,
+          states: {
+            ...(policyScope.states as Record<string, unknown>),
+            "candidate-optional": "  ",
+          },
+        },
+      },
+      productionPackages: [],
+    });
+
+    const report = createReport(repo);
+
+    expect(report.catalogErrors).toContain(
+      "docs/package-catalog.json: certification.policy.scope.states.candidate-optional must be a non-empty string",
+    );
+    expect(hasProviderCertificationFailures(report)).toBe(true);
+  });
+
   it("fails badge and prose certification claims without a certified catalog record", () => {
     const repo = createTempRepo();
     writePackage(
@@ -543,7 +595,7 @@ function createCertificationPolicyScope(
       "certified-required":
         "A certified record is required for production-ready extension packages or public compatibility claims.",
       "candidate-optional":
-        "A candidate record may track evidence before the extension package is production-ready.",
+        "A pre-production record may track evidence before the extension package is production-ready; candidate state requires liveSmoke evidence.",
       "not-applicable":
         "No certification record is required until production-ready maturity or a public compatibility claim.",
     },
@@ -554,6 +606,7 @@ function createCertifiedRecord(
   packageName: string,
   options: {
     readonly command?: string;
+    readonly evidence?: Record<string, Record<string, unknown>>;
     readonly evidencePath?: string;
     readonly knownGaps?: readonly string[];
     readonly omitEvidence?: string;
@@ -574,6 +627,7 @@ function createCertifiedRecord(
       artifact: `packages/${packageName}/README.md`,
       description: "Optional env-gated live smoke skips when credentials are absent.",
     },
+    ...options.evidence,
   };
 
   if (options.omitEvidence) {

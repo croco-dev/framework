@@ -96,6 +96,22 @@ console.log(runtime?.requestId);
 | Node    | `process.env` | `x-request-id` 또는 generated id           | no-op       | no-op                                   |
 | Lambda  | `process.env` | API Gateway request id 또는 `awsRequestId` | queued work | queued work drain, rejected work logged |
 
+### Lambda API Gateway v2 요청 매핑
+
+Lambda handler는 API Gateway v2 이벤트를 Fetch `Request`로 변환합니다.
+
+| Event field                         | Fetch request behavior                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------ |
+| `requestContext.http.method`        | Fetch request method. 값이 없으면 `GET`을 사용합니다.                                      |
+| `rawPath`, `rawQueryString`         | `https://lambda.local${rawPath}?${rawQueryString}` 형태의 request URL을 구성합니다.        |
+| `headers`                           | Fetch `Headers`로 복사되며 Fetch 표준에 따라 대소문자 구분 없이 조회할 수 있습니다.        |
+| `headers.cookie` / `headers.Cookie` | 명시된 `Cookie` header가 있으면 그대로 유지하며 `event.cookies`보다 우선합니다.            |
+| `cookies`                           | 명시된 `Cookie` header가 없을 때 `; `로 join해 inbound Fetch `Cookie` header로 설정합니다. |
+| `body`, `isBase64Encoded`           | base64 body는 `Buffer`로 디코딩하고, `GET`/`HEAD` 요청에는 body를 전달하지 않습니다.       |
+
+원본 Lambda `event`와 `context`는 Hono env에 그대로 보존되며 `getLambdaEvent()`와
+`getLambdaContext()`로 읽을 수 있습니다.
+
 Lambda에서 OpenTelemetry span export까지 보장하려면 `@croco/telemetry-sdk-node`의
 `TelemetryRuntime.forceFlush()`를 handler flush callback으로 연결합니다. 이 callback이 실패하면 Lambda
 handler도 실패하므로 관측 실패가 성공 응답으로 숨겨지지 않습니다.
@@ -115,6 +131,17 @@ export const handler = app.lambdaHandler({
   },
 });
 ```
+
+### Lambda 응답 헤더와 쿠키 매핑
+
+`app.lambdaHandler()`는 API Gateway HTTP API payload format v2 응답을 반환합니다. 일반 Fetch 응답
+헤더는 `LambdaResponse.headers`의 single-value header record로 매핑합니다. `Set-Cookie` 응답 헤더는
+single-value record에 넣지 않고 API Gateway v2 전용 `LambdaResponse.cookies: string[]`로 매핑합니다.
+API Gateway는 `cookies` 배열의 각 값을 개별 `set-cookie` 응답 헤더로 변환하므로, auth/session 응답에서
+여러 쿠키나 `Expires=Wed, 21 Oct ...`처럼 comma가 포함된 쿠키 값을 안전하게 보존할 수 있습니다.
+
+JSON 응답은 문자열 body와 `isBase64Encoded: false`를 유지하고, binary 응답은 기존처럼 body를 base64로
+인코딩한 뒤 `isBase64Encoded: true`를 반환합니다.
 
 ### Node 서버 실행
 

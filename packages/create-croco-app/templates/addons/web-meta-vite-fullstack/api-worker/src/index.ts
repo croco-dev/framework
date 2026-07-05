@@ -71,9 +71,10 @@ function getApiWorkerHandler(env: ApiWorkerEnv): ApiWorkerHandler {
   return cachedHandler;
 }
 
-export default {
-  fetch(...args: Parameters<ApiWorkerHandler["fetch"]>): ReturnType<ApiWorkerHandler["fetch"]> {
-    const [, env] = args;
-    return getApiWorkerHandler(env as ApiWorkerEnv).fetch(...args);
+const worker: ExportedHandler<ApiWorkerEnv> = {
+  fetch(request, env, ctx) {
+    return getApiWorkerHandler(env).fetch(request, env, ctx);
   },
 };
+
+export default worker;

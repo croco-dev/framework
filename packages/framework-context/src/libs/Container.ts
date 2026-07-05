@@ -194,7 +194,7 @@ export class Container {
     } = {},
   ): DependencyGraphManifest {
     const roots = [...(options.roots ?? Container.getRegisteredComponents())].sort((left, right) =>
-      Container.describeToken(left).label.localeCompare(Container.describeToken(right).label),
+      Container.compareTokens(left, right),
     );
     const traces = roots.map((root) => Container.buildResolutionTrace(root));
     const diagnostics = Container.createGraphDiagnostics(traces);
@@ -316,6 +316,7 @@ export class Container {
     throw ProblemFactory.internalServerError(errorDiagnostic.code, errorDiagnostic.message, {
       extensions: {
         resolution: errorDiagnostic.trace,
+        legacyCode: errorDiagnostic.legacyCode,
         token: errorDiagnostic.token,
         tokenId: errorDiagnostic.tokenId,
         path: errorDiagnostic.path,
@@ -369,13 +370,14 @@ export class Container {
     return Array.from(providers.values())
       .map((provider) => ({
         ...provider,
-        dependencies: Array.from(provider.dependencies.values()).sort(),
-        dependencyIds: Array.from(provider.dependencies.keys()).sort(),
+        ...Container.sortProviderDependencies(provider.dependencies),
       }))
-      .sort((left, right) => {
-        const tokenOrder = left.token.localeCompare(right.token);
-        return tokenOrder === 0 ? left.tokenId.localeCompare(right.tokenId) : tokenOrder;
-      });
+      .sort((left, right) =>
+        Container.compareTokenDescriptions(
+          { label: left.token, id: left.tokenId },
+          { label: right.token, id: right.tokenId },
+        ),
+      );
   }
 
   private static createGraphDiagnostics(
@@ -398,7 +400,8 @@ export class Container {
       for (const step of trace.steps) {
         if (step.status === "missing") {
           pushDiagnostic({
-            code: "framework-context/di-missing-provider",
+            code: "CROCO_DI_001",
+            legacyCode: "framework-context/di-missing-provider",
             severity: "error",
             token: step.token,
             tokenId: step.tokenId,
@@ -414,7 +417,8 @@ export class Container {
 
         if (step.status === "circular") {
           pushDiagnostic({
-            code: "framework-context/di-circular-dependency",
+            code: "CROCO_DI_002",
+            legacyCode: "framework-context/di-circular-dependency",
             severity: "error",
             token: step.token,
             tokenId: step.tokenId,
@@ -430,7 +434,8 @@ export class Container {
 
         if (step.status === "scope-mismatch") {
           pushDiagnostic({
-            code: "framework-context/di-scope-mismatch",
+            code: "CROCO_DI_003",
+            legacyCode: "framework-context/di-scope-mismatch",
             severity: "error",
             token: step.token,
             tokenId: step.tokenId,
@@ -446,7 +451,8 @@ export class Container {
 
         if (step.provider === "typedi") {
           pushDiagnostic({
-            code: "framework-context/di-unknown-provider",
+            code: "CROCO_DI_004",
+            legacyCode: "framework-context/di-unknown-provider",
             severity: "error",
             token: step.token,
             tokenId: step.tokenId,
@@ -468,8 +474,51 @@ export class Container {
       }
 
       const tokenOrder = left.token.localeCompare(right.token);
-      return tokenOrder === 0 ? left.tokenId.localeCompare(right.tokenId) : tokenOrder;
+      if (tokenOrder !== 0) {
+        return tokenOrder;
+      }
+
+      const tokenIdOrder = left.tokenId.localeCompare(right.tokenId);
+      if (tokenIdOrder !== 0) {
+        return tokenIdOrder;
+      }
+
+      const pathOrder = left.pathIds.join(">").localeCompare(right.pathIds.join(">"));
+      return pathOrder === 0 ? left.message.localeCompare(right.message) : pathOrder;
     });
+  }
+
+  private static sortProviderDependencies(dependenciesById: Map<string, string>): {
+    readonly dependencies: readonly string[];
+    readonly dependencyIds: readonly string[];
+  } {
+    const sortedDependencies = Array.from(dependenciesById.entries()).sort(
+      ([leftId, leftToken], [rightId, rightToken]) =>
+        Container.compareTokenDescriptions(
+          { label: leftToken, id: leftId },
+          { label: rightToken, id: rightId },
+        ),
+    );
+
+    return {
+      dependencies: sortedDependencies.map(([, token]) => token),
+      dependencyIds: sortedDependencies.map(([id]) => id),
+    };
+  }
+
+  private static compareTokens<T>(left: TokenIdentifier<T>, right: TokenIdentifier<T>): number {
+    return Container.compareTokenDescriptions(
+      Container.describeToken(left),
+      Container.describeToken(right),
+    );
+  }
+
+  private static compareTokenDescriptions(
+    left: { readonly label: string; readonly id: string },
+    right: { readonly label: string; readonly id: string },
+  ): number {
+    const labelOrder = left.label.localeCompare(right.label);
+    return labelOrder === 0 ? left.id.localeCompare(right.id) : labelOrder;
   }
 
   private static getSourceLocationForTokenId(tokenId: string): {

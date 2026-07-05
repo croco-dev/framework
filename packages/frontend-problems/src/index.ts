@@ -19,6 +19,7 @@ export type ProblemDeclaration<
   readonly status: Status;
   readonly description?: string;
   readonly type?: string;
+  readonly cookbookPath?: string;
 };
 
 export type ProblemDetailsFor<Problem extends ProblemDeclaration> =

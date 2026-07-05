@@ -1,3 +1,4 @@
+import { Component } from "@croco/framework-context";
 import { Body, Controller, Get, Header, Post, ResponseSchema } from "@croco/protocols-rest";
 import {
   aiGenerateRequestSchema,
@@ -8,6 +9,7 @@ import {
   type AiGenerateRequestDto,
 } from "./aiSchemas";
 
+@Component()
 @Controller("/ai")
 export class AiController {
   @Post("/generate")

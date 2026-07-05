@@ -10,7 +10,7 @@ export default defineConfig({
       "@croco/diagnostics-core": resolve(currentDir, "../diagnostics-core/src/index.ts"),
       "@croco/framework-context": resolve(currentDir, "../framework-context/src/index.ts"),
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
-      graphql: resolve(currentDir, "../../node_modules/graphql/index.js"),
+      graphql: resolve(currentDir, "node_modules/graphql/index.js"),
     },
   },
   test: {

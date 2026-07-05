@@ -1,3 +1,4 @@
+import { Component } from "@croco/framework-context";
 import { Body, Controller, Get, Param, Post, Query, ResponseSchema } from "@croco/protocols-rest";
 import type { ExecutionStatus } from "@croco/execution-core";
 import type { JobActionDto } from "./schemas";
@@ -57,6 +58,7 @@ async function parseOptionalJobsInteger(
   return parsed;
 }
 
+@Component()
 @Controller("/ops/jobs")
 export class JobsController {
   @Get()

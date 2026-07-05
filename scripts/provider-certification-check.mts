@@ -5,13 +5,20 @@ import { join, resolve } from "node:path";
 import { argv, exit } from "node:process";
 import { pathToFileURL } from "node:url";
 
+import {
+  createDefaultCertificationPolicy,
+  isCertificationClaimLine,
+  parseCertificationPolicy as parseSharedCertificationPolicy,
+  type CertificationPolicy as SharedCertificationPolicy,
+  type CertificationRequirementKey,
+} from "./certification-policy.mts";
 import { type PackageInfo, readPackages } from "./package-quality-report.mts";
 
 type CheckStatus = "pass" | "fail" | "not-applicable";
 type MaturityKey = (typeof maturityOrder)[number];
 type RuntimeKey = (typeof runtimeKeys)[number];
 type CertificationState = (typeof certificationStates)[number];
-type CertificationRequirement = (typeof certificationRequirements)[number];
+type CertificationRequirement = CertificationRequirementKey;
 type CommandEvidenceKey = (typeof commandEvidenceKeys)[number];
 
 type Options = {
@@ -45,16 +52,7 @@ type CertificationCatalog = {
   readonly knownGapAllowances: ReadonlyMap<string, ReadonlyMap<string, KnownGapAllowance>>;
 };
 
-type CertificationPolicy = {
-  readonly scope: CertificationPolicyScope;
-};
-
-type CertificationPolicyScope = {
-  readonly extensionGroups: readonly string[];
-  readonly requiredMaturity: MaturityKey;
-  readonly claimRequiresCertified: boolean;
-  readonly states: Readonly<Record<CertificationRequirement, string>>;
-};
+type CertificationPolicy = SharedCertificationPolicy<MaturityKey>;
 
 type CertificationRecord = {
   readonly packageName: string;
@@ -128,11 +126,6 @@ const catalogMetadataPath = join("docs", "package-catalog.json");
 const maturityOrder = ["production", "beta", "alpha", "deprecated"] as const;
 const runtimeKeys = ["node", "lambda", "cloudflare-workers", "browser"] as const;
 const certificationStates = ["uncertified", "candidate", "certified"] as const;
-const certificationRequirements = [
-  "certified-required",
-  "candidate-optional",
-  "not-applicable",
-] as const;
 const commandEvidenceKeys = [
   "conformance",
   "noCredentialSmoke",
@@ -140,26 +133,8 @@ const commandEvidenceKeys = [
   "redaction",
 ] as const;
 const evidenceKeys = [...commandEvidenceKeys, "liveSmoke"] as const;
-const certificationClaimPatterns: readonly RegExp[] = [
-  /Croco compatible\s*:/i,
-  /!\[[^\]]*\b(?:certified|certification|Croco compatible)\b[^\]]*\]/i,
-  /\[[^\]]*\b(?:certified|certification|Croco compatible)\b[^\]]*\]\([^)]+\)/i,
-  /\bcertified\s+(?:for|against|with)\s+(?:the\s+)?Croco\b/i,
-  /\bCroco\s+certified\b/i,
-];
-
-const defaultCertificationPolicy: CertificationPolicy = {
-  scope: {
-    extensionGroups: [],
-    requiredMaturity: "production",
-    claimRequiresCertified: true,
-    states: {
-      "certified-required": "",
-      "candidate-optional": "",
-      "not-applicable": "",
-    },
-  },
-};
+const defaultCertificationPolicy: CertificationPolicy =
+  createDefaultCertificationPolicy("production");
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -175,10 +150,6 @@ function isRuntimeKey(value: string): value is RuntimeKey {
 
 function isCertificationState(value: string): value is CertificationState {
   return certificationStates.includes(value as CertificationState);
-}
-
-function isMaturityKey(value: string): value is MaturityKey {
-  return maturityOrder.includes(value as MaturityKey);
 }
 
 function certificationStateRank(state: CertificationState | null): number {
@@ -365,104 +336,6 @@ function parseExtensionMatrix(
   return {
     extensionGroups: new Set(isStringArray(extensionMatrix.groups) ? extensionMatrix.groups : []),
     extensionRuntimesByPackage,
-  };
-}
-
-function parseCertificationPolicy(
-  policyValue: unknown,
-  extensionGroups: ReadonlySet<string>,
-  errors: string[],
-): CertificationPolicy {
-  if (policyValue === undefined) {
-    errors.push(`${catalogMetadataPath}: certification.policy must define certification scope`);
-    return defaultCertificationPolicy;
-  }
-
-  if (!isRecord(policyValue)) {
-    errors.push(`${catalogMetadataPath}: certification.policy must be an object`);
-    return defaultCertificationPolicy;
-  }
-
-  const scopeValue = policyValue.scope;
-  if (!isRecord(scopeValue)) {
-    errors.push(`${catalogMetadataPath}: certification.policy.scope must be an object`);
-    return defaultCertificationPolicy;
-  }
-
-  const extensionGroupValue = scopeValue.extensionGroups;
-  const extensionGroupList = isStringArray(extensionGroupValue) ? extensionGroupValue : [];
-  if (!isStringArray(extensionGroupValue) || extensionGroupList.length === 0) {
-    errors.push(
-      `${catalogMetadataPath}: certification.policy.scope.extensionGroups must be a non-empty string array`,
-    );
-  }
-
-  for (const group of extensionGroupList) {
-    if (!extensionGroups.has(group)) {
-      errors.push(
-        `${catalogMetadataPath}: certification.policy.scope.extensionGroups references non-extension group ${group}`,
-      );
-    }
-  }
-
-  for (const group of extensionGroups) {
-    if (!extensionGroupList.includes(group)) {
-      errors.push(
-        `${catalogMetadataPath}: certification.policy.scope.extensionGroups must include extensionMatrix group ${group}`,
-      );
-    }
-  }
-
-  const requiredMaturity =
-    typeof scopeValue.requiredMaturity === "string" && isMaturityKey(scopeValue.requiredMaturity)
-      ? scopeValue.requiredMaturity
-      : null;
-  if (!requiredMaturity) {
-    errors.push(
-      `${catalogMetadataPath}: certification.policy.scope.requiredMaturity must be one of ${maturityOrder.join(", ")}`,
-    );
-  }
-
-  if (scopeValue.claimRequiresCertified !== true) {
-    errors.push(
-      `${catalogMetadataPath}: certification.policy.scope.claimRequiresCertified must be true`,
-    );
-  }
-
-  const statesValue = scopeValue.states;
-  if (!isRecord(statesValue)) {
-    errors.push(`${catalogMetadataPath}: certification.policy.scope.states must be an object`);
-    return {
-      scope: {
-        extensionGroups: extensionGroupList,
-        requiredMaturity: requiredMaturity ?? "production",
-        claimRequiresCertified: scopeValue.claimRequiresCertified === true,
-        states: defaultCertificationPolicy.scope.states,
-      },
-    };
-  }
-
-  const states = Object.fromEntries(
-    certificationRequirements.map((requirement) => {
-      const description = statesValue[requirement];
-      if (typeof description !== "string" || description.trim().length === 0) {
-        errors.push(
-          `${catalogMetadataPath}: certification.policy.scope.states.${requirement} must be a non-empty string`,
-        );
-        return [requirement, ""];
-      }
-
-      return [requirement, description.trim()];
-    }),
-  ) as Record<CertificationRequirement, string>;
-
-  return {
-    scope: {
-      extensionGroups: extensionGroupList,
-      requiredMaturity: requiredMaturity ?? "production",
-      claimRequiresCertified: scopeValue.claimRequiresCertified === true,
-      states,
-    },
   };
 }
 
@@ -666,7 +539,15 @@ function parseCertificationCatalog(
     errors.push(`${catalogMetadataPath}: certification.schemaVersion must be 1`);
   }
 
-  const policy = parseCertificationPolicy(certificationValue.policy, extensionGroups, errors);
+  const policy = parseSharedCertificationPolicy({
+    catalogMetadataPath,
+    defaultRequiredMaturity: "production",
+    diagnostics: errors,
+    extensionGroups: [...extensionGroups],
+    missingPolicyMessage: `${catalogMetadataPath}: certification.policy must define certification scope`,
+    policyValue: certificationValue.policy,
+    validRequiredMaturities: maturityOrder,
+  });
   const knownGapAllowances = parseKnownGapAllowances(certificationValue.policy, errors);
   if (!Array.isArray(certificationValue.records)) {
     errors.push(`${catalogMetadataPath}: certification.records must be an array`);
@@ -1076,17 +957,17 @@ function createLiveSmokeCheck(
   rootDir: string,
   pkg: WorkspacePackage,
   record: CertificationRecord | undefined,
-  requiresCompleteEvidence: boolean,
+  requiresLiveSmokeEvidence: boolean,
 ): ProviderCertificationCheck {
   if (!record) {
     return notApplicable("liveSmoke", "liveSmoke", "no certification record");
   }
 
-  if (!requiresCompleteEvidence) {
+  if (!requiresLiveSmokeEvidence) {
     return notApplicable(
       "liveSmoke",
       "liveSmoke",
-      "complete evidence is required only for certified or production-ready extension packages",
+      "liveSmoke evidence is required only for candidate, certified, or certified-required extension packages",
     );
   }
 
@@ -1233,6 +1114,11 @@ function createCertificationRow(
   );
   const requiresCompleteEvidence =
     certificationRequirement === "certified-required" || record?.state === "certified";
+  const requiresLiveSmokeEvidence = requiresCompleteEvidence || record?.state === "candidate";
+  const blocksKnownGaps =
+    certificationRequirement === "certified-required" ||
+    record?.state === "candidate" ||
+    record?.state === "certified";
   const checks = [
     createRecordCheck(pkg, record, certificationRequirement),
     createStateCheck(pkg, record, certificationRequirement),
@@ -1240,13 +1126,8 @@ function createCertificationRow(
     ...commandEvidenceKeys.map((key) =>
       createCommandEvidenceCheck(rootDir, pkg, record, key, requiresCompleteEvidence),
     ),
-    createLiveSmokeCheck(rootDir, pkg, record, requiresCompleteEvidence),
-    createKnownGapsCheck(
-      pkg,
-      record,
-      catalog,
-      requiredForProduction || record?.state === "certified",
-    ),
+    createLiveSmokeCheck(rootDir, pkg, record, requiresLiveSmokeEvidence),
+    createKnownGapsCheck(pkg, record, catalog, blocksKnownGaps),
   ];
 
   return {
@@ -1330,7 +1211,7 @@ function isFenceToggle(line: string): boolean {
 }
 
 function hasCertificationClaim(line: string): boolean {
-  return certificationClaimPatterns.some((pattern) => pattern.test(line));
+  return isCertificationClaimLine(line);
 }
 
 function packageRefsForClaim(file: string, line: string): readonly string[] {
@@ -1583,7 +1464,7 @@ export function buildProviderCertificationMarkdown(report: ProviderCertification
     "## Recovery",
     "",
     "- Add or update `docs/package-catalog.json` `certification.records.<package>` for production-ready extension packages.",
-    '- Keep certification separate from maturity: extension packages in `certified-required` scope require `state: "certified"`, while `not-applicable` packages may remain without records.',
+    '- Keep certification separate from maturity: extension packages in `certified-required` scope require `state: "certified"`, candidate records require recorded live-smoke evidence, and `not-applicable` packages may remain without records.',
     "- Provide package-scoped command/path evidence for conformance, no-credential smoke, diagnostics, and redaction checks.",
     "- Document package-scoped live-smoke behavior, including optional, credential, env-gated, or skipped behavior.",
     "- Close `knownGaps` before certified/production-ready promotion, or add a package-scoped allowance with non-empty reason and owner.",

@@ -34,6 +34,7 @@ type SmokeValidation = {
   readonly json?: {
     readonly path: string;
     readonly matches: Record<string, unknown>;
+    readonly arrayMinLengths?: Readonly<Record<string, number>>;
   };
   readonly env?: Readonly<Record<string, string>>;
   readonly expectFailure?: {
@@ -496,6 +497,20 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["contract:client"],
         paths: ["libs/shared/provider-rpc/src/user.ts"],
       },
+      {
+        label: "DI graph verify",
+        args: ["di:verify"],
+        paths: [".croco/build/di-graph.manifest.json"],
+        json: {
+          path: ".croco/build/di-graph.manifest.json",
+          matches: {
+            version: "croco.di-graph.manifest.v1",
+            status: "ready",
+            roots: ["UserController"],
+          },
+          arrayMinLengths: { providers: 1 },
+        },
+      },
     ],
   },
   {
@@ -523,6 +538,20 @@ const smokeCases: readonly SmokeCase[] = [
         label: "Admin RPC client",
         args: ["contract:client"],
         paths: ["libs/shared/provider-rpc/src/admin.ts"],
+      },
+      {
+        label: "DI graph verify",
+        args: ["di:verify"],
+        paths: [".croco/build/di-graph.manifest.json"],
+        json: {
+          path: ".croco/build/di-graph.manifest.json",
+          matches: {
+            version: "croco.di-graph.manifest.v1",
+            status: "ready",
+            roots: ["AdminController", "UserController"],
+          },
+          arrayMinLengths: { providers: 2 },
+        },
       },
     ],
   },
@@ -604,7 +633,25 @@ const smokeCases: readonly SmokeCase[] = [
         args: ["contract:verify"],
         paths: ["contract-graph.coverage.json"],
       },
-      { label: "doctor", args: ["exec", "croco", "doctor", "--json"] },
+      {
+        label: "DI graph verify",
+        args: ["di:verify"],
+        paths: [".croco/build/di-graph.manifest.json"],
+        json: {
+          path: ".croco/build/di-graph.manifest.json",
+          matches: {
+            version: "croco.di-graph.manifest.v1",
+            status: "ready",
+            roots: [
+              "JobsController",
+              "OperationsController",
+              "SaasController",
+              "UsageDashboardController",
+            ],
+          },
+          arrayMinLengths: { providers: 4 },
+        },
+      },
       { label: "demo seed", args: ["demo:seed"] },
       { label: "demo flow", args: ["demo:smoke"] },
       { label: "failure drill smoke", args: ["failure-drill:smoke"] },
@@ -738,6 +785,20 @@ const smokeCases: readonly SmokeCase[] = [
         label: "Contract verify",
         args: ["contract:verify"],
         paths: ["contract-graph.coverage.json"],
+      },
+      {
+        label: "DI graph verify",
+        args: ["di:verify"],
+        paths: [".croco/build/di-graph.manifest.json"],
+        json: {
+          path: ".croco/build/di-graph.manifest.json",
+          matches: {
+            version: "croco.di-graph.manifest.v1",
+            status: "ready",
+            roots: ["AiController", "JobsController", "OperationsController", "SaasController"],
+          },
+          arrayMinLengths: { providers: 4 },
+        },
       },
       { label: "AI demo flow", args: ["ai:smoke"] },
       { label: "full demo flow", args: ["demo:smoke"] },
@@ -1373,6 +1434,7 @@ function runValidation(
         join(validationDir, validation.json.path),
         validation.json.matches,
         `${smokeCase.name} ${validation.label}`,
+        validation.json.arrayMinLengths,
       );
     }
 
@@ -1791,7 +1853,12 @@ function assertFileContains(path: string, expected: string): void {
   }
 }
 
-function assertJsonMatches(path: string, expected: Record<string, unknown>, label: string): void {
+function assertJsonMatches(
+  path: string,
+  expected: Record<string, unknown>,
+  label: string,
+  arrayMinLengths: Readonly<Record<string, number>> = {},
+): void {
   assertExists(path, `${label} did not create ${path}`);
   const actual = JSON.parse(readFileSync(path, "utf8")) as unknown;
 
@@ -1805,6 +1872,15 @@ function assertJsonMatches(path: string, expected: Record<string, unknown>, labe
     if (JSON.stringify(actualValue) !== JSON.stringify(expectedValue)) {
       throw new Error(
         `${label} JSON ${path} expected ${key}=${JSON.stringify(expectedValue)} but got ${JSON.stringify(actualValue)}`,
+      );
+    }
+  }
+
+  for (const [key, minLength] of Object.entries(arrayMinLengths)) {
+    const actualValue = actual[key];
+    if (!Array.isArray(actualValue) || actualValue.length < minLength) {
+      throw new Error(
+        `${label} JSON ${path} expected ${key} to contain at least ${minLength} item(s) but got ${JSON.stringify(actualValue)}`,
       );
     }
   }

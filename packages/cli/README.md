@@ -27,6 +27,8 @@ Run from any directory inside a Croco workspace. The CLI automatically detects `
 | `codegen rpc [args]`                    | Generate RPC client code                         |
 | `codegen openapi [args]`                | Generate OpenAPI spec                            |
 | `doctor [path]`                         | Diagnose workspace boundaries and setup          |
+| `di graph [args]`                       | Generate a deterministic DI graph manifest       |
+| `di check <manifest>`                   | Validate a DI graph manifest for CI              |
 | `migrate up\|down\|status [args]`       | Run, rollback, or inspect database migrations    |
 | `upgrade [paths...] [--write]`          | Report and apply safe version migration codemods |
 | `jobs list\|show\|logs\|cancel\|replay` | Inspect and recover Croco background jobs        |
@@ -134,6 +136,21 @@ Current stable doctor diagnostic codes are:
 - `CROCO_DOCTOR_PROVIDER_CERTIFICATION_DOCUMENTED`
 
 In this repository, `pnpm run doctor` builds the CLI and runs `croco doctor` against the current workspace.
+
+### di — Dependency Injection Graphs
+
+- `croco di graph --module apps/api-server/src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write .croco/build/di-graph.manifest.json` imports an app module, runs the named bootstrap export, reads the named root-token export, and writes a deterministic `croco.di-graph.manifest.v1` manifest.
+- `croco di graph --json` prints the manifest to stdout without writing a file.
+- `croco di check .croco/build/di-graph.manifest.json` fails CI when the manifest contains DI errors or has an invalid shape.
+- Generated apps expose `pnpm di:verify`, which runs `di:graph`, `di:check`, asserts that `.croco/build/di-graph.manifest.json` contains at least one root and provider, refreshes/checks the project-map bundle, then runs `croco doctor --json`.
+- `.croco/build/di-graph.manifest.json` is the runtime DI resolution manifest. `.croco/manifest/di-graph.json` inside the project-map bundle is the provider catalog emitted with other project-map artifacts.
+
+Local recovery workflow for DI graph failures:
+
+1. Run `pnpm di:verify` in a generated app, or export `createCrocoDiGraphRoots()` from the app module and run `croco di graph --module apps/api-server/src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write .croco/build/di-graph.manifest.json` in a custom workspace.
+2. Run `croco di check .croco/build/di-graph.manifest.json` and inspect the first `CROCO_DI_*` diagnostic.
+3. Fix `CROCO_DI_001` missing providers, `CROCO_DI_002` cycles, `CROCO_DI_003` scope mismatches, or `CROCO_DI_004` unresolved TypeDI fallbacks at the reported token/path.
+4. Re-run `pnpm di:verify`, or refresh/check the project-map bundle before `croco doctor --json`, so doctor confirms the committed manifest and bootstrap state.
 
 ### jobs — Background Job Operations
 

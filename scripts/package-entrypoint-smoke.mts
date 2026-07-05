@@ -1,13 +1,11 @@
 import { spawnSync } from "node:child_process";
 import {
-  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { builtinModules } from "node:module";
@@ -24,14 +22,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const defaultRootDir = resolve(__dirname, "..");
 const mode = parseArgs(process.argv.slice(2));
-const spawnTimeoutMs = 30_000;
+const spawnTimeoutMs = 180_000;
 const nodeBuiltinModules = new Set([
   ...builtinModules,
   ...builtinModules.map((moduleName) => `node:${moduleName}`),
 ]);
 
 type PackageJson = {
+  readonly dependencies?: Record<string, string>;
   readonly name?: string;
+  readonly optionalDependencies?: Record<string, string>;
+  readonly packageManager?: string;
+  readonly peerDependencies?: Record<string, string>;
+  readonly peerDependenciesMeta?: Record<string, { readonly optional?: boolean }>;
   readonly private?: boolean;
   readonly publishConfig?: Record<string, unknown>;
   readonly [key: string]: unknown;
@@ -41,8 +44,12 @@ type PackageInfo = {
   readonly packageDir: string;
   readonly packagePath: string;
   readonly packageName: string;
-  readonly publishManifest: PackageJson;
   readonly sourceManifest: PackageJson;
+};
+
+type PackedPackageInfo = PackageInfo & {
+  readonly packedManifest: PackageJson;
+  readonly tarballPath: string;
 };
 
 type SmokeTarget = {
@@ -71,16 +78,24 @@ type ExemptionResult = {
   readonly reason: string;
 };
 
+type RunResult = {
+  readonly stderr: string;
+  readonly stdout: string;
+};
+
 main();
 
 function main(): void {
   const rootDir = mode.rootDir;
-  const smokeRoot = mkdtempSync(join(tmpdir(), "croco-entrypoint-smoke-"));
+  const packRoot = mkdtempSync(join(tmpdir(), "croco-entrypoint-pack-"));
+  const consumerRoot = mkdtempSync(join(tmpdir(), "croco-entrypoint-consumer-"));
 
   try {
+    const packageManager = packageManagerFor(rootDir);
     const packageJsonFiles = findPackageJsonFiles(join(rootDir, "packages"));
     const packageIndex = packageIndexFor(packageJsonFiles);
     const diagnostics: string[] = [];
+    const packedPackages = new Map<string, PackedPackageInfo>();
     const packageInfos: PackageInfo[] = [];
     const packageResults: PackageSmokeResult[] = [];
     const exemptions: ExemptionResult[] = [];
@@ -112,7 +127,6 @@ function main(): void {
         packageDir: dirname(packagePath),
         packageName,
         packagePath,
-        publishManifest: publishManifestFor(sourceManifest),
         sourceManifest,
       });
     }
@@ -132,10 +146,27 @@ function main(): void {
     }
 
     for (const packageInfo of packageInfos) {
-      const plan = planPackageSmoke(packageInfo);
+      const graph = collectInternalRuntimeGraph(packageInfo, packageIndex);
+      for (const graphPackage of graph) {
+        packPackage(graphPackage, packRoot, rootDir, packedPackages);
+      }
+
+      const packedPackage = packedPackages.get(packageInfo.packageName);
+      if (!packedPackage) {
+        throw new Error(`${packageInfo.packageName}: packed tarball was not created`);
+      }
+
+      const graphTarballs = graph.map((graphPackage) => {
+        const packedGraphPackage = packedPackages.get(graphPackage.packageName);
+        if (!packedGraphPackage) {
+          throw new Error(`${graphPackage.packageName}: packed tarball was not created`);
+        }
+        return packedGraphPackage;
+      });
+      const plan = planPackageSmoke(packedPackage);
       diagnostics.push(...plan.diagnostics);
       if (plan.diagnostics.length === 0) {
-        runPackageSmoke(smokeRoot, packageInfo, packageIndex, plan);
+        runPackageSmoke(consumerRoot, packedPackage, graphTarballs, packageManager, plan);
       }
       packageResults.push({
         cjsCount: plan.cjs.length,
@@ -158,7 +189,8 @@ function main(): void {
       `package-entrypoint-smoke: cjs, esm, and typescript consumers resolved for ${packageResults.length} packages`,
     );
   } finally {
-    rmSync(smokeRoot, { force: true, recursive: true });
+    rmSync(packRoot, { force: true, recursive: true });
+    rmSync(consumerRoot, { force: true, recursive: true });
   }
 }
 
@@ -248,6 +280,17 @@ function readPackageJson(packagePath: string): PackageJson {
   return JSON.parse(readFileSync(packagePath, "utf-8")) as PackageJson;
 }
 
+function packageManagerFor(rootDir: string): string {
+  const packageJsonPath = join(rootDir, "package.json");
+  const rootManifest = readPackageJson(packageJsonPath);
+
+  if (typeof rootManifest.packageManager !== "string" || rootManifest.packageManager.length === 0) {
+    throw new Error(`${packageJsonPath}: packageManager must pin the pnpm version`);
+  }
+
+  return rootManifest.packageManager;
+}
+
 function packageNameFor(pkg: PackageJson, packagePath: string): string {
   if (typeof pkg.name === "string" && pkg.name.length > 0) {
     return pkg.name;
@@ -270,7 +313,6 @@ function packageIndexFor(packageJsonFiles: readonly string[]): ReadonlyMap<strin
       packageDir: dirname(packagePath),
       packageName,
       packagePath,
-      publishManifest: publishManifestFor(sourceManifest),
       sourceManifest,
     });
   }
@@ -278,41 +320,55 @@ function packageIndexFor(packageJsonFiles: readonly string[]): ReadonlyMap<strin
   return packageIndex;
 }
 
-function publishManifestFor(sourceManifest: PackageJson): PackageJson {
-  const publishManifest = {
-    ...sourceManifest,
-    ...sourceManifest.publishConfig,
-  };
-  delete publishManifest.publishConfig;
-
-  return publishManifest;
-}
-
 function runPackageSmoke(
-  smokeRoot: string,
-  packageInfo: PackageInfo,
-  packageIndex: ReadonlyMap<string, PackageInfo>,
+  consumerRoot: string,
+  packageInfo: PackedPackageInfo,
+  graphPackages: readonly PackedPackageInfo[],
+  packageManager: string,
   plan: PackageSmokePlan,
 ): void {
-  const packageSmokeRoot = join(smokeRoot, safeDirectoryName(packageInfo.packageName));
+  const packageSmokeRoot = join(consumerRoot, safeDirectoryName(packageInfo.packageName));
   mkdirSync(packageSmokeRoot, { recursive: true });
-  installPackageGraph(packageSmokeRoot, packageInfo, packageIndex, new Set());
+  writeConsumerPackageJson(packageSmokeRoot, graphPackages, packageManager);
+
+  const internalPeerTarballs = internalPeerPackagesFor(graphPackages).map(
+    (packageInfo) => packageInfo.tarballPath,
+  );
+
+  run(
+    "pnpm",
+    ["add", "--prod", packageInfo.tarballPath, ...internalPeerTarballs, "--ignore-scripts"],
+    packageSmokeRoot,
+    {
+      label: `${packageInfo.packageName}: install packed tarball`,
+    },
+  );
+  console.log(
+    `package-entrypoint-smoke: ${packageInfo.packageName} packed tarball installed with node-linker=isolated`,
+  );
 
   writeEsmConsumer(packageSmokeRoot, plan.esm);
   writeCjsConsumer(packageSmokeRoot, plan.cjs);
   writeTypesConsumer(packageSmokeRoot, plan.types);
 
   if (plan.cjs.length > 0) {
-    run("node", [join(packageSmokeRoot, "cjs.cjs")], packageSmokeRoot);
+    run("node", [join(packageSmokeRoot, "cjs.cjs")], packageSmokeRoot, {
+      label: `${packageInfo.packageName}: cjs entrypoints`,
+    });
   }
   if (plan.esm.length > 0) {
-    run("node", [join(packageSmokeRoot, "esm.mjs")], packageSmokeRoot);
+    run("node", [join(packageSmokeRoot, "esm.mjs")], packageSmokeRoot, {
+      label: `${packageInfo.packageName}: esm entrypoints`,
+    });
   }
   if (plan.types.length > 0) {
     run(
       process.execPath,
       [tscPath(), "-p", join(packageSmokeRoot, "tsconfig.json")],
       packageSmokeRoot,
+      {
+        label: `${packageInfo.packageName}: types entrypoints`,
+      },
     );
   }
 
@@ -325,32 +381,44 @@ function safeDirectoryName(packageName: string): string {
   return packageName.replaceAll("/", "__").replaceAll("@", "");
 }
 
-function installPackageGraph(
-  smokeRoot: string,
-  packageInfo: PackageInfo,
+function collectInternalRuntimeGraph(
+  rootPackage: PackageInfo,
   packageIndex: ReadonlyMap<string, PackageInfo>,
-  installedPackages: Set<string>,
-): void {
-  if (installedPackages.has(packageInfo.packageName)) {
-    return;
-  }
+): PackageInfo[] {
+  const graph = new Map<string, PackageInfo>();
 
-  installedPackages.add(packageInfo.packageName);
-  installPackage(smokeRoot, packageInfo);
-
-  for (const dependencyName of installDependencyNames(packageInfo.sourceManifest)) {
-    const workspaceDependency = packageIndex.get(dependencyName);
-    if (workspaceDependency) {
-      installPackageGraph(smokeRoot, workspaceDependency, packageIndex, installedPackages);
-      continue;
+  function visit(packageInfo: PackageInfo): void {
+    if (graph.has(packageInfo.packageName)) {
+      return;
     }
 
-    installExternalDependency(
-      smokeRoot,
-      dependencyName,
-      optionalDependencyNames(packageInfo.sourceManifest).has(dependencyName),
-    );
+    graph.set(packageInfo.packageName, packageInfo);
+
+    for (const dependencyName of internalRuntimeDependencyNames(packageInfo.sourceManifest)) {
+      const dependencyPackage = packageIndex.get(dependencyName);
+      if (dependencyPackage) {
+        visit(dependencyPackage);
+      }
+    }
   }
+
+  visit(rootPackage);
+
+  return Array.from(graph.values()).sort((left, right) =>
+    left.packageName.localeCompare(right.packageName),
+  );
+}
+
+function internalRuntimeDependencyNames(pkg: PackageJson): string[] {
+  const optionalPeers = optionalPeerDependencyNames(pkg.peerDependenciesMeta);
+
+  return Array.from(
+    new Set([
+      ...dependencyNames(pkg.dependencies),
+      ...dependencyNames(pkg.optionalDependencies),
+      ...dependencyNames(pkg.peerDependencies).filter((name) => !optionalPeers.has(name)),
+    ]),
+  ).sort();
 }
 
 function installDependencyNames(pkg: PackageJson): string[] {
@@ -371,68 +439,181 @@ function dependencyNames(value: unknown): string[] {
   return Object.keys(value).sort();
 }
 
-function optionalDependencyNames(pkg: PackageJson): ReadonlySet<string> {
-  return new Set([
-    ...dependencyNames(pkg.optionalDependencies),
-    ...optionalPeerDependencyNames(pkg.peerDependenciesMeta),
-  ]);
-}
-
-function optionalPeerDependencyNames(value: unknown): string[] {
+function optionalPeerDependencyNames(value: unknown): ReadonlySet<string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return [];
+    return new Set();
   }
 
-  return Object.entries(value)
-    .filter(([, meta]) =>
-      Boolean(meta && typeof meta === "object" && "optional" in meta && meta.optional === true),
-    )
-    .map(([dependencyName]) => dependencyName)
-    .sort();
-}
-
-function installPackage(smokeRoot: string, packageInfo: PackageInfo): void {
-  const smokePackageDir = join(smokeRoot, "node_modules", ...packageInfo.packageName.split("/"));
-  const sourceDistDir = join(packageInfo.packageDir, "dist");
-  mkdirSync(smokePackageDir, { recursive: true });
-  if (existsSync(sourceDistDir)) {
-    cpSync(sourceDistDir, join(smokePackageDir, "dist"), { recursive: true });
-  } else {
-    mkdirSync(join(smokePackageDir, "dist"), { recursive: true });
-  }
-  writeFileSync(
-    join(smokePackageDir, "package.json"),
-    `${JSON.stringify(packageInfo.publishManifest, null, 2)}\n`,
+  return new Set(
+    Object.entries(value)
+      .filter(([, meta]) =>
+        Boolean(meta && typeof meta === "object" && "optional" in meta && meta.optional === true),
+      )
+      .map(([dependencyName]) => dependencyName)
+      .sort(),
   );
 }
 
-function installExternalDependency(
-  smokeRoot: string,
-  dependencyName: string,
-  optional: boolean,
+function packPackage(
+  packageInfo: PackageInfo,
+  packRoot: string,
+  rootDir: string,
+  packedPackages: Map<string, PackedPackageInfo>,
 ): void {
-  const sourceDependencyDir = join(defaultRootDir, "node_modules", ...dependencyName.split("/"));
-  if (!existsSync(sourceDependencyDir)) {
-    if (optional) {
-      return;
-    }
-
-    throw new Error(`${dependencyName}: declared dependency is missing from root node_modules`);
-  }
-
-  const smokeDependencyDir = join(smokeRoot, "node_modules", ...dependencyName.split("/"));
-  if (existsSync(smokeDependencyDir)) {
+  if (packedPackages.has(packageInfo.packageName)) {
     return;
   }
 
-  mkdirSync(dirname(smokeDependencyDir), { recursive: true });
-  symlinkSync(sourceDependencyDir, smokeDependencyDir, "dir");
+  run("pnpm", ["pack", "--pack-destination", packRoot], packageInfo.packageDir, {
+    label: `${packageInfo.packageName}: pnpm pack`,
+  });
+
+  const tarballPath = findTarball(packRoot, packageInfo.packageName, rootDir);
+  const packedManifest = readPackedJson(tarballPath, "package/package.json", rootDir);
+  packedPackages.set(packageInfo.packageName, {
+    ...packageInfo,
+    packedManifest,
+    tarballPath,
+  });
 }
 
-function planPackageSmoke(packageInfo: PackageInfo): PackageSmokePlan {
+function findTarball(packRoot: string, packageName: string, rootDir: string): string {
+  const matches = readdirSync(packRoot)
+    .filter((entry) => entry.endsWith(".tgz"))
+    .map((entry) => join(packRoot, entry))
+    .filter((tarballPath) => {
+      try {
+        return readPackedJson(tarballPath, "package/package.json", rootDir).name === packageName;
+      } catch {
+        return false;
+      }
+    })
+    .sort();
+
+  const tarballPath = matches.at(-1);
+  if (!tarballPath) {
+    throw new Error(`${packageName}: missing packed tarball`);
+  }
+
+  return tarballPath;
+}
+
+function readPackedJson(tarballPath: string, entryPath: string, rootDir: string): PackageJson {
+  return JSON.parse(readPackedFile(tarballPath, entryPath, rootDir)) as PackageJson;
+}
+
+function readPackedFile(tarballPath: string, entryPath: string, rootDir: string): string {
+  return run("tar", ["-xOf", tarballPath, entryPath], rootDir, {
+    label: `${tarballPath}: read ${entryPath}`,
+  }).stdout;
+}
+
+function packedFileExists(tarballPath: string, entryPath: string, rootDir: string): boolean {
+  const result = spawnSync("tar", ["-tf", tarballPath, entryPath], {
+    cwd: rootDir,
+    encoding: "utf-8",
+    stdio: "pipe",
+    timeout: spawnTimeoutMs,
+  });
+
+  if (result.error) {
+    throw new Error(
+      [
+        `${tarballPath}: check ${entryPath} failed`,
+        `${result.error.name}: ${result.error.message}`,
+        result.stdout.trim(),
+        result.stderr.trim(),
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    );
+  }
+
+  return result.status === 0;
+}
+
+function writeConsumerPackageJson(
+  consumerRoot: string,
+  graphPackages: readonly PackedPackageInfo[],
+  packageManager: string,
+): void {
+  const overrides = Object.fromEntries(
+    graphPackages.map((packageInfo) => [
+      packageInfo.packageName,
+      `file:${packageInfo.tarballPath}`,
+    ]),
+  );
+
+  writeFileSync(
+    join(consumerRoot, "package.json"),
+    `${JSON.stringify(
+      {
+        name: "croco-package-entrypoint-smoke-consumer",
+        packageManager,
+        private: true,
+        type: "module",
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(consumerRoot, "pnpm-workspace.yaml"),
+    `${JSON.stringify(
+      {
+        packages: [],
+        overrides,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(consumerRoot, ".npmrc"),
+    [
+      "node-linker=isolated",
+      "hoist=false",
+      "auto-install-peers=true",
+      "link-workspace-packages=false",
+      "",
+    ].join("\n"),
+  );
+}
+
+function directInternalPeerDependencyNames(packageInfo: PackageInfo): string[] {
+  const optionalPeers = optionalPeerDependencyNames(
+    packageInfo.sourceManifest.peerDependenciesMeta,
+  );
+
+  return dependencyNames(packageInfo.sourceManifest.peerDependencies).filter(
+    (dependencyName) => !optionalPeers.has(dependencyName) && dependencyName.startsWith("@croco/"),
+  );
+}
+
+function internalPeerPackagesFor(graphPackages: readonly PackedPackageInfo[]): PackedPackageInfo[] {
+  const packageIndex = new Map(
+    graphPackages.map((packageInfo) => [packageInfo.packageName, packageInfo]),
+  );
+  const peerPackages = new Map<string, PackedPackageInfo>();
+
+  for (const packageInfo of graphPackages) {
+    for (const dependencyName of directInternalPeerDependencyNames(packageInfo)) {
+      const peerPackage = packageIndex.get(dependencyName);
+      if (peerPackage) {
+        peerPackages.set(peerPackage.packageName, peerPackage);
+      }
+    }
+  }
+
+  return Array.from(peerPackages.values()).sort((left, right) =>
+    left.packageName.localeCompare(right.packageName),
+  );
+}
+
+function planPackageSmoke(packageInfo: PackedPackageInfo): PackageSmokePlan {
   const diagnostics: string[] = [];
-  const packageName = packageNameFor(packageInfo.sourceManifest, packageInfo.packagePath);
-  const publishManifest = packageInfo.publishManifest;
+  const packageName = packageNameFor(packageInfo.packedManifest, packageInfo.packagePath);
+  const publishManifest = packageInfo.packedManifest;
   const exportsValue = publishManifest.exports;
   const exportEntries = collectExportEntries(packageName, exportsValue, diagnostics);
   const esm: SmokeTarget[] = [];
@@ -485,18 +666,70 @@ function planPackageSmoke(packageInfo: PackageInfo): PackageSmokePlan {
   for (const target of types) {
     validateDeclaredTypeDependencies(packageInfo, target, diagnostics);
   }
+  for (const target of [...esm, ...cjs]) {
+    validateDeclaredRuntimeDependencies(packageInfo, target, diagnostics);
+  }
 
   return { cjs, diagnostics, esm, types };
 }
 
-function validateDeclaredTypeDependencies(
-  packageInfo: PackageInfo,
+function validateDeclaredRuntimeDependencies(
+  packageInfo: PackedPackageInfo,
   target: SmokeTarget,
   diagnostics: string[],
 ): void {
-  const declaredDependencies = new Set(installDependencyNames(packageInfo.sourceManifest));
-  const declarationPath = join(packageInfo.packageDir, target.target);
-  const declarationContent = stripComments(readFileSync(declarationPath, "utf-8"));
+  if (target.kind === "json") {
+    return;
+  }
+
+  const declaredDependencies = new Set(installDependencyNames(packageInfo.packedManifest));
+  const runtimeContent = stripTemplateLiterals(
+    stripComments(
+      readPackedFile(
+        packageInfo.tarballPath,
+        `package/${target.target.slice(2)}`,
+        packageInfo.packageDir,
+      ),
+    ),
+  );
+  const packageName = packageInfo.packageName;
+  const undeclaredDependencies = new Set<string>();
+
+  for (const specifier of collectRuntimeImportSpecifiers(runtimeContent)) {
+    const dependencyName = packageNameFromSpecifier(specifier);
+
+    if (
+      !dependencyName ||
+      dependencyName === packageName ||
+      nodeBuiltinModules.has(dependencyName) ||
+      declaredDependencies.has(dependencyName)
+    ) {
+      continue;
+    }
+
+    undeclaredDependencies.add(dependencyName);
+  }
+
+  for (const dependencyName of Array.from(undeclaredDependencies).sort()) {
+    diagnostics.push(
+      `${packageName}: ${target.fieldName} imports undeclared runtime dependency ${dependencyName}`,
+    );
+  }
+}
+
+function validateDeclaredTypeDependencies(
+  packageInfo: PackedPackageInfo,
+  target: SmokeTarget,
+  diagnostics: string[],
+): void {
+  const declaredDependencies = new Set(installDependencyNames(packageInfo.packedManifest));
+  const declarationContent = stripComments(
+    readPackedFile(
+      packageInfo.tarballPath,
+      `package/${target.target.slice(2)}`,
+      packageInfo.packageDir,
+    ),
+  );
   const packageName = packageInfo.packageName;
   const undeclaredDependencies = new Set<string>();
 
@@ -542,8 +775,73 @@ function collectDeclarationImportSpecifiers(content: string): string[] {
   return Array.from(specifiers).sort();
 }
 
+function collectRuntimeImportSpecifiers(content: string): string[] {
+  const specifiers = new Set<string>();
+  const importDeclarationPattern = /^\s*import(?:\s+[^;]*?\s+from)?\s*["']([^"']+)["']/gm;
+  const exportDeclarationPattern = /^\s*export\s+[^;]*?\s+from\s*["']([^"']+)["']/gm;
+  const importCallPattern = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
+  const requireCallPattern = /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g;
+
+  for (const pattern of [
+    importDeclarationPattern,
+    exportDeclarationPattern,
+    importCallPattern,
+    requireCallPattern,
+  ]) {
+    for (const match of content.matchAll(pattern)) {
+      const specifier = match[1];
+      if (specifier) {
+        specifiers.add(specifier);
+      }
+    }
+  }
+
+  return Array.from(specifiers).sort();
+}
+
 function stripComments(content: string): string {
   return content.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+
+function stripTemplateLiterals(content: string): string {
+  let stripped = "";
+  let inTemplate = false;
+  let escaped = false;
+
+  for (const character of content) {
+    if (!inTemplate) {
+      if (character === "`") {
+        inTemplate = true;
+        stripped += " ";
+        continue;
+      }
+
+      stripped += character;
+      continue;
+    }
+
+    if (escaped) {
+      escaped = false;
+      stripped += character === "\n" ? "\n" : " ";
+      continue;
+    }
+
+    if (character === "\\") {
+      escaped = true;
+      stripped += " ";
+      continue;
+    }
+
+    if (character === "`") {
+      inTemplate = false;
+      stripped += " ";
+      continue;
+    }
+
+    stripped += character === "\n" ? "\n" : " ";
+  }
+
+  return stripped;
 }
 
 function packageNameFromSpecifier(specifier: string): string | undefined {
@@ -624,7 +922,7 @@ function pushConditionalTarget(
   value: unknown,
   fieldName: string,
   condition: "import" | "require" | "types",
-  packageInfo: PackageInfo,
+  packageInfo: PackedPackageInfo,
   diagnostics: string[],
   targets: SmokeTarget[],
 ): void {
@@ -659,11 +957,11 @@ function pushStringTarget(
   specifier: string,
   target: unknown,
   fieldName: string,
-  packageInfo: PackageInfo,
+  packageInfo: PackedPackageInfo,
   diagnostics: string[],
   targets: SmokeTarget[],
 ): void {
-  const packageName = packageNameFor(packageInfo.sourceManifest, packageInfo.packagePath);
+  const packageName = packageNameFor(packageInfo.packedManifest, packageInfo.packagePath);
 
   if (typeof target !== "string") {
     diagnostics.push(`${packageName}: ${fieldName} must be a string`);
@@ -675,8 +973,9 @@ function pushStringTarget(
     return;
   }
 
-  const targetPath = join(packageInfo.packageDir, target);
-  if (!existsSync(targetPath)) {
+  if (
+    !packedFileExists(packageInfo.tarballPath, `package/${target.slice(2)}`, packageInfo.packageDir)
+  ) {
     diagnostics.push(`${packageName}: ${fieldName} points to missing file ${target}`);
     return;
   }
@@ -806,8 +1105,12 @@ function runFrontendViteOptionalPeerSmoke(smokeRoot: string, packageName: string
     ].join("\n"),
   );
 
-  run("node", [join(smokeRoot, "frontend-vite-optional-peer.cjs")], smokeRoot);
-  run("node", [join(smokeRoot, "frontend-vite-optional-peer.mjs")], smokeRoot);
+  run("node", [join(smokeRoot, "frontend-vite-optional-peer.cjs")], smokeRoot, {
+    label: `${packageName}: frontend-vite optional peer cjs`,
+  });
+  run("node", [join(smokeRoot, "frontend-vite-optional-peer.mjs")], smokeRoot, {
+    label: `${packageName}: frontend-vite optional peer esm`,
+  });
 
   installBrokenCloudflareVitePlugin(smokeRoot);
   writeFileSync(
@@ -833,7 +1136,9 @@ function runFrontendViteOptionalPeerSmoke(smokeRoot: string, packageName: string
       "",
     ].join("\n"),
   );
-  run("node", [join(smokeRoot, "frontend-vite-nested-error.mjs")], smokeRoot);
+  run("node", [join(smokeRoot, "frontend-vite-nested-error.mjs")], smokeRoot, {
+    label: `${packageName}: frontend-vite nested peer error`,
+  });
 }
 
 function removeCloudflareVitePlugin(smokeRoot: string): void {
@@ -906,18 +1211,27 @@ function tscPath(): string {
   return join(defaultRootDir, "node_modules", "typescript", "lib", "tsc.js");
 }
 
-function run(command: string, args: readonly string[], cwd: string): void {
+function run(
+  command: string,
+  args: readonly string[],
+  cwd: string,
+  options: { readonly expectedExitCode?: number; readonly label: string },
+): RunResult {
+  const expectedExitCode = options.expectedExitCode ?? 0;
   const result = spawnSync(command, [...args], {
     cwd,
     encoding: "utf-8",
+    env: { ...process.env, DATABASE_URL: "" },
     stdio: "pipe",
     timeout: spawnTimeoutMs,
   });
 
-  if (result.error || result.status !== 0) {
+  if (result.error || result.status !== expectedExitCode) {
     throw new Error(
       [
-        `${command} ${args.join(" ")} failed`,
+        `${options.label}: ${command} ${args.map((arg) => relativeArg(cwd, arg)).join(" ")} failed`,
+        `Expected exit code: ${expectedExitCode}`,
+        `Actual exit code: ${result.status ?? "null"}`,
         result.error ? `${result.error.name}: ${result.error.message}` : undefined,
         result.stdout.trim(),
         result.stderr.trim(),
@@ -927,7 +1241,16 @@ function run(command: string, args: readonly string[], cwd: string): void {
     );
   }
 
-  if (result.stdout.trim()) {
-    console.log(result.stdout.trim());
+  return {
+    stderr: result.stderr,
+    stdout: result.stdout,
+  };
+}
+
+function relativeArg(cwd: string, arg: string): string {
+  if (arg.startsWith(cwd)) {
+    return relative(cwd, arg);
   }
+
+  return arg;
 }

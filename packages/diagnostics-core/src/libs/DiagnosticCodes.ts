@@ -113,7 +113,13 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     action:
       "Register the provider before resolution, export it from the owning module, or inject an optional dependency only through an explicit optional lookup path.",
     docs: "docs/troubleshooting/diagnostics.md#croco_di_001",
-    searchKeywords: ["CROCO_DI_001", "missing provider", "Container.get", "provider registration"],
+    searchKeywords: [
+      "CROCO_DI_001",
+      "framework-context/di-missing-provider",
+      "missing provider",
+      "Container.get",
+      "provider registration",
+    ],
     fixExamples: [
       {
         label: "Register the provider before resolving it",
@@ -121,6 +127,85 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
         after: "Container.set(PaymentGateway, gateway);\nContainer.get(PaymentGateway);",
       },
     ],
+    legacyCodes: ["framework-context/di-missing-provider"],
+  },
+  {
+    code: "CROCO_DI_002",
+    category: "dependency-injection",
+    severity: "error",
+    title: "Circular dependency detected",
+    cause:
+      "The DI graph contains a provider cycle, so one or more providers cannot be constructed in a deterministic order.",
+    action:
+      "Break the provider cycle by extracting shared state behind an explicit token, moving one dependency behind a factory, or splitting responsibilities so construction is acyclic.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_di_002",
+    searchKeywords: [
+      "CROCO_DI_002",
+      "framework-context/di-circular-dependency",
+      "circular dependency",
+      "DI graph",
+      "cycle",
+    ],
+    fixExamples: [
+      {
+        label: "Regenerate the DI graph after breaking the cycle",
+        command:
+          "croco di graph --module apps/api-server/src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write .croco/build/di-graph.manifest.json",
+      },
+    ],
+    legacyCodes: ["framework-context/di-circular-dependency"],
+  },
+  {
+    code: "CROCO_DI_003",
+    category: "dependency-injection",
+    severity: "error",
+    title: "Scope lifetime mismatch",
+    cause:
+      "A longer-lived provider depends directly on a request-scoped provider, which can capture request-local state outside the request boundary.",
+    action:
+      "Move request-scoped work behind a request boundary, inject a request-safe factory, or reduce the dependent provider lifetime so it cannot retain request state.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_di_003",
+    searchKeywords: [
+      "CROCO_DI_003",
+      "framework-context/di-scope-mismatch",
+      "scope mismatch",
+      "request scope",
+      "singleton request dependency",
+    ],
+    fixExamples: [
+      {
+        label: "Verify request-scope dependencies locally",
+        command:
+          "croco di graph --module apps/api-server/src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write .croco/build/di-graph.manifest.json",
+      },
+    ],
+    legacyCodes: ["framework-context/di-scope-mismatch"],
+  },
+  {
+    code: "CROCO_DI_004",
+    category: "dependency-injection",
+    severity: "error",
+    title: "Provider falls back to unverifiable TypeDI metadata",
+    cause:
+      "A dependency is visible only through TypeDI fallback metadata, so Croco cannot prove the provider registration, scope, or construction path at build time.",
+    action:
+      "Annotate the provider with Croco component metadata, register the token explicitly, or move the dependency behind a generated manifest-backed provider.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_di_004",
+    searchKeywords: [
+      "CROCO_DI_004",
+      "framework-context/di-unknown-provider",
+      "TypeDI fallback",
+      "unknown provider",
+      "unverifiable provider",
+    ],
+    fixExamples: [
+      {
+        label: "Regenerate the manifest after annotating the provider",
+        command:
+          "croco di graph --module apps/api-server/src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write .croco/build/di-graph.manifest.json",
+      },
+    ],
+    legacyCodes: ["framework-context/di-unknown-provider"],
   },
   {
     code: "CROCO_ROUTE_004",
@@ -605,6 +690,21 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     fixExample: {
       label: "Regenerate the usage dashboard",
       command: "pnpm exec croco generate usage-dashboard",
+    },
+  }),
+  createCliDiagnosticCodeDefinition({
+    code: "CROCO_CLI_USAGE_DASHBOARD_005",
+    category: "build-time",
+    title: "Usage dashboard route path is invalid",
+    cause:
+      "The usage dashboard generator received an API or page path outside the supported route path grammar.",
+    action:
+      "Pass a non-empty route path containing only letters, numbers, underscore, dot, slash, colon, or hyphen.",
+    legacyCodes: ["usage-dashboard/invalid-route-path"],
+    searchKeywords: ["usage dashboard", "invalid route path", "apiPath", "pagePath"],
+    fixExample: {
+      label: "Generate dashboard routes with valid paths",
+      command: "pnpm exec croco generate usage-dashboard --apiPath /ops/usage --pagePath /usage",
     },
   }),
   createCliDiagnosticCodeDefinition({

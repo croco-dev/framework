@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import type { Constructor } from "@croco/framework-context";
 import {
   createSlidingWindowPolicy,
   RateLimiter,
@@ -18,6 +19,12 @@ import { UserController } from "./controllers/UserController";
 import { readEnv } from "./env";
 
 const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/metrics"]);
+const controllers = [UserController];
+const diGraphRootControllers: readonly Constructor[] = controllers;
+
+export function createCrocoDiGraphRoots(): readonly Constructor[] {
+  return [...diGraphRootControllers];
+}
 
 export function createCrocoApp() {
   const env = readEnv();
@@ -27,7 +34,7 @@ export function createCrocoApp() {
   );
 
   return createApp({
-    controllers: [UserController],
+    controllers,
     diValidation: "off",
     globalFilters: [HttpExceptionFilter],
     middlewares: [

@@ -1,6 +1,8 @@
+import { Component } from "@croco/framework-context";
 import { Controller, Get, ResponseSchema } from "@croco/protocols-rest";
 import { diagnosticsSchema, healthSchema } from "./schemas";
 
+@Component()
 @Controller("/ops")
 export class OperationsController {
   @Get("/health")

@@ -27,6 +27,8 @@ const SOURCE_FILE_EXTENSIONS = new Set([
 const IMPORT_SPECIFIER_PATTERN =
   /\b(?:import|export)\s+(type\s+)?(?:[^'"]*?\s+from\s+)?["']([^"']+)["']/g;
 const DYNAMIC_IMPORT_SPECIFIER_PATTERN = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
+const GENERATED_API_DI_GRAPH_SCRIPT =
+  "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 
 type DependencyField = (typeof DEPENDENCY_FIELDS)[number];
 type ImportReference = {
@@ -760,6 +762,13 @@ describe("E2E: generate()", () => {
         lint: "biome lint .",
         test: "turbo test",
         typecheck: "turbo typecheck",
+        "di:graph": "pnpm --filter @test/api-server di:graph",
+        "di:check": "croco di check .croco/build/di-graph.manifest.json",
+        "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
+        doctor: "croco doctor --json",
+        "di:verify": expect.stringMatching(
+          /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+        ),
       });
       expect(rootPackageJson.scripts?.["contract:client"]).toContain(
         "--problem-runtime frontend-problems",
@@ -769,10 +778,13 @@ describe("E2E: generate()", () => {
       );
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(apiPackageJson.scripts).toMatchObject({
+        "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
         "dev:smoke": "tsx src/dev-smoke.ts",
         build: "tsup src/index.ts src/lambda.ts --format cjs --clean",
         test: "vitest run",
       });
+      expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
+      expect(apiAppSource).toContain("createCrocoDiGraphRoots");
       expect(apiPackageJson.dependencies).toMatchObject({
         "@croco/events-core": externalCrocoRange("@croco/events-core"),
         "@croco/events-inmemory": externalCrocoRange("@croco/events-inmemory"),
@@ -789,6 +801,7 @@ describe("E2E: generate()", () => {
       });
       expect(rpcPackageJson.dependencies).toMatchObject({
         "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
+        "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
       });
       expect(existsSync(join(testDir, "apps", "api-server", "src", "lambda.ts"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "env.ts"))).toBe(true);
@@ -833,6 +846,9 @@ describe("E2E: generate()", () => {
 
       const rootPackageJson = readPackageJson(join(testDir, "package.json"));
       const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+      const rpcPackageJson = readPackageJson(
+        join(testDir, "libs", "shared", "provider-rpc", "package.json"),
+      );
       const readme = readFileSync(join(testDir, "README.md"), "utf8");
       const appSource = readFileSync(join(testDir, "apps", "api-server", "src", "app.ts"), "utf8");
       const webSource = readFileSync(
@@ -852,6 +868,13 @@ describe("E2E: generate()", () => {
         "contract:client": expect.stringContaining(
           "apps/api-server/src/{controllers/**/*.ts,admin.ts,users.ts,problems.ts}",
         ),
+        "di:graph": "pnpm --filter @test/api-server di:graph",
+        "di:check": "croco di check .croco/build/di-graph.manifest.json",
+        "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
+        doctor: "croco doctor --json",
+        "di:verify": expect.stringMatching(
+          /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+        ),
       });
       expect(rootPackageJson.scripts?.["contract:client"]).toContain(
         "--problem-runtime frontend-problems",
@@ -861,9 +884,16 @@ describe("E2E: generate()", () => {
       );
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(apiPackageJson.scripts).toMatchObject({
+        "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
         "admin:smoke": "tsx src/dev-smoke.ts",
       });
+      expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
+      expect(rpcPackageJson.dependencies).toMatchObject({
+        "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
+        "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
+      });
       expect(appSource).toContain("AdminController");
+      expect(appSource).toContain("createCrocoDiGraphRoots");
       expect(viteConfig).toContain("'/admin': 'http://localhost:3000'");
       expect(webSource).toContain("import { adminClient, type adminRpc }");
       expect(webSource).toContain("adminClient");
@@ -907,6 +937,9 @@ describe("E2E: generate()", () => {
 
     const rootPackageJson = readPackageJson(join(testDir, "package.json"));
     const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+    const rpcPackageJson = readPackageJson(
+      join(testDir, "libs", "shared", "provider-rpc", "package.json"),
+    );
     const failureDrillSource = readFileSync(
       join(testDir, "apps", "api-server", "src", "demo", "failure-drill-smoke.ts"),
       "utf8",
@@ -926,6 +959,13 @@ describe("E2E: generate()", () => {
         "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --out croco.project-map.json --manifest-bundle .croco/manifest",
       "project-map:check":
         "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --check --manifest croco.project-map.json --manifest-bundle .croco/manifest",
+      "di:graph": "pnpm --filter @test/api-server di:graph",
+      "di:check": "NODE_PATH=./node_modules croco di check .croco/build/di-graph.manifest.json",
+      "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
+      doctor: "NODE_PATH=./node_modules croco doctor --json",
+      "di:verify": expect.stringMatching(
+        /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+      ),
       "profile:smoke:real": "pnpm --filter @test/api-server profile:smoke:real",
       "demo:smoke":
         "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server jobs:smoke",
@@ -953,10 +993,15 @@ describe("E2E: generate()", () => {
       "@croco/telemetry-sdk-node": externalCrocoRange("@croco/telemetry-sdk-node"),
     });
     expect(apiPackageJson.dependencies?.["@croco/testing"]).toBeUndefined();
+    expect(rpcPackageJson.dependencies).toMatchObject({
+      "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
+    });
     expect(apiPackageJson.scripts).toMatchObject({
+      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
       "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
       "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
     });
+    expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
     expect(apiPackageJson.devDependencies?.typedi).toBe("^0.10.0");
     expect(apiPackageJson.devDependencies?.["@croco/cli"]).toMatch(/^\^[0-9]+\.[0-9]+\.[0-9]+$/);
     expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
@@ -1277,6 +1322,13 @@ describe("E2E: generate()", () => {
         test: "turbo test",
         "contract:verify":
           "pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
+        "di:graph": "pnpm --filter @test/api-server di:graph",
+        "di:check": "NODE_PATH=./node_modules croco di check .croco/build/di-graph.manifest.json",
+        "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
+        doctor: "NODE_PATH=./node_modules croco doctor --json",
+        "di:verify": expect.stringMatching(
+          /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+        ),
         "demo:smoke":
           "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server jobs:smoke",
       });
@@ -1374,6 +1426,13 @@ describe("E2E: generate()", () => {
           "pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server ai:smoke",
         "failure-drill:smoke": "pnpm --filter @test/api-server failure-drill:smoke",
         "failure-drill:integration": "pnpm --filter @test/api-server failure-drill:integration",
+        "di:graph": "pnpm --filter @test/api-server di:graph",
+        "di:check": "NODE_PATH=./node_modules croco di check .croco/build/di-graph.manifest.json",
+        "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
+        doctor: "NODE_PATH=./node_modules croco doctor --json",
+        "di:verify": expect.stringMatching(
+          /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+        ),
       });
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(rootPackageJson.scripts?.["contract:openapi"]).toContain("--strict-schemas");
@@ -1389,12 +1448,15 @@ describe("E2E: generate()", () => {
       });
       expect(apiPackageJson.dependencies?.["@croco/testing"]).toBeUndefined();
       expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
+      expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(apiPackageJson.scripts?.["ai:smoke"]).toBe("tsx src/demo/ai-smoke.ts");
+      expect(apiPackageJson.scripts?.["di:graph"]).toBe(GENERATED_API_DI_GRAPH_SCRIPT);
       expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
         "tsx src/demo/failure-drill-smoke.ts",
       );
       expect(failureDrillSource).toContain("assertSaasSmokeContract(snapshot)");
       expect(appSource).toMatch(/AiController/);
+      expect(appSource).toContain("createCrocoDiGraphRoots");
       expect(appSource).toMatch(
         /\[OperationsController, JobsController, SaasController, AiController\]/,
       );

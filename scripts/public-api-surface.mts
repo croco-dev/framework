@@ -14,12 +14,22 @@ export type PublicApiExport = {
   readonly source: string | null;
   readonly localName?: string;
   readonly declarationKind?: string;
+  readonly compatibilityGroup?: string;
+};
+
+export type PublicApiCompatibilityGroup = {
+  readonly id: string;
+  readonly title: string;
+  readonly owner: string;
+  readonly breakingChangePolicy: string;
+  readonly coverage: readonly string[];
 };
 
 export type PublicApiPackage = {
   readonly packageName: string;
   readonly relativeDir: string;
   readonly entrypoint: string;
+  readonly compatibilityGroups?: readonly PublicApiCompatibilityGroup[];
   readonly runtimeExports: readonly PublicApiExport[];
   readonly typeExports: readonly PublicApiExport[];
 };
@@ -39,6 +49,8 @@ export type PackageApiDiff = {
   readonly relativeDir: string;
   readonly runtime: ExportSurfaceDiff;
   readonly type: ExportSurfaceDiff;
+  readonly compatibilityGroupMetadata: PublicApiCompatibilityGroupMetadataDiff;
+  readonly compatibilityGroupImpacts: readonly PublicApiCompatibilityGroupImpact[];
   readonly packageStatus: "added" | "removed" | "changed";
 };
 
@@ -72,15 +84,428 @@ type ExportSurface = "runtime" | "type";
 
 type FileExportSurface = Pick<PublicApiPackage, "runtimeExports" | "typeExports">;
 
+type PublicApiCompatibilityGroupImpact = PublicApiCompatibilityGroup & {
+  readonly runtimeAdded: number;
+  readonly runtimeRemoved: number;
+  readonly typeAdded: number;
+  readonly typeRemoved: number;
+};
+
+type PublicApiCompatibilityGroupMetadataChange = {
+  readonly groupId: string;
+  readonly previous: PublicApiCompatibilityGroup;
+  readonly current: PublicApiCompatibilityGroup;
+};
+
+type PublicApiCompatibilityGroupMetadataDiff = {
+  readonly added: readonly PublicApiCompatibilityGroup[];
+  readonly removed: readonly PublicApiCompatibilityGroup[];
+  readonly changed: readonly PublicApiCompatibilityGroupMetadataChange[];
+};
+
 type ExtractContext = {
   readonly activeFiles: Set<string>;
   readonly cache: Map<string, FileExportSurface>;
+};
+
+type PublicApiCompatibilityGroupExportRule = {
+  readonly source: string | null;
+  readonly names: readonly string[];
+};
+
+type PublicApiCompatibilityGroupRule = {
+  readonly groupId: string;
+  readonly exports: readonly PublicApiCompatibilityGroupExportRule[];
+};
+
+type PublicApiCompatibilityContract = {
+  readonly groups: readonly PublicApiCompatibilityGroup[];
+  readonly rules: readonly PublicApiCompatibilityGroupRule[];
 };
 
 const snapshotFileName = "public-api-surface.snapshot.json";
 const reportDirectory = join("ci-reports", "package-quality");
 const reportFileName = "public-api-diff.md";
 const summaryFileName = "public-api-summary.json";
+
+const frameworkContextCompatibilityContract = {
+  groups: [
+    {
+      id: "di",
+      title: "DI and dependency graph",
+      owner: "Framework Context DI owner",
+      breakingChangePolicy:
+        "Renames, removals, scope semantics, diagnostic-code changes, or graph manifest changes are breaking for DI consumers and generated apps.",
+      coverage: [
+        "public-api:check grouped snapshot",
+        "create-croco-app generator imports DI primitives",
+        "croco doctor DI diagnostics",
+      ],
+    },
+    {
+      id: "context",
+      title: "Request and runtime context",
+      owner: "Framework Context request-context owner",
+      breakingChangePolicy:
+        "RequestContext, RuntimeContext, transaction-context, and lifecycle field removals or semantic changes require a migration note and versioned compatibility review.",
+      coverage: [
+        "public-api:check grouped snapshot",
+        "generated app request context imports",
+        "doctor/project-map runtime context reads",
+      ],
+    },
+    {
+      id: "runtime-policy",
+      title: "Runtime policy",
+      owner: "Runtime policy owner",
+      breakingChangePolicy:
+        "Policy table shape, policy kind/target constants, capability diagnostics, and execution-plan semantics are release-blocking compatibility changes.",
+      coverage: [
+        "public-api:check grouped snapshot",
+        "croco runtime-policy check",
+        "croco project-map policy validation",
+      ],
+    },
+    {
+      id: "runtime-capability",
+      title: "Runtime capability",
+      owner: "Runtime capability owner",
+      breakingChangePolicy:
+        "Capability names, platform names, manifest versions, diagnostic codes, and support matrix semantics are breaking unless versioned or explicitly migrated.",
+      coverage: [
+        "public-api:check grouped snapshot",
+        "croco runtime-policy check",
+        "generated app smoke workspace build",
+      ],
+    },
+    {
+      id: "runtime-inspector",
+      title: "Runtime inspector",
+      owner: "Runtime inspector owner",
+      breakingChangePolicy:
+        "Inspector record/timeline/event shape changes must preserve additive compatibility or document a versioned diagnostic migration.",
+      coverage: [
+        "public-api:check grouped snapshot",
+        "generated app smoke workspace build",
+        "doctor/project-map runtime diagnostics",
+      ],
+    },
+    {
+      id: "middleware",
+      title: "Middleware and request pipeline",
+      owner: "Middleware pipeline owner",
+      breakingChangePolicy:
+        "Middleware callable shape, pipeline graph node/phase constants, and failure propagation changes require a documented migration path.",
+      coverage: ["public-api:check grouped snapshot", "generated app request pipeline usage"],
+    },
+    {
+      id: "shutdown",
+      title: "Shutdown lifecycle",
+      owner: "Shutdown lifecycle owner",
+      breakingChangePolicy:
+        "Shutdown hook signatures, timeout/configuration problem behavior, and signal listener semantics are breaking without migration guidance.",
+      coverage: ["public-api:check grouped snapshot", "generated app smoke workspace build"],
+    },
+  ],
+  rules: [
+    {
+      groupId: "di",
+      exports: [
+        {
+          source: "./libs/Container",
+          names: ["Container", "ContainerValidationOptions", "TokenIdentifier"],
+        },
+        {
+          source: "./libs/decorators/Component",
+          names: ["Component"],
+        },
+        {
+          source: "./libs/decorators/Inject",
+          names: ["Inject"],
+        },
+        {
+          source: "./libs/diagnostics/ContainerDiagnosticsProvider",
+          names: ["ContainerDiagnosticsProvider"],
+        },
+        {
+          source: "./libs/ILogger",
+          names: ["ILogger", "LOGGER_TOKEN"],
+        },
+        {
+          source: "./libs/MetadataStorage",
+          names: ["MetadataStorage"],
+        },
+        {
+          source: "./libs/problems/CircularDependencyProblem",
+          names: ["CircularDependencyProblem"],
+        },
+        {
+          source: "./libs/problems/ContainerResolutionProblem",
+          names: [
+            "ContainerResolutionFailureReason",
+            "ContainerResolutionProblem",
+            "ContainerScopeMismatchProblem",
+          ],
+        },
+        {
+          source: "./libs/types",
+          names: [
+            "ComponentMetadata",
+            "ComponentOptions",
+            "Constructor",
+            "DependencyGraphDiagnostic",
+            "DependencyGraphDiagnosticCode",
+            "DependencyGraphLegacyDiagnosticCode",
+            "DependencyGraphManifest",
+            "DependencyGraphManifestStatus",
+            "DependencyGraphManifestVersion",
+            "DependencyGraphProvider",
+            "DependencyProviderKind",
+            "DependencyResolutionStep",
+            "DependencyResolutionStepStatus",
+            "DependencyResolutionTrace",
+            "DependencyResolutionTraceStatus",
+            "DependencySourceLocation",
+            "DependencyTokenKind",
+            "Scope",
+          ],
+        },
+        {
+          source: "typedi",
+          names: ["ContainerInstance", "Token"],
+        },
+      ],
+    },
+    {
+      groupId: "context",
+      exports: [
+        {
+          source: "./libs/Context",
+          names: ["Context"],
+        },
+        {
+          source: "./libs/TransactionContext",
+          names: ["TRANSACTION_CONTEXT_TOKEN", "TransactionContext"],
+        },
+        {
+          source: "./libs/types",
+          names: [
+            "LifecycleHooks",
+            "RequestContext",
+            "RuntimeContext",
+            "RuntimeNativeContext",
+            "RuntimeTraceContext",
+          ],
+        },
+      ],
+    },
+    {
+      groupId: "runtime-policy",
+      exports: [
+        {
+          source: "./libs/problems/RuntimePolicyProblems",
+          names: [
+            "POLICY_CAPABILITY_UNAVAILABLE_CODE",
+            "PolicyCapabilityProblem",
+            "PolicyConflictProblem",
+            "PolicyDefinitionProblem",
+          ],
+        },
+        {
+          source: "./libs/RuntimePolicy",
+          names: [
+            "DefinePolicyOptions",
+            "DefineRuntimePolicyOptions",
+            "POLICY_EXECUTION_ORDER",
+            "POLICY_KINDS",
+            "POLICY_TARGET_KINDS",
+            "PolicyCapabilityDiagnostic",
+            "PolicyDefinition",
+            "PolicyExecutionEntry",
+            "PolicyExecutionPlan",
+            "PolicyFailurePropagation",
+            "PolicyFailurePropagationEntry",
+            "PolicyKind",
+            "PolicyRuntimeCapability",
+            "PolicySource",
+            "PolicyTable",
+            "PolicyTarget",
+            "PolicyTargetKind",
+            "RetryPolicyDefinition",
+            "RuntimePolicy",
+            "RuntimePolicyPresetConfig",
+            "TimeoutPolicy",
+            "TracingPolicy",
+            "assertPolicyRuntimeCapabilities",
+            "assertPolicyRuntimeCapabilityManifest",
+            "assertPolicyTableRuntimeCapabilities",
+            "assertPolicyTableRuntimeCapabilityManifest",
+            "checkPolicyRuntimeCapabilities",
+            "checkPolicyRuntimeCapabilityManifest",
+            "checkPolicyTableRuntimeCapabilities",
+            "checkPolicyTableRuntimeCapabilityManifest",
+            "compilePolicyTable",
+            "compilePolicyTableForRuntime",
+            "createPolicyTarget",
+            "definePolicy",
+            "definePolicyForRuntime",
+            "defineRuntimePolicyPreset",
+            "formatPolicyCapabilityDiagnostic",
+            "getPolicyExecutionPlan",
+            "getRuntimePolicyPresetCapabilities",
+          ],
+        },
+      ],
+    },
+    {
+      groupId: "runtime-capability",
+      exports: [
+        {
+          source: "./libs/runtimeCapabilities",
+          names: [
+            "RUNTIME_CAPABILITY_MANIFEST_VERSION",
+            "RUNTIME_CAPABILITY_NAMES",
+            "RUNTIME_CAPABILITY_SUPPORT",
+            "RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE",
+            "RUNTIME_PLATFORMS",
+            "RuntimeCapabilitiesForPlatform",
+            "RuntimeCapabilityOverridesFor",
+            "RuntimeCapabilitySupport",
+            "RuntimeCapabilitySupportForPlatform",
+            "RuntimeCapabilitySupportMatrix",
+            "SupportedRuntimeCapabilityName",
+            "UnsupportedRuntimeCapabilityName",
+            "checkRuntimeCapabilityRequirements",
+            "createRuntimeCapabilityDiagnostic",
+            "createRuntimeCapabilityManifest",
+            "createRuntimeCapabilityManifestFromSupport",
+            "getRuntimeCapabilitySupport",
+            "isKnownRuntimePlatform",
+            "isRuntimeCapabilitySupported",
+            "stringifyRuntimeCapabilityManifest",
+          ],
+        },
+        {
+          source: "./libs/types",
+          names: [
+            "KnownRuntimePlatform",
+            "RuntimeCapabilities",
+            "RuntimeCapabilityDiagnostic",
+            "RuntimeCapabilityDiagnosticCode",
+            "RuntimeCapabilityManifest",
+            "RuntimeCapabilityManifestVersion",
+            "RuntimeCapabilityName",
+            "RuntimeCapabilityRequirement",
+            "RuntimePlatform",
+          ],
+        },
+      ],
+    },
+    {
+      groupId: "runtime-inspector",
+      exports: [
+        {
+          source: "./libs/RuntimeInspector",
+          names: [
+            "DEV_INSPECTOR_TOKEN",
+            "RuntimeInspectionOutcome",
+            "RuntimeInspectionRecord",
+            "RuntimeInspector",
+            "RuntimeInspectorEventInput",
+            "RuntimeInspectorEventKind",
+            "RuntimeInspectorEventOutcome",
+            "RuntimeInspectorFailureReporter",
+            "RuntimeInspectorOptions",
+            "RuntimeInspectorRequestFinish",
+            "RuntimeInspectorRequestStart",
+            "RuntimeInspectorSnapshot",
+            "RuntimeInspectorTimelineEvent",
+            "finishRuntimeInspectionRequest",
+            "recordRuntimeInspectionEvent",
+            "startRuntimeInspectionRequest",
+          ],
+        },
+        {
+          source: "./libs/types",
+          names: ["RuntimeInspectorRecorder", "RuntimeInspectorRecorderEventInput"],
+        },
+      ],
+    },
+    {
+      groupId: "middleware",
+      exports: [
+        {
+          source: "./libs/Guard",
+          names: ["Guard"],
+        },
+        {
+          source: "./libs/Middleware",
+          names: ["MiddlewareChain"],
+        },
+        {
+          source: "./libs/problems/MiddlewareProblems",
+          names: ["MiddlewareProblem"],
+        },
+        {
+          source: "./libs/problems/PipelineGraphProblems",
+          names: ["PipelineGraphProblem"],
+        },
+        {
+          source: "./libs/RequestPipelineGraph",
+          names: [
+            "CompileRequestPipelineGraphOptions",
+            "PolicyPipelineNodeOptions",
+            "REQUEST_PIPELINE_FAILURE_PROPAGATIONS",
+            "REQUEST_PIPELINE_NODE_KINDS",
+            "REQUEST_PIPELINE_PHASES",
+            "RequestPipelineFailurePropagation",
+            "RequestPipelineGraph",
+            "RequestPipelineGraphEdge",
+            "RequestPipelineGraphEdgeReason",
+            "RequestPipelineNode",
+            "RequestPipelineNodeKind",
+            "RequestPipelinePath",
+            "RequestPipelinePhase",
+            "RequestPipelinePhaseOrder",
+            "ResolvedRequestPipelineNode",
+            "compileRequestPipelineGraph",
+            "dumpRequestPipelineGraph",
+            "requestPipelineNodesFromPolicyPlan",
+          ],
+        },
+        {
+          source: "./libs/types",
+          names: ["Middleware"],
+        },
+      ],
+    },
+    {
+      groupId: "shutdown",
+      exports: [
+        {
+          source: "./libs/decorators/OnShutdown",
+          names: ["OnShutdown"],
+        },
+        {
+          source: "./libs/problems/ShutdownProblems",
+          names: ["ShutdownConfigurationConflictProblem", "ShutdownTimeoutProblem"],
+        },
+        {
+          source: "./libs/ShutdownManager",
+          names: ["ShutdownManager"],
+        },
+        {
+          source: "./libs/types",
+          names: ["ShutdownHook"],
+        },
+      ],
+    },
+  ],
+} as const satisfies PublicApiCompatibilityContract;
+
+const compatibilityContractsByPackage = new Map<string, PublicApiCompatibilityContract>([
+  ["@croco/framework-context", frameworkContextCompatibilityContract],
+]);
 
 function log(message: string): void {
   stdout.write(`${message}\n`);
@@ -451,6 +876,7 @@ function exportKey(entry: PublicApiExport): string {
     entry.source,
     entry.localName ?? null,
     entry.declarationKind ?? null,
+    entry.compatibilityGroup ?? null,
   ]);
 }
 
@@ -460,6 +886,76 @@ function dedupeExports(entries: readonly PublicApiExport[]): PublicApiExport[] {
 
 function sortExports(entries: readonly PublicApiExport[]): PublicApiExport[] {
   return [...entries].sort((left, right) => exportKey(left).localeCompare(exportKey(right)));
+}
+
+function describeExportForContract(entry: PublicApiExport): string {
+  const source = entry.source ? ` from ${entry.source}` : "";
+  const declaration = entry.declarationKind ? ` (${entry.declarationKind})` : "";
+  const localName = entry.localName ? `${entry.localName} as ` : "";
+
+  return `${localName}${entry.name}${source}${declaration}`;
+}
+
+function isRuleMatch(entry: PublicApiExport, rule: PublicApiCompatibilityGroupRule): boolean {
+  return rule.exports.some(
+    (exportRule) => exportRule.source === entry.source && exportRule.names.includes(entry.name),
+  );
+}
+
+function resolveCompatibilityGroup(
+  packageName: string,
+  entry: PublicApiExport,
+  contract: PublicApiCompatibilityContract,
+): string {
+  const matchingRules = contract.rules.filter((rule) => isRuleMatch(entry, rule));
+
+  if (matchingRules.length === 1) {
+    return matchingRules[0].groupId;
+  }
+
+  if (matchingRules.length > 1) {
+    throw new Error(
+      `public API compatibility contract for ${packageName} classifies ${describeExportForContract(
+        entry,
+      )} into multiple groups: ${matchingRules.map((rule) => rule.groupId).join(", ")}`,
+    );
+  }
+
+  throw new Error(
+    `public API compatibility contract for ${packageName} does not classify ${describeExportForContract(
+      entry,
+    )}`,
+  );
+}
+
+function withCompatibilityGroups(
+  packageName: string,
+  entries: readonly PublicApiExport[],
+): readonly PublicApiExport[] {
+  const contract = compatibilityContractsByPackage.get(packageName);
+
+  if (!contract) {
+    return entries;
+  }
+
+  const groupIds = new Set(contract.groups.map((group) => group.id));
+
+  return sortExports(
+    entries.map((entry) => {
+      const compatibilityGroup = resolveCompatibilityGroup(packageName, entry, contract);
+
+      if (!groupIds.has(compatibilityGroup)) {
+        throw new Error(
+          `public API compatibility contract for ${packageName} references unknown group ${compatibilityGroup}`,
+        );
+      }
+
+      return {
+        ...entry,
+        compatibilityGroup,
+      };
+    }),
+  );
 }
 
 export function createPublicApiSnapshot(rootDir: string): PublicApiSnapshot {
@@ -473,13 +969,16 @@ export function createPublicApiSnapshot(rootDir: string): PublicApiSnapshot {
       }
 
       const exports = extractEntrypointExports(entrypoint);
+      const compatibilityContract = compatibilityContractsByPackage.get(pkg.name);
 
       return [
         {
           packageName: pkg.name,
           relativeDir: pkg.relativeDir,
           entrypoint: toPosixPath(relative(rootDir, entrypoint)),
-          ...exports,
+          ...(compatibilityContract ? { compatibilityGroups: compatibilityContract.groups } : {}),
+          runtimeExports: withCompatibilityGroups(pkg.name, exports.runtimeExports),
+          typeExports: withCompatibilityGroups(pkg.name, exports.typeExports),
         },
       ];
     })
@@ -506,18 +1005,47 @@ function parseExport(value: unknown): PublicApiExport {
     throw new Error(`public API snapshot contains an invalid export kind: ${exportKind}`);
   }
 
-  if (value.source !== null && typeof value.source !== "string") {
+  const sourceCandidate = value.source;
+  let source: string | null = null;
+  if (typeof sourceCandidate === "string") {
+    source = sourceCandidate;
+  } else if (sourceCandidate !== null) {
     throw new Error("public API snapshot export source must be a string or null");
   }
 
   return {
     name: value.name,
     exportKind,
-    source: value.source,
+    source,
     ...(typeof value.localName === "string" ? { localName: value.localName } : {}),
     ...(typeof value.declarationKind === "string"
       ? { declarationKind: value.declarationKind }
       : {}),
+    ...(typeof value.compatibilityGroup === "string"
+      ? { compatibilityGroup: value.compatibilityGroup }
+      : {}),
+  };
+}
+
+function parseCompatibilityGroup(value: unknown): PublicApiCompatibilityGroup {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    typeof value.title !== "string" ||
+    typeof value.owner !== "string" ||
+    typeof value.breakingChangePolicy !== "string" ||
+    !Array.isArray(value.coverage) ||
+    !value.coverage.every((entry) => typeof entry === "string")
+  ) {
+    throw new Error("public API snapshot contains an invalid compatibility group");
+  }
+
+  return {
+    id: value.id,
+    title: value.title,
+    owner: value.owner,
+    breakingChangePolicy: value.breakingChangePolicy,
+    coverage: value.coverage,
   };
 }
 
@@ -533,12 +1061,45 @@ function parsePackage(value: unknown): PublicApiPackage {
     throw new Error("public API snapshot contains an invalid package entry");
   }
 
+  const compatibilityGroups = Array.isArray(value.compatibilityGroups)
+    ? value.compatibilityGroups.map(parseCompatibilityGroup)
+    : undefined;
+  const groupIds = new Set(compatibilityGroups?.map((group) => group.id) ?? []);
+  const runtimeExports = sortExports(value.runtimeExports.map(parseExport));
+  const typeExports = sortExports(value.typeExports.map(parseExport));
+
+  if (compatibilityGroups) {
+    for (const entry of [...runtimeExports, ...typeExports]) {
+      if (!entry.compatibilityGroup) {
+        throw new Error(
+          `public API snapshot package ${value.packageName} has grouped exports without compatibilityGroup on ${entry.name}`,
+        );
+      }
+
+      if (!groupIds.has(entry.compatibilityGroup)) {
+        throw new Error(
+          `public API snapshot package ${value.packageName} references unknown compatibilityGroup ${entry.compatibilityGroup}`,
+        );
+      }
+    }
+  }
+
+  if (
+    !compatibilityGroups &&
+    [...runtimeExports, ...typeExports].some((entry) => entry.compatibilityGroup)
+  ) {
+    throw new Error(
+      `public API snapshot package ${value.packageName} has compatibilityGroup tags without compatibilityGroups metadata`,
+    );
+  }
+
   return {
     packageName: value.packageName,
     relativeDir: value.relativeDir,
     entrypoint: value.entrypoint,
-    runtimeExports: sortExports(value.runtimeExports.map(parseExport)),
-    typeExports: sortExports(value.typeExports.map(parseExport)),
+    ...(compatibilityGroups ? { compatibilityGroups } : {}),
+    runtimeExports,
+    typeExports,
   };
 }
 
@@ -584,6 +1145,111 @@ function diffExportSurface(
   };
 }
 
+function compatibilityGroupMetadataKey(group: PublicApiCompatibilityGroup): string {
+  return JSON.stringify([group.title, group.owner, group.breakingChangePolicy, group.coverage]);
+}
+
+function sortCompatibilityGroups(
+  groups: readonly PublicApiCompatibilityGroup[],
+): PublicApiCompatibilityGroup[] {
+  return [...groups].sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function diffCompatibilityGroupMetadata(
+  previous: readonly PublicApiCompatibilityGroup[] = [],
+  current: readonly PublicApiCompatibilityGroup[] = [],
+): PublicApiCompatibilityGroupMetadataDiff {
+  const previousById = new Map(previous.map((group) => [group.id, group]));
+  const currentById = new Map(current.map((group) => [group.id, group]));
+  const groupIds = [...new Set([...previousById.keys(), ...currentById.keys()])].sort();
+
+  const added: PublicApiCompatibilityGroup[] = [];
+  const removed: PublicApiCompatibilityGroup[] = [];
+  const changed: PublicApiCompatibilityGroupMetadataChange[] = [];
+
+  for (const groupId of groupIds) {
+    const previousGroup = previousById.get(groupId);
+    const currentGroup = currentById.get(groupId);
+
+    if (!previousGroup && currentGroup) {
+      added.push(currentGroup);
+      continue;
+    }
+
+    if (previousGroup && !currentGroup) {
+      removed.push(previousGroup);
+      continue;
+    }
+
+    if (
+      previousGroup &&
+      currentGroup &&
+      compatibilityGroupMetadataKey(previousGroup) !== compatibilityGroupMetadataKey(currentGroup)
+    ) {
+      changed.push({
+        groupId,
+        previous: previousGroup,
+        current: currentGroup,
+      });
+    }
+  }
+
+  return {
+    added: sortCompatibilityGroups(added),
+    removed: sortCompatibilityGroups(removed),
+    changed,
+  };
+}
+
+function hasCompatibilityGroupMetadataDiff(diff: PublicApiCompatibilityGroupMetadataDiff): boolean {
+  return diff.added.length > 0 || diff.removed.length > 0 || diff.changed.length > 0;
+}
+
+function countEntriesForGroup(entries: readonly PublicApiExport[], groupId: string): number {
+  return entries.filter((entry) => entry.compatibilityGroup === groupId).length;
+}
+
+function buildCompatibilityGroupImpacts(
+  previousPackage: PublicApiPackage | undefined,
+  currentPackage: PublicApiPackage | undefined,
+  runtime: ExportSurfaceDiff,
+  type: ExportSurfaceDiff,
+): readonly PublicApiCompatibilityGroupImpact[] {
+  const groups = [
+    ...(previousPackage?.compatibilityGroups ?? []),
+    ...(currentPackage?.compatibilityGroups ?? []),
+  ];
+
+  if (groups.length === 0) {
+    return [];
+  }
+
+  const groupsById = new Map(groups.map((group) => [group.id, group]));
+  const changedGroupIds = new Set(
+    [...runtime.added, ...runtime.removed, ...type.added, ...type.removed].flatMap((entry) =>
+      entry.compatibilityGroup ? [entry.compatibilityGroup] : [],
+    ),
+  );
+
+  return [...changedGroupIds].sort().flatMap((groupId): PublicApiCompatibilityGroupImpact[] => {
+    const group = groupsById.get(groupId);
+
+    if (!group) {
+      return [];
+    }
+
+    return [
+      {
+        ...group,
+        runtimeAdded: countEntriesForGroup(runtime.added, groupId),
+        runtimeRemoved: countEntriesForGroup(runtime.removed, groupId),
+        typeAdded: countEntriesForGroup(type.added, groupId),
+        typeRemoved: countEntriesForGroup(type.removed, groupId),
+      },
+    ];
+  });
+}
+
 export function diffPublicApiSnapshots(
   previous: PublicApiSnapshot,
   current: PublicApiSnapshot,
@@ -606,12 +1272,17 @@ export function diffPublicApiSnapshots(
       previousPackage?.typeExports ?? [],
       currentPackage?.typeExports ?? [],
     );
+    const compatibilityGroupMetadata = diffCompatibilityGroupMetadata(
+      previousPackage?.compatibilityGroups,
+      currentPackage?.compatibilityGroups,
+    );
 
     if (
       runtime.added.length === 0 &&
       runtime.removed.length === 0 &&
       type.added.length === 0 &&
-      type.removed.length === 0
+      type.removed.length === 0 &&
+      !hasCompatibilityGroupMetadataDiff(compatibilityGroupMetadata)
     ) {
       return [];
     }
@@ -622,6 +1293,13 @@ export function diffPublicApiSnapshots(
         relativeDir,
         runtime,
         type,
+        compatibilityGroupMetadata,
+        compatibilityGroupImpacts: buildCompatibilityGroupImpacts(
+          previousPackage,
+          currentPackage,
+          runtime,
+          type,
+        ),
         packageStatus: previousPackage ? (currentPackage ? "changed" : "removed") : "added",
       },
     ];
@@ -688,6 +1366,85 @@ function formatExportLines(
   return [`- ${label}:`, ...entries.map((entry) => `  - \`${marker} ${formatExport(entry)}\``)];
 }
 
+function formatTableCell(value: string): string {
+  return value.replaceAll("|", "\\|").replaceAll("\n", "<br>");
+}
+
+function formatCoverageCell(coverage: readonly string[]): string {
+  return formatTableCell(coverage.join("<br>"));
+}
+
+function formatCompatibilityGroupMetadata(group: PublicApiCompatibilityGroup): string {
+  return formatTableCell(
+    [
+      `title=${group.title}`,
+      `owner=${group.owner}`,
+      `policy=${group.breakingChangePolicy}`,
+      `coverage=${group.coverage.join(", ")}`,
+    ].join("; "),
+  );
+}
+
+function formatCompatibilityGroupMetadataDiffLines(
+  diff: PublicApiCompatibilityGroupMetadataDiff,
+): string[] {
+  if (!hasCompatibilityGroupMetadataDiff(diff)) {
+    return [];
+  }
+
+  const changedLines = diff.changed.map(
+    (change) =>
+      `| ${formatTableCell(change.groupId)} | changed | ${formatCompatibilityGroupMetadata(
+        change.previous,
+      )} | ${formatCompatibilityGroupMetadata(change.current)} |`,
+  );
+  const addedLines = diff.added.map(
+    (group) =>
+      `| ${formatTableCell(group.id)} | added | none | ${formatCompatibilityGroupMetadata(
+        group,
+      )} |`,
+  );
+  const removedLines = diff.removed.map(
+    (group) =>
+      `| ${formatTableCell(group.id)} | removed | ${formatCompatibilityGroupMetadata(
+        group,
+      )} | none |`,
+  );
+
+  return [
+    "",
+    "Compatibility group metadata drift:",
+    "| Group | Change | Previous | Current |",
+    "| --- | --- | --- | --- |",
+    ...changedLines,
+    ...addedLines,
+    ...removedLines,
+  ];
+}
+
+function formatCompatibilityGroupImpactLines(
+  impacts: readonly PublicApiCompatibilityGroupImpact[],
+): string[] {
+  if (impacts.length === 0) {
+    return [];
+  }
+
+  return [
+    "",
+    "Compatibility group impact:",
+    "| Group | Owner | Runtime + | Runtime - | Type + | Type - | Breaking-change policy | Coverage |",
+    "| --- | --- | ---: | ---: | ---: | ---: | --- | --- |",
+    ...impacts.map(
+      (impact) =>
+        `| ${formatTableCell(`${impact.title} (${impact.id})`)} | ${formatTableCell(
+          impact.owner,
+        )} | ${impact.runtimeAdded} | ${impact.runtimeRemoved} | ${impact.typeAdded} | ${impact.typeRemoved} | ${formatTableCell(
+          impact.breakingChangePolicy,
+        )} | ${formatCoverageCell(impact.coverage)} |`,
+    ),
+  ];
+}
+
 export function buildPublicApiReportMarkdown(
   summary: PublicApiSummary,
   diff: PublicApiDiff,
@@ -723,6 +1480,8 @@ export function buildPublicApiReportMarkdown(
       `### ${pkg.packageName}`,
       `- Path: \`${pkg.relativeDir}\``,
       `- Package status: ${pkg.packageStatus}`,
+      ...formatCompatibilityGroupMetadataDiffLines(pkg.compatibilityGroupMetadata),
+      ...formatCompatibilityGroupImpactLines(pkg.compatibilityGroupImpacts),
       "",
       "Runtime exports:",
       ...formatExportLines("added", "+", pkg.runtime.added),

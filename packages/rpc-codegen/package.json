@@ -41,7 +41,9 @@
     "ts-morph": "^24.0.0"
   },
   "devDependencies": {
-    "reflect-metadata": "0.2.2",
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@croco/openapi-spec": "workspace:*",
+    "reflect-metadata": "^0.2.2",
     "tsup": "^8.5.1",
     "typescript": "^5.0.0",
     "vitest": "4.0.16",

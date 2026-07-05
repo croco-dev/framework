@@ -116,30 +116,6 @@
     },
     {
       "package": "@croco/cli",
-      "file": "packages/cli/src/commands/generateUsageDashboard.ts",
-      "line": 257,
-      "excerpt": "throw new Error(`Invalid ${label}: ${value}`);",
-      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
-    },
-    {
-      "package": "@croco/cli",
-      "file": "packages/cli/src/commands/generateUsageDashboard.ts",
-      "line": 266,
-      "excerpt": "throw new Error(`Invalid apiPath: ${path}`);",
-      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
-    },
-    {
-      "package": "@croco/cli",
-      "file": "packages/cli/src/commands/generateUsageDashboard.ts",
-      "line": 913,
-      "excerpt": "throw new Error('Usage dashboard request failed with HTTP ' + response.status);",
-      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
-    },
-    {
-      "package": "@croco/cli",
       "file": "packages/cli/src/commands/makeController.ts",
       "line": 28,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
@@ -349,7 +325,7 @@
     {
       "package": "@croco/frontend-problems",
       "file": "packages/frontend-problems/src/index.ts",
-      "line": 469,
+      "line": 470,
       "excerpt": "throw new Error(`Unhandled Problem variant${suffix}`);",
       "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
       "owner": "framework-error-handling"
@@ -429,7 +405,7 @@
     {
       "package": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 1349,
+      "line": 1350,
       "excerpt": "throw new Error(\\`Unhandled RPC Problem variant\\${suffix}\\`);",
       "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
       "owner": "framework-error-handling"

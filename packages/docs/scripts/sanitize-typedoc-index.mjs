@@ -42,6 +42,7 @@ const cliDiagnosticDefinitionsTable = [
   "| `CROCO_CLI_USAGE_DASHBOARD_002` | `usage-dashboard/tenant-not-found` | Usage dashboard tenant was not found | Use an existing tenant id or seed the tenant before opening the dashboard. |",
   "| `CROCO_CLI_USAGE_DASHBOARD_003` | `usage-dashboard/meter-not-found` | Usage dashboard meter was not found | Use a registered meter id or update the tenant meter registry before requesting the dashboard. |",
   "| `CROCO_CLI_USAGE_DASHBOARD_004` | `usage-dashboard/provider-unavailable` | Usage dashboard provider is unavailable | Wire the generated runtime dependencies and inspect the provider failure detail. |",
+  "| `CROCO_CLI_USAGE_DASHBOARD_005` | `usage-dashboard/invalid-route-path` | Usage dashboard route path is invalid | Pass a non-empty route path containing only letters, numbers, underscore, dot, slash, colon, or hyphen. |",
   "| `CROCO_CLI_OPS_001` | `cli/invalid-ops-target-url` | Ops command target URL is invalid | Pass a valid Croco app base URL to the ops command. |",
   "| `CROCO_CLI_OPS_002` | `cli/invalid-ops-timeout` | Ops command timeout is invalid | Pass a positive timeout in milliseconds. |",
   "| `CROCO_CLI_JOBS_001` | `cli/invalid-jobs-target-url` | Jobs command target URL is invalid | Pass a valid Croco app base URL to the jobs command. |",

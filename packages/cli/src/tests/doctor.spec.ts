@@ -2262,7 +2262,8 @@ describe("doctor", () => {
       status: "failed",
       diagnostics: [
         {
-          code: "framework-context/di-missing-provider",
+          code: "CROCO_DI_001",
+          legacyCode: "framework-context/di-missing-provider",
           severity: "error",
           message: "Provider ApiController is not registered",
         },
@@ -2496,7 +2497,7 @@ function writeRootPackage(repo: string, manifest: Record<string, unknown> = {}):
   writeJson(repo, "package.json", {
     name: "croco-doctor-test",
     private: true,
-    packageManager: "pnpm@10.15.1",
+    packageManager: "pnpm@11.9.0",
     ...manifest,
   });
 

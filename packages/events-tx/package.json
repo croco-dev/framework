@@ -38,5 +38,7 @@
     "@croco/tx-core": "workspace:*",
     "drizzle-orm": "catalog:"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@croco/idempotency-core": "workspace:*"
+  }
 }

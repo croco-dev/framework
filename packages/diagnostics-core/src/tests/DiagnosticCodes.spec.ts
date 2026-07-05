@@ -73,11 +73,26 @@ describe("DiagnosticCodes", () => {
     expect(isDiagnosticCode("CROCO_ROUTE_004")).toBe(true);
     expect(isDiagnosticCode("CROCO_DOCTOR_WORKSPACE_VERSION_CONFLICT")).toBe(true);
     expect(getDiagnosticCodeDefinition("CROCO_DI_001")?.category).toBe("dependency-injection");
+    expect(getDiagnosticCodeDefinition("CROCO_DI_001")?.legacyCodes).toEqual([
+      "framework-context/di-missing-provider",
+    ]);
+    expect(getDiagnosticCodeDefinition("CROCO_DI_002")?.legacyCodes).toEqual([
+      "framework-context/di-circular-dependency",
+    ]);
+    expect(getDiagnosticCodeDefinition("CROCO_DI_003")?.legacyCodes).toEqual([
+      "framework-context/di-scope-mismatch",
+    ]);
+    expect(getDiagnosticCodeDefinition("CROCO_DI_004")?.legacyCodes).toEqual([
+      "framework-context/di-unknown-provider",
+    ]);
     expect(getDiagnosticCodeDefinition("CROCO_CLI_DOCTOR_001")?.legacyCodes).toEqual([
       "doctor/workspace-not-found",
     ]);
     expect(getDiagnosticCodeDefinition("CROCO_CLI_USAGE_DASHBOARD_004")?.legacyCodes).toEqual([
       "usage-dashboard/provider-unavailable",
+    ]);
+    expect(getDiagnosticCodeDefinition("CROCO_CLI_USAGE_DASHBOARD_005")?.legacyCodes).toEqual([
+      "usage-dashboard/invalid-route-path",
     ]);
     expect(getDiagnosticCodeDefinition("CROCO_UNKNOWN_999")).toBeUndefined();
   });
