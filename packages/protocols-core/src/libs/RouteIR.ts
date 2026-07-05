@@ -28,6 +28,7 @@ export type RouteContractIR = {
   readonly sourceLocation?: RouteContractSourceLocation;
   readonly inputSchemas: RouteInputSchemas;
   readonly outputSchema: z.ZodType | null;
+  readonly problemResponsesDeclared: boolean;
   readonly problemResponses: readonly ProblemResponseIR[];
 };
 

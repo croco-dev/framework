@@ -167,6 +167,28 @@ describe("rpc-codegen CLI", () => {
       "missing frontend action manifest path for check",
       ["--controllers", "src/controllers/**/*.ts", "--frontend-action-manifest-check"],
     ],
+    [
+      "conflicting schema modes",
+      [
+        "--controllers",
+        "src/controllers/**/*.ts",
+        "--out",
+        "client",
+        "--strict-schemas",
+        "--compatibility-schemas",
+      ],
+    ],
+    [
+      "conflicting Problem modes",
+      [
+        "--controllers",
+        "src/controllers/**/*.ts",
+        "--out",
+        "client",
+        "--strict-problems",
+        "--compatibility-problems",
+      ],
+    ],
   ])("exits with failure for %s without loading generation modules", async (_name, args) => {
     const exitCode = await runCli(args, {
       stdout: (message) => stdout.push(message),
@@ -286,10 +308,122 @@ describe("rpc-codegen CLI", () => {
     expect(stdout).toEqual(["client/user.ts"]);
     expect(generationModuleImports.generateClientFiles).toBe(1);
     expect(generationModuleImports.loadContractGraph).toBe(1);
+    expect(generationModuleImports.lastLoadOptions).toEqual({
+      strictProblemResponses: true,
+      strictSchemas: true,
+    });
     expect(generationModuleImports.lastGenerateOptions).toEqual({
       problemRuntime: "frontend-problems",
       reactQuery: false,
     });
+  });
+
+  it("reports contract graph warnings before writing generated clients", async () => {
+    generationModuleImports.graph = {
+      version: "croco.contract-graph.v1",
+      controllers: [
+        {
+          name: "UsersController",
+          path: "/users",
+          guards: [],
+          roles: [],
+          routeIds: ["UsersController.list"],
+        },
+      ],
+      routes: [{ routeId: "UsersController.list" }],
+      diagnostics: [
+        {
+          code: "contract-route-missing-problem-union",
+          severity: "warning",
+          target: "route",
+          message: "Declare generated client Problem responses.",
+          routeId: "UsersController.list",
+        },
+      ],
+    };
+
+    const exitCode = await runCli(["--controllers", "src/**/*.ts", "--out", "client"], {
+      stdout: (message) => stdout.push(message),
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toEqual([
+      "WARNING contract-route-missing-problem-union UsersController.list: Declare generated client Problem responses.",
+      "client/user.ts",
+    ]);
+    expect(generationModuleImports.lastLoadOptions).toEqual({
+      strictProblemResponses: true,
+      strictSchemas: true,
+    });
+    expect(generationModuleImports.generateClientFiles).toBe(1);
+  });
+
+  it("fails client generation on warnings when diagnostics are blocking", async () => {
+    generationModuleImports.graph = {
+      version: "croco.contract-graph.v1",
+      controllers: [
+        {
+          name: "UsersController",
+          path: "/users",
+          guards: [],
+          roles: [],
+          routeIds: ["UsersController.list"],
+        },
+      ],
+      routes: [{ routeId: "UsersController.list" }],
+      diagnostics: [
+        {
+          code: "contract-route-missing-problem-union",
+          severity: "warning",
+          target: "route",
+          message: "Declare generated client Problem responses.",
+          routeId: "UsersController.list",
+        },
+      ],
+    };
+
+    const exitCode = await runCli(
+      ["--controllers", "src/**/*.ts", "--out", "client", "--fail-on-diagnostics"],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([
+      "WARNING contract-route-missing-problem-union UsersController.list: Declare generated client Problem responses.",
+      "Contract graph contains 1 diagnostic(s); fix them before generating clients.",
+    ]);
+    expect(generationModuleImports.lastLoadOptions).toEqual({
+      strictProblemResponses: true,
+      strictSchemas: true,
+    });
+    expect(generationModuleImports.generate).toBe(0);
+    expect(generationModuleImports.generateClientFiles).toBe(0);
+  });
+
+  it("allows compatibility mode only through explicit opt-out flags", async () => {
+    const exitCode = await runCli(
+      [
+        "--controllers",
+        "src/**/*.ts",
+        "--out",
+        "client",
+        "--compatibility-problems",
+        "--compatibility-schemas",
+      ],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toEqual(["client/user.ts"]);
+    expect(generationModuleImports.lastLoadOptions).toEqual({
+      strictProblemResponses: false,
+      strictSchemas: false,
+    });
+    expect(generationModuleImports.generateClientFiles).toBe(1);
   });
 
   it("passes the frontend action manifest path to client generation", async () => {

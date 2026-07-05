@@ -1,5 +1,13 @@
-import { defineRouteContract, HttpMethod } from "@croco/protocols-rest";
 import { z } from "zod";
+import { ProblemCategory } from "@croco/problems-core";
+import { defineRouteContract, defineRouteProblem, HttpMethod } from "@croco/protocols-rest";
+import { UserNotFoundProblem } from "../problems";
+
+const userNotFoundProblem = defineRouteProblem(UserNotFoundProblem, {
+  code: "starter/user-not-found",
+  category: ProblemCategory.NotFound,
+  description: "The requested user does not exist.",
+});
 
 export const userIdSchema = z.string();
 export const userSchema = z.object({
@@ -21,6 +29,7 @@ export const listUsersRoute = defineRouteContract({
   path: "/users",
   operationId: "listUsers",
   response: z.array(userSchema),
+  problems: [],
 });
 
 export const getUserRoute = defineRouteContract({
@@ -30,6 +39,7 @@ export const getUserRoute = defineRouteContract({
   operationId: "getUserById",
   params: z.object({ id: userIdSchema }),
   response: userSchema,
+  problems: [userNotFoundProblem],
 });
 
 export const createUserRoute = defineRouteContract({
@@ -39,6 +49,7 @@ export const createUserRoute = defineRouteContract({
   operationId: "createUser",
   body: createUserInputSchema,
   response: userSchema,
+  problems: [],
 });
 
 export const updateUserRoute = defineRouteContract({
@@ -49,6 +60,7 @@ export const updateUserRoute = defineRouteContract({
   params: z.object({ id: userIdSchema }),
   body: createUserInputSchema,
   response: userSchema,
+  problems: [userNotFoundProblem],
 });
 
 export const deleteUserRoute = defineRouteContract({
@@ -58,6 +70,7 @@ export const deleteUserRoute = defineRouteContract({
   operationId: "deleteUser",
   params: z.object({ id: userIdSchema }),
   response: deletedResponseSchema,
+  problems: [userNotFoundProblem],
 });
 
 export type User = z.infer<typeof userSchema>;

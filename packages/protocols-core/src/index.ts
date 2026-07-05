@@ -25,6 +25,11 @@ export {
   getContractPathParamNames,
   getContractPathParams,
 } from "./libs/ContractGraph";
+export type { ContractGraphBlockingDiagnostics } from "./libs/ContractGraphCli";
+export {
+  parseContractGraphStrictModeFlag,
+  resolveContractGraphBlockingDiagnostics,
+} from "./libs/ContractGraphCli";
 export type {
   ContractGraphConsumerCoverage,
   ContractGraphConsumerCoverageReport,

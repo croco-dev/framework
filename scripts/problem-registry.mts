@@ -105,6 +105,7 @@ type ProblemCodeDiscoveryCandidate = {
   readonly file: string;
   readonly line: number;
   readonly column: number;
+  readonly routeProblemProjection?: boolean;
 };
 
 type StringConstants = {
@@ -235,10 +236,20 @@ export function discoverProblemCodes(rootDir = process.cwd()): readonly ProblemC
   const candidates = getSourceFiles(rootDir).flatMap((file) =>
     discoverProblemCodeCandidates(rootDir, file),
   );
+  const implementedProblemKeys = new Set(
+    candidates
+      .filter((candidate) => !candidate.routeProblemProjection)
+      .map((candidate) => getProblemDiscoveryKey(candidate)),
+  );
+  const effectiveCandidates = candidates.filter(
+    (candidate) =>
+      !candidate.routeProblemProjection ||
+      !implementedProblemKeys.has(getProblemDiscoveryKey(candidate)),
+  );
   const candidatesByCodeAndCategory = new Map<string, ProblemCodeDiscoveryCandidate[]>();
 
-  for (const candidate of candidates) {
-    const key = `${candidate.code}\0${candidate.category}`;
+  for (const candidate of effectiveCandidates) {
+    const key = getProblemDiscoveryKey(candidate);
     const existing = candidatesByCodeAndCategory.get(key) ?? [];
     candidatesByCodeAndCategory.set(key, [...existing, candidate]);
   }
@@ -268,6 +279,12 @@ export function discoverProblemCodes(rootDir = process.cwd()): readonly ProblemC
       (left, right) =>
         left.code.localeCompare(right.code) || left.category.localeCompare(right.category),
     );
+}
+
+function getProblemDiscoveryKey(
+  candidate: Pick<ProblemCodeDiscoveryCandidate, "category" | "code">,
+): string {
+  return `${candidate.code}\0${candidate.category}`;
 }
 
 export function createProblemCodeRegistry(
@@ -1002,10 +1019,16 @@ function discoverProblemCodeCandidates(
     }
 
     if (ts.isObjectLiteralExpression(node)) {
+      const routeProblemProjection = isRouteProblemProjectionObject(node);
       const metadata = getProblemMetadataObject(sourceFile, node, stringConstants);
 
       if (metadata) {
-        discoveries.push(createCandidate(rootDir, sourceFile, node, metadata));
+        discoveries.push(
+          createCandidate(rootDir, sourceFile, node, {
+            ...metadata,
+            ...(routeProblemProjection ? { routeProblemProjection } : {}),
+          }),
+        );
       }
     }
 
@@ -1015,6 +1038,17 @@ function discoverProblemCodeCandidates(
   visit(sourceFile);
 
   return discoveries;
+}
+
+function isRouteProblemProjectionObject(node: ts.ObjectLiteralExpression): boolean {
+  const expression = getExpressionArgumentContainer(node);
+  const parent = expression.parent;
+
+  return (
+    ts.isCallExpression(parent) &&
+    parent.arguments[1] === expression &&
+    getExpressionTerminalName(parent.expression) === "defineRouteProblem"
+  );
 }
 
 function getProblemConstructorCall(
@@ -1151,7 +1185,10 @@ function createCandidate(
   rootDir: string,
   sourceFile: ts.SourceFile,
   node: ts.Node,
-  discovery: Pick<ProblemCodeDiscoveryCandidate, "category" | "code" | "kind">,
+  discovery: Pick<
+    ProblemCodeDiscoveryCandidate,
+    "category" | "code" | "kind" | "routeProblemProjection"
+  >,
 ): ProblemCodeDiscoveryCandidate {
   const location = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
 

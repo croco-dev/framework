@@ -71,8 +71,13 @@ describe("runGenerateUsageDashboard", () => {
     expect(result?.page?.files.map((file) => file.status)).toEqual(["created", "created"]);
     expect(controllerContent).toContain('import { Component } from "@croco/framework-context";');
     expect(controllerContent).toContain("@Component()");
-    expect(controllerContent).toContain('@Controller("/ops")');
-    expect(controllerContent).toContain('@Get("/usage")');
+    expect(readGeneratedUsageDashboardRoute(controllerContent)).toEqual({
+      controllerPath: "/ops",
+      contractPath: "/ops/usage",
+      methodDecorator: "usageDashboardSnapshotRoute",
+      resolvedMethodPath: "/usage",
+    });
+    expect(controllerContent).toContain('import { ProblemCategory } from "@croco/problems-core";');
     expect(controllerContent).toContain("@ResponseSchema(usageDashboardSnapshotSchema)");
     expect(controllerContent).toContain("const usageDashboardSnapshotSchema = z.object");
     expect(controllerContent).toContain('await import("../usage-dashboard/UsageDashboardRuntime")');
@@ -309,8 +314,12 @@ await app.listen(3000);
       "utf-8",
     );
 
-    expect(controllerContent).toContain('@Controller("/admin/tenants")');
-    expect(controllerContent).toContain('@Get("/usage")');
+    expect(readGeneratedUsageDashboardRoute(controllerContent)).toEqual({
+      controllerPath: "/admin/tenants",
+      contractPath: "/admin/tenants/usage",
+      methodDecorator: "usageDashboardSnapshotRoute",
+      resolvedMethodPath: "/usage",
+    });
     expect(routeContent).toContain("path: '/admin/usage'");
   });
 
@@ -467,6 +476,62 @@ export function createCrocoApp() {
 
 async function readApiEntry(cwd: string): Promise<string> {
   return fs.readFile(path.join(cwd, "apps", "api-server", "src", "app.ts"), "utf-8");
+}
+
+function readGeneratedUsageDashboardRoute(controllerContent: string): {
+  readonly controllerPath: string;
+  readonly contractPath: string;
+  readonly methodDecorator: string;
+  readonly resolvedMethodPath: string;
+} {
+  const controllerPath = readStringCapture(
+    controllerContent,
+    /@Controller\("([^"]+)"\)/,
+    "controller path",
+  );
+  const contractPath = readStringCapture(
+    controllerContent,
+    /const usageDashboardSnapshotRoute = defineRouteContract\(\{[\s\S]*?path: "([^"]+)"/,
+    "usage dashboard contract path",
+  );
+  const methodDecorator = readStringCapture(
+    controllerContent,
+    /@Get\(([A-Za-z0-9_]+)\)/,
+    "usage dashboard method decorator",
+  );
+
+  return {
+    controllerPath,
+    contractPath,
+    methodDecorator,
+    resolvedMethodPath: resolveControllerRelativeRoutePath(controllerPath, contractPath),
+  };
+}
+
+function readStringCapture(content: string, pattern: RegExp, label: string): string {
+  const value = pattern.exec(content)?.[1];
+
+  if (!value) {
+    throw new Error(`Could not read generated ${label}.`);
+  }
+
+  return value;
+}
+
+function resolveControllerRelativeRoutePath(controllerPath: string, routePath: string): string {
+  if (controllerPath === "") {
+    return routePath === "/" ? "" : routePath;
+  }
+
+  if (routePath === controllerPath) {
+    return "";
+  }
+
+  if (routePath.startsWith(`${controllerPath}/`)) {
+    return routePath.slice(controllerPath.length);
+  }
+
+  return routePath;
 }
 
 function packageManifest(packageNames: readonly string[]): string {

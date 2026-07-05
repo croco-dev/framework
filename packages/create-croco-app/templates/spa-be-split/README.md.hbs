@@ -46,6 +46,8 @@ pnpm codegen
 
 `contract:check`는 생성 전에 canonical contract graph 진단을 실행합니다. 의도적인 계약 변경은 `contract:snapshot`으로 `contract-graph.snapshot.json`을 갱신한 뒤 커밋합니다. CI에서는 snapshot을 다시 쓰지 않는 `contract:verify` 또는 `ci:contracts`를 실행해 커밋된 스냅샷과 현재 컨트롤러 계약의 breaking drift를 먼저 비교하고, `contract-graph.coverage.json`과 `.croco/manifest` bundle을 쓴 뒤, 통과한 계약에서 `openapi.json`과 React Query hook을 포함한 fetch 클라이언트를 생성합니다.
 
+생성된 OpenAPI/RPC 명령은 기본적으로 엄격한 ContractGraph 스키마 검사를 실행하고 `--fail-on-diagnostics`를 전달하므로, 엄격 모드의 Problem 계약 진단이 있으면 산출물 생성이 실패합니다. `--compatibility-schemas`와 `--compatibility-problems`는 레거시 라우트 마이그레이션 전용 opt-out이며 generated app CI 설정으로 사용하지 않습니다.
+
 Artifact 책임은 다음과 같습니다.
 
 - `contract-graph.snapshot.json`: breaking change 기준선이므로 커밋합니다.

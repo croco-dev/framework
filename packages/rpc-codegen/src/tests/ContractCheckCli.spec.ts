@@ -29,9 +29,18 @@ describe("rpc-codegen contract check CLI", () => {
 
       fs.writeFileSync(controllerPath, getMultipleBodyController());
 
-      const exitCode = await runCli(["--controllers", path.join(sourceDir, "*.ts"), "--check"], {
-        stdout: (message) => stdout.push(message),
-      });
+      const exitCode = await runCli(
+        [
+          "--controllers",
+          path.join(sourceDir, "*.ts"),
+          "--check",
+          "--compatibility-problems",
+          "--compatibility-schemas",
+        ],
+        {
+          stdout: (message) => stdout.push(message),
+        },
+      );
 
       expect(exitCode).toBe(1);
       expect(stdout[0]).toContain(
@@ -51,9 +60,18 @@ describe("rpc-codegen contract check CLI", () => {
       fs.writeFileSync(path.join(sourceDir, "AssetsController.ts"), getCatchAllController());
       const stdout: string[] = [];
 
-      const exitCode = await runCli(["--controllers", path.join(sourceDir, "*.ts"), "--check"], {
-        stdout: (message) => stdout.push(message),
-      });
+      const exitCode = await runCli(
+        [
+          "--controllers",
+          path.join(sourceDir, "*.ts"),
+          "--check",
+          "--compatibility-problems",
+          "--compatibility-schemas",
+        ],
+        {
+          stdout: (message) => stdout.push(message),
+        },
+      );
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain(
@@ -72,7 +90,13 @@ describe("rpc-codegen contract check CLI", () => {
       fs.writeFileSync(controllerPath, getCatchAllController());
 
       const exitCode = await runCli(
-        ["--controllers", path.join(sourceDir, "*.ts"), "--check", "--strict-problems"],
+        [
+          "--controllers",
+          path.join(sourceDir, "*.ts"),
+          "--check",
+          "--strict-problems",
+          "--compatibility-schemas",
+        ],
         {
           stdout: (message) => stdout.push(message),
         },
@@ -93,6 +117,40 @@ describe("rpc-codegen contract check CLI", () => {
   );
 
   it(
+    "fails strict Problem response diagnostics when diagnostics are blocking",
+    async () => {
+      const controllerPath = path.join(sourceDir, "AssetsController.ts");
+      const stdout: string[] = [];
+
+      fs.writeFileSync(controllerPath, getCatchAllController());
+
+      const exitCode = await runCli(
+        [
+          "--controllers",
+          path.join(sourceDir, "*.ts"),
+          "--check",
+          "--strict-problems",
+          "--compatibility-schemas",
+          "--fail-on-diagnostics",
+        ],
+        {
+          stdout: (message) => stdout.push(message),
+        },
+      );
+
+      expect(exitCode).toBe(1);
+      expect(stdout[0]).toContain(
+        `WARNING contract-route-missing-problem-response-contract AssetsController.getAsset ${controllerPath}:`,
+      );
+      expect(stdout[0]).toContain(
+        "Strict Problem contract mode could not find declared route failures.",
+      );
+      expect(stdout).toContain("Contract graph check failed with 1 diagnostic(s).");
+    },
+    CONTRACT_CHECK_TIMEOUT_MS,
+  );
+
+  it(
     "fails strict schema mode before permissive generated client contracts are accepted",
     async () => {
       const controllerPath = path.join(sourceDir, "AssetsController.ts");
@@ -101,7 +159,13 @@ describe("rpc-codegen contract check CLI", () => {
       fs.writeFileSync(controllerPath, getCatchAllController());
 
       const exitCode = await runCli(
-        ["--controllers", path.join(sourceDir, "*.ts"), "--check", "--strict-schemas"],
+        [
+          "--controllers",
+          path.join(sourceDir, "*.ts"),
+          "--check",
+          "--strict-schemas",
+          "--compatibility-problems",
+        ],
         {
           stdout: (message) => stdout.push(message),
         },
@@ -143,7 +207,14 @@ describe("rpc-codegen contract check CLI", () => {
       fs.writeFileSync(controllerPath, getCatchAllController());
 
       const exitCode = await runCli(
-        ["--controllers", path.join(sourceDir, "*.ts"), "--out", outDir, "--strict-schemas"],
+        [
+          "--controllers",
+          path.join(sourceDir, "*.ts"),
+          "--out",
+          outDir,
+          "--strict-schemas",
+          "--compatibility-problems",
+        ],
         {
           stdout: (message) => stdout.push(message),
         },

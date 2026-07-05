@@ -1331,6 +1331,12 @@ function assertExists(path: string, message: string): void {
   }
 }
 
+function assertMissing(path: string, message: string): void {
+  if (existsSync(path)) {
+    throw new Error(message);
+  }
+}
+
 function assertGeneratedReadme(projectDir: string, smokeCase: SmokeCase): void {
   const readmePath = join(projectDir, "README.md");
   assertExists(readmePath, `${smokeCase.name} did not generate README.md`);
@@ -1692,7 +1698,110 @@ function runSpaBeSplitContractSmoke(
     generatedClientPath,
     "export type CreateInput = { email: string; name: string; };",
   );
+  const problemDeclarationCanary = removeRestSpaListProblemDeclaration(projectDir);
+  runExpectFailure(
+    "corepack",
+    [
+      "pnpm",
+      "exec",
+      "croco-rpc-codegen",
+      "--controllers",
+      "apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}",
+      "--check",
+      "--fail-on-diagnostics",
+    ],
+    projectDir,
+    [
+      "contract-route-missing-problem-response-contract",
+      "Strict Problem contract mode could not find declared route failures.",
+      "Contract graph check failed with 1 diagnostic(s).",
+    ],
+  );
+  writeFileSync(problemDeclarationCanary.path, problemDeclarationCanary.original);
+  removeRestSpaListResponseSchema(projectDir);
+  runExpectFailure(
+    "corepack",
+    [
+      "pnpm",
+      "exec",
+      "croco-openapi-spec",
+      "--controllers",
+      "apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}",
+      "--out",
+      "strict-openapi-canary.json",
+      "--fail-on-diagnostics",
+      "--manifest-bundle",
+      ".croco/manifest",
+    ],
+    projectDir,
+    [
+      "contract-route-missing-response-schema",
+      "Strict schema mode requires a success response schema before RPC/OpenAPI generation.",
+      "fix them before generating OpenAPI",
+    ],
+  );
+  assertMissing(
+    join(projectDir, "strict-openapi-canary.json"),
+    "REST SPA strict OpenAPI canary wrote an artifact despite ContractGraph errors",
+  );
+  runExpectFailure(
+    "corepack",
+    [
+      "pnpm",
+      "exec",
+      "croco-rpc-codegen",
+      "--controllers",
+      "apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}",
+      "--out",
+      ".strict-rpc-canary",
+      "--react-query",
+      "--problem-runtime",
+      "frontend-problems",
+      "--fail-on-diagnostics",
+      "--manifest-bundle",
+      ".croco/manifest",
+    ],
+    projectDir,
+    [
+      "contract-route-missing-response-schema",
+      "Strict schema mode requires a success response schema before RPC/OpenAPI generation.",
+      "fix them before generating clients",
+    ],
+  );
+  assertMissing(
+    join(projectDir, ".strict-rpc-canary"),
+    "REST SPA strict RPC canary wrote artifacts despite ContractGraph errors",
+  );
   console.log("create-croco-app-generated-smoke: rest-spa-contracts contract commands passed");
+}
+
+function removeRestSpaListProblemDeclaration(projectDir: string): {
+  readonly path: string;
+  readonly original: string;
+} {
+  const schemaPath = join(projectDir, "apps", "api-server", "src", "controllers", "userSchemas.ts");
+  const original = readFileSync(schemaPath, "utf8");
+  const updated = original.replace("  problems: [],\n", "");
+
+  if (updated === original) {
+    throw new Error("REST SPA strict Problem smoke could not remove the list Problem declaration");
+  }
+
+  writeFileSync(schemaPath, updated);
+
+  return { path: schemaPath, original };
+}
+
+function removeRestSpaListResponseSchema(projectDir: string): void {
+  const schemaPath = join(projectDir, "apps", "api-server", "src", "controllers", "userSchemas.ts");
+  const original = readFileSync(schemaPath, "utf8");
+  const updated = original.replace("  response: z.array(userSchema),\n", "");
+
+  if (updated === original) {
+    throw new Error("REST SPA strict schema smoke could not remove the list response schema");
+  }
+
+  writeFileSync(schemaPath, updated);
 }
 
 function getGeneratedSmokeRangeOverrides(

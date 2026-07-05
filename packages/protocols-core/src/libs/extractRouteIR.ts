@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { getProblemCookbookPath, ProblemCategoryMapper } from "@croco/problems-core";
+import type { Problem } from "@croco/problems-core";
 import type { z } from "zod";
 import type {
   ParamIR,
@@ -93,6 +94,7 @@ function extractRouteContract(contract: RouteContractMetadata | undefined): Rout
       headers: null,
     },
     outputSchema: contract.response ?? null,
+    problemResponsesDeclared: Array.isArray(contract.problems),
     problemResponses: extractContractProblemResponses(contract.problems),
   };
 }
@@ -126,7 +128,8 @@ function extractContractProblemResponses(value: unknown): ProblemResponseIR[] {
   }
 
   return value
-    .filter(isProblemResponseMetadata)
+    .map(readContractProblemResponse)
+    .filter((response): response is ProblemResponseMetadata => response !== null)
     .map(toContractProblemResponseIR)
     .sort(compareProblemResponses);
 }
@@ -170,6 +173,52 @@ function isProblemResponseMetadata(value: unknown): value is ProblemResponseMeta
     typeof value.category === "string" &&
     (!("status" in value) || typeof value.status === "number")
   );
+}
+
+function readContractProblemResponse(value: unknown): ProblemResponseMetadata | null {
+  if (isProblemResponseMetadata(value)) {
+    return value;
+  }
+
+  if (!isProblemConstructor(value)) {
+    return null;
+  }
+
+  const prototypeResponse = readProblemInstanceResponse(value.prototype);
+  if (prototypeResponse) {
+    return prototypeResponse;
+  }
+
+  try {
+    return readProblemInstanceResponse(new (value as new () => Problem)());
+  } catch {
+    return null;
+  }
+}
+
+function isProblemConstructor(value: unknown): value is { readonly prototype: Problem } {
+  return typeof value === "function" && "prototype" in value;
+}
+
+function readProblemInstanceResponse(value: unknown): ProblemResponseMetadata | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const code = Reflect.get(value, "code");
+  const category = Reflect.get(value, "category");
+
+  if (typeof code !== "string" || code.length === 0 || typeof category !== "string") {
+    return null;
+  }
+
+  const status = Reflect.get(value, "status");
+
+  return {
+    code,
+    category: category as ProblemResponseMetadata["category"],
+    ...(typeof status === "number" ? { status } : {}),
+  };
 }
 
 function getProblemResponseStatus(response: ProblemResponseMetadata): number {
