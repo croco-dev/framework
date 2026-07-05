@@ -72,6 +72,7 @@ type SpineConfig = {
   readonly description: string;
   readonly label: string;
   readonly packages: readonly string[];
+  readonly promotionPackages: readonly string[];
 };
 
 type RuntimeKey = (typeof runtimeOrder)[number];
@@ -507,6 +508,7 @@ function parseSpine(
       description: "",
       label: "Croco 1.0 spine",
       packages: [],
+      promotionPackages: [],
     };
   }
 
@@ -514,6 +516,7 @@ function parseSpine(
   const label = readRequiredString(config.label, "spine.label", violations);
   const description = readRequiredString(config.description, "spine.description", violations);
   const packageNames = readRequiredStringArray(config.packages, "spine.packages", violations);
+  const promotionPackages = parseSpinePromotionPackages(config.promotion, violations);
   const packageByName = new Map(packages.map((pkg) => [pkg.shortName, pkg]));
   const seen = new Set<string>();
 
@@ -537,11 +540,50 @@ function parseSpine(
     }
   }
 
+  for (const packageName of promotionPackages) {
+    if (!packageByName.has(packageName)) {
+      violations.push(
+        `${catalogMetadataPath}: spine.promotion.packages references missing package ${packageName}`,
+      );
+      continue;
+    }
+
+    if (!seen.has(packageName)) {
+      violations.push(
+        `${catalogMetadataPath}: spine.promotion.packages.${packageName} is outside spine.packages`,
+      );
+    }
+  }
+
   return {
     description: description || "Release-critical package set for Croco 1.0.",
     label: label || "Croco 1.0 spine",
     packages: packageNames,
+    promotionPackages,
   };
+}
+
+function parseSpinePromotionPackages(value: unknown, violations: string[]): readonly string[] {
+  if (value === undefined) {
+    return [];
+  }
+
+  if (!isRecord(value)) {
+    violations.push(`${catalogMetadataPath}: spine.promotion must be an object`);
+    return [];
+  }
+
+  const packages = value.packages;
+  if (packages === undefined) {
+    return [];
+  }
+
+  if (!isRecord(packages)) {
+    violations.push(`${catalogMetadataPath}: spine.promotion.packages must be an object`);
+    return [];
+  }
+
+  return Object.keys(packages).sort((left, right) => left.localeCompare(right));
 }
 
 function parseExtensionMatrix(
@@ -1930,6 +1972,10 @@ function generateReadmeCatalog(state: CatalogState): string {
     "",
     "Spine membership is not a maturity claim: production-ready packages already have the strongest evidence gates, beta spine packages are allowed while their 1.0 gates harden, and non-spine beta/alpha packages do not block 1.0 unless they are pulled into a golden path or certified adapter path.",
     "",
+    formatSpineStatusSummary(state),
+    "",
+    ...formatSpineStatusTable(state),
+    "",
     ...formatSpinePackageTable(state),
     "",
     "### Package Groups",
@@ -2052,6 +2098,10 @@ function generateDocsReport(
     `${state.spine.description}`,
     "",
     "Downstream release gates should select this package set from `docs/package-catalog.json` `spine.packages`. Spine membership is independent from maturity: non-spine alpha/beta packages can remain outside the 1.0 blocker set unless a golden path or certified adapter contract explicitly pulls them in.",
+    "",
+    formatSpineStatusSummary(state),
+    "",
+    ...formatSpineStatusTable(state),
     "",
     ...formatSpinePackageTable(state),
     "",
@@ -2194,6 +2244,49 @@ function formatSpinePackageTable(state: CatalogState): string[] {
   }
 
   return lines;
+}
+
+function formatSpineStatusSummary(state: CatalogState): string {
+  const status = getSpineStatusCounts(state);
+
+  return `Current 1.0 spine status: ${status.total} spine packages; ${status.production} production-ready, ${status.beta} beta, ${status.alpha} alpha/WIP, ${status.deprecated} deprecated; ${status.betaPromotionRecords} beta promotion records.`;
+}
+
+function formatSpineStatusTable(state: CatalogState): string[] {
+  const status = getSpineStatusCounts(state);
+
+  return [
+    "| Generated status | Count | Source |",
+    "| --- | ---: | --- |",
+    `| Spine packages | ${status.total} | \`docs/package-catalog.json\` \`spine.packages\` |`,
+    `| Production-ready spine packages | ${status.production} | \`maturity.production.packages\` |`,
+    `| Beta spine packages | ${status.beta} | \`maturity.beta.packages\` |`,
+    `| Alpha/WIP spine packages | ${status.alpha} | \`maturity.alpha.packages\` |`,
+    `| Deprecated spine packages | ${status.deprecated} | \`maturity.deprecated.packages\` |`,
+    `| Beta promotion records | ${status.betaPromotionRecords} | \`spine.promotion.packages\` |`,
+  ];
+}
+
+function getSpineStatusCounts(state: CatalogState): {
+  readonly alpha: number;
+  readonly beta: number;
+  readonly betaPromotionRecords: number;
+  readonly deprecated: number;
+  readonly production: number;
+  readonly total: number;
+} {
+  const promotionPackages = new Set(state.spine.promotionPackages);
+  const betaSpinePackages = state.spinePackages.filter((pkg) => pkg.maturity === "beta");
+
+  return {
+    alpha: state.spinePackages.filter((pkg) => pkg.maturity === "alpha").length,
+    beta: betaSpinePackages.length,
+    betaPromotionRecords: betaSpinePackages.filter((pkg) => promotionPackages.has(pkg.shortName))
+      .length,
+    deprecated: state.spinePackages.filter((pkg) => pkg.maturity === "deprecated").length,
+    production: state.spinePackages.filter((pkg) => pkg.maturity === "production").length,
+    total: state.spinePackages.length,
+  };
 }
 
 function formatMissingPackages(

@@ -61,6 +61,10 @@ describe("package-docs-check.mts", () => {
     expect(readme).toContain("현재 카탈로그는 **2개 public package**");
     expect(readme).toContain("Croco 1.0 Spine");
     expect(readme).toContain("release-critical compatibility scope");
+    expect(readme).toContain(
+      "Current 1.0 spine status: 2 spine packages; 0 production-ready, 2 beta, 0 alpha/WIP, 0 deprecated; 2 beta promotion records.",
+    );
+    expect(readme).toContain("| Beta promotion records          |     2 |");
     expect(readme).toContain("Extension & Adapter Matrix");
     expect(readme).toContain("Adapter Ecosystem");
     expect(readme).toContain("compatibility certification checklist");
@@ -74,6 +78,10 @@ describe("package-docs-check.mts", () => {
     expect(report).toContain("`not-applicable`");
     expect(report).toContain("## Certification Records");
     expect(report).toContain("Croco 1.0 spine packages");
+    expect(report).toContain(
+      "Current 1.0 spine status: 2 spine packages; 0 production-ready, 2 beta, 0 alpha/WIP, 0 deprecated; 2 beta promotion records.",
+    );
+    expect(report).toContain("| Beta promotion records          |     2 |");
     expect(report).toContain("| `@croco/beta`");
     expect(report).toContain("Missing generated API docs");
     expect(report).toContain("Generated API Docs Backlog By Maturity");
@@ -929,6 +937,7 @@ function writeCatalogMetadata(
     readonly certificationRecords?: readonly Record<string, unknown>[];
     readonly groupName?: string;
     readonly productionPackages?: readonly string[];
+    readonly spinePromotionPackages?: readonly string[];
     readonly spinePackages?: readonly string[];
   } = {},
 ): void {
@@ -939,12 +948,29 @@ function writeCatalogMetadata(
   const betaPackages = packageNames.filter(
     (packageName) => !productionPackageNames.has(packageName),
   );
+  const spinePackageNames = options.spinePackages ?? packageNames;
+  const spinePackageNameSet = new Set(spinePackageNames);
+  const spinePromotionPackages =
+    options.spinePromotionPackages ??
+    betaPackages.filter((packageName) => spinePackageNameSet.has(packageName));
   writeJson(join(root, "docs", "package-catalog.json"), {
     schemaVersion: 1,
     spine: {
       label: "Croco 1.0 spine",
       description: "Fixture release-critical package set.",
-      packages: options.spinePackages ?? packageNames,
+      packages: spinePackageNames,
+      promotion: {
+        packages: Object.fromEntries(
+          spinePromotionPackages.map((packageName) => [
+            packageName,
+            {
+              owner: "fixture-owner",
+              recoveryAction: "Complete fixture release evidence.",
+              targetEvidence: ["fixture release evidence"],
+            },
+          ]),
+        ),
+      },
     },
     groups: {
       [groupName]: {

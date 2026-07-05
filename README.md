@@ -359,37 +359,20 @@ class OrderService {
 }
 ```
 
-## 🗺️ 로드맵 — SaaS-first를 향하여
+## 🗺️ 로드맵 — 1.0 readiness status
 
-Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기능들입니다.
+Croco 1.0 readiness는 날짜만 있는 phase 목록이 아니라 checked source와 gate로 추적합니다.
 
-### 🏗️ Phase 1: 인프라 강화 (Q2 2025)
+Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alpha/WIP, 0 deprecated; 8 beta promotion records.
 
-- [ ] **billing-core**: 다중 통화, 세금 계산, 프리 티어 지원
-- [ ] **subscription-drizzle**: Stripe + Drizzle 통합 구독 관리
-- [ ] **metering-drizzle**: Redis + Drizzle 하이브리드 사용량 추적
+| Track                   | Current status                                                                                      | Checked source / gate                                                                               |
+| ----------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 1.0 spine package scope | `docs/package-catalog.json`의 `spine.packages`가 release-critical compatibility scope를 정의합니다. | `pnpm docs:catalog:check`, `pnpm spine-promotion:check`                                             |
+| First-success path      | Quick-start Lambda와 SaaS billing golden path가 public first-success commands로 고정되어 있습니다.  | `pnpm first-success:verify`, `pnpm quick-start-lambda:smoke`, `pnpm saas-billing-golden-path:smoke` |
+| Release evidence        | Alpha/release smoke, provenance, spine evidence는 release docs와 CI gate에서 확인합니다.            | `pnpm release-docs:check`, `pnpm release:spine-evidence`                                            |
+| Package maturity        | production-ready, beta, alpha/WIP, deprecated 상태는 catalog metadata에서 생성됩니다.               | `pnpm docs:catalog:check`, `pnpm production-ready:check`                                            |
 
-### 🔐 Phase 2: 인증/인가 (Q3 2025)
-
-- [ ] **auth-clerk**: Clerk 통합 (소셜 로그인, 조직 관리)
-- [ ] **auth-better-auth**: Better Auth + Drizzle 셀프 호스팅 인증
-- [ ] **access-drizzle**: Fine-grained ACL 구현체
-
-### 🚀 Phase 3: 서버리스 확장 (Q4 2025)
-
-- [ ] **batch-qstash**: QStash 기반 비동기 배치 처리
-- [ ] **tasks-qstash**: QStash 태스크 큐
-- [ ] **notification-email**: Resend 이메일 발송
-
-### 🧠 Phase 4: AI/LLM (2026)
-
-- [ ] **llm-agent**: 에이전트 패턴, 도구 호출, 멀티턴 대화
-- [ ] **llm-rag**: 벡터 DB 통합, 문서 검색 증강
-- [ ] **llm-evals**: LLM 평가 프레임워크
-
----
-
-**기여 환영**: 각 패키지의 GitHub Issues에서 `good first issue`를 확인하세요!
+Follow-up work is tracked in GitHub Issues and in [Croco 1.0 Spine](docs/release/croco-1.0-spine.md), with status rendered from checked repository metadata.
 
 ---
 
@@ -406,6 +389,17 @@ Croco가 **완전한 SaaS 프레임워크**가 되기 위해 계획 중인 기�
 Croco 1.0 spine은 18개 package를 release-critical compatibility scope로 고정합니다. Source of truth는 `docs/package-catalog.json`의 `spine.packages`이며, 운영 가이드와 후속 release-gate issue 목록은 [Croco 1.0 Spine](docs/release/croco-1.0-spine.md)에 있습니다.
 
 Spine membership is not a maturity claim: production-ready packages already have the strongest evidence gates, beta spine packages are allowed while their 1.0 gates harden, and non-spine beta/alpha packages do not block 1.0 unless they are pulled into a golden path or certified adapter path.
+
+Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alpha/WIP, 0 deprecated; 8 beta promotion records.
+
+| Generated status                | Count | Source                                       |
+| ------------------------------- | ----: | -------------------------------------------- |
+| Spine packages                  |    18 | `docs/package-catalog.json` `spine.packages` |
+| Production-ready spine packages |    10 | `maturity.production.packages`               |
+| Beta spine packages             |     8 | `maturity.beta.packages`                     |
+| Alpha/WIP spine packages        |     0 | `maturity.alpha.packages`                    |
+| Deprecated spine packages       |     0 | `maturity.deprecated.packages`               |
+| Beta promotion records          |     8 | `spine.promotion.packages`                   |
 
 | Package                     | Group       | Maturity            | Directory                     |
 | --------------------------- | ----------- | ------------------- | ----------------------------- |
@@ -663,26 +657,31 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 
 ### 코드 품질 도구
 
-- **Biome**: 린팅 및 포맷팅 (`quoteStyle: 'single'`, `lineWidth: 120`)
+- **Oxlint / Oxfmt**: root quality gate와 pre-commit hook에서 lint와 format을 확인합니다.
 - **TypeScript**: 엄격 모드 + 데코레이터 지원
-- **Vitest**: 테스트 프레임워크
+- **Vitest / Turbo**: package test와 repo-wide task orchestration을 담당합니다.
+- **Catalog / release drift gates**: README package catalog, first-success docs, release docs, package manifests, public API, static misuse를 checked scripts로 검증합니다.
 
 ### 주요 명령어
 
 ```bash
 pnpm install          # 의존성 설치
-pnpm build            # 모든 패키지 빌드
-pnpm lint             # Biome 린트 검사
-pnpm check            # Biome 전체 검사 (lint + format)
-pnpm format           # Biome 포맷팅
+pnpm build            # turbo build
+pnpm lint             # turbo lint
+pnpm format           # oxfmt write
+pnpm check            # repository policy, docs/catalog/release drift, lint, format, static gates
+pnpm docs:catalog:check      # README package catalog and package docs drift
+pnpm first-success:verify    # README, getting-started, examples, and first-success command drift
+pnpm release-docs:check      # release guide and Changesets config drift
+pnpm release:spine-evidence  # consolidated release spine evidence gate
 pnpm test             # 테스트 실행
 pnpm typecheck        # TypeScript 타입 검사
 ```
 
 ### Git Hooks (Lefthook)
 
-- **Pre-commit**: Biome 자동 수정
-- **Pre-push**: 테스트 및 타입 검사
+- **Pre-commit**: oxlint/oxfmt 자동 수정
+- **Pre-push**: auto-changeset, 테스트, 타입 검사
 
 ---
 
