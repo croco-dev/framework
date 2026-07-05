@@ -90,6 +90,38 @@ describe("ParamResolver", () => {
     expect(json).toHaveBeenCalledTimes(1);
   });
 
+  it("body parse failure도 캐시해 같은 요청에서 다시 읽지 않음", async () => {
+    class TestController {
+      create(@Body() _first: unknown, @Body() _second: unknown) {}
+    }
+
+    const json = vi.fn(async () => {
+      throw new SyntaxError("Unexpected end of JSON input");
+    });
+
+    const resolver = new ParamResolver();
+    const ctx = createMockHttpContext(json as CrocoHttpContext["json"]);
+    const expectedProblem = {
+      code: "protocols-rest/request-validation-failed",
+      issues: [
+        {
+          path: "body.value",
+          message: "Request body must contain valid JSON",
+        },
+      ],
+    };
+
+    await expect(resolver.resolveParams(ctx, TestController, "create")).rejects.toMatchObject(
+      expectedProblem,
+    );
+    expect(json).toHaveBeenCalledTimes(1);
+
+    await expect(resolver.resolveParams(ctx, TestController, "create")).rejects.toMatchObject(
+      expectedProblem,
+    );
+    expect(json).toHaveBeenCalledTimes(1);
+  });
+
   it("같은 인자 슬롯에 중복된 parameter metadata가 있으면 fail fast", async () => {
     class TestController {
       create(_value: unknown) {}
