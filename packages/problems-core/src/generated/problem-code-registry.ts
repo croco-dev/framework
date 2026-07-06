@@ -11682,12 +11682,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#transports-http-duplicate-route-definition",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause: "Two REST controller methods compile to the same HTTP method and runtime path.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Use an application build where every route decorator has a unique HTTP method and path combination.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Inspect the duplicate-route diagnostic for the existing and conflicting controller methods and their route decorator source locations, then rename one route path or change one HTTP method.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",
@@ -11701,7 +11701,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 97,
+          line: 115,
           column: 15,
           kind: "problem-factory",
         },
@@ -11800,7 +11800,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 50,
+          line: 67,
           column: 11,
           kind: "problem-factory",
         },
@@ -11833,7 +11833,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 157,
+          line: 175,
           column: 17,
           kind: "problem-factory",
         },

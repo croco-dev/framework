@@ -130,6 +130,7 @@ describe("extractRouteIR", () => {
       { kind: "path", name: "id", schema: null },
       { kind: "query", name: "filter", schema: null },
     ]);
+    expect((routes[0]?.inputSchemas.query as z.AnyZodObject).shape.filter.isOptional()).toBe(true);
   });
 
   it("should set inputSchemas for body, path, and query params", () => {
@@ -158,7 +159,7 @@ describe("extractRouteIR", () => {
     expect(routes[0]?.inputSchema).toBe(updateItemSchema);
   });
 
-  it("should set inputSchemas.headers with default string schema for header params", () => {
+  it("should set inputSchemas.headers with optional fallback schema for schema-less header params", () => {
     @Controller("/users")
     class UsersController {
       @Get("/")
@@ -172,9 +173,9 @@ describe("extractRouteIR", () => {
     expect(routes[0]?.inputSchemas.path).toBeNull();
     expect(routes[0]?.inputSchemas.query).toBeNull();
     expect(routes[0]?.inputSchemas.headers).toBeTruthy();
-    expect((routes[0]?.inputSchemas.headers as z.AnyZodObject).shape["x-tenant-id"]).toBeInstanceOf(
-      z.ZodString,
-    );
+    expect(
+      (routes[0]?.inputSchemas.headers as z.AnyZodObject).shape["x-tenant-id"].isOptional(),
+    ).toBe(true);
     expect(routes[0]?.params).toEqual([{ kind: "header", name: "x-tenant-id", schema: null }]);
   });
 

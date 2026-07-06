@@ -1877,6 +1877,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "transports-http/duplicate-route-definition": recovery({
+    cause: "Two REST controller methods compile to the same HTTP method and runtime path.",
+    userAction:
+      "Use an application build where every route decorator has a unique HTTP method and path combination.",
+    operatorAction:
+      "Inspect the duplicate-route diagnostic for the existing and conflicting controller methods and their route decorator source locations, then rename one route path or change one HTTP method.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metrics-billing/metric-dropped": recovery({
     cause:
       "Billing metrics could not be recorded because the referenced account, subscription, or plan evidence was missing.",

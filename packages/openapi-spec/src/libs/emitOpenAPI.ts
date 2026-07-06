@@ -423,7 +423,7 @@ function withParameterMetadata(param: ParamIR): ZodType {
     param: {
       name: param.name,
       in: location,
-      required: param.kind === "path",
+      required: isRequiredOpenAPIParameter(param.kind, param.schema),
     },
   });
 }
@@ -639,4 +639,14 @@ function compareOpenAPIEntitlementFingerprints(
   right: DeclaredEntitlementOpenAPI,
 ): number {
   return JSON.stringify(left).localeCompare(JSON.stringify(right));
+}
+
+function isRequiredOpenAPIParameter(kind: ParamIR["kind"], schema: ParamIR["schema"]): boolean {
+  if (kind === "path") {
+    return true;
+  }
+
+  const declaredSchema = unwrapZodEffectsSchema(schema);
+
+  return declaredSchema ? !declaredSchema.isOptional() : false;
 }

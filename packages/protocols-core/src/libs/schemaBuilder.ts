@@ -28,8 +28,16 @@ function buildNamedParamSchema(
   const shape: Record<string, z.ZodType> = {};
 
   for (const param of namedParams) {
-    shape[param.name] = param.schema ?? z.string();
+    shape[param.name] = param.schema ?? getFallbackParamSchema(kind);
   }
 
   return z.object(shape);
+}
+
+function getFallbackParamSchema(kind: "path" | "query" | "header"): z.ZodType {
+  if (kind === "path") {
+    return z.string();
+  }
+
+  return z.string().optional();
 }

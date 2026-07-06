@@ -386,7 +386,7 @@ This cookbook documents 416 public Croco Problem codes. The deterministic JSON r
 | [`transports-graphql/server-not-initialized`](#transports-graphql-server-not-initialized)                                             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`transports-http/di-bootstrap-validation`](#transports-http-di-bootstrap-validation)                                                 | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`transports-http/duplicate-health-check`](#transports-http-duplicate-health-check)                                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
-| [`transports-http/duplicate-route-definition`](#transports-http-duplicate-route-definition)                                           | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`transports-http/duplicate-route-definition`](#transports-http-duplicate-route-definition)                                           | InternalServerError   |    500 | not-retryable | operator-only | active    |       1 |
 | [`transports-http/middleware-next-called-multiple-times`](#transports-http-middleware-next-called-multiple-times)                     | InternalServerError   |    500 | not-retryable | operator-only | active    |       1 |
 | [`transports-http/pipe-resolution-failed`](#transports-http-pipe-resolution-failed)                                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`transports-http/provider-resolution-failed`](#transports-http-provider-resolution-failed)                                           | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
@@ -7150,17 +7150,17 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: Two REST controller methods compile to the same HTTP method and runtime path.
+- User action: Use an application build where every route decorator has a unique HTTP method and path combination.
+- Operator action: Inspect the duplicate-route diagnostic for the existing and conflicting controller methods and their route decorator source locations, then rename one route path or change one HTTP method.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/transports-http/src/libs/RouteCompiler.ts:97:15` (problem-factory)
+- `packages/transports-http/src/libs/RouteCompiler.ts:115:15` (problem-factory)
 
 <a id="transports-http-middleware-next-called-multiple-times"></a>
 
@@ -7214,7 +7214,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/RouteCompiler.ts:50:11` (problem-factory)
+- `packages/transports-http/src/libs/RouteCompiler.ts:67:11` (problem-factory)
 
 <a id="transports-http-route-method-not-function"></a>
 
@@ -7232,7 +7232,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/RouteCompiler.ts:157:17` (problem-factory)
+- `packages/transports-http/src/libs/RouteCompiler.ts:175:17` (problem-factory)
 
 <a id="transports-http-runtime-capability-invalid"></a>
 
