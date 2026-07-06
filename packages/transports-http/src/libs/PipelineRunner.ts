@@ -27,6 +27,16 @@ type FilterResponse = {
   body: Record<string, unknown>;
 };
 
+const BODY_SPECIFIC_RESPONSE_HEADERS = new Set([
+  "content-length",
+  "content-encoding",
+  "content-md5",
+  "content-digest",
+  "digest",
+  "repr-digest",
+  "etag",
+]);
+
 function isFilterResponse(value: unknown): value is FilterResponse {
   return (
     typeof value === "object" &&
@@ -125,8 +135,8 @@ export function describeHttpPipelineGraph(config: HttpPipelineGraphConfig): Requ
   ];
 
   return compileRequestPipelineGraph(nodes, {
-    target: config.target,
-    policyPlan: config.policyPlan,
+    ...(config.target !== undefined ? { target: config.target } : {}),
+    ...(config.policyPlan !== undefined ? { policyPlan: config.policyPlan } : {}),
   });
 }
 
@@ -147,7 +157,7 @@ export class PipelineRunner {
       return await this.runInterceptorChain(execContext, handler, config.interceptors);
     } catch (error) {
       this.recordPipelineError(error);
-      return this.runFilters(error, execContext, config.filters);
+      return await this.runFilters(error, execContext, config.filters);
     }
   }
 
@@ -176,6 +186,10 @@ export class PipelineRunner {
 
     for (let i = interceptors.length - 1; i >= 0; i--) {
       const interceptor = interceptors[i];
+      if (interceptor === undefined) {
+        continue;
+      }
+
       const currentNext = next;
       next = {
         handle: () => interceptor.intercept(context, currentNext),
@@ -185,37 +199,80 @@ export class PipelineRunner {
     return next.handle();
   }
 
-  private runFilters(
+  private async runFilters(
     error: unknown,
     context: HttpExecutionContext,
     filters: ExceptionFilter<unknown, HttpExecutionContext>[],
-  ): unknown {
+  ): Promise<unknown> {
     const nextError = error;
 
     for (const filter of filters) {
       try {
-        const result = filter.catch(nextError, context);
-        // If the filter returned a proper Response, use it directly.
-        // Otherwise convert the plain object { status, headers, body } into a Response.
+        const result = await filter.catch(nextError, context);
+        // Redact Problem Details from filter-owned HTTP shapes before returning them.
         if (result instanceof Response) {
-          return result;
+          return await this.createRedactedFilterResponse(nextError, context, result);
         }
         if (isFilterResponse(result)) {
           const httpCtx = context.getHttpContext();
-          const response = httpCtx.jsonResponse(result.body, result.status);
-          // Apply custom headers from the filter (e.g. Content-Type: application/problem+json)
-          for (const [key, value] of Object.entries(result.headers)) {
-            response.headers.set(key, value);
+          const body = this.errorHandler.createFilterResponseBody(nextError, result.body, httpCtx);
+          if (body === result.body && hasProblemJsonContentType(result.headers)) {
+            const fallbackResponse = this.errorHandler.handleError(nextError, httpCtx);
+            copyFilterResponseHeaders(fallbackResponse, Object.entries(result.headers));
+            return fallbackResponse;
           }
+
+          const response = httpCtx.jsonResponse(body, result.status);
+          // Apply custom headers from the filter (e.g. Content-Type: application/problem+json)
+          copyFilterResponseHeaders(response, Object.entries(result.headers));
           return response;
         }
         return result;
-      } catch {
-        // Filter 실패 시 무시하고 다음 필터로 넘어감
+      } catch (filterError) {
+        this.recordPipelineError(filterError);
       }
     }
 
     return this.errorHandler.handleError(nextError, context.getHttpContext());
+  }
+
+  private async createRedactedFilterResponse(
+    error: unknown,
+    context: HttpExecutionContext,
+    response: Response,
+  ): Promise<Response> {
+    const contentType = response.headers.get("Content-Type")?.toLowerCase() ?? "";
+    if (!contentType.includes("application/problem+json")) {
+      return response;
+    }
+
+    const httpCtx = context.getHttpContext();
+    const createFallbackResponse = () => {
+      const fallbackResponse = this.errorHandler.handleError(error, httpCtx);
+      copyFilterResponseHeaders(fallbackResponse, response.headers.entries());
+      return fallbackResponse;
+    };
+
+    let parsedBody: unknown;
+    try {
+      parsedBody = await response.clone().json();
+    } catch {
+      return createFallbackResponse();
+    }
+
+    if (!isRecord(parsedBody)) {
+      return createFallbackResponse();
+    }
+
+    const body = this.errorHandler.createFilterResponseBody(error, parsedBody, httpCtx);
+    if (body === parsedBody) {
+      return createFallbackResponse();
+    }
+
+    const redactedResponse = httpCtx.jsonResponse(body, response.status);
+    copyFilterResponseHeaders(redactedResponse, response.headers.entries());
+
+    return redactedResponse;
   }
 
   private recordPipelineError(error: unknown): void {
@@ -269,7 +326,7 @@ function toNode(
     phase,
     order,
     label,
-    failurePropagation,
+    ...(failurePropagation !== undefined ? { failurePropagation } : {}),
   };
 }
 
@@ -288,4 +345,25 @@ function getProviderName(provider: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasProblemJsonContentType(headers: Record<string, string>): boolean {
+  return (
+    Object.entries(headers)
+      .find(([key]) => key.toLowerCase() === "content-type")?.[1]
+      .toLowerCase()
+      .includes("application/problem+json") ?? false
+  );
+}
+
+function copyFilterResponseHeaders(response: Response, headers: Iterable<[string, string]>): void {
+  for (const [key, value] of headers) {
+    if (!BODY_SPECIFIC_RESPONSE_HEADERS.has(key.toLowerCase())) {
+      response.headers.set(key, value);
+    }
+  }
 }

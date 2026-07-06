@@ -25,6 +25,50 @@ HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개
 
 ## Methods
 
+### createFilterResponseBody()
+
+> **createFilterResponseBody**(`error`, `body`, `ctx`): `Record`\<`string`, `unknown`\>
+
+#### Parameters
+
+##### error
+
+`unknown`
+
+##### body
+
+`Record`\<`string`, `unknown`\>
+
+##### ctx
+
+[`CrocoHttpContext`](/api/transports-http/src/interfaces/crocohttpcontext/)
+
+#### Returns
+
+`Record`\<`string`, `unknown`\>
+
+---
+
+### createProblemResponseBody()
+
+> **createProblemResponseBody**(`problem`, `ctx`): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
+
+#### Parameters
+
+##### problem
+
+[`Problem`](/api/problems-core/src/classes/problem/)
+
+##### ctx
+
+[`CrocoHttpContext`](/api/transports-http/src/interfaces/crocohttpcontext/)
+
+#### Returns
+
+[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
+
+---
+
 ### handleError()
 
 > **handleError**(`error`, `ctx`): `Response`

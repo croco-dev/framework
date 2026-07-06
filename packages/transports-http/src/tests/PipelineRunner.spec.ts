@@ -1,9 +1,10 @@
 import "reflect-metadata";
-import { Container } from "@croco/framework-context";
+import { Container, Context as FrameworkContext } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
-import { Problem, ProblemFactory } from "@croco/problems-core";
+import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import type { ExceptionFilter } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { HTTP_CONTEXT_KEYS } from "../libs/contextKeys";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HttpExecutionContext } from "../libs/HttpExecutionContext";
 import { PipelineRunner, describeHttpPipelineGraph } from "../libs/PipelineRunner";
@@ -52,6 +53,23 @@ function createMockHttpContext(): CrocoHttpContext {
       .fn()
       .mockImplementation((url: string, status: number = 302) => Response.redirect(url, status)),
   };
+}
+
+class OperatorOnlyProblem extends Problem {
+  constructor() {
+    super(
+      "transports-http/di-bootstrap-validation",
+      ProblemCategory.InternalServerError,
+      "DI bootstrap failed for tenant secret-tenant",
+      {
+        extensions: {
+          issues: [{ message: "container token missing" }],
+          reason: "di_failure",
+          rawProviderResponse: { token: "secret-provider-token" },
+        },
+      },
+    );
+  }
 }
 
 describe("PipelineRunner", () => {
@@ -207,6 +225,275 @@ describe("PipelineRunner", () => {
       status: 400,
     });
   });
+
+  it("should redact Problem Details returned from async exception filters", async () => {
+    const runner = createRunner();
+    const httpContext = createMockHttpContext();
+    httpContext.get = vi.fn((key: string) =>
+      key === HTTP_CONTEXT_KEYS.traceId ? "filter-trace" : undefined,
+    ) as CrocoHttpContext["get"];
+    const execContext = new HttpExecutionContext(httpContext, class TestController {}, "handler");
+    const filter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockImplementation(async (error: unknown) => {
+        if (error instanceof Problem) {
+          return {
+            status: error.status,
+            headers: { "Content-Type": "application/problem+json" },
+            body: error.toJSON(),
+          };
+        }
+
+        throw error;
+      }),
+    };
+
+    const result = await FrameworkContext.run({ requestId: "filter-request" }, () =>
+      runner.run(
+        execContext,
+        async () => {
+          throw new OperatorOnlyProblem();
+        },
+        {
+          guards: [],
+          interceptors: [],
+          filters: [filter],
+        },
+      ),
+    );
+
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(500);
+
+    const body = await (result as Response).json();
+    expect(body).toEqual(
+      expect.objectContaining({
+        status: 500,
+        code: "transports-http/di-bootstrap-validation",
+        detail: "An internal error occurred",
+        instance: "http://localhost/test",
+        traceId: "filter-trace",
+        requestId: "filter-request",
+      }),
+    );
+    expect(body).not.toHaveProperty("issues");
+    expect(body).not.toHaveProperty("reason");
+    expect(body).not.toHaveProperty("rawProviderResponse");
+    expect(JSON.stringify(body)).not.toContain("secret-tenant");
+    expect(JSON.stringify(body)).not.toContain("secret-provider-token");
+  });
+
+  it("should fail closed for unrecognized application/problem+json FilterResponse bodies", async () => {
+    const runner = createRunner();
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const filter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockImplementation(async (error: unknown) => {
+        if (error instanceof Problem) {
+          return {
+            status: 500,
+            headers: {
+              "Cache-Control": "no-store",
+              "Content-Digest": "sha-256=:stale-digest:",
+              "Content-Encoding": "gzip",
+              "Content-Length": "999",
+              "Content-MD5": "stale-md5",
+              "Content-Type": "Application/Problem+Json",
+              Digest: "sha-256=:stale-digest:",
+              ETag: '"stale-etag"',
+              "Repr-Digest": "sha-256=:stale-repr-digest:",
+            },
+            body: {
+              leak: "secret-provider-token",
+              rawProviderResponse: { tenant: "secret-tenant" },
+              status: 500,
+            },
+          };
+        }
+
+        throw error;
+      }),
+    };
+
+    const result = await runner.run(
+      execContext,
+      async () => {
+        throw new OperatorOnlyProblem();
+      },
+      {
+        guards: [],
+        interceptors: [],
+        filters: [filter],
+      },
+    );
+
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(500);
+    expect((result as Response).headers.get("Cache-Control")).toBe("no-store");
+    expect((result as Response).headers.get("Content-Digest")).toBeNull();
+    expect((result as Response).headers.get("Content-Encoding")).toBeNull();
+    expect((result as Response).headers.get("Content-Length")).toBeNull();
+    expect((result as Response).headers.get("Content-MD5")).toBeNull();
+    expect((result as Response).headers.get("Digest")).toBeNull();
+    expect((result as Response).headers.get("ETag")).toBeNull();
+    expect((result as Response).headers.get("Repr-Digest")).toBeNull();
+
+    const body = await (result as Response).json();
+    expect(body).toEqual(
+      expect.objectContaining({
+        status: 500,
+        code: "transports-http/di-bootstrap-validation",
+        detail: "An internal error occurred",
+        instance: "http://localhost/test",
+      }),
+    );
+    expect(JSON.stringify(body)).not.toContain("secret-provider-token");
+    expect(JSON.stringify(body)).not.toContain("secret-tenant");
+    expect(JSON.stringify(body)).not.toContain("rawProviderResponse");
+  });
+
+  it("should redact application/problem+json Response returned from async exception filters", async () => {
+    const runner = createRunner();
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const filter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockImplementation(async (error: unknown) => {
+        if (error instanceof Problem) {
+          return new Response(JSON.stringify(error.toJSON()), {
+            status: error.status,
+            headers: {
+              "Cache-Control": "no-store",
+              "Content-Digest": "sha-256=:stale-digest:",
+              "Content-Encoding": "gzip",
+              "Content-Length": "999",
+              "Content-MD5": "stale-md5",
+              "Content-Type": "Application/Problem+Json",
+              Digest: "sha-256=:stale-digest:",
+              ETag: '"stale-etag"',
+              "Repr-Digest": "sha-256=:stale-repr-digest:",
+            },
+          });
+        }
+
+        throw error;
+      }),
+    };
+
+    const result = await runner.run(
+      execContext,
+      async () => {
+        throw new OperatorOnlyProblem();
+      },
+      {
+        guards: [],
+        interceptors: [],
+        filters: [filter],
+      },
+    );
+
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(500);
+    expect((result as Response).headers.get("Cache-Control")).toBe("no-store");
+    expect((result as Response).headers.get("Content-Digest")).toBeNull();
+    expect((result as Response).headers.get("Content-Encoding")).toBeNull();
+    expect((result as Response).headers.get("Content-Length")).toBeNull();
+    expect((result as Response).headers.get("Content-MD5")).toBeNull();
+    expect((result as Response).headers.get("Digest")).toBeNull();
+    expect((result as Response).headers.get("ETag")).toBeNull();
+    expect((result as Response).headers.get("Repr-Digest")).toBeNull();
+
+    const body = await (result as Response).json();
+    expect(body).toEqual(
+      expect.objectContaining({
+        status: 500,
+        code: "transports-http/di-bootstrap-validation",
+        detail: "An internal error occurred",
+        instance: "http://localhost/test",
+      }),
+    );
+    expect(body).not.toHaveProperty("issues");
+    expect(body).not.toHaveProperty("reason");
+    expect(body).not.toHaveProperty("rawProviderResponse");
+    expect(JSON.stringify(body)).not.toContain("secret-tenant");
+    expect(JSON.stringify(body)).not.toContain("secret-provider-token");
+  });
+
+  it.each([
+    { name: "malformed JSON", responseBody: "{not-json secret-provider-token" },
+    { name: "non-object JSON", responseBody: JSON.stringify(["secret-provider-token"]) },
+    {
+      name: "unrecognized object",
+      responseBody: JSON.stringify({ leak: "secret-provider-token", status: 500 }),
+    },
+  ])(
+    "should fail closed for $name application/problem+json Response bodies returned from filters",
+    async ({ responseBody }) => {
+      const runner = createRunner();
+      const execContext = new HttpExecutionContext(
+        createMockHttpContext(),
+        class TestController {},
+        "handler",
+      );
+      const filter: ExceptionFilter<unknown, HttpExecutionContext> = {
+        catch: vi.fn().mockResolvedValue(
+          new Response(responseBody, {
+            status: 500,
+            headers: {
+              "Cache-Control": "no-store",
+              "Content-Digest": "sha-256=:stale-digest:",
+              "Content-Encoding": "gzip",
+              "Content-Length": "999",
+              "Content-MD5": "stale-md5",
+              "Content-Type": "application/problem+json",
+              Digest: "sha-256=:stale-digest:",
+              ETag: '"stale-etag"',
+              "Repr-Digest": "sha-256=:stale-repr-digest:",
+            },
+          }),
+        ),
+      };
+
+      const result = await runner.run(
+        execContext,
+        async () => {
+          throw new OperatorOnlyProblem();
+        },
+        {
+          guards: [],
+          interceptors: [],
+          filters: [filter],
+        },
+      );
+
+      expect(result).toBeInstanceOf(Response);
+      expect((result as Response).status).toBe(500);
+      expect((result as Response).headers.get("Cache-Control")).toBe("no-store");
+      expect((result as Response).headers.get("Content-Digest")).toBeNull();
+      expect((result as Response).headers.get("Content-Encoding")).toBeNull();
+      expect((result as Response).headers.get("Content-Length")).toBeNull();
+      expect((result as Response).headers.get("Content-MD5")).toBeNull();
+      expect((result as Response).headers.get("Digest")).toBeNull();
+      expect((result as Response).headers.get("ETag")).toBeNull();
+      expect((result as Response).headers.get("Repr-Digest")).toBeNull();
+
+      const body = await (result as Response).json();
+      expect(body).toEqual(
+        expect.objectContaining({
+          status: 500,
+          code: "transports-http/di-bootstrap-validation",
+          detail: "An internal error occurred",
+          instance: "http://localhost/test",
+        }),
+      );
+      expect(JSON.stringify(body)).not.toContain("secret-provider-token");
+      expect(JSON.stringify(body)).not.toContain("rawProviderResponse");
+    },
+  );
 
   it("should describe deterministic middleware, guard, interceptor, handler, and filter order", () => {
     function firstMiddleware() {}
