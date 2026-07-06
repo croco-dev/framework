@@ -57,6 +57,38 @@ Custom adapter platforms can still use a custom `platform` string, but they must
 capability support config when creating a runtime context so unsupported hooks are rejected instead of
 falling back silently.
 
+## Declaring Requirements
+
+Package authors should declare runtime needs as `RuntimeCapabilityRequirement` values and validate
+them against the generated runtime manifest instead of branching on platform names in application
+code.
+
+```typescript typecheck
+import {
+  checkRuntimeCapabilityRequirements,
+  createRuntimeCapabilityManifest,
+  type RuntimeCapabilityRequirement,
+} from "@croco/framework-context";
+
+const requirements = [
+  { capability: "waitUntil", source: { file: "src/jobs/register.ts" } },
+  { capability: "nodeApi", source: { file: "src/reports/export.ts" } },
+] satisfies RuntimeCapabilityRequirement[];
+
+const manifest = createRuntimeCapabilityManifest("cloudflare-workers");
+const diagnostics = checkRuntimeCapabilityRequirements(manifest, requirements);
+
+if (diagnostics.length > 0) {
+  throw new Error(diagnostics.map((diagnostic) => diagnostic.code).join(", "));
+}
+```
+
+Use `source.file`, `source.line`, and `source.column` when a requirement comes from generated
+metadata or package manifests. Unsupported requirements fail with stable
+`CROCO_RUNTIME_CAPABILITY_001` diagnostics, so package checks, generated app smoke, and release
+evidence can point authors back to the exact declaration that must move to another runtime or remove
+the unsupported capability.
+
 ## Native Context
 
 Use `runtime.native` only at adapter boundaries:

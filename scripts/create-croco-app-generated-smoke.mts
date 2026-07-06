@@ -107,6 +107,8 @@ type TemplateMatrixExclusion = {
   readonly reason: string;
 };
 
+type RuntimeCapabilitySmokePlatform = "node" | "lambda" | "cloudflare-workers";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = resolve(__dirname, "..");
@@ -181,6 +183,55 @@ const generatedSmokeExternalCrocoRangeExceptions = {} satisfies Record<
   string,
   ExternalCrocoRangeException
 >;
+const runtimeCapabilitySmokePlatforms = [
+  "node",
+  "lambda",
+  "cloudflare-workers",
+] as const satisfies readonly RuntimeCapabilitySmokePlatform[];
+const runtimeCapabilitySmokeSupport = {
+  node: {
+    env: true,
+    filesystem: true,
+    logger: true,
+    nodeApi: true,
+    requestLifecycle: true,
+    trace: true,
+    waitUntil: false,
+    flush: false,
+    streamingResponse: true,
+    deadline: false,
+    abortSignal: true,
+    shutdown: false,
+  },
+  lambda: {
+    env: true,
+    filesystem: true,
+    logger: true,
+    nodeApi: true,
+    requestLifecycle: true,
+    trace: true,
+    waitUntil: true,
+    flush: true,
+    streamingResponse: false,
+    deadline: true,
+    abortSignal: false,
+    shutdown: false,
+  },
+  "cloudflare-workers": {
+    env: true,
+    filesystem: false,
+    logger: true,
+    nodeApi: false,
+    requestLifecycle: true,
+    trace: true,
+    waitUntil: true,
+    flush: false,
+    streamingResponse: true,
+    deadline: false,
+    abortSignal: true,
+    shutdown: false,
+  },
+} as const satisfies Record<RuntimeCapabilitySmokePlatform, Record<string, boolean>>;
 const smokeCases: readonly SmokeCase[] = [
   {
     name: "blank-basic",
@@ -214,31 +265,7 @@ const smokeCases: readonly SmokeCase[] = [
           },
         },
       },
-      {
-        label: "runtime capability manifest",
-        json: {
-          path: "croco-runtime-capability.manifest.json",
-          matches: {
-            version: "croco.runtime-capability.manifest.v1",
-            platform: "node",
-            capabilities: {
-              env: true,
-              filesystem: true,
-              logger: true,
-              nodeApi: true,
-              requestLifecycle: true,
-              trace: true,
-              waitUntil: false,
-              flush: false,
-              streamingResponse: true,
-              deadline: false,
-              abortSignal: true,
-              shutdown: false,
-            },
-            diagnostics: [],
-          },
-        },
-      },
+      runtimeCapabilityManifestValidation("node"),
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "test", args: ["test"] },
@@ -689,6 +716,7 @@ const smokeCases: readonly SmokeCase[] = [
           "apps/api-server/src/generatedTenantModel.ts",
         ],
       },
+      runtimeCapabilityManifestValidation("cloudflare-workers"),
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "test", args: ["test"] },
@@ -727,31 +755,7 @@ const smokeCases: readonly SmokeCase[] = [
           "apps/api-server/src/generatedTenantModel.ts",
         ],
       },
-      {
-        label: "runtime capability manifest",
-        json: {
-          path: "croco-runtime-capability.manifest.json",
-          matches: {
-            version: "croco.runtime-capability.manifest.v1",
-            platform: "lambda",
-            capabilities: {
-              env: true,
-              filesystem: true,
-              logger: true,
-              nodeApi: true,
-              requestLifecycle: true,
-              trace: true,
-              waitUntil: true,
-              flush: true,
-              streamingResponse: false,
-              deadline: true,
-              abortSignal: false,
-              shutdown: false,
-            },
-            diagnostics: [],
-          },
-        },
-      },
+      runtimeCapabilityManifestValidation("lambda"),
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "test", args: ["test"] },
@@ -1025,6 +1029,7 @@ function renderGeneratedSmokeReport(report: GeneratedSmokeReport): string {
     `- DB: ${formatList(report.matrix.coverage.databases)}`,
     `- SaaS profile: ${formatList(report.matrix.coverage.saasProviderProfiles)}`,
     `- Tenant model: ${formatList(report.matrix.coverage.tenantModels)}`,
+    `- Runtime capability manifests: ${formatList(report.matrix.coverage.runtimeCapabilityManifests)}`,
     "",
     "## Template accountability",
     "",
@@ -1286,6 +1291,23 @@ function readSmokeCasePreset(smokeCase: SmokeCase): string {
   return goal ? `goal:${goal}` : "unknown";
 }
 
+function runtimeCapabilityManifestValidation(
+  platform: RuntimeCapabilitySmokePlatform,
+): SmokeValidation {
+  return {
+    label: "runtime capability manifest",
+    json: {
+      path: "croco-runtime-capability.manifest.json",
+      matches: {
+        version: "croco.runtime-capability.manifest.v1",
+        platform,
+        capabilities: runtimeCapabilitySmokeSupport[platform],
+        diagnostics: [],
+      },
+    },
+  };
+}
+
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -1485,6 +1507,11 @@ function assertSmokeCoverage(cases: readonly SmokeCase[]): void {
     SUPPORTED_CREATE_CROCO_APP_CHOICES.tenantModels,
     coverage.tenantModels,
   );
+  assertCovers(
+    "runtime capability manifest",
+    runtimeCapabilitySmokePlatforms,
+    coverage.runtimeCapabilityManifests,
+  );
 }
 
 function printSmokeCoverageSummary(cases: readonly SmokeCase[]): void {
@@ -1497,6 +1524,9 @@ function printSmokeCoverageSummary(cases: readonly SmokeCase[]): void {
   );
   console.log(
     `create-croco-app-generated-smoke: matrix covers presets=${coverage.presets.join(", ")}; apis=${coverage.apis.join(", ")}; api-hosting=${coverage.apiHosting.join(", ")}; backend-deploy=${coverage.backendDeploys.join(", ")}; frontend-deploy=${coverage.frontendDeploys.join(", ")}; db=${coverage.databases.join(", ")}; saas-profile=${coverage.saasProviderProfiles.join(", ")}; tenant-model=${coverage.tenantModels.join(", ")}`,
+  );
+  console.log(
+    `create-croco-app-generated-smoke: runtime capability manifests ${coverage.runtimeCapabilityManifests.join(", ")}`,
   );
   console.log(
     `create-croco-app-generated-smoke: template targets ${templateTargets.map(({ template }) => template).join(", ")}`,
@@ -1515,6 +1545,7 @@ function readSmokeCoverage(cases: readonly SmokeCase[]): {
   readonly databases: readonly string[];
   readonly saasProviderProfiles: readonly string[];
   readonly tenantModels: readonly string[];
+  readonly runtimeCapabilityManifests: readonly RuntimeCapabilitySmokePlatform[];
 } {
   return {
     presets: readCoveredValues(cases, "--preset", SUPPORTED_CREATE_CROCO_APP_CHOICES.presets),
@@ -1543,6 +1574,7 @@ function readSmokeCoverage(cases: readonly SmokeCase[]): {
       SUPPORTED_CREATE_CROCO_APP_CHOICES.saasProviderProfiles,
     ),
     tenantModels: readCoveredTenantModels(cases),
+    runtimeCapabilityManifests: readRuntimeCapabilityManifestCoverage(cases),
   };
 }
 
@@ -1564,6 +1596,27 @@ function readCoveredTenantModels(cases: readonly SmokeCase[]): readonly string[]
   return SUPPORTED_CREATE_CROCO_APP_CHOICES.tenantModels.filter((tenantModel) =>
     coveredTenantModels.has(tenantModel),
   );
+}
+
+function readRuntimeCapabilityManifestCoverage(
+  cases: readonly SmokeCase[],
+): readonly RuntimeCapabilitySmokePlatform[] {
+  const coveredPlatforms = new Set<RuntimeCapabilitySmokePlatform>();
+
+  for (const smokeCase of cases) {
+    for (const validation of smokeCase.validations) {
+      const platform = validation.json?.matches.platform;
+      if (isRuntimeCapabilitySmokePlatform(platform)) {
+        coveredPlatforms.add(platform);
+      }
+    }
+  }
+
+  return runtimeCapabilitySmokePlatforms.filter((platform) => coveredPlatforms.has(platform));
+}
+
+function isRuntimeCapabilitySmokePlatform(value: unknown): value is RuntimeCapabilitySmokePlatform {
+  return runtimeCapabilitySmokePlatforms.includes(value as RuntimeCapabilitySmokePlatform);
 }
 
 function readFlagValue(args: readonly string[], flag: string): string | undefined {

@@ -461,7 +461,7 @@ export class CrocoApp {
       );
     }
 
-    return this.hono.fetch(request);
+    return this.hono.fetch(request, options.env, options.executionContext);
   }
 
   private registerNodeStaticRoutes(options?: ListenOptions): void {
