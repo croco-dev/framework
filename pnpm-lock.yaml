@@ -2732,9 +2732,36 @@ importers:
       '@asteasolutions/zod-to-openapi':
         specifier: ^7.3.4
         version: 7.3.4(zod@3.25.76)
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
+      '@croco/framework-config':
+        specifier: workspace:*
+        version: link:../framework-config
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
+      '@croco/framework-logger':
+        specifier: workspace:*
+        version: link:../framework-logger
+      '@croco/health-core':
+        specifier: workspace:*
+        version: link:../health-core
       '@croco/openapi-spec':
         specifier: workspace:*
         version: link:../openapi-spec
+      '@croco/protocols-rest':
+        specifier: workspace:*
+        version: link:../protocols-rest
+      '@croco/ratelimit-core':
+        specifier: workspace:*
+        version: link:../ratelimit-core
+      '@croco/transports-http':
+        specifier: workspace:*
+        version: link:../transports-http
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
