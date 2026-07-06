@@ -220,6 +220,48 @@ describe("emitOpenAPI", () => {
     expect(spec.paths?.["/assets/{...id}"]).toBeUndefined();
   });
 
+  it("should derive query and header requiredness from schema optionality", () => {
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/")
+      searchReports(
+        @Query("q", z.string().min(1)) _query: string,
+        @Query("view", z.enum(["summary", "detail"]).optional()) _view: string | undefined,
+        @Header("x-tenant-id", z.string().min(1)) _tenantId: string,
+        @Header("x-request-id", z.string().optional()) _requestId: string | undefined,
+      ): void {}
+    }
+
+    const graph = buildContractGraph([ReportsController]);
+    const spec = emitOpenAPIFromContractGraph(graph);
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(spec.paths?.["/reports"]?.get?.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          in: "query",
+          name: "q",
+          required: true,
+        }),
+        expect.objectContaining({
+          in: "query",
+          name: "view",
+          required: false,
+        }),
+        expect.objectContaining({
+          in: "header",
+          name: "x-tenant-id",
+          required: true,
+        }),
+        expect.objectContaining({
+          in: "header",
+          name: "x-request-id",
+          required: false,
+        }),
+      ]),
+    );
+  });
+
   it("should not rewrite path parameters with matching prefixes", () => {
     @Controller("/pairs")
     class PairsController {
