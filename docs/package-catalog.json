@@ -917,7 +917,8 @@
         "evidence": {
           "conformance": {
             "status": "present",
-            "command": "pnpm --filter @croco/billing-polar test"
+            "command": "pnpm --filter @croco/billing-polar test",
+            "description": "Polar SDK-backed webhook conformance covers replayed signed delivery, duplicate event idempotency, stale timestamp/clock-skew rejection mapping, and stable invalid-signature Problem code/status."
           },
           "noCredentialSmoke": {
             "status": "present",
@@ -935,7 +936,7 @@
           "redactionTests": {
             "status": "present",
             "command": "pnpm --filter @croco/billing-polar test",
-            "description": "Diagnostics and Problem tests cover Polar token and webhook secret redaction."
+            "description": "Diagnostics and webhook validation Problem tests cover Polar token, webhook secret, and signature-like value redaction before caller/report surfacing."
           }
         },
         "knownGaps": ["Recorded real Polar liveSmoke evidence is required before certified state."]
