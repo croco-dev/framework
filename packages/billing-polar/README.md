@@ -93,7 +93,9 @@ const result = await handler.handle(requestBody, requestHeaders);
 
 웹훅 검증에는 Polar가 보낸 raw body와 signature header가 필요합니다. JSON으로 재직렬화한 body를
 사용하면 서명 검증이 실패할 수 있습니다. 잘못된 서명 또는 구조적으로 잘못된 webhook payload는
-`WebhookValidationProblem`으로 실패합니다.
+`WebhookValidationProblem`으로 실패합니다. Polar SDK가 replay-style signature, 오래된 timestamp,
+또는 clock-skew를 거부하면 Croco는 안정적인 `WEBHOOK_VALIDATION_FAILED` Problem code와 HTTP
+400 status로 정규화하고, webhook secret/signature 값은 응답 detail에 노출하지 않습니다.
 
 ## 웹훅 이벤트 타입
 
@@ -121,8 +123,11 @@ const result = await handler.handle(requestBody, requestHeaders);
 Polar 웹훅은 `eventId`를 멱등성 키로 사용합니다:
 
 - 같은 `eventId`는 한 번만 처리됩니다
+- 동일한 `webhook-id`, timestamp, signature로 재전송된 delivery는 성공 응답을 유지하면서 도메인
+  side effect를 반복하지 않습니다
 - 진행 중인 이벤트는 메모리에서 추적하여 중복 실행 방지
-- 처리 실패 시 `unmarkWebhookProcessed`로 롤백 지원
+- 저장소의 중복 reservation 충돌은 이미 처리된 delivery로 간주합니다
+- 처리 실패 시 `failWebhook`으로 롤백 지원
 
 ## 스키마
 
@@ -182,8 +187,8 @@ const health = await provider.getHealth();
 ```
 
 기본 diagnostics는 Polar에 네트워크 요청을 보내지 않습니다. live readiness가 필요하면
-`readinessCheck`를 주입합니다. 반환되는 details는 token, secret, password, api key 같은 민감한
-키를 자동으로 redaction합니다.
+`readinessCheck`를 주입합니다. 반환되는 details는 token, secret, signature, password, api key 같은
+민감한 키를 자동으로 redaction합니다.
 
 ## 에러 처리
 
@@ -229,6 +234,12 @@ pnpm --filter @croco/testing test
 `@croco/testing`의 `createBillingProviderConformanceSuite()`를 사용해 checkout, customer portal,
 subscription lifecycle, webhook 처리, webhook idempotency, invalid signature/payload rejection을
 mocked Polar backend로 검증합니다.
+
+`PolarWebhookHandler` 테스트는 credential 없이 real `@polar-sh/sdk` signature verifier를 통과하는
+replayed signed delivery, duplicate event idempotency, stale timestamp/clock-skew rejection mapping,
+invalid signature Problem code/status, 그리고 caller-facing Problem detail redaction을 검증합니다.
+`PolarBillingDiagnosticsProvider` 테스트는 provider report에 signature-like diagnostics가 노출되지
+않는지 확인합니다.
 
 ### Optional live smoke
 

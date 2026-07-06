@@ -1,7 +1,7 @@
 import type { BillingStore, Subscription } from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { Trace } from "@croco/telemetry-api";
-import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks";
+import { validateEvent } from "@polar-sh/sdk/webhooks";
 import { ZodError } from "zod";
 import type { PolarConfig, WebhookHandlerResult } from "../types";
 import { PolarEventMapper } from "./PolarEventMapper";
@@ -87,10 +87,11 @@ export class PolarWebhookHandler {
     try {
       event = validateEvent(body, headers, this.webhookSecret);
     } catch (error) {
-      if (error instanceof WebhookVerificationError) {
-        throw new WebhookValidationProblem(error.message);
-      }
-      throw new WebhookValidationProblem(error instanceof Error ? error.message : "Unknown error");
+      const reason = sanitizeWebhookValidationReason(
+        error instanceof Error ? error.message : "Unknown error",
+        [this.webhookSecret],
+      );
+      throw new WebhookValidationProblem(reason);
     }
 
     let parsedEvent: PolarEvent;
@@ -419,4 +420,26 @@ function formatZodError(error: ZodError): string {
       return `${path}: ${issue.message}`;
     })
     .join("; ");
+}
+
+const SENSITIVE_WEBHOOK_KEY_VALUE_PATTERN =
+  /(["']?\b(?:webhook[-_]?secret|webhook[-_]?signature|webhookSecret|webhookSignature|signature)\b["']?\s*[:=]\s*)(["']?)([^"';\s{}]+)(["']?)/gi;
+
+function sanitizeWebhookValidationReason(
+  reason: string,
+  sensitiveValues: readonly string[],
+): string {
+  let sanitized = reason;
+
+  for (const value of sensitiveValues) {
+    if (value.length > 0) {
+      sanitized = sanitized.split(value).join("[redacted]");
+    }
+  }
+
+  return sanitized.replace(
+    SENSITIVE_WEBHOOK_KEY_VALUE_PATTERN,
+    (_match, prefix: string, openQuote: string, _value: string, closeQuote: string) =>
+      `${prefix}${openQuote}[redacted]${closeQuote}`,
+  );
 }

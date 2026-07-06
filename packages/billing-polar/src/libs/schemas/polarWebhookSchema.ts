@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const PolarEventSchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
   type: z.string(),
   data: z.record(z.string(), z.unknown()),
 });

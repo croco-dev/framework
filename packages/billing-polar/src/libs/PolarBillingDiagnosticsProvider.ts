@@ -109,7 +109,7 @@ export class PolarBillingDiagnosticsProvider implements DiagnosticsProvider {
 }
 
 const SENSITIVE_DIAGNOSTIC_KEY =
-  /(authorization|password|secret|token|api[-_]?key|access[-_]?token)/i;
+  /(authorization|password|secret|signature|token|api[-_]?key|access[-_]?token)/i;
 
 function sanitizeDiagnosticValue(value: unknown): unknown {
   if (Array.isArray(value)) {

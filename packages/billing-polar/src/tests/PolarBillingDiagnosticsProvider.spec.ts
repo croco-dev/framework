@@ -62,8 +62,10 @@ describe("PolarBillingDiagnosticsProvider", () => {
         readinessCheck: async () => ({
           details: {
             accessToken: "leaked-token",
+            webhookSignature: "leaked-signature",
             nested: {
               webhookSecret: "leaked-secret",
+              signature: "nested-leaked-signature",
               safe: "visible",
             },
           },
@@ -76,11 +78,15 @@ describe("PolarBillingDiagnosticsProvider", () => {
     expect(healthy.status).toBe("healthy");
     expect(JSON.stringify(healthy)).not.toContain("leaked-token");
     expect(JSON.stringify(healthy)).not.toContain("leaked-secret");
+    expect(JSON.stringify(healthy)).not.toContain("leaked-signature");
+    expect(JSON.stringify(healthy)).not.toContain("nested-leaked-signature");
     expect(healthy.details).toMatchObject({
       readiness: {
         accessToken: "[redacted]",
+        webhookSignature: "[redacted]",
         nested: {
           webhookSecret: "[redacted]",
+          signature: "[redacted]",
           safe: "visible",
         },
       },

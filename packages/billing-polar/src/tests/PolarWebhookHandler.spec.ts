@@ -48,6 +48,75 @@ vi.mock("@polar-sh/sdk/webhooks", () => ({
   },
 }));
 
+const signedSubscriptionEvent = {
+  id: "evt-signed-replay",
+  type: "subscription.created",
+  data: {
+    id: "sub-signed-replay",
+    customer: { externalId: "tenant-signed-replay", metadata: {} },
+    product: { id: "plan-pro" },
+    status: "active",
+    currentPeriodEnd: "2026-02-01T00:00:00Z",
+    cancelAtPeriodEnd: false,
+  },
+};
+
+function expectWebhookValidationProblem(
+  problem: unknown,
+  detail?: string | RegExp,
+): asserts problem is WebhookValidationProblem {
+  expect(problem).toBeInstanceOf(WebhookValidationProblem);
+  expect(problem).toMatchObject({
+    code: "WEBHOOK_VALIDATION_FAILED",
+    status: 400,
+  });
+
+  if (detail) {
+    expect(problem).toMatchObject({
+      detail: typeof detail === "string" ? detail : expect.stringMatching(detail),
+    });
+  }
+}
+
+async function captureWebhookValidationProblem(run: () => Promise<unknown>) {
+  try {
+    await run();
+  } catch (error) {
+    expectWebhookValidationProblem(error);
+    return error;
+  }
+
+  throw new Error("Expected webhook validation to fail");
+}
+
+const webhookValidationFailureCases: readonly {
+  readonly name: string;
+  readonly message: string;
+  readonly headers: Record<string, string>;
+  readonly detail: string | RegExp;
+}[] = [
+  {
+    name: "invalid signature",
+    message: "Invalid signature",
+    headers: {
+      "webhook-id": "evt-invalid-signature",
+      "webhook-signature": "invalid-signature",
+    },
+    detail: "Webhook validation failed: Invalid signature",
+  },
+  {
+    name: "stale timestamp outside clock skew tolerance",
+    message: "Webhook timestamp outside tolerance: signature=stale-signature",
+    headers: {
+      "webhook-id": "evt-stale-timestamp",
+      "webhook-timestamp": "2026-01-01T00:00:00Z",
+      "webhook-signature": "stale-signature",
+    },
+    detail:
+      /Webhook validation failed: Webhook timestamp outside tolerance: signature=\[redacted\]/,
+  },
+];
+
 describe("PolarWebhookHandler", () => {
   let handler!: PolarWebhookHandler;
   let mockStore!: BillingStore;
@@ -193,6 +262,44 @@ describe("PolarWebhookHandler", () => {
   });
 
   describe("이미 처리된 이벤트는 스킵 (멱등성)", () => {
+    it("should treat replayed signed deliveries as idempotent successes", async () => {
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.reserveWebhook)
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error("duplicate webhook event"));
+      vi.mocked(mockValidateEvent).mockImplementation(
+        (body: Buffer | string, headers: Record<string, string>) => {
+          expect(headers).toMatchObject({
+            "webhook-id": signedSubscriptionEvent.id,
+            "webhook-timestamp": "2026-01-31T00:00:00Z",
+            "webhook-signature": "v1,replayed-signature",
+          });
+
+          return JSON.parse(Buffer.isBuffer(body) ? body.toString("utf8") : body) as never;
+        },
+      );
+
+      const body = JSON.stringify(signedSubscriptionEvent);
+      const headers = {
+        "webhook-id": signedSubscriptionEvent.id,
+        "webhook-timestamp": "2026-01-31T00:00:00Z",
+        "webhook-signature": "v1,replayed-signature",
+      };
+
+      const firstResult = await handler.handle(body, headers);
+      const replayResult = await handler.handle(body, headers);
+
+      expect(firstResult).toEqual({ success: true, eventId: signedSubscriptionEvent.id });
+      expect(replayResult).toEqual({ success: true, eventId: signedSubscriptionEvent.id });
+      expect(mockValidateEvent).toHaveBeenCalledTimes(2);
+      expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(2);
+      expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
+      expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
+      expect(mockStore.failWebhook).not.toHaveBeenCalled();
+    });
+
     it("should process webhook only once for concurrent requests", async () => {
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
       vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
@@ -464,26 +571,48 @@ describe("PolarWebhookHandler", () => {
   });
 
   describe("webhook 검증 실패", () => {
-    it("잘못된 서명으로 인해 검증 실패", async () => {
-      const body = JSON.stringify({ id: "evt-789", type: "subscription.created" });
-      const headers = { "webhook-id": "evt-789", "webhook-signature": "invalid-signature" };
+    it.each(webhookValidationFailureCases)(
+      "should surface stable Problem code and status for $name",
+      async ({ message, headers, detail }) => {
+        const body = JSON.stringify({ id: headers["webhook-id"], type: "subscription.created" });
 
-      const WebhookVerificationError = class extends Error {
-        constructor(message: string) {
-          super(message);
-          this.name = "WebhookVerificationError";
-        }
+        vi.mocked(mockValidateEvent).mockImplementation(() => {
+          throw new Error(message);
+        });
+
+        const problem = await captureWebhookValidationProblem(() => handler.handle(body, headers));
+
+        expectWebhookValidationProblem(problem, detail);
+        expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
+        expect(mockStore.saveSubscription).not.toHaveBeenCalled();
+        expect(mockStore.completeWebhook).not.toHaveBeenCalled();
+        expect(mockStore.failWebhook).not.toHaveBeenCalled();
+        expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should redact webhook secrets and signature diagnostics from validation Problems", async () => {
+      const rawSignature = "v1,leaked-signature";
+      const body = JSON.stringify({ id: "evt-redacted", type: "subscription.created" });
+      const headers = {
+        "webhook-id": "evt-redacted",
+        "webhook-signature": rawSignature,
       };
 
       vi.mocked(mockValidateEvent).mockImplementation(() => {
-        throw new WebhookVerificationError("Invalid signature");
+        throw new Error(
+          "Invalid signature: webhookSecret=test-secret webhook-signature=v1,leaked-signature signature=leaked-signature",
+        );
       });
 
-      await expect(handler.handle(body, headers)).rejects.toBeInstanceOf(WebhookValidationProblem);
-      await expect(handler.handle(body, headers)).rejects.toMatchObject({
-        code: "WEBHOOK_VALIDATION_FAILED",
-        detail: "Webhook validation failed: Invalid signature",
-      });
+      const problem = await captureWebhookValidationProblem(() => handler.handle(body, headers));
+      const serializedProblem = JSON.stringify(problem);
+
+      expect(problem.detail).toContain("[redacted]");
+      expect(serializedProblem).not.toContain("test-secret");
+      expect(serializedProblem).not.toContain("leaked-signature");
+      expect(serializedProblem).not.toContain(rawSignature);
+      expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
       expect(mockStore.saveSubscription).not.toHaveBeenCalled();
       expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
     });
