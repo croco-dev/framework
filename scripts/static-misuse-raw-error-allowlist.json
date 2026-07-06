@@ -269,7 +269,7 @@
     {
       "package": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 486,
+      "line": 491,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling"
@@ -293,7 +293,7 @@
     {
       "package": "create-croco-app",
       "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
-      "line": 474,
+      "line": 531,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling"
@@ -301,7 +301,7 @@
     {
       "package": "create-croco-app",
       "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
-      "line": 487,
+      "line": 544,
       "excerpt": "throw new Error(`CROCO_SAAS_PROFILE_PACKAGE_RANGE_MISSING: ${packageName}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling"
@@ -309,7 +309,7 @@
     {
       "package": "create-croco-app",
       "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
-      "line": 506,
+      "line": 563,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling"

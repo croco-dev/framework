@@ -208,6 +208,7 @@ function writeSaasProviderProfileArtifacts(targetDir: string, options: Generator
   const tenantModelManifest = createTenantModelManifest(tenantModel);
   const tenantModelSchema = createTenantModelManifestSchema();
   const tenantModelPlaybook = renderTenantModelPlaybook(tenantModelManifest);
+  const providerProfileDocs = renderSaasDeployNotes(manifest);
   const docsDir = join(targetDir, "docs");
   const apiServerSrcDir = join(targetDir, "apps", "api-server", "src");
 
@@ -233,12 +234,16 @@ function writeSaasProviderProfileArtifacts(targetDir: string, options: Generator
     `${JSON.stringify(createArchitecturePolicyManifest(options), null, 2)}\n`,
   );
   writeFileSync(join(targetDir, ".env.example"), renderSaasEnvExample(manifest));
-  writeFileSync(join(docsDir, "provider-profile.md"), renderSaasDeployNotes(manifest));
+  writeFileSync(join(docsDir, "provider-profile.md"), providerProfileDocs);
   writeFileSync(join(docsDir, "tenant-model-playbook.md"), tenantModelPlaybook);
   writeFileSync(join(docsDir, "secrets-checklist.md"), renderSaasSecretsChecklist(manifest));
   writeFileSync(
     join(apiServerSrcDir, "generatedSaasProviderProfile.ts"),
-    `export const generatedSaasProviderProfileManifest = ${JSON.stringify(manifest, null, 2)} as const;\n`,
+    [
+      `export const generatedSaasProviderProfileManifest = ${JSON.stringify(manifest, null, 2)} as const;`,
+      `export const generatedSaasProviderProfileDocs = ${JSON.stringify(providerProfileDocs)} as const;`,
+      "",
+    ].join("\n"),
   );
   writeFileSync(
     join(apiServerSrcDir, "generatedTenantModel.ts"),

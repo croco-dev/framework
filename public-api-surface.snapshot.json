@@ -17789,6 +17789,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "SUPPORTED_TENANT_MODEL_MANIFEST_SCHEMA_VERSIONS",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "const"
+        },
+        {
           "name": "TENANT_ISOLATION_DIAGNOSTIC_CODES",
           "exportKind": "named",
           "source": "./libs/problems/TenantIsolationProblems",
@@ -17796,6 +17802,18 @@
         },
         {
           "name": "TENANT_MODEL_DEFINITIONS",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "const"
+        },
+        {
+          "name": "TENANT_MODEL_MANIFEST_COMPATIBILITY_RULES",
+          "exportKind": "named",
+          "source": "./libs/TenantModelManifest",
+          "declarationKind": "const"
+        },
+        {
+          "name": "TENANT_MODEL_MANIFEST_SCHEMA_ID",
           "exportKind": "named",
           "source": "./libs/TenantModelManifest",
           "declarationKind": "const"
@@ -18043,6 +18061,11 @@
         },
         {
           "name": "TenantModelManifestSchema",
+          "exportKind": "named",
+          "source": "./tenant-model"
+        },
+        {
+          "name": "TenantModelManifestSchemaVersion",
           "exportKind": "named",
           "source": "./tenant-model"
         },
