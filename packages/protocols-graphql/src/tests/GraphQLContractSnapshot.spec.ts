@@ -3,6 +3,11 @@ import { ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { GRAPHQL_GUARDS_KEY, GRAPHQL_INTERCEPTORS_KEY, GRAPHQL_ROLES_KEY } from "../libs/constants";
 import {
+  createGraphQLContractSnapshot,
+  diffGraphQLContractSnapshots,
+  stringifyGraphQLContractSnapshot,
+} from "../libs/contract";
+import {
   Field,
   GraphQLProblemResponse,
   GraphQLResolver,
@@ -10,11 +15,6 @@ import {
   ObjectType,
   Query,
 } from "../libs/decorators";
-import {
-  createGraphQLContractSnapshot,
-  diffGraphQLContractSnapshots,
-  stringifyGraphQLContractSnapshot,
-} from "../libs/contract";
 import { resolverRegistry } from "../libs/metadata/ResolverRegistry";
 
 @ObjectType()
@@ -26,6 +26,8 @@ class HealthStatus {
 class AuthGuard {}
 
 class AuditInterceptor {}
+
+type ContractResolver = abstract new (...args: never[]) => unknown;
 
 describe("GraphQL contract snapshots", () => {
   beforeEach(() => {
@@ -59,7 +61,9 @@ describe("GraphQL contract snapshots", () => {
     Reflect.defineMetadata(GRAPHQL_ROLES_KEY, ["admin"], HealthResolver.prototype, "health");
 
     const schema = await buildContractSchema([HealthResolver]);
-    const snapshot = createGraphQLContractSnapshot(schema, { resolvers: [HealthResolver] });
+    const snapshot = createGraphQLContractSnapshot(schema, {
+      resolvers: [HealthResolver],
+    });
 
     expect(snapshot.snapshotVersion).toBe("croco.graphql-contract.snapshot.v1");
     expect(snapshot.sdl).toContain("type Query");
@@ -120,7 +124,9 @@ describe("GraphQL contract snapshots", () => {
 
     const baselineSchema = await buildContractSchema([HealthResolver]);
     const currentSchema = await buildContractSchema([HealthResolver, ReadinessResolver]);
-    const baseline = createGraphQLContractSnapshot(baselineSchema, { resolvers: [HealthResolver] });
+    const baseline = createGraphQLContractSnapshot(baselineSchema, {
+      resolvers: [HealthResolver],
+    });
     const current = createGraphQLContractSnapshot(currentSchema, {
       resolvers: [HealthResolver, ReadinessResolver],
     });
@@ -175,6 +181,67 @@ describe("GraphQL contract snapshots", () => {
     );
   });
 
+  it("flags resolver metadata changes as breaking drift", async () => {
+    let baselineSnapshot: ReturnType<typeof createGraphQLContractSnapshot>;
+    let currentSnapshot: ReturnType<typeof createGraphQLContractSnapshot>;
+
+    {
+      @GraphQLResolver({ scope: "request" })
+      class HealthResolver {
+        @GraphQLProblemResponse({
+          code: "GRAPHQL_HEALTH_UNAVAILABLE",
+          category: ProblemCategory.InternalServerError,
+        })
+        @Query(() => String, { name: "health" })
+        health(): string {
+          return "ok";
+        }
+      }
+
+      Reflect.defineMetadata(GRAPHQL_GUARDS_KEY, [AuthGuard], HealthResolver.prototype, "health");
+      Reflect.defineMetadata(
+        GRAPHQL_INTERCEPTORS_KEY,
+        [AuditInterceptor],
+        HealthResolver.prototype,
+        "health",
+      );
+      Reflect.defineMetadata(GRAPHQL_ROLES_KEY, ["admin"], HealthResolver.prototype, "health");
+
+      const schema = await buildContractSchema([HealthResolver]);
+      baselineSnapshot = createGraphQLContractSnapshot(schema, {
+        resolvers: [HealthResolver],
+      });
+    }
+
+    {
+      @GraphQLResolver()
+      class HealthResolver {
+        @Query(() => String, { name: "health" })
+        health(): string {
+          return "ok";
+        }
+      }
+
+      const schema = await buildContractSchema([HealthResolver]);
+      currentSnapshot = createGraphQLContractSnapshot(schema, {
+        resolvers: [HealthResolver],
+      });
+    }
+
+    const diff = diffGraphQLContractSnapshots(baselineSnapshot, currentSnapshot);
+
+    expect(diff.hasBreakingChanges).toBe(true);
+    expect(diff.breakingChanges.map((change) => change.code)).toEqual(
+      expect.arrayContaining([
+        "graphql-resolver-di-scope-changed",
+        "graphql-resolver-guards-changed",
+        "graphql-resolver-interceptors-changed",
+        "graphql-resolver-roles-changed",
+        "graphql-resolver-problems-changed",
+      ]),
+    );
+  });
+
   it("ignores implementation-only resolver helper methods", async () => {
     let baselineSnapshot: ReturnType<typeof createGraphQLContractSnapshot>;
     let currentSnapshot: ReturnType<typeof createGraphQLContractSnapshot>;
@@ -193,7 +260,9 @@ describe("GraphQL contract snapshots", () => {
       }
 
       const schema = await buildContractSchema([HealthResolver]);
-      baselineSnapshot = createGraphQLContractSnapshot(schema, { resolvers: [HealthResolver] });
+      baselineSnapshot = createGraphQLContractSnapshot(schema, {
+        resolvers: [HealthResolver],
+      });
     }
 
     {
@@ -206,7 +275,9 @@ describe("GraphQL contract snapshots", () => {
       }
 
       const schema = await buildContractSchema([HealthResolver]);
-      currentSnapshot = createGraphQLContractSnapshot(schema, { resolvers: [HealthResolver] });
+      currentSnapshot = createGraphQLContractSnapshot(schema, {
+        resolvers: [HealthResolver],
+      });
     }
 
     expect(baselineSnapshot.resolvers[0]?.methods.map((method) => method.methodName)).toEqual([
@@ -216,7 +287,7 @@ describe("GraphQL contract snapshots", () => {
   });
 });
 
-async function buildContractSchema(resolvers: [Function, ...Function[]]) {
+async function buildContractSchema(resolvers: [ContractResolver, ...ContractResolver[]]) {
   const { buildSchema } = await import("type-graphql");
 
   return buildSchema({
