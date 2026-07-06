@@ -153,6 +153,9 @@ const defaultRuntimeCapabilityManifestPath = "croco-runtime-capability.manifest.
 const legacyRuntimePolicyManifestPath = "croco-runtime-policy.manifest.json";
 const defaultDiGraphManifestPath = ".croco/build/di-graph.manifest.json";
 const defaultProviderProfileManifestPath = "croco-saas-profile.manifest.json";
+const providerProfileManifestSchemaVersion = "croco.saas-provider-profile/v1";
+const defaultTenantModelManifestPath = "croco-tenant-model.manifest.json";
+const tenantModelManifestSchemaVersion = "croco.tenant-model/v1";
 const defaultPackageCatalogPath = "docs/package-catalog.json";
 const defaultCoreCoverageWarningCheckPath = "scripts/core-coverage-warning-check.mts";
 const defaultVitestConfigPath = "vitest.config.ts";
@@ -2807,7 +2810,7 @@ function providerCertificationCheck(
   }
 
   const manifest = readJsonObject(manifestPath);
-  if (manifest.kind === "invalid" || !isProviderProfileManifestRecord(manifest.value)) {
+  if (manifest.kind === "invalid") {
     return {
       id: checkId,
       title: "Provider certification gaps",
@@ -2817,10 +2820,48 @@ function providerCertificationCheck(
           code: CLI_DIAGNOSTIC_CODES.doctorProviderProfileInvalid,
           severity: "error",
           checkId,
-          cause:
-            manifest.kind === "invalid"
-              ? `${defaultProviderProfileManifestPath} could not be parsed: ${manifest.message}`
-              : `${defaultProviderProfileManifestPath} is not a croco.saas-provider-profile/v1 artifact.`,
+          cause: `${defaultProviderProfileManifestPath} could not be parsed: ${manifest.message}`,
+          location: { file: defaultProviderProfileManifestPath },
+          action: "Regenerate the provider profile artifacts and rerun croco doctor.",
+        },
+      ],
+    };
+  }
+
+  const providerManifestVersion = readOptionalString(manifest.value.schemaVersion);
+  if (
+    providerManifestVersion !== null &&
+    !isProviderProfileManifestVersionSupported(providerManifestVersion)
+  ) {
+    return {
+      id: checkId,
+      title: "Provider certification gaps",
+      status: "fail",
+      diagnostics: [
+        {
+          code: CLI_DIAGNOSTIC_CODES.doctorProviderProfileVersionUnsupported,
+          severity: "error",
+          checkId,
+          cause: `${defaultProviderProfileManifestPath} uses unsupported schemaVersion '${providerManifestVersion}'. Supported versions: ${providerProfileManifestSchemaVersion}.`,
+          location: { file: defaultProviderProfileManifestPath },
+          action:
+            "Regenerate the provider profile artifacts with a supported schemaVersion or apply the provider profile migration guidance.",
+        },
+      ],
+    };
+  }
+
+  if (!isProviderProfileManifestRecord(manifest.value)) {
+    return {
+      id: checkId,
+      title: "Provider certification gaps",
+      status: "fail",
+      diagnostics: [
+        {
+          code: CLI_DIAGNOSTIC_CODES.doctorProviderProfileInvalid,
+          severity: "error",
+          checkId,
+          cause: `${defaultProviderProfileManifestPath} is not a ${providerProfileManifestSchemaVersion} artifact.`,
           location: { file: defaultProviderProfileManifestPath },
           action: "Regenerate the provider profile artifacts and rerun croco doctor.",
         },
@@ -2844,7 +2885,7 @@ function providerCertificationCheck(
     (capability) => capability.status === "documented",
   );
 
-  const diagnostics = [
+  const diagnostics: DoctorDiagnostic[] = [
     ...missingPackages.map((packageName) => ({
       code: CLI_DIAGNOSTIC_CODES.doctorProviderPackageMissing,
       severity: "error" as const,
@@ -2870,6 +2911,7 @@ function providerCertificationCheck(
       action:
         "Run the documented real-provider smoke only after provider credentials are configured.",
     })),
+    ...providerProfileTenantModelDiagnostics(rootDir, manifest.value, checkId),
   ];
   const hasErrors = diagnostics.some((diagnostic) => diagnostic.severity === "error");
 
@@ -3206,10 +3248,11 @@ function hasRequiredHttpMiddlewareCall(
 function extractFunctionCallNames(source: string): string[] {
   const names: string[] = [];
   const pattern = /\b([A-Za-z_$][\w$]*)\s*\(/g;
-  let match: RegExpExecArray | null;
+  let match = pattern.exec(source);
 
-  while ((match = pattern.exec(source)) !== null) {
+  while (match !== null) {
     names.push(match[1]);
+    match = pattern.exec(source);
   }
 
   return uniqueStrings(names);
@@ -3217,11 +3260,12 @@ function extractFunctionCallNames(source: string): string[] {
 
 function extractNamedFunctionBody(source: string, functionName: string): string | null {
   const pattern = new RegExp(`\\bfunction\\s+${escapeRegExp(functionName)}\\s*\\(`, "g");
-  let match: RegExpExecArray | null;
+  let match = pattern.exec(source);
 
-  while ((match = pattern.exec(source)) !== null) {
+  while (match !== null) {
     const bodyStart = source.indexOf("{", match.index);
     if (bodyStart === -1) {
+      match = pattern.exec(source);
       continue;
     }
 
@@ -3238,12 +3282,13 @@ function extractCreateAppOptionSources(
 ): SourceSlice[] {
   const optionSources: SourceSlice[] = [];
   const createAppPattern = /\bcreateApp\s*\(/g;
-  let match: RegExpExecArray | null;
+  let match = createAppPattern.exec(maskedSource);
 
-  while ((match = createAppPattern.exec(maskedSource)) !== null) {
+  while (match !== null) {
     const callStart = maskedSource.indexOf("(", match.index);
     const callEnd = findBalancedDelimitedEnd(maskedSource, callStart, "(", ")");
     if (callEnd === null) {
+      match = createAppPattern.exec(maskedSource);
       continue;
     }
 
@@ -3252,6 +3297,7 @@ function extractCreateAppOptionSources(
     const objectStart = maskedCallArguments.indexOf("{");
     if (objectStart === -1) {
       optionSources.push({ source: "", maskedSource: "" });
+      match = createAppPattern.exec(maskedSource);
       continue;
     }
 
@@ -3261,6 +3307,7 @@ function extractCreateAppOptionSources(
         source: callArguments.slice(objectStart),
         maskedSource: maskedCallArguments.slice(objectStart),
       });
+      match = createAppPattern.exec(maskedSource);
       continue;
     }
 
@@ -3268,6 +3315,7 @@ function extractCreateAppOptionSources(
       source: callArguments.slice(objectStart, objectEnd + 1),
       maskedSource: maskedCallArguments.slice(objectStart, objectEnd + 1),
     });
+    match = createAppPattern.exec(maskedSource);
   }
 
   return optionSources;
@@ -3806,13 +3854,114 @@ function readRuntimePlatform(value: Record<string, unknown>): string {
   return readOptionalString(runtime?.platform) ?? "unknown";
 }
 
+function providerProfileTenantModelDiagnostics(
+  rootDir: string,
+  manifest: Record<string, unknown>,
+  checkId: string,
+): DoctorDiagnostic[] {
+  const tenantModel = asRecord(manifest.tenantModel);
+  if (tenantModel === null) {
+    return [];
+  }
+
+  const linkedManifest = readOptionalString(tenantModel.manifest);
+  if (linkedManifest === null) {
+    return [];
+  }
+
+  const location = { file: linkedManifest };
+  const tenantManifestPath = join(rootDir, linkedManifest);
+  if (!existsSync(tenantManifestPath)) {
+    return [
+      {
+        code: CLI_DIAGNOSTIC_CODES.doctorTenantModelManifestInvalid,
+        severity: "error",
+        checkId,
+        cause: `Provider profile links ${linkedManifest}, but the tenant model manifest was not found.`,
+        location,
+        action: `Regenerate ${defaultTenantModelManifestPath} and provider profile artifacts so tenant metadata is in sync.`,
+      },
+    ];
+  }
+
+  const tenantManifest = readJsonObject(tenantManifestPath);
+  if (tenantManifest.kind === "invalid") {
+    return [
+      {
+        code: CLI_DIAGNOSTIC_CODES.doctorTenantModelManifestInvalid,
+        severity: "error",
+        checkId,
+        cause: `${linkedManifest} could not be parsed: ${tenantManifest.message}`,
+        location,
+        action: "Regenerate tenant model artifacts and rerun croco doctor.",
+      },
+    ];
+  }
+
+  const tenantManifestVersion = readOptionalString(tenantManifest.value.schemaVersion);
+  if (
+    tenantManifestVersion !== null &&
+    !isTenantModelManifestVersionSupported(tenantManifestVersion)
+  ) {
+    return [
+      {
+        code: CLI_DIAGNOSTIC_CODES.doctorTenantModelVersionUnsupported,
+        severity: "error",
+        checkId,
+        cause: `${linkedManifest} uses unsupported schemaVersion '${tenantManifestVersion}'. Supported versions: ${tenantModelManifestSchemaVersion}.`,
+        location,
+        action:
+          "Regenerate tenant model artifacts with a supported schemaVersion or apply the tenant model migration guidance.",
+      },
+    ];
+  }
+
+  if (!isTenantModelManifestRecord(tenantManifest.value)) {
+    return [
+      {
+        code: CLI_DIAGNOSTIC_CODES.doctorTenantModelManifestInvalid,
+        severity: "error",
+        checkId,
+        cause: `${linkedManifest} is not a ${tenantModelManifestSchemaVersion} artifact.`,
+        location,
+        action: "Regenerate tenant model artifacts and rerun croco doctor.",
+      },
+    ];
+  }
+
+  return [];
+}
+
+function isProviderProfileManifestVersionSupported(version: string): boolean {
+  return version === providerProfileManifestSchemaVersion;
+}
+
+function isTenantModelManifestVersionSupported(version: string): boolean {
+  return version === tenantModelManifestSchemaVersion;
+}
+
 function isProviderProfileManifestRecord(value: Record<string, unknown>): boolean {
   return (
-    value.schemaVersion === "croco.saas-provider-profile/v1" &&
+    value.schemaVersion === providerProfileManifestSchemaVersion &&
     isRecord(value.profile) &&
     typeof value.profile.name === "string" &&
     Array.isArray(value.packages) &&
     Array.isArray(value.capabilities)
+  );
+}
+
+function isTenantModelManifestRecord(value: Record<string, unknown>): boolean {
+  const selected = asRecord(value.selected);
+
+  return (
+    value.schemaVersion === tenantModelManifestSchemaVersion &&
+    typeof value.currentModel === "string" &&
+    typeof value.defaultModel === "string" &&
+    selected !== null &&
+    typeof selected.name === "string" &&
+    Array.isArray(value.models) &&
+    isRecord(value.schema) &&
+    isRecord(value.migration)
   );
 }
 

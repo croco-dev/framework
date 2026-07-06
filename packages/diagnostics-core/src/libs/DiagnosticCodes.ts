@@ -555,6 +555,60 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     fixExample: { label: "Run doctor", command: "pnpm exec croco doctor" },
   }),
   createCliDiagnosticCodeDefinition({
+    code: "CROCO_DOCTOR_PROVIDER_PROFILE_VERSION_UNSUPPORTED",
+    category: "build-time",
+    title: "Provider profile manifest version is unsupported",
+    cause:
+      "The provider profile manifest uses a schemaVersion this version of croco doctor does not support.",
+    action:
+      "Regenerate provider profile artifacts with a supported schemaVersion or apply the published manifest migration guidance.",
+    legacyCodes: [],
+    searchKeywords: [
+      "croco doctor",
+      "provider profile",
+      "unsupported manifest version",
+      "schemaVersion",
+    ],
+    fixExample: {
+      label: "Regenerate provider profile artifacts",
+      command: "pnpm exec create-croco-app --template saas",
+    },
+  }),
+  createCliDiagnosticCodeDefinition({
+    code: "CROCO_DOCTOR_TENANT_MODEL_MANIFEST_INVALID",
+    category: "build-time",
+    title: "Tenant model manifest is invalid",
+    cause: "A provider profile links a tenant model manifest that is missing or malformed.",
+    action:
+      "Regenerate tenant model artifacts so the provider manifest, tenant manifest, schema, playbook, and generated source stay in sync.",
+    legacyCodes: [],
+    searchKeywords: ["croco doctor", "tenant model", "tenant manifest", "invalid manifest"],
+    fixExample: {
+      label: "Check generated provider artifacts",
+      command: "pnpm profile:check",
+    },
+  }),
+  createCliDiagnosticCodeDefinition({
+    code: "CROCO_DOCTOR_TENANT_MODEL_VERSION_UNSUPPORTED",
+    category: "build-time",
+    title: "Tenant model manifest version is unsupported",
+    cause:
+      "A provider profile links a tenant model manifest schemaVersion this version of croco doctor does not support.",
+    action:
+      "Regenerate tenant model artifacts with a supported schemaVersion or apply the published tenant model migration guidance.",
+    legacyCodes: [],
+    searchKeywords: [
+      "croco doctor",
+      "tenant model",
+      "unsupported manifest version",
+      "schemaVersion",
+    ],
+    fixExample: {
+      label: "Check generated provider artifacts",
+      command: "pnpm profile:check",
+    },
+  }),
+  createCliDiagnosticCodeDefinition({
     code: "CROCO_DOCTOR_PROVIDER_PACKAGE_MISSING",
     category: "build-time",
     title: "Provider package dependency is missing",

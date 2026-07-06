@@ -14,8 +14,21 @@ export const SAAS_PROVIDER_PROFILE_CHOICES = [
 ] as const;
 
 export const DEFAULT_SAAS_PROVIDER_PROFILE = "saas-node-postgres" satisfies SaasProviderProfileName;
+export const SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_VERSION = "croco.saas-provider-profile/v1";
+export const SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_ID =
+  "https://croco.dev/schemas/saas-provider-profile.v1.json";
+export const SUPPORTED_SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_VERSIONS = [
+  SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_VERSION,
+] as const;
+export const SAAS_PROVIDER_PROFILE_MANIFEST_COMPATIBILITY_RULES = [
+  "croco.saas-provider-profile/v1 changes must be additive for existing fields.",
+  "Removing or renaming provider profile fields requires a new schemaVersion and migration notes.",
+  "Generated provider manifest, tenant manifest, provider docs, .env.example, and generated TS source must be committed together.",
+] as const;
 
 export type SaasProviderProfileName = (typeof SAAS_PROVIDER_PROFILE_CHOICES)[number];
+export type SaasProviderProfileManifestSchemaVersion =
+  (typeof SUPPORTED_SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_VERSIONS)[number];
 
 export type SaasProviderCapabilityName =
   | "runtime"
@@ -60,7 +73,12 @@ export type SaasProviderProfileDefinition = {
 };
 
 export type SaasProviderProfileManifest = {
-  schemaVersion: "croco.saas-provider-profile/v1";
+  schemaVersion: SaasProviderProfileManifestSchemaVersion;
+  schema: {
+    id: typeof SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_ID;
+    version: typeof SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_VERSION;
+    supportedVersions: typeof SUPPORTED_SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_VERSIONS;
+  };
   profile: {
     name: SaasProviderProfileName;
     displayName: string;
@@ -79,6 +97,21 @@ export type SaasProviderProfileManifest = {
   };
   compatibility: {
     requiredCapabilities: readonly SaasProviderCapabilityName[];
+    rules: typeof SAAS_PROVIDER_PROFILE_MANIFEST_COMPATIBILITY_RULES;
+    generatedArtifacts: {
+      manifest: "croco-saas-profile.manifest.json";
+      tenantModelManifest: "croco-tenant-model.manifest.json";
+      tenantModelSchema: "croco-tenant-model.schema.json";
+      providerDocs: "docs/provider-profile.md";
+      tenantModelPlaybook: "docs/tenant-model-playbook.md";
+      envExample: ".env.example";
+      source: "apps/api-server/src/generatedSaasProviderProfile.ts";
+    };
+    migration: {
+      requiredForVersionChange: true;
+      guidance: readonly string[];
+    };
+    qualityGates: readonly string[];
   };
   tenantModel: {
     currentModel: TenantModelName;
@@ -426,7 +459,12 @@ export function createSaasProviderProfileManifest(
   const tenantModelManifest = createTenantModelManifest(tenantModel);
 
   return {
-    schemaVersion: "croco.saas-provider-profile/v1",
+    schemaVersion: SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_VERSION,
+    schema: {
+      id: SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_ID,
+      version: SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_VERSION,
+      supportedVersions: SUPPORTED_SAAS_PROVIDER_PROFILE_MANIFEST_SCHEMA_VERSIONS,
+    },
     profile: {
       name: profile.name,
       displayName: profile.displayName,
@@ -447,6 +485,25 @@ export function createSaasProviderProfileManifest(
     },
     compatibility: {
       requiredCapabilities: REQUIRED_SAAS_PROVIDER_CAPABILITIES,
+      rules: SAAS_PROVIDER_PROFILE_MANIFEST_COMPATIBILITY_RULES,
+      generatedArtifacts: {
+        manifest: "croco-saas-profile.manifest.json",
+        tenantModelManifest: "croco-tenant-model.manifest.json",
+        tenantModelSchema: "croco-tenant-model.schema.json",
+        providerDocs: "docs/provider-profile.md",
+        tenantModelPlaybook: "docs/tenant-model-playbook.md",
+        envExample: ".env.example",
+        source: "apps/api-server/src/generatedSaasProviderProfile.ts",
+      },
+      migration: {
+        requiredForVersionChange: true,
+        guidance: [
+          "Keep v1 changes additive unless generated app consumers cannot safely read the new shape.",
+          "Bump schemaVersion only with release notes, migration guidance, and croco doctor support for the new version.",
+          "Run profile:check, croco doctor, and generated app smoke checks before accepting a manifest version change.",
+        ],
+      },
+      qualityGates: ["profile:check", "croco doctor --json", "demo:smoke"],
     },
     tenantModel: {
       currentModel: tenantModelManifest.currentModel,
@@ -563,6 +620,26 @@ export function renderSaasDeployNotes(manifest: SaasProviderProfileManifest): st
 
   return [
     `# ${manifest.profile.displayName} Deploy Notes`,
+    "",
+    "## Manifest Contract",
+    "",
+    `Schema id: \`${manifest.schema.id}\``,
+    `Schema version: \`${manifest.schemaVersion}\``,
+    `Supported versions: \`${manifest.schema.supportedVersions.join(", ")}\``,
+    "",
+    "Compatibility rules:",
+    ...manifest.compatibility.rules.map((rule) => `- ${rule}`),
+    "",
+    "Generated artifacts:",
+    ...Object.entries(manifest.compatibility.generatedArtifacts).map(
+      ([label, file]) => `- ${label}: \`${file}\``,
+    ),
+    "",
+    "Version migration guidance:",
+    ...manifest.compatibility.migration.guidance.map((step) => `- ${step}`),
+    "",
+    "Quality gates:",
+    ...manifest.compatibility.qualityGates.map((gate) => `- \`${gate}\``),
     "",
     `Runtime target: \`${manifest.profile.runtimeTarget}\``,
     `Tenant model: \`${tenantModel.name}\` (${tenantModel.displayName})`,

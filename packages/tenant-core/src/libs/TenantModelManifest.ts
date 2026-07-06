@@ -1,4 +1,17 @@
 export const TENANT_MODEL_MANIFEST_SCHEMA_VERSION = "croco.tenant-model/v1";
+export const TENANT_MODEL_MANIFEST_SCHEMA_ID =
+  "https://croco.dev/schemas/tenant-model-manifest.v1.json";
+export const SUPPORTED_TENANT_MODEL_MANIFEST_SCHEMA_VERSIONS = [
+  TENANT_MODEL_MANIFEST_SCHEMA_VERSION,
+] as const;
+export const TENANT_MODEL_MANIFEST_COMPATIBILITY_RULES = [
+  "croco.tenant-model/v1 changes must be additive for existing fields.",
+  "Removing or renaming tenant model fields requires a new schemaVersion and migration notes.",
+  "Generated croco-tenant-model.manifest.json, croco-tenant-model.schema.json, docs/tenant-model-playbook.md, and generatedTenantModel.ts must be committed together.",
+] as const;
+
+export type TenantModelManifestSchemaVersion =
+  (typeof SUPPORTED_TENANT_MODEL_MANIFEST_SCHEMA_VERSIONS)[number];
 
 export const TENANT_MODEL_NAMES = [
   "single",
@@ -48,7 +61,7 @@ export type TenantModelDefinition = {
 };
 
 export type TenantModelManifest = {
-  readonly schemaVersion: typeof TENANT_MODEL_MANIFEST_SCHEMA_VERSION;
+  readonly schemaVersion: TenantModelManifestSchemaVersion;
   readonly currentModel: TenantModelName;
   readonly defaultModel: TenantModelName;
   readonly selected: TenantModelDefinition;
@@ -64,6 +77,22 @@ export type TenantModelManifest = {
     readonly message: string;
     readonly recovery: string;
   }[];
+  readonly compatibility: {
+    readonly schemaId: typeof TENANT_MODEL_MANIFEST_SCHEMA_ID;
+    readonly currentVersion: typeof TENANT_MODEL_MANIFEST_SCHEMA_VERSION;
+    readonly supportedVersions: typeof SUPPORTED_TENANT_MODEL_MANIFEST_SCHEMA_VERSIONS;
+    readonly rules: typeof TENANT_MODEL_MANIFEST_COMPATIBILITY_RULES;
+    readonly generatedArtifacts: {
+      readonly manifest: "croco-tenant-model.manifest.json";
+      readonly schema: "croco-tenant-model.schema.json";
+      readonly playbook: "docs/tenant-model-playbook.md";
+      readonly source: "apps/api-server/src/generatedTenantModel.ts";
+    };
+    readonly migration: {
+      readonly requiredForVersionChange: true;
+      readonly guidance: readonly string[];
+    };
+  };
   readonly qualityGates: readonly string[];
 };
 
@@ -287,6 +316,26 @@ export function createTenantModelManifest(
       ...warning,
       severity: "warning",
     })),
+    compatibility: {
+      schemaId: TENANT_MODEL_MANIFEST_SCHEMA_ID,
+      currentVersion: TENANT_MODEL_MANIFEST_SCHEMA_VERSION,
+      supportedVersions: SUPPORTED_TENANT_MODEL_MANIFEST_SCHEMA_VERSIONS,
+      rules: TENANT_MODEL_MANIFEST_COMPATIBILITY_RULES,
+      generatedArtifacts: {
+        manifest: "croco-tenant-model.manifest.json",
+        schema: "croco-tenant-model.schema.json",
+        playbook: "docs/tenant-model-playbook.md",
+        source: "apps/api-server/src/generatedTenantModel.ts",
+      },
+      migration: {
+        requiredForVersionChange: true,
+        guidance: [
+          "Bump schemaVersion only when existing tenant manifest consumers cannot safely read the new shape.",
+          "Ship migration guidance before generated apps start emitting the new tenant manifest version.",
+          "Run profile:check and croco doctor on generated apps before accepting the version change.",
+        ],
+      },
+    },
     qualityGates: ["profile:check", "contract:verify", "demo:smoke"],
   };
 }
@@ -294,10 +343,18 @@ export function createTenantModelManifest(
 export function createTenantModelManifestSchema(): TenantModelManifestSchema {
   return {
     $schema: "https://json-schema.org/draft/2020-12/schema",
-    $id: "https://croco.dev/schemas/tenant-model-manifest.v1.json",
+    $id: TENANT_MODEL_MANIFEST_SCHEMA_ID,
     title: "Croco Tenant Model Manifest",
     type: "object",
-    required: ["schemaVersion", "currentModel", "defaultModel", "selected", "models", "migration"],
+    required: [
+      "schemaVersion",
+      "currentModel",
+      "defaultModel",
+      "selected",
+      "models",
+      "migration",
+      "compatibility",
+    ],
     properties: {
       schemaVersion: {
         const: TENANT_MODEL_MANIFEST_SCHEMA_VERSION,
@@ -332,6 +389,17 @@ export function createTenantModelManifestSchema(): TenantModelManifestSchema {
       migration: {
         type: "object",
         required: ["from", "to", "risk", "manualSteps", "warnings"],
+      },
+      compatibility: {
+        type: "object",
+        required: [
+          "schemaId",
+          "currentVersion",
+          "supportedVersions",
+          "rules",
+          "generatedArtifacts",
+          "migration",
+        ],
       },
     },
   };
@@ -432,6 +500,18 @@ export function renderTenantModelPlaybook(manifest: TenantModelManifest): string
     "- `tenant-core/tenant-model-package-missing`: generated provider profile lacks a required package.",
     "- `tenant-core/tenant-model-capability-missing`: generated profile lacks a required tenant capability.",
     "- `tenant-core/tenant-model-manual-migration-required`: migration requires operator-controlled manual steps.",
+    "",
+    "## Manifest Versioning",
+    "",
+    `Schema id: \`${manifest.compatibility.schemaId}\``,
+    `Current version: \`${manifest.compatibility.currentVersion}\``,
+    `Supported versions: \`${manifest.compatibility.supportedVersions.join(", ")}\``,
+    "",
+    "Compatibility rules:",
+    ...manifest.compatibility.rules.map((rule) => `- ${rule}`),
+    "",
+    "Future version migration:",
+    ...manifest.compatibility.migration.guidance.map((step) => `- ${step}`),
     "",
   ].join("\n");
 }

@@ -26,6 +26,9 @@ export const CLI_DIAGNOSTIC_CODES = {
   doctorDiGraphManifestInvalid: "CROCO_DOCTOR_DI_GRAPH_MANIFEST_INVALID",
   doctorDiBootstrapErrors: "CROCO_DOCTOR_DI_BOOTSTRAP_ERRORS",
   doctorProviderProfileInvalid: "CROCO_DOCTOR_PROVIDER_PROFILE_INVALID",
+  doctorProviderProfileVersionUnsupported: "CROCO_DOCTOR_PROVIDER_PROFILE_VERSION_UNSUPPORTED",
+  doctorTenantModelManifestInvalid: "CROCO_DOCTOR_TENANT_MODEL_MANIFEST_INVALID",
+  doctorTenantModelVersionUnsupported: "CROCO_DOCTOR_TENANT_MODEL_VERSION_UNSUPPORTED",
   doctorProviderPackageMissing: "CROCO_DOCTOR_PROVIDER_PACKAGE_MISSING",
   doctorProviderCertificationGap: "CROCO_DOCTOR_PROVIDER_CERTIFICATION_GAP",
   doctorProviderCertificationDocumented: "CROCO_DOCTOR_PROVIDER_CERTIFICATION_DOCUMENTED",
@@ -111,6 +114,9 @@ type CliNonLegacyDiagnosticKey =
   | "doctorDiGraphManifestInvalid"
   | "doctorDiBootstrapErrors"
   | "doctorProviderProfileInvalid"
+  | "doctorProviderProfileVersionUnsupported"
+  | "doctorTenantModelManifestInvalid"
+  | "doctorTenantModelVersionUnsupported"
   | "doctorProviderPackageMissing"
   | "doctorProviderCertificationGap"
   | "doctorProviderCertificationDocumented"
