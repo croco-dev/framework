@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { ProblemOptions } from "@croco/problems-core";
 
 export class UnauthorizedProblem extends Problem {
   readonly code = "UNAUTHORIZED";
@@ -13,6 +14,20 @@ export class ForbiddenProblem extends Problem {
   readonly category = ProblemCategory.Forbidden;
   constructor(detail = "Insufficient permissions") {
     super(detail);
+  }
+}
+
+export class AuthProviderUnavailableProblem extends Problem {
+  readonly code = "auth-core/auth-provider-unavailable";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor(detail = "Authentication provider is unavailable", cause?: Error) {
+    const options = cause ? ({ cause } satisfies ProblemOptions) : undefined;
+    super(
+      "auth-core/auth-provider-unavailable",
+      ProblemCategory.InternalServerError,
+      detail,
+      options,
+    );
   }
 }
 

@@ -1,7 +1,11 @@
 import "reflect-metadata";
-import { Container, MetadataStorage } from "@croco/framework-context";
-import { Problem } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Container, MetadataStorage } from "@croco/framework-context";
+import { Problem, ProblemFactory } from "@croco/problems-core";
+import {
+  authGuardConformance,
+  createConformanceProtocolUser,
+} from "../../../../test-support/authGuardConformance";
 import { GRAPHQL_GUARDS_KEY, GRAPHQL_ROLES_KEY, RESOLVERS_KEY } from "../libs/constants";
 import { GraphQLResolver } from "../libs/decorators";
 import { GraphQLAuthGuard } from "../libs/guards/AuthGuard";
@@ -44,10 +48,9 @@ describe("GraphQLAuthGuard", () => {
 
     await expect(guard.canActivate(context)).rejects.toBeInstanceOf(Problem);
     await expect(guard.canActivate(context)).rejects.toThrow("Missing authorization header");
-    await expect(guard.canActivate(context)).rejects.toMatchObject({
-      status: 401,
-      code: "protocols-graphql/auth-missing-header",
-    });
+    await expect(guard.canActivate(context)).rejects.toMatchObject(
+      authGuardConformance.graphql.missingCredentials,
+    );
   });
 
   it("should throw error when request context headers are unavailable", async () => {
@@ -67,14 +70,13 @@ describe("GraphQLAuthGuard", () => {
     });
 
     const context = createMockContext({
-      context: { headers: { authorization: "InvalidFormat" } },
+      context: { headers: { authorization: authGuardConformance.headers.malformedAuthorization } },
     });
 
     await expect(guard.canActivate(context)).rejects.toThrow("Invalid authorization header format");
-    await expect(guard.canActivate(context)).rejects.toMatchObject({
-      status: 400,
-      code: "protocols-graphql/auth-invalid-header-format",
-    });
+    await expect(guard.canActivate(context)).rejects.toMatchObject(
+      authGuardConformance.graphql.malformedCredentials,
+    );
   });
 
   it("should throw error when token verification fails", async () => {
@@ -84,13 +86,12 @@ describe("GraphQLAuthGuard", () => {
     });
 
     const context = createMockContext({
-      context: { headers: { authorization: "Bearer invalid-token" } },
+      context: { headers: { authorization: authGuardConformance.headers.invalidAuthorization } },
     });
 
-    await expect(guard.canActivate(context)).rejects.toMatchObject({
-      status: 401,
-      code: "protocols-graphql/auth-invalid-token",
-    });
+    await expect(guard.canActivate(context)).rejects.toMatchObject(
+      authGuardConformance.graphql.invalidCredentials,
+    );
   });
 
   it("should surface verifier outages separately from invalid tokens", async () => {
@@ -99,23 +100,41 @@ describe("GraphQLAuthGuard", () => {
     });
 
     const context = createMockContext({
-      context: { headers: { authorization: "Bearer service-token" } },
+      context: {
+        headers: { authorization: authGuardConformance.headers.verifierUnavailableAuthorization },
+      },
     });
 
-    await expect(guard.canActivate(context)).rejects.toMatchObject({
-      status: 500,
-      code: "protocols-graphql/auth-verifier-unavailable",
-    });
+    await expect(guard.canActivate(context)).rejects.toMatchObject(
+      authGuardConformance.graphql.verifierUnavailable,
+    );
   });
 
-  it("should set user on context when token is valid", async () => {
-    const mockUser = { id: "1", name: "Test User" };
+  it("should preserve verifier-thrown Problems", async () => {
+    const policyProblem = ProblemFactory.forbidden(
+      authGuardConformance.preservedProblem.policyDenied.code,
+      "Access denied",
+    );
+    const verifier = vi.fn().mockRejectedValue(policyProblem);
+    const guard = new GraphQLAuthGuard({ verifier });
+
+    const context = createMockContext({
+      context: { headers: { authorization: authGuardConformance.headers.validAuthorization } },
+    });
+
+    await expect(guard.canActivate(context)).rejects.toBe(policyProblem);
+    expect(policyProblem).toMatchObject(authGuardConformance.preservedProblem.policyDenied);
+    expect(verifier).toHaveBeenCalledWith(authGuardConformance.tokens.valid);
+  });
+
+  it("should set conformance user metadata on context when token is valid", async () => {
+    const mockUser = createConformanceProtocolUser();
     const guard = new GraphQLAuthGuard({
       verifier: () => mockUser,
     });
 
     const ctx: { headers: Record<string, string>; user?: unknown } = {
-      headers: { authorization: "Bearer valid-token" },
+      headers: { authorization: authGuardConformance.headers.validAuthorization },
     };
 
     const context = createMockContext({
@@ -126,6 +145,12 @@ describe("GraphQLAuthGuard", () => {
 
     expect(result).toBe(true);
     expect(ctx.user).toBe(mockUser);
+    expect(ctx.user).toMatchObject({
+      id: authGuardConformance.subject.id,
+      roles: [...authGuardConformance.subject.roles],
+      scopes: [...authGuardConformance.subject.scopes],
+      tenantId: authGuardConformance.subject.tenantId,
+    });
   });
 });
 

@@ -1,6 +1,10 @@
 import "reflect-metadata";
-import { Problem } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Problem, ProblemFactory } from "@croco/problems-core";
+import {
+  authGuardConformance,
+  createConformanceProtocolUser,
+} from "../../../../test-support/authGuardConformance";
 import { AuthGuard } from "../libs/guards/AuthGuard";
 import type { ExecutionContext } from "../libs/interfaces/ExecutionContext";
 
@@ -27,15 +31,25 @@ describe("AuthGuard", () => {
   });
 
   it("should allow access with valid token", async () => {
-    const mockRequest = { headers: { authorization: "Bearer valid-token" }, user: undefined };
-    (mockVerifier as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "123", name: "Test User" });
+    const mockRequest = {
+      headers: { authorization: authGuardConformance.headers.validAuthorization },
+      user: undefined,
+    };
+    const user = createConformanceProtocolUser();
+    (mockVerifier as ReturnType<typeof vi.fn>).mockResolvedValue(user);
     mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
 
     const result = await guard.canActivate(mockContext);
 
     expect(result).toBe(true);
-    expect(mockRequest.user).toEqual({ id: "123", name: "Test User" });
-    expect(mockVerifier).toHaveBeenCalledWith("valid-token");
+    expect(mockRequest.user).toBe(user);
+    expect(mockRequest.user).toMatchObject({
+      id: authGuardConformance.subject.id,
+      roles: [...authGuardConformance.subject.roles],
+      scopes: [...authGuardConformance.subject.scopes],
+      tenantId: authGuardConformance.subject.tenantId,
+    });
+    expect(mockVerifier).toHaveBeenCalledWith(authGuardConformance.tokens.valid);
   });
 
   it("should deny access without Authorization header", async () => {
@@ -43,10 +57,9 @@ describe("AuthGuard", () => {
 
     await expect(guard.canActivate(mockContext)).rejects.toBeInstanceOf(Problem);
     await expect(guard.canActivate(mockContext)).rejects.toThrow("Missing authorization header");
-    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
-      status: 401,
-      code: "protocols-rest/auth-missing-header",
-    });
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject(
+      authGuardConformance.rest.missingCredentials,
+    );
     expect(mockVerifier).not.toHaveBeenCalled();
   });
 
@@ -61,31 +74,49 @@ describe("AuthGuard", () => {
   });
 
   it("should deny access with invalid token", async () => {
-    const mockRequest = { headers: { authorization: "Bearer invalid-token" } };
+    const mockRequest = {
+      headers: { authorization: authGuardConformance.headers.invalidAuthorization },
+    };
     const tokenError = Object.assign(new Error("Token expired"), { name: "ERR_JWT_EXPIRED" });
     (mockVerifier as ReturnType<typeof vi.fn>).mockRejectedValue(tokenError);
     mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow("Invalid or expired token");
-    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
-      status: 401,
-      code: "protocols-rest/auth-invalid-token",
-    });
-    expect(mockVerifier).toHaveBeenCalledWith("invalid-token");
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject(
+      authGuardConformance.rest.invalidCredentials,
+    );
+    expect(mockVerifier).toHaveBeenCalledWith(authGuardConformance.tokens.invalid);
   });
 
   it("should surface verifier outages separately from invalid tokens", async () => {
-    const mockRequest = { headers: { authorization: "Bearer service-token" } };
+    const mockRequest = {
+      headers: { authorization: authGuardConformance.headers.verifierUnavailableAuthorization },
+    };
     (mockVerifier as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("ECONNRESET"));
     mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow(
       "Authentication verifier is unavailable",
     );
-    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
-      status: 500,
-      code: "protocols-rest/auth-verifier-unavailable",
-    });
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject(
+      authGuardConformance.rest.verifierUnavailable,
+    );
+  });
+
+  it("should preserve verifier-thrown Problems", async () => {
+    const mockRequest = {
+      headers: { authorization: authGuardConformance.headers.validAuthorization },
+    };
+    const policyProblem = ProblemFactory.forbidden(
+      authGuardConformance.preservedProblem.policyDenied.code,
+      "Access denied",
+    );
+    (mockVerifier as ReturnType<typeof vi.fn>).mockRejectedValue(policyProblem);
+    mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
+
+    await expect(guard.canActivate(mockContext)).rejects.toBe(policyProblem);
+    expect(policyProblem).toMatchObject(authGuardConformance.preservedProblem.policyDenied);
+    expect(mockVerifier).toHaveBeenCalledWith(authGuardConformance.tokens.valid);
   });
 
   it("should extract Bearer token correctly", async () => {
@@ -100,29 +131,31 @@ describe("AuthGuard", () => {
   });
 
   it("should deny access with malformed token (no scheme)", async () => {
-    const mockRequest = { headers: { authorization: "just-a-token" } };
+    const mockRequest = {
+      headers: { authorization: authGuardConformance.headers.malformedAuthorization },
+    };
     mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow(
       "Invalid authorization header format",
     );
-    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
-      status: 400,
-      code: "protocols-rest/auth-invalid-header-format",
-    });
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject(
+      authGuardConformance.rest.malformedCredentials,
+    );
   });
 
   it("should deny access with wrong scheme", async () => {
-    const mockRequest = { headers: { authorization: "Basic token" } };
+    const mockRequest = {
+      headers: { authorization: authGuardConformance.headers.wrongSchemeAuthorization },
+    };
     mockContext.getRequest = vi.fn().mockReturnValue(mockRequest);
 
     await expect(guard.canActivate(mockContext)).rejects.toThrow(
       "Invalid authorization header format",
     );
-    await expect(guard.canActivate(mockContext)).rejects.toMatchObject({
-      status: 400,
-      code: "protocols-rest/auth-invalid-header-format",
-    });
+    await expect(guard.canActivate(mockContext)).rejects.toMatchObject(
+      authGuardConformance.rest.malformedCredentials,
+    );
   });
 
   it("should use custom header name", async () => {

@@ -1,6 +1,25 @@
+import type { Guard } from "@croco/framework-context";
+import { Controller, Get, UseGuards, type ExecutionContext } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createCrocoApp } from "../app";
 import { getUserAuditEntries, resetUserRuntimeForTests } from "../users";
+
+const protectedRouteToken = "generated-smoke-token";
+
+class ProtectedRouteGuard implements Guard<ExecutionContext> {
+  canActivate(context: ExecutionContext): boolean {
+    return context.getRequest().headers.get("authorization") === `Bearer ${protectedRouteToken}`;
+  }
+}
+
+@Controller("/protected-smoke")
+class ProtectedSmokeController {
+  @Get()
+  @UseGuards(ProtectedRouteGuard)
+  read() {
+    return { ok: true };
+  }
+}
 
 describe("API server", () => {
   beforeEach(() => {
@@ -58,5 +77,28 @@ describe("API server", () => {
         code: "starter/user-not-found",
       }),
     );
+  });
+
+  it("requires credentials for a protected route", async () => {
+    const app = createCrocoApp({ extraControllers: [ProtectedSmokeController] });
+
+    const denied = await app.fetch(new Request("http://localhost/protected-smoke"));
+    const deniedProblem = await denied.json();
+    const allowed = await app.fetch(
+      new Request("http://localhost/protected-smoke", {
+        headers: { authorization: `Bearer ${protectedRouteToken}` },
+      }),
+    );
+    const allowedBody = await allowed.json();
+
+    expect(denied.status).toBe(403);
+    expect(deniedProblem).toEqual(
+      expect.objectContaining({
+        status: 403,
+        code: "ACCESS_DENIED",
+      }),
+    );
+    expect(allowed.status).toBe(200);
+    expect(allowedBody).toEqual({ ok: true });
   });
 });

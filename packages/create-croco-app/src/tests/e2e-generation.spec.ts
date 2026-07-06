@@ -521,6 +521,10 @@ describe("E2E: generate()", () => {
       const graphqlPackageJson = readPackageJson(
         join(testDir, "apps", "graphql-api", "package.json"),
       );
+      const graphqlSchemaContent = readFileSync(
+        join(testDir, "apps", "graphql-api", "src", "schema.ts"),
+        "utf8",
+      );
       const webDockerfileContent = readFileSync(join(testDir, "web", "Dockerfile"), "utf8");
       const composeContent = readFileSync(join(testDir, "docker-compose.yml"), "utf8");
 
@@ -546,6 +550,8 @@ describe("E2E: generate()", () => {
       expect(existsSync(join(testDir, "apps", "graphql-api", "src", "graphql-contract.ts"))).toBe(
         true,
       );
+      expect(graphqlSchemaContent).toContain("function hasRequiredRole");
+      expect(graphqlSchemaContent).toContain("hasRequiredRole(resolverData.context, roles)");
       assertSourceBareImportsDeclared(join(testDir, "apps", "graphql-api"));
       expect(apiDockerfileContent).toContain("turbo prune @test/graphql-api --docker");
       expect(apiDockerfileContent).toContain("pnpm turbo build --filter=@test/graphql-api");
@@ -738,7 +744,10 @@ describe("E2E: generate()", () => {
     expect(handlerContent).toContain('from "@apollo/server";');
     expect(handlerContent).toContain('from "@as-integrations/aws-lambda";');
     expect(handlerContent).toContain('import type { APIGatewayProxyHandlerV2 } from "aws-lambda";');
-    expect(handlerContent).toContain('import { createSchema } from "./schema.js";');
+    expect(handlerContent).toContain(
+      'import { createGraphQLContext, createSchema } from "./schema.js";',
+    );
+    expect(handlerContent).toContain('import type { GraphQLAuthContext } from "./schema.js";');
     expect(handlerContent).toContain("const telemetryReady = telemetry.init(");
     expect(handlerContent).toContain(
       "const lambdaHandlerPromise: Promise<APIGatewayProxyHandlerV2>",
@@ -746,7 +755,16 @@ describe("E2E: generate()", () => {
     expect(handlerContent).toContain("await telemetryReady;");
     expect(handlerContent).toContain("const lambdaHandler = await lambdaHandlerPromise;");
     expect(handlerContent).toContain("await telemetry.forceFlush();");
-    expect(schemaContent).toContain("export async function createSchema()");
+    expect(handlerContent).toContain(
+      "context: async ({ event }) => createGraphQLContext(event.headers),",
+    );
+    expect(schemaContent).toContain(
+      "export async function createSchema(options: CreateSchemaOptions = {})",
+    );
+    expect(schemaContent).toContain("function hasRequiredRole");
+    expect(schemaContent).toContain("hasRequiredRole(resolverData.context, roles)");
+    expect(schemaContent).toContain('const AUTH_TOKEN_ENV = "GRAPHQL_AUTH_TOKEN";');
+    expect(schemaContent).not.toContain("generated-smoke-token");
     expect(packageJson.dependencies?.["@apollo/server"]).toBe("^4.12.2");
     expect(packageJson.dependencies?.["@as-integrations/aws-lambda"]).toBe("^3.1.0");
     expect(packageJson.devDependencies?.["@types/aws-lambda"]).toBe("^8.10.146");
@@ -876,6 +894,14 @@ describe("E2E: generate()", () => {
       });
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(apiAppSource).toContain("createCrocoDiGraphRoots");
+      expect(apiAppSource).toContain(
+        "function createControllerList(options: CreateCrocoAppOptions = {})",
+      );
+      expect(apiAppSource).toMatch(
+        /export function createCrocoDiGraphRoots\(\s*options: CreateCrocoAppOptions = {},\s*\): readonly Constructor\[\]/,
+      );
+      expect(apiAppSource).toContain("return createControllerList(options);");
+      expect(apiAppSource).toContain("const appControllers = createControllerList(options);");
       expect(apiPackageJson.dependencies).toMatchObject({
         "@croco/events-core": externalCrocoRange("@croco/events-core"),
         "@croco/events-inmemory": externalCrocoRange("@croco/events-inmemory"),
@@ -985,6 +1011,14 @@ describe("E2E: generate()", () => {
       });
       expect(appSource).toContain("AdminController");
       expect(appSource).toContain("createCrocoDiGraphRoots");
+      expect(appSource).toContain(
+        "function createControllerList(options: CreateCrocoAppOptions = {})",
+      );
+      expect(appSource).toContain(
+        "export function createCrocoDiGraphRoots(options: CreateCrocoAppOptions = {})",
+      );
+      expect(appSource).toContain("return createControllerList(options);");
+      expect(appSource).toContain("const appControllers = createControllerList(options);");
       expect(viteConfig).toContain("'/admin': 'http://localhost:3000'");
       expect(webSource).toContain("import { adminClient, type adminRpc }");
       expect(webSource).toContain("adminClient");

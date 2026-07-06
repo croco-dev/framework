@@ -5,6 +5,7 @@ import type { AuthProvider } from "../interfaces/AuthProvider";
 import type { AuthRequest } from "../interfaces/AuthRequest";
 import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
 import { UnauthorizedProblem } from "../problems/AuthProblems";
+import { authenticateWithProvider } from "./authenticateWithProvider";
 import { getHeaderValue } from "./headerUtils";
 
 function isPublicRoute(controllerTarget: object, handler: string | symbol): boolean {
@@ -48,7 +49,7 @@ export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
     const apiKeyHeader = getHeaderValue(request, "x-api-key");
 
     if (apiKeyHeader) {
-      const principal = await this.apiKeyProvider.authenticate(request);
+      const principal = await authenticateWithProvider(this.apiKeyProvider, request);
       if (principal) {
         request.principal = principal;
         request.apiKey = principal;
@@ -57,7 +58,7 @@ export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
       throw new UnauthorizedProblem("Invalid API key");
     }
 
-    const user = await this.authProvider.authenticate(request);
+    const user = await authenticateWithProvider(this.authProvider, request);
     if (user) {
       request.principal = { ...user, type: "user" as const };
       request.user = user;

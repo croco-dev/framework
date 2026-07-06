@@ -2647,6 +2647,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "AuthProviderUnavailableProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/AuthProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "CurrentApiKey",
           "exportKind": "named",
           "source": "./libs/decorators/CurrentApiKey",
