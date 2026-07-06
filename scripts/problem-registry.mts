@@ -17,6 +17,8 @@ import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
+import { getProblemCodeDeprecationValidationErrors } from "../packages/problems-core/src/libs/ProblemCodeRegistryValidation.mts";
+
 export type ProblemRegistryMode = "check" | "write";
 export type ProblemRegistryRunOptions = {
   readonly baseRef?: string;
@@ -1984,7 +1986,7 @@ function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): 
     }
 
     if (lifecycle.status === "deprecated") {
-      errors.push(...getDeprecationMetadataValidationErrors(problem, registryByCode));
+      errors.push(...getProblemCodeDeprecationValidationErrors(problem, registryByCode));
     }
 
     if (problem.sources.length === 0 && lifecycle.status !== "deprecated") {
@@ -1997,81 +1999,6 @@ function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): 
   }
 
   return errors;
-}
-
-function getDeprecationMetadataValidationErrors(
-  problem: ProblemCodeRegistryEntry,
-  registryByCode: ReadonlyMap<string, ProblemCodeRegistryEntry>,
-): readonly string[] {
-  const metadata = getProblemLifecycle(problem).deprecation;
-  const diagnostics: string[] = [];
-
-  if (!metadata) {
-    return [`Deprecated Problem code '${problem.code}' is missing deprecation metadata.`];
-  }
-
-  const metadataRecord = metadata as {
-    readonly reason?: unknown;
-    readonly migrationNote?: unknown;
-    readonly replacementCode?: unknown;
-    readonly noReplacementReason?: unknown;
-  };
-  const reason = getTrimmedString(metadataRecord.reason);
-  const migrationNote = getTrimmedString(metadataRecord.migrationNote);
-  const replacementCode = getTrimmedString(metadataRecord.replacementCode);
-  const noReplacementReason = getTrimmedString(metadataRecord.noReplacementReason);
-
-  if (!reason) {
-    diagnostics.push(`Deprecated Problem code '${problem.code}' is missing deprecation reason.`);
-  }
-
-  if (!migrationNote) {
-    diagnostics.push(`Deprecated Problem code '${problem.code}' is missing migration guidance.`);
-  }
-
-  if (!replacementCode && !noReplacementReason) {
-    diagnostics.push(
-      `Deprecated Problem code '${problem.code}' must declare replacementCode or noReplacementReason.`,
-    );
-  }
-
-  if (replacementCode && noReplacementReason) {
-    diagnostics.push(
-      `Deprecated Problem code '${problem.code}' must not declare both replacementCode and noReplacementReason.`,
-    );
-  }
-
-  if (!replacementCode) {
-    return diagnostics;
-  }
-
-  if (replacementCode === problem.code) {
-    diagnostics.push(
-      `Deprecated Problem code '${problem.code}' replacementCode must reference a different Problem code.`,
-    );
-    return diagnostics;
-  }
-
-  const replacement = registryByCode.get(replacementCode);
-
-  if (!replacement) {
-    diagnostics.push(
-      `Deprecated Problem code '${problem.code}' replacementCode '${replacementCode}' is not registered.`,
-    );
-    return diagnostics;
-  }
-
-  if (getProblemLifecycleStatus(replacement) === "deprecated") {
-    diagnostics.push(
-      `Deprecated Problem code '${problem.code}' replacementCode '${replacementCode}' points to a deprecated Problem code.`,
-    );
-  }
-
-  return diagnostics;
-}
-
-function getTrimmedString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
 }
 
 function getProblemLifecycle(problem: ProblemCodeRegistryEntry): ProblemLifecycle {

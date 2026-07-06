@@ -517,42 +517,10 @@ describe("problem-registry.mts", () => {
   });
 
   it("preserves deprecated registry entries without replacements when a no-replacement reason is present", () => {
-    const repo = createTempRepo();
-    writeFile(
-      repo,
-      "packages/alpha/src/problems.ts",
-      [
-        'import { Problem, ProblemCategory } from "@croco/problems-core";',
-        "export class AlphaRemovedProblem extends Problem {",
-        "  constructor() {",
-        '    super("alpha/removed", ProblemCategory.Gone, "removed");',
-        "  }",
-        "}",
-        "",
-      ].join("\n"),
-    );
-    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
-
-    writeFile(repo, "packages/alpha/src/problems.ts", "");
-    const registry = readRegistry(repo);
-    writeRegistry(repo, {
-      ...registry,
-      problems: registry.problems.map((problem) =>
-        problem.code === "alpha/removed"
-          ? {
-              ...problem,
-              lifecycle: {
-                status: "deprecated",
-                deprecation: {
-                  reason: "The upstream capability was removed.",
-                  migrationNote: "Stop branching on alpha/removed in generated clients.",
-                  noReplacementReason: "The retired capability has no supported equivalent.",
-                },
-              },
-              sources: [],
-            }
-          : problem,
-      ),
+    const repo = setupDeprecatedAlphaRemovedRegistry({
+      reason: "The upstream capability was removed.",
+      migrationNote: "Stop branching on alpha/removed in generated clients.",
+      noReplacementReason: "The retired capability has no supported equivalent.",
     });
 
     const writeResult = runProblemRegistryCheck(repo, "write");
@@ -569,41 +537,9 @@ describe("problem-registry.mts", () => {
   });
 
   it("rejects deprecated lifecycle metadata without replacement guidance", () => {
-    const repo = createTempRepo();
-    writeFile(
-      repo,
-      "packages/alpha/src/problems.ts",
-      [
-        'import { Problem, ProblemCategory } from "@croco/problems-core";',
-        "export class AlphaRemovedProblem extends Problem {",
-        "  constructor() {",
-        '    super("alpha/removed", ProblemCategory.Gone, "removed");',
-        "  }",
-        "}",
-        "",
-      ].join("\n"),
-    );
-    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
-
-    writeFile(repo, "packages/alpha/src/problems.ts", "");
-    const registry = readRegistry(repo);
-    writeRegistry(repo, {
-      ...registry,
-      problems: registry.problems.map((problem) =>
-        problem.code === "alpha/removed"
-          ? {
-              ...problem,
-              lifecycle: {
-                status: "deprecated",
-                deprecation: {
-                  reason: "The code was retired.",
-                  migrationNote: "Stop branching on alpha/removed.",
-                },
-              },
-              sources: [],
-            }
-          : problem,
-      ),
+    const repo = setupDeprecatedAlphaRemovedRegistry({
+      reason: "The code was retired.",
+      migrationNote: "Stop branching on alpha/removed.",
     });
 
     const result = runProblemRegistryCheck(repo, "check");
@@ -908,6 +844,45 @@ function writeFile(repo: string, path: string, content: string): void {
   const absolutePath = join(repo, path);
   mkdirSync(dirname(absolutePath), { recursive: true });
   writeFileSync(absolutePath, content);
+}
+
+function setupDeprecatedAlphaRemovedRegistry(deprecation: Record<string, unknown>): string {
+  const repo = createTempRepo();
+  writeFile(
+    repo,
+    "packages/alpha/src/problems.ts",
+    [
+      'import { Problem, ProblemCategory } from "@croco/problems-core";',
+      "export class AlphaRemovedProblem extends Problem {",
+      "  constructor() {",
+      '    super("alpha/removed", ProblemCategory.Gone, "removed");',
+      "  }",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+
+  writeFile(repo, "packages/alpha/src/problems.ts", "");
+  const registry = readRegistry(repo);
+  const deprecatedLifecycle = JSON.parse(
+    JSON.stringify({ status: "deprecated", deprecation }),
+  ) as ProblemCodeRegistry["problems"][number]["lifecycle"];
+
+  writeRegistry(repo, {
+    ...registry,
+    problems: registry.problems.map((problem) =>
+      problem.code === "alpha/removed"
+        ? {
+            ...problem,
+            lifecycle: deprecatedLifecycle,
+            sources: [],
+          }
+        : problem,
+    ),
+  });
+
+  return repo;
 }
 
 function readRegistry(repo: string): ProblemCodeRegistry {
