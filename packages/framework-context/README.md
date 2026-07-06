@@ -66,6 +66,31 @@ ShutdownManager.getInstance().listen();
 - `LOGGER_TOKEN`, `TRANSACTION_CONTEXT_TOKEN`: 공용 DI 토큰
 - `CircularDependencyProblem`, `MiddlewareProblem`, `ShutdownConfigurationConflictProblem`, `ShutdownTimeoutProblem`: 기반 계층 Problem 타입
 
+## 의존성 그래프 sourceLocation 진단
+
+`Container.createDependencyGraphManifest()`가 반환하는 `sourceLocation`은 사람이 읽는 진단 메타데이터입니다.
+토큰 ID나 provider identity를 만들 때 사용하지 않으므로 sourcemap, bundler, minifier, test runner에 따라
+stack trace 품질이 달라져도 manifest identity는 안정적으로 유지됩니다.
+
+자동 stack trace에서 신뢰할 수 있는 위치를 찾지 못하면 `sourceLocation` 필드는 생략됩니다. 생성 코드나
+번들러가 원본 위치를 알고 있다면 컴포넌트를 등록하기 전에 명시적으로 주입할 수 있습니다.
+
+```typescript
+import { Component, Container } from "@croco/framework-context";
+
+class GeneratedOrderService {}
+
+Container.setComponentSourceLocation(GeneratedOrderService, {
+  file: "src/generated/GeneratedOrderService.ts",
+  line: 18,
+  column: 3,
+});
+Component()(GeneratedOrderService);
+```
+
+명시적으로 설정한 위치는 다음 등록부터 사용되며 `Container.setComponentSourceLocation(Service, undefined)`,
+`Container.remove(Service)`, `Container.reset()`으로 정리됩니다.
+
 ## Public compatibility sub-surfaces
 
 `@croco/framework-context`는 하나의 패키지 엔트리포인트를 유지하지만 1.0 호환성 검토에서는 아래

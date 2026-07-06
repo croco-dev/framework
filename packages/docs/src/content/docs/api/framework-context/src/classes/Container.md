@@ -335,6 +335,32 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 ---
 
+### setComponentSourceLocation()
+
+> `static` **setComponentSourceLocation**\<`T`\>(`token`, `sourceLocation?`): `void`
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### token
+
+[`Constructor`](/api/framework-context/src/type-aliases/constructor/)\<`T`\>
+
+##### sourceLocation?
+
+[`DependencySourceLocation`](/api/framework-context/src/type-aliases/dependencysourcelocation/)
+
+#### Returns
+
+`void`
+
+---
+
 ### validate()
 
 > `static` **validate**(`options?`): `void`
