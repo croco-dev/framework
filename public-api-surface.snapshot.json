@@ -19100,6 +19100,12 @@
           "source": null
         },
         {
+          "name": "isMiddlewareShortCircuit",
+          "exportKind": "named",
+          "source": "./libs/middleware/MiddlewareShortCircuit",
+          "declarationKind": "function"
+        },
+        {
           "name": "isShuttingDown",
           "exportKind": "named",
           "source": "./libs/middleware/GracefulShutdownMiddleware",
@@ -19178,6 +19184,12 @@
           "name": "setupGracefulShutdown",
           "exportKind": "named",
           "source": "./libs/middleware/GracefulShutdownMiddleware",
+          "declarationKind": "function"
+        },
+        {
+          "name": "shortCircuit",
+          "exportKind": "named",
+          "source": "./libs/middleware/MiddlewareShortCircuit",
           "declarationKind": "function"
         },
         {
@@ -19404,6 +19416,16 @@
           "name": "MiddlewareFunction",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "MiddlewareShortCircuit",
+          "exportKind": "named",
+          "source": "./libs/middleware/MiddlewareShortCircuit"
+        },
+        {
+          "name": "MiddlewareShortCircuitReason",
+          "exportKind": "named",
+          "source": "./libs/middleware/MiddlewareShortCircuit"
         },
         {
           "name": "OperationalLivenessResponse",

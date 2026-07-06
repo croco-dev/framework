@@ -252,6 +252,53 @@ transport는 이 계약만으로 strict `415 Unsupported Media Type` negotiation
 애플리케이션이 media type을 강제해야 한다면 라우트 앞단 middleware나 policy에서 별도로 검증해야
 합니다.
 
+### Middleware continuation and short-circuit semantics
+
+HTTP middleware must complete exactly one pipeline contract per request:
+
+| Outcome              | Middleware behavior                                                                   |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| Continue             | `return next()` or `await next()` once.                                               |
+| Transform downstream | `const response = await next(); return new Response(...);`                            |
+| Short-circuit        | Return a native `Response`, or return `shortCircuit(reason)` without calling `next()` |
+
+`shortCircuit(reason)` is the explicit marker for ending the chain with the current
+`ctx.res.status` and `ctx.res.headers` and an empty body. Keep `reason` stable and
+low-cardinality because it is written to runtime inspection details.
+
+```typescript
+import { shortCircuit, type MiddlewareFunction } from "@croco/transports-http";
+
+const maintenanceWindow: MiddlewareFunction = (ctx) => {
+  ctx.res.status = 503;
+  ctx.res.headers["Retry-After"] = "60";
+
+  return shortCircuit("maintenance-window");
+};
+
+const responseTransform: MiddlewareFunction = async (_ctx, next) => {
+  const response = await next();
+  if (response === undefined) {
+    return;
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    headers: response.headers,
+  });
+};
+```
+
+If middleware returns without a native `Response`, without `shortCircuit(reason)`, and without
+calling `next()`, the transport returns a `CROCO_HTTP_MIDDLEWARE_001` Problem instead of silently
+turning the path into a short-circuit response. Calling `next()` more than once fails with
+`CROCO_HTTP_MIDDLEWARE_002`; reuse the response from the first `next()` call instead.
+
+Runtime inspector timelines record `middleware.short-circuit` events for native `Response`
+short-circuits, explicit `shortCircuit(reason)` markers, missing `next()` failures, invalid return
+values, and multiple-`next()` failures. Event details include the middleware name/index, `reason`,
+and either `responseStatus` or `diagnosticCode`.
+
 ## Security Middleware Contract
 
 `createApp`는 기본적으로 아래 4개 보안 미들웨어가 모두 등록되어 있는지 부트스트랩 시점에 검증합니다. 하나라도 누락되면 앱 생성은 fail-closed로 중단됩니다.

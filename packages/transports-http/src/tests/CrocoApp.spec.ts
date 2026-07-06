@@ -8,6 +8,7 @@ import {
   Context as FrameworkContext,
   type ILogger,
   LOGGER_TOKEN,
+  type RuntimeInspectorSnapshot,
 } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -16,6 +17,7 @@ import {
   Body,
   Controller,
   Get,
+  Options,
   Param,
   type ParamMetadata,
   ParamType,
@@ -47,6 +49,7 @@ import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import { bodyLimitMiddleware, mb } from "../libs/middleware/BodyLimitMiddleware";
 import { corsMiddleware } from "../libs/middleware/CorsMiddleware";
+import { shortCircuit } from "../libs/middleware/MiddlewareShortCircuit";
 import { rateLimitHttpMiddleware } from "../libs/middleware/RateLimitMiddleware";
 import { securityHeadersMiddleware } from "../libs/middleware/SecurityHeadersMiddleware";
 import {
@@ -106,6 +109,11 @@ describe("CrocoApp", () => {
     @Get("/hello")
     hello() {
       return { message: "Hello, World!" };
+    }
+
+    @Options("/hello")
+    helloOptions() {
+      return { handler: "options" };
     }
 
     @Get("/empty")
@@ -541,6 +549,200 @@ describe("CrocoApp", () => {
       limit: 4,
       received: 16,
     });
+  });
+
+  it("should preserve built-in CORS preflight short-circuits in the app pipeline", async () => {
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [corsMiddleware({ origins: ["https://example.com"] })],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
+    });
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/hello", {
+        method: "OPTIONS",
+        headers: {
+          origin: "https://example.com",
+        },
+      }),
+    );
+    const inspectorResponse = await app.fetch(new Request("http://localhost/dev/inspector"));
+    const snapshot = (await inspectorResponse.json()) as RuntimeInspectorSnapshot;
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe("https://example.com");
+    expect(response.headers.get("access-control-max-age")).toBe("86400");
+    expect(snapshot.requests[0]?.timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "middleware.short-circuit",
+          outcome: "succeeded",
+          name: "corsMiddleware",
+          details: expect.objectContaining({
+            middleware: "corsMiddleware",
+            middlewareIndex: 1,
+            reason: "cors-preflight",
+            responseStatus: 204,
+          }),
+        }),
+      ]),
+    );
+    expect(snapshot.requests[0]?.timeline).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "handler.start" })]),
+    );
+  });
+
+  it("should explicitly short-circuit middleware with a runtime inspection reason", async () => {
+    const maintenanceShortCircuit: MiddlewareFunction = (ctx) => {
+      ctx.res.status = 204;
+      ctx.res.headers["X-Short-Circuit"] = "maintenance";
+      return shortCircuit("maintenance-window");
+    };
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [maintenanceShortCircuit],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+    const inspectorResponse = await app.fetch(new Request("http://localhost/dev/inspector"));
+    const snapshot = (await inspectorResponse.json()) as RuntimeInspectorSnapshot;
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("x-short-circuit")).toBe("maintenance");
+    expect(snapshot.requests[0]?.timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "middleware.short-circuit",
+          outcome: "succeeded",
+          name: "maintenanceShortCircuit",
+          details: expect.objectContaining({
+            middleware: "maintenanceShortCircuit",
+            middlewareIndex: 1,
+            reason: "maintenance-window",
+            responseStatus: 204,
+          }),
+        }),
+      ]),
+    );
+    expect(snapshot.requests[0]?.timeline).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "handler.start" })]),
+    );
+  });
+
+  it("should fail middleware that returns without calling next", async () => {
+    const missingNext: MiddlewareFunction = () => undefined;
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [missingNext],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+    const body = (await response.json()) as ProblemCorrelationResponse;
+    const inspectorResponse = await app.fetch(new Request("http://localhost/dev/inspector"));
+    const snapshot = (await inspectorResponse.json()) as RuntimeInspectorSnapshot;
+
+    expect(response.status).toBe(500);
+    expect(body).toMatchObject({
+      status: 500,
+      code: "CROCO_HTTP_MIDDLEWARE_001",
+      detail: "An internal error occurred",
+    });
+    expect(snapshot.requests[0]?.timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "middleware.short-circuit",
+          outcome: "failed",
+          name: "missingNext",
+          details: expect.objectContaining({
+            middleware: "missingNext",
+            middlewareIndex: 1,
+            reason: "missing-next",
+            diagnosticCode: "CROCO_HTTP_MIDDLEWARE_001",
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it("should fail middleware that returns a non-contract value", async () => {
+    const invalidReturn = (() => ({ handled: true })) as unknown as MiddlewareFunction;
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [invalidReturn],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+    const body = (await response.json()) as ProblemCorrelationResponse;
+    const inspectorResponse = await app.fetch(new Request("http://localhost/dev/inspector"));
+    const snapshot = (await inspectorResponse.json()) as RuntimeInspectorSnapshot;
+
+    expect(response.status).toBe(500);
+    expect(body.code).toBe("CROCO_HTTP_MIDDLEWARE_001");
+    expect(snapshot.requests[0]?.timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "middleware.short-circuit",
+          outcome: "failed",
+          details: expect.objectContaining({
+            reason: "invalid-return",
+            diagnosticCode: "CROCO_HTTP_MIDDLEWARE_001",
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it("should fail middleware that calls next multiple times", async () => {
+    const doubleNext: MiddlewareFunction = async (_ctx, next) => {
+      await next();
+      await next();
+    };
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [doubleNext],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+    const body = (await response.json()) as ProblemCorrelationResponse;
+    const inspectorResponse = await app.fetch(new Request("http://localhost/dev/inspector"));
+    const snapshot = (await inspectorResponse.json()) as RuntimeInspectorSnapshot;
+
+    expect(response.status).toBe(500);
+    expect(body.code).toBe("CROCO_HTTP_MIDDLEWARE_002");
+    expect(snapshot.requests[0]?.timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "middleware.short-circuit",
+          outcome: "failed",
+          name: "doubleNext",
+          details: expect.objectContaining({
+            middleware: "doubleNext",
+            middlewareIndex: 1,
+            reason: "next-called-multiple-times",
+            diagnosticCode: "CROCO_HTTP_MIDDLEWARE_002",
+          }),
+        }),
+      ]),
+    );
   });
 
   it("should expose Node runtime context with request id and trace metadata", async () => {

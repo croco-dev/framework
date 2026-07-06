@@ -987,6 +987,59 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     ],
   },
   {
+    code: "CROCO_HTTP_MIDDLEWARE_001",
+    category: "runtime",
+    severity: "error",
+    title: "HTTP middleware did not complete the pipeline contract",
+    cause:
+      "An HTTP middleware returned without a native Response, without an explicit shortCircuit(reason) marker, and without calling next() exactly once.",
+    action:
+      "Return next(), await next() and return undefined, return a native Response, or return shortCircuit(reason) for intentional no-next termination.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_http_middleware_001",
+    searchKeywords: [
+      "CROCO_HTTP_MIDDLEWARE_001",
+      "shortCircuit",
+      "middleware next",
+      "missing next",
+      "invalid middleware return",
+      "transports-http middleware diagnostics",
+    ],
+    fixExamples: [
+      {
+        label: "Continue or explicitly short-circuit middleware",
+        before: "async (ctx, next) => {\n  ctx.res.headers['X-Trace'] = 'enabled';\n}",
+        after:
+          "async (ctx, next) => {\n  ctx.res.headers['X-Trace'] = 'enabled';\n  await next();\n}",
+      },
+    ],
+  },
+  {
+    code: "CROCO_HTTP_MIDDLEWARE_002",
+    category: "runtime",
+    severity: "error",
+    title: "HTTP middleware called next multiple times",
+    cause:
+      "An HTTP middleware attempted to resume the downstream pipeline more than once for a single request.",
+    action:
+      "Call next() at most once, store the returned Response if it must be inspected or transformed, and return that Response or a replacement Response.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_http_middleware_002",
+    legacyCodes: ["transports-http/middleware-next-called-multiple-times"],
+    searchKeywords: [
+      "CROCO_HTTP_MIDDLEWARE_002",
+      "transports-http/middleware-next-called-multiple-times",
+      "middleware next twice",
+      "multiple next",
+      "transports-http middleware diagnostics",
+    ],
+    fixExamples: [
+      {
+        label: "Reuse the downstream response instead of calling next twice",
+        before: "async (_ctx, next) => {\n  await next();\n  return next();\n}",
+        after: "async (_ctx, next) => {\n  const response = await next();\n  return response;\n}",
+      },
+    ],
+  },
+  {
     code: "CROCO_HTTP_FILTER_001",
     category: "runtime",
     severity: "error",

@@ -10,10 +10,17 @@ import {
   recordRuntimeInspectionEvent,
   startRuntimeInspectionRequest,
 } from "@croco/framework-context";
-import { Problem, ProblemCategoryMapper, ProblemFactory } from "@croco/problems-core";
+import {
+  Problem,
+  ProblemCategory,
+  ProblemCategoryMapper,
+  ProblemFactory,
+} from "@croco/problems-core";
 import type { Hono, Context as HonoContext } from "hono";
 import type { ErrorHandler } from "./ErrorHandler";
 import { HttpContext } from "./HttpContext";
+import { isMiddlewareShortCircuit } from "./middleware/MiddlewareShortCircuit";
+import { getSecurityMiddlewareExportName } from "./middleware/SecurityMiddlewareMarker";
 import { parseTraceParent, type TraceParent, telemetryMiddleware } from "./middleware/telemetry";
 import {
   createRuntimeContext,
@@ -22,6 +29,13 @@ import {
 } from "./runtimeContext";
 import { describeHttpPipelineGraph } from "./PipelineRunner";
 import type { CompiledRoute, MiddlewareFunction } from "./types";
+
+const HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE = "CROCO_HTTP_MIDDLEWARE_001";
+const HTTP_MIDDLEWARE_MULTIPLE_NEXT_CODE = "CROCO_HTTP_MIDDLEWARE_002";
+const LEGACY_MIDDLEWARE_MULTIPLE_NEXT_PROBLEM = {
+  code: "transports-http/middleware-next-called-multiple-times",
+  category: ProblemCategory.InternalServerError,
+} as const;
 
 /**
  * 컴파일된 라우트를 Hono 인스턴스에 등록하고 공통 미들웨어를 적용합니다.
@@ -108,34 +122,39 @@ export class CrocoRouteRegistrar {
               count: middlewares.length,
             },
           });
-          let response = await this.executeMiddlewares(ctx, middlewares, async () => {
-            const handlerStartedAt = Date.now();
-            this.recordInspectionEvent(inspector, {
-              kind: "handler.start",
-              outcome: "started",
-              name: String(route.methodName),
-              details: {
-                route: route.path,
-                method: route.method,
-              },
-            });
+          let response = await this.executeMiddlewares(
+            ctx,
+            middlewares,
+            async () => {
+              const handlerStartedAt = Date.now();
+              this.recordInspectionEvent(inspector, {
+                kind: "handler.start",
+                outcome: "started",
+                name: String(route.methodName),
+                details: {
+                  route: route.path,
+                  method: route.method,
+                },
+              });
 
-            const result = await route.handler(ctx);
-            const handlerResponse = this.toResponse(ctx, result);
-            const resultOutcome = handlerResponse.status >= 400 ? "failed" : "succeeded";
-            this.recordInspectionEvent(inspector, {
-              kind: "handler.end",
-              outcome: resultOutcome,
-              name: String(route.methodName),
-              durationMs: Date.now() - handlerStartedAt,
-              details: {
-                resultType: this.describeResult(result),
-                responseStatus: handlerResponse.status,
-              },
-            });
+              const result = await route.handler(ctx);
+              const handlerResponse = this.toResponse(ctx, result);
+              const resultOutcome = handlerResponse.status >= 400 ? "failed" : "succeeded";
+              this.recordInspectionEvent(inspector, {
+                kind: "handler.end",
+                outcome: resultOutcome,
+                name: String(route.methodName),
+                durationMs: Date.now() - handlerStartedAt,
+                details: {
+                  resultType: this.describeResult(result),
+                  responseStatus: handlerResponse.status,
+                },
+              });
 
-            return handlerResponse;
-          });
+              return handlerResponse;
+            },
+            inspector,
+          );
           response = this.withContextResponseHeaders(ctx, response);
           const responseOutcome = response.status >= 400 ? "failed" : "succeeded";
           this.recordInspectionEvent(inspector, {
@@ -226,15 +245,30 @@ export class CrocoRouteRegistrar {
     ctx: HttpContext,
     middlewares: MiddlewareFunction[],
     terminal: () => Promise<Response>,
+    inspector: RuntimeInspector | undefined,
   ): Promise<Response> {
     let index = -1;
     let response: Response | undefined;
 
     const dispatch = async (nextIndex: number): Promise<Response> => {
       if (nextIndex <= index) {
+        const middlewareIndex = Math.max(0, nextIndex - 1);
+        const middleware = middlewares[middlewareIndex];
+        this.recordMiddlewareShortCircuit(inspector, {
+          middleware,
+          middlewareIndex,
+          outcome: "failed",
+          reason: "next-called-multiple-times",
+          diagnosticCode: HTTP_MIDDLEWARE_MULTIPLE_NEXT_CODE,
+        });
         throw ProblemFactory.internalServerError(
-          "transports-http/middleware-next-called-multiple-times",
+          HTTP_MIDDLEWARE_MULTIPLE_NEXT_CODE,
           "Middleware called next() multiple times",
+          {
+            extensions: {
+              legacyCode: LEGACY_MIDDLEWARE_MULTIPLE_NEXT_PROBLEM.code,
+            },
+          },
         );
       }
 
@@ -246,12 +280,24 @@ export class CrocoRouteRegistrar {
         return response;
       }
 
+      let nextCalled = false;
       let downstreamResponse: Response | undefined;
       const middlewareResponse = await middleware(ctx, async () => {
+        nextCalled = true;
         downstreamResponse = await dispatch(nextIndex + 1);
         return downstreamResponse;
       });
       if (middlewareResponse instanceof Response) {
+        if (!nextCalled) {
+          this.recordMiddlewareShortCircuit(inspector, {
+            middleware,
+            middlewareIndex: nextIndex,
+            outcome: "succeeded",
+            reason: "response-returned",
+            responseStatus: middlewareResponse.status,
+          });
+        }
+
         if (downstreamResponse && middlewareResponse !== downstreamResponse) {
           ctx.clearBufferedResponseBody();
         }
@@ -260,15 +306,66 @@ export class CrocoRouteRegistrar {
         return middlewareResponse;
       }
 
-      if (response) {
+      if (isMiddlewareShortCircuit(middlewareResponse)) {
+        if (nextCalled) {
+          this.recordMiddlewareShortCircuit(inspector, {
+            middleware,
+            middlewareIndex: nextIndex,
+            outcome: "failed",
+            reason: "short-circuit-after-next",
+            diagnosticCode: HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE,
+          });
+          throw this.createInvalidMiddlewareResultProblem(middleware, nextIndex);
+        }
+
+        response = this.toShortCircuitResponse(ctx);
+        this.recordMiddlewareShortCircuit(inspector, {
+          middleware,
+          middlewareIndex: nextIndex,
+          outcome: "succeeded",
+          reason: middlewareResponse.reason,
+          responseStatus: response.status,
+        });
         return response;
       }
 
-      response = this.toShortCircuitResponse(ctx);
-      return response;
+      if (nextCalled) {
+        if (downstreamResponse) {
+          return downstreamResponse;
+        }
+
+        if (response) {
+          return response;
+        }
+      }
+
+      this.recordMiddlewareShortCircuit(inspector, {
+        middleware,
+        middlewareIndex: nextIndex,
+        outcome: "failed",
+        reason: middlewareResponse === undefined ? "missing-next" : "invalid-return",
+        diagnosticCode: HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE,
+      });
+      throw this.createInvalidMiddlewareResultProblem(middleware, nextIndex);
     };
 
     return dispatch(0);
+  }
+
+  private createInvalidMiddlewareResultProblem(
+    middleware: MiddlewareFunction,
+    middlewareIndex: number,
+  ): Problem {
+    return ProblemFactory.internalServerError(
+      HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE,
+      "Middleware must return a Response, return shortCircuit(reason), or call next() exactly once.",
+      {
+        extensions: {
+          middleware: this.describeMiddleware(middleware, middlewareIndex),
+          middlewareIndex,
+        },
+      },
+    );
   }
 
   private toResponse(ctx: HttpContext, result: unknown): Response {
@@ -299,6 +396,49 @@ export class CrocoRouteRegistrar {
       status: 204,
       headers: ctx.raw.res.headers,
     });
+  }
+
+  private recordMiddlewareShortCircuit(
+    inspector: RuntimeInspector | undefined,
+    input: {
+      readonly middleware: MiddlewareFunction | undefined;
+      readonly middlewareIndex: number;
+      readonly outcome: "succeeded" | "failed";
+      readonly reason: string;
+      readonly responseStatus?: number;
+      readonly diagnosticCode?: string;
+    },
+  ): void {
+    const middlewareName =
+      input.middleware === undefined
+        ? `middleware[${input.middlewareIndex}]`
+        : this.describeMiddleware(input.middleware, input.middlewareIndex);
+
+    this.recordInspectionEvent(inspector, {
+      kind: "middleware.short-circuit",
+      outcome: input.outcome,
+      name: middlewareName,
+      details: {
+        middleware: middlewareName,
+        middlewareIndex: input.middlewareIndex,
+        reason: input.reason,
+        ...(input.responseStatus !== undefined ? { responseStatus: input.responseStatus } : {}),
+        ...(input.diagnosticCode !== undefined ? { diagnosticCode: input.diagnosticCode } : {}),
+      },
+    });
+  }
+
+  private describeMiddleware(middleware: MiddlewareFunction, fallbackIndex: number): string {
+    const securityExportName = getSecurityMiddlewareExportName(middleware);
+    if (securityExportName) {
+      return securityExportName;
+    }
+
+    if (middleware.name.length > 0) {
+      return middleware.name;
+    }
+
+    return `middleware[${fallbackIndex}]`;
   }
 
   private withContextResponseHeaders(ctx: HttpContext, response: Response): Response {

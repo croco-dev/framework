@@ -1836,6 +1836,25 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "error",
   }),
+  CROCO_HTTP_MIDDLEWARE_001: recovery({
+    cause:
+      "HTTP middleware returned without a Response, without shortCircuit(reason), and without calling next() exactly once.",
+    userAction: "Retry only after the service owner ships a middleware contract fix.",
+    operatorAction:
+      "Update the named @croco/transports-http middleware to return next(), await next() once, return a Response, or return shortCircuit(reason) for intentional termination.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  CROCO_HTTP_MIDDLEWARE_002: recovery({
+    cause: "HTTP middleware attempted to resume the downstream pipeline more than once.",
+    userAction: "Retry only after the service owner ships a middleware contract fix.",
+    operatorAction:
+      "Store the Response from a single next() call and reuse or transform it instead of calling next() again.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "transports-http/security-middleware-validation": recovery({
     cause:
       "Compatibility metadata for the previous HTTP security middleware validation code. New runtime failures use CROCO_HTTP_SECURITY_001 and preserve this value as extensions.legacyCode.",
@@ -1845,6 +1864,17 @@ const recoveryMetadataByCode = {
       "Update dashboards, alerts, and runbooks from transports-http/security-middleware-validation to CROCO_HTTP_SECURITY_001 before removing legacy-code matching.",
     retryability: "not-retryable",
     redactionPolicy: "public",
+    severity: "error",
+  }),
+  "transports-http/middleware-next-called-multiple-times": recovery({
+    cause:
+      "Compatibility metadata for the previous HTTP middleware multiple-next code. New runtime failures use CROCO_HTTP_MIDDLEWARE_002 and preserve this value as extensions.legacyCode.",
+    userAction:
+      "Migrate Problem.code matchers to CROCO_HTTP_MIDDLEWARE_002; use extensions.legacyCode only while rolling out compatibility changes.",
+    operatorAction:
+      "Update dashboards, alerts, and runbooks from transports-http/middleware-next-called-multiple-times to CROCO_HTTP_MIDDLEWARE_002 before removing legacy-code matching.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
     severity: "error",
   }),
   "metrics-billing/metric-dropped": recovery({

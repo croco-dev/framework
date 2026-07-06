@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 414,
+  problemCount: 416,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -2800,6 +2800,69 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "CROCO_HTTP_MIDDLEWARE_001",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-middleware-001",
+      recovery: {
+        cause:
+          "HTTP middleware returned without a Response, without shortCircuit(reason), and without calling next() exactly once.",
+        userAction: "Retry only after the service owner ships a middleware contract fix.",
+        operatorAction:
+          "Update the named @croco/transports-http middleware to return next(), await next() once, return a Response, or return shortCircuit(reason) for intentional termination.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+          line: 359,
+          column: 12,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CROCO_HTTP_MIDDLEWARE_002",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-http-middleware-002",
+      recovery: {
+        cause: "HTTP middleware attempted to resume the downstream pipeline more than once.",
+        userAction: "Retry only after the service owner ships a middleware contract fix.",
+        operatorAction:
+          "Store the Response from a single next() call and reuse or transform it instead of calling next() again.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+          line: 264,
+          column: 15,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
       code: "CROCO_HTTP_SECURITY_001",
       category: "InternalServerError",
       status: 500,
@@ -2857,7 +2920,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/middleware/SecurityMiddlewareMarker.ts",
-          line: 148,
+          line: 154,
           column: 11,
           kind: "problem-factory",
         },
@@ -11652,12 +11715,13 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#transports-http-middleware-next-called-multiple-times",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause:
+          "Compatibility metadata for the previous HTTP middleware multiple-next code. New runtime failures use CROCO_HTTP_MIDDLEWARE_002 and preserve this value as extensions.legacyCode.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Migrate Problem.code matchers to CROCO_HTTP_MIDDLEWARE_002; use extensions.legacyCode only while rolling out compatibility changes.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Update dashboards, alerts, and runbooks from transports-http/middleware-next-called-multiple-times to CROCO_HTTP_MIDDLEWARE_002 before removing legacy-code matching.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",
@@ -11671,9 +11735,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 235,
-          column: 15,
-          kind: "problem-factory",
+          line: 35,
+          column: 49,
+          kind: "problem-metadata",
         },
       ],
     },
@@ -11867,7 +11931,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 218,
+          line: 237,
           column: 15,
           kind: "problem-factory",
         },
