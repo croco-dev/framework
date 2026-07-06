@@ -146,6 +146,19 @@ pnpm changeset pre exit
 | 출시 후보   | `rc`     | `1.0.0-rc.0`    | 정식 출시 직전 최종 검증   |
 | 정식 출시   | `latest` | `1.0.0`         | 일반 사용자용 안정 버전    |
 
+### RC release notes
+
+RC release notes must link the
+[0.x-to-1.0 Migration Matrix](docs/release/croco-1.0-spine.md#0x-to-10-migration-matrix) from the
+Croco 1.0 spine checklist. The notes must call out changed package entrypoints, generated app
+templates, manifests, ContractGraph behavior, Problem codes, runtime capability changes, and any
+renamed/deprecated/removed public APIs or artifacts that affect 0.x consumers.
+
+When `croco doctor` or `croco upgrade --dry-run` covers a known old artifact, include the diagnostic
+or upgrade command in the RC release notes so generated-app and CI consumers have a recovery path.
+If no practical diagnostic exists for a compatibility change, the release notes must say so and name
+the manual review path.
+
 ### First alpha release gate
 
 The first alpha release must use the `alpha` dist-tag. Do not publish a `latest` tag until the alpha

@@ -9,7 +9,29 @@ type ChangesetsConfig = {
   readonly linked?: unknown;
 };
 
+type PackageCatalog = {
+  readonly spine?: {
+    readonly packages?: unknown;
+  };
+};
+
 type VersioningMode = "independent" | "fixed" | "linked" | "fixed-and-linked";
+
+const MIGRATION_MATRIX_HEADING = "## 0.x-to-1.0 Migration Matrix";
+const MIGRATION_MATRIX_LINK = "docs/release/croco-1.0-spine.md#0x-to-10-migration-matrix";
+const REQUIRED_MIGRATION_MATRIX_TERMS = [
+  "package entrypoints",
+  "generated app templates",
+  "manifests",
+  "ContractGraph",
+  "Problem codes",
+  "runtime capability",
+  "croco doctor",
+  "croco upgrade",
+  "renamed",
+  "deprecated",
+  "removed",
+] as const;
 
 function log(message: string): void {
   stdout.write(`${message}\n`);
@@ -37,8 +59,25 @@ function parseRoot(args: readonly string[]): string {
   return rootDir;
 }
 
-function readJson(path: string): ChangesetsConfig {
+function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, "utf-8"));
+}
+
+function readSpinePackages(catalog: PackageCatalog): string[] {
+  const packages = catalog.spine?.packages;
+  if (!Array.isArray(packages)) {
+    throw new Error("docs/package-catalog.json spine.packages must be an array");
+  }
+
+  return packages.map((packageName, packageIndex) => {
+    if (typeof packageName !== "string" || packageName.length === 0) {
+      throw new Error(
+        `docs/package-catalog.json spine.packages[${packageIndex}] must be a package slug`,
+      );
+    }
+
+    return packageName;
+  });
 }
 
 function readGroups(value: unknown, fieldName: "fixed" | "linked"): string[][] {
@@ -86,8 +125,184 @@ function groupPackages(groups: readonly string[][]): string[] {
   return groups.flatMap((group) => group);
 }
 
+function toSpinePackageName(slug: string): string {
+  return slug === "create-croco-app" ? slug : `@croco/${slug}`;
+}
+
+function splitMarkdownTableRow(line: string): string[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) {
+    return null;
+  }
+
+  return trimmed
+    .slice(1, -1)
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isMarkdownTableSeparator(cells: readonly string[]): boolean {
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function normalizePackageTableCell(cell: string): string {
+  const trimmed = cell.trim();
+  if (trimmed.startsWith("`") && trimmed.endsWith("`")) {
+    return trimmed.slice(1, -1);
+  }
+
+  return trimmed;
+}
+
+function extractMarkdownSection(markdown: string, heading: string): string | null {
+  const lines = markdown.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === heading);
+  if (start === -1) {
+    return null;
+  }
+
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index++) {
+    if (lines[index].startsWith("## ")) {
+      end = index;
+      break;
+    }
+  }
+
+  return lines.slice(start, end).join("\n");
+}
+
+function includesTerm(content: string, term: string): boolean {
+  return content.toLowerCase().includes(term.toLowerCase());
+}
+
+function collectMigrationMatrixTableErrors(
+  matrixSection: string,
+  spinePackageSlugs: readonly string[],
+): string[] {
+  const errors: string[] = [];
+  const lines = matrixSection.split(/\r?\n/);
+  const headerIndex = lines.findIndex((line) => splitMarkdownTableRow(line)?.[0] === "Package");
+  if (headerIndex === -1) {
+    return ["docs/release/croco-1.0-spine.md migration matrix must include a Package table."];
+  }
+
+  const headerCells = splitMarkdownTableRow(lines[headerIndex]) ?? [];
+  const separatorCells = splitMarkdownTableRow(lines[headerIndex + 1] ?? "");
+  if (!separatorCells || !isMarkdownTableSeparator(separatorCells)) {
+    errors.push(
+      "docs/release/croco-1.0-spine.md migration matrix Package table must include a markdown separator row.",
+    );
+  }
+
+  if (headerCells.length < 4) {
+    errors.push(
+      "docs/release/croco-1.0-spine.md migration matrix Package table must include package, surface, migration, and recovery columns.",
+    );
+  }
+
+  const expectedPackageNames = new Set(spinePackageSlugs.map(toSpinePackageName));
+  const tablePackageNames = new Map<string, number>();
+
+  for (let index = headerIndex + 2; index < lines.length; index++) {
+    const cells = splitMarkdownTableRow(lines[index]);
+    if (!cells) {
+      break;
+    }
+
+    if (isMarkdownTableSeparator(cells)) {
+      continue;
+    }
+
+    if (cells.length !== headerCells.length) {
+      errors.push(
+        `docs/release/croco-1.0-spine.md migration matrix Package table row ${index + 1} must have ${headerCells.length} column(s).`,
+      );
+      continue;
+    }
+
+    const packageName = normalizePackageTableCell(cells[0]);
+    if (!packageName) {
+      errors.push(
+        `docs/release/croco-1.0-spine.md migration matrix Package table row ${index + 1} must name a package.`,
+      );
+      continue;
+    }
+
+    if (cells.slice(1).some((cell) => cell.length === 0)) {
+      errors.push(
+        `docs/release/croco-1.0-spine.md migration matrix Package table row for ${packageName} must have non-empty surface, migration, and recovery cells.`,
+      );
+    }
+
+    tablePackageNames.set(packageName, (tablePackageNames.get(packageName) ?? 0) + 1);
+  }
+
+  for (const [packageName, count] of tablePackageNames) {
+    if (count > 1) {
+      errors.push(
+        `docs/release/croco-1.0-spine.md migration matrix Package table must not repeat ${packageName}.`,
+      );
+    }
+
+    if (!expectedPackageNames.has(packageName)) {
+      errors.push(
+        `docs/release/croco-1.0-spine.md migration matrix Package table includes ${packageName}, which is not in docs/package-catalog.json spine.packages.`,
+      );
+    }
+  }
+
+  for (const packageSlug of spinePackageSlugs) {
+    const packageName = toSpinePackageName(packageSlug);
+    if (!tablePackageNames.has(packageName)) {
+      errors.push(
+        `docs/release/croco-1.0-spine.md migration matrix Package table must include ${packageName} from docs/package-catalog.json spine.packages.`,
+      );
+    }
+  }
+
+  return errors;
+}
+
+function collectMigrationMatrixErrors(
+  releaseGuide: string,
+  spineDocs: string,
+  spinePackageSlugs: readonly string[],
+): string[] {
+  const errors: string[] = [];
+  const hasReleaseGuideLink =
+    releaseGuide.includes("RC release notes") &&
+    releaseGuide.includes(MIGRATION_MATRIX_LINK) &&
+    releaseGuide.includes("renamed/deprecated/removed") &&
+    releaseGuide.includes("croco doctor") &&
+    releaseGuide.includes("croco upgrade --dry-run");
+  if (!hasReleaseGuideLink) {
+    errors.push(
+      "RELEASING.md must require RC release notes to link the 0.x-to-1.0 migration matrix and name doctor/upgrade recovery paths.",
+    );
+  }
+
+  const matrixSection = extractMarkdownSection(spineDocs, MIGRATION_MATRIX_HEADING);
+  if (!matrixSection) {
+    errors.push("docs/release/croco-1.0-spine.md must include `## 0.x-to-1.0 Migration Matrix`.");
+    return errors;
+  }
+
+  errors.push(...collectMigrationMatrixTableErrors(matrixSection, spinePackageSlugs));
+
+  for (const term of REQUIRED_MIGRATION_MATRIX_TERMS) {
+    if (!includesTerm(matrixSection, term)) {
+      errors.push(`docs/release/croco-1.0-spine.md migration matrix must mention ${term}.`);
+    }
+  }
+
+  return errors;
+}
+
 function collectErrors(
   docs: string,
+  spineDocs: string,
+  spinePackageSlugs: readonly string[],
   mode: VersioningMode,
   fixedGroups: readonly string[][],
   linkedGroups: readonly string[][],
@@ -141,6 +356,8 @@ function collectErrors(
     errors.push("RELEASING.md must describe fixed/linked group behavior.");
   }
 
+  errors.push(...collectMigrationMatrixErrors(docs, spineDocs, spinePackageSlugs));
+
   if (mode === "independent") {
     if (!docs.includes("**Mode**: Independent")) {
       errors.push(
@@ -191,12 +408,22 @@ function collectErrors(
 function main(): void {
   try {
     const rootDir = parseRoot(argv.slice(2));
-    const config = readJson(join(rootDir, ".changeset/config.json"));
+    const config = readJson<ChangesetsConfig>(join(rootDir, ".changeset/config.json"));
+    const packageCatalog = readJson<PackageCatalog>(join(rootDir, "docs/package-catalog.json"));
     const docs = readFileSync(join(rootDir, "RELEASING.md"), "utf-8");
+    const spineDocs = readFileSync(join(rootDir, "docs/release/croco-1.0-spine.md"), "utf-8");
     const fixedGroups = readGroups(config.fixed ?? [], "fixed");
     const linkedGroups = readGroups(config.linked ?? [], "linked");
     const mode = getVersioningMode(fixedGroups, linkedGroups);
-    const errors = collectErrors(docs, mode, fixedGroups, linkedGroups);
+    const spinePackageSlugs = readSpinePackages(packageCatalog);
+    const errors = collectErrors(
+      docs,
+      spineDocs,
+      spinePackageSlugs,
+      mode,
+      fixedGroups,
+      linkedGroups,
+    );
 
     if (errors.length === 0) {
       log(`release-docs: Changesets config and release guide agree on ${mode} versioning.`);
