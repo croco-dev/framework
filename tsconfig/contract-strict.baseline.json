@@ -4360,7 +4360,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 520,
+      "line": 525,
       "column": 7,
       "code": "TS2375",
       "message": "Type '{ platform: \"cloudflare-workers\"; env: Record<string, unknown> | undefined; native: { executionContext: { waitUntil: (promise: Promise<unknown>) => void; }; }; waitUntil: (promise: Promise<unknown>) => void; capabilities: { ...; }; }' is not assignable to type 'RuntimeContextInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -4368,7 +4368,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 708,
+      "line": 713,
       "column": 7,
       "code": "TS2379",
       "message": "Argument of type '{ inspectionId: string | undefined; status: number; outcome: \"failed\" | \"succeeded\"; details: { traceId: unknown; telemetryDegraded: {}; error: { name: string; message: string; } | undefined; }; }' is not assignable to parameter of type 'RuntimeInspectorRequestFinish' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

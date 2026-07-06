@@ -384,18 +384,23 @@ export class CrocoRouteRegistrar {
   }
 
   private toShortCircuitResponse(ctx: HttpContext): Response {
-    if (ctx.res.status === 204) {
-      return this.toEmptyResponse(ctx);
+    if (this.isNullBodyStatus(ctx.res.status)) {
+      return this.toEmptyResponse(ctx, ctx.res.status);
     }
 
     return ctx.text("", ctx.res.status);
   }
 
-  private toEmptyResponse(ctx: HttpContext): Response {
+  private toEmptyResponse(ctx: HttpContext, status = 204): Response {
     return new Response(null, {
-      status: 204,
+      status,
       headers: ctx.raw.res.headers,
     });
+  }
+
+  private isNullBodyStatus(status: number): boolean {
+    // Fetch Response can preserve final null-body statuses in the 2xx-5xx constructor range.
+    return status === 204 || status === 205 || status === 304;
   }
 
   private recordMiddlewareShortCircuit(

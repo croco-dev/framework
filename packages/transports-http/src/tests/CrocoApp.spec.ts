@@ -636,6 +636,27 @@ describe("CrocoApp", () => {
     );
   });
 
+  it("should preserve null-body short-circuit response statuses", async () => {
+    for (const status of [205, 304]) {
+      const nullBodyShortCircuit: MiddlewareFunction = (ctx) => {
+        ctx.res.status = status;
+        ctx.res.headers["X-Short-Circuit"] = `status-${status}`;
+        return shortCircuit(`status-${status}`);
+      };
+      const app = createApp({
+        controllers: [TestController],
+        middlewares: [nullBodyShortCircuit],
+        securityValidation: "off",
+      });
+
+      const response = await app.fetch(new Request("http://localhost/api/hello"));
+
+      expect(response.status).toBe(status);
+      expect(response.headers.get("x-short-circuit")).toBe(`status-${status}`);
+      await expect(response.text()).resolves.toBe("");
+    }
+  });
+
   it("should fail middleware that returns without calling next", async () => {
     const missingNext: MiddlewareFunction = () => undefined;
     const app = createApp({
@@ -739,6 +760,44 @@ describe("CrocoApp", () => {
             middlewareIndex: 1,
             reason: "next-called-multiple-times",
             diagnosticCode: "CROCO_HTTP_MIDDLEWARE_002",
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it("should fail middleware that short-circuits after calling next", async () => {
+    const shortCircuitAfterNext: MiddlewareFunction = async (_ctx, next) => {
+      await next();
+      return shortCircuit("ignored");
+    };
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [shortCircuitAfterNext],
+      securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/api/hello"));
+    const body = (await response.json()) as ProblemCorrelationResponse;
+    const inspectorResponse = await app.fetch(new Request("http://localhost/dev/inspector"));
+    const snapshot = (await inspectorResponse.json()) as RuntimeInspectorSnapshot;
+
+    expect(response.status).toBe(500);
+    expect(body.code).toBe("CROCO_HTTP_MIDDLEWARE_001");
+    expect(snapshot.requests[0]?.timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "middleware.short-circuit",
+          outcome: "failed",
+          name: "shortCircuitAfterNext",
+          details: expect.objectContaining({
+            middleware: "shortCircuitAfterNext",
+            middlewareIndex: 1,
+            reason: "short-circuit-after-next",
+            diagnosticCode: "CROCO_HTTP_MIDDLEWARE_001",
           }),
         }),
       ]),
