@@ -77,6 +77,9 @@ export type {
  */
 export {
   DEFAULT_TENANT_MODEL,
+  SUPPORTED_TENANT_MODEL_MANIFEST_SCHEMA_VERSIONS,
+  TENANT_MODEL_MANIFEST_COMPATIBILITY_RULES,
+  TENANT_MODEL_MANIFEST_SCHEMA_ID,
   TENANT_MODEL_DEFINITIONS,
   TENANT_MODEL_MANIFEST_SCHEMA_VERSION,
   TENANT_MODEL_NAMES,
@@ -99,6 +102,7 @@ export type {
   TenantModelDiagnosticCode,
   TenantModelManifest,
   TenantModelManifestSchema,
+  TenantModelManifestSchemaVersion,
   TenantModelName,
   TenantModelRiskLevel,
   TenantModelRuntimeTarget,

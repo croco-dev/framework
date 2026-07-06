@@ -1,7 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { validateTenantModelCompatibility } from "@croco/tenant-core/tenant-model";
-import { generatedSaasProviderProfileManifest } from "./generatedSaasProviderProfile";
+import {
+  generatedSaasProviderProfileDocs,
+  generatedSaasProviderProfileManifest,
+} from "./generatedSaasProviderProfile";
 import {
   generatedTenantModelManifest,
   generatedTenantModelManifestSchema,
@@ -13,23 +16,28 @@ type TenantModelManifest = typeof generatedTenantModelManifest;
 type TenantModelManifestSchema = typeof generatedTenantModelManifestSchema;
 
 const PROFILE_MANIFEST_FILE = "croco-saas-profile.manifest.json";
+const PROFILE_DOCS_FILE = "docs/provider-profile.md";
 const TENANT_MODEL_MANIFEST_FILE = "croco-tenant-model.manifest.json";
 const TENANT_MODEL_SCHEMA_FILE = "croco-tenant-model.schema.json";
 const TENANT_MODEL_PLAYBOOK_FILE = "docs/tenant-model-playbook.md";
+const PROFILE_MANIFEST_SCHEMA_VERSION = "croco.saas-provider-profile/v1";
+const TENANT_MODEL_MANIFEST_SCHEMA_VERSION = "croco.tenant-model/v1";
 
 function main(): void {
   const mode = readMode(process.argv.slice(2));
   const manifest = readProfileManifest();
+  const providerProfileDocs = readProviderProfileDocs();
   const tenantModelManifest = readTenantModelManifest();
   const tenantModelSchema = readTenantModelSchema();
   const tenantModelPlaybook = readTenantModelPlaybook();
 
-  assertManifestMatchesGeneratedSource(manifest);
+  assertManifestMatchesGeneratedSource(manifest, providerProfileDocs);
   assertTenantModelArtifactsMatchGeneratedSource(
     tenantModelManifest,
     tenantModelSchema,
     tenantModelPlaybook,
   );
+  assertTenantModelVersionLinks(tenantModelManifest, tenantModelSchema);
   assertTenantModelManifestLinked(manifest, tenantModelManifest);
   assertTenantModelCompatibility(manifest, tenantModelManifest);
   assertManifestPackagesDeclared(manifest);
@@ -58,6 +66,11 @@ function readProfileManifest(): ProfileManifest {
     "CROCO_SAAS_PROFILE_MANIFEST_MISSING",
   );
   const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as unknown;
+  const schemaVersion = readSchemaVersion(parsed);
+
+  if (schemaVersion !== null && schemaVersion !== PROFILE_MANIFEST_SCHEMA_VERSION) {
+    throw new Error(`CROCO_SAAS_PROFILE_VERSION_UNSUPPORTED: ${schemaVersion}`);
+  }
 
   if (!isProfileManifest(parsed)) {
     throw new Error("CROCO_SAAS_PROFILE_MANIFEST_INVALID: manifest shape does not match v1");
@@ -66,12 +79,23 @@ function readProfileManifest(): ProfileManifest {
   return parsed;
 }
 
+function readProviderProfileDocs(): string {
+  const docsPath = findRootArtifactPath(PROFILE_DOCS_FILE, "CROCO_SAAS_PROFILE_DOCS_MISSING");
+
+  return readFileSync(docsPath, "utf8");
+}
+
 function readTenantModelManifest(): TenantModelManifest {
   const manifestPath = findRootArtifactPath(
     TENANT_MODEL_MANIFEST_FILE,
     "CROCO_TENANT_MODEL_MANIFEST_MISSING",
   );
   const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as unknown;
+  const schemaVersion = readSchemaVersion(parsed);
+
+  if (schemaVersion !== null && schemaVersion !== TENANT_MODEL_MANIFEST_SCHEMA_VERSION) {
+    throw new Error(`CROCO_TENANT_MODEL_VERSION_UNSUPPORTED: ${schemaVersion}`);
+  }
 
   if (!isTenantModelManifest(parsed)) {
     throw new Error("CROCO_TENANT_MODEL_MANIFEST_INVALID: manifest shape does not match v1");
@@ -114,14 +138,21 @@ function findRootArtifactPath(file: string, diagnosticCode: string): string {
   return artifactPath;
 }
 
-function assertManifestMatchesGeneratedSource(manifest: ProfileManifest): void {
-  if (JSON.stringify(manifest) === JSON.stringify(generatedSaasProviderProfileManifest)) {
-    return;
+function assertManifestMatchesGeneratedSource(
+  manifest: ProfileManifest,
+  providerProfileDocs: string,
+): void {
+  if (JSON.stringify(manifest) !== JSON.stringify(generatedSaasProviderProfileManifest)) {
+    throw new Error(
+      "CROCO_SAAS_PROFILE_MANIFEST_DRIFT: croco-saas-profile.manifest.json differs from generatedSaasProviderProfile.ts",
+    );
   }
 
-  throw new Error(
-    "CROCO_SAAS_PROFILE_MANIFEST_DRIFT: croco-saas-profile.manifest.json differs from generatedSaasProviderProfile.ts",
-  );
+  if (providerProfileDocs !== generatedSaasProviderProfileDocs) {
+    throw new Error(
+      "CROCO_SAAS_PROFILE_DOCS_DRIFT: docs/provider-profile.md differs from generatedSaasProviderProfile.ts",
+    );
+  }
 }
 
 function assertTenantModelArtifactsMatchGeneratedSource(
@@ -144,6 +175,27 @@ function assertTenantModelArtifactsMatchGeneratedSource(
   if (playbook !== generatedTenantModelPlaybook) {
     throw new Error(
       "CROCO_TENANT_MODEL_PLAYBOOK_DRIFT: docs/tenant-model-playbook.md differs from generatedTenantModel.ts",
+    );
+  }
+}
+
+function assertTenantModelVersionLinks(
+  manifest: TenantModelManifest,
+  schema: TenantModelManifestSchema,
+): void {
+  const schemaVersionProperty = schema.properties.schemaVersion;
+
+  if (manifest.schemaVersion !== TENANT_MODEL_MANIFEST_SCHEMA_VERSION) {
+    throw new Error(`CROCO_TENANT_MODEL_VERSION_UNSUPPORTED: ${manifest.schemaVersion}`);
+  }
+
+  if (manifest.schema.version !== manifest.schemaVersion) {
+    throw new Error("CROCO_TENANT_MODEL_SCHEMA_VERSION_DRIFT: manifest schema.version mismatch");
+  }
+
+  if (!isRecord(schemaVersionProperty) || schemaVersionProperty.const !== manifest.schemaVersion) {
+    throw new Error(
+      "CROCO_TENANT_MODEL_SCHEMA_VERSION_DRIFT: schema properties.schemaVersion.const mismatch",
     );
   }
 }
@@ -269,7 +321,10 @@ function isEnvConfigured(value: string | undefined): boolean {
 
 function isProfileManifest(value: unknown): value is ProfileManifest {
   if (!isRecord(value)) return false;
-  if (value.schemaVersion !== "croco.saas-provider-profile/v1") return false;
+  if (value.schemaVersion !== PROFILE_MANIFEST_SCHEMA_VERSION) return false;
+  if (!isRecord(value.schema)) return false;
+  if (value.schema.version !== PROFILE_MANIFEST_SCHEMA_VERSION) return false;
+  if (!Array.isArray(value.schema.supportedVersions)) return false;
   if (!isRecord(value.profile)) return false;
   if (typeof value.profile.name !== "string") return false;
   if (!isRecord(value.env)) return false;
@@ -279,6 +334,10 @@ function isProfileManifest(value: unknown): value is ProfileManifest {
   if (!Array.isArray(value.capabilities)) return false;
   if (!isRecord(value.smoke)) return false;
   if (!isRecord(value.compatibility)) return false;
+  if (!Array.isArray(value.compatibility.rules)) return false;
+  if (!isRecord(value.compatibility.generatedArtifacts)) return false;
+  if (!isRecord(value.compatibility.migration)) return false;
+  if (!Array.isArray(value.compatibility.qualityGates)) return false;
   if (!isRecord(value.tenantModel)) return false;
   if (typeof value.tenantModel.currentModel !== "string") return false;
   if (typeof value.tenantModel.defaultModel !== "string") return false;
@@ -301,7 +360,7 @@ function isProfileManifest(value: unknown): value is ProfileManifest {
 
 function isTenantModelManifest(value: unknown): value is TenantModelManifest {
   if (!isRecord(value)) return false;
-  if (value.schemaVersion !== "croco.tenant-model/v1") return false;
+  if (value.schemaVersion !== TENANT_MODEL_MANIFEST_SCHEMA_VERSION) return false;
   if (typeof value.currentModel !== "string") return false;
   if (typeof value.defaultModel !== "string") return false;
   if (!isRecord(value.selected)) return false;
@@ -313,6 +372,11 @@ function isTenantModelManifest(value: unknown): value is TenantModelManifest {
   if (!isRecord(value.schema)) return false;
   if (value.schema.file !== TENANT_MODEL_SCHEMA_FILE) return false;
   if (!isRecord(value.migration)) return false;
+  if (!isRecord(value.compatibility)) return false;
+  if (!Array.isArray(value.compatibility.supportedVersions)) return false;
+  if (!Array.isArray(value.compatibility.rules)) return false;
+  if (!isRecord(value.compatibility.generatedArtifacts)) return false;
+  if (!isRecord(value.compatibility.migration)) return false;
   if (!Array.isArray(value.qualityGates)) return false;
 
   return (
@@ -336,6 +400,10 @@ function isTenantModelSchema(value: unknown): value is TenantModelManifestSchema
 
 function isEnvVar(value: unknown): value is ProfileManifest["env"]["required"][number] {
   return isRecord(value) && typeof value.name === "string";
+}
+
+function readSchemaVersion(value: unknown): string | null {
+  return isRecord(value) && typeof value.schemaVersion === "string" ? value.schemaVersion : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

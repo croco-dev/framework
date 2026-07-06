@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, extname, join, relative } from "node:path";
 import { preProcessFile } from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -29,6 +30,16 @@ const IMPORT_SPECIFIER_PATTERN =
 const DYNAMIC_IMPORT_SPECIFIER_PATTERN = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
 const GENERATED_API_DI_GRAPH_SCRIPT =
   "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
+const WORKSPACE_ROOT = join(process.cwd(), "..", "..");
+const TSX_CLI_PATH = join(
+  WORKSPACE_ROOT,
+  "node_modules",
+  ".pnpm",
+  "node_modules",
+  "tsx",
+  "dist",
+  "cli.mjs",
+);
 
 type DependencyField = (typeof DEPENDENCY_FIELDS)[number];
 type ImportReference = {
@@ -139,6 +150,86 @@ function assertLambdaHandlerTarget(projectDir: string, expectedHandlerPath: stri
 
 function readPackageJson(filePath: string): PackageJson {
   return JSON.parse(readFileSync(filePath, "utf8")) as PackageJson;
+}
+
+function runGeneratedProfileCheck(projectDir: string): { status: number | null; output: string } {
+  expect(existsSync(TSX_CLI_PATH), TSX_CLI_PATH).toBe(true);
+  writeGeneratedProfileCheckRuntimeStub(projectDir);
+
+  const result = spawnSync(
+    process.execPath,
+    [TSX_CLI_PATH, "src/provider-profile-check.ts", "--mode=manifest"],
+    {
+      cwd: join(projectDir, "apps", "api-server"),
+      encoding: "utf8",
+    },
+  );
+
+  return {
+    status: result.status,
+    output: [result.stdout, result.stderr, result.error?.message].filter(Boolean).join("\n"),
+  };
+}
+
+function writeGeneratedProfileCheckRuntimeStub(projectDir: string): void {
+  const tenantCoreStubDir = join(
+    projectDir,
+    "apps",
+    "api-server",
+    "node_modules",
+    "@croco",
+    "tenant-core",
+  );
+  mkdirSync(tenantCoreStubDir, { recursive: true });
+  writeFileSync(
+    join(tenantCoreStubDir, "package.json"),
+    `${JSON.stringify(
+      {
+        type: "module",
+        exports: {
+          "./tenant-model": "./tenant-model.mjs",
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(tenantCoreStubDir, "tenant-model.mjs"),
+    [
+      "export function validateTenantModelCompatibility() {",
+      "  return { ok: true, diagnostics: [] };",
+      "}",
+      "",
+    ].join("\n"),
+  );
+}
+
+function expectGeneratedProfileCheckPass(projectDir: string): void {
+  const result = runGeneratedProfileCheck(projectDir);
+
+  expect(result.output).toContain("SaaS provider profile manifest check passed");
+  expect(result.status).toBe(0);
+}
+
+function expectGeneratedProfileCheckFailureAfterWrite(
+  projectDir: string,
+  relativePath: string,
+  update: (source: string) => string,
+  diagnosticCode: string,
+): void {
+  const artifactPath = join(projectDir, relativePath);
+  const original = readFileSync(artifactPath, "utf8");
+
+  try {
+    writeFileSync(artifactPath, update(original));
+    const result = runGeneratedProfileCheck(projectDir);
+
+    expect(result.status).not.toBe(0);
+    expect(result.output).toContain(diagnosticCode);
+  } finally {
+    writeFileSync(artifactPath, original);
+  }
 }
 
 function toPackageName(specifier: string): string | undefined {
@@ -1072,6 +1163,11 @@ describe("E2E: generate()", () => {
 
     expect(profileManifest).toMatchObject({
       schemaVersion: "croco.saas-provider-profile/v1",
+      schema: {
+        id: "https://croco.dev/schemas/saas-provider-profile.v1.json",
+        version: "croco.saas-provider-profile/v1",
+        supportedVersions: ["croco.saas-provider-profile/v1"],
+      },
       profile: {
         name: "saas-cloudflare",
         runtimeTarget: "cloudflare-workers",
@@ -1094,6 +1190,305 @@ describe("E2E: generate()", () => {
         ],
       },
     });
+    expect(profileManifest).toMatchInlineSnapshot(`
+      {
+        "capabilities": [
+          {
+            "capability": "runtime",
+            "env": [
+              "CLOUDFLARE_ACCOUNT_ID",
+            ],
+            "notes": "Cloudflare Workers covers runtime.",
+            "packageName": "@croco/transports-cloudflare-workers",
+            "provider": "Cloudflare Workers",
+            "status": "documented",
+          },
+          {
+            "capability": "auth",
+            "env": [
+              "CLERK_SECRET_KEY",
+            ],
+            "notes": "Clerk covers auth.",
+            "packageName": "@croco/auth-clerk",
+            "provider": "Clerk",
+            "status": "documented",
+          },
+          {
+            "capability": "billing",
+            "env": [
+              "POLAR_ACCESS_TOKEN",
+              "POLAR_WEBHOOK_SECRET",
+              "POLAR_PRODUCT_ID_TEAM",
+            ],
+            "notes": "Polar covers billing.",
+            "packageName": "@croco/billing-polar",
+            "provider": "Polar",
+            "status": "documented",
+          },
+          {
+            "capability": "metering",
+            "env": [
+              "UPSTASH_REDIS_REST_URL",
+              "UPSTASH_REDIS_REST_TOKEN",
+            ],
+            "notes": "Upstash Redis covers metering.",
+            "packageName": "@croco/metering-upstash",
+            "provider": "Upstash Redis",
+            "status": "documented",
+          },
+          {
+            "capability": "storage",
+            "env": [
+              "R2_BUCKET",
+            ],
+            "notes": "Cloudflare R2 covers storage.",
+            "packageName": "@croco/storage-r2",
+            "provider": "Cloudflare R2",
+            "status": "documented",
+          },
+          {
+            "capability": "tasks",
+            "env": [
+              "UPSTASH_QSTASH_TOKEN",
+              "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
+              "UPSTASH_QSTASH_NEXT_SIGNING_KEY",
+            ],
+            "notes": "QStash covers tasks.",
+            "packageName": "@croco/tasks-qstash",
+            "provider": "QStash",
+            "status": "documented",
+          },
+          {
+            "capability": "telemetry",
+            "env": [
+              "TELEMETRY_ENABLED",
+              "OTEL_EXPORTER_OTLP_ENDPOINT",
+            ],
+            "notes": "OpenTelemetry fetch export covers telemetry.",
+            "packageName": "@croco/telemetry-api",
+            "provider": "OpenTelemetry fetch export",
+            "status": "documented",
+          },
+          {
+            "capability": "webhookVerification",
+            "env": [
+              "POLAR_WEBHOOK_SECRET",
+              "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
+              "UPSTASH_QSTASH_NEXT_SIGNING_KEY",
+            ],
+            "notes": "Polar + QStash signatures covers webhookVerification.",
+            "provider": "Polar + QStash signatures",
+            "status": "documented",
+          },
+        ],
+        "compatibility": {
+          "generatedArtifacts": {
+            "envExample": ".env.example",
+            "manifest": "croco-saas-profile.manifest.json",
+            "providerDocs": "docs/provider-profile.md",
+            "source": "apps/api-server/src/generatedSaasProviderProfile.ts",
+            "tenantModelManifest": "croco-tenant-model.manifest.json",
+            "tenantModelPlaybook": "docs/tenant-model-playbook.md",
+            "tenantModelSchema": "croco-tenant-model.schema.json",
+          },
+          "migration": {
+            "guidance": [
+              "Keep v1 changes additive unless generated app consumers cannot safely read the new shape.",
+              "Bump schemaVersion only with release notes, migration guidance, and croco doctor support for the new version.",
+              "Run profile:check, croco doctor, and generated app smoke checks before accepting a manifest version change.",
+            ],
+            "requiredForVersionChange": true,
+          },
+          "qualityGates": [
+            "profile:check",
+            "croco doctor --json",
+            "demo:smoke",
+          ],
+          "requiredCapabilities": [
+            "runtime",
+            "auth",
+            "billing",
+            "metering",
+            "storage",
+            "tasks",
+            "telemetry",
+            "webhookVerification",
+          ],
+          "rules": [
+            "croco.saas-provider-profile/v1 changes must be additive for existing fields.",
+            "Removing or renaming provider profile fields requires a new schemaVersion and migration notes.",
+            "Generated provider manifest, tenant manifest, provider docs, .env.example, and generated TS source must be committed together.",
+          ],
+        },
+        "deployNotes": [
+          "Keep generated smoke local; use pnpm profile:smoke:real only after Worker secrets are bound.",
+          "Verify Polar and QStash signatures before Worker handlers mutate billing, metering, or task state.",
+          "Flush telemetry through the Worker request lifecycle instead of AWS exec-wrapper style boot hooks.",
+          "Run pnpm profile:check in CI and fail deployment when runtimeTarget or required capabilities drift.",
+        ],
+        "env": {
+          "optional": [
+            {
+              "description": "Opt-in local HTTP demo endpoints.",
+              "example": "false",
+              "name": "SAAS_DEMO_ENDPOINTS_ENABLED",
+              "requiredForRealProvider": false,
+              "secret": false,
+            },
+            {
+              "description": "Enable OpenTelemetry exporter wiring.",
+              "example": "true",
+              "name": "TELEMETRY_ENABLED",
+              "requiredForRealProvider": false,
+              "secret": false,
+            },
+            {
+              "description": "OTLP endpoint used by telemetry init and flush.",
+              "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
+              "requiredForRealProvider": false,
+              "secret": false,
+            },
+          ],
+          "required": [
+            {
+              "description": "Selected generated provider profile name.",
+              "name": "SAAS_PROVIDER_PROFILE",
+              "requiredForRealProvider": true,
+              "secret": false,
+            },
+            {
+              "description": "Cloudflare account id for Workers and R2.",
+              "name": "CLOUDFLARE_ACCOUNT_ID",
+              "requiredForRealProvider": true,
+              "secret": true,
+            },
+            {
+              "description": "Cloudflare deploy token.",
+              "name": "CLOUDFLARE_API_TOKEN",
+              "requiredForRealProvider": true,
+              "secret": true,
+            },
+            {
+              "description": "R2 bucket name for object storage.",
+              "name": "R2_BUCKET",
+              "requiredForRealProvider": true,
+              "secret": false,
+            },
+            {
+              "description": "Clerk backend secret key.",
+              "name": "CLERK_SECRET_KEY",
+              "requiredForRealProvider": true,
+              "secret": true,
+            },
+            {
+              "description": "Polar API access token.",
+              "name": "POLAR_ACCESS_TOKEN",
+              "requiredForRealProvider": true,
+              "secret": true,
+            },
+            {
+              "description": "Polar webhook signature secret.",
+              "name": "POLAR_WEBHOOK_SECRET",
+              "requiredForRealProvider": true,
+              "secret": true,
+            },
+            {
+              "description": "Polar product id for the team plan.",
+              "name": "POLAR_PRODUCT_ID_TEAM",
+              "requiredForRealProvider": true,
+              "secret": false,
+            },
+            {
+              "description": "Upstash Redis REST URL for metering state.",
+              "name": "UPSTASH_REDIS_REST_URL",
+              "requiredForRealProvider": true,
+              "secret": true,
+            },
+            {
+              "description": "Upstash Redis REST token.",
+              "name": "UPSTASH_REDIS_REST_TOKEN",
+              "requiredForRealProvider": true,
+              "secret": true,
+            },
+            {
+              "description": "QStash token for task delivery.",
+              "name": "UPSTASH_QSTASH_TOKEN",
+              "requiredForRealProvider": true,
+              "secret": true,
+            },
+            {
+              "description": "Current QStash webhook signing key.",
+              "name": "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
+              "requiredForRealProvider": true,
+              "secret": true,
+            },
+            {
+              "description": "Next QStash webhook signing key.",
+              "name": "UPSTASH_QSTASH_NEXT_SIGNING_KEY",
+              "requiredForRealProvider": true,
+              "secret": true,
+            },
+          ],
+        },
+        "packages": [
+          "@croco/preset-cloudflare",
+          "@croco/transports-cloudflare-workers",
+          "@croco/auth-clerk",
+          "@croco/billing-polar",
+          "@croco/metering-upstash",
+          "@croco/storage-r2",
+          "@croco/tasks-qstash",
+          "@croco/triggers-qstash",
+          "@clerk/backend",
+          "@polar-sh/sdk",
+          "@upstash/qstash",
+          "@upstash/redis",
+        ],
+        "profile": {
+          "description": "Cloudflare Workers profile with Clerk auth, Polar billing, Upstash metering/tasks, R2 storage, and explicit Worker runtime limits.",
+          "displayName": "Cloudflare SaaS",
+          "name": "saas-cloudflare",
+          "runtimeTarget": "cloudflare-workers",
+        },
+        "schema": {
+          "id": "https://croco.dev/schemas/saas-provider-profile.v1.json",
+          "supportedVersions": [
+            "croco.saas-provider-profile/v1",
+          ],
+          "version": "croco.saas-provider-profile/v1",
+        },
+        "schemaVersion": "croco.saas-provider-profile/v1",
+        "smoke": {
+          "realProviderOptIn": "SAAS_PROVIDER_PROFILE=saas-cloudflare pnpm profile:smoke:real",
+          "zeroCredential": "pnpm demo:smoke",
+        },
+        "tenantModel": {
+          "currentModel": "workspace",
+          "defaultModel": "org",
+          "manifest": "croco-tenant-model.manifest.json",
+          "playbook": "docs/tenant-model-playbook.md",
+          "requiredAdapters": [
+            "TenantManager",
+            "MembershipManager",
+            "InvitationManager",
+            "WorkspaceSelectionAdapter",
+          ],
+          "requiredCapabilities": [
+            "tenant-context",
+            "tenant-identity",
+            "membership",
+            "workspace-selection",
+            "migration-plan",
+          ],
+          "requiredPackages": [
+            "@croco/tenant-core",
+            "@croco/membership-core",
+            "@croco/invitation-core",
+          ],
+          "schema": "croco-tenant-model.schema.json",
+        },
+      }
+    `);
     expect(tenantModelManifest).toMatchObject({
       schemaVersion: "croco.tenant-model/v1",
       currentModel: "workspace",
@@ -1112,6 +1507,396 @@ describe("E2E: generate()", () => {
         risk: "low",
       },
     });
+    expect(tenantModelManifest).toMatchInlineSnapshot(`
+      {
+        "compatibility": {
+          "currentVersion": "croco.tenant-model/v1",
+          "generatedArtifacts": {
+            "manifest": "croco-tenant-model.manifest.json",
+            "playbook": "docs/tenant-model-playbook.md",
+            "schema": "croco-tenant-model.schema.json",
+            "source": "apps/api-server/src/generatedTenantModel.ts",
+          },
+          "migration": {
+            "guidance": [
+              "Bump schemaVersion only when existing tenant manifest consumers cannot safely read the new shape.",
+              "Ship migration guidance before generated apps start emitting the new tenant manifest version.",
+              "Run profile:check and croco doctor on generated apps before accepting the version change.",
+            ],
+            "requiredForVersionChange": true,
+          },
+          "rules": [
+            "croco.tenant-model/v1 changes must be additive for existing fields.",
+            "Removing or renaming tenant model fields requires a new schemaVersion and migration notes.",
+            "Generated croco-tenant-model.manifest.json, croco-tenant-model.schema.json, docs/tenant-model-playbook.md, and generatedTenantModel.ts must be committed together.",
+          ],
+          "schemaId": "https://croco.dev/schemas/tenant-model-manifest.v1.json",
+          "supportedVersions": [
+            "croco.tenant-model/v1",
+          ],
+        },
+        "currentModel": "workspace",
+        "defaultModel": "org",
+        "diagnostics": [
+          {
+            "code": "tenant-core/tenant-model-manual-migration-required",
+            "message": "Moving historical rows between workspaces can change entitlement and audit semantics.",
+            "recovery": "Write an explicit migration runbook, backfill evidence, and rollback plan before changing production tenant isolation.",
+            "severity": "warning",
+          },
+        ],
+        "migration": {
+          "from": "org",
+          "manualSteps": [
+            "Inventory existing tenant-owned resources before changing the manifest from 'org' to 'workspace'.",
+            "Choose a deterministic default workspace for each existing organization.",
+            "Backfill workspace ids onto tenant-owned resources before exposing workspace switching.",
+            "Keep an audit trail for rows moved between workspaces.",
+            "Run generated contract checks and tenant isolation fixtures before accepting writes in the new model.",
+            "Commit the updated croco-tenant-model.manifest.json and docs/tenant-model-playbook.md together.",
+          ],
+          "risk": "low",
+          "to": "workspace",
+          "warnings": [
+            {
+              "code": "tenant-core/tenant-model-manual-migration-required",
+              "message": "Moving historical rows between workspaces can change entitlement and audit semantics.",
+              "recovery": "Write an explicit migration runbook, backfill evidence, and rollback plan before changing production tenant isolation.",
+            },
+          ],
+        },
+        "models": [
+          {
+            "displayName": "Single tenant",
+            "isolation": "none",
+            "migrationHints": [
+              "Create one tenant record that represents the current deployment.",
+              "Backfill future tenant-owned rows with that tenant id before enabling scoped queries.",
+            ],
+            "name": "single",
+            "requiredAdapters": [
+              "TenantManager",
+            ],
+            "requiredCapabilities": [
+              "tenant-context",
+              "migration-plan",
+            ],
+            "requiredPackages": [
+              "@croco/tenant-core",
+            ],
+            "schemaHints": [
+              "Do not add tenant discriminator columns to domain tables.",
+              "Keep admin-only data export available so the app can move to an org or workspace model later.",
+            ],
+            "summary": "One logical tenant for the whole application. Use this while product-market fit matters more than tenant administration.",
+            "supportedRuntimeTargets": [
+              "node",
+              "cloudflare-workers",
+              "lambda",
+            ],
+            "tenantKey": "none",
+            "unsafeMigrationWarnings": [],
+          },
+          {
+            "displayName": "Organization",
+            "isolation": "membership",
+            "migrationHints": [
+              "Create organization records for each existing account owner or billing account.",
+              "Backfill memberships before enforcing tenant-required routes.",
+              "Run cross-tenant leak fixtures before removing single-tenant fallbacks.",
+            ],
+            "name": "org",
+            "requiredAdapters": [
+              "TenantManager",
+              "MembershipManager",
+              "InvitationManager",
+            ],
+            "requiredCapabilities": [
+              "tenant-context",
+              "tenant-identity",
+              "membership",
+              "migration-plan",
+            ],
+            "requiredPackages": [
+              "@croco/tenant-core",
+              "@croco/membership-core",
+              "@croco/invitation-core",
+            ],
+            "schemaHints": [
+              "Create an organizations table or provider-backed organization mapping.",
+              "Store membership and invitation records by organization id.",
+              "Bind request context from an explicit organization selector, auth claim, header, or route segment.",
+            ],
+            "summary": "A SaaS organization owns memberships, invitations, billing, and default tenant context for most B2B apps.",
+            "supportedRuntimeTargets": [
+              "node",
+              "cloudflare-workers",
+              "lambda",
+            ],
+            "tenantKey": "organizationId",
+            "unsafeMigrationWarnings": [
+              "Do not infer organization ownership only from email domains without an explicit admin review.",
+            ],
+          },
+          {
+            "displayName": "Workspace",
+            "isolation": "membership",
+            "migrationHints": [
+              "Choose a deterministic default workspace for each existing organization.",
+              "Backfill workspace ids onto tenant-owned resources before exposing workspace switching.",
+              "Keep an audit trail for rows moved between workspaces.",
+            ],
+            "name": "workspace",
+            "requiredAdapters": [
+              "TenantManager",
+              "MembershipManager",
+              "InvitationManager",
+              "WorkspaceSelectionAdapter",
+            ],
+            "requiredCapabilities": [
+              "tenant-context",
+              "tenant-identity",
+              "membership",
+              "workspace-selection",
+              "migration-plan",
+            ],
+            "requiredPackages": [
+              "@croco/tenant-core",
+              "@croco/membership-core",
+              "@croco/invitation-core",
+            ],
+            "schemaHints": [
+              "Create workspaces beneath organizations or accounts.",
+              "Persist the active workspace id separately from user authentication state.",
+              "Scope feature flags, entitlement checks, and generated RPC clients to the active workspace.",
+            ],
+            "summary": "A user can belong to multiple workspaces inside an organization. Use this when collaboration spaces need isolated configuration or data.",
+            "supportedRuntimeTargets": [
+              "node",
+              "cloudflare-workers",
+              "lambda",
+            ],
+            "tenantKey": "workspaceId",
+            "unsafeMigrationWarnings": [
+              "Moving historical rows between workspaces can change entitlement and audit semantics.",
+            ],
+          },
+          {
+            "displayName": "Shared schema",
+            "isolation": "tenant-column",
+            "migrationHints": [
+              "Classify every table as global, tenant-owned, or join data before adding columns.",
+              "Backfill tenant ids in a locked or dual-write phase.",
+              "Fail reads and writes that omit tenant predicates.",
+            ],
+            "name": "shared-schema",
+            "requiredAdapters": [
+              "TenantContextProvider",
+              "TenantFilteredRepository",
+            ],
+            "requiredCapabilities": [
+              "tenant-context",
+              "tenant-identity",
+              "tenant-discriminator",
+              "tenant-query-filter",
+              "migration-plan",
+            ],
+            "requiredPackages": [
+              "@croco/tenant-core",
+              "@croco/tx-core",
+            ],
+            "schemaHints": [
+              "Add a non-null tenant id column to every tenant-owned table.",
+              "Index tenant id with hot-path lookup keys.",
+              "Require repository/query helpers to prove tenant predicates before execution.",
+            ],
+            "summary": "All tenants share the same database schema and every tenant-owned table carries a tenant discriminator column.",
+            "supportedRuntimeTargets": [
+              "node",
+              "cloudflare-workers",
+              "lambda",
+            ],
+            "tenantKey": "tenantId",
+            "unsafeMigrationWarnings": [
+              "A nullable tenant discriminator is an unsafe intermediate state unless writes are frozen.",
+              "Global tables must be explicitly marked global instead of silently skipping tenant checks.",
+            ],
+          },
+          {
+            "displayName": "RLS-backed",
+            "isolation": "postgres-rls",
+            "migrationHints": [
+              "Add tenant id columns and indexes before enabling RLS.",
+              "Create policies in report-only or locked maintenance windows first.",
+              "Verify adapter-provided TenantRlsEvidence matches the active tenant before release.",
+            ],
+            "name": "rls-backed",
+            "requiredAdapters": [
+              "TenantContextProvider",
+              "DrizzleTenantSession",
+              "TenantRlsEvidence",
+            ],
+            "requiredCapabilities": [
+              "tenant-context",
+              "tenant-identity",
+              "tenant-discriminator",
+              "tenant-query-filter",
+              "postgres-rls",
+              "migration-plan",
+            ],
+            "requiredPackages": [
+              "@croco/tenant-core",
+              "@croco/tx-core",
+              "@croco/tx-drizzle",
+              "drizzle-orm",
+            ],
+            "schemaHints": [
+              "Use Postgres tables with non-null tenant id columns for tenant-owned rows.",
+              "Set the current tenant through a transaction-scoped database setting before queries run.",
+              "Enable and force RLS policies before treating the provider as production-ready.",
+            ],
+            "summary": "Postgres row-level security enforces tenant isolation in the database in addition to application-level tenant context.",
+            "supportedRuntimeTargets": [
+              "node",
+            ],
+            "tenantKey": "tenantId",
+            "unsafeMigrationWarnings": [
+              "Do not enable RLS without proving every write path sets the current tenant database setting.",
+              "Do not deploy RLS-backed mode on runtimes without a Postgres transaction boundary.",
+            ],
+          },
+        ],
+        "qualityGates": [
+          "profile:check",
+          "contract:verify",
+          "demo:smoke",
+        ],
+        "schema": {
+          "file": "croco-tenant-model.schema.json",
+          "version": "croco.tenant-model/v1",
+        },
+        "schemaVersion": "croco.tenant-model/v1",
+        "selected": {
+          "displayName": "Workspace",
+          "isolation": "membership",
+          "migrationHints": [
+            "Choose a deterministic default workspace for each existing organization.",
+            "Backfill workspace ids onto tenant-owned resources before exposing workspace switching.",
+            "Keep an audit trail for rows moved between workspaces.",
+          ],
+          "name": "workspace",
+          "requiredAdapters": [
+            "TenantManager",
+            "MembershipManager",
+            "InvitationManager",
+            "WorkspaceSelectionAdapter",
+          ],
+          "requiredCapabilities": [
+            "tenant-context",
+            "tenant-identity",
+            "membership",
+            "workspace-selection",
+            "migration-plan",
+          ],
+          "requiredPackages": [
+            "@croco/tenant-core",
+            "@croco/membership-core",
+            "@croco/invitation-core",
+          ],
+          "schemaHints": [
+            "Create workspaces beneath organizations or accounts.",
+            "Persist the active workspace id separately from user authentication state.",
+            "Scope feature flags, entitlement checks, and generated RPC clients to the active workspace.",
+          ],
+          "summary": "A user can belong to multiple workspaces inside an organization. Use this when collaboration spaces need isolated configuration or data.",
+          "supportedRuntimeTargets": [
+            "node",
+            "cloudflare-workers",
+            "lambda",
+          ],
+          "tenantKey": "workspaceId",
+          "unsafeMigrationWarnings": [
+            "Moving historical rows between workspaces can change entitlement and audit semantics.",
+          ],
+        },
+      }
+    `);
+    expect(tenantModelSchema).toMatchInlineSnapshot(`
+      {
+        "$id": "https://croco.dev/schemas/tenant-model-manifest.v1.json",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "properties": {
+          "compatibility": {
+            "required": [
+              "schemaId",
+              "currentVersion",
+              "supportedVersions",
+              "rules",
+              "generatedArtifacts",
+              "migration",
+            ],
+            "type": "object",
+          },
+          "currentModel": {
+            "enum": [
+              "single",
+              "org",
+              "workspace",
+              "shared-schema",
+              "rls-backed",
+            ],
+          },
+          "defaultModel": {
+            "const": "org",
+          },
+          "migration": {
+            "required": [
+              "from",
+              "to",
+              "risk",
+              "manualSteps",
+              "warnings",
+            ],
+            "type": "object",
+          },
+          "models": {
+            "minItems": 5,
+            "type": "array",
+          },
+          "schemaVersion": {
+            "const": "croco.tenant-model/v1",
+          },
+          "selected": {
+            "required": [
+              "name",
+              "displayName",
+              "summary",
+              "tenantKey",
+              "isolation",
+              "requiredPackages",
+              "requiredAdapters",
+              "requiredCapabilities",
+              "supportedRuntimeTargets",
+              "schemaHints",
+              "migrationHints",
+              "unsafeMigrationWarnings",
+            ],
+            "type": "object",
+          },
+        },
+        "required": [
+          "schemaVersion",
+          "currentModel",
+          "defaultModel",
+          "selected",
+          "models",
+          "migration",
+          "compatibility",
+        ],
+        "title": "Croco Tenant Model Manifest",
+        "type": "object",
+      }
+    `);
     expect(tenantModelManifest.models.map((model: { name: string }) => model.name)).toEqual([
       "single",
       "org",
@@ -1212,14 +1997,60 @@ describe("E2E: generate()", () => {
     expect(envExample).toContain("SAAS_PROVIDER_PROFILE=saas-cloudflare");
     expect(envExample).toContain("CLOUDFLARE_ACCOUNT_ID=<secret>");
     expect(providerProfileDocs).toContain("Capability Matrix");
+    expect(providerProfileDocs).toContain("Manifest Contract");
+    expect(providerProfileDocs).toContain("Schema version: `croco.saas-provider-profile/v1`");
     expect(providerProfileDocs).toContain("Tenant model: `workspace`");
     expect(providerProfileDocs).toContain("QStash");
     expect(tenantModelPlaybook).toContain("Current model: `workspace`");
+    expect(tenantModelPlaybook).toContain("## Manifest Versioning");
+    expect(tenantModelPlaybook).toContain("Current version: `croco.tenant-model/v1`");
     expect(tenantModelPlaybook).toContain("Tenant model migration: org -> workspace");
     expect(tenantModelPlaybook).toContain("tenant-core/tenant-model-runtime-incompatible");
     expect(generatedProfileSource).toContain("saas-cloudflare");
+    expect(generatedProfileSource).toContain("generatedSaasProviderProfileDocs");
+    expect(generatedProfileSource).toContain(JSON.stringify(providerProfileDocs));
+    const providerProfileCheckSource = readFileSync(
+      join(testDir, "apps", "api-server", "src", "provider-profile-check.ts"),
+      "utf8",
+    );
+    expect(providerProfileCheckSource).toContain("CROCO_SAAS_PROFILE_VERSION_UNSUPPORTED");
+    expect(providerProfileCheckSource).toContain("CROCO_TENANT_MODEL_VERSION_UNSUPPORTED");
     expect(generatedTenantModelSource).toContain("generatedTenantModelManifest");
     expect(generatedTenantModelSource).toContain('"workspace"');
+    expectGeneratedProfileCheckPass(testDir);
+    expectGeneratedProfileCheckFailureAfterWrite(
+      testDir,
+      "docs/provider-profile.md",
+      (source) => `${source}\n`,
+      "CROCO_SAAS_PROFILE_DOCS_DRIFT",
+    );
+    expectGeneratedProfileCheckFailureAfterWrite(
+      testDir,
+      "croco-saas-profile.manifest.json",
+      (source) =>
+        source.replace(
+          '"displayName": "Cloudflare SaaS"',
+          '"displayName": "Cloudflare SaaS Drift"',
+        ),
+      "CROCO_SAAS_PROFILE_MANIFEST_DRIFT",
+    );
+    expectGeneratedProfileCheckFailureAfterWrite(
+      testDir,
+      "croco-tenant-model.schema.json",
+      (source) =>
+        source.replace(
+          '"title": "Croco Tenant Model Manifest"',
+          '"title": "Drifted Tenant Model Manifest"',
+        ),
+      "CROCO_TENANT_MODEL_SCHEMA_DRIFT",
+    );
+    expectGeneratedProfileCheckFailureAfterWrite(
+      testDir,
+      "docs/tenant-model-playbook.md",
+      (source) => `${source}\n`,
+      "CROCO_TENANT_MODEL_PLAYBOOK_DRIFT",
+    );
+    expectGeneratedProfileCheckPass(testDir);
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "demo", "saasSmokeContract.ts")),
     ).toBe(true);

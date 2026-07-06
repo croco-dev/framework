@@ -496,6 +496,68 @@ describe("doctor", () => {
     ]);
   });
 
+  it("fails generated SaaS provider readiness when the provider manifest version is unsupported", () => {
+    const repo = createCrocoWorkspace();
+    writeHealthySaasProviderDoctorWorkspace(repo);
+    writeProviderProfileManifest(repo, {
+      schemaVersion: "croco.saas-provider-profile/v2",
+    });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorProviderProfileVersionUnsupported,
+        cause: expect.stringContaining("croco.saas-provider-profile/v2"),
+        action: expect.stringContaining("migration guidance"),
+      }),
+    ]);
+    expect(getDoctorExitCode(report)).toBe(1);
+  });
+
+  it("fails generated SaaS provider readiness when the linked tenant manifest version is unsupported", () => {
+    const repo = createCrocoWorkspace();
+    writeHealthySaasProviderDoctorWorkspace(repo);
+    writeProviderProfileManifest(repo, {
+      tenantModel: {
+        manifest: "croco-tenant-model.manifest.json",
+      },
+    });
+    writeTenantModelManifest(repo, {
+      schemaVersion: "croco.tenant-model/v2",
+    });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorTenantModelVersionUnsupported,
+        cause: expect.stringContaining("croco.tenant-model/v2"),
+        location: expect.objectContaining({ file: "croco-tenant-model.manifest.json" }),
+      }),
+    ]);
+    expect(getDoctorExitCode(report)).toBe(1);
+  });
+
+  it("passes generated SaaS provider readiness when the linked tenant manifest uses the v1 contract", () => {
+    const repo = createCrocoWorkspace();
+    writeHealthySaasProviderDoctorWorkspace(repo);
+    writeProviderProfileManifest(repo, {
+      tenantModel: {
+        manifest: "croco-tenant-model.manifest.json",
+      },
+    });
+    writeTenantModelManifest(repo);
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("healthy");
+    expect(report.diagnostics).toEqual([]);
+    expect(getDoctorExitCode(report)).toBe(0);
+  });
+
   it("passes advisory release-hardening readiness when local evidence is present", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -2867,6 +2929,113 @@ function writeValidStaticMisuseAllowlist(
         ...entry,
       },
     ],
+  });
+}
+
+function writeHealthySaasProviderDoctorWorkspace(repo: string): void {
+  writeRootPackage(repo, {
+    scripts: {
+      "contract:snapshot": "croco contracts check --json --out contract-graph.snapshot.json",
+      "runtime-policy:check":
+        "croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
+    },
+    devDependencies: {
+      "@croco/cli": "file:../packs/croco-cli.tgz",
+    },
+  });
+  writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+    dependencies: {
+      "@croco/auth-better-auth": "file:../packs/croco-auth-better-auth.tgz",
+      "@croco/problems-core": "file:../packs/croco-problems-core.tgz",
+      "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+    },
+  });
+  writeFile(
+    repo,
+    "packages/api/src/app.ts",
+    [
+      'import { bodyLimitMiddleware, corsMiddleware, createApp, rateLimitHttpMiddleware, securityHeadersMiddleware } from "@croco/transports-http";',
+      "export function createApiApp() {",
+      "  return createApp({",
+      "    controllers: [],",
+      "    middlewares: [",
+      "      securityHeadersMiddleware(),",
+      "      corsMiddleware({ origins: ['http://localhost:5173'] }),",
+      "      bodyLimitMiddleware({ limit: 1024 }),",
+      "      rateLimitHttpMiddleware({ rateLimiter: {} as never, policy: {} as never }),",
+      "    ],",
+      "  });",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  writeNodeModulePackage(repo, "@croco/cli");
+  for (const packageName of [
+    "@croco/auth-better-auth",
+    "@croco/problems-core",
+    "@croco/transports-http",
+  ]) {
+    writeNodeModulePackage(repo, packageName, "packages/api");
+  }
+  writeJson(repo, "contract-graph.snapshot.json", {
+    snapshotVersion: "croco.contract-graph.snapshot.v1",
+    graphVersion: "croco.contract-graph.v1",
+    controllerCount: 0,
+    routeCount: 0,
+    operationIds: [],
+    controllers: [],
+    routes: [],
+    diagnostics: [],
+  });
+  writeJson(repo, "croco-runtime-policy.manifest.json", {
+    schemaVersion: "croco.runtime-policy/v1",
+    runtime: { platform: "node" },
+    table: { plans: [] },
+  });
+  writeProviderProfileManifest(repo);
+}
+
+function writeProviderProfileManifest(repo: string, manifest: Record<string, unknown> = {}): void {
+  writeJson(repo, "croco-saas-profile.manifest.json", {
+    schemaVersion: "croco.saas-provider-profile/v1",
+    profile: {
+      name: "saas-node-postgres",
+      displayName: "Node/Postgres SaaS",
+      runtimeTarget: "node",
+    },
+    packages: ["@croco/auth-better-auth"],
+    capabilities: [
+      "runtime",
+      "auth",
+      "billing",
+      "metering",
+      "storage",
+      "tasks",
+      "telemetry",
+      "webhookVerification",
+    ].map((capability) => ({
+      capability,
+      provider: "zero-credential",
+      status: "configured",
+      env: [],
+      notes: "covered by generated smoke",
+    })),
+    ...manifest,
+  });
+}
+
+function writeTenantModelManifest(repo: string, manifest: Record<string, unknown> = {}): void {
+  writeJson(repo, "croco-tenant-model.manifest.json", {
+    schemaVersion: "croco.tenant-model/v1",
+    currentModel: "org",
+    defaultModel: "org",
+    selected: {
+      name: "org",
+    },
+    models: [],
+    schema: {},
+    migration: {},
+    ...manifest,
   });
 }
 
