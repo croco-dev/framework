@@ -140,8 +140,12 @@ export {
   isMiddlewareShortCircuit,
   shortCircuit,
   type MiddlewareShortCircuit,
-  type MiddlewareShortCircuitReason,
 } from "./libs/middleware/MiddlewareShortCircuit";
+
+/**
+ * 명시적인 HTTP 미들웨어 short-circuit 사유 문자열입니다.
+ */
+export type { MiddlewareShortCircuitReason } from "./libs/middleware/MiddlewareShortCircuit";
 
 /**
  * graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
