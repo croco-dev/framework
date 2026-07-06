@@ -444,7 +444,7 @@ This cookbook documents 414 public Croco Problem codes. The deterministic JSON r
 
 Sources:
 
-- `packages/transports-http/src/libs/PipelineRunner.ts:171:15` (problem-factory)
+- `packages/transports-http/src/libs/PipelineRunner.ts:196:15` (problem-factory)
 
 <a id="access-core-forbidden"></a>
 
@@ -2064,7 +2064,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:183:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:186:11` (problem-factory)
 
 <a id="croco-http-security-002"></a>
 
@@ -7086,7 +7086,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:220:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:223:11` (problem-factory)
 
 <a id="transports-http-duplicate-health-check"></a>
 

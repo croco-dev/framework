@@ -1,8 +1,14 @@
 import "reflect-metadata";
-import { Container, Context as FrameworkContext } from "@croco/framework-context";
+import {
+  Container,
+  Context,
+  DEV_INSPECTOR_TOKEN,
+  RuntimeInspector,
+} from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
-import type { ExceptionFilter } from "@croco/protocols-rest";
+import type { ExceptionFilter, HttpExceptionFilterResponse } from "@croco/protocols-rest";
+import { type Span, trace } from "@opentelemetry/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HTTP_CONTEXT_KEYS } from "../libs/contextKeys";
 import { ErrorHandler } from "../libs/ErrorHandler";
@@ -80,8 +86,59 @@ describe("PipelineRunner", () => {
     debug: ReturnType<typeof vi.fn>;
   };
 
+  type MockSpan = Span & {
+    addEvent: ReturnType<typeof vi.fn>;
+    recordException: ReturnType<typeof vi.fn>;
+  };
+
+  function createMockSpan(): MockSpan {
+    const setAttribute = vi.fn();
+    const setAttributes = vi.fn();
+    const addEvent = vi.fn();
+    const addLink = vi.fn();
+    const addLinks = vi.fn();
+    const setStatus = vi.fn();
+    const updateName = vi.fn();
+
+    const span = {
+      spanContext: vi.fn().mockReturnValue({
+        traceId: "11111111111111111111111111111111",
+        spanId: "2222222222222222",
+        traceFlags: 1,
+      }),
+      setAttribute,
+      setAttributes,
+      addEvent,
+      addLink,
+      addLinks,
+      setStatus,
+      updateName,
+      end: vi.fn(),
+      isRecording: vi.fn().mockReturnValue(true),
+      recordException: vi.fn(),
+    } as unknown as MockSpan;
+
+    setAttribute.mockReturnValue(span);
+    setAttributes.mockReturnValue(span);
+    addEvent.mockReturnValue(span);
+    addLink.mockReturnValue(span);
+    addLinks.mockReturnValue(span);
+    setStatus.mockReturnValue(span);
+    updateName.mockReturnValue(span);
+
+    return span;
+  }
+
   function createRunner(): PipelineRunner {
-    return new PipelineRunner(Container.get(ErrorHandler));
+    return new PipelineRunner(Container.get(ErrorHandler), logger as unknown as Logger);
+  }
+
+  function filterResponse(
+    status: number,
+    body: Record<string, unknown>,
+    headers: Record<string, string> = { "Content-Type": "application/json" },
+  ): HttpExceptionFilterResponse {
+    return { status, headers, body };
   }
 
   beforeEach(() => {
@@ -112,14 +169,14 @@ describe("PipelineRunner", () => {
     const httpProblemFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
       catch: vi.fn().mockImplementation((error: unknown) => {
         if (error instanceof Problem) {
-          return "http-problem-filter";
+          return filterResponse(409, { code: "HTTP_PROBLEM_FILTER" });
         }
         throw error;
       }),
     };
 
     const genericFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
-      catch: vi.fn().mockReturnValue("generic-filter"),
+      catch: vi.fn().mockReturnValue(filterResponse(500, { code: "GENERIC_FILTER" })),
     };
 
     const httpProblemResult = await runner.run(
@@ -134,7 +191,9 @@ describe("PipelineRunner", () => {
       },
     );
 
-    expect(httpProblemResult).toBe("http-problem-filter");
+    expect(httpProblemResult).toBeInstanceOf(Response);
+    expect((httpProblemResult as Response).status).toBe(409);
+    expect(await (httpProblemResult as Response).json()).toEqual({ code: "HTTP_PROBLEM_FILTER" });
     expect(httpProblemFilter.catch).toHaveBeenCalledTimes(1);
     expect(genericFilter.catch).not.toHaveBeenCalled();
 
@@ -150,7 +209,9 @@ describe("PipelineRunner", () => {
       },
     );
 
-    expect(genericErrorResult).toBe("generic-filter");
+    expect(genericErrorResult).toBeInstanceOf(Response);
+    expect((genericErrorResult as Response).status).toBe(500);
+    expect(await (genericErrorResult as Response).json()).toEqual({ code: "GENERIC_FILTER" });
     expect(httpProblemFilter.catch).toHaveBeenCalledTimes(2);
     expect(genericFilter.catch).toHaveBeenCalledTimes(1);
   });
@@ -224,6 +285,348 @@ describe("PipelineRunner", () => {
       detail: "original business error",
       status: 400,
     });
+    expect(logger.warn).toHaveBeenCalledWith(
+      "CROCO_HTTP_FILTER_001",
+      expect.objectContaining({
+        diagnosticCode: "CROCO_HTTP_FILTER_001",
+        filter: "filter[0]",
+        reason: "thrown",
+        originalProblemCode: "BAD_REQUEST",
+        originalProblemCategory: originalProblem.category,
+        originalProblemStatus: 400,
+      }),
+    );
+  });
+
+  it("should treat undefined filter results as not handled", async () => {
+    const runner = createRunner();
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "not handled");
+
+    const passThroughFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockReturnValue(undefined),
+    };
+
+    const result = await runner.run(
+      execContext,
+      async () => {
+        throw originalProblem;
+      },
+      {
+        guards: [],
+        interceptors: [],
+        filters: [passThroughFilter],
+      },
+    );
+
+    expect(passThroughFilter.catch).toHaveBeenCalledWith(originalProblem, execContext);
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(400);
+    expect(await (result as Response).json()).toMatchObject({
+      code: "BAD_REQUEST",
+      detail: "not handled",
+      status: 400,
+    });
+    expect(logger.warn).not.toHaveBeenCalledWith("CROCO_HTTP_FILTER_001", expect.anything());
+  });
+
+  it("should let a later filter handle the original error after an earlier filter throws", async () => {
+    const runner = createRunner();
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "original");
+
+    const brokenFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockImplementation(() => {
+        throw new Error("filter failure");
+      }),
+    };
+    const handlingFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockReturnValue(filterResponse(422, { code: "HANDLED_AFTER_FAILURE" })),
+    };
+
+    const result = await runner.run(
+      execContext,
+      async () => {
+        throw originalProblem;
+      },
+      {
+        guards: [],
+        interceptors: [],
+        filters: [brokenFilter, handlingFilter],
+      },
+    );
+
+    expect(handlingFilter.catch).toHaveBeenCalledWith(originalProblem, execContext);
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(422);
+    expect(await (result as Response).json()).toEqual({ code: "HANDLED_AFTER_FAILURE" });
+    expect(logger.warn).toHaveBeenCalledWith(
+      "CROCO_HTTP_FILTER_001",
+      expect.objectContaining({
+        diagnosticCode: "CROCO_HTTP_FILTER_001",
+        reason: "thrown",
+      }),
+    );
+  });
+
+  it("should record every throwing filter and fall back to the original route error", async () => {
+    const runner = createRunner();
+    const inspector = new RuntimeInspector();
+    Container.set(DEV_INSPECTOR_TOKEN, inspector);
+    inspector.startRequest({ requestId: "req-filter-all-throw" });
+
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "preserved");
+
+    const filters: ExceptionFilter<unknown, HttpExecutionContext>[] = [
+      {
+        catch: vi.fn().mockImplementation(() => {
+          throw new Error("first filter failure");
+        }),
+      },
+      {
+        catch: vi.fn().mockImplementation(() => {
+          throw new TypeError("second filter failure");
+        }),
+      },
+    ];
+
+    const result = await Context.run({ requestId: "req-filter-all-throw" }, () =>
+      runner.run(
+        execContext,
+        async () => {
+          throw originalProblem;
+        },
+        {
+          guards: [],
+          interceptors: [],
+          filters,
+        },
+      ),
+    );
+
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(400);
+    expect(await (result as Response).json()).toMatchObject({
+      code: "BAD_REQUEST",
+      detail: "preserved",
+      status: 400,
+    });
+    expect(logger.warn).toHaveBeenCalledTimes(2);
+    expect(logger.warn).toHaveBeenNthCalledWith(
+      1,
+      "CROCO_HTTP_FILTER_001",
+      expect.objectContaining({
+        diagnosticCode: "CROCO_HTTP_FILTER_001",
+        filterIndex: 0,
+        reason: "thrown",
+      }),
+    );
+    expect(logger.warn).toHaveBeenNthCalledWith(
+      2,
+      "CROCO_HTTP_FILTER_001",
+      expect.objectContaining({
+        diagnosticCode: "CROCO_HTTP_FILTER_001",
+        filterIndex: 1,
+        reason: "thrown",
+      }),
+    );
+
+    const timeline = inspector.snapshot().requests[0]?.timeline ?? [];
+    expect(timeline.filter((event) => event.name === "CROCO_HTTP_FILTER_001")).toHaveLength(2);
+  });
+
+  it("should record invalid filter results and fall back to the original route error", async () => {
+    const runner = createRunner();
+    const inspector = new RuntimeInspector();
+    Container.set(DEV_INSPECTOR_TOKEN, inspector);
+    inspector.startRequest({ requestId: "req-filter-invalid-result" });
+
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "invalid filter return");
+
+    const invalidFilters = [
+      {
+        catch: vi.fn().mockReturnValue({ status: Number.NaN, headers: {}, body: {} }),
+      },
+      {
+        catch: vi.fn().mockReturnValue(filterResponse(199, { code: "FILTER_STATUS_BELOW_RANGE" })),
+      },
+      {
+        catch: vi.fn().mockReturnValue(filterResponse(600, { code: "FILTER_STATUS_ABOVE_RANGE" })),
+      },
+      {
+        catch: vi.fn().mockReturnValue(filterResponse(200.5, { code: "FILTER_STATUS_FRACTIONAL" })),
+      },
+      {
+        catch: vi.fn().mockReturnValue({ status: 400, headers: new Map(), body: {} }),
+      },
+      {
+        catch: vi.fn().mockReturnValue({ status: 400, headers: { "x-filter": 123 }, body: {} }),
+      },
+      {
+        catch: vi.fn().mockReturnValue({ status: 400, headers: {}, body: [] }),
+      },
+    ] as unknown as ExceptionFilter<unknown, HttpExecutionContext>[];
+
+    const result = await Context.run({ requestId: "req-filter-invalid-result" }, () =>
+      runner.run(
+        execContext,
+        async () => {
+          throw originalProblem;
+        },
+        {
+          guards: [],
+          interceptors: [],
+          filters: invalidFilters,
+        },
+      ),
+    );
+
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(400);
+    expect(await (result as Response).json()).toMatchObject({
+      code: "BAD_REQUEST",
+      detail: "invalid filter return",
+      status: 400,
+    });
+    expect(logger.warn).toHaveBeenCalledTimes(7);
+    expect(logger.warn).toHaveBeenNthCalledWith(
+      1,
+      "CROCO_HTTP_FILTER_001",
+      expect.objectContaining({
+        diagnosticCode: "CROCO_HTTP_FILTER_001",
+        filterIndex: 0,
+        reason: "invalid-return",
+        resultType: "object",
+      }),
+    );
+    for (const [callNumber, filterIndex] of [
+      [2, 1],
+      [3, 2],
+      [4, 3],
+    ] as const) {
+      expect(logger.warn).toHaveBeenNthCalledWith(
+        callNumber,
+        "CROCO_HTTP_FILTER_001",
+        expect.objectContaining({
+          diagnosticCode: "CROCO_HTTP_FILTER_001",
+          filterIndex,
+          reason: "invalid-return",
+          resultType: "object",
+        }),
+      );
+      expect(logger.warn.mock.calls[callNumber - 1]?.[1]).not.toHaveProperty("filterErrorName");
+    }
+
+    const timeline = inspector.snapshot().requests[0]?.timeline ?? [];
+    expect(timeline.filter((event) => event.name === "CROCO_HTTP_FILTER_001")).toHaveLength(7);
+  });
+
+  it("should keep filter diagnostics non-throwing for null-prototype filter objects", async () => {
+    const runner = createRunner();
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "null prototype filter");
+    const nullPrototypeFilter = Object.assign(Object.create(null), {
+      catch: vi.fn().mockReturnValue({ status: 400, headers: {}, body: [] }),
+    }) as ExceptionFilter<unknown, HttpExecutionContext>;
+
+    const result = await runner.run(
+      execContext,
+      async () => {
+        throw originalProblem;
+      },
+      {
+        guards: [],
+        interceptors: [],
+        filters: [nullPrototypeFilter],
+      },
+    );
+
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(400);
+    expect(await (result as Response).json()).toMatchObject({
+      code: "BAD_REQUEST",
+      detail: "null prototype filter",
+      status: 400,
+    });
+    expect(logger.warn).toHaveBeenCalledWith(
+      "CROCO_HTTP_FILTER_001",
+      expect.objectContaining({
+        diagnosticCode: "CROCO_HTTP_FILTER_001",
+        filter: "filter[0]",
+        reason: "invalid-return",
+      }),
+    );
+  });
+
+  it("should record filter failures on the active OpenTelemetry span", async () => {
+    const runner = createRunner();
+    const span = createMockSpan();
+    const execContext = new HttpExecutionContext(
+      createMockHttpContext(),
+      class TestController {},
+      "handler",
+    );
+    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "span evidence");
+
+    const brokenFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
+      catch: vi.fn().mockImplementation(() => {
+        throw new Error("filter span failure");
+      }),
+    };
+
+    const getActiveSpan = vi.spyOn(trace, "getActiveSpan").mockReturnValue(span);
+    const result = await runner.run(
+      execContext,
+      async () => {
+        throw originalProblem;
+      },
+      {
+        guards: [],
+        interceptors: [],
+        filters: [brokenFilter],
+      },
+    );
+    getActiveSpan.mockRestore();
+
+    expect(result).toBeInstanceOf(Response);
+    expect(span.addEvent).toHaveBeenCalledWith(
+      "croco.http.exception_filter.failed",
+      expect.objectContaining({
+        "croco.diagnostic.code": "CROCO_HTTP_FILTER_001",
+        "croco.http.exception_filter.index": 0,
+        "croco.http.exception_filter.reason": "thrown",
+        "croco.problem.original.code": "BAD_REQUEST",
+        "croco.problem.original.status": 400,
+      }),
+    );
+    expect(span.recordException).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Error",
+        message: "filter span failure",
+      }),
+    );
   });
 
   it("should redact Problem Details returned from async exception filters", async () => {
@@ -247,7 +650,7 @@ describe("PipelineRunner", () => {
       }),
     };
 
-    const result = await FrameworkContext.run({ requestId: "filter-request" }, () =>
+    const result = await Context.run({ requestId: "filter-request" }, () =>
       runner.run(
         execContext,
         async () => {

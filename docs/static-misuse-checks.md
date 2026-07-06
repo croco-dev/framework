@@ -98,10 +98,10 @@ Example empty-catch entry:
 ```json
 {
   "package": "@croco/transports-http",
-  "file": "packages/transports-http/src/libs/PipelineRunner.ts",
-  "line": 213,
+  "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
+  "line": 594,
   "excerpt": "} catch {",
-  "reason": "Exception filter failure intentionally falls through to the next filter or default error handler.",
+  "reason": "Dev inspector warning logging is best-effort and must not affect request handling.",
   "owner": "framework-error-handling"
 }
 ```

@@ -3,6 +3,7 @@ import {
   Context,
   DEV_INSPECTOR_TOKEN,
   type Guard,
+  type ILogger,
   type RequestPipelineGraph,
   type RequestPipelineNode,
   type RuntimeInspector,
@@ -15,17 +16,15 @@ import type {
   CallHandler,
   ExceptionFilter,
   ExecutionContext,
+  HttpExceptionFilterResponse,
   Interceptor,
 } from "@croco/protocols-rest";
+import { type Exception, trace } from "@opentelemetry/api";
 import type { ErrorHandler } from "./ErrorHandler";
 import type { HttpExecutionContext } from "./HttpExecutionContext";
 import type { CompiledRoutePipelineGraphConfig, MiddlewareFunction } from "./types";
 
-type FilterResponse = {
-  status: number;
-  headers: Record<string, string>;
-  body: Record<string, unknown>;
-};
+const HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE = "CROCO_HTTP_FILTER_001";
 
 const BODY_SPECIFIC_RESPONSE_HEADERS = new Set([
   "content-length",
@@ -37,15 +36,38 @@ const BODY_SPECIFIC_RESPONSE_HEADERS = new Set([
   "etag",
 ]);
 
-function isFilterResponse(value: unknown): value is FilterResponse {
+type FilterFailureReason = "thrown" | "invalid-return";
+
+function isFilterResponse(value: unknown): value is HttpExceptionFilterResponse {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const response = value as Partial<HttpExceptionFilterResponse>;
   return (
-    typeof value === "object" &&
-    value !== null &&
     "status" in value &&
     "headers" in value &&
     "body" in value &&
-    typeof (value as FilterResponse).status === "number"
+    typeof response.status === "number" &&
+    Number.isInteger(response.status) &&
+    response.status >= 200 &&
+    response.status <= 599 &&
+    isStringRecord(response.headers) &&
+    isPlainRecord(response.body)
   );
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return isPlainRecord(value) && Object.values(value).every((entry) => typeof entry === "string");
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 export interface PipelineConfig {
@@ -144,7 +166,10 @@ export function describeHttpPipelineGraph(config: HttpPipelineGraphConfig): Requ
  * Guard, Interceptor, Filter 체인을 조합해 컨트롤러 핸들러를 실행합니다.
  */
 export class PipelineRunner {
-  constructor(private readonly errorHandler: ErrorHandler) {}
+  constructor(
+    private readonly errorHandler: ErrorHandler,
+    private readonly logger?: ILogger,
+  ) {}
 
   async run(
     execContext: HttpExecutionContext,
@@ -206,12 +231,15 @@ export class PipelineRunner {
   ): Promise<unknown> {
     const nextError = error;
 
-    for (const filter of filters) {
+    for (const [filterIndex, filter] of filters.entries()) {
       try {
         const result = await filter.catch(nextError, context);
         // Redact Problem Details from filter-owned HTTP shapes before returning them.
         if (result instanceof Response) {
           return await this.createRedactedFilterResponse(nextError, context, result);
+        }
+        if (result === undefined) {
+          continue;
         }
         if (isFilterResponse(result)) {
           const httpCtx = context.getHttpContext();
@@ -227,9 +255,21 @@ export class PipelineRunner {
           copyFilterResponseHeaders(response, Object.entries(result.headers));
           return response;
         }
-        return result;
+        this.recordFilterFailure({
+          filter,
+          filterIndex,
+          reason: "invalid-return",
+          originalError: nextError,
+          result,
+        });
       } catch (filterError) {
-        this.recordPipelineError(filterError);
+        this.recordFilterFailure({
+          filter,
+          filterIndex,
+          reason: "thrown",
+          originalError: nextError,
+          filterError,
+        });
       }
     }
 
@@ -275,10 +315,96 @@ export class PipelineRunner {
     return redactedResponse;
   }
 
-  private recordPipelineError(error: unknown): void {
-    const inspector: RuntimeInspectorRecorder | undefined =
+  private recordFilterFailure(input: {
+    filter: ExceptionFilter<unknown, HttpExecutionContext>;
+    filterIndex: number;
+    reason: FilterFailureReason;
+    originalError: unknown;
+    filterError?: unknown;
+    result?: unknown;
+  }): void {
+    const originalProblemDetails: {
+      originalProblemCode?: string;
+      originalProblemCategory?: string;
+      originalProblemStatus?: number;
+    } =
+      input.originalError instanceof Problem
+        ? {
+            originalProblemCode: input.originalError.code,
+            originalProblemCategory: input.originalError.category,
+            originalProblemStatus: ProblemCategoryMapper.toHttpStatus(input.originalError.category),
+          }
+        : {};
+
+    const details = {
+      diagnosticCode: HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE,
+      filter: getProviderName(input.filter, `filter[${input.filterIndex}]`),
+      filterIndex: input.filterIndex,
+      reason: input.reason,
+      originalErrorName: getErrorName(input.originalError),
+      originalErrorMessage: getErrorMessage(input.originalError),
+      ...originalProblemDetails,
+      ...(input.filterError !== undefined
+        ? {
+            filterErrorName: getErrorName(input.filterError),
+            filterErrorMessage: getErrorMessage(input.filterError),
+          }
+        : {}),
+      ...(input.result !== undefined ? { resultType: getValueType(input.result) } : {}),
+    };
+
+    this.logger?.warn(HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE, details);
+
+    const inspector = this.getRuntimeInspector();
+    if (inspector) {
+      recordRuntimeInspectionEvent(inspector, {
+        kind: "diagnostic",
+        outcome: "failed",
+        name: HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE,
+        details,
+      });
+    }
+
+    const span = trace.getActiveSpan();
+    if (!span) {
+      return;
+    }
+
+    span.addEvent("croco.http.exception_filter.failed", {
+      "croco.diagnostic.code": HTTP_FILTER_FAILURE_DIAGNOSTIC_CODE,
+      "croco.http.exception_filter.index": input.filterIndex,
+      "croco.http.exception_filter.name": details.filter,
+      "croco.http.exception_filter.reason": input.reason,
+      "croco.error.original.name": details.originalErrorName,
+      ...(details.originalProblemCode
+        ? { "croco.problem.original.code": details.originalProblemCode }
+        : {}),
+      ...(details.originalProblemCategory
+        ? { "croco.problem.original.category": details.originalProblemCategory }
+        : {}),
+      ...(details.originalProblemStatus
+        ? { "croco.problem.original.status": details.originalProblemStatus }
+        : {}),
+      ...(details.filterErrorName ? { "croco.error.filter.name": details.filterErrorName } : {}),
+      ...(details.resultType
+        ? { "croco.http.exception_filter.result_type": details.resultType }
+        : {}),
+    });
+
+    if (input.filterError !== undefined) {
+      span.recordException(toTelemetryException(input.filterError));
+    }
+  }
+
+  private getRuntimeInspector(): RuntimeInspectorRecorder | undefined {
+    return (
       Context.get()?.runtimeInspector ??
-      Container.getOptional<RuntimeInspector>(DEV_INSPECTOR_TOKEN);
+      Container.getOptional<RuntimeInspector>(DEV_INSPECTOR_TOKEN)
+    );
+  }
+
+  private recordPipelineError(error: unknown): void {
+    const inspector = this.getRuntimeInspector();
     if (!inspector) {
       return;
     }
@@ -312,6 +438,42 @@ export class PipelineRunner {
   }
 }
 
+function getErrorName(error: unknown): string {
+  return error instanceof Error ? error.name : typeof error;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getValueType(value: unknown): string {
+  if (value === null) {
+    return "null";
+  }
+  if (Array.isArray(value)) {
+    return "array";
+  }
+  return typeof value;
+}
+
+function toTelemetryException(error: unknown): Exception {
+  if (error instanceof Error) {
+    const exception: Exception = {
+      name: error.name,
+      message: error.message,
+    };
+    if (error.stack !== undefined) {
+      exception.stack = error.stack;
+    }
+    return exception;
+  }
+
+  return {
+    name: getErrorName(error),
+    message: getErrorMessage(error),
+  };
+}
+
 function toNode(
   id: string,
   kind: RequestPipelineNode["kind"],
@@ -339,8 +501,12 @@ function getProviderName(provider: unknown, fallback: string): string {
     return fallback;
   }
 
-  const constructorName = provider.constructor.name;
-  if (constructorName.length > 0 && constructorName !== "Object") {
+  const constructorName = Object.getPrototypeOf(provider)?.constructor?.name;
+  if (
+    typeof constructorName === "string" &&
+    constructorName.length > 0 &&
+    constructorName !== "Object"
+  ) {
     return constructorName;
   }
 

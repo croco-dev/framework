@@ -19,7 +19,7 @@ title: "ExceptionFilter"
 
 ### catch()
 
-> **catch**(`exception`, `context`): `unknown`
+> **catch**(`exception`, `context`): [`ExceptionFilterResult`](/api/protocols-rest/src/type-aliases/exceptionfilterresult/)
 
 #### Parameters
 
@@ -33,4 +33,4 @@ title: "ExceptionFilter"
 
 #### Returns
 
-`unknown`
+[`ExceptionFilterResult`](/api/protocols-rest/src/type-aliases/exceptionfilterresult/)

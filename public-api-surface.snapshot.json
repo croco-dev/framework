@@ -15425,6 +15425,11 @@
           "source": "./ExceptionFilter"
         },
         {
+          "name": "ExceptionFilterResult",
+          "exportKind": "named",
+          "source": "./ExceptionFilter"
+        },
+        {
           "name": "ExecutionContext",
           "exportKind": "named",
           "source": "./ExecutionContext"
@@ -15432,7 +15437,7 @@
         {
           "name": "HttpExceptionFilterResponse",
           "exportKind": "named",
-          "source": "./HttpExceptionFilter"
+          "source": "./ExceptionFilter"
         },
         {
           "name": "InferRequestType",

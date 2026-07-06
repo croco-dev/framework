@@ -11,13 +11,17 @@ Guard, Interceptor, Filter 체인을 조합해 컨트롤러 핸들러를 실행�
 
 ### Constructor
 
-> **new PipelineRunner**(`errorHandler`): `PipelineRunner`
+> **new PipelineRunner**(`errorHandler`, `logger?`): `PipelineRunner`
 
 #### Parameters
 
 ##### errorHandler
 
 [`ErrorHandler`](/api/transports-http/src/classes/errorhandler/)
+
+##### logger?
+
+[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
 
 #### Returns
 
