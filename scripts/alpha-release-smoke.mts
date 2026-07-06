@@ -89,6 +89,7 @@ export const alphaReleaseGeneratedAppValidations = [
   "contract:verify",
   "typecheck",
   "build",
+  "test",
   "dev:smoke",
 ] as const;
 
@@ -678,21 +679,26 @@ function packageManagerFor(rootDir: string): string {
   );
 }
 
-function writePnpmOverrides(projectDir: string, rangeOverrides: Record<string, string>): void {
-  const manifestPath = join(projectDir, "package.json");
-  const packageJson = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>;
-  const pnpmConfig = isRecord(packageJson.pnpm) ? packageJson.pnpm : {};
-  const existingOverrides = isDependencyMap(pnpmConfig.overrides) ? pnpmConfig.overrides : {};
+export function writePnpmOverrides(
+  projectDir: string,
+  rangeOverrides: Record<string, string>,
+): void {
+  const workspacePath = join(projectDir, "pnpm-workspace.yaml");
+  const existingContent = existsSync(workspacePath)
+    ? readFileSync(workspacePath, "utf8")
+    : `packages:\n  - "."\n`;
+  const contentWithoutOverrides = removeTopLevelYamlBlock(existingContent, "overrides").trimEnd();
+  const overrideLines = Object.entries(rangeOverrides)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(
+      ([packageName, range]) =>
+        `  ${toYamlDoubleQuotedScalar(packageName)}: ${toYamlDoubleQuotedScalar(range)}`,
+    );
 
-  packageJson.pnpm = {
-    ...pnpmConfig,
-    overrides: {
-      ...existingOverrides,
-      ...rangeOverrides,
-    },
-  };
-
-  writeFileSync(manifestPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+  writeFileSync(
+    workspacePath,
+    `${contentWithoutOverrides}\n\n${["overrides:", ...overrideLines].join("\n")}\n`,
+  );
 }
 
 function rangeFor(rangeOverrides: Record<string, string>, packageName: string): string {
@@ -768,6 +774,29 @@ function collectEvidenceFiles(directory: string): readonly string[] {
       ? [entryPath]
       : [];
   });
+}
+
+function removeTopLevelYamlBlock(content: string, key: string): string {
+  const lines = content.split(/\r?\n/);
+  const blockStartIndex = lines.findIndex((line) => line === `${key}:`);
+
+  if (blockStartIndex === -1) {
+    return content;
+  }
+
+  let blockEndIndex = blockStartIndex + 1;
+  while (
+    blockEndIndex < lines.length &&
+    (lines[blockEndIndex] === "" || /^\s/.test(lines[blockEndIndex]))
+  ) {
+    blockEndIndex += 1;
+  }
+
+  return [...lines.slice(0, blockStartIndex), ...lines.slice(blockEndIndex)].join("\n");
+}
+
+function toYamlDoubleQuotedScalar(value: string): string {
+  return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
 }
 
 function run(command: string, args: readonly string[], cwd: string): void {
@@ -855,7 +884,7 @@ export function formatAlphaReleaseSmokeReport(report: SmokeReport): string {
     "- Config-free alpha spine entrypoints import successfully from the clean install.",
     "- The packed create-croco-app artifact generates the production-app preset outside the repository checkout.",
     "- Generated app install uses packed Croco artifacts with no `@croco/*` workspace ranges.",
-    "- Contract verification, typecheck, build, and zero-credential smoke run against the generated project.",
+    "- Contract verification, typecheck, build, test, and zero-credential smoke run against the generated project.",
   );
 
   return `${lines.join("\n")}\n`;

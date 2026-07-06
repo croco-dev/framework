@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   alphaReleaseBinarySmokeCommands,
   alphaReleaseCleanInstallImportExclusions,
@@ -12,9 +15,18 @@ import {
   normalizeCatalogSpinePackageName,
   readCatalogSpinePackageNames,
   validateAlphaReleaseSpineCoverage,
+  writePnpmOverrides,
 } from "../alpha-release-smoke.mts";
 
+const tempRoots: string[] = [];
+
 describe("alpha-release-smoke.mts", () => {
+  afterEach(() => {
+    for (const root of tempRoots.splice(0)) {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
   it("derives the alpha spine from the package catalog", () => {
     expect(alphaReleaseSpineRoots).toEqual(readCatalogSpinePackageNames());
     expect(alphaReleaseSpineRoots).toEqual([
@@ -52,6 +64,7 @@ describe("alpha-release-smoke.mts", () => {
       "contract:verify",
       "typecheck",
       "build",
+      "test",
       "dev:smoke",
     ]);
     expect(alphaReleaseEvidenceReportPath).toBe("ci-reports/release/alpha-release-smoke.md");
@@ -141,6 +154,40 @@ describe("alpha-release-smoke.mts", () => {
     );
   });
 
+  it("writes packed tarball overrides to pnpm-workspace.yaml", () => {
+    const root = createTempRoot();
+    writeJson(join(root, "package.json"), {
+      name: "alpha-smoke-consumer",
+      private: true,
+      type: "module",
+    });
+    writeFileSync(
+      join(root, "pnpm-workspace.yaml"),
+      ["packages:", '  - "."', "", "onlyBuiltDependencies:", "  - esbuild", ""].join("\n"),
+    );
+
+    writePnpmOverrides(root, {
+      "@croco/cli": "file:/tmp/croco-cli-0.0.4.tgz",
+      "@croco/framework-context": "file:/tmp/croco-framework-context-0.0.4.tgz",
+    });
+
+    const workspaceConfig = readFileSync(join(root, "pnpm-workspace.yaml"), "utf8");
+    const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
+      readonly pnpm?: unknown;
+    };
+
+    expect(workspaceConfig).toContain('packages:\n  - "."');
+    expect(workspaceConfig).toContain("onlyBuiltDependencies:\n  - esbuild");
+    expect(workspaceConfig).toContain(
+      [
+        "overrides:",
+        '  "@croco/cli": "file:/tmp/croco-cli-0.0.4.tgz"',
+        '  "@croco/framework-context": "file:/tmp/croco-framework-context-0.0.4.tgz"',
+      ].join("\n"),
+    );
+    expect(packageJson.pnpm).toBeUndefined();
+  });
+
   it("formats release evidence with clean install and generated app claims", () => {
     const report = formatAlphaReleaseSmokeReport({
       cleanInstallImportExclusions: alphaReleaseCleanInstallImportExclusions,
@@ -160,7 +207,20 @@ describe("alpha-release-smoke.mts", () => {
     expect(report).toContain("- Clean install import exclusions:");
     expect(report).toContain("`pnpm exec croco --help`");
     expect(report).toContain("`pnpm contract:verify`");
+    expect(report).toContain("`pnpm test`");
     expect(report).toContain("clean project from packed artifacts");
     expect(report).toContain("Generated app install uses packed Croco artifacts");
   });
 });
+
+function createTempRoot(): string {
+  const root = mkdtempSync(join(tmpdir(), "croco-alpha-release-smoke-test-"));
+  tempRoots.push(root);
+  mkdirSync(root, { recursive: true });
+
+  return root;
+}
+
+function writeJson(path: string, value: Record<string, unknown>): void {
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}

@@ -168,8 +168,8 @@ pnpm alpha-release:smoke
 This packs the alpha spine and `create-croco-app`, installs them into clean temporary projects,
 generates the `production-app` preset from the packed CLI artifact, rewrites Croco dependencies to
 packed artifacts, then runs install, `contract:snapshot`, `contract:verify`, `typecheck`, `build`,
-and `dev:smoke`. The script fails if `workspace:` ranges or repository checkout paths leak into the
-clean install evidence.
+`test`, and `dev:smoke`. The script fails if `workspace:` ranges or repository checkout paths leak
+into the clean install evidence.
 
 The smoke report is written at `ci-reports/release/alpha-release-smoke.md`. Attach or link that
 report from the alpha release notes, or upload it as the `alpha-release-smoke` CI artifact when the

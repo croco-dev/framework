@@ -209,6 +209,20 @@ export function createReleaseSpineEvidenceManifest(): readonly EvidenceCommand[]
       ],
     },
     {
+      id: "alpha-release-smoke",
+      label: "Packed generated app release smoke",
+      category: "generated-app",
+      command: ["pnpm", "alpha-release:smoke"],
+      timeoutMs: minutes(45),
+      artifacts: [
+        {
+          label: "Packed generated app smoke report",
+          path: "ci-reports/release/alpha-release-smoke.md",
+          required: true,
+        },
+      ],
+    },
+    {
       id: "typecheck",
       label: "Summarized TypeScript check",
       category: "typecheck",
