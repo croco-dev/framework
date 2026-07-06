@@ -1,9 +1,15 @@
 import "reflect-metadata";
-import { Context as FrameworkContext, Container } from "@croco/framework-context";
+import {
+  Component,
+  Context as FrameworkContext,
+  Container,
+  type DependencyGraphProvider,
+} from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import {
   Body,
   type CallHandler,
+  type Constructor,
   Controller,
   type ExecutionContext,
   Get,
@@ -68,6 +74,93 @@ type LifecycleResponse = {
     path: string;
   };
 };
+
+type DiLifecycleGraphProvider = {
+  token: string;
+  scope: DependencyGraphProvider["scope"] | null;
+  dependencies: readonly string[];
+};
+
+type DiLifecycleResponse = {
+  id: string;
+  contextActive: boolean;
+  requestId: string | null;
+  singletonId: string;
+  injectedRequestScopedId: string;
+  directRequestScopedId: string;
+  repeatedRequestScopedId: string;
+  graph: {
+    status: "ready" | "failed";
+    roots: readonly string[];
+    providers: readonly DiLifecycleGraphProvider[];
+    diagnostics: readonly {
+      code: string;
+      token: string;
+      status: string;
+      path: readonly string[];
+    }[];
+  };
+};
+
+let lifecycleInstanceSequence = 0;
+
+class HttpSingletonLifecycleProvider {
+  readonly id = `singleton-${++lifecycleInstanceSequence}`;
+}
+
+class HttpRequestScopedLifecycleProvider {
+  readonly id = `request-${++lifecycleInstanceSequence}`;
+}
+
+@Controller("/framework/integration/di")
+class DiLifecycleController {
+  constructor(
+    private readonly singletonProvider: HttpSingletonLifecycleProvider,
+    private readonly requestScopedProvider: HttpRequestScopedLifecycleProvider,
+  ) {}
+
+  @Get("/lifecycle/:id")
+  lifecycle(@Param("id") id: string): DiLifecycleResponse {
+    const directRequestScoped = Container.get(HttpRequestScopedLifecycleProvider);
+    const repeatedRequestScoped = Container.get(HttpRequestScopedLifecycleProvider);
+    const manifest = Container.createDependencyGraphManifest({ roots: [DiLifecycleController] });
+    const context = FrameworkContext.get();
+
+    return {
+      id,
+      contextActive: FrameworkContext.isActive(),
+      requestId: context?.requestId ?? null,
+      singletonId: this.singletonProvider.id,
+      injectedRequestScopedId: this.requestScopedProvider.id,
+      directRequestScopedId: directRequestScoped.id,
+      repeatedRequestScopedId: repeatedRequestScoped.id,
+      graph: {
+        status: manifest.status,
+        roots: manifest.roots,
+        providers: manifest.providers.map((provider) => ({
+          token: provider.token,
+          scope: provider.scope ?? null,
+          dependencies: provider.dependencies,
+        })),
+        diagnostics: manifest.diagnostics.map((diagnostic) => ({
+          code: diagnostic.code,
+          token: diagnostic.token,
+          status: diagnostic.status,
+          path: diagnostic.path,
+        })),
+      },
+    };
+  }
+}
+
+Reflect.defineMetadata("design:paramtypes", [], HttpSingletonLifecycleProvider);
+Reflect.defineMetadata("design:paramtypes", [], HttpRequestScopedLifecycleProvider);
+Reflect.defineMetadata(
+  "design:paramtypes",
+  [HttpSingletonLifecycleProvider, HttpRequestScopedLifecycleProvider],
+  DiLifecycleController,
+);
+const DiLifecycleControllerToken = DiLifecycleController as unknown as Constructor;
 
 class ResponseEnvelopeInterceptor implements Interceptor<ExecutionContext> {
   async intercept(context: ExecutionContext, next: CallHandler): Promise<unknown> {
@@ -182,6 +275,31 @@ describe("Framework integration", () => {
     };
   }
 
+  function createGetLambdaEvent(path: string, requestId: string): LambdaEvent {
+    return createLambdaEvent({
+      rawPath: path,
+      rawQueryString: "",
+      requestContext: {
+        accountId: "123456789012",
+        apiId: "api-123",
+        domainName: "example.execute-api.ap-northeast-2.amazonaws.com",
+        domainPrefix: "example",
+        http: {
+          method: "GET",
+          path,
+          protocol: "HTTP/1.1",
+          sourceIp: "127.0.0.1",
+          userAgent: "vitest",
+        },
+        requestId,
+        routeKey: "$default",
+        stage: "$default",
+        time: "17/Mar/2026:12:00:00 +0000",
+        timeEpoch: 1710676800000,
+      },
+    });
+  }
+
   async function readJson<T>(response: Response): Promise<T> {
     return (await response.json()) as T;
   }
@@ -205,6 +323,7 @@ describe("Framework integration", () => {
 
   beforeEach(() => {
     Container.reset();
+    lifecycleInstanceSequence = 0;
     const logger = {
       info: () => {},
       warn: () => {},
@@ -214,9 +333,12 @@ describe("Framework integration", () => {
     Container.set(Logger, logger);
     Container.set(ErrorHandler, new ErrorHandler(logger));
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
+    Component({ scope: "singleton" })(HttpSingletonLifecycleProvider);
+    Component({ scope: "request" })(HttpRequestScopedLifecycleProvider);
+    Component({ scope: "request" })(DiLifecycleController);
 
     app = createApp({
-      controllers: [FrameworkIntegrationController],
+      controllers: [FrameworkIntegrationController, DiLifecycleControllerToken],
       securityValidation: "off",
     });
   });
@@ -242,6 +364,61 @@ describe("Framework integration", () => {
       traceId: TRACE_ID,
     });
     expect(body.requestId).toEqual(expect.any(String));
+  });
+
+  it("reuses request-scoped providers inside one Node fetch request and isolates separate requests", async () => {
+    const firstResponse = await app.fetch(
+      new Request("http://localhost/framework/integration/di/lifecycle/fetch-1"),
+    );
+    const secondResponse = await app.fetch(
+      new Request("http://localhost/framework/integration/di/lifecycle/fetch-2"),
+    );
+
+    expect(firstResponse.status).toBe(200);
+    expect(secondResponse.status).toBe(200);
+
+    const first = await readJson<DiLifecycleResponse>(firstResponse);
+    const second = await readJson<DiLifecycleResponse>(secondResponse);
+
+    expect(first).toMatchObject({
+      id: "fetch-1",
+      contextActive: true,
+      graph: {
+        status: "ready",
+        roots: ["DiLifecycleController"],
+        diagnostics: [],
+      },
+    });
+    expect(first.requestId).toEqual(expect.any(String));
+    expect(first.injectedRequestScopedId).toBe(first.directRequestScopedId);
+    expect(first.directRequestScopedId).toBe(first.repeatedRequestScopedId);
+    expect(first.graph.providers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          token: "DiLifecycleController",
+          scope: "request",
+          dependencies: expect.arrayContaining([
+            "HttpSingletonLifecycleProvider",
+            "HttpRequestScopedLifecycleProvider",
+          ]),
+        }),
+        expect.objectContaining({
+          token: "HttpSingletonLifecycleProvider",
+          scope: "singleton",
+        }),
+        expect.objectContaining({
+          token: "HttpRequestScopedLifecycleProvider",
+          scope: "request",
+        }),
+      ]),
+    );
+
+    expect(second.id).toBe("fetch-2");
+    expect(second.singletonId).toBe(first.singletonId);
+    expect(second.injectedRequestScopedId).toBe(second.directRequestScopedId);
+    expect(second.directRequestScopedId).toBe(second.repeatedRequestScopedId);
+    expect(second.directRequestScopedId).not.toBe(first.directRequestScopedId);
+    expect(second.requestId).not.toBe(first.requestId);
   });
 
   it("serializes zod body validation failures as Problem Details", async () => {
@@ -421,5 +598,81 @@ describe("Framework integration", () => {
       traceId: TRACE_ID,
     });
     expect(body.requestId).toEqual(expect.any(String));
+  });
+
+  it("reuses request-scoped providers inside one Lambda request and isolates separate invocations", async () => {
+    const handler = app.lambdaHandler();
+    const firstResponse = await handler(
+      createGetLambdaEvent("/framework/integration/di/lifecycle/lambda-1", "gateway-lambda-1"),
+      createLambdaContext(),
+    );
+    const secondResponse = await handler(
+      createGetLambdaEvent("/framework/integration/di/lifecycle/lambda-2", "gateway-lambda-2"),
+      createLambdaContext(),
+    );
+
+    expect(firstResponse.statusCode).toBe(200);
+    expect(secondResponse.statusCode).toBe(200);
+
+    const first = JSON.parse(firstResponse.body ?? "{}") as DiLifecycleResponse;
+    const second = JSON.parse(secondResponse.body ?? "{}") as DiLifecycleResponse;
+
+    expect(first).toMatchObject({
+      id: "lambda-1",
+      contextActive: true,
+      requestId: "gateway-lambda-1",
+      graph: {
+        status: "ready",
+        roots: ["DiLifecycleController"],
+        diagnostics: [],
+      },
+    });
+    expect(first.injectedRequestScopedId).toBe(first.directRequestScopedId);
+    expect(first.directRequestScopedId).toBe(first.repeatedRequestScopedId);
+
+    expect(second).toMatchObject({
+      id: "lambda-2",
+      contextActive: true,
+      requestId: "gateway-lambda-2",
+    });
+    expect(second.singletonId).toBe(first.singletonId);
+    expect(second.injectedRequestScopedId).toBe(second.directRequestScopedId);
+    expect(second.directRequestScopedId).toBe(second.repeatedRequestScopedId);
+    expect(second.directRequestScopedId).not.toBe(first.directRequestScopedId);
+  });
+
+  it("reports singleton to request-scope mismatches in DI graph diagnostics", () => {
+    Container.reset();
+
+    class InvalidRequestScopedProvider {}
+
+    class InvalidSingletonProvider {
+      constructor(readonly requestScopedProvider: InvalidRequestScopedProvider) {}
+    }
+
+    Reflect.defineMetadata("design:paramtypes", [], InvalidRequestScopedProvider);
+    Reflect.defineMetadata(
+      "design:paramtypes",
+      [InvalidRequestScopedProvider],
+      InvalidSingletonProvider,
+    );
+    Component({ scope: "request" })(InvalidRequestScopedProvider);
+    Component({ scope: "singleton" })(InvalidSingletonProvider);
+
+    const manifest = Container.createDependencyGraphManifest({
+      roots: [InvalidSingletonProvider],
+    });
+
+    expect(manifest.status).toBe("failed");
+    expect(manifest.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "CROCO_DI_003",
+        legacyCode: "framework-context/di-scope-mismatch",
+        severity: "error",
+        token: "InvalidRequestScopedProvider",
+        status: "scope-mismatch",
+        path: ["InvalidSingletonProvider", "InvalidRequestScopedProvider"],
+      }),
+    );
   });
 });
