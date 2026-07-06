@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { lambdaPreset } from "../libs/presets/lambda";
+import { TelemetryRuntime } from "../runtime";
 
 describe("lambdaPreset", () => {
   const originalEnv = process.env;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await TelemetryRuntime.reset();
     vi.resetModules();
     process.env = { ...originalEnv };
 
@@ -15,6 +17,10 @@ describe("lambdaPreset", () => {
     delete process.env.TELEMETRY_ENABLED;
     delete process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
     delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+  });
+
+  afterEach(async () => {
+    await TelemetryRuntime.reset();
   });
 
   it("should create config with required fields", () => {
@@ -206,4 +212,70 @@ describe("lambdaPreset", () => {
 
     expect(config.trace?.exporterUrl).toBe("http://traces:4318/v1/traces");
   });
+
+  it("should surface Lambda flush failures after request work completes", async () => {
+    const runtime = TelemetryRuntime.getInstance();
+    const events: string[] = [];
+
+    Object.assign(runtime, {
+      processor: {
+        forceFlush: vi.fn().mockRejectedValue(new Error("export failed")),
+      },
+    });
+
+    await expect(
+      runLambdaRequestWithFlush(
+        async () => {
+          events.push("request");
+          return "ok";
+        },
+        async () => {
+          events.push("flush");
+          const result = await runtime.forceFlush(5000);
+          if (!result.success) {
+            throw result.error ?? new Error("telemetry flush failed");
+          }
+        },
+      ),
+    ).rejects.toThrow("Telemetry forceFlush failed: export failed");
+
+    expect(events).toEqual(["request", "flush"]);
+  });
+
+  it("should keep disabled Lambda telemetry flush from blocking request results", async () => {
+    process.env.TELEMETRY_ENABLED = "false";
+
+    const runtime = TelemetryRuntime.getInstance();
+    const events: string[] = [];
+
+    await runtime.init(lambdaPreset({ serviceName: "orders" }));
+
+    await expect(
+      runLambdaRequestWithFlush(
+        async () => {
+          events.push("request");
+          return "ok";
+        },
+        async () => {
+          events.push("flush");
+          const result = await runtime.forceFlush(5000);
+          if (!result.success) {
+            throw result.error ?? new Error("telemetry flush failed");
+          }
+        },
+      ),
+    ).resolves.toBe("ok");
+
+    expect(events).toEqual(["request", "flush"]);
+    await expect(runtime.forceFlush()).resolves.toEqual({ success: true, flushedSpans: -1 });
+  });
 });
+
+async function runLambdaRequestWithFlush<T>(
+  requestWork: () => Promise<T>,
+  flush: () => Promise<void>,
+): Promise<T> {
+  const response = await requestWork();
+  await flush();
+  return response;
+}
