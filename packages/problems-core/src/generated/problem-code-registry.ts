@@ -8269,7 +8269,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/problems-core/src/libs/ProblemRegistry.ts",
-          line: 188,
+          line: 198,
           column: 5,
           kind: "problem-constructor",
         },

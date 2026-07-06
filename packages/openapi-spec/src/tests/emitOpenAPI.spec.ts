@@ -117,6 +117,10 @@ describe("emitOpenAPI", () => {
         },
       ],
     });
+    expect(operation?.responses?.[404]?.["x-croco-problems"]?.[0]).not.toHaveProperty("lifecycle");
+    expect(operation?.responses?.[404]?.["x-croco-problems"]?.[0]).not.toHaveProperty(
+      "deprecation",
+    );
   });
 
   it("should reference the shared Project manifest bundle when configured", () => {

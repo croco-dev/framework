@@ -5,28 +5,4 @@ prev: false
 title: "ProblemDeprecationMetadata"
 ---
 
-> **ProblemDeprecationMetadata** = `object`
-
-## Properties
-
-### migrationNote
-
-> `readonly` **migrationNote**: `string`
-
----
-
-### reason
-
-> `readonly` **reason**: `string`
-
----
-
-### replacementCode?
-
-> `readonly` `optional` **replacementCode?**: `string`
-
----
-
-### since?
-
-> `readonly` `optional` **since?**: `string`
+> **ProblemDeprecationMetadata** = \{ `migrationNote`: `string`; `noReplacementReason?`: `never`; `reason`: `string`; `replacementCode`: `string`; `since?`: `string`; \} \| \{ `migrationNote`: `string`; `noReplacementReason`: `string`; `reason`: `string`; `replacementCode?`: `never`; `since?`: `string`; \}

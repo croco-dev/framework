@@ -195,8 +195,9 @@ describe("Problem code registry", () => {
   it("allows deprecated registry entries without source locations when migration metadata is present", () => {
     const registry = createProblemCodeRegistry([
       discovery("auth/not-allowed", ProblemCategory.Forbidden, "packages/auth/src/a.ts", 4),
+      discovery("auth/not-allowed-v2", ProblemCategory.Forbidden, "packages/auth/src/b.ts", 6),
     ]);
-    const [entry] = registry.problems;
+    const entry = registry.problems.find((problem) => problem.code === "auth/not-allowed");
 
     if (!entry) {
       throw new Error("expected registry fixture entry");
@@ -214,6 +215,38 @@ describe("Problem code registry", () => {
                 reason: "The Problem code was replaced by a package-scoped code.",
                 migrationNote: "Use auth/not-allowed-v2 for new client branches.",
                 replacementCode: "auth/not-allowed-v2",
+              },
+            },
+            sources: [],
+          },
+          ...registry.problems.filter((problem) => problem.code !== "auth/not-allowed"),
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  it("allows deprecated registry entries without replacements when a no-replacement reason is present", () => {
+    const registry = createProblemCodeRegistry([
+      discovery("auth/removed", ProblemCategory.Gone, "packages/auth/src/a.ts", 4),
+    ]);
+    const [entry] = registry.problems;
+
+    if (!entry) {
+      throw new Error("expected registry fixture entry");
+    }
+
+    expect(() =>
+      assertProblemCodeRegistryValid({
+        ...registry,
+        problems: [
+          {
+            ...entry,
+            lifecycle: {
+              status: "deprecated",
+              deprecation: {
+                reason: "The Problem code represented a retired capability.",
+                migrationNote: "Stop branching on auth/removed in generated clients.",
+                noReplacementReason: "The retired capability has no supported equivalent.",
               },
             },
             sources: [],
@@ -245,6 +278,109 @@ describe("Problem code registry", () => {
         ],
       }),
     ).toThrow(ProblemRegistryValidationProblem);
+  });
+
+  it("rejects deprecated registry entries with incomplete or invalid replacement guidance", () => {
+    const registry = createProblemCodeRegistry([
+      discovery("auth/self", ProblemCategory.Gone, "packages/auth/src/a.ts", 4),
+      discovery("auth/unknown", ProblemCategory.Gone, "packages/auth/src/b.ts", 5),
+      discovery("auth/old-target", ProblemCategory.Gone, "packages/auth/src/c.ts", 6),
+      discovery("auth/deprecated-target", ProblemCategory.Gone, "packages/auth/src/d.ts", 7),
+    ]);
+
+    expect(() =>
+      assertProblemCodeRegistryValid({
+        ...registry,
+        problems: registry.problems.map((problem) => {
+          const deprecation = {
+            reason: "The code was retired.",
+            migrationNote: "Follow the replacement guidance before removing branches.",
+          };
+
+          if (problem.code === "auth/self") {
+            return {
+              ...problem,
+              lifecycle: {
+                status: "deprecated",
+                deprecation: { ...deprecation, replacementCode: "auth/self" },
+              },
+            };
+          }
+
+          if (problem.code === "auth/unknown") {
+            return {
+              ...problem,
+              lifecycle: {
+                status: "deprecated",
+                deprecation: { ...deprecation, replacementCode: "auth/missing" },
+              },
+            };
+          }
+
+          if (problem.code === "auth/old-target") {
+            return {
+              ...problem,
+              lifecycle: {
+                status: "deprecated",
+                deprecation: { ...deprecation, replacementCode: "auth/deprecated-target" },
+              },
+            };
+          }
+
+          return {
+            ...problem,
+            lifecycle: {
+              status: "deprecated",
+              deprecation: {
+                ...deprecation,
+                noReplacementReason: "The deprecated target has no active equivalent.",
+              },
+            },
+          };
+        }),
+      }),
+    ).toThrow(ProblemRegistryValidationProblem);
+
+    expect(
+      (() => {
+        try {
+          assertProblemCodeRegistryValid({
+            ...registry,
+            problems: registry.problems.map((problem) => ({
+              ...problem,
+              lifecycle: {
+                status: "deprecated",
+                deprecation:
+                  problem.code === "auth/deprecated-target"
+                    ? {
+                        reason: "The code was retired.",
+                        migrationNote: "Stop branching on the deprecated target.",
+                        noReplacementReason: "The deprecated target has no active equivalent.",
+                      }
+                    : {
+                        reason: "The code was retired.",
+                        migrationNote: "Follow replacement guidance.",
+                        replacementCode:
+                          problem.code === "auth/self"
+                            ? "auth/self"
+                            : problem.code === "auth/unknown"
+                              ? "auth/missing"
+                              : "auth/deprecated-target",
+                      },
+              },
+            })),
+          });
+        } catch (error) {
+          return error instanceof ProblemRegistryValidationProblem ? error.errors : [];
+        }
+
+        return [];
+      })(),
+    ).toEqual([
+      "Deprecated Problem code 'auth/old-target' replacementCode 'auth/deprecated-target' points to a deprecated Problem code.",
+      "Deprecated Problem code 'auth/self' replacementCode must reference a different Problem code.",
+      "Deprecated Problem code 'auth/unknown' replacementCode 'auth/missing' is not registered.",
+    ]);
   });
 
   it("builds stable cookbook anchors from code strings", () => {

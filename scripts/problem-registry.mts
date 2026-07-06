@@ -17,6 +17,8 @@ import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
+import { getProblemCodeDeprecationValidationErrors } from "../packages/problems-core/src/libs/ProblemCodeRegistryValidation.mts";
+
 export type ProblemRegistryMode = "check" | "write";
 export type ProblemRegistryRunOptions = {
   readonly baseRef?: string;
@@ -34,12 +36,21 @@ export type ProblemRedactionPolicy = "public" | "safe-message" | "operator-only"
 export type ProblemTelemetrySeverity = "info" | "warning" | "error";
 export type ProblemLifecycleStatus = "active" | "deprecated";
 
-export type ProblemDeprecationMetadata = {
-  readonly reason: string;
-  readonly migrationNote: string;
-  readonly replacementCode?: string;
-  readonly since?: string;
-};
+export type ProblemDeprecationMetadata =
+  | {
+      readonly reason: string;
+      readonly migrationNote: string;
+      readonly replacementCode: string;
+      readonly noReplacementReason?: never;
+      readonly since?: string;
+    }
+  | {
+      readonly reason: string;
+      readonly migrationNote: string;
+      readonly replacementCode?: never;
+      readonly noReplacementReason: string;
+      readonly since?: string;
+    };
 
 export type ProblemLifecycle = {
   readonly status: ProblemLifecycleStatus;
@@ -198,11 +209,12 @@ export function runProblemRegistryCheck(
     const registry = mergeDeprecatedProblemEntries(generatedRegistry, existingRegistry);
     const artifacts = formatProblemRegistryArtifacts(createProblemRegistryArtifacts(registry));
     const preflightDiagnostics = [
+      ...getProblemCodeRegistryValidationErrors(registry),
       ...getRegistryImplementationDiagnostics(implementationBaselineRegistry, registry),
       ...getProblemContractChangeDiagnostics(
         absoluteRootDir,
         baseRegistry ?? existingRegistry,
-        generatedRegistry,
+        registry,
       ),
       ...getProblemRedactionDiagnostics(absoluteRootDir),
     ];
@@ -624,21 +636,21 @@ function getRegistryImplementationDiagnostics(
 function getProblemContractChangeDiagnostics(
   rootDir: string,
   existingRegistry: ProblemCodeRegistry | null,
-  generatedRegistry: ProblemCodeRegistry,
+  currentRegistry: ProblemCodeRegistry,
 ): readonly string[] {
   if (!existingRegistry) {
     return [];
   }
 
   const generatedByCode = new Map(
-    generatedRegistry.problems.map((problem) => [problem.code, problem]),
+    currentRegistry.problems.map((problem) => [problem.code, problem]),
   );
   const diagnostics: string[] = [];
 
   for (const existingProblem of existingRegistry.problems) {
     const generatedProblem = generatedByCode.get(existingProblem.code);
 
-    if (!generatedProblem || getProblemLifecycleStatus(existingProblem) === "deprecated") {
+    if (!generatedProblem) {
       continue;
     }
 
@@ -654,6 +666,7 @@ function getProblemContractChangeDiagnostics(
       existingRetryability === generatedRetryability
         ? null
         : `retryability ${existingRetryability} -> ${generatedRetryability}`,
+      ...getProblemLifecycleChangeFields(existingProblem, generatedProblem),
     ].filter((field): field is string => field !== null);
 
     if (
@@ -671,6 +684,63 @@ function getProblemContractChangeDiagnostics(
   return diagnostics;
 }
 
+function getProblemLifecycleChangeFields(
+  existingProblem: ProblemCodeRegistryEntry,
+  generatedProblem: ProblemCodeRegistryEntry,
+): readonly string[] {
+  const existingLifecycle = getProblemLifecycle(existingProblem);
+  const generatedLifecycle = getProblemLifecycle(generatedProblem);
+  const existingDeprecation = existingLifecycle.deprecation;
+  const generatedDeprecation = generatedLifecycle.deprecation;
+
+  return [
+    existingLifecycle.status === generatedLifecycle.status
+      ? null
+      : `lifecycle ${existingLifecycle.status} -> ${generatedLifecycle.status}`,
+    formatOptionalContractFieldChange(
+      "deprecation.reason",
+      existingDeprecation?.reason,
+      generatedDeprecation?.reason,
+    ),
+    formatOptionalContractFieldChange(
+      "deprecation.migrationNote",
+      existingDeprecation?.migrationNote,
+      generatedDeprecation?.migrationNote,
+    ),
+    formatOptionalContractFieldChange(
+      "deprecation.replacementCode",
+      existingDeprecation?.replacementCode,
+      generatedDeprecation?.replacementCode,
+    ),
+    formatOptionalContractFieldChange(
+      "deprecation.noReplacementReason",
+      existingDeprecation?.noReplacementReason,
+      generatedDeprecation?.noReplacementReason,
+    ),
+    formatOptionalContractFieldChange(
+      "deprecation.since",
+      existingDeprecation?.since,
+      generatedDeprecation?.since,
+    ),
+  ].filter((field): field is string => field !== null);
+}
+
+function formatOptionalContractFieldChange(
+  field: string,
+  existingValue: string | undefined,
+  generatedValue: string | undefined,
+): string | null {
+  if ((existingValue ?? "") === (generatedValue ?? "")) {
+    return null;
+  }
+
+  return `${field} ${formatOptionalContractValue(existingValue)} -> ${formatOptionalContractValue(generatedValue)}`;
+}
+
+function formatOptionalContractValue(value: string | undefined): string {
+  return value ? value : "(none)";
+}
+
 function hasProblemContractChangeEvidence(rootDir: string, code: string): boolean {
   return getProblemContractEvidencePaths(rootDir).some((relativePath) => {
     const absolutePath = join(rootDir, relativePath);
@@ -680,10 +750,7 @@ function hasProblemContractChangeEvidence(rootDir: string, code: string): boolea
 }
 
 function getProblemContractEvidencePaths(rootDir: string): readonly string[] {
-  const paths = [
-    join("docs", "release", "problem-code-migrations.md"),
-    join("docs", "troubleshooting", "diagnostics.md"),
-  ];
+  const paths = [join("docs", "release", "problem-code-migrations.md")];
   const changesetDir = join(rootDir, ".changeset");
 
   if (!existsSync(changesetDir)) {
@@ -1893,6 +1960,7 @@ function createActiveProblemLifecycle(): ProblemLifecycle {
 function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): readonly string[] {
   const errors: string[] = [];
   const seenCodes = new Set<string>();
+  const registryByCode = new Map(registry.problems.map((problem) => [problem.code, problem]));
 
   if (registry.problemCount !== registry.problems.length) {
     errors.push(
@@ -1917,11 +1985,8 @@ function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): 
       errors.push(`Problem code '${problem.code}' is missing recovery cookbook metadata.`);
     }
 
-    if (
-      lifecycle.status === "deprecated" &&
-      !isCompleteDeprecationMetadata(lifecycle.deprecation)
-    ) {
-      errors.push(`Deprecated Problem code '${problem.code}' is missing migration metadata.`);
+    if (lifecycle.status === "deprecated") {
+      errors.push(...getProblemCodeDeprecationValidationErrors(problem, registryByCode));
     }
 
     if (problem.sources.length === 0 && lifecycle.status !== "deprecated") {
@@ -2023,12 +2088,6 @@ function isCompleteRecoveryMetadata(metadata: ProblemRecoveryMetadata): boolean 
   );
 }
 
-function isCompleteDeprecationMetadata(
-  metadata: ProblemDeprecationMetadata | undefined,
-): metadata is ProblemDeprecationMetadata {
-  return Boolean(metadata?.reason && metadata.migrationNote);
-}
-
 function formatGeneratedProblemRegistrySource(registry: ProblemCodeRegistry): string {
   return `${[
     'import type { TypedProblemDetails } from "../libs/Problem";',
@@ -2099,6 +2158,9 @@ function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
         `- Migration note: ${lifecycle.deprecation.migrationNote}`,
         ...(lifecycle.deprecation.replacementCode
           ? [`- Replacement code: \`${lifecycle.deprecation.replacementCode}\``]
+          : []),
+        ...(lifecycle.deprecation.noReplacementReason
+          ? [`- No replacement reason: ${lifecycle.deprecation.noReplacementReason}`]
           : []),
         ...(lifecycle.deprecation.since ? [`- Since: \`${lifecycle.deprecation.since}\``] : []),
         "",

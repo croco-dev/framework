@@ -356,6 +356,8 @@ describe("generateClientFiles", () => {
     expect(content).toContain(
       "{ code: 'USER_NOT_FOUND', category: 'NotFound', status: 404, description: 'User id is missing, or the user was deleted.' }",
     );
+    expect(content).not.toContain("lifecycle");
+    expect(content).not.toContain("deprecation");
   });
 
   it("should emit a deterministic frontend action manifest for REST RPC routes", () => {
