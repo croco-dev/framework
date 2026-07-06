@@ -1,6 +1,10 @@
 import type { Guard, ILogger } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
-import { extractRouteIR, type RouteIR } from "@croco/protocols-core";
+import {
+  extractRouteIR,
+  type RouteContractSourceLocation,
+  type RouteIR,
+} from "@croco/protocols-core";
 import {
   type Constructor,
   type ExceptionFilter,
@@ -21,6 +25,19 @@ import type {
   InterceptorProvider,
   PipeProvider,
 } from "./types";
+
+type RouteDiagnosticMetadata = {
+  readonly controllerName: string;
+  readonly methodName: string;
+  readonly httpMethod: string;
+  readonly path: string;
+  readonly sourceLocation?: RouteContractSourceLocation;
+};
+
+type RouteCompilerEntry = {
+  readonly route: CompiledRoute;
+  readonly diagnosticMetadata: RouteDiagnosticMetadata;
+};
 
 export interface CompileOptions {
   container?: { get<T>(type: Constructor<T>): T };
@@ -66,7 +83,7 @@ export class RouteCompiler {
   ) {}
 
   compile(controllers: Constructor[], options: CompileOptions = {}): CompiledRoute[] {
-    const routes: CompiledRoute[] = [];
+    const routeEntries: RouteCompilerEntry[] = [];
 
     for (const controller of controllers) {
       const routeIRs = extractRouteIR(controller);
@@ -77,30 +94,31 @@ export class RouteCompiler {
 
       for (const routeIR of routeIRs) {
         const compiledRoute = this.compileRouteFromIR(controller, routeIR, options);
-        routes.push(compiledRoute);
+        routeEntries.push(compiledRoute);
       }
     }
 
-    this.assertNoDuplicateRoutes(routes);
+    this.assertNoDuplicateRoutes(routeEntries);
 
-    return routes;
+    return routeEntries.map((entry) => entry.route);
   }
 
-  private assertNoDuplicateRoutes(routes: CompiledRoute[]): void {
-    const seenRoutes = new Map<string, CompiledRoute>();
+  private assertNoDuplicateRoutes(routeEntries: RouteCompilerEntry[]): void {
+    const seenRoutes = new Map<string, RouteCompilerEntry>();
 
-    for (const route of routes) {
+    for (const entry of routeEntries) {
+      const route = entry.route;
       const routeKey = `${route.method.toUpperCase()} ${route.path}`;
       const existingRoute = seenRoutes.get(routeKey);
 
       if (existingRoute) {
         throw ProblemFactory.internalServerError(
           "transports-http/duplicate-route-definition",
-          `Duplicate route detected for ${routeKey}`,
+          this.formatDuplicateRouteDetail(routeKey, existingRoute, entry),
         );
       }
 
-      seenRoutes.set(routeKey, route);
+      seenRoutes.set(routeKey, entry);
     }
   }
 
@@ -108,7 +126,7 @@ export class RouteCompiler {
     controller: Constructor,
     routeIR: RouteIR,
     options: CompileOptions,
-  ): CompiledRoute {
+  ): RouteCompilerEntry {
     const fullPath = this.toRuntimeRoutePath(this.joinPaths("", routeIR.path));
     const paramResolver = new ParamResolver((pipe) => instantiateProvider(pipe, options.container));
 
@@ -170,7 +188,7 @@ export class RouteCompiler {
       });
     };
 
-    return {
+    const route: CompiledRoute = {
       method: routeIR.httpMethod,
       path: fullPath,
       handler,
@@ -183,6 +201,17 @@ export class RouteCompiler {
         guards: [...globalGuards, ...routeGuards],
         interceptors: [...globalInterceptors, ...routeInterceptors],
         filters: [...globalFilters, ...routeFilters],
+      },
+    };
+
+    return {
+      route,
+      diagnosticMetadata: {
+        controllerName: routeIR.controllerName,
+        methodName: routeIR.methodName,
+        httpMethod: routeIR.httpMethod.toUpperCase(),
+        path: fullPath,
+        ...(routeIR.sourceLocation ? { sourceLocation: routeIR.sourceLocation } : {}),
       },
     };
   }
@@ -202,5 +231,40 @@ export class RouteCompiler {
 
       return name === paramToken || name.length === 0 ? token : `:${name}{.+}`;
     });
+  }
+
+  private formatDuplicateRouteDetail(
+    routeKey: string,
+    existingEntry: RouteCompilerEntry,
+    conflictingEntry: RouteCompilerEntry,
+  ): string {
+    return [
+      `Duplicate route definition detected for ${routeKey}.`,
+      `Existing route: ${this.formatRouteDiagnostic(existingEntry.diagnosticMetadata)}.`,
+      `Conflicting route: ${this.formatRouteDiagnostic(conflictingEntry.diagnosticMetadata)}.`,
+      "Recovery: give one route decorator a unique HTTP method or path before starting the HTTP transport.",
+    ].join(" ");
+  }
+
+  private formatRouteDiagnostic(metadata: RouteDiagnosticMetadata): string {
+    const routeLabel = `${metadata.controllerName}.${metadata.methodName} (${metadata.httpMethod} ${metadata.path})`;
+    const sourceLocation = this.formatRouteSourceLocation(metadata.sourceLocation);
+
+    return sourceLocation
+      ? `${routeLabel} at ${sourceLocation}`
+      : `${routeLabel} (route decorator source unavailable)`;
+  }
+
+  private formatRouteSourceLocation(
+    sourceLocation: RouteContractSourceLocation | undefined,
+  ): string | null {
+    if (!sourceLocation) {
+      return null;
+    }
+
+    const line = sourceLocation.line === undefined ? "" : `:${sourceLocation.line}`;
+    const column = sourceLocation.column === undefined ? "" : `:${sourceLocation.column}`;
+
+    return `${sourceLocation.path}${line}${column}`;
   }
 }

@@ -2,6 +2,7 @@ import "reflect-metadata";
 import type { Guard } from "@croco/framework-context";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
+import { Problem } from "@croco/problems-core";
 import {
   type Constructor,
   Controller,
@@ -63,6 +64,13 @@ function createMockHttpContext(): CrocoHttpContext {
       .fn()
       .mockImplementation((url: string, status: number = 302) => Response.redirect(url, status)),
   };
+}
+
+function expectDuplicateRouteProblem(error: unknown): Problem {
+  expect(error).toBeInstanceOf(Problem);
+  const problem = error as Problem;
+  expect(problem.code).toBe("transports-http/duplicate-route-definition");
+  return problem;
 }
 
 describe("RouteCompiler", () => {
@@ -278,9 +286,30 @@ describe("RouteCompiler", () => {
 
     const compiler = createCompiler();
 
-    expect(() => {
+    let thrown: unknown;
+    try {
       compiler.compile([DuplicateRouteController]);
-    }).toThrow("Duplicate route detected for GET /users/:id");
+    } catch (error) {
+      thrown = error;
+    }
+
+    const problem = expectDuplicateRouteProblem(thrown);
+    expect(problem.detail).toContain("Duplicate route definition detected for GET /users/:id.");
+    expect(problem.detail).toContain(
+      "Existing route: DuplicateRouteController.getById (GET /users/:id)",
+    );
+    expect(problem.detail).toContain(
+      "Conflicting route: DuplicateRouteController.getByIdWithoutLeadingSlash (GET /users/:id)",
+    );
+    expect(problem.detail).toContain(
+      "Recovery: give one route decorator a unique HTTP method or path before starting the HTTP transport.",
+    );
+    expect(problem.detail).toMatch(
+      /DuplicateRouteController\.getById \(GET \/users\/:id\) at .*RouteCompiler\.spec\.ts:\d+:\d+/,
+    );
+    expect(problem.detail).toMatch(
+      /DuplicateRouteController\.getByIdWithoutLeadingSlash \(GET \/users\/:id\) at .*RouteCompiler\.spec\.ts:\d+:\d+/,
+    );
   });
 
   it("should fail fast when duplicate routes are contributed by different controllers", () => {
@@ -302,8 +331,25 @@ describe("RouteCompiler", () => {
 
     const compiler = createCompiler();
 
-    expect(() => {
+    let thrown: unknown;
+    try {
       compiler.compile([FirstController, SecondController]);
-    }).toThrow("Duplicate route detected for GET /users/:id");
+    } catch (error) {
+      thrown = error;
+    }
+
+    const problem = expectDuplicateRouteProblem(thrown);
+    expect(problem.detail).toContain("Duplicate route definition detected for GET /users/:id.");
+    expect(problem.detail).toContain("Existing route: FirstController.first (GET /users/:id)");
+    expect(problem.detail).toContain("Conflicting route: SecondController.second (GET /users/:id)");
+    expect(problem.detail).toContain(
+      "Recovery: give one route decorator a unique HTTP method or path before starting the HTTP transport.",
+    );
+    expect(problem.detail).toMatch(
+      /FirstController\.first \(GET \/users\/:id\) at .*RouteCompiler\.spec\.ts:\d+:\d+/,
+    );
+    expect(problem.detail).toMatch(
+      /SecondController\.second \(GET \/users\/:id\) at .*RouteCompiler\.spec\.ts:\d+:\d+/,
+    );
   });
 });
