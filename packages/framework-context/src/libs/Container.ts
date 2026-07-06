@@ -79,9 +79,15 @@ export class Container {
     Constructor,
     DependencySourceLocation
   >();
+  private static readonly explicitComponentSourceLocations = new Map<
+    Constructor,
+    DependencySourceLocation
+  >();
+  private static readonly componentRegistrationOrder = new Map<Constructor, number>();
   private static readonly tokenIdentityIds = new Map<TokenIdentifier<unknown>, string>();
   private static readonly tokenIdentityOwners = new Map<string, TokenIdentifier<unknown>>();
   private static lastResolutionTrace: DependencyResolutionTrace | undefined;
+  private static nextComponentRegistrationOrder = 1;
 
   static get<T>(token: TokenIdentifier<T>): T {
     const trace = Container.buildResolutionTrace(token);
@@ -142,14 +148,14 @@ export class Container {
     Container.removeRegisteredValue(token);
     Container.lazyProviders.delete(token);
     if (Container.isConstructorToken(token)) {
+      const label = Container.getConstructorTokenLabel(token);
       MetadataStorage.delete(COMPONENT_METADATA_KEY, token);
       Container.componentSourceLocations.delete(token);
+      Container.explicitComponentSourceLocations.delete(token);
+      Container.componentRegistrationOrder.delete(token);
+      Container.clearConstructorLabelTokenIdentities(label);
     }
-    const tokenId = Container.tokenIdentityIds.get(token);
-    if (tokenId) {
-      Container.tokenIdentityOwners.delete(tokenId);
-    }
-    Container.tokenIdentityIds.delete(token);
+    Container.clearTokenIdentity(token);
     Container.validated = false;
   }
 
@@ -160,9 +166,12 @@ export class Container {
     Container.lazyProviders.clear();
     Container.symbolTokens.clear();
     Container.componentSourceLocations.clear();
+    Container.explicitComponentSourceLocations.clear();
+    Container.componentRegistrationOrder.clear();
     Container.tokenIdentityIds.clear();
     Container.tokenIdentityOwners.clear();
     Container.lastResolutionTrace = undefined;
+    Container.nextComponentRegistrationOrder = 1;
     Container.validated = false;
   }
 
@@ -210,16 +219,41 @@ export class Container {
   }
 
   static register<T>(token: Constructor<T>, scope: Scope): void {
+    const label = Container.getConstructorTokenLabel(token);
+    if (!Container.componentRegistrationOrder.has(token)) {
+      Container.componentRegistrationOrder.set(token, Container.nextComponentRegistrationOrder);
+      Container.nextComponentRegistrationOrder += 1;
+    }
+    Container.clearConstructorLabelTokenIdentities(label);
+
     MetadataStorage.define(COMPONENT_METADATA_KEY, token, {
       scope,
       target: token,
     });
-    const sourceLocation = Container.captureSourceLocation();
+    const sourceLocation =
+      Container.explicitComponentSourceLocations.get(token) ?? Container.captureSourceLocation();
     if (sourceLocation) {
       Container.componentSourceLocations.set(token, sourceLocation);
     } else {
       Container.componentSourceLocations.delete(token);
     }
+    Container.validated = false;
+  }
+
+  static setComponentSourceLocation<T>(
+    token: Constructor<T>,
+    sourceLocation?: DependencySourceLocation,
+  ): void {
+    if (!sourceLocation) {
+      Container.explicitComponentSourceLocations.delete(token);
+      Container.componentSourceLocations.delete(token);
+      Container.validated = false;
+      return;
+    }
+
+    const normalizedSourceLocation = Container.normalizeSourceLocation(sourceLocation);
+    Container.explicitComponentSourceLocations.set(token, normalizedSourceLocation);
+    Container.componentSourceLocations.set(token, normalizedSourceLocation);
     Container.validated = false;
   }
 
@@ -537,28 +571,82 @@ export class Container {
     const stack = new Error().stack?.split("\n").slice(2) ?? [];
 
     for (const line of stack) {
-      const trimmed = line.trim();
-      const match =
-        trimmed.match(/\(?((?:file:\/\/)?\/.*):(\d+):(\d+)\)?$/) ??
-        trimmed.match(/\(?([A-Za-z]:\\.*):(\d+):(\d+)\)?$/);
-      if (!match) {
+      const sourceLocation = Container.parseStackSourceLocation(line);
+      if (!sourceLocation) {
         continue;
       }
 
-      const file = match[1]?.replace(/^file:\/\//, "");
-
-      if (!file || file.includes("/packages/framework-context/src/libs/")) {
+      if (Container.isInternalSourceLocation(sourceLocation.file)) {
         continue;
       }
 
-      return {
-        file: Container.normalizeSourceFile(file),
-        line: Number(match[2]),
-        column: Number(match[3]),
-      };
+      return sourceLocation;
     }
 
     return undefined;
+  }
+
+  private static parseStackSourceLocation(line: string): DependencySourceLocation | undefined {
+    const trimmed = line.trim();
+    const match =
+      trimmed.match(/\(([^()]+):(\d+):(\d+)\)$/) ??
+      trimmed.match(/^at\s+(.+):(\d+):(\d+)$/) ??
+      trimmed.match(/^(.+):(\d+):(\d+)$/);
+    if (!match) {
+      return undefined;
+    }
+
+    const rawFile = match[1]?.trim().replace(/^async\s+/, "");
+
+    if (!rawFile || !Container.isStackSourceLocationCandidate(rawFile)) {
+      return undefined;
+    }
+
+    return Container.normalizeSourceLocation({
+      file: rawFile,
+      line: Number(match[2]),
+      column: Number(match[3]),
+    });
+  }
+
+  private static isStackSourceLocationCandidate(file: string): boolean {
+    const normalizedFile = file.replace(/\\/g, "/");
+    return (
+      normalizedFile.length > 0 &&
+      normalizedFile !== "native" &&
+      normalizedFile !== "<anonymous>" &&
+      !normalizedFile.startsWith("node:") &&
+      !normalizedFile.startsWith("internal/")
+    );
+  }
+
+  private static isInternalSourceLocation(file: string): boolean {
+    const internalMatchFile = file.replace(/\\/g, "/").replace(/\/\.\//g, "/");
+
+    return (
+      (internalMatchFile.startsWith("src/libs/") && Container.isFrameworkContextPackageCwd()) ||
+      internalMatchFile.startsWith("packages/framework-context/src/libs/") ||
+      internalMatchFile.startsWith("packages/framework-context/dist/") ||
+      internalMatchFile.includes("/packages/framework-context/src/libs/") ||
+      internalMatchFile.includes("/packages/framework-context/dist/") ||
+      internalMatchFile.startsWith("node_modules/@croco/framework-context/") ||
+      internalMatchFile.includes("/node_modules/@croco/framework-context/") ||
+      internalMatchFile.includes("://@croco/framework-context/")
+    );
+  }
+
+  private static isFrameworkContextPackageCwd(): boolean {
+    return process.cwd().replace(/\\/g, "/").endsWith("/packages/framework-context");
+  }
+
+  private static normalizeSourceLocation(
+    sourceLocation: DependencySourceLocation,
+  ): DependencySourceLocation {
+    return {
+      file: Container.normalizeSourceFile(sourceLocation.file.replace(/^file:\/\//, "")),
+      ...(sourceLocation.line === undefined ? {} : { line: sourceLocation.line }),
+      ...(sourceLocation.column === undefined ? {} : { column: sourceLocation.column }),
+    };
   }
 
   private static normalizeSourceFile(file: string): string {
@@ -1168,12 +1256,7 @@ export class Container {
     label: string,
   ): string {
     if (Container.isConstructorToken(token)) {
-      const sourceLocation = Container.componentSourceLocations.get(token);
-      if (sourceLocation) {
-        const line = sourceLocation.line ?? 0;
-        const column = sourceLocation.column ?? 0;
-        return `${kind}:${Container.formatTokenIdPart(label)}@${sourceLocation.file}:${line}:${column}`;
-      }
+      return Container.createConstructorTokenIdBase(token, kind, label);
     }
 
     if (typeof token === "symbol") {
@@ -1186,8 +1269,57 @@ export class Container {
     return `${kind}:${Container.formatTokenIdPart(label)}`;
   }
 
+  private static createConstructorTokenIdBase<T>(
+    token: Constructor<T>,
+    kind: DependencyTokenKind,
+    label: string,
+  ): string {
+    const labelPart = Container.formatTokenIdPart(label);
+    const registrationOrder = Container.componentRegistrationOrder.get(token);
+    if (!registrationOrder) {
+      return `${kind}:${labelPart}`;
+    }
+
+    const sameLabelComponents = [...Container.componentRegistrationOrder.entries()]
+      .filter(([candidate]) => Container.getConstructorTokenLabel(candidate) === label)
+      .sort(([, leftOrder], [, rightOrder]) => leftOrder - rightOrder);
+    const rank =
+      sameLabelComponents.findIndex(([candidate]) => Container.isSameToken(candidate, token)) + 1;
+
+    return rank > 1 ? `${kind}:${labelPart}#${rank}` : `${kind}:${labelPart}`;
+  }
+
   private static formatTokenIdPart(value: string): string {
     return value.replace(/\\/g, "/");
+  }
+
+  private static getConstructorTokenLabel(token: Constructor): string {
+    return token.name || "<anonymous>";
+  }
+
+  private static clearTokenIdentity<T>(token: TokenIdentifier<T>): void {
+    const tokenId = Container.tokenIdentityIds.get(token);
+    if (tokenId) {
+      Container.tokenIdentityOwners.delete(tokenId);
+    }
+    Container.tokenIdentityIds.delete(token);
+  }
+
+  private static clearConstructorLabelTokenIdentities(label: string): void {
+    const tokensToClear: TokenIdentifier<unknown>[] = [];
+
+    for (const token of Container.tokenIdentityIds.keys()) {
+      if (
+        Container.isConstructorToken(token) &&
+        Container.getConstructorTokenLabel(token) === label
+      ) {
+        tokensToClear.push(token);
+      }
+    }
+
+    for (const token of tokensToClear) {
+      Container.clearTokenIdentity(token);
+    }
   }
 
   private static isSameToken<T>(
