@@ -270,6 +270,30 @@ export function createReleaseSpineEvidenceManifest(): readonly EvidenceCommand[]
       ],
     },
     {
+      id: "spine-bundle-size",
+      label: "Spine bundle-size enforcement",
+      category: "quality",
+      command: ["pnpm", "package-quality:report", "--", "--enforce-spine-bundle-size"],
+      timeoutMs: minutes(10),
+      artifacts: [
+        {
+          label: "Package quality dashboard markdown",
+          path: "ci-reports/package-quality/report.md",
+          required: true,
+        },
+        {
+          label: "Package quality dashboard JSON",
+          path: "ci-reports/package-quality/summary.json",
+          required: true,
+        },
+        {
+          label: "Bundle-size enforcement markdown",
+          path: "ci-reports/package-quality/bundle-size.md",
+          required: true,
+        },
+      ],
+    },
+    {
       id: "core-coverage",
       label: "Core coverage gate",
       category: "coverage",
