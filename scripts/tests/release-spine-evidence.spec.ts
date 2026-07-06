@@ -47,6 +47,7 @@ describe("release-spine-evidence.mts", () => {
       "package-bins-smoke",
       "release-metadata",
       "generated-app-smoke",
+      "alpha-release-smoke",
       "typecheck",
       "test",
       "provider-certification",
@@ -71,6 +72,13 @@ describe("release-spine-evidence.mts", () => {
     expect(
       findCheck(manifest, "generated-app-smoke").artifacts?.map((artifact) => artifact.path),
     ).toEqual(["ci-reports/generated-apps/matrix.md", "ci-reports/generated-apps/matrix.json"]);
+    expect(findCheck(manifest, "alpha-release-smoke").command).toEqual([
+      "pnpm",
+      "alpha-release:smoke",
+    ]);
+    expect(
+      findCheck(manifest, "alpha-release-smoke").artifacts?.map((artifact) => artifact.path),
+    ).toEqual(["ci-reports/release/alpha-release-smoke.md"]);
     expect(findCheck(manifest, "spine-bundle-size").command).toEqual([
       "pnpm",
       "package-quality:report",
@@ -86,6 +94,12 @@ describe("release-spine-evidence.mts", () => {
     ]);
     expect(manifest.findIndex((check) => check.id === "release-metadata")).toBeLessThan(
       manifest.findIndex((check) => check.id === "generated-app-smoke"),
+    );
+    expect(manifest.findIndex((check) => check.id === "generated-app-smoke")).toBeLessThan(
+      manifest.findIndex((check) => check.id === "alpha-release-smoke"),
+    );
+    expect(manifest.findIndex((check) => check.id === "alpha-release-smoke")).toBeLessThan(
+      manifest.findIndex((check) => check.id === "typecheck"),
     );
   });
 

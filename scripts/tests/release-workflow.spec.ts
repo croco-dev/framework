@@ -169,6 +169,7 @@ describe("release workflow quality gates", () => {
     const workflow = readReleaseWorkflow();
     const releaseGateFiles = [
       ".github/workflows/release.yml",
+      "scripts/alpha-release-smoke.mts",
       "scripts/certification-policy.mts",
       "scripts/changeset-required-check.mts",
       "scripts/core-coverage-warning-check.mts",
@@ -190,6 +191,7 @@ describe("release workflow quality gates", () => {
       "scripts/release-spine-evidence.mts",
       "scripts/security-allowlist-metadata-check.mts",
       "scripts/spine-promotion-check.mts",
+      "scripts/tests/alpha-release-smoke.spec.ts",
       "scripts/tests/changeset-required-check.spec.ts",
       "scripts/tests/core-coverage-warning-check.spec.ts",
       "scripts/tests/create-croco-app-generated-smoke.spec.ts",
@@ -226,6 +228,7 @@ describe("release workflow quality gates", () => {
       "if: steps.release_work.outputs.should_verify_release_gate_maintenance == 'true'",
     );
     expect(workflow).toContain("pnpm exec vitest run scripts/tests/release-workflow.spec.ts");
+    expect(workflow).toContain("scripts/tests/alpha-release-smoke.spec.ts");
     expect(workflow).toContain("scripts/tests/dependency-audit-policy.spec.ts");
     expect(workflow).toContain("scripts/tests/release-spine-evidence.spec.ts");
     expect(workflow).toContain("scripts/tests/release-metadata-check.spec.ts");
