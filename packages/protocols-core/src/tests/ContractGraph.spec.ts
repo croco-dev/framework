@@ -1364,9 +1364,14 @@ describe("buildContractGraph", () => {
       redaction: "public",
       cookbookPath: "/reference/problem-recovery-cookbook/#users-api-not-found",
     });
+    expect(graph.routes[0]?.problemResponses?.[0]?.registry).not.toHaveProperty("lifecycle");
+    expect(graph.routes[0]?.problemResponses?.[0]?.registry).not.toHaveProperty("deprecation");
 
     expect(createContractGraphSnapshot(graph).routes[0]?.problems[0]?.registry).toEqual(
       graph.routes[0]?.problemResponses?.[0]?.registry,
+    );
+    expect(createContractGraphSnapshot(graph).routes[0]?.problems[0]?.registry).not.toHaveProperty(
+      "lifecycle",
     );
   });
 

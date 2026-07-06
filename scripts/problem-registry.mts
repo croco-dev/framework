@@ -34,12 +34,21 @@ export type ProblemRedactionPolicy = "public" | "safe-message" | "operator-only"
 export type ProblemTelemetrySeverity = "info" | "warning" | "error";
 export type ProblemLifecycleStatus = "active" | "deprecated";
 
-export type ProblemDeprecationMetadata = {
-  readonly reason: string;
-  readonly migrationNote: string;
-  readonly replacementCode?: string;
-  readonly since?: string;
-};
+export type ProblemDeprecationMetadata =
+  | {
+      readonly reason: string;
+      readonly migrationNote: string;
+      readonly replacementCode: string;
+      readonly noReplacementReason?: never;
+      readonly since?: string;
+    }
+  | {
+      readonly reason: string;
+      readonly migrationNote: string;
+      readonly replacementCode?: never;
+      readonly noReplacementReason: string;
+      readonly since?: string;
+    };
 
 export type ProblemLifecycle = {
   readonly status: ProblemLifecycleStatus;
@@ -198,11 +207,12 @@ export function runProblemRegistryCheck(
     const registry = mergeDeprecatedProblemEntries(generatedRegistry, existingRegistry);
     const artifacts = formatProblemRegistryArtifacts(createProblemRegistryArtifacts(registry));
     const preflightDiagnostics = [
+      ...getProblemCodeRegistryValidationErrors(registry),
       ...getRegistryImplementationDiagnostics(implementationBaselineRegistry, registry),
       ...getProblemContractChangeDiagnostics(
         absoluteRootDir,
         baseRegistry ?? existingRegistry,
-        generatedRegistry,
+        registry,
       ),
       ...getProblemRedactionDiagnostics(absoluteRootDir),
     ];
@@ -624,21 +634,21 @@ function getRegistryImplementationDiagnostics(
 function getProblemContractChangeDiagnostics(
   rootDir: string,
   existingRegistry: ProblemCodeRegistry | null,
-  generatedRegistry: ProblemCodeRegistry,
+  currentRegistry: ProblemCodeRegistry,
 ): readonly string[] {
   if (!existingRegistry) {
     return [];
   }
 
   const generatedByCode = new Map(
-    generatedRegistry.problems.map((problem) => [problem.code, problem]),
+    currentRegistry.problems.map((problem) => [problem.code, problem]),
   );
   const diagnostics: string[] = [];
 
   for (const existingProblem of existingRegistry.problems) {
     const generatedProblem = generatedByCode.get(existingProblem.code);
 
-    if (!generatedProblem || getProblemLifecycleStatus(existingProblem) === "deprecated") {
+    if (!generatedProblem) {
       continue;
     }
 
@@ -654,6 +664,7 @@ function getProblemContractChangeDiagnostics(
       existingRetryability === generatedRetryability
         ? null
         : `retryability ${existingRetryability} -> ${generatedRetryability}`,
+      ...getProblemLifecycleChangeFields(existingProblem, generatedProblem),
     ].filter((field): field is string => field !== null);
 
     if (
@@ -671,6 +682,63 @@ function getProblemContractChangeDiagnostics(
   return diagnostics;
 }
 
+function getProblemLifecycleChangeFields(
+  existingProblem: ProblemCodeRegistryEntry,
+  generatedProblem: ProblemCodeRegistryEntry,
+): readonly string[] {
+  const existingLifecycle = getProblemLifecycle(existingProblem);
+  const generatedLifecycle = getProblemLifecycle(generatedProblem);
+  const existingDeprecation = existingLifecycle.deprecation;
+  const generatedDeprecation = generatedLifecycle.deprecation;
+
+  return [
+    existingLifecycle.status === generatedLifecycle.status
+      ? null
+      : `lifecycle ${existingLifecycle.status} -> ${generatedLifecycle.status}`,
+    formatOptionalContractFieldChange(
+      "deprecation.reason",
+      existingDeprecation?.reason,
+      generatedDeprecation?.reason,
+    ),
+    formatOptionalContractFieldChange(
+      "deprecation.migrationNote",
+      existingDeprecation?.migrationNote,
+      generatedDeprecation?.migrationNote,
+    ),
+    formatOptionalContractFieldChange(
+      "deprecation.replacementCode",
+      existingDeprecation?.replacementCode,
+      generatedDeprecation?.replacementCode,
+    ),
+    formatOptionalContractFieldChange(
+      "deprecation.noReplacementReason",
+      existingDeprecation?.noReplacementReason,
+      generatedDeprecation?.noReplacementReason,
+    ),
+    formatOptionalContractFieldChange(
+      "deprecation.since",
+      existingDeprecation?.since,
+      generatedDeprecation?.since,
+    ),
+  ].filter((field): field is string => field !== null);
+}
+
+function formatOptionalContractFieldChange(
+  field: string,
+  existingValue: string | undefined,
+  generatedValue: string | undefined,
+): string | null {
+  if ((existingValue ?? "") === (generatedValue ?? "")) {
+    return null;
+  }
+
+  return `${field} ${formatOptionalContractValue(existingValue)} -> ${formatOptionalContractValue(generatedValue)}`;
+}
+
+function formatOptionalContractValue(value: string | undefined): string {
+  return value ? value : "(none)";
+}
+
 function hasProblemContractChangeEvidence(rootDir: string, code: string): boolean {
   return getProblemContractEvidencePaths(rootDir).some((relativePath) => {
     const absolutePath = join(rootDir, relativePath);
@@ -680,10 +748,7 @@ function hasProblemContractChangeEvidence(rootDir: string, code: string): boolea
 }
 
 function getProblemContractEvidencePaths(rootDir: string): readonly string[] {
-  const paths = [
-    join("docs", "release", "problem-code-migrations.md"),
-    join("docs", "troubleshooting", "diagnostics.md"),
-  ];
+  const paths = [join("docs", "release", "problem-code-migrations.md")];
   const changesetDir = join(rootDir, ".changeset");
 
   if (!existsSync(changesetDir)) {
@@ -1893,6 +1958,7 @@ function createActiveProblemLifecycle(): ProblemLifecycle {
 function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): readonly string[] {
   const errors: string[] = [];
   const seenCodes = new Set<string>();
+  const registryByCode = new Map(registry.problems.map((problem) => [problem.code, problem]));
 
   if (registry.problemCount !== registry.problems.length) {
     errors.push(
@@ -1917,11 +1983,8 @@ function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): 
       errors.push(`Problem code '${problem.code}' is missing recovery cookbook metadata.`);
     }
 
-    if (
-      lifecycle.status === "deprecated" &&
-      !isCompleteDeprecationMetadata(lifecycle.deprecation)
-    ) {
-      errors.push(`Deprecated Problem code '${problem.code}' is missing migration metadata.`);
+    if (lifecycle.status === "deprecated") {
+      errors.push(...getDeprecationMetadataValidationErrors(problem, registryByCode));
     }
 
     if (problem.sources.length === 0 && lifecycle.status !== "deprecated") {
@@ -1934,6 +1997,81 @@ function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): 
   }
 
   return errors;
+}
+
+function getDeprecationMetadataValidationErrors(
+  problem: ProblemCodeRegistryEntry,
+  registryByCode: ReadonlyMap<string, ProblemCodeRegistryEntry>,
+): readonly string[] {
+  const metadata = getProblemLifecycle(problem).deprecation;
+  const diagnostics: string[] = [];
+
+  if (!metadata) {
+    return [`Deprecated Problem code '${problem.code}' is missing deprecation metadata.`];
+  }
+
+  const metadataRecord = metadata as {
+    readonly reason?: unknown;
+    readonly migrationNote?: unknown;
+    readonly replacementCode?: unknown;
+    readonly noReplacementReason?: unknown;
+  };
+  const reason = getTrimmedString(metadataRecord.reason);
+  const migrationNote = getTrimmedString(metadataRecord.migrationNote);
+  const replacementCode = getTrimmedString(metadataRecord.replacementCode);
+  const noReplacementReason = getTrimmedString(metadataRecord.noReplacementReason);
+
+  if (!reason) {
+    diagnostics.push(`Deprecated Problem code '${problem.code}' is missing deprecation reason.`);
+  }
+
+  if (!migrationNote) {
+    diagnostics.push(`Deprecated Problem code '${problem.code}' is missing migration guidance.`);
+  }
+
+  if (!replacementCode && !noReplacementReason) {
+    diagnostics.push(
+      `Deprecated Problem code '${problem.code}' must declare replacementCode or noReplacementReason.`,
+    );
+  }
+
+  if (replacementCode && noReplacementReason) {
+    diagnostics.push(
+      `Deprecated Problem code '${problem.code}' must not declare both replacementCode and noReplacementReason.`,
+    );
+  }
+
+  if (!replacementCode) {
+    return diagnostics;
+  }
+
+  if (replacementCode === problem.code) {
+    diagnostics.push(
+      `Deprecated Problem code '${problem.code}' replacementCode must reference a different Problem code.`,
+    );
+    return diagnostics;
+  }
+
+  const replacement = registryByCode.get(replacementCode);
+
+  if (!replacement) {
+    diagnostics.push(
+      `Deprecated Problem code '${problem.code}' replacementCode '${replacementCode}' is not registered.`,
+    );
+    return diagnostics;
+  }
+
+  if (getProblemLifecycleStatus(replacement) === "deprecated") {
+    diagnostics.push(
+      `Deprecated Problem code '${problem.code}' replacementCode '${replacementCode}' points to a deprecated Problem code.`,
+    );
+  }
+
+  return diagnostics;
+}
+
+function getTrimmedString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function getProblemLifecycle(problem: ProblemCodeRegistryEntry): ProblemLifecycle {
@@ -2023,12 +2161,6 @@ function isCompleteRecoveryMetadata(metadata: ProblemRecoveryMetadata): boolean 
   );
 }
 
-function isCompleteDeprecationMetadata(
-  metadata: ProblemDeprecationMetadata | undefined,
-): metadata is ProblemDeprecationMetadata {
-  return Boolean(metadata?.reason && metadata.migrationNote);
-}
-
 function formatGeneratedProblemRegistrySource(registry: ProblemCodeRegistry): string {
   return `${[
     'import type { TypedProblemDetails } from "../libs/Problem";',
@@ -2099,6 +2231,9 @@ function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
         `- Migration note: ${lifecycle.deprecation.migrationNote}`,
         ...(lifecycle.deprecation.replacementCode
           ? [`- Replacement code: \`${lifecycle.deprecation.replacementCode}\``]
+          : []),
+        ...(lifecycle.deprecation.noReplacementReason
+          ? [`- No replacement reason: ${lifecycle.deprecation.noReplacementReason}`]
           : []),
         ...(lifecycle.deprecation.since ? [`- Since: \`${lifecycle.deprecation.since}\``] : []),
         "",

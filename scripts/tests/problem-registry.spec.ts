@@ -516,6 +516,186 @@ describe("problem-registry.mts", () => {
     });
   });
 
+  it("preserves deprecated registry entries without replacements when a no-replacement reason is present", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AlphaRemovedProblem extends Problem {",
+        "  constructor() {",
+        '    super("alpha/removed", ProblemCategory.Gone, "removed");',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+
+    writeFile(repo, "packages/alpha/src/problems.ts", "");
+    const registry = readRegistry(repo);
+    writeRegistry(repo, {
+      ...registry,
+      problems: registry.problems.map((problem) =>
+        problem.code === "alpha/removed"
+          ? {
+              ...problem,
+              lifecycle: {
+                status: "deprecated",
+                deprecation: {
+                  reason: "The upstream capability was removed.",
+                  migrationNote: "Stop branching on alpha/removed in generated clients.",
+                  noReplacementReason: "The retired capability has no supported equivalent.",
+                },
+              },
+              sources: [],
+            }
+          : problem,
+      ),
+    });
+
+    const writeResult = runProblemRegistryCheck(repo, "write");
+    const cookbook = readFileSync(
+      join(repo, "packages/docs/src/content/docs/en/reference/problem-recovery-cookbook.md"),
+      "utf-8",
+    );
+
+    expect(writeResult.status).toBe("pass");
+    expect(runProblemRegistryCheck(repo, "check").status).toBe("pass");
+    expect(cookbook).toContain(
+      "- No replacement reason: The retired capability has no supported equivalent.",
+    );
+  });
+
+  it("rejects deprecated lifecycle metadata without replacement guidance", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AlphaRemovedProblem extends Problem {",
+        "  constructor() {",
+        '    super("alpha/removed", ProblemCategory.Gone, "removed");',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+
+    writeFile(repo, "packages/alpha/src/problems.ts", "");
+    const registry = readRegistry(repo);
+    writeRegistry(repo, {
+      ...registry,
+      problems: registry.problems.map((problem) =>
+        problem.code === "alpha/removed"
+          ? {
+              ...problem,
+              lifecycle: {
+                status: "deprecated",
+                deprecation: {
+                  reason: "The code was retired.",
+                  migrationNote: "Stop branching on alpha/removed.",
+                },
+              },
+              sources: [],
+            }
+          : problem,
+      ),
+    });
+
+    const result = runProblemRegistryCheck(repo, "check");
+
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toEqual([
+      "Deprecated Problem code 'alpha/removed' must declare replacementCode or noReplacementReason.",
+    ]);
+  });
+
+  it("rejects deprecated replacement codes that are self-references, unknown, or deprecated", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        'export class AlphaSelfProblem extends Problem { constructor() { super("alpha/self", ProblemCategory.Gone, "self"); } }',
+        'export class AlphaUnknownProblem extends Problem { constructor() { super("alpha/unknown", ProblemCategory.Gone, "unknown"); } }',
+        'export class AlphaOldTargetProblem extends Problem { constructor() { super("alpha/old-target", ProblemCategory.Gone, "old"); } }',
+        'export class AlphaDeprecatedTargetProblem extends Problem { constructor() { super("alpha/deprecated-target", ProblemCategory.Gone, "target"); } }',
+        "",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+
+    const registry = readRegistry(repo);
+    writeRegistry(repo, {
+      ...registry,
+      problems: registry.problems.map((problem) => {
+        const deprecation = {
+          reason: "The code was retired.",
+          migrationNote: "Follow the replacement guidance before removing branches.",
+        };
+
+        if (problem.code === "alpha/self") {
+          return {
+            ...problem,
+            lifecycle: {
+              status: "deprecated",
+              deprecation: { ...deprecation, replacementCode: "alpha/self" },
+            },
+          };
+        }
+
+        if (problem.code === "alpha/unknown") {
+          return {
+            ...problem,
+            lifecycle: {
+              status: "deprecated",
+              deprecation: { ...deprecation, replacementCode: "alpha/missing" },
+            },
+          };
+        }
+
+        if (problem.code === "alpha/old-target") {
+          return {
+            ...problem,
+            lifecycle: {
+              status: "deprecated",
+              deprecation: { ...deprecation, replacementCode: "alpha/deprecated-target" },
+            },
+          };
+        }
+
+        if (problem.code === "alpha/deprecated-target") {
+          return {
+            ...problem,
+            lifecycle: {
+              status: "deprecated",
+              deprecation: {
+                ...deprecation,
+                noReplacementReason: "The deprecated target has no active equivalent.",
+              },
+            },
+          };
+        }
+
+        return problem;
+      }),
+    });
+
+    const result = runProblemRegistryCheck(repo, "check");
+
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toEqual([
+      "Deprecated Problem code 'alpha/old-target' replacementCode 'alpha/deprecated-target' points to a deprecated Problem code.",
+      "Deprecated Problem code 'alpha/self' replacementCode must reference a different Problem code.",
+      "Deprecated Problem code 'alpha/unknown' replacementCode 'alpha/missing' is not registered.",
+    ]);
+  });
+
   it("requires changeset or migration evidence for category, status, or retryability changes", () => {
     const repo = createTempRepo();
     writeFile(
@@ -625,6 +805,68 @@ describe("problem-registry.mts", () => {
     expect(result.diagnostics).toEqual([
       "Problem code 'alpha/changed' changed category NotFound -> Conflict, status 404 -> 409, retryability not-retryable -> conditional without an explicit changeset or migration note mentioning that code.",
     ]);
+  });
+
+  it("requires changeset or migration evidence for lifecycle deprecation changes", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AlphaChangedProblem extends Problem {",
+        "  constructor() {",
+        '    super("alpha/changed", ProblemCategory.Gone, "changed");',
+        "  }",
+        "}",
+        "export class AlphaReplacementProblem extends Problem {",
+        "  constructor() {",
+        '    super("alpha/replacement", ProblemCategory.Gone, "replacement");',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+    const baseRegistry = readRegistry(repo);
+    writeRegistry(repo, {
+      ...baseRegistry,
+      problems: baseRegistry.problems.map((problem) =>
+        problem.code === "alpha/changed"
+          ? {
+              ...problem,
+              lifecycle: {
+                status: "deprecated",
+                deprecation: {
+                  reason: "The code was replaced.",
+                  migrationNote: "Branch clients on alpha/replacement.",
+                  replacementCode: "alpha/replacement",
+                },
+              },
+            }
+          : problem,
+      ),
+    });
+
+    const blockedResult = runProblemRegistryCheck(repo, "check", { baseRegistry });
+    expect(blockedResult.status).toBe("fail");
+    expect(blockedResult.diagnostics).toEqual([
+      "Problem code 'alpha/changed' changed lifecycle active -> deprecated, deprecation.reason (none) -> The code was replaced., deprecation.migrationNote (none) -> Branch clients on alpha/replacement., deprecation.replacementCode (none) -> alpha/replacement without an explicit changeset or migration note mentioning that code.",
+    ]);
+
+    writeFile(
+      repo,
+      "docs/release/problem-code-migrations.md",
+      [
+        "# Problem code migrations",
+        "",
+        "- `alpha/changed` is deprecated in favor of `alpha/replacement`.",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write", { baseRegistry }).status).toBe("pass");
+    expect(runProblemRegistryCheck(repo, "check", { baseRegistry }).status).toBe("pass");
   });
 
   it("rejects unsafe Problem extension redaction fixtures", () => {

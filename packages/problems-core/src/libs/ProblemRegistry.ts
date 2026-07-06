@@ -18,12 +18,21 @@ export type ProblemRegistryVisibility = "public" | "private";
 export type ProblemRegistryRedaction = "public" | "safe" | "operator-only";
 export type ProblemLifecycleStatus = "active" | "deprecated";
 
-export type ProblemDeprecationMetadata = {
-  readonly reason: string;
-  readonly migrationNote: string;
-  readonly replacementCode?: string;
-  readonly since?: string;
-};
+export type ProblemDeprecationMetadata =
+  | {
+      readonly reason: string;
+      readonly migrationNote: string;
+      readonly replacementCode: string;
+      readonly noReplacementReason?: never;
+      readonly since?: string;
+    }
+  | {
+      readonly reason: string;
+      readonly migrationNote: string;
+      readonly replacementCode?: never;
+      readonly noReplacementReason: string;
+      readonly since?: string;
+    };
 
 export type ProblemLifecycle = {
   readonly status: ProblemLifecycleStatus;
@@ -580,6 +589,7 @@ export function getProblemCodeRegistryValidationErrors(
 ): readonly string[] {
   const errors: string[] = [];
   const seenCodes = new Set<string>();
+  const registryByCode = new Map(registry.problems.map((problem) => [problem.code, problem]));
 
   if (registry.version !== "croco.problem-code-registry.v1") {
     errors.push(`Unsupported Problem registry version '${registry.version}'.`);
@@ -621,11 +631,8 @@ export function getProblemCodeRegistryValidationErrors(
 
     if (!lifecycle || (lifecycle.status !== "active" && lifecycle.status !== "deprecated")) {
       errors.push(`Problem code '${problem.code}' has an invalid lifecycle status.`);
-    } else if (
-      lifecycle.status === "deprecated" &&
-      !isCompleteDeprecationMetadata(lifecycle.deprecation)
-    ) {
-      errors.push(`Deprecated Problem code '${problem.code}' is missing migration metadata.`);
+    } else if (lifecycle.status === "deprecated") {
+      errors.push(...getDeprecationMetadataValidationErrors(problem, registryByCode));
     }
 
     if (problem.sources.length === 0 && lifecycle?.status !== "deprecated") {
@@ -638,6 +645,81 @@ export function getProblemCodeRegistryValidationErrors(
   }
 
   return errors;
+}
+
+function getDeprecationMetadataValidationErrors(
+  problem: ProblemCodeRegistryEntry,
+  registryByCode: ReadonlyMap<string, ProblemCodeRegistryEntry>,
+): readonly string[] {
+  const metadata = problem.lifecycle.deprecation;
+  const diagnostics: string[] = [];
+
+  if (!metadata) {
+    return [`Deprecated Problem code '${problem.code}' is missing deprecation metadata.`];
+  }
+
+  const metadataRecord = metadata as {
+    readonly reason?: unknown;
+    readonly migrationNote?: unknown;
+    readonly replacementCode?: unknown;
+    readonly noReplacementReason?: unknown;
+  };
+  const reason = getTrimmedString(metadataRecord.reason);
+  const migrationNote = getTrimmedString(metadataRecord.migrationNote);
+  const replacementCode = getTrimmedString(metadataRecord.replacementCode);
+  const noReplacementReason = getTrimmedString(metadataRecord.noReplacementReason);
+
+  if (!reason) {
+    diagnostics.push(`Deprecated Problem code '${problem.code}' is missing deprecation reason.`);
+  }
+
+  if (!migrationNote) {
+    diagnostics.push(`Deprecated Problem code '${problem.code}' is missing migration guidance.`);
+  }
+
+  if (!replacementCode && !noReplacementReason) {
+    diagnostics.push(
+      `Deprecated Problem code '${problem.code}' must declare replacementCode or noReplacementReason.`,
+    );
+  }
+
+  if (replacementCode && noReplacementReason) {
+    diagnostics.push(
+      `Deprecated Problem code '${problem.code}' must not declare both replacementCode and noReplacementReason.`,
+    );
+  }
+
+  if (!replacementCode) {
+    return diagnostics;
+  }
+
+  if (replacementCode === problem.code) {
+    diagnostics.push(
+      `Deprecated Problem code '${problem.code}' replacementCode must reference a different Problem code.`,
+    );
+    return diagnostics;
+  }
+
+  const replacement = registryByCode.get(replacementCode);
+
+  if (!replacement) {
+    diagnostics.push(
+      `Deprecated Problem code '${problem.code}' replacementCode '${replacementCode}' is not registered.`,
+    );
+    return diagnostics;
+  }
+
+  if (replacement.lifecycle.status === "deprecated") {
+    diagnostics.push(
+      `Deprecated Problem code '${problem.code}' replacementCode '${replacementCode}' points to a deprecated Problem code.`,
+    );
+  }
+
+  return diagnostics;
+}
+
+function getTrimmedString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 export function assertProblemCodeRegistryValid(registry: ProblemCodeRegistry): void {
@@ -758,10 +840,4 @@ function isCompleteRecoveryMetadata(metadata: ProblemRecoveryMetadata): boolean 
     metadata.telemetry.severity.length > 0 &&
     metadata.telemetry.attributes.length > 0
   );
-}
-
-function isCompleteDeprecationMetadata(
-  metadata: ProblemDeprecationMetadata | undefined,
-): metadata is ProblemDeprecationMetadata {
-  return Boolean(metadata?.reason && metadata.migrationNote);
 }
