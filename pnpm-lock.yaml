@@ -2414,6 +2414,9 @@ importers:
       '@croco/protocols-rest':
         specifier: workspace:*
         version: link:../protocols-rest
+      '@croco/transports-http':
+        specifier: workspace:*
+        version: link:../transports-http
       '@redocly/cli':
         specifier: ^2.30.3
         version: 2.30.3(@opentelemetry/api@1.9.0)(core-js@3.49.0)(encoding@0.1.13)
