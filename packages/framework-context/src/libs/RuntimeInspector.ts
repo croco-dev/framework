@@ -113,10 +113,45 @@ type MutableRuntimeInspectionRecord = Omit<
 const DEFAULT_MAX_REQUESTS = 50;
 const DEFAULT_MAX_EVENTS_PER_REQUEST = 200;
 const DEFAULT_MAX_STRING_LENGTH = 500;
-const DEFAULT_SENSITIVE_KEY_PATTERN =
-  /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
-const DEFAULT_SENSITIVE_VALUE_PATTERN =
-  /((?:authorization|password|secret|token|api[-_]?key|access[-_]?key|private[-_]?key|credential|dsn)\s*[:=]\s*)[^\s,;&]+|((?:bearer|basic)\s+)[^\s,;]+|((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/)[^\s]+/gi;
+const SENSITIVE_ASSIGNMENT_KEY_PATTERN_SOURCE = [
+  "credential",
+  "password",
+  "secret",
+  "token",
+  "api[-_]?key",
+  "private[-_]?key",
+  "access[-_]?key",
+  "database[-_]?url",
+  "connection[-_]?string",
+  "dsn",
+].join("|");
+const DEFAULT_SENSITIVE_KEY_PATTERN = new RegExp(
+  [
+    "authorization",
+    "cookie",
+    SENSITIVE_ASSIGNMENT_KEY_PATTERN_SOURCE,
+    "redis[-_]?url",
+    "mongo(?:db)?[-_]?url",
+    "postgres(?:ql)?[-_]?url",
+  ].join("|"),
+  "i",
+);
+const COOKIE_ASSIGNMENT_VALUE_PATTERN = new RegExp(
+  [
+    "(\\b(?:set[-_]?cookie|cookie)\\s*[:=]\\s*)",
+    `(?:(?!\\s+\\b(?:${SENSITIVE_ASSIGNMENT_KEY_PATTERN_SOURCE})\\s*[:=])[^\\n])+`,
+  ].join(""),
+  "gi",
+);
+const DEFAULT_SENSITIVE_VALUE_PATTERN = new RegExp(
+  [
+    "((?:(?:authorization|cookie)\\s*[:=]\\s*(?:(?:bearer|basic)\\s+)?",
+    `|(?:${SENSITIVE_ASSIGNMENT_KEY_PATTERN_SOURCE})\\s*[:=]\\s*))[^\\s,;&]+`,
+    "|((?:bearer|basic)\\s+)[^\\s,;]+",
+    "|((?:postgres(?:ql)?|mysql|mongodb(?:\\+srv)?|redis):\\/\\/)[^\\s]+",
+  ].join(""),
+  "gi",
+);
 
 export class RuntimeInspector {
   private readonly maxRequests: number;
@@ -388,7 +423,11 @@ export class RuntimeInspector {
   }
 
   private sanitizeString(value: string): string {
-    const scrubbed = value.replace(
+    const cookieScrubbed = value.replace(
+      COOKIE_ASSIGNMENT_VALUE_PATTERN,
+      (_match, assignmentPrefix) => `${assignmentPrefix}[Redacted]`,
+    );
+    const scrubbed = cookieScrubbed.replace(
       DEFAULT_SENSITIVE_VALUE_PATTERN,
       (_match, assignmentPrefix, authPrefix, urlPrefix) =>
         `${assignmentPrefix ?? authPrefix ?? urlPrefix ?? ""}[Redacted]`,

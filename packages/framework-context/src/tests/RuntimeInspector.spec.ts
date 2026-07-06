@@ -127,4 +127,244 @@ describe("RuntimeInspector", () => {
     expect(JSON.stringify(snapshot)).not.toContain("first-secret");
     expect(JSON.stringify(snapshot)).not.toContain("second-secret");
   });
+
+  it("snapshots redaction coverage across request and timeline surfaces", () => {
+    const inspector = new RuntimeInspector();
+    inspector.startRequest({
+      requestId: "req-redaction",
+      method: "POST",
+      path: "/diagnostics",
+      route: "/diagnostics",
+      url: "/diagnostics?token=url-token&ApiKey=url-api-key&dsn=https://public@sentry.example/1&safe=value",
+      headers: {
+        Authorization: "Bearer header-secret",
+        Cookie: "session=header-cookie",
+        "x-safe-header": "safe-header",
+      },
+      query: {
+        TOKEN: "query-token",
+        api_key: "query-api-key",
+        safe: "query-safe",
+        nested: {
+          databaseUrl: "postgres://user:password@db.example/app",
+        },
+      },
+      runtime: {
+        databaseURL: "postgres://runtime:secret@db.example/app",
+        array: [
+          { token: "array-token" },
+          "Authorization: Bearer array-secret",
+          "Set-Cookie: session=set-cookie-secret; Path=/; HttpOnly; csrf=set-cookie-csrf databaseUrl=postgres://user:pass@db.example/app",
+          "Set-Cookie: session=first-cookie; Path=/, refresh=second-cookie; HttpOnly databaseUrl=postgres://user:pass@db.example/app",
+          new Error(
+            "cookie=session-secret; refresh=refresh-secret databaseUrl=postgres://user:pass@db.example/app",
+          ),
+        ],
+      },
+    });
+    inspector.recordEvent({
+      requestId: "req-redaction",
+      kind: "error",
+      outcome: "failed",
+      details: {
+        message: "apiKey=timeline-api-key dsn=https://public@sentry.example/1",
+        nested: {
+          Authorization: "Bearer nested-secret",
+          values: ["token=array-token", { connectionString: "redis://:secret@redis.example:6379" }],
+        },
+        error: new Error(
+          "Cookie: session=error-cookie; csrf=csrf-secret databaseUrl=mysql://user:pass@db.example/app",
+        ),
+      },
+    });
+    inspector.finishRequest({
+      requestId: "req-redaction",
+      status: 500,
+      outcome: "failed",
+      details: {
+        databaseUrl: "postgres://finish:secret@db.example/app",
+      },
+    });
+
+    const snapshot = inspector.snapshot();
+    const request = snapshot.requests[0];
+    const redactionShape = {
+      activeRequestCount: snapshot.activeRequestCount,
+      requestCount: snapshot.requestCount,
+      request: {
+        requestId: request.requestId,
+        method: request.method,
+        path: request.path,
+        route: request.route,
+        url: request.url,
+        status: request.status,
+        outcome: request.outcome,
+        headers: request.headers,
+        query: request.query,
+        runtime: request.runtime,
+        timeline: request.timeline.map((event) => ({
+          kind: event.kind,
+          outcome: event.outcome,
+          details: event.details,
+        })),
+      },
+    };
+
+    expect(redactionShape).toMatchInlineSnapshot(`
+      {
+        "activeRequestCount": 0,
+        "request": {
+          "headers": {
+            "Authorization": "[Redacted]",
+            "Cookie": "[Redacted]",
+            "x-safe-header": "safe-header",
+          },
+          "method": "POST",
+          "outcome": "failed",
+          "path": "/diagnostics",
+          "query": {
+            "TOKEN": "[Redacted]",
+            "api_key": "[Redacted]",
+            "nested": {
+              "databaseUrl": "[Redacted]",
+            },
+            "safe": "query-safe",
+          },
+          "requestId": "req-redaction",
+          "route": "/diagnostics",
+          "runtime": {
+            "array": [
+              {
+                "token": "[Redacted]",
+              },
+              "Authorization: Bearer [Redacted]",
+              "Set-Cookie: [Redacted] databaseUrl=[Redacted]",
+              "Set-Cookie: [Redacted] databaseUrl=[Redacted]",
+              {
+                "message": "cookie=[Redacted] databaseUrl=[Redacted]",
+                "name": "Error",
+              },
+            ],
+            "databaseURL": "[Redacted]",
+          },
+          "status": 500,
+          "timeline": [
+            {
+              "details": {
+                "method": "POST",
+                "path": "/diagnostics",
+                "route": "/diagnostics",
+                "runtime": {
+                  "array": [
+                    {
+                      "token": "[Redacted]",
+                    },
+                    "Authorization: Bearer [Redacted]",
+                    "Set-Cookie: [Redacted] databaseUrl=[Redacted]",
+                    "Set-Cookie: [Redacted] databaseUrl=[Redacted]",
+                    {
+                      "message": "cookie=[Redacted] databaseUrl=[Redacted]",
+                      "name": "Error",
+                    },
+                  ],
+                  "databaseURL": "[Redacted]",
+                },
+                "trace": undefined,
+              },
+              "kind": "request.start",
+              "outcome": "started",
+            },
+            {
+              "details": {
+                "error": {
+                  "message": "Cookie: [Redacted] databaseUrl=[Redacted]",
+                  "name": "Error",
+                },
+                "message": "apiKey=[Redacted] dsn=[Redacted]",
+                "nested": {
+                  "Authorization": "[Redacted]",
+                  "values": [
+                    "token=[Redacted]",
+                    {
+                      "connectionString": "[Redacted]",
+                    },
+                  ],
+                },
+              },
+              "kind": "error",
+              "outcome": "failed",
+            },
+            {
+              "details": {
+                "databaseUrl": "[Redacted]",
+                "status": 500,
+              },
+              "kind": "request.end",
+              "outcome": "failed",
+            },
+          ],
+          "url": "/diagnostics?token=%5BRedacted%5D&ApiKey=%5BRedacted%5D&dsn=%5BRedacted%5D&safe=value",
+        },
+        "requestCount": 1,
+      }
+    `);
+    const serializedSnapshot = JSON.stringify(snapshot);
+    for (const secret of [
+      "header-secret",
+      "header-cookie",
+      "url-token",
+      "url-api-key",
+      "query-token",
+      "query-api-key",
+      "runtime:secret",
+      "array-secret",
+      "array-token",
+      "timeline-api-key",
+      "nested-secret",
+      "csrf",
+      "csrf-secret",
+      "set-cookie-secret",
+      "set-cookie-csrf",
+      "first-cookie",
+      "second-cookie",
+      "session-secret",
+      "refresh",
+      "refresh-secret",
+      "error-cookie",
+      "finish:secret",
+      "db.example",
+      "redis.example",
+      "sentry.example",
+    ]) {
+      expect(serializedSnapshot).not.toContain(secret);
+    }
+  });
+
+  it("uses a custom sensitive key pattern for request snapshots", () => {
+    const inspector = new RuntimeInspector({ sensitiveKeyPattern: /tenant[-_]?id/i });
+    inspector.startRequest({
+      requestId: "req-custom",
+      headers: {
+        tenantId: "tenant-secret",
+        authorization: "authorization-visible-with-custom-pattern",
+      },
+      query: {
+        tenant_id: "query-tenant-secret",
+        token: "token-visible-with-custom-pattern",
+      },
+      url: "/tenants?tenantId=url-tenant-secret&token=url-token-visible",
+    });
+
+    expect(inspector.snapshot().requests[0]).toMatchObject({
+      headers: {
+        tenantId: "[Redacted]",
+        authorization: "authorization-visible-with-custom-pattern",
+      },
+      query: {
+        tenant_id: "[Redacted]",
+        token: "token-visible-with-custom-pattern",
+      },
+      url: "/tenants?tenantId=%5BRedacted%5D&token=url-token-visible",
+    });
+  });
 });

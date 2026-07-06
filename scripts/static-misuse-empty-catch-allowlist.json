@@ -21,7 +21,7 @@
     {
       "package": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RuntimeInspector.ts",
-      "line": 527,
+      "line": 566,
       "excerpt": "} catch {",
       "reason": "Runtime inspector failure reporters are optional instrumentation and must not affect application behavior.",
       "owner": "framework-error-handling"
