@@ -89,53 +89,56 @@ class TelemetryRuntime {
 
       const BatchSpanProcessor = traceBaseModule.BatchSpanProcessor;
 
-      const resource = defaultResource().merge(
-        resourceFromAttributes({
-          [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
-          [SEMRESATTRS_SERVICE_VERSION]: config.serviceVersion ?? "0.0.0",
-          ...config.resourceAttributes,
-        }),
-      );
-
       const traceConfig = config.trace ?? {};
       const sampler = await this.createSampler(config);
 
-      if (traceConfig.enabled !== false) {
-        const endpoint =
-          traceConfig.exporterUrl ??
-          process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
-          process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+      try {
+        const resource = defaultResource().merge(
+          resourceFromAttributes({
+            [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
+            [SEMRESATTRS_SERVICE_VERSION]: config.serviceVersion ?? "0.0.0",
+            ...config.resourceAttributes,
+          }),
+        );
 
-        if (!endpoint) {
-          throw new OtlpEndpointRequiredProblem();
+        if (traceConfig.enabled !== false) {
+          const endpoint =
+            traceConfig.exporterUrl ??
+            process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
+            process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+
+          if (!endpoint) {
+            throw new OtlpEndpointRequiredProblem();
+          }
+
+          const exporter = new OTLPTraceExporter({
+            url: endpoint,
+            headers: traceConfig.exporterHeaders,
+          });
+
+          this.processor = new BatchSpanProcessor(exporter, {
+            scheduledDelayMillis: traceConfig.batchTimeout ?? 5000,
+            maxQueueSize: traceConfig.batchCount ?? 2048,
+            maxExportBatchSize: traceConfig.batchSize ?? 512,
+          });
         }
 
-        const exporter = new OTLPTraceExporter({
-          url: endpoint,
-          headers: traceConfig.exporterHeaders,
+        this.sdk = new NodeSDK({
+          resource,
+          spanProcessor: this.processor ?? undefined,
+          sampler,
+          instrumentations: traceConfig.instrumentations ?? [],
         });
 
-        this.processor = new BatchSpanProcessor(exporter, {
-          scheduledDelayMillis: traceConfig.batchTimeout ?? 5000,
-          maxQueueSize: traceConfig.batchCount ?? 2048,
-          maxExportBatchSize: traceConfig.batchSize ?? 512,
-        });
-      }
-
-      this.sdk = new NodeSDK({
-        resource,
-        spanProcessor: this.processor ?? undefined,
-        sampler,
-        instrumentations: traceConfig.instrumentations ?? [],
-      });
-
-      try {
         this.sdk.start();
         this.initialized = true;
       } catch (error) {
         this.initialized = false;
         this.sdk = null;
         this.processor = null;
+        if (error instanceof OtlpEndpointRequiredProblem) {
+          throw error;
+        }
         throw this.createRuntimeProblem("init", error);
       }
     })();

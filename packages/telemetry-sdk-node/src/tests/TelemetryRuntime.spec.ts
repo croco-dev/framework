@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TelemetryRuntimeProblem } from "../libs/problems/TelemetryProblems";
 import { TelemetryRuntime } from "../runtime";
 
@@ -8,6 +8,13 @@ describe("TelemetryRuntime", () => {
   beforeEach(async () => {
     await TelemetryRuntime.reset();
     runtime = TelemetryRuntime.getInstance();
+  });
+
+  afterEach(async () => {
+    vi.doUnmock("@opentelemetry/exporter-trace-otlp-http");
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
+    await TelemetryRuntime.reset();
   });
 
   it("should return singleton instance", () => {
@@ -246,6 +253,50 @@ describe("TelemetryRuntime", () => {
     ).rejects.toThrow("OTLP endpoint is required for telemetry");
   });
 
+  it("should wrap exporter construction failures and leave runtime retryable", async () => {
+    vi.resetModules();
+    vi.doMock("@opentelemetry/exporter-trace-otlp-http", () => ({
+      OTLPTraceExporter: class FailingTraceExporter {
+        constructor() {
+          throw new Error("exporter bootstrap failed");
+        }
+      },
+    }));
+
+    let caughtError: unknown;
+    try {
+      await runtime.init({
+        serviceName: "exporter-failure-test",
+        trace: {
+          enabled: true,
+          exporterUrl: "http://collector:4318/v1/traces",
+        },
+      });
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).toBeInstanceOf(TelemetryRuntimeProblem);
+    expect((caughtError as TelemetryRuntimeProblem).code).toBe("TELEMETRY_RUNTIME_ERROR");
+    expect((caughtError as TelemetryRuntimeProblem).message).toBe(
+      "Telemetry init failed: exporter bootstrap failed",
+    );
+    expect(runtime.isInitialized()).toBe(false);
+    await expect(runtime.forceFlush()).resolves.toEqual({ success: true, flushedSpans: -1 });
+
+    vi.doUnmock("@opentelemetry/exporter-trace-otlp-http");
+    vi.resetModules();
+
+    await expect(
+      runtime.init({
+        serviceName: "retry-after-exporter-failure",
+        enabled: true,
+        trace: { enabled: false },
+      }),
+    ).resolves.not.toThrow();
+    expect(runtime.isInitialized()).toBe(true);
+  });
+
   it("should not throw when endpoint is provided in config", async () => {
     await expect(
       runtime.init({
@@ -327,6 +378,25 @@ describe("TelemetryRuntime", () => {
     expect(result.flushedSpans).toBe(-1);
   });
 
+  it("should keep disabled telemetry from blocking unrelated request work", async () => {
+    await runtime.init({
+      serviceName: "disabled-request-test",
+      enabled: false,
+      trace: {
+        enabled: true,
+        exporterUrl: "http://collector:4318/v1/traces",
+        exporterHeaders: { Authorization: "Bearer secret" },
+      },
+    });
+
+    const requestWork = vi.fn().mockResolvedValue({ ok: true });
+
+    await expect(requestWork()).resolves.toEqual({ ok: true });
+    await expect(runtime.forceFlush()).resolves.toEqual({ success: true, flushedSpans: -1 });
+    expect(runtime.isInitialized()).toBe(false);
+    expect(requestWork).toHaveBeenCalledTimes(1);
+  });
+
   it("should propagate shutdown failures as Problem details", async () => {
     const sdk = {
       shutdown: vi.fn().mockRejectedValue(new Error("shutdown failed")),
@@ -335,5 +405,6 @@ describe("TelemetryRuntime", () => {
     Object.assign(runtime, { sdk });
 
     await expect(runtime.shutdown()).rejects.toThrow("Telemetry shutdown failed: shutdown failed");
+    Object.assign(runtime, { sdk: null, processor: null, initialized: false, initPromise: null });
   });
 });
