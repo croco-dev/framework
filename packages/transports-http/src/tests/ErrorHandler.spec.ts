@@ -393,5 +393,78 @@ describe("ErrorHandler", () => {
       );
       expect(JSON.stringify(body)).not.toContain("secret setup failure");
     });
+
+    it("should emit a golden REST Problem Details response with correlation metadata", async () => {
+      const store = new Map<string, unknown>([[HTTP_CONTEXT_KEYS.traceId, "trace-golden-rest"]]);
+      mockCtx.get = ((key: string) => store.get(key)) as CrocoHttpContext["get"];
+      const problem = new TestProblem({
+        code: "protocols-rest/request-validation-failed",
+        category: ProblemCategory.ValidationError,
+        detail: "body.email is invalid",
+        extensions: {
+          issues: [{ path: "body.email", message: "must be an email" }],
+          traceId: "extension-trace",
+          requestId: "extension-request",
+          telemetry: { degraded: false },
+          metadata: { token: "secret-extension-token" },
+        },
+      });
+
+      const response = await FrameworkContext.run({ requestId: "request-golden-rest" }, () =>
+        errorHandler.handleError(problem, mockCtx),
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+      expect(body).toEqual({
+        type: "about:blank",
+        title: "Validation Error",
+        status: 422,
+        code: "protocols-rest/request-validation-failed",
+        detail: "body.email is invalid",
+        instance: "/test",
+        issues: [{ path: "body.email", message: "must be an email" }],
+        traceId: "trace-golden-rest",
+        requestId: "request-golden-rest",
+      });
+      expect(JSON.stringify(body)).not.toContain("secret-extension-token");
+    });
+
+    it("should emit a golden redacted REST Problem Details response for operator-only Problems", async () => {
+      const store = new Map<string, unknown>([
+        [HTTP_CONTEXT_KEYS.traceId, "trace-golden-redacted"],
+      ]);
+      mockCtx.get = ((key: string) => store.get(key)) as CrocoHttpContext["get"];
+      const problem = new TestProblem({
+        code: "transports-http/di-bootstrap-validation",
+        category: ProblemCategory.InternalServerError,
+        detail: "DI bootstrap failed for tenant secret-tenant",
+        extensions: {
+          issues: [{ message: "container token missing" }],
+          reason: "di_failure",
+          rawProviderResponse: { token: "secret-provider-token" },
+        },
+      });
+
+      const response = await FrameworkContext.run({ requestId: "request-golden-redacted" }, () =>
+        errorHandler.handleError(problem, mockCtx),
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(body).toEqual({
+        type: "about:blank",
+        title: "Internal Server Error",
+        status: 500,
+        code: "transports-http/di-bootstrap-validation",
+        detail: "An internal error occurred",
+        instance: "/test",
+        traceId: "trace-golden-redacted",
+        requestId: "request-golden-redacted",
+      });
+      expect(JSON.stringify(body)).not.toContain("secret-tenant");
+      expect(JSON.stringify(body)).not.toContain("secret-provider-token");
+    });
   });
 });

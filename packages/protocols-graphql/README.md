@@ -30,6 +30,20 @@ class HealthResolver {
 }
 ```
 
+## Problem Error Extensions
+
+`problemToGraphQLError()` maps a Croco `Problem` into a GraphQL error with
+`extensions.code`, `extensions.status`, `extensions.title`, `extensions.type`, and
+the fields already present on `problem.extensions`.
+
+Unlike the HTTP transport, this protocol helper does not build an RFC 7807 response
+body or derive `requestId` / `traceId` from request context. A resolver or transport
+that wants correlation metadata in GraphQL errors should add safe `requestId` and
+`traceId` extension values before conversion. It should also avoid placing
+operator-only data or reserved Problem fields such as `code`, `status`, `title`, or
+`type` in `problem.extensions`; the helper forwards extensions without applying the
+HTTP Problem Details redaction and field-protection policy.
+
 ## Contract Snapshots
 
 Use `createGraphQLContractSnapshot()` after schema compilation to persist the stable

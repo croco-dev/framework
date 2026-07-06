@@ -74,6 +74,45 @@ describe("ErrorConverter", () => {
     });
   });
 
+  it("should emit a golden GraphQL Problem extension payload with explicit correlation metadata", () => {
+    const problem = new GraphQLValidationProblem("GRAPHQL_INPUT_INVALID", "Email is invalid", {
+      field: "email",
+      issues: [{ path: "email", message: "must be an email" }],
+      requestId: "request-golden-graphql",
+      traceId: "trace-golden-graphql",
+    });
+    const error = problemToGraphQLError(problem, ["Mutation", "createUser"]);
+
+    expect(error.message).toBe("Email is invalid");
+    expect(error.path).toEqual(["Mutation", "createUser"]);
+    expect(error.extensions).toEqual({
+      code: "GRAPHQL_INPUT_INVALID",
+      status: 422,
+      title: "Validation Error",
+      type: "about:blank",
+      field: "email",
+      issues: [{ path: "email", message: "must be an email" }],
+      requestId: "request-golden-graphql",
+      traceId: "trace-golden-graphql",
+    });
+  });
+
+  it("should not invent HTTP correlation metadata in GraphQL Problem extensions", () => {
+    const problem = new GraphQLInternalError("GRAPHQL_RESOLVER_FAILED", "Resolver failed");
+    const error = problemToGraphQLError(problem, ["Query", "user"]);
+
+    expect(error.message).toBe("Resolver failed");
+    expect(error.path).toEqual(["Query", "user"]);
+    expect(error.extensions).toEqual({
+      code: "GRAPHQL_RESOLVER_FAILED",
+      status: 500,
+      title: "Internal Server Error",
+      type: "about:blank",
+    });
+    expect(error.extensions).not.toHaveProperty("requestId");
+    expect(error.extensions).not.toHaveProperty("traceId");
+  });
+
   it("should include path in GraphQL error", () => {
     const problem = new GraphQLNotFoundProblem("User", "123");
     const path = ["users", "getById"];

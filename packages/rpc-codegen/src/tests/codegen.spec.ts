@@ -23,6 +23,28 @@ const TEMP_DIR = path.join(__dirname, "codegen-temp");
 const GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS = 15_000;
 const VIRTUAL_PROBLEMS_CORE_MODULE = "node_modules/@croco/problems-core/index.d.ts";
 type RpcQueryKeyInputProblemConstructor = new (path: string, detail: string) => Problem;
+type GeneratedRpcProblemErrorConstructor = new (
+  problem: Record<string, unknown>,
+  response: Response,
+) => Error & {
+  readonly problem: Record<string, unknown>;
+  readonly response: Response;
+};
+type GeneratedRpcHandleJsonResult = (
+  response: Response,
+  declaredProblems?: readonly {
+    readonly code: string;
+    readonly category: string;
+    readonly status: number;
+  }[],
+  telemetry?: unknown,
+) => Promise<unknown>;
+type GeneratedClientFetch = (url: string, init: RequestInit) => Promise<Response>;
+type GeneratedUserClientSupport = {
+  readonly userClient: {
+    readonly getResult: (input: { readonly path: { readonly id: string } }) => Promise<unknown>;
+  };
+};
 const VIRTUAL_PROBLEMS_CORE_SOURCE = `
 export enum ProblemCategory {
   BadRequest = "BadRequest",
@@ -1490,6 +1512,128 @@ void handleMissingProblemBranch;
     GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
   );
 
+  it("should return declared Problem responses as golden generated-client Result payloads", async () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        problemResponses: [
+          {
+            code: "USER_NOT_FOUND",
+            category: ProblemCategory.NotFound,
+            status: 404,
+          },
+        ],
+        domain: null,
+      },
+    ];
+    const problemBody = {
+      type: "about:blank",
+      title: "Not Found",
+      status: 404,
+      code: "USER_NOT_FOUND",
+      detail: "User was not found",
+      instance: "/users/missing",
+      requestId: "request-golden-rpc",
+      traceId: "trace-golden-rpc",
+    };
+    const declaration = { code: "USER_NOT_FOUND", category: "NotFound", status: 404 };
+
+    const response = new Response(JSON.stringify(problemBody), {
+      status: 404,
+      headers: { "Content-Type": "application/problem+json" },
+    });
+    const fetchCalls: { readonly url: string; readonly init: RequestInit }[] = [];
+
+    generateClientFiles(routes, TEMP_DIR);
+    const { userClient } = loadGeneratedUserClientSupport(async (url, init) => {
+      fetchCalls.push({ url, init });
+
+      return response;
+    });
+
+    const result = (await userClient.getResult({ path: { id: "missing" } })) as Record<
+      string,
+      unknown
+    >;
+    const { response: resultResponse, ...serializableResult } = result;
+
+    expect(fetchCalls).toEqual([{ url: "/users/missing", init: { method: "GET" } }]);
+    expect(resultResponse).toBe(response);
+    expect(serializableResult).toEqual({
+      ok: false,
+      kind: "problem",
+      code: "USER_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      problem: problemBody,
+      declaration,
+    });
+  });
+
+  it("should return undeclared Problem responses as golden external generated-client payloads", async () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        problemResponses: [
+          {
+            code: "USER_NOT_FOUND",
+            category: ProblemCategory.NotFound,
+            status: 404,
+          },
+        ],
+        domain: null,
+      },
+    ];
+    const problemBody = {
+      type: "about:blank",
+      title: "Conflict",
+      status: 409,
+      code: "USER_EMAIL_CONFLICT",
+      detail: "Email already exists",
+      instance: "/users",
+      requestId: "request-external-rpc",
+      traceId: "trace-external-rpc",
+    };
+    const declaration = { code: "USER_NOT_FOUND", category: "NotFound", status: 404 };
+
+    generateClientFiles(routes, TEMP_DIR);
+    const { handleJsonResult, RpcClientProblemError } = loadGeneratedRpcSupport();
+    const response = new Response(JSON.stringify(problemBody), {
+      status: 409,
+      headers: { "Content-Type": "application/problem+json" },
+    });
+
+    const result = (await handleJsonResult(response, [declaration])) as Record<string, unknown>;
+    const { error, response: resultResponse, ...serializableResult } = result;
+
+    expect(resultResponse).toBe(response);
+    expect(error).toBeInstanceOf(RpcClientProblemError);
+    expect((error as InstanceType<GeneratedRpcProblemErrorConstructor>).problem).toEqual(
+      problemBody,
+    );
+    expect(serializableResult).toEqual({
+      ok: false,
+      kind: "external",
+      body: problemBody,
+    });
+  });
+
   it("should keep undeclared route Problem unions as never", () => {
     const routes: RouteIR[] = [
       {
@@ -2460,8 +2604,31 @@ function assertGeneratedPackageTypechecks(fileNames: readonly string[]): void {
 
 function loadGeneratedRpcSupport(): {
   readonly RpcQueryKeyInputError: RpcQueryKeyInputProblemConstructor;
+  readonly RpcClientProblemError: GeneratedRpcProblemErrorConstructor;
+  readonly handleJsonResult: GeneratedRpcHandleJsonResult;
   readonly serializeRpcQueryKeyInput: (value: unknown) => unknown;
 } {
+  const rpcModule = loadGeneratedRpcModule();
+
+  const RpcQueryKeyInputError = rpcModule.RpcQueryKeyInputError;
+  const RpcClientProblemError = rpcModule.RpcClientProblemError;
+  const handleJsonResult = rpcModule.handleJsonResult;
+  const serializeRpcQueryKeyInput = rpcModule.serializeRpcQueryKeyInput;
+
+  expect(RpcQueryKeyInputError).toBeTypeOf("function");
+  expect(RpcClientProblemError).toBeTypeOf("function");
+  expect(handleJsonResult).toBeTypeOf("function");
+  expect(serializeRpcQueryKeyInput).toBeTypeOf("function");
+
+  return {
+    RpcQueryKeyInputError: RpcQueryKeyInputError as RpcQueryKeyInputProblemConstructor,
+    RpcClientProblemError: RpcClientProblemError as GeneratedRpcProblemErrorConstructor,
+    handleJsonResult: handleJsonResult as GeneratedRpcHandleJsonResult,
+    serializeRpcQueryKeyInput: serializeRpcQueryKeyInput as (value: unknown) => unknown,
+  };
+}
+
+function loadGeneratedRpcModule(): Record<string, unknown> {
   const rpcSource = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
   const outputText = ts.transpileModule(rpcSource, {
     compilerOptions: {
@@ -2480,16 +2647,37 @@ function loadGeneratedRpcSupport(): {
 
   vm.runInNewContext(outputText, context);
 
-  const RpcQueryKeyInputError = context.exports.RpcQueryKeyInputError;
-  const serializeRpcQueryKeyInput = context.exports.serializeRpcQueryKeyInput;
+  return context.exports;
+}
 
-  expect(RpcQueryKeyInputError).toBeTypeOf("function");
-  expect(serializeRpcQueryKeyInput).toBeTypeOf("function");
+function loadGeneratedUserClientSupport(
+  fetchImpl: GeneratedClientFetch,
+): GeneratedUserClientSupport {
+  const rpcModule = loadGeneratedRpcModule();
+  const userSource = fs.readFileSync(path.join(TEMP_DIR, "user.ts"), "utf-8");
+  const outputText = ts.transpileModule(userSource, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const context = {
+    exports: {} as Record<string, unknown>,
+    fetch: fetchImpl,
+    require(specifier: string): Record<string, unknown> {
+      expect(specifier).toBe("./rpc");
 
-  return {
-    RpcQueryKeyInputError: RpcQueryKeyInputError as RpcQueryKeyInputProblemConstructor,
-    serializeRpcQueryKeyInput: serializeRpcQueryKeyInput as (value: unknown) => unknown,
+      return rpcModule;
+    },
   };
+
+  vm.runInNewContext(outputText, context);
+
+  const userClient = context.exports.userClient;
+  expect(userClient).toBeTypeOf("object");
+  expect((userClient as GeneratedUserClientSupport["userClient"]).getResult).toBeTypeOf("function");
+
+  return { userClient: userClient as GeneratedUserClientSupport["userClient"] };
 }
 
 function captureThrownProblem(
