@@ -1,7 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { getExternalCrocoPackageRange } from "../helpers/croco-ranges.js";
+import {
+  getExternalCrocoPackageRange,
+  getExternalCrocoPackageRanges,
+  getGeneratedAppCrocoVersionSet,
+} from "../helpers/croco-ranges.js";
 
 const TEMPLATES_DIR = new URL("../../templates", import.meta.url).pathname;
 const REPO_ROOT_DIR = new URL("../../../../", import.meta.url).pathname;
@@ -41,9 +45,37 @@ function readWorkspacePackageVersion(packageName: string): string {
   return packageJson.version;
 }
 
+function normalizeCatalogSpinePackageName(packageName: string): string {
+  if (packageName === "create-croco-app" || packageName.startsWith("@")) {
+    return packageName;
+  }
+
+  return `@croco/${packageName}`;
+}
+
+function readSpinePackageNames(): Set<string> {
+  const catalogPath = join(REPO_ROOT_DIR, "docs", "package-catalog.json");
+  const catalog = JSON.parse(readFileSync(catalogPath, "utf8")) as {
+    spine: {
+      packages: string[];
+    };
+  };
+
+  return new Set(catalog.spine.packages.map(normalizeCatalogSpinePackageName));
+}
+
 describe("external Croco package ranges", () => {
   it("covers every external Croco workspace dependency used by templates", () => {
     const templateDependencies = collectTemplateCrocoWorkspaceDependencies();
+    const versionSet = getGeneratedAppCrocoVersionSet();
+    const versionSetRanges: ReadonlyMap<string, string> = new Map(
+      versionSet.packages.map((entry) => [entry.packageName, entry.range]),
+    );
+    const expectedRangeNames = Object.keys(getExternalCrocoPackageRanges()).sort();
+    const spinePackageNames = readSpinePackageNames();
+    const spineTemplateDependencies = templateDependencies.filter((packageName) =>
+      spinePackageNames.has(packageName),
+    );
     const missingRanges = templateDependencies.filter(
       (packageName) => getExternalCrocoPackageRange(packageName) === undefined,
     );
@@ -84,6 +116,12 @@ describe("external Croco package ranges", () => {
     });
 
     expect(templateDependencies).not.toEqual([]);
+    expect(versionSet.policy).toBe("tested-croco-compatibility-train");
+    expect(versionSet.packages.map((entry) => entry.packageName)).toEqual(expectedRangeNames);
+    expect(spineTemplateDependencies).not.toEqual([]);
+    expect(
+      spineTemplateDependencies.filter((packageName) => !versionSetRanges.has(packageName)),
+    ).toEqual([]);
     expect(missingRanges).toEqual([]);
     expect(invalidRanges).toEqual([]);
     expect(staleRanges).toEqual([]);

@@ -1,6 +1,6 @@
 # Package Quality Dashboard
 
-Croco CI publishes a package quality dashboard from Turbo run summaries, dependency boundary scans, public API drift, and bundle-size warnings.
+Croco CI publishes a package quality dashboard from Turbo run summaries, dependency boundary scans, public API drift, compatibility train checks, and bundle-size warnings.
 The dashboard is written to `ci-reports/package-quality/report.md`, appended to the GitHub Actions job summary, and uploaded as the `package-quality-dashboard` artifact.
 
 ## What It Shows
@@ -12,6 +12,7 @@ The dashboard is written to `ci-reports/package-quality/report.md`, appended to 
 - Failure evidence narrowed to the package, check, and Turbo log path.
 - Repository dependency boundary results, starting with the `@croco/repository-core` Drizzle-free rule.
 - Release metadata linkage through the `changeset-required:check` PR gate.
+- Croco compatibility train evidence from package manifests, checked internal peer semver exceptions, generated app dependency ranges compared with the exported generated-app version set, and the Changesets fixed/linked decision.
 - The current rollout state for advisory and promoted gates such as benchmark and bundle-size checks.
 - Bundle-size artifact ownership from `ci-reports/package-quality/bundle-size.md`.
 
@@ -20,7 +21,7 @@ The dashboard is written to `ci-reports/package-quality/report.md`, appended to 
 The protected `trunk` branch keeps the existing hard gates:
 
 - `changeset-required:check` for release-significant public package changes.
-- `pnpm check`, including package manifest drift, docs catalog drift, release docs drift, circular dependency policy, dependency boundaries, lint, and format.
+- `pnpm check`, including package manifest drift, Croco compatibility train drift, docs catalog drift, release docs drift, circular dependency policy, dependency boundaries, lint, and format.
 - `build`, `typecheck`, and `test` through Turbo package tasks.
 - `provider-certification:check` after package tests, blocking production-ready extension packages without certified catalog evidence.
 - `production-ready:check` after Turbo summaries, blocking production-ready packages that lack required maturity evidence.
@@ -46,6 +47,32 @@ Promote an advisory gate to a blocking trunk gate only when:
 2. The baseline is committed or otherwise reproducible from protected-branch history.
 3. New packages either participate in the gate or carry an explicit documented exemption.
 4. The recovery action is local and deterministic for contributors.
+
+## Compatibility Train Policy
+
+`pnpm package-quality:report` embeds the compatibility train summary in
+`ci-reports/package-quality/report.md` and `summary.json`. The section reports:
+
+- internal `@croco/*` workspace range drift away from `workspace:*`;
+- checked peer-only semver exceptions from `scripts/internal-peer-dependency-range-exceptions.json`;
+- `docs/package-catalog.json` `spine.packages` as the tested 1.0 train selector;
+- generated app Croco dependency rows from `packages/create-croco-app/templates/**/package.json.hbs`,
+  including the template `workspace:*` row, actual emitted semver range from
+  `packages/create-croco-app/src/helpers/croco-ranges.ts`, and expected range from the current
+  workspace package version;
+- the current Changesets fixed/linked decision from `.changeset/config.json`.
+
+Local recovery:
+
+```bash
+pnpm package-manifests:check
+pnpm package-quality:report
+```
+
+Intentional internal peer semver exceptions must include package, section, dependency, range,
+reason, owner, and compatibility rationale. The dashboard uses the same schema reader as
+`package-manifests:check`, so stale legacy exception metadata fails instead of appearing as a
+successful report.
 
 ## Core Coverage Warning Report
 

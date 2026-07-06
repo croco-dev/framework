@@ -897,7 +897,10 @@ describe("normalize-packages.mjs", () => {
         section: "peerDependencies",
         dependency: "@croco/internal-runtime",
         range: "^0.0.3",
-        rationale: "Published peers intentionally accept the current compatible alpha line.",
+        reason: "Published peers intentionally accept the current compatible alpha line.",
+        owner: "release",
+        compatibilityRationale:
+          "The peer package consumes only stable source-level contracts covered by the compatibility train.",
       },
     ]);
 
@@ -942,56 +945,100 @@ describe("normalize-packages.mjs", () => {
         section: "peerDependencies",
         dependency: "@croco/internal-runtime",
         range: "^0.0.3",
-        rationale: "",
+        reason: "",
+        owner: "release",
+        compatibilityRationale:
+          "The peer package consumes only stable source-level contracts covered by the compatibility train.",
       },
       {
         package: "@croco/dev-range",
         section: "devDependencies",
         dependency: "@croco/internal-runtime",
         range: "^0.0.3",
-        rationale: "Dev dependency ranges are not allowed to use semver exceptions.",
+        reason: "Dev dependency ranges are not allowed to use semver exceptions.",
+        owner: "release",
+        compatibilityRationale: "Dev dependency ranges are not published compatibility contracts.",
       },
       {
         package: "@croco/peer-compat",
         section: "peerDependencies",
         dependency: 42,
         range: "^0.0.3",
-        rationale: "Malformed entries must be rejected instead of ignored.",
+        reason: "Malformed entries must be rejected instead of ignored.",
+        owner: "release",
+        compatibilityRationale: "Malformed entries must not silently bypass manifest validation.",
       },
       {
         package: "@croco/peer-compat",
         section: "peerDependencies",
         dependency: "@croco/internal-runtime",
         range: "",
-        rationale: "Blank ranges are not valid published compatibility ranges.",
+        reason: "Blank ranges are not valid published compatibility ranges.",
+        owner: "release",
+        compatibilityRationale: "Blank ranges cannot define a consumer-installable peer contract.",
       },
       {
         package: "@croco/invalid-peer-range",
         section: "peerDependencies",
         dependency: "@croco/internal-runtime",
         range: "file:../internal-runtime",
-        rationale: "Non-semver dependency specs are not published peer compatibility ranges.",
+        reason: "Non-semver dependency specs are not published peer compatibility ranges.",
+        owner: "release",
+        compatibilityRationale: "File dependencies are checkout-local and cannot define npm compatibility.",
       },
       {
         package: "@croco/peer-compat",
         section: "peerDependencies",
         dependency: "@croco/internal-runtime",
         range: "1.2.3-.",
-        rationale: "Malformed prerelease identifiers are not compatibility ranges.",
+        reason: "Malformed prerelease identifiers are not compatibility ranges.",
+        owner: "release",
+        compatibilityRationale: "Malformed prerelease identifiers cannot define npm compatibility.",
       },
       {
         package: "@croco/peer-compat",
         section: "peerDependencies",
         dependency: "@croco/internal-runtime",
         range: "1.2.3+.",
-        rationale: "Malformed build identifiers are not compatibility ranges.",
+        reason: "Malformed build identifiers are not compatibility ranges.",
+        owner: "release",
+        compatibilityRationale: "Malformed build identifiers cannot define npm compatibility.",
       },
       {
         package: "@croco/peer-compat",
         section: "peerDependencies",
         dependency: "@croco/internal-runtime",
         range: ">=0.0.3",
-        rationale: "This valid exception is intentionally unused by any manifest entry.",
+        reason: "This valid exception is intentionally unused by any manifest entry.",
+        owner: "release",
+        compatibilityRationale:
+          "Unused exception detection must keep the checked metadata file synchronized with manifests.",
+      },
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: "@croco/internal-runtime",
+        range: "~0.0.3",
+        reason: "Old-schema drift must not be accepted.",
+        owner: "",
+        compatibilityRationale:
+          "Empty owner metadata would leave the exception without a recovery owner.",
+      },
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: "@croco/internal-runtime",
+        range: "~0.0.4",
+        reason: "Old-schema drift must not be accepted.",
+        owner: "release",
+        compatibilityRationale: "",
+      },
+      {
+        package: "@croco/peer-compat",
+        section: "peerDependencies",
+        dependency: "@croco/internal-runtime",
+        range: "~0.0.5",
+        rationale: "Legacy schema must be rejected because it has no explicit owner.",
       },
     ]);
 
@@ -999,7 +1046,7 @@ describe("normalize-packages.mjs", () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain(
-      "scripts/internal-peer-dependency-range-exceptions.json[0].rationale must be nonempty",
+      "scripts/internal-peer-dependency-range-exceptions.json[0].reason must be nonempty",
     );
     expect(result.stdout).toContain(
       'scripts/internal-peer-dependency-range-exceptions.json[1].section must be "peerDependencies"; internal semver exceptions are peer-only',
@@ -1021,6 +1068,21 @@ describe("normalize-packages.mjs", () => {
     );
     expect(result.stdout).toContain(
       'scripts/internal-peer-dependency-range-exceptions.json: unused internal peer dependency range exception @croco/peer-compat peerDependencies.@croco/internal-runtime=">=0.0.3"',
+    );
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[8].owner must be nonempty",
+    );
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[9].compatibilityRationale must be nonempty",
+    );
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[10].reason must be a string",
+    );
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[10].owner must be a string",
+    );
+    expect(result.stdout).toContain(
+      "scripts/internal-peer-dependency-range-exceptions.json[10].compatibilityRationale must be a string",
     );
     expect(result.stdout).toContain("peer-compat/package.json");
     expect(result.stdout).toContain("dev-range/package.json");

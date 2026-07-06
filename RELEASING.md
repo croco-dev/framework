@@ -12,6 +12,16 @@
 - **Mode**: Independent (Changesets fixed/linked group 없음)
 - **Registry**: npm (public access)
 
+Croco 1.0 spine 호환성은 현재 Changesets fixed/linked group이 아니라 검증 게이트로 관리합니다.
+`pnpm package-manifests:check`는 내부 `@croco/*` workspace 의존성이 `workspace:*`를 쓰는지
+검사하고, 의도된 peer semver 예외는 `scripts/internal-peer-dependency-range-exceptions.json`에
+reason, owner, compatibility rationale을 포함한 metadata로 기록해야 합니다. `pnpm
+package-quality:report`는 같은 정책을 compatibility train 섹션에 요약하고 generated app dependency
+set의 실제 생성 range와 현재 workspace package version에서 기대되는 range, fixed/linked decision을
+함께 보여줍니다. 검증만으로 published train 동기화가 부족해지는
+시점에만 `.changeset/config.json`의 fixed 또는 linked group을 도입하고, 이 문서에 group 영향
+범위와 패키지 선택 기준을 갱신합니다.
+
 ### npm provenance contract
 
 Croco releases use token-based npm publishing with provenance enabled. The release workflow keeps
@@ -103,6 +113,7 @@ After a package version is published, maintainers verify provenance in two ways:
 
 - `.changeset/config.json`과 이 가이드의 versioning mode 설명이 일치해야 합니다. 현재는 `fixed: []`, `linked: []`이므로 독립 버전 관리로 리뷰합니다.
 - Fixed 또는 linked group을 도입하려면 `.changeset/config.json`에 실제 group을 먼저 표현하고, 이 가이드에 group 영향 범위와 패키지 선택 기준을 함께 갱신해야 합니다.
+- Croco 1.0 spine compatibility train은 fixed/linked group 없이 `package-manifests:check`, `package-quality:report`, `create-croco-app` generated app range checks, smoke evidence로 검증합니다. 내부 peer semver 예외는 owner와 compatibility rationale이 있는 checked metadata 없이는 허용하지 않습니다.
 - 리뷰어는 release-significant package 변경마다 적절한 changeset entry가 있는지 확인합니다. 하나의 패키지를 선택했다는 이유만으로 관련 없는 패키지까지 자동으로 함께 bump된다고 가정하지 않습니다.
 - `pnpm public-api:check`는 publishable package의 `src/index.ts` export surface를 `public-api-surface.snapshot.json`과 비교합니다. 의도된 export 변경이면 `pnpm public-api:write`로 snapshot을 갱신하고, runtime/type export diff가 import surface, 타입, 또는 공개 동작을 바꾸는지 기준으로 changeset 필요 여부를 리뷰합니다.
 - Breaking changes to `croco.doctor.v1` doctor JSON output must either intentionally version the report schema or include release notes that name the removed/renamed field, check id, diagnostic field, status, severity, or stable diagnostic code and provide the migration path for CI/generated-app consumers.

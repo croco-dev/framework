@@ -1,6 +1,16 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  DEPENDENCY_RANGE_POLICY_SECTIONS,
+  formatInternalPeerDependencyRangeException,
+  INTERNAL_CROCO_PACKAGE_PREFIX,
+  INTERNAL_PEER_DEPENDENCY_RANGE_EXCEPTIONS_PATH,
+  INTERNAL_WORKSPACE_DEPENDENCY_RANGE,
+  internalPeerDependencyRangeExceptionKey,
+  readInternalPeerDependencyRangeExceptions,
+} from "./internal-croco-compatibility-policy.mjs";
+import { getGeneratedAppCrocoVersionSet } from "../packages/create-croco-app/src/helpers/croco-ranges.ts";
 
 export type QualityTask = "build" | "typecheck" | "test";
 export type QualityStatus = "pass" | "fail" | "not-collected" | "not-configured" | "not-run";
@@ -111,6 +121,61 @@ export type BundleSizeWarningReport = {
   readonly artifacts: readonly BundleSizeArtifact[];
 };
 
+export type CompatibilityTrainRangeDrift = {
+  readonly packageName: string;
+  readonly relativeDir: string;
+  readonly section: string;
+  readonly dependencyName: string;
+  readonly range: string;
+};
+
+export type CompatibilityTrainPeerException = {
+  readonly packageName: string;
+  readonly section: "peerDependencies";
+  readonly dependencyName: string;
+  readonly range: string;
+  readonly reason: string;
+  readonly owner: string;
+  readonly compatibilityRationale: string;
+};
+
+export type CompatibilityTrainGeneratedAppDependency = {
+  readonly packageName: string;
+  readonly templateRange: string;
+  readonly actualRange: string | null;
+  readonly expectedRange: string | null;
+  readonly sourcePath: string;
+  readonly inSpine: boolean;
+  readonly status: "pass" | "fail";
+  readonly failureReason: string | null;
+};
+
+export type CompatibilityTrainFixedLinkedDecision = {
+  readonly fixedGroupCount: number;
+  readonly linkedGroupCount: number;
+  readonly required: boolean;
+  readonly decision: string;
+};
+
+export type CompatibilityTrainReport = {
+  readonly status: "pass" | "fail";
+  readonly policy: string;
+  readonly localCommand: string;
+  readonly internalWorkspaceRange: string;
+  readonly exceptionMetadataPath: string;
+  readonly internalRangeDriftCount: number;
+  readonly generatedAppRangeDriftCount: number;
+  readonly peerExceptionCount: number;
+  readonly spinePackageCount: number;
+  readonly generatedAppDependencyCount: number;
+  readonly generatedAppSpineDependencyCount: number;
+  readonly fixedLinkedDecision: CompatibilityTrainFixedLinkedDecision;
+  readonly spinePackageNames: readonly string[];
+  readonly rangeDrift: readonly CompatibilityTrainRangeDrift[];
+  readonly peerExceptions: readonly CompatibilityTrainPeerException[];
+  readonly generatedAppDependencies: readonly CompatibilityTrainGeneratedAppDependency[];
+};
+
 export type PackageQualityReport = {
   readonly generatedAt: string;
   readonly rootDir: string;
@@ -119,6 +184,7 @@ export type PackageQualityReport = {
   readonly boundaries: readonly DependencyBoundaryResult[];
   readonly publicApi: PublicApiGuardResult;
   readonly bundleSize: BundleSizeWarningReport;
+  readonly compatibilityTrain: CompatibilityTrainReport;
   readonly gateOutcomes: Readonly<Record<string, string>>;
 };
 
@@ -161,17 +227,38 @@ type BundleBaselineMatch = {
   readonly bytes: number;
 };
 
+type WorkspacePackageManifest = {
+  readonly name: string;
+  readonly version: string | null;
+  readonly relativeDir: string;
+  readonly dependenciesBySection: Readonly<Record<string, Readonly<Record<string, string>>>>;
+};
+
+type CompatibilityTrainGeneratedAppVersionSet = {
+  readonly policy: string;
+  readonly source: string;
+  readonly packages: readonly {
+    readonly packageName: string;
+    readonly range: string;
+  }[];
+};
+
 const QUALITY_TASKS: readonly QualityTask[] = ["build", "typecheck", "test"];
 const reportDirectory = join("ci-reports", "package-quality");
 const bundleSizeBaselinePath = join("ci-reports", "bundle-size", "baseline.json");
 const bundleSizeReportPath = join(reportDirectory, "bundle-size.md");
 const packageCatalogPath = join("docs", "package-catalog.json");
+const changesetConfigPath = join(".changeset", "config.json");
+const createCrocoAppTemplatesPath = join("packages", "create-croco-app", "templates");
 const turboRunsDirectory = join(".turbo", "runs");
 const workspaceFileName = "pnpm-workspace.yaml";
 const publicApiSummaryPath = join(reportDirectory, "public-api-summary.json");
 const bundleSizeRecoveryCommand = "pnpm build && pnpm package-quality:report";
+const compatibilityTrainRecoveryCommand =
+  "pnpm package-manifests:check && pnpm package-quality:report";
 const spineBundleSizeEnforcementCommand =
   "pnpm package-quality:report -- --enforce-spine-bundle-size";
+const generatedAppWorkspaceCrocoDependencyPattern = /"(@croco\/[^"]+)":\s*"(workspace:[^"]+)"/g;
 const spineBundleSizeDeltaPolicy: BundleSizeDeltaPolicy = {
   kind: "global",
   allowedPositiveDeltaBytes: 0,
@@ -442,6 +529,296 @@ function resolveSpinePackages(
   return {
     packageDirs,
     packageNames,
+  };
+}
+
+function readDependencyMap(value: unknown): Readonly<Record<string, string>> {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
+}
+
+function readWorkspacePackageManifests(rootDir: string): WorkspacePackageManifest[] {
+  return readWorkspacePackageJsonFiles(rootDir)
+    .flatMap((packageJsonPath): WorkspacePackageManifest[] => {
+      const packageJson = readJsonFile(packageJsonPath);
+      const relativeDir = toPosixPath(
+        relative(rootDir, packageJsonPath).replace(/\/package\.json$/, ""),
+      );
+
+      if (!isRecord(packageJson) || typeof packageJson.name !== "string") {
+        return [];
+      }
+
+      return [
+        {
+          name: packageJson.name,
+          version: typeof packageJson.version === "string" ? packageJson.version : null,
+          relativeDir,
+          dependenciesBySection: Object.fromEntries(
+            DEPENDENCY_RANGE_POLICY_SECTIONS.map((sectionName) => [
+              sectionName,
+              readDependencyMap(packageJson[sectionName]),
+            ]),
+          ),
+        },
+      ];
+    })
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function readCompatibilityTrainSpinePackageNames(
+  rootDir: string,
+  workspacePackageNames: ReadonlySet<string>,
+): string[] {
+  const catalogFilePath = join(rootDir, packageCatalogPath);
+  if (!existsSync(catalogFilePath)) {
+    return [];
+  }
+
+  return readCatalogSpineEntries(rootDir)
+    .filter((packageName) => workspacePackageNames.has(packageName))
+    .sort();
+}
+
+function readChangesetArrayGroupCount(config: Record<string, unknown>, fieldName: string): number {
+  const value = config[fieldName];
+  if (!Array.isArray(value)) {
+    return 0;
+  }
+
+  return value.length;
+}
+
+function readCompatibilityTrainFixedLinkedDecision(
+  rootDir: string,
+): CompatibilityTrainFixedLinkedDecision {
+  const configPath = join(rootDir, changesetConfigPath);
+  if (!existsSync(configPath)) {
+    return {
+      fixedGroupCount: 0,
+      linkedGroupCount: 0,
+      required: false,
+      decision:
+        "Compatibility-train validation is sufficient; no Changesets fixed or linked groups are configured in this checkout.",
+    };
+  }
+
+  const config = readJsonFile(configPath);
+  if (!isRecord(config)) {
+    throw new Error(`${changesetConfigPath} must contain an object`);
+  }
+
+  const fixedGroupCount = readChangesetArrayGroupCount(config, "fixed");
+  const linkedGroupCount = readChangesetArrayGroupCount(config, "linked");
+
+  return {
+    fixedGroupCount,
+    linkedGroupCount,
+    required: false,
+    decision:
+      fixedGroupCount === 0 && linkedGroupCount === 0
+        ? "Compatibility-train validation is sufficient for the current 1.0 spine; fixed/linked groups remain intentionally empty."
+        : "Fixed or linked groups are configured; review RELEASING.md for the synchronized-versioning scope.",
+  };
+}
+
+function getExpectedPublishedRange(manifest: WorkspacePackageManifest | undefined): string | null {
+  return manifest?.version ? `^${manifest.version}` : null;
+}
+
+function getGeneratedAppFailureReason(
+  actualRange: string | null,
+  expectedRange: string | null,
+): string | null {
+  if (expectedRange === null) {
+    return "missing workspace manifest";
+  }
+
+  if (actualRange === null) {
+    return "missing generated app version set range";
+  }
+
+  if (actualRange !== expectedRange) {
+    return `expected ${expectedRange}`;
+  }
+
+  return null;
+}
+
+function collectGeneratedAppCrocoDependencies(
+  rootDir: string,
+  manifestsByName: ReadonlyMap<string, WorkspacePackageManifest>,
+  spinePackageNames: ReadonlySet<string>,
+  generatedAppVersionSet: CompatibilityTrainGeneratedAppVersionSet,
+): CompatibilityTrainGeneratedAppDependency[] {
+  const templateDir = join(rootDir, createCrocoAppTemplatesPath);
+  if (!existsSync(templateDir)) {
+    return [];
+  }
+
+  const generatedAppRanges = new Map(
+    generatedAppVersionSet.packages.map((entry) => [entry.packageName, entry.range]),
+  );
+
+  return walkFiles(templateDir)
+    .filter((filePath) => filePath.endsWith("package.json.hbs"))
+    .flatMap((filePath) => {
+      const sourcePath = toPosixPath(relative(rootDir, filePath));
+      const source = readFileSync(filePath, "utf-8");
+      const matches = [...source.matchAll(generatedAppWorkspaceCrocoDependencyPattern)];
+
+      return matches.map((match) => {
+        const packageName = match[1];
+        const templateRange = match[2];
+        const manifest = manifestsByName.get(packageName);
+        const actualRange = generatedAppRanges.get(packageName) ?? null;
+        const expectedRange = getExpectedPublishedRange(manifest);
+        const failureReason = getGeneratedAppFailureReason(actualRange, expectedRange);
+
+        return {
+          packageName,
+          templateRange,
+          actualRange,
+          expectedRange,
+          sourcePath,
+          inSpine: spinePackageNames.has(packageName),
+          status: failureReason === null ? "pass" : "fail",
+          failureReason,
+        };
+      });
+    })
+    .sort((left, right) => {
+      const packageCompare = left.packageName.localeCompare(right.packageName);
+      return packageCompare === 0
+        ? left.sourcePath.localeCompare(right.sourcePath)
+        : packageCompare;
+    });
+}
+
+function collectCompatibilityRangeDrift(
+  manifests: readonly WorkspacePackageManifest[],
+  internalWorkspacePackageNames: ReadonlySet<string>,
+  peerExceptions: ReadonlyMap<string, CompatibilityTrainPeerException & { readonly key: string }>,
+): CompatibilityTrainRangeDrift[] {
+  return manifests.flatMap((manifest) =>
+    DEPENDENCY_RANGE_POLICY_SECTIONS.flatMap((sectionName) => {
+      const dependencies = manifest.dependenciesBySection[sectionName] ?? {};
+
+      return Object.entries(dependencies).flatMap(([dependencyName, range]) => {
+        if (!internalWorkspacePackageNames.has(dependencyName)) {
+          return [];
+        }
+
+        if (range === INTERNAL_WORKSPACE_DEPENDENCY_RANGE) {
+          return [];
+        }
+
+        const exceptionKey = internalPeerDependencyRangeExceptionKey(
+          manifest.name,
+          dependencyName,
+          range,
+        );
+        if (sectionName === "peerDependencies" && peerExceptions.has(exceptionKey)) {
+          return [];
+        }
+
+        return [
+          {
+            packageName: manifest.name,
+            relativeDir: manifest.relativeDir,
+            section: sectionName,
+            dependencyName,
+            range,
+          },
+        ];
+      });
+    }),
+  );
+}
+
+function createCompatibilityTrainReport(
+  rootDir: string,
+  generatedAppVersionSet: CompatibilityTrainGeneratedAppVersionSet,
+): CompatibilityTrainReport {
+  const manifests = readWorkspacePackageManifests(rootDir);
+  const manifestsByName = new Map(manifests.map((manifest) => [manifest.name, manifest]));
+  const workspacePackageNames = new Set(manifests.map((manifest) => manifest.name));
+  const internalWorkspacePackageNames = new Set(
+    manifests
+      .map((manifest) => manifest.name)
+      .filter((packageName) => packageName.startsWith(INTERNAL_CROCO_PACKAGE_PREFIX)),
+  );
+  const exceptionViolations: string[] = [];
+  const peerExceptions = readInternalPeerDependencyRangeExceptions(
+    rootDir,
+    workspacePackageNames,
+    internalWorkspacePackageNames,
+    exceptionViolations,
+  ) as ReadonlyMap<string, CompatibilityTrainPeerException & { readonly key: string }>;
+
+  if (exceptionViolations.length > 0) {
+    throw new Error(exceptionViolations.join("\n"));
+  }
+
+  const spinePackageNames = readCompatibilityTrainSpinePackageNames(rootDir, workspacePackageNames);
+  const spinePackageNameSet = new Set(spinePackageNames);
+  const generatedAppDependencies = collectGeneratedAppCrocoDependencies(
+    rootDir,
+    manifestsByName,
+    spinePackageNameSet,
+    generatedAppVersionSet,
+  );
+  const rangeDrift = collectCompatibilityRangeDrift(
+    manifests,
+    internalWorkspacePackageNames,
+    peerExceptions,
+  );
+  const fixedLinkedDecision = readCompatibilityTrainFixedLinkedDecision(rootDir);
+  const generatedAppRangeDriftCount = generatedAppDependencies.filter(
+    (dependency) => dependency.status === "fail",
+  ).length;
+
+  return {
+    status: rangeDrift.length === 0 && generatedAppRangeDriftCount === 0 ? "pass" : "fail",
+    policy:
+      "Internal @croco/* workspace dependencies use workspace:* except checked peer-only semver exceptions; generated app workspace ranges resolve through the exported tested spine dependency set.",
+    localCommand: compatibilityTrainRecoveryCommand,
+    internalWorkspaceRange: INTERNAL_WORKSPACE_DEPENDENCY_RANGE,
+    exceptionMetadataPath: INTERNAL_PEER_DEPENDENCY_RANGE_EXCEPTIONS_PATH,
+    internalRangeDriftCount: rangeDrift.length,
+    generatedAppRangeDriftCount,
+    peerExceptionCount: peerExceptions.size,
+    spinePackageCount: spinePackageNames.length,
+    generatedAppDependencyCount: generatedAppDependencies.length,
+    generatedAppSpineDependencyCount: generatedAppDependencies.filter(
+      (dependency) => dependency.inSpine,
+    ).length,
+    fixedLinkedDecision,
+    spinePackageNames,
+    rangeDrift,
+    peerExceptions: [...peerExceptions.values()]
+      .map((exception) => ({
+        packageName: exception.packageName,
+        section: "peerDependencies" as const,
+        dependencyName: exception.dependencyName,
+        range: exception.range,
+        reason: exception.reason,
+        owner: exception.owner,
+        compatibilityRationale: exception.compatibilityRationale,
+      }))
+      .sort((left, right) =>
+        formatInternalPeerDependencyRangeException(left).localeCompare(
+          formatInternalPeerDependencyRangeException(right),
+        ),
+      ),
+    generatedAppDependencies,
   };
 }
 
@@ -1126,6 +1503,7 @@ export function createBundleSizeWarningReport(
 export function createPackageQualityReport(
   options: Pick<CheckOptions, "rootDir" | "summaryDir"> & {
     readonly enforceSpineBundleSize?: boolean;
+    readonly generatedAppVersionSet?: CompatibilityTrainGeneratedAppVersionSet;
   },
 ): PackageQualityReport {
   const summaries = readTurboRunSummaries(options.summaryDir);
@@ -1143,6 +1521,10 @@ export function createPackageQualityReport(
     bundleSize: createBundleSizeWarningReport(options.rootDir, packages, {
       enforceSpineBundleSize: options.enforceSpineBundleSize,
     }),
+    compatibilityTrain: createCompatibilityTrainReport(
+      options.rootDir,
+      options.generatedAppVersionSet ?? getGeneratedAppCrocoVersionSet(),
+    ),
     gateOutcomes: readGateOutcomes(),
   };
 }
@@ -1258,6 +1640,86 @@ function formatPublicApiSection(result: PublicApiGuardResult): string[] {
     `- Snapshot: \`${result.snapshotPath}\``,
     `- Diff report: \`${result.reportPath}\``,
     `- Intentional update procedure: run \`${result.updateCommand}\`, review the runtime/type diff, and include a changeset when a publishable package's import surface, types, or behavior changes.`,
+  ];
+}
+
+function formatCompatibilityTrainStatus(report: CompatibilityTrainReport): string {
+  if (report.status === "pass") {
+    return "pass";
+  }
+
+  return `fail; ${report.internalRangeDriftCount} internal range drift(s); ${report.generatedAppRangeDriftCount} generated app range drift(s)`;
+}
+
+function formatCompatibilityTrainEvidence(report: CompatibilityTrainReport): string {
+  return `${report.spinePackageCount} spine package(s); ${report.generatedAppDependencyCount} generated app dependency row(s); ${report.generatedAppRangeDriftCount} generated app range drift(s); ${report.peerExceptionCount} peer exception(s); run \`${report.localCommand}\``;
+}
+
+function formatCompatibilityTrainRangeDriftRows(report: CompatibilityTrainReport): string[] {
+  if (report.rangeDrift.length === 0) {
+    return ["| _none_ | _none_ | _none_ | _none_ |"];
+  }
+
+  return report.rangeDrift.map(
+    (entry) =>
+      `| \`${entry.packageName}\` | \`${entry.section}.${entry.dependencyName}\` | \`${entry.range}\` | use \`${report.internalWorkspaceRange}\` or add a checked peer-only exception |`,
+  );
+}
+
+function formatCompatibilityTrainPeerExceptionRows(report: CompatibilityTrainReport): string[] {
+  if (report.peerExceptions.length === 0) {
+    return ["| _none_ | _none_ | _none_ | _none_ | _none_ |"];
+  }
+
+  return report.peerExceptions.map(
+    (exception) =>
+      `| \`${exception.packageName}\` | \`${exception.dependencyName}\` | \`${exception.range}\` | ${exception.owner} | ${exception.reason} |`,
+  );
+}
+
+function formatCompatibilityTrainGeneratedAppRows(report: CompatibilityTrainReport): string[] {
+  if (report.generatedAppDependencies.length === 0) {
+    return ["| _none_ | _none_ | _none_ | _none_ | _none_ | _none_ | _none_ |"];
+  }
+
+  return report.generatedAppDependencies.map((dependency) => {
+    const scope = dependency.inSpine ? "spine" : "non-spine";
+    const actualRange = dependency.actualRange ?? "missing";
+    const expectedRange = dependency.expectedRange ?? "missing workspace manifest";
+    const status =
+      dependency.failureReason === null
+        ? dependency.status
+        : `${dependency.status}: ${dependency.failureReason}`;
+
+    return `| \`${dependency.packageName}\` | ${scope} | \`${dependency.templateRange}\` | \`${actualRange}\` | \`${expectedRange}\` | ${status} | \`${dependency.sourcePath}\` |`;
+  });
+}
+
+function formatCompatibilityTrainSection(report: CompatibilityTrainReport): string[] {
+  return [
+    "## Compatibility train policy",
+    `- Status: ${formatCompatibilityTrainStatus(report)}`,
+    `- Policy: ${report.policy}`,
+    `- Internal workspace range: \`${report.internalWorkspaceRange}\``,
+    `- Peer exception metadata: \`${report.exceptionMetadataPath}\``,
+    `- Spine packages: ${report.spinePackageNames.length === 0 ? "_none_" : report.spinePackageNames.map((packageName) => `\`${packageName}\``).join(", ")}`,
+    `- Fixed/linked decision: ${report.fixedLinkedDecision.decision}`,
+    `- Local recovery command: \`${report.localCommand}\``,
+    "",
+    "### Internal range drift",
+    "| Package | Dependency | Range | Recovery |",
+    "| --- | --- | --- | --- |",
+    ...formatCompatibilityTrainRangeDriftRows(report),
+    "",
+    "### Checked peer semver exceptions",
+    "| Package | Dependency | Range | Owner | Reason |",
+    "| --- | --- | --- | --- | --- |",
+    ...formatCompatibilityTrainPeerExceptionRows(report),
+    "",
+    "### Generated app dependency set",
+    "| Package | Scope | Template range | Actual generated range | Expected published range | Status | Source |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+    ...formatCompatibilityTrainGeneratedAppRows(report),
   ];
 }
 
@@ -1468,13 +1930,14 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     "",
     `- Generated at: ${report.generatedAt}`,
     `- Turbo summary directory: \`${toPosixPath(relative(report.rootDir, report.summaryDir))}\``,
-    "- Source: Turbo run summaries plus repository dependency boundary and public API surface scans.",
+    "- Source: Turbo run summaries plus repository dependency boundary, public API surface, compatibility train, and bundle-size scans.",
     "",
     "## Gate summary",
     "| Gate | Scope | CI mode | Current outcome | Evidence |",
     "| --- | --- | --- | --- | --- |",
     `| \`changeset-required:check\` | publishable package behavior changes | blocking on PR | ${report.gateOutcomes["changeset-required:check"]} | links public package changes to a required non-README changeset |`,
     `| \`pnpm check\` | repository policy, lint, format, architecture policy, dependency boundaries, strict contract checks, static misuse checks, public API drift | blocking on PR/trunk | ${report.gateOutcomes["pnpm check"]} | includes \`architecture-policy:check\`, \`dependency-boundaries:check\`, \`strict-contract-typecheck\`, \`static-misuse:check\`, and \`public-api:check\` |`,
+    `| \`package-manifests:check\` | package manifests and Croco compatibility train | blocking through \`pnpm check\` | ${formatCompatibilityTrainStatus(report.compatibilityTrain)} | ${formatCompatibilityTrainEvidence(report.compatibilityTrain)} |`,
     `| \`public-api:check\` | package public export surface drift | blocking through \`pnpm check\` | ${formatPublicApiStatus(report.publicApi)} | ${formatPublicApiEvidence(report.publicApi)} |`,
     `| \`build\` | package build tasks | blocking on PR/trunk | ${report.gateOutcomes.build} | Turbo \`build\` summary below |`,
     `| \`typecheck\` | package TypeScript tasks | blocking on PR/trunk | ${report.gateOutcomes.typecheck} | Turbo \`typecheck\` summary below |`,
@@ -1506,6 +1969,8 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     "",
     ...formatPublicApiSection(report.publicApi),
     "",
+    ...formatCompatibilityTrainSection(report.compatibilityTrain),
+    "",
     "## Bundle size warning",
     `- Status: ${formatBundleSizeStatus(report.bundleSize)}`,
     `- Report: \`${report.bundleSize.reportPath}\``,
@@ -1521,7 +1986,7 @@ export function buildReportMarkdown(report: PackageQualityReport): string {
     ),
     "",
     "## Trunk gate rollout",
-    "- Current blocking gates: changeset-required, architecture-policy, dependency-boundaries, static-misuse, lint/format/policy checks, build, typecheck, test, provider-certification, production-ready, spine-promotion, and the dedicated benchmark workflow.",
+    "- Current blocking gates: changeset-required, package manifest compatibility train, architecture-policy, dependency-boundaries, static-misuse, lint/format/policy checks, build, typecheck, test, provider-certification, production-ready, spine-promotion, and the dedicated benchmark workflow.",
     "- Current advisory gates: production audit in CI, core coverage baseline warnings, and bundle-size warnings. Release publish gates still run `pnpm audit:prod` as blocking.",
     "- Promote warning-only gates only after the dashboard shows stable package-level ownership, no unknown package rows, and documented baselines.",
     "- New packages should appear in this dashboard with explicit build/typecheck/test support or an intentional not-configured state.",
@@ -1658,10 +2123,19 @@ async function main(): Promise<void> {
   console.log(`package-quality-report: package task failures=${failureCount}`);
   console.log(`package-quality-report: dependency boundary failures=${boundaryFailureCount}`);
   console.log(
+    `package-quality-report: compatibility train internal range drift=${report.compatibilityTrain.internalRangeDriftCount}`,
+  );
+  console.log(
+    `package-quality-report: compatibility train generated app range drift=${report.compatibilityTrain.generatedAppRangeDriftCount}`,
+  );
+  console.log(
     `package-quality-report: spine bundle-size blocking issues=${report.bundleSize.spineBlockingIssueCount}`,
   );
 
-  if (report.bundleSize.spineBlockingIssueCount > 0) {
+  if (
+    report.compatibilityTrain.status === "fail" ||
+    report.bundleSize.spineBlockingIssueCount > 0
+  ) {
     process.exit(1);
   }
 }
