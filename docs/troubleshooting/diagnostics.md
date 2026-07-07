@@ -365,8 +365,10 @@ filter가 응답을 확정합니다. `undefined`는 실패가 아니라 pass-thr
 - `private` exposure는 `NODE_ENV=production`에서 등록되지 않습니다. 운영 환경에서 꼭 필요하면 `allowProduction: true`와 `token` 또는 `custom` exposure를 함께 사용해야 합니다.
 - 기본 토큰 헤더는 `X-Dev-Inspector-Token`입니다.
 - 응답은 `Cache-Control: no-store`를 포함합니다.
-- 요청 URL query, headers/query, timeline details 안의 token/secret/password/API key/connection string 계열 key는 `[Redacted]`로 대체됩니다.
-- Error/Problem message처럼 key 없이 들어오는 문자열도 `token=...`, `Bearer ...`, DSN/connection URL 형태의 민감 값은 `[Redacted]`로 scrub 처리되며, 문자열은 기본 최대 500자로 잘립니다(`maxStringLength`로 조정 가능).
+- 요청 URL query, headers/query, runtime/trace, timeline details 안의 `authorization`, `cookie`, `credential`, `password`, `secret`, `token`, `api[-_]?key`, `private[-_]?key`, `access[-_]?key`, `database[-_]?url`, `redis[-_]?url`, `mongo(db)?[-_]?url`, `postgres(ql)?[-_]?url`, `connection[-_]?string`, `dsn` 계열 key는 대소문자와 무관하게 `[Redacted]`로 대체됩니다.
+- Error/Problem message처럼 key 없이 들어오는 문자열도 `authorization=...`, `cookie=...`/`Set-Cookie: ...`(세미콜론으로 구분된 `Path=`, `HttpOnly` 같은 속성 포함), `token=...`, `apiKey=...`, `databaseUrl=...`, `connectionString=...`, `dsn=...`, `Bearer ...`, `Basic ...`, database/Redis URL 형태의 민감 값은 `[Redacted]`로 scrub 처리되며, 문자열은 기본 최대 500자로 잘립니다(`maxStringLength`로 조정 가능).
+- 애플리케이션이 다른 key naming을 쓰면 `RuntimeInspector({ sensitiveKeyPattern })` 또는 `createApp({ devInspector: { sensitiveKeyPattern } })`로 key redaction pattern을 확장하거나 교체할 수 있습니다. Custom pattern을 좁게 지정하면 기본 key redaction 목록이 자동으로 합쳐지지 않으므로 운영 노출 전 snapshot으로 확인하세요.
+- `/dev/inspector`는 기본 off이며 로컬 개발 목적의 opt-in endpoint입니다. Production에서 노출해야 할 때는 `allowProduction: true`만으로 열지 말고 token 또는 custom exposure를 함께 사용하고, reverse proxy/cache가 `Cache-Control: no-store`를 보존하는지 확인하세요.
 - Inspector 기록 중 예외가 발생해도 원래 요청 처리와 응답은 유지됩니다. 실패한 instrumentation은 가능한 경우 logger warning으로만 남깁니다.
 - Inspector는 인메모리 ring buffer입니다. 프로세스 재시작, Lambda cold start, Worker isolate 교체 시 내용은 초기화됩니다.
 
