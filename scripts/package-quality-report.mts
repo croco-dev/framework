@@ -10,6 +10,7 @@ import {
   internalPeerDependencyRangeExceptionKey,
   readInternalPeerDependencyRangeExceptions,
 } from "./internal-croco-compatibility-policy.mjs";
+import { normalizeCatalogSpinePackageName } from "../packages/create-croco-app/src/helpers/catalog-spine.ts";
 import { getGeneratedAppCrocoVersionSet } from "../packages/create-croco-app/src/helpers/croco-ranges.ts";
 
 export type QualityTask = "build" | "typecheck" | "test";
@@ -259,6 +260,7 @@ const compatibilityTrainRecoveryCommand =
 const spineBundleSizeEnforcementCommand =
   "pnpm package-quality:report -- --enforce-spine-bundle-size";
 const generatedAppWorkspaceCrocoDependencyPattern = /"(@croco\/[^"]+)":\s*"(workspace:[^"]+)"/g;
+const generatedAppVersionSetOnlyRangeSource = "version-set";
 const spineBundleSizeDeltaPolicy: BundleSizeDeltaPolicy = {
   kind: "global",
   allowedPositiveDeltaBytes: 0,
@@ -455,14 +457,6 @@ export function readPackages(rootDir: string): PackageInfo[] {
       };
     })
     .sort((left, right) => left.name.localeCompare(right.name));
-}
-
-function normalizeCatalogSpinePackageName(packageName: string): string {
-  if (packageName === "create-croco-app" || packageName.startsWith("@")) {
-    return packageName;
-  }
-
-  return `@croco/${packageName}`;
 }
 
 function readCatalogSpineEntries(rootDir: string): string[] {
@@ -667,7 +661,7 @@ function collectGeneratedAppCrocoDependencies(
     generatedAppVersionSet.packages.map((entry) => [entry.packageName, entry.range]),
   );
 
-  return walkFiles(templateDir)
+  const templateDependencies: CompatibilityTrainGeneratedAppDependency[] = walkFiles(templateDir)
     .filter((filePath) => filePath.endsWith("package.json.hbs"))
     .flatMap((filePath) => {
       const sourcePath = toPosixPath(relative(rootDir, filePath));
@@ -693,13 +687,36 @@ function collectGeneratedAppCrocoDependencies(
           failureReason,
         };
       });
-    })
-    .sort((left, right) => {
-      const packageCompare = left.packageName.localeCompare(right.packageName);
-      return packageCompare === 0
-        ? left.sourcePath.localeCompare(right.sourcePath)
-        : packageCompare;
     });
+
+  const templatePackageNames = new Set(
+    templateDependencies.map((dependency) => dependency.packageName),
+  );
+  const versionSetOnlyDependencies: CompatibilityTrainGeneratedAppDependency[] =
+    generatedAppVersionSet.packages
+      .filter((entry) => !templatePackageNames.has(entry.packageName))
+      .map((entry) => {
+        const manifest = manifestsByName.get(entry.packageName);
+        const actualRange = entry.range;
+        const expectedRange = getExpectedPublishedRange(manifest);
+        const failureReason = getGeneratedAppFailureReason(actualRange, expectedRange);
+
+        return {
+          packageName: entry.packageName,
+          templateRange: generatedAppVersionSetOnlyRangeSource,
+          actualRange,
+          expectedRange,
+          sourcePath: generatedAppVersionSet.source,
+          inSpine: spinePackageNames.has(entry.packageName),
+          status: failureReason === null ? "pass" : "fail",
+          failureReason,
+        };
+      });
+
+  return [...templateDependencies, ...versionSetOnlyDependencies].sort((left, right) => {
+    const packageCompare = left.packageName.localeCompare(right.packageName);
+    return packageCompare === 0 ? left.sourcePath.localeCompare(right.sourcePath) : packageCompare;
+  });
 }
 
 function collectCompatibilityRangeDrift(
@@ -1668,12 +1685,12 @@ function formatCompatibilityTrainRangeDriftRows(report: CompatibilityTrainReport
 
 function formatCompatibilityTrainPeerExceptionRows(report: CompatibilityTrainReport): string[] {
   if (report.peerExceptions.length === 0) {
-    return ["| _none_ | _none_ | _none_ | _none_ | _none_ |"];
+    return ["| _none_ | _none_ | _none_ | _none_ | _none_ | _none_ |"];
   }
 
   return report.peerExceptions.map(
     (exception) =>
-      `| \`${exception.packageName}\` | \`${exception.dependencyName}\` | \`${exception.range}\` | ${exception.owner} | ${exception.reason} |`,
+      `| \`${exception.packageName}\` | \`${exception.dependencyName}\` | \`${exception.range}\` | ${exception.owner} | ${exception.reason} | ${exception.compatibilityRationale} |`,
   );
 }
 
@@ -1712,8 +1729,8 @@ function formatCompatibilityTrainSection(report: CompatibilityTrainReport): stri
     ...formatCompatibilityTrainRangeDriftRows(report),
     "",
     "### Checked peer semver exceptions",
-    "| Package | Dependency | Range | Owner | Reason |",
-    "| --- | --- | --- | --- | --- |",
+    "| Package | Dependency | Range | Owner | Reason | Compatibility rationale |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...formatCompatibilityTrainPeerExceptionRows(report),
     "",
     "### Generated app dependency set",

@@ -19,6 +19,9 @@ import {
   rewriteExternalCrocoRanges,
   type WorkspacePackage,
 } from "./create-croco-app-generated-smoke-support.mts";
+import { normalizeCatalogSpinePackageName } from "../packages/create-croco-app/src/helpers/catalog-spine.ts";
+
+export { normalizeCatalogSpinePackageName } from "../packages/create-croco-app/src/helpers/catalog-spine.ts";
 
 type DependencyField = "dependencies" | "peerDependencies" | "optionalDependencies";
 
@@ -230,14 +233,6 @@ export function readCatalogSpinePackageNames(rootDir = defaultRootDir): readonly
 
     return normalizeCatalogSpinePackageName(packageName);
   });
-}
-
-export function normalizeCatalogSpinePackageName(packageName: string): string {
-  if (packageName === "create-croco-app" || packageName.startsWith("@")) {
-    return packageName;
-  }
-
-  return `@croco/${packageName}`;
 }
 
 export function deriveAlphaReleaseCleanInstallImportPackages(

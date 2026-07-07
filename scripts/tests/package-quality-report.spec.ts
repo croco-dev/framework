@@ -266,6 +266,12 @@ describe("package-quality-report.mts", () => {
     expect(dashboard).toContain(
       "| `@croco/runtime` | spine | `workspace:*` | `^0.0.3` | `^0.0.3` | pass |",
     );
+    expect(dashboard).toContain(
+      "| Package | Dependency | Range | Owner | Reason | Compatibility rationale |",
+    );
+    expect(dashboard).toContain(
+      "| `@croco/peer` | `@croco/runtime` | `^0.0.3` | release | Published peers intentionally accept the current compatible alpha line. | The peer package consumes only stable source-level contracts covered by the compatibility train. |",
+    );
   });
 
   it("fails compatibility train reporting when generated app ranges are stale", () => {
@@ -320,6 +326,66 @@ describe("package-quality-report.mts", () => {
     expect(dashboard).toContain("fail; 0 internal range drift(s); 1 generated app range drift(s)");
     expect(dashboard).toContain(
       "| `@croco/runtime` | spine | `workspace:*` | `^0.0.2` | `^0.0.3` | fail: expected ^0.0.3 |",
+    );
+  });
+
+  it("fails compatibility train reporting when exported generated app ranges are stale outside templates", () => {
+    const repo = createTempRepo();
+    writePackageManifest(repo, "packages/runtime", {
+      name: "@croco/runtime",
+      version: "0.0.3",
+    });
+    writePackageManifest(repo, "packages/profile-runtime", {
+      name: "@croco/profile-runtime",
+      version: "0.0.4",
+    });
+    writeCatalog(repo, ["runtime"]);
+    writeFile(
+      repo,
+      "packages/create-croco-app/templates/app/package.json.hbs",
+      `${JSON.stringify(
+        {
+          dependencies: {
+            "@croco/runtime": "workspace:*",
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+      generatedAppVersionSet: {
+        policy: "tested-croco-compatibility-train",
+        source: "fixture-version-set",
+        packages: [
+          { packageName: "@croco/runtime", range: "^0.0.3" },
+          { packageName: "@croco/profile-runtime", range: "^0.0.3" },
+        ],
+      },
+    });
+    const generatedAppDependency = report.compatibilityTrain.generatedAppDependencies.find(
+      (dependency) => dependency.packageName === "@croco/profile-runtime",
+    );
+
+    expect(report.compatibilityTrain).toEqual(
+      expect.objectContaining({
+        status: "fail",
+        generatedAppRangeDriftCount: 1,
+        generatedAppDependencyCount: 2,
+      }),
+    );
+    expect(generatedAppDependency).toEqual(
+      expect.objectContaining({
+        templateRange: "version-set",
+        actualRange: "^0.0.3",
+        expectedRange: "^0.0.4",
+        sourcePath: "fixture-version-set",
+        status: "fail",
+        failureReason: "expected ^0.0.4",
+      }),
     );
   });
 

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { normalizeCatalogSpinePackageName } from "../helpers/catalog-spine.js";
 import {
   getExternalCrocoPackageRange,
   getExternalCrocoPackageRanges,
@@ -43,14 +44,6 @@ function readWorkspacePackageVersion(packageName: string): string {
   const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { version: string };
 
   return packageJson.version;
-}
-
-function normalizeCatalogSpinePackageName(packageName: string): string {
-  if (packageName === "create-croco-app" || packageName.startsWith("@")) {
-    return packageName;
-  }
-
-  return `@croco/${packageName}`;
 }
 
 function readSpinePackageNames(): Set<string> {
