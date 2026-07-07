@@ -1,4 +1,5 @@
 import type { MiddlewareFunction } from "../types";
+import { shortCircuit } from "./MiddlewareShortCircuit";
 import { markSecurityMiddleware } from "./SecurityMiddlewareMarker";
 
 export type CorsOptions = {
@@ -26,7 +27,7 @@ export const corsMiddleware = (options: CorsOptions): MiddlewareFunction => {
     exposedHeaders,
   } = options;
 
-  const middleware: MiddlewareFunction = async (ctx, next): Promise<void> => {
+  const middleware: MiddlewareFunction = async (ctx, next) => {
     const requestOrigin = ctx.header("origin");
 
     if (!requestOrigin || !origins.includes(requestOrigin)) {
@@ -54,7 +55,7 @@ export const corsMiddleware = (options: CorsOptions): MiddlewareFunction => {
     if (isPreflight) {
       ctx.raw.header("Access-Control-Max-Age", String(maxAge));
       ctx.res.status = 204;
-      return;
+      return shortCircuit("cors-preflight");
     }
 
     await next();

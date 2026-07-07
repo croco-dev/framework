@@ -1,6 +1,7 @@
 import type { PolicyExecutionPlan, RequestPipelineGraph } from "@croco/framework-context";
 import type { Constructor } from "@croco/protocols-rest";
 import type { DevInspectorEndpointOptions } from "./devInspectorEndpoint";
+import type { MiddlewareShortCircuit } from "./middleware/MiddlewareShortCircuit";
 import type { DiagnosticsEndpointOptions } from "./operationalEndpoints";
 import type {
   APIGatewayEventRequestContextV2,
@@ -38,7 +39,7 @@ export interface ListenOptions {
 export type MiddlewareFunction = (
   ctx: CrocoHttpContext,
   next: () => Promise<Response | void>,
-) => Promise<Response | void> | Response | void;
+) => Promise<MiddlewareShortCircuit | Response | void> | MiddlewareShortCircuit | Response | void;
 
 export interface CrocoHttpContext {
   readonly req: CrocoRequest;

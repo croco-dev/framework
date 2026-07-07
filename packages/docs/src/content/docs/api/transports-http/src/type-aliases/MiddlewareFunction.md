@@ -5,7 +5,7 @@ prev: false
 title: "MiddlewareFunction"
 ---
 
-> **MiddlewareFunction** = (`ctx`, `next`) => `Promise`\<`Response` \| `void`\> \| `Response` \| `void`
+> **MiddlewareFunction** = (`ctx`, `next`) => `Promise`\<[`MiddlewareShortCircuit`](/api/transports-http/src/type-aliases/middlewareshortcircuit/) \| `Response` \| `void`\> \| [`MiddlewareShortCircuit`](/api/transports-http/src/type-aliases/middlewareshortcircuit/) \| `Response` \| `void`
 
 ## Parameters
 
@@ -19,4 +19,4 @@ title: "MiddlewareFunction"
 
 ## Returns
 
-`Promise`\<`Response` \| `void`\> \| `Response` \| `void`
+`Promise`\<[`MiddlewareShortCircuit`](/api/transports-http/src/type-aliases/middlewareshortcircuit/) \| `Response` \| `void`\> \| [`MiddlewareShortCircuit`](/api/transports-http/src/type-aliases/middlewareshortcircuit/) \| `Response` \| `void`

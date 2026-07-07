@@ -117,6 +117,12 @@ export function isSecurityMiddleware(
   return (middleware as MarkedSecurityMiddleware)[SECURITY_MIDDLEWARE_EXPORT_KEY] === exportName;
 }
 
+export function getSecurityMiddlewareExportName(
+  middleware: MiddlewareFunction,
+): SecurityMiddlewareExportName | undefined {
+  return (middleware as MarkedSecurityMiddleware)[SECURITY_MIDDLEWARE_EXPORT_KEY];
+}
+
 function getOrCreateSecurityMiddlewareMetadata(
   middleware: MiddlewareFunction,
 ): SecurityMiddlewareMetadata {

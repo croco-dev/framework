@@ -174,6 +174,8 @@ Search: CROCO_ROUTE_004, missing path param, @Param, route contract
 | `CROCO_BUILD_003`              | build-time           | error    | controller source에 TypeScript 오류가 있음       | controller type error 수정 후 contract 재실행                  |
 | `CROCO_HTTP_SECURITY_001`      | runtime              | error    | HTTP bootstrap에 필수 security middleware가 없음 | security headers, CORS, body limit, rate limit middleware 등록 |
 | `CROCO_HTTP_SECURITY_002`      | runtime              | error    | 지원하지 않는 security capability를 선언함       | supported capability literal로 수정                            |
+| `CROCO_HTTP_MIDDLEWARE_001`    | runtime              | error    | HTTP middleware가 pipeline 계약을 완료하지 않음  | `next()`, `Response`, 또는 `shortCircuit(reason)` 반환         |
+| `CROCO_HTTP_MIDDLEWARE_002`    | runtime              | error    | HTTP middleware가 `next()`를 여러 번 호출함      | `next()`를 한 번만 호출하고 반환값 재사용                      |
 | `CROCO_HTTP_FILTER_001`        | runtime              | error    | HTTP exception filter 결과가 계약 밖이거나 throw | 공식 filter result 반환 또는 `undefined`로 다음 filter에 위임  |
 
 ### CLI diagnostic code migration
@@ -308,6 +310,29 @@ Cause: `declareSecurityMiddlewareCapabilities()` 호출이 지원하지 않는 s
 Fix: Custom 또는 wrapper middleware 선언을 지원되는 literal 중 하나 이상으로 수정합니다. JavaScript
 호출자는 오타가 runtime에서 `extensions.capability`와 함께 실패하므로, 해당 값을 기준으로 선언 코드를
 고칩니다.
+
+### `CROCO_HTTP_MIDDLEWARE_001`
+
+Cause: `@croco/transports-http` middleware가 `Response`를 반환하지 않고, `shortCircuit(reason)`도
+반환하지 않고, `next()`도 호출하지 않았습니다. `next()` 호출 뒤 `shortCircuit()`을 반환하거나
+`null`/plain object/string 같은 계약 밖 값을 반환한 경우도 같은 진단으로 실패합니다.
+Fix: Middleware가 downstream pipeline을 계속 실행해야 한다면 `return next()`를 사용하거나
+`await next()` 뒤 `undefined` 또는 변환한 `Response`를 반환합니다. Middleware가 의도적으로
+pipeline을 끝내야 한다면 native `Response`를 반환하거나, 현재 `ctx.res.status`/headers로 빈 응답을
+확정하는 `shortCircuit("low-cardinality-reason")`을 반환합니다.
+
+Runtime inspector timeline에는 `middleware.short-circuit` event가 기록되며 `reason`,
+`middlewareIndex`, `middleware`, `responseStatus` 또는 `diagnosticCode`를 포함합니다. `reason`은
+운영자가 필터링할 수 있는 낮은 cardinality 문자열로 유지합니다.
+
+### `CROCO_HTTP_MIDDLEWARE_002`
+
+Cause: 하나의 middleware invocation에서 `next()`를 두 번 이상 호출했습니다. Downstream handler와
+뒤쪽 middleware는 요청당 한 번만 실행될 수 있으므로 두 번째 호출은 실패합니다.
+Fix: Downstream 응답을 검사하거나 변환해야 한다면 `const response = await next()`로 한 번만 호출한
+뒤 그 `Response`를 재사용하거나 replacement `Response`를 반환합니다. 이전 slash-form code
+`transports-http/middleware-next-called-multiple-times`는 전환 기간 동안 Problem `extensions.legacyCode`
+에 남아 있습니다.
 
 ### `CROCO_HTTP_FILTER_001`
 

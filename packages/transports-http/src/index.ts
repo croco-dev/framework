@@ -134,6 +134,20 @@ export {
 export { type CorsOptions, corsMiddleware } from "./libs/middleware/CorsMiddleware";
 
 /**
+ * 명시적인 HTTP 미들웨어 short-circuit marker입니다.
+ */
+export {
+  isMiddlewareShortCircuit,
+  shortCircuit,
+  type MiddlewareShortCircuit,
+} from "./libs/middleware/MiddlewareShortCircuit";
+
+/**
+ * 명시적인 HTTP 미들웨어 short-circuit 사유 문자열입니다.
+ */
+export type { MiddlewareShortCircuitReason } from "./libs/middleware/MiddlewareShortCircuit";
+
+/**
  * graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
  */
 export {
