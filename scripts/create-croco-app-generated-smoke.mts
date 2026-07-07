@@ -4,27 +4,76 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../packages/create-croco-app/src/supported-options.ts";
 import {
   createWorkspacePackageIndex,
-  resolveLocalCrocoPackagesForGeneratedProject,
-  rewriteExternalCrocoRanges,
-  writePnpmWorkspaceOverrides,
   type DependencyField,
   type ExternalCrocoRangeException,
   type PackageJson,
+  resolveLocalCrocoPackagesForGeneratedProject,
+  rewriteExternalCrocoRanges,
   type WorkspacePackage,
+  writePnpmWorkspaceOverrides,
 } from "./create-croco-app-generated-smoke-support.mts";
-import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../packages/create-croco-app/src/supported-options.ts";
 
 const DEFAULT_TENANT_MODEL = "org";
+const GRAPHQL_CONTRACT_CHECK_LABEL = "GraphQL contract check";
+const GRAPHQL_CONTRACT_SNAPSHOT_LABEL = "GraphQL contract snapshot";
+const GRAPHQL_CONTRACT_SNAPSHOT_PATH = "graphql-contract.snapshot.json";
+const GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH = ["apps", "graphql-api"] as const;
+const GRAPHQL_NEXTJS_CONTRACT_PACKAGE_PATH = ["apps", "web"] as const;
+const GRAPHQL_RESOLVER_METADATA_DRIFT_CODES = [
+  "graphql-resolver-guards-changed",
+  "graphql-resolver-roles-changed",
+  "graphql-resolver-interceptors-changed",
+  "graphql-resolver-di-scope-changed",
+  "graphql-resolver-problems-changed",
+] as const;
+
+type GraphQLContractSnapshotJson = {
+  readonly snapshotVersion: "croco.graphql-contract.snapshot.v1";
+  readonly sdl: string;
+  readonly operationCount: number;
+  readonly resolverCount: number;
+  readonly operations: readonly GraphQLContractOperationJson[];
+  readonly resolvers: readonly GraphQLContractResolverJson[];
+  readonly diagnostics: readonly unknown[];
+};
+
+type GraphQLContractOperationJson = {
+  readonly kind: "query" | "mutation" | "subscription";
+  readonly name: string;
+  readonly type: string;
+  readonly args: readonly unknown[];
+};
+
+type GraphQLContractResolverJson = {
+  readonly resolverName: string;
+  readonly diScope: string | null;
+  readonly methods: readonly GraphQLContractResolverMethodJson[];
+};
+
+type GraphQLContractResolverMethodJson = {
+  readonly methodName: string;
+  readonly guards: readonly string[];
+  readonly interceptors: readonly string[];
+  readonly roles: readonly string[];
+  readonly problems: readonly GraphQLContractProblemJson[];
+};
+
+type GraphQLContractProblemJson = {
+  readonly code: string;
+  readonly category: string;
+  readonly status: number;
+};
 
 type SmokeValidation = {
   readonly label: string;
@@ -293,6 +342,17 @@ const smokeCases: readonly SmokeCase[] = [
     runtimeTarget: "lambda",
     matrixTargets: ["base-ddd"],
     validations: [
+      {
+        label: GRAPHQL_CONTRACT_CHECK_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:check"],
+      },
+      {
+        label: GRAPHQL_CONTRACT_SNAPSHOT_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:snapshot"],
+        paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
+      },
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
     ],
@@ -340,6 +400,17 @@ const smokeCases: readonly SmokeCase[] = [
     runtimeTarget: "opennext",
     matrixTargets: ["base-ddd"],
     validations: [
+      {
+        label: GRAPHQL_CONTRACT_CHECK_LABEL,
+        packagePath: GRAPHQL_NEXTJS_CONTRACT_PACKAGE_PATH,
+        args: ["contract:check"],
+      },
+      {
+        label: GRAPHQL_CONTRACT_SNAPSHOT_LABEL,
+        packagePath: GRAPHQL_NEXTJS_CONTRACT_PACKAGE_PATH,
+        args: ["contract:snapshot"],
+        paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
+      },
       { label: "typecheck", packagePath: ["apps", "web"], args: ["typecheck"] },
       {
         label: "OpenNext deployment files",
@@ -394,6 +465,17 @@ const smokeCases: readonly SmokeCase[] = [
     matrixTargets: ["base-ddd"],
     validations: [
       {
+        label: GRAPHQL_CONTRACT_CHECK_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:check"],
+      },
+      {
+        label: GRAPHQL_CONTRACT_SNAPSHOT_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:snapshot"],
+        paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
+      },
+      {
         label: "apps/web vite config load",
         packagePath: ["apps", "web"],
         args: ["exec", "node", "--input-type=module", "--eval", loadViteConfigScript],
@@ -428,6 +510,17 @@ const smokeCases: readonly SmokeCase[] = [
     runtimeTarget: "cloudflare-workers+browser",
     matrixTargets: ["base-ddd"],
     validations: [
+      {
+        label: GRAPHQL_CONTRACT_CHECK_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:check"],
+      },
+      {
+        label: GRAPHQL_CONTRACT_SNAPSHOT_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:snapshot"],
+        paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
+      },
       {
         label: "apps/web vite config load",
         packagePath: ["apps", "web"],
@@ -817,6 +910,8 @@ try {
   const selectedSmokeCases = selectSmokeCases(smokeCases);
   const isFilteredRun = selectedSmokeCases.length !== smokeCases.length;
 
+  assertGraphQLSmokeContractCoverage(selectedSmokeCases);
+
   if (isFilteredRun) {
     console.log(
       `create-croco-app-generated-smoke: selected cases ${selectedSmokeCases.map(({ name }) => name).join(", ")}`,
@@ -934,6 +1029,7 @@ try {
     for (const validation of smokeCase.validations) {
       runValidation(projectDir, smokeCase, validation, smokeReport, caseResult);
     }
+    runGraphQLContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
     caseResult.status = "passed";
     writeGeneratedSmokeReport(smokeReport);
   }
@@ -1146,6 +1242,64 @@ function assertTemplateMatrixAccountability(cases: readonly SmokeCase[]): void {
       `create-croco-app generated smoke matrix references unknown template directories: ${unknownTargets.join(", ")}`,
     );
   }
+}
+
+function assertGraphQLSmokeContractCoverage(cases: readonly SmokeCase[]): void {
+  const missingCoverage: string[] = [];
+
+  for (const smokeCase of cases) {
+    const packagePath = readGraphQLContractPackagePath(smokeCase);
+    if (!packagePath) continue;
+
+    const checkIndex = smokeCase.validations.findIndex((validation) =>
+      isPackageValidation(validation, packagePath, GRAPHQL_CONTRACT_CHECK_LABEL, [
+        "contract:check",
+      ]),
+    );
+    const snapshotIndex = smokeCase.validations.findIndex(
+      (validation) =>
+        isPackageValidation(validation, packagePath, GRAPHQL_CONTRACT_SNAPSHOT_LABEL, [
+          "contract:snapshot",
+        ]) && validation.paths?.includes(GRAPHQL_CONTRACT_SNAPSHOT_PATH),
+    );
+
+    if (checkIndex === -1 || snapshotIndex === -1 || checkIndex > snapshotIndex) {
+      missingCoverage.push(
+        `${smokeCase.name} (${packagePath.join("/")} requires ${GRAPHQL_CONTRACT_CHECK_LABEL} before ${GRAPHQL_CONTRACT_SNAPSHOT_LABEL})`,
+      );
+    }
+  }
+
+  if (missingCoverage.length > 0) {
+    throw new Error(
+      `create-croco-app generated GraphQL smoke cases are missing contract coverage: ${missingCoverage.join(", ")}`,
+    );
+  }
+}
+
+function isPackageValidation(
+  validation: SmokeValidation,
+  packagePath: readonly string[],
+  label: string,
+  args: readonly string[],
+): boolean {
+  return (
+    validation.label === label &&
+    samePath(validation.packagePath, packagePath) &&
+    sameArgs(validation.args, args)
+  );
+}
+
+function samePath(left: readonly string[] | undefined, right: readonly string[]): boolean {
+  return Boolean(
+    left && left.length === right.length && left.every((part, index) => part === right[index]),
+  );
+}
+
+function sameArgs(left: readonly string[] | undefined, right: readonly string[]): boolean {
+  return Boolean(
+    left && left.length === right.length && left.every((part, index) => part === right[index]),
+  );
 }
 
 function getSmokeCaseResult(report: GeneratedSmokeReport, caseName: string): SmokeCaseResult {
@@ -1480,6 +1634,206 @@ function runValidation(
   console.log(`create-croco-app-generated-smoke: ${smokeCase.name} ${validation.label} passed`);
 }
 
+function runGraphQLContractDriftCanaries(
+  projectDir: string,
+  smokeCase: SmokeCase,
+  report: GeneratedSmokeReport,
+  caseResult: SmokeCaseResult,
+): void {
+  const packagePath = readGraphQLContractPackagePath(smokeCase);
+  if (!packagePath) {
+    return;
+  }
+
+  const packageDir = join(projectDir, ...packagePath);
+  const snapshotPath = join(packageDir, GRAPHQL_CONTRACT_SNAPSHOT_PATH);
+  const step = createSmokeStep("GraphQL contract drift canaries", {
+    command: formatCommand("corepack", ["pnpm", "--dir", packageDir, "contract:check"], rootDir),
+    packagePath,
+    paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
+    expectFailure: true,
+  });
+  caseResult.steps.push(step);
+  writeGeneratedSmokeReport(report);
+
+  try {
+    assertExists(
+      snapshotPath,
+      `${smokeCase.name} GraphQL drift canaries require ${GRAPHQL_CONTRACT_SNAPSHOT_PATH}`,
+    );
+    const originalSnapshot = readFileSync(snapshotPath, "utf8");
+    const diagnosticCodes = [
+      ...runGraphQLSnapshotCanary(
+        packageDir,
+        snapshotPath,
+        originalSnapshot,
+        withStaleGraphQLOperationBaseline,
+        ["graphql-operation-removed"],
+      ),
+      ...runGraphQLSnapshotCanary(
+        packageDir,
+        snapshotPath,
+        originalSnapshot,
+        withChangedGraphQLFieldTypeBaseline,
+        ["graphql-schema-breaking-change"],
+      ),
+      ...runGraphQLSnapshotCanary(
+        packageDir,
+        snapshotPath,
+        originalSnapshot,
+        withGraphQLResolverMetadataDriftBaseline,
+        GRAPHQL_RESOLVER_METADATA_DRIFT_CODES,
+      ),
+    ];
+
+    step.diagnosticCodes = [...new Set(diagnosticCodes)].sort();
+    step.status = "passed";
+    writeGeneratedSmokeReport(report);
+  } catch (error) {
+    recordSmokeCaseFailure(report, caseResult, step, error);
+    throw createSmokeFailureError(caseResult, step, error);
+  }
+
+  console.log(`create-croco-app-generated-smoke: ${smokeCase.name} GraphQL drift canaries passed`);
+}
+
+function runGraphQLSnapshotCanary(
+  packageDir: string,
+  snapshotPath: string,
+  originalSnapshot: string,
+  mutate: (snapshot: GraphQLContractSnapshotJson) => GraphQLContractSnapshotJson,
+  expectedDiagnosticCodes: readonly string[],
+): readonly string[] {
+  const snapshot = parseGraphQLContractSnapshot(originalSnapshot, snapshotPath);
+  writeFileSync(snapshotPath, stringifyGraphQLContractSnapshotJson(mutate(snapshot)));
+
+  try {
+    const reportedCodes = runExpectFailure(
+      "corepack",
+      ["pnpm", "--dir", packageDir, "contract:check"],
+      rootDir,
+      expectedDiagnosticCodes,
+    );
+    return [...new Set([...reportedCodes, ...expectedDiagnosticCodes])];
+  } finally {
+    writeFileSync(snapshotPath, originalSnapshot);
+  }
+}
+
+function parseGraphQLContractSnapshot(
+  content: string,
+  snapshotPath: string,
+): GraphQLContractSnapshotJson {
+  const snapshot = JSON.parse(content) as unknown;
+
+  if (!isGraphQLContractSnapshotJson(snapshot)) {
+    throw new Error(`${snapshotPath} is not a Croco GraphQL contract snapshot.`);
+  }
+
+  return snapshot;
+}
+
+function isGraphQLContractSnapshotJson(value: unknown): value is GraphQLContractSnapshotJson {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const snapshot = value as {
+    readonly snapshotVersion?: unknown;
+    readonly sdl?: unknown;
+    readonly operations?: unknown;
+    readonly resolvers?: unknown;
+    readonly diagnostics?: unknown;
+  };
+
+  return (
+    snapshot.snapshotVersion === "croco.graphql-contract.snapshot.v1" &&
+    typeof snapshot.sdl === "string" &&
+    Array.isArray(snapshot.operations) &&
+    Array.isArray(snapshot.resolvers) &&
+    Array.isArray(snapshot.diagnostics)
+  );
+}
+
+function stringifyGraphQLContractSnapshotJson(snapshot: GraphQLContractSnapshotJson): string {
+  return `${JSON.stringify(snapshot, null, 2)}\n`;
+}
+
+function withStaleGraphQLOperationBaseline(
+  snapshot: GraphQLContractSnapshotJson,
+): GraphQLContractSnapshotJson {
+  return {
+    ...snapshot,
+    operationCount: snapshot.operations.length + 1,
+    operations: [
+      ...snapshot.operations,
+      {
+        kind: "query",
+        name: "removedHealth",
+        type: "String!",
+        args: [],
+      },
+    ].sort(compareGraphQLOperations),
+  };
+}
+
+function withChangedGraphQLFieldTypeBaseline(
+  snapshot: GraphQLContractSnapshotJson,
+): GraphQLContractSnapshotJson {
+  return {
+    ...snapshot,
+    sdl: snapshot.sdl.replace("health: String!", "health: Int!"),
+    operations: snapshot.operations.map((operation) =>
+      operation.kind === "query" && operation.name === "health"
+        ? { ...operation, type: "Int!" }
+        : operation,
+    ),
+  };
+}
+
+function withGraphQLResolverMetadataDriftBaseline(
+  snapshot: GraphQLContractSnapshotJson,
+): GraphQLContractSnapshotJson {
+  const [resolver] = snapshot.resolvers;
+  const [method] = resolver?.methods ?? [];
+  if (!resolver || !method) {
+    throw new Error("GraphQL resolver metadata canary requires at least one resolver method.");
+  }
+
+  return {
+    ...snapshot,
+    resolvers: [
+      {
+        ...resolver,
+        diScope: "request",
+        methods: [
+          {
+            ...method,
+            guards: ["CanaryGuard"],
+            interceptors: ["CanaryInterceptor"],
+            roles: ["admin"],
+            problems: [
+              {
+                code: "GRAPHQL_HEALTH_UNAVAILABLE",
+                category: "InternalServerError",
+                status: 500,
+              },
+            ],
+          },
+          ...resolver.methods.slice(1),
+        ],
+      },
+      ...snapshot.resolvers.slice(1),
+    ],
+  };
+}
+
+function compareGraphQLOperations(
+  left: GraphQLContractOperationJson,
+  right: GraphQLContractOperationJson,
+): number {
+  return `${left.kind}:${left.name}`.localeCompare(`${right.kind}:${right.name}`);
+}
+
 function assertSmokeCoverage(cases: readonly SmokeCase[]): void {
   const coverage = readSmokeCoverage(cases);
 
@@ -1617,6 +1971,16 @@ function readRuntimeCapabilityManifestCoverage(
 
 function isRuntimeCapabilitySmokePlatform(value: unknown): value is RuntimeCapabilitySmokePlatform {
   return runtimeCapabilitySmokePlatforms.includes(value as RuntimeCapabilitySmokePlatform);
+}
+
+function readGraphQLContractPackagePath(smokeCase: SmokeCase): readonly string[] | undefined {
+  if (readFlagValue(smokeCase.args, "--api") !== "graphql") {
+    return undefined;
+  }
+
+  return readFlagValue(smokeCase.args, "--api-hosting") === "nextjs"
+    ? GRAPHQL_NEXTJS_CONTRACT_PACKAGE_PATH
+    : GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH;
 }
 
 function readFlagValue(args: readonly string[], flag: string): string | undefined {

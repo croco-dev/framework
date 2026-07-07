@@ -54,6 +54,31 @@ The committed baseline is `contract-graph.snapshot.json`. `contract-graph.covera
 artifacts, but CI should regenerate them from the server controllers rather than treating
 hand-edited generated output as authoritative.
 
+## GraphQL SDL snapshots
+
+Generated GraphQL apps use a sibling contract gate, not the REST ContractGraph. The authoritative
+artifact is the package-local `graphql-contract.snapshot.json`, which stores the compiled SDL plus
+Croco resolver metadata such as DI scope, guards, roles, interceptors, and declared Problem mappings.
+
+Standalone GraphQL generated apps run the gate from `apps/graphql-api`; Next.js GraphQL generated
+apps run it from `apps/web`. CI and generated smoke should run the check before refreshing the
+snapshot:
+
+```bash
+pnpm --dir apps/graphql-api contract:check
+pnpm --dir apps/graphql-api contract:snapshot
+```
+
+Use `apps/web` for the Next.js GraphQL path. `contract:check` compares the committed
+`graphql-contract.snapshot.json` with the current compiled schema and fails on unreviewed breaking
+SDL drift, removed operations, resolver removal, DI-scope changes, guard/interceptor/role changes,
+and Problem mapping changes. `contract:snapshot` is only for intentional GraphQL contract changes
+after review.
+
+Do not route GraphQL apps through REST `contract-graph.snapshot.json`, OpenAPI, or RPC codegen gates.
+Those gates still own REST controller contracts; GraphQL review stays centered on compiled SDL plus
+resolver metadata.
+
 ## Typed RPC clients
 
 `contract:client` reads the same REST controller metadata and writes a fetch client with generated

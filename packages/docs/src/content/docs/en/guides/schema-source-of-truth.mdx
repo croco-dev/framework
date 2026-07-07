@@ -148,10 +148,11 @@ The snapshot version is `croco.graphql-contract.snapshot.v1`. It records:
 - method-level roles, guards, interceptors, and declared `GraphQLProblemResponse` mappings.
 
 Generated GraphQL apps include `graphql-contract.snapshot.json`, `contract:snapshot`, and
-`contract:check`. CI should run the check path before build/typecheck. Intentional GraphQL schema
-changes update the snapshot with `contract:snapshot`; unintentional breaking SDL drift, resolver
-removal, DI-scope changes, guard/interceptor/role changes, and Problem mapping changes fail the
-contract check.
+`contract:check`. Standalone GraphQL apps run those scripts from `apps/graphql-api`; Next.js
+GraphQL apps run them from `apps/web`. CI and generated smoke should run the check path before
+build/typecheck and before any snapshot refresh. Intentional GraphQL schema changes update the
+snapshot with `contract:snapshot`; unintentional breaking SDL drift, resolver removal, DI-scope
+changes, guard/interceptor/role changes, and Problem mapping changes fail the contract check.
 
 REST Contract Graph/OpenAPI/RPC and GraphQL SDL snapshots are sibling artifacts. Do not force GraphQL
 through the REST Contract Graph; keep GraphQL review centered on SDL plus resolver metadata.
