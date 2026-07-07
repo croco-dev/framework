@@ -55,6 +55,40 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/tx-drizzle": "^0.0.4",
 } as const satisfies Record<string, string>;
 
+export type ExternalCrocoPackageName = keyof typeof EXTERNAL_CROCO_PACKAGE_RANGES;
+
+export type GeneratedAppCrocoVersionSetEntry = {
+  readonly packageName: ExternalCrocoPackageName;
+  readonly range: string;
+};
+
+export type GeneratedAppCrocoVersionSet = {
+  readonly policy: "tested-croco-compatibility-train";
+  readonly source: string;
+  readonly packages: readonly GeneratedAppCrocoVersionSetEntry[];
+};
+
 export function getExternalCrocoPackageRange(packageName: string): string | undefined {
   return EXTERNAL_CROCO_PACKAGE_RANGES[packageName as keyof typeof EXTERNAL_CROCO_PACKAGE_RANGES];
+}
+
+export function getExternalCrocoPackageRanges(): Readonly<
+  Record<ExternalCrocoPackageName, string>
+> {
+  return EXTERNAL_CROCO_PACKAGE_RANGES;
+}
+
+export function getGeneratedAppCrocoVersionSet(): GeneratedAppCrocoVersionSet {
+  return {
+    policy: "tested-croco-compatibility-train",
+    source: "packages/create-croco-app/src/helpers/croco-ranges.ts",
+    packages: (
+      Object.entries(EXTERNAL_CROCO_PACKAGE_RANGES) as [ExternalCrocoPackageName, string][]
+    )
+      .map(([packageName, range]) => ({
+        packageName,
+        range,
+      }))
+      .sort((left, right) => left.packageName.localeCompare(right.packageName)),
+  };
 }

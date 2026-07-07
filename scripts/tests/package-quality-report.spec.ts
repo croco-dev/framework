@@ -143,6 +143,9 @@ describe("package-quality-report.mts", () => {
       "| `bundle-size:warning` | publishable package generated artifact growth",
     );
     expect(markdown).toContain(
+      "| `package-manifests:check` | package manifests and Croco compatibility train",
+    );
+    expect(markdown).toContain(
       "| `production-ready:check` | production-ready package maturity evidence",
     );
     expect(markdown).toContain(
@@ -160,7 +163,271 @@ describe("package-quality-report.mts", () => {
     expect(summaryJson).toContain('"packageName": "@croco/alpha"');
     expect(summaryJson).toContain('"publicApi"');
     expect(summaryJson).toContain('"bundleSize"');
+    expect(summaryJson).toContain('"compatibilityTrain"');
     expect(bundleSizeMarkdown).toContain("# Bundle Size Warning Report");
+  });
+
+  it("reports compatibility train policy from manifests and generated app dependencies", () => {
+    const repo = createTempRepo();
+    writePackageManifest(repo, "packages/runtime", {
+      name: "@croco/runtime",
+      version: "0.0.3",
+      scripts: {
+        build: "tsup",
+      },
+    });
+    writePackageManifest(repo, "packages/peer", {
+      name: "@croco/peer",
+      version: "0.0.3",
+      peerDependencies: {
+        "@croco/runtime": "^0.0.3",
+      },
+    });
+    writeCatalog(repo, ["runtime"]);
+    writeFile(
+      repo,
+      "scripts/internal-peer-dependency-range-exceptions.json",
+      `${JSON.stringify(
+        [
+          {
+            package: "@croco/peer",
+            section: "peerDependencies",
+            dependency: "@croco/runtime",
+            range: "^0.0.3",
+            reason: "Published peers intentionally accept the current compatible alpha line.",
+            owner: "release",
+            compatibilityRationale:
+              "The peer package consumes only stable source-level contracts covered by the compatibility train.",
+          },
+        ],
+        null,
+        2,
+      )}\n`,
+    );
+    writeFile(
+      repo,
+      "packages/create-croco-app/templates/app/package.json.hbs",
+      `${JSON.stringify(
+        {
+          dependencies: {
+            "@croco/runtime": "workspace:*",
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+      generatedAppVersionSet: {
+        policy: "tested-croco-compatibility-train",
+        source: "fixture",
+        packages: [{ packageName: "@croco/runtime", range: "^0.0.3" }],
+      },
+    });
+    const dashboard = buildReportMarkdown(report);
+
+    expect(report.compatibilityTrain).toEqual(
+      expect.objectContaining({
+        status: "pass",
+        internalRangeDriftCount: 0,
+        peerExceptionCount: 1,
+        spinePackageCount: 1,
+        generatedAppDependencyCount: 1,
+        generatedAppRangeDriftCount: 0,
+        generatedAppSpineDependencyCount: 1,
+        spinePackageNames: ["@croco/runtime"],
+      }),
+    );
+    expect(report.compatibilityTrain.peerExceptions[0]).toEqual(
+      expect.objectContaining({
+        packageName: "@croco/peer",
+        dependencyName: "@croco/runtime",
+        owner: "release",
+      }),
+    );
+    expect(report.compatibilityTrain.generatedAppDependencies[0]).toEqual(
+      expect.objectContaining({
+        packageName: "@croco/runtime",
+        templateRange: "workspace:*",
+        actualRange: "^0.0.3",
+        expectedRange: "^0.0.3",
+        inSpine: true,
+        status: "pass",
+        failureReason: null,
+      }),
+    );
+    expect(dashboard).toContain("## Compatibility train policy");
+    expect(dashboard).toContain(
+      "Fixed/linked decision: Compatibility-train validation is sufficient",
+    );
+    expect(dashboard).toContain(
+      "| `@croco/runtime` | spine | `workspace:*` | `^0.0.3` | `^0.0.3` | pass |",
+    );
+    expect(dashboard).toContain(
+      "| Package | Dependency | Range | Owner | Reason | Compatibility rationale |",
+    );
+    expect(dashboard).toContain(
+      "| `@croco/peer` | `@croco/runtime` | `^0.0.3` | release | Published peers intentionally accept the current compatible alpha line. | The peer package consumes only stable source-level contracts covered by the compatibility train. |",
+    );
+  });
+
+  it("fails compatibility train reporting when generated app ranges are stale", () => {
+    const repo = createTempRepo();
+    writePackageManifest(repo, "packages/runtime", {
+      name: "@croco/runtime",
+      version: "0.0.3",
+    });
+    writeCatalog(repo, ["runtime"]);
+    writeFile(
+      repo,
+      "packages/create-croco-app/templates/app/package.json.hbs",
+      `${JSON.stringify(
+        {
+          dependencies: {
+            "@croco/runtime": "workspace:*",
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+      generatedAppVersionSet: {
+        policy: "tested-croco-compatibility-train",
+        source: "fixture",
+        packages: [{ packageName: "@croco/runtime", range: "^0.0.2" }],
+      },
+    });
+    const dashboard = buildReportMarkdown(report);
+
+    expect(report.compatibilityTrain).toEqual(
+      expect.objectContaining({
+        status: "fail",
+        internalRangeDriftCount: 0,
+        generatedAppRangeDriftCount: 1,
+        generatedAppDependencyCount: 1,
+      }),
+    );
+    expect(report.compatibilityTrain.generatedAppDependencies[0]).toEqual(
+      expect.objectContaining({
+        packageName: "@croco/runtime",
+        actualRange: "^0.0.2",
+        expectedRange: "^0.0.3",
+        status: "fail",
+        failureReason: "expected ^0.0.3",
+      }),
+    );
+    expect(dashboard).toContain("fail; 0 internal range drift(s); 1 generated app range drift(s)");
+    expect(dashboard).toContain(
+      "| `@croco/runtime` | spine | `workspace:*` | `^0.0.2` | `^0.0.3` | fail: expected ^0.0.3 |",
+    );
+  });
+
+  it("fails compatibility train reporting when exported generated app ranges are stale outside templates", () => {
+    const repo = createTempRepo();
+    writePackageManifest(repo, "packages/runtime", {
+      name: "@croco/runtime",
+      version: "0.0.3",
+    });
+    writePackageManifest(repo, "packages/profile-runtime", {
+      name: "@croco/profile-runtime",
+      version: "0.0.4",
+    });
+    writeCatalog(repo, ["runtime"]);
+    writeFile(
+      repo,
+      "packages/create-croco-app/templates/app/package.json.hbs",
+      `${JSON.stringify(
+        {
+          dependencies: {
+            "@croco/runtime": "workspace:*",
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    const report = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+      generatedAppVersionSet: {
+        policy: "tested-croco-compatibility-train",
+        source: "fixture-version-set",
+        packages: [
+          { packageName: "@croco/runtime", range: "^0.0.3" },
+          { packageName: "@croco/profile-runtime", range: "^0.0.3" },
+        ],
+      },
+    });
+    const generatedAppDependency = report.compatibilityTrain.generatedAppDependencies.find(
+      (dependency) => dependency.packageName === "@croco/profile-runtime",
+    );
+
+    expect(report.compatibilityTrain).toEqual(
+      expect.objectContaining({
+        status: "fail",
+        generatedAppRangeDriftCount: 1,
+        generatedAppDependencyCount: 2,
+      }),
+    );
+    expect(generatedAppDependency).toEqual(
+      expect.objectContaining({
+        templateRange: "version-set",
+        actualRange: "^0.0.3",
+        expectedRange: "^0.0.4",
+        sourcePath: "fixture-version-set",
+        status: "fail",
+        failureReason: "expected ^0.0.4",
+      }),
+    );
+  });
+
+  it("uses shared peer exception schema for compatibility train reporting", () => {
+    const repo = createTempRepo();
+    writePackageManifest(repo, "packages/runtime", {
+      name: "@croco/runtime",
+      version: "0.0.3",
+    });
+    writePackageManifest(repo, "packages/peer", {
+      name: "@croco/peer",
+      version: "0.0.3",
+      peerDependencies: {
+        "@croco/runtime": "^0.0.3",
+      },
+    });
+    writeFile(
+      repo,
+      "scripts/internal-peer-dependency-range-exceptions.json",
+      `${JSON.stringify(
+        [
+          {
+            package: "@croco/peer",
+            section: "peerDependencies",
+            dependency: "@croco/runtime",
+            range: "^0.0.3",
+            rationale: "Legacy schema is missing reason, owner, and compatibilityRationale.",
+          },
+        ],
+        null,
+        2,
+      )}\n`,
+    );
+
+    expect(() =>
+      createPackageQualityReport({
+        rootDir: repo,
+        summaryDir: join(repo, ".turbo", "runs"),
+      }),
+    ).toThrow(
+      /scripts\/internal-peer-dependency-range-exceptions\.json\[0\]\.reason must be a string/,
+    );
   });
 
   it("reports bundle-size artifact ownership when baselines are missing", () => {
@@ -652,6 +919,15 @@ function writePackage(
   scripts: Record<string, string>,
 ): void {
   writeWorkspacePackage(repo, `packages/${dirName}`, packageName, scripts);
+}
+
+function writePackageManifest(
+  repo: string,
+  relativeDir: string,
+  packageJson: Record<string, unknown>,
+): void {
+  writeFile(repo, `${relativeDir}/package.json`, `${JSON.stringify(packageJson, null, 2)}\n`);
+  writeFile(repo, `${relativeDir}/src/index.ts`, "export const value = 1;\n");
 }
 
 function writeWorkspacePackage(

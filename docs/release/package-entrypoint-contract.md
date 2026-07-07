@@ -26,8 +26,9 @@ dependencies: pnpm rewrites `workspace:*` to the target workspace package versio
 not need hand-written internal semver ranges. If a future public peer compatibility range must stay
 as semver in source, add an exact checked exception to
 `scripts/internal-peer-dependency-range-exceptions.json` with the package name, `peerDependencies`
-section, internal dependency name, range, and compatibility rationale. Exceptions are peer-only;
-internal `dependencies`, `devDependencies`, and `optionalDependencies` still use `workspace:*`.
+section, internal dependency name, range, reason, owner, and compatibility rationale. Exceptions are
+peer-only; internal `dependencies`, `devDependencies`, and `optionalDependencies` still use
+`workspace:*`.
 
 The contract is enforced by:
 
