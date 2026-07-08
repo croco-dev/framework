@@ -1,6 +1,7 @@
-import type { Guard } from "@croco/framework-context";
-import { Controller, Get, UseGuards, type ExecutionContext } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { Guard } from "@croco/framework-context";
+import { Controller, Get, UseGuards } from "@croco/protocols-rest";
+import type { ExecutionContext } from "@croco/protocols-rest";
 import { createCrocoApp } from "../app";
 import { getUserAuditEntries, resetUserRuntimeForTests } from "../users";
 

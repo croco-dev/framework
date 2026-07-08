@@ -1,6 +1,6 @@
 import "reflect-metadata";
-import { ProblemFactory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ProblemFactory } from "@croco/problems-core";
 import {
   authGuardConformance,
   createConformanceApiKeyPrincipal,

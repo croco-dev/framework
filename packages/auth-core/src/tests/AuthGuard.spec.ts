@@ -151,6 +151,24 @@ describe("AuthGuard", () => {
     await expect(activation).rejects.toHaveProperty("cause", cause);
   });
 
+  it("should preserve non-Error provider outage values as auth-core Problem causes", async () => {
+    class TestController {
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController.prototype, "protectedMethod");
+    const cause = "ECONNRESET";
+    vi.spyOn(mockAuthProvider, "authenticate").mockRejectedValue(cause);
+
+    const activation = authGuard.canActivate(context);
+
+    await expect(activation).rejects.toThrow(AuthProviderUnavailableProblem);
+    await expect(activation).rejects.toMatchObject(
+      authGuardConformance.authCore.providerUnavailable,
+    );
+    await expect(activation).rejects.toHaveProperty("cause", expect.any(Error));
+    await expect(activation).rejects.toHaveProperty("cause.cause", cause);
+  });
+
   it("should preserve provider-thrown Croco Problems", async () => {
     class TestController {
       protectedMethod() {}
