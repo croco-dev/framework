@@ -458,6 +458,17 @@ const smokeCases: readonly SmokeCase[] = [
     runtimeTarget: "node",
     matrixTargets: ["base-ddd"],
     validations: [
+      {
+        label: GRAPHQL_CONTRACT_CHECK_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:check"],
+      },
+      {
+        label: GRAPHQL_CONTRACT_SNAPSHOT_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:snapshot"],
+        paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
+      },
       { label: "typecheck", args: ["typecheck"] },
       {
         label: "protected GraphQL route smoke",
