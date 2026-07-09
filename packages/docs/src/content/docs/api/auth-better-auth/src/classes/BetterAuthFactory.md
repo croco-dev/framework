@@ -29,8 +29,8 @@ title: "BetterAuthFactory"
 
 ### getAuth()
 
-> **getAuth**(): `Auth`\<`BetterAuthOptions`\>
+> **getAuth**(): `Auth`
 
 #### Returns
 
-`Auth`\<`BetterAuthOptions`\>
+`Auth`
