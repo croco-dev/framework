@@ -5047,22 +5047,6 @@
     },
     {
       "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
-      "line": 687,
-      "column": 3,
-      "code": "TS2375",
-      "message": "Type '{ name: string; description: string; requiredForRealProvider: boolean; secret: boolean; example: string | undefined; }' is not assignable to type 'SaasProviderEnvVar' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
-      "line": 697,
-      "column": 3,
-      "code": "TS2375",
-      "message": "Type '{ capability: SaasProviderCapabilityName; provider: string; status: CapabilityStatus; packageName: string | undefined; env: readonly string[]; notes: string; }' is not assignable to type 'SaasProviderCapability' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/types.ts",
       "line": 1,
       "column": 38,

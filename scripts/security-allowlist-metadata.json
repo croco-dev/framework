@@ -23,6 +23,9 @@
           "reviewBy": "2026-10-31"
         }
       ]
+    },
+    "generatedTemplates": {
+      "allowlists": []
     }
   }
 }

@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { readGeneratedSmokeAllowlistMetadata } from "../create-croco-app-generated-smoke.mts";
 import {
   createWorkspacePackageIndex,
   resolveLocalCrocoPackagesForGeneratedProject,
@@ -145,6 +146,16 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
       'overrides:\n  "@croco/template-only": "file:/tmp/template-only.tgz"',
     );
     expect(packageJson.pnpm).toBeUndefined();
+  });
+
+  it("reports malformed generated secret allowlist metadata with smoke case context", () => {
+    const root = createTempRoot();
+    const metadataPath = join(root, "security-allowlist-metadata.json");
+    writeFileSync(metadataPath, "{ invalid-json");
+
+    expect(() => readGeneratedSmokeAllowlistMetadata(metadataPath, "saas-golden-path")).toThrow(
+      /saas-golden-path generated secret allowlist metadata is invalid JSON:/,
+    );
   });
 });
 

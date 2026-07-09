@@ -6,6 +6,11 @@ import {
   type TenantModelCapabilityName,
   type TenantModelName,
 } from "@croco/tenant-core/tenant-model";
+import {
+  renderSafeEnvExampleValue,
+  renderSecretPlaceholderPolicyTable,
+  renderSecretsChecklistPlaceholderItems,
+} from "./secret-placeholder-policy.js";
 
 export const SAAS_PROVIDER_PROFILE_CHOICES = [
   "saas-node-postgres",
@@ -103,6 +108,7 @@ export type SaasProviderProfileManifest = {
       tenantModelManifest: "croco-tenant-model.manifest.json";
       tenantModelSchema: "croco-tenant-model.schema.json";
       providerDocs: "docs/provider-profile.md";
+      secretsChecklist: "docs/secrets-checklist.md";
       tenantModelPlaybook: "docs/tenant-model-playbook.md";
       envExample: ".env.example";
       source: "apps/api-server/src/generatedSaasProviderProfile.ts";
@@ -491,6 +497,7 @@ export function createSaasProviderProfileManifest(
         tenantModelManifest: "croco-tenant-model.manifest.json",
         tenantModelSchema: "croco-tenant-model.schema.json",
         providerDocs: "docs/provider-profile.md",
+        secretsChecklist: "docs/secrets-checklist.md",
         tenantModelPlaybook: "docs/tenant-model-playbook.md",
         envExample: ".env.example",
         source: "apps/api-server/src/generatedSaasProviderProfile.ts",
@@ -574,23 +581,12 @@ export function renderSaasEnvExample(manifest: SaasProviderProfileManifest): str
     ...[...manifest.env.required, ...manifest.env.optional].flatMap((entry) => [
       "",
       `# ${entry.description}`,
-      `${entry.name}=${renderEnvExampleValue(entry, manifest.profile.name)}`,
+      `${entry.name}=${renderSafeEnvExampleValue(entry, manifest.profile.name)}`,
     ]),
     "",
   ];
 
   return lines.join("\n");
-}
-
-function renderEnvExampleValue(
-  entry: SaasProviderEnvVar,
-  profileName: SaasProviderProfileName,
-): string {
-  if (entry.name === "SAAS_PROVIDER_PROFILE") {
-    return profileName;
-  }
-
-  return entry.example ?? (entry.secret ? "<secret>" : `<${entry.name.toLowerCase()}>`);
 }
 
 export function renderSaasSecretsChecklist(manifest: SaasProviderProfileManifest): string {
@@ -600,13 +596,17 @@ export function renderSaasSecretsChecklist(manifest: SaasProviderProfileManifest
   return [
     `# ${manifest.profile.displayName} Secrets Checklist`,
     "",
+    "## Placeholder Policy",
+    "",
+    renderSecretPlaceholderPolicyTable(manifest),
+    "",
     "## Required Secrets",
     "",
-    ...requiredSecrets.map((entry) => `- [ ] ${entry.name}: ${entry.description}`),
+    ...renderSecretsChecklistPlaceholderItems(manifest, requiredSecrets),
     "",
     "## Required Non-Secret Config",
     "",
-    ...nonSecretConfig.map((entry) => `- [ ] ${entry.name}: ${entry.description}`),
+    ...renderSecretsChecklistPlaceholderItems(manifest, nonSecretConfig),
     "",
     "## Real-Provider Smoke",
     "",
@@ -640,6 +640,12 @@ export function renderSaasDeployNotes(manifest: SaasProviderProfileManifest): st
     "",
     "Quality gates:",
     ...manifest.compatibility.qualityGates.map((gate) => `- \`${gate}\``),
+    "",
+    "## Placeholder Policy",
+    "",
+    renderSecretPlaceholderPolicyTable(manifest),
+    "",
+    "Generated `.env.example`, provider docs, and secrets checklists must use these safe values. Load real provider credentials from deployment secrets only.",
     "",
     `Runtime target: \`${manifest.profile.runtimeTarget}\``,
     `Tenant model: \`${tenantModel.name}\` (${tenantModel.displayName})`,
@@ -684,7 +690,8 @@ function envVar(
   secret: boolean,
   example?: string,
 ): SaasProviderEnvVar {
-  return { name, description, requiredForRealProvider, secret, example };
+  const base = { name, description, requiredForRealProvider, secret };
+  return example === undefined ? base : { ...base, example };
 }
 
 function capability(
@@ -694,14 +701,14 @@ function capability(
   packageName: string | undefined,
   env: readonly string[],
 ): SaasProviderCapability {
-  return {
+  const base = {
     capability: capabilityName,
     provider,
     status,
-    packageName,
     env,
     notes: `${provider} covers ${capabilityName}.`,
   };
+  return packageName === undefined ? base : { ...base, packageName };
 }
 
 function capabilities(

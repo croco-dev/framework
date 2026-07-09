@@ -5,6 +5,10 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { argv, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
+import {
+  readGeneratedTemplateSecretAllowlistsFromMetadata,
+  type GeneratedTemplateSecretAllowlistEntry,
+} from "../packages/create-croco-app/src/secret-placeholder-policy.ts";
 
 type Options = {
   readonly explicitGitleaksConfigPath: boolean;
@@ -51,6 +55,7 @@ type GitleaksAllowlistEntry = {
 
 type SecurityAllowlistMetadata = {
   readonly auditIgnores: readonly AuditMetadataEntry[];
+  readonly generatedTemplateAllowlists: readonly GeneratedTemplateSecretAllowlistEntry[];
   readonly gitleaksAllowlists: readonly GitleaksMetadataEntry[];
   readonly gitleaksConfigPath?: string;
 };
@@ -257,9 +262,15 @@ function readMetadata(
       violations,
     ),
   );
+  const generatedTemplateAllowlists = readGeneratedTemplateSecretAllowlistsFromMetadata(
+    root,
+    today,
+  );
+  violations.push(...generatedTemplateAllowlists.violations);
 
   return {
     auditIgnores: [...auditIgnoreGhsas, ...auditIgnoreCves],
+    generatedTemplateAllowlists: generatedTemplateAllowlists.allowlists,
     gitleaksAllowlists: [...gitleaksAllowlists, ...gitleaksIgnoreFingerprints],
     gitleaksConfigPath,
   };
@@ -1203,14 +1214,30 @@ function validateGitleaksMetadata(
   }
 }
 
+function validateGeneratedTemplateMetadata(
+  metadata: readonly GeneratedTemplateSecretAllowlistEntry[],
+  violations: Violation[],
+): void {
+  const keys = metadata.map((entry) => `${entry.pathPattern}\u0000${entry.matchPattern}`);
+
+  for (const duplicateKey of duplicateValues(keys)) {
+    const [pathPattern, matchPattern] = duplicateKey.split("\u0000");
+    violations.push({
+      message: `generated template secret allowlist contains duplicate pathPattern ${pathPattern} and matchPattern ${matchPattern}`,
+      recovery: "Keep one metadata object per generated template secret-scan exception.",
+    });
+  }
+}
+
 function printResult(
   violations: readonly Violation[],
   effectiveAuditIgnores: readonly string[],
   effectiveGitleaks: GitleaksEffectiveAllowlists,
+  generatedTemplateAllowlists: readonly GeneratedTemplateSecretAllowlistEntry[],
 ): void {
   if (violations.length === 0) {
     log(
-      `security-allowlist-metadata: passed (${effectiveAuditIgnores.length} audit ignores, ${effectiveGitleaks.entries.length} gitleaks allowlist entries, ${effectiveGitleaks.ignoreFingerprints.length} gitleaks ignore fingerprints).`,
+      `security-allowlist-metadata: passed (${effectiveAuditIgnores.length} audit ignores, ${effectiveGitleaks.entries.length} gitleaks allowlist entries, ${effectiveGitleaks.ignoreFingerprints.length} gitleaks ignore fingerprints, ${generatedTemplateAllowlists.length} generated template allowlists).`,
     );
     return;
   }
@@ -1592,8 +1619,14 @@ function main(): void {
 
   validateAuditMetadata(effectiveAuditIgnores, metadata.auditIgnores, violations);
   validateGitleaksMetadata(effectiveGitleaks, metadata.gitleaksAllowlists, violations);
+  validateGeneratedTemplateMetadata(metadata.generatedTemplateAllowlists, violations);
   validateNoInlineGitleaksSuppressions(options, violations);
-  printResult(violations, effectiveAuditIgnores, effectiveGitleaks);
+  printResult(
+    violations,
+    effectiveAuditIgnores,
+    effectiveGitleaks,
+    metadata.generatedTemplateAllowlists,
+  );
 
   if (violations.length > 0) {
     exit(1);

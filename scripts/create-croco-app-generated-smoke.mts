@@ -11,7 +11,11 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  readGeneratedTemplateSecretAllowlistsFromMetadata,
+  scanGeneratedTemplateSecretText,
+} from "../packages/create-croco-app/src/secret-placeholder-policy.ts";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../packages/create-croco-app/src/supported-options.ts";
 import {
   createWorkspacePackageIndex,
@@ -167,7 +171,7 @@ const generatedSmokeReportDir = resolve(
   process.env.CROCO_GENERATED_SMOKE_REPORT_DIR ?? join(rootDir, "ci-reports", "generated-apps"),
 );
 const turboPath = join(rootDir, "node_modules", "turbo", "bin", "turbo");
-const smokeRoot = mkdtempSync(join(tmpdir(), "croco-generated-app-smoke-"));
+let smokeRoot: string | undefined;
 const commandTimeoutMs = 600_000;
 const sourceFileExtensions = new Set([
   ".js",
@@ -188,6 +192,7 @@ const securityValidationScanFileExtensions = new Set([
 ]);
 const securityValidationScanFileNames = new Set([
   ".env",
+  ".env.example",
   ".env.local",
   ".env.development",
   ".env.production",
@@ -1066,156 +1071,171 @@ const smokeCases: readonly SmokeCase[] = [
   },
 ];
 
-let smokeReport: GeneratedSmokeReport | undefined;
+if (isMainModule()) {
+  let smokeReport: GeneratedSmokeReport | undefined;
+  const activeSmokeRoot = getSmokeRoot();
 
-try {
-  const selectedSmokeCases = selectSmokeCases(smokeCases);
-  const isFilteredRun = selectedSmokeCases.length !== smokeCases.length;
+  try {
+    const selectedSmokeCases = selectSmokeCases(smokeCases);
+    const isFilteredRun = selectedSmokeCases.length !== smokeCases.length;
 
-  assertGraphQLSmokeContractCoverage(selectedSmokeCases);
+    assertGraphQLSmokeContractCoverage(selectedSmokeCases);
 
-  if (isFilteredRun) {
-    console.log(
-      `create-croco-app-generated-smoke: selected cases ${selectedSmokeCases.map(({ name }) => name).join(", ")}`,
-    );
-  } else {
-    assertSmokeCoverage(smokeCases);
-    assertTemplateMatrixAccountability(smokeCases);
-    printSmokeCoverageSummary(smokeCases);
-  }
+    if (isFilteredRun) {
+      console.log(
+        `create-croco-app-generated-smoke: selected cases ${selectedSmokeCases.map(({ name }) => name).join(", ")}`,
+      );
+    } else {
+      assertSmokeCoverage(smokeCases);
+      assertTemplateMatrixAccountability(smokeCases);
+      printSmokeCoverageSummary(smokeCases);
+    }
 
-  smokeReport = createGeneratedSmokeReport(selectedSmokeCases, isFilteredRun);
-  writeGeneratedSmokeReport(smokeReport);
+    smokeReport = createGeneratedSmokeReport(selectedSmokeCases, isFilteredRun);
+    writeGeneratedSmokeReport(smokeReport);
 
-  runGeneratedAppContractGates(smokeReport);
+    runGeneratedAppContractGates(smokeReport);
 
-  runGateCommand(
-    smokeReport,
-    "workspace package build",
-    process.execPath,
-    [
-      turboPath,
-      "build",
-      "--filter=@croco/auth-better-auth...",
-      "--filter=@croco/auth-clerk...",
-      "--filter=@croco/auth-drizzle...",
-      "--filter=@croco/billing-polar...",
-      "--filter=@croco/cli...",
-      "--filter=@croco/events-core...",
-      "--filter=@croco/events-inmemory...",
-      "--filter=create-croco-app...",
-      "--filter=@croco/framework-context...",
-      "--filter=@croco/frontend-cloudflare...",
-      "--filter=@croco/frontend-problems...",
-      "--filter=@croco/frontend-react...",
-      "--filter=@croco/frontend-vite...",
-      "--filter=@croco/llm-core...",
-      "--filter=@croco/llm-metering...",
-      "--filter=@croco/meta-vite...",
-      "--filter=@croco/lifecycle-core...",
-      "--filter=@croco/metering-drizzle...",
-      "--filter=@croco/metering-upstash...",
-      "--filter=@croco/openapi-spec...",
-      "--filter=@croco/problems-core...",
-      "--filter=@croco/preset-cloudflare...",
-      "--filter=@croco/preset-lambda...",
-      "--filter=@croco/repository-core...",
-      "--filter=@croco/retry-core...",
-      "--filter=@croco/rpc-codegen...",
-      "--filter=@croco/storage-cloudinary...",
-      "--filter=@croco/storage-r2...",
-      "--filter=@croco/tasks-qstash...",
-      "--filter=@croco/telemetry-api...",
-      "--filter=@croco/telemetry-sdk-node...",
-      "--filter=@croco/tenant-core...",
-      "--filter=@croco/transports-http...",
-      "--filter=@croco/triggers-qstash...",
-      "--filter=@croco/tx-drizzle...",
-      "--force",
-    ],
-    rootDir,
-  );
-  assertExists(cliPath, "create-croco-app dist CLI is missing after build");
-
-  const workspacePackageIndex = createWorkspacePackageIndex(rootDir);
-  const packedWorkspacePackages = new Map<string, string>();
-  const builtWorkspacePackageNames = new Set<string>();
-
-  for (const smokeCase of selectedSmokeCases) {
-    const projectDir = join(smokeRoot, smokeCase.name);
-    const caseResult = getSmokeCaseResult(smokeReport, smokeCase.name);
-
-    runSmokeCaseCommand(
+    runGateCommand(
       smokeReport,
-      caseResult,
-      "generate",
-      "node",
-      [cliPath, projectDir, ...smokeCase.args],
+      "workspace package build",
+      process.execPath,
+      [
+        turboPath,
+        "build",
+        "--filter=@croco/auth-better-auth...",
+        "--filter=@croco/auth-clerk...",
+        "--filter=@croco/auth-drizzle...",
+        "--filter=@croco/billing-polar...",
+        "--filter=@croco/cli...",
+        "--filter=@croco/events-core...",
+        "--filter=@croco/events-inmemory...",
+        "--filter=create-croco-app...",
+        "--filter=@croco/framework-context...",
+        "--filter=@croco/frontend-cloudflare...",
+        "--filter=@croco/frontend-problems...",
+        "--filter=@croco/frontend-react...",
+        "--filter=@croco/frontend-vite...",
+        "--filter=@croco/llm-core...",
+        "--filter=@croco/llm-metering...",
+        "--filter=@croco/meta-vite...",
+        "--filter=@croco/lifecycle-core...",
+        "--filter=@croco/metering-drizzle...",
+        "--filter=@croco/metering-upstash...",
+        "--filter=@croco/openapi-spec...",
+        "--filter=@croco/problems-core...",
+        "--filter=@croco/preset-cloudflare...",
+        "--filter=@croco/preset-lambda...",
+        "--filter=@croco/repository-core...",
+        "--filter=@croco/retry-core...",
+        "--filter=@croco/rpc-codegen...",
+        "--filter=@croco/storage-cloudinary...",
+        "--filter=@croco/storage-r2...",
+        "--filter=@croco/tasks-qstash...",
+        "--filter=@croco/telemetry-api...",
+        "--filter=@croco/telemetry-sdk-node...",
+        "--filter=@croco/tenant-core...",
+        "--filter=@croco/transports-http...",
+        "--filter=@croco/triggers-qstash...",
+        "--filter=@croco/tx-drizzle...",
+        "--force",
+      ],
       rootDir,
     );
-    const generatedSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
-      projectDir,
-      join(smokeRoot, "generated-package-packs"),
-      workspacePackageIndex,
-      packedWorkspacePackages,
-      builtWorkspacePackageNames,
-    );
-    rewriteExternalCrocoRanges(
-      projectDir,
-      generatedSmokeRangeOverrides,
-      generatedSmokeExternalCrocoRangeExceptions,
-    );
-    assertGeneratedReadme(projectDir, smokeCase);
-    assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
-    writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
-    runSmokeCaseCommand(
-      smokeReport,
-      caseResult,
-      "install",
-      "corepack",
-      ["pnpm", "install"],
-      projectDir,
-    );
-    const lockfilePath = join(projectDir, "pnpm-lock.yaml");
-    assertExists(lockfilePath, `${smokeCase.name} did not create a pnpm lockfile`);
-    assertPnpmLockfileUsesLocalTarballOverrides(
-      lockfilePath,
-      smokeCase.name,
-      generatedSmokeRangeOverrides,
-    );
-    assertExists(
-      join(projectDir, "node_modules"),
-      `${smokeCase.name} did not install dependencies with pnpm`,
-    );
+    assertExists(cliPath, "create-croco-app dist CLI is missing after build");
 
-    for (const validation of smokeCase.validations) {
-      runValidation(projectDir, smokeCase, validation, smokeReport, caseResult);
+    const workspacePackageIndex = createWorkspacePackageIndex(rootDir);
+    const packedWorkspacePackages = new Map<string, string>();
+    const builtWorkspacePackageNames = new Set<string>();
+
+    for (const smokeCase of selectedSmokeCases) {
+      const projectDir = join(activeSmokeRoot, smokeCase.name);
+      const caseResult = getSmokeCaseResult(smokeReport, smokeCase.name);
+
+      runSmokeCaseCommand(
+        smokeReport,
+        caseResult,
+        "generate",
+        "node",
+        [cliPath, projectDir, ...smokeCase.args],
+        rootDir,
+      );
+      const generatedSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
+        projectDir,
+        join(activeSmokeRoot, "generated-package-packs"),
+        workspacePackageIndex,
+        packedWorkspacePackages,
+        builtWorkspacePackageNames,
+      );
+      rewriteExternalCrocoRanges(
+        projectDir,
+        generatedSmokeRangeOverrides,
+        generatedSmokeExternalCrocoRangeExceptions,
+      );
+      assertGeneratedReadme(projectDir, smokeCase);
+      assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
+      assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
+      writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
+      runSmokeCaseCommand(
+        smokeReport,
+        caseResult,
+        "install",
+        "corepack",
+        ["pnpm", "install"],
+        projectDir,
+      );
+      const lockfilePath = join(projectDir, "pnpm-lock.yaml");
+      assertExists(lockfilePath, `${smokeCase.name} did not create a pnpm lockfile`);
+      assertPnpmLockfileUsesLocalTarballOverrides(
+        lockfilePath,
+        smokeCase.name,
+        generatedSmokeRangeOverrides,
+      );
+      assertExists(
+        join(projectDir, "node_modules"),
+        `${smokeCase.name} did not install dependencies with pnpm`,
+      );
+
+      for (const validation of smokeCase.validations) {
+        runValidation(projectDir, smokeCase, validation, smokeReport, caseResult);
+      }
+      runGraphQLContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
+      caseResult.status = "passed";
+      writeGeneratedSmokeReport(smokeReport);
     }
-    runGraphQLContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
-    caseResult.status = "passed";
-    writeGeneratedSmokeReport(smokeReport);
-  }
 
-  if (!isFilteredRun) {
-    runSpaBeSplitContractSmoke(
-      workspacePackageIndex,
-      packedWorkspacePackages,
-      builtWorkspacePackageNames,
-    );
-  }
+    if (!isFilteredRun) {
+      runSpaBeSplitContractSmoke(
+        workspacePackageIndex,
+        packedWorkspacePackages,
+        builtWorkspacePackageNames,
+      );
+    }
 
-  smokeReport.status = "passed";
-  writeGeneratedSmokeReport(smokeReport);
-  console.log("create-croco-app-generated-smoke: all generated app smoke cases passed");
-} catch (error) {
-  if (smokeReport) {
-    smokeReport.status = "failed";
-    smokeReport.failure = toErrorMessage(error);
+    smokeReport.status = "passed";
     writeGeneratedSmokeReport(smokeReport);
+    console.log("create-croco-app-generated-smoke: all generated app smoke cases passed");
+  } catch (error) {
+    if (smokeReport) {
+      smokeReport.status = "failed";
+      smokeReport.failure = toErrorMessage(error);
+      writeGeneratedSmokeReport(smokeReport);
+    }
+    throw error;
+  } finally {
+    rmSync(activeSmokeRoot, { force: true, recursive: true });
+    smokeRoot = undefined;
   }
-  throw error;
-} finally {
-  rmSync(smokeRoot, { force: true, recursive: true });
+}
+
+function isMainModule(): boolean {
+  const entrypoint = process.argv[1];
+  return entrypoint !== undefined && import.meta.url === pathToFileURL(entrypoint).href;
+}
+
+function getSmokeRoot(): string {
+  smokeRoot ??= mkdtempSync(join(tmpdir(), "croco-generated-app-smoke-"));
+  return smokeRoot;
 }
 
 function runGeneratedAppContractGates(report: GeneratedSmokeReport): void {
@@ -1226,6 +1246,7 @@ function runGeneratedAppContractGates(report: GeneratedSmokeReport): void {
     ["exec", "oxlint", "packages/create-croco-app/templates"],
     report,
   );
+  runGate("generated secret placeholder policy", ["generated-secret-placeholders:check"], report);
 }
 
 function runGate(label: string, args: readonly string[], report: GeneratedSmokeReport): void {
@@ -1705,6 +1726,67 @@ function assertNoGeneratedSecurityValidationOptOut(projectDir: string, smokeCase
   console.log(
     `create-croco-app-generated-smoke: ${smokeCase.name} keeps HTTP security validation enabled`,
   );
+}
+
+function assertNoGeneratedCredentialLookingValues(projectDir: string, smokeCase: SmokeCase): void {
+  const metadata = readGeneratedSmokeAllowlistMetadata(
+    join(rootDir, "scripts", "security-allowlist-metadata.json"),
+    smokeCase.name,
+  );
+  const allowlistRead = readGeneratedTemplateSecretAllowlistsFromMetadata(
+    metadata,
+    new Date().toISOString().slice(0, 10),
+  );
+
+  if (allowlistRead.violations.length > 0) {
+    throw new Error(
+      [
+        `${smokeCase.name} generated secret allowlist metadata is invalid`,
+        ...allowlistRead.violations.map(
+          (violation) => `- ${violation.message} Recovery: ${violation.recovery}`,
+        ),
+      ].join("\n"),
+    );
+  }
+
+  const findings = collectGeneratedSecurityValidationScanFiles(projectDir).flatMap((filePath) =>
+    scanGeneratedTemplateSecretText(
+      relative(projectDir, filePath).replace(/\\/g, "/"),
+      readFileSync(filePath, "utf8"),
+      allowlistRead.allowlists,
+    ),
+  );
+
+  if (findings.length > 0) {
+    throw new Error(
+      [
+        `${smokeCase.name} generated files contain credential-shaped values`,
+        ...findings.map(
+          (finding) =>
+            `- ${finding.filePath}:${finding.line} ${finding.patternId} ${finding.match}`,
+        ),
+      ].join("\n"),
+    );
+  }
+
+  console.log(
+    `create-croco-app-generated-smoke: ${smokeCase.name} generated secret placeholders are safe`,
+  );
+}
+
+export function readGeneratedSmokeAllowlistMetadata(
+  metadataPath: string,
+  smokeCaseName: string,
+): unknown {
+  try {
+    return JSON.parse(readFileSync(metadataPath, "utf8")) as unknown;
+  } catch (error) {
+    throw new Error(
+      `${smokeCaseName} generated secret allowlist metadata is invalid JSON: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
 }
 
 function collectGeneratedSecurityValidationScanFiles(directory: string): string[] {
@@ -2216,7 +2298,8 @@ function runSpaBeSplitContractSmoke(
   packedWorkspacePackages: Map<string, string>,
   builtWorkspacePackageNames: Set<string>,
 ): void {
-  const projectDir = join(smokeRoot, "rest-spa-contracts");
+  const contractSmokeRoot = getSmokeRoot();
+  const projectDir = join(contractSmokeRoot, "rest-spa-contracts");
   const templateDir = join(rootDir, "packages", "create-croco-app", "templates", "spa-be-split");
 
   renderTemplate(templateDir, projectDir, {
@@ -2230,7 +2313,7 @@ function runSpaBeSplitContractSmoke(
   );
   const contractSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
     projectDir,
-    join(smokeRoot, "contract-package-packs"),
+    join(contractSmokeRoot, "contract-package-packs"),
     workspacePackageIndex,
     packedWorkspacePackages,
     builtWorkspacePackageNames,

@@ -946,6 +946,22 @@ describe("Base preset README templates", () => {
   });
 });
 
+describe("Generated secret placeholder helper", () => {
+  it("matches the canonical create-croco-app helper", () => {
+    const testsDir = dirname(fileURLToPath(import.meta.url));
+    const canonicalHelper = readFileSync(
+      join(testsDir, "..", "secret-placeholder-policy.ts"),
+      "utf-8",
+    );
+    const generatedHelper = readFileSync(
+      templatePath("saas", "apps", "api-server", "src", "secret-placeholder-policy.ts"),
+      "utf-8",
+    );
+
+    expect(generatedHelper).toBe(canonicalHelper);
+  });
+});
+
 describe.each(["spa-be-split", "saas", "ai-saas", "admin-console"])(
   "Shipped template: %s",
   (template) => {
