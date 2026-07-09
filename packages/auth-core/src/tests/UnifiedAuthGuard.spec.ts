@@ -1,5 +1,11 @@
 import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ProblemFactory } from "@croco/problems-core";
+import {
+  authGuardConformance,
+  createConformanceApiKeyPrincipal,
+  createConformanceAuthCoreUser,
+} from "../../../../test-support/authGuardConformance";
 import { AUTH_PUBLIC_KEY } from "../libs/constants";
 import { UnifiedAuthGuard } from "../libs/guards/UnifiedAuthGuard";
 import type { ApiKeyProvider } from "../libs/interfaces/ApiKeyProvider";
@@ -8,29 +14,16 @@ import type { AuthRequest } from "../libs/interfaces/AuthRequest";
 import type { AuthUser } from "../libs/interfaces/AuthUser";
 import type { RouteExecutionContext } from "../libs/interfaces/Guard";
 import type { ApiKeyPrincipal } from "../libs/interfaces/Principal";
-import { UnauthorizedProblem } from "../libs/problems/AuthProblems";
+import { AuthProviderUnavailableProblem, UnauthorizedProblem } from "../libs/problems/AuthProblems";
 
 describe("UnifiedAuthGuard", () => {
   let guard!: UnifiedAuthGuard;
   let mockAuthProvider!: AuthProvider & { authenticate: ReturnType<typeof vi.fn> };
   let mockApiKeyProvider!: ApiKeyProvider & { authenticate: ReturnType<typeof vi.fn> };
 
-  const mockUser: AuthUser = {
-    id: "user-1",
-    email: "test@example.com",
-    roles: ["user"],
-    permissions: ["read:users"],
-  };
+  const mockUser = createConformanceAuthCoreUser() as AuthUser;
 
-  const mockApiKeyPrincipal: ApiKeyPrincipal = {
-    type: "apikey",
-    id: "api-key-1",
-    keyId: "kid_123",
-    name: "Test API Key",
-    keyStart: "pk_test_...",
-    permissions: ["read:users"],
-    tenantId: "tenant-1",
-  };
+  const mockApiKeyPrincipal = createConformanceApiKeyPrincipal() as ApiKeyPrincipal;
 
   const createMockContext = (
     target: unknown,
@@ -106,6 +99,13 @@ describe("UnifiedAuthGuard", () => {
     expect(result).toBe(true);
     expect(request.principal).toBe(mockApiKeyPrincipal);
     expect(request.apiKey).toBe(mockApiKeyPrincipal);
+    expect(request.principal).toMatchObject({
+      permissions: [...authGuardConformance.subject.permissions],
+      tenantId: authGuardConformance.subject.tenantId,
+      metadata: {
+        scopes: [...authGuardConformance.subject.scopes],
+      },
+    });
     expect(mockApiKeyProvider.authenticate).toHaveBeenCalledWith(context.getRequest());
     expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
   });
@@ -156,8 +156,10 @@ describe("UnifiedAuthGuard", () => {
     });
     mockApiKeyProvider.authenticate.mockResolvedValue(null);
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedProblem);
-    await expect(guard.canActivate(context)).rejects.toThrow("Invalid API key");
+    const activation = guard.canActivate(context);
+
+    await expect(activation).rejects.toThrow(UnauthorizedProblem);
+    await expect(activation).rejects.toThrow("Invalid API key");
     expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
   });
 
@@ -174,6 +176,17 @@ describe("UnifiedAuthGuard", () => {
     expect(result).toBe(true);
     expect(request.principal).toEqual({ ...mockUser, type: "user" });
     expect(request.user).toBe(mockUser);
+    expect(request.principal).toMatchObject({
+      id: authGuardConformance.subject.id,
+      email: authGuardConformance.subject.email,
+      roles: [...authGuardConformance.subject.roles],
+      permissions: [...authGuardConformance.subject.permissions],
+      tenantId: authGuardConformance.subject.tenantId,
+      metadata: {
+        tenantId: authGuardConformance.subject.tenantId,
+        scopes: [...authGuardConformance.subject.scopes],
+      },
+    });
     expect(mockAuthProvider.authenticate).toHaveBeenCalledWith(context.getRequest());
     expect(mockApiKeyProvider.authenticate).not.toHaveBeenCalled();
   });
@@ -185,7 +198,12 @@ describe("UnifiedAuthGuard", () => {
     const context = createMockContext(TestController.prototype, "protectedMethod", {});
     mockAuthProvider.authenticate.mockResolvedValue(null);
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedProblem);
+    const activation = guard.canActivate(context);
+
+    await expect(activation).rejects.toThrow(UnauthorizedProblem);
+    await expect(activation).rejects.toMatchObject(
+      authGuardConformance.authCore.invalidCredentials,
+    );
     expect(mockApiKeyProvider.authenticate).not.toHaveBeenCalled();
   });
 
@@ -196,7 +214,92 @@ describe("UnifiedAuthGuard", () => {
     const context = createMockContext(TestController.prototype, "protectedMethod", {});
     mockAuthProvider.authenticate.mockResolvedValue(null);
 
-    await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedProblem);
+    const activation = guard.canActivate(context);
+
+    await expect(activation).rejects.toThrow(UnauthorizedProblem);
+    await expect(activation).rejects.toMatchObject(
+      authGuardConformance.authCore.missingCredentials,
+    );
+  });
+
+  it("should surface API key provider outages as an auth-core Problem", async () => {
+    class TestController {
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController.prototype, "protectedMethod", {
+      "x-api-key": "pk_test_service_error",
+    });
+    const cause = new Error("ECONNRESET");
+    mockApiKeyProvider.authenticate.mockRejectedValue(cause);
+
+    const activation = guard.canActivate(context);
+
+    await expect(activation).rejects.toThrow(AuthProviderUnavailableProblem);
+    await expect(activation).rejects.toMatchObject(
+      authGuardConformance.authCore.providerUnavailable,
+    );
+    await expect(activation).rejects.toHaveProperty("cause", cause);
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should preserve API key provider-thrown Croco Problems", async () => {
+    class TestController {
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController.prototype, "protectedMethod", {
+      "x-api-key": "pk_test_policy_denied",
+    });
+    const problem = ProblemFactory.forbidden(
+      authGuardConformance.preservedProblem.policyDenied.code,
+      "Policy denied",
+    );
+    mockApiKeyProvider.authenticate.mockRejectedValue(problem);
+
+    const activation = guard.canActivate(context);
+
+    await expect(activation).rejects.toBe(problem);
+    await expect(activation).rejects.toMatchObject(
+      authGuardConformance.preservedProblem.policyDenied,
+    );
+    expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should surface user auth provider outages as an auth-core Problem", async () => {
+    class TestController {
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController.prototype, "protectedMethod", {});
+    const cause = new Error("ECONNRESET");
+    mockAuthProvider.authenticate.mockRejectedValue(cause);
+
+    const activation = guard.canActivate(context);
+
+    await expect(activation).rejects.toThrow(AuthProviderUnavailableProblem);
+    await expect(activation).rejects.toMatchObject(
+      authGuardConformance.authCore.providerUnavailable,
+    );
+    await expect(activation).rejects.toHaveProperty("cause", cause);
+    expect(mockApiKeyProvider.authenticate).not.toHaveBeenCalled();
+  });
+
+  it("should preserve user auth provider-thrown Croco Problems", async () => {
+    class TestController {
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController.prototype, "protectedMethod", {});
+    const problem = ProblemFactory.forbidden(
+      authGuardConformance.preservedProblem.policyDenied.code,
+      "Policy denied",
+    );
+    mockAuthProvider.authenticate.mockRejectedValue(problem);
+
+    const activation = guard.canActivate(context);
+
+    await expect(activation).rejects.toBe(problem);
+    await expect(activation).rejects.toMatchObject(
+      authGuardConformance.preservedProblem.policyDenied,
+    );
+    expect(mockApiKeyProvider.authenticate).not.toHaveBeenCalled();
   });
 
   it("should prefer lowercase x-api-key header when both exist", async () => {

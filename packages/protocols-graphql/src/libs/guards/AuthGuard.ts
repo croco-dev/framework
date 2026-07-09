@@ -86,7 +86,7 @@ export class GraphQLAuthGuard implements Guard<GraphQLGuardContext> {
 
       return true;
     } catch (error) {
-      if (error instanceof Problem && error.code === "protocols-graphql/auth-invalid-token") {
+      if (error instanceof Problem) {
         throw error;
       }
 

@@ -30,6 +30,21 @@ class HealthResolver {
 }
 ```
 
+## AuthGuard Conformance
+
+`GraphQLAuthGuard` reads `context.headers.authorization` as a Bearer token and writes the
+verifier result to `context.user` without reshaping it. Role, scope, tenant, and metadata
+fields are preserved when the verifier includes them in the returned user object.
+
+GraphQL auth failures use protocol-scoped Problem codes: missing headers are
+`protocols-graphql/auth-missing-header`, malformed Bearer headers are
+`protocols-graphql/auth-invalid-header-format`, invalid or expired tokens are
+`protocols-graphql/auth-invalid-token`, and verifier outages are
+`protocols-graphql/auth-verifier-unavailable`. Verifier-thrown Croco `Problem`s are
+preserved as-is. Public GraphQL fields are represented by not installing the guard for
+that resolver/field; unlike auth-core, this package does not read `@Public` route
+metadata.
+
 ## Problem Error Extensions
 
 `problemToGraphQLError()` maps a Croco `Problem` into a GraphQL error with

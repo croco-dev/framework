@@ -72,8 +72,20 @@ class ProjectController {
 ### 문제 타입
 
 - `UnauthorizedProblem`, `ForbiddenProblem`
+- `AuthProviderUnavailableProblem`
 - `ApiKeyExpiredProblem`, `ApiKeyRevokedProblem`, `ApiKeyNotFoundProblem`
 - `InvalidPermissionFormatProblem`, `InvalidPermissionActionProblem`
+
+## AuthGuard conformance
+
+`AuthGuard`와 `UnifiedAuthGuard`는 protected route에서 `AuthProvider` 또는 `ApiKeyProvider`를 호출하고,
+성공한 `AuthUser` 또는 `ApiKeyPrincipal`을 `request.user`, `request.principal`, `request.apiKey`에 주입합니다.
+`AuthUser.roles`, `AuthUser.permissions`, `AuthUser.tenantId`, `metadata`는 provider가 반환한 값을 그대로 보존합니다.
+auth-core는 scope를 별도 최상위 필드로 해석하지 않으며, scope 값은 보통 `permissions` 또는 `metadata.scopes`에 둡니다.
+
+공개 route는 `@Public`/`AUTH_PUBLIC_KEY` 메타데이터로 표시하며 provider를 호출하지 않습니다. provider 미등록 또는
+provider가 `null`을 반환하는 경우 `UnauthorizedProblem`으로 실패하고, provider가 일반 예외를 던지는 경우
+`AuthProviderUnavailableProblem`으로 실패합니다. provider가 이미 Croco `Problem`을 던진 경우에는 해당 Problem을 보존합니다.
 
 ## 구현 포인트
 

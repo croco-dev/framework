@@ -91,7 +91,7 @@ export class AuthGuard implements Guard<ExecutionContext> {
 
       return true;
     } catch (error) {
-      if (error instanceof Problem && error.code === "protocols-rest/auth-invalid-token") {
+      if (error instanceof Problem) {
         throw error;
       }
 

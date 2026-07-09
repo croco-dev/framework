@@ -15,7 +15,14 @@
           "reviewBy": "2027-01-31"
         }
       ],
-      "ignoreFingerprints": []
+      "ignoreFingerprints": [
+        {
+          "fingerprint": "09c1014cbcad324bec051e823b85f0f313cb986b:.sisyphus/evidence/task-9-audit.json:generic-api-key:4540",
+          "owner": "kang-heewon",
+          "reason": "Historical planning evidence artifact in git history triggers generic-api-key detection; current source tree does not include the artifact and the exact fingerprint is tracked for future history-cleanup review.",
+          "reviewBy": "2026-10-31"
+        }
+      ]
     }
   }
 }

@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import type { Constructor } from "@croco/framework-context";
 import {
   createSlidingWindowPolicy,
   RateLimiter,
@@ -15,26 +14,37 @@ import {
   rateLimitHttpMiddleware,
   securityHeadersMiddleware,
 } from "@croco/transports-http";
+import type { Constructor } from "@croco/protocols-rest";
 import { UserController } from "./controllers/UserController";
 import { readEnv } from "./env";
 
 const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/metrics"]);
 const controllers = [UserController];
-const diGraphRootControllers: readonly Constructor[] = controllers;
 
-export function createCrocoDiGraphRoots(): readonly Constructor[] {
-  return [...diGraphRootControllers];
+export type CreateCrocoAppOptions = {
+  readonly extraControllers?: readonly Constructor[];
+};
+
+function createControllerList(options: CreateCrocoAppOptions = {}): Constructor[] {
+  return [...controllers, ...(options.extraControllers ?? [])];
 }
 
-export function createCrocoApp() {
+export function createCrocoDiGraphRoots(
+  options: CreateCrocoAppOptions = {},
+): readonly Constructor[] {
+  return createControllerList(options);
+}
+
+export function createCrocoApp(options: CreateCrocoAppOptions = {}) {
   const env = readEnv();
   const rateLimiter = new RateLimiter(
     new SlidingWindowInMemoryStore(),
     new RateLimitKeyBuilder(["ip"]),
   );
+  const appControllers = createControllerList(options);
 
   return createApp({
-    controllers,
+    controllers: appControllers,
     diValidation: "off",
     globalFilters: [HttpExceptionFilter],
     middlewares: [

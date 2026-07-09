@@ -5,6 +5,7 @@ import type { AuthProvider } from "../interfaces/AuthProvider";
 import type { AuthRequest } from "../interfaces/AuthRequest";
 import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
 import { UnauthorizedProblem } from "../problems/AuthProblems";
+import { authenticateWithProvider } from "./authenticateWithProvider";
 
 export const AUTH_PROVIDER_TOKEN = new Token<AuthProvider>("AuthProvider");
 
@@ -47,7 +48,7 @@ export class AuthGuard implements Guard<RouteExecutionContext> {
     }
 
     const request = context.getRequest() as AuthRequest;
-    const user = await authProvider.authenticate(request);
+    const user = await authenticateWithProvider(authProvider, request);
 
     if (!user) {
       throw new UnauthorizedProblem();

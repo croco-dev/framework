@@ -44,6 +44,17 @@ class AdminController {
 }
 ```
 
+`AuthGuard`는 REST 요청의 `Authorization: Bearer <token>` 헤더를 검증하고 verifier가 반환한 사용자 객체를
+`request.user`에 그대로 주입합니다. 사용자 객체의 `roles`, `scopes`, `permissions`, `tenantId`, `metadata`는
+프로토콜 계층에서 변환하지 않습니다.
+
+REST AuthGuard의 실패 코드는 프로토콜 범위로 고정됩니다. 헤더 누락은
+`protocols-rest/auth-missing-header`, Bearer 형식 오류는 `protocols-rest/auth-invalid-header-format`,
+토큰 검증 실패 또는 verifier의 falsy 반환은 `protocols-rest/auth-invalid-token`, verifier 장애는
+`protocols-rest/auth-verifier-unavailable` Problem으로 보고됩니다. verifier가 Croco `Problem`을 직접 던진
+경우에는 해당 Problem을 보존합니다. 공개 route 우회는 auth-core의 `@Public` 메타데이터가 아니라 해당
+route에 guard를 설치하지 않는 방식으로 표현합니다.
+
 ### Zod 기반 검증
 
 ```typescript

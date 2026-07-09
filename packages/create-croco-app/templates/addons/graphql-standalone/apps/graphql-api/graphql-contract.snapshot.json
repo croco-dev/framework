@@ -1,12 +1,18 @@
 {
   "snapshotVersion": "croco.graphql-contract.snapshot.v1",
-  "sdl": "type Query {\n  health: String!\n}\n",
-  "operationCount": 1,
+  "sdl": "type Query {\n  health: String!\n  protectedHealth: String!\n}\n",
+  "operationCount": 2,
   "resolverCount": 1,
   "operations": [
     {
       "kind": "query",
       "name": "health",
+      "type": "String!",
+      "args": []
+    },
+    {
+      "kind": "query",
+      "name": "protectedHealth",
       "type": "String!",
       "args": []
     }
@@ -18,6 +24,13 @@
       "methods": [
         {
           "methodName": "health",
+          "guards": [],
+          "interceptors": [],
+          "roles": [],
+          "problems": []
+        },
+        {
+          "methodName": "protectedHealth",
           "guards": [],
           "interceptors": [],
           "roles": [],

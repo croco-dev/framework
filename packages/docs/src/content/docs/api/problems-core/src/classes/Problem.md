@@ -73,6 +73,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ApiKeyCreationFailedProblem`](/api/auth-core/src/classes/apikeycreationfailedproblem/)
 - [`ApiKeyExpiredProblem`](/api/auth-core/src/classes/apikeyexpiredproblem/)
 - [`ApiKeyRevokedProblem`](/api/auth-core/src/classes/apikeyrevokedproblem/)
+- [`AuthProviderUnavailableProblem`](/api/auth-core/src/classes/authproviderunavailableproblem/)
 - [`ForbiddenProblem`](/api/auth-core/src/classes/forbiddenproblem/)
 - [`InvalidPermissionActionProblem`](/api/auth-core/src/classes/invalidpermissionactionproblem/)
 - [`InvalidPermissionFormatProblem`](/api/auth-core/src/classes/invalidpermissionformatproblem/)

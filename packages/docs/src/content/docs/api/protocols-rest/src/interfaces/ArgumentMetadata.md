@@ -11,14 +11,14 @@ title: "ArgumentMetadata"
 
 > `optional` **metatype?**: `Function`
 
-***
+---
 
 ### name?
 
 > `optional` **name?**: `string`
 
-***
+---
 
 ### type
 
-> **type**: `"body"` \| `"query"` \| `"header"` \| `"custom"` \| `"param"`
+> **type**: `"custom"` \| `"query"` \| `"body"` \| `"param"` \| `"header"`

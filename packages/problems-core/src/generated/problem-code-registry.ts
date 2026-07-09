@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 416,
+  problemCount: 417,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -552,7 +552,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 20,
+          line: 35,
           column: 3,
           kind: "problem-class",
         },
@@ -613,7 +613,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 28,
+          line: 43,
           column: 3,
           kind: "problem-class",
         },
@@ -1331,7 +1331,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 52,
+          line: 67,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "auth-core/auth-provider-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#auth-core-auth-provider-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
+          line: 21,
           column: 3,
           kind: "problem-class",
         },
@@ -1361,7 +1393,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 44,
+          line: 59,
           column: 3,
           kind: "problem-class",
         },
@@ -1391,7 +1423,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 36,
+          line: 51,
           column: 3,
           kind: "problem-class",
         },
@@ -3984,7 +4016,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 12,
+          line: 13,
           column: 3,
           kind: "problem-class",
         },
@@ -12444,7 +12476,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 4,
+          line: 5,
           column: 3,
           kind: "problem-class",
         },

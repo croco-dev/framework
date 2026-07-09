@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "RequestValidationProblem"
+title: "AuthProviderUnavailableProblem"
 ---
 
-요청 입력 검증이 실패했을 때 발생하는 Problem입니다.
+인증 도메인에서 사용하는 Problem 하위 타입들입니다.
 
 ## Extends
 
@@ -15,21 +15,21 @@ title: "RequestValidationProblem"
 
 ### Constructor
 
-> **new RequestValidationProblem**(`source`, `issues`): `RequestValidationProblem`
+> **new AuthProviderUnavailableProblem**(`detail?`, `cause?`): `AuthProviderUnavailableProblem`
 
 #### Parameters
 
-##### source
+##### detail?
 
-`"query"` \| `"headers"` \| `"body"` \| `"params"`
+`string` = `"Authentication provider is unavailable"`
 
-##### issues
+##### cause?
 
-[`ValidationIssue`](/api/protocols-rest/src/type-aliases/validationissue/)[]
+`Error`
 
 #### Returns
 
-`RequestValidationProblem`
+`AuthProviderUnavailableProblem`
 
 #### Overrides
 
@@ -39,7 +39,7 @@ title: "RequestValidationProblem"
 
 ### category
 
-> `readonly` **category**: [`ValidationError`](/api/problems-core/src/enumerations/problemcategory/#validationerror) = `ProblemCategory.ValidationError`
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
 #### Overrides
 
@@ -59,7 +59,7 @@ title: "RequestValidationProblem"
 
 ### code
 
-> `readonly` **code**: `"protocols-rest/request-validation-failed"` = `"protocols-rest/request-validation-failed"`
+> `readonly` **code**: `"auth-core/auth-provider-unavailable"` = `"auth-core/auth-provider-unavailable"`
 
 #### Overrides
 
@@ -94,12 +94,6 @@ title: "RequestValidationProblem"
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`instance`](/api/problems-core/src/classes/problem/#instance)
-
----
-
-### issues
-
-> `readonly` **issues**: [`ValidationIssue`](/api/protocols-rest/src/type-aliases/validationissue/)[]
 
 ---
 

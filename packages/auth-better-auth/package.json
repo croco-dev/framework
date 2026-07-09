@@ -45,7 +45,7 @@
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
-    "better-auth": "^1.1.0",
+    "better-auth": "^1.6.23",
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {

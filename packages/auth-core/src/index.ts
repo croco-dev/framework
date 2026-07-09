@@ -153,6 +153,7 @@ export {
   ApiKeyCreationFailedProblem,
   ApiKeyExpiredProblem,
   ApiKeyRevokedProblem,
+  AuthProviderUnavailableProblem,
   ForbiddenProblem,
   InvalidPermissionActionProblem,
   InvalidPermissionFormatProblem,
