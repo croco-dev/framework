@@ -16,6 +16,7 @@ import {
   defineRouteSchema,
   Get,
   Header,
+  Head,
   HttpMethod,
   type InferRouteSchemaRequest,
   type InferRouteSchemaResponse,
@@ -146,6 +147,37 @@ describe("emitOpenAPI", () => {
         policies: ".croco/manifest/policies.json",
         providers: ".croco/manifest/providers.json",
       },
+    });
+  });
+
+  it("should emit explicit HEAD operations without synthesizing GET-implied HEAD", () => {
+    @Controller("/head-policy")
+    class HeadPolicyController {
+      @Get("/get-only")
+      getOnly(): void {}
+
+      @Get("/resource")
+      getResource(): void {}
+
+      @Head("/resource")
+      headResource(): void {}
+    }
+
+    const graph = buildContractGraph([HeadPolicyController]);
+    const spec = emitOpenAPIFromContractGraph(graph);
+
+    expect(spec.paths?.["/head-policy/get-only"]?.get).toMatchObject({
+      operationId: "HeadPolicyController_getOnly",
+      summary: "HeadPolicyController.getOnly",
+    });
+    expect(spec.paths?.["/head-policy/get-only"]?.head).toBeUndefined();
+    expect(spec.paths?.["/head-policy/resource"]?.get).toMatchObject({
+      operationId: "HeadPolicyController_getResource",
+      summary: "HeadPolicyController.getResource",
+    });
+    expect(spec.paths?.["/head-policy/resource"]?.head).toMatchObject({
+      operationId: "HeadPolicyController_headResource",
+      summary: "HeadPolicyController.headResource",
     });
   });
 

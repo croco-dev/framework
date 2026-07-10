@@ -30,6 +30,10 @@ export function Get(path = ""): MethodDecorator {
   return createRouteDecorator("GET", path);
 }
 
+export function Head(path = ""): MethodDecorator {
+  return createRouteDecorator("HEAD", path);
+}
+
 export function Post(path = ""): MethodDecorator {
   return createRouteDecorator("POST", path);
 }

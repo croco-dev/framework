@@ -11,6 +11,7 @@ import {
   type ExceptionFilterResult,
   Get,
   type GuardConstructor,
+  Head,
   type Interceptor,
   type InterceptorConstructor,
   Param,
@@ -309,6 +310,60 @@ describe("RouteCompiler", () => {
     );
     expect(problem.detail).toMatch(
       /DuplicateRouteController\.getByIdWithoutLeadingSlash \(GET \/users\/:id\) at .*RouteCompiler\.spec\.ts:\d+:\d+/,
+    );
+  });
+
+  it("should allow GET and explicit HEAD handlers on the same path", () => {
+    @Controller("/head-policy")
+    class HeadPolicyController {
+      @Get("/resource")
+      getResource() {
+        return { method: "GET" };
+      }
+
+      @Head("/resource")
+      headResource() {
+        return new Response(null, {
+          headers: {
+            "x-route-method": "HEAD",
+          },
+        });
+      }
+    }
+
+    const compiler = createCompiler();
+    const routes = compiler.compile([HeadPolicyController]);
+    const methods = routes.map((route) => `${route.method} ${route.path}`).sort();
+
+    expect(methods).toEqual(["GET /head-policy/resource", "HEAD /head-policy/resource"]);
+  });
+
+  it("should fail fast when duplicate explicit HEAD routes resolve to the same path", () => {
+    @Controller("/head-policy")
+    class DuplicateHeadController {
+      @Head("/resource")
+      first() {
+        return new Response(null);
+      }
+
+      @Head("/resource")
+      second() {
+        return new Response(null);
+      }
+    }
+
+    const compiler = createCompiler();
+
+    let thrown: unknown;
+    try {
+      compiler.compile([DuplicateHeadController]);
+    } catch (error) {
+      thrown = error;
+    }
+
+    const problem = expectDuplicateRouteProblem(thrown);
+    expect(problem.detail).toContain(
+      "Duplicate route definition detected for HEAD /head-policy/resource.",
     );
   });
 

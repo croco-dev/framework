@@ -53,7 +53,7 @@
     {
       "package": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 739,
+      "line": 747,
       "excerpt": "} catch {",
       "reason": "Dev inspector warning logging is best-effort and must not affect request handling.",
       "owner": "framework-error-handling"

@@ -2085,7 +2085,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:359:12` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:367:12` (problem-factory)
 
 <a id="croco-http-middleware-002"></a>
 
@@ -2103,7 +2103,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:264:15` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:272:15` (problem-factory)
 
 <a id="croco-http-security-001"></a>
 
@@ -2121,7 +2121,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:186:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:245:11` (problem-factory)
 
 <a id="croco-http-security-002"></a>
 
@@ -7143,7 +7143,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:223:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:282:11` (problem-factory)
 
 <a id="transports-http-duplicate-health-check"></a>
 
@@ -7197,7 +7197,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:35:49` (problem-metadata)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:39:49` (problem-metadata)
 
 <a id="transports-http-pipe-resolution-failed"></a>
 
@@ -7287,7 +7287,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:76:55` (problem-metadata)
+- `packages/transports-http/src/libs/CrocoApp.ts:78:55` (problem-metadata)
 
 <a id="transports-http-unsupported-route-method"></a>
 
@@ -7305,7 +7305,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:237:15` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:245:15` (problem-factory)
 
 <a id="triggers-core-duplicate-trigger-metadata"></a>
 

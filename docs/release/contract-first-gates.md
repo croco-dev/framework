@@ -98,6 +98,12 @@ ContractGraph snapshots, OpenAPI generation, and RPC codegen share the
 `JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX` exported by `@croco/protocols-core`. Unsupported schemas fail
 with `contract-schema-json-unsafe` before generator-specific output is written.
 
+HTTP `HEAD` compatibility is a runtime transport policy, not a synthetic contract artifact. A
+GET-only route may answer `HEAD` requests at runtime with the GET status/headers and an empty body,
+but ContractGraph and OpenAPI still emit only the declared `GET` route. Declare `@Head()` when a
+first-class ContractGraph `HEAD` route or OpenAPI `head` operation is required; same-path `GET` and
+explicit `HEAD` declarations are method-distinct.
+
 | Zod schema                                                                                                                                                       | Contract behavior                                                                                                     |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `ZodString`, `ZodNumber`, `ZodBoolean`, `ZodNull`                                                                                                                | Supported as JSON primitives.                                                                                         |

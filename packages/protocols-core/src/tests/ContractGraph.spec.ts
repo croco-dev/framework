@@ -34,6 +34,7 @@ import {
   Body,
   Controller,
   Get,
+  Head,
   Header,
   Param,
   Post,
@@ -686,6 +687,39 @@ describe("buildContractGraph", () => {
       }),
     ]);
     expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+  });
+
+  it("should expose explicit HEAD routes without synthesizing GET-implied HEAD contracts", () => {
+    @Controller("/head-policy")
+    class HeadPolicyController {
+      @Get("/get-only")
+      getOnly(): void {}
+
+      @Get("/resource")
+      getResource(): void {}
+
+      @Head("/resource")
+      headResource(): void {}
+    }
+
+    const graph = buildContractGraph([HeadPolicyController]);
+    const snapshot = createContractGraphV1(graph);
+    const getOnlyMethods = graph.routes
+      .filter((route) => route.path === "/head-policy/get-only")
+      .map((route) => route.httpMethod);
+    const resourceMethods = graph.routes
+      .filter((route) => route.path === "/head-policy/resource")
+      .map((route) => route.httpMethod)
+      .sort();
+    const snapshotResourceMethods = snapshot.routes
+      .filter((route) => route.path === "/head-policy/resource")
+      .map((route) => route.method)
+      .sort();
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(getOnlyMethods).toEqual(["GET"]);
+    expect(resourceMethods).toEqual(["GET", "HEAD"]);
+    expect(snapshotResourceMethods).toEqual(["GET", "HEAD"]);
   });
 
   it("should create byte-stable sorted JSON snapshots for the same controller metadata", () => {

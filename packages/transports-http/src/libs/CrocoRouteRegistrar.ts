@@ -30,6 +30,10 @@ import {
 import { describeHttpPipelineGraph } from "./PipelineRunner";
 import type { CompiledRoute, MiddlewareFunction } from "./types";
 
+export type RegisterRouteOptions = {
+  readonly registerHeadAsGet?: boolean;
+};
+
 const HTTP_MIDDLEWARE_MISSING_CONTINUATION_CODE = "CROCO_HTTP_MIDDLEWARE_001";
 const HTTP_MIDDLEWARE_MULTIPLE_NEXT_CODE = "CROCO_HTTP_MIDDLEWARE_002";
 const LEGACY_MIDDLEWARE_MULTIPLE_NEXT_PROBLEM = {
@@ -54,7 +58,7 @@ export class CrocoRouteRegistrar {
     this.runtimeInspector = inspector;
   }
 
-  register(route: CompiledRoute): void {
+  register(route: CompiledRoute, options: RegisterRouteOptions = {}): void {
     const method = route.method.toLowerCase();
     const telemetry = telemetryMiddleware(route.path);
     const middlewares = [telemetry, ...this.globalMiddlewares];
@@ -228,7 +232,11 @@ export class CrocoRouteRegistrar {
         this.hono.options(route.path, honoHandler);
         break;
       case "head":
-        this.hono.on("HEAD", route.path, headHandler);
+        if (options.registerHeadAsGet) {
+          this.hono.get(route.path, headHandler);
+        } else {
+          this.hono.on("HEAD", route.path, headHandler);
+        }
         break;
       case "all":
         this.hono.all(route.path, honoHandler);
