@@ -523,17 +523,14 @@ describe("REST contract-to-runtime parity", () => {
     });
 
     const nestedRpcOutDir = fs.mkdtempSync(path.join(GENERATED_RPC_TEMP_ROOT, "nested-rpc-out-"));
-    try {
-      generateClientFilesFromContractGraph(artifactGraph, nestedRpcOutDir);
-      throw new Error("Expected nested body RPC generation to fail.");
-    } catch (error) {
-      expect(error).toMatchObject({
+    expect(() => generateClientFilesFromContractGraph(artifactGraph, nestedRpcOutDir)).toThrow(
+      expect.objectContaining({
         code: "rpc-codegen/unsupported-form-schema",
         detail: expect.stringContaining(
           "field 'metadata' uses unsupported form field schema ZodObject.",
         ),
-      });
-    }
+      }),
+    );
   });
 
   it("matches declared domain Problem responses at runtime", async () => {
