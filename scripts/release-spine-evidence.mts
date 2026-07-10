@@ -193,17 +193,17 @@ export function createReleaseSpineEvidenceManifest(): readonly EvidenceCommand[]
       id: "generated-app-smoke",
       label: "create-croco-app generated app smoke",
       category: "generated-app",
-      command: ["pnpm", "create-croco-app:smoke"],
+      command: ["pnpm", "create-croco-app:smoke", "--", "--tier", "spine-blocking"],
       timeoutMs: minutes(45),
       artifacts: [
         {
-          label: "Generated app smoke matrix markdown",
-          path: "ci-reports/generated-apps/matrix.md",
+          label: "Spine-blocking generated app smoke matrix markdown",
+          path: "ci-reports/generated-apps/spine-blocking-matrix.md",
           required: true,
         },
         {
-          label: "Generated app smoke matrix JSON",
-          path: "ci-reports/generated-apps/matrix.json",
+          label: "Spine-blocking generated app smoke matrix JSON",
+          path: "ci-reports/generated-apps/spine-blocking-matrix.json",
           required: true,
         },
       ],

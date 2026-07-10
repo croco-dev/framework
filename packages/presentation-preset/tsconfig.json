@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "paths": {
       "@croco/framework-preset": ["../framework-preset/src/index.ts"],
       "@croco/preset-cloudflare": ["../preset-cloudflare/src/index.ts"],

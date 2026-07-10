@@ -179,26 +179,45 @@ jobs:
       - name: Package binary smoke
         run: pnpm package-bins:smoke
 
-      - name: create-croco-app generated app smoke
-        id: generated_app_smoke
-        run: pnpm create-croco-app:smoke
+      - name: create-croco-app spine-blocking generated app smoke
+        id: generated_app_smoke_spine
+        run: pnpm create-croco-app:smoke -- --tier spine-blocking
+
+      - name: create-croco-app ecosystem-advisory generated app smoke
+        id: generated_app_smoke_advisory
+        continue-on-error: true
+        run: pnpm create-croco-app:smoke -- --tier ecosystem-advisory
 
       - name: Publish generated app smoke summary
         if: always()
         shell: bash
         run: |
-          if [ -f ci-reports/generated-apps/matrix.md ]; then
-            cat ci-reports/generated-apps/matrix.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Generated app smoke matrix report was not generated." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          for report in spine-blocking-matrix.md ecosystem-advisory-matrix.md; do
+            if [ -f "ci-reports/generated-apps/${report}" ]; then
+              cat "ci-reports/generated-apps/${report}" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "Generated app smoke ${report} was not generated." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
 
-      - name: Upload generated app smoke report
+      - name: Upload spine-blocking generated app smoke report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: generated-app-smoke-report
-          path: ci-reports/generated-apps
+          name: generated-app-smoke-spine-blocking
+          path: |
+            ci-reports/generated-apps/spine-blocking-matrix.md
+            ci-reports/generated-apps/spine-blocking-matrix.json
+          if-no-files-found: warn
+
+      - name: Upload ecosystem-advisory generated app smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-app-smoke-ecosystem-advisory
+          path: |
+            ci-reports/generated-apps/ecosystem-advisory-matrix.md
+            ci-reports/generated-apps/ecosystem-advisory-matrix.json
           if-no-files-found: warn
 
       - name: TypeScript check

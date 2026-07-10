@@ -71,7 +71,17 @@ describe("release-spine-evidence.mts", () => {
     ]);
     expect(
       findCheck(manifest, "generated-app-smoke").artifacts?.map((artifact) => artifact.path),
-    ).toEqual(["ci-reports/generated-apps/matrix.md", "ci-reports/generated-apps/matrix.json"]);
+    ).toEqual([
+      "ci-reports/generated-apps/spine-blocking-matrix.md",
+      "ci-reports/generated-apps/spine-blocking-matrix.json",
+    ]);
+    expect(findCheck(manifest, "generated-app-smoke").command).toEqual([
+      "pnpm",
+      "create-croco-app:smoke",
+      "--",
+      "--tier",
+      "spine-blocking",
+    ]);
     expect(findCheck(manifest, "alpha-release-smoke").command).toEqual([
       "pnpm",
       "alpha-release:smoke",
@@ -157,8 +167,8 @@ describe("release-spine-evidence.mts", () => {
         createCommand("generated-app-smoke", {
           artifacts: [
             {
-              label: "Generated app matrix",
-              path: "ci-reports/generated-apps/matrix.md",
+              label: "Spine-blocking generated app matrix",
+              path: "ci-reports/generated-apps/spine-blocking-matrix.md",
               required: true,
             },
           ],
@@ -174,7 +184,7 @@ describe("release-spine-evidence.mts", () => {
 
   it("fails a passing command when a required artifact was not refreshed", async () => {
     const repo = createTempRepo();
-    const artifactPath = join(repo, "ci-reports", "generated-apps", "matrix.md");
+    const artifactPath = join(repo, "ci-reports", "generated-apps", "spine-blocking-matrix.md");
     const fakeTime = createFakeClock();
     fakeTime.advance(1_000);
     mkdirSync(join(repo, "ci-reports", "generated-apps"), { recursive: true });
@@ -189,8 +199,8 @@ describe("release-spine-evidence.mts", () => {
         createCommand("generated-app-smoke", {
           artifacts: [
             {
-              label: "Generated app matrix",
-              path: "ci-reports/generated-apps/matrix.md",
+              label: "Spine-blocking generated app matrix",
+              path: "ci-reports/generated-apps/spine-blocking-matrix.md",
               required: true,
             },
           ],

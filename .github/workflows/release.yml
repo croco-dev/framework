@@ -53,7 +53,7 @@ jobs:
           release_pr_update_pattern='^\.changeset/(pre\.json|[^/]+\.md)$'
           release_pr_update_ignore_pattern='^\.changeset/README\.md$'
           publish_candidate_pattern='^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$|^pnpm-workspace\.yaml$'
-          release_gate_maintenance_pattern='^\.github/workflows/release\.yml$|^scripts/(alpha-release-smoke\.mts|certification-policy\.mts|changeset-required-check\.mts|core-coverage-warning-check\.mts|create-croco-app-generated-smoke(-support)?\.mts|dependency-audit-policy\.mts|first-success-verify\.mts|normalize-packages\.mjs|package-bin-smoke\.mts|package-entrypoint-smoke\.mts|package-manifest-contracts\.mjs|package-quality-report\.mts|production-ready-check\.mts|provider-certification-check\.mts|public-api-surface\.mts|quick-start-lambda-smoke\.mts|release-docs-check\.mts|release-metadata-check\.mts|release-spine-evidence\.mts|security-allowlist-metadata-check\.mts|spine-promotion-check\.mts)$|^scripts/tests/(alpha-release-smoke|changeset-required-check|core-coverage-warning-check|create-croco-app-generated-smoke|dependency-audit-policy|first-success-verify|normalize-packages|package-bin-smoke|package-entrypoint-smoke|package-quality-report|production-ready-check|provider-certification-check|public-api-surface|release-docs-check|release-metadata-check|release-spine-evidence|release-workflow|security-allowlist-metadata-check|spine-promotion-check)\.spec\.ts$'
+          release_gate_maintenance_pattern='^\.github/workflows/release\.yml$|^scripts/(alpha-release-smoke\.mts|certification-policy\.mts|changeset-required-check\.mts|core-coverage-warning-check\.mts|create-croco-app-generated-smoke(-(support|matrix))?\.mts|dependency-audit-policy\.mts|first-success-verify\.mts|normalize-packages\.mjs|package-bin-smoke\.mts|package-entrypoint-smoke\.mts|package-manifest-contracts\.mjs|package-quality-report\.mts|production-ready-check\.mts|provider-certification-check\.mts|public-api-surface\.mts|quick-start-lambda-smoke\.mts|release-docs-check\.mts|release-metadata-check\.mts|release-spine-evidence\.mts|security-allowlist-metadata-check\.mts|spine-promotion-check\.mts)$|^scripts/tests/(alpha-release-smoke|changeset-required-check|core-coverage-warning-check|create-croco-app-generated-smoke|dependency-audit-policy|first-success-verify|normalize-packages|package-bin-smoke|package-entrypoint-smoke|package-quality-report|production-ready-check|provider-certification-check|public-api-surface|release-docs-check|release-metadata-check|release-spine-evidence|release-workflow|security-allowlist-metadata-check|spine-promotion-check)\.spec\.ts$'
 
           changed_files="$(git diff --name-only "$base" HEAD)"
           should_update_release_pr=false
@@ -115,7 +115,10 @@ jobs:
           node --experimental-strip-types scripts/release-metadata-check.mts --allow-pending-changesets
           pnpm package-entrypoints:smoke
           pnpm package-bins:smoke
-          pnpm create-croco-app:smoke
+          pnpm create-croco-app:smoke -- --tier spine-blocking
+          if ! pnpm create-croco-app:smoke -- --tier ecosystem-advisory; then
+            echo "Ecosystem-advisory generated app smoke failed; inspect its matrix report for the owner and recovery action."
+          fi
           pnpm quick-start-lambda:smoke
           pnpm first-success:verify
           # CI and release:spine-evidence cover --require-task-summaries after summarized build/typecheck/test.
