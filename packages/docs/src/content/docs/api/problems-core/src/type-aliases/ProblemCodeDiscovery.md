@@ -13,13 +13,13 @@ title: "ProblemCodeDiscovery"
 
 > `readonly` **category**: [`ProblemCategoryName`](/api/problems-core/src/type-aliases/problemcategoryname/)
 
----
+***
 
 ### code
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### sources
 

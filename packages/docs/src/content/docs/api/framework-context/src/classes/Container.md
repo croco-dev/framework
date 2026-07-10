@@ -35,7 +35,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`DependencyGraphManifest`](/api/framework-context/src/type-aliases/dependencygraphmanifest/)
 
----
+***
 
 ### get()
 
@@ -57,7 +57,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T`
 
----
+***
 
 ### getComponentMetadata()
 
@@ -73,7 +73,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`ComponentMetadata`](/api/framework-context/src/interfaces/componentmetadata/) \| `undefined`
 
----
+***
 
 ### getDiagnosticsSnapshot()
 
@@ -99,7 +99,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 > **scopes**: `string`[]
 
----
+***
 
 ### getLastResolutionTrace()
 
@@ -109,7 +109,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/) \| `undefined`
 
----
+***
 
 ### getMany()
 
@@ -131,7 +131,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T`[]
 
----
+***
 
 ### getOptional()
 
@@ -153,7 +153,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T` \| `undefined`
 
----
+***
 
 ### getResolutionTrace()
 
@@ -175,7 +175,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
 
----
+***
 
 ### has()
 
@@ -197,7 +197,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `boolean`
 
----
+***
 
 ### register()
 
@@ -223,7 +223,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `void`
 
----
+***
 
 ### registerAsync()
 
@@ -249,7 +249,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `Promise`\<`T`\>
 
----
+***
 
 ### registerLazy()
 
@@ -275,7 +275,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `void`
 
----
+***
 
 ### remove()
 
@@ -297,7 +297,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `void`
 
----
+***
 
 ### reset()
 
@@ -307,7 +307,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `void`
 
----
+***
 
 ### set()
 
@@ -333,7 +333,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `T`
 
----
+***
 
 ### setComponentSourceLocation()
 
@@ -359,7 +359,7 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 `void`
 
----
+***
 
 ### validate()
 

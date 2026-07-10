@@ -13,13 +13,13 @@ title: "FrontendActionEntitlement"
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### feature
 
 > `readonly` **feature**: `string`
 
----
+***
 
 ### resource?
 

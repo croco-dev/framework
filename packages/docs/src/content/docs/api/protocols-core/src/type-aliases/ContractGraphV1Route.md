@@ -15,13 +15,13 @@ REST route contract with schemas, problems, policies, runtime requirements, and 
 
 > `readonly` **di**: readonly [`ContractGraphV1DiRef`](/api/protocols-core/src/type-aliases/contractgraphv1diref/)[]
 
----
+***
 
 ### id
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### inputSchemas
 
@@ -43,49 +43,49 @@ REST route contract with schemas, problems, policies, runtime requirements, and 
 
 > `readonly` **query**: [`ContractSchemaSnapshot`](/api/protocols-core/src/type-aliases/contractschemasnapshot/) \| `null`
 
----
+***
 
 ### method
 
 > `readonly` **method**: `string`
 
----
+***
 
 ### outputSchema
 
 > `readonly` **outputSchema**: [`ContractSchemaSnapshot`](/api/protocols-core/src/type-aliases/contractschemasnapshot/) \| `null`
 
----
+***
 
 ### path
 
 > `readonly` **path**: `string`
 
----
+***
 
 ### policies
 
 > `readonly` **policies**: readonly [`ContractGraphV1PolicyRef`](/api/protocols-core/src/type-aliases/contractgraphv1policyref/)[]
 
----
+***
 
 ### problems
 
 > `readonly` **problems**: readonly [`ContractGraphSnapshotProblemResponse`](/api/protocols-core/src/type-aliases/contractgraphsnapshotproblemresponse/)[]
 
----
+***
 
 ### protocol
 
 > `readonly` **protocol**: `"rest"`
 
----
+***
 
 ### runtime
 
 > `readonly` **runtime**: readonly [`ContractGraphV1RuntimeRequirement`](/api/protocols-core/src/type-aliases/contractgraphv1runtimerequirement/)[]
 
----
+***
 
 ### source
 

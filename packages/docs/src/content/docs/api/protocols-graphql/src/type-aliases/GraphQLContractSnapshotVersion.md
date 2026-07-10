@@ -5,4 +5,4 @@ prev: false
 title: "GraphQLContractSnapshotVersion"
 ---
 
-> **GraphQLContractSnapshotVersion** = `"croco.graphql-contract.snapshot.v1"`
+> **GraphQLContractSnapshotVersion** = `"croco.graphql-contract.snapshot.v2"`

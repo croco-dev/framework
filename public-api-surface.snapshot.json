@@ -13506,6 +13506,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "createProblemResponseDetail",
+          "exportKind": "named",
+          "source": "./libs/ProblemResponseRedaction",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createProblemResponseExtensions",
+          "exportKind": "named",
+          "source": "./libs/ProblemResponseRedaction",
+          "declarationKind": "function"
+        },
+        {
           "name": "CROCO_PROBLEM_CODE_REGISTRY",
           "exportKind": "named",
           "source": "./generated/problem-code-registry",
@@ -13515,6 +13527,12 @@
           "name": "defineProblemRegistry",
           "exportKind": "named",
           "source": "./libs/ProblemRegistry",
+          "declarationKind": "function"
+        },
+        {
+          "name": "extractProblemDetailsResponseExtensions",
+          "exportKind": "named",
+          "source": "./libs/ProblemResponseRedaction",
           "declarationKind": "function"
         },
         {
@@ -13566,6 +13584,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "OPERATOR_ONLY_PROBLEM_DETAIL",
+          "exportKind": "named",
+          "source": "./libs/ProblemResponseRedaction",
+          "declarationKind": "const"
+        },
+        {
           "name": "Problem",
           "exportKind": "named",
           "source": "./libs/Problem",
@@ -13600,6 +13624,24 @@
           "exportKind": "named",
           "source": "./libs/ProblemSerializer",
           "declarationKind": "const"
+        },
+        {
+          "name": "resolveProblemCodeRedactionPolicy",
+          "exportKind": "named",
+          "source": "./libs/ProblemResponseRedaction",
+          "declarationKind": "function"
+        },
+        {
+          "name": "resolveProblemDetailsResponseRedactionPolicy",
+          "exportKind": "named",
+          "source": "./libs/ProblemResponseRedaction",
+          "declarationKind": "function"
+        },
+        {
+          "name": "resolveProblemResponseRedactionPolicy",
+          "exportKind": "named",
+          "source": "./libs/ProblemResponseRedaction",
+          "declarationKind": "function"
         },
         {
           "name": "slugifyProblemCode",

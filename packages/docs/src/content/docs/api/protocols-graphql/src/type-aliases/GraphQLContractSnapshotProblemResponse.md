@@ -27,6 +27,12 @@ title: "GraphQLContractSnapshotProblemResponse"
 
 ***
 
+### redactionPolicy
+
+> `readonly` **redactionPolicy**: [`ProblemRedactionPolicy`](/api/problems-core/src/type-aliases/problemredactionpolicy/)
+
+***
+
 ### status
 
 > `readonly` **status**: `number`

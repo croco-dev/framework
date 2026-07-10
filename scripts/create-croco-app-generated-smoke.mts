@@ -43,7 +43,7 @@ const GRAPHQL_RESOLVER_METADATA_DRIFT_CODES = [
 ] as const;
 
 type GraphQLContractSnapshotJson = {
-  readonly snapshotVersion: "croco.graphql-contract.snapshot.v1";
+  readonly snapshotVersion: "croco.graphql-contract.snapshot.v2";
   readonly sdl: string;
   readonly operationCount: number;
   readonly resolverCount: number;
@@ -1990,7 +1990,7 @@ function isGraphQLContractSnapshotJson(value: unknown): value is GraphQLContract
   };
 
   return (
-    snapshot.snapshotVersion === "croco.graphql-contract.snapshot.v1" &&
+    snapshot.snapshotVersion === "croco.graphql-contract.snapshot.v2" &&
     typeof snapshot.sdl === "string" &&
     Array.isArray(snapshot.operations) &&
     Array.isArray(snapshot.resolvers) &&

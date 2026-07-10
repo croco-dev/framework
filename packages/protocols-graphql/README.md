@@ -49,15 +49,17 @@ metadata.
 
 `problemToGraphQLError()` maps a Croco `Problem` into a GraphQL error with
 `extensions.code`, `extensions.status`, `extensions.title`, `extensions.type`, and
-the fields already present on `problem.extensions`.
+the public-safe fields selected from `problem.extensions` by the shared Croco
+Problem response-redaction policy.
 
-Unlike the HTTP transport, this protocol helper does not build an RFC 7807 response
-body or derive `requestId` / `traceId` from request context. A resolver or transport
-that wants correlation metadata in GraphQL errors should add safe `requestId` and
-`traceId` extension values before conversion. It should also avoid placing
-operator-only data or reserved Problem fields such as `code`, `status`, `title`, or
-`type` in `problem.extensions`; the helper forwards extensions without applying the
-HTTP Problem Details redaction and field-protection policy.
+Public and safe-message Problems retain their safe detail and the same conservative
+extension allowlist used by HTTP. Operator-only Problems use an opaque message and
+expose no Problem extensions. Reserved fields and correlation or telemetry fields,
+including `requestId`, `traceId`, and `telemetry`, are never forwarded from
+`problem.extensions`. Runtime GraphQL errors also never expose `redactionPolicy`.
+
+Unlike HTTP, the helper does not produce an RFC 7807 body or synthesize an `instance`
+field. The GraphQL transport retains GraphQL's `errors` envelope and resolver path.
 
 ## Contract Snapshots
 
@@ -75,11 +77,15 @@ const snapshot = createGraphQLContractSnapshot(schema, { resolvers: [HealthResol
 const diff = diffGraphQLContractSnapshots(baselineSnapshot, snapshot);
 ```
 
-Snapshots use `croco.graphql-contract.snapshot.v1` and include root operations,
+Snapshots use `croco.graphql-contract.snapshot.v2` and include root operations,
 resolver DI scope, method roles, guards, interceptors, and declared
-`GraphQLProblemResponse` mappings. Diffs classify GraphQL schema breaking changes
+`GraphQLProblemResponse` mappings with the redaction policy derived from the generated
+Problem registry. Diffs classify GraphQL schema breaking changes
 with `graphql`'s schema comparison utilities and treat resolver metadata changes as
 breaking contract drift.
+
+Version 2 adds the derived Problem redaction policy to response metadata. Regenerate existing
+version 1 snapshots before comparing them with version 2 output.
 
 ## Verification
 

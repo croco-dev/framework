@@ -1,6 +1,10 @@
 import "reflect-metadata";
-import type { ProblemCategory } from "@croco/problems-core";
-import { ProblemCategoryMapper } from "@croco/problems-core";
+import {
+  ProblemCategoryMapper,
+  resolveProblemCodeRedactionPolicy,
+  type ProblemCategory,
+  type ProblemRedactionPolicy,
+} from "@croco/problems-core";
 import { GRAPHQL_PROBLEM_RESPONSES_KEY } from "../constants";
 
 export type GraphQLProblemResponseOptions<
@@ -18,6 +22,7 @@ export type GraphQLProblemResponseMetadata = {
   readonly code: string;
   readonly category: ProblemCategory;
   readonly status: number;
+  readonly redactionPolicy: ProblemRedactionPolicy;
   readonly description?: string;
   readonly type?: string;
 };
@@ -57,6 +62,7 @@ function toGraphQLProblemResponseMetadata(
     code: response.code,
     category: response.category,
     status: response.status ?? ProblemCategoryMapper.toHttpStatus(response.category),
+    redactionPolicy: resolveProblemCodeRedactionPolicy(response.code, response.category),
     ...(response.description ? { description: response.description } : {}),
     ...(response.type ? { type: response.type } : {}),
   };

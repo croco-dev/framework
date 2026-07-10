@@ -1,5 +1,5 @@
 {
-  "snapshotVersion": "croco.graphql-contract.snapshot.v1",
+  "snapshotVersion": "croco.graphql-contract.snapshot.v2",
   "sdl": "type Query {\n  health: String!\n  protectedHealth: String!\n}\n",
   "operationCount": 2,
   "resolverCount": 1,

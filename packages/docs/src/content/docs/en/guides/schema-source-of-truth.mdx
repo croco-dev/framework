@@ -140,12 +140,15 @@ const snapshot = createGraphQLContractSnapshot(schema, { resolvers: [HealthResol
 const diff = diffGraphQLContractSnapshots(baselineSnapshot, snapshot);
 ```
 
-The snapshot version is `croco.graphql-contract.snapshot.v1`. It records:
+The snapshot version is `croco.graphql-contract.snapshot.v2`. It records:
 
 - deterministic SDL for the compiled schema,
 - root query, mutation, and subscription operations,
 - resolver class names and Croco DI scope,
 - method-level roles, guards, interceptors, and declared `GraphQLProblemResponse` mappings.
+
+Version 2 adds the derived Problem redaction policy to response metadata. Regenerate existing
+version 1 snapshots before comparing them with version 2 output.
 
 Generated GraphQL apps include `graphql-contract.snapshot.json`, `contract:snapshot`, and
 `contract:check`. Standalone GraphQL apps run those scripts from `apps/graphql-api`; Next.js
