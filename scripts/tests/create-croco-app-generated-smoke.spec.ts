@@ -1,14 +1,29 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  readCommandOutputSegment,
   readGeneratedSmokeAllowlistMetadata,
-  shouldRunSpaBeSplitContractSmoke,
 } from "../create-croco-app-generated-smoke.mts";
 import {
+  classifySmokeCommandFailure,
+  classifySmokeFailure,
+  collectSmokeFailureArtifactFiles,
   copyGeneratedSmokeArtifacts,
+  createSmokeRecoverySummary,
+  extractSmokeCommandDiagnosticCodes,
   renderGeneratedSmokeArtifacts,
+  shouldIncludeSmokeFailureArtifact,
+  shouldSkipSmokeArtifactDirectory,
 } from "../create-croco-app-generated-smoke-report.mts";
 import {
   assertGeneratedSmokeMatrixContract,
@@ -213,11 +228,15 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
 });
 
 describe("create-croco-app generated smoke matrix", () => {
-  it("keeps REST SPA contract canaries in the blocking tier", () => {
-    expect(shouldRunSpaBeSplitContractSmoke(false, undefined)).toBe(true);
-    expect(shouldRunSpaBeSplitContractSmoke(true, "spine-blocking")).toBe(true);
-    expect(shouldRunSpaBeSplitContractSmoke(true, "ecosystem-advisory")).toBe(false);
-    expect(shouldRunSpaBeSplitContractSmoke(true, undefined)).toBe(false);
+  it("keeps REST SPA contract canaries selectable in the blocking tier", () => {
+    expect(
+      GENERATED_SMOKE_MATRIX_CASES.find(({ name }) => name === "rest-spa-contracts")?.tier,
+    ).toBe("spine-blocking");
+    expect(
+      selectGeneratedSmokeMatrixCases(GENERATED_SMOKE_MATRIX_CASES, {
+        args: ["rest-spa-contracts"],
+      }).cases.map(({ name }) => name),
+    ).toEqual(["rest-spa-contracts"]);
   });
 
   it("classifies every generated smoke case and requires advisory recovery metadata", () => {
@@ -231,6 +250,7 @@ describe("create-croco-app generated smoke matrix", () => {
       "meta-vite-fullstack-workers",
       "production-app-starter",
       "saas-golden-path",
+      "rest-spa-contracts",
     ]);
     expect(
       GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "ecosystem-advisory"),
@@ -260,6 +280,7 @@ describe("create-croco-app generated smoke matrix", () => {
       "meta-vite-fullstack-workers",
       "production-app-starter",
       "saas-golden-path",
+      "rest-spa-contracts",
     ]);
     expect(() =>
       selectGeneratedSmokeMatrixCases(GENERATED_SMOKE_MATRIX_CASES, {
@@ -386,6 +407,106 @@ describe("create-croco-app generated smoke matrix", () => {
   });
 });
 
+describe("create-croco-app generated smoke failure evidence", () => {
+  afterEach(() => {
+    for (const root of tempRoots.splice(0)) {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("retains recovery details and artifact paths in the blocking-tier matrix report", () => {
+    const spine = createGeneratedSmokeMatrixTierReport(
+      "spine-blocking",
+      [
+        {
+          name: "rest-spa-contracts",
+          status: "failed",
+          failureEvidence: {
+            error: "contract graph drift detected",
+            diagnosticCodes: ["CROCO_CONTRACT_DRIFT"],
+            recovery: createSmokeRecoverySummary("rest-spa-contracts"),
+            classification: classifySmokeFailure({ message: "contract graph drift detected" }),
+            artifactBundle: {
+              path: "ci-reports/generated-apps/cases/rest-spa-contracts",
+              stdoutPath: "ci-reports/generated-apps/cases/rest-spa-contracts/stdout.log",
+              stderrPath: "ci-reports/generated-apps/cases/rest-spa-contracts/stderr.log",
+              files: [
+                "ci-reports/generated-apps/cases/rest-spa-contracts/files/.croco/manifest/routes.json",
+              ],
+              outputTruncated: true,
+            },
+          },
+        },
+      ],
+      { filteredRun: true, generatedAt: "2026-07-10T00:00:00.000Z" },
+    );
+
+    const rendered = renderGeneratedSmokeMatrixReport(spine);
+
+    expect(spine.cases.find(({ name }) => name === "rest-spa-contracts")?.failureEvidence).toEqual(
+      expect.objectContaining({ error: "contract graph drift detected" }),
+    );
+    expect(rendered).toContain("## Failed Case Recovery");
+    expect(rendered).toContain("pnpm create-croco-app:smoke rest-spa-contracts");
+    expect(rendered).toContain("ci-reports/generated-apps/cases/rest-spa-contracts/stdout.log");
+    expect(rendered).toContain("truncated at 64 MiB");
+  });
+
+  it("classifies command output from captured stdout and stderr without assertion text", () => {
+    const commandFailure = {
+      message:
+        "corepack pnpm check failed without expected output: ETIMEDOUT CROCO_EXPECTED_DIAGNOSTIC",
+      stdout: "contract validation failed",
+      stderr: "CROCO_CONTRACT_DRIFT",
+      signal: null,
+    };
+
+    expect(extractSmokeCommandDiagnosticCodes(commandFailure)).toEqual(["CROCO_CONTRACT_DRIFT"]);
+    expect(classifySmokeCommandFailure(commandFailure)).toEqual({
+      kind: "deterministic",
+      reason:
+        "no transient timeout, network, DNS, socket, fetch, or termination indicator detected",
+    });
+  });
+
+  it("reads complete Unicode command-output segments", () => {
+    const root = createTempRoot();
+    const outputPath = join(root, "command-output.log");
+    const output = "first line\\nemoji: \\u{1F642}\\nlast line\\n";
+    writeFileSync(outputPath, output, "utf8");
+
+    const fileDescriptor = openSync(outputPath, "r");
+    try {
+      expect(readCommandOutputSegment(fileDescriptor, Buffer.byteLength(output), 0)).toBe(output);
+    } finally {
+      closeSync(fileDescriptor);
+    }
+  });
+
+  it("keeps only relevant generated files in a failure artifact bundle", () => {
+    const projectDir = createTempRoot();
+    writeFile(join(projectDir, "package.json"), "{}\n");
+    writeFile(join(projectDir, ".croco/manifest/routes.json"), "{}\n");
+    writeFile(
+      join(projectDir, "apps/api-server/src/controllers/userSchemas.ts"),
+      "export const userSchemas = {};\n",
+    );
+    writeFile(join(projectDir, "node_modules/example/package.json"), "{}\n");
+
+    const artifactPaths = collectSmokeFailureArtifactFiles(projectDir, "rest-spa-contracts").map(
+      (path) => path.slice(projectDir.length + 1),
+    );
+
+    expect(shouldIncludeSmokeFailureArtifact("croco-runtime-capability.manifest.json")).toBe(true);
+    expect(shouldIncludeSmokeFailureArtifact("node_modules/package/package.json")).toBe(false);
+    expect(shouldSkipSmokeArtifactDirectory(".next")).toBe(true);
+    expect(artifactPaths).toContain(".croco/manifest/routes.json");
+    expect(artifactPaths).toContain("apps/api-server/src/controllers/userSchemas.ts");
+    expect(artifactPaths).toContain("package.json");
+    expect(artifactPaths).not.toContain("node_modules/example/package.json");
+  });
+});
+
 function createTempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "croco-generated-smoke-test-"));
   tempRoots.push(root);
@@ -429,4 +550,9 @@ function readGeneratedPackage(
 function writeJson(path: string, value: Record<string, unknown>): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function writeFile(path: string, content: string): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, content);
 }

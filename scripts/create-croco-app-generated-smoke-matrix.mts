@@ -1,4 +1,12 @@
+import type {
+  SmokeCaseArtifactBundle,
+  SmokeCaseRecoverySummary,
+  SmokeFailureClassification,
+} from "./create-croco-app-generated-smoke-report.mts";
+
 export type SmokeMatrixTier = "spine-blocking" | "ecosystem-advisory";
+
+export const REST_SPA_CONTRACT_SMOKE_CASE_NAME = "rest-spa-contracts";
 
 export type SmokeMatrixStatus = "pending" | "passed" | "failed";
 
@@ -15,6 +23,15 @@ export type SmokeMatrixCaseDefinition = {
 
 export type SmokeMatrixCaseState = SmokeMatrixCaseDefinition & {
   readonly status: SmokeMatrixStatus;
+  readonly failureEvidence?: SmokeMatrixCaseFailureEvidence;
+};
+
+export type SmokeMatrixCaseFailureEvidence = {
+  readonly error: string;
+  readonly diagnosticCodes: readonly string[];
+  readonly recovery: SmokeCaseRecoverySummary;
+  readonly classification: SmokeFailureClassification;
+  readonly artifactBundle?: SmokeCaseArtifactBundle;
 };
 
 export type SmokeMatrixFailure = {
@@ -164,6 +181,7 @@ export const GENERATED_SMOKE_MATRIX_CASES = [
         "CROCO_GENERATED_SMOKE_CASES=ai-saas-golden-path pnpm create-croco-app:smoke; inspect the AI full demo flow and contracts.",
     },
   },
+  { name: REST_SPA_CONTRACT_SMOKE_CASE_NAME, tier: "spine-blocking" },
 ] as const satisfies readonly SmokeMatrixCaseDefinition[];
 
 const SMOKE_MATRIX_TIERS = ["spine-blocking", "ecosystem-advisory"] as const;
@@ -276,7 +294,7 @@ export function selectGeneratedSmokeMatrixCases<T extends SmokeMatrixCaseDefinit
 
 export function createGeneratedSmokeMatrixTierReport(
   tier: SmokeMatrixTier,
-  selectedCases: readonly Pick<SmokeMatrixCaseState, "name" | "status">[],
+  selectedCases: readonly Pick<SmokeMatrixCaseState, "name" | "status" | "failureEvidence">[],
   options: {
     readonly filteredRun: boolean;
     readonly previousReport?: unknown;
@@ -287,12 +305,19 @@ export function createGeneratedSmokeMatrixTierReport(
   const previous = isGeneratedSmokeMatrixTierReport(options.previousReport, tier)
     ? new Map(options.previousReport.cases.map((smokeCase) => [smokeCase.name, smokeCase]))
     : new Map<string, SmokeMatrixCaseState>();
-  const updates = new Map(selectedCases.map((smokeCase) => [smokeCase.name, smokeCase.status]));
+  const updates = new Map(selectedCases.map((smokeCase) => [smokeCase.name, smokeCase]));
   const cases = GENERATED_SMOKE_MATRIX_CASES.filter((smokeCase) => smokeCase.tier === tier).map(
-    (definition) => ({
-      ...definition,
-      status: updates.get(definition.name) ?? previous.get(definition.name)?.status ?? "pending",
-    }),
+    (definition) => {
+      const update = updates.get(definition.name);
+      const previousCase = previous.get(definition.name);
+      const failureEvidence = update ? update.failureEvidence : previousCase?.failureEvidence;
+
+      return {
+        ...definition,
+        status: update?.status ?? previousCase?.status ?? "pending",
+        ...(failureEvidence ? { failureEvidence } : {}),
+      };
+    },
   );
   const status = options.failure
     ? "failed"
@@ -378,6 +403,12 @@ export function isGeneratedSmokeMatrixTierReport(
     if (!definition || smokeCase.tier !== tier || !isSmokeMatrixStatus(smokeCase.status)) {
       return false;
     }
+    if (
+      smokeCase.failureEvidence !== undefined &&
+      !isSmokeMatrixCaseFailureEvidence(smokeCase.failureEvidence)
+    ) {
+      return false;
+    }
     if (tier === "ecosystem-advisory") {
       if (
         !isAdvisoryMetadata(smokeCase.advisory) ||
@@ -440,6 +471,39 @@ export function renderGeneratedSmokeMatrixReport(
     }),
     "",
   );
+
+  const failedCases = report.cases.filter(
+    (
+      smokeCase,
+    ): smokeCase is SmokeMatrixCaseState & {
+      readonly failureEvidence: SmokeMatrixCaseFailureEvidence;
+    } => smokeCase.failureEvidence !== undefined,
+  );
+  if (failedCases.length > 0) {
+    lines.push("## Failed Case Recovery", "");
+    for (const smokeCase of failedCases) {
+      const { artifactBundle, classification, diagnosticCodes, error, recovery } =
+        smokeCase.failureEvidence;
+      lines.push(
+        `### ${smokeCase.name}`,
+        "",
+        `- Classification: ${classification.kind} (${escapeMarkdown(classification.reason)})`,
+        `- Rerun: \`${escapeBackticks(recovery.localRerunCommand)}\``,
+        `- Diagnostics: ${formatSmokeMatrixList(diagnosticCodes)}`,
+        `- Error: ${escapeMarkdown(error)}`,
+      );
+      if (artifactBundle) {
+        lines.push(
+          `- Artifacts: \`${escapeBackticks(artifactBundle.path)}\``,
+          `- Stdout: \`${escapeBackticks(artifactBundle.stdoutPath)}\``,
+          `- Stderr: \`${escapeBackticks(artifactBundle.stderrPath)}\``,
+          `- Output capture: ${artifactBundle.outputTruncated ? "truncated at 64 MiB" : "complete"}`,
+          ...artifactBundle.files.map((file) => `- File: \`${escapeBackticks(file)}\``),
+        );
+      }
+      lines.push("");
+    }
+  }
 
   return lines.join("\n");
 }
@@ -545,10 +609,48 @@ function isSmokeMatrixFailure(value: unknown): value is SmokeMatrixFailure {
   );
 }
 
+function isSmokeMatrixCaseFailureEvidence(value: unknown): value is SmokeMatrixCaseFailureEvidence {
+  return (
+    isRecord(value) &&
+    typeof value.error === "string" &&
+    Array.isArray(value.diagnosticCodes) &&
+    value.diagnosticCodes.every((code) => typeof code === "string") &&
+    isRecord(value.recovery) &&
+    typeof value.recovery.localRerunCommand === "string" &&
+    isRecord(value.classification) &&
+    (value.classification.kind === "deterministic" ||
+      value.classification.kind === "suspectedFlaky") &&
+    typeof value.classification.reason === "string" &&
+    (value.artifactBundle === undefined || isSmokeCaseArtifactBundle(value.artifactBundle))
+  );
+}
+
+function isSmokeCaseArtifactBundle(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.path === "string" &&
+    typeof value.stdoutPath === "string" &&
+    typeof value.stderrPath === "string" &&
+    Array.isArray(value.files) &&
+    value.files.every((file) => typeof file === "string") &&
+    typeof value.outputTruncated === "boolean"
+  );
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
 function escapeMarkdown(value: string): string {
   return value.replace(/\|/g, "\\|").replace(/\n/g, " ");
+}
+
+function escapeBackticks(value: string): string {
+  return value.replace(/`/g, "\\`");
+}
+
+function formatSmokeMatrixList(values: readonly string[]): string {
+  return values.length > 0
+    ? values.map((value) => `\`${escapeBackticks(value)}\``).join(", ")
+    : "_none_";
 }
