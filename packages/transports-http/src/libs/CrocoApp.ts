@@ -51,7 +51,7 @@ import {
 import { type CompileOptions, RouteCompiler } from "./RouteCompiler";
 import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
 import type { AppConfig, CompiledRoute, LambdaHandler, ListenOptions } from "./types";
-
+import type { NodeServerHandle } from "./types";
 type SecurityValidationMode = NonNullable<AppConfig["securityValidation"]>;
 type DiValidationMode = NonNullable<AppConfig["diValidation"]>;
 type HonoFetchExecutionContext = Parameters<Hono["fetch"]>[2];
@@ -484,7 +484,7 @@ export class CrocoApp {
     port: number,
     options?: ListenOptions | (() => void),
     callback?: () => void,
-  ): Promise<void> {
+  ): Promise<NodeServerHandle> {
     this.boot();
 
     const listenOptions = typeof options === "function" ? undefined : options;
@@ -494,7 +494,7 @@ export class CrocoApp {
 
     const { serve } = await import("@hono/node-server");
 
-    serve(
+    return serve(
       {
         fetch: (request: Request, env: NodeServerEnv) =>
           this.dispatch(

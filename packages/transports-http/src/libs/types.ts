@@ -1,5 +1,7 @@
 import type { PolicyExecutionPlan, RequestPipelineGraph } from "@croco/framework-context";
 import type { Constructor } from "@croco/protocols-rest";
+import type { Server } from "node:http";
+import type { Http2SecureServer, Http2Server } from "node:http2";
 import type { DevInspectorEndpointOptions } from "./devInspectorEndpoint";
 import type { MiddlewareShortCircuit } from "./middleware/MiddlewareShortCircuit";
 import type { DiagnosticsEndpointOptions } from "./operationalEndpoints";
@@ -35,6 +37,8 @@ export interface ListenOptions {
   staticDir?: string;
   spaFallback?: boolean;
 }
+
+export type NodeServerHandle = Server | Http2Server | Http2SecureServer;
 
 export type MiddlewareFunction = (
   ctx: CrocoHttpContext,
