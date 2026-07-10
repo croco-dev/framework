@@ -251,7 +251,7 @@ describe("create-croco-app generated smoke matrix", () => {
 
   it("intersects named cases with the selected tier and rejects mismatches", () => {
     const selection = selectGeneratedSmokeMatrixCases(GENERATED_SMOKE_MATRIX_CASES, {
-      args: ["--tier", "spine-blocking"],
+      args: ["--", "--tier", "spine-blocking"],
     });
 
     expect(selection.cases.map(({ name }) => name)).toEqual([

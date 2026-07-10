@@ -459,6 +459,9 @@ function parseGeneratedSmokeMatrixSelection(
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
+    if (arg === "--") {
+      continue;
+    }
     if (arg === "--tier") {
       const value = args[index + 1];
       if (!value) {
