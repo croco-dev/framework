@@ -2,11 +2,22 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { readGeneratedSmokeAllowlistMetadata } from "../create-croco-app-generated-smoke.mts";
+import {
+  readGeneratedSmokeAllowlistMetadata,
+  shouldRunSpaBeSplitContractSmoke,
+} from "../create-croco-app-generated-smoke.mts";
 import {
   copyGeneratedSmokeArtifacts,
   renderGeneratedSmokeArtifacts,
 } from "../create-croco-app-generated-smoke-report.mts";
+import {
+  assertGeneratedSmokeMatrixContract,
+  createGeneratedSmokeMatrixAggregateReport,
+  createGeneratedSmokeMatrixTierReport,
+  GENERATED_SMOKE_MATRIX_CASES,
+  renderGeneratedSmokeMatrixReport,
+  selectGeneratedSmokeMatrixCases,
+} from "../create-croco-app-generated-smoke-matrix.mts";
 import {
   createWorkspacePackageIndex,
   resolveLocalCrocoPackagesForGeneratedProject,
@@ -198,6 +209,180 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
     expect(renderGeneratedSmokeArtifacts(artifacts)).toContain(
       "`artifacts/saas-golden-path/ci-reports/saas-golden-path/scenario.json`",
     );
+  });
+});
+
+describe("create-croco-app generated smoke matrix", () => {
+  it("keeps REST SPA contract canaries in the blocking tier", () => {
+    expect(shouldRunSpaBeSplitContractSmoke(false, undefined)).toBe(true);
+    expect(shouldRunSpaBeSplitContractSmoke(true, "spine-blocking")).toBe(true);
+    expect(shouldRunSpaBeSplitContractSmoke(true, "ecosystem-advisory")).toBe(false);
+    expect(shouldRunSpaBeSplitContractSmoke(true, undefined)).toBe(false);
+  });
+
+  it("classifies every generated smoke case and requires advisory recovery metadata", () => {
+    expect(
+      GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "spine-blocking").map(
+        ({ name }) => name,
+      ),
+    ).toEqual([
+      "graphql-lambda-api",
+      "graphql-vite-spa-docker",
+      "meta-vite-fullstack-workers",
+      "production-app-starter",
+      "saas-golden-path",
+    ]);
+    expect(
+      GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "ecosystem-advisory"),
+    ).toHaveLength(11);
+    expect(
+      GENERATED_SMOKE_MATRIX_CASES.find(({ name }) => name === "graphql-lambda-api")?.advisory,
+    ).toBeUndefined();
+
+    expect(() =>
+      assertGeneratedSmokeMatrixContract([
+        {
+          ...GENERATED_SMOKE_MATRIX_CASES[0],
+          advisory: { owner: "", recoveryAction: "recover" },
+        },
+      ]),
+    ).toThrow("requires owner and recoveryAction");
+  });
+
+  it("intersects named cases with the selected tier and rejects mismatches", () => {
+    const selection = selectGeneratedSmokeMatrixCases(GENERATED_SMOKE_MATRIX_CASES, {
+      args: ["--", "--tier", "spine-blocking"],
+    });
+
+    expect(selection.cases.map(({ name }) => name)).toEqual([
+      "graphql-lambda-api",
+      "graphql-vite-spa-docker",
+      "meta-vite-fullstack-workers",
+      "production-app-starter",
+      "saas-golden-path",
+    ]);
+    expect(() =>
+      selectGeneratedSmokeMatrixCases(GENERATED_SMOKE_MATRIX_CASES, {
+        args: ["--tier", "spine-blocking", "blank-basic"],
+      }),
+    ).toThrow("do not belong to selected tier spine-blocking");
+  });
+
+  it("preserves canonical tier state and rebuilds aggregate release status from spine evidence", () => {
+    const spine = createGeneratedSmokeMatrixTierReport(
+      "spine-blocking",
+      GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "spine-blocking").map(
+        ({ name }) => ({
+          name,
+          status: "passed" as const,
+        }),
+      ),
+      { filteredRun: false, generatedAt: "2026-07-10T00:00:00.000Z" },
+    );
+    const firstAdvisory = createGeneratedSmokeMatrixTierReport(
+      "ecosystem-advisory",
+      [{ name: "blank-basic", status: "failed" }],
+      { filteredRun: true, generatedAt: "2026-07-10T00:01:00.000Z" },
+    );
+    const advisory = createGeneratedSmokeMatrixTierReport(
+      "ecosystem-advisory",
+      [{ name: "goal-saas-api", status: "passed" }],
+      {
+        filteredRun: true,
+        previousReport: firstAdvisory,
+        generatedAt: "2026-07-10T00:02:00.000Z",
+      },
+    );
+    const aggregate = createGeneratedSmokeMatrixAggregateReport(
+      { "spine-blocking": spine, "ecosystem-advisory": advisory },
+      "2026-07-10T00:03:00.000Z",
+    );
+
+    expect(advisory.cases.find(({ name }) => name === "blank-basic")?.status).toBe("failed");
+    expect(advisory.cases.find(({ name }) => name === "goal-saas-api")?.status).toBe("passed");
+    expect(aggregate.release.status).toBe("passed");
+    expect(aggregate.status).toBe("failed");
+    expect(renderGeneratedSmokeMatrixReport(advisory)).toContain(
+      "create-croco-app blank template owner",
+    );
+    expect(renderGeneratedSmokeMatrixReport(advisory)).toContain(
+      "CROCO_GENERATED_SMOKE_CASES=blank-basic pnpm create-croco-app:smoke",
+    );
+  });
+
+  it("retains an owner and recovery action for tier-level failures", () => {
+    const spine = createGeneratedSmokeMatrixTierReport(
+      "spine-blocking",
+      GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "spine-blocking").map(
+        ({ name }) => ({
+          name,
+          status: "passed" as const,
+        }),
+      ),
+      {
+        filteredRun: true,
+        failure: {
+          message: "create-croco-app CLI bootstrap failed",
+          owner: "create-croco-app release spine owner",
+          recoveryAction: "Repair the bootstrap command and rerun the spine tier.",
+        },
+      },
+    );
+
+    expect(spine.status).toBe("failed");
+    expect(renderGeneratedSmokeMatrixReport(spine)).toContain(
+      "create-croco-app release spine owner",
+    );
+    expect(renderGeneratedSmokeMatrixReport(spine)).toContain(
+      "Repair the bootstrap command and rerun the spine tier.",
+    );
+  });
+
+  it("treats missing or stale tier reports as pending aggregate evidence", () => {
+    const spine = createGeneratedSmokeMatrixTierReport(
+      "spine-blocking",
+      GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "spine-blocking").map(
+        ({ name }) => ({ name, status: "passed" as const }),
+      ),
+      { filteredRun: true, generatedAt: "2026-07-10T00:00:00.000Z" },
+    );
+    const advisory = createGeneratedSmokeMatrixTierReport(
+      "ecosystem-advisory",
+      [{ name: "blank-basic", status: "passed" }],
+      { filteredRun: true, generatedAt: "2026-07-10T00:00:00.000Z" },
+    );
+    const aggregate = createGeneratedSmokeMatrixAggregateReport(
+      {
+        "spine-blocking": {
+          ...spine,
+          release: { ...spine.release, status: "pending" },
+        },
+        "ecosystem-advisory": advisory,
+      },
+      "2026-07-10T00:01:00.000Z",
+    );
+
+    expect(aggregate.release.status).toBe("pending");
+    expect(aggregate.tiers).toContainEqual({ tier: "spine-blocking", status: "pending" });
+
+    const aggregateWithStaleAdvisoryMetadata = createGeneratedSmokeMatrixAggregateReport(
+      {
+        "spine-blocking": spine,
+        "ecosystem-advisory": {
+          ...advisory,
+          cases: advisory.cases.map((smokeCase) => ({
+            ...smokeCase,
+            advisory: { ...smokeCase.advisory, owner: "stale owner" },
+          })),
+        },
+      },
+      "2026-07-10T00:02:00.000Z",
+    );
+
+    expect(aggregateWithStaleAdvisoryMetadata.tiers).toContainEqual({
+      tier: "ecosystem-advisory",
+      status: "pending",
+    });
   });
 });
 

@@ -174,6 +174,7 @@ describe("release workflow quality gates", () => {
       "scripts/changeset-required-check.mts",
       "scripts/core-coverage-warning-check.mts",
       "scripts/create-croco-app-generated-smoke-support.mts",
+      "scripts/create-croco-app-generated-smoke-matrix.mts",
       "scripts/create-croco-app-generated-smoke.mts",
       "scripts/dependency-audit-policy.mts",
       "scripts/first-success-verify.mts",
@@ -250,7 +251,13 @@ describe("release workflow quality gates", () => {
     );
     expect(workflow).toContain("pnpm package-entrypoints:smoke");
     expect(workflow).toContain("pnpm package-bins:smoke");
-    expect(workflow).toContain("pnpm create-croco-app:smoke");
+    expect(workflow).toContain("pnpm create-croco-app:smoke -- --tier spine-blocking");
+    expect(workflow).toContain(
+      "if ! pnpm create-croco-app:smoke -- --tier ecosystem-advisory; then",
+    );
+    expect(workflow).toContain(
+      "Ecosystem-advisory generated app smoke failed; inspect its matrix report for the owner and recovery action.",
+    );
     expect(workflow).toContain("pnpm quick-start-lambda:smoke");
     expect(workflow).toContain("pnpm first-success:verify");
     expect(workflow).toContain("pnpm production-ready:check");

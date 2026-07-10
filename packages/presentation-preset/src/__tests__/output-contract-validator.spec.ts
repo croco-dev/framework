@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { getGeneratedSmokeMatrixCaseNames } from "../../../../scripts/create-croco-app-generated-smoke-matrix.mts";
 
 import type {
   GeneratedRuntimeProfile,
@@ -146,13 +147,10 @@ describe("Generated runtime profile catalog", () => {
   });
 
   it("names generated app smoke cases that exist in the smoke matrix", () => {
-    const smokeScript = readFileSync(
-      new URL("../../../../scripts/create-croco-app-generated-smoke.mts", import.meta.url),
-      "utf-8",
-    );
+    const smokeCaseNames = new Set(getGeneratedSmokeMatrixCaseNames());
 
     for (const profile of profileCatalog.profiles) {
-      expect(smokeScript).toContain(`name: "${profile.generatedAppSmokeCase}"`);
+      expect(smokeCaseNames).toContain(profile.generatedAppSmokeCase);
     }
   });
 

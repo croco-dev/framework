@@ -155,13 +155,16 @@ describe("CI package quality dashboard", () => {
   it("publishes generated app smoke matrix artifacts after the smoke gate", () => {
     const workflow = readCiWorkflow();
     const orderedMarkers = [
-      "- name: create-croco-app generated app smoke",
-      "run: pnpm create-croco-app:smoke",
+      "- name: create-croco-app spine-blocking generated app smoke",
+      "run: pnpm create-croco-app:smoke -- --tier spine-blocking",
+      "- name: create-croco-app ecosystem-advisory generated app smoke",
+      "run: pnpm create-croco-app:smoke -- --tier ecosystem-advisory",
       "- name: Publish generated app smoke summary",
-      "ci-reports/generated-apps/matrix.md",
-      "- name: Upload generated app smoke report",
-      "name: generated-app-smoke-report",
-      "path: ci-reports/generated-apps",
+      "for report in spine-blocking-matrix.md ecosystem-advisory-matrix.md; do",
+      "- name: Upload spine-blocking generated app smoke report",
+      "name: generated-app-smoke-spine-blocking",
+      "- name: Upload ecosystem-advisory generated app smoke report",
+      "name: generated-app-smoke-ecosystem-advisory",
       "- name: TypeScript check",
     ];
 
@@ -174,6 +177,12 @@ describe("CI package quality dashboard", () => {
       );
       previousIndex = index;
     }
+
+    const advisorySmokeStart = workflow.indexOf(
+      "- name: create-croco-app ecosystem-advisory generated app smoke",
+    );
+    const summaryStart = workflow.indexOf("- name: Publish generated app smoke summary");
+    expect(workflow.slice(advisorySmokeStart, summaryStart)).toContain("continue-on-error: true");
   });
 
   it("excludes intentionally archived OpenAI API docs snapshots from docs link checks", () => {

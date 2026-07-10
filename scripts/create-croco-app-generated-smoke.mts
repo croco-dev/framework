@@ -20,8 +20,17 @@ import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../packages/create-croco-app
 import {
   copyGeneratedSmokeArtifacts,
   type GeneratedSmokeArtifact,
-  renderGeneratedSmokeArtifacts,
 } from "./create-croco-app-generated-smoke-report.mts";
+import {
+  createGeneratedSmokeMatrixAggregateReport,
+  createGeneratedSmokeMatrixTierReport,
+  renderGeneratedSmokeMatrixReport,
+  selectGeneratedSmokeMatrixCases,
+  withGeneratedSmokeMatrixMetadata,
+  type AdvisorySmokeMetadata,
+  type SmokeMatrixFailure,
+  type SmokeMatrixTier,
+} from "./create-croco-app-generated-smoke-matrix.mts";
 import {
   createWorkspacePackageIndex,
   type DependencyField,
@@ -118,6 +127,8 @@ type SmokeStepResult = {
 
 type SmokeCase = {
   readonly name: string;
+  readonly tier: SmokeMatrixTier;
+  readonly advisory?: AdvisorySmokeMetadata;
   readonly args: readonly string[];
   readonly runtimeTarget: string;
   readonly matrixTargets: readonly string[];
@@ -126,6 +137,8 @@ type SmokeCase = {
 
 type SmokeCaseResult = {
   readonly name: string;
+  readonly tier: SmokeMatrixTier;
+  readonly advisory?: AdvisorySmokeMetadata;
   readonly preset: string;
   readonly runtimeTarget: string;
   readonly matrixTargets: readonly string[];
@@ -138,16 +151,27 @@ type SmokeCaseResult = {
 type SmokeGateResult = {
   readonly label: string;
   readonly command: string;
+  readonly tier: SmokeMatrixTier;
   status: SmokeStepStatus;
   error?: string;
 };
 
 type GeneratedSmokeReport = {
-  readonly schemaVersion: "croco.generated-app-smoke/v1";
+  readonly schemaVersion: "croco.generated-app-smoke/v2";
   readonly generatedAt: string;
   readonly filteredRun: boolean;
+  readonly selectedTier?: SmokeMatrixTier;
+  readonly release: {
+    readonly blockingTier: "spine-blocking";
+    status: SmokeStepStatus;
+  };
+  readonly tiers: readonly {
+    readonly tier: SmokeMatrixTier;
+    status: SmokeStepStatus;
+  }[];
   status: SmokeStepStatus;
   failure?: string;
+  failureTier?: SmokeMatrixTier;
   readonly matrix: {
     readonly coverage: ReturnType<typeof readSmokeCoverage>;
     readonly templateTargets: readonly TemplateMatrixTarget[];
@@ -411,7 +435,7 @@ const runtimeCapabilitySmokeSupport = {
     shutdown: false,
   },
 } as const satisfies Record<RuntimeCapabilitySmokePlatform, Record<string, boolean>>;
-const smokeCases: readonly SmokeCase[] = [
+const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
   {
     name: "blank-basic",
     args: ["--preset", "blank", "--scope", "@smoke", "--no-install", "--no-git"],
@@ -1105,13 +1129,26 @@ const smokeCases: readonly SmokeCase[] = [
   },
 ];
 
+const smokeCases = withGeneratedSmokeMatrixMetadata(smokeCaseDefinitions);
+
+export function shouldRunSpaBeSplitContractSmoke(
+  isFilteredRun: boolean,
+  selectedTier: SmokeMatrixTier | undefined,
+): boolean {
+  return !isFilteredRun || selectedTier === "spine-blocking";
+}
+
 if (isMainModule()) {
   let smokeReport: GeneratedSmokeReport | undefined;
   const activeSmokeRoot = getSmokeRoot();
 
   try {
-    const selectedSmokeCases = selectSmokeCases(smokeCases);
-    const isFilteredRun = selectedSmokeCases.length !== smokeCases.length;
+    const smokeSelection = selectGeneratedSmokeMatrixCases(smokeCases, {
+      args: process.argv.slice(2),
+      env: process.env,
+    });
+    const selectedSmokeCases = smokeSelection.cases;
+    const isFilteredRun = smokeSelection.filteredRun;
 
     assertGraphQLSmokeContractCoverage(selectedSmokeCases);
 
@@ -1125,124 +1162,158 @@ if (isMainModule()) {
       printSmokeCoverageSummary(smokeCases);
     }
 
-    smokeReport = createGeneratedSmokeReport(selectedSmokeCases, isFilteredRun);
+    smokeReport = createGeneratedSmokeReport(
+      selectedSmokeCases,
+      isFilteredRun,
+      smokeSelection.selectedTier,
+    );
     writeGeneratedSmokeReport(smokeReport);
-
-    runGeneratedAppContractGates(smokeReport);
 
     runGateCommand(
       smokeReport,
-      "workspace package build",
+      "create-croco-app CLI bootstrap",
       process.execPath,
-      [
-        turboPath,
-        "build",
-        "--filter=@croco/auth-better-auth...",
-        "--filter=@croco/auth-clerk...",
-        "--filter=@croco/auth-drizzle...",
-        "--filter=@croco/billing-polar...",
-        "--filter=@croco/cli...",
-        "--filter=@croco/events-core...",
-        "--filter=@croco/events-inmemory...",
-        "--filter=create-croco-app...",
-        "--filter=@croco/framework-context...",
-        "--filter=@croco/frontend-cloudflare...",
-        "--filter=@croco/frontend-problems...",
-        "--filter=@croco/frontend-react...",
-        "--filter=@croco/frontend-vite...",
-        "--filter=@croco/llm-core...",
-        "--filter=@croco/llm-metering...",
-        "--filter=@croco/meta-vite...",
-        "--filter=@croco/lifecycle-core...",
-        "--filter=@croco/metering-drizzle...",
-        "--filter=@croco/metering-upstash...",
-        "--filter=@croco/openapi-spec...",
-        "--filter=@croco/problems-core...",
-        "--filter=@croco/preset-cloudflare...",
-        "--filter=@croco/preset-lambda...",
-        "--filter=@croco/repository-core...",
-        "--filter=@croco/retry-core...",
-        "--filter=@croco/rpc-codegen...",
-        "--filter=@croco/storage-cloudinary...",
-        "--filter=@croco/storage-r2...",
-        "--filter=@croco/tasks-qstash...",
-        "--filter=@croco/telemetry-api...",
-        "--filter=@croco/telemetry-sdk-node...",
-        "--filter=@croco/tenant-core...",
-        "--filter=@croco/transports-http...",
-        "--filter=@croco/triggers-qstash...",
-        "--filter=@croco/tx-drizzle...",
-        "--force",
-      ],
+      [turboPath, "build", "--filter=create-croco-app...", "--force"],
       rootDir,
+      "spine-blocking",
     );
     assertExists(cliPath, "create-croco-app dist CLI is missing after build");
+
+    if (smokeSelection.selectedTier !== "spine-blocking") {
+      runGeneratedAppContractGates(smokeReport);
+      runContinuingGateCommand(
+        smokeReport,
+        "workspace package build",
+        process.execPath,
+        [
+          turboPath,
+          "build",
+          "--filter=@croco/auth-better-auth...",
+          "--filter=@croco/auth-clerk...",
+          "--filter=@croco/auth-drizzle...",
+          "--filter=@croco/billing-polar...",
+          "--filter=@croco/cli...",
+          "--filter=@croco/events-core...",
+          "--filter=@croco/events-inmemory...",
+          "--filter=create-croco-app...",
+          "--filter=@croco/framework-context...",
+          "--filter=@croco/frontend-cloudflare...",
+          "--filter=@croco/frontend-problems...",
+          "--filter=@croco/frontend-react...",
+          "--filter=@croco/frontend-vite...",
+          "--filter=@croco/llm-core...",
+          "--filter=@croco/llm-metering...",
+          "--filter=@croco/meta-vite...",
+          "--filter=@croco/lifecycle-core...",
+          "--filter=@croco/metering-drizzle...",
+          "--filter=@croco/metering-upstash...",
+          "--filter=@croco/openapi-spec...",
+          "--filter=@croco/problems-core...",
+          "--filter=@croco/preset-cloudflare...",
+          "--filter=@croco/preset-lambda...",
+          "--filter=@croco/repository-core...",
+          "--filter=@croco/retry-core...",
+          "--filter=@croco/rpc-codegen...",
+          "--filter=@croco/storage-cloudinary...",
+          "--filter=@croco/storage-r2...",
+          "--filter=@croco/tasks-qstash...",
+          "--filter=@croco/telemetry-api...",
+          "--filter=@croco/telemetry-sdk-node...",
+          "--filter=@croco/tenant-core...",
+          "--filter=@croco/transports-http...",
+          "--filter=@croco/triggers-qstash...",
+          "--filter=@croco/tx-drizzle...",
+          "--force",
+        ],
+        rootDir,
+        "ecosystem-advisory",
+      );
+    }
 
     const workspacePackageIndex = createWorkspacePackageIndex(rootDir);
     const packedWorkspacePackages = new Map<string, string>();
     const builtWorkspacePackageNames = new Set<string>();
+    const smokeCaseFailures: Error[] = [];
 
     for (const smokeCase of selectedSmokeCases) {
       const projectDir = join(activeSmokeRoot, smokeCase.name);
       const caseResult = getSmokeCaseResult(smokeReport, smokeCase.name);
 
-      runSmokeCaseCommand(
-        smokeReport,
-        caseResult,
-        "generate",
-        "node",
-        [cliPath, projectDir, ...smokeCase.args],
-        rootDir,
-      );
-      const generatedSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
-        projectDir,
-        join(activeSmokeRoot, "generated-package-packs"),
-        workspacePackageIndex,
-        packedWorkspacePackages,
-        builtWorkspacePackageNames,
-      );
-      rewriteExternalCrocoRanges(
-        projectDir,
-        generatedSmokeRangeOverrides,
-        generatedSmokeExternalCrocoRangeExceptions,
-      );
-      assertGeneratedReadme(projectDir, smokeCase);
-      assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
-      assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
-      writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
-      runSmokeCaseCommand(
-        smokeReport,
-        caseResult,
-        "install",
-        "corepack",
-        ["pnpm", "install"],
-        projectDir,
-      );
-      const lockfilePath = join(projectDir, "pnpm-lock.yaml");
-      assertExists(lockfilePath, `${smokeCase.name} did not create a pnpm lockfile`);
-      assertPnpmLockfileUsesLocalTarballOverrides(
-        lockfilePath,
-        smokeCase.name,
-        generatedSmokeRangeOverrides,
-      );
-      assertExists(
-        join(projectDir, "node_modules"),
-        `${smokeCase.name} did not install dependencies with pnpm`,
-      );
-
-      for (const validation of smokeCase.validations) {
-        runValidation(projectDir, smokeCase, validation, smokeReport, caseResult);
+      try {
+        runSmokeCaseCommand(
+          smokeReport,
+          caseResult,
+          "generate",
+          "node",
+          [cliPath, projectDir, ...smokeCase.args],
+          rootDir,
+        );
+        const generatedSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
+          projectDir,
+          join(activeSmokeRoot, "generated-package-packs"),
+          workspacePackageIndex,
+          packedWorkspacePackages,
+          builtWorkspacePackageNames,
+        );
+        rewriteExternalCrocoRanges(
+          projectDir,
+          generatedSmokeRangeOverrides,
+          generatedSmokeExternalCrocoRangeExceptions,
+        );
+        assertGeneratedReadme(projectDir, smokeCase);
+        assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
+        assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
+        writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
+        runSmokeCaseCommand(
+          smokeReport,
+          caseResult,
+          "install",
+          "corepack",
+          ["pnpm", "install"],
+          projectDir,
+        );
+        const lockfilePath = join(projectDir, "pnpm-lock.yaml");
+        assertExists(lockfilePath, `${smokeCase.name} did not create a pnpm lockfile`);
+        assertPnpmLockfileUsesLocalTarballOverrides(
+          lockfilePath,
+          smokeCase.name,
+          generatedSmokeRangeOverrides,
+        );
+        assertExists(
+          join(projectDir, "node_modules"),
+          `${smokeCase.name} did not install dependencies with pnpm`,
+        );
+        for (const validation of smokeCase.validations) {
+          runValidation(projectDir, smokeCase, validation, smokeReport, caseResult);
+        }
+        runGraphQLContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
+        caseResult.status = "passed";
+        writeGeneratedSmokeReport(smokeReport);
+      } catch (error) {
+        const message = toErrorMessage(error);
+        caseResult.status = "failed";
+        caseResult.error ??= message;
+        smokeReport.status = "failed";
+        smokeReport.failure ??= message;
+        smokeReport.failureTier ??= smokeCase.tier;
+        smokeCaseFailures.push(error instanceof Error ? error : new Error(message));
+        writeGeneratedSmokeReport(smokeReport);
+        console.error(`create-croco-app-generated-smoke: ${smokeCase.name} failed: ${message}`);
       }
-      runGraphQLContractDriftCanaries(projectDir, smokeCase, smokeReport, caseResult);
-      caseResult.status = "passed";
-      writeGeneratedSmokeReport(smokeReport);
     }
 
-    if (!isFilteredRun) {
+    if (shouldRunSpaBeSplitContractSmoke(isFilteredRun, smokeSelection.selectedTier)) {
       runSpaBeSplitContractSmoke(
         workspacePackageIndex,
         packedWorkspacePackages,
         builtWorkspacePackageNames,
+      );
+    }
+
+    const failedGates = smokeReport.gates.filter((gate) => gate.status === "failed");
+    if (smokeCaseFailures.length > 0 || failedGates.length > 0) {
+      throw new Error(
+        `Generated app smoke completed with ${smokeCaseFailures.length} case failure(s) and ${failedGates.length} gate failure(s)`,
       );
     }
 
@@ -1253,6 +1324,7 @@ if (isMainModule()) {
     if (smokeReport) {
       smokeReport.status = "failed";
       smokeReport.failure = toErrorMessage(error);
+      smokeReport.failureTier ??= smokeReport.selectedTier ?? "spine-blocking";
       writeGeneratedSmokeReport(smokeReport);
     }
     throw error;
@@ -1284,19 +1356,30 @@ function runGeneratedAppContractGates(report: GeneratedSmokeReport): void {
 }
 
 function runGate(label: string, args: readonly string[], report: GeneratedSmokeReport): void {
-  runGateCommand(report, label, "corepack", ["pnpm", ...args], rootDir);
-  console.log(`create-croco-app-generated-smoke: ${label} passed`);
+  runContinuingGateCommand(
+    report,
+    label,
+    "corepack",
+    ["pnpm", ...args],
+    rootDir,
+    "ecosystem-advisory",
+  );
 }
 
 function createGeneratedSmokeReport(
   cases: readonly SmokeCase[],
   isFilteredRun: boolean,
+  selectedTier: SmokeMatrixTier | undefined,
 ): GeneratedSmokeReport {
+  const tiers = ["spine-blocking", "ecosystem-advisory"] as const;
   return {
-    schemaVersion: "croco.generated-app-smoke/v1",
+    schemaVersion: "croco.generated-app-smoke/v2",
     generatedAt: new Date().toISOString(),
     filteredRun: isFilteredRun,
+    selectedTier,
     status: "pending",
+    release: { blockingTier: "spine-blocking", status: "pending" },
+    tiers: tiers.map((tier) => ({ tier, status: "pending" })),
     matrix: {
       coverage: readSmokeCoverage(cases),
       templateTargets: readTemplateMatrixTargets(cases),
@@ -1305,6 +1388,8 @@ function createGeneratedSmokeReport(
     gates: [],
     cases: cases.map((smokeCase) => ({
       name: smokeCase.name,
+      tier: smokeCase.tier,
+      advisory: smokeCase.advisory,
       preset: readSmokeCasePreset(smokeCase),
       runtimeTarget: smokeCase.runtimeTarget,
       matrixTargets: smokeCase.matrixTargets,
@@ -1317,101 +1402,116 @@ function createGeneratedSmokeReport(
 
 function writeGeneratedSmokeReport(report: GeneratedSmokeReport): void {
   mkdirSync(generatedSmokeReportDir, { recursive: true });
+  refreshGeneratedSmokeReportStatus(report);
+
+  const tiersToWrite = report.selectedTier
+    ? [report.selectedTier]
+    : (["spine-blocking", "ecosystem-advisory"] as const);
+  for (const tier of tiersToWrite) {
+    const tierReport = createGeneratedSmokeMatrixTierReport(
+      tier,
+      report.cases.filter((smokeCase) => smokeCase.tier === tier),
+      {
+        filteredRun: report.filteredRun,
+        previousReport: readGeneratedSmokeMatrixReport(
+          join(generatedSmokeReportDir, `${tier}-matrix.json`),
+        ),
+        generatedAt: report.generatedAt,
+        failure: createGeneratedSmokeMatrixFailure(tier, report.failure, report.failureTier),
+      },
+    );
+    writeFileSync(
+      join(generatedSmokeReportDir, `${tier}-matrix.json`),
+      `${JSON.stringify(tierReport, null, 2)}\n`,
+    );
+    writeFileSync(
+      join(generatedSmokeReportDir, `${tier}-matrix.md`),
+      renderGeneratedSmokeMatrixReport(tierReport),
+    );
+  }
+
+  const aggregate = createGeneratedSmokeMatrixAggregateReport(
+    {
+      "spine-blocking": readGeneratedSmokeMatrixReport(
+        join(generatedSmokeReportDir, "spine-blocking-matrix.json"),
+      ),
+      "ecosystem-advisory": readGeneratedSmokeMatrixReport(
+        join(generatedSmokeReportDir, "ecosystem-advisory-matrix.json"),
+      ),
+    },
+    report.generatedAt,
+  );
   writeFileSync(
     join(generatedSmokeReportDir, "matrix.json"),
-    `${JSON.stringify(report, null, 2)}\n`,
+    `${JSON.stringify(aggregate, null, 2)}\n`,
   );
-  writeFileSync(join(generatedSmokeReportDir, "matrix.md"), renderGeneratedSmokeReport(report));
+  writeFileSync(
+    join(generatedSmokeReportDir, "matrix.md"),
+    renderGeneratedSmokeMatrixReport(aggregate),
+  );
 }
 
-function renderGeneratedSmokeReport(report: GeneratedSmokeReport): string {
-  const lines = [
-    "# Generated app smoke matrix",
-    "",
-    `- Status: ${report.status}`,
-    `- Generated at: ${report.generatedAt}`,
-    `- Filtered run: ${report.filteredRun ? "yes" : "no"}`,
-    "",
-    "## Coverage",
-    "",
-    `- Presets: ${formatList(report.matrix.coverage.presets)}`,
-    `- APIs: ${formatList(report.matrix.coverage.apis)}`,
-    `- API hosting: ${formatList(report.matrix.coverage.apiHosting)}`,
-    `- Backend deploy: ${formatList(report.matrix.coverage.backendDeploys)}`,
-    `- Frontend deploy: ${formatList(report.matrix.coverage.frontendDeploys)}`,
-    `- DB: ${formatList(report.matrix.coverage.databases)}`,
-    `- SaaS profile: ${formatList(report.matrix.coverage.saasProviderProfiles)}`,
-    `- Tenant model: ${formatList(report.matrix.coverage.tenantModels)}`,
-    `- Runtime capability manifests: ${formatList(report.matrix.coverage.runtimeCapabilityManifests)}`,
-    "",
-    "## Template accountability",
-    "",
-    "| Template | Status | Evidence |",
-    "| --- | --- | --- |",
-    ...report.matrix.templateTargets.map(
-      (target) =>
-        `| \`${target.template}\` | covered | ${target.cases.map((name) => `\`${name}\``).join(", ")} |`,
-    ),
-    ...report.matrix.templateExclusions.map(
-      (exclusion) =>
-        `| \`${exclusion.template}\` | excluded | ${escapeMarkdownTable(exclusion.reason)} |`,
-    ),
-    "",
-    "## Gates",
-    "",
-    "| Gate | Status | Command |",
-    "| --- | --- | --- |",
-    ...report.gates.map(
-      (gate) =>
-        `| ${escapeMarkdownTable(gate.label)} | ${gate.status} | \`${escapeBackticks(gate.command)}\` |`,
-    ),
-    "",
-    "## Cases",
-    "",
-    "| Case | Preset/goal | Runtime target | Templates | Status |",
-    "| --- | --- | --- | --- | --- |",
-    ...report.cases.map(
-      (smokeCase) =>
-        `| \`${smokeCase.name}\` | \`${smokeCase.preset}\` | \`${smokeCase.runtimeTarget}\` | ${smokeCase.matrixTargets.map((target) => `\`${target}\``).join(", ")} | ${smokeCase.status} |`,
-    ),
-  ];
-
-  if (report.failure) {
-    lines.push("", "## Failure", "", report.failure);
+function readGeneratedSmokeMatrixReport(path: string): unknown {
+  if (!existsSync(path)) {
+    return undefined;
   }
 
-  lines.push("", "## Case steps", "");
-  for (const smokeCase of report.cases) {
-    lines.push(`### ${smokeCase.name}`, "");
-    if (smokeCase.steps.length === 0) {
-      lines.push("_No steps recorded yet._", "");
-      continue;
-    }
-    lines.push(
-      "| Step | Status | Command | Diagnostics | Artifacts |",
-      "| --- | --- | --- | --- | --- |",
-    );
-    for (const step of smokeCase.steps) {
-      lines.push(
-        `| ${escapeMarkdownTable(step.label)} | ${step.status} | ${step.command ? `\`${escapeBackticks(step.command)}\`` : "-"} | ${formatList(step.diagnosticCodes)} | ${renderGeneratedSmokeArtifacts(step.artifacts)} |`,
-      );
-    }
-    lines.push("");
+  try {
+    return JSON.parse(readFileSync(path, "utf8")) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+function createGeneratedSmokeMatrixFailure(
+  tier: SmokeMatrixTier,
+  message: string | undefined,
+  failureTier: SmokeMatrixTier | undefined,
+): SmokeMatrixFailure | undefined {
+  if (!message || failureTier !== tier) {
+    return undefined;
   }
 
-  return `${lines.join("\n")}\n`;
+  if (tier === "spine-blocking") {
+    return {
+      message,
+      owner: "create-croco-app release spine owner",
+      recoveryAction:
+        "pnpm create-croco-app:smoke -- --tier spine-blocking; repair the reported bootstrap or spine smoke failure.",
+    };
+  }
+
+  return {
+    message,
+    owner: "create-croco-app ecosystem smoke owner",
+    recoveryAction:
+      "pnpm create-croco-app:smoke -- --tier ecosystem-advisory; repair the reported advisory gate or smoke failure.",
+  };
 }
 
-function formatList(values: readonly string[]): string {
-  return values.length > 0 ? values.map((value) => `\`${value}\``).join(", ") : "_none_";
+function refreshGeneratedSmokeReportStatus(report: GeneratedSmokeReport): void {
+  for (const tier of report.tiers) {
+    const statuses = report.cases
+      .filter((smokeCase) => smokeCase.tier === tier.tier)
+      .map(({ status }) => status);
+    tier.status = summarizeSmokeStatuses(statuses);
+  }
+  report.release.status =
+    report.tiers.find(({ tier }) => tier === "spine-blocking")?.status ?? "pending";
+  report.status = summarizeSmokeStatuses([
+    ...report.tiers.map(({ status }) => status),
+    ...report.gates.map(({ status }) => status),
+  ]);
 }
 
-function escapeMarkdownTable(value: string): string {
-  return value.replace(/\|/g, "\\|").replace(/\n/g, " ");
-}
-
-function escapeBackticks(value: string): string {
-  return value.replace(/`/g, "\\`");
+function summarizeSmokeStatuses(statuses: readonly SmokeStepStatus[]): SmokeStepStatus {
+  if (statuses.some((status) => status === "failed")) {
+    return "failed";
+  }
+  if (statuses.length === 0 || statuses.some((status) => status === "pending")) {
+    return "pending";
+  }
+  return "passed";
 }
 
 function readTemplateMatrixTargets(cases: readonly SmokeCase[]): readonly TemplateMatrixTarget[] {
@@ -1536,10 +1636,12 @@ function runGateCommand(
   command: string,
   args: readonly string[],
   cwd: string,
+  tier: SmokeMatrixTier,
 ): void {
   const result: SmokeGateResult = {
     label,
     command: formatCommand(command, args, cwd),
+    tier,
     status: "pending",
   };
   report.gates.push(result);
@@ -1554,8 +1656,25 @@ function runGateCommand(
     result.error = toErrorMessage(error);
     report.status = "failed";
     report.failure = result.error;
+    report.failureTier ??= tier;
     writeGeneratedSmokeReport(report);
     throw error;
+  }
+}
+
+function runContinuingGateCommand(
+  report: GeneratedSmokeReport,
+  label: string,
+  command: string,
+  args: readonly string[],
+  cwd: string,
+  tier: SmokeMatrixTier,
+): void {
+  try {
+    runGateCommand(report, label, command, args, cwd, tier);
+    console.log(`create-croco-app-generated-smoke: ${label} passed`);
+  } catch (error) {
+    console.error(`create-croco-app-generated-smoke: ${label} failed: ${toErrorMessage(error)}`);
   }
 }
 
@@ -1620,6 +1739,7 @@ function recordSmokeCaseFailure(
   caseResult.error = step.error;
   report.status = "failed";
   report.failure = createSmokeFailureMessage(caseResult, step, error);
+  report.failureTier ??= caseResult.tier;
   writeGeneratedSmokeReport(report);
 }
 
@@ -1691,35 +1811,6 @@ function extractDiagnosticCodes(output: string): readonly string[] {
   return [
     ...new Set(output.match(/\b(?:CROCO_[A-Z0-9_]+|[a-z0-9-]+\/[a-z0-9-]+)\b/g) ?? []),
   ].sort();
-}
-
-function selectSmokeCases(cases: readonly SmokeCase[]): readonly SmokeCase[] {
-  const requestedCaseNames = new Set(process.argv.slice(2).filter(Boolean));
-  const envValue = process.env.CROCO_GENERATED_SMOKE_CASES;
-
-  if (envValue) {
-    for (const caseName of envValue.split(",")) {
-      const trimmedCaseName = caseName.trim();
-      if (trimmedCaseName) {
-        requestedCaseNames.add(trimmedCaseName);
-      }
-    }
-  }
-
-  if (requestedCaseNames.size === 0) {
-    return cases;
-  }
-
-  const selectedCases = cases.filter(({ name }) => requestedCaseNames.has(name));
-  const unknownCases = [...requestedCaseNames].filter(
-    (caseName) => !cases.some(({ name }) => name === caseName),
-  );
-
-  if (unknownCases.length > 0) {
-    throw new Error(`Unknown create-croco-app generated smoke case(s): ${unknownCases.join(", ")}`);
-  }
-
-  return selectedCases;
 }
 
 function assertExists(path: string, message: string): void {
