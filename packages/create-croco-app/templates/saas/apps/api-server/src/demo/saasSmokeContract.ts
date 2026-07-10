@@ -38,6 +38,9 @@ export type SaasDemoSnapshot = {
     };
   };
   auth: {
+    userId: string;
+    sessionId: string;
+    roles: readonly string[];
     permission: string;
     allowed: boolean;
   };
@@ -50,6 +53,13 @@ export type SaasDemoSnapshot = {
     checkoutUrl: string;
     subscriptionStatus: string;
     entitlementPlanId: string | null;
+    mockEvent: {
+      eventId: string;
+      eventType: string;
+      externalSubscriptionId: string;
+      processedStatus: "completed";
+      duplicateFailureCode: string;
+    };
   };
   metering: {
     meterId: string;
@@ -120,6 +130,13 @@ export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
       ? "seat limit failure was not explicit"
       : undefined,
     !snapshot.auth.allowed ? "member RBAC permission check failed" : undefined,
+    snapshot.auth.userId !== "user_member"
+      ? "member auth user id was not deterministic"
+      : undefined,
+    snapshot.auth.sessionId !== "session_demo_member"
+      ? "member session id was not deterministic"
+      : undefined,
+    !snapshot.auth.roles.includes("member") ? "member auth role was not captured" : undefined,
     !snapshot.access.allowed ? "member access tuple check failed" : undefined,
     !snapshot.billing.checkoutUrl.startsWith("https://billing.example.test/checkout/")
       ? "billing checkout URL was not created"
@@ -129,6 +146,15 @@ export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
       : undefined,
     snapshot.billing.entitlementPlanId !== "team"
       ? "billing subscription did not sync the entitlement plan"
+      : undefined,
+    snapshot.billing.mockEvent.eventType !== "billing.subscription_activated"
+      ? "billing mock event type was not explicit"
+      : undefined,
+    snapshot.billing.mockEvent.processedStatus !== "completed"
+      ? "billing mock event was not completed"
+      : undefined,
+    snapshot.billing.mockEvent.duplicateFailureCode !== "billing/webhook-already-processed"
+      ? "billing mock event replay failure was not explicit"
       : undefined,
     snapshot.metering.currentUsage !== 3 ? "usage was not recorded" : undefined,
     snapshot.ai.provider !== "in-memory" ? "AI provider was not the demo provider" : undefined,

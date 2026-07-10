@@ -27,17 +27,20 @@ pnpm failure-drill:smoke
 
 ```bash
 pnpm exec croco generate usage-dashboard --no-page
+pnpm demo:scenario
 SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter {{scope}}/api-server dev
 curl -X POST http://localhost:3000/saas/demo/seed
 curl -H 'x-tenant-id: tenant_acme' http://localhost:3000/ops/usage
 ```
 
 `croco generate usage-dashboard`는 `/ops/usage` API를 생성합니다. 이 SaaS preset은 API-only baseline이므로 `--no-page`를 사용합니다. 로컬 개발 서버에서 `/saas/demo/seed`를 호출하면 같은 in-memory runtime에 `x-tenant-id: tenant_acme` 또는 `?tenantId=tenant_acme`로 조회할 수 있는 tenant, plan, subscription, 정상 quota 사용량, 초과 quota warning 사용량이 준비됩니다.
+`pnpm demo:scenario`는 usage-dashboard API를 생성한 뒤 deterministic seed data와 dashboard read model을 함께 검증하고 `ci-reports/saas-golden-path/scenario.json`, `ci-reports/saas-golden-path/scenario.md`를 씁니다. Scenario는 generated `UsageDashboardRuntime`의 `createUsageDashboardService()` contract를 사용하므로 실행 전에 dashboard를 다시 생성합니다.
 
 ## Demo Flow
 
 ```bash
 pnpm demo:seed
+pnpm demo:scenario
 ```
 
 seed는 다음 순서로 실행됩니다.
@@ -55,6 +58,8 @@ seed는 다음 순서로 실행됩니다.
 11. at-risk health signal을 lifecycle rule로 평가하고 CS follow-up action을 1회 emit
 12. billing-sync background job 실행 및 inspect
 13. health/diagnostics 상태 확인
+
+`demo:scenario`는 위 seed를 fresh in-memory runtime에 다시 실행하고 generated usage dashboard read model에서 `tenant_acme`, `team` plan, active subscription, `api_requests` 정상 사용량, `storage.gb` warning overage 상태를 확인합니다. 출력 artifact는 timestamp, invitation token 같은 volatile field를 정규화하거나 제외합니다.
 
 ## API Contract
 

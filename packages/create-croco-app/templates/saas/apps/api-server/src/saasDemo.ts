@@ -3,6 +3,7 @@ import { type AuthUser, RbacEngine, RoleRegistry } from "@croco/auth-core";
 import {
   BillingService,
   InMemoryBillingStore,
+  WebhookAlreadyProcessedProblem,
   type BillingGateway,
   type SubscriptionStatus,
 } from "@croco/billing-core";
@@ -84,6 +85,9 @@ const DEMO_LLM_PROMPT = "Summarize tenant usage";
 const DEMO_LLM_INPUT_PRICE_PER_TOKEN = 0.000001;
 const DEMO_LLM_OUTPUT_PRICE_PER_TOKEN = 0.000002;
 const DEMO_LLM_PROMPT_TOKENS_QUOTA = 50;
+const DEMO_MEMBER_SESSION_ID = "session_demo_member";
+const DEMO_SUBSCRIPTION_CURRENT_PERIOD_END = new Date("2030-01-01T00:00:00.000Z");
+const DEMO_BILLING_LAST_SYNCED_AT = new Date("2026-01-01T00:00:00.000Z");
 const PROMPT_TOKENS = "llm.prompt_tokens";
 const COMPLETION_TOKENS = "llm.completion_tokens";
 const COST_USD = "llm.cost_usd";
@@ -500,7 +504,16 @@ export function createSaasRuntime(): SaasRuntime {
   };
 }
 
-export const defaultSaasRuntime = createSaasRuntime();
+export let defaultSaasRuntime = createSaasRuntime();
+
+export function resetDefaultSaasRuntime(): SaasRuntime {
+  defaultSaasRuntime = createSaasRuntime();
+  return defaultSaasRuntime;
+}
+
+export async function seedDefaultSaasRuntime(): Promise<SaasDemoSnapshot> {
+  return runSaasDemoFlow(resetDefaultSaasRuntime());
+}
 
 async function assertLlmQuotaForEntitlement(
   entitlementManager: EntitlementManager,
@@ -552,16 +565,7 @@ export async function runSaasDemoFlow(
       successUrl: "https://app.example.test/billing/success",
       cancelUrl: "https://app.example.test/billing/cancel",
     });
-    await runtime.billingStore.saveSubscription({
-      id: `subscription_${tenant.id}`,
-      billingAccountId: tenant.id,
-      externalSubscriptionId: `external_subscription_${tenant.id}`,
-      planId: TEAM_PLAN_ID,
-      status: "active",
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      cancelAtPeriodEnd: false,
-      lastSyncedAt: new Date(),
-    });
+    const billingMockEvent = await processBillingMockSubscriptionActivatedEvent(runtime, tenant.id);
     const entitlementPlanId = await runtime.subscriptionProvider.getCurrentPlanId(tenant.id);
 
     const ownerMembership = await runtime.membershipManager.addMember(
@@ -795,6 +799,9 @@ export async function runSaasDemoFlow(
         },
       },
       auth: {
+        userId: memberUser.id,
+        sessionId: DEMO_MEMBER_SESSION_ID,
+        roles: memberUser.roles,
         permission: authPermission,
         allowed: authAllowed,
       },
@@ -807,6 +814,7 @@ export async function runSaasDemoFlow(
         checkoutUrl: checkout.checkoutUrl,
         subscriptionStatus: subscriptionStatus ?? "none",
         entitlementPlanId,
+        mockEvent: billingMockEvent,
       },
       metering: {
         meterId: usageRecord.meterId,
@@ -855,6 +863,46 @@ export async function runSaasDemoFlow(
       },
     };
   });
+}
+
+async function processBillingMockSubscriptionActivatedEvent(
+  runtime: SaasRuntime,
+  tenantId: string,
+): Promise<SaasDemoSnapshot["billing"]["mockEvent"]> {
+  const eventType = "billing.subscription_activated";
+  const eventId = `${eventType}:${tenantId}:team`;
+  const externalSubscriptionId = `external_subscription_${tenantId}`;
+
+  await runtime.billingStore.reserveWebhook(eventId, eventType);
+  await runtime.billingStore.saveSubscription({
+    id: `subscription_${tenantId}`,
+    billingAccountId: tenantId,
+    externalSubscriptionId,
+    planId: TEAM_PLAN_ID,
+    status: "active",
+    currentPeriodEnd: DEMO_SUBSCRIPTION_CURRENT_PERIOD_END,
+    cancelAtPeriodEnd: false,
+    lastSyncedAt: DEMO_BILLING_LAST_SYNCED_AT,
+  });
+  await runtime.billingStore.completeWebhook(eventId);
+
+  let duplicateFailureCode = "none";
+  try {
+    await runtime.billingStore.reserveWebhook(eventId, eventType);
+  } catch (error) {
+    if (!(error instanceof WebhookAlreadyProcessedProblem)) {
+      throw error;
+    }
+    duplicateFailureCode = error.code;
+  }
+
+  return {
+    eventId,
+    eventType,
+    externalSubscriptionId,
+    processedStatus: "completed",
+    duplicateFailureCode,
+  };
 }
 
 async function runBillingSyncJob(runtime: SaasRuntime, tenantId: string): Promise<JobDetails> {

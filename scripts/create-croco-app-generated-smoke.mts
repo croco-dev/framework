@@ -18,6 +18,11 @@ import {
 } from "../packages/create-croco-app/src/secret-placeholder-policy.ts";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../packages/create-croco-app/src/supported-options.ts";
 import {
+  copyGeneratedSmokeArtifacts,
+  type GeneratedSmokeArtifact,
+  renderGeneratedSmokeArtifacts,
+} from "./create-croco-app-generated-smoke-report.mts";
+import {
   createWorkspacePackageIndex,
   type DependencyField,
   type ExternalCrocoRangeException,
@@ -89,6 +94,7 @@ type SmokeValidation = {
     readonly matches: Record<string, unknown>;
     readonly arrayMinLengths?: Readonly<Record<string, number>>;
   };
+  readonly artifacts?: readonly string[];
   readonly env?: Readonly<Record<string, string>>;
   readonly expectFailure?: {
     readonly outputIncludes: readonly string[];
@@ -103,6 +109,7 @@ type SmokeStepResult = {
   readonly packagePath?: readonly string[];
   readonly paths?: readonly string[];
   readonly jsonPath?: string;
+  artifacts: readonly GeneratedSmokeArtifact[];
   readonly expectFailure?: boolean;
   status: SmokeStepStatus;
   diagnosticCodes: readonly string[];
@@ -942,6 +949,33 @@ const smokeCases: readonly SmokeCase[] = [
       { label: "demo seed", args: ["demo:seed"] },
       { label: "demo flow", args: ["demo:smoke"] },
       { label: "failure drill smoke", args: ["failure-drill:smoke"] },
+      {
+        label: "scenario output",
+        args: ["demo:scenario"],
+        paths: [
+          "ci-reports/saas-golden-path/scenario.json",
+          "ci-reports/saas-golden-path/scenario.md",
+        ],
+        json: {
+          path: "ci-reports/saas-golden-path/scenario.json",
+          matches: {
+            schemaVersion: "croco.saas-golden-path.scenario/v1",
+            generatedAt: "deterministic",
+            tenantId: "tenant_acme",
+            billingSubscriptionStatus: "active",
+            dashboardTenantId: "tenant_acme",
+            dashboardPlanId: "team",
+            aiQuotaFailureCode: "llm-metering/quota-exceeded",
+            operationsHealthStatus: "up",
+            jobsStatus: "completed",
+            lifecycleDuplicateRunStatus: "skipped",
+          },
+        },
+        artifacts: [
+          "ci-reports/saas-golden-path/scenario.json",
+          "ci-reports/saas-golden-path/scenario.md",
+        ],
+      },
     ],
   },
   {
@@ -1353,10 +1387,13 @@ function renderGeneratedSmokeReport(report: GeneratedSmokeReport): string {
       lines.push("_No steps recorded yet._", "");
       continue;
     }
-    lines.push("| Step | Status | Command | Diagnostics |", "| --- | --- | --- | --- |");
+    lines.push(
+      "| Step | Status | Command | Diagnostics | Artifacts |",
+      "| --- | --- | --- | --- | --- |",
+    );
     for (const step of smokeCase.steps) {
       lines.push(
-        `| ${escapeMarkdownTable(step.label)} | ${step.status} | ${step.command ? `\`${escapeBackticks(step.command)}\`` : "-"} | ${formatList(step.diagnosticCodes)} |`,
+        `| ${escapeMarkdownTable(step.label)} | ${step.status} | ${step.command ? `\`${escapeBackticks(step.command)}\`` : "-"} | ${formatList(step.diagnosticCodes)} | ${renderGeneratedSmokeArtifacts(step.artifacts)} |`,
       );
     }
     lines.push("");
@@ -1563,6 +1600,7 @@ function createSmokeStep(
     packagePath: options.packagePath,
     paths: options.paths,
     jsonPath: options.jsonPath,
+    artifacts: [],
     expectFailure: options.expectFailure,
     status: "pending",
     diagnosticCodes: [],
@@ -1864,7 +1902,16 @@ function runValidation(
       );
     }
 
-    if (!validation.args && !validation.paths && !validation.json) {
+    if (validation.artifacts) {
+      step.artifacts = copyGeneratedSmokeArtifacts({
+        generatedSmokeReportDir,
+        smokeCaseName: smokeCase.name,
+        validationDir,
+        artifactPaths: validation.artifacts,
+      });
+    }
+
+    if (!validation.args && !validation.paths && !validation.json && !validation.artifacts) {
       throw new Error(`${smokeCase.name} ${validation.label} has no validation action`);
     }
 

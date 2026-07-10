@@ -510,6 +510,7 @@ function checkSaasStructure() {
   checkFileExists("saas", "apps", "api-server", "src", "providerProfiles.ts");
   checkFileExists("saas", "apps", "api-server", "src", "provider-profile-check.ts");
   checkFileExists("saas", "apps", "api-server", "src", "demo", "saasSmokeContract.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "demo", "scenario.ts");
   checkFileExists("saas", "apps", "api-server", "src", "inMemoryAdapters.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "SaasController.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "OperationsController.ts");
@@ -566,6 +567,8 @@ function checkSaasStructure() {
       "demo:smoke": expect.stringMatching(
         /profile:check[\s\S]*architecture-policy:check[\s\S]*runtime-policy:check[\s\S]*contract:check[\s\S]*api-server demo:smoke[\s\S]*api-server ops:smoke[\s\S]*api-server jobs:smoke/,
       ),
+      "demo:scenario":
+        "pnpm exec croco generate usage-dashboard --no-page && pnpm --filter {{scope}}/api-server demo:scenario",
       "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
       "jobs:smoke": "pnpm --filter {{scope}}/api-server jobs:smoke",
       "failure-drill:smoke": "pnpm --filter {{scope}}/api-server failure-drill:smoke",
@@ -587,6 +590,7 @@ function checkSaasStructure() {
       "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
       "demo:seed": "tsx src/demo/seed.ts",
       "demo:smoke": "tsx src/demo/smoke.ts",
+      "demo:scenario": "tsx src/demo/scenario.ts",
       "ops:smoke": "tsx src/demo/ops-smoke.ts",
       "jobs:smoke": "tsx src/demo/jobs-smoke.ts",
       "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
@@ -684,7 +688,42 @@ function checkSaasStructure() {
   checkFileContains("saas", ["README.md.hbs"], /croco-saas-profile\.manifest\.json/);
   checkFileContains("saas", ["README.md.hbs"], /croco-tenant-model\.manifest\.json/);
   checkFileContains("saas", ["README.md.hbs"], /tenant-model-playbook\.md/);
+  checkFileContains("saas", ["README.md.hbs"], /pnpm demo:scenario/);
+  checkFileContains("saas", ["README.md.hbs"], /ci-reports\/saas-golden-path\/scenario\.json/);
   checkFileContains("saas", ["README.md.hbs"], /@croco\/billing-polar/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /seedDefaultSaasRuntime/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /reserveWebhook/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "saasDemo.ts"],
+    /WebhookAlreadyProcessedProblem/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "scenario.ts"],
+    /UsageDashboardRuntime/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "scenario.ts"],
+    /createUsageDashboardService/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "scenario.ts"],
+    /croco\.saas-golden-path\.scenario\/v1/,
+  );
+  checkFileContains("saas", ["apps", "api-server", "src", "demo", "scenario.ts"], /lifecycle/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "scenario.ts"],
+    /quotaFailureCode/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "controllers", "schemas.ts"],
+    /lifecycle/,
+  );
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /billing-sync/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LifecycleRuleEvaluator/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /cs\.follow_up/);

@@ -1,7 +1,8 @@
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
 import { JobsController } from "../controllers/JobsController";
-import { assertDemoEndpointsEnabled } from "../controllers/SaasController";
+import { assertDemoEndpointsEnabled, SaasController } from "../controllers/SaasController";
+import { saasDemoSnapshotSchema } from "../controllers/schemas";
 import { DemoEndpointDisabledProblem } from "../problems";
 import {
   getSaasProviderProfile,
@@ -11,8 +12,8 @@ import {
 import {
   assertSaasDemoSnapshot,
   createSaasRuntime,
-  defaultSaasRuntime,
   runSaasDemoFlow,
+  seedDefaultSaasRuntime,
 } from "../saasDemo";
 
 describe("SaaS golden path demo", () => {
@@ -58,6 +59,9 @@ describe("SaaS golden path demo", () => {
     const snapshot = await runSaasDemoFlow(createSaasRuntime());
 
     expect(snapshot.auth).toEqual({
+      userId: "user_member",
+      sessionId: "session_demo_member",
+      roles: ["member"],
       permission: "tenant:read",
       allowed: true,
     });
@@ -101,6 +105,13 @@ describe("SaaS golden path demo", () => {
       planId: "team",
     });
     expect(snapshot.billing.entitlementPlanId).toBe("team");
+    expect(snapshot.billing.mockEvent).toMatchObject({
+      eventId: "billing.subscription_activated:tenant_acme:team",
+      eventType: "billing.subscription_activated",
+      externalSubscriptionId: "external_subscription_tenant_acme",
+      processedStatus: "completed",
+      duplicateFailureCode: "billing/webhook-already-processed",
+    });
   });
 
   it("seeds dashboard-ready normal and over-quota usage states", async () => {
@@ -167,6 +178,20 @@ describe("SaaS golden path demo", () => {
       diagnosticsSummary: "all_healthy",
     });
     expect(() => assertSaasDemoSnapshot(snapshot)).not.toThrow();
+  });
+
+  it("keeps lifecycle evidence in the demo response contract", async () => {
+    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const parsed = saasDemoSnapshotSchema.parse(snapshot);
+
+    expect(parsed.lifecycle).toMatchObject({
+      ruleId: "saas-risk-onboarding-follow-up",
+      firstRunStatus: "succeeded",
+      duplicateRunStatus: "skipped",
+      duplicateSkipReason: "idempotency_key_reused",
+      emittedActionType: "cs.follow_up",
+      emittedActionCount: 1,
+    });
   });
 
   it("documents supported and provider-backed profile seams", () => {
@@ -247,6 +272,38 @@ describe("SaaS golden path demo", () => {
     }
   });
 
+  it("resets the shared demo runtime before endpoint seeding", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousFlag = process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV];
+
+    try {
+      process.env.NODE_ENV = "development";
+      process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] = "true";
+
+      const controller = new SaasController();
+      const first = await controller.seedDemo();
+      const second = await controller.seedDemo();
+
+      expect(first.tenant.id).toBe("tenant_acme");
+      expect(second.tenant.id).toBe("tenant_acme");
+      expect(second.billing.mockEvent.duplicateFailureCode).toBe(
+        "billing/webhook-already-processed",
+      );
+    } finally {
+      if (previousNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+
+      if (previousFlag === undefined) {
+        delete process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV];
+      } else {
+        process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] = previousFlag;
+      }
+    }
+  });
+
   it("runs an inspectable billing sync background job", async () => {
     const snapshot = await runSaasDemoFlow(createSaasRuntime());
 
@@ -259,7 +316,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("exposes the billing sync job through operations controller", async () => {
-    const seeded = await runSaasDemoFlow(defaultSaasRuntime);
+    const seeded = await seedDefaultSaasRuntime();
     const controller = new JobsController();
 
     const listReport = (await controller.list(undefined, "billing-sync")) as {
