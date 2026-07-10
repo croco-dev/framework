@@ -18,6 +18,7 @@ import {
   getParamsMeta,
   getPipes,
 } from "@croco/protocols-rest";
+import type { Http2Bindings, HttpBindings } from "@hono/node-server";
 import { Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
 import { CrocoLambdaAdapter, type LambdaHandlerOptions } from "./CrocoLambdaAdapter";
@@ -58,6 +59,7 @@ type FetchRuntimeOptions = {
   env?: Record<string, unknown>;
   executionContext?: HonoFetchExecutionContext;
 };
+type NodeServerEnv = HttpBindings | Http2Bindings;
 type DiBootstrapDiagnostic = {
   readonly code: string;
   readonly message: string;
@@ -97,15 +99,36 @@ const REQUIRED_SECURITY_MIDDLEWARES: readonly RequiredSecurityMiddleware[] = [
   },
 ] as const;
 
+function createFetchRuntimeOptions(
+  env: Record<string, unknown> | undefined,
+  executionContext?: HonoFetchExecutionContext,
+): FetchRuntimeOptions {
+  const options: FetchRuntimeOptions = {};
+
+  if (env) {
+    options.env = env;
+  }
+  if (executionContext) {
+    options.executionContext = executionContext;
+  }
+
+  return options;
+}
+
 /**
  * 컨트롤러를 컴파일해 Hono 앱, Lambda 핸들러, Node 서버로 실행하는 HTTP 애플리케이션입니다.
  */
 export class CrocoApp {
   private hono: Hono;
+  private readonly honoFetch: Hono["fetch"];
+  private explicitHeadHono: Hono;
+  private readonly explicitHeadHonoFetch: Hono["fetch"];
+  private readonly explicitHeadRouteMisses = new WeakMap<Request, number>();
   private routes: CompiledRoute[] = [];
   private booted = false;
   private nodeStaticRoutesRegistered = false;
   private routeRegistrar: CrocoRouteRegistrar;
+  private explicitHeadRouteRegistrar: CrocoRouteRegistrar;
   private lambdaAdapter: CrocoLambdaAdapter;
 
   constructor(
@@ -115,13 +138,37 @@ export class CrocoApp {
     private readonly healthCheckRegistry: HealthCheckRegistry,
   ) {
     this.hono = new Hono();
+    this.honoFetch = this.hono.fetch.bind(this.hono) as Hono["fetch"];
+    this.hono.fetch = ((request, env, executionContext) =>
+      this.dispatch(
+        request,
+        undefined,
+        createFetchRuntimeOptions(env as Record<string, unknown> | undefined, executionContext),
+      )) as Hono["fetch"];
+    this.explicitHeadHono = new Hono();
+    this.explicitHeadHonoFetch = this.explicitHeadHono.fetch.bind(
+      this.explicitHeadHono,
+    ) as Hono["fetch"];
     this.routeRegistrar = new CrocoRouteRegistrar(
       this.hono,
       this.errorHandler,
       this.config.middlewares ?? [],
       this.logger,
     );
-    this.lambdaAdapter = new CrocoLambdaAdapter(this.hono);
+    this.explicitHeadRouteRegistrar = new CrocoRouteRegistrar(
+      this.explicitHeadHono,
+      this.errorHandler,
+      this.config.middlewares ?? [],
+      this.logger,
+    );
+    this.lambdaAdapter = new CrocoLambdaAdapter({
+      fetch: (request, env, executionContext) =>
+        this.dispatch(
+          request,
+          undefined,
+          createFetchRuntimeOptions(env as Record<string, unknown> | undefined, executionContext),
+        ),
+    });
   }
 
   private boot(options: CompileOptions = {}): void {
@@ -147,8 +194,20 @@ export class CrocoApp {
       globalPipes: this.config.globalPipes,
     });
 
+    const explicitHeadRoutes = this.routes.filter((route) => route.method.toUpperCase() === "HEAD");
+
+    for (const route of explicitHeadRoutes) {
+      this.explicitHeadRouteRegistrar.register(route, { registerHeadAsGet: true });
+    }
+    this.explicitHeadHono.get("*", (c) => {
+      this.markExplicitHeadRouteMiss(c.req.raw);
+      return new Response(null, { status: 404 });
+    });
+
     for (const route of this.routes) {
-      this.routeRegistrar.register(route);
+      if (route.method.toUpperCase() !== "HEAD") {
+        this.routeRegistrar.register(route);
+      }
     }
 
     this.booted = true;
@@ -384,6 +443,7 @@ export class CrocoApp {
     if (devInspectorPolicy.exposure !== "off") {
       const inspector = resolveDevInspector(devInspectorPolicy);
       this.routeRegistrar.setRuntimeInspector(inspector);
+      this.explicitHeadRouteRegistrar.setRuntimeInspector(inspector);
 
       this.hono.get(DEV_INSPECTOR_ENDPOINT_PATH, async (c) => {
         if (!(await authorizeDevInspectorRequest(c, devInspectorPolicy))) {
@@ -436,7 +496,12 @@ export class CrocoApp {
 
     serve(
       {
-        fetch: this.hono.fetch,
+        fetch: (request: Request, env: NodeServerEnv) =>
+          this.dispatch(
+            request,
+            undefined,
+            createFetchRuntimeOptions(env as Record<string, unknown> | undefined),
+          ),
         port,
       },
       () => {
@@ -453,15 +518,50 @@ export class CrocoApp {
   ): Promise<Response> {
     this.boot();
 
-    if (runtimeContext) {
-      return this.hono.fetch(
+    return this.dispatch(request, runtimeContext, options);
+  }
+
+  private async dispatch(
+    request: Request,
+    runtimeContext?: RuntimeContextInit,
+    options: FetchRuntimeOptions = {},
+  ): Promise<Response> {
+    const env = runtimeContext ? withRuntimeContextEnv(options.env, runtimeContext) : options.env;
+
+    if (request.method.toUpperCase() === "HEAD") {
+      const explicitHeadResponse = await this.explicitHeadHonoFetch(
         request,
-        withRuntimeContextEnv(options.env, runtimeContext),
+        env,
         options.executionContext,
       );
+
+      if (!this.consumeExplicitHeadRouteMiss(request)) {
+        return explicitHeadResponse;
+      }
     }
 
-    return this.hono.fetch(request, options.env, options.executionContext);
+    return this.honoFetch(request, env, options.executionContext);
+  }
+
+  private markExplicitHeadRouteMiss(request: Request): void {
+    const count = this.explicitHeadRouteMisses.get(request) ?? 0;
+    this.explicitHeadRouteMisses.set(request, count + 1);
+  }
+
+  private consumeExplicitHeadRouteMiss(request: Request): boolean {
+    const count = this.explicitHeadRouteMisses.get(request);
+
+    if (!count) {
+      return false;
+    }
+
+    if (count === 1) {
+      this.explicitHeadRouteMisses.delete(request);
+    } else {
+      this.explicitHeadRouteMisses.set(request, count - 1);
+    }
+
+    return true;
   }
 
   private registerNodeStaticRoutes(options?: ListenOptions): void {

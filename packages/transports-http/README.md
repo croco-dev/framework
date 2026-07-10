@@ -136,6 +136,21 @@ export const handler = app.lambdaHandler({
 });
 ```
 
+### HEAD 요청과 GET 라우트
+
+Croco HTTP 런타임은 GET-only 라우트에 들어온 `HEAD` 요청을 호환 동작으로 지원합니다. 이 경우 GET
+핸들러와 같은 pipeline을 실행해 status/header를 보존하되 응답 body는 비워 반환합니다. 같은 path에
+명시적인 `@Head()` 라우트가 있으면 `HEAD` 요청은 그 핸들러를 사용하며, `GET` 요청은 기존 `@Get()`
+핸들러를 사용합니다.
+
+ContractGraph와 OpenAPI는 선언된 decorator만 산출물로 노출합니다. GET-only 라우트는 ContractGraph와
+OpenAPI에 `GET`만 기록되며, OpenAPI `head` operation이나 ContractGraph `HEAD` route가 필요하면
+route author가 `@Head()`를 명시해야 합니다.
+
+이 정책은 `CrocoApp.fetch`, `listen`, `lambdaHandler`, 그리고 `app.getHono().fetch`에 적용됩니다. Hono의
+`route()`나 `basePath()`처럼 raw route를 복사하는 composition API는 Croco의 explicit `HEAD` sidecar를
+포함하지 않으므로, explicit `HEAD` 정책의 실행 경계로 사용하지 않습니다.
+
 ### Lambda 응답 헤더와 쿠키 매핑
 
 `app.lambdaHandler()`는 API Gateway HTTP API payload format v2 응답을 반환합니다. 일반 Fetch 응답

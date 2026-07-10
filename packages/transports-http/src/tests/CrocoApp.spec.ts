@@ -17,6 +17,7 @@ import {
   Body,
   Controller,
   Get,
+  Head,
   Options,
   Param,
   type ParamMetadata,
@@ -33,7 +34,7 @@ import {
   RateLimitKeyBuilder,
   SlidingWindowInMemoryStore,
 } from "@croco/ratelimit-core";
-import { serve } from "@hono/node-server";
+import { serve, type Http2Bindings, type HttpBindings } from "@hono/node-server";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp as createCrocoApp } from "../libs/CrocoApp";
@@ -78,6 +79,13 @@ type ProblemCorrelationResponse = {
   instance: string;
   traceId?: string;
   requestId?: string;
+};
+
+type NodeServerOptions = {
+  readonly fetch: (
+    request: Request,
+    env: HttpBindings | Http2Bindings,
+  ) => Response | Promise<Response>;
 };
 
 class TestProblem extends Problem {
@@ -1306,7 +1314,7 @@ describe("CrocoApp", () => {
     expect(json).toEqual({ id: "icons/logo.svg" });
   });
 
-  it("should return headers without a response body for HEAD requests", async () => {
+  it("should return GET route headers without a response body for implied HEAD requests", async () => {
     const app = createApp({ controllers: [TestController] });
 
     const response = await app.fetch(new Request("http://localhost/api/hello", { method: "HEAD" }));
@@ -1314,6 +1322,245 @@ describe("CrocoApp", () => {
     expect(response.status).toBe(200);
     expect(await response.text()).toBe("");
     expect(response.headers.get("content-type")).toContain("application/json");
+  });
+
+  it("should preserve GET-implied HEAD behavior through the Lambda adapter", async () => {
+    const app = createApp({ controllers: [TestController] });
+    const handler = app.lambdaHandler();
+
+    const response = await handler(
+      createLambdaEvent({
+        routeKey: "HEAD /api/hello",
+        rawPath: "/api/hello",
+        requestContext: createRequestContext("HEAD", "/api/hello"),
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toBe("");
+    expect(response.headers?.["content-type"]).toContain("application/json");
+  });
+
+  it("should prefer explicit HEAD handlers over GET-implied HEAD on the same path", async () => {
+    @Controller("/head-policy")
+    class HeadPolicyController {
+      @Get("/resource")
+      getResource(): Response {
+        return new Response("get body", {
+          headers: {
+            "content-type": "text/plain",
+            "x-route-method": "GET",
+          },
+        });
+      }
+
+      @Head("/resource")
+      headResource(): Response {
+        return new Response("head body should be stripped", {
+          headers: {
+            "content-type": "text/plain",
+            "x-head-contract": "explicit",
+            "x-route-method": "HEAD",
+          },
+        });
+      }
+    }
+
+    const app = createApp({ controllers: [HeadPolicyController] });
+    const handler = app.lambdaHandler();
+
+    const getResponse = await app.fetch(new Request("http://localhost/head-policy/resource"));
+    const headResponse = await app.fetch(
+      new Request("http://localhost/head-policy/resource", { method: "HEAD" }),
+    );
+    const honoHeadResponse = await app
+      .getHono()
+      .fetch(new Request("http://localhost/head-policy/resource", { method: "HEAD" }));
+    const lambdaHeadResponse = await handler(
+      createLambdaEvent({
+        routeKey: "HEAD /head-policy/resource",
+        rawPath: "/head-policy/resource",
+        requestContext: createRequestContext("HEAD", "/head-policy/resource"),
+      }),
+      lambdaContext,
+    );
+
+    expect(getResponse.status).toBe(200);
+    expect(await getResponse.text()).toBe("get body");
+    expect(getResponse.headers.get("x-route-method")).toBe("GET");
+
+    expect(headResponse.status).toBe(200);
+    expect(await headResponse.text()).toBe("");
+    expect(headResponse.headers.get("x-route-method")).toBe("HEAD");
+    expect(headResponse.headers.get("x-head-contract")).toBe("explicit");
+
+    expect(honoHeadResponse.status).toBe(200);
+    expect(await honoHeadResponse.text()).toBe("");
+    expect(honoHeadResponse.headers.get("x-route-method")).toBe("HEAD");
+    expect(honoHeadResponse.headers.get("x-head-contract")).toBe("explicit");
+
+    expect(lambdaHeadResponse.statusCode).toBe(200);
+    expect(lambdaHeadResponse.body).toBe("");
+    expect(lambdaHeadResponse.headers?.["x-route-method"]).toBe("HEAD");
+    expect(lambdaHeadResponse.headers?.["x-head-contract"]).toBe("explicit");
+  });
+
+  it("should fall back to GET-implied HEAD when an explicit HEAD route does not match Hono constraints", async () => {
+    @Controller("/head-policy")
+    class ConstrainedHeadPolicyController {
+      @Get("/items/:id")
+      getItem(@Param("id") id: string): Response {
+        return new Response(`get:${id}`, {
+          headers: {
+            "x-item-id": id,
+            "x-route-method": "GET",
+          },
+        });
+      }
+
+      @Head("/items/:id{[0-9]+}")
+      headNumericItem(@Param("id") id: string): Response {
+        return new Response(`head:${id}`, {
+          headers: {
+            "x-item-id": id,
+            "x-route-method": "HEAD",
+          },
+        });
+      }
+    }
+
+    const app = createApp({ controllers: [ConstrainedHeadPolicyController] });
+    const handler = app.lambdaHandler();
+
+    const explicitResponse = await app.fetch(
+      new Request("http://localhost/head-policy/items/123", { method: "HEAD" }),
+    );
+    const fallbackResponse = await app.fetch(
+      new Request("http://localhost/head-policy/items/abc", { method: "HEAD" }),
+    );
+    const sharedFallbackRequest = new Request("http://localhost/head-policy/items/abc", {
+      method: "HEAD",
+    });
+    const [firstSharedFallbackResponse, secondSharedFallbackResponse] = await Promise.all([
+      app.fetch(sharedFallbackRequest),
+      app.fetch(sharedFallbackRequest),
+    ]);
+    const honoFallbackResponse = await app
+      .getHono()
+      .fetch(new Request("http://localhost/head-policy/items/abc", { method: "HEAD" }));
+    const lambdaFallbackResponse = await handler(
+      createLambdaEvent({
+        routeKey: "HEAD /head-policy/items/abc",
+        rawPath: "/head-policy/items/abc",
+        requestContext: createRequestContext("HEAD", "/head-policy/items/abc"),
+      }),
+      lambdaContext,
+    );
+
+    expect(explicitResponse.status).toBe(200);
+    expect(await explicitResponse.text()).toBe("");
+    expect(explicitResponse.headers.get("x-route-method")).toBe("HEAD");
+    expect(explicitResponse.headers.get("x-item-id")).toBe("123");
+
+    expect(fallbackResponse.status).toBe(200);
+    expect(await fallbackResponse.text()).toBe("");
+    expect(fallbackResponse.headers.get("x-route-method")).toBe("GET");
+    expect(fallbackResponse.headers.get("x-item-id")).toBe("abc");
+
+    expect(firstSharedFallbackResponse.status).toBe(200);
+    expect(await firstSharedFallbackResponse.text()).toBe("");
+    expect(firstSharedFallbackResponse.headers.get("x-route-method")).toBe("GET");
+    expect(secondSharedFallbackResponse.status).toBe(200);
+    expect(await secondSharedFallbackResponse.text()).toBe("");
+    expect(secondSharedFallbackResponse.headers.get("x-route-method")).toBe("GET");
+
+    expect(honoFallbackResponse.status).toBe(200);
+    expect(await honoFallbackResponse.text()).toBe("");
+    expect(honoFallbackResponse.headers.get("x-route-method")).toBe("GET");
+    expect(honoFallbackResponse.headers.get("x-item-id")).toBe("abc");
+
+    expect(lambdaFallbackResponse.statusCode).toBe(200);
+    expect(lambdaFallbackResponse.body).toBe("");
+    expect(lambdaFallbackResponse.headers?.["x-route-method"]).toBe("GET");
+    expect(lambdaFallbackResponse.headers?.["x-item-id"]).toBe("abc");
+  });
+
+  it("should preserve a matching explicit HEAD error response instead of falling back to GET", async () => {
+    @Controller("/head-policy")
+    class ExplicitHeadErrorController {
+      @Get("/missing")
+      getMissing(): Response {
+        return new Response("get body", {
+          headers: {
+            "x-route-method": "GET",
+          },
+        });
+      }
+
+      @Head("/missing")
+      headMissing(): Response {
+        return new Response("head body should be stripped", {
+          status: 404,
+          headers: {
+            "x-croco-explicit-head-route-miss": "1",
+            "x-route-method": "HEAD",
+          },
+        });
+      }
+    }
+
+    const app = createApp({ controllers: [ExplicitHeadErrorController] });
+    const response = await app.fetch(
+      new Request("http://localhost/head-policy/missing", { method: "HEAD" }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe("");
+    expect(response.headers.get("x-route-method")).toBe("HEAD");
+  });
+
+  it("should apply explicit HEAD policy through the Node listener dispatcher", async () => {
+    @Controller("/head-policy")
+    class NodeHeadPolicyController {
+      @Get("/listener")
+      getListener(): Response {
+        return new Response("get body", {
+          headers: {
+            "x-route-method": "GET",
+          },
+        });
+      }
+
+      @Head("/listener")
+      headListener(): Response {
+        return new Response("head body should be stripped", {
+          headers: {
+            "x-route-method": "HEAD",
+          },
+        });
+      }
+    }
+
+    const app = createApp({ controllers: [NodeHeadPolicyController] });
+
+    await app.listen(3000);
+
+    const serveOptions = vi.mocked(serve).mock.calls[0]?.[0] as NodeServerOptions | undefined;
+    expect(serveOptions).toBeDefined();
+
+    if (!serveOptions) {
+      return;
+    }
+
+    const response = await serveOptions.fetch(
+      new Request("http://localhost/head-policy/listener", { method: "HEAD" }),
+      {} as HttpBindings,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe("");
+    expect(response.headers.get("x-route-method")).toBe("HEAD");
   });
 
   it("should handle POST with body", async () => {
@@ -1396,8 +1643,13 @@ describe("CrocoApp", () => {
     const app = createApp({ controllers: [TestController] });
 
     const response = await app.fetch(new Request("http://localhost/unknown"));
+    const headResponse = await app.fetch(
+      new Request("http://localhost/unknown", { method: "HEAD" }),
+    );
 
     expect(response.status).toBe(404);
+    expect(headResponse.status).toBe(404);
+    expect(await headResponse.text()).toBe("");
   });
 
   it("should serve static assets and keep listen callback compatibility", async () => {

@@ -4416,7 +4416,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 139,
+      "line": 186,
       "column": 61,
       "code": "TS2379",
       "message": "Argument of type '{ container: { get<T>(type: Constructor<T>): T; }; globalGuards: unknown[] | undefined; globalInterceptors: unknown[] | undefined; globalFilters: unknown[] | undefined; globalPipes: unknown[] | undefined; }' is not assignable to parameter of type 'CompileOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -4424,7 +4424,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 239,
+      "line": 298,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'CROCO_HTTP_DI_VALIDATION' comes from an index signature, so it must be accessed with ['CROCO_HTTP_DI_VALIDATION']."
@@ -4432,7 +4432,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 245,
+      "line": 304,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -4440,7 +4440,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 245,
+      "line": 304,
       "column": 66,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -4448,7 +4448,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 336,
+      "line": 395,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'CROCO_HTTP_SECURITY_VALIDATION' comes from an index signature, so it must be accessed with ['CROCO_HTTP_SECURITY_VALIDATION']."
@@ -4456,7 +4456,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 525,
+      "line": 533,
       "column": 7,
       "code": "TS2375",
       "message": "Type '{ platform: \"cloudflare-workers\"; env: Record<string, unknown> | undefined; native: { executionContext: { waitUntil: (promise: Promise<unknown>) => void; }; }; waitUntil: (promise: Promise<unknown>) => void; capabilities: { ...; }; }' is not assignable to type 'RuntimeContextInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -4464,7 +4464,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 713,
+      "line": 721,
       "column": 7,
       "code": "TS2379",
       "message": "Argument of type '{ inspectionId: string | undefined; status: number; outcome: \"failed\" | \"succeeded\"; details: { traceId: unknown; telemetryDegraded: {}; error: { name: string; message: string; } | undefined; }; }' is not assignable to parameter of type 'RuntimeInspectorRequestFinish' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -4472,7 +4472,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 77,
+      "line": 81,
       "column": 9,
       "code": "TS2379",
       "message": "Argument of type '{ requestId: string; method: string; path: string; route: string; url: string; headers: Record<string, string>; query: Record<string, string>; runtime: Record<string, unknown>; trace: Record<...> | undefined; }' is not assignable to parameter of type 'RuntimeInspectorRequestStart' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -4480,7 +4480,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 99,
+      "line": 103,
       "column": 35,
       "code": "TS2379",
       "message": "Argument of type '{ requestId: string; inspectionId: string | undefined; traceId: string | undefined; spanId: string | undefined; traceFlags: string | number | undefined; runtime: RuntimeContext; runtimeInspector: RuntimeInspector | undefined; }' is not assignable to parameter of type 'RequestContext' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

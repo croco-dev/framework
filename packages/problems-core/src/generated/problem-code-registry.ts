@@ -2857,7 +2857,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 359,
+          line: 367,
           column: 12,
           kind: "problem-factory",
         },
@@ -2888,7 +2888,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 264,
+          line: 272,
           column: 15,
           kind: "problem-factory",
         },
@@ -2921,7 +2921,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 186,
+          line: 245,
           column: 11,
           kind: "problem-factory",
         },
@@ -11668,7 +11668,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 223,
+          line: 282,
           column: 11,
           kind: "problem-factory",
         },
@@ -11767,7 +11767,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 35,
+          line: 39,
           column: 49,
           kind: "problem-metadata",
         },
@@ -11930,7 +11930,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 76,
+          line: 78,
           column: 55,
           kind: "problem-metadata",
         },
@@ -11963,7 +11963,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-          line: 237,
+          line: 245,
           column: 15,
           kind: "problem-factory",
         },

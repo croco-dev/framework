@@ -3,6 +3,8 @@ import type { Hono } from "hono";
 import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
 import type { LambdaContext, LambdaEvent, LambdaHandler } from "./types";
 
+type FetchDispatcher = Pick<Hono, "fetch">;
+
 type HeadersWithSetCookie = Headers & {
   getSetCookie?: () => string[];
 };
@@ -272,7 +274,7 @@ async function runWithLambdaFlushBoundary<T>(
  * Hono 앱을 API Gateway v2 형태의 AWS Lambda 핸들러로 연결하는 어댑터입니다.
  */
 export class CrocoLambdaAdapter {
-  constructor(private readonly hono: Hono) {}
+  constructor(private readonly dispatcher: FetchDispatcher) {}
 
   createHandler(options: LambdaHandlerOptions = {}): LambdaHandler {
     return async (event: LambdaEvent, lambdaContext: LambdaContext) => {
@@ -343,7 +345,7 @@ export class CrocoLambdaAdapter {
             body: ["GET", "HEAD"].includes(method) ? null : body,
           });
 
-          return this.hono.fetch(request, executionEnv);
+          return this.dispatcher.fetch(request, executionEnv);
         },
         runtimeContext,
         options,
