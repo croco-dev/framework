@@ -96,6 +96,13 @@ export type LambdaHandlerOptions = {
 
 const WAIT_UNTIL_REJECTION_MESSAGE = "Lambda waitUntil task rejected";
 const LAMBDA_FLUSH_BOUNDARY_ERROR_CODE = "transports-http/lambda-flush-boundary-failed";
+const LAMBDA_EVENT_INVALID_CODE = "transports-http/lambda-event-invalid";
+
+type ValidatedApiGatewayV2Event = {
+  method: string;
+  path: string;
+  queryString: string;
+};
 
 class LambdaFlushBoundaryError extends Error {
   readonly code = LAMBDA_FLUSH_BOUNDARY_ERROR_CODE;
@@ -118,6 +125,71 @@ class LambdaFlushBoundaryError extends Error {
     this.originalError = originalError;
     this.flushErrors = [...flushErrors];
   }
+}
+
+class LambdaEventValidationError extends Error {
+  readonly code = LAMBDA_EVENT_INVALID_CODE;
+
+  constructor(detail: string) {
+    super(`Invalid API Gateway v2 Lambda event: ${detail}`);
+    this.name = "LambdaEventValidationError";
+  }
+}
+
+function readRequiredString(
+  value: unknown,
+  field: string,
+  options: { allowEmpty?: boolean } = {},
+): string {
+  if (typeof value !== "string") {
+    throw new LambdaEventValidationError(`${field} must be a string`);
+  }
+
+  if (!options.allowEmpty && value.trim().length === 0) {
+    throw new LambdaEventValidationError(`${field} must not be empty`);
+  }
+
+  return value;
+}
+
+function validateApiGatewayV2Event(event: unknown): ValidatedApiGatewayV2Event {
+  if (typeof event !== "object" || event === null) {
+    throw new LambdaEventValidationError("event must be an object");
+  }
+
+  const lambdaEvent = event as LambdaEvent;
+  if (lambdaEvent.version !== "2.0") {
+    throw new LambdaEventValidationError('version must be "2.0"');
+  }
+
+  const path = readRequiredString(lambdaEvent.rawPath, "rawPath");
+  if (!path.startsWith("/")) {
+    throw new LambdaEventValidationError("rawPath must start with /");
+  }
+
+  return {
+    method: readRequiredString(
+      lambdaEvent.requestContext?.http?.method,
+      "requestContext.http.method",
+    ),
+    path,
+    queryString: readRequiredString(lambdaEvent.rawQueryString, "rawQueryString", {
+      allowEmpty: true,
+    }),
+  };
+}
+
+function decodeBase64Body(body: string): Uint8Array<ArrayBuffer> {
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(body)) {
+    throw new LambdaEventValidationError(
+      "body must be a valid base64 string when isBase64Encoded is true",
+    );
+  }
+
+  const decoded = Buffer.from(body, "base64");
+  const bytes = new Uint8Array(decoded.byteLength);
+  bytes.set(decoded);
+  return bytes;
 }
 
 function reportWaitUntilRejections(
@@ -204,38 +276,10 @@ export class CrocoLambdaAdapter {
 
   createHandler(options: LambdaHandlerOptions = {}): LambdaHandler {
     return async (event: LambdaEvent, lambdaContext: LambdaContext) => {
-      const method = event.requestContext?.http?.method ?? "GET";
-      const path = event.rawPath ?? "/";
-      const queryString = event.rawQueryString ?? "";
-      const url = `https://lambda.local${path}${queryString ? `?${queryString}` : ""}`;
-
-      const headers = new Headers();
-      if (event.headers) {
-        for (const [key, value] of Object.entries(event.headers)) {
-          if (value !== undefined && value !== null) {
-            headers.set(key, value);
-          }
-        }
-      }
-      if (!headers.has("cookie") && event.cookies && event.cookies.length > 0) {
-        headers.set("cookie", event.cookies.join("; "));
-      }
-
-      let body: BodyInit | null = null;
-      if (event.body) {
-        body = event.isBase64Encoded ? Buffer.from(event.body, "base64") : event.body;
-      }
-
-      const request = new Request(url, {
-        method,
-        headers,
-        body: ["GET", "HEAD"].includes(method) ? null : body,
-      });
-
       const pendingTasks: Promise<unknown>[] = [];
       const runtimeContext: RuntimeContextInit = {
         platform: "lambda",
-        requestId: event.requestContext?.requestId ?? lambdaContext.awsRequestId,
+        requestId: event?.requestContext?.requestId ?? lambdaContext.awsRequestId,
         env: process.env,
         ...(options.logger !== undefined ? { logger: options.logger } : {}),
         native: {
@@ -272,7 +316,35 @@ export class CrocoLambdaAdapter {
       ) as LambdaExecutionEnv & Record<string, unknown>;
 
       const response = await runWithLambdaFlushBoundary(
-        () => this.hono.fetch(request, executionEnv),
+        () => {
+          const { method, path, queryString } = validateApiGatewayV2Event(event);
+          const url = `https://lambda.local${path}${queryString ? `?${queryString}` : ""}`;
+
+          const headers = new Headers();
+          if (event.headers) {
+            for (const [key, value] of Object.entries(event.headers)) {
+              if (value !== undefined && value !== null) {
+                headers.set(key, value);
+              }
+            }
+          }
+          if (!headers.has("cookie") && event.cookies && event.cookies.length > 0) {
+            headers.set("cookie", event.cookies.join("; "));
+          }
+
+          let body: BodyInit | null = null;
+          if (event.body) {
+            body = event.isBase64Encoded ? decodeBase64Body(event.body) : event.body;
+          }
+
+          const request = new Request(url, {
+            method,
+            headers,
+            body: ["GET", "HEAD"].includes(method) ? null : body,
+          });
+
+          return this.hono.fetch(request, executionEnv);
+        },
         runtimeContext,
         options,
       );
