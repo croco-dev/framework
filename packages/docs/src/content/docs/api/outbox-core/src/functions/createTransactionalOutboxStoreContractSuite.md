@@ -11,7 +11,7 @@ title: "createTransactionalOutboxStoreContractSuite"
 
 ### TStore
 
-`TStore` _extends_ [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/)\<`TClient`\>
+`TStore` *extends* [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/)\<`TClient`\>
 
 ### TClient
 

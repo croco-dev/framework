@@ -11,19 +11,19 @@ title: "ParamIR"
 
 > **kind**: `"query"` \| `"path"` \| `"body"` \| `"header"` \| `"ctx"`
 
----
+***
 
 ### name
 
 > **name**: `string`
 
----
+***
 
 ### schema
 
 > **schema**: `ZodType`\<`any`, `ZodTypeDef`, `any`\> \| `null`
 
----
+***
 
 ### sourceLocation?
 

@@ -1,7 +1,9 @@
 import "reflect-metadata";
 import { Container } from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { Field, ObjectType, Query, Resolver } from "@croco/protocols-graphql";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { GraphQLError } from "graphql";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { GraphQLServer } from "../libs/GraphQLServer";
 import {
   GraphQLResolversNotConfiguredProblem,
@@ -36,6 +38,96 @@ class UserResolver {
   @Query(() => String)
   async hello(): Promise<string> {
     return "Hello, GraphQL!";
+  }
+}
+
+class TestGraphQLProblem extends Problem {
+  constructor(
+    code: string,
+    category: ProblemCategory,
+    detail: string,
+    extensions?: Record<string, unknown>,
+  ) {
+    super(code, category, detail, { extensions });
+  }
+}
+
+@Resolver()
+class ProblemResolver {
+  @Query(() => String)
+  publicProblem(): string {
+    throw new TestGraphQLProblem(
+      "GRAPHQL_INPUT_INVALID",
+      ProblemCategory.ValidationError,
+      "Email is invalid",
+      {
+        field: "email",
+        requestId: "request-secret",
+        traceId: "trace-secret",
+        diagnostics: "provider-secret",
+      },
+    );
+  }
+
+  @Query(() => String)
+  safeMessageProblem(): string {
+    throw new TestGraphQLProblem(
+      "ACCESS_DENIED",
+      ProblemCategory.Forbidden,
+      "You cannot access this tenant",
+      {
+        reason: "tenant mismatch",
+        providerSecret: "secret",
+      },
+    );
+  }
+
+  @Query(() => String)
+  operatorOnlyProblem(): string {
+    throw new TestGraphQLProblem(
+      "transports-graphql/schema-not-configured",
+      ProblemCategory.InternalServerError,
+      "Database password is invalid",
+      {
+        reason: "database password is invalid",
+      },
+    );
+  }
+
+  @Query(() => String)
+  unknownProblem(): string {
+    throw new TestGraphQLProblem(
+      "example/user-not-found",
+      ProblemCategory.NotFound,
+      "User 123 was not found",
+      {
+        reason: "deleted",
+        diagnostics: "store:primary",
+      },
+    );
+  }
+
+  @Query(() => String)
+  wrappedProblem(): string {
+    throw new GraphQLError("Wrapped provider secret", {
+      originalError: new TestGraphQLProblem(
+        "GRAPHQL_INPUT_INVALID",
+        ProblemCategory.ValidationError,
+        "Wrapped email is invalid",
+        {
+          field: "email",
+          diagnostics: "provider-secret",
+        },
+      ),
+    });
+  }
+
+  @Query(() => String)
+  unhandledProblem(): string {
+    throw Object.assign(new Error("Unhandled provider secret"), {
+      code: "ACCESS_DENIED",
+      category: ProblemCategory.Forbidden,
+    });
   }
 }
 
@@ -233,4 +325,232 @@ describe("GraphQLServer integration", () => {
 
     await testServer.stop();
   });
+
+  describe("Problem masking", () => {
+    const problemServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [ProblemResolver],
+        autoDiscover: false,
+      },
+    });
+
+    beforeAll(async () => {
+      await problemServer.initialize();
+    });
+
+    afterAll(async () => {
+      await problemServer.stop();
+    });
+
+    it("should redact public resolver Problems", async () => {
+      const { response, data } = await executeQuery(problemServer, "{ publicProblem }");
+
+      expect(response.status).toBe(200);
+      expect(data.errors[0].message).toBe("Email is invalid");
+      expect(data.errors[0].extensions).toMatchObject({
+        code: "GRAPHQL_INPUT_INVALID",
+        status: 422,
+        title: "Validation Error",
+        field: "email",
+      });
+      expect(data.errors[0].extensions).not.toHaveProperty("requestId");
+      expect(data.errors[0].extensions).not.toHaveProperty("traceId");
+      expect(data.errors[0].extensions).not.toHaveProperty("diagnostics");
+      expect(data.errors[0].extensions).not.toHaveProperty("redactionPolicy");
+      expect(JSON.stringify(data.errors[0])).not.toContain("request-secret");
+      expect(JSON.stringify(data.errors[0])).not.toContain("trace-secret");
+      expect(JSON.stringify(data.errors[0])).not.toContain("provider-secret");
+    });
+
+    it("should retain safe-message resolver Problems", async () => {
+      const { data } = await executeQuery(problemServer, "{ safeMessageProblem }");
+
+      expect(data.errors[0].message).toBe("You cannot access this tenant");
+      expect(data.errors[0].extensions).toMatchObject({
+        code: "ACCESS_DENIED",
+        status: 403,
+        reason: "tenant mismatch",
+      });
+      expect(data.errors[0].extensions).not.toHaveProperty("providerSecret");
+    });
+
+    it("should redact operator-only resolver Problems", async () => {
+      const { data } = await executeQuery(problemServer, "{ operatorOnlyProblem }");
+
+      expect(data.errors[0].message).toBe("An internal error occurred");
+      expect(data.errors[0].extensions).toEqual({
+        code: "transports-graphql/schema-not-configured",
+        status: 500,
+        title: "Internal Server Error",
+        type: "about:blank",
+      });
+    });
+
+    it("should use category fallback for unknown resolver Problem codes", async () => {
+      const { data } = await executeQuery(problemServer, "{ unknownProblem }");
+
+      expect(data.errors[0].message).toBe("User 123 was not found");
+      expect(data.errors[0].extensions).toMatchObject({
+        code: "example/user-not-found",
+        status: 404,
+        reason: "deleted",
+      });
+      expect(data.errors[0].extensions).not.toHaveProperty("diagnostics");
+    });
+
+    it("should redact wrapped Problems and preserve their GraphQL path", async () => {
+      const { data } = await executeQuery(problemServer, "{ wrappedProblem }");
+
+      expect(data.errors[0].message).toBe("Wrapped email is invalid");
+      expect(data.errors[0].path).toEqual(["wrappedProblem"]);
+      expect(data.errors[0].extensions).toMatchObject({
+        code: "GRAPHQL_INPUT_INVALID",
+        field: "email",
+      });
+      expect(data.errors[0].extensions).not.toHaveProperty("diagnostics");
+    });
+
+    it("should keep Yoga masking for non-Problem errors", async () => {
+      const { data } = await executeQuery(problemServer, "{ unhandledProblem }");
+
+      expect(data.errors[0].message).toBe("Unexpected error.");
+      expect(data.errors[0].message).not.toContain("provider secret");
+    });
+
+    it("should redact Problems thrown while creating context", async () => {
+      const contextServer = new GraphQLServer({
+        schemaOptions: {
+          resolvers: [ProblemResolver],
+          autoDiscover: false,
+        },
+        context: () => {
+          throw new TestGraphQLProblem(
+            "transports-graphql/schema-not-configured",
+            ProblemCategory.InternalServerError,
+            "Context provider secret",
+            { diagnostics: "context-secret" },
+          );
+        },
+      });
+
+      await contextServer.initialize();
+
+      try {
+        const { data } = await executeQuery(contextServer, "{ publicProblem }");
+
+        expect(data.errors[0].message).toBe("An internal error occurred");
+        expect(data.errors[0].extensions).toEqual({
+          code: "transports-graphql/schema-not-configured",
+          status: 500,
+          title: "Internal Server Error",
+          type: "about:blank",
+        });
+        expect(JSON.stringify(data.errors[0])).not.toContain("context-secret");
+      } finally {
+        await contextServer.stop();
+      }
+    });
+
+    it("should redact every Croco Problem before Yoga logs it", async () => {
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const contextServer = new GraphQLServer({
+        schemaOptions: {
+          resolvers: [ProblemResolver],
+          autoDiscover: false,
+        },
+        context: () => {
+          throw new TestGraphQLProblem(
+            "transports-graphql/schema-not-configured",
+            ProblemCategory.InternalServerError,
+            "Context provider secret",
+            { diagnostics: "context-secret" },
+          );
+        },
+      });
+
+      await contextServer.initialize();
+
+      try {
+        await executeQuery(problemServer, "{ publicProblem }");
+        await executeQuery(problemServer, "{ safeMessageProblem }");
+        await executeQuery(problemServer, "{ operatorOnlyProblem }");
+        await executeQuery(problemServer, "{ unknownProblem }");
+        await executeQuery(problemServer, "{ wrappedProblem }");
+        await executeQuery(contextServer, "{ publicProblem }");
+
+        const loggedErrors = errorSpy.mock.calls
+          .flat()
+          .map((value) =>
+            value instanceof GraphQLError
+              ? JSON.stringify({
+                  extensions: value.extensions,
+                  message: value.message,
+                  name: value.name,
+                })
+              : String(value),
+          )
+          .join("\n");
+
+        expect(loggedErrors).toContain("An internal error occurred");
+        for (const secret of [
+          "request-secret",
+          "trace-secret",
+          "provider-secret",
+          "providerSecret",
+          "Database password is invalid",
+          "database password is invalid",
+          "store:primary",
+          "Wrapped provider secret",
+          "Context provider secret",
+          "context-secret",
+        ]) {
+          expect(loggedErrors).not.toContain(secret);
+        }
+      } finally {
+        await contextServer.stop();
+        errorSpy.mockRestore();
+      }
+    });
+
+    it("should preserve configured Yoga plugins", async () => {
+      let pluginExecuted = false;
+      const pluginServer = new GraphQLServer({
+        schemaOptions: {
+          resolvers: [ProblemResolver],
+          autoDiscover: false,
+        },
+        plugins: [
+          {
+            onExecute() {
+              pluginExecuted = true;
+            },
+          },
+        ],
+      });
+
+      await pluginServer.initialize();
+
+      try {
+        await executeQuery(pluginServer, "{ publicProblem }");
+        expect(pluginExecuted).toBe(true);
+      } finally {
+        await pluginServer.stop();
+      }
+    });
+  });
 });
+
+async function executeQuery(server: GraphQLServer, query: string) {
+  const response = await server.getHandler()(
+    new Request("http://localhost/graphql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    }),
+  );
+
+  return {
+    response,
+    data: await response.json(),
+  };
+}

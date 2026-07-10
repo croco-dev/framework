@@ -115,4 +115,13 @@ export {
  * Problem Details를 직렬화하고 역직렬화하는 유틸리티입니다.
  */
 export { ProblemSerializer } from "./libs/ProblemSerializer";
+export {
+  OPERATOR_ONLY_PROBLEM_DETAIL,
+  createProblemResponseDetail,
+  createProblemResponseExtensions,
+  extractProblemDetailsResponseExtensions,
+  resolveProblemCodeRedactionPolicy,
+  resolveProblemDetailsResponseRedactionPolicy,
+  resolveProblemResponseRedactionPolicy,
+} from "./libs/ProblemResponseRedaction";
 export { isValidExtensions, validateExtensions } from "./libs/validators/validateExtensions";

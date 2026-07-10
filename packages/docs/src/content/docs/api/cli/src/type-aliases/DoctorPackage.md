@@ -13,31 +13,31 @@ title: "DoctorPackage"
 
 > `readonly` **absoluteDir**: `string`
 
----
+***
 
 ### dependencies
 
 > `readonly` **dependencies**: readonly `DoctorPackageDependency`[]
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### private
 
 > `readonly` **private**: `boolean`
 
----
+***
 
 ### relativeDir
 
 > `readonly` **relativeDir**: `string`
 
----
+***
 
 ### version
 

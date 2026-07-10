@@ -13,13 +13,13 @@ title: "FrontendActionMetadataReference"
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### name
 
 > `readonly` **name**: `string`
 
----
+***
 
 ### owner?
 

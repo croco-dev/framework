@@ -11,13 +11,13 @@ title: "ArgumentMetadata"
 
 > `optional` **metatype?**: `Function`
 
----
+***
 
 ### name?
 
 > `optional` **name?**: `string`
 
----
+***
 
 ### type
 

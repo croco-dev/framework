@@ -15,13 +15,13 @@ Versioned, JSON-safe contract graph used as the stable source for strict generat
 
 > `readonly` **diagnostics**: readonly [`ContractDiagnostic`](/api/protocols-core/src/type-aliases/contractdiagnostic/)[]
 
----
+***
 
 ### routes
 
 > `readonly` **routes**: readonly [`ContractGraphV1Route`](/api/protocols-core/src/type-aliases/contractgraphv1route/)[]
 
----
+***
 
 ### version
 

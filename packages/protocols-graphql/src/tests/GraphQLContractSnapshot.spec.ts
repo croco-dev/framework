@@ -65,7 +65,7 @@ describe("GraphQL contract snapshots", () => {
       resolvers: [HealthResolver],
     });
 
-    expect(snapshot.snapshotVersion).toBe("croco.graphql-contract.snapshot.v1");
+    expect(snapshot.snapshotVersion).toBe("croco.graphql-contract.snapshot.v2");
     expect(snapshot.sdl).toContain("type Query");
     expect(snapshot.sdl).toContain("health: HealthStatus!");
     expect(snapshot.operationCount).toBe(1);
@@ -92,6 +92,7 @@ describe("GraphQL contract snapshots", () => {
                 code: "GRAPHQL_HEALTH_UNAVAILABLE",
                 category: ProblemCategory.InternalServerError,
                 status: 500,
+                redactionPolicy: "operator-only",
               },
             ],
           },

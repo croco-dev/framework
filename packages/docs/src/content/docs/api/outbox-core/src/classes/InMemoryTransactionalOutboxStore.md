@@ -41,7 +41,7 @@ In-memory transactional outbox store implementation for conformance tests and lo
 
 [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/).[`claimBatch`](/api/outbox-core/src/interfaces/transactionaloutboxstore/#claimbatch)
 
----
+***
 
 ### clear()
 
@@ -51,7 +51,7 @@ In-memory transactional outbox store implementation for conformance tests and lo
 
 `Promise`\<`void`\>
 
----
+***
 
 ### findRecord()
 
@@ -67,7 +67,7 @@ In-memory transactional outbox store implementation for conformance tests and lo
 
 `Promise`\<[`OutboxRecord`](/api/outbox-core/src/type-aliases/outboxrecord/) \| `null`\>
 
----
+***
 
 ### listRecords()
 
@@ -77,7 +77,7 @@ In-memory transactional outbox store implementation for conformance tests and lo
 
 `Promise`\<[`OutboxRecord`](/api/outbox-core/src/type-aliases/outboxrecord/)[]\>
 
----
+***
 
 ### markDispatched()
 
@@ -101,7 +101,7 @@ In-memory transactional outbox store implementation for conformance tests and lo
 
 [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/).[`markDispatched`](/api/outbox-core/src/interfaces/transactionaloutboxstore/#markdispatched)
 
----
+***
 
 ### markFailed()
 
@@ -125,7 +125,7 @@ In-memory transactional outbox store implementation for conformance tests and lo
 
 [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/).[`markFailed`](/api/outbox-core/src/interfaces/transactionaloutboxstore/#markfailed)
 
----
+***
 
 ### record()
 
@@ -149,7 +149,7 @@ In-memory transactional outbox store implementation for conformance tests and lo
 
 [`TransactionalOutboxStore`](/api/outbox-core/src/interfaces/transactionaloutboxstore/).[`record`](/api/outbox-core/src/interfaces/transactionaloutboxstore/#record)
 
----
+***
 
 ### runInUnitOfWork()
 

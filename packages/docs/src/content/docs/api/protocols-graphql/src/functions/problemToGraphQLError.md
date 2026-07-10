@@ -15,7 +15,7 @@ title: "problemToGraphQLError"
 
 ### path?
 
-(`string` \| `number`)[]
+readonly (`string` \| `number`)[]
 
 ## Returns
 

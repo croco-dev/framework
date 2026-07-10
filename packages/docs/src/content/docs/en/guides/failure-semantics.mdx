@@ -133,8 +133,23 @@ Package-level differences are intentional:
   `Problem` types for recovery logic.
 - `@croco/transports-http` serializes known `Problem` instances into RFC 7807 responses and treats
   non-Problem errors as unhandled internal faults.
+- `@croco/protocols-graphql` converts a `Problem` into GraphQL `errors` metadata with the same
+  code-first redaction policy as HTTP. Public and safe-message Problems retain safe detail and
+  allowlisted extensions; operator-only Problems return an opaque message without Problem
+  extensions.
+- `@croco/transports-graphql` configures GraphQL Yoga to apply that conversion to resolver or
+  context Problems, including a `GraphQLError.originalError` Problem. Other errors retain Yoga's
+  default masking behavior. GraphQL preserves its `errors` envelope and resolver path rather than
+  emitting an RFC 7807 body, and it never exposes `requestId`, `traceId`, telemetry, or
+  `redactionPolicy` in runtime error extensions. Yoga's server-side logger applies the same
+  redaction to Croco Problems. Operators still need deployment-specific secret handling for
+  non-Problem failures.
 - `@croco/rpc-codegen` turns serialized `Problem` JSON into `RpcClientProblemError.problem` and
   separates non-Problem failures as `RpcClientResponseError`.
+
+GraphQL contract snapshots do include the redaction policy for declared Problem responses. That
+metadata is derived from the generated Problem registry by code with category fallback; it is
+contract-review data, not a runtime error extension.
 
 When adding a package, test at least one typed failure path that proves the package does not hide an
 expected failure behind a generic `Error`.

@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import type { Scope } from "@croco/framework-context";
-import type { ProblemCategory } from "@croco/problems-core";
+import type { ProblemCategory, ProblemRedactionPolicy } from "@croco/problems-core";
 import type { GraphQLField, GraphQLObjectType, GraphQLSchema, GraphQLType } from "graphql";
 import { lexicographicSortSchema, printSchema } from "graphql";
 import { getMetadataStorage } from "type-graphql";
@@ -13,7 +13,7 @@ import {
 import { getAllResolvers, getResolverMetadata } from "../metadata/MetadataReader";
 import type { GraphQLProblemResponseMetadata } from "../decorators/GraphQLProblemResponse";
 
-export type GraphQLContractSnapshotVersion = "croco.graphql-contract.snapshot.v1";
+export type GraphQLContractSnapshotVersion = "croco.graphql-contract.snapshot.v2";
 export type GraphQLContractOperationKind = "query" | "mutation" | "subscription";
 
 export type GraphQLContractSnapshotOptions = {
@@ -40,6 +40,7 @@ export type GraphQLContractSnapshotProblemResponse = {
   readonly code: string;
   readonly category: ProblemCategory;
   readonly status: number;
+  readonly redactionPolicy: ProblemRedactionPolicy;
   readonly description?: string;
   readonly type?: string;
 };
@@ -89,7 +90,7 @@ export function createGraphQLContractSnapshot(
   const resolvers = collectResolvers(options.resolvers ?? getAllResolvers());
 
   return {
-    snapshotVersion: "croco.graphql-contract.snapshot.v1",
+    snapshotVersion: "croco.graphql-contract.snapshot.v2",
     sdl: `${printSchema(sortedSchema).trim()}\n`,
     operationCount: operations.length,
     resolverCount: resolvers.length,
@@ -109,7 +110,7 @@ export function isGraphQLContractSnapshot(value: unknown): value is GraphQLContr
   }
 
   return (
-    value["snapshotVersion"] === "croco.graphql-contract.snapshot.v1" &&
+    value["snapshotVersion"] === "croco.graphql-contract.snapshot.v2" &&
     typeof value["sdl"] === "string" &&
     Array.isArray(value["operations"]) &&
     Array.isArray(value["resolvers"]) &&
@@ -287,6 +288,7 @@ function readProblemResponses(
       code: problem.code,
       category: problem.category,
       status: problem.status,
+      redactionPolicy: problem.redactionPolicy,
       ...(problem.description ? { description: problem.description } : {}),
       ...(problem.type ? { type: problem.type } : {}),
     }))
@@ -298,7 +300,8 @@ function isProblemResponseMetadata(value: unknown): value is GraphQLProblemRespo
     isRecord(value) &&
     typeof value["code"] === "string" &&
     typeof value["category"] === "string" &&
-    typeof value["status"] === "number"
+    typeof value["status"] === "number" &&
+    typeof value["redactionPolicy"] === "string"
   );
 }
 

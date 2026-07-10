@@ -13,7 +13,7 @@ title: "ProblemLifecycle"
 
 > `readonly` `optional` **deprecation?**: [`ProblemDeprecationMetadata`](/api/problems-core/src/type-aliases/problemdeprecationmetadata/)
 
----
+***
 
 ### status
 

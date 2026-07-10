@@ -3,7 +3,8 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { Container, Context as FrameworkContext } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Problem } from "@croco/problems-core";
-import { createYoga } from "graphql-yoga";
+import { isProblem, problemToGraphQLError } from "@croco/protocols-graphql";
+import { createYoga, maskError } from "graphql-yoga";
 import {
   GraphQLRequestBodyAbortedProblem,
   GraphQLRequestBodyTooLargeProblem,
@@ -15,6 +16,23 @@ import type { GraphQLServerOptions } from "./types";
 type YogaHandler = (request: Request) => Promise<Response>;
 
 const DEFAULT_MAX_BODY_SIZE_BYTES = 1024 * 1024;
+
+const CROCO_YOGA_LOGGER = {
+  debug: (...args: unknown[]) => console.debug(...args),
+  info: (...args: unknown[]) => console.info(...args),
+  warn: (...args: unknown[]) => console.warn(...args),
+  error: (...args: unknown[]) => {
+    const [error] = args;
+    const problem = getCrocoProblem(error);
+
+    if (problem) {
+      console.error(problemToGraphQLError(problem, getGraphQLErrorPath(error)));
+      return;
+    }
+
+    console.error(...args);
+  },
+};
 
 export class GraphQLServer {
   private yogaHandler: YogaHandler | null = null;
@@ -51,6 +69,10 @@ export class GraphQLServer {
       graphqlEndpoint,
       cors,
       plugins,
+      logging: CROCO_YOGA_LOGGER,
+      maskedErrors: {
+        maskError: maskCrocoProblemError,
+      },
       context: async ({ request }) => {
         if (typeof context === "function") {
           return await context(request);
@@ -226,4 +248,46 @@ export class GraphQLServer {
       }
     });
   }
+}
+
+function maskCrocoProblemError(error: unknown, message: string, isDev?: boolean): Error {
+  const problem = getCrocoProblem(error);
+
+  if (!problem) {
+    return maskError(error, message, isDev);
+  }
+
+  return problemToGraphQLError(problem, getGraphQLErrorPath(error));
+}
+
+function getCrocoProblem(error: unknown): Problem | undefined {
+  let currentError: unknown = error;
+  const visited = new Set<Error>();
+
+  while (currentError instanceof Error && !visited.has(currentError)) {
+    if (isProblem(currentError)) {
+      return currentError;
+    }
+
+    visited.add(currentError);
+
+    if (!isGraphQLError(currentError)) {
+      return undefined;
+    }
+
+    currentError = currentError.originalError;
+  }
+
+  return undefined;
+}
+
+function getGraphQLErrorPath(error: unknown): readonly (string | number)[] | undefined {
+  return error instanceof Error && isGraphQLError(error) ? error.path : undefined;
+}
+
+function isGraphQLError(error: Error): error is Error & {
+  originalError?: unknown;
+  path?: readonly (string | number)[];
+} {
+  return error.name === "GraphQLError";
 }

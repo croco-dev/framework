@@ -11,15 +11,15 @@ title: "ProblemDeclaration"
 
 ### Code
 
-`Code` _extends_ `string` = `string`
+`Code` *extends* `string` = `string`
 
 ### Category
 
-`Category` _extends_ `string` = `string`
+`Category` *extends* `string` = `string`
 
 ### Status
 
-`Status` _extends_ `number` = `number`
+`Status` *extends* `number` = `number`
 
 ## Properties
 
@@ -27,31 +27,31 @@ title: "ProblemDeclaration"
 
 > `readonly` **category**: `Category`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `Code`
 
----
+***
 
 ### cookbookPath?
 
 > `readonly` `optional` **cookbookPath?**: `string`
 
----
+***
 
 ### description?
 
 > `readonly` `optional` **description?**: `string`
 
----
+***
 
 ### status
 
 > `readonly` **status**: `Status`
 
----
+***
 
 ### type?
 
