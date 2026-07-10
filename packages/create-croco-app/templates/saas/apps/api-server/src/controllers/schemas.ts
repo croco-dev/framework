@@ -104,6 +104,9 @@ export const saasDemoSnapshotSchema = z.object({
     }),
   }),
   auth: z.object({
+    userId: z.string(),
+    sessionId: z.string(),
+    roles: z.array(z.string()),
     permission: z.string(),
     allowed: z.boolean(),
   }),
@@ -116,6 +119,13 @@ export const saasDemoSnapshotSchema = z.object({
     checkoutUrl: z.string(),
     subscriptionStatus: z.string(),
     entitlementPlanId: z.string().nullable(),
+    mockEvent: z.object({
+      eventId: z.string(),
+      eventType: z.string(),
+      externalSubscriptionId: z.string(),
+      processedStatus: z.literal("completed"),
+      duplicateFailureCode: z.string(),
+    }),
   }),
   metering: z.object({
     meterId: z.string(),
@@ -152,6 +162,15 @@ export const saasDemoSnapshotSchema = z.object({
     status: z.string(),
     failurePolicyState: z.string(),
     logCount: z.number(),
+  }),
+  lifecycle: z.object({
+    ruleId: z.string(),
+    firstRunStatus: z.string(),
+    duplicateRunStatus: z.string(),
+    duplicateSkipReason: z.string(),
+    emittedActionType: z.string(),
+    emittedActionCount: z.number(),
+    visibleRunCount: z.number(),
   }),
 });
 

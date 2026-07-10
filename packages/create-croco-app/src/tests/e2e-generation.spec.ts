@@ -1069,6 +1069,11 @@ describe("E2E: generate()", () => {
       join(testDir, "apps", "api-server", "src", "demo", "failure-drill-smoke.ts"),
       "utf8",
     );
+    const scenarioSource = readFileSync(
+      join(testDir, "apps", "api-server", "src", "demo", "scenario.ts"),
+      "utf8",
+    );
+    const readme = readFileSync(join(testDir, "README.md"), "utf8");
 
     expect(rootPackageJson.scripts).toMatchObject({
       typecheck: "turbo typecheck",
@@ -1094,6 +1099,8 @@ describe("E2E: generate()", () => {
       "profile:smoke:real": "pnpm --filter @test/api-server profile:smoke:real",
       "demo:smoke":
         "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server jobs:smoke",
+      "demo:scenario":
+        "pnpm exec croco generate usage-dashboard --no-page && pnpm --filter @test/api-server demo:scenario",
       "ops:smoke": "pnpm --filter @test/api-server ops:smoke",
       "jobs:smoke": "pnpm --filter @test/api-server jobs:smoke",
       "failure-drill:smoke": "pnpm --filter @test/api-server failure-drill:smoke",
@@ -1132,6 +1139,7 @@ describe("E2E: generate()", () => {
     expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
     expect(apiPackageJson.scripts?.["ops:smoke"]).toBe("tsx src/demo/ops-smoke.ts");
     expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe("tsx src/demo/jobs-smoke.ts");
+    expect(apiPackageJson.scripts?.["demo:scenario"]).toBe("tsx src/demo/scenario.ts");
     expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
       "tsx src/demo/failure-drill-smoke.ts",
     );
@@ -1146,6 +1154,13 @@ describe("E2E: generate()", () => {
       existsSync(join(testDir, "apps", "api-server", "src", "provider-profile-check.ts")),
     ).toBe(true);
     expect(failureDrillSource).toContain("assertSaasSmokeContract(snapshot)");
+    expect(scenarioSource).toContain("croco.saas-golden-path.scenario/v1");
+    expect(scenarioSource).toContain("UsageDashboardRuntime");
+    expect(scenarioSource).toContain("createUsageDashboardService");
+    expect(scenarioSource).toContain("lifecycle");
+    expect(scenarioSource).toContain("quotaFailureCode");
+    expect(readme).toContain("pnpm demo:scenario");
+    expect(readme).toContain("ci-reports/saas-golden-path/scenario.json");
     expect(
       existsSync(join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts")),
     ).toBe(true);

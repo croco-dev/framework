@@ -4,6 +4,10 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { readGeneratedSmokeAllowlistMetadata } from "../create-croco-app-generated-smoke.mts";
 import {
+  copyGeneratedSmokeArtifacts,
+  renderGeneratedSmokeArtifacts,
+} from "../create-croco-app-generated-smoke-report.mts";
+import {
   createWorkspacePackageIndex,
   resolveLocalCrocoPackagesForGeneratedProject,
   rewriteExternalCrocoRanges,
@@ -155,6 +159,44 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
 
     expect(() => readGeneratedSmokeAllowlistMetadata(metadataPath, "saas-golden-path")).toThrow(
       /saas-golden-path generated secret allowlist metadata is invalid JSON:/,
+    );
+  });
+
+  it("copies configured smoke artifacts into the report tree and renders matrix evidence", () => {
+    const root = createTempRoot();
+    const generatedProjectDir = join(root, "generated-app");
+    const reportDir = join(root, "ci-reports", "generated-apps");
+    const scenarioPath = "ci-reports/saas-golden-path/scenario.json";
+    writeGeneratedPackage(generatedProjectDir, scenarioPath, {
+      schemaVersion: "croco.saas-golden-path.scenario/v1",
+    });
+
+    const artifacts = copyGeneratedSmokeArtifacts({
+      generatedSmokeReportDir: reportDir,
+      smokeCaseName: "saas-golden-path",
+      validationDir: generatedProjectDir,
+      artifactPaths: [scenarioPath],
+    });
+
+    expect(artifacts).toEqual([
+      {
+        sourcePath: join(generatedProjectDir, scenarioPath),
+        reportPath: join(
+          reportDir,
+          "artifacts",
+          "saas-golden-path",
+          "ci-reports",
+          "saas-golden-path",
+          "scenario.json",
+        ),
+        reportRelativePath: "artifacts/saas-golden-path/ci-reports/saas-golden-path/scenario.json",
+      },
+    ]);
+    expect(readFileSync(artifacts[0].reportPath, "utf8")).toContain(
+      '"schemaVersion": "croco.saas-golden-path.scenario/v1"',
+    );
+    expect(renderGeneratedSmokeArtifacts(artifacts)).toContain(
+      "`artifacts/saas-golden-path/ci-reports/saas-golden-path/scenario.json`",
     );
   });
 });

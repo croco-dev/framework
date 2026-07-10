@@ -23,15 +23,15 @@ export class SaasController {
   @ProblemResponses(...routeProblemResponses(seedSaasDemoRoute))
   async seedDemo() {
     await assertDemoEndpointsEnabled();
-    const { runSaasDemoFlow } = await import("../saasDemo");
-    return runSaasDemoFlow();
+    const { seedDefaultSaasRuntime } = await import("../saasDemo");
+    return seedDefaultSaasRuntime();
   }
 
   @Get(smokeSaasDemoRoute)
   @ProblemResponses(...routeProblemResponses(smokeSaasDemoRoute))
   async smokeDemo() {
     await assertDemoEndpointsEnabled();
-    const { runSaasDemoFlow } = await import("../saasDemo");
-    return runSaasDemoFlow();
+    const { seedDefaultSaasRuntime } = await import("../saasDemo");
+    return seedDefaultSaasRuntime();
   }
 }

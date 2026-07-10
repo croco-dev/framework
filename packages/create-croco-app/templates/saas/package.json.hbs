@@ -26,6 +26,7 @@
     "profile:smoke:real": "pnpm --filter {{scope}}/api-server profile:smoke:real",
     "demo:seed": "pnpm --filter {{scope}}/api-server demo:seed",
     "demo:smoke": "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter {{scope}}/api-server demo:smoke && pnpm --filter {{scope}}/api-server ops:smoke && pnpm --filter {{scope}}/api-server jobs:smoke",
+    "demo:scenario": "pnpm exec croco generate usage-dashboard --no-page && pnpm --filter {{scope}}/api-server demo:scenario",
     "ops:smoke": "pnpm --filter {{scope}}/api-server ops:smoke",
     "jobs:smoke": "pnpm --filter {{scope}}/api-server jobs:smoke",
     "failure-drill:smoke": "pnpm --filter {{scope}}/api-server failure-drill:smoke",
