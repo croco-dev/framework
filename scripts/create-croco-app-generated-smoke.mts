@@ -1,12 +1,16 @@
 import { spawnSync } from "node:child_process";
 import {
+  closeSync,
   copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readdirSync,
+  readSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,16 +22,27 @@ import {
 } from "../packages/create-croco-app/src/secret-placeholder-policy.ts";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../packages/create-croco-app/src/supported-options.ts";
 import {
+  classifySmokeCommandFailure,
+  classifySmokeFailure,
+  collectSmokeFailureArtifactFiles,
   copyGeneratedSmokeArtifacts,
+  createSmokeRecoverySummary,
+  extractSmokeCommandDiagnosticCodes,
   type GeneratedSmokeArtifact,
+  type SmokeCaseArtifactBundle,
+  type SmokeCaseRecoverySummary,
+  type SmokeFailureClassification,
+  toPosixPath,
 } from "./create-croco-app-generated-smoke-report.mts";
 import {
   createGeneratedSmokeMatrixAggregateReport,
   createGeneratedSmokeMatrixTierReport,
   renderGeneratedSmokeMatrixReport,
+  REST_SPA_CONTRACT_SMOKE_CASE_NAME,
   selectGeneratedSmokeMatrixCases,
   withGeneratedSmokeMatrixMetadata,
   type AdvisorySmokeMetadata,
+  type SmokeMatrixCaseFailureEvidence,
   type SmokeMatrixFailure,
   type SmokeMatrixTier,
 } from "./create-croco-app-generated-smoke-matrix.mts";
@@ -143,9 +158,12 @@ type SmokeCaseResult = {
   readonly runtimeTarget: string;
   readonly matrixTargets: readonly string[];
   readonly args: readonly string[];
+  readonly recovery: SmokeCaseRecoverySummary;
   status: SmokeStepStatus;
   steps: SmokeStepResult[];
   error?: string;
+  artifactBundle?: SmokeCaseArtifactBundle;
+  failureClassification?: SmokeFailureClassification;
 };
 
 type SmokeGateResult = {
@@ -191,6 +209,26 @@ type TemplateMatrixExclusion = {
   readonly reason: string;
 };
 
+type CommandRunResult = {
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly status: number | null;
+  readonly signal: string | null;
+  readonly outputTruncated: boolean;
+  readonly diagnosticCodes: readonly string[];
+};
+
+type SmokeCommandOutputObserver = (label: string, result: CommandRunResult) => void;
+
+class CommandExecutionError extends Error {
+  readonly commandResult: CommandRunResult;
+
+  constructor(message: string, commandResult: CommandRunResult, cause?: unknown) {
+    super(message, cause === undefined ? undefined : { cause });
+    this.commandResult = commandResult;
+  }
+}
+
 type RuntimeCapabilitySmokePlatform = "node" | "lambda" | "cloudflare-workers";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -204,6 +242,12 @@ const generatedSmokeReportDir = resolve(
 const turboPath = join(rootDir, "node_modules", "turbo", "bin", "turbo");
 let smokeRoot: string | undefined;
 const commandTimeoutMs = 600_000;
+const commandCaptureMaxBytes = 64 * 1024 * 1024;
+const commandCaptureHeadBytes = 1024 * 1024;
+const smokeCaseOutputBuffers = new Map<
+  string,
+  { stdout: string[]; stderr: string[]; outputTruncated: boolean }
+>();
 const sourceFileExtensions = new Set([
   ".js",
   ".jsx",
@@ -1129,32 +1173,44 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
   },
 ];
 
-const smokeCases = withGeneratedSmokeMatrixMetadata(smokeCaseDefinitions);
-
-export function shouldRunSpaBeSplitContractSmoke(
-  isFilteredRun: boolean,
-  selectedTier: SmokeMatrixTier | undefined,
-): boolean {
-  return !isFilteredRun || selectedTier === "spine-blocking";
-}
+const restSpaContractSmokeCase = {
+  name: REST_SPA_CONTRACT_SMOKE_CASE_NAME,
+  tier: "spine-blocking",
+  args: [],
+  runtimeTarget: "node",
+  matrixTargets: ["spa-be-split"],
+  validations: [],
+} as const satisfies SmokeCase;
+const selectableSmokeCases = withGeneratedSmokeMatrixMetadata([
+  ...smokeCaseDefinitions,
+  restSpaContractSmokeCase,
+]);
+const smokeCases = selectableSmokeCases.filter(
+  (smokeCase) => smokeCase.name !== REST_SPA_CONTRACT_SMOKE_CASE_NAME,
+);
 
 if (isMainModule()) {
   let smokeReport: GeneratedSmokeReport | undefined;
   const activeSmokeRoot = getSmokeRoot();
 
   try {
-    const smokeSelection = selectGeneratedSmokeMatrixCases(smokeCases, {
+    const smokeSelection = selectGeneratedSmokeMatrixCases(selectableSmokeCases, {
       args: process.argv.slice(2),
       env: process.env,
     });
-    const selectedSmokeCases = smokeSelection.cases;
+    const selectedSmokeCases = smokeSelection.cases.filter(
+      (smokeCase) => smokeCase.name !== REST_SPA_CONTRACT_SMOKE_CASE_NAME,
+    );
+    const shouldRunRestSpaContracts = smokeSelection.cases.some(
+      (smokeCase) => smokeCase.name === REST_SPA_CONTRACT_SMOKE_CASE_NAME,
+    );
     const isFilteredRun = smokeSelection.filteredRun;
 
     assertGraphQLSmokeContractCoverage(selectedSmokeCases);
 
     if (isFilteredRun) {
       console.log(
-        `create-croco-app-generated-smoke: selected cases ${selectedSmokeCases.map(({ name }) => name).join(", ")}`,
+        `create-croco-app-generated-smoke: selected cases ${smokeSelection.cases.map(({ name }) => name).join(", ")}`,
       );
     } else {
       assertSmokeCoverage(smokeCases);
@@ -1163,7 +1219,7 @@ if (isMainModule()) {
     }
 
     smokeReport = createGeneratedSmokeReport(
-      selectedSmokeCases,
+      smokeSelection.cases,
       isFilteredRun,
       smokeSelection.selectedTier,
     );
@@ -1243,6 +1299,7 @@ if (isMainModule()) {
         runSmokeCaseCommand(
           smokeReport,
           caseResult,
+          projectDir,
           "generate",
           "node",
           [cliPath, projectDir, ...smokeCase.args],
@@ -1254,6 +1311,7 @@ if (isMainModule()) {
           workspacePackageIndex,
           packedWorkspacePackages,
           builtWorkspacePackageNames,
+          (label, result) => appendSmokeCaseOutput(caseResult, label, result),
         );
         rewriteExternalCrocoRanges(
           projectDir,
@@ -1267,6 +1325,7 @@ if (isMainModule()) {
         runSmokeCaseCommand(
           smokeReport,
           caseResult,
+          projectDir,
           "install",
           "corepack",
           ["pnpm", "install"],
@@ -1290,24 +1349,30 @@ if (isMainModule()) {
         caseResult.status = "passed";
         writeGeneratedSmokeReport(smokeReport);
       } catch (error) {
-        const message = toErrorMessage(error);
-        caseResult.status = "failed";
-        caseResult.error ??= message;
-        smokeReport.status = "failed";
-        smokeReport.failure ??= message;
-        smokeReport.failureTier ??= smokeCase.tier;
-        smokeCaseFailures.push(error instanceof Error ? error : new Error(message));
+        recordUnhandledSmokeCaseFailure(smokeReport, caseResult, projectDir, error);
+        smokeCaseFailures.push(error instanceof Error ? error : new Error(toErrorMessage(error)));
         writeGeneratedSmokeReport(smokeReport);
-        console.error(`create-croco-app-generated-smoke: ${smokeCase.name} failed: ${message}`);
+        console.error(
+          `create-croco-app-generated-smoke: ${smokeCase.name} failed: ${toErrorMessage(error)}`,
+        );
       }
     }
 
-    if (shouldRunSpaBeSplitContractSmoke(isFilteredRun, smokeSelection.selectedTier)) {
-      runSpaBeSplitContractSmoke(
-        workspacePackageIndex,
-        packedWorkspacePackages,
-        builtWorkspacePackageNames,
-      );
+    if (shouldRunRestSpaContracts) {
+      try {
+        runSpaBeSplitContractSmoke(
+          workspacePackageIndex,
+          packedWorkspacePackages,
+          builtWorkspacePackageNames,
+          smokeReport,
+          getSmokeCaseResult(smokeReport, REST_SPA_CONTRACT_SMOKE_CASE_NAME),
+        );
+      } catch (error) {
+        smokeCaseFailures.push(error instanceof Error ? error : new Error(toErrorMessage(error)));
+        console.error(
+          `create-croco-app-generated-smoke: ${REST_SPA_CONTRACT_SMOKE_CASE_NAME} failed: ${toErrorMessage(error)}`,
+        );
+      }
     }
 
     const failedGates = smokeReport.gates.filter((gate) => gate.status === "failed");
@@ -1394,6 +1459,7 @@ function createGeneratedSmokeReport(
       runtimeTarget: smokeCase.runtimeTarget,
       matrixTargets: smokeCase.matrixTargets,
       args: smokeCase.args,
+      recovery: createSmokeRecoverySummary(smokeCase.name),
       status: "pending",
       steps: [],
     })),
@@ -1410,7 +1476,13 @@ function writeGeneratedSmokeReport(report: GeneratedSmokeReport): void {
   for (const tier of tiersToWrite) {
     const tierReport = createGeneratedSmokeMatrixTierReport(
       tier,
-      report.cases.filter((smokeCase) => smokeCase.tier === tier),
+      report.cases
+        .filter((smokeCase) => smokeCase.tier === tier)
+        .map((smokeCase) => ({
+          name: smokeCase.name,
+          status: smokeCase.status,
+          failureEvidence: createSmokeMatrixCaseFailureEvidence(smokeCase),
+        })),
       {
         filteredRun: report.filteredRun,
         previousReport: readGeneratedSmokeMatrixReport(
@@ -1486,6 +1558,28 @@ function createGeneratedSmokeMatrixFailure(
     owner: "create-croco-app ecosystem smoke owner",
     recoveryAction:
       "pnpm create-croco-app:smoke -- --tier ecosystem-advisory; repair the reported advisory gate or smoke failure.",
+  };
+}
+
+function createSmokeMatrixCaseFailureEvidence(
+  smokeCase: SmokeCaseResult,
+): SmokeMatrixCaseFailureEvidence | undefined {
+  if (!smokeCase.error || !smokeCase.failureClassification) {
+    return undefined;
+  }
+
+  return {
+    error: smokeCase.error,
+    diagnosticCodes: [
+      ...new Set(
+        smokeCase.steps
+          .filter((step) => step.status === "failed")
+          .flatMap((step) => step.diagnosticCodes),
+      ),
+    ].sort(),
+    recovery: smokeCase.recovery,
+    classification: smokeCase.failureClassification,
+    artifactBundle: smokeCase.artifactBundle,
   };
 }
 
@@ -1681,6 +1775,7 @@ function runContinuingGateCommand(
 function runSmokeCaseCommand(
   report: GeneratedSmokeReport,
   caseResult: SmokeCaseResult,
+  projectDir: string,
   label: string,
   command: string,
   args: readonly string[],
@@ -1694,11 +1789,48 @@ function runSmokeCaseCommand(
   writeGeneratedSmokeReport(report);
 
   try {
-    run(command, args, cwd, env);
+    appendSmokeCaseOutput(caseResult, label, run(command, args, cwd, env));
     step.status = "passed";
     writeGeneratedSmokeReport(report);
   } catch (error) {
-    recordSmokeCaseFailure(report, caseResult, step, error);
+    const commandResult = getCommandResultFromError(error);
+    if (commandResult) {
+      appendSmokeCaseOutput(caseResult, label, commandResult);
+    }
+    recordSmokeCaseFailure(report, caseResult, step, error, projectDir);
+    throw createSmokeFailureError(caseResult, step, error);
+  }
+}
+
+function runExpectedSmokeCaseCommand(
+  report: GeneratedSmokeReport,
+  caseResult: SmokeCaseResult,
+  projectDir: string,
+  label: string,
+  command: string,
+  args: readonly string[],
+  cwd: string,
+  expectedOutput: readonly string[],
+): void {
+  const step = createSmokeStep(label, {
+    command: formatCommand(command, args, cwd),
+    expectFailure: true,
+  });
+  caseResult.steps.push(step);
+  writeGeneratedSmokeReport(report);
+
+  try {
+    const commandResult = runExpectFailure(command, args, cwd, expectedOutput);
+    appendSmokeCaseOutput(caseResult, label, commandResult);
+    step.diagnosticCodes = commandResult.diagnosticCodes;
+    step.status = "passed";
+    writeGeneratedSmokeReport(report);
+  } catch (error) {
+    const commandResult = getCommandResultFromError(error);
+    if (commandResult) {
+      appendSmokeCaseOutput(caseResult, label, commandResult);
+    }
+    recordSmokeCaseFailure(report, caseResult, step, error, projectDir);
     throw createSmokeFailureError(caseResult, step, error);
   }
 }
@@ -1731,16 +1863,139 @@ function recordSmokeCaseFailure(
   caseResult: SmokeCaseResult,
   step: SmokeStepResult,
   error: unknown,
+  projectDir: string,
 ): void {
   step.status = "failed";
   step.error = toErrorMessage(error);
-  step.diagnosticCodes = extractDiagnosticCodes(step.error);
+  const commandResult = getCommandResultFromError(error);
+  step.diagnosticCodes = commandResult
+    ? extractSmokeCommandDiagnosticCodes({
+        message: step.error,
+        stdout: commandResult.stdout,
+        stderr: commandResult.stderr,
+        signal: commandResult.signal,
+      })
+    : extractDiagnosticCodes(step.error);
   caseResult.status = "failed";
   caseResult.error = step.error;
   report.status = "failed";
   report.failure = createSmokeFailureMessage(caseResult, step, error);
   report.failureTier ??= caseResult.tier;
+  caseResult.artifactBundle = persistSmokeCaseFailureArtifacts(caseResult, projectDir);
+  caseResult.failureClassification = commandResult
+    ? classifySmokeCommandFailure({
+        message: step.error,
+        stdout: commandResult.stdout,
+        stderr: commandResult.stderr,
+        signal: commandResult.signal,
+      })
+    : classifySmokeFailure({ message: step.error });
   writeGeneratedSmokeReport(report);
+}
+
+function appendSmokeCaseOutput(
+  caseResult: SmokeCaseResult,
+  label: string,
+  result: CommandRunResult,
+): void {
+  const output = smokeCaseOutputBuffers.get(caseResult.name) ?? {
+    stdout: [],
+    stderr: [],
+    outputTruncated: false,
+  };
+  const prefix = `[${label}]\n`;
+  let remainingBytes = commandCaptureMaxBytes - getSmokeCaseOutputSize(output);
+  const stdoutTruncated = result.stdout
+    ? appendCappedSmokeCaseOutput(output.stdout, `${prefix}${result.stdout}`, remainingBytes)
+    : false;
+  remainingBytes = commandCaptureMaxBytes - getSmokeCaseOutputSize(output);
+  const stderrTruncated = result.stderr
+    ? appendCappedSmokeCaseOutput(output.stderr, `${prefix}${result.stderr}`, remainingBytes)
+    : false;
+  output.outputTruncated ||= result.outputTruncated || stdoutTruncated || stderrTruncated;
+  smokeCaseOutputBuffers.set(caseResult.name, output);
+}
+
+function getSmokeCaseOutputSize(output: {
+  readonly stdout: readonly string[];
+  readonly stderr: readonly string[];
+}): number {
+  return [...output.stdout, ...output.stderr].reduce(
+    (size, value) => size + Buffer.byteLength(value),
+    0,
+  );
+}
+
+function appendCappedSmokeCaseOutput(output: string[], value: string, maxBytes: number): boolean {
+  if (value.length === 0) {
+    return false;
+  }
+
+  const cappedValue = takeUtf8Prefix(value, Math.max(maxBytes, 0));
+  if (cappedValue.value.length > 0) {
+    output.push(cappedValue.value);
+  }
+  return cappedValue.truncated;
+}
+
+function takeUtf8Prefix(value: string, maxBytes: number): { value: string; truncated: boolean } {
+  if (Buffer.byteLength(value) <= maxBytes) {
+    return { value, truncated: false };
+  }
+
+  let bytes = 0;
+  let end = 0;
+  for (const character of value) {
+    const characterBytes = Buffer.byteLength(character);
+    if (bytes + characterBytes > maxBytes) {
+      break;
+    }
+    bytes += characterBytes;
+    end += character.length;
+  }
+  return { value: value.slice(0, end), truncated: true };
+}
+
+function persistSmokeCaseFailureArtifacts(
+  caseResult: SmokeCaseResult,
+  projectDir: string,
+): SmokeCaseArtifactBundle {
+  const artifactDir = join(generatedSmokeReportDir, "cases", caseResult.name);
+  const filesDir = join(artifactDir, "files");
+  const output = smokeCaseOutputBuffers.get(caseResult.name) ?? {
+    stdout: [],
+    stderr: [],
+    outputTruncated: false,
+  };
+  rmSync(artifactDir, { force: true, recursive: true });
+  mkdirSync(filesDir, { recursive: true });
+  const stdoutPath = join(artifactDir, "stdout.log");
+  const stderrPath = join(artifactDir, "stderr.log");
+  writeFileSync(stdoutPath, output.stdout.join(""));
+  writeFileSync(stderrPath, output.stderr.join(""));
+
+  const files = existsSync(projectDir)
+    ? collectSmokeFailureArtifactFiles(projectDir, caseResult.name).map((sourcePath) => {
+        const relativePath = relative(projectDir, sourcePath);
+        const targetPath = join(filesDir, relativePath);
+        mkdirSync(dirname(targetPath), { recursive: true });
+        copyFileSync(sourcePath, targetPath);
+        return toReportArtifactPath(targetPath);
+      })
+    : [];
+
+  return {
+    path: toReportArtifactPath(artifactDir),
+    stdoutPath: toReportArtifactPath(stdoutPath),
+    stderrPath: toReportArtifactPath(stderrPath),
+    files,
+    outputTruncated: output.outputTruncated,
+  };
+}
+
+function toReportArtifactPath(path: string): string {
+  const relativePath = relative(rootDir, path);
+  return relativePath.startsWith("..") ? toPosixPath(path) : toPosixPath(relativePath);
 }
 
 function createSmokeFailureError(
@@ -1751,6 +2006,25 @@ function createSmokeFailureError(
   return new Error(createSmokeFailureMessage(caseResult, step, error), {
     cause: error,
   });
+}
+
+function recordUnhandledSmokeCaseFailure(
+  report: GeneratedSmokeReport,
+  caseResult: SmokeCaseResult,
+  projectDir: string,
+  error: unknown,
+): void {
+  if (caseResult.status === "failed") {
+    return;
+  }
+
+  const commandResult = getCommandResultFromError(error);
+  if (commandResult) {
+    appendSmokeCaseOutput(caseResult, "case setup or assertion", commandResult);
+  }
+  const step = createSmokeStep("case setup or assertion");
+  caseResult.steps.push(step);
+  recordSmokeCaseFailure(report, caseResult, step, error, projectDir);
 }
 
 function createSmokeFailureMessage(
@@ -1777,6 +2051,10 @@ function formatCommand(command: string, args: readonly string[], cwd: string): s
 }
 
 function readSmokeCasePreset(smokeCase: SmokeCase): string {
+  if (smokeCase.name === REST_SPA_CONTRACT_SMOKE_CASE_NAME) {
+    return "contract:spa-be-split";
+  }
+
   const preset = readFlagValue(smokeCase.args, "--preset");
   if (preset) {
     return preset;
@@ -1960,19 +2238,25 @@ function runValidation(
   try {
     if (validation.args) {
       if (validation.expectFailure) {
-        step.diagnosticCodes = runExpectFailure(
+        const commandResult = runExpectFailure(
           "corepack",
           ["pnpm", "--dir", validationDir, ...validation.args],
           rootDir,
           validation.expectFailure.outputIncludes,
           validation.env,
         );
+        appendSmokeCaseOutput(caseResult, validation.label, commandResult);
+        step.diagnosticCodes = commandResult.diagnosticCodes;
       } else {
-        run(
-          "corepack",
-          ["pnpm", "--dir", validationDir, ...validation.args],
-          rootDir,
-          validation.env,
+        appendSmokeCaseOutput(
+          caseResult,
+          validation.label,
+          run(
+            "corepack",
+            ["pnpm", "--dir", validationDir, ...validation.args],
+            rootDir,
+            validation.env,
+          ),
         );
       }
     }
@@ -2009,7 +2293,11 @@ function runValidation(
     step.status = "passed";
     writeGeneratedSmokeReport(report);
   } catch (error) {
-    recordSmokeCaseFailure(report, caseResult, step, error);
+    const commandResult = getCommandResultFromError(error);
+    if (commandResult) {
+      appendSmokeCaseOutput(caseResult, validation.label, commandResult);
+    }
+    recordSmokeCaseFailure(report, caseResult, step, error, projectDir);
     throw createSmokeFailureError(caseResult, step, error);
   }
 
@@ -2044,35 +2332,42 @@ function runGraphQLContractDriftCanaries(
       `${smokeCase.name} GraphQL drift canaries require ${GRAPHQL_CONTRACT_SNAPSHOT_PATH}`,
     );
     const originalSnapshot = readFileSync(snapshotPath, "utf8");
-    const diagnosticCodes = [
-      ...runGraphQLSnapshotCanary(
+    const commandResults: CommandRunResult[] = [];
+    for (const canary of [
+      {
+        mutate: withStaleGraphQLOperationBaseline,
+        expectedDiagnosticCodes: ["graphql-operation-removed"],
+      },
+      {
+        mutate: withChangedGraphQLFieldTypeBaseline,
+        expectedDiagnosticCodes: ["graphql-schema-breaking-change"],
+      },
+      {
+        mutate: withGraphQLResolverMetadataDriftBaseline,
+        expectedDiagnosticCodes: GRAPHQL_RESOLVER_METADATA_DRIFT_CODES,
+      },
+    ]) {
+      const result = runGraphQLSnapshotCanary(
         packageDir,
         snapshotPath,
         originalSnapshot,
-        withStaleGraphQLOperationBaseline,
-        ["graphql-operation-removed"],
-      ),
-      ...runGraphQLSnapshotCanary(
-        packageDir,
-        snapshotPath,
-        originalSnapshot,
-        withChangedGraphQLFieldTypeBaseline,
-        ["graphql-schema-breaking-change"],
-      ),
-      ...runGraphQLSnapshotCanary(
-        packageDir,
-        snapshotPath,
-        originalSnapshot,
-        withGraphQLResolverMetadataDriftBaseline,
-        GRAPHQL_RESOLVER_METADATA_DRIFT_CODES,
-      ),
-    ];
-
-    step.diagnosticCodes = [...new Set(diagnosticCodes)].sort();
+        canary.mutate,
+        canary.expectedDiagnosticCodes,
+      );
+      appendSmokeCaseOutput(caseResult, step.label, result);
+      commandResults.push(result);
+    }
+    step.diagnosticCodes = [
+      ...new Set(commandResults.flatMap(({ diagnosticCodes }) => diagnosticCodes)),
+    ].sort();
     step.status = "passed";
     writeGeneratedSmokeReport(report);
   } catch (error) {
-    recordSmokeCaseFailure(report, caseResult, step, error);
+    const commandResult = getCommandResultFromError(error);
+    if (commandResult) {
+      appendSmokeCaseOutput(caseResult, step.label, commandResult);
+    }
+    recordSmokeCaseFailure(report, caseResult, step, error, projectDir);
     throw createSmokeFailureError(caseResult, step, error);
   }
 
@@ -2085,18 +2380,21 @@ function runGraphQLSnapshotCanary(
   originalSnapshot: string,
   mutate: (snapshot: GraphQLContractSnapshotJson) => GraphQLContractSnapshotJson,
   expectedDiagnosticCodes: readonly string[],
-): readonly string[] {
+): CommandRunResult {
   const snapshot = parseGraphQLContractSnapshot(originalSnapshot, snapshotPath);
   writeFileSync(snapshotPath, stringifyGraphQLContractSnapshotJson(mutate(snapshot)));
 
   try {
-    const reportedCodes = runExpectFailure(
+    const commandResult = runExpectFailure(
       "corepack",
       ["pnpm", "--dir", packageDir, "contract:check"],
       rootDir,
       expectedDiagnosticCodes,
     );
-    return [...new Set([...reportedCodes, ...expectedDiagnosticCodes])];
+    return {
+      ...commandResult,
+      diagnosticCodes: [...new Set([...commandResult.diagnosticCodes, ...expectedDiagnosticCodes])],
+    };
   } finally {
     writeFileSync(snapshotPath, originalSnapshot);
   }
@@ -2143,18 +2441,17 @@ function stringifyGraphQLContractSnapshotJson(snapshot: GraphQLContractSnapshotJ
 function withStaleGraphQLOperationBaseline(
   snapshot: GraphQLContractSnapshotJson,
 ): GraphQLContractSnapshotJson {
+  const staleOperation: GraphQLContractOperationJson = {
+    kind: "query",
+    name: "removedHealth",
+    type: "String!",
+    args: [],
+  };
+
   return {
     ...snapshot,
     operationCount: snapshot.operations.length + 1,
-    operations: [
-      ...snapshot.operations,
-      {
-        kind: "query",
-        name: "removedHealth",
-        type: "String!",
-        args: [],
-      },
-    ].sort(compareGraphQLOperations),
+    operations: [...snapshot.operations, staleOperation].sort(compareGraphQLOperations),
   };
 }
 
@@ -2435,144 +2732,205 @@ function runSpaBeSplitContractSmoke(
   workspacePackageIndex: ReadonlyMap<string, WorkspacePackage>,
   packedWorkspacePackages: Map<string, string>,
   builtWorkspacePackageNames: Set<string>,
+  report: GeneratedSmokeReport,
+  caseResult: SmokeCaseResult,
 ): void {
   const contractSmokeRoot = getSmokeRoot();
   const projectDir = join(contractSmokeRoot, "rest-spa-contracts");
   const templateDir = join(rootDir, "packages", "create-croco-app", "templates", "spa-be-split");
 
-  renderTemplate(templateDir, projectDir, {
-    projectName: "rest-spa-contracts",
-    scope: "@smoke",
-  });
-  removeDependency(
-    join(projectDir, "apps", "api-server", "package.json"),
-    "devDependencies",
-    "@croco/testing",
-  );
-  const contractSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
-    projectDir,
-    join(contractSmokeRoot, "contract-package-packs"),
-    workspacePackageIndex,
-    packedWorkspacePackages,
-    builtWorkspacePackageNames,
-  );
-  rewriteExternalCrocoRanges(
-    projectDir,
-    contractSmokeRangeOverrides,
-    generatedSmokeExternalCrocoRangeExceptions,
-  );
-  writePnpmWorkspaceOverrides(projectDir, contractSmokeRangeOverrides);
+  try {
+    renderTemplate(templateDir, projectDir, {
+      projectName: "rest-spa-contracts",
+      scope: "@smoke",
+    });
+    removeDependency(
+      join(projectDir, "apps", "api-server", "package.json"),
+      "devDependencies",
+      "@croco/testing",
+    );
+    const contractSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
+      projectDir,
+      join(contractSmokeRoot, "contract-package-packs"),
+      workspacePackageIndex,
+      packedWorkspacePackages,
+      builtWorkspacePackageNames,
+      (label, result) => appendSmokeCaseOutput(caseResult, label, result),
+    );
+    rewriteExternalCrocoRanges(
+      projectDir,
+      contractSmokeRangeOverrides,
+      generatedSmokeExternalCrocoRangeExceptions,
+    );
+    writePnpmWorkspaceOverrides(projectDir, contractSmokeRangeOverrides);
 
-  run("corepack", ["pnpm", "install"], projectDir);
-  assertPnpmLockfileUsesLocalTarballOverrides(
-    join(projectDir, "pnpm-lock.yaml"),
-    "rest-spa-contracts",
-    contractSmokeRangeOverrides,
-  );
-  run("corepack", ["pnpm", "contract:check"], projectDir);
-  run("corepack", ["pnpm", "contract:snapshot"], projectDir);
-  assertExists(
-    join(projectDir, "contract-graph.snapshot.json"),
-    "REST SPA contract smoke did not create contract-graph.snapshot.json",
-  );
-  run("corepack", ["pnpm", "contract:verify"], projectDir);
-  assertExists(
-    join(projectDir, "contract-graph.coverage.json"),
-    "REST SPA contract smoke did not create contract-graph.coverage.json",
-  );
-  assertExists(
-    join(projectDir, "openapi.json"),
-    "REST SPA contract smoke did not create openapi.json",
-  );
+    runSmokeCaseCommand(
+      report,
+      caseResult,
+      projectDir,
+      "install",
+      "corepack",
+      ["pnpm", "install"],
+      projectDir,
+    );
+    assertPnpmLockfileUsesLocalTarballOverrides(
+      join(projectDir, "pnpm-lock.yaml"),
+      REST_SPA_CONTRACT_SMOKE_CASE_NAME,
+      contractSmokeRangeOverrides,
+    );
+    runSmokeCaseCommand(
+      report,
+      caseResult,
+      projectDir,
+      "contract check",
+      "corepack",
+      ["pnpm", "contract:check"],
+      projectDir,
+    );
+    runSmokeCaseCommand(
+      report,
+      caseResult,
+      projectDir,
+      "contract snapshot",
+      "corepack",
+      ["pnpm", "contract:snapshot"],
+      projectDir,
+    );
+    assertExists(
+      join(projectDir, "contract-graph.snapshot.json"),
+      "REST SPA contract smoke did not create contract-graph.snapshot.json",
+    );
+    runSmokeCaseCommand(
+      report,
+      caseResult,
+      projectDir,
+      "contract verify",
+      "corepack",
+      ["pnpm", "contract:verify"],
+      projectDir,
+    );
+    assertExists(
+      join(projectDir, "contract-graph.coverage.json"),
+      "REST SPA contract smoke did not create contract-graph.coverage.json",
+    );
+    assertExists(
+      join(projectDir, "openapi.json"),
+      "REST SPA contract smoke did not create openapi.json",
+    );
 
-  const generatedClientPath = join(projectDir, "libs", "shared", "provider-rpc", "src", "user.ts");
-  assertExists(
-    generatedClientPath,
-    "REST SPA contract smoke did not create provider-rpc user client",
-  );
-  assertFileContains(
-    generatedClientPath,
-    "export function useList<TData = ListOutput>(options?: ListQueryOptions<TData>)",
-  );
-  assertFileContains(
-    generatedClientPath,
-    "export type CreateInput = { email: string; name: string; };",
-  );
-  const problemDeclarationCanary = removeRestSpaListProblemDeclaration(projectDir);
-  runExpectFailure(
-    "corepack",
-    [
-      "pnpm",
-      "exec",
-      "croco-rpc-codegen",
-      "--controllers",
-      "apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}",
-      "--check",
-      "--fail-on-diagnostics",
-    ],
-    projectDir,
-    [
-      "contract-route-missing-problem-response-contract",
-      "Strict Problem contract mode could not find declared route failures.",
-      "Contract graph check failed with 1 diagnostic(s).",
-    ],
-  );
-  writeFileSync(problemDeclarationCanary.path, problemDeclarationCanary.original);
-  removeRestSpaListResponseSchema(projectDir);
-  runExpectFailure(
-    "corepack",
-    [
-      "pnpm",
-      "exec",
-      "croco-openapi-spec",
-      "--controllers",
-      "apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}",
-      "--out",
-      "strict-openapi-canary.json",
-      "--fail-on-diagnostics",
-      "--manifest-bundle",
-      ".croco/manifest",
-    ],
-    projectDir,
-    [
-      "contract-route-missing-response-schema",
-      "Strict schema mode requires a success response schema before RPC/OpenAPI generation.",
-      "fix them before generating OpenAPI",
-    ],
-  );
-  assertMissing(
-    join(projectDir, "strict-openapi-canary.json"),
-    "REST SPA strict OpenAPI canary wrote an artifact despite ContractGraph errors",
-  );
-  runExpectFailure(
-    "corepack",
-    [
-      "pnpm",
-      "exec",
-      "croco-rpc-codegen",
-      "--controllers",
-      "apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}",
-      "--out",
-      ".strict-rpc-canary",
-      "--react-query",
-      "--problem-runtime",
-      "frontend-problems",
-      "--fail-on-diagnostics",
-      "--manifest-bundle",
-      ".croco/manifest",
-    ],
-    projectDir,
-    [
-      "contract-route-missing-response-schema",
-      "Strict schema mode requires a success response schema before RPC/OpenAPI generation.",
-      "fix them before generating clients",
-    ],
-  );
-  assertMissing(
-    join(projectDir, ".strict-rpc-canary"),
-    "REST SPA strict RPC canary wrote artifacts despite ContractGraph errors",
-  );
-  console.log("create-croco-app-generated-smoke: rest-spa-contracts contract commands passed");
+    const generatedClientPath = join(
+      projectDir,
+      "libs",
+      "shared",
+      "provider-rpc",
+      "src",
+      "user.ts",
+    );
+    assertExists(
+      generatedClientPath,
+      "REST SPA contract smoke did not create provider-rpc user client",
+    );
+    assertFileContains(
+      generatedClientPath,
+      "export function useList<TData = ListOutput>(options?: ListQueryOptions<TData>)",
+    );
+    assertFileContains(
+      generatedClientPath,
+      "export type CreateInput = { email: string; name: string; };",
+    );
+    const problemDeclarationCanary = removeRestSpaListProblemDeclaration(projectDir);
+    runExpectedSmokeCaseCommand(
+      report,
+      caseResult,
+      projectDir,
+      "strict Problem declaration canary",
+      "corepack",
+      [
+        "pnpm",
+        "exec",
+        "croco-rpc-codegen",
+        "--controllers",
+        "apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}",
+        "--check",
+        "--fail-on-diagnostics",
+      ],
+      projectDir,
+      [
+        "contract-route-missing-problem-response-contract",
+        "Strict Problem contract mode could not find declared route failures.",
+        "Contract graph check failed with 1 diagnostic(s).",
+      ],
+    );
+    writeFileSync(problemDeclarationCanary.path, problemDeclarationCanary.original);
+    removeRestSpaListResponseSchema(projectDir);
+    runExpectedSmokeCaseCommand(
+      report,
+      caseResult,
+      projectDir,
+      "strict OpenAPI schema canary",
+      "corepack",
+      [
+        "pnpm",
+        "exec",
+        "croco-openapi-spec",
+        "--controllers",
+        "apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}",
+        "--out",
+        "strict-openapi-canary.json",
+        "--fail-on-diagnostics",
+        "--manifest-bundle",
+        ".croco/manifest",
+      ],
+      projectDir,
+      [
+        "contract-route-missing-response-schema",
+        "Strict schema mode requires a success response schema before RPC/OpenAPI generation.",
+        "fix them before generating OpenAPI",
+      ],
+    );
+    assertMissing(
+      join(projectDir, "strict-openapi-canary.json"),
+      "REST SPA strict OpenAPI canary wrote an artifact despite ContractGraph errors",
+    );
+    runExpectedSmokeCaseCommand(
+      report,
+      caseResult,
+      projectDir,
+      "strict RPC schema canary",
+      "corepack",
+      [
+        "pnpm",
+        "exec",
+        "croco-rpc-codegen",
+        "--controllers",
+        "apps/api-server/src/{controllers/**/*.ts,users.ts,problems.ts}",
+        "--out",
+        ".strict-rpc-canary",
+        "--react-query",
+        "--problem-runtime",
+        "frontend-problems",
+        "--fail-on-diagnostics",
+        "--manifest-bundle",
+        ".croco/manifest",
+      ],
+      projectDir,
+      [
+        "contract-route-missing-response-schema",
+        "Strict schema mode requires a success response schema before RPC/OpenAPI generation.",
+        "fix them before generating clients",
+      ],
+    );
+    assertMissing(
+      join(projectDir, ".strict-rpc-canary"),
+      "REST SPA strict RPC canary wrote artifacts despite ContractGraph errors",
+    );
+    caseResult.status = "passed";
+    writeGeneratedSmokeReport(report);
+    console.log("create-croco-app-generated-smoke: rest-spa-contracts contract commands passed");
+  } catch (error) {
+    recordUnhandledSmokeCaseFailure(report, caseResult, projectDir, error);
+    throw error;
+  }
 }
 
 function removeRestSpaListProblemDeclaration(projectDir: string): {
@@ -2610,6 +2968,7 @@ function getGeneratedSmokeRangeOverrides(
   workspacePackageIndex: ReadonlyMap<string, WorkspacePackage>,
   packedWorkspacePackages: Map<string, string>,
   builtWorkspacePackageNames: Set<string>,
+  onCommandResult?: SmokeCommandOutputObserver,
 ): Record<string, string> {
   const workspacePackages = resolveLocalCrocoPackagesForGeneratedProject(
     projectDir,
@@ -2620,12 +2979,13 @@ function getGeneratedSmokeRangeOverrides(
   buildWorkspacePackages(
     workspacePackages.map(({ name }) => name),
     builtWorkspacePackageNames,
+    onCommandResult,
   );
 
   return Object.fromEntries(
     workspacePackages.map((workspacePackage) => [
       workspacePackage.name,
-      `file:${packWorkspacePackage(workspacePackage, packDir, packedWorkspacePackages)}`,
+      `file:${packWorkspacePackage(workspacePackage, packDir, packedWorkspacePackages, onCommandResult)}`,
     ]),
   );
 }
@@ -2633,6 +2993,7 @@ function getGeneratedSmokeRangeOverrides(
 function buildWorkspacePackages(
   packageNames: readonly string[],
   builtWorkspacePackageNames: Set<string>,
+  onCommandResult?: SmokeCommandOutputObserver,
 ): void {
   const packageNamesToBuild = [...new Set(packageNames)]
     .filter((packageName) => !builtWorkspacePackageNames.has(packageName))
@@ -2642,11 +3003,12 @@ function buildWorkspacePackages(
     return;
   }
 
-  run(
+  const commandResult = run(
     process.execPath,
     [turboPath, "build", ...packageNamesToBuild.map((packageName) => `--filter=${packageName}...`)],
     rootDir,
   );
+  onCommandResult?.("build local dependencies", commandResult);
 
   for (const packageName of packageNamesToBuild) {
     builtWorkspacePackageNames.add(packageName);
@@ -2657,6 +3019,7 @@ function packWorkspacePackage(
   workspacePackage: WorkspacePackage,
   packDir: string,
   packedWorkspacePackages: Map<string, string>,
+  onCommandResult?: SmokeCommandOutputObserver,
 ): string {
   const cachedTarballPath = packedWorkspacePackages.get(workspacePackage.name);
   if (cachedTarballPath) {
@@ -2664,11 +3027,12 @@ function packWorkspacePackage(
   }
 
   mkdirSync(packDir, { recursive: true });
-  run(
+  const commandResult = run(
     "corepack",
     ["pnpm", "--filter", workspacePackage.name, "pack", "--pack-destination", packDir],
     rootDir,
   );
+  onCommandResult?.(`pack local dependency ${workspacePackage.name}`, commandResult);
 
   const tarballPath = join(
     packDir,
@@ -2800,21 +3164,27 @@ function run(
   args: readonly string[],
   cwd: string,
   env?: Readonly<Record<string, string>>,
-): void {
-  const result = spawnSync(command, [...args], {
-    cwd,
-    env: env ? { ...process.env, ...env } : undefined,
-    stdio: "inherit",
-    timeout: commandTimeoutMs,
-  });
+): CommandRunResult {
+  const { result, commandResult } = executeCommand(command, args, cwd, env);
 
   if (result.error) {
-    throw result.error;
+    replayCommandOutput(commandResult);
+    throw new CommandExecutionError(
+      createCommandExecutionErrorMessage(command, args, result.error),
+      commandResult,
+      result.error,
+    );
   }
 
   if (result.status !== 0) {
-    throw new Error(`${command} ${args.join(" ")} failed with exit code ${result.status}`);
+    replayCommandOutput(commandResult);
+    throw new CommandExecutionError(
+      `${command} ${args.join(" ")} failed with ${formatCommandExit(commandResult)}`,
+      commandResult,
+    );
   }
+
+  return commandResult;
 }
 
 function runExpectFailure(
@@ -2823,31 +3193,178 @@ function runExpectFailure(
   cwd: string,
   expectedOutput: readonly string[],
   env?: Readonly<Record<string, string>>,
-): readonly string[] {
-  const result = spawnSync(command, [...args], {
-    cwd,
-    encoding: "utf8",
-    env: env ? { ...process.env, ...env } : undefined,
-    timeout: commandTimeoutMs,
-  });
-
-  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+): CommandRunResult {
+  const { result, commandResult } = executeCommand(command, args, cwd, env);
+  const output = `${commandResult.stdout}${commandResult.stderr}`;
 
   if (result.error) {
-    throw result.error;
+    replayCommandOutput(commandResult);
+    throw new CommandExecutionError(
+      createCommandExecutionErrorMessage(command, args, result.error),
+      commandResult,
+      result.error,
+    );
   }
 
   if (result.status === 0) {
-    throw new Error(`${command} ${args.join(" ")} was expected to fail but exited 0`);
+    replayCommandOutput(commandResult);
+    throw new CommandExecutionError(
+      `${command} ${args.join(" ")} was expected to fail but exited 0`,
+      commandResult,
+    );
   }
 
   for (const expectedText of expectedOutput) {
     if (!output.includes(expectedText)) {
-      throw new Error(
-        `${command} ${args.join(" ")} failed without expected output: ${expectedText}\n${output}`,
+      replayCommandOutput(commandResult);
+      throw new CommandExecutionError(
+        `${command} ${args.join(" ")} failed without expected output: ${expectedText}`,
+        commandResult,
       );
     }
   }
 
-  return extractDiagnosticCodes(output);
+  return commandResult;
+}
+
+function executeCommand(
+  command: string,
+  args: readonly string[],
+  cwd: string,
+  env?: Readonly<Record<string, string>>,
+): {
+  readonly result: ReturnType<typeof spawnSync>;
+  readonly commandResult: CommandRunResult;
+} {
+  const outputDir = mkdtempSync(join(tmpdir(), "croco-generated-smoke-command-"));
+  const stdoutPath = join(outputDir, "stdout.log");
+  const stderrPath = join(outputDir, "stderr.log");
+  const stdoutFileDescriptor = openSync(stdoutPath, "w");
+  const stderrFileDescriptor = openSync(stderrPath, "w");
+
+  const result = (() => {
+    try {
+      return spawnSync(command, [...args], {
+        cwd,
+        env: env ? { ...process.env, ...env } : undefined,
+        stdio: ["ignore", stdoutFileDescriptor, stderrFileDescriptor],
+        timeout: commandTimeoutMs,
+      });
+    } finally {
+      closeSync(stdoutFileDescriptor);
+      closeSync(stderrFileDescriptor);
+    }
+  })();
+
+  try {
+    const stdout = readCappedCommandOutput(stdoutPath);
+    const stderr = readCappedCommandOutput(stderrPath);
+
+    return {
+      result,
+      commandResult: toCommandRunResult(result, stdout, stderr),
+    };
+  } finally {
+    rmSync(outputDir, { force: true, recursive: true });
+  }
+}
+
+function readCappedCommandOutput(path: string): {
+  readonly value: string;
+  readonly truncated: boolean;
+} {
+  const size = statSync(path).size;
+  const fileDescriptor = openSync(path, "r");
+
+  try {
+    if (size <= commandCaptureMaxBytes) {
+      return {
+        value: readCommandOutputSegment(fileDescriptor, size, 0),
+        truncated: false,
+      };
+    }
+
+    const headLength = Math.min(commandCaptureHeadBytes, commandCaptureMaxBytes);
+    const tailLength = commandCaptureMaxBytes - headLength;
+    return {
+      value: [
+        readCommandOutputSegment(fileDescriptor, headLength, 0),
+        `[croco generated smoke output truncated; showing the first ${headLength} bytes and final ${tailLength} bytes]`,
+        readCommandOutputSegment(fileDescriptor, tailLength, size - tailLength),
+      ].join("\n"),
+      truncated: true,
+    };
+  } finally {
+    closeSync(fileDescriptor);
+  }
+}
+
+export function readCommandOutputSegment(
+  fileDescriptor: number,
+  length: number,
+  position: number,
+): string {
+  const buffer = Buffer.alloc(length);
+  const decoder = new TextDecoder("utf-8");
+  let bytesRead = 0;
+  let value = "";
+
+  while (bytesRead < length) {
+    const readLength = readSync(
+      fileDescriptor,
+      buffer,
+      bytesRead,
+      length - bytesRead,
+      position + bytesRead,
+    );
+    if (readLength === 0) {
+      break;
+    }
+    value += decoder.decode(buffer.subarray(bytesRead, bytesRead + readLength), { stream: true });
+    bytesRead += readLength;
+  }
+
+  return `${value}${decoder.decode()}`;
+}
+
+function toCommandRunResult(
+  result: ReturnType<typeof spawnSync>,
+  stdout: { readonly value: string; readonly truncated: boolean },
+  stderr: { readonly value: string; readonly truncated: boolean },
+): CommandRunResult {
+  const output = [stdout.value, stderr.value].join("\n");
+
+  return {
+    stdout: stdout.value,
+    stderr: stderr.value,
+    status: result.status,
+    signal: result.signal,
+    outputTruncated: stdout.truncated || stderr.truncated,
+    diagnosticCodes: extractDiagnosticCodes(output),
+  };
+}
+
+function replayCommandOutput(result: CommandRunResult): void {
+  if (result.stdout) {
+    process.stdout.write(result.stdout);
+  }
+  if (result.stderr) {
+    process.stderr.write(result.stderr);
+  }
+}
+
+function createCommandExecutionErrorMessage(
+  command: string,
+  args: readonly string[],
+  error: Error,
+): string {
+  return `${command} ${args.join(" ")} failed to start: ${error.message}`;
+}
+
+function formatCommandExit(result: CommandRunResult): string {
+  return result.signal ? `signal ${result.signal}` : `exit code ${result.status}`;
+}
+
+function getCommandResultFromError(error: unknown): CommandRunResult | undefined {
+  return error instanceof CommandExecutionError ? error.commandResult : undefined;
 }
