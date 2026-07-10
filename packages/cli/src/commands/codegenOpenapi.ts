@@ -1,8 +1,8 @@
 import { type ChildProcess, type SpawnOptions, spawn } from "node:child_process";
 import { createRequire } from "node:module";
-import { basename, dirname, join } from "node:path";
 import { defineCommand } from "citty";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { resolveCliBinFromEntry } from "./resolveCliBin.js";
 
 const require = createRequire(import.meta.url);
 
@@ -60,9 +60,5 @@ export function resolveOpenapiSpecBin(): string {
 }
 
 export function resolveOpenapiSpecBinFromEntry(entry: string): string {
-  const entryDir = dirname(entry);
-
-  return basename(entryDir) === "src"
-    ? join(dirname(entryDir), "dist", "cli.js")
-    : join(entryDir, "cli.js");
+  return resolveCliBinFromEntry(entry);
 }

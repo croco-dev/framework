@@ -91,13 +91,12 @@ describe("installed CLI command integration", () => {
 
   it("installs published package graphs and resolves bins under the temp consumer", () => {
     const harness = getHarness();
+    const consumerBinDir = join(harness.consumerRoot, "node_modules", ".bin");
 
-    expect(harness.binPaths.croco).toContain(join(harness.consumerRoot, "node_modules", ".bin"));
-    expect(harness.binPaths.createCrocoApp).toContain(
-      join(harness.consumerRoot, "node_modules", ".bin"),
-    );
-    expect(harness.binPaths.croco).not.toContain(join(REPO_ROOT, "node_modules"));
-    expect(harness.binPaths.createCrocoApp).not.toContain(join(REPO_ROOT, "node_modules"));
+    expect(existsSync(harness.binPaths.croco)).toBe(true);
+    expect(existsSync(harness.binPaths.createCrocoApp)).toBe(true);
+    expect(dirname(harness.binPaths.croco)).toBe(consumerBinDir);
+    expect(dirname(harness.binPaths.createCrocoApp)).toBe(consumerBinDir);
 
     expect([
       installedPackageSummary(harness, "@croco/cli"),
