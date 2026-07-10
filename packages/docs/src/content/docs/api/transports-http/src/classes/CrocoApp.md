@@ -45,7 +45,7 @@ title: "CrocoApp"
 
 readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/requestpipelinegraph/)[]
 
-***
+---
 
 ### fetch()
 
@@ -69,7 +69,7 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 
 `Promise`\<`Response`\>
 
-***
+---
 
 ### getHono()
 
@@ -79,7 +79,7 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 
 `Hono`
 
-***
+---
 
 ### lambdaHandler()
 
@@ -95,11 +95,11 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 
 [`LambdaHandler`](/api/preset-lambda/src/type-aliases/lambdahandler/)
 
-***
+---
 
 ### listen()
 
-> **listen**(`port`, `options?`, `callback?`): `Promise`\<`void`\>
+> **listen**(`port`, `options?`, `callback?`): `Promise`\<[`NodeServerHandle`](/api/transports-http/src/type-aliases/nodeserverhandle/)\>
 
 #### Parameters
 
@@ -117,4 +117,4 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<[`NodeServerHandle`](/api/transports-http/src/type-aliases/nodeserverhandle/)\>

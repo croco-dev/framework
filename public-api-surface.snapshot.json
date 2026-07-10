@@ -19451,6 +19451,11 @@
           "source": "./libs/middleware/MiddlewareShortCircuit"
         },
         {
+          "name": "NodeServerHandle",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "OperationalLivenessResponse",
           "exportKind": "named",
           "source": "./libs/operationalEndpoints"

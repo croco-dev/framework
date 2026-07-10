@@ -35,6 +35,7 @@ export type {
   LambdaResponse,
   ListenOptions,
   MiddlewareFunction,
+  NodeServerHandle,
   PipeProvider,
 } from "./libs/types";
 

@@ -5,7 +5,7 @@ prev: false
 title: "startServer"
 ---
 
-> **startServer**(`app`, `port`): `Promise`\<`void`\>
+> **startServer**(`app`, `port`): `Promise`\<[`NodeServerHandle`](/api/transports-http/src/type-aliases/nodeserverhandle/)\>
 
 CrocoApp 인스턴스를 지정한 포트에서 Node 서버로 실행합니다.
 
@@ -21,4 +21,4 @@ CrocoApp 인스턴스를 지정한 포트에서 Node 서버로 실행합니다.
 
 ## Returns
 
-`Promise`\<`void`\>
+`Promise`\<[`NodeServerHandle`](/api/transports-http/src/type-aliases/nodeserverhandle/)\>
