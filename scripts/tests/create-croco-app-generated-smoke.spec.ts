@@ -2,7 +2,10 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { readGeneratedSmokeAllowlistMetadata } from "../create-croco-app-generated-smoke.mts";
+import {
+  readGeneratedSmokeAllowlistMetadata,
+  shouldRunSpaBeSplitContractSmoke,
+} from "../create-croco-app-generated-smoke.mts";
 import {
   copyGeneratedSmokeArtifacts,
   renderGeneratedSmokeArtifacts,
@@ -210,6 +213,13 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
 });
 
 describe("create-croco-app generated smoke matrix", () => {
+  it("keeps REST SPA contract canaries in the blocking tier", () => {
+    expect(shouldRunSpaBeSplitContractSmoke(false, undefined)).toBe(true);
+    expect(shouldRunSpaBeSplitContractSmoke(true, "spine-blocking")).toBe(true);
+    expect(shouldRunSpaBeSplitContractSmoke(true, "ecosystem-advisory")).toBe(false);
+    expect(shouldRunSpaBeSplitContractSmoke(true, undefined)).toBe(false);
+  });
+
   it("classifies every generated smoke case and requires advisory recovery metadata", () => {
     expect(
       GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "spine-blocking").map(

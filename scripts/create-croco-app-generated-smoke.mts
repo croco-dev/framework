@@ -1131,6 +1131,13 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
 
 const smokeCases = withGeneratedSmokeMatrixMetadata(smokeCaseDefinitions);
 
+export function shouldRunSpaBeSplitContractSmoke(
+  isFilteredRun: boolean,
+  selectedTier: SmokeMatrixTier | undefined,
+): boolean {
+  return !isFilteredRun || selectedTier === "spine-blocking";
+}
+
 if (isMainModule()) {
   let smokeReport: GeneratedSmokeReport | undefined;
   const activeSmokeRoot = getSmokeRoot();
@@ -1295,7 +1302,7 @@ if (isMainModule()) {
       }
     }
 
-    if (!isFilteredRun) {
+    if (shouldRunSpaBeSplitContractSmoke(isFilteredRun, smokeSelection.selectedTier)) {
       runSpaBeSplitContractSmoke(
         workspacePackageIndex,
         packedWorkspacePackages,
