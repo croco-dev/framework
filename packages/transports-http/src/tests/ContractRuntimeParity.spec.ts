@@ -1,10 +1,14 @@
 import "reflect-metadata";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory, type ProblemDetails } from "@croco/problems-core";
 import {
   assertContractGraphHasNoErrors,
   buildContractGraph,
+  type ContractGraph,
   type ContractGraphRoute,
 } from "@croco/protocols-core";
 import {
@@ -19,14 +23,18 @@ import {
   ProblemResponses,
   Query,
   RequestValidationProblem,
+  ResponseSchema,
   routeProblemResponses,
 } from "@croco/protocols-rest";
-import { beforeEach, describe, expect, it } from "vitest";
+import ts from "typescript";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { emitOpenAPIFromContractGraph } from "../../../openapi-spec/src/index";
+import { generateClientFilesFromContractGraph } from "../../../rpc-codegen/src/index";
 import { createApp, type CrocoApp, ErrorHandler, HealthCheckRegistry } from "../index";
 
 const WidgetPathSchema = z.object({
-  id: z.string().regex(/^widget_[a-z0-9]+$/),
+  id: z.string().regex(/^widget_[a-z0-9 ]+$/),
 });
 
 const WidgetQuerySchema = z.object({
@@ -40,6 +48,16 @@ const WidgetHeadersSchema = z.object({
 const WidgetBodySchema = z.object({
   name: z.string().min(1),
   enabled: z.boolean(),
+});
+
+const NestedWidgetBodySchema = z.object({
+  metadata: z.object({
+    color: z.enum(["blue", "green"]),
+  }),
+});
+
+const NestedWidgetResponseSchema = z.object({
+  color: z.enum(["blue", "green"]),
 });
 
 const WidgetResponseSchema = z.object({
@@ -88,6 +106,31 @@ const updateWidgetRoute = defineRouteContract({
 type WidgetBody = z.infer<typeof WidgetBodySchema>;
 type WidgetMode = z.infer<typeof WidgetQuerySchema>["mode"];
 type WidgetResponse = z.infer<typeof WidgetResponseSchema>;
+type NestedWidgetBody = z.infer<typeof NestedWidgetBodySchema>;
+type NestedWidgetResponse = z.infer<typeof NestedWidgetResponseSchema>;
+type GeneratedUpdateWidgetInput = {
+  readonly path: { readonly id: string };
+  readonly query: { readonly mode: WidgetMode };
+  readonly headers: { readonly "x-tenant-id": string };
+  readonly body: WidgetBody;
+};
+type ContractParityGeneratedModule = {
+  readonly contractParityClient: {
+    readonly updateWidget: (
+      input: GeneratedUpdateWidgetInput,
+      options?: unknown,
+    ) => Promise<WidgetResponse>;
+    readonly updateWidgetResult: (
+      input: GeneratedUpdateWidgetInput,
+      options?: unknown,
+    ) => Promise<unknown>;
+  };
+};
+
+const GENERATED_RPC_TEMP_ROOT = path.join(
+  __dirname,
+  "../../node_modules/.croco-contract-runtime-parity",
+);
 
 @Controller("/contract-parity")
 class ContractParityController {
@@ -113,6 +156,15 @@ class ContractParityController {
   }
 }
 
+@Controller("/contract-parity")
+class NestedBodyValidationController {
+  @Post("/nested-body")
+  @ResponseSchema(NestedWidgetResponseSchema)
+  createNestedWidget(@Body(NestedWidgetBodySchema) body: NestedWidgetBody): NestedWidgetResponse {
+    return { color: body.metadata.color };
+  }
+}
+
 type ValidationProblemDetails = ProblemDetails & {
   readonly issues?: readonly {
     readonly path: string;
@@ -122,10 +174,16 @@ type ValidationProblemDetails = ProblemDetails & {
 
 describe("REST contract-to-runtime parity", () => {
   let app: CrocoApp;
+  let graph: ContractGraph;
   let route: ContractGraphRoute;
+  let rpcOutDir: string;
+  let rpcModuleDir: string;
 
   beforeEach(() => {
     Container.reset();
+    fs.mkdirSync(GENERATED_RPC_TEMP_ROOT, { recursive: true });
+    rpcOutDir = fs.mkdtempSync(path.join(GENERATED_RPC_TEMP_ROOT, "rpc-out-"));
+    rpcModuleDir = fs.mkdtempSync(path.join(GENERATED_RPC_TEMP_ROOT, "rpc-modules-"));
 
     const logger = {
       info: () => {},
@@ -137,7 +195,7 @@ describe("REST contract-to-runtime parity", () => {
     Container.set(ErrorHandler, new ErrorHandler(logger));
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
 
-    const graph = buildContractGraph([ContractParityController], {
+    graph = buildContractGraph([ContractParityController], {
       strictProblemResponses: true,
       strictSchemas: true,
     });
@@ -155,6 +213,11 @@ describe("REST contract-to-runtime parity", () => {
       controllers: [ContractParityController],
       securityValidation: "off",
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fs.rmSync(GENERATED_RPC_TEMP_ROOT, { recursive: true, force: true });
   });
 
   it("keeps accepted contract metadata aligned with the fixture route", () => {
@@ -276,6 +339,200 @@ describe("REST contract-to-runtime parity", () => {
     },
   );
 
+  it("locks nested body validation failures with the same Problem response shape", async () => {
+    const nestedApp = createApp({
+      controllers: [NestedBodyValidationController],
+      securityValidation: "off",
+    });
+    const response = await nestedApp.fetch(
+      new Request("http://localhost/contract-parity/nested-body", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ metadata: { color: "red" } }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    const problem = (await response.json()) as ValidationProblemDetails;
+
+    expect(problem).toMatchObject({
+      type: "about:blank",
+      title: "Validation Error",
+      status: 422,
+      code: "protocols-rest/request-validation-failed",
+      instance: "http://localhost/contract-parity/nested-body",
+      detail: expect.stringContaining("body.metadata.color"),
+      issues: expect.any(Array),
+    });
+    expect(problem.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "body.metadata.color",
+          message: expect.any(String),
+        }),
+      ]),
+    );
+  });
+
+  it("keeps generated OpenAPI and RPC artifacts aligned with the validation matrix", async () => {
+    const spec = emitOpenAPIFromContractGraph(graph);
+    const operation = spec.paths?.["/contract-parity/widgets/{id}"]?.post;
+
+    expect(operation).toBeDefined();
+    expect(operation?.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          in: "path",
+          name: "id",
+          required: true,
+          schema: expect.objectContaining({
+            type: "string",
+            pattern: "^widget_[a-z0-9 ]+$",
+          }),
+        }),
+        expect.objectContaining({
+          in: "query",
+          name: "mode",
+          required: true,
+          schema: expect.objectContaining({ enum: ["merge", "replace"], type: "string" }),
+        }),
+        expect.objectContaining({
+          in: "header",
+          name: "x-tenant-id",
+          required: true,
+          schema: expect.objectContaining({ minLength: 3, type: "string" }),
+        }),
+      ]),
+    );
+    expect(operation?.requestBody).toMatchObject({
+      required: true,
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            properties: {
+              name: { type: "string", minLength: 1 },
+              enabled: { type: "boolean" },
+            },
+            required: ["name", "enabled"],
+          },
+        },
+      },
+    });
+    expect(operation?.responses?.[422]).toMatchObject({
+      "x-croco-problems": [
+        expect.objectContaining({
+          code: "protocols-rest/request-validation-failed",
+          category: "ValidationError",
+          status: 422,
+        }),
+      ],
+    });
+
+    const module = await importGeneratedContractParityClient(
+      generateClientFilesFromContractGraph(graph, rpcOutDir),
+      rpcOutDir,
+      rpcModuleDir,
+    );
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const rawUrl =
+        typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      const requestUrl = rawUrl.startsWith("http://")
+        ? rawUrl
+        : `http://localhost${rawUrl.startsWith("/") ? rawUrl : `/${rawUrl}`}`;
+
+      return app.fetch(new Request(requestUrl, init));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const input: GeneratedUpdateWidgetInput = {
+      path: { id: "widget_hello world" },
+      query: { mode: "replace" },
+      headers: { "x-tenant-id": "tenant-a" },
+      body: { name: "Generated widget", enabled: true },
+    };
+    const response = await module.contractParityClient.updateWidget(input);
+
+    expect(response).toEqual({
+      id: "widget_hello world",
+      mode: "replace",
+      tenantId: "tenant-a",
+      name: "Generated widget",
+      enabled: true,
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/contract-parity/widgets/widget_hello%20world?mode=replace",
+      {
+        method: "POST",
+        headers: {
+          "x-tenant-id": "tenant-a",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(input.body),
+      },
+    );
+
+    const rpcProblem = await module.contractParityClient.updateWidgetResult({
+      ...input,
+      body: { name: "", enabled: true },
+    });
+    expect(rpcProblem).toMatchObject({
+      ok: false,
+      kind: "problem",
+      code: "protocols-rest/request-validation-failed",
+      category: "ValidationError",
+      status: 422,
+      problem: expect.objectContaining({
+        code: "protocols-rest/request-validation-failed",
+        status: 422,
+      }),
+    });
+
+    const artifactGraph = buildContractGraph(
+      [ContractParityController, NestedBodyValidationController],
+      {
+        strictProblemResponses: true,
+        strictSchemas: true,
+      },
+    );
+    assertContractGraphHasNoErrors(artifactGraph);
+
+    const nestedOperation =
+      emitOpenAPIFromContractGraph(artifactGraph).paths?.["/contract-parity/nested-body"]?.post;
+    expect(nestedOperation?.requestBody).toMatchObject({
+      required: true,
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            properties: {
+              metadata: {
+                type: "object",
+                properties: {
+                  color: { enum: ["blue", "green"], type: "string" },
+                },
+                required: ["color"],
+              },
+            },
+            required: ["metadata"],
+          },
+        },
+      },
+    });
+
+    const nestedRpcOutDir = fs.mkdtempSync(path.join(GENERATED_RPC_TEMP_ROOT, "nested-rpc-out-"));
+    expect(() => generateClientFilesFromContractGraph(artifactGraph, nestedRpcOutDir)).toThrow(
+      expect.objectContaining({
+        code: "rpc-codegen/unsupported-form-schema",
+        detail: expect.stringContaining(
+          "field 'metadata' uses unsupported form field schema ZodObject.",
+        ),
+      }),
+    );
+  });
+
   it("matches declared domain Problem responses at runtime", async () => {
     const response = await app.fetch(
       createUpdateRequest({
@@ -365,6 +622,21 @@ async function expectProblemResponse(
     );
   }
 
+  expect(problem).toMatchObject({
+    type: "about:blank",
+    status: expected.status,
+    code: expected.code,
+    instance: expect.stringMatching(/^http:\/\/localhost\/contract-parity\/widgets\//),
+  });
+
+  if (expected.code === "protocols-rest/request-validation-failed") {
+    expect(problem).toMatchObject({
+      title: "Validation Error",
+      detail: expect.any(String),
+      issues: expect.any(Array),
+    });
+  }
+
   return problem;
 }
 
@@ -419,4 +691,56 @@ function expectProblemIssuePath(
       `[${route.routeId}] expected runtime validation issue '${expectedPath}', received [${issuePaths.join(", ")}].`,
     );
   }
+
+  expect(problem.detail).toEqual(expect.stringContaining(expectedPath));
+  expect(problem.issues).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        path: expectedPath,
+        message: expect.any(String),
+      }),
+    ]),
+  );
+}
+
+async function importGeneratedContractParityClient(
+  files: readonly string[],
+  rpcOutDir: string,
+  rpcModuleDir: string,
+): Promise<ContractParityGeneratedModule> {
+  const domainFile = files.find((file) => path.basename(file) === "contractParity.ts");
+
+  if (!domainFile) {
+    throw new Error(`Expected generated contractParity.ts, got: ${files.join(", ")}`);
+  }
+
+  const rpcSource = fs.readFileSync(path.join(rpcOutDir, "rpc.ts"), "utf-8");
+  const domainSource = fs.readFileSync(domainFile, "utf-8");
+  const rpcOutput = ts.transpileModule(rpcSource, {
+    compilerOptions: {
+      module: ts.ModuleKind.ES2022,
+      target: ts.ScriptTarget.ES2022,
+    },
+    reportDiagnostics: true,
+  });
+  const domainOutput = ts.transpileModule(
+    domainSource.replace("from './rpc';", "from './rpc.mjs';"),
+    {
+      compilerOptions: {
+        module: ts.ModuleKind.ES2022,
+        target: ts.ScriptTarget.ES2022,
+      },
+      reportDiagnostics: true,
+    },
+  );
+
+  expect(rpcOutput.diagnostics).toEqual([]);
+  expect(domainOutput.diagnostics).toEqual([]);
+
+  const modulePath = path.join(rpcModuleDir, "contractParity.mjs");
+
+  fs.writeFileSync(path.join(rpcModuleDir, "rpc.mjs"), rpcOutput.outputText);
+  fs.writeFileSync(modulePath, domainOutput.outputText);
+
+  return import(pathToFileURL(modulePath).href) as Promise<ContractParityGeneratedModule>;
 }
