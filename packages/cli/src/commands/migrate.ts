@@ -1,6 +1,7 @@
 import { defineCommand } from "citty";
 import { type ChildProcess, type SpawnOptions, spawn } from "node:child_process";
 import { createRequire } from "node:module";
+import { basename, dirname, join } from "node:path";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 const require = createRequire(import.meta.url);
@@ -99,5 +100,13 @@ export function runMigrateCommand(
 }
 
 export function resolveMigrationRunnerBin(): string {
-  return require.resolve("@croco/migration-runner/dist/cli.js");
+  return resolveMigrationRunnerBinFromEntry(require.resolve("@croco/migration-runner"));
+}
+
+export function resolveMigrationRunnerBinFromEntry(entry: string): string {
+  const entryDir = dirname(entry);
+
+  return basename(entryDir) === "src"
+    ? join(dirname(entryDir), "dist", "cli.js")
+    : join(entryDir, "cli.js");
 }

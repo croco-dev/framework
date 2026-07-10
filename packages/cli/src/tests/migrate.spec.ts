@@ -5,12 +5,24 @@ import {
   type MigrateCommand,
   type MigrationRunnerSpawn,
   migrate,
+  resolveMigrationRunnerBinFromEntry,
   runMigrateCommand,
 } from "../commands/migrate.js";
 
 describe("migrate command", () => {
   it("should expose up, down, and status migration subcommands", () => {
     expect(Object.keys(migrate.subCommands ?? {})).toEqual(["up", "down", "status"]);
+  });
+
+  it("should resolve workspace and installed migration runner entries to the built CLI", () => {
+    expect(
+      resolveMigrationRunnerBinFromEntry("/workspace/packages/migration-runner/src/index.ts"),
+    ).toBe("/workspace/packages/migration-runner/dist/cli.js");
+    expect(
+      resolveMigrationRunnerBinFromEntry(
+        "/consumer/node_modules/@croco/migration-runner/dist/index.js",
+      ),
+    ).toBe("/consumer/node_modules/@croco/migration-runner/dist/cli.js");
   });
 
   it.each<MigrateCommand>(["up", "down", "status"])(

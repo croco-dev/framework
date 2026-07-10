@@ -1,10 +1,16 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, type SpawnOptions, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { basename, dirname, join } from "node:path";
 import { defineCommand } from "citty";
 import { GLOBAL_OPTIONS } from "./options.js";
 
 const require = createRequire(import.meta.url);
+
+export type OpenapiSpecSpawn = (
+  command: string,
+  args: string[],
+  options: SpawnOptions,
+) => ChildProcess;
 
 export const codegenOpenapi = defineCommand({
   meta: {
@@ -14,27 +20,46 @@ export const codegenOpenapi = defineCommand({
   args: {
     ...GLOBAL_OPTIONS,
   },
-  run() {
-    runOpenapiSpec(process.argv.slice(3));
+  run({ rawArgs }) {
+    runOpenapiSpec(rawArgs);
   },
 });
 
-function runOpenapiSpec(args: string[]): void {
-  const child = spawn(resolveOpenapiSpecBin(), args, {
+export function runOpenapiSpec(
+  args: string[],
+  options: {
+    readonly resolveBin?: () => string;
+    readonly setExitCode?: (code: number) => void;
+    readonly spawn?: OpenapiSpecSpawn;
+    readonly writeError?: (message: string) => void;
+  } = {},
+): void {
+  const resolveBin = options.resolveBin ?? resolveOpenapiSpecBin;
+  const spawnChild = options.spawn ?? spawn;
+  const setExitCode =
+    options.setExitCode ??
+    ((code: number) => {
+      process.exitCode = code;
+    });
+  const writeError = options.writeError ?? ((message: string) => console.error(message));
+  const child = spawnChild(process.execPath, [resolveBin(), ...args], {
     stdio: "inherit",
-    shell: true,
   });
 
   child.on("error", (error) => {
-    throw error;
+    writeError(error.message);
+    setExitCode(1);
   });
   child.on("exit", (code) => {
-    process.exitCode = code ?? 1;
+    setExitCode(code ?? 1);
   });
 }
 
-function resolveOpenapiSpecBin(): string {
-  const entry = require.resolve("@croco/openapi-spec");
+export function resolveOpenapiSpecBin(): string {
+  return resolveOpenapiSpecBinFromEntry(require.resolve("@croco/openapi-spec"));
+}
+
+export function resolveOpenapiSpecBinFromEntry(entry: string): string {
   const entryDir = dirname(entry);
 
   return basename(entryDir) === "src"
