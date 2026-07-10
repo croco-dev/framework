@@ -165,6 +165,8 @@ describe("CI package quality dashboard", () => {
       "name: generated-app-smoke-spine-blocking",
       "- name: Upload ecosystem-advisory generated app smoke report",
       "name: generated-app-smoke-ecosystem-advisory",
+      "- name: Upload generated app smoke failure artifacts",
+      "name: generated-app-smoke-failure-artifacts",
       "- name: TypeScript check",
     ];
 
@@ -183,6 +185,15 @@ describe("CI package quality dashboard", () => {
     );
     const summaryStart = workflow.indexOf("- name: Publish generated app smoke summary");
     expect(workflow.slice(advisorySmokeStart, summaryStart)).toContain("continue-on-error: true");
+
+    const failureArtifactStart = workflow.indexOf(
+      "- name: Upload generated app smoke failure artifacts",
+    );
+    const typecheckStart = workflow.indexOf("- name: TypeScript check");
+    const failureArtifactStep = workflow.slice(failureArtifactStart, typecheckStart);
+    expect(failureArtifactStep).toContain("ci-reports/generated-apps/cases");
+    expect(failureArtifactStep).toContain("include-hidden-files: true");
+    expect(failureArtifactStep).toContain("if-no-files-found: ignore");
   });
 
   it("excludes intentionally archived OpenAI API docs snapshots from docs link checks", () => {

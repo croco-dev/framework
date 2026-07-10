@@ -32,6 +32,7 @@ import {
   GENERATED_SMOKE_MATRIX_CASES,
   renderGeneratedSmokeMatrixReport,
   selectGeneratedSmokeMatrixCases,
+  type SmokeMatrixCaseDefinition,
 } from "../create-croco-app-generated-smoke-matrix.mts";
 import {
   createWorkspacePackageIndex,
@@ -255,9 +256,9 @@ describe("create-croco-app generated smoke matrix", () => {
     expect(
       GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "ecosystem-advisory"),
     ).toHaveLength(11);
-    expect(
-      GENERATED_SMOKE_MATRIX_CASES.find(({ name }) => name === "graphql-lambda-api")?.advisory,
-    ).toBeUndefined();
+    const graphqlLambdaApiCase: SmokeMatrixCaseDefinition | undefined =
+      GENERATED_SMOKE_MATRIX_CASES.find(({ name }) => name === "graphql-lambda-api");
+    expect(graphqlLambdaApiCase?.advisory).toBeUndefined();
 
     expect(() =>
       assertGeneratedSmokeMatrixContract([
