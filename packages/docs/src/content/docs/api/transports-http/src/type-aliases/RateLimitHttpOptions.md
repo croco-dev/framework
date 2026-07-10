@@ -11,6 +11,10 @@ HTTP 요청에 레이트 리밋 정책을 적용하는 미들웨어 팩토리입
 
 ## Type Declaration
 
+### clientIdentity?
+
+> `optional` **clientIdentity?**: [`RateLimitClientIdentityPolicy`](/api/transports-http/src/type-aliases/ratelimitclientidentitypolicy/)
+
 ### skip?
 
 > `optional` **skip?**: `RateLimitSkipPredicate`

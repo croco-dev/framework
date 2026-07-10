@@ -15750,6 +15750,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY",
+          "exportKind": "named",
+          "source": "./libs/middleware/rateLimitMiddleware",
+          "declarationKind": "const"
+        },
+        {
           "name": "RATE_LIMIT_METADATA_KEY",
           "exportKind": "named",
           "source": "./libs/guards/RateLimitGuard",
@@ -15895,6 +15901,11 @@
           "name": "RateLimitAlgorithm",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "RateLimitClientIdentityMetadata",
+          "exportKind": "named",
+          "source": "./libs/middleware/rateLimitMiddleware"
         },
         {
           "name": "RateLimitDecoratorOptions",
@@ -19038,6 +19049,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "createRuntimeAwareRateLimitClientIdentityPolicy",
+          "exportKind": "named",
+          "source": "./libs/middleware/RateLimitMiddleware",
+          "declarationKind": "function"
+        },
+        {
           "name": "CrocoApp",
           "exportKind": "named",
           "source": null
@@ -19477,6 +19494,11 @@
           "source": "./libs/types"
         },
         {
+          "name": "RateLimitClientIdentityPolicy",
+          "exportKind": "named",
+          "source": "./libs/middleware/RateLimitMiddleware"
+        },
+        {
           "name": "RateLimitHttpOptions",
           "exportKind": "named",
           "source": "./libs/middleware/RateLimitMiddleware"
@@ -19510,6 +19532,11 @@
           "name": "SecurityMiddlewareCapability",
           "exportKind": "named",
           "source": "./libs/middleware/SecurityMiddlewareMarker"
+        },
+        {
+          "name": "TrustedRateLimitProxyHeader",
+          "exportKind": "named",
+          "source": "./libs/middleware/RateLimitMiddleware"
         },
         {
           "name": "TypedLambdaHandler",

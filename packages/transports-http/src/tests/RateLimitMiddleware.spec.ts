@@ -1,10 +1,12 @@
 import "reflect-metadata";
 
-import { Container } from "@croco/framework-context";
+import type { RuntimeContext } from "@croco/framework-context";
+import { Container, Context as FrameworkContext } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Controller, Get } from "@croco/protocols-rest";
 import {
   createSlidingWindowPolicy,
+  RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY,
   RateLimiter,
   RateLimitKeyBuilder,
   SlidingWindowInMemoryStore,
@@ -15,24 +17,34 @@ import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import {
   createRateLimitMiddlewareFactory,
+  createRuntimeAwareRateLimitClientIdentityPolicy,
   rateLimitHttpMiddleware,
 } from "../libs/middleware/RateLimitMiddleware";
 
 type RateLimitTestContext = Parameters<ReturnType<typeof rateLimitHttpMiddleware>>[0];
 
-function createRateLimitTestContext(options: { path?: string; status?: number } = {}): {
+function createRateLimitTestContext(
+  options: {
+    path?: string;
+    status?: number;
+    requestHeaders?: Record<string, string>;
+  } = {},
+): {
   ctx: RateLimitTestContext;
   headers: Map<string, string>;
 } {
   const store = new Map<string, unknown>();
   const headers = new Map<string, string>();
   const path = options.path ?? "/test";
+  const requestHeaders = options.requestHeaders ?? {
+    "x-forwarded-for": "127.0.0.1",
+  };
 
   const ctx = {
     req: {
       method: "GET",
       path,
-      headers: { "x-forwarded-for": "127.0.0.1" },
+      headers: requestHeaders,
       url: `http://localhost${path}`,
     },
     res: { status: options.status ?? 200, headers: {} },
@@ -46,7 +58,7 @@ function createRateLimitTestContext(options: { path?: string; status?: number } 
       store.set(key, value);
     },
     get: <T>(key: string): T | undefined => store.get(key) as T | undefined,
-    header: (name: string) => (name === "x-forwarded-for" ? "127.0.0.1" : undefined),
+    header: (name: string) => requestHeaders[name],
   } as unknown as RateLimitTestContext;
 
   return { ctx, headers };
@@ -170,6 +182,166 @@ describe("RateLimitMiddleware", () => {
       expect(rateLimitHeaders).toBeDefined();
       expect(rateLimitHeaders?.["X-RateLimit-Limit"]).toBeDefined();
       expect(rateLimitHeaders?.["X-RateLimit-Remaining"]).toBeDefined();
+    });
+
+    it("should ignore spoofable proxy headers for Node requests", async () => {
+      const middleware = rateLimitHttpMiddleware({
+        rateLimiter,
+        policy: createSlidingWindowPolicy("node-spoofed-headers", 10, 60000),
+      });
+      const { ctx } = createRateLimitTestContext({
+        requestHeaders: {
+          "x-forwarded-for": "198.51.100.1",
+          "x-real-ip": "198.51.100.2",
+          "cf-connecting-ip": "198.51.100.3",
+        },
+      });
+
+      await middleware(ctx, async () => {});
+
+      expect(ctx.get<string>("rateLimitKey")).toBe("rl:sliding:unknown");
+      expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toEqual({
+        value: "unknown",
+        source: "unknown",
+        trusted: false,
+        runtime: "node",
+      });
+    });
+
+    it("should prefer Lambda request context identity over proxy headers", async () => {
+      const middleware = rateLimitHttpMiddleware({
+        rateLimiter,
+        policy: createSlidingWindowPolicy("lambda-native-client-ip", 10, 60000),
+      });
+      const { ctx } = createRateLimitTestContext({
+        requestHeaders: {
+          "x-forwarded-for": "198.51.100.1",
+          "x-real-ip": "198.51.100.2",
+        },
+      });
+
+      await FrameworkContext.run(
+        {
+          requestId: "lambda-client-ip",
+          runtime: {
+            platform: "lambda",
+            native: {
+              event: {
+                requestContext: {
+                  http: {
+                    sourceIp: "203.0.113.11",
+                  },
+                },
+              },
+            },
+          } as unknown as RuntimeContext,
+        },
+        async () => {
+          await middleware(ctx, async () => {});
+        },
+      );
+
+      expect(ctx.get<string>("rateLimitKey")).toBe("rl:sliding:203.0.113.11");
+      expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toMatchObject({
+        value: "203.0.113.11",
+        source: "runtime.lambda.requestContext.http.sourceIp",
+        trusted: true,
+        runtime: "lambda",
+      });
+    });
+
+    it("should prefer cf-connecting-ip over configured proxy headers for Cloudflare Workers", async () => {
+      const middleware = rateLimitHttpMiddleware({
+        rateLimiter,
+        policy: createSlidingWindowPolicy("cloudflare-client-ip", 10, 60000),
+        clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy({
+          trustedProxyHeaders: ["x-forwarded-for"],
+        }),
+      });
+      const { ctx } = createRateLimitTestContext({
+        requestHeaders: {
+          "cf-connecting-ip": "203.0.113.12",
+          "x-forwarded-for": "198.51.100.1",
+        },
+      });
+      ctx.set("clientIp", "203.0.113.13");
+
+      await FrameworkContext.run(
+        {
+          requestId: "cloudflare-client-ip",
+          runtime: { platform: "cloudflare-workers" } as RuntimeContext,
+        },
+        async () => {
+          await middleware(ctx, async () => {});
+        },
+      );
+
+      expect(ctx.get<string>("rateLimitKey")).toBe("rl:sliding:203.0.113.12");
+      expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toMatchObject({
+        value: "203.0.113.12",
+        source: "header.cf-connecting-ip",
+        trusted: true,
+        runtime: "cloudflare-workers",
+        header: "cf-connecting-ip",
+      });
+    });
+
+    it("should use configured proxy header precedence and parse the first forwarded address", async () => {
+      const middleware = rateLimitHttpMiddleware({
+        rateLimiter,
+        policy: createSlidingWindowPolicy("trusted-proxy-client-ip", 10, 60000),
+        clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy({
+          trustedProxyHeaders: ["x-real-ip", "x-forwarded-for"],
+        }),
+      });
+      const { ctx } = createRateLimitTestContext({
+        requestHeaders: {
+          "x-forwarded-for": "203.0.113.14, 198.51.100.1",
+          "x-real-ip": "203.0.113.15",
+        },
+      });
+
+      await middleware(ctx, async () => {});
+
+      expect(ctx.get<string>("rateLimitKey")).toBe("rl:sliding:203.0.113.15");
+      expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toMatchObject({
+        value: "203.0.113.15",
+        source: "trusted-proxy-header.x-real-ip",
+        trusted: true,
+        header: "x-real-ip",
+      });
+    });
+
+    it("should record the selected identity source in runtime diagnostics", async () => {
+      const recordEvent = vi.fn();
+      const middleware = rateLimitHttpMiddleware({
+        rateLimiter,
+        policy: createSlidingWindowPolicy("client-ip-diagnostics", 10, 60000),
+      });
+      const { ctx } = createRateLimitTestContext();
+
+      await FrameworkContext.run(
+        {
+          requestId: "client-ip-diagnostics",
+          runtime: { platform: "node" } as RuntimeContext,
+          runtimeInspector: { recordEvent },
+        },
+        async () => {
+          await middleware(ctx, async () => {});
+        },
+      );
+
+      expect(recordEvent).toHaveBeenCalledWith({
+        kind: "rate-limit.client-identity",
+        outcome: "succeeded",
+        details: {
+          runtime: "node",
+          source: "unknown",
+          trusted: false,
+          header: undefined,
+          value: "unknown",
+        },
+      });
     });
 
     it("should skip rate limiting when the skip predicate matches", async () => {
@@ -347,6 +519,23 @@ describe("RateLimitMiddleware", () => {
       }
 
       expect(nextCalls).toBe(2);
+    });
+
+    it("should pass the client identity policy through the middleware factory", async () => {
+      const factory = createRateLimitMiddlewareFactory({
+        rateLimiter,
+        defaultPolicy: createSlidingWindowPolicy("factory-client-identity", 10, 60000),
+        clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy({
+          trustedProxyHeaders: ["x-forwarded-for"],
+        }),
+      });
+      const { ctx } = createRateLimitTestContext({
+        requestHeaders: { "x-forwarded-for": "203.0.113.16, 198.51.100.1" },
+      });
+
+      await factory()(ctx, async () => {});
+
+      expect(ctx.get<string>("rateLimitKey")).toBe("rl:sliding:203.0.113.16");
     });
   });
 

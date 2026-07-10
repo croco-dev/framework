@@ -410,6 +410,11 @@ function checkSsrLambdaStructure() {
     ["apps", "api-server", "src", "app.ts"],
     /rateLimitHttpMiddleware\(\{/,
   );
+  checkFileContains(
+    "ssr-lambda",
+    ["apps", "api-server", "src", "app.ts"],
+    /clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy\(\)/,
+  );
   checkFileDoesNotContain(
     "ssr-lambda",
     ["apps", "api-server", "src", "app.ts"],
@@ -465,6 +470,21 @@ function checkWebMetaViteFullstackAddonStructure() {
     "addons/web-meta-vite-fullstack",
     ["api-worker", "src", "index.ts"],
     /skip: \(ctx\) => OPERATIONAL_RATE_LIMIT_BYPASS_PATHS\.has\(ctx\.req\.path\)/,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "src", "index.ts"],
+    /createRuntimeAwareRateLimitClientIdentityPolicy\(\{\s*trustedProxyHeaders:\s*\["x-forwarded-for"\],?\s*\}\)/,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["ssr-worker", "src", "helpers", "apiFetch.ts"],
+    /headers\.set\("X-Forwarded-For", request\.headers\.get\("cf-connecting-ip"\) \?\? ""\)/,
+  );
+  checkFileDoesNotContain(
+    "addons/web-meta-vite-fullstack",
+    ["ssr-worker", "src", "helpers", "apiFetch.ts"],
+    /request\.headers\.get\("x-forwarded-for"\)/i,
   );
   checkFileDoesNotContain(
     "addons/web-meta-vite-fullstack",
@@ -695,6 +715,11 @@ function checkSaasStructure() {
     /defaultSaasRuntime\.diagnosticsCollector\.getProviders/,
   );
   checkFileContains("saas", ["apps", "api-server", "src", "app.ts"], /rateLimitHttpMiddleware/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "app.ts"],
+    /clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy\(\)/,
+  );
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "app.ts"],

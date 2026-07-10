@@ -10,6 +10,7 @@ import {
   bodyLimitMiddleware,
   corsMiddleware,
   createApp,
+  createRuntimeAwareRateLimitClientIdentityPolicy,
   mb,
   rateLimitHttpMiddleware,
   securityHeadersMiddleware,
@@ -54,6 +55,7 @@ export function createCrocoApp(options: CreateCrocoAppOptions = {}) {
       rateLimitHttpMiddleware({
         rateLimiter,
         policy: createSlidingWindowPolicy("api", 100, 60_000),
+        clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy(),
         skip: (ctx) => OPERATIONAL_RATE_LIMIT_BYPASS_PATHS.has(ctx.req.path),
       }),
     ],

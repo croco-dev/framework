@@ -38,6 +38,8 @@ export {
   createRateLimitMiddleware,
   type HttpContext,
   type MiddlewareFunction,
+  RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY,
+  type RateLimitClientIdentityMetadata,
   type RateLimitHeaders,
 } from "./libs/middleware/rateLimitMiddleware";
 

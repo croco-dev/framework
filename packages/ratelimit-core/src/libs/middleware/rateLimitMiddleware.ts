@@ -33,6 +33,16 @@ export type RateLimitHeaders = {
   "Retry-After"?: string;
 };
 
+export const RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY = "rateLimitClientIdentity";
+
+export type RateLimitClientIdentityMetadata = {
+  value: string;
+  source: string;
+  trusted: boolean;
+  runtime?: string;
+  header?: string;
+};
+
 export function createRateLimitMiddleware(options: CreateMiddlewareOptions): MiddlewareFunction {
   const {
     rateLimiter,
@@ -44,7 +54,12 @@ export function createRateLimitMiddleware(options: CreateMiddlewareOptions): Mid
   const keyBuilder = new RateLimitKeyBuilder(keySegments);
 
   return async (ctx: HttpContext, next: () => Promise<void>): Promise<void> => {
-    const keyContext = createKeyContextAdapter(ctx);
+    const clientIdentity = resolveClientIdentity(ctx);
+    ctx.set(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY, clientIdentity);
+    ctx.set("clientIp", clientIdentity.value);
+    ctx.set("ip", clientIdentity.value);
+
+    const keyContext = createKeyContextAdapter(ctx, clientIdentity);
     const key = keyBuilder.build(keyContext, policy.algorithm ?? "sliding");
 
     ctx.set("rateLimitKey", key);
@@ -68,12 +83,41 @@ export function createRateLimitMiddleware(options: CreateMiddlewareOptions): Mid
   };
 }
 
-function createKeyContextAdapter(ctx: HttpContext): KeyContext {
-  const forwardedFor = ctx.req.headers["x-forwarded-for"]?.split(",")[0]?.trim();
-  const realIp = ctx.req.headers["x-real-ip"]?.trim();
-  const cfIp = ctx.req.headers["cf-connecting-ip"]?.trim();
-  const clientIp = forwardedFor || realIp || cfIp || "unknown";
+function resolveClientIdentity(ctx: HttpContext): RateLimitClientIdentityMetadata {
+  const metadata = ctx.get<RateLimitClientIdentityMetadata>(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY);
+  if (metadata && normalizeClientIdentity(metadata.value)) {
+    return metadata;
+  }
 
+  const clientIp = normalizeClientIdentity(ctx.get<string>("clientIp"));
+  if (clientIp) {
+    return {
+      value: clientIp,
+      source: "context.clientIp",
+      trusted: true,
+    };
+  }
+
+  const ip = normalizeClientIdentity(ctx.get<string>("ip"));
+  if (ip) {
+    return {
+      value: ip,
+      source: "context.ip",
+      trusted: true,
+    };
+  }
+
+  return {
+    value: "unknown",
+    source: "unknown",
+    trusted: false,
+  };
+}
+
+function createKeyContextAdapter(
+  ctx: HttpContext,
+  clientIdentity: RateLimitClientIdentityMetadata,
+): KeyContext {
   return {
     get<T>(key: string): T | undefined {
       const stored = ctx.get<T>(key);
@@ -82,7 +126,7 @@ function createKeyContextAdapter(ctx: HttpContext): KeyContext {
       switch (key) {
         case "ip":
         case "clientIp":
-          return clientIp as T;
+          return clientIdentity.value as T;
         case "method":
           return ctx.req.method as T;
         case "path":
@@ -92,6 +136,11 @@ function createKeyContextAdapter(ctx: HttpContext): KeyContext {
       }
     },
   };
+}
+
+function normalizeClientIdentity(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
+  return normalized || undefined;
 }
 
 function buildHeaders(result: RateLimitResult): RateLimitHeaders {
