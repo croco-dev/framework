@@ -1182,6 +1182,7 @@ describe("E2E: generate()", () => {
     );
     const envExample = readFileSync(join(testDir, ".env.example"), "utf8");
     const providerProfileDocs = readFileSync(join(testDir, "docs", "provider-profile.md"), "utf8");
+    const secretsChecklist = readFileSync(join(testDir, "docs", "secrets-checklist.md"), "utf8");
     const tenantModelPlaybook = readFileSync(
       join(testDir, "docs", "tenant-model-playbook.md"),
       "utf8",
@@ -1320,6 +1321,7 @@ describe("E2E: generate()", () => {
             "envExample": ".env.example",
             "manifest": "croco-saas-profile.manifest.json",
             "providerDocs": "docs/provider-profile.md",
+            "secretsChecklist": "docs/secrets-checklist.md",
             "source": "apps/api-server/src/generatedSaasProviderProfile.ts",
             "tenantModelManifest": "croco-tenant-model.manifest.json",
             "tenantModelPlaybook": "docs/tenant-model-playbook.md",
@@ -2029,10 +2031,15 @@ describe("E2E: generate()", () => {
       "webhookVerification",
     ]);
     expect(envExample).toContain("SAAS_PROVIDER_PROFILE=saas-cloudflare");
-    expect(envExample).toContain("CLOUDFLARE_ACCOUNT_ID=<secret>");
+    expect(envExample).toContain("CLOUDFLARE_ACCOUNT_ID=<croco-secret:CLOUDFLARE_ACCOUNT_ID>");
+    expect(envExample).toContain("R2_BUCKET=<croco-config:R2_BUCKET>");
     expect(providerProfileDocs).toContain("Capability Matrix");
     expect(providerProfileDocs).toContain("Manifest Contract");
     expect(providerProfileDocs).toContain("Schema version: `croco.saas-provider-profile/v1`");
+    expect(providerProfileDocs).toContain("Policy version: `croco.secret-placeholder-policy/v1`");
+    expect(providerProfileDocs).toContain("`<croco-secret:CLOUDFLARE_API_TOKEN>`");
+    expect(secretsChecklist).toContain("`<croco-secret:CLOUDFLARE_API_TOKEN>`");
+    expect(secretsChecklist).toContain("`<croco-config:R2_BUCKET>`");
     expect(providerProfileDocs).toContain("Tenant model: `workspace`");
     expect(providerProfileDocs).toContain("QStash");
     expect(tenantModelPlaybook).toContain("Current model: `workspace`");
@@ -2042,12 +2049,18 @@ describe("E2E: generate()", () => {
     expect(tenantModelPlaybook).toContain("tenant-core/tenant-model-runtime-incompatible");
     expect(generatedProfileSource).toContain("saas-cloudflare");
     expect(generatedProfileSource).toContain("generatedSaasProviderProfileDocs");
+    expect(generatedProfileSource).toContain("generatedSaasProviderProfileEnvExample");
+    expect(generatedProfileSource).toContain("generatedSaasProviderSecretsChecklist");
     expect(generatedProfileSource).toContain(JSON.stringify(providerProfileDocs));
+    expect(generatedProfileSource).toContain(JSON.stringify(envExample));
+    expect(generatedProfileSource).toContain(JSON.stringify(secretsChecklist));
     const providerProfileCheckSource = readFileSync(
       join(testDir, "apps", "api-server", "src", "provider-profile-check.ts"),
       "utf8",
     );
     expect(providerProfileCheckSource).toContain("CROCO_SAAS_PROFILE_VERSION_UNSUPPORTED");
+    expect(providerProfileCheckSource).toContain("CROCO_SAAS_PROFILE_ENV_EXAMPLE_DRIFT");
+    expect(providerProfileCheckSource).toContain("CROCO_SAAS_PROFILE_SECRETS_CHECKLIST_DRIFT");
     expect(providerProfileCheckSource).toContain("CROCO_TENANT_MODEL_VERSION_UNSUPPORTED");
     expect(generatedTenantModelSource).toContain("generatedTenantModelManifest");
     expect(generatedTenantModelSource).toContain('"workspace"');
@@ -2057,6 +2070,18 @@ describe("E2E: generate()", () => {
       "docs/provider-profile.md",
       (source) => `${source}\n`,
       "CROCO_SAAS_PROFILE_DOCS_DRIFT",
+    );
+    expectGeneratedProfileCheckFailureAfterWrite(
+      testDir,
+      ".env.example",
+      (source) => `${source}\n`,
+      "CROCO_SAAS_PROFILE_ENV_EXAMPLE_DRIFT",
+    );
+    expectGeneratedProfileCheckFailureAfterWrite(
+      testDir,
+      "docs/secrets-checklist.md",
+      (source) => `${source}\n`,
+      "CROCO_SAAS_PROFILE_SECRETS_CHECKLIST_DRIFT",
     );
     expectGeneratedProfileCheckFailureAfterWrite(
       testDir,

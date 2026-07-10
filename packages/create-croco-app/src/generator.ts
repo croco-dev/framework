@@ -209,6 +209,8 @@ function writeSaasProviderProfileArtifacts(targetDir: string, options: Generator
   const tenantModelSchema = createTenantModelManifestSchema();
   const tenantModelPlaybook = renderTenantModelPlaybook(tenantModelManifest);
   const providerProfileDocs = renderSaasDeployNotes(manifest);
+  const providerEnvExample = renderSaasEnvExample(manifest);
+  const providerSecretsChecklist = renderSaasSecretsChecklist(manifest);
   const docsDir = join(targetDir, "docs");
   const apiServerSrcDir = join(targetDir, "apps", "api-server", "src");
 
@@ -233,15 +235,17 @@ function writeSaasProviderProfileArtifacts(targetDir: string, options: Generator
     join(targetDir, "croco.arch.json"),
     `${JSON.stringify(createArchitecturePolicyManifest(options), null, 2)}\n`,
   );
-  writeFileSync(join(targetDir, ".env.example"), renderSaasEnvExample(manifest));
+  writeFileSync(join(targetDir, ".env.example"), providerEnvExample);
   writeFileSync(join(docsDir, "provider-profile.md"), providerProfileDocs);
   writeFileSync(join(docsDir, "tenant-model-playbook.md"), tenantModelPlaybook);
-  writeFileSync(join(docsDir, "secrets-checklist.md"), renderSaasSecretsChecklist(manifest));
+  writeFileSync(join(docsDir, "secrets-checklist.md"), providerSecretsChecklist);
   writeFileSync(
     join(apiServerSrcDir, "generatedSaasProviderProfile.ts"),
     [
       `export const generatedSaasProviderProfileManifest = ${JSON.stringify(manifest, null, 2)} as const;`,
       `export const generatedSaasProviderProfileDocs = ${JSON.stringify(providerProfileDocs)} as const;`,
+      `export const generatedSaasProviderProfileEnvExample = ${JSON.stringify(providerEnvExample)} as const;`,
+      `export const generatedSaasProviderSecretsChecklist = ${JSON.stringify(providerSecretsChecklist)} as const;`,
       "",
     ].join("\n"),
   );

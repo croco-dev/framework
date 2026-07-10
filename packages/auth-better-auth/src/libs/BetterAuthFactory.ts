@@ -6,6 +6,7 @@ import * as schema from "./schema";
 export const DRIZZLE_TOKEN = "DRIZZLE_TOKEN";
 
 type BetterAuthDatabase = Parameters<typeof drizzleAdapter>[0];
+type BetterAuthInstance = ReturnType<typeof createBetterAuthInstance>;
 
 /**
  * Better Auth 초기화에 필요한 설정입니다.
@@ -26,8 +27,6 @@ function createBetterAuthInstance(db: BetterAuthDatabase, config: BetterAuthConf
   });
 }
 
-type BetterAuthInstance = ReturnType<typeof createBetterAuthInstance>;
-
 @Component()
 /**
  * Better Auth 인스턴스를 지연 생성하고 재사용하는 팩토리입니다.
@@ -41,12 +40,13 @@ export class BetterAuthFactory {
   ) {}
 
   getAuth(): BetterAuthInstance {
-    if (this.auth) {
-      return this.auth;
+    const cachedAuth = this.auth;
+    if (cachedAuth) {
+      return cachedAuth;
     }
 
-    this.auth = createBetterAuthInstance(this.db, this.config);
-
-    return this.auth;
+    const auth = createBetterAuthInstance(this.db, this.config);
+    this.auth = auth;
+    return auth;
   }
 }

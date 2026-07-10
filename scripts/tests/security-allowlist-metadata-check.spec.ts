@@ -28,7 +28,7 @@ describe("security-allowlist-metadata-check.mts", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(
-      "security-allowlist-metadata: passed (1 audit ignores, 1 gitleaks allowlist entries, 0 gitleaks ignore fingerprints).",
+      "security-allowlist-metadata: passed (1 audit ignores, 1 gitleaks allowlist entries, 0 gitleaks ignore fingerprints, 0 generated template allowlists).",
     );
   });
 
@@ -463,6 +463,14 @@ describe("security-allowlist-metadata-check.mts", () => {
             ],
             ignoreFingerprints: [],
           },
+          generatedTemplates: {
+            allowlists: [
+              {
+                pathPattern: "^templates/fixture\\.env$",
+                matchPattern: "^POLAR_ACCESS_TOKEN=",
+              },
+            ],
+          },
         },
       },
     });
@@ -476,12 +484,32 @@ describe("security-allowlist-metadata-check.mts", () => {
     expect(result.stdout).toContain(
       "secretScan.gitleaks.allowlists[0].owner must be a non-empty string",
     );
+    expect(result.stdout).toContain(
+      "secretScan.generatedTemplates.allowlists[0].owner must be a non-empty string",
+    );
+    expect(result.stdout).toContain(
+      "secretScan.generatedTemplates.allowlists[0].reason must be a non-empty string",
+    );
+    expect(result.stdout).toContain(
+      "secretScan.generatedTemplates.allowlists[0] must include reviewBy or expiresOn",
+    );
   });
 
   it("fails stale review dates", () => {
     const root = createTempRoot();
     writeRepo(root, {
-      metadata: metadataFixture({ reviewBy: "2026-07-02" }),
+      metadata: metadataFixture({
+        generatedTemplateAllowlists: [
+          {
+            pathPattern: "^templates/fixture\\.env$",
+            matchPattern: "^POLAR_ACCESS_TOKEN=",
+            owner: "security",
+            reason: "Intentional scanner fixture.",
+            reviewBy: "2026-07-02",
+          },
+        ],
+        reviewBy: "2026-07-02",
+      }),
     });
 
     const result = runScript(root);
@@ -492,6 +520,9 @@ describe("security-allowlist-metadata-check.mts", () => {
     );
     expect(result.stdout).toContain(
       "secretScan.gitleaks.allowlists[0].reviewBy is stale (2026-07-02 is before 2026-07-03)",
+    );
+    expect(result.stdout).toContain(
+      "secretScan.generatedTemplates.allowlists[0].reviewBy is stale (2026-07-02 is before 2026-07-03)",
     );
   });
 
@@ -512,6 +543,71 @@ describe("security-allowlist-metadata-check.mts", () => {
     );
     expect(result.stdout).toContain(
       "secretScan.gitleaks.allowlists[0].expiresOn is stale (2026-07-02 is before 2026-07-03)",
+    );
+  });
+
+  it("fails generated-template allowlists with invalid calendar review dates", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      metadata: metadataFixture({
+        generatedTemplateAllowlists: [
+          {
+            pathPattern: "^templates/fixture\\.env$",
+            matchPattern: "^POLAR_ACCESS_TOKEN=",
+            owner: "security",
+            reason: "Intentional scanner fixture.",
+            expiresOn: "2026-02-30",
+            reviewBy: "2026-13-01",
+          },
+        ],
+      }),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "secretScan.generatedTemplates.allowlists[0].reviewBy must be a valid YYYY-MM-DD date",
+    );
+    expect(result.stdout).toContain(
+      "secretScan.generatedTemplates.allowlists[0].expiresOn must be a valid YYYY-MM-DD date",
+    );
+  });
+
+  it("fails generated-template allowlists with broad or non-template-scoped regexes", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      metadata: metadataFixture({
+        generatedTemplateAllowlists: [
+          {
+            pathPattern: "^.*$",
+            matchPattern: ".*",
+            owner: "security",
+            reason: "Intentionally broad scanner fixture.",
+            reviewBy: "2027-01-31",
+          },
+          {
+            pathPattern: "^fixtures/secret\\.env$",
+            matchPattern: "^POLAR_ACCESS_TOKEN=",
+            owner: "security",
+            reason: "Intentionally non-template scanner fixture.",
+            reviewBy: "2027-01-31",
+          },
+        ],
+      }),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "secretScan.generatedTemplates.allowlists[0].pathPattern must not be a catch-all regular expression",
+    );
+    expect(result.stdout).toContain(
+      "secretScan.generatedTemplates.allowlists[0].matchPattern must not be a catch-all regular expression",
+    );
+    expect(result.stdout).toContain(
+      "secretScan.generatedTemplates.allowlists[1].pathPattern must target generated templates",
     );
   });
 
@@ -715,6 +811,7 @@ function metadataFixture(
     readonly auditCves?: readonly Record<string, unknown>[];
     readonly configPath?: string;
     readonly expiresOn?: string;
+    readonly generatedTemplateAllowlists?: readonly Record<string, unknown>[];
     readonly gitleaksAllowlists?: readonly Record<string, unknown>[];
     readonly reviewBy?: string;
   } = {},
@@ -749,6 +846,9 @@ function metadataFixture(
           },
         ],
         ignoreFingerprints: [],
+      },
+      generatedTemplates: {
+        allowlists: options.generatedTemplateAllowlists ?? [],
       },
     },
   };

@@ -1,9 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { validateTenantModelCompatibility } from "@croco/tenant-core/tenant-model";
+import { assertSaasProviderSecretPlaceholderPolicy } from "./secret-placeholder-policy";
 import {
   generatedSaasProviderProfileDocs,
+  generatedSaasProviderProfileEnvExample,
   generatedSaasProviderProfileManifest,
+  generatedSaasProviderSecretsChecklist,
 } from "./generatedSaasProviderProfile";
 import {
   generatedTenantModelManifest,
@@ -17,6 +20,8 @@ type TenantModelManifestSchema = typeof generatedTenantModelManifestSchema;
 
 const PROFILE_MANIFEST_FILE = "croco-saas-profile.manifest.json";
 const PROFILE_DOCS_FILE = "docs/provider-profile.md";
+const PROFILE_ENV_EXAMPLE_FILE = ".env.example";
+const PROFILE_SECRETS_CHECKLIST_FILE = "docs/secrets-checklist.md";
 const TENANT_MODEL_MANIFEST_FILE = "croco-tenant-model.manifest.json";
 const TENANT_MODEL_SCHEMA_FILE = "croco-tenant-model.schema.json";
 const TENANT_MODEL_PLAYBOOK_FILE = "docs/tenant-model-playbook.md";
@@ -27,11 +32,18 @@ function main(): void {
   const mode = readMode(process.argv.slice(2));
   const manifest = readProfileManifest();
   const providerProfileDocs = readProviderProfileDocs();
+  const envExample = readProviderEnvExample();
+  const secretsChecklist = readProviderSecretsChecklist();
   const tenantModelManifest = readTenantModelManifest();
   const tenantModelSchema = readTenantModelSchema();
   const tenantModelPlaybook = readTenantModelPlaybook();
 
-  assertManifestMatchesGeneratedSource(manifest, providerProfileDocs);
+  assertManifestMatchesGeneratedSource(manifest, providerProfileDocs, envExample, secretsChecklist);
+  assertSaasProviderSecretPlaceholderPolicy(manifest, {
+    envExample,
+    providerProfileDocs,
+    secretsChecklist,
+  });
   assertTenantModelArtifactsMatchGeneratedSource(
     tenantModelManifest,
     tenantModelSchema,
@@ -83,6 +95,24 @@ function readProviderProfileDocs(): string {
   const docsPath = findRootArtifactPath(PROFILE_DOCS_FILE, "CROCO_SAAS_PROFILE_DOCS_MISSING");
 
   return readFileSync(docsPath, "utf8");
+}
+
+function readProviderEnvExample(): string {
+  const envPath = findRootArtifactPath(
+    PROFILE_ENV_EXAMPLE_FILE,
+    "CROCO_SAAS_PROFILE_ENV_EXAMPLE_MISSING",
+  );
+
+  return readFileSync(envPath, "utf8");
+}
+
+function readProviderSecretsChecklist(): string {
+  const checklistPath = findRootArtifactPath(
+    PROFILE_SECRETS_CHECKLIST_FILE,
+    "CROCO_SAAS_PROFILE_SECRETS_CHECKLIST_MISSING",
+  );
+
+  return readFileSync(checklistPath, "utf8");
 }
 
 function readTenantModelManifest(): TenantModelManifest {
@@ -141,6 +171,8 @@ function findRootArtifactPath(file: string, diagnosticCode: string): string {
 function assertManifestMatchesGeneratedSource(
   manifest: ProfileManifest,
   providerProfileDocs: string,
+  envExample: string,
+  secretsChecklist: string,
 ): void {
   if (JSON.stringify(manifest) !== JSON.stringify(generatedSaasProviderProfileManifest)) {
     throw new Error(
@@ -151,6 +183,18 @@ function assertManifestMatchesGeneratedSource(
   if (providerProfileDocs !== generatedSaasProviderProfileDocs) {
     throw new Error(
       "CROCO_SAAS_PROFILE_DOCS_DRIFT: docs/provider-profile.md differs from generatedSaasProviderProfile.ts",
+    );
+  }
+
+  if (envExample !== generatedSaasProviderProfileEnvExample) {
+    throw new Error(
+      "CROCO_SAAS_PROFILE_ENV_EXAMPLE_DRIFT: .env.example differs from generatedSaasProviderProfile.ts",
+    );
+  }
+
+  if (secretsChecklist !== generatedSaasProviderSecretsChecklist) {
+    throw new Error(
+      "CROCO_SAAS_PROFILE_SECRETS_CHECKLIST_DRIFT: docs/secrets-checklist.md differs from generatedSaasProviderProfile.ts",
     );
   }
 }
@@ -354,7 +398,8 @@ function isProfileManifest(value: unknown): value is ProfileManifest {
     value.tenantModel.requiredPackages.every((packageName) => typeof packageName === "string") &&
     value.tenantModel.requiredAdapters.every((adapter) => typeof adapter === "string") &&
     value.tenantModel.requiredCapabilities.every((capability) => typeof capability === "string") &&
-    value.env.required.every(isEnvVar)
+    value.env.required.every(isEnvVar) &&
+    value.env.optional.every(isEnvVar)
   );
 }
 
@@ -399,7 +444,14 @@ function isTenantModelSchema(value: unknown): value is TenantModelManifestSchema
 }
 
 function isEnvVar(value: unknown): value is ProfileManifest["env"]["required"][number] {
-  return isRecord(value) && typeof value.name === "string";
+  return (
+    isRecord(value) &&
+    typeof value.name === "string" &&
+    typeof value.requiredForRealProvider === "boolean" &&
+    typeof value.secret === "boolean" &&
+    (value.description === undefined || typeof value.description === "string") &&
+    (value.example === undefined || typeof value.example === "string")
+  );
 }
 
 function readSchemaVersion(value: unknown): string | null {
