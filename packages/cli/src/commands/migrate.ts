@@ -2,6 +2,7 @@ import { defineCommand } from "citty";
 import { type ChildProcess, type SpawnOptions, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { resolveCliBinFromEntry } from "./resolveCliBin.js";
 
 const require = createRequire(import.meta.url);
 
@@ -99,5 +100,9 @@ export function runMigrateCommand(
 }
 
 export function resolveMigrationRunnerBin(): string {
-  return require.resolve("@croco/migration-runner/dist/cli.js");
+  return resolveMigrationRunnerBinFromEntry(require.resolve("@croco/migration-runner"));
+}
+
+export function resolveMigrationRunnerBinFromEntry(entry: string): string {
+  return resolveCliBinFromEntry(entry);
 }

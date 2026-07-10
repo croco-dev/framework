@@ -40,6 +40,8 @@ const coreCoveragePackagePaths = CORE_COVERAGE_PACKAGES.map(
 const currentWorkingDirectory = process.cwd().replace(/\\/g, "/");
 const isFrameworkContextPackageRun = currentWorkingDirectory.endsWith("packages/framework-context");
 const isTestingPackageRun = currentWorkingDirectory.endsWith("packages/testing");
+const shouldExcludeCliIntegrationTestsFromCoreCoverage =
+  isCoreCoverageRun && currentWorkingDirectory.endsWith("packages/cli");
 const shouldApplyCoreCoverageThresholds =
   isCoreCoverageRun &&
   coreCoveragePackagePaths.some((packagePath) => currentWorkingDirectory.endsWith(packagePath));
@@ -68,7 +70,11 @@ export default defineConfig({
     globals: true,
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.spec.ts", "scripts/tests/**/*.spec.ts"],
-    exclude: ["**/node_modules/**", "**/dist/**"],
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      ...(shouldExcludeCliIntegrationTestsFromCoreCoverage ? ["src/tests/integration/**"] : []),
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "json-summary", "html"],
