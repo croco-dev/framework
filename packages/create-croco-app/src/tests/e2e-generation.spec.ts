@@ -671,6 +671,15 @@ describe("E2E: generate()", () => {
       expect(workerContent).toContain("corsMiddleware({ origins: [webOrigin] })");
       expect(workerContent).toContain("bodyLimitMiddleware({ limit: mb(1) })");
       expect(workerContent).toContain("rateLimitHttpMiddleware({");
+      expect(workerContent).toContain('trustedProxyHeaders: ["x-forwarded-for"]');
+      const apiFetchContent = readFileSync(
+        join(ssrWorkerDir, "src", "helpers", "apiFetch.ts"),
+        "utf8",
+      );
+      expect(apiFetchContent).toContain(
+        'headers.set("X-Forwarded-For", request.headers.get("cf-connecting-ip") ?? "");',
+      );
+      expect(apiFetchContent).not.toContain('request.headers.get("x-forwarded-for")');
       expect(workerContent).toMatch(
         /new Set\(\[\s*"\/health",\s*"\/health\/live",\s*"\/health\/ready",\s*"\/ready",?\s*\]\)/,
       );

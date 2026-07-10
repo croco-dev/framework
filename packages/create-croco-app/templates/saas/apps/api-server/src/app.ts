@@ -10,6 +10,7 @@ import {
   bodyLimitMiddleware,
   corsMiddleware,
   createApp,
+  createRuntimeAwareRateLimitClientIdentityPolicy,
   mb,
   type MiddlewareFunction,
   rateLimitHttpMiddleware,
@@ -53,6 +54,7 @@ function createApiRateLimitMiddleware(rateLimiter: RateLimiter): MiddlewareFunct
   return rateLimitHttpMiddleware({
     rateLimiter,
     policy: createSlidingWindowPolicy("api", 100, 60_000),
+    clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy(),
     skip: (ctx) => OPERATIONAL_RATE_LIMIT_BYPASS_PATHS.has(ctx.req.path),
   });
 }

@@ -4575,14 +4575,6 @@
     },
     {
       "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts",
-      "line": 141,
-      "column": 36,
-      "code": "TS2379",
-      "message": "Argument of type '{ rateLimiter: RateLimiter<KeyContext>; policy: RateLimitPolicy; skipSuccessfulRequests: boolean | undefined; skipFailedRequests: boolean | undefined; skip: RateLimitSkipPredicate | undefined; }' is not assignable to parameter of type 'RateLimitHttpOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
       "line": 295,
       "column": 3,

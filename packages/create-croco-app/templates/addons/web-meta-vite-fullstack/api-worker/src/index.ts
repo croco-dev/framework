@@ -9,6 +9,7 @@ import {
   bodyLimitMiddleware,
   corsMiddleware,
   createApp,
+  createRuntimeAwareRateLimitClientIdentityPolicy,
   mb,
   rateLimitHttpMiddleware,
   securityHeadersMiddleware,
@@ -61,6 +62,9 @@ function getApiWorkerHandler(env: ApiWorkerEnv): ApiWorkerHandler {
       rateLimitHttpMiddleware({
         rateLimiter,
         policy: createSlidingWindowPolicy("api", 100, 60_000),
+        clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy({
+          trustedProxyHeaders: ["x-forwarded-for"],
+        }),
         skip: (ctx) => OPERATIONAL_RATE_LIMIT_BYPASS_PATHS.has(ctx.req.path),
       }),
     ],

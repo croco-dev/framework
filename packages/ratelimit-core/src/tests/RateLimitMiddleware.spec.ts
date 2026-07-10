@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createRateLimitMiddleware,
   type HttpContext,
+  RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY,
 } from "../libs/middleware/rateLimitMiddleware";
 import { RateLimitExceededProblem } from "../libs/problems/RateLimitExceededProblem";
 import type { RateLimiter } from "../libs/RateLimiter";
@@ -81,21 +82,71 @@ describe("createRateLimitMiddleware", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("should extract IP from x-forwarded-for header", async () => {
+  it("should ignore spoofable proxy headers by default", async () => {
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,
       policy,
       keySegments: ["ip"],
     });
-    const ctx = createContext({ headers: { "x-forwarded-for": "10.0.0.1, 192.168.1.1" } });
+    const ctx = createContext({
+      headers: {
+        "x-forwarded-for": "10.0.0.1, 192.168.1.1",
+        "x-real-ip": "203.0.113.9",
+        "cf-connecting-ip": "203.0.113.7",
+      },
+    });
     const next = vi.fn().mockResolvedValue(undefined);
 
     await middleware(ctx, next);
 
-    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
-      expect.stringContaining("10.0.0.1"),
+    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith("rl:sliding:unknown", policy);
+    expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toEqual({
+      value: "unknown",
+      source: "unknown",
+      trusted: false,
+    });
+  });
+
+  it("should use an explicit client IP context value", async () => {
+    const middleware = createRateLimitMiddleware({
+      rateLimiter: mockRateLimiter,
       policy,
-    );
+      keySegments: ["ip"],
+    });
+    const ctx = createContext();
+    ctx.set("clientIp", "203.0.113.9");
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware(ctx, next);
+
+    expect(ctx.get("rateLimitKey")).toBe("rl:sliding:203.0.113.9");
+    expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toEqual({
+      value: "203.0.113.9",
+      source: "context.clientIp",
+      trusted: true,
+    });
+  });
+
+  it("should preserve explicit client identity metadata", async () => {
+    const middleware = createRateLimitMiddleware({
+      rateLimiter: mockRateLimiter,
+      policy,
+      keySegments: ["ip"],
+    });
+    const ctx = createContext();
+    const metadata = {
+      value: "203.0.113.7",
+      source: "runtime.lambda.requestContext.http.sourceIp",
+      trusted: true,
+      runtime: "lambda",
+    };
+    ctx.set(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY, metadata);
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware(ctx, next);
+
+    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith("rl:sliding:203.0.113.7", policy);
+    expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toEqual(metadata);
   });
 
   it("should store the consumed rate limit key in context", async () => {
@@ -104,34 +155,12 @@ describe("createRateLimitMiddleware", () => {
       policy,
       keySegments: ["ip"],
     });
-    const ctx = createContext({ headers: { "x-real-ip": "203.0.113.9" } });
+    const ctx = createContext();
     const next = vi.fn().mockResolvedValue(undefined);
 
     await middleware(ctx, next);
 
-    expect(ctx.get("rateLimitKey")).toBe("rl:sliding:203.0.113.9");
-  });
-
-  it("should fallback to cf-connecting-ip when x-forwarded-for is empty", async () => {
-    const middleware = createRateLimitMiddleware({
-      rateLimiter: mockRateLimiter,
-      policy,
-      keySegments: ["ip"],
-    });
-    const ctx = createContext({
-      headers: {
-        "x-forwarded-for": "   ",
-        "cf-connecting-ip": "203.0.113.7",
-      },
-    });
-    const next = vi.fn().mockResolvedValue(undefined);
-
-    await middleware(ctx, next);
-
-    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
-      expect.stringContaining("203.0.113.7"),
-      policy,
-    );
+    expect(ctx.get("rateLimitKey")).toBe("rl:sliding:unknown");
   });
 
   it("should store rate limit headers in context", async () => {

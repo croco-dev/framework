@@ -164,10 +164,13 @@ export {
  * HTTP 요청에 레이트 리밋 정책을 적용하는 미들웨어 팩토리입니다.
  */
 export {
+  createRuntimeAwareRateLimitClientIdentityPolicy,
   createRateLimitMiddlewareFactory,
+  type RateLimitClientIdentityPolicy,
   type RateLimitHttpOptions,
   type RateLimitMiddlewareFactoryOptions,
   rateLimitHttpMiddleware,
+  type TrustedRateLimitProxyHeader,
 } from "./libs/middleware/RateLimitMiddleware";
 
 /**
