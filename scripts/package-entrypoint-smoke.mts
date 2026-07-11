@@ -1006,6 +1006,10 @@ function pushConditionalTarget(
   if (target === undefined && condition === "require") {
     return;
   }
+  if (typeof target === "string" && isStaticAssetTargetPath(target)) {
+    validateStaticAssetTarget(target, fieldName, packageInfo, diagnostics);
+    return;
+  }
   if (condition === "types" && typeof target === "string" && isJsonTargetPath(target)) {
     return;
   }

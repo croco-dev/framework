@@ -1,8 +1,8 @@
-import type { BadgeVariant } from "@astryxdesign/core/Badge";
 import { Badge } from "@astryxdesign/core/Badge";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
 
+import type { BadgeVariant } from "@astryxdesign/core/Badge";
 import type { ProblemDetails } from "@croco/problems-core";
 
 import type { AstryxRecoveryAction, AstryxSession, AstryxSessionState } from "./crocoUiTypes";
@@ -87,6 +87,13 @@ function actionButton(action: AstryxRecoveryAction) {
   );
 }
 
+function appliesToProblem(action: AstryxRecoveryAction, problem: ProblemDetails | undefined) {
+  return (
+    action.problemCodes === undefined ||
+    (problem !== undefined && action.problemCodes.includes(problem.code))
+  );
+}
+
 export function AstryxAuthState({
   detail,
   problem,
@@ -95,6 +102,7 @@ export function AstryxAuthState({
   state,
 }: AstryxAuthStateProps) {
   const badge = stateBadge(state);
+  const visibleActions = recoveryActions.filter((action) => appliesToProblem(action, problem));
 
   return (
     <Card
@@ -109,7 +117,7 @@ export function AstryxAuthState({
       <p>{detail ?? problem?.detail ?? defaultDetail(state, session)}</p>
       {session?.provider === undefined ? null : <p>Provider: {session.provider}</p>}
       {problem === undefined ? null : <p>Problem: {problem.code}</p>}
-      {recoveryActions.length === 0 ? null : <div>{recoveryActions.map(actionButton)}</div>}
+      {visibleActions.length === 0 ? null : <div>{visibleActions.map(actionButton)}</div>}
     </Card>
   );
 }

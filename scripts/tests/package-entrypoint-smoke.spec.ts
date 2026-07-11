@@ -50,6 +50,11 @@ describe("package-entrypoint-smoke.mts", () => {
           types: "./dist/index.d.ts",
         },
         "./styles.css": "./dist/styles.css",
+        "./conditional-styles": {
+          import: "./dist/styles.css",
+          require: "./dist/styles.css",
+          types: "./dist/index.d.ts",
+        },
       },
     });
     writeFileSync(join(root, "packages", "styled", "dist", "styles.css"), ".root {}\n");
@@ -57,7 +62,7 @@ describe("package-entrypoint-smoke.mts", () => {
     const result = runScript(root);
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("✓ @croco/styled: esm 1, cjs 1, types 1");
+    expect(result.stdout).toContain("✓ @croco/styled: esm 1, cjs 1, types 2");
   });
 
   it("requires the root package manager pin for isolated consumers", () => {

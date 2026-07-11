@@ -65,6 +65,14 @@ describe("@croco/ui-astryx", () => {
     const html = renderToStaticMarkup(
       createElement(AstryxAuthState, {
         detail: "Sign in to manage this tenant.",
+        recoveryActions: [
+          { id: "sign-in", label: "Sign in" },
+          {
+            id: "provider-status",
+            label: "Provider status",
+            problemCodes: [problem.code],
+          },
+        ],
         state: "signed-out",
       }),
     );
@@ -72,6 +80,8 @@ describe("@croco/ui-astryx", () => {
     expect(html).toContain('data-croco-auth-state="signed-out"');
     expect(html).toContain("Signed out");
     expect(html).toContain("Sign in to manage this tenant.");
+    expect(html).toContain("Sign in");
+    expect(html).not.toContain("Provider status");
   });
 
   it("maps Croco frontend session contracts without treating unavailable state as signed out", () => {
@@ -80,7 +90,15 @@ describe("@croco/ui-astryx", () => {
     const sessionState: FrontendSessionState = {
       kind: "unavailable",
       problem,
-      recoveryActions: [{ href: "/status", id: "status", label: "Service status" }],
+      recoveryActions: [
+        {
+          href: "/status",
+          id: "status",
+          label: "Service status",
+          problemCodes: [problem.code],
+        },
+        { id: "ignored", label: "Ignore me", problemCodes: ["OTHER_PROBLEM"] },
+      ],
     };
 
     const props = mapFrontendSessionState(sessionState);
@@ -91,5 +109,6 @@ describe("@croco/ui-astryx", () => {
     expect(html).toContain(problem.code);
     expect(html).toContain("Service status");
     expect(html).toContain('href="/status"');
+    expect(html).not.toContain("Ignore me");
   });
 });
