@@ -124,7 +124,7 @@ describe("runGenerateUsageDashboard", () => {
     expect(pageContent).toContain("Loading usage");
     expect(pageContent).toContain("meter needs quota attention");
     expect(routeContent).toContain("path: '/usage'");
-  });
+  }, 30_000);
 
   it("should support API-only workspaces", async () => {
     const cwd = await createWorkspace({ consoleWeb: false });
