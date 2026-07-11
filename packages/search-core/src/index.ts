@@ -41,6 +41,7 @@ export {
   IndexNotFoundProblem,
   MissingTenantProblem,
   SearchCapabilityUnavailableProblem,
+  SearchSyncIdentityConflictProblem,
   StrategyUnavailableProblem,
   TransformNotFoundProblem,
 } from "./libs/problems/SearchProblems";
@@ -115,3 +116,5 @@ export type {
   SearchQuery,
   SearchResult,
 } from "./libs/types";
+
+export type { SearchSyncIdentityConflictSource } from "./libs/problems/SearchProblems";
