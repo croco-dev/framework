@@ -4384,7 +4384,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 186,
+      "line": 187,
       "column": 61,
       "code": "TS2379",
       "message": "Argument of type '{ container: { get<T>(type: Constructor<T>): T; }; globalGuards: unknown[] | undefined; globalInterceptors: unknown[] | undefined; globalFilters: unknown[] | undefined; globalPipes: unknown[] | undefined; }' is not assignable to parameter of type 'CompileOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -4392,7 +4392,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 298,
+      "line": 299,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'CROCO_HTTP_DI_VALIDATION' comes from an index signature, so it must be accessed with ['CROCO_HTTP_DI_VALIDATION']."
@@ -4400,7 +4400,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 304,
+      "line": 305,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -4408,7 +4408,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 304,
+      "line": 305,
       "column": 66,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -4416,7 +4416,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 395,
+      "line": 396,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'CROCO_HTTP_SECURITY_VALIDATION' comes from an index signature, so it must be accessed with ['CROCO_HTTP_SECURITY_VALIDATION']."
@@ -4504,7 +4504,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/HealthCheckRegistry.ts",
-      "line": 68,
+      "line": 91,
       "column": 5,
       "code": "TS2375",
       "message": "Type '{ details?: HealthIndicatorResult[\"details\"]; name: string; status: HealthStatus; }' is not assignable to type 'HealthIndicatorResult' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -4600,7 +4600,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
-      "line": 127,
+      "line": 134,
       "column": 52,
       "code": "TS4111",
       "message": "Property 'CROCO_DIAGNOSTICS_EXPOSURE' comes from an index signature, so it must be accessed with ['CROCO_DIAGNOSTICS_EXPOSURE']."
@@ -4608,7 +4608,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
-      "line": 128,
+      "line": 135,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'CROCO_DIAGNOSTICS_ENABLED' comes from an index signature, so it must be accessed with ['CROCO_DIAGNOSTICS_ENABLED']."
@@ -4616,7 +4616,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
-      "line": 129,
+      "line": 136,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'CROCO_DIAGNOSTICS_TOKEN' comes from an index signature, so it must be accessed with ['CROCO_DIAGNOSTICS_TOKEN']."
@@ -4624,7 +4624,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
-      "line": 133,
+      "line": 140,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ exposure: DiagnosticsExposureMode; token: string | undefined; tokenHeader: string; guard: DiagnosticsGuard | undefined; collector: DiagnosticsCollector | undefined; providers: readonly DiagnosticsProvider[] | undefined; recentErrorLimit: number; messageLimit: number; }' is not assignable to type 'DiagnosticsEndpointPolicy' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

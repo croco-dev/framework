@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HealthCheckService } from "../libs/HealthCheckService";
 import type {
   HealthIndicator,
@@ -11,6 +11,10 @@ describe("HealthCheckService", () => {
 
   beforeEach(() => {
     service = new HealthCheckService();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("should return up status when all indicators are up", async () => {
@@ -262,6 +266,61 @@ describe("HealthCheckService", () => {
   });
 
   describe("readiness", () => {
+    it("should return detailed up status when no readiness indicators are registered", async () => {
+      await expect(service.checkReadiness()).resolves.toEqual({ status: "up", results: [] });
+    });
+
+    it("should return detailed readiness results", async () => {
+      const database: ReadinessIndicator = {
+        check: vi.fn().mockResolvedValue({ name: "database", status: "up" }),
+        isReady: vi.fn().mockResolvedValue({
+          name: "database",
+          status: "up",
+          details: { latency: 12 },
+        }),
+      };
+      const cache: ReadinessIndicator = {
+        check: vi.fn().mockResolvedValue({ name: "cache", status: "up" }),
+        isReady: vi.fn().mockResolvedValue({
+          name: "cache",
+          status: "down",
+          details: { error: "warming up" },
+        }),
+      };
+
+      service.registerReadiness(database);
+      service.registerReadiness(cache);
+
+      await expect(service.checkReadiness()).resolves.toEqual({
+        status: "down",
+        results: [
+          { name: "database", status: "up", details: { latency: 12 } },
+          { name: "cache", status: "down", details: { error: "warming up" } },
+        ],
+      });
+      expect(database.isReady).toHaveBeenCalledOnce();
+      expect(cache.isReady).toHaveBeenCalledOnce();
+    });
+
+    it("should keep generic and readiness indicator results independent", async () => {
+      service.register({
+        check: vi.fn().mockResolvedValue({ name: "generic", status: "down" }),
+      });
+      service.registerReadiness({
+        check: vi.fn().mockResolvedValue({ name: "readiness", status: "down" }),
+        isReady: vi.fn().mockResolvedValue({ name: "readiness", status: "up" }),
+      });
+
+      await expect(service.check()).resolves.toEqual({
+        status: "down",
+        results: [{ name: "generic", status: "down" }],
+      });
+      await expect(service.checkReadiness()).resolves.toEqual({
+        status: "up",
+        results: [{ name: "readiness", status: "up" }],
+      });
+    });
+
     it("should return true when no readiness indicators registered", async () => {
       const service = new HealthCheckService();
       const isReady = await service.isReady();
@@ -310,6 +369,17 @@ describe("HealthCheckService", () => {
 
       const isReady = await service.isReady();
       expect(isReady).toBe(false);
+
+      await expect(service.checkReadiness()).resolves.toEqual({
+        status: "down",
+        results: [
+          {
+            name: "Object",
+            status: "down",
+            details: { error: "Timeout" },
+          },
+        ],
+      });
     });
 
     it("should handle multiple readiness indicators", async () => {
@@ -350,6 +420,41 @@ describe("HealthCheckService", () => {
 
       const isReady = await service.isReady();
       expect(isReady).toBe(false);
+    });
+
+    it("should abort timed-out readiness indicators and preserve the detailed timeout", async () => {
+      vi.useFakeTimers();
+      let didAbort = false;
+      const service = new HealthCheckService({ timeout: 100 });
+      const slowIndicator: ReadinessIndicator = {
+        name: "slow",
+        check: vi.fn().mockResolvedValue({ name: "slow", status: "up" }),
+        isReady: vi.fn().mockImplementation(
+          (signal?: AbortSignal) =>
+            new Promise<HealthIndicatorResult>((resolve) => {
+              signal?.addEventListener("abort", () => {
+                didAbort = true;
+              });
+              setTimeout(() => resolve({ name: "slow", status: "up" }), 10000);
+            }),
+        ),
+      };
+      service.registerReadiness(slowIndicator);
+
+      const resultPromise = service.checkReadiness();
+      await vi.advanceTimersByTimeAsync(100);
+
+      await expect(resultPromise).resolves.toEqual({
+        status: "down",
+        results: [
+          {
+            name: "slow",
+            status: "down",
+            details: { error: "Health check timeout for slow" },
+          },
+        ],
+      });
+      expect(didAbort).toBe(true);
     });
   });
 });

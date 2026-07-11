@@ -6,6 +6,7 @@ import {
   type HealthStatus,
   type HealthCheckResult as CoreHealthCheckResult,
   type HealthCheckServiceOptions,
+  type ReadinessIndicator,
 } from "@croco/health-core";
 import { ProblemFactory } from "@croco/problems-core";
 
@@ -27,19 +28,30 @@ export interface HealthCheckRegistryResult extends CoreHealthCheckResult {}
  * 이름별 헬스체크를 등록하고 readiness 결과를 집계하는 레지스트리입니다.
  */
 export class HealthCheckRegistry {
-  private checks = new Map<string, HealthCheckFunction>();
+  private readonly checks = new Map<string, HealthCheckFunction>();
+  private readonly readinessChecks = new Map<string, HealthCheckFunction>();
   private readonly service = new HealthCheckService();
 
   register(name: string, check: HealthCheckFunction, options: HealthCheckOptions = {}): void {
     if (this.checks.has(name)) {
-      throw ProblemFactory.internalServerError(
-        "transports-http/duplicate-health-check",
-        `Duplicate health check registration detected for '${name}'`,
-      );
+      throw duplicateHealthCheckRegistration("health", name);
     }
 
     this.checks.set(name, check);
     this.service.register(new RegisteredHealthCheckIndicator(name, check), options);
+  }
+
+  registerReadiness(
+    name: string,
+    check: HealthCheckFunction,
+    options: HealthCheckOptions = {},
+  ): void {
+    if (this.readinessChecks.has(name)) {
+      throw duplicateHealthCheckRegistration("readiness", name);
+    }
+
+    this.readinessChecks.set(name, check);
+    this.service.registerReadiness(new RegisteredReadinessCheckIndicator(name, check), options);
   }
 
   getRegisteredCheckCount(): number {
@@ -49,6 +61,17 @@ export class HealthCheckRegistry {
   async check(): Promise<HealthCheckRegistryResult> {
     return this.service.check();
   }
+
+  async checkReadiness(): Promise<HealthCheckRegistryResult> {
+    return this.service.checkReadiness();
+  }
+}
+
+function duplicateHealthCheckRegistration(kind: "health" | "readiness", name: string) {
+  return ProblemFactory.internalServerError(
+    "transports-http/duplicate-health-check",
+    `Duplicate ${kind} check registration detected for '${name}'`,
+  );
 }
 
 class RegisteredHealthCheckIndicator implements HealthIndicator {
@@ -74,5 +97,14 @@ class RegisteredHealthCheckIndicator implements HealthIndicator {
           }
         : {}),
     };
+  }
+}
+
+class RegisteredReadinessCheckIndicator
+  extends RegisteredHealthCheckIndicator
+  implements ReadinessIndicator
+{
+  async isReady(signal?: AbortSignal): Promise<HealthIndicatorResult> {
+    return this.check(signal);
   }
 }

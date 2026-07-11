@@ -43,24 +43,24 @@ export class HealthCheckService {
   }
 
   async isReady(): Promise<boolean> {
-    if (this.readinessIndicators.length === 0) {
-      return true;
-    }
-
-    const results = await Promise.all(
-      this.readinessIndicators.map(({ indicator, options }) =>
-        this.checkWithTimeout(indicator, "isReady", options),
-      ),
-    );
-
-    return results.every((r) => r.status === "up");
+    const result = await this.checkReadiness();
+    return result.status === "up";
   }
 
   async check(): Promise<HealthCheckResult> {
+    return this.checkIndicators(this.indicators, "check");
+  }
+
+  async checkReadiness(): Promise<HealthCheckResult> {
+    return this.checkIndicators(this.readinessIndicators, "isReady");
+  }
+
+  private async checkIndicators(
+    indicators: RegisteredIndicator<HealthIndicator | ReadinessIndicator>[],
+    method: "check" | "isReady",
+  ): Promise<HealthCheckResult> {
     const results = await Promise.all(
-      this.indicators.map(({ indicator, options }) =>
-        this.checkWithTimeout(indicator, "check", options),
-      ),
+      indicators.map(({ indicator, options }) => this.checkWithTimeout(indicator, method, options)),
     );
 
     const status = results.every((r) => r.status === "up") ? "up" : "down";
