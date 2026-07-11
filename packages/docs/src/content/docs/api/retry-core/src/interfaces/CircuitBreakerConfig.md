@@ -17,6 +17,14 @@ CircuitBreaker 설정 옵션.
 
 ***
 
+### stateStore?
+
+> `optional` **stateStore?**: [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/)
+
+상태 공유 범위를 제어하는 저장소 (기본값: decorated method별 in-memory store)
+
+***
+
 ### successThreshold?
 
 > `optional` **successThreshold?**: `number`

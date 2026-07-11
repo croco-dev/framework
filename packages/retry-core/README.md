@@ -54,6 +54,31 @@ const breaker = new CircuitBreaker({
 });
 ```
 
+`@Retryable`에 서킷 브레이커를 설정하면 같은 decorated method의 모든 서비스 인스턴스가 resolved circuit ID별 상태를 현재 프로세스에서 공유합니다. `circuitIdResolver`가 서로 다른 ID를 반환하면 상태도 격리됩니다.
+
+```typescript
+import { RedisCircuitBreakerStore, Retryable } from "@croco/retry-core";
+
+const stateStore = new RedisCircuitBreakerStore({ redis });
+
+class PaymentService {
+  @Retryable({
+    maxAttempts: 1,
+    circuitBreaker: {
+      failureThreshold: 5,
+      timeout: 30000,
+      stateStore,
+    },
+    circuitIdResolver: ({ args, defaultCircuitId }) => `${defaultCircuitId}:${String(args[0])}`,
+  })
+  async charge(tenantId: string): Promise<string> {
+    return gateway.charge(tenantId);
+  }
+}
+```
+
+기본 저장소와 breaker registry는 decorated method가 로드된 동안 유지됩니다. 기본 저장소의 idle retention은 최소 5분이며, 명시적인 `timeout`에는 첫 HALF_OPEN 전환을 보장하기 위한 5분이 추가됩니다. 비활성 registry 항목은 5분 또는 1,000개 한도에서 제거되지만, 제거 과정은 상태 저장소를 reset하지 않습니다. 프로세스나 런타임 간 OPEN/HALF_OPEN 상태 공유가 필요하면 같은 분산 `stateStore`를 명시적으로 전달해야 합니다. 분산 저장소는 저장된 상태를 공유하며, breaker 인스턴스 내부의 CLOSED 동시 실행 카운터까지 프로세스 간 공유하지는 않습니다.
+
 ### 실패 분류
 
 기본 정책은 `ProblemCategory.InternalServerError`와 `ProblemCategory.TooManyRequests`를 재시도 가능한 transient 실패로 취급합니다. `BadRequest`, `ValidationError`, `BusinessRuleViolation`, `Conflict`, 인증/인가, not-found 계열은 기본적으로 terminal 실패입니다.
@@ -68,4 +93,4 @@ const breaker = new CircuitBreaker({
 - 서킷 브레이커: `CircuitBreaker`, `CircuitBreakerRetryTemplate`, `CircuitState`, `InMemoryCircuitBreakerStateStore`, `RedisCircuitBreakerStore`
 - Lambda 연동: `LambdaTimeoutGuard`, `setLambdaContext`, `getRemainingTimeInMillis`, `hasTimeForRetry`
 - Problem 타입: `RetryExhaustedProblem`, `RetryAbortedProblem`, `LambdaTimeoutProblem`, `CircuitBreakerOpenProblem`, `CircuitBreakerUnexpectedStateProblem`
-- 타입: `RetryableOptions`, `RetryTemplateOptions`, `BackoffOptions`, `CircuitBreakerOptions`, `RetryListener`
+- 타입: `RetryableOptions`, `RetryTemplateOptions`, `BackoffOptions`, `CircuitBreakerConfig`, `CircuitBreakerOptions`, `RetryListener`

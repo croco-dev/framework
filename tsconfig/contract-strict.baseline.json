@@ -3934,14 +3934,6 @@
       "message": "Argument of type '{ methodName: string; exceptionType: (new (...args: unknown[]) => Error) | undefined; }' is not assignable to parameter of type 'RecoverMetadata' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
-      "packageName": "@croco/retry-core",
-      "file": "packages/retry-core/src/libs/Retryable.ts",
-      "line": 113,
-      "column": 32,
-      "code": "TS2379",
-      "message": "Argument of type '{ circuitId: string; failureThreshold: number; openDuration: number | undefined; halfOpenRequests: number | undefined; }' is not assignable to parameter of type 'CircuitBreakerOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
       "packageName": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
       "line": 756,

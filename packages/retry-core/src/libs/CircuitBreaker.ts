@@ -136,6 +136,8 @@ export class CircuitBreaker {
       const err = error instanceof Error ? error : new Error(String(error));
       await this.recordClosedFailure();
       throw err;
+    } finally {
+      this.releaseClosedExecutionSlot();
     }
   }
 
@@ -156,8 +158,6 @@ export class CircuitBreaker {
 
   private async recordClosedSuccess(): Promise<void> {
     await this.withCircuitLock(async () => {
-      this.releaseClosedExecutionSlot();
-
       const state = await this.stateStore.getState(this.circuitId);
       if (state !== CircuitState.CLOSED) {
         return;
@@ -169,8 +169,6 @@ export class CircuitBreaker {
 
   private async recordClosedFailure(): Promise<void> {
     await this.withCircuitLock(async () => {
-      this.releaseClosedExecutionSlot();
-
       const state = await this.stateStore.getState(this.circuitId);
       if (state !== CircuitState.CLOSED) {
         return;
