@@ -530,7 +530,7 @@ describe("@Retryable", () => {
         circuitBreaker: {
           failureThreshold: 1,
           stateStore,
-          timeout: 1000,
+          timeout: 60_000,
         },
         circuitIdResolver: ({ args }) => String(args[0]),
       })
