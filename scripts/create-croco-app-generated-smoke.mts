@@ -47,6 +47,10 @@ import {
   type SmokeMatrixTier,
 } from "./create-croco-app-generated-smoke-matrix.mts";
 import {
+  createGeneratedSmokeJourneyReport,
+  writeCanonicalGeneratedSmokeJourneyBundle,
+} from "./create-croco-app-generated-smoke-journey-report.mts";
+import {
   createWorkspacePackageIndex,
   type DependencyField,
   type ExternalCrocoRangeException,
@@ -182,6 +186,7 @@ type GeneratedSmokeReport = {
   readonly schemaVersion: "croco.generated-app-smoke/v2";
   readonly generatedAt: string;
   readonly filteredRun: boolean;
+  readonly requestedCaseNames: readonly string[];
   readonly selectedTier?: SmokeMatrixTier;
   readonly release: {
     readonly blockingTier: "spine-blocking";
@@ -942,23 +947,27 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         label: "Contract snapshot",
         args: ["contract:snapshot"],
         paths: ["contract-graph.snapshot.json"],
+        artifacts: ["contract-graph.snapshot.json"],
       },
       {
         label: "Contract coverage",
         args: ["contract:coverage"],
         paths: ["contract-graph.coverage.json"],
+        artifacts: ["contract-graph.coverage.json"],
       },
       { label: "Contract diff", args: ["contract:diff"] },
-      { label: "OpenAPI contract", args: ["contract:openapi"] },
+      { label: "OpenAPI contract", args: ["contract:openapi"], artifacts: ["openapi.json"] },
       {
         label: "RPC client",
         args: ["contract:client"],
         paths: ["libs/shared/provider-rpc/src/user.ts"],
+        artifacts: ["libs/shared/provider-rpc/src/user.ts"],
       },
       {
         label: "DI graph verify",
         args: ["di:verify"],
         paths: [".croco/build/di-graph.manifest.json"],
+        artifacts: [".croco/build/di-graph.manifest.json"],
         json: {
           path: ".croco/build/di-graph.manifest.json",
           matches: {
@@ -1319,6 +1328,9 @@ const selectableSmokeCases = withGeneratedSmokeMatrixMetadata([
   ...smokeCaseDefinitions,
   restSpaContractSmokeCase,
 ]);
+const spineSmokeCaseNames = selectableSmokeCases
+  .filter(({ tier }) => tier === "spine-blocking")
+  .map(({ name }) => name);
 const smokeCases = selectableSmokeCases.filter(
   (smokeCase) => smokeCase.name !== REST_SPA_CONTRACT_SMOKE_CASE_NAME,
 );
@@ -1356,6 +1368,7 @@ if (isMainModule()) {
       smokeSelection.cases,
       isFilteredRun,
       smokeSelection.selectedTier,
+      smokeSelection.requestedCaseNames,
     );
     writeGeneratedSmokeReport(smokeReport);
 
@@ -1569,12 +1582,14 @@ function createGeneratedSmokeReport(
   cases: readonly SmokeCase[],
   isFilteredRun: boolean,
   selectedTier: SmokeMatrixTier | undefined,
+  requestedCaseNames: readonly string[],
 ): GeneratedSmokeReport {
   const tiers = ["spine-blocking", "ecosystem-advisory"] as const;
   return {
     schemaVersion: "croco.generated-app-smoke/v2",
     generatedAt: new Date().toISOString(),
     filteredRun: isFilteredRun,
+    requestedCaseNames,
     selectedTier,
     status: "pending",
     release: { blockingTier: "spine-blocking", status: "pending" },
@@ -1655,6 +1670,24 @@ function writeGeneratedSmokeReport(report: GeneratedSmokeReport): void {
     join(generatedSmokeReportDir, "matrix.md"),
     renderGeneratedSmokeMatrixReport(aggregate),
   );
+
+  writeCanonicalGeneratedSmokeJourneyBundle({
+    selection: {
+      selectedCaseNames: report.cases.map(({ name }) => name),
+      spineCaseNames: spineSmokeCaseNames,
+      selectedTier: report.selectedTier,
+      requestedCaseNames: report.requestedCaseNames,
+    },
+    outputDir: join(generatedSmokeReportDir, "spine-blocking-journeys"),
+    createReport: () =>
+      createGeneratedSmokeJourneyReport(
+        report,
+        selectableSmokeCases.map(({ name }) => name),
+        undefined,
+        toPosixPath(relative(rootDir, generatedSmokeReportDir)),
+      ),
+    sourceRootDir: generatedSmokeReportDir,
+  });
 }
 
 function readGeneratedSmokeMatrixReport(path: string): unknown {

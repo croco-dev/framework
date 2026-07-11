@@ -192,7 +192,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          for report in spine-blocking-matrix.md ecosystem-advisory-matrix.md; do
+          for report in spine-blocking-matrix.md ecosystem-advisory-matrix.md spine-blocking-journeys/report.md; do
             if [ -f "ci-reports/generated-apps/${report}" ]; then
               cat "ci-reports/generated-apps/${report}" >> "$GITHUB_STEP_SUMMARY"
             else
@@ -208,6 +208,8 @@ jobs:
           path: |
             ci-reports/generated-apps/spine-blocking-matrix.md
             ci-reports/generated-apps/spine-blocking-matrix.json
+            ci-reports/generated-apps/spine-blocking-journeys
+          include-hidden-files: true
           if-no-files-found: warn
 
       - name: Upload ecosystem-advisory generated app smoke report

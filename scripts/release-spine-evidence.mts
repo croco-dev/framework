@@ -1,10 +1,16 @@
 #!/usr/bin/env node
 
-import { spawn, type ChildProcess } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { type ChildProcess, spawn } from "node:child_process";
+import { cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import {
+  assertGeneratedSmokeJourneyLinks,
+  assertGeneratedSmokeJourneyReport,
+  renderGeneratedSmokeJourneyReport,
+} from "./create-croco-app-generated-smoke-journey-report.mts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -41,6 +47,7 @@ export type EvidenceArtifactExpectation = {
   readonly label: string;
   readonly path: string;
   readonly required: boolean;
+  readonly copyRelativePath?: string;
 };
 
 export type EvidenceArtifactReference = EvidenceArtifactExpectation & {
@@ -205,6 +212,12 @@ export function createReleaseSpineEvidenceManifest(): readonly EvidenceCommand[]
           label: "Spine-blocking generated app smoke matrix JSON",
           path: "ci-reports/generated-apps/spine-blocking-matrix.json",
           required: true,
+        },
+        {
+          label: "Generated app smoke journey bundle",
+          path: "ci-reports/generated-apps/spine-blocking-journeys",
+          required: true,
+          copyRelativePath: "spine-blocking-journeys",
         },
       ],
     },
@@ -651,8 +664,27 @@ function relativeToRoot(rootDir: string, path: string): string {
   return toPosixPath(relative(rootDir, path));
 }
 
-function artifactCopyPath(outputDir: string, checkId: string, sourcePath: string): string {
-  return join(outputDir, releaseArtifactDirectory, checkId, basename(sourcePath));
+function artifactCopyPath(
+  outputDir: string,
+  checkId: string,
+  artifact: EvidenceArtifactExpectation,
+): string {
+  const copyRelativePath = (artifact.copyRelativePath ?? basename(artifact.path)).replaceAll(
+    "\\",
+    "/",
+  );
+  const copyRoot = join(outputDir, releaseArtifactDirectory, checkId);
+  const destination = resolve(copyRoot, copyRelativePath);
+  const destinationRelativePath = relative(copyRoot, destination).replaceAll("\\", "/");
+  if (
+    isAbsolute(copyRelativePath) ||
+    /^[A-Za-z]:\//.test(copyRelativePath) ||
+    destinationRelativePath === ".." ||
+    destinationRelativePath.startsWith("../")
+  ) {
+    throw new Error(`Unsafe release evidence copy path: ${copyRelativePath}`);
+  }
+  return destination;
 }
 
 function collectArtifactReferences(
@@ -661,18 +693,19 @@ function collectArtifactReferences(
   outputDir: string,
   startedMs: number,
 ): readonly EvidenceArtifactReference[] {
-  return (check.artifacts ?? []).map((artifact) => {
+  let references = (check.artifacts ?? []).map((artifact) => {
     const sourcePath = resolve(rootDir, artifact.path);
     const exists = existsSync(sourcePath);
     const modifiedAtMs = exists ? statSync(sourcePath).mtimeMs : null;
     const fresh = modifiedAtMs !== null && modifiedAtMs >= startedMs;
-    const copiedPath = exists && fresh ? artifactCopyPath(outputDir, check.id, sourcePath) : null;
+    let copiedPath: string | null = null;
     let copyError: string | null = null;
 
-    if (copiedPath) {
+    if (exists && fresh) {
       try {
+        copiedPath = artifactCopyPath(outputDir, check.id, artifact);
         mkdirSync(dirname(copiedPath), { recursive: true });
-        copyFileSync(sourcePath, copiedPath);
+        cpSync(sourcePath, copiedPath, { recursive: true });
       } catch (error) {
         copyError = error instanceof Error ? error.message : String(error);
       }
@@ -688,6 +721,35 @@ function collectArtifactReferences(
       sourcePath: artifact.path,
     };
   });
+
+  if (check.id === "generated-app-smoke") {
+    try {
+      assertCopiedGeneratedSmokeJourneyBundle(
+        join(outputDir, releaseArtifactDirectory, check.id, "spine-blocking-journeys"),
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const validationTarget =
+        references.find(
+          ({ copyRelativePath }) => copyRelativePath === "spine-blocking-journeys/report.json",
+        ) ?? references[0];
+      references = references.map((reference) =>
+        reference === validationTarget ? { ...reference, copyError: message } : reference,
+      );
+    }
+  }
+
+  return references;
+}
+
+function assertCopiedGeneratedSmokeJourneyBundle(bundleRoot: string): void {
+  const reportJson = JSON.parse(readFileSync(join(bundleRoot, "report.json"), "utf8"));
+  assertGeneratedSmokeJourneyReport(reportJson);
+  const reportMarkdown = readFileSync(join(bundleRoot, "report.md"), "utf8");
+  if (reportMarkdown !== renderGeneratedSmokeJourneyReport(reportJson)) {
+    throw new Error("Copied generated smoke journey Markdown does not match report.json");
+  }
+  assertGeneratedSmokeJourneyLinks(bundleRoot, reportJson);
 }
 
 function artifactFailureReason(artifacts: readonly EvidenceArtifactReference[]): string | null {
