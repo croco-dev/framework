@@ -8047,7 +8047,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-          line: 104,
+          line: 106,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9499,7 +9499,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 104,
+          line: 105,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9560,7 +9560,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 110,
+          line: 111,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11799,7 +11799,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/ParamResolver.ts",
-          line: 192,
+          line: 159,
           column: 13,
           kind: "problem-factory",
         },

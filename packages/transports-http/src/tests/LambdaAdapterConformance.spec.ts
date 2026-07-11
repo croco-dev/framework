@@ -18,6 +18,7 @@ import {
   Raw,
 } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { createApp, type CrocoApp } from "../libs/CrocoApp";
 import {
   getLambdaContext,
@@ -159,7 +160,7 @@ describe("Lambda adapter API Gateway v2 conformance", () => {
     @Get("/items/:id")
     getItem(
       @Param("id") id: string,
-      @Query("tag") tag: string | undefined,
+      @Query("tag", z.array(z.string()).optional()) tag: string[] | undefined,
       @Query("page") page: string | undefined,
       @Query("encoded") encoded: string | undefined,
       @Header("x-request-header") requestHeader: string | undefined,
@@ -318,7 +319,7 @@ describe("Lambda adapter API Gateway v2 conformance", () => {
       method: "GET",
       path: "/lambda-conformance/items/item-123",
       id: "item-123",
-      tag: "red",
+      tag: ["red", "blue"],
       allTags: ["red", "blue"],
       page: "2",
       encoded: "a b",

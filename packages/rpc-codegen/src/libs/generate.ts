@@ -30,6 +30,7 @@ import {
   getZodObjectShape,
   getZodObjectUnsupportedDynamicKeyMode,
   getZodSchemaTypeName,
+  isZodArraySchema,
   getContractPathParamNames,
   getContractPathParams,
   normalizeProjectManifestBundlePath,
@@ -515,16 +516,20 @@ function serializeQueryParams(query: Record<string, QueryParamInput>): string {
     : "";
   const headerHelpers = domainRoutes.routes.some((route) => route.inputSchemas.headers)
     ? `type HeaderParamValue = string | number | boolean | null | undefined;
+type HeaderParamInput = HeaderParamValue | readonly HeaderParamValue[];
 
-function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<string, string> {
+function serializeHeaders(headers: Record<string, HeaderParamInput>): Record<string, string> {
   const serialized: Record<string, string> = {};
 
   for (const [key, value] of Object.entries(headers)) {
-    if (value === undefined) {
+    const values = Array.isArray(value) ? value : [value];
+    const serializedValues = values.filter((item) => item !== undefined).map((item) => String(item));
+
+    if (serializedValues.length === 0) {
       continue;
     }
 
-    serialized[key] = String(value);
+    serialized[key] = serializedValues.join(', ');
   }
 
   return serialized;
@@ -2061,7 +2066,7 @@ function generateInputType(route: GeneratedClientRoute): string {
   }
 
   const fields = getInputSchemaEntries(route).map(
-    ([name, schema]) => `${name}: ${zodTypeToTypeScript(schema)};`,
+    ([name, schema]) => `${name}: ${zodInputTypeToTypeScript(name, schema)};`,
   );
 
   return `export type ${getInputTypeName(route)} = { ${fields.join(" ")} };`;
@@ -2296,7 +2301,7 @@ function generateFormField(
     };
   }
 
-  if (schemaName === "ZodArray") {
+  if (isZodArraySchema(analysis.schema)) {
     const elementAnalysis = analyzeFormFieldSchema(getZodArrayElementSchema(analysis.schema));
     const elementSchemaName = getSchemaName(elementAnalysis.schema);
     const elementOptions = getFormFieldOptions(elementAnalysis.schema);
@@ -2356,6 +2361,11 @@ function analyzeFormFieldSchema(schema: unknown): FormFieldSchemaAnalysis {
     if (schemaName === "ZodDefault") {
       optional = true;
       defaultValue = getZodDefaultValue(current);
+      current = getZodInnerSchema(current);
+      continue;
+    }
+
+    if (schemaName === "ZodCatch") {
       current = getZodInnerSchema(current);
       continue;
     }
@@ -2426,7 +2436,7 @@ function getFormFieldInitialValueExpression(
     return formLiteralValueToTypeScript(route, name, options[0]?.value);
   }
 
-  if (schemaName === "ZodArray") {
+  if (isZodArraySchema(analysis.schema)) {
     return "[]";
   }
 
@@ -2972,6 +2982,28 @@ function getReactQueryKeyExpression(
 }
 
 function zodTypeToTypeScript(schema: unknown): string {
+  return zodTypeToTypeScriptWithOptions(schema);
+}
+
+function zodInputTypeToTypeScript(name: string, schema: unknown): string {
+  if (name === "headers") {
+    return zodTypeToTypeScriptWithOptions(schema, {
+      readonlyArrays: true,
+      catchAllowsUndefined: true,
+    });
+  }
+
+  if (name === "query") {
+    return zodTypeToTypeScriptWithOptions(schema, { catchAllowsUndefined: true });
+  }
+
+  return zodTypeToTypeScript(schema);
+}
+
+function zodTypeToTypeScriptWithOptions(
+  schema: unknown,
+  options: TypeScriptTypeOptions = {},
+): string {
   const descriptor = describeZodSchema(schema as never);
 
   if (!descriptor) {
@@ -2988,10 +3020,18 @@ function zodTypeToTypeScript(schema: unknown): string {
     throw new RpcCodegenContractProblem(formatSchemaDiagnostic(unsafeDiagnostic));
   }
 
-  return schemaDescriptorToTypeScript(descriptor);
+  return schemaDescriptorToTypeScript(descriptor, options);
 }
 
-function schemaDescriptorToTypeScript(descriptor: ContractSchemaDescriptor): string {
+type TypeScriptTypeOptions = {
+  readonly readonlyArrays?: boolean;
+  readonly catchAllowsUndefined?: boolean;
+};
+
+function schemaDescriptorToTypeScript(
+  descriptor: ContractSchemaDescriptor,
+  options: TypeScriptTypeOptions = {},
+): string {
   if (descriptor.kind === "string") {
     return "string";
   }
@@ -3029,19 +3069,30 @@ function schemaDescriptorToTypeScript(descriptor: ContractSchemaDescriptor): str
   }
 
   if (descriptor.kind === "union") {
-    return unionTypes((descriptor.options ?? []).map(schemaDescriptorToTypeScript));
+    return unionTypes(
+      (descriptor.options ?? []).map((option) => schemaDescriptorToTypeScript(option, options)),
+    );
   }
 
   if (descriptor.kind === "optional") {
-    return `${schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"))} | undefined`;
+    return `${schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"), options)} | undefined`;
   }
 
   if (descriptor.kind === "nullable") {
-    return `${schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"))} | null`;
+    return `${schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"), options)} | null`;
   }
 
   if (descriptor.kind === "default") {
-    return schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"));
+    return schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"), options);
+  }
+
+  if (descriptor.kind === "catch") {
+    const inner = schemaDescriptorToTypeScript(
+      getRequiredChildDescriptor(descriptor, "inner"),
+      options,
+    );
+
+    return options.catchAllowsUndefined ? includeUndefinedType(inner) : inner;
   }
 
   if (
@@ -3049,24 +3100,32 @@ function schemaDescriptorToTypeScript(descriptor: ContractSchemaDescriptor): str
     descriptor.kind === "branded" ||
     descriptor.kind === "readonly"
   ) {
-    return schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"));
+    return schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "inner"), options);
   }
 
   if (descriptor.kind === "array") {
-    return `${schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "element"))}[]`;
+    const element = getArrayElementTypeScript(
+      schemaDescriptorToTypeScript(getRequiredChildDescriptor(descriptor, "element"), options),
+    );
+
+    return options.readonlyArrays ? `readonly ${element}[]` : `${element}[]`;
   }
 
   if (descriptor.kind === "record") {
-    return `Record<string, ${descriptor.element ? schemaDescriptorToTypeScript(descriptor.element) : "unknown"}>`;
+    return `Record<string, ${descriptor.element ? schemaDescriptorToTypeScript(descriptor.element, options) : "unknown"}>`;
   }
 
   if (descriptor.kind === "object") {
-    return getObjectTypeScript(descriptor);
+    return getObjectTypeScript(descriptor, options);
   }
 
   throw new RpcCodegenContractProblem(
     `Cannot generate RPC client type for unsupported schema ${descriptor.typeName}. Use a JSON-safe Zod schema supported by @croco/protocols-core or remove the schema from generated contracts.`,
   );
+}
+
+function getArrayElementTypeScript(type: string): string {
+  return type.includes(" | ") ? `(${type})` : type;
 }
 
 function getRequiredChildDescriptor(
@@ -3094,6 +3153,10 @@ function unionTypes(types: readonly string[]): string {
   return uniqueTypes.length === 0 ? "never" : uniqueTypes.join(" | ");
 }
 
+function includeUndefinedType(type: string): string {
+  return type.split(" | ").includes("undefined") ? type : `${type} | undefined`;
+}
+
 function literalValueToTypeScript(value: unknown): string {
   if (typeof value === "string") {
     return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
@@ -3112,9 +3175,13 @@ function literalValueToTypeScript(value: unknown): string {
   );
 }
 
-function getObjectTypeScript(descriptor: ContractSchemaDescriptor): string {
+function getObjectTypeScript(
+  descriptor: ContractSchemaDescriptor,
+  options: TypeScriptTypeOptions = {},
+): string {
   const fields = (descriptor.fields ?? []).map(
-    (field) => `${formatObjectKey(field.name)}: ${schemaDescriptorToTypeScript(field.schema)};`,
+    (field) =>
+      `${formatObjectKey(field.name)}: ${schemaDescriptorToTypeScript(field.schema, options)};`,
   );
 
   return `{ ${fields.join(" ")} }`;

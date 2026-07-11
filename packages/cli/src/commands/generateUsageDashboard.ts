@@ -884,7 +884,14 @@ export class UsageDashboardController {
 }
 
 function readTenantId(ctx: CrocoHttpContext): string | undefined {
-  return ctx.header("x-tenant-id") ?? ctx.query("tenantId");
+  const tenantId = ctx.header("x-tenant-id");
+  if (tenantId !== undefined) {
+    return tenantId;
+  }
+
+  const queryTenantId = ctx.query("tenantId");
+
+  return Array.isArray(queryTenantId) ? queryTenantId[0] : queryTenantId;
 }
 
 function readRepeatedQuery(ctx: CrocoHttpContext, name: string): readonly string[] | undefined {
@@ -893,8 +900,8 @@ function readRepeatedQuery(ctx: CrocoHttpContext, name: string): readonly string
     return undefined;
   }
 
-  const values = value
-    .split(",")
+  const values = (Array.isArray(value) ? value : [value])
+    .flatMap((item) => item.split(","))
     .map((part) => part.trim())
     .filter(Boolean);
 

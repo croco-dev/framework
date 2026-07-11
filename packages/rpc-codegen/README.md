@@ -70,6 +70,10 @@ const result = await userClient.getUserResult(
 );
 ```
 
+Generated query arrays are serialized as repeated query keys. Generated header arrays accept
+readonly arrays and serialize them as comma-separated header values, matching Croco HTTP runtime
+validation and OpenAPI parameter serialization.
+
 The generated runtime records `rpc.request.*` events for start, retry attempts, success, declared
 Problems, external failures, and cancellations. Non-GET routes also emit `rpc.mutation.*` lifecycle
 events. Event payloads are limited to route metadata, status, latency, correlation ids, and stable

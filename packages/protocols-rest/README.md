@@ -66,6 +66,21 @@ const pipe = createValidationPipe(schema);
 const page = validateRequest(schema, { page: "1" });
 ```
 
+### Repeated HTTP parameters
+
+`HttpContext.query(name)` returns `string | string[] | undefined`: a single query key remains a
+string, while repeated keys such as `?tag=a&tag=b` are preserved as `string[]`. Existing code that
+uses this context API must narrow or validate the value before using it as a scalar.
+
+Named `@Query("tag")` parameters without an explicit schema retain the generated optional-scalar
+contract and reject repeated values. Declare a Zod array schema when the controller parameter is
+intended to accept repeated keys.
+
+When `@Query()` uses a Zod array schema, a single query value is normalized to a one-item array and
+repeated values remain an array. Repeated values for scalar query schemas fail validation. For
+`@Header()` array schemas, the Fetch/Hono comma-delimited header value is split and trimmed before
+Zod validation; scalar header schemas retain the original string behavior.
+
 ### 스키마 단일 출처
 
 `defineRouteSchema`는 DTO 타입, 런타임 검증, 응답 스키마, OpenAPI/RPC 산출물의 출처를 하나의

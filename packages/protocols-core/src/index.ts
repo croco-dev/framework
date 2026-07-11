@@ -120,14 +120,18 @@ export {
   getZodObjectShape,
   getZodObjectUnsupportedDynamicKeyMode,
   getZodSchemaTypeName,
+  isZodArraySchema,
+  isZodType,
   JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX,
   unwrapZodEffectsSchema,
+  unwrapZodParameterSchema,
 } from "./libs/SchemaDescriptor";
 export {
   discoverControllerConstructors,
   isControllerConstructor,
 } from "./libs/controllerDiscovery";
 export { extractRouteIR } from "./libs/extractRouteIR";
+export { getHttpParamFallbackSchema } from "./libs/schemaBuilder";
 export type {
   ParamIR,
   ProblemRegistryReferenceIR,

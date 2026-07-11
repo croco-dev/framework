@@ -56,7 +56,7 @@ export interface HttpContext {
   readonly request: HttpRequestLike;
   readonly response: HttpResponseLike;
   param(name: string): string | undefined;
-  query(name: string): string | undefined;
+  query(name: string): string | string[] | undefined;
   header(name: string): string | undefined;
   json<T = unknown>(): Promise<T>;
   set(key: string, value: unknown): void;
@@ -68,7 +68,7 @@ export interface HttpRequestLike {
   url: string;
   headers: Headers | Record<string, string>;
   params?: Record<string, string>;
-  query?: Record<string, string>;
+  query?: Record<string, string | string[]>;
 }
 
 export interface HttpResponseLike {
