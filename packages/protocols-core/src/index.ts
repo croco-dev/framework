@@ -115,6 +115,7 @@ export {
   describeZodSchema,
   formatSchemaDiagnostic,
   getSchemaDescriptorDiagnostics,
+  getZodArrayInputSchema,
   getZodArrayElementSchema,
   getZodDefaultValue,
   getZodInnerSchema,

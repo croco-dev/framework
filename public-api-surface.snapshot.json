@@ -14055,6 +14055,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "getZodArrayInputSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
           "name": "getZodDefaultValue",
           "exportKind": "named",
           "source": "./libs/SchemaDescriptor",

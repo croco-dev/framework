@@ -1,5 +1,5 @@
 import {
-  acceptsZodArrayInput,
+  getZodArrayInputSchema,
   isZodArraySchema,
   unwrapZodParameterSchema,
 } from "@croco/protocols-core";
@@ -14,11 +14,17 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
   constructor(private readonly schema: z.ZodType<T>) {}
 
   transform(value: unknown, metadata: ArgumentMetadata): T {
-    if (metadata.type === "query" && Array.isArray(value) && !acceptsZodArrayInput(this.schema)) {
+    const repeatedQuerySchema =
+      metadata.type === "query" && Array.isArray(value)
+        ? getZodArrayInputSchema(this.schema)
+        : undefined;
+
+    if (metadata.type === "query" && Array.isArray(value) && !repeatedQuerySchema) {
       throwRepeatedQueryValueProblem();
     }
 
-    const schemaWithoutCatch = unwrapZodParameterSchema(this.schema);
+    const schemaWithoutCatch = (repeatedQuerySchema ??
+      unwrapZodParameterSchema(this.schema)) as z.ZodType<T>;
     const normalizedValue = normalizeHttpParameterValue(value, metadata, this.schema);
 
     const shouldParseWithoutCatch =

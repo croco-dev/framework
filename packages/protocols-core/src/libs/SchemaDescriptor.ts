@@ -270,6 +270,7 @@ const TRANSPARENT_ZOD_WRAPPER_CHILD_KEYS: Readonly<Record<string, TransparentZod
   };
 
 const PARAMETER_SCHEMA_CACHE = new WeakMap<z.ZodType, z.ZodType>();
+const ARRAY_INPUT_SCHEMA_CACHE = new WeakMap<object, z.ZodType | null>();
 
 export function describeZodSchema(
   schema: z.ZodType | null | undefined,
@@ -335,34 +336,106 @@ export function isZodArraySchema(schema: unknown): boolean {
  * silently reinterpret repeated scalar parameters.
  */
 export function acceptsZodArrayInput(schema: unknown): boolean {
-  return acceptsZodArrayInputInternal(schema, new Set());
+  return getZodArrayInputSchema(schema) !== undefined;
 }
 
-function acceptsZodArrayInputInternal(schema: unknown, seen: Set<object>): boolean {
-  if (!isRecord(schema) || seen.has(schema)) {
-    return false;
+/**
+ * Projects a parameter schema to the branches that preserve array input.
+ *
+ * Scalar and value-changing union branches are removed so their coercion,
+ * preprocessing, or catch behavior cannot consume repeated parameter values.
+ * The projection is cached by source schema for request-path reuse.
+ */
+export function getZodArrayInputSchema(schema: unknown): z.ZodType | undefined {
+  if (!isRecord(schema)) {
+    return undefined;
   }
 
-  seen.add(schema);
+  const cachedSchema = ARRAY_INPUT_SCHEMA_CACHE.get(schema);
+  if (cachedSchema !== undefined) {
+    return cachedSchema ?? undefined;
+  }
+
+  const projectedSchema = projectZodArrayInputSchema(schema, new Map());
+  const result = isZodType(projectedSchema) ? projectedSchema : undefined;
+  ARRAY_INPUT_SCHEMA_CACHE.set(schema, result ?? null);
+  return result;
+}
+
+function projectZodArrayInputSchema(
+  schema: unknown,
+  projectedSchemas: Map<object, unknown | undefined>,
+): unknown | undefined {
+  if (!isRecord(schema)) {
+    return undefined;
+  }
+
+  if (projectedSchemas.has(schema)) {
+    return projectedSchemas.get(schema);
+  }
+
+  projectedSchemas.set(schema, undefined);
 
   const typeName = getSchemaTypeName(schema);
   if (typeName === "ZodArray" || typeName === "ZodAny" || typeName === "ZodUnknown") {
-    return true;
-  }
-
-  if (
-    isTransparentArrayWrapper(typeName) ||
-    (typeName === "ZodEffects" && isZodRefinementEffect(schema))
-  ) {
-    return acceptsZodArrayInputInternal(getZodInnerSchema(schema), seen);
+    projectedSchemas.set(schema, schema);
+    return schema;
   }
 
   const definition = getZodDefinition(schema);
-  if (typeName === "ZodUnion" && Array.isArray(definition?.options)) {
-    return definition.options.some((option) => acceptsZodArrayInputInternal(option, new Set(seen)));
+  if (!definition) {
+    return undefined;
   }
 
-  return false;
+  const childKey = getCatchRewriteChildKey(typeName, schema);
+  if (childKey) {
+    const child = definition[childKey];
+    const projectedChild = projectZodArrayInputSchema(child, projectedSchemas);
+    if (projectedChild === undefined) {
+      return undefined;
+    }
+
+    const projected =
+      typeName === "ZodCatch"
+        ? projectedChild
+        : projectedChild === child
+          ? schema
+          : reconstructZodSchema(schema, {
+              ...definition,
+              [childKey]: projectedChild,
+            });
+    projectedSchemas.set(schema, projected);
+    return projected;
+  }
+
+  if (typeName === "ZodUnion" && Array.isArray(definition?.options)) {
+    const projectedOptions: unknown[] = [];
+    for (const option of definition.options) {
+      const projectedOption = projectZodArrayInputSchema(option, projectedSchemas);
+      if (projectedOption !== undefined) {
+        projectedOptions.push(projectedOption);
+      }
+    }
+
+    if (projectedOptions.length === 0) {
+      return undefined;
+    }
+
+    const projected =
+      projectedOptions.length === 1
+        ? projectedOptions[0]
+        : definition.options.length === projectedOptions.length &&
+            definition.options.every((option, index) => option === projectedOptions[index])
+          ? schema
+          : reconstructZodSchema(schema, {
+              ...definition,
+              options: projectedOptions,
+            });
+    projectedSchemas.set(schema, projected);
+    return projected;
+  }
+
+  return undefined;
 }
 
 /**

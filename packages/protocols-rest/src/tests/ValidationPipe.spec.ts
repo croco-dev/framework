@@ -125,6 +125,18 @@ describe("ValidationPipe", () => {
     },
   );
 
+  it.each([
+    z.union([z.coerce.string(), z.array(z.string())]),
+    z.union([
+      z.preprocess((value) => (Array.isArray(value) ? value.join(",") : value), z.string()),
+      z.array(z.string()),
+    ]),
+  ])("should bypass scalar value-changing union branches for repeated values", (schema) => {
+    const pipe = new ValidationPipe(schema);
+
+    expect(pipe.transform(["first", "second"], QUERY_METADATA)).toEqual(["first", "second"]);
+  });
+
   it("should normalize comma-separated and raw array headers for catch-wrapped arrays", () => {
     const pipe = new ValidationPipe(z.array(z.string()).catch([]));
 

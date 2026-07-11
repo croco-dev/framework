@@ -8,6 +8,7 @@ import {
   CONTRACT_SCHEMA_ZOD_EFFECTS_UNWRAPPED_DIAGNOSTIC_CODE,
   describeZodSchema,
   getSchemaDescriptorDiagnostics,
+  getZodArrayInputSchema,
   getZodArrayElementSchema,
   isZodArraySchema,
   isZodType,
@@ -230,6 +231,28 @@ describe("SchemaDescriptor", () => {
     expect(acceptsZodArrayInput(z.coerce.boolean())).toBe(false);
     expect(acceptsZodArrayInput(z.preprocess((value) => value, z.string()))).toBe(false);
     expect(acceptsZodArrayInput(z.preprocess((value) => value, tags))).toBe(false);
+  });
+
+  it("should project unions to array-preserving parameter branches", () => {
+    const tags = z.array(z.string());
+    const coercingUnion = z.union([z.coerce.string(), tags]);
+    const preprocessingUnion = z.union([
+      z.preprocess((value) => (Array.isArray(value) ? value.join(",") : value), z.string()),
+      tags,
+    ]);
+
+    const coercingProjection = getZodArrayInputSchema(coercingUnion);
+    const preprocessingProjection = getZodArrayInputSchema(preprocessingUnion);
+
+    expect(coercingProjection).toBe(getZodArrayInputSchema(coercingUnion));
+    expect(coercingProjection?.safeParse(["first", "second"])).toMatchObject({
+      success: true,
+      data: ["first", "second"],
+    });
+    expect(preprocessingProjection?.safeParse(["first", "second"])).toMatchObject({
+      success: true,
+      data: ["first", "second"],
+    });
   });
 
   it("should remove catch wrappers while preserving transparent parameter wrappers", () => {
