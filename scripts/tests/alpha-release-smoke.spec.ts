@@ -7,7 +7,9 @@ import {
   alphaReleaseCleanInstallImportExclusions,
   alphaReleaseEvidenceReportPath,
   alphaReleaseCleanInstallImportPackages,
+  alphaReleaseCanonicalSaasValidations,
   alphaReleaseGeneratedAppSmoke,
+  alphaReleaseGeneratedAppSmokeCases,
   alphaReleaseGeneratedAppValidations,
   alphaReleaseSpineRoots,
   deriveAlphaReleaseCleanInstallImportPackages,
@@ -67,6 +69,14 @@ describe("alpha-release-smoke.mts", () => {
       "test",
       "dev:smoke",
     ]);
+    expect(alphaReleaseGeneratedAppSmokeCases).toContainEqual({
+      args: ["--goal", "saas-api", "--scope", "@myorg", "--no-install", "--no-git"],
+      goal: "saas-api",
+      name: "my-saas-api",
+      preset: "saas",
+      validations: alphaReleaseCanonicalSaasValidations,
+    });
+    expect(alphaReleaseCanonicalSaasValidations).toContain("demo:smoke");
     expect(alphaReleaseEvidenceReportPath).toBe("ci-reports/release/alpha-release-smoke.md");
   });
 
@@ -195,7 +205,7 @@ describe("alpha-release-smoke.mts", () => {
       cleanInstallImports: alphaReleaseCleanInstallImportPackages,
       generatedAppDirectory: "/tmp/app",
       packedPackageCount: 12,
-      smokeCase: alphaReleaseGeneratedAppSmoke,
+      smokeCases: alphaReleaseGeneratedAppSmokeCases,
       spineRoots: alphaReleaseSpineRoots,
       status: "PASS",
       validations: alphaReleaseGeneratedAppValidations,

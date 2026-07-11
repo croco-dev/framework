@@ -39,7 +39,7 @@
     "docs:catalog:check": "node --experimental-strip-types scripts/package-docs-check.mts --check",
     "docs:catalog:write": "node --experimental-strip-types scripts/package-docs-check.mts --write",
     "dependency-boundaries:check": "node --experimental-strip-types scripts/package-quality-report.mts --boundary-check-only",
-    "first-success:verify": "node --experimental-strip-types scripts/first-success-verify.mts",
+    "first-success:verify": "pnpm build --filter=create-croco-app && node --experimental-strip-types scripts/first-success-verify.mts",
     "package-quality:report": "node --experimental-strip-types scripts/package-quality-report.mts",
     "provider-certification:check": "node --experimental-strip-types scripts/provider-certification-check.mts",
     "production-ready:check": "node --experimental-strip-types scripts/production-ready-check.mts",

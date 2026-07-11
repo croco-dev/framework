@@ -1,250 +1,127 @@
 ---
 title: Getting Started
-description: Build and deploy a production-ready SaaS backend on AWS Lambda in 5 minutes with Croco.
+description: Generate and validate Croco's REST SaaS golden path with one canonical CLI goal.
 ---
 
 import { Aside } from "@astrojs/starlight/components";
 
 ## 1. Introduction
 
-Croco provides a **SaaS backend toolkit** — fully typed, Lambda-ready, with auth, metering, and
-billing built into the framework. The `ddd-api` preset gives you a basic DDD skeleton to start
-from; for a complete SaaS example with auth and metering wired together, skip straight to the Quick
-Start Lambda example, or use the SaaS Billing Golden Path for billing, retry, transactions, events,
-and Problem recovery.
+Croco provides a **SaaS backend toolkit** — fully typed, with auth, metering, billing, tenant
+isolation, REST contracts, and operational diagnostics built into the framework. The `saas-api`
+goal selects the supported generated stack and records it in `croco.app.json`.
 
-This guide takes you from zero to a deployed API: scaffold the project, add an authenticated endpoint, layer on metering, and export as a Lambda handler.
+This guide follows one executable loop: generate the REST SaaS workspace, install it, pass its
+zero-credential demo smoke, inspect its routes, and extend the same generated controller.
 
 <Aside type="tip" title="Prefer a fully working example?">
   Jump straight to
   [`examples/quick-start-lambda`](https://github.com/croco-dev/framework/tree/trunk/examples/quick-start-lambda)
-  — a complete, runnable SaaS backend with auth, metering, Lambda export, and DI wiring already in
-  place. For the billing-oriented path, use
+  for a separate Lambda reference with auth, metering, and DI wiring. For a billing-oriented
+  reference, use
   [`examples/saas-billing-golden-path`](https://github.com/croco-dev/framework/tree/trunk/examples/saas-billing-golden-path).
 </Aside>
 
 ## 2. Quick Start
 
-Create a new project with the CLI. The `ddd-api` preset generates a basic DDD skeleton (Drizzle ORM + env config) — a clean foundation to build on:
+Create the canonical SaaS REST workspace with the CLI:
 
 ```bash
-npx create-croco-app@latest my-project --preset ddd-api --scope @myorg --api graphql --backend-deploy lambda --no-install --no-git
+npx create-croco-app@latest my-saas-api --goal saas-api --scope @myorg --no-install --no-git
 ```
 
-This runs noninteractively with the `ddd-api` preset, `@myorg` package scope, GraphQL API, and Lambda backend. Replace `@myorg` with your package scope.
-Generated Croco projects are pnpm workspaces, and the CLI uses pnpm when dependency installation is enabled.
+This runs noninteractively with the `saas-api` goal and `@myorg` package scope. It generates a REST
+SaaS workspace with `apps/api-server/src/controllers/SaasController.ts`,
+`apps/api-server/src/controllers/OperationsController.ts`, provider and tenant manifests, and a
+`croco.app.json` goal contract. Replace `@myorg` with your package scope.
 
-Install dependencies and start the dev server:
+Install dependencies and run the documented success scenario:
 
 ```bash
-cd my-project && pnpm install && pnpm dev
+cd my-saas-api && pnpm install && pnpm demo:smoke
 ```
 
-Your API is now running at `http://localhost:3000/api`. Let's add some SaaS features.
+Success means `demo:smoke` completes the generated REST contract checks, in-memory SaaS demo flow,
+and operational smoke without external credentials. It does not start a long-running server.
 
-## 3. Your First SaaS Endpoint
+## 3. Inspect the Generated REST API
 
-Croco treats auth as a first-class concern. Wrap any controller method with `@UseGuards(AuthGuard)` and authentication is handled before your code runs.
+The generated Node REST application registers
+`apps/api-server/src/controllers/SaasController.ts` and
+`apps/api-server/src/controllers/OperationsController.ts`. `SaasController` exposes the local demo
+routes under `/saas`; `OperationsController` exposes health and diagnostics under `/ops`.
 
-First, register an auth provider and guard:
-
-`TestAuthProvider` is generated inside the quick-start project; this startup wiring is shown in the
-context of that generated application.
-
-```typescript no-check
-import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
-import { Container } from "@croco/framework-context";
-import { TestAuthProvider } from "../integrations/TestAuthProvider";
-
-Container.set(AUTH_PROVIDER_TOKEN, new TestAuthProvider());
-Container.set(AuthGuard, new AuthGuard());
-```
-
-Now create a controller with a protected endpoint:
-
-```typescript typecheck
-import { AuthGuard } from "@croco/auth-core";
-import { Controller, Get, UseGuards } from "@croco/protocols-rest";
-
-@Controller("/api/users")
-class UserController {
-  private readonly users = {
-    list: () => [{ id: "user-123", email: "user@example.com" }],
-  };
-
-  @Get()
-  @UseGuards(AuthGuard)
-  list(): { id: string; email: string }[] {
-    return this.users.list();
-  }
-}
-```
-
-Any request without a valid API key gets a `401 Unauthorized` automatically. No middleware to configure — the guard handles it.
-
-## 4. Add Metering
-
-Track usage for billing with a single decorator. Croco's `@Metered` records every invocation against a named meter:
-
-The metering adapter below is generated in the quick-start project and bound once at application
-startup.
-
-```typescript no-check
-import { Meter, Metered, setMeteringService } from "@croco/metering-core";
-import { createMeteringService } from "../integrations/inMemoryMetering";
-
-// Wire up the metering infrastructure once, at app startup
-setMeteringService(createMeteringService());
-
-@Meter({ meterId: "api_user_create" })
-@Controller("/api/users")
-class UserController {
-  @Post()
-  @UseGuards(AuthGuard)
-  @Metered({ meterId: "api_user_create" })
-  create(@Body() body: CreateUserBody) {
-    return this.users.create(body);
-  }
-}
-```
-
-Now every `POST /api/users` call increments the `api_user_create` meter — ready to drive billing, usage limits, or analytics.
-
-## 5. Deploy to Lambda
-
-Export your app as a Lambda handler with one line:
-
-```typescript typecheck
-import { Controller, Get } from "@croco/protocols-rest";
-import { createApp } from "@croco/transports-http";
-
-@Controller("/api/users")
-class UserController {
-  @Get()
-  list(): { id: string; email: string }[] {
-    return [{ id: "user-123", email: "user@example.com" }];
-  }
-}
-
-const app = createApp({
-  controllers: [UserController],
-});
-
-export const handler = app.lambdaHandler();
-```
-
-That's it. `handler` is a standard AWS Lambda entrypoint — deploy it with SST, Terraform, CDK, or any Lambda-compatible platform.
-
-## 6. Complete Example
-
-The quick-start-lambda example above is the **complete, runnable reference** for everything covered
-in this guide. The `saas-billing-golden-path` example is the checked-in reference for the billing
-success path: checkout, transient payment retry, transactional event publication, audit projection,
-and explicit Problem recovery.
-
-The repository validates those references with:
+Start that generated application with its demo endpoints enabled:
 
 ```bash
-pnpm quick-start-lambda:smoke
-pnpm saas-billing-golden-path:smoke
-pnpm first-success:verify
+SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter @myorg/api-server dev
 ```
 
-The SaaS smoke command builds the example and its workspace dependencies before it runs the
-checked-in golden-path tests. The first-success verifier keeps this guide, the root README, release
-spine docs, public scaffold commands, and checked examples pointed at the same commands.
+In another terminal, seed the in-memory SaaS runtime and read the deterministic smoke result:
 
-Here's the project structure from `quick-start-lambda`, bringing together auth, metering, protocol metadata, transport wiring, and Lambda export in one runnable reference:
-
-```
-my-saas-api/
-├── src/
-│   ├── app/
-│   │   └── bootstrap.ts             # DI, integrations, createApp
-│   ├── domain/
-│   │   └── UserService.ts           # App/domain behavior
-│   ├── integrations/
-│   │   ├── TestAuthProvider.ts      # Replaceable auth provider
-│   │   └── inMemoryMetering.ts      # Replaceable metering storage
-│   ├── protocols/
-│   │   ├── HealthController.ts      # REST health metadata
-│   │   └── UserController.ts        # REST user metadata
-│   └── index.ts                     # Lambda export + local dev start
-└── package.json
+```bash
+curl -X POST http://localhost:3000/saas/demo/seed
+curl http://localhost:3000/saas/demo/smoke
+curl http://localhost:3000/ops/health
 ```
 
-`src/protocols/UserController.ts` owns protocol metadata and remains transport-neutral:
+The `/saas/demo/*` routes are disabled unless `SAAS_DEMO_ENDPOINTS_ENABLED=true` and remain disabled
+in production. The CLI `pnpm demo:smoke` path does not require opening those HTTP routes.
+
+## 4. Extend the Generated Controller
+
+Add REST behavior in `apps/api-server/src/controllers/SaasController.ts`, where the generated app
+already keeps route metadata and Problem responses together:
 
 ```typescript no-check
-import { AuthGuard } from "@croco/auth-core";
-import { Container } from "@croco/framework-context";
-import { Meter, Metered } from "@croco/metering-core";
-import { Body, Controller, Get, Post, UseGuards } from "@croco/protocols-rest";
-import { type CreateUserBody, UserService } from "../domain/UserService";
-
-@Meter({ meterId: "api_user_create" })
-@Controller("/api/users")
-export class UserController {
-  private readonly users: UserService;
-
-  constructor() {
-    this.users = Container.get(UserService);
+@Component()
+@Controller("/saas")
+export class SaasController {
+  @Post(seedSaasDemoRoute)
+  @ProblemResponses(...routeProblemResponses(seedSaasDemoRoute))
+  async seedDemo() {
+    await assertDemoEndpointsEnabled();
+    const { seedDefaultSaasRuntime } = await import("../saasDemo");
+    return seedDefaultSaasRuntime();
   }
 
-  @Get()
-  @UseGuards(AuthGuard)
-  list() {
-    return this.users.list();
-  }
-
-  @Post()
-  @UseGuards(AuthGuard)
-  @Metered({ meterId: "api_user_create" })
-  create(@Body() body: CreateUserBody) {
-    return this.users.create(body);
+  @Get(smokeSaasDemoRoute)
+  @ProblemResponses(...routeProblemResponses(smokeSaasDemoRoute))
+  async smokeDemo() {
+    await assertDemoEndpointsEnabled();
+    const { seedDefaultSaasRuntime } = await import("../saasDemo");
+    return seedDefaultSaasRuntime();
   }
 }
 ```
 
-`src/app/bootstrap.ts` owns runtime composition, so auth and metering adapters can change without changing controller or domain code:
+After changing route metadata or behavior, re-run the generated contract and success gates:
 
-```typescript no-check
-import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
-import { Container } from "@croco/framework-context";
-import { setMeteringService } from "@croco/metering-core";
-import { createApp } from "@croco/transports-http";
-import { TestAuthProvider } from "../integrations/TestAuthProvider";
-import { createMeteringService } from "../integrations/inMemoryMetering";
-import { HealthController } from "../protocols/HealthController";
-import { UserController } from "../protocols/UserController";
-
-setMeteringService(createMeteringService());
-Container.set(AUTH_PROVIDER_TOKEN, new TestAuthProvider());
-Container.set(AuthGuard, new AuthGuard());
-Container.set(HealthController, new HealthController());
-Container.set(UserController, new UserController());
-
-export const app = createApp({
-  controllers: [HealthController, UserController],
-  securityValidation: "off",
-});
+```bash
+pnpm contract:check
+pnpm demo:smoke
 ```
 
-`src/index.ts` stays thin and marks the Lambda transport boundary:
+`contract:check` fails on invalid REST schemas or Problem contracts. `demo:smoke` then proves the
+same generated workspace still passes profile, architecture, runtime-policy, contract, SaaS flow,
+operations, and job checks.
 
-```typescript no-check
-import "reflect-metadata";
-import { createLambdaExampleApp, startLocalServer } from "./app/bootstrap";
+## 5. Separate Checked-in References
 
-const app = createLambdaExampleApp();
-export const handler = app.lambdaHandler();
+The scaffold journey is complete at this point. For deployment-specific or deeper domain examples,
+use these separate checked-in references rather than treating them as generated files:
 
-if (process.env.NODE_ENV !== "production") {
-  startLocalServer(app);
-}
-```
+- [`examples/quick-start-lambda`](https://github.com/croco-dev/framework/tree/trunk/examples/quick-start-lambda)
+  demonstrates Lambda export, auth, metering, and DI wiring. Validate it with
+  `pnpm quick-start-lambda:smoke`.
+- [`examples/saas-billing-golden-path`](https://github.com/croco-dev/framework/tree/trunk/examples/saas-billing-golden-path)
+  demonstrates checkout, retry, transactional events, audit projection, and explicit Problem
+  recovery. Validate it with `pnpm saas-billing-golden-path:smoke`.
 
-## 7. Next Steps
+The repository-level `pnpm first-success:verify` gate keeps the public scaffold commands and this
+generated SaaS route/runtime walkthrough aligned with the actual CLI contract.
+
+## 6. Next Steps
 
 Now that you have a running SaaS API, explore what Croco can do:
 

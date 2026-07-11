@@ -516,6 +516,7 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "test", args: ["test"] },
+      { label: "demo flow", args: ["demo:smoke"] },
       {
         label: "failure drill smoke",
         args: ["failure-drill:smoke"],

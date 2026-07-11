@@ -2,6 +2,7 @@ import { Problem } from "@croco/problems-core";
 import { existsSync, rmSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createProgram } from "../cli.js";
+import { createCreateCrocoAppProgram } from "../cli-program.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
 import {
   normalizeNonInteractiveOptions,
@@ -42,6 +43,23 @@ describe("noninteractive CLI option validation", () => {
     expect(help).toContain("--json");
     expect(help).toContain("Print a machine-readable JSON result");
     expect(help).not.toContain("--package-manager");
+  });
+
+  it("parses the canonical documentation command through the action-free CLI contract", () => {
+    const program = createCreateCrocoAppProgram().exitOverride();
+
+    program.parse(
+      ["my-saas-api", "--goal", "saas-api", "--scope", "@myorg", "--no-install", "--no-git"],
+      { from: "user" },
+    );
+
+    expect(program.processedArgs).toEqual(["my-saas-api"]);
+    expect(program.opts()).toMatchObject({
+      goal: "saas-api",
+      scope: "@myorg",
+      install: false,
+      git: false,
+    });
   });
 
   it("marks retained Vike preset naming as meta-vite compatibility", () => {
