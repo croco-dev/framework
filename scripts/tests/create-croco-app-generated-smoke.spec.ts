@@ -26,6 +26,16 @@ import {
   shouldSkipSmokeArtifactDirectory,
 } from "../create-croco-app-generated-smoke-report.mts";
 import {
+  assertGeneratedSmokeJourneyReport,
+  createGeneratedSmokeJourneyReport,
+  GENERATED_SMOKE_JOURNEY_DEFINITIONS,
+  isCanonicalGeneratedSmokeJourneySelection,
+  renderGeneratedSmokeJourneyReport,
+  writeCanonicalGeneratedSmokeJourneyBundle,
+  writeGeneratedSmokeJourneyBundle,
+  type GeneratedSmokeJourneySourceReport,
+} from "../create-croco-app-generated-smoke-journey-report.mts";
+import {
   assertGeneratedSmokeMatrixContract,
   createGeneratedSmokeMatrixAggregateReport,
   createGeneratedSmokeMatrixTierReport,
@@ -42,6 +52,394 @@ import {
 } from "../create-croco-app-generated-smoke-support.mts";
 
 const tempRoots: string[] = [];
+const journeySourceCaseNames = [
+  "production-app-starter",
+  "graphql-lambda-api",
+  "rest-spa-contracts",
+] as const;
+
+describe("create-croco-app generated smoke journey report", () => {
+  it("projects the seven stable user journeys from exact executed smoke steps", () => {
+    const report = createGeneratedSmokeJourneyReport(
+      createJourneySourceReport(),
+      journeySourceCaseNames,
+    );
+
+    expect(report.schemaVersion).toBe("croco.generated-app-smoke-journeys/v1");
+    expect(report.status).toBe("passed");
+    expect(report.journeys.map(({ id }) => id)).toEqual(
+      GENERATED_SMOKE_JOURNEY_DEFINITIONS.map(({ id }) => id),
+    );
+    expect(report.journeys.find(({ id }) => id === "create-app")).toMatchObject({
+      status: "passed",
+      sourceSelectors: [
+        {
+          caseName: "production-app-starter",
+          stepLabels: ["generate", "install"],
+        },
+      ],
+      commands: ["node create-croco-app production-app-starter", "pnpm install"],
+      artifacts: ["evidence/create-app.json"],
+      recoveryAction: "pnpm create-croco-app:smoke production-app-starter",
+    });
+    expect(report.journeys.find(({ id }) => id === "validate-contracts")?.sourceArtifacts).toEqual([
+      "artifacts/production-app-starter/contract-graph.snapshot.json",
+    ]);
+    expect(report.journeys.find(({ id }) => id === "validate-contracts")?.artifacts).toContain(
+      "proof/artifacts/production-app-starter/contract-graph.snapshot.json",
+    );
+    expect(report.journeys.find(({ id }) => id === "handle-expected-failures")).toMatchObject({
+      status: "passed",
+      diagnosticCodes: ["contract-route-missing-problem-response-contract"],
+    });
+  });
+
+  it("accepts v1 and rejects malformed journey report schemas", () => {
+    const report = createGeneratedSmokeJourneyReport(
+      createJourneySourceReport(),
+      journeySourceCaseNames,
+    );
+    assertGeneratedSmokeJourneyReport(report);
+    const candidate = () =>
+      structuredClone(report) as unknown as {
+        schemaVersion: string;
+        status: string;
+        journeys: Array<{
+          id: string;
+          title?: string;
+          status: string;
+          recoveryAction: string;
+          sourceSelectors: Array<{
+            caseName: string;
+            stepLabels: string[];
+          }>;
+        }>;
+      };
+
+    const unknownVersion = candidate();
+    unknownVersion.schemaVersion = "croco.generated-app-smoke-journeys/v2";
+    expect(() => assertGeneratedSmokeJourneyReport(unknownVersion)).toThrow("Unknown");
+
+    const duplicateId = candidate();
+    const duplicateJourney = duplicateId.journeys[1];
+    if (!duplicateJourney) {
+      throw new Error("missing duplicate journey fixture");
+    }
+    duplicateJourney.id = "create-app";
+    expect(() => assertGeneratedSmokeJourneyReport(duplicateId)).toThrow("duplicate journey ID");
+
+    const missingField = candidate();
+    const missingFieldJourney = missingField.journeys[0];
+    if (!missingFieldJourney) {
+      throw new Error("missing required-field journey fixture");
+    }
+    delete missingFieldJourney.title;
+    expect(() => assertGeneratedSmokeJourneyReport(missingField)).toThrow("title");
+
+    const blankRecovery = candidate();
+    const blankRecoveryJourney = blankRecovery.journeys[0];
+    if (!blankRecoveryJourney) {
+      throw new Error("missing recovery journey fixture");
+    }
+    blankRecoveryJourney.recoveryAction = "  ";
+    expect(() => assertGeneratedSmokeJourneyReport(blankRecovery)).toThrow("recoveryAction");
+
+    const unknownStatus = candidate();
+    const unknownStatusJourney = unknownStatus.journeys[0];
+    if (!unknownStatusJourney) {
+      throw new Error("missing status journey fixture");
+    }
+    unknownStatusJourney.status = "skipped";
+    expect(() => assertGeneratedSmokeJourneyReport(unknownStatus)).toThrow("unknown status");
+
+    const changedSelector = candidate();
+    const changedSelectorJourney = changedSelector.journeys[0];
+    if (!changedSelectorJourney) {
+      throw new Error("missing selector journey fixture");
+    }
+    changedSelectorJourney.sourceSelectors[0] = {
+      caseName: "rest-spa-contracts",
+      stepLabels: ["generate", "install"],
+    };
+    expect(() => assertGeneratedSmokeJourneyReport(changedSelector)).toThrow(
+      "sourceSelectors do not match the canonical journey definition",
+    );
+  });
+
+  it("does not report create-app as passed when dependency installation fails", () => {
+    const source = createJourneySourceReport();
+    const productionCase = source.cases[0];
+    if (!productionCase) {
+      throw new Error("missing production-app-starter fixture");
+    }
+    const report = createGeneratedSmokeJourneyReport(
+      {
+        ...source,
+        status: "failed",
+        cases: [
+          {
+            ...productionCase,
+            status: "failed",
+            error: "install failed",
+            artifactBundle: {
+              stdoutPath: "ci-reports/generated-apps/cases/production-app-starter/stdout.log",
+              stderrPath: "ci-reports/generated-apps/cases/production-app-starter/stderr.log",
+              files: ["ci-reports/generated-apps/cases/production-app-starter/files/package.json"],
+            },
+            steps: productionCase.steps.map((step) =>
+              step.label === "install"
+                ? { ...step, status: "failed", error: "install failed" }
+                : step,
+            ),
+          },
+          ...source.cases.slice(1),
+        ],
+      },
+      journeySourceCaseNames,
+      undefined,
+      "ci-reports/generated-apps",
+    );
+
+    expect(report.journeys.find(({ id }) => id === "create-app")).toMatchObject({
+      status: "failed",
+      failure: "install failed",
+    });
+    expect(report.journeys.find(({ id }) => id === "create-app")?.sourceArtifacts).toEqual([
+      "cases/production-app-starter/stdout.log",
+      "cases/production-app-starter/stderr.log",
+      "cases/production-app-starter/files/package.json",
+    ]);
+  });
+
+  it("fails a journey when its source case fails after the selected steps pass", () => {
+    const source = createJourneySourceReport();
+    const productionCase = source.cases[0];
+    if (!productionCase) {
+      throw new Error("missing production-app-starter fixture");
+    }
+
+    const report = createGeneratedSmokeJourneyReport(
+      {
+        ...source,
+        status: "failed",
+        failure: "production case failed",
+        cases: [
+          {
+            ...productionCase,
+            status: "failed",
+            error: "production case failed",
+          },
+          ...source.cases.slice(1),
+        ],
+      },
+      journeySourceCaseNames,
+    );
+
+    expect(report.journeys.find(({ id }) => id === "run-local-api")).toMatchObject({
+      status: "failed",
+      failure: "production case failed",
+    });
+  });
+
+  it("fails loudly when a passed source case omits an exact journey selector", () => {
+    const source = createJourneySourceReport();
+    const productionCase = source.cases[0];
+    if (!productionCase) {
+      throw new Error("missing production-app-starter fixture");
+    }
+
+    expect(() =>
+      createGeneratedSmokeJourneyReport(
+        {
+          ...source,
+          cases: [
+            {
+              ...productionCase,
+              steps: productionCase.steps.filter(({ label }) => label !== "Contract diff"),
+            },
+            ...source.cases.slice(1),
+          ],
+        },
+        journeySourceCaseNames,
+      ),
+    ).toThrow("validate-contracts selector drift");
+  });
+
+  it("keeps not-yet-reached journeys pending during progressive writes", () => {
+    const source = createJourneySourceReport();
+    const report = createGeneratedSmokeJourneyReport(
+      {
+        ...source,
+        status: "pending",
+        cases: source.cases.map((smokeCase) => ({
+          ...smokeCase,
+          status: "pending",
+          steps: [],
+        })),
+      },
+      journeySourceCaseNames,
+    );
+
+    expect(report.status).toBe("pending");
+    expect(
+      report.journeys.every(
+        ({ status, commands }) => status === "pending" && commands.length === 0,
+      ),
+    ).toBe(true);
+  });
+
+  it("propagates a terminal blocking bootstrap failure to every untouched journey", () => {
+    const source = createJourneySourceReport();
+    const bootstrapCommand = "node turbo build --filter=create-croco-app... --force";
+    const report = createGeneratedSmokeJourneyReport(
+      {
+        ...source,
+        status: "failed",
+        failure: "bootstrap failed",
+        gates: [
+          {
+            label: "create-croco-app CLI bootstrap",
+            command: bootstrapCommand,
+            tier: "spine-blocking",
+            status: "failed",
+            error: "bootstrap failed",
+          },
+        ],
+        cases: source.cases.map((smokeCase) => ({
+          ...smokeCase,
+          status: "pending",
+          steps: [],
+        })),
+      },
+      journeySourceCaseNames,
+    );
+
+    expect(report.status).toBe("failed");
+    expect(
+      report.journeys.every(
+        ({ status, commands, failure }) =>
+          status === "failed" &&
+          commands.includes(bootstrapCommand) &&
+          failure === "bootstrap failed",
+      ),
+    ).toBe(true);
+  });
+
+  it("writes a self-contained bundle whose Markdown evidence links all resolve", () => {
+    const root = createTempRoot();
+    const sourceRoot = join(root, "source");
+    const sourceArtifact = join(
+      sourceRoot,
+      "artifacts",
+      "production-app-starter",
+      "contract-graph.snapshot.json",
+    );
+    mkdirSync(dirname(sourceArtifact), { recursive: true });
+    writeFileSync(sourceArtifact, '{"version":"croco.contract-graph.v1"}\n');
+    const outputDir = join(root, "journeys");
+    const report = createGeneratedSmokeJourneyReport(
+      createJourneySourceReport(),
+      journeySourceCaseNames,
+    );
+
+    writeGeneratedSmokeJourneyBundle(outputDir, report, sourceRoot);
+
+    const markdown = readFileSync(join(outputDir, "report.md"), "utf8");
+    expect(markdown).toBe(renderGeneratedSmokeJourneyReport(report));
+    expect(readFileSync(join(outputDir, "report.json"), "utf8")).toContain(
+      '"schemaVersion": "croco.generated-app-smoke-journeys/v1"',
+    );
+    for (const journey of report.journeys) {
+      const relativePath = `evidence/${journey.id}.json`;
+      expect(markdown).toContain(`[${relativePath}](${relativePath})`);
+      expect(readFileSync(join(outputDir, relativePath), "utf8")).toContain(
+        `"id": "${journey.id}"`,
+      );
+    }
+    expect(
+      readFileSync(
+        join(
+          outputDir,
+          "proof",
+          "artifacts",
+          "production-app-starter",
+          "contract-graph.snapshot.json",
+        ),
+        "utf8",
+      ),
+    ).toContain("croco.contract-graph.v1");
+  });
+
+  it("preserves the previous bundle when staging a replacement fails", () => {
+    const outputDir = join(createTempRoot(), "journeys");
+    const sentinelPath = join(outputDir, "sentinel.txt");
+    mkdirSync(outputDir, { recursive: true });
+    writeFileSync(sentinelPath, "previous bundle\n");
+    const report = createGeneratedSmokeJourneyReport(
+      createJourneySourceReport(),
+      journeySourceCaseNames,
+    );
+
+    expect(() => writeGeneratedSmokeJourneyBundle(outputDir, report)).toThrow(
+      "requires a source root",
+    );
+    expect(readFileSync(sentinelPath, "utf8")).toBe("previous bundle\n");
+  });
+
+  it("preserves the canonical bundle for advisory, unfiltered, and named selections", () => {
+    const outputDir = join(createTempRoot(), "journeys");
+    const sentinelPath = join(outputDir, "sentinel.txt");
+    mkdirSync(outputDir, { recursive: true });
+    writeFileSync(sentinelPath, "canonical\n");
+    const rejectedSelections = [
+      {
+        selectedCaseNames: ["advisory"],
+        spineCaseNames: journeySourceCaseNames,
+        selectedTier: "ecosystem-advisory",
+        requestedCaseNames: [],
+      },
+      {
+        selectedCaseNames: [...journeySourceCaseNames, "advisory"],
+        spineCaseNames: journeySourceCaseNames,
+        requestedCaseNames: [],
+      },
+      {
+        selectedCaseNames: ["production-app-starter"],
+        spineCaseNames: journeySourceCaseNames,
+        selectedTier: "spine-blocking",
+        requestedCaseNames: ["production-app-starter"],
+      },
+      {
+        selectedCaseNames: journeySourceCaseNames,
+        spineCaseNames: journeySourceCaseNames,
+        selectedTier: "spine-blocking",
+        requestedCaseNames: journeySourceCaseNames,
+      },
+    ];
+
+    for (const selection of rejectedSelections) {
+      expect(isCanonicalGeneratedSmokeJourneySelection(selection)).toBe(false);
+      expect(
+        writeCanonicalGeneratedSmokeJourneyBundle({
+          selection,
+          outputDir,
+          createReport: () => {
+            throw new Error("partial selection must not project or write the canonical report");
+          },
+        }),
+      ).toBe(false);
+      expect(readFileSync(sentinelPath, "utf8")).toBe("canonical\n");
+    }
+    expect(
+      isCanonicalGeneratedSmokeJourneySelection({
+        selectedCaseNames: journeySourceCaseNames,
+        spineCaseNames: journeySourceCaseNames,
+        selectedTier: "spine-blocking",
+        requestedCaseNames: [],
+      }),
+    ).toBe(true);
+  });
+});
 
 describe("create-croco-app-generated-smoke dependency resolution", () => {
   afterEach(() => {
@@ -507,6 +905,74 @@ describe("create-croco-app generated smoke failure evidence", () => {
     expect(artifactPaths).not.toContain("node_modules/example/package.json");
   });
 });
+
+function createJourneySourceReport(): GeneratedSmokeJourneySourceReport {
+  const step = (
+    label: string,
+    command: string,
+    options: {
+      readonly artifacts?: readonly string[];
+      readonly diagnosticCodes?: readonly string[];
+    } = {},
+  ) => ({
+    label,
+    command,
+    artifacts: (options.artifacts ?? []).map((reportRelativePath) => ({ reportRelativePath })),
+    status: "passed" as const,
+    diagnosticCodes: options.diagnosticCodes ?? [],
+  });
+
+  return {
+    generatedAt: "2026-07-11T00:00:00.000Z",
+    status: "passed",
+    gates: [],
+    cases: [
+      {
+        name: "production-app-starter",
+        status: "passed",
+        recovery: {
+          localRerunCommand: "pnpm create-croco-app:smoke production-app-starter",
+        },
+        steps: [
+          step("generate", "node create-croco-app production-app-starter"),
+          step("install", "pnpm install"),
+          step("dev smoke", "pnpm dev:smoke"),
+          step("Contract snapshot", "pnpm contract:snapshot", {
+            artifacts: ["artifacts/production-app-starter/contract-graph.snapshot.json"],
+          }),
+          step("Contract coverage", "pnpm contract:coverage"),
+          step("Contract diff", "pnpm contract:diff"),
+          step("OpenAPI contract", "pnpm contract:openapi"),
+          step("RPC client", "pnpm contract:client"),
+          step("DI graph verify", "pnpm di:verify"),
+        ],
+      },
+      {
+        name: "graphql-lambda-api",
+        status: "passed",
+        recovery: { localRerunCommand: "pnpm create-croco-app:smoke graphql-lambda-api" },
+        steps: [
+          step(
+            "protected GraphQL route smoke",
+            "pnpm --dir apps/graphql-api exec tsx --eval <lambda-handler-smoke>",
+          ),
+        ],
+      },
+      {
+        name: "rest-spa-contracts",
+        status: "passed",
+        recovery: { localRerunCommand: "pnpm create-croco-app:smoke rest-spa-contracts" },
+        steps: [
+          step("strict Problem declaration canary", "pnpm exec croco-rpc-codegen --check", {
+            diagnosticCodes: ["contract-route-missing-problem-response-contract"],
+          }),
+          step("strict OpenAPI schema canary", "pnpm exec croco-openapi-spec"),
+          step("strict RPC schema canary", "pnpm exec croco-rpc-codegen"),
+        ],
+      },
+    ],
+  };
+}
 
 function createTempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "croco-generated-smoke-test-"));

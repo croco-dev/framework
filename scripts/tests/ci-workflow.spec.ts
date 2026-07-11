@@ -160,7 +160,7 @@ describe("CI package quality dashboard", () => {
       "- name: create-croco-app ecosystem-advisory generated app smoke",
       "run: pnpm create-croco-app:smoke -- --tier ecosystem-advisory",
       "- name: Publish generated app smoke summary",
-      "for report in spine-blocking-matrix.md ecosystem-advisory-matrix.md; do",
+      "for report in spine-blocking-matrix.md ecosystem-advisory-matrix.md spine-blocking-journeys/report.md; do",
       "- name: Upload spine-blocking generated app smoke report",
       "name: generated-app-smoke-spine-blocking",
       "- name: Upload ecosystem-advisory generated app smoke report",
@@ -185,6 +185,16 @@ describe("CI package quality dashboard", () => {
     );
     const summaryStart = workflow.indexOf("- name: Publish generated app smoke summary");
     expect(workflow.slice(advisorySmokeStart, summaryStart)).toContain("continue-on-error: true");
+
+    const spineArtifactStart = workflow.indexOf(
+      "- name: Upload spine-blocking generated app smoke report",
+    );
+    const advisoryArtifactStart = workflow.indexOf(
+      "- name: Upload ecosystem-advisory generated app smoke report",
+    );
+    const spineArtifactStep = workflow.slice(spineArtifactStart, advisoryArtifactStart);
+    expect(spineArtifactStep).toContain("ci-reports/generated-apps/spine-blocking-journeys");
+    expect(spineArtifactStep).toContain("include-hidden-files: true");
 
     const failureArtifactStart = workflow.indexOf(
       "- name: Upload generated app smoke failure artifacts",

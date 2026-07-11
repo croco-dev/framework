@@ -175,6 +175,7 @@ describe("release workflow quality gates", () => {
       "scripts/core-coverage-warning-check.mts",
       "scripts/create-croco-app-generated-smoke-support.mts",
       "scripts/create-croco-app-generated-smoke-matrix.mts",
+      "scripts/create-croco-app-generated-smoke-journey-report.mts",
       "scripts/create-croco-app-generated-smoke.mts",
       "scripts/dependency-audit-policy.mts",
       "scripts/first-success-generated-contract.mts",
@@ -299,6 +300,7 @@ describe("release workflow quality gates", () => {
     expect(workflow).toContain(
       "uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
     );
+    expect(uploadStep).toContain("include-hidden-files: true");
     expect(workflow).toContain("if-no-files-found: warn");
   });
 

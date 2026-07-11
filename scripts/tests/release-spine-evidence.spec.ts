@@ -8,9 +8,14 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
+import {
+  createGeneratedSmokeJourneyReport,
+  writeGeneratedSmokeJourneyBundle,
+  type GeneratedSmokeJourneySourceReport,
+} from "../create-croco-app-generated-smoke-journey-report.mts";
 import {
   createReleaseSpineEvidenceManifest,
   defaultCommandRunner,
@@ -74,6 +79,7 @@ describe("release-spine-evidence.mts", () => {
     ).toEqual([
       "ci-reports/generated-apps/spine-blocking-matrix.md",
       "ci-reports/generated-apps/spine-blocking-matrix.json",
+      "ci-reports/generated-apps/spine-blocking-journeys",
     ]);
     expect(findCheck(manifest, "generated-app-smoke").command).toEqual([
       "pnpm",
@@ -180,6 +186,95 @@ describe("release-spine-evidence.mts", () => {
     expect(report.status).toBe("failed");
     expect(report.checks[0]?.status).toBe("failed");
     expect(report.checks[0]?.failureReason).toContain("Required release evidence artifact");
+  });
+
+  it("preserves journey report relative links when copying release evidence", async () => {
+    const repo = createTempRepo();
+    const outputDir = join(repo, "ci-reports", "release");
+    const journeyRoot = join(repo, "ci-reports", "generated-apps", "spine-blocking-journeys");
+    const generatedAppsRoot = join(repo, "ci-reports", "generated-apps");
+    const sourceArtifactRelativePath =
+      "artifacts/production-app-starter/contract-graph.snapshot.json";
+    const sourceArtifactPath = join(generatedAppsRoot, sourceArtifactRelativePath);
+    const failureArtifactPaths = [
+      "cases/production-app-starter/stdout.log",
+      "cases/production-app-starter/stderr.log",
+      "cases/production-app-starter/files/.croco/diagnostic.json",
+    ];
+    const sourceReport = createReleaseJourneySourceReport(sourceArtifactRelativePath);
+    const productionCase = sourceReport.cases[0];
+    if (!productionCase) {
+      throw new Error("missing production-app-starter release fixture");
+    }
+    const journeyReport = createGeneratedSmokeJourneyReport(
+      {
+        ...sourceReport,
+        status: "failed",
+        failure: "production app failed after collecting evidence",
+        cases: [
+          {
+            ...productionCase,
+            status: "failed",
+            error: "production app failed after collecting evidence",
+            artifactBundle: {
+              stdoutPath: `ci-reports/generated-apps/${failureArtifactPaths[0]}`,
+              stderrPath: `ci-reports/generated-apps/${failureArtifactPaths[1]}`,
+              files: [`ci-reports/generated-apps/${failureArtifactPaths[2]}`],
+            },
+          },
+          ...sourceReport.cases.slice(1),
+        ],
+      },
+      ["production-app-starter", "graphql-lambda-api", "rest-spa-contracts"],
+      undefined,
+      "ci-reports/generated-apps",
+    );
+    const runner: CommandRunner = () => {
+      mkdirSync(dirname(sourceArtifactPath), { recursive: true });
+      writeFileSync(sourceArtifactPath, '{"status":"passed"}\n');
+      for (const failureArtifactPath of failureArtifactPaths) {
+        const absolutePath = join(generatedAppsRoot, failureArtifactPath);
+        mkdirSync(dirname(absolutePath), { recursive: true });
+        writeFileSync(absolutePath, `${failureArtifactPath}\n`);
+      }
+      writeGeneratedSmokeJourneyBundle(journeyRoot, journeyReport, generatedAppsRoot);
+      return okResult("generated app ok");
+    };
+
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir,
+      totalTimeoutMs: 1_000,
+      commands: [
+        createCommand("generated-app-smoke", {
+          artifacts: [
+            {
+              label: "Journey bundle",
+              path: "ci-reports/generated-apps/spine-blocking-journeys",
+              required: true,
+              copyRelativePath: "spine-blocking-journeys",
+            },
+          ],
+        }),
+      ],
+      runner,
+    });
+
+    const copiedJourneyRoot = join(
+      outputDir,
+      "artifacts",
+      "generated-app-smoke",
+      "spine-blocking-journeys",
+    );
+    expect(report.status).toBe("passed");
+    for (const journey of journeyReport.journeys) {
+      for (const artifact of journey.artifacts) {
+        expect(readFileSync(join(copiedJourneyRoot, "report.md"), "utf8")).toContain(
+          `(${artifact})`,
+        );
+        expect(existsSync(join(copiedJourneyRoot, artifact))).toBe(true);
+      }
+    }
   });
 
   it("fails a passing command when a required artifact was not refreshed", async () => {
@@ -437,6 +532,63 @@ describe("release-spine-evidence.mts", () => {
     );
   });
 });
+
+function createReleaseJourneySourceReport(
+  contractArtifactPath: string,
+): GeneratedSmokeJourneySourceReport {
+  const step = (
+    label: string,
+    options: { readonly artifact?: string; readonly diagnosticCodes?: readonly string[] } = {},
+  ) => ({
+    label,
+    command: `pnpm ${label.toLowerCase().replaceAll(" ", ":")}`,
+    artifacts: options.artifact ? [{ reportRelativePath: options.artifact }] : [],
+    status: "passed" as const,
+    diagnosticCodes: options.diagnosticCodes ?? [],
+  });
+
+  return {
+    generatedAt: "2026-07-11T00:00:00.000Z",
+    status: "passed",
+    gates: [],
+    cases: [
+      {
+        name: "production-app-starter",
+        status: "passed",
+        recovery: { localRerunCommand: "pnpm create-croco-app:smoke production-app-starter" },
+        steps: [
+          step("generate"),
+          step("install"),
+          step("dev smoke"),
+          step("Contract snapshot", { artifact: contractArtifactPath }),
+          step("Contract coverage"),
+          step("Contract diff"),
+          step("OpenAPI contract"),
+          step("RPC client"),
+          step("DI graph verify"),
+        ],
+      },
+      {
+        name: "graphql-lambda-api",
+        status: "passed",
+        recovery: { localRerunCommand: "pnpm create-croco-app:smoke graphql-lambda-api" },
+        steps: [step("protected GraphQL route smoke")],
+      },
+      {
+        name: "rest-spa-contracts",
+        status: "passed",
+        recovery: { localRerunCommand: "pnpm create-croco-app:smoke rest-spa-contracts" },
+        steps: [
+          step("strict Problem declaration canary", {
+            diagnosticCodes: ["contract-route-missing-problem-response-contract"],
+          }),
+          step("strict OpenAPI schema canary"),
+          step("strict RPC schema canary"),
+        ],
+      },
+    ],
+  };
+}
 
 function createTempRepo(): string {
   const repo = mkdtempSync(join(tmpdir(), "croco-release-spine-evidence-"));
