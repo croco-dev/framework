@@ -35,7 +35,9 @@ npx create-croco-app@latest my-app \
   --api-hosting standalone \
   --web-apps web \
   --frontend-deploy vite-spa \
-  --ui astryx
+  --ui astryx \
+  --no-install \
+  --no-git
 ```
 
 The generated app imports Astryx's prebuilt CSS, so it does not add a StyleX compiler plugin.
