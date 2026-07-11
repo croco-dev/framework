@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HealthCheckService } from "../libs/HealthCheckService";
 import type {
   HealthIndicator,
@@ -11,6 +11,10 @@ describe("HealthCheckService", () => {
 
   beforeEach(() => {
     service = new HealthCheckService();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("should return up status when all indicators are up", async () => {

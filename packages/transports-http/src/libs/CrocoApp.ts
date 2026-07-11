@@ -19,7 +19,7 @@ import {
   getPipes,
 } from "@croco/protocols-rest";
 import type { Http2Bindings, HttpBindings } from "@hono/node-server";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
 import { CrocoLambdaAdapter, type LambdaHandlerOptions } from "./CrocoLambdaAdapter";
 import { CrocoRouteRegistrar } from "./CrocoRouteRegistrar";
@@ -407,15 +407,13 @@ export class CrocoApp {
 
     this.hono.get("/health/live", (c) => c.json({ status: "ok" }, 200));
 
-    this.hono.get("/health/ready", async (c) => {
+    const readinessHandler = async (c: Context) => {
       const result = sanitizeReadinessResult(await this.healthCheckRegistry.checkReadiness());
       return c.json(result, result.status === "up" ? 200 : 503);
-    });
+    };
 
-    this.hono.get("/ready", async (c) => {
-      const result = sanitizeReadinessResult(await this.healthCheckRegistry.checkReadiness());
-      return c.json(result, result.status === "up" ? 200 : 503);
-    });
+    this.hono.get("/health/ready", readinessHandler);
+    this.hono.get("/ready", readinessHandler);
 
     const diagnosticsPolicy = resolveDiagnosticsEndpointPolicy(this.config.diagnostics);
     if (diagnosticsPolicy.exposure !== "off") {
