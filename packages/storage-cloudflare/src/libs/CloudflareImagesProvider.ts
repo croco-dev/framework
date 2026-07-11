@@ -10,6 +10,7 @@ import type {
 } from "@croco/storage-core";
 import { BaseStorageProvider } from "@croco/storage-core";
 import {
+  CloudflareImagesValidationProblem,
   createCloudflareImagesResponseProblem,
   normalizeCloudflareImagesError,
 } from "./CloudflareImagesDiagnosticsProvider";
@@ -17,10 +18,16 @@ import type {
   CloudflareImageDetails,
   CloudflareImagesOptions,
   CloudflareTransformOptions,
-  CloudflareUploadResponse,
 } from "./types";
 
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_CLOUDFLARE_IMAGE_ID_CODE_POINTS = 1024;
+
+type CloudflareUploadRuntimeResponse = {
+  readonly errors: string[];
+  readonly result?: { readonly id?: unknown } | null;
+  readonly success: boolean;
+};
 
 /**
  * Cloudflare Images를 이용해 파일 저장과 이미지 변환 URL 생성을 제공하는 구현체입니다.
@@ -54,8 +61,10 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
 
   async put(key: string, data: Buffer | Readable, options?: PutOptions): Promise<void> {
     this.validateKey(key);
+    this.validateUploadImageId(key);
 
     const formData = new FormData();
+    formData.append("id", key);
 
     let file: File | Blob;
     if (Buffer.isBuffer(data)) {
@@ -124,7 +133,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       });
     }
 
-    const result = (await response.json()) as CloudflareUploadResponse;
+    const result = (await response.json()) as CloudflareUploadRuntimeResponse;
 
     if (!result.success) {
       throw createCloudflareImagesResponseProblem({
@@ -134,12 +143,24 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
         detail: `Cloudflare Images upload failed: ${result.errors.join(", ")}`,
       });
     }
+
+    if (typeof result.result?.id !== "string" || result.result.id !== key) {
+      throw new CloudflareImagesValidationProblem(
+        {
+          provider: "cloudflare-images",
+          operation: "put",
+          key,
+          upstreamCode: "image-id-mismatch",
+        },
+        "Cloudflare Images upload response did not preserve the requested image id",
+      );
+    }
   }
 
   async get(key: string): Promise<Buffer> {
     this.validateKey(key);
 
-    const url = this.buildImageUrl(key, this.options.defaultVariant ?? "public");
+    const url = this.buildImageUrl(key, this.options.defaultVariant ?? "public", "get");
     const response = await this.fetchCloudflare(url, { key, operation: "get" });
 
     if (!response.ok) {
@@ -161,7 +182,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   async delete(key: string): Promise<void> {
     this.validateKey(key);
 
-    const response = await this.fetchCloudflare(`${this.apiBaseUrl}/${key}`, {
+    const response = await this.fetchCloudflare(this.buildManagementImageUrl(key, "delete"), {
       init: {
         method: "DELETE",
         headers: {
@@ -197,13 +218,13 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   getPublicUrl(key: string): string {
     this.validateKey(key);
 
-    return this.buildImageUrl(key, this.options.defaultVariant ?? "public");
+    return this.buildImageUrl(key, this.options.defaultVariant ?? "public", "public-url");
   }
 
   async getSignedUrl(key: string, options: SignedUrlOptions): Promise<string> {
     this.validateKey(key);
 
-    const url = this.buildImageUrl(key, this.options.defaultVariant ?? "public");
+    const url = this.buildImageUrl(key, this.options.defaultVariant ?? "public", "signed-url");
 
     const expiresAt = Math.floor(Date.now() / 1000) + options.expiresIn;
 
@@ -217,7 +238,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   ): Promise<{ size: number; contentType?: string; lastModified: Date; etag?: string }> {
     this.validateKey(key);
 
-    const response = await this.fetchCloudflare(`${this.apiBaseUrl}/${key}`, {
+    const response = await this.fetchCloudflare(this.buildManagementImageUrl(key, "metadata"), {
       init: {
         headers: {
           Authorization: `Bearer ${this.options.apiToken}`,
@@ -277,6 +298,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
 
   async getUploadIntent(key: string, options?: { ttlInSeconds?: number }): Promise<UploadIntent> {
     this.validateKey(key);
+    this.validateImageIdUnicode(key, "upload-intent");
 
     const ttl = options?.ttlInSeconds ?? this.ttl;
     if (!Number.isFinite(ttl) || !Number.isInteger(ttl) || ttl <= 0) {
@@ -335,7 +357,11 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     }
 
     const uploadUrl = result.result.uploadURL;
-    const publicUrl = this.buildImageUrl(result.result.id, this.options.defaultVariant ?? "public");
+    const publicUrl = this.buildImageUrl(
+      result.result.id,
+      this.options.defaultVariant ?? "public",
+      "upload-intent",
+    );
     const expiresAt = new Date(Date.now() + ttl * 1000);
 
     return {
@@ -345,8 +371,13 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     };
   }
 
-  private buildImageUrl(key: string, variant: string): string {
-    return `${this.imageBaseUrl}/${this.options.accountHash}/${key}/${variant}`;
+  private buildImageUrl(key: string, variant: string, operation: string): string {
+    return `${this.imageBaseUrl}/${this.options.accountHash}/${this.encodeDeliveryImageId(key, operation)}/${variant}`;
+  }
+
+  private buildManagementImageUrl(key: string, operation: string): string {
+    this.validateImageIdUnicode(key, operation);
+    return `${this.apiBaseUrl}/${encodeURIComponent(key)}`;
   }
 
   private buildTransformUrlDefault(key: string, options: TransformOptions): string {
@@ -354,7 +385,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     const params = this.buildTransformParams(transformOptions);
 
     if (params.length === 0) {
-      return this.buildImageUrl(key, this.options.defaultVariant ?? "public");
+      return this.buildImageUrl(key, this.options.defaultVariant ?? "public", "transform-url");
     }
 
     return this.buildTransformUrl(key, params);
@@ -365,14 +396,72 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     const params = this.buildTransformParams(transformOptions);
 
     if (params.length === 0) {
-      return this.buildImageUrl(key, this.options.defaultVariant ?? "public");
+      return this.buildImageUrl(key, this.options.defaultVariant ?? "public", "transform-url");
     }
 
     return this.buildTransformUrl(key, params);
   }
 
   private buildTransformUrl(key: string, params: string): string {
-    return `${this.transformBaseUrl}/cdn-cgi/image/${params}/${this.options.accountHash}/${key}/${this.options.defaultVariant ?? "public"}`;
+    return `${this.transformBaseUrl}/cdn-cgi/image/${params}/${this.options.accountHash}/${this.encodeDeliveryImageId(key, "transform-url")}/${this.options.defaultVariant ?? "public"}`;
+  }
+
+  private encodeDeliveryImageId(key: string, operation: string): string {
+    this.validateImageIdUnicode(key, operation);
+    return key
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+  }
+
+  private validateUploadImageId(key: string): void {
+    this.validateImageIdUnicode(key, "put");
+
+    if (Array.from(key).length <= MAX_CLOUDFLARE_IMAGE_ID_CODE_POINTS) {
+      return;
+    }
+
+    throw new CloudflareImagesValidationProblem(
+      {
+        provider: "cloudflare-images",
+        operation: "put",
+        key,
+        upstreamCode: "image-id-too-long",
+      },
+      `Cloudflare Images image id must not exceed ${MAX_CLOUDFLARE_IMAGE_ID_CODE_POINTS} Unicode code points`,
+    );
+  }
+
+  private validateImageIdUnicode(key: string, operation: string): void {
+    for (let index = 0; index < key.length; index += 1) {
+      const codeUnit = key.charCodeAt(index);
+
+      if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+        const nextCodeUnit = key.charCodeAt(index + 1);
+        if (nextCodeUnit >= 0xdc00 && nextCodeUnit <= 0xdfff) {
+          index += 1;
+          continue;
+        }
+
+        this.throwInvalidImageIdUnicode(key, operation);
+      }
+
+      if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) {
+        this.throwInvalidImageIdUnicode(key, operation);
+      }
+    }
+  }
+
+  private throwInvalidImageIdUnicode(key: string, operation: string): never {
+    throw new CloudflareImagesValidationProblem(
+      {
+        provider: "cloudflare-images",
+        operation,
+        key,
+        upstreamCode: "image-id-invalid-unicode",
+      },
+      "Cloudflare Images image id must contain well-formed Unicode",
+    );
   }
 
   private buildTransformParams(options: CloudflareTransformOptions): string {

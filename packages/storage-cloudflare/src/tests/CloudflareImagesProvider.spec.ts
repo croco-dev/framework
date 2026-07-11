@@ -2,6 +2,7 @@ import { Container } from "@croco/framework-context";
 import { FileNotFoundProblem, UploadFailedProblem } from "@croco/storage-core";
 import { createStorageProviderConformanceSuite } from "@croco/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CloudflareImagesValidationProblem } from "../libs/CloudflareImagesDiagnosticsProvider";
 import { CloudflareImagesProvider } from "../libs/CloudflareImagesProvider";
 
 type StoredCloudflareImage = {
@@ -98,7 +99,7 @@ describe("CloudflareImagesProvider", () => {
         json: async () => ({
           success: true,
           result: {
-            id: "test-image-id",
+            id: "test.jpg",
             filename: "test.jpg",
             uploaded: new Date().toISOString(),
           },
@@ -121,6 +122,10 @@ describe("CloudflareImagesProvider", () => {
           },
         }),
       );
+
+      const request = mockFetch.mock.calls[0]?.[1] as RequestInit;
+      expect(request.body).toBeInstanceOf(FormData);
+      expect((request.body as FormData).get("id")).toBe("test.jpg");
     });
 
     it("should upload file successfully with Readable stream", async () => {
@@ -132,7 +137,7 @@ describe("CloudflareImagesProvider", () => {
         json: async () => ({
           success: true,
           result: {
-            id: "test-image-id",
+            id: "test.jpg",
             filename: "test.jpg",
             uploaded: new Date().toISOString(),
           },
@@ -146,6 +151,123 @@ describe("CloudflareImagesProvider", () => {
       await provider.put("test.jpg", mockStream);
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
+      const request = mockFetch.mock.calls[0]?.[1] as RequestInit;
+      expect(request.body).toBeInstanceOf(FormData);
+      expect((request.body as FormData).get("id")).toBe("test.jpg");
+    });
+
+    it.each([
+      ["ASCII", "a".repeat(1024)],
+      ["astral Unicode", "🦊".repeat(1024)],
+    ])("should accept a 1,024-code-point %s image id", async (_label, key) => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: { id: key },
+          errors: [],
+          messages: [],
+        }),
+      });
+
+      await provider.put(key, Buffer.from("test-image-data"));
+
+      const request = mockFetch.mock.calls[0]?.[1] as RequestInit;
+      expect((request.body as FormData).get("id")).toBe(key);
+    });
+
+    it.each([
+      ["ASCII", "a".repeat(1025)],
+      ["astral Unicode", "🦊".repeat(1025)],
+    ])("should reject a 1,025-code-point %s image id before upload", async (_label, key) => {
+      await expect(provider.put(key, Buffer.from("test-image-data"))).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+        extensions: {
+          operation: "put",
+          upstreamCode: "image-id-too-long",
+        },
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["lone high surrogate", String.fromCharCode(0xd800)],
+      ["lone low surrogate", String.fromCharCode(0xdc00)],
+    ])("should reject a %s image id before upload", async (_label, key) => {
+      await expect(provider.put(key, Buffer.from("test-image-data"))).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+        extensions: {
+          operation: "put",
+          upstreamCode: "image-id-invalid-unicode",
+        },
+      });
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("should reject an unsupported image id before consuming a stream", async () => {
+      const { Readable } = await import("node:stream");
+      let consumed = false;
+      const stream = Readable.from(
+        (async function* () {
+          consumed = true;
+          yield Buffer.from("test-image-data");
+        })(),
+      );
+
+      await expect(provider.put("a".repeat(1025), stream)).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+        extensions: {
+          upstreamCode: "image-id-too-long",
+        },
+      });
+      expect(consumed).toBe(false);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it("should reject ill-formed Unicode before consuming a stream", async () => {
+      const { Readable } = await import("node:stream");
+      let consumed = false;
+      const stream = Readable.from(
+        (async function* () {
+          consumed = true;
+          yield Buffer.from("test-image-data");
+        })(),
+      );
+
+      await expect(provider.put(String.fromCharCode(0xd800), stream)).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+        extensions: {
+          upstreamCode: "image-id-invalid-unicode",
+        },
+      });
+      expect(consumed).toBe(false);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["missing", {}],
+      ["null", null],
+      ["non-string", { id: 42 }],
+      ["mismatched", { id: "generated-image-id" }],
+    ])("should reject a %s returned image id", async (_label, returnedResult) => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: returnedResult,
+          errors: [],
+          messages: [],
+        }),
+      });
+
+      await expect(provider.put("test.jpg", Buffer.from("test-image-data"))).rejects.toMatchObject({
+        code: "storage-cloudflare/validation-failed",
+        extensions: {
+          key: "test.jpg",
+          operation: "put",
+          upstreamCode: "image-id-mismatch",
+        },
+      });
     });
 
     it("should throw UploadFailedProblem when stream exceeds maxUploadBytes", async () => {
@@ -315,6 +437,20 @@ describe("CloudflareImagesProvider", () => {
         code: "storage-cloudflare/validation-failed",
       });
     });
+
+    it("should encode the complete image id as one management path parameter", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, errors: [] }),
+      });
+
+      await provider.delete("folder/50% café?#.jpg");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v1/folder%2F50%25%20caf%C3%A9%3F%23.jpg",
+        expect.objectContaining({ method: "DELETE" }),
+      );
+    });
   });
 
   describe("exists", () => {
@@ -381,6 +517,23 @@ describe("CloudflareImagesProvider", () => {
 
       expect(url).toBe("https://imagedelivery.net/test-account-hash/test-image-id/thumbnail");
     });
+
+    it("should preserve subpaths while encoding each delivery path segment", () => {
+      const url = provider.getPublicUrl("folder/50% café?#.jpg");
+
+      expect(url).toBe(
+        "https://imagedelivery.net/test-account-hash/folder/50%25%20caf%C3%A9%3F%23.jpg/public",
+      );
+    });
+
+    it.each([
+      ["public", (key: string) => provider.getPublicUrl(key)],
+      ["transform", (key: string) => provider.getTransformUrl(key, { width: 800 })],
+    ])("should reject ill-formed Unicode before %s URL generation", (_label, buildUrl) => {
+      expect(() => buildUrl(String.fromCharCode(0xd800))).toThrow(
+        CloudflareImagesValidationProblem,
+      );
+    });
   });
 
   describe("getSignedUrl", () => {
@@ -424,6 +577,16 @@ describe("CloudflareImagesProvider", () => {
       const url = await providerWithCustomDomain.getSignedUrl("test-image-id", { expiresIn: 3600 });
 
       expect(url).toContain("cdn.example.com");
+    });
+
+    it("should encode delivery path segments without changing the logical signature key", async () => {
+      const url = await provider.getSignedUrl("folder/50% café?#.jpg", { expiresIn: 3600 });
+
+      expect(url).toContain(
+        "https://imagedelivery.net/test-account-hash/folder/50%25%20caf%C3%A9%3F%23.jpg/public",
+      );
+      const signedData = mockCryptoSign.mock.calls[0]?.[2] as Uint8Array;
+      expect(new TextDecoder().decode(signedData)).toContain("folder/50% café?#.jpg:");
     });
 
     it("should throw validation provider Problem when signingKey is missing", async () => {
@@ -535,6 +698,29 @@ describe("CloudflareImagesProvider", () => {
         code: "cloudflare/images-null-result",
       });
     });
+
+    it("should encode the complete image id for metadata lookup", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          result: {
+            id: "folder/50% café?#.jpg",
+            filename: "image.jpg",
+            uploaded: "2026-01-01T00:00:00.000Z",
+            variants: [],
+          },
+          errors: [],
+        }),
+      });
+
+      await provider.getMetadata("folder/50% café?#.jpg");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://api.cloudflare.com/client/v4/accounts/test-account-id/images/v1/folder%2F50%25%20caf%C3%A9%3F%23.jpg",
+        expect.any(Object),
+      );
+    });
   });
 
   describe("getTransformUrl", () => {
@@ -643,6 +829,42 @@ describe("CloudflareImagesProvider", () => {
       expect(customUrl).toBe(
         "https://cdn.example.com/cdn-cgi/image/width=800,quality=85/test-account-hash/test-image-id/public",
       );
+    });
+
+    it("should preserve subpaths while encoding transformed delivery URLs", () => {
+      const url = provider.getTransformUrl("folder/50% café?#.jpg", { width: 800 });
+
+      expect(url).toBe(
+        "https://imagedelivery.net/cdn-cgi/image/width=800/test-account-hash/folder/50%25%20caf%C3%A9%3F%23.jpg/public",
+      );
+    });
+  });
+
+  describe("caller key lifecycle", () => {
+    it("should use the multipart image id for buffer round trips", async () => {
+      useInMemoryCloudflareImagesBackend(mockFetch, mockOptions.accountHash);
+      const key = "avatars/user 100%.jpg";
+      const data = Buffer.from("buffer-image-data");
+
+      await provider.put(key, data, { contentType: "image/jpeg" });
+
+      await expect(provider.get(key)).resolves.toEqual(data);
+      await expect(provider.getMetadata(key)).resolves.toMatchObject({ size: data.length });
+      await provider.delete(key);
+      await expect(provider.exists(key)).resolves.toBe(false);
+    });
+
+    it("should use the multipart image id for stream round trips", async () => {
+      const { Readable } = await import("node:stream");
+      useInMemoryCloudflareImagesBackend(mockFetch, mockOptions.accountHash);
+      const key = "streams/🦊 image.jpg";
+      const data = Buffer.from("stream-image-data");
+
+      await provider.put(key, Readable.from(data), { contentType: "image/jpeg" });
+
+      await expect(provider.get(key)).resolves.toEqual(data);
+      await provider.delete(key);
+      await expect(provider.exists(key)).resolves.toBe(false);
     });
   });
 
@@ -866,7 +1088,12 @@ function useInMemoryCloudflareImagesBackend(
         return jsonResponse({ success: false, errors: ["missing file"] }, 400);
       }
 
-      images.set(file.name, {
+      const imageId = body.get("id");
+      if (typeof imageId !== "string" || imageId.length === 0) {
+        return jsonResponse({ success: false, errors: ["missing image id"] }, 400);
+      }
+
+      images.set(imageId, {
         contentType: file.type || undefined,
         data: Buffer.from(await file.arrayBuffer()),
         uploaded: "2026-01-01T00:00:00.000Z",
@@ -876,7 +1103,7 @@ function useInMemoryCloudflareImagesBackend(
         success: true,
         result: {
           filename: file.name,
-          id: file.name,
+          id: imageId,
           uploaded: "2026-01-01T00:00:00.000Z",
         },
         errors: [],
