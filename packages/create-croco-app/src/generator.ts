@@ -19,7 +19,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
-import { validateResolvedGoalOptions, writeGoalManifest } from "./goals.js";
+import { writeGoalManifest } from "./goals.js";
 import { mergeInto } from "./helpers/fs.js";
 import { rewriteExternalCrocoWorkspaceRanges } from "./helpers/manifest-normalizer.js";
 import {
@@ -34,10 +34,12 @@ import {
   installSharedUi,
   installTrpcNextjs,
   installTrpcStandalone,
+  installUiProfile,
   installWebGraphql,
   installWebTrpc,
 } from "./installers/index.js";
 import { DirectoryNotEmptyProblem } from "./libs/problems/DirectoryNotEmptyProblem.js";
+import { validateResolvedOptions } from "./options.js";
 import {
   DEFAULT_SAAS_PROVIDER_PROFILE,
   assertSaasProviderTenantModelCompatibility,
@@ -54,7 +56,7 @@ import type { GeneratorOptions } from "./types.js";
 import type { SaasProviderProfileManifest } from "./saas-provider-profiles.js";
 
 export async function generate(targetDir: string, options: GeneratorOptions): Promise<void> {
-  validateResolvedGoalOptions(options);
+  validateResolvedOptions(options);
 
   const vars = { projectName: options.projectName, scope: options.scope };
   const isLegacyVikeFullstackPreset = options.preset === "ddd-vike-fullstack";
@@ -128,7 +130,9 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
     hasWebApps &&
     (options.preset === "ddd-fullstack" || options.apiHosting === "nextjs")
   ) {
-    installSharedUi(resolvedTarget, vars);
+    if (options.ui === undefined) {
+      installSharedUi(resolvedTarget, vars);
+    }
   }
 
   // Step 5: web addon (standalone hosting + web apps)
@@ -176,6 +180,11 @@ export async function generate(targetDir: string, options: GeneratorOptions): Pr
         ...vars,
         preset: options.preset,
         frontendDeploy: options.frontendDeploy,
+      });
+      installUiProfile(resolvedTarget, webAppName, {
+        ...vars,
+        frontendDeploy: options.frontendDeploy,
+        ...(options.ui === undefined ? {} : { ui: options.ui }),
       });
     }
   }

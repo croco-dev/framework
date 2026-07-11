@@ -38,6 +38,8 @@ describe("noninteractive CLI option validation", () => {
     expect(help).toContain("saas-node-postgres|saas-cloudflare|saas-lambda");
     expect(help).toContain("--tenant-model");
     expect(help).toContain("single|org|workspace|shared-schema|rls-backed");
+    expect(help).toContain("--ui <profile>");
+    expect(help).toContain("none|astryx");
     expect(help).toContain("--no-install");
     expect(help).toContain("Skip pnpm dependency installation");
     expect(help).toContain("--json");
@@ -171,6 +173,71 @@ describe("noninteractive CLI option validation", () => {
     expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
       'Invalid --api value "rest". Expected graphql or trpc.',
     );
+  });
+
+  it("normalizes an explicit Astryx profile for Vite SPA generation", () => {
+    const options = normalizeNonInteractiveOptions(
+      parseCliOptions("my-astryx-spa", {
+        preset: "ddd-fullstack",
+        scope: "@test",
+        api: "graphql",
+        apiHosting: "standalone",
+        webApps: "web",
+        frontendDeploy: "vite-spa",
+        ui: "astryx",
+        install: false,
+        git: false,
+      }),
+    );
+
+    expect(options.ui).toBe("astryx");
+    expect(options.frontendDeploy).toBe("vite-spa");
+  });
+
+  it("rejects UI profiles outside the Vite SPA presentation runtime", () => {
+    expect(() =>
+      normalizeNonInteractiveOptions(
+        parseCliOptions("my-next-app", {
+          preset: "ddd-fullstack",
+          scope: "@test",
+          api: "graphql",
+          apiHosting: "nextjs",
+          webApps: "web",
+          frontendDeploy: "vercel",
+          ui: "astryx",
+          install: false,
+          git: false,
+        }),
+      ),
+    ).toThrow("--ui is currently only supported with --frontend-deploy vite-spa");
+  });
+
+  it.each(["saas", "ai-saas", "production-app", "admin-console"] as const)(
+    "rejects --ui for the %s preset before preset-specific normalization",
+    (preset) => {
+      expect(() =>
+        normalizeNonInteractiveOptions(
+          parseCliOptions("my-app", {
+            preset,
+            scope: "@test",
+            ui: "astryx",
+            install: false,
+            git: false,
+          }),
+        ),
+      ).toThrow("--ui is currently only supported with --preset ddd-fullstack");
+    },
+  );
+
+  it("rejects goal-first requests mixed with a UI profile", () => {
+    expect(() =>
+      validateCliOptions(
+        parseCliOptions(undefined, {
+          goal: "worker",
+          ui: "none",
+        }),
+      ),
+    ).toThrow("--ui cannot be combined with --goal worker");
   });
 
   it("normalizes SaaS tenant model defaults and explicit choices", () => {

@@ -75,12 +75,18 @@ in the relevant package README, package tests, generated-app smoke, and this pag
 profile's target metadata, output entries, artifacts, contract format, generated smoke case, and
 the runtime claims currently listed in `docs/package-catalog.json`.
 
-| Profile             | Runtime              | Generated smoke case          |
-| ------------------- | -------------------- | ----------------------------- |
-| `node-server`       | `node`               | `production-app-starter`      |
-| `lambda-function`   | `lambda`             | `graphql-lambda-api`          |
-| `cloudflare-worker` | `cloudflare-workers` | `meta-vite-fullstack-workers` |
-| `browser-vite-spa`  | `browser`            | `graphql-vite-spa-docker`     |
+| Profile                   | Runtime              | Generated smoke case          |
+| ------------------------- | -------------------- | ----------------------------- |
+| `node-server`             | `node`               | `production-app-starter`      |
+| `lambda-function`         | `lambda`             | `graphql-lambda-api`          |
+| `cloudflare-worker`       | `cloudflare-workers` | `meta-vite-fullstack-workers` |
+| `browser-vite-spa`        | `browser`            | `graphql-vite-spa-docker`     |
+| `browser-vite-spa-astryx` | `browser`            | `graphql-vite-spa-astryx`     |
+
+`browser-vite-spa-astryx` is a beta opt-in profile generated with `--ui astryx`. It uses Astryx's
+prebuilt CSS exports and records `requiresStylexCompile: false`; no Vite StyleX plugin is required.
+Use `--ui none` for the explicit provider-neutral profile. The Astryx profile does not apply to
+meta-vite hydration in this release.
 
 Verification commands:
 

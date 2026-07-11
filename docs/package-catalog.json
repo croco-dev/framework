@@ -230,7 +230,8 @@
         "frontend-react",
         "frontend-vite",
         "meta-vite",
-        "presentation-preset"
+        "presentation-preset",
+        "ui-astryx"
       ]
     },
     "Tooling": {
@@ -342,6 +343,7 @@
         "protocols-graphql",
         "protocols-trpc",
         "rpc-codegen",
+        "ui-astryx",
         "search-drizzle",
         "search-meilisearch",
         "storage-cloudinary",
@@ -575,6 +577,20 @@
           "optional Cloudflare peer diagnostics",
           "SPA browser build smoke",
           "meta-vite generated build smoke"
+        ]
+      },
+      "ui-astryx": {
+        "domain": "Astryx UI",
+        "adapter": "Croco-aware Astryx React presentation adapter",
+        "runtimes": ["browser", "node"],
+        "requiredEnv": ["none"],
+        "features": [
+          "Astryx neutral theme provider",
+          "application shell",
+          "Problem recovery display",
+          "auth and session states",
+          "prebuilt StyleX CSS consumer path",
+          "generated Vite SPA smoke"
         ]
       },
       "integrations-posthog": {

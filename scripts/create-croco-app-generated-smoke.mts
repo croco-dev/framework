@@ -14,7 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, extname, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   readGeneratedTemplateSecretAllowlistsFromMetadata,
@@ -117,6 +117,10 @@ type SmokeValidation = {
     readonly path: string;
     readonly matches: Record<string, unknown>;
     readonly arrayMinLengths?: Readonly<Record<string, number>>;
+  };
+  readonly presentationProfile?: {
+    readonly appPath: string;
+    readonly runtimeProfileName: string;
   };
   readonly artifacts?: readonly string[];
   readonly env?: Readonly<Record<string, string>>;
@@ -735,6 +739,8 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
       "docker",
       "--frontend-deploy",
       "vite-spa",
+      "--ui",
+      "none",
       "--no-install",
       "--no-git",
     ],
@@ -764,6 +770,61 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         paths: ["dist/index.html", "src/vite-env.d.ts"],
       },
       { label: "vite SPA Dockerfile", paths: ["web/Dockerfile.vite-spa"] },
+    ],
+  },
+  {
+    name: "graphql-vite-spa-astryx",
+    args: [
+      "--preset",
+      "ddd-fullstack",
+      "--scope",
+      "@smoke",
+      "--api",
+      "graphql",
+      "--api-hosting",
+      "standalone",
+      "--web-apps",
+      "web",
+      "--frontend-deploy",
+      "vite-spa",
+      "--ui",
+      "astryx",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "browser",
+    matrixTargets: ["base-ddd"],
+    validations: [
+      {
+        label: GRAPHQL_CONTRACT_CHECK_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:check"],
+      },
+      {
+        label: GRAPHQL_CONTRACT_SNAPSHOT_LABEL,
+        packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
+        args: ["contract:snapshot"],
+        paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
+      },
+      {
+        label: "Astryx presentation profile metadata",
+        presentationProfile: {
+          appPath: "apps/web/croco.presentation-profile.json",
+          runtimeProfileName: "browser-vite-spa-astryx",
+        },
+      },
+      { label: "Astryx Vite SPA typecheck", packagePath: ["apps", "web"], args: ["typecheck"] },
+      {
+        label: "Astryx Vite SPA browser build",
+        packagePath: ["apps", "web"],
+        args: ["build"],
+        paths: ["dist/index.html"],
+      },
+      {
+        label: "Astryx Croco-aware render smoke",
+        packagePath: ["apps", "web"],
+        args: ["presentation:smoke"],
+      },
     ],
   },
   {
@@ -2350,6 +2411,15 @@ function runValidation(
       );
     }
 
+    if (validation.presentationProfile) {
+      assertGeneratedPresentationProfileMatchesCatalog(
+        projectDir,
+        validation.presentationProfile.appPath,
+        validation.presentationProfile.runtimeProfileName,
+        smokeCase.name,
+      );
+    }
+
     if (validation.artifacts) {
       step.artifacts = copyGeneratedSmokeArtifacts({
         generatedSmokeReportDir,
@@ -2359,7 +2429,13 @@ function runValidation(
       });
     }
 
-    if (!validation.args && !validation.paths && !validation.json && !validation.artifacts) {
+    if (
+      !validation.args &&
+      !validation.paths &&
+      !validation.json &&
+      !validation.presentationProfile &&
+      !validation.artifacts
+    ) {
       throw new Error(`${smokeCase.name} ${validation.label} has no validation action`);
     }
 
@@ -2602,6 +2678,7 @@ function assertSmokeCoverage(cases: readonly SmokeCase[]): void {
     SUPPORTED_CREATE_CROCO_APP_CHOICES.frontendDeploys,
     coverage.frontendDeploys,
   );
+  assertCovers("ui", SUPPORTED_CREATE_CROCO_APP_CHOICES.uiProfiles, coverage.uiProfiles);
   assertCovers("db", SUPPORTED_CREATE_CROCO_APP_CHOICES.databases, coverage.databases);
   assertCovers(
     "saas-profile",
@@ -2629,7 +2706,7 @@ function printSmokeCoverageSummary(cases: readonly SmokeCase[]): void {
     `create-croco-app-generated-smoke: matrix cases ${cases.map(({ name }) => name).join(", ")}`,
   );
   console.log(
-    `create-croco-app-generated-smoke: matrix covers presets=${coverage.presets.join(", ")}; apis=${coverage.apis.join(", ")}; api-hosting=${coverage.apiHosting.join(", ")}; backend-deploy=${coverage.backendDeploys.join(", ")}; frontend-deploy=${coverage.frontendDeploys.join(", ")}; db=${coverage.databases.join(", ")}; saas-profile=${coverage.saasProviderProfiles.join(", ")}; tenant-model=${coverage.tenantModels.join(", ")}`,
+    `create-croco-app-generated-smoke: matrix covers presets=${coverage.presets.join(", ")}; apis=${coverage.apis.join(", ")}; api-hosting=${coverage.apiHosting.join(", ")}; backend-deploy=${coverage.backendDeploys.join(", ")}; frontend-deploy=${coverage.frontendDeploys.join(", ")}; ui=${coverage.uiProfiles.join(", ")}; db=${coverage.databases.join(", ")}; saas-profile=${coverage.saasProviderProfiles.join(", ")}; tenant-model=${coverage.tenantModels.join(", ")}`,
   );
   console.log(
     `create-croco-app-generated-smoke: runtime capability manifests ${coverage.runtimeCapabilityManifests.join(", ")}`,
@@ -2648,6 +2725,7 @@ function readSmokeCoverage(cases: readonly SmokeCase[]): {
   readonly apiHosting: readonly string[];
   readonly backendDeploys: readonly string[];
   readonly frontendDeploys: readonly string[];
+  readonly uiProfiles: readonly string[];
   readonly databases: readonly string[];
   readonly saasProviderProfiles: readonly string[];
   readonly tenantModels: readonly string[];
@@ -2671,6 +2749,7 @@ function readSmokeCoverage(cases: readonly SmokeCase[]): {
       "--frontend-deploy",
       SUPPORTED_CREATE_CROCO_APP_CHOICES.frontendDeploys,
     ),
+    uiProfiles: readCoveredValues(cases, "--ui", SUPPORTED_CREATE_CROCO_APP_CHOICES.uiProfiles),
     databases: readCoveredValues(cases, "--db", SUPPORTED_CREATE_CROCO_APP_CHOICES.databases, {
       splitCommaValues: true,
     }),
@@ -3230,6 +3309,80 @@ function assertJsonMatches(
       );
     }
   }
+}
+
+export function assertGeneratedPresentationProfileMatchesCatalog(
+  projectDir: string,
+  appProfilePath: string,
+  runtimeProfileName: string,
+  smokeCaseName: string,
+  catalogPath = join(rootDir, "packages", "presentation-preset", "runtime-profiles.json"),
+): void {
+  const catalog = readJsonObject(catalogPath, "presentation runtime profile catalog");
+  if (!Array.isArray(catalog.profiles)) {
+    throw new Error(`Presentation runtime profile catalog ${catalogPath} has no profiles array`);
+  }
+
+  const runtimeProfile = catalog.profiles.find(
+    (profile): profile is Record<string, unknown> =>
+      isRecord(profile) && profile.name === runtimeProfileName,
+  );
+  if (!runtimeProfile) {
+    throw new Error(
+      `Presentation runtime profile catalog ${catalogPath} does not define ${runtimeProfileName}`,
+    );
+  }
+  if (runtimeProfile.generatedAppSmokeCase !== smokeCaseName) {
+    throw new Error(
+      `Presentation runtime profile ${runtimeProfileName} references ${String(runtimeProfile.generatedAppSmokeCase)} instead of ${smokeCaseName}`,
+    );
+  }
+  if (!isRecord(runtimeProfile.ui)) {
+    throw new Error(`Presentation runtime profile ${runtimeProfileName} has no UI metadata`);
+  }
+  if (runtimeProfile.ui.generatedAppSmokeCase !== smokeCaseName) {
+    throw new Error(
+      `Presentation runtime profile ${runtimeProfileName} UI metadata references ${String(runtimeProfile.ui.generatedAppSmokeCase)} instead of ${smokeCaseName}`,
+    );
+  }
+
+  const generatedAppProfilePath = join(projectDir, appProfilePath);
+  const generatedAppProfile = readJsonObject(
+    generatedAppProfilePath,
+    `${smokeCaseName} generated app presentation profile`,
+  );
+  const webApp = basename(dirname(generatedAppProfilePath));
+  const expectedProfile = {
+    webApp,
+    runtimeProfile: runtimeProfileName,
+    ui: runtimeProfile.ui,
+  };
+  if (JSON.stringify(generatedAppProfile) !== JSON.stringify(expectedProfile)) {
+    throw new Error(
+      `${smokeCaseName} generated presentation profile does not match ${runtimeProfileName} in ${catalogPath}`,
+    );
+  }
+
+  const manifestPath = join(projectDir, "croco-presentation-profile.manifest.json");
+  const manifest = readJsonObject(manifestPath, `${smokeCaseName} presentation profile manifest`);
+  if (
+    manifest.schemaVersion !== "croco.generated-presentation-profile/v1" ||
+    JSON.stringify(manifest.profiles) !== JSON.stringify([expectedProfile])
+  ) {
+    throw new Error(
+      `${smokeCaseName} presentation profile manifest does not match the canonical generated profile`,
+    );
+  }
+}
+
+function readJsonObject(path: string, label: string): Record<string, unknown> {
+  assertExists(path, `${label} did not create ${path}`);
+  const value = JSON.parse(readFileSync(path, "utf8")) as unknown;
+  if (!isRecord(value)) {
+    throw new Error(`${label} JSON ${path} is not an object`);
+  }
+
+  return value;
 }
 
 function run(

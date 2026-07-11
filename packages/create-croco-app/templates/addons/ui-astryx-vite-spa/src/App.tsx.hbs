@@ -1,0 +1,17 @@
+import { AstryxAppShell, AstryxAuthState, AstryxProvider } from '@croco/ui-astryx';
+
+const projectName = '{{projectName}}';
+
+export default function App() {
+  return (
+    <AstryxProvider>
+      <AstryxAppShell appName={projectName}>
+        <main>
+          <h1>{projectName}</h1>
+          <p>A Croco Vite application using the beta Astryx presentation profile.</p>
+          <AstryxAuthState state="signed-out" detail="Sign in to continue." />
+        </main>
+      </AstryxAppShell>
+    </AstryxProvider>
+  );
+}

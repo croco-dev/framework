@@ -224,6 +224,71 @@ describe("Generated runtime profile catalog", () => {
     ).toBe(true);
   });
 
+  it("accepts optional Astryx UI profile evidence without requiring StyleX compilation", () => {
+    const [profile] = profileCatalog.profiles;
+
+    const report = validator.validateGeneratedRuntimeProfile({
+      ...profile,
+      ui: {
+        name: "astryx",
+        styleEngine: "stylex",
+        requiresStylexCompile: false,
+        maturity: "beta",
+        generatedAppSmokeCase: profile.generatedAppSmokeCase,
+      },
+    });
+
+    expect(report.passed).toBe(true);
+  });
+
+  it("preserves generated runtime profiles that omit UI metadata", () => {
+    const [profile] = profileCatalog.profiles;
+    const report = validator.validateGeneratedRuntimeProfile(profile);
+
+    expect(profile.ui).toBeUndefined();
+    expect(report.passed).toBe(true);
+  });
+
+  it("fails when UI metadata does not match its profile and smoke evidence", () => {
+    const [profile] = profileCatalog.profiles;
+
+    const report = validator.validateGeneratedRuntimeProfile({
+      ...profile,
+      ui: {
+        name: "astryx",
+        styleEngine: "none",
+        requiresStylexCompile: true,
+        maturity: "stable",
+        generatedAppSmokeCase: "different-smoke-case",
+      },
+    } as unknown as GeneratedRuntimeProfile);
+
+    expect(report.passed).toBe(false);
+    expect(report.results.map((result) => result.message)).toEqual(
+      expect.arrayContaining([
+        `Generated runtime profile '${profile.name}' UI profile 'astryx' must declare the StyleX engine`,
+        `Generated runtime profile '${profile.name}' cannot require StyleX compilation without a style engine`,
+        `Generated runtime profile '${profile.name}' has unsupported UI maturity 'stable'`,
+        `Generated runtime profile '${profile.name}' UI smoke case must match '${profile.generatedAppSmokeCase}'`,
+      ]),
+    );
+  });
+
+  it("fails without throwing when UI metadata is not an object", () => {
+    const [profile] = profileCatalog.profiles;
+    const report = validator.validateGeneratedRuntimeProfile({
+      ...profile,
+      ui: "astryx",
+    } as unknown as GeneratedRuntimeProfile);
+
+    expect(report.passed).toBe(false);
+    expect(report.results).toContainEqual({
+      path: `profile:${profile.name}:ui`,
+      severity: "error",
+      message: `Generated runtime profile '${profile.name}' UI metadata must be an object`,
+    });
+  });
+
   it("fails when runtime target env metadata is not a string array", () => {
     const [profile] = profileCatalog.profiles;
     const report = validator.validateGeneratedRuntimeProfile({

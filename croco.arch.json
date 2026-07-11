@@ -113,7 +113,8 @@
         "@croco/admin-react",
         "@croco/frontend-*",
         "@croco/meta-vite",
-        "@croco/presentation-preset"
+        "@croco/presentation-preset",
+        "@croco/ui-*"
       ]
     },
     "app": {

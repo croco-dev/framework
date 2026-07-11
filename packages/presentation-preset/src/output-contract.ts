@@ -84,6 +84,25 @@ export type DeployTarget = {
 
 export type PresentationRuntime = "node" | "lambda" | "cloudflare-workers" | "browser";
 
+export type GeneratedUiProfileName = "none" | "astryx";
+
+export type GeneratedUiStyleEngine = "none" | "stylex";
+
+export type GeneratedUiProfileMaturity = "alpha" | "beta";
+
+export type GeneratedUiProfileMetadata = {
+  /** UI profile selected by the generator */
+  readonly name: GeneratedUiProfileName;
+  /** Styling engine used by the generated profile */
+  readonly styleEngine: GeneratedUiStyleEngine;
+  /** Whether the generated application must compile StyleX source */
+  readonly requiresStylexCompile: boolean;
+  /** Current support maturity of the generated UI profile */
+  readonly maturity: GeneratedUiProfileMaturity;
+  /** Generated app smoke case that proves this UI profile */
+  readonly generatedAppSmokeCase: string;
+};
+
 export type GeneratedRuntimeProfile = {
   /** Stable generated profile name used in tests and docs */
   readonly name: string;
@@ -95,6 +114,8 @@ export type GeneratedRuntimeProfile = {
   readonly generatedAppSmokeCase: string;
   /** Focused command for re-running the generated smoke evidence */
   readonly generatedAppSmokeCommand: string;
+  /** Optional generated UI profile evidence for presentation-aware applications */
+  readonly ui?: GeneratedUiProfileMetadata;
   /** Runtime target metadata and expected output contract for the profile */
   readonly target: DeployTarget;
 };

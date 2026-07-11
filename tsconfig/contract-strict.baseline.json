@@ -4712,7 +4712,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 155,
+      "line": 159,
       "column": 37,
       "code": "TS2379",
       "message": "Argument of type '{ api: \"graphql\" | \"trpc\" | undefined; frontendDeploy: \"docker\" | \"opennext\" | \"vercel\" | \"cloudflare-meta-vite\" | \"vite-spa\" | undefined; webApps: string[]; projectName: string; scope: string; }' is not assignable to parameter of type 'Pick<GeneratorOptions, \"projectName\" | \"scope\" | \"webApps\" | \"api\" | \"frontendDeploy\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -4720,7 +4720,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 162,
+      "line": 166,
       "column": 37,
       "code": "TS2379",
       "message": "Argument of type '{ api: \"graphql\" | \"trpc\" | undefined; projectName: string; scope: string; }' is not assignable to parameter of type 'Pick<GeneratorOptions, \"projectName\" | \"scope\" | \"api\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -4728,34 +4728,10 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 363,
+      "line": 374,
       "column": 9,
       "code": "TS2375",
-      "message": "Type '{ projectName: string; scope: string; preset: \"ddd-fullstack\" | \"ddd-vike-fullstack\" | \"ddd-api\"; webApps: string[]; api: \"graphql\" | \"trpc\" | undefined; apiHosting: \"standalone\" | \"nextjs\"; ... 7 more ...; initGit: boolean; }' is not assignable to type 'GeneratorOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/options.ts",
-      "line": 48,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'goal' comes from an index signature, so it must be accessed with ['goal']."
-    },
-    {
-      "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/options.ts",
-      "line": 49,
-      "column": 34,
-      "code": "TS4111",
-      "message": "Property 'goal' comes from an index signature, so it must be accessed with ['goal']."
-    },
-    {
-      "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/options.ts",
-      "line": 49,
-      "column": 5,
-      "code": "TS2412",
-      "message": "Type 'AppGoal | undefined' is not assignable to type 'AppGoal' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
+      "message": "Type '{ saasProviderProfile: \"saas-node-postgres\" | \"saas-cloudflare\" | \"saas-lambda\" | undefined; tenantModel: \"single\" | \"org\" | \"workspace\" | \"shared-schema\" | \"rls-backed\" | undefined; ... 12 more ...; frontendDeploy: \"docker\" | ... 4 more ... | undefined; }' is not assignable to type 'GeneratorOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "create-croco-app",
@@ -4763,12 +4739,36 @@
       "line": 50,
       "column": 25,
       "code": "TS4111",
-      "message": "Property 'preset' comes from an index signature, so it must be accessed with ['preset']."
+      "message": "Property 'goal' comes from an index signature, so it must be accessed with ['goal']."
     },
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
       "line": 51,
+      "column": 34,
+      "code": "TS4111",
+      "message": "Property 'goal' comes from an index signature, so it must be accessed with ['goal']."
+    },
+    {
+      "packageName": "create-croco-app",
+      "file": "packages/create-croco-app/src/options.ts",
+      "line": 51,
+      "column": 5,
+      "code": "TS2412",
+      "message": "Type 'AppGoal | undefined' is not assignable to type 'AppGoal' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
+    },
+    {
+      "packageName": "create-croco-app",
+      "file": "packages/create-croco-app/src/options.ts",
+      "line": 52,
+      "column": 25,
+      "code": "TS4111",
+      "message": "Property 'preset' comes from an index signature, so it must be accessed with ['preset']."
+    },
+    {
+      "packageName": "create-croco-app",
+      "file": "packages/create-croco-app/src/options.ts",
+      "line": 53,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'preset' comes from an index signature, so it must be accessed with ['preset']."
@@ -4776,7 +4776,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 52,
+      "line": 54,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'scope' comes from an index signature, so it must be accessed with ['scope']."
@@ -4784,7 +4784,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 52,
+      "line": 54,
       "column": 75,
       "code": "TS4111",
       "message": "Property 'scope' comes from an index signature, so it must be accessed with ['scope']."
@@ -4792,7 +4792,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 53,
+      "line": 55,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'saasProfile' comes from an index signature, so it must be accessed with ['saasProfile']."
@@ -4800,7 +4800,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 54,
+      "line": 56,
       "column": 5,
       "code": "TS2412",
       "message": "Type '\"saas-node-postgres\" | \"saas-cloudflare\" | \"saas-lambda\" | undefined' is not assignable to type '\"saas-node-postgres\" | \"saas-cloudflare\" | \"saas-lambda\"' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
@@ -4808,7 +4808,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 55,
+      "line": 57,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'saasProfile' comes from an index signature, so it must be accessed with ['saasProfile']."
@@ -4816,7 +4816,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 57,
+      "line": 59,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'tenantModel' comes from an index signature, so it must be accessed with ['tenantModel']."
@@ -4824,7 +4824,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 58,
+      "line": 60,
       "column": 41,
       "code": "TS4111",
       "message": "Property 'tenantModel' comes from an index signature, so it must be accessed with ['tenantModel']."
@@ -4832,7 +4832,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 58,
+      "line": 60,
       "column": 5,
       "code": "TS2412",
       "message": "Type '\"single\" | \"org\" | \"workspace\" | \"shared-schema\" | \"rls-backed\" | undefined' is not assignable to type '\"single\" | \"org\" | \"workspace\" | \"shared-schema\" | \"rls-backed\"' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
@@ -4840,7 +4840,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 60,
+      "line": 62,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'api' comes from an index signature, so it must be accessed with ['api']."
@@ -4848,7 +4848,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 61,
+      "line": 63,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'api' comes from an index signature, so it must be accessed with ['api']."
@@ -4856,7 +4856,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 61,
+      "line": 63,
       "column": 5,
       "code": "TS2412",
       "message": "Type '\"graphql\" | \"trpc\" | undefined' is not assignable to type '\"graphql\" | \"trpc\"' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
@@ -4864,16 +4864,8 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 62,
+      "line": 64,
       "column": 25,
-      "code": "TS4111",
-      "message": "Property 'apiHosting' comes from an index signature, so it must be accessed with ['apiHosting']."
-    },
-    {
-      "packageName": "create-croco-app",
-      "file": "packages/create-croco-app/src/options.ts",
-      "line": 63,
-      "column": 40,
       "code": "TS4111",
       "message": "Property 'apiHosting' comes from an index signature, so it must be accessed with ['apiHosting']."
     },
@@ -4881,6 +4873,14 @@
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
       "line": 65,
+      "column": 40,
+      "code": "TS4111",
+      "message": "Property 'apiHosting' comes from an index signature, so it must be accessed with ['apiHosting']."
+    },
+    {
+      "packageName": "create-croco-app",
+      "file": "packages/create-croco-app/src/options.ts",
+      "line": 67,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'webApps' comes from an index signature, so it must be accessed with ['webApps']."
@@ -4888,7 +4888,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 66,
+      "line": 68,
       "column": 37,
       "code": "TS4111",
       "message": "Property 'webApps' comes from an index signature, so it must be accessed with ['webApps']."
@@ -4896,7 +4896,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 71,
+      "line": 73,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'backendDeploy' comes from an index signature, so it must be accessed with ['backendDeploy']."
@@ -4904,7 +4904,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 72,
+      "line": 74,
       "column": 43,
       "code": "TS4111",
       "message": "Property 'backendDeploy' comes from an index signature, so it must be accessed with ['backendDeploy']."
@@ -4912,7 +4912,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 72,
+      "line": 74,
       "column": 5,
       "code": "TS2412",
       "message": "Type '\"lambda\" | \"docker\" | undefined' is not assignable to type '\"lambda\" | \"docker\"' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
@@ -4920,7 +4920,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 74,
+      "line": 76,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'frontendDeploy' comes from an index signature, so it must be accessed with ['frontendDeploy']."
@@ -4928,7 +4928,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 75,
+      "line": 77,
       "column": 44,
       "code": "TS4111",
       "message": "Property 'frontendDeploy' comes from an index signature, so it must be accessed with ['frontendDeploy']."
@@ -4936,7 +4936,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 75,
+      "line": 77,
       "column": 5,
       "code": "TS2412",
       "message": "Type '\"docker\" | \"opennext\" | \"vercel\" | \"cloudflare-meta-vite\" | \"vite-spa\" | undefined' is not assignable to type '\"docker\" | \"opennext\" | \"vercel\" | \"cloudflare-meta-vite\" | \"vite-spa\"' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
@@ -4944,7 +4944,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 77,
+      "line": 82,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'db' comes from an index signature, so it must be accessed with ['db']."
@@ -4952,7 +4952,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 78,
+      "line": 83,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'db' comes from an index signature, so it must be accessed with ['db']."
@@ -4960,7 +4960,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 83,
+      "line": 88,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'agentRules' comes from an index signature, so it must be accessed with ['agentRules']."
@@ -4968,7 +4968,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 84,
+      "line": 89,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'install' comes from an index signature, so it must be accessed with ['install']."
@@ -4976,7 +4976,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/options.ts",
-      "line": 85,
+      "line": 90,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'git' comes from an index signature, so it must be accessed with ['git']."
@@ -4984,7 +4984,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/prompts.ts",
-      "line": 196,
+      "line": 204,
       "column": 13,
       "code": "TS2322",
       "message": "Type '{ value: \"saas-node-postgres\" | \"saas-cloudflare\" | \"saas-lambda\"; label: \"saas-node-postgres\" | \"saas-cloudflare\" | \"saas-lambda\"; hint: string | undefined; }[]' is not assignable to type '({ value: \"saas-node-postgres\"; label?: string; hint?: string; } | { value: \"saas-cloudflare\"; label?: string; hint?: string; } | { value: \"saas-lambda\"; label?: string; hint?: string; })[]'."
@@ -4992,7 +4992,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/prompts.ts",
-      "line": 258,
+      "line": 266,
       "column": 5,
       "code": "TS2375",
       "message": "Type '{ projectName: string; scope: string; preset: \"production-app\" | \"admin-console\" | \"saas\" | \"ai-saas\"; saasProviderProfile: \"saas-node-postgres\" | \"saas-cloudflare\" | \"saas-lambda\" | undefined; ... 6 more ...; initGit: boolean; }' is not assignable to type 'GeneratorOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -5000,10 +5000,10 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/prompts.ts",
-      "line": 429,
+      "line": 472,
       "column": 3,
       "code": "TS2375",
-      "message": "Type '{ projectName: string; scope: string; preset: GeneratorOptions[\"preset\"]; webApps: string[]; api: GeneratorOptions[\"api\"]; apiHosting: \"standalone\" | \"nextjs\"; backendDeploy: \"lambda\" | \"docker\" | undefined; ... 4 more ...; initGit: boolean; }' is not assignable to type 'GeneratorOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Type '{ db: GeneratorOptions[\"db\"]; agentRules: boolean; installDeps: boolean; initGit: boolean; ui?: \"none\" | \"astryx\"; projectName: string; scope: string; preset: GeneratorOptions[\"preset\"]; ... 4 more ...; frontendDeploy: \"docker\" | ... 4 more ... | undefined; }' is not assignable to type 'GeneratorOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "create-croco-app",

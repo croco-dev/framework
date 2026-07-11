@@ -27,12 +27,17 @@ The source of truth is `runtime-profiles.json`. Each profile names the runtime c
 metadata, output artifacts, entry descriptors, package test evidence, and generated-app smoke
 case that proves the claim.
 
-| Profile             | Catalog runtime      | Generated smoke evidence                                                              |
-| ------------------- | -------------------- | ------------------------------------------------------------------------------------- |
-| `node-server`       | `node`               | `CROCO_GENERATED_SMOKE_CASES=production-app-starter pnpm create-croco-app:smoke`      |
-| `lambda-function`   | `lambda`             | `CROCO_GENERATED_SMOKE_CASES=graphql-lambda-api pnpm create-croco-app:smoke`          |
-| `cloudflare-worker` | `cloudflare-workers` | `CROCO_GENERATED_SMOKE_CASES=meta-vite-fullstack-workers pnpm create-croco-app:smoke` |
-| `browser-vite-spa`  | `browser`            | `CROCO_GENERATED_SMOKE_CASES=graphql-vite-spa-docker pnpm create-croco-app:smoke`     |
+| Profile                   | Catalog runtime      | Generated smoke evidence                                                              |
+| ------------------------- | -------------------- | ------------------------------------------------------------------------------------- |
+| `node-server`             | `node`               | `CROCO_GENERATED_SMOKE_CASES=production-app-starter pnpm create-croco-app:smoke`      |
+| `lambda-function`         | `lambda`             | `CROCO_GENERATED_SMOKE_CASES=graphql-lambda-api pnpm create-croco-app:smoke`          |
+| `cloudflare-worker`       | `cloudflare-workers` | `CROCO_GENERATED_SMOKE_CASES=meta-vite-fullstack-workers pnpm create-croco-app:smoke` |
+| `browser-vite-spa`        | `browser`            | `CROCO_GENERATED_SMOKE_CASES=graphql-vite-spa-docker pnpm create-croco-app:smoke`     |
+| `browser-vite-spa-astryx` | `browser`            | `CROCO_GENERATED_SMOKE_CASES=graphql-vite-spa-astryx pnpm create-croco-app:smoke`     |
+
+The Astryx profile uses Astryx's prebuilt CSS exports, so generated Vite applications do not need
+a StyleX compiler plugin. It remains a beta opt-in profile; the provider-neutral Vite profile is
+still available through `--ui none`, and omitted `--ui` values retain the legacy generator output.
 
 ## Verification
 

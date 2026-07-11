@@ -23,6 +23,29 @@ and the zero-credential `demo:smoke` success path. Generated projects are pnpm
 workspaces; `--no-install --no-git` keeps the documented setup deterministic before
 the explicit install and smoke commands.
 
+### Astryx Vite UI profile
+
+Astryx is available as an opt-in beta UI profile for the Vite SPA frontend runtime:
+
+```bash
+npx create-croco-app@latest my-app \
+  --preset ddd-fullstack \
+  --scope @myorg \
+  --api graphql \
+  --api-hosting standalone \
+  --web-apps web \
+  --frontend-deploy vite-spa \
+  --ui astryx
+```
+
+The generated app imports Astryx's prebuilt CSS, so it does not add a StyleX compiler plugin.
+Use `--ui none` for an explicit provider-neutral Vite starter. Omitting `--ui` preserves the
+generator's existing output for compatibility. Astryx does not change `@croco/frontend-react` or
+apply to meta-vite profiles in this release.
+
+Generated projects include the package manager command and next-step instructions in
+the CLI result.
+
 ## Verification
 
 ```bash

@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  assertGeneratedPresentationProfileMatchesCatalog,
   readCommandOutputSegment,
   readGeneratedSmokeAllowlistMetadata,
 } from "../create-croco-app-generated-smoke.mts";
@@ -189,6 +190,58 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
     );
   });
 
+  it("rejects generated Astryx metadata that drifts from the presentation profile catalog", () => {
+    const root = createTempRoot();
+    const projectDir = join(root, "generated-app");
+    const catalogPath = join(root, "runtime-profiles.json");
+    const ui = {
+      name: "astryx",
+      styleEngine: "stylex",
+      requiresStylexCompile: false,
+      maturity: "beta",
+      generatedAppSmokeCase: "graphql-vite-spa-astryx",
+    };
+    const profile = { webApp: "web", runtimeProfile: "browser-vite-spa-astryx", ui };
+    writeGeneratedPackage(projectDir, "apps/web/croco.presentation-profile.json", profile);
+    writeGeneratedPackage(projectDir, "croco-presentation-profile.manifest.json", {
+      schemaVersion: "croco.generated-presentation-profile/v1",
+      profiles: [profile],
+    });
+    writeGeneratedPackage(root, "runtime-profiles.json", {
+      profiles: [
+        {
+          name: "browser-vite-spa-astryx",
+          generatedAppSmokeCase: "graphql-vite-spa-astryx",
+          ui,
+        },
+      ],
+    });
+
+    expect(() =>
+      assertGeneratedPresentationProfileMatchesCatalog(
+        projectDir,
+        "apps/web/croco.presentation-profile.json",
+        "browser-vite-spa-astryx",
+        "graphql-vite-spa-astryx",
+        catalogPath,
+      ),
+    ).not.toThrow();
+
+    writeGeneratedPackage(projectDir, "apps/web/croco.presentation-profile.json", {
+      ...profile,
+      ui: { ...ui, maturity: "alpha" },
+    });
+    expect(() =>
+      assertGeneratedPresentationProfileMatchesCatalog(
+        projectDir,
+        "apps/web/croco.presentation-profile.json",
+        "browser-vite-spa-astryx",
+        "graphql-vite-spa-astryx",
+        catalogPath,
+      ),
+    ).toThrow("does not match browser-vite-spa-astryx");
+  });
+
   it("copies configured smoke artifacts into the report tree and renders matrix evidence", () => {
     const root = createTempRoot();
     const generatedProjectDir = join(root, "generated-app");
@@ -255,7 +308,7 @@ describe("create-croco-app generated smoke matrix", () => {
     ]);
     expect(
       GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "ecosystem-advisory"),
-    ).toHaveLength(11);
+    ).toHaveLength(12);
     const graphqlLambdaApiCase: SmokeMatrixCaseDefinition | undefined =
       GENERATED_SMOKE_MATRIX_CASES.find(({ name }) => name === "graphql-lambda-api");
     expect(graphqlLambdaApiCase?.advisory).toBeUndefined();

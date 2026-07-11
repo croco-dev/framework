@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { runPrompts } from "../prompts.js";
 import type { GeneratorOptions } from "../types.js";
 
 describe("GeneratorOptions type", () => {
@@ -48,5 +49,44 @@ describe("GeneratorOptions type", () => {
       initGit: true,
     };
     expect(opts.frontendDeploy).toBe("vite-spa");
+  });
+
+  it("should accept an explicit Astryx UI profile", () => {
+    const opts: GeneratorOptions = {
+      projectName: "astryx-spa",
+      scope: "@myorg",
+      preset: "ddd-fullstack",
+      webApps: ["web"],
+      api: "graphql",
+      apiHosting: "standalone",
+      frontendDeploy: "vite-spa",
+      ui: "astryx",
+      db: [],
+      agentRules: false,
+      installDeps: true,
+      initGit: true,
+    };
+
+    expect(opts.ui).toBe("astryx");
+  });
+
+  it("should reject an explicit UI profile for an incompatible interactive runtime", async () => {
+    await expect(
+      runPrompts({
+        projectName: "astryx-worker",
+        scope: "@myorg",
+        preset: "ddd-fullstack",
+        webApps: ["web"],
+        api: "graphql",
+        apiHosting: "standalone",
+        backendDeploy: "lambda",
+        frontendDeploy: "cloudflare-meta-vite",
+        ui: "astryx",
+        db: [],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      }),
+    ).rejects.toThrow("--ui is currently only supported with --frontend-deploy vite-spa");
   });
 });

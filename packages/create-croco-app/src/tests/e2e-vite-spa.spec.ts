@@ -55,6 +55,84 @@ describe("E2E Vite SPA: generate()", () => {
     },
   );
 
+  it("generates isolated none and Astryx UI profiles", { timeout: 120_000 }, async () => {
+    const noneDir = `${testDir}-none`;
+    const astryxDir = `${testDir}-astryx`;
+    const baseOptions: GeneratorOptions = {
+      projectName: "my-vite-ui",
+      scope: "@test",
+      preset: "ddd-fullstack",
+      webApps: ["web"],
+      api: "graphql",
+      apiHosting: "standalone",
+      frontendDeploy: "vite-spa",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    try {
+      await generate(noneDir, { ...baseOptions, ui: "none" });
+      await generate(astryxDir, { ...baseOptions, ui: "astryx" });
+
+      const nonePackage = readFileSync(join(noneDir, "apps", "web", "package.json"), "utf8");
+      const astryxPackage = readFileSync(join(astryxDir, "apps", "web", "package.json"), "utf8");
+      const noneManifest = JSON.parse(
+        readFileSync(join(noneDir, "croco-presentation-profile.manifest.json"), "utf8"),
+      ) as { profiles: [{ ui: { name: string; requiresStylexCompile: boolean } }] };
+      const astryxManifest = JSON.parse(
+        readFileSync(join(astryxDir, "croco-presentation-profile.manifest.json"), "utf8"),
+      ) as { profiles: [{ runtimeProfile: string; ui: { name: string; maturity: string } }] };
+
+      expect(noneManifest.profiles[0].ui).toEqual(
+        expect.objectContaining({ name: "none", requiresStylexCompile: false }),
+      );
+      expect(nonePackage).not.toContain("astryx");
+      expect(nonePackage).not.toContain("stylex");
+      expect(existsSync(join(noneDir, "libs", "shared", "ui"))).toBe(false);
+
+      expect(astryxManifest.profiles[0]).toEqual(
+        expect.objectContaining({
+          runtimeProfile: "browser-vite-spa-astryx",
+          ui: expect.objectContaining({ name: "astryx", maturity: "beta" }),
+        }),
+      );
+      expect(astryxPackage).toContain('"@croco/ui-astryx": "^0.1.0"');
+      expect(astryxPackage).toContain('"@astryxdesign/core": "0.1.4"');
+      expect(astryxPackage).toContain('"@stylexjs/stylex": "^0.18.3"');
+      expect(existsSync(join(astryxDir, "libs", "shared", "ui"))).toBe(false);
+      expect(existsSync(join(astryxDir, "apps", "web", "src", "presentation-smoke.tsx"))).toBe(
+        true,
+      );
+    } finally {
+      rmSync(noneDir, { recursive: true, force: true });
+      rmSync(astryxDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects incompatible programmatic UI generation before writing files", async () => {
+    const options: GeneratorOptions = {
+      projectName: "invalid-astryx-runtime",
+      scope: "@test",
+      preset: "ddd-fullstack",
+      webApps: ["web"],
+      api: "graphql",
+      apiHosting: "standalone",
+      frontendDeploy: "cloudflare-meta-vite",
+      ui: "astryx",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    await expect(generate(testDir, options)).rejects.toThrow(
+      "--ui is currently only supported with --frontend-deploy vite-spa",
+    );
+    expect(existsSync(testDir)).toBe(false);
+  });
+
   it("generates vite spa docker file with api build artifacts", { timeout: 120_000 }, async () => {
     const options: GeneratorOptions = {
       projectName: "my-vite-spa-docker",

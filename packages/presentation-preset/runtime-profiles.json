@@ -127,6 +127,45 @@
           ]
         }
       }
+    },
+    {
+      "name": "browser-vite-spa-astryx",
+      "runtime": "browser",
+      "packageTestName": "validates the browser-vite-spa-astryx generated runtime profile",
+      "generatedAppSmokeCase": "graphql-vite-spa-astryx",
+      "generatedAppSmokeCommand": "CROCO_GENERATED_SMOKE_CASES=graphql-vite-spa-astryx pnpm create-croco-app:smoke",
+      "ui": {
+        "name": "astryx",
+        "styleEngine": "stylex",
+        "requiresStylexCompile": false,
+        "maturity": "beta",
+        "generatedAppSmokeCase": "graphql-vite-spa-astryx"
+      },
+      "target": {
+        "target": "browser",
+        "requiredEnvVars": [],
+        "output": {
+          "presetName": "presentation-preset/browser-vite-spa-astryx",
+          "buildTime": "2026-01-01T00:00:00.000Z",
+          "format": "neutral",
+          "artifacts": [
+            { "path": "apps/web/dist/index.html", "format": "neutral", "type": "asset" },
+            { "path": "apps/web/src/vite-env.d.ts", "format": "neutral", "type": "types" },
+            {
+              "path": "apps/web/croco.presentation-profile.json",
+              "format": "neutral",
+              "type": "config"
+            }
+          ],
+          "entries": [
+            {
+              "exportName": "./browser",
+              "main": "apps/web/dist/index.html",
+              "types": "apps/web/src/vite-env.d.ts"
+            }
+          ]
+        }
+      }
     }
   ]
 }
