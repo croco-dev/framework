@@ -26,6 +26,34 @@ describe("HttpContext", () => {
     expect(ctx.req.query.foo).toBe("bar");
   });
 
+  it("should preserve repeated query values and Fetch-coalesced header values", () => {
+    const mockCtx = {
+      req: {
+        method: "GET",
+        url: "https://example.com/test?tag=first&tag=second",
+        raw: {
+          headers: new Headers([
+            ["x-tags", "read"],
+            ["x-tags", "write"],
+          ]),
+        },
+        param: vi.fn(),
+        query: vi.fn(),
+        header: vi.fn(),
+        json: vi.fn(),
+      },
+      text: vi.fn(),
+      json: vi.fn(),
+      redirect: vi.fn(),
+    };
+
+    const ctx = new HttpContext(mockCtx as unknown as HonoContext);
+
+    expect(ctx.req.query.tag).toEqual(["first", "second"]);
+    expect(ctx.query("tag")).toEqual(["first", "second"]);
+    expect(ctx.req.headers["x-tags"]).toBe("read, write");
+  });
+
   it("should capture route params into req.params", () => {
     const mockCtx = {
       req: {

@@ -28,7 +28,7 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
       url: raw.req.url,
       path: url.pathname,
       params,
-      query: Object.fromEntries(url.searchParams),
+      query: toQueryRecord(url.searchParams),
       headers,
     };
 
@@ -52,8 +52,8 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
     return this.raw.req.param(name);
   }
 
-  query(name: string): string | undefined {
-    return this.raw.req.query(name);
+  query(name: string): string | string[] | undefined {
+    return this.req.query[name];
   }
 
   header(name: string): string | undefined {
@@ -121,6 +121,28 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
 
     return params;
   }
+}
+
+function toQueryRecord(searchParams: URLSearchParams): Record<string, string | string[]> {
+  const query: Record<string, string | string[]> = {};
+
+  searchParams.forEach((value, key) => {
+    const existing = query[key];
+
+    if (existing === undefined) {
+      query[key] = value;
+      return;
+    }
+
+    if (Array.isArray(existing)) {
+      existing.push(value);
+      return;
+    }
+
+    query[key] = [existing, value];
+  });
+
+  return query;
 }
 
 function toBufferedBytes(body: string | Uint8Array): Uint8Array<ArrayBuffer> {

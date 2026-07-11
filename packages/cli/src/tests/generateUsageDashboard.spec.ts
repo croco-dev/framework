@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { runGenerateUsageDashboard } from "../commands/generateUsageDashboard.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
@@ -81,7 +82,15 @@ describe("runGenerateUsageDashboard", () => {
     expect(controllerContent).toContain("@ResponseSchema(usageDashboardSnapshotSchema)");
     expect(controllerContent).toContain("const usageDashboardSnapshotSchema = z.object");
     expect(controllerContent).toContain('await import("../usage-dashboard/UsageDashboardRuntime")');
-    expect(controllerContent).toContain('ctx.header("x-tenant-id") ?? ctx.query("tenantId")');
+    expect(controllerContent).toContain('const tenantId = ctx.header("x-tenant-id");');
+    expect(controllerContent).toContain('throw new RequestValidationProblem("query", [');
+    expect(controllerContent).toContain(
+      '{ path: "tenantId", message: "Expected a single query value" },',
+    );
+    expect(controllerContent).toContain("return queryTenantId;");
+    expect(controllerContent).not.toContain("queryTenantId[0]");
+    expect(controllerContent).toContain("const values = (Array.isArray(value) ? value : [value])");
+    assertGeneratedQueryHelpersTypecheck(controllerContent);
     expect(serviceContent).toContain("export type UsageDashboardSnapshot");
     expect(serviceContent).toContain('"near_quota"');
     expect(serviceContent).toContain("resolveOverageState");
@@ -118,7 +127,7 @@ describe("runGenerateUsageDashboard", () => {
     expect(pageContent).toContain("Loading usage");
     expect(pageContent).toContain("meter needs quota attention");
     expect(routeContent).toContain("path: '/usage'");
-  });
+  }, 30_000);
 
   it("should support API-only workspaces", async () => {
     const cwd = await createWorkspace({ consoleWeb: false });
@@ -544,6 +553,47 @@ function packageManifest(packageNames: readonly string[]): string {
     null,
     2,
   );
+}
+
+function assertGeneratedQueryHelpersTypecheck(controllerContent: string): void {
+  const helpersStart = controllerContent.indexOf("function readTenantId");
+  expect(helpersStart).toBeGreaterThanOrEqual(0);
+
+  const source = `type CrocoHttpContext = {
+  header(name: string): string | undefined;
+  query(name: string): string | string[] | undefined;
+};
+
+declare class RequestValidationProblem {
+  constructor(source: "query", issues: Array<{ path: string; message: string }>);
+}
+
+${controllerContent.slice(helpersStart)}`;
+  const fileName = path.join(process.cwd(), "generated-usage-dashboard-query-helpers.ts");
+  const compilerOptions: ts.CompilerOptions = {
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    noEmit: true,
+    strict: true,
+    target: ts.ScriptTarget.ES2022,
+  };
+  const host = ts.createCompilerHost(compilerOptions);
+  const getSourceFile = host.getSourceFile.bind(host);
+
+  host.getSourceFile = (...args) => {
+    const [requestedFileName, languageVersion] = args;
+
+    if (requestedFileName === fileName) {
+      return ts.createSourceFile(fileName, source, languageVersion, true);
+    }
+
+    return getSourceFile(...args);
+  };
+
+  const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram([fileName], compilerOptions, host));
+  expect(
+    diagnostics.map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")),
+  ).toEqual([]);
 }
 
 async function importGeneratedModule<T>(filePath: string): Promise<T> {

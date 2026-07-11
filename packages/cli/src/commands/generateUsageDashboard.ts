@@ -768,6 +768,7 @@ import {
   Get,
   HttpMethod,
   ProblemResponses,
+  RequestValidationProblem,
   ResponseSchema,
   routeProblemResponses,
 } from "@croco/protocols-rest";
@@ -884,7 +885,19 @@ export class UsageDashboardController {
 }
 
 function readTenantId(ctx: CrocoHttpContext): string | undefined {
-  return ctx.header("x-tenant-id") ?? ctx.query("tenantId");
+  const tenantId = ctx.header("x-tenant-id");
+  if (tenantId !== undefined) {
+    return tenantId;
+  }
+
+  const queryTenantId = ctx.query("tenantId");
+  if (Array.isArray(queryTenantId)) {
+    throw new RequestValidationProblem("query", [
+      { path: "tenantId", message: "Expected a single query value" },
+    ]);
+  }
+
+  return queryTenantId;
 }
 
 function readRepeatedQuery(ctx: CrocoHttpContext, name: string): readonly string[] | undefined {
@@ -893,8 +906,8 @@ function readRepeatedQuery(ctx: CrocoHttpContext, name: string): readonly string
     return undefined;
   }
 
-  const values = value
-    .split(",")
+  const values = (Array.isArray(value) ? value : [value])
+    .flatMap((item) => item.split(","))
     .map((part) => part.trim())
     .filter(Boolean);
 

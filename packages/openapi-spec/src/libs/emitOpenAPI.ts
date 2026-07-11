@@ -16,10 +16,12 @@ import {
   type ContractGraphObservedConsumerRoute,
   type ContractGraphRoute,
   getContractPathParams,
+  isZodArraySchema,
   normalizeProjectManifestBundlePath,
   type ParamIR,
   type ProjectManifestBundleArtifactKey,
   unwrapZodEffectsSchema,
+  unwrapZodParameterSchema,
 } from "@croco/protocols-core";
 import { type ZodType, z } from "zod";
 
@@ -416,7 +418,8 @@ function toZodObject(params: ParamIR[]): z.ZodObject<Record<string, ZodType>> | 
 }
 
 function withParameterMetadata(param: ParamIR): ZodType {
-  const schema = unwrapZodEffectsSchema(param.schema) ?? z.string();
+  const schemaWithoutCatch = unwrapZodParameterSchema(param.schema);
+  const schema = unwrapZodEffectsSchema(schemaWithoutCatch) ?? z.string();
   const location = toOpenAPIParamLocation(param.kind);
 
   return schema.openapi({
@@ -424,8 +427,31 @@ function withParameterMetadata(param: ParamIR): ZodType {
       name: param.name,
       in: location,
       required: isRequiredOpenAPIParameter(param.kind, param.schema),
+      ...toArrayParameterSerialization(param.kind, schemaWithoutCatch),
     },
   });
+}
+
+function toArrayParameterSerialization(
+  kind: ParamIR["kind"],
+  schema: ParamIR["schema"],
+):
+  | { readonly style: "form"; readonly explode: true }
+  | { readonly style: "simple"; readonly explode: false }
+  | Record<string, never> {
+  if (!isZodArraySchema(schema)) {
+    return {};
+  }
+
+  if (kind === "query") {
+    return { style: "form", explode: true };
+  }
+
+  if (kind === "header") {
+    return { style: "simple", explode: false };
+  }
+
+  return {};
 }
 
 function toOpenAPIParamLocation(kind: ParamIR["kind"]): OpenAPIParamLocation {

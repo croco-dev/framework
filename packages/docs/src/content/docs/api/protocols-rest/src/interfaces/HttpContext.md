@@ -11,7 +11,7 @@ title: "HttpContext"
 
 > `readonly` **request**: [`HttpRequestLike`](/api/protocols-rest/src/interfaces/httprequestlike/)
 
-***
+---
 
 ### response
 
@@ -39,7 +39,7 @@ title: "HttpContext"
 
 `T` \| `undefined`
 
-***
+---
 
 ### header()
 
@@ -55,7 +55,7 @@ title: "HttpContext"
 
 `string` \| `undefined`
 
-***
+---
 
 ### json()
 
@@ -71,7 +71,7 @@ title: "HttpContext"
 
 `Promise`\<`T`\>
 
-***
+---
 
 ### param()
 
@@ -87,11 +87,11 @@ title: "HttpContext"
 
 `string` \| `undefined`
 
-***
+---
 
 ### query()
 
-> **query**(`name`): `string` \| `undefined`
+> **query**(`name`): `string` \| `string`[] \| `undefined`
 
 #### Parameters
 
@@ -101,9 +101,9 @@ title: "HttpContext"
 
 #### Returns
 
-`string` \| `undefined`
+`string` \| `string`[] \| `undefined`
 
-***
+---
 
 ### set()
 

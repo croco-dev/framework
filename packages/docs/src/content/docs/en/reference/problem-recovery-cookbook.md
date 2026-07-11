@@ -5073,7 +5073,7 @@ Sources:
 
 Sources:
 
-- `packages/openapi-spec/src/libs/emitOpenAPI.ts:104:5` (problem-constructor)
+- `packages/openapi-spec/src/libs/emitOpenAPI.ts:106:5` (problem-constructor)
 
 <a id="openapi-spec-no-rest-controllers-found"></a>
 
@@ -5901,7 +5901,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:104:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:105:5` (problem-constructor)
 
 <a id="rpc-codegen-no-rest-controllers-found"></a>
 
@@ -5937,7 +5937,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:110:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:111:5` (problem-constructor)
 
 <a id="saas-demo-demo-endpoint-disabled"></a>
 
@@ -7215,7 +7215,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/ParamResolver.ts:192:13` (problem-factory)
+- `packages/transports-http/src/libs/ParamResolver.ts:159:13` (problem-factory)
 
 <a id="transports-http-provider-resolution-failed"></a>
 

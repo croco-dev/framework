@@ -359,6 +359,21 @@ describe("buildContractGraph", () => {
 
     const graph = buildContractGraph([UsersController], { strictSchemas: true });
 
+    const getUserRoute = graph.routes.find(
+      (candidate) => candidate.routeId === "UsersController.getUser",
+    );
+    expect(getUserRoute?.params).toEqual([
+      { kind: "path", name: "id", schema: null },
+      { kind: "query", name: "include", schema: null },
+      { kind: "header", name: "x-request-id", schema: null },
+    ]);
+    expect((getUserRoute?.inputSchemas.query as z.AnyZodObject).shape.include.isOptional()).toBe(
+      true,
+    );
+    expect(
+      (getUserRoute?.inputSchemas.headers as z.AnyZodObject).shape["x-request-id"].isOptional(),
+    ).toBe(true);
+
     expect(graph.diagnostics).toHaveLength(6);
     expect(graph.diagnostics).toEqual(
       expect.arrayContaining([

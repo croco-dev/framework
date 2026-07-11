@@ -109,25 +109,31 @@ export type {
   ContractSchemaSupportMatrixEntry,
 } from "./libs/SchemaDescriptor";
 export {
+  acceptsZodArrayInput,
   CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
   CONTRACT_SCHEMA_ZOD_EFFECTS_UNWRAPPED_DIAGNOSTIC_CODE,
   describeZodSchema,
   formatSchemaDiagnostic,
   getSchemaDescriptorDiagnostics,
+  getZodArrayInputSchema,
   getZodArrayElementSchema,
   getZodDefaultValue,
   getZodInnerSchema,
   getZodObjectShape,
   getZodObjectUnsupportedDynamicKeyMode,
   getZodSchemaTypeName,
+  isZodArraySchema,
+  isZodType,
   JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX,
   unwrapZodEffectsSchema,
+  unwrapZodParameterSchema,
 } from "./libs/SchemaDescriptor";
 export {
   discoverControllerConstructors,
   isControllerConstructor,
 } from "./libs/controllerDiscovery";
 export { extractRouteIR } from "./libs/extractRouteIR";
+export { getHttpParamFallbackSchema } from "./libs/schemaBuilder";
 export type {
   ParamIR,
   ProblemRegistryReferenceIR,

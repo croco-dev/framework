@@ -211,6 +211,14 @@ const HEADER_INPUT_SCHEMAS = {
     "x-tenant-id": z.string().optional(),
   }) as any,
 };
+const ARRAY_HEADER_INPUT_SCHEMAS: RouteIR["inputSchemas"] = {
+  body: null,
+  path: null,
+  query: null,
+  headers: z.object({
+    "x-tags": z.array(z.string()),
+  }) as unknown as NonNullable<RouteIR["inputSchemas"]["headers"]>,
+};
 const COMBINED_INPUT_SCHEMAS = {
   body: z.object({ name: z.string() }) as any,
   path: z.object({ id: z.string() }) as any,
@@ -1274,6 +1282,76 @@ void createInvalidationRouteId;
     );
   });
 
+  it("should align catch and union parameter types with array serialization", () => {
+    const catchFirst = z.union([z.string().catch("fallback"), z.array(z.string())]);
+    const catchLast = z.union([z.array(z.string()), z.string().catch("fallback")]);
+    const routes: RouteIR[] = [
+      {
+        controllerName: "FilterController",
+        methodName: "list",
+        httpMethod: "GET",
+        path: "/filters",
+        routeContract: null,
+        params: [
+          {
+            kind: "query",
+            name: "catchArray",
+            schema: z.array(z.string()).catch([]),
+          },
+          {
+            kind: "query",
+            name: "catchScalar",
+            schema: z.string().catch("fallback"),
+          },
+          { kind: "query", name: "catchFirst", schema: catchFirst },
+          { kind: "query", name: "catchLast", schema: catchLast },
+          {
+            kind: "header",
+            name: "x-catch-array",
+            schema: z.array(z.string()).catch([]),
+          },
+        ],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: null,
+          query: z.object({
+            catchArray: z.array(z.string()).catch([]),
+            catchScalar: z.string().catch("fallback"),
+            catchFirst,
+            catchLast,
+          }) as unknown as NonNullable<RouteIR["inputSchemas"]["query"]>,
+          headers: z.object({
+            "x-catch-array": z.array(z.string()).catch([]),
+          }) as unknown as NonNullable<RouteIR["inputSchemas"]["headers"]>,
+        },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const files = generateClientFiles(routes, TEMP_DIR);
+    const content = fs.readFileSync(files[0], "utf-8");
+
+    expect(content).toContain(
+      "export type ListInput = { query: { catchArray: string[] | undefined; catchFirst: string[] | string | undefined; catchLast: string[] | string | undefined; catchScalar: string | undefined; }; headers: { 'x-catch-array': readonly string[] | undefined; }; };",
+    );
+    expect(content).toContain("params.append(key, String(item));");
+    expect(content).toContain("serialized[key] = serializedValues.join(', ');");
+    assertGeneratedClientTypechecks(`${content}
+const result = filterClient.list({
+  query: {
+    catchArray: undefined,
+    catchScalar: undefined,
+    catchFirst: ['first', 'second'],
+    catchLast: undefined,
+  },
+  headers: { 'x-catch-array': undefined },
+});
+void result;
+`);
+  });
+
   it("should generate combined input types from inputSchemas", () => {
     const routes: RouteIR[] = [
       {
@@ -1985,8 +2063,12 @@ void handleMissingProblemBranch;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "function serializeHeaders(headers: Record<string, HeaderParamValue>): Record<string, string>",
+      "type HeaderParamInput = HeaderParamValue | readonly HeaderParamValue[];",
     );
+    expect(content).toContain(
+      "function serializeHeaders(headers: Record<string, HeaderParamInput>): Record<string, string>",
+    );
+    expect(content).toContain("serialized[key] = serializedValues.join(', ');");
     expect(content).toContain("const path = '/users';");
     expect(content).toContain(
       "const request = createRpcClientRequest(userContractRoutes[0], 'query', path, { method: 'GET', headers: serializeHeaders(input.headers) }, options);",
@@ -2257,6 +2339,40 @@ void result;
   );
 
   it(
+    "should typecheck generated clients with readonly header array inputs",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "get",
+          httpMethod: "GET",
+          path: "/users",
+          routeContract: null,
+          params: [{ kind: "header", name: "x-tags", schema: null }],
+          inputSchema: null,
+          inputSchemas: ARRAY_HEADER_INPUT_SCHEMAS,
+          outputSchema: null,
+          domain: null,
+        },
+      ];
+
+      const files = generateClientFiles(routes, TEMP_DIR);
+      const content = fs.readFileSync(files[0], "utf-8");
+
+      expect(content).toContain(
+        "export type GetInput = { headers: { 'x-tags': readonly string[]; }; };",
+      );
+      assertGeneratedClientTypechecks(`${content}
+const result: Promise<unknown | undefined> = userClient.get({
+  headers: { 'x-tags': ['new', 'vip'] as const },
+});
+void result;
+`);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it(
     "should generate form models, submit payload builders, and typed form Problems from body schemas",
     () => {
       const routes: RouteIR[] = [
@@ -2411,6 +2527,49 @@ const updatePayload: UpdateSubmitPayload = buildUpdateFormPayload(
 const updateResult = userClient.update(updatePayload);
 void updateResult;
 `);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
+
+  it(
+    "should generate forms for refinement and catch wrapped array fields",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "create",
+          httpMethod: "POST",
+          path: "/users",
+          routeContract: null,
+          params: [{ kind: "body", name: "", schema: null }],
+          inputSchema: null,
+          inputSchemas: {
+            body: z.object({
+              scopes: z.array(z.enum(["read", "write"])).catch([]),
+              tags: z.array(z.string()).refine((tags) => tags.length > 0),
+            }) as any,
+            path: null,
+            query: null,
+            headers: null,
+          },
+          outputSchema: null,
+          domain: null,
+        },
+      ];
+
+      const files = generateClientFiles(routes, TEMP_DIR);
+      const content = fs.readFileSync(files[0], "utf-8");
+
+      expect(content).toContain(
+        "export type CreateFormValues = { scopes: ('read' | 'write')[]; tags: string[]; };",
+      );
+      expect(content).toContain(
+        "{ name: 'scopes', label: 'Scopes', control: 'multi-select', valueKind: 'array', required: true, initialValue: [], options: [{ label: 'read', value: 'read' }, { label: 'write', value: 'write' }] }",
+      );
+      expect(content).toContain(
+        "{ name: 'tags', label: 'Tags', control: 'list', valueKind: 'array', required: true, initialValue: [] }",
+      );
+      assertGeneratedClientTypechecks(content);
     },
     GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
   );

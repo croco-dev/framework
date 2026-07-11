@@ -3,11 +3,17 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  acceptsZodArrayInput,
   CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
   CONTRACT_SCHEMA_ZOD_EFFECTS_UNWRAPPED_DIAGNOSTIC_CODE,
   describeZodSchema,
   getSchemaDescriptorDiagnostics,
+  getZodArrayInputSchema,
+  getZodArrayElementSchema,
+  isZodArraySchema,
+  isZodType,
   JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX,
+  unwrapZodParameterSchema,
 } from "../libs/SchemaDescriptor";
 
 const NUMERIC_NATIVE_ENUM = {
@@ -174,12 +180,195 @@ describe("SchemaDescriptor", () => {
     );
   });
 
+  it("should recognize Zod schemas structurally without accepting parse-like objects", () => {
+    const schema = z.string();
+    const foreignSchema = Object.assign(
+      Object.create({ constructor: schema.constructor }),
+      schema,
+      {
+        safeParse: schema.safeParse.bind(schema),
+      },
+    );
+
+    expect(foreignSchema).not.toBeInstanceOf(z.ZodType);
+    expect(isZodType(schema)).toBe(true);
+    expect(isZodType(foreignSchema)).toBe(true);
+    expect(isZodType({ safeParse: () => ({ success: true }) })).toBe(false);
+    expect(isZodType({ _def: {}, transform: (value: unknown) => value })).toBe(false);
+  });
+
+  it("should detect arrays through transparent wrappers but not value-changing effects", () => {
+    const tags = z.array(z.string());
+
+    expect(isZodArraySchema(tags)).toBe(true);
+    expect(isZodArraySchema(tags.optional())).toBe(true);
+    expect(isZodArraySchema(tags.nullable())).toBe(true);
+    expect(isZodArraySchema(tags.default([]))).toBe(true);
+    expect(isZodArraySchema(tags.catch([]))).toBe(true);
+    expect(isZodArraySchema(tags.brand<"Tags">())).toBe(true);
+    expect(isZodArraySchema(tags.readonly())).toBe(true);
+    expect(isZodArraySchema(tags.refine((value) => value.length > 0))).toBe(true);
+    expect(isZodArraySchema(tags.transform((value) => value.join(",")))).toBe(false);
+    expect(isZodArraySchema(z.preprocess((value) => value, tags))).toBe(false);
+    expect(isZodArraySchema(z.string().optional())).toBe(false);
+    expect(getZodArrayElementSchema(tags.refine((value) => value.length > 0))).toBe(tags.element);
+    expect(getZodArrayElementSchema(tags.catch([]))).toBe(tags.element);
+  });
+
+  it("should classify schemas that explicitly accept repeated parameter values", () => {
+    const tags = z.array(z.string());
+
+    expect(acceptsZodArrayInput(tags)).toBe(true);
+    expect(acceptsZodArrayInput(tags.optional())).toBe(true);
+    expect(acceptsZodArrayInput(tags.catch([]))).toBe(true);
+    expect(acceptsZodArrayInput(tags.refine((value) => value.length > 0))).toBe(true);
+    expect(acceptsZodArrayInput(z.union([z.string(), tags]))).toBe(true);
+    expect(acceptsZodArrayInput(z.any())).toBe(true);
+    expect(acceptsZodArrayInput(z.unknown())).toBe(true);
+
+    expect(acceptsZodArrayInput(z.string())).toBe(false);
+    expect(acceptsZodArrayInput(z.coerce.string())).toBe(false);
+    expect(acceptsZodArrayInput(z.coerce.boolean())).toBe(false);
+    expect(acceptsZodArrayInput(z.preprocess((value) => value, z.string()))).toBe(false);
+    expect(acceptsZodArrayInput(z.preprocess((value) => value, tags))).toBe(false);
+  });
+
+  it("should project unions to array-preserving parameter branches", () => {
+    const tags = z.array(z.string());
+    const coercingUnion = z.union([z.coerce.string(), tags]);
+    const preprocessingUnion = z.union([
+      z.preprocess((value) => (Array.isArray(value) ? value.join(",") : value), z.string()),
+      tags,
+    ]);
+
+    const coercingProjection = getZodArrayInputSchema(coercingUnion);
+    const preprocessingProjection = getZodArrayInputSchema(preprocessingUnion);
+
+    expect(coercingProjection).toBe(getZodArrayInputSchema(coercingUnion));
+    expect(coercingProjection?.safeParse(["first", "second"])).toMatchObject({
+      success: true,
+      data: ["first", "second"],
+    });
+    expect(preprocessingProjection?.safeParse(["first", "second"])).toMatchObject({
+      success: true,
+      data: ["first", "second"],
+    });
+  });
+
+  it("should remove catch wrappers while preserving transparent parameter wrappers", () => {
+    const tags = z.array(z.string());
+    const optionalTags = tags.optional();
+    const catchInsideOptional = tags.catch([]).optional();
+    const catchInsideNullable = tags.catch([]).nullable();
+    const catchOutsideOptional = optionalTags.catch([]);
+    const brandedReadonly = tags.catch([]).brand<"Tags">().readonly();
+
+    expect(unwrapZodParameterSchema(tags.catch([]))).toBe(tags);
+    expect(unwrapZodParameterSchema(catchOutsideOptional)).toBe(optionalTags);
+    expect(unwrapZodParameterSchema(optionalTags)).toBe(optionalTags);
+
+    const optionalWithoutCatch = unwrapZodParameterSchema(catchInsideOptional);
+    const nullableWithoutCatch = unwrapZodParameterSchema(catchInsideNullable);
+    const brandedReadonlyWithoutCatch = unwrapZodParameterSchema(brandedReadonly);
+
+    expect(optionalWithoutCatch).not.toBe(catchInsideOptional);
+    expect(optionalWithoutCatch.safeParse(undefined).success).toBe(true);
+    expect(optionalWithoutCatch.safeParse(["first"]).success).toBe(true);
+    expect(nullableWithoutCatch.safeParse(null).success).toBe(true);
+    expect(nullableWithoutCatch.safeParse(["first"]).success).toBe(true);
+    expect(brandedReadonlyWithoutCatch.safeParse(["first"]).success).toBe(true);
+  });
+
+  it("should cache reconstructed parameter schemas by source reference", () => {
+    const schema = z.array(z.string()).catch([]).optional();
+
+    expect(unwrapZodParameterSchema(schema)).toBe(unwrapZodParameterSchema(schema));
+  });
+
+  it("should preserve defaults and refinements without evaluating them during catch removal", () => {
+    let defaultCalls = 0;
+    const withDefault = z
+      .string()
+      .catch("fallback")
+      .default(() => {
+        defaultCalls += 1;
+        return "default";
+      });
+    const refined = z
+      .string()
+      .catch("fallback")
+      .refine((value) => value.length >= 2, "Expected at least two characters");
+
+    const defaultWithoutCatch = unwrapZodParameterSchema(withDefault);
+    const refinementWithoutCatch = unwrapZodParameterSchema(refined);
+
+    expect(defaultCalls).toBe(0);
+    expect(defaultWithoutCatch.safeParse(undefined)).toMatchObject({
+      success: true,
+      data: "default",
+    });
+    expect(defaultCalls).toBe(1);
+    expect(defaultWithoutCatch.safeParse(42).success).toBe(false);
+    expect(refinementWithoutCatch.safeParse("a")).toMatchObject({
+      success: false,
+      error: {
+        issues: [
+          expect.objectContaining({
+            message: "Expected at least two characters",
+          }),
+        ],
+      },
+    });
+    expect(refinementWithoutCatch.safeParse(42).success).toBe(false);
+  });
+
+  it("should remove catches from ordinary unions in option order", () => {
+    const schemas = [
+      z.union([z.string().catch("fallback"), z.array(z.string())]),
+      z.union([z.array(z.string()), z.string().catch("fallback")]),
+    ];
+
+    for (const schema of schemas) {
+      const schemaWithoutCatch = unwrapZodParameterSchema(schema);
+
+      expect(schemaWithoutCatch).not.toBe(schema);
+      expect(schemaWithoutCatch.safeParse(["first", "second"])).toMatchObject({
+        success: true,
+        data: ["first", "second"],
+      });
+      expect(schemaWithoutCatch.safeParse(42).success).toBe(false);
+    }
+  });
+
+  it("should not cross value-changing or discriminated-union boundaries", () => {
+    const transformed = z
+      .string()
+      .catch("fallback")
+      .transform((value) => value.length);
+    const preprocessed = z.preprocess((value) => value, z.string().catch("fallback"));
+    const pipeline = z.string().catch("fallback").pipe(z.string());
+    const discriminated = z.discriminatedUnion("kind", [
+      z.object({
+        kind: z.literal("first"),
+        value: z.string().catch("fallback"),
+      }),
+      z.object({ kind: z.literal("second"), value: z.array(z.string()) }),
+    ]);
+
+    expect(unwrapZodParameterSchema(transformed)).toBe(transformed);
+    expect(unwrapZodParameterSchema(preprocessed)).toBe(preprocessed);
+    expect(unwrapZodParameterSchema(pipeline)).toBe(pipeline);
+    expect(unwrapZodParameterSchema(discriminated)).toBe(discriminated);
+  });
+
   it("should keep Zod internals isolated to the shared schema descriptor", () => {
     const repoRoot = join(__dirname, "../../../..");
     const sourceRoots = [
       join(repoRoot, "packages/protocols-core/src/libs"),
       join(repoRoot, "packages/rpc-codegen/src/libs"),
       join(repoRoot, "packages/openapi-spec/src/libs"),
+      join(repoRoot, "packages/protocols-rest/src/libs"),
+      join(repoRoot, "packages/transports-http/src/libs"),
     ];
     const allowedFile = join(repoRoot, "packages/protocols-core/src/libs/SchemaDescriptor.ts");
     const forbiddenPatterns = ["constructor.name", "._def", '"_def"', "instanceof z.ZodEffects"];

@@ -1,6 +1,9 @@
 import { z } from "zod";
 import type { ParamIR } from "./RouteIR";
 
+const PATH_PARAM_FALLBACK_SCHEMA = z.string();
+const OPTIONAL_PARAM_FALLBACK_SCHEMA = z.string().optional();
+
 export function buildPathSchema(params: ParamIR[]): z.ZodObject<Record<string, z.ZodType>> | null {
   return buildNamedParamSchema(params, "path");
 }
@@ -28,16 +31,16 @@ function buildNamedParamSchema(
   const shape: Record<string, z.ZodType> = {};
 
   for (const param of namedParams) {
-    shape[param.name] = param.schema ?? getFallbackParamSchema(kind);
+    shape[param.name] = param.schema ?? getHttpParamFallbackSchema(kind);
   }
 
   return z.object(shape);
 }
 
-function getFallbackParamSchema(kind: "path" | "query" | "header"): z.ZodType {
+export function getHttpParamFallbackSchema(kind: "path" | "query" | "header"): z.ZodType {
   if (kind === "path") {
-    return z.string();
+    return PATH_PARAM_FALLBACK_SCHEMA;
   }
 
-  return z.string().optional();
+  return OPTIONAL_PARAM_FALLBACK_SCHEMA;
 }
