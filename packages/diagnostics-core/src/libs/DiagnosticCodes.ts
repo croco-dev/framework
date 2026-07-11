@@ -504,6 +504,26 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     fixExample: { label: "Check runtime policy", command: "pnpm runtime-policy:check" },
   }),
   createCliDiagnosticCodeDefinition({
+    code: "CROCO_DOCTOR_RUNTIME_PROFILE_MISMATCH",
+    category: "runtime",
+    title: "Runtime and provider profiles disagree",
+    cause:
+      "The runtime capability manifest and provider profile manifest declare different runtime targets.",
+    action:
+      "Regenerate the runtime capability and provider profile artifacts from the same application profile, then rerun croco doctor.",
+    legacyCodes: [],
+    searchKeywords: [
+      "croco doctor",
+      "runtime profile mismatch",
+      "provider profile",
+      "runtimeTarget",
+    ],
+    fixExample: {
+      label: "Verify the regenerated profile artifacts",
+      command: "pnpm profile:check",
+    },
+  }),
+  createCliDiagnosticCodeDefinition({
     code: "CROCO_DOCTOR_HTTP_SECURITY_VALIDATION_DISABLED",
     category: "runtime",
     title: "HTTP security validation is disabled",
