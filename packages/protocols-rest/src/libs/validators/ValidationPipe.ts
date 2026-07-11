@@ -1,4 +1,8 @@
-import { isZodArraySchema, unwrapZodParameterSchema } from "@croco/protocols-core";
+import {
+  acceptsZodArrayInput,
+  isZodArraySchema,
+  unwrapZodParameterSchema,
+} from "@croco/protocols-core";
 import type { z } from "zod";
 import type { ArgumentMetadata, PipeTransform } from "../interfaces/PipeTransform";
 import { RequestValidationProblem } from "./ValidationProblem";
@@ -10,6 +14,10 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
   constructor(private readonly schema: z.ZodType<T>) {}
 
   transform(value: unknown, metadata: ArgumentMetadata): T {
+    if (metadata.type === "query" && Array.isArray(value) && !acceptsZodArrayInput(this.schema)) {
+      throwRepeatedQueryValueProblem();
+    }
+
     const schemaWithoutCatch = unwrapZodParameterSchema(this.schema);
     const normalizedValue = normalizeHttpParameterValue(value, metadata, this.schema);
 
@@ -25,28 +33,12 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
         return result.data;
       }
 
-      if (metadata.type === "query" && isTopLevelTypeMismatch(result.error.issues)) {
-        throw new RequestValidationProblem("query", [
-          { path: "value", message: "Expected a single query value" },
-        ]);
-      }
-
       throwValidationProblem(result.error.issues, metadata);
     }
 
     const result = this.schema.safeParse(normalizedValue);
 
     if (!result.success) {
-      if (
-        metadata.type === "query" &&
-        Array.isArray(value) &&
-        isTopLevelTypeMismatch(result.error.issues)
-      ) {
-        throw new RequestValidationProblem("query", [
-          { path: "value", message: "Expected a single query value" },
-        ]);
-      }
-
       throwValidationProblem(result.error.issues, metadata);
     }
 
@@ -54,8 +46,10 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
   }
 }
 
-function isTopLevelTypeMismatch(issues: readonly z.ZodIssue[]): boolean {
-  return issues.length === 1 && issues[0]?.code === "invalid_type" && issues[0].path.length === 0;
+function throwRepeatedQueryValueProblem(): never {
+  throw new RequestValidationProblem("query", [
+    { path: "value", message: "Expected a single query value" },
+  ]);
 }
 
 function throwValidationProblem(issues: readonly z.ZodIssue[], metadata: ArgumentMetadata): never {

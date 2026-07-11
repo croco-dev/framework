@@ -13893,6 +13893,12 @@
       "entrypoint": "packages/protocols-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "acceptsZodArrayInput",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertContractGraphConsumerRouteCoverage",
           "exportKind": "named",
           "source": "./libs/ContractGraphConsumerCoverage",

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  acceptsZodArrayInput,
   CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
   CONTRACT_SCHEMA_ZOD_EFFECTS_UNWRAPPED_DIAGNOSTIC_CODE,
   describeZodSchema,
@@ -211,6 +212,24 @@ describe("SchemaDescriptor", () => {
     expect(isZodArraySchema(z.string().optional())).toBe(false);
     expect(getZodArrayElementSchema(tags.refine((value) => value.length > 0))).toBe(tags.element);
     expect(getZodArrayElementSchema(tags.catch([]))).toBe(tags.element);
+  });
+
+  it("should classify schemas that explicitly accept repeated parameter values", () => {
+    const tags = z.array(z.string());
+
+    expect(acceptsZodArrayInput(tags)).toBe(true);
+    expect(acceptsZodArrayInput(tags.optional())).toBe(true);
+    expect(acceptsZodArrayInput(tags.catch([]))).toBe(true);
+    expect(acceptsZodArrayInput(tags.refine((value) => value.length > 0))).toBe(true);
+    expect(acceptsZodArrayInput(z.union([z.string(), tags]))).toBe(true);
+    expect(acceptsZodArrayInput(z.any())).toBe(true);
+    expect(acceptsZodArrayInput(z.unknown())).toBe(true);
+
+    expect(acceptsZodArrayInput(z.string())).toBe(false);
+    expect(acceptsZodArrayInput(z.coerce.string())).toBe(false);
+    expect(acceptsZodArrayInput(z.coerce.boolean())).toBe(false);
+    expect(acceptsZodArrayInput(z.preprocess((value) => value, z.string()))).toBe(false);
+    expect(acceptsZodArrayInput(z.preprocess((value) => value, tags))).toBe(false);
   });
 
   it("should remove catch wrappers while preserving transparent parameter wrappers", () => {

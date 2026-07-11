@@ -109,6 +109,7 @@ export type {
   ContractSchemaSupportMatrixEntry,
 } from "./libs/SchemaDescriptor";
 export {
+  acceptsZodArrayInput,
   CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
   CONTRACT_SCHEMA_ZOD_EFFECTS_UNWRAPPED_DIAGNOSTIC_CODE,
   describeZodSchema,

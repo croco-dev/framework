@@ -39,6 +39,23 @@ describe("ValidationPipe", () => {
     });
   });
 
+  it.each([
+    ["coerced string", z.coerce.string()],
+    ["coerced boolean", z.coerce.boolean()],
+    [
+      "preprocessed scalar",
+      z.preprocess((value) => (Array.isArray(value) ? value.join(",") : value), z.string()),
+    ],
+  ])("should reject repeated values before a %s schema can reinterpret them", (_name, schema) => {
+    const pipe = new ValidationPipe(schema);
+
+    expect(() => pipe.transform(["first", "second"], QUERY_METADATA)).toThrowError(
+      expect.objectContaining({
+        issues: [{ path: "query.value", message: "Expected a single query value" }],
+      }),
+    );
+  });
+
   it("should preserve scalar schema errors for a single query value", () => {
     const pipe = new ValidationPipe(z.number());
 

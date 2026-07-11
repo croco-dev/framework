@@ -327,6 +327,45 @@ export function isZodArraySchema(schema: unknown): boolean {
 }
 
 /**
+ * Returns whether a parameter schema explicitly accepts array input.
+ *
+ * Arrays, any, unknown, transparent wrappers and refinements around them, and
+ * ordinary unions containing an array-capable option accept repeated values.
+ * Value-changing effects remain opaque so coercion and preprocessing cannot
+ * silently reinterpret repeated scalar parameters.
+ */
+export function acceptsZodArrayInput(schema: unknown): boolean {
+  return acceptsZodArrayInputInternal(schema, new Set());
+}
+
+function acceptsZodArrayInputInternal(schema: unknown, seen: Set<object>): boolean {
+  if (!isRecord(schema) || seen.has(schema)) {
+    return false;
+  }
+
+  seen.add(schema);
+
+  const typeName = getSchemaTypeName(schema);
+  if (typeName === "ZodArray" || typeName === "ZodAny" || typeName === "ZodUnknown") {
+    return true;
+  }
+
+  if (
+    isTransparentArrayWrapper(typeName) ||
+    (typeName === "ZodEffects" && isZodRefinementEffect(schema))
+  ) {
+    return acceptsZodArrayInputInternal(getZodInnerSchema(schema), seen);
+  }
+
+  const definition = getZodDefinition(schema);
+  if (typeName === "ZodUnion" && Array.isArray(definition?.options)) {
+    return definition.options.some((option) => acceptsZodArrayInputInternal(option, new Set(seen)));
+  }
+
+  return false;
+}
+
+/**
  * Removes catch wrappers that parameter-schema consumers cannot interpret.
  *
  * Transparent wrappers and ordinary union options are reconstructed only when
