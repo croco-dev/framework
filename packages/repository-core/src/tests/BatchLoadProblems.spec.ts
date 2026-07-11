@@ -3,9 +3,11 @@ import {
   BatchLoaderFactoryNotRegisteredProblem,
   BatchLoaderFactoryResolutionProblem,
   BatchLoaderScopeCollisionProblem,
-  type BatchLoadOptions,
-  type BatchLoadScope,
-  type BatchLoadScopeResolver,
+} from "@croco/repository-core";
+import type {
+  BatchLoadOptions,
+  BatchLoadScope,
+  BatchLoadScopeResolver,
 } from "@croco/repository-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 

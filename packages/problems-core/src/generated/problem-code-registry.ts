@@ -9248,7 +9248,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/repository-core/src/libs/problems/BatchLoadProblems.ts",
-          line: 26,
+          line: 29,
           column: 3,
           kind: "problem-class",
         },

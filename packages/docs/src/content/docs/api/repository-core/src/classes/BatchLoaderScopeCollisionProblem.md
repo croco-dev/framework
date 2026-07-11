@@ -5,7 +5,7 @@ prev: false
 title: "BatchLoaderScopeCollisionProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Raised when one explicit BatchLoad name is reused by different decorated methods or repository scopes.
 
 ## Extends
 

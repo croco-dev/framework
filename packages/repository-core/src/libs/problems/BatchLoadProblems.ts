@@ -22,6 +22,9 @@ export class BatchLoaderFactoryResolutionProblem extends Problem {
   }
 }
 
+/**
+ * Raised when one explicit BatchLoad name is reused by different decorated methods or repository scopes.
+ */
 export class BatchLoaderScopeCollisionProblem extends Problem {
   readonly code = "repository-core/batch-loader-scope-collision";
   readonly category = ProblemCategory.InternalServerError;
