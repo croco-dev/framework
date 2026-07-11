@@ -69,6 +69,29 @@ await consumer.handle(message, async (outboxMessage) => {
 
 Inbox records are keyed by `consumerId` and message idempotency key. Processed or currently processing records return `duplicate`; failed records can be retried explicitly.
 
+Each accepted start returns an `attempts` claim. Direct store callers must pass that value as `expectedAttempts` when marking the record processed or failed:
+
+```typescript
+const started = await store.startInboxProcessing({
+  consumerId: "billing-projection",
+  messageId: message.id,
+  inboxKey: message.idempotencyKey,
+  eventType: message.eventType,
+  now: new Date(),
+});
+
+if (started.status === "started") {
+  await store.markInboxProcessed({
+    consumerId: "billing-projection",
+    inboxKey: message.idempotencyKey,
+    expectedAttempts: started.record.attempts,
+    now: new Date(),
+  });
+}
+```
+
+Completion is a compare-and-set operation over the inbox identity, `processing` status, and claimed attempt. A stale or already completed claim fails with `InboxClaimConflictProblem` and leaves the current record unchanged. `TransactionalInboxConsumer` carries this claim automatically.
+
 ## Storage Adapters
 
 - `InMemoryTransactionalEventStore` provides test/local storage plus a `createTxAdapter()` helper for `TxManager` rollback and savepoint fixtures.

@@ -2632,7 +2632,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 691,
+      "line": 726,
       "column": 5,
       "code": "TS2375",
       "message": "Type '{ diagnostics: TransactionalEventDiagnostic[]; deadLetterReason?: string | undefined; deadLetteredAt?: Date | undefined; lastError: TransactionalEventError | undefined; ... 16 more ...; eventType: string; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2640,7 +2640,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 693,
+      "line": 728,
       "column": 27,
       "code": "TS4111",
       "message": "Property 'eventId' comes from an index signature, so it must be accessed with ['eventId']."
@@ -2648,7 +2648,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 694,
+      "line": 764,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'eventType' comes from an index signature, so it must be accessed with ['eventType']."
@@ -2656,7 +2656,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 695,
+      "line": 730,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'aggregateId' comes from an index signature, so it must be accessed with ['aggregateId']."
@@ -2664,7 +2664,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 696,
+      "line": 731,
       "column": 47,
       "code": "TS4111",
       "message": "Property 'aggregateId' comes from an index signature, so it must be accessed with ['aggregateId']."
@@ -2672,7 +2672,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 698,
+      "line": 733,
       "column": 34,
       "code": "TS4111",
       "message": "Property 'idempotencyKey' comes from an index signature, so it must be accessed with ['idempotencyKey']."
@@ -2680,7 +2680,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 699,
+      "line": 734,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'payload' comes from an index signature, so it must be accessed with ['payload']."
@@ -2688,7 +2688,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 700,
+      "line": 735,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'metadata' comes from an index signature, so it must be accessed with ['metadata']."
@@ -2696,7 +2696,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 701,
+      "line": 736,
       "column": 35,
       "code": "TS4111",
       "message": "Property 'traceContext' comes from an index signature, so it must be accessed with ['traceContext']."
@@ -2704,7 +2704,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 702,
+      "line": 737,
       "column": 51,
       "code": "TS4111",
       "message": "Property 'traceContext' comes from an index signature, so it must be accessed with ['traceContext']."
@@ -2712,7 +2712,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 704,
+      "line": 739,
       "column": 28,
       "code": "TS4111",
       "message": "Property 'attempts' comes from an index signature, so it must be accessed with ['attempts']."
@@ -2720,7 +2720,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 705,
+      "line": 740,
       "column": 31,
       "code": "TS4111",
       "message": "Property 'maxAttempts' comes from an index signature, so it must be accessed with ['maxAttempts']."
@@ -2728,7 +2728,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 706,
+      "line": 741,
       "column": 26,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -2736,7 +2736,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 707,
+      "line": 742,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'visibleAt' comes from an index signature, so it must be accessed with ['visibleAt']."
@@ -2744,7 +2744,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 708,
+      "line": 743,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'occurredAt' comes from an index signature, so it must be accessed with ['occurredAt']."
@@ -2752,7 +2752,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 709,
+      "line": 744,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'createdAt' comes from an index signature, so it must be accessed with ['createdAt']."
@@ -2760,7 +2760,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 710,
+      "line": 745,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'updatedAt' comes from an index signature, so it must be accessed with ['updatedAt']."
@@ -2768,7 +2768,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 711,
+      "line": 746,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'lockedUntil' comes from an index signature, so it must be accessed with ['lockedUntil']."
@@ -2776,7 +2776,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 711,
+      "line": 746,
       "column": 79,
       "code": "TS4111",
       "message": "Property 'lockedUntil' comes from an index signature, so it must be accessed with ['lockedUntil']."
@@ -2784,7 +2784,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 712,
+      "line": 747,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'publishedAt' comes from an index signature, so it must be accessed with ['publishedAt']."
@@ -2792,7 +2792,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 712,
+      "line": 747,
       "column": 79,
       "code": "TS4111",
       "message": "Property 'publishedAt' comes from an index signature, so it must be accessed with ['publishedAt']."
@@ -2800,7 +2800,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 713,
+      "line": 748,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'lastError' comes from an index signature, so it must be accessed with ['lastError']."
@@ -2808,7 +2808,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 714,
+      "line": 749,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'deadLetteredAt' comes from an index signature, so it must be accessed with ['deadLetteredAt']."
@@ -2816,7 +2816,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 715,
+      "line": 750,
       "column": 48,
       "code": "TS4111",
       "message": "Property 'deadLetteredAt' comes from an index signature, so it must be accessed with ['deadLetteredAt']."
@@ -2824,7 +2824,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 717,
+      "line": 752,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'deadLetterReason' comes from an index signature, so it must be accessed with ['deadLetterReason']."
@@ -2832,7 +2832,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 718,
+      "line": 753,
       "column": 52,
       "code": "TS4111",
       "message": "Property 'deadLetterReason' comes from an index signature, so it must be accessed with ['deadLetterReason']."
@@ -2840,7 +2840,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 720,
+      "line": 755,
       "column": 38,
       "code": "TS4111",
       "message": "Property 'diagnostics' comes from an index signature, so it must be accessed with ['diagnostics']."
@@ -2848,7 +2848,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 725,
+      "line": 760,
       "column": 5,
       "code": "TS2375",
       "message": "Type '{ metadata: Record<string, unknown>; diagnostics: TransactionalEventDiagnostic[]; failureReason?: string | undefined; lastError: TransactionalEventError | undefined; ... 9 more ...; updatedAt: Date; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2856,7 +2856,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 726,
+      "line": 761,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'consumerId' comes from an index signature, so it must be accessed with ['consumerId']."
@@ -2864,7 +2864,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 727,
+      "line": 762,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'messageId' comes from an index signature, so it must be accessed with ['messageId']."
@@ -2872,7 +2872,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 728,
+      "line": 763,
       "column": 28,
       "code": "TS4111",
       "message": "Property 'inboxKey' comes from an index signature, so it must be accessed with ['inboxKey']."
@@ -2888,7 +2888,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 730,
+      "line": 765,
       "column": 26,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -2896,7 +2896,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 731,
+      "line": 766,
       "column": 28,
       "code": "TS4111",
       "message": "Property 'attempts' comes from an index signature, so it must be accessed with ['attempts']."
@@ -2904,7 +2904,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 732,
+      "line": 767,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'createdAt' comes from an index signature, so it must be accessed with ['createdAt']."
@@ -2912,7 +2912,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 733,
+      "line": 768,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'updatedAt' comes from an index signature, so it must be accessed with ['updatedAt']."
@@ -2920,7 +2920,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 734,
+      "line": 769,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'processedAt' comes from an index signature, so it must be accessed with ['processedAt']."
@@ -2928,7 +2928,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 734,
+      "line": 769,
       "column": 79,
       "code": "TS4111",
       "message": "Property 'processedAt' comes from an index signature, so it must be accessed with ['processedAt']."
@@ -2936,7 +2936,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 735,
+      "line": 770,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'failedAt' comes from an index signature, so it must be accessed with ['failedAt']."
@@ -2944,7 +2944,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 735,
+      "line": 770,
       "column": 73,
       "code": "TS4111",
       "message": "Property 'failedAt' comes from an index signature, so it must be accessed with ['failedAt']."
@@ -2952,7 +2952,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 736,
+      "line": 771,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'lastError' comes from an index signature, so it must be accessed with ['lastError']."
@@ -2960,7 +2960,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 737,
+      "line": 772,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'failureReason' comes from an index signature, so it must be accessed with ['failureReason']."
@@ -2968,7 +2968,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 738,
+      "line": 773,
       "column": 49,
       "code": "TS4111",
       "message": "Property 'failureReason' comes from an index signature, so it must be accessed with ['failureReason']."
@@ -2976,7 +2976,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 740,
+      "line": 775,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'metadata' comes from an index signature, so it must be accessed with ['metadata']."
@@ -2984,7 +2984,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 741,
+      "line": 776,
       "column": 38,
       "code": "TS4111",
       "message": "Property 'diagnostics' comes from an index signature, so it must be accessed with ['diagnostics']."
@@ -2992,7 +2992,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 752,
+      "line": 787,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'traceId' comes from an index signature, so it must be accessed with ['traceId']."
@@ -3000,7 +3000,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 752,
+      "line": 787,
       "column": 66,
       "code": "TS4111",
       "message": "Property 'traceId' comes from an index signature, so it must be accessed with ['traceId']."
@@ -3008,7 +3008,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 753,
+      "line": 788,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'spanId' comes from an index signature, so it must be accessed with ['spanId']."
@@ -3016,7 +3016,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 753,
+      "line": 788,
       "column": 64,
       "code": "TS4111",
       "message": "Property 'spanId' comes from an index signature, so it must be accessed with ['spanId']."
@@ -3024,7 +3024,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 754,
+      "line": 789,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'traceFlags' comes from an index signature, so it must be accessed with ['traceFlags']."
@@ -3032,7 +3032,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 754,
+      "line": 789,
       "column": 72,
       "code": "TS4111",
       "message": "Property 'traceFlags' comes from an index signature, so it must be accessed with ['traceFlags']."
@@ -3040,7 +3040,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 755,
+      "line": 790,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'isValid' comes from an index signature, so it must be accessed with ['isValid']."
@@ -3048,7 +3048,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
-      "line": 755,
+      "line": 790,
       "column": 67,
       "code": "TS4111",
       "message": "Property 'isValid' comes from an index signature, so it must be accessed with ['isValid']."
@@ -3056,7 +3056,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 284,
+      "line": 287,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ status: \"published\"; updatedAt: Date; publishedAt: Date; lockedUntil: undefined; diagnostics: TransactionalEventDiagnostic[]; id: string; ... 14 more ...; deadLetterReason?: string; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3064,7 +3064,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 314,
+      "line": 317,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ diagnostics: TransactionalEventDiagnostic[]; deadLetterReason?: string; status: \"retrying\" | \"poisoned\"; visibleAt: Date; updatedAt: Date; ... 15 more ...; deadLetteredAt?: Date; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3072,7 +3072,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 356,
+      "line": 359,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ status: \"dead_lettered\"; updatedAt: Date; deadLetteredAt: Date; deadLetterReason: string; lockedUntil: undefined; diagnostics: TransactionalEventDiagnostic[]; ... 14 more ...; lastError?: TransactionalEventError; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3080,7 +3080,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 473,
+      "line": 481,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ status: \"failed\"; updatedAt: Date; failedAt: Date; lastError: TransactionalEventError | undefined; failureReason: string; diagnostics: TransactionalEventDiagnostic[]; ... 7 more ...; metadata: Record<string, unknown>; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3088,7 +3088,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 65,
+      "line": 66,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ diagnostics: TransactionalEventDiagnostic[]; lastError?: TransactionalEventError; deadLetteredAt?: Date; publishedAt?: Date; lockedUntil?: Date; visibleAt: Date; ... 14 more ...; deadLetterReason?: string; }' is not assignable to type 'TransactionalOutboxMessage' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3096,7 +3096,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/InMemoryTransactionalEventStore.ts",
-      "line": 85,
+      "line": 86,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ metadata: Record<string, unknown>; diagnostics: TransactionalEventDiagnostic[]; lastError?: TransactionalEventError; failedAt?: Date; processedAt?: Date; ... 8 more ...; failureReason?: string; }' is not assignable to type 'TransactionalInboxRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3104,7 +3104,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/TransactionalEvents.ts",
-      "line": 372,
+      "line": 364,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ eventType: string; eventId: string; occurredAt: string; aggregateId: string | undefined; payload: Record<string, unknown>; }' is not assignable to type 'SerializedEvent' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3112,7 +3112,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/TransactionalEvents.ts",
-      "line": 427,
+      "line": 419,
       "column": 11,
       "code": "TS2379",
       "message": "Argument of type '{ id: string; eventId: string; eventType: string; aggregateId: string | undefined; idempotencyKey: string; payload: Record<string, unknown>; metadata: { [x: string]: unknown; traceContext?: EventTraceContext; }; ... 4 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to parameter of type 'AppendOutboxMessageInput' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

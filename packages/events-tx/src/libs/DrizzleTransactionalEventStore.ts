@@ -21,7 +21,7 @@ import {
   type TransactionalInboxRecord,
   type TransactionalOutboxMessage,
 } from "./TransactionalEvents";
-import { OutboxStorageProblem } from "./problems/EventsTxProblems";
+import { InboxClaimConflictProblem, OutboxStorageProblem } from "./problems/EventsTxProblems";
 import { transactionalInboxRecords, transactionalOutboxMessages } from "./schema";
 
 type AwaitableRows = PromiseLike<unknown[]>;
@@ -537,9 +537,13 @@ export class DrizzleTransactionalEventStore<
           ? appendDiagnostic(current.diagnostics, input.diagnostic)
           : current.diagnostics,
       })
-      .where(this.inboxStorageCondition(input.consumerId, input.inboxKey))
+      .where(
+        this.activeInboxClaimCondition(input.consumerId, input.inboxKey, input.expectedAttempts),
+      )
       .returning();
-    return this.requireMappedInbox(updated, input.consumerId, input.inboxKey);
+    return isRecord(updated)
+      ? this.mapInboxRow(updated)
+      : this.throwInboxClaimConflict(input, context);
   }
 
   async markInboxFailed(
@@ -559,9 +563,13 @@ export class DrizzleTransactionalEventStore<
           ? appendDiagnostic(current.diagnostics, input.diagnostic)
           : current.diagnostics,
       })
-      .where(this.inboxStorageCondition(input.consumerId, input.inboxKey))
+      .where(
+        this.activeInboxClaimCondition(input.consumerId, input.inboxKey, input.expectedAttempts),
+      )
       .returning();
-    return this.requireMappedInbox(updated, input.consumerId, input.inboxKey);
+    return isRecord(updated)
+      ? this.mapInboxRow(updated)
+      : this.throwInboxClaimConflict(input, context);
   }
 
   async findInboxRecord(
@@ -616,6 +624,19 @@ export class DrizzleTransactionalEventStore<
     );
   }
 
+  private activeInboxClaimCondition(
+    consumerId: string,
+    inboxKey: string,
+    expectedAttempts: number,
+  ): SQL<unknown> | undefined {
+    return and(
+      eq(this.inbox.consumerId, consumerId),
+      eq(this.inbox.inboxKey, inboxKey),
+      eq(this.inbox.status, "processing"),
+      eq(this.inbox.attempts, expectedAttempts),
+    );
+  }
+
   private activeClaimCondition(id: string, expectedAttempts: number): SQL<unknown> | undefined {
     return and(
       eq(this.outbox.id, id),
@@ -663,6 +684,20 @@ export class DrizzleTransactionalEventStore<
       throw new OutboxStorageProblem(`Inbox record '${consumerId}:${inboxKey}' was not found.`);
     }
     return record;
+  }
+
+  private async throwInboxClaimConflict(
+    input: InboxCompletionInput,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<never> {
+    const actual = await this.requireInbox(input.consumerId, input.inboxKey, context);
+    throw new InboxClaimConflictProblem(
+      input.consumerId,
+      input.inboxKey,
+      input.expectedAttempts,
+      actual.attempts,
+      actual.status,
+    );
   }
 
   private requireMappedOutbox(row: unknown, id: string): TransactionalOutboxMessage {

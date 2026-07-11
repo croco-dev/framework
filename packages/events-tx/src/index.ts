@@ -2,6 +2,7 @@
  * 트랜잭션 상태가 유효하지 않을 때 발생하는 Problem 하위 타입입니다.
  */
 export {
+  InboxClaimConflictProblem,
   OutboxPublishExhaustedProblem,
   OutboxStorageProblem,
   OutboxTransactionRequiredProblem,
@@ -51,7 +52,6 @@ export type {
   InboxCompletionInput,
   InboxConsumerResult,
   InboxFailureInput,
-  InboxMessageStatus,
   InboxStartInput,
   InboxStartResult,
   ListInboxRecordsOptions,
@@ -61,7 +61,6 @@ export type {
   OutboxCompletionInput,
   OutboxDeadLetterInput,
   OutboxFailureInput,
-  OutboxMessageStatus,
   OutboxRelayBatchResult,
   OutboxRelayConfig,
   OutboxRelayMessageResult,
@@ -75,6 +74,8 @@ export type {
   TransactionalOutboxConfig,
   TransactionalOutboxMessage,
 } from "./libs/TransactionalEvents";
+
+export type { InboxMessageStatus, OutboxMessageStatus } from "./libs/TransactionalEventTypes";
 
 export type {
   NewTransactionalInboxRecordRow,

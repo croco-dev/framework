@@ -5698,6 +5698,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "InboxClaimConflictProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EventsTxProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "InMemoryTransactionalEventStore",
           "exportKind": "named",
           "source": "./libs/InMemoryTransactionalEventStore",
@@ -5803,7 +5809,7 @@
         {
           "name": "InboxMessageStatus",
           "exportKind": "named",
-          "source": "./libs/TransactionalEvents"
+          "source": "./libs/TransactionalEventTypes"
         },
         {
           "name": "InboxStartInput",
@@ -5873,7 +5879,7 @@
         {
           "name": "OutboxMessageStatus",
           "exportKind": "named",
-          "source": "./libs/TransactionalEvents"
+          "source": "./libs/TransactionalEventTypes"
         },
         {
           "name": "OutboxRelayBatchResult",

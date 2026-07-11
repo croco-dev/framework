@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import type { TxAdapter } from "@croco/tx-core";
 import {
   type AppendOutboxMessageInput,
@@ -19,7 +20,7 @@ import {
   type TransactionalInboxRecord,
   type TransactionalOutboxMessage,
 } from "./TransactionalEvents";
-import { OutboxStorageProblem } from "./problems/EventsTxProblems";
+import { InboxClaimConflictProblem, OutboxStorageProblem } from "./problems/EventsTxProblems";
 
 export type InMemoryTransactionalEventStoreState = {
   outbox: Map<string, TransactionalOutboxMessage>;
@@ -142,17 +143,19 @@ function assertNotAborted(signal?: AbortSignal): void {
  */
 export class InMemoryTransactionalEventStore implements TransactionalEventStore<InMemoryTransactionalEventStoreClient> {
   private rootState = createEmptyState();
+  private commitTail: Promise<void> = Promise.resolve();
 
   createTxAdapter(): TxAdapter<InMemoryTransactionalEventStoreClient> {
     return {
       transaction: async (fn, _options, signal) => {
         assertNotAborted(signal);
+        const baseState = cloneState(this.rootState);
         const client: InMemoryTransactionalEventStoreClient = {
-          state: cloneState(this.rootState),
+          state: cloneState(baseState),
         };
         const result = await fn(client);
         assertNotAborted(signal);
-        this.rootState = cloneState(client.state);
+        await this.commitTransaction(baseState, client.state);
         return result;
       },
       savepoint: async (client, fn, _options, signal) => {
@@ -381,6 +384,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     input: InboxStartInput,
     context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
   ): Promise<InboxStartResult> {
+    await this.waitForPendingCommits(context);
     const state = this.resolveState(context);
     const storageKey = inboxStorageKey(input.consumerId, input.inboxKey);
     const existing = state.inbox.get(storageKey);
@@ -446,9 +450,11 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     input: InboxCompletionInput,
     context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
   ): Promise<TransactionalInboxRecord> {
+    await this.waitForPendingCommits(context);
     const state = this.resolveState(context);
     const storageKey = inboxStorageKey(input.consumerId, input.inboxKey);
     const record = this.requireInboxRecord(state, storageKey);
+    this.requireActiveInboxClaim(record, input);
     const updated: TransactionalInboxRecord = {
       ...cloneInboxRecord(record),
       status: "processed",
@@ -467,9 +473,11 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     input: InboxFailureInput,
     context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
   ): Promise<TransactionalInboxRecord> {
+    await this.waitForPendingCommits(context);
     const state = this.resolveState(context);
     const storageKey = inboxStorageKey(input.consumerId, input.inboxKey);
     const record = this.requireInboxRecord(state, storageKey);
+    this.requireActiveInboxClaim(record, input);
     const updated: TransactionalInboxRecord = {
       ...cloneInboxRecord(record),
       status: "failed",
@@ -513,6 +521,107 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     return context?.client?.state ?? this.rootState;
   }
 
+  private async waitForPendingCommits(
+    context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
+  ): Promise<void> {
+    if (!context?.client) {
+      await this.commitTail;
+    }
+  }
+
+  private async commitTransaction(
+    baseState: InMemoryTransactionalEventStoreState,
+    stagedState: InMemoryTransactionalEventStoreState,
+  ): Promise<void> {
+    const previousCommit = this.commitTail;
+    let releaseCommit = (): void => {};
+    this.commitTail = new Promise((resolve) => {
+      releaseCommit = resolve;
+    });
+
+    await previousCommit;
+    try {
+      this.mergeTransactionState(baseState, stagedState);
+    } finally {
+      releaseCommit();
+    }
+  }
+
+  private mergeTransactionState(
+    baseState: InMemoryTransactionalEventStoreState,
+    stagedState: InMemoryTransactionalEventStoreState,
+  ): void {
+    const nextState = cloneState(this.rootState);
+
+    this.mergeMap(
+      baseState.outbox,
+      stagedState.outbox,
+      nextState.outbox,
+      cloneOutboxMessage,
+      (key) => new OutboxStorageProblem(`Outbox message '${key}' changed concurrently.`),
+    );
+    this.mergeMap(
+      baseState.outboxIdByIdempotencyKey,
+      stagedState.outboxIdByIdempotencyKey,
+      nextState.outboxIdByIdempotencyKey,
+      (value) => value,
+      (key) => new OutboxStorageProblem(`Outbox idempotency key '${key}' changed concurrently.`),
+    );
+    this.mergeMap(
+      baseState.inbox,
+      stagedState.inbox,
+      nextState.inbox,
+      cloneInboxRecord,
+      (key, base, staged, actual) => {
+        if (actual) {
+          const expectedAttempts = staged?.attempts ?? base?.attempts ?? 0;
+          return new InboxClaimConflictProblem(
+            actual.consumerId,
+            actual.inboxKey,
+            expectedAttempts,
+            actual.attempts,
+            actual.status,
+          );
+        }
+        return new OutboxStorageProblem(`Inbox record '${key}' changed concurrently.`);
+      },
+    );
+
+    this.rootState = nextState;
+  }
+
+  private mergeMap<T>(
+    base: Map<string, T>,
+    staged: Map<string, T>,
+    target: Map<string, T>,
+    clone: (value: T) => T,
+    conflict: (
+      key: string,
+      base: T | undefined,
+      staged: T | undefined,
+      actual: T | undefined,
+    ) => Error,
+  ): void {
+    for (const key of new Set([...base.keys(), ...staged.keys()])) {
+      const baseValue = base.get(key);
+      const stagedValue = staged.get(key);
+      if (isDeepStrictEqual(baseValue, stagedValue)) {
+        continue;
+      }
+
+      const actualValue = target.get(key);
+      if (!isDeepStrictEqual(baseValue, actualValue)) {
+        throw conflict(key, baseValue, stagedValue, actualValue);
+      }
+
+      if (stagedValue === undefined) {
+        target.delete(key);
+      } else {
+        target.set(key, clone(stagedValue));
+      }
+    }
+  }
+
   private isClaimable(message: TransactionalOutboxMessage, now: Date): boolean {
     const visible = message.visibleAt.getTime() <= now.getTime();
     if (!visible) {
@@ -554,5 +663,22 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
       throw new OutboxStorageProblem(`Inbox record '${storageKey}' was not found.`);
     }
     return record;
+  }
+
+  private requireActiveInboxClaim(
+    record: TransactionalInboxRecord,
+    input: InboxCompletionInput,
+  ): void {
+    if (record.status === "processing" && record.attempts === input.expectedAttempts) {
+      return;
+    }
+
+    throw new InboxClaimConflictProblem(
+      input.consumerId,
+      input.inboxKey,
+      input.expectedAttempts,
+      record.attempts,
+      record.status,
+    );
   }
 }

@@ -12,16 +12,7 @@ import {
   OutboxPublishExhaustedProblem,
   OutboxTransactionRequiredProblem,
 } from "./problems/EventsTxProblems";
-
-export type OutboxMessageStatus =
-  | "pending"
-  | "publishing"
-  | "published"
-  | "retrying"
-  | "poisoned"
-  | "dead_lettered";
-
-export type InboxMessageStatus = "processing" | "processed" | "failed";
+import type { InboxMessageStatus, OutboxMessageStatus } from "./TransactionalEventTypes";
 
 export type TransactionalEventDiagnostic = {
   code: string;
@@ -147,6 +138,7 @@ export type InboxStartResult =
 export type InboxCompletionInput = {
   consumerId: string;
   inboxKey: string;
+  expectedAttempts: number;
   now: Date;
   diagnostic?: TransactionalEventDiagnostic;
 };
@@ -709,33 +701,13 @@ export class TransactionalInboxConsumer<TClient = unknown> {
 
     try {
       await handler(message);
-      const processed = await this.config.store.markInboxProcessed(
-        {
-          consumerId: this.config.consumerId,
-          inboxKey,
-          now: this.now(),
-          diagnostic: createTransactionalEventDiagnostic(
-            "events-tx/inbox-processed",
-            "Inbox message processed.",
-            this.now(),
-            {
-              eventType: message.eventType,
-            },
-          ),
-        },
-        this.context(),
-      );
-
-      return {
-        status: "processed",
-        record: processed,
-      };
     } catch (error) {
       const normalized = normalizeTransactionalEventError(error);
       const failed = await this.config.store.markInboxFailed(
         {
           consumerId: this.config.consumerId,
           inboxKey,
+          expectedAttempts: start.record.attempts,
           now: this.now(),
           error: normalized,
           reason: normalized.message,
@@ -761,6 +733,29 @@ export class TransactionalInboxConsumer<TClient = unknown> {
         error: normalized,
       };
     }
+
+    const processed = await this.config.store.markInboxProcessed(
+      {
+        consumerId: this.config.consumerId,
+        inboxKey,
+        expectedAttempts: start.record.attempts,
+        now: this.now(),
+        diagnostic: createTransactionalEventDiagnostic(
+          "events-tx/inbox-processed",
+          "Inbox message processed.",
+          this.now(),
+          {
+            eventType: message.eventType,
+          },
+        ),
+      },
+      this.context(),
+    );
+
+    return {
+      status: "processed",
+      record: processed,
+    };
   }
 
   private context(): TransactionalEventStoreContext<TClient> | undefined {

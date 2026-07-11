@@ -13,19 +13,25 @@ title: "InboxCompletionInput"
 
 > **consumerId**: `string`
 
-***
+---
 
 ### diagnostic?
 
 > `optional` **diagnostic?**: [`TransactionalEventDiagnostic`](/api/events-tx/src/type-aliases/transactionaleventdiagnostic/)
 
-***
+---
+
+### expectedAttempts
+
+> **expectedAttempts**: `number`
+
+---
 
 ### inboxKey
 
 > **inboxKey**: `string`
 
-***
+---
 
 ### now
 

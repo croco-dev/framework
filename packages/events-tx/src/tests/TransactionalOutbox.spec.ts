@@ -13,13 +13,16 @@ import {
   InMemoryIdempotencyStore,
   InvalidIdempotencyKeyProblem,
 } from "@croco/idempotency-core";
+import { ProblemCategory } from "@croco/problems-core";
 import * as telemetry from "@croco/telemetry-api";
 import { TxManager } from "@croco/tx-core";
+import { drizzle as createPgProxyDrizzle } from "drizzle-orm/pg-proxy";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createEventBusOutboxPublisher,
   DrizzleTransactionalEventStore,
   type DrizzleTransactionalEventStoreDb,
+  InboxClaimConflictProblem,
   InMemoryTransactionalEventStore,
   normalizeTransactionalEventError,
   OutboxPublishExhaustedProblem,
@@ -861,6 +864,58 @@ describe("TransactionalInboxConsumer", () => {
       failureReason: "projection offline",
     });
   });
+
+  it("propagates the claimed attempt to both completion paths", async () => {
+    const fixture = createOutboxFixture();
+    const successfulMessage = await appendMessage(fixture);
+    const failedMessage = await appendMessage(fixture, {
+      idempotencyKey: "credit-acct-2",
+    });
+    const processedSpy = vi.spyOn(fixture.store, "markInboxProcessed");
+    const failedSpy = vi.spyOn(fixture.store, "markInboxFailed");
+    const consumer = new TransactionalInboxConsumer({
+      store: fixture.store,
+      consumerId: "claim-projection",
+      now: fixture.clock.now,
+      throwOnError: false,
+    });
+
+    await consumer.handle(successfulMessage, async () => {});
+    await consumer.handle(failedMessage, async () => {
+      throw new Error("projection offline");
+    });
+
+    expect(processedSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedAttempts: 1 }),
+      undefined,
+    );
+    expect(failedSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedAttempts: 1 }),
+      undefined,
+    );
+  });
+
+  it("does not reinterpret a success completion conflict as a handler failure", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const conflict = new InboxClaimConflictProblem(
+      "claim-projection",
+      message.idempotencyKey,
+      1,
+      2,
+      "processing",
+    );
+    vi.spyOn(fixture.store, "markInboxProcessed").mockRejectedValue(conflict);
+    const failedSpy = vi.spyOn(fixture.store, "markInboxFailed");
+    const consumer = new TransactionalInboxConsumer({
+      store: fixture.store,
+      consumerId: "claim-projection",
+      now: fixture.clock.now,
+    });
+
+    await expect(consumer.handle(message, async () => {})).rejects.toBe(conflict);
+    expect(failedSpy).not.toHaveBeenCalled();
+  });
 });
 
 describe("createEventBusOutboxPublisher", () => {
@@ -965,6 +1020,7 @@ describe("TransactionalEventStore conformance", () => {
     await fixture.store.markInboxProcessed({
       consumerId: "projection",
       inboxKey: message.idempotencyKey,
+      expectedAttempts: started.record.attempts,
       now: fixture.clock.now(),
     });
     const duplicate = await fixture.store.startInboxProcessing({
@@ -992,7 +1048,7 @@ describe("TransactionalEventStore conformance", () => {
       metadata: {},
     });
 
-    await fixture.store.startInboxProcessing({
+    const ledgerStarted = await fixture.store.startInboxProcessing({
       consumerId: "ledger-projection",
       messageId: message.id,
       inboxKey: message.idempotencyKey,
@@ -1002,6 +1058,7 @@ describe("TransactionalEventStore conformance", () => {
     await fixture.store.markInboxFailed({
       consumerId: "ledger-projection",
       inboxKey: message.idempotencyKey,
+      expectedAttempts: ledgerStarted.record.attempts,
       now: fixture.clock.now(),
       error: {
         name: "Error",
@@ -1032,6 +1089,312 @@ describe("TransactionalEventStore conformance", () => {
     await expect(fixture.store.listInboxRecords()).resolves.toHaveLength(2);
   });
 
+  it("rejects stale inbox success after a newer retry without mutating the active claim", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const first = await fixture.store.startInboxProcessing({
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    });
+    await fixture.store.markInboxFailed({
+      consumerId: "ledger-projection",
+      inboxKey: message.idempotencyKey,
+      expectedAttempts: first.record.attempts,
+      now: fixture.clock.now(),
+      error: { name: "Error", message: "projection offline" },
+      reason: "projection offline",
+    });
+    const retry = await fixture.store.startInboxProcessing({
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    });
+    const before = await fixture.store.findInboxRecord("ledger-projection", message.idempotencyKey);
+
+    await expect(
+      fixture.store.markInboxProcessed({
+        consumerId: "ledger-projection",
+        inboxKey: message.idempotencyKey,
+        expectedAttempts: first.record.attempts,
+        now: fixture.clock.advance(1_000),
+      }),
+    ).rejects.toMatchObject({
+      code: "events-tx/inbox-claim-conflict",
+      extensions: {
+        expectedAttempts: 1,
+        actualAttempts: 2,
+        actualStatus: "processing",
+      },
+    });
+    expect(retry.record.attempts).toBe(2);
+    await expect(
+      fixture.store.findInboxRecord("ledger-projection", message.idempotencyKey),
+    ).resolves.toEqual(before);
+  });
+
+  it("rejects a late inbox failure after success without changing terminal evidence", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const started = await fixture.store.startInboxProcessing({
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    });
+    await fixture.store.markInboxProcessed({
+      consumerId: "ledger-projection",
+      inboxKey: message.idempotencyKey,
+      expectedAttempts: started.record.attempts,
+      now: fixture.clock.now(),
+    });
+    const before = await fixture.store.findInboxRecord("ledger-projection", message.idempotencyKey);
+
+    await expect(
+      fixture.store.markInboxFailed({
+        consumerId: "ledger-projection",
+        inboxKey: message.idempotencyKey,
+        expectedAttempts: started.record.attempts,
+        now: fixture.clock.advance(1_000),
+        error: { name: "Error", message: "late failure" },
+        reason: "late failure",
+      }),
+    ).rejects.toBeInstanceOf(InboxClaimConflictProblem);
+    await expect(
+      fixture.store.findInboxRecord("ledger-projection", message.idempotencyKey),
+    ).resolves.toEqual(before);
+  });
+
+  it("allows exactly one terminal completion for the same inbox claim", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const started = await fixture.store.startInboxProcessing({
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    });
+    const completion = {
+      consumerId: "ledger-projection",
+      inboxKey: message.idempotencyKey,
+      expectedAttempts: started.record.attempts,
+      now: fixture.clock.now(),
+    };
+
+    const results = await Promise.allSettled([
+      fixture.store.markInboxProcessed(completion),
+      fixture.store.markInboxFailed({
+        ...completion,
+        error: { name: "Error", message: "racing failure" },
+        reason: "racing failure",
+      }),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toMatchObject([
+      {
+        reason: {
+          code: "events-tx/inbox-claim-conflict",
+        },
+      },
+    ]);
+    await expect(
+      fixture.store.findInboxRecord("ledger-projection", message.idempotencyKey),
+    ).resolves.toMatchObject({ status: "processed" });
+  });
+
+  it("commits only one in-memory transaction for the same completion claim", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const started = await fixture.store.startInboxProcessing({
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    });
+    const adapter = fixture.store.createTxAdapter();
+    let releaseFirstTransaction = (): void => {};
+    const firstTransactionGate = new Promise<void>((resolve) => {
+      releaseFirstTransaction = resolve;
+    });
+    const completion = {
+      consumerId: "ledger-projection",
+      inboxKey: message.idempotencyKey,
+      expectedAttempts: started.record.attempts,
+      now: fixture.clock.now(),
+    };
+
+    const processed = adapter.transaction(async (client) => {
+      const record = await fixture.store.markInboxProcessed(completion, { client });
+      await firstTransactionGate;
+      return record;
+    });
+    const failed = adapter.transaction(async (client) => {
+      return fixture.store.markInboxFailed(
+        {
+          ...completion,
+          error: { name: "Error", message: "racing failure" },
+          reason: "racing failure",
+        },
+        { client },
+      );
+    });
+
+    await expect(failed).resolves.toMatchObject({ status: "failed", attempts: 1 });
+    releaseFirstTransaction();
+    await expect(processed).rejects.toMatchObject({
+      code: "events-tx/inbox-claim-conflict",
+    });
+    await expect(
+      fixture.store.findInboxRecord("ledger-projection", message.idempotencyKey),
+    ).resolves.toMatchObject({ status: "failed", attempts: 1 });
+  });
+
+  it("allows only one completion across transaction and direct in-memory paths", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const started = await fixture.store.startInboxProcessing({
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    });
+    const adapter = fixture.store.createTxAdapter();
+    let releaseTransaction = (): void => {};
+    const transactionGate = new Promise<void>((resolve) => {
+      releaseTransaction = resolve;
+    });
+    const completion = {
+      consumerId: "ledger-projection",
+      inboxKey: message.idempotencyKey,
+      expectedAttempts: started.record.attempts,
+      now: fixture.clock.now(),
+    };
+    const processed = adapter.transaction(async (client) => {
+      const record = await fixture.store.markInboxProcessed(completion, { client });
+      await transactionGate;
+      return record;
+    });
+    const failed = fixture.store.markInboxFailed({
+      ...completion,
+      error: { name: "Error", message: "racing failure" },
+      reason: "racing failure",
+    });
+
+    await expect(failed).resolves.toMatchObject({ status: "failed", attempts: 1 });
+    releaseTransaction();
+    await expect(processed).rejects.toMatchObject({
+      code: "events-tx/inbox-claim-conflict",
+    });
+    await expect(
+      fixture.store.findInboxRecord("ledger-projection", message.idempotencyKey),
+    ).resolves.toMatchObject({ status: "failed", attempts: 1 });
+  });
+
+  it("reports the rejected retry attempt when concurrent transactions complete attempt two", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const firstAttempt = await fixture.store.startInboxProcessing({
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    });
+    await fixture.store.markInboxFailed({
+      consumerId: "ledger-projection",
+      inboxKey: message.idempotencyKey,
+      expectedAttempts: firstAttempt.record.attempts,
+      now: fixture.clock.now(),
+      error: { name: "Error", message: "first failure" },
+      reason: "first failure",
+    });
+    const adapter = fixture.store.createTxAdapter();
+    let releaseFirstRetry = (): void => {};
+    const firstRetryGate = new Promise<void>((resolve) => {
+      releaseFirstRetry = resolve;
+    });
+    const retryInput = {
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    };
+
+    const processed = adapter.transaction(async (client) => {
+      const retry = await fixture.store.startInboxProcessing(retryInput, { client });
+      expect(retry.record.attempts).toBe(2);
+      const record = await fixture.store.markInboxProcessed(
+        {
+          consumerId: "ledger-projection",
+          inboxKey: message.idempotencyKey,
+          expectedAttempts: retry.record.attempts,
+          now: fixture.clock.now(),
+        },
+        { client },
+      );
+      await firstRetryGate;
+      return record;
+    });
+    const failed = adapter.transaction(async (client) => {
+      const retry = await fixture.store.startInboxProcessing(retryInput, { client });
+      expect(retry.record.attempts).toBe(2);
+      return fixture.store.markInboxFailed(
+        {
+          consumerId: "ledger-projection",
+          inboxKey: message.idempotencyKey,
+          expectedAttempts: retry.record.attempts,
+          now: fixture.clock.now(),
+          error: { name: "Error", message: "second failure" },
+          reason: "second failure",
+        },
+        { client },
+      );
+    });
+
+    await expect(failed).resolves.toMatchObject({ status: "failed", attempts: 2 });
+    releaseFirstRetry();
+    await expect(processed).rejects.toMatchObject({
+      code: "events-tx/inbox-claim-conflict",
+      extensions: {
+        expectedAttempts: 2,
+        actualAttempts: 2,
+        actualStatus: "failed",
+      },
+    });
+  });
+
+  it("merges a nested requires-new transaction without deadlocking its outer transaction", async () => {
+    const fixture = createOutboxFixture();
+
+    await fixture.txManager.run(async () => {
+      await fixture.outbox.append(new AccountCreditedEvent("acct-outer", 100), {
+        idempotencyKey: "credit-outer",
+      });
+      await fixture.txManager.suspend(() =>
+        fixture.txManager.run(() =>
+          fixture.outbox.append(new AccountCreditedEvent("acct-inner", 200), {
+            idempotencyKey: "credit-inner",
+          }),
+        ),
+      );
+    });
+
+    await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+      { idempotencyKey: "credit-inner" },
+      { idempotencyKey: "credit-outer" },
+    ]);
+  });
+
   it("throws storage problems for missing outbox and inbox records", async () => {
     const fixture = createOutboxFixture();
 
@@ -1046,6 +1409,7 @@ describe("TransactionalEventStore conformance", () => {
       fixture.store.markInboxProcessed({
         consumerId: "projection",
         inboxKey: "missing-key",
+        expectedAttempts: 1,
         now: fixture.clock.now(),
       }),
     ).rejects.toBeInstanceOf(OutboxStorageProblem);
@@ -1187,6 +1551,128 @@ describe("DrizzleTransactionalEventStore", () => {
         status: "published",
       },
     ]);
+  });
+
+  it("emits four-predicate Drizzle CAS SQL for inbox success and failure", async () => {
+    const processing = inboxRowValues({ attempts: 2, status: "processing" });
+    const processed = inboxRowValues({
+      attempts: 2,
+      status: "processed",
+      processedAt: new Date("2026-01-01T00:00:01.000Z"),
+    });
+    const failed = inboxRowValues({
+      attempts: 2,
+      status: "failed",
+      failedAt: new Date("2026-01-01T00:00:01.000Z"),
+      failureReason: "projection offline",
+    });
+    const successProxy = createInboxProxyDb([[processing], [processed]]);
+    const failureProxy = createInboxProxyDb([[processing], [failed]]);
+    const successStore = new DrizzleTransactionalEventStore({ db: successProxy.db });
+    const failureStore = new DrizzleTransactionalEventStore({ db: failureProxy.db });
+
+    await expect(
+      successStore.markInboxProcessed({
+        consumerId: "ledger-projection",
+        inboxKey: "credit-acct-1",
+        expectedAttempts: 2,
+        now: new Date("2026-01-01T00:00:01.000Z"),
+      }),
+    ).resolves.toMatchObject({ status: "processed", attempts: 2 });
+    await expect(
+      failureStore.markInboxFailed({
+        consumerId: "ledger-projection",
+        inboxKey: "credit-acct-1",
+        expectedAttempts: 2,
+        now: new Date("2026-01-01T00:00:01.000Z"),
+        error: { name: "Error", message: "projection offline" },
+        reason: "projection offline",
+      }),
+    ).resolves.toMatchObject({ status: "failed", attempts: 2 });
+
+    for (const query of [successProxy.queries[1], failureProxy.queries[1]]) {
+      const whereSql = query.sql.slice(query.sql.indexOf(" where "));
+      expect(whereSql).toContain('"croco_inbox_records"."consumer_id"');
+      expect(whereSql).toContain('"croco_inbox_records"."inbox_key"');
+      expect(whereSql).toContain('"croco_inbox_records"."status"');
+      expect(whereSql).toContain('"croco_inbox_records"."attempts"');
+      expect(query.params.slice(-4)).toEqual([
+        "ledger-projection",
+        "credit-acct-1",
+        "processing",
+        2,
+      ]);
+    }
+  });
+
+  it("re-reads the current Drizzle inbox record after a lost completion claim", async () => {
+    const processing = inboxRowValues({ attempts: 1, status: "processing" });
+    const processed = inboxRowValues({
+      attempts: 1,
+      status: "processed",
+      processedAt: new Date("2026-01-01T00:00:01.000Z"),
+    });
+    const proxy = createInboxProxyDb([[processing], [], [processed]]);
+    const store = new DrizzleTransactionalEventStore({ db: proxy.db });
+
+    await expect(
+      store.markInboxFailed({
+        consumerId: "ledger-projection",
+        inboxKey: "credit-acct-1",
+        expectedAttempts: 1,
+        now: new Date("2026-01-01T00:00:02.000Z"),
+        error: { name: "Error", message: "late failure" },
+        reason: "late failure",
+      }),
+    ).rejects.toMatchObject({
+      code: "events-tx/inbox-claim-conflict",
+      category: ProblemCategory.Conflict,
+      extensions: {
+        consumerId: "ledger-projection",
+        inboxKey: "credit-acct-1",
+        expectedAttempts: 1,
+        actualAttempts: 1,
+        actualStatus: "processed",
+      },
+    });
+    expect(proxy.queries).toHaveLength(3);
+    expect(proxy.queries[1].sql).toContain('update "croco_inbox_records"');
+    expect(proxy.queries[2].sql).toContain("select");
+  });
+
+  it("allows exactly one Drizzle completion to affect a processing claim", async () => {
+    const proxy = createStatefulInboxProxyDb({ attempts: 1, status: "processing" });
+    const store = new DrizzleTransactionalEventStore({ db: proxy.db });
+    const completion = {
+      consumerId: "ledger-projection",
+      inboxKey: "credit-acct-1",
+      expectedAttempts: 1,
+      now: new Date("2026-01-01T00:00:01.000Z"),
+    };
+
+    const results = await Promise.allSettled([
+      store.markInboxProcessed(completion),
+      store.markInboxFailed({
+        ...completion,
+        error: { name: "Error", message: "racing failure" },
+        reason: "racing failure",
+      }),
+    ]);
+
+    expect(results.map((result) => result.status)).toEqual(["fulfilled", "rejected"]);
+    expect(results[1]).toMatchObject({
+      reason: {
+        code: "events-tx/inbox-claim-conflict",
+        extensions: { actualAttempts: 1, actualStatus: "processed" },
+      },
+    });
+    expect(proxy.affectedRows).toBe(1);
+    expect(proxy.current()).toMatchObject({
+      status: "processed",
+      attempts: 1,
+      failureReason: null,
+      diagnostics: [],
+    });
   });
 
   it("maps persisted Drizzle JSON fields, diagnostics, and optional timestamps", async () => {
@@ -1349,6 +1835,97 @@ function createInboxRow(overrides: Partial<Record<string, unknown>> = {}): Recor
     metadata: {},
     diagnostics: [],
     ...overrides,
+  };
+}
+
+type CapturedProxyQuery = {
+  sql: string;
+  params: unknown[];
+  method: "all" | "execute";
+};
+
+function inboxRowValues(overrides: Partial<Record<string, unknown>> = {}): unknown[] {
+  const row = createInboxRow(overrides);
+  return [
+    row.consumerId,
+    row.messageId,
+    row.inboxKey,
+    row.eventType,
+    row.status,
+    row.attempts,
+    row.createdAt,
+    row.updatedAt,
+    row.processedAt,
+    row.failedAt,
+    row.lastError,
+    row.failureReason,
+    row.metadata,
+    row.diagnostics,
+  ];
+}
+
+function createInboxProxyDb(results: unknown[][][]) {
+  const queries: CapturedProxyQuery[] = [];
+  const pendingResults = [...results];
+  const db = createPgProxyDrizzle(async (sql, params, method) => {
+    queries.push({ sql, params, method });
+    return { rows: pendingResults.shift() ?? [] };
+  });
+
+  return {
+    db: db as unknown as DrizzleTransactionalEventStoreDb,
+    queries,
+  };
+}
+
+function createStatefulInboxProxyDb(overrides: Partial<Record<string, unknown>> = {}) {
+  const queries: CapturedProxyQuery[] = [];
+  let record = createInboxRow(overrides);
+  let affectedRows = 0;
+  const db = createPgProxyDrizzle(async (sql, params, method) => {
+    queries.push({ sql, params, method });
+    if (sql.startsWith("select")) {
+      return { rows: [inboxRowValues(record)] };
+    }
+
+    if (!sql.startsWith("update")) {
+      return { rows: [] };
+    }
+
+    const [consumerId, inboxKey, expectedStatus, expectedAttempts] = params.slice(-4);
+    const ownsClaim =
+      record.consumerId === consumerId &&
+      record.inboxKey === inboxKey &&
+      record.status === expectedStatus &&
+      record.attempts === expectedAttempts;
+    if (!ownsClaim) {
+      return { rows: [] };
+    }
+
+    const nextStatus = String(params[0]);
+    affectedRows += 1;
+    record = {
+      ...record,
+      status: nextStatus,
+      updatedAt: params[2],
+      ...(nextStatus === "processed"
+        ? { processedAt: params[1] }
+        : {
+            failedAt: params[1],
+            lastError: params[3],
+            failureReason: params[4],
+          }),
+    };
+    return { rows: [inboxRowValues(record)] };
+  });
+
+  return {
+    db: db as unknown as DrizzleTransactionalEventStoreDb,
+    queries,
+    get affectedRows() {
+      return affectedRows;
+    },
+    current: () => ({ ...record }),
   };
 }
 
