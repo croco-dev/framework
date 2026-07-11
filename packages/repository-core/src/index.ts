@@ -4,6 +4,11 @@
 
 export { BatchLoad } from "./libs/decorators/BatchLoad";
 export type {
+  BatchLoadOptions,
+  BatchLoadScope,
+  BatchLoadScopeResolver,
+} from "./libs/decorators/BatchLoad";
+export type {
   BatchLoaderFactoryOptions,
   BatchLoaderLike,
   IBatchLoaderFactory,
@@ -12,6 +17,7 @@ export { BATCH_LOADER_FACTORY_TOKEN } from "./libs/IBatchLoaderFactory";
 export {
   BatchLoaderFactoryNotRegisteredProblem,
   BatchLoaderFactoryResolutionProblem,
+  BatchLoaderScopeCollisionProblem,
 } from "./libs/problems/BatchLoadProblems";
 export * from "./libs/ReadRepository";
 /**

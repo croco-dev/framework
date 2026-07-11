@@ -21,3 +21,16 @@ export class BatchLoaderFactoryResolutionProblem extends Problem {
     super(undefined, undefined, `Failed to resolve IBatchLoaderFactory for BatchLoad: ${message}`);
   }
 }
+
+export class BatchLoaderScopeCollisionProblem extends Problem {
+  readonly code = "repository-core/batch-loader-scope-collision";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(name: string) {
+    super(
+      undefined,
+      undefined,
+      `BatchLoad name '${name}' is already claimed by a different method or repository scope`,
+    );
+  }
+}
