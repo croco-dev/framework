@@ -18234,6 +18234,18 @@
           "declarationKind": "function"
         },
         {
+          "name": "assertOperationalFailureDrillMatrix",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill",
+          "declarationKind": "function"
+        },
+        {
+          "name": "assertOperationalFailureDrillOutcome",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertProblemResponse",
           "exportKind": "named",
           "source": "./libs/testing",
@@ -18273,6 +18285,12 @@
           "name": "createLlmProviderConformanceSuite",
           "exportKind": "named",
           "source": "./libs/llm-provider-conformance",
+          "declarationKind": "function"
+        },
+        {
+          "name": "createOperationalFailureDrillMatrix",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill",
           "declarationKind": "function"
         },
         {
@@ -18372,6 +18390,24 @@
           "declarationKind": "function"
         },
         {
+          "name": "OPERATIONAL_FAILURE_DRILL_OUTCOME_KINDS",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill",
+          "declarationKind": "const"
+        },
+        {
+          "name": "OPERATIONAL_FAILURE_DRILL_SCENARIO_IDS",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill",
+          "declarationKind": "const"
+        },
+        {
+          "name": "OPERATIONAL_FAILURE_DRILL_SCHEMA_VERSION",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill",
+          "declarationKind": "const"
+        },
+        {
           "name": "readProblemResponse",
           "exportKind": "named",
           "source": "./libs/testing",
@@ -18381,6 +18417,12 @@
           "name": "readResponseJson",
           "exportKind": "named",
           "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "renderOperationalFailureDrillMarkdown",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill",
           "declarationKind": "function"
         },
         {
@@ -18402,9 +18444,27 @@
           "declarationKind": "function"
         },
         {
+          "name": "runOperationalFailureDrills",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill",
+          "declarationKind": "function"
+        },
+        {
+          "name": "runOperationalFailureDrillScenario",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill",
+          "declarationKind": "function"
+        },
+        {
           "name": "runWithTestingContext",
           "exportKind": "named",
           "source": "./libs/testing",
+          "declarationKind": "function"
+        },
+        {
+          "name": "serializeOperationalFailureDrillReport",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill",
           "declarationKind": "function"
         },
         {
@@ -18685,6 +18745,91 @@
           "name": "OpenAPIRouteExpectation",
           "exportKind": "named",
           "source": "./libs/testing"
+        },
+        {
+          "name": "OperationalFailureDrillDiagnostic",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillDiagnosticExpectation",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillDiagnosticOutcome",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillExpectedDiagnosticOutcome",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillExpectedOutcome",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillExpectedProblemOutcome",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillJsonValue",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillOutcome",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillOutcomeKind",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillProblemExpectation",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillProblemOutcome",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillProblemResult",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillProvenance",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillReport",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillResult",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillScenario",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
+        },
+        {
+          "name": "OperationalFailureDrillScenarioId",
+          "exportKind": "named",
+          "source": "./libs/operational-failure-drill"
         },
         {
           "name": "ProblemResponseExpectation",

@@ -5,6 +5,7 @@ import {
 } from "@croco/testing";
 import { ProblemCategory, ProblemCategoryMapper, type ProblemDetails } from "@croco/problems-core";
 import { runSaasDemoFlow } from "../saasDemo";
+import { runGeneratedOperationalFailureDrills } from "./operational-failure-drills";
 import { assertSaasSmokeContract } from "./saasSmokeContract";
 
 const WEBHOOK_DUPLICATE_RECOVERY =
@@ -132,8 +133,11 @@ async function main(): Promise<void> {
     },
   });
   const report = await runFailureDrills(catalog);
+  const operationalReport = await runGeneratedOperationalFailureDrills();
 
-  console.log(`SaaS failure drill smoke passed (${report.results.length} drills)`);
+  console.log(
+    `SaaS failure drill smoke passed (${report.results.length} generic drills, ${operationalReport.results.length} operational drills)`,
+  );
 }
 
 void main();

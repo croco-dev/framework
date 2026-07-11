@@ -23,6 +23,8 @@ const response = await app.get("/users");
 | `installTestingTelemetryCapture()`                    | Captures spans in memory without starting an SDK exporter.                                                                                 |
 | `createFailureDrillCatalog()`                         | Builds deterministic no-credential failure drills for provider timeout, duplicate delivery, outbox, telemetry, tenant, and quota failures. |
 | `runFailureDrills(cases)`                             | Executes failure drills and rejects runs that lack the expected Problem code, recovery action, telemetry evidence, or audit evidence.      |
+| `createOperationalFailureDrillMatrix(cases)`          | Validates the exact ordered operational incident matrix without changing the generic six-scenario catalog.                                 |
+| `runOperationalFailureDrills(cases)`                  | Executes operational fixtures and verifies their Problem or diagnostic outcome, recovery action, and real-boundary provenance.             |
 | `assertProblemResponse(response, expected)`           | Verifies an RFC 7807 Problem Details response without depending on a test runner.                                                          |
 | `assertOpenAPIRoute(controllersOrSpec, expected)`     | Verifies generated OpenAPI route metadata and response contracts.                                                                          |
 | `createRpcTestFetch(app)`                             | Returns a fetch-compatible function that routes generated RPC clients into the in-memory app.                                              |
@@ -73,6 +75,22 @@ each drill returns:
 Generated apps can override individual catalog entries with app-backed scenarios while keeping the
 same evidence contract. This keeps failure injection in smoke/test code instead of adding production
 fallback branches.
+
+### Operational failure evidence
+
+`createOperationalFailureDrillMatrix()` is the additive contract for generated-app and release
+evidence. It requires all eight operational incidents in this order: missing provider environment,
+unavailable telemetry exporter, missing DI provider, DI scope mismatch, route validation failure,
+rate-limit exhaustion, unavailable auth verifier, and invalid webhook signature. The provider
+environment incident remains a diagnostic; the other incidents preserve their owning Problem
+contracts. A diagnostic-only boundary is never relabeled as a Problem.
+
+Each scenario declares its expected stable code and may declare status, title, type, structured
+extensions, and related diagnostics. `runOperationalFailureDrills()` also requires an exact recovery
+action and fixture provenance naming the real boundary under test. It emits the deterministic,
+timestamp-free `croco.operational-failure-drills/v1` report with top-level ordered `scenarioIds` and
+`outcomeKinds`. Use `serializeOperationalFailureDrillReport()` and
+`renderOperationalFailureDrillMarkdown()` to retain matching JSON and Markdown evidence.
 
 ## Event Handlers
 

@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { validateTenantModelCompatibility } from "@croco/tenant-core/tenant-model";
 import { assertSaasProviderSecretPlaceholderPolicy } from "./secret-placeholder-policy";
+import { assertRealProviderEnv } from "./provider-profile-env";
 import {
   generatedSaasProviderProfileDocs,
   generatedSaasProviderProfileEnvExample,
@@ -339,28 +340,6 @@ function findApiPackageJsonPath(): string {
   }
 
   return packageJsonPath;
-}
-
-function assertRealProviderEnv(manifest: ProfileManifest): void {
-  const configuredProfile = process.env.SAAS_PROVIDER_PROFILE;
-
-  if (configuredProfile !== manifest.profile.name) {
-    throw new Error(
-      `CROCO_SAAS_PROFILE_MISMATCH: expected SAAS_PROVIDER_PROFILE=${manifest.profile.name}`,
-    );
-  }
-
-  const missingEnv = manifest.env.required
-    .map((entry) => entry.name)
-    .filter((name) => !isEnvConfigured(process.env[name]));
-
-  if (missingEnv.length > 0) {
-    throw new Error(`CROCO_SAAS_PROFILE_ENV_MISSING: ${missingEnv.join(", ")}`);
-  }
-}
-
-function isEnvConfigured(value: string | undefined): boolean {
-  return value !== undefined && value !== "" && !value.startsWith("<");
 }
 
 function isProfileManifest(value: unknown): value is ProfileManifest {

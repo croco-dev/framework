@@ -529,7 +529,9 @@ function checkSaasStructure() {
   checkFileExists("saas", "apps", "api-server", "src", "saasDemo.ts");
   checkFileExists("saas", "apps", "api-server", "src", "providerProfiles.ts");
   checkFileExists("saas", "apps", "api-server", "src", "provider-profile-check.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "provider-profile-env.ts");
   checkFileExists("saas", "apps", "api-server", "src", "demo", "saasSmokeContract.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "demo", "operational-failure-drills.ts");
   checkFileExists("saas", "apps", "api-server", "src", "demo", "scenario.ts");
   checkFileExists("saas", "apps", "api-server", "src", "inMemoryAdapters.ts");
   checkFileExists("saas", "apps", "api-server", "src", "controllers", "SaasController.ts");
@@ -643,6 +645,7 @@ function checkSaasStructure() {
     devDependencies: expect.objectContaining({
       "@croco/cli": "workspace:*",
       "@croco/testing": "workspace:*",
+      "@croco/webhooks-core": "workspace:*",
       "cross-env": "^10.1.0",
       typedi: "^0.10.0",
     }),
@@ -682,6 +685,11 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "provider-profile-check.ts"],
+    /assertRealProviderEnv/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "provider-profile-env.ts"],
     /CROCO_SAAS_PROFILE_ENV_MISSING/,
   );
   checkFileContains(
@@ -710,6 +718,7 @@ function checkSaasStructure() {
   checkFileContains("saas", ["README.md.hbs"], /tenant-model-playbook\.md/);
   checkFileContains("saas", ["README.md.hbs"], /pnpm demo:scenario/);
   checkFileContains("saas", ["README.md.hbs"], /ci-reports\/saas-golden-path\/scenario\.json/);
+  checkFileContains("saas", ["README.md.hbs"], /ci-reports\/failure-drills\/operational\.json/);
   checkFileContains("saas", ["README.md.hbs"], /@croco\/billing-polar/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /seedDefaultSaasRuntime/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /reserveWebhook/);
@@ -803,6 +812,16 @@ function checkSaasStructure() {
   );
   checkFileContains(
     "saas",
+    ["apps", "api-server", "src", "demo", "failure-drill-smoke.ts"],
+    /runGeneratedOperationalFailureDrills/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "operational-failure-drills.ts"],
+    /provider-environment-missing[\s\S]*telemetry-exporter-unavailable[\s\S]*di-provider-missing[\s\S]*di-scope-mismatch[\s\S]*route-validation-failure[\s\S]*rate-limit-exhausted[\s\S]*auth-verifier-unavailable[\s\S]*webhook-signature-invalid/,
+  );
+  checkFileContains(
+    "saas",
     ["apps", "api-server", "src", "demo", "ops-smoke.ts"],
     /@croco\/cli\/ops/,
   );
@@ -879,6 +898,7 @@ function checkAiSaasStructure() {
     }),
     devDependencies: expect.objectContaining({
       "@croco/testing": "workspace:*",
+      "@croco/webhooks-core": "workspace:*",
       "cross-env": "^10.1.0",
     }),
   });
