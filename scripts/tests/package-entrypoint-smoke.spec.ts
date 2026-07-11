@@ -40,6 +40,31 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("summary checked=1 exempt=0 skippedPrivate=1");
   });
 
+  it("validates CSS exports as static assets without loading them in Node", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "styled", {
+      exportsValue: {
+        ".": {
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+          types: "./dist/index.d.ts",
+        },
+        "./styles.css": "./dist/styles.css",
+        "./conditional-styles": {
+          import: "./dist/styles.css",
+          require: "./dist/styles.css",
+          types: "./dist/index.d.ts",
+        },
+      },
+    });
+    writeFileSync(join(root, "packages", "styled", "dist", "styles.css"), ".root {}\n");
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("✓ @croco/styled: esm 1, cjs 1, types 2");
+  });
+
   it("requires the root package manager pin for isolated consumers", () => {
     const root = createTempRoot({ packageManager: false });
     writeImportablePackage(root, "valid");

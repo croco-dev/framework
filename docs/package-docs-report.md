@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   110 |
+| Public packages                |   111 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    41 |
+| Extension matrix packages      |    42 |
 | Certification records          |     6 |
 | Croco 1.0 spine packages       |    18 |
 
@@ -111,13 +111,13 @@ None.
 | Integration  |        5 |
 | Protocol     |        7 |
 | Transport    |        3 |
-| Presentation |        7 |
+| Presentation |        8 |
 | Tooling      |        9 |
 
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       24 |
-| 🟡 beta             |       74 |
+| 🟡 beta             |       75 |
 | 🔴 alpha/WIP        |       12 |
 | ⚠️ deprecated       |        0 |
 
@@ -130,4 +130,4 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 | Provider     |       26 |                     0 |
 | Integration  |        5 |                     0 |
 | Transport    |        3 |                     0 |
-| Presentation |        7 |                     0 |
+| Presentation |        8 |                     0 |

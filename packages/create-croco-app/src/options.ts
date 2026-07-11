@@ -20,6 +20,7 @@ const APIS = SUPPORTED_CREATE_CROCO_APP_CHOICES.apis;
 const API_HOSTING = SUPPORTED_CREATE_CROCO_APP_CHOICES.apiHosting;
 const BACKEND_DEPLOYS = SUPPORTED_CREATE_CROCO_APP_CHOICES.backendDeploys;
 const FRONTEND_DEPLOYS = SUPPORTED_CREATE_CROCO_APP_CHOICES.frontendDeploys;
+const UI_PROFILES = SUPPORTED_CREATE_CROCO_APP_CHOICES.uiProfiles;
 const DATABASES = SUPPORTED_CREATE_CROCO_APP_CHOICES.databases;
 const SAAS_PROVIDER_PROFILES = SUPPORTED_CREATE_CROCO_APP_CHOICES.saasProviderProfiles;
 const TENANT_MODELS = SUPPORTED_CREATE_CROCO_APP_CHOICES.tenantModels;
@@ -30,6 +31,7 @@ type ChoiceName =
   | "api-hosting"
   | "backend-deploy"
   | "frontend-deploy"
+  | "ui"
   | "db"
   | "saas-profile"
   | "tenant-model";
@@ -73,6 +75,9 @@ export function parseCliOptions(
   }
   if (typeof rawOptions.frontendDeploy === "string") {
     cliOptions.frontendDeploy = rawOptions.frontendDeploy as GeneratorOptions["frontendDeploy"];
+  }
+  if (typeof rawOptions["ui"] === "string") {
+    cliOptions.ui = rawOptions["ui"] as NonNullable<GeneratorOptions["ui"]>;
   }
   if (typeof rawOptions.db === "string") {
     cliOptions.db = rawOptions.db
@@ -126,9 +131,12 @@ export function validateCliOptions(cliOptions: Partial<GeneratorOptions>): void 
   if (cliOptions.frontendDeploy !== undefined) {
     readChoice("frontend-deploy", cliOptions.frontendDeploy, FRONTEND_DEPLOYS);
   }
+  if (cliOptions.ui !== undefined) readChoice("ui", cliOptions.ui, UI_PROFILES);
   for (const db of cliOptions.db ?? []) {
     readChoice("db", db, DATABASES);
   }
+
+  assertUiPresetCompatibility(cliOptions);
 
   if (isSaasPreset(cliOptions.preset)) {
     assertSaasOptions(cliOptions, cliOptions.preset);
@@ -163,9 +171,12 @@ export function validateResolvedOptions(options: GeneratorOptions): void {
   if (options.backendDeploy) readChoice("backend-deploy", options.backendDeploy, BACKEND_DEPLOYS);
   if (options.frontendDeploy)
     readChoice("frontend-deploy", options.frontendDeploy, FRONTEND_DEPLOYS);
+  if (options.ui) readChoice("ui", options.ui, UI_PROFILES);
   for (const db of options.db) {
     readChoice("db", db, DATABASES);
   }
+
+  assertUiCompatibility(options);
 
   if (!isSaasPreset(options.preset) && options.saasProviderProfile) {
     throwInvalidCliOption(
@@ -369,6 +380,7 @@ export function normalizeNonInteractiveOptions(
     apiHosting,
     backendDeploy,
     frontendDeploy,
+    ...(cliOptions.ui === undefined ? {} : { ui: cliOptions.ui }),
     saasProviderProfile: cliOptions.saasProviderProfile,
     tenantModel: cliOptions.tenantModel,
     db,
@@ -401,6 +413,7 @@ function assertBlankOptions(cliOptions: Partial<GeneratorOptions>): void {
   if (cliOptions.apiHosting) throwUnsupportedPresetOption("--api-hosting", "blank");
   if (cliOptions.backendDeploy) throwUnsupportedPresetOption("--backend-deploy", "blank");
   if (cliOptions.frontendDeploy) throwUnsupportedPresetOption("--frontend-deploy", "blank");
+  if (cliOptions.ui) throwUnsupportedPresetOption("--ui", "blank");
   if (cliOptions.webApps && cliOptions.webApps.length > 0) {
     throwUnsupportedPresetOption("--web-apps", "blank");
   }
@@ -566,6 +579,28 @@ function normalizeFrontendDeploy(
   }
 
   return frontendDeploy;
+}
+
+export function assertUiCompatibility(options: Partial<GeneratorOptions>): void {
+  if (!options.ui) return;
+
+  if (options.frontendDeploy !== "vite-spa") {
+    throwInvalidCliOption(
+      "--ui is currently only supported with --frontend-deploy vite-spa",
+      "Use --frontend-deploy vite-spa, or remove --ui until another presentation runtime is supported.",
+      "--ui",
+    );
+  }
+}
+
+export function assertUiPresetCompatibility(options: Partial<GeneratorOptions>): void {
+  if (!options.ui || options.preset === undefined || options.preset === "ddd-fullstack") return;
+
+  throwInvalidCliOption(
+    "--ui is currently only supported with --preset ddd-fullstack",
+    "Use --preset ddd-fullstack with --frontend-deploy vite-spa, or remove --ui.",
+    "--ui",
+  );
 }
 
 function requireOption<T>(value: T | undefined, message: string): T {

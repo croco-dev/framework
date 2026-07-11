@@ -20,6 +20,7 @@ export type GeneratorOptions = {
   apiHosting: "standalone" | "nextjs";
   backendDeploy?: "docker" | "lambda";
   frontendDeploy?: "opennext" | "vercel" | "docker" | "cloudflare-meta-vite" | "vite-spa";
+  ui?: "none" | "astryx";
   saasProviderProfile?: "saas-node-postgres" | "saas-cloudflare" | "saas-lambda";
   tenantModel?: TenantModelName;
   db: ("postgres" | "mongodb" | "redis")[];

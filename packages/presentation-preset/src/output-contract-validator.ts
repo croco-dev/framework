@@ -29,6 +29,9 @@ export type RuntimeClaimValidationOptions = {
 const ARTIFACT_FORMATS = new Set(["esm", "cjs", "dual", "neutral"]);
 const ARTIFACT_TYPES = new Set(["code", "types", "config", "asset"]);
 const PRESENTATION_RUNTIMES = new Set(["node", "lambda", "cloudflare-workers", "browser"]);
+const GENERATED_UI_PROFILE_NAMES = new Set(["none", "astryx"]);
+const GENERATED_UI_STYLE_ENGINES = new Set(["none", "stylex"]);
+const GENERATED_UI_PROFILE_MATURITIES = new Set(["alpha", "beta"]);
 
 export class OutputContractValidator {
   validate(contract: OutputContract): ValidationReport {
@@ -460,6 +463,8 @@ export class OutputContractValidator {
       });
     }
 
+    this.validateGeneratedUiProfileMetadata(profile, results);
+
     if (!isRecord(profile.target)) {
       results.push({
         path,
@@ -477,6 +482,104 @@ export class OutputContractValidator {
       });
     }
     this.validateDeployTargetShape(profile.target, results);
+  }
+
+  private validateGeneratedUiProfileMetadata(
+    profile: GeneratedRuntimeProfile,
+    results: ValidationResult[],
+  ): void {
+    if (profile.ui === undefined) {
+      return;
+    }
+
+    const path = isNonEmptyString(profile.name)
+      ? `profile:${profile.name}:ui`
+      : "profile:<unknown>:ui";
+    if (!isRecord(profile.ui)) {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' UI metadata must be an object`,
+      });
+      return;
+    }
+
+    if (!isNonEmptyString(profile.ui.name) || !GENERATED_UI_PROFILE_NAMES.has(profile.ui.name)) {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' has unsupported UI profile '${profile.ui.name}'`,
+      });
+    }
+    if (
+      !isNonEmptyString(profile.ui.styleEngine) ||
+      !GENERATED_UI_STYLE_ENGINES.has(profile.ui.styleEngine)
+    ) {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' has unsupported UI style engine '${profile.ui.styleEngine}'`,
+      });
+    }
+    if (typeof profile.ui.requiresStylexCompile !== "boolean") {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' UI metadata must declare whether StyleX compilation is required`,
+      });
+    }
+    if (
+      !isNonEmptyString(profile.ui.maturity) ||
+      !GENERATED_UI_PROFILE_MATURITIES.has(profile.ui.maturity)
+    ) {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' has unsupported UI maturity '${profile.ui.maturity}'`,
+      });
+    }
+    if (!isNonEmptyString(profile.ui.generatedAppSmokeCase)) {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' UI metadata must name its generated app smoke case`,
+      });
+    } else if (profile.ui.generatedAppSmokeCase !== profile.generatedAppSmokeCase) {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' UI smoke case must match '${profile.generatedAppSmokeCase}'`,
+      });
+    }
+
+    if (profile.ui.name === "none" && profile.ui.styleEngine !== "none") {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' UI profile 'none' cannot declare a style engine`,
+      });
+    }
+    if (profile.ui.name === "none" && profile.ui.requiresStylexCompile !== false) {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' UI profile 'none' cannot require StyleX compilation`,
+      });
+    }
+    if (profile.ui.name === "astryx" && profile.ui.styleEngine !== "stylex") {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' UI profile 'astryx' must declare the StyleX engine`,
+      });
+    }
+    if (profile.ui.styleEngine === "none" && profile.ui.requiresStylexCompile === true) {
+      results.push({
+        path,
+        severity: "error",
+        message: `Generated runtime profile '${profile.name}' cannot require StyleX compilation without a style engine`,
+      });
+    }
   }
 }
 

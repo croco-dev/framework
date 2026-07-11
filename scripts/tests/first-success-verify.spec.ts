@@ -54,6 +54,7 @@ type FixtureOptions = {
   readonly omitReleaseFirstSuccessCommand?: string;
   readonly omittedReadmeToolingCommand?: string;
   readonly packageReadmeCommand?: string | null;
+  readonly packageReadmeExtraCommand?: string;
   readonly rootSaasSmokeScript?: string | null;
   readonly saasReadmeCommands?: readonly string[];
   readonly staleReadmeRoadmapStatus?: boolean;
@@ -134,6 +135,28 @@ describe("first-success-verify.mts", () => {
     expect(result.stdout).toContain(
       "create-croco-app package README missing a public create-croco-app command",
     );
+  });
+
+  it("allows an additional valid noncanonical scaffold command beside the canonical journey", () => {
+    const root = createFixture({
+      packageReadmeExtraCommand: [
+        "npx create-croco-app@latest my-app \\",
+        "  --preset ddd-fullstack \\",
+        "  --scope @myorg \\",
+        "  --api graphql \\",
+        "  --api-hosting standalone \\",
+        "  --web-apps web \\",
+        "  --frontend-deploy vite-spa \\",
+        "  --ui astryx \\",
+        "  --no-install \\",
+        "  --no-git",
+      ].join("\n"),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("first-success contract verification PASSED");
   });
 
   it("fails when public package-count claims drift from the generated report", () => {
@@ -572,7 +595,17 @@ function createFixture(options: FixtureOptions = {}): string {
     root,
     "packages/create-croco-app/README.md",
     packageReadmeCommand
-      ? ["# create-croco-app", "", "```bash", packageReadmeCommand, "```", ""].join("\n")
+      ? [
+          "# create-croco-app",
+          "",
+          "```bash",
+          packageReadmeCommand,
+          "```",
+          ...(options.packageReadmeExtraCommand
+            ? ["", "```bash", options.packageReadmeExtraCommand, "```"]
+            : []),
+          "",
+        ].join("\n")
       : "# create-croco-app\n",
   );
   writeFile(

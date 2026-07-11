@@ -18,6 +18,7 @@ export const SUPPORTED_CREATE_CROCO_APP_CHOICES = {
   apiHosting: ["standalone", "nextjs"],
   backendDeploys: ["docker", "lambda"],
   frontendDeploys: ["opennext", "vercel", "docker", "cloudflare-meta-vite", "vite-spa"],
+  uiProfiles: ["none", "astryx"],
   databases: ["postgres", "mongodb", "redis"],
 } as const satisfies {
   readonly presets: readonly GeneratorOptions["preset"][];
@@ -28,6 +29,7 @@ export const SUPPORTED_CREATE_CROCO_APP_CHOICES = {
   readonly apiHosting: readonly GeneratorOptions["apiHosting"][];
   readonly backendDeploys: readonly NonNullable<GeneratorOptions["backendDeploy"]>[];
   readonly frontendDeploys: readonly NonNullable<GeneratorOptions["frontendDeploy"]>[];
+  readonly uiProfiles: readonly NonNullable<GeneratorOptions["ui"]>[];
   readonly databases: readonly GeneratorOptions["db"][number][];
 };
 

@@ -244,6 +244,7 @@ export function validateResolvedGoalOptions(options: GeneratorOptions): void {
   if (options.apiHosting !== expectedOptions.apiHosting) mismatches.push("apiHosting");
   if (options.backendDeploy !== expectedOptions.backendDeploy) mismatches.push("backendDeploy");
   if (options.frontendDeploy !== expectedOptions.frontendDeploy) mismatches.push("frontendDeploy");
+  if (options.ui !== expectedOptions.ui) mismatches.push("ui");
   if (options.tenantModel !== expectedOptions.tenantModel) mismatches.push("tenantModel");
   if (!sameStringArray(options.webApps, expectedOptions.webApps)) mismatches.push("webApps");
   if (!sameStringArray(options.db, expectedOptions.db)) mismatches.push("db");
@@ -265,6 +266,7 @@ function assertGoalDoesNotMixStackOptions(goal: AppGoal, options: Partial<Genera
   if (options.apiHosting) unsupportedOptions.push("--api-hosting");
   if (options.backendDeploy) unsupportedOptions.push("--backend-deploy");
   if (options.frontendDeploy) unsupportedOptions.push("--frontend-deploy");
+  if (options.ui) unsupportedOptions.push("--ui");
   if (options.saasProviderProfile) unsupportedOptions.push("--saas-profile");
   if (options.tenantModel) unsupportedOptions.push("--tenant-model");
   if (options.webApps && options.webApps.length > 0) unsupportedOptions.push("--web-apps");

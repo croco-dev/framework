@@ -1,0 +1,64 @@
+{
+  "name": "@croco/ui-astryx",
+  "version": "0.1.0",
+  "description": "Astryx UI profile adapters for Croco React applications",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/ui-astryx"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "sideEffects": [
+    "./dist/styles.css"
+  ],
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      },
+      "./styles.css": "./dist/styles.css"
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external @stylexjs/stylex --external @astryxdesign/core --external @astryxdesign/core/AppShell --external @astryxdesign/core/Badge --external @astryxdesign/core/Banner --external @astryxdesign/core/Button --external @astryxdesign/core/Card --external @astryxdesign/core/theme --external @astryxdesign/theme-neutral --external @croco/problems-core && cp styles.css dist/styles.css",
+    "lint": "oxlint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astryxdesign/core": "0.1.4",
+    "@astryxdesign/theme-neutral": "0.1.4",
+    "@croco/problems-core": "workspace:*",
+    "@stylexjs/stylex": "^0.18.3"
+  },
+  "devDependencies": {
+    "@croco/frontend-react": "workspace:*",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "4.0.16"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
+  },
+  "vitest": {
+    "include": [
+      "src/**/*.spec.ts",
+      "src/**/*.spec.tsx"
+    ]
+  }
+}

@@ -6,6 +6,10 @@ export type {
   EntryDescriptor,
   GeneratedRuntimeProfile,
   GeneratedRuntimeProfileCatalog,
+  GeneratedUiProfileMaturity,
+  GeneratedUiProfileMetadata,
+  GeneratedUiProfileName,
+  GeneratedUiStyleEngine,
   OutputContract,
   PresentationRuntime,
 } from "./output-contract";

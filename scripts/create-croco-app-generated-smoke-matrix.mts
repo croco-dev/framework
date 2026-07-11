@@ -134,6 +134,15 @@ export const GENERATED_SMOKE_MATRIX_CASES = [
   },
   { name: "graphql-vite-spa-docker", tier: "spine-blocking" },
   {
+    name: "graphql-vite-spa-astryx",
+    tier: "ecosystem-advisory",
+    advisory: {
+      owner: "Astryx presentation profile owner",
+      recoveryAction:
+        "CROCO_GENERATED_SMOKE_CASES=graphql-vite-spa-astryx pnpm create-croco-app:smoke; inspect the generated UI metadata, Astryx dependency isolation, Vite build, and Croco-aware render smoke.",
+    },
+  },
+  {
     name: "meta-vite-web",
     tier: "ecosystem-advisory",
     advisory: {

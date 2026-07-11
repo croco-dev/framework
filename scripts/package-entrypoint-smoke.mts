@@ -980,6 +980,13 @@ function pushConditionalTarget(
   targets: SmokeTarget[],
 ): void {
   if (typeof value === "string") {
+    if (isStaticAssetTargetPath(value)) {
+      if (condition === "import") {
+        validateStaticAssetTarget(value, fieldName, packageInfo, diagnostics);
+      }
+      return;
+    }
+
     if (condition === "types" && isJsonTargetPath(value)) {
       return;
     }
@@ -999,11 +1006,35 @@ function pushConditionalTarget(
   if (target === undefined && condition === "require") {
     return;
   }
+  if (typeof target === "string" && isStaticAssetTargetPath(target)) {
+    validateStaticAssetTarget(target, fieldName, packageInfo, diagnostics);
+    return;
+  }
   if (condition === "types" && typeof target === "string" && isJsonTargetPath(target)) {
     return;
   }
 
   pushStringTarget(specifier, target, fieldName, packageInfo, diagnostics, targets);
+}
+
+function validateStaticAssetTarget(
+  target: string,
+  fieldName: string,
+  packageInfo: PackedPackageInfo,
+  diagnostics: string[],
+): void {
+  const packageName = packageNameFor(packageInfo.packedManifest, packageInfo.packagePath);
+
+  if (!target.startsWith("./")) {
+    diagnostics.push(`${packageName}: ${fieldName} must be a relative package file path`);
+    return;
+  }
+
+  if (
+    !packedFileExists(packageInfo.tarballPath, `package/${target.slice(2)}`, packageInfo.packageDir)
+  ) {
+    diagnostics.push(`${packageName}: ${fieldName} points to missing file ${target}`);
+  }
 }
 
 function pushStringTarget(
@@ -1043,6 +1074,10 @@ function pushStringTarget(
 
 function isJsonTargetPath(target: string): boolean {
   return target.endsWith(".json");
+}
+
+function isStaticAssetTargetPath(target: string): boolean {
+  return target.endsWith(".css");
 }
 
 function writeEsmConsumer(smokeRoot: string, targets: readonly SmokeTarget[]): void {

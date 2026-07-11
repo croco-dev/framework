@@ -53,6 +53,13 @@ type ExtractedCommand = {
   readonly line: number;
 };
 
+type PublicCreateCommandValidation = {
+  readonly failures: string[];
+  readonly isCanonical: boolean;
+  readonly line: number;
+  readonly resolvedJourney: string | undefined;
+};
+
 type RootReadmeToolingCommand = {
   readonly command: string;
   readonly line: number;
@@ -267,8 +274,9 @@ function extractCreateCrocoAppCommands(content: string): ExtractedCommand[] {
   const lines = content.split(/\r?\n/);
   let inFence = false;
 
-  for (const [index, rawLine] of lines.entries()) {
-    const line = normalizeMarkdownShellLine(rawLine);
+  for (let index = 0; index < lines.length; index += 1) {
+    const rawLine = lines[index];
+    let line = normalizeMarkdownShellLine(rawLine ?? "");
 
     if (line.startsWith("```")) {
       inFence = !inFence;
@@ -277,7 +285,13 @@ function extractCreateCrocoAppCommands(content: string): ExtractedCommand[] {
 
     if (inFence) {
       if (isCreateCrocoAppCommandSnippet(line)) {
-        commands.push({ command: line, line: index + 1 });
+        const commandLine = index + 1;
+        while (line.endsWith("\\") && index + 1 < lines.length) {
+          index += 1;
+          const continuation = normalizeMarkdownShellLine(lines[index] ?? "");
+          line = `${line.slice(0, -1).trimEnd()} ${continuation.trim()}`;
+        }
+        commands.push({ command: line, line: commandLine });
       }
       continue;
     }
@@ -383,14 +397,21 @@ function isCreateCrocoAppExecutable(arg: string | undefined): boolean {
 async function validatePublicCreateCommand(
   extracted: ExtractedCommand,
   source: PublicDocsSource,
-): Promise<string[]> {
+): Promise<PublicCreateCommandValidation> {
   const cliArgs = extractCreateCrocoAppArgs(splitShellWords(extracted.command));
 
   if (!cliArgs) {
-    return [`${source.label}:${extracted.line} could not parse create-croco-app command`];
+    return {
+      failures: [`${source.label}:${extracted.line} could not parse create-croco-app command`],
+      isCanonical: false,
+      line: extracted.line,
+      resolvedJourney: undefined,
+    };
   }
 
   const failures: string[] = [];
+  let isCanonical = false;
+  let resolvedJourney: string | undefined;
 
   if (source.requireSkipFlags) {
     const missingSkipFlags = ["--no-install", "--no-git"].filter((flag) => !cliArgs.includes(flag));
@@ -423,11 +444,8 @@ async function validatePublicCreateCommand(
     }
 
     const options = normalizeNonInteractiveOptions(cliOptions);
-    if (options.goal !== "saas-api" || options.preset !== "saas") {
-      failures.push(
-        `${source.label}:${extracted.line} create-croco-app command resolves to ${options.goal ? `goal ${options.goal}` : `preset ${options.preset}`}, not the canonical goal saas-api journey`,
-      );
-    }
+    resolvedJourney = options.goal ? `goal ${options.goal}` : `preset ${options.preset}`;
+    isCanonical = options.goal === "saas-api" && options.preset === "saas";
 
     const targetDir = join(tempRoot, options.projectName);
     await generate(targetDir, {
@@ -435,7 +453,9 @@ async function validatePublicCreateCommand(
       installDeps: false,
       initGit: false,
     });
-    failures.push(...validateGeneratedSaasJourney(targetDir, source, extracted));
+    if (isCanonical) {
+      failures.push(...validateGeneratedSaasJourney(targetDir, source, extracted));
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     failures.push(
@@ -445,7 +465,7 @@ async function validatePublicCreateCommand(
     rmSync(tempRoot, { force: true, recursive: true });
   }
 
-  return failures;
+  return { failures, isCanonical, line: extracted.line, resolvedJourney };
 }
 
 function validateGeneratedSaasJourney(
@@ -1042,9 +1062,23 @@ console.log("\n📋 E. Docs contract\n");
           return [`${source.label} missing a public create-croco-app command`];
         }
 
-        return (
-          await Promise.all(commands.map((command) => validatePublicCreateCommand(command, source)))
-        ).flat();
+        const validations = await Promise.all(
+          commands.map((command) => validatePublicCreateCommand(command, source)),
+        );
+        const failures = validations.flatMap((validation) => validation.failures);
+
+        if (!validations.some((validation) => validation.isCanonical)) {
+          const resolved = validations.find(
+            (validation) => validation.resolvedJourney !== undefined,
+          );
+          failures.push(
+            resolved
+              ? `${source.label}:${resolved.line} create-croco-app command resolves to ${resolved.resolvedJourney}, not the canonical goal saas-api journey`
+              : `${source.label} is missing a valid canonical goal saas-api create-croco-app command`,
+          );
+        }
+
+        return failures;
       }),
     )
   ).flat();
@@ -1056,7 +1090,7 @@ console.log("\n📋 E. Docs contract\n");
   } else {
     pass(
       "D3",
-      "Public create-croco-app commands normalize and generate the canonical saas-api journey",
+      "Public create-croco-app commands validate and each source retains the canonical saas-api journey",
     );
   }
 

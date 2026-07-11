@@ -471,6 +471,7 @@ jobs:
               - 'packages/triggers-qstash/src/**'
               - 'packages/tx-core/src/**'
               - 'packages/tx-drizzle/src/**'
+              - 'packages/ui-astryx/src/**'
               - 'packages/webhooks-core/src/**'
               - 'packages/workflow-core/src/**'
               - 'packages/docs/astro.config.mjs'

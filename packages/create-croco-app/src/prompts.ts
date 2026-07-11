@@ -6,6 +6,7 @@ import {
 } from "@croco/tenant-core/tenant-model";
 import pc from "picocolors";
 import { GOAL_SPECS, readGoal, resolveGoalOptions } from "./goals.js";
+import { assertUiCompatibility, assertUiPresetCompatibility } from "./options.js";
 import {
   DEFAULT_SAAS_PROVIDER_PROFILE,
   SAAS_PROVIDER_PROFILE_CHOICES,
@@ -151,6 +152,13 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
   if (p.isCancel(preset)) {
     p.cancel("Operation cancelled");
     process.exit(0);
+  }
+
+  if (cliArgs.ui !== undefined) {
+    assertUiPresetCompatibility({
+      preset: preset as GeneratorOptions["preset"],
+      ui: cliArgs.ui,
+    });
   }
 
   // blank preset: return early with defaults
@@ -355,7 +363,13 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
   }
 
   // 8. frontendDeploy (fullstack only)
-  let frontendDeploy: "opennext" | "vercel" | "docker" | "cloudflare-meta-vite" | undefined;
+  let frontendDeploy:
+    | "opennext"
+    | "vercel"
+    | "docker"
+    | "cloudflare-meta-vite"
+    | "vite-spa"
+    | undefined;
   if (preset === "ddd-fullstack" || preset === "ddd-vike-fullstack") {
     const frontendChoice =
       cliArgs.frontendDeploy ??
@@ -368,6 +382,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
             label: "Cloudflare Meta Vite",
             hint: "SSR Worker deployment",
           },
+          { value: "vite-spa", label: "Vite SPA", hint: "Browser SPA deployment" },
           { value: "vercel", label: "Vercel", hint: "Vercel platform" },
           { value: "docker", label: "Docker", hint: "Containerized" },
         ],
@@ -376,10 +391,38 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
       p.cancel("Operation cancelled");
       process.exit(0);
     }
-    frontendDeploy = frontendChoice as "opennext" | "vercel" | "docker" | "cloudflare-meta-vite";
+    frontendDeploy = frontendChoice as NonNullable<GeneratorOptions["frontendDeploy"]>;
   }
 
-  // 9. db
+  if (cliArgs.ui !== undefined) {
+    assertUiCompatibility({ ...(frontendDeploy ? { frontendDeploy } : {}), ui: cliArgs.ui });
+  }
+
+  // 9. UI profile (Vite SPA only)
+  let ui: GeneratorOptions["ui"];
+  if (frontendDeploy === "vite-spa") {
+    const uiChoice =
+      cliArgs.ui ??
+      (await p.select({
+        message: "UI profile:",
+        initialValue: "none",
+        options: [
+          { value: "none", label: "None", hint: "Provider-neutral React starter" },
+          {
+            value: "astryx",
+            label: "Astryx",
+            hint: "Beta StyleX design-system profile",
+          },
+        ],
+      }));
+    if (p.isCancel(uiChoice)) {
+      p.cancel("Operation cancelled");
+      process.exit(0);
+    }
+    ui = uiChoice as NonNullable<GeneratorOptions["ui"]>;
+  }
+
+  // 10. db
   const db =
     cliArgs.db && cliArgs.db.length > 0
       ? cliArgs.db
@@ -435,6 +478,7 @@ export async function runPrompts(cliArgs: Partial<GeneratorOptions>): Promise<Ge
     apiHosting,
     backendDeploy,
     frontendDeploy,
+    ...(ui === undefined ? {} : { ui }),
     db: db as GeneratorOptions["db"],
     agentRules: agentRules as boolean,
     installDeps: installDeps as boolean,

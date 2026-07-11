@@ -54,3 +54,11 @@ Runtime claim this generated profile proves for the package catalog
 > `readonly` **target**: [`DeployTarget`](/api/presentation-preset/src/type-aliases/deploytarget/)
 
 Runtime target metadata and expected output contract for the profile
+
+***
+
+### ui?
+
+> `readonly` `optional` **ui?**: [`GeneratedUiProfileMetadata`](/api/presentation-preset/src/type-aliases/generateduiprofilemetadata/)
+
+Optional generated UI profile evidence for presentation-aware applications

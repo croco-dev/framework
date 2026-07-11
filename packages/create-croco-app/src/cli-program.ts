@@ -40,6 +40,7 @@ export function configureCreateCrocoAppProgram(program: Command): Command {
       "--frontend-deploy <deploy>",
       "Frontend deploy (opennext|vercel|docker|cloudflare-meta-vite|vite-spa)",
     )
+    .option("--ui <profile>", "UI profile (none|astryx). Astryx currently requires vite-spa")
     .option("--db <dbs>", "Comma-separated DB types (postgres,mongodb,redis)")
     .option("--no-agent-rules", "Skip agent rules")
     .option("--no-install", "Skip pnpm dependency installation")

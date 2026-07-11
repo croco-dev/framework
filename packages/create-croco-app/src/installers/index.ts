@@ -9,5 +9,6 @@ export { installRedis } from "./redis.js";
 export { installSharedUi } from "./shared-ui.js";
 export { installTrpcNextjs } from "./trpc-nextjs.js";
 export { installTrpcStandalone } from "./trpc-standalone.js";
+export { installUiProfile } from "./ui-profile.js";
 export { installWebGraphql } from "./web-graphql.js";
 export { installWebTrpc } from "./web-trpc.js";

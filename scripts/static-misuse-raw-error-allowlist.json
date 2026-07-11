@@ -269,7 +269,7 @@
     {
       "package": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 495,
+      "line": 504,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling"
