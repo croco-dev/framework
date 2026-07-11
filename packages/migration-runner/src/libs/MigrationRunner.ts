@@ -7,6 +7,8 @@ import { MissingUpFunctionProblem } from "./problems/MissingUpFunctionProblem";
 import type { MigrationFile, MigrationStatus } from "./types";
 import { assertValidMigrationCount } from "./validateMigrationCount";
 
+const PREVIEW_ROLLBACK = Symbol("migration-preview-rollback");
+
 export class MigrationRunner {
   private readonly scanner: MigrationScanner;
   private readonly store: MigrationStore;
@@ -40,20 +42,12 @@ export class MigrationRunner {
 
   async up(targetId?: string): Promise<string[]> {
     await this.init();
-
-    const files = await this.scanner.scan();
-    const executed = await this.store.getExecutedMigrations(this.db);
-    const executedIds = new Set(executed.map((m) => m.id));
-
-    const pending = files.filter((f) => !executedIds.has(f.id));
-    const toRun = targetId ? pending.filter((f) => f.id <= targetId) : pending;
+    const toRun = await this.selectUpMigrations(this.db, targetId);
 
     const runIds: string[] = [];
 
     for (const file of toRun) {
-      if (typeof file.up !== "function") {
-        throw new MissingUpFunctionProblem(file.id, file.name);
-      }
+      this.assertUpMigration(file);
 
       const executed = await this.runUpMigration(file);
       if (executed) {
@@ -65,40 +59,14 @@ export class MigrationRunner {
   }
 
   async down(targetId?: string, count?: number): Promise<string[]> {
-    if (!targetId && count !== undefined) {
-      assertValidMigrationCount(count);
-    }
-
+    this.assertDownCount(targetId, count);
     await this.init();
-
-    const files = await this.scanner.scan();
-    const executed = await this.store.getExecutedMigrations(this.db);
-
-    const fileMap = new Map(files.map((f) => [f.id, f]));
-    const runFiles: MigrationFile[] = [];
-
-    for (const record of executed) {
-      const file = fileMap.get(record.id);
-      if (file) {
-        runFiles.push(file);
-      }
-    }
-
-    let toRevert: MigrationFile[];
-    if (targetId) {
-      toRevert = runFiles.filter((f) => f.id >= targetId).reverse();
-    } else if (count !== undefined) {
-      toRevert = runFiles.slice(-count).reverse();
-    } else {
-      toRevert = runFiles.slice(-1).reverse();
-    }
+    const toRevert = await this.selectDownMigrations(this.db, targetId, count);
 
     const revertedIds: string[] = [];
 
     for (const file of toRevert) {
-      if (typeof file.down !== "function") {
-        throw new MissingDownFunctionProblem(file.id, file.name);
-      }
+      this.assertDownMigration(file);
 
       const reverted = await this.runDownMigration(file);
       if (reverted) {
@@ -107,6 +75,103 @@ export class MigrationRunner {
     }
 
     return revertedIds;
+  }
+
+  async previewUp(targetId?: string): Promise<string[]> {
+    return this.preview("up", async (db) => {
+      const migrations = await this.selectUpMigrations(db, targetId);
+      for (const migration of migrations) {
+        this.assertUpMigration(migration);
+      }
+      return migrations;
+    });
+  }
+
+  async previewDown(targetId?: string, count?: number): Promise<string[]> {
+    this.assertDownCount(targetId, count);
+    return this.preview("down", async (db) => {
+      const migrations = await this.selectDownMigrations(db, targetId, count);
+      for (const migration of migrations) {
+        this.assertDownMigration(migration);
+      }
+      return migrations;
+    });
+  }
+
+  private async preview(
+    direction: "up" | "down",
+    select: (db: DatabaseClient) => Promise<MigrationFile[]>,
+  ): Promise<string[]> {
+    if (!this.db.transaction) {
+      throw new MigrationTransactionRequiredProblem(direction);
+    }
+
+    let selected: MigrationFile[] = [];
+
+    try {
+      await this.db.transaction(async (tx) => {
+        await this.store.ensureTable(tx);
+        selected = await select(tx);
+        throw PREVIEW_ROLLBACK;
+      });
+    } catch (error) {
+      if (error !== PREVIEW_ROLLBACK) {
+        throw error;
+      }
+    }
+
+    return selected.map(({ id, name }) => `${id}_${name}`);
+  }
+
+  private async selectUpMigrations(
+    db: DatabaseClient,
+    targetId?: string,
+  ): Promise<MigrationFile[]> {
+    const files = await this.scanner.scan();
+    const executed = await this.store.getExecutedMigrations(db);
+    const executedIds = new Set(executed.map((migration) => migration.id));
+    const pending = files.filter((file) => !executedIds.has(file.id));
+    return targetId ? pending.filter((file) => file.id <= targetId) : pending;
+  }
+
+  private async selectDownMigrations(
+    db: DatabaseClient,
+    targetId?: string,
+    count?: number,
+  ): Promise<MigrationFile[]> {
+    const files = await this.scanner.scan();
+    const executed = await this.store.getExecutedMigrations(db);
+    const fileMap = new Map(files.map((file) => [file.id, file]));
+    const runFiles = executed.flatMap((record) => {
+      const file = fileMap.get(record.id);
+      return file ? [file] : [];
+    });
+
+    if (targetId) {
+      return runFiles.filter((file) => file.id >= targetId).reverse();
+    }
+    if (count !== undefined) {
+      return runFiles.slice(-count).reverse();
+    }
+    return runFiles.slice(-1).reverse();
+  }
+
+  private assertDownCount(targetId?: string, count?: number): void {
+    if (!targetId && count !== undefined) {
+      assertValidMigrationCount(count);
+    }
+  }
+
+  private assertUpMigration(file: MigrationFile): void {
+    if (typeof file.up !== "function") {
+      throw new MissingUpFunctionProblem(file.id, file.name);
+    }
+  }
+
+  private assertDownMigration(file: MigrationFile): void {
+    if (typeof file.down !== "function") {
+      throw new MissingDownFunctionProblem(file.id, file.name);
+    }
   }
 
   private async runUpMigration(file: MigrationFile): Promise<boolean> {
