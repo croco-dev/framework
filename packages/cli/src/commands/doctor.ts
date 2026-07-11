@@ -2,6 +2,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { defineCommand } from "citty";
+import { isKnownRuntimePlatform } from "@croco/framework-context";
+import type { KnownRuntimePlatform } from "@croco/framework-context";
 import { PROJECT_MANIFEST_BUNDLE_ARTIFACTS } from "@croco/protocols-core";
 import { WORKSPACE_MAX_DEPTH } from "../libs/constants.js";
 import { parseCoreCoveragePackageFilters } from "../libs/coreCoverageFilters.js";
@@ -109,6 +111,15 @@ type SourceSlice = {
 type AdvisoryGateReadinessSection = {
   readonly label: string;
   readonly diagnostics: readonly DoctorDiagnostic[];
+};
+
+type ProviderProfileManifestRecord = Record<string, unknown> & {
+  readonly profile: Record<string, unknown> & {
+    readonly name: string;
+    readonly runtimeTarget: KnownRuntimePlatform;
+  };
+  readonly packages: readonly unknown[];
+  readonly capabilities: readonly unknown[];
 };
 
 const sourceFileExtensions = [".ts", ".tsx", ".mts", ".cts", ".ts.hbs", ".tsx.hbs"];
@@ -2606,12 +2617,67 @@ function runtimeCapabilityManifestCheck(rootDir: string): DoctorCheckResult {
     };
   }
 
+  const profileMismatchDiagnostic = runtimeProfileMismatchDiagnostic(
+    rootDir,
+    manifest.value,
+    manifestArtifact,
+    checkId,
+  );
+  if (profileMismatchDiagnostic) {
+    return {
+      id: checkId,
+      title: "Runtime and provider profile consistency",
+      status: "fail",
+      diagnostics: [profileMismatchDiagnostic],
+      note: "Runtime and provider profile artifacts disagree.",
+    };
+  }
+
   return {
     id: checkId,
     title: "RuntimeCapabilityManifest presence",
     status: "pass",
     diagnostics: [],
     note: `Runtime target ${readRuntimePlatform(manifest.value)} from ${manifestArtifact}.`,
+  };
+}
+
+function runtimeProfileMismatchDiagnostic(
+  rootDir: string,
+  runtimeManifest: Record<string, unknown>,
+  runtimeManifestArtifact: string,
+  checkId: string,
+): DoctorDiagnostic | null {
+  const providerManifestPath = join(rootDir, defaultProviderProfileManifestPath);
+  if (!existsSync(providerManifestPath)) {
+    return null;
+  }
+
+  const providerManifest = readJsonObject(providerManifestPath);
+  if (providerManifest.kind === "invalid") {
+    return null;
+  }
+
+  if (!isProviderProfileManifestRecord(providerManifest.value)) {
+    return null;
+  }
+
+  const providerRuntimeTarget = providerManifest.value.profile.runtimeTarget;
+  const runtimePlatform = readRuntimePlatform(runtimeManifest);
+  if (providerRuntimeTarget === runtimePlatform) {
+    return null;
+  }
+
+  return {
+    code: CLI_DIAGNOSTIC_CODES.doctorRuntimeProfileMismatch,
+    severity: "error",
+    checkId,
+    cause:
+      `Runtime target '${runtimePlatform}' from ${runtimeManifestArtifact} does not match ` +
+      `provider runtimeTarget '${providerRuntimeTarget}' from ${defaultProviderProfileManifestPath}.`,
+    location: { file: defaultProviderProfileManifestPath },
+    action:
+      "Regenerate the runtime capability and provider profile artifacts from the same application profile, then rerun croco doctor.",
   };
 }
 
@@ -3940,11 +4006,17 @@ function isTenantModelManifestVersionSupported(version: string): boolean {
   return version === tenantModelManifestSchemaVersion;
 }
 
-function isProviderProfileManifestRecord(value: Record<string, unknown>): boolean {
+function isProviderProfileManifestRecord(
+  value: Record<string, unknown>,
+): value is ProviderProfileManifestRecord {
+  const profile = asRecord(value.profile);
+
   return (
     value.schemaVersion === providerProfileManifestSchemaVersion &&
-    isRecord(value.profile) &&
-    typeof value.profile.name === "string" &&
+    profile !== null &&
+    typeof profile["name"] === "string" &&
+    typeof profile["runtimeTarget"] === "string" &&
+    isKnownRuntimePlatform(profile["runtimeTarget"]) &&
     Array.isArray(value.packages) &&
     Array.isArray(value.capabilities)
   );

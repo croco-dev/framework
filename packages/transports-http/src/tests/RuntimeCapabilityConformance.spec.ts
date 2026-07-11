@@ -1,17 +1,24 @@
 import "reflect-metadata";
+import { getDiagnosticCodeDefinition } from "@croco/diagnostics-core";
 import {
   Container,
-  Context as FrameworkContext,
+  checkPolicyTableRuntimeCapabilityManifest,
+  checkRuntimeCapabilityRequirements,
+  compilePolicyTable,
+  createPolicyTarget,
   createRuntimeCapabilityManifest,
-  RUNTIME_CAPABILITY_NAMES,
-  RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE,
+  definePolicy,
+  Context as FrameworkContext,
   type KnownRuntimePlatform,
+  POLICY_CAPABILITY_UNAVAILABLE_CODE,
+  RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE,
   type RuntimeCapabilities,
+  type RuntimeCapabilityRequirement,
 } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Controller, Get } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createApp, type CrocoApp } from "../libs/CrocoApp";
+import { type CrocoApp, createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import type { LambdaContext, LambdaEvent } from "../libs/types";
@@ -113,34 +120,113 @@ describe("runtime capability conformance", () => {
     expect(waitUntil).toHaveBeenCalledTimes(1);
   });
 
-  it("emits stable diagnostics for unsupported requirements on every runtime manifest", () => {
-    for (const platform of ["node", "lambda", "cloudflare-workers"] as const) {
-      const manifest = createRuntimeCapabilityManifest(platform, {
-        requirements: RUNTIME_CAPABILITY_NAMES.map((capability) => ({
-          capability,
-          source: { file: `fixtures/${platform}.ts` },
-        })),
-      });
-      const unsupportedCapabilities = RUNTIME_CAPABILITY_NAMES.filter(
-        (capability) => !manifest.capabilities[capability],
-      ).sort();
+  it.each([
+    {
+      label: "Lambda streaming response route",
+      platform: "lambda",
+      capability: "streamingResponse",
+      targetKind: "route",
+      targetId: "StreamingController",
+      operation: "download",
+      file: "fixtures/lambda/StreamingController.ts",
+      symbol: "StreamingController.download",
+    },
+    {
+      label: "Node deferred event handler",
+      platform: "node",
+      capability: "waitUntil",
+      targetKind: "event-handler",
+      targetId: "DeferredWorkHook",
+      operation: "enqueue",
+      file: "fixtures/node/DeferredWorkHook.ts",
+      symbol: "DeferredWorkHook.enqueue",
+    },
+    {
+      label: "Node telemetry flush hook",
+      platform: "node",
+      capability: "flush",
+      targetKind: "service",
+      targetId: "TelemetryFlushHook",
+      operation: "flush",
+      file: "fixtures/node/TelemetryFlushHook.ts",
+      symbol: "TelemetryFlushHook.flush",
+    },
+    {
+      label: "Workers filesystem provider",
+      platform: "cloudflare-workers",
+      capability: "filesystem",
+      targetKind: "service",
+      targetId: "AssetProvider",
+      operation: "read",
+      file: "fixtures/workers/AssetProvider.ts",
+      symbol: "AssetProvider.read",
+    },
+    {
+      label: "Workers Node API route",
+      platform: "cloudflare-workers",
+      capability: "nodeApi",
+      targetKind: "route",
+      targetId: "AdminController",
+      operation: "inspect",
+      file: "fixtures/workers/AdminController.ts",
+      symbol: "AdminController.inspect",
+    },
+  ] as const)("rejects the $label with stable recovery guidance", (drill) => {
+    const target = createPolicyTarget(drill.targetKind, drill.targetId, {
+      operation: drill.operation,
+      source: { file: drill.file, symbol: drill.symbol },
+    });
+    const table = compilePolicyTable([
+      definePolicy(
+        target,
+        { kind: "retry", maxAttempts: 2 },
+        { requiredCapabilities: [drill.capability] },
+      ),
+    ]);
+    const manifest = createRuntimeCapabilityManifest(drill.platform);
+    const entry = table.plans[0]?.entries[0];
 
-      expect(
-        manifest.diagnostics.map(({ code, platform: diagnosticPlatform, capability, source }) => ({
-          code,
-          platform: diagnosticPlatform,
-          capability,
-          source,
-        })),
-      ).toEqual(
-        unsupportedCapabilities.map((capability) => ({
-          code: RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE,
-          platform,
-          capability,
-          source: { file: `fixtures/${platform}.ts` },
-        })),
-      );
+    expect(entry).toBeDefined();
+    if (!entry) {
+      return;
     }
+
+    expect(entry.target).toEqual(target);
+    expect(entry.requiredCapabilities).toEqual([drill.capability]);
+
+    expect(checkPolicyTableRuntimeCapabilityManifest(table, manifest)).toEqual([
+      expect.objectContaining({
+        code: POLICY_CAPABILITY_UNAVAILABLE_CODE,
+        target,
+        targetRuntime: drill.platform,
+        capability: drill.capability,
+        source: { file: drill.file, symbol: drill.symbol },
+      }),
+    ]);
+
+    const source = entry.source ?? entry.target.source;
+    const requirements: RuntimeCapabilityRequirement[] = entry.requiredCapabilities.map(
+      (capability) => ({
+        capability,
+        source: source?.file ? { file: source.file } : undefined,
+      }),
+    );
+
+    expect(checkRuntimeCapabilityRequirements(manifest, requirements)).toEqual([
+      {
+        code: RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE,
+        severity: "error",
+        platform: drill.platform,
+        capability: drill.capability,
+        message: `Runtime platform '${drill.platform}' does not support capability '${drill.capability}'.`,
+        source: { file: drill.file },
+      },
+    ]);
+    expect(
+      getDiagnosticCodeDefinition(RUNTIME_CAPABILITY_UNSUPPORTED_DIAGNOSTIC_CODE)?.action,
+    ).toBe(
+      "Choose a runtime that supports the capability, remove the requirement, or move the code behind an adapter that declares a supported capability.",
+    );
   });
 });
 

@@ -21,6 +21,7 @@ export const CLI_DIAGNOSTIC_CODES = {
   doctorProblemRegistryCheckFailed: "CROCO_DOCTOR_PROBLEM_REGISTRY_CHECK_FAILED",
   doctorRuntimeCapabilityManifestMissing: "CROCO_DOCTOR_RUNTIME_CAPABILITY_MANIFEST_MISSING",
   doctorRuntimeCapabilityManifestInvalid: "CROCO_DOCTOR_RUNTIME_CAPABILITY_MANIFEST_INVALID",
+  doctorRuntimeProfileMismatch: "CROCO_DOCTOR_RUNTIME_PROFILE_MISMATCH",
   doctorHttpSecurityValidationDisabled: "CROCO_DOCTOR_HTTP_SECURITY_VALIDATION_DISABLED",
   doctorHttpSecurityMiddlewareMissing: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING",
   doctorDiGraphManifestInvalid: "CROCO_DOCTOR_DI_GRAPH_MANIFEST_INVALID",
@@ -109,6 +110,7 @@ type CliNonLegacyDiagnosticKey =
   | "doctorProblemRegistryCheckFailed"
   | "doctorRuntimeCapabilityManifestMissing"
   | "doctorRuntimeCapabilityManifestInvalid"
+  | "doctorRuntimeProfileMismatch"
   | "doctorHttpSecurityValidationDisabled"
   | "doctorHttpSecurityMiddlewareMissing"
   | "doctorDiGraphManifestInvalid"

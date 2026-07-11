@@ -496,9 +496,92 @@ describe("doctor", () => {
     ]);
   });
 
+  it("passes generated app profile consistency when current runtime and provider artifacts match", () => {
+    const repo = createCrocoWorkspace();
+    writeHealthySaasProviderDoctorWorkspace(repo);
+    writeRuntimeCapabilityManifest(repo, "node");
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("healthy");
+    expect(report.diagnostics).toEqual([]);
+  });
+
+  it("fails generated app profile consistency when runtime and provider targets differ", () => {
+    const repo = createCrocoWorkspace();
+    writeHealthySaasProviderDoctorWorkspace(repo);
+    writeRuntimeCapabilityManifest(repo, "cloudflare-workers");
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorRuntimeProfileMismatch,
+        cause: expect.stringContaining(
+          "Runtime target 'cloudflare-workers' from croco-runtime-capability.manifest.json does not match provider runtimeTarget 'node'",
+        ),
+        location: expect.objectContaining({ file: "croco-saas-profile.manifest.json" }),
+        action:
+          "Regenerate the runtime capability and provider profile artifacts from the same application profile, then rerun croco doctor.",
+      }),
+    ]);
+    expect(getDoctorExitCode(report)).toBe(1);
+  });
+
+  it("preserves the provider diagnostic when a profile artifact is malformed", () => {
+    const repo = createCrocoWorkspace();
+    writeHealthySaasProviderDoctorWorkspace(repo);
+    writeRuntimeCapabilityManifest(repo, "cloudflare-workers");
+    writeProviderProfileManifest(repo, { profile: "invalid" });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorProviderProfileInvalid,
+      }),
+    ]);
+  });
+
+  it("rejects a current provider profile that omits its runtime target", () => {
+    const repo = createCrocoWorkspace();
+    writeHealthySaasProviderDoctorWorkspace(repo);
+    writeRuntimeCapabilityManifest(repo, "cloudflare-workers");
+    writeProviderProfileManifest(repo, {
+      profile: { name: "saas-node-postgres" },
+    });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorProviderProfileInvalid,
+        cause: expect.stringContaining("is not a croco.saas-provider-profile/v1 artifact"),
+      }),
+    ]);
+  });
+
+  it("preserves the provider parse diagnostic when a profile artifact contains invalid JSON", () => {
+    const repo = createCrocoWorkspace();
+    writeHealthySaasProviderDoctorWorkspace(repo);
+    writeRuntimeCapabilityManifest(repo, "cloudflare-workers");
+    writeFile(repo, "croco-saas-profile.manifest.json", "{ invalid json");
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorProviderProfileInvalid,
+        cause: expect.stringContaining("could not be parsed"),
+      }),
+    ]);
+  });
+
   it("fails generated SaaS provider readiness when the provider manifest version is unsupported", () => {
     const repo = createCrocoWorkspace();
     writeHealthySaasProviderDoctorWorkspace(repo);
+    writeRuntimeCapabilityManifest(repo, "cloudflare-workers");
     writeProviderProfileManifest(repo, {
       schemaVersion: "croco.saas-provider-profile/v2",
     });
@@ -3021,6 +3104,15 @@ function writeProviderProfileManifest(repo: string, manifest: Record<string, unk
       notes: "covered by generated smoke",
     })),
     ...manifest,
+  });
+}
+
+function writeRuntimeCapabilityManifest(repo: string, platform: string): void {
+  writeJson(repo, "croco-runtime-capability.manifest.json", {
+    version: "croco.runtime-capability.manifest.v1",
+    platform,
+    capabilities: {},
+    diagnostics: [],
   });
 }
 

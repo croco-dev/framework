@@ -200,6 +200,7 @@ ERROR CROCO_CLI_DOCTOR_005
 | `CROCO_CLI_DOCTOR_003`                              | `doctor/workspace-package-invalid`         | `croco doctor`      | package manifest가 유효하지 않음                                                        |
 | `CROCO_CLI_DOCTOR_004`                              | `doctor/repository-core-drizzle-boundary`  | `croco doctor`      | repository-core가 Drizzle 구현에 오염됨                                                 |
 | `CROCO_CLI_DOCTOR_005`                              | `doctor/lambda-telemetry-flush-missing`    | `croco doctor`      | Lambda telemetry flush 보장이 없음                                                      |
+| `CROCO_DOCTOR_RUNTIME_PROFILE_MISMATCH`             | 없음                                       | `croco doctor`      | runtime capability manifest와 provider profile의 runtime target이 일치하지 않음         |
 | `CROCO_DOCTOR_PROVIDER_PROFILE_VERSION_UNSUPPORTED` | 없음                                       | `croco doctor`      | provider profile manifest `schemaVersion`이 현재 doctor에서 지원되지 않음               |
 | `CROCO_DOCTOR_TENANT_MODEL_MANIFEST_INVALID`        | 없음                                       | `croco doctor`      | provider profile이 연결한 tenant model manifest가 없거나 유효하지 않음                  |
 | `CROCO_DOCTOR_TENANT_MODEL_VERSION_UNSUPPORTED`     | 없음                                       | `croco doctor`      | provider profile이 연결한 tenant model manifest version이 현재 doctor에서 지원되지 않음 |
