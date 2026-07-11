@@ -220,6 +220,15 @@ jobs:
             ci-reports/generated-apps/ecosystem-advisory-matrix.json
           if-no-files-found: warn
 
+      - name: Upload generated app smoke failure artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-app-smoke-failure-artifacts
+          path: ci-reports/generated-apps/cases
+          include-hidden-files: true
+          if-no-files-found: ignore
+
       - name: TypeScript check
         id: typecheck
         run: pnpm turbo run typecheck --summarize --continue=always
