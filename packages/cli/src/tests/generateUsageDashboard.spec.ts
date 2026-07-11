@@ -83,9 +83,12 @@ describe("runGenerateUsageDashboard", () => {
     expect(controllerContent).toContain("const usageDashboardSnapshotSchema = z.object");
     expect(controllerContent).toContain('await import("../usage-dashboard/UsageDashboardRuntime")');
     expect(controllerContent).toContain('const tenantId = ctx.header("x-tenant-id");');
+    expect(controllerContent).toContain('throw new RequestValidationProblem("query", [');
     expect(controllerContent).toContain(
-      "return Array.isArray(queryTenantId) ? queryTenantId[0] : queryTenantId;",
+      '{ path: "tenantId", message: "Expected a single query value" },',
     );
+    expect(controllerContent).toContain("return queryTenantId;");
+    expect(controllerContent).not.toContain("queryTenantId[0]");
     expect(controllerContent).toContain("const values = (Array.isArray(value) ? value : [value])");
     assertGeneratedQueryHelpersTypecheck(controllerContent);
     expect(serviceContent).toContain("export type UsageDashboardSnapshot");
@@ -560,6 +563,10 @@ function assertGeneratedQueryHelpersTypecheck(controllerContent: string): void {
   header(name: string): string | undefined;
   query(name: string): string | string[] | undefined;
 };
+
+declare class RequestValidationProblem {
+  constructor(source: "query", issues: Array<{ path: string; message: string }>);
+}
 
 ${controllerContent.slice(helpersStart)}`;
   const fileName = path.join(process.cwd(), "generated-usage-dashboard-query-helpers.ts");
