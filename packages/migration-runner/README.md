@@ -30,6 +30,7 @@ The CLI currently supports Postgres connections.
 | `--dialect <dialect>` | `postgres`     | Supported value: `postgres`. Other values fail with `migration-runner/unsupported-dialect`. |
 | `--target <id>`       | none           | Run or roll back through a specific timestamp id.                                           |
 | `--count <number>`    | `1`            | `down` only. Must be a positive integer when no target is supplied.                         |
+| `--dry-run`           | `false`        | `up` and `down` only. Print the selected migrations without committing changes.             |
 
 ## Migration Files
 
@@ -74,6 +75,12 @@ Run pending migrations through a target id:
 pnpm exec migrate up --target 20260615000500 --connection "$DATABASE_URL"
 ```
 
+Preview pending migrations without changing the checkpoint table or running migration bodies:
+
+```bash
+pnpm exec migrate up --dry-run --connection "$DATABASE_URL"
+```
+
 Show database status before operating:
 
 ```bash
@@ -98,8 +105,16 @@ Roll back to a target id:
 pnpm exec migrate down --target 20260615000001 --connection "$DATABASE_URL"
 ```
 
-There is no dry-run execution mode. Use `status` before destructive `down` operations, review the selected
-target or count, and keep database backups or point-in-time restore available for production rollbacks.
+Preview the rollback selection without changing checkpoint or migration state:
+
+```bash
+pnpm exec migrate down --count 2 --dry-run --connection "$DATABASE_URL"
+```
+
+Dry-run uses the same target and count selection as execution. On a fresh database it initializes and reads the
+checkpoint table inside a rollback-only transaction, so neither that table nor migration state is committed. This
+guarantee depends on the supported Postgres transactional-DDL boundary; the package does not claim cross-dialect dry-run
+support. Continue to keep database backups or point-in-time restore available for production rollbacks.
 
 ## Destructive Command Safety
 
@@ -132,18 +147,28 @@ Migration failed: migration-runner/invalid-count (400 Bad Request): Migration ro
 
 Common operator failures:
 
-| Code                                        | When it happens                                                       | Recovery                                               |
-| ------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------ |
-| `migration-runner/database-url-required`    | No `--connection` and no `DATABASE_URL`.                              | Provide a Postgres URL for the target environment.     |
-| `migration-runner/unsupported-dialect`      | `--dialect` is not `postgres`.                                        | Use Postgres or provide a direct API `DatabaseClient`. |
-| `migration-runner/invalid-count`            | `down --count` is zero, negative, fractional, non-numeric, or unsafe. | Choose a positive integer or use `--target`.           |
-| `migration-runner/transaction-required`     | Direct API client has no `transaction` function for `up` or `down`.   | Wrap the adapter with transaction support.             |
-| `migration-runner/unsupported-query-result` | Adapter returns neither an array nor a `{ rows: [...] }` result.      | Normalize the adapter result shape.                    |
-| `migration-runner/missing-up-function`      | A migration file lacks `up`.                                          | Add the forward migration body.                        |
-| `migration-runner/missing-down-function`    | A migration file lacks `down`.                                        | Add a rollback body or do not select it for rollback.  |
+| Code                                        | When it happens                                                           | Recovery                                               |
+| ------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `migration-runner/database-url-required`    | No `--connection` and no `DATABASE_URL`.                                  | Provide a Postgres URL for the target environment.     |
+| `migration-runner/unsupported-dialect`      | `--dialect` is not `postgres`.                                            | Use Postgres or provide a direct API `DatabaseClient`. |
+| `migration-runner/invalid-count`            | `down --count` is zero, negative, fractional, non-numeric, or unsafe.     | Choose a positive integer or use `--target`.           |
+| `migration-runner/transaction-required`     | Direct API client has no `transaction` function for execution or preview. | Wrap the adapter with transaction support.             |
+| `migration-runner/unsupported-query-result` | Adapter returns neither an array nor a `{ rows: [...] }` result.          | Normalize the adapter result shape.                    |
+| `migration-runner/missing-up-function`      | A migration file lacks `up`.                                              | Add the forward migration body.                        |
+| `migration-runner/missing-down-function`    | A migration file lacks `down`.                                            | Add a rollback body or do not select it for rollback.  |
 
-Database connection and query failures are not hidden as success. They make the command exit nonzero after the
-pool is closed.
+Database connection and query failures are not hidden as success. They make the command exit nonzero after the pool
+cleanup attempt. If cleanup itself fails, the CLI adds a `Cleanup failed: ...` diagnostic and exits nonzero without
+discarding earlier command output or failure diagnostics.
+
+When an `up` or `down` command fails after opening the database, the CLI prints conservative direction-specific recovery
+guidance: inspect `migrate status` and the database state, correct the reported failure, then rerun the same command. The
+CLI does not infer checkpoint or commit state from an undifferentiated adapter or driver error.
+
+For a migration-body failure with a database that honors the required transaction contract, transactions remain scoped
+per migration: the failing body and its checkpoint change roll back together, while migrations completed earlier in the
+same command remain committed. This narrower guarantee does not cover uncertain driver commit outcomes, whole-command
+rollback, or dialects whose DDL is not transactional.
 
 ## Programmatic API
 
@@ -158,14 +183,17 @@ const db: DatabaseClient = {
 
 const runner = new MigrationRunner(db, "./migrations", "_migrations");
 
+const pending = await runner.previewUp();
 await runner.up();
 const status = await runner.status();
+const rollbackPlan = await runner.previewDown(undefined, 1);
 await runner.down(undefined, 1);
 ```
 
-`up` and `down` require transaction support so checkpoint changes and migration body side effects commit or
-roll back together. Concurrent runners reserve or claim checkpoint rows atomically through the checkpoint
-table and skip migrations already claimed by another transaction.
+`previewUp` and `previewDown` return planned ids without presenting them as executed results. They require transaction
+support for rollback-only checkpoint initialization. `up` and `down` also require transaction support so checkpoint changes
+and migration body side effects commit or roll back together. Concurrent runners reserve or claim checkpoint rows atomically
+through the checkpoint table and skip migrations already claimed by another transaction.
 
 ## Verification
 

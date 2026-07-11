@@ -61,6 +61,42 @@ title: "MigrationRunner"
 
 ***
 
+### previewDown()
+
+> **previewDown**(`targetId?`, `count?`): `Promise`\<`string`[]\>
+
+#### Parameters
+
+##### targetId?
+
+`string`
+
+##### count?
+
+`number`
+
+#### Returns
+
+`Promise`\<`string`[]\>
+
+***
+
+### previewUp()
+
+> **previewUp**(`targetId?`): `Promise`\<`string`[]\>
+
+#### Parameters
+
+##### targetId?
+
+`string`
+
+#### Returns
+
+`Promise`\<`string`[]\>
+
+***
+
 ### status()
 
 > **status**(): `Promise`\<[`MigrationStatus`](/api/migration-runner/src/interfaces/migrationstatus/)[]\>
