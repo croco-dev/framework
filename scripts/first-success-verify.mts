@@ -4,12 +4,39 @@
  * Verifies the first-success journey contract by parsing source files.
  * Ensures README documentation, source code, docs, and scaffold stay in sync.
  *
- * Usage: node --experimental-strip-types scripts/first-success-verify.mts
+ * Usage: pnpm first-success:verify
  * Exit: 0 = all contracts pass, 1 = any contract fails
  */
 
-import { readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import type * as CreateCrocoAppVerification from "../packages/create-croco-app/src/verification.ts";
+import { validateGeneratedSaasDocsContract } from "./first-success-generated-contract.mts";
+
+const scriptRepoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const cliContractBundle = join(
+  scriptRepoRoot,
+  "packages",
+  "create-croco-app",
+  "dist",
+  "verification.js",
+);
+
+if (!existsSync(cliContractBundle)) {
+  throw new Error(
+    `Missing create-croco-app verification contract: ${cliContractBundle}. Run pnpm first-success:verify so the CLI contract is built first.`,
+  );
+}
+
+const {
+  createCreateCrocoAppProgram,
+  generate,
+  isNonInteractiveOptions,
+  normalizeNonInteractiveOptions,
+  parseCliOptions,
+} = (await import(pathToFileURL(cliContractBundle).href)) as typeof CreateCrocoAppVerification;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -30,11 +57,6 @@ type RootReadmeToolingCommand = {
   readonly command: string;
   readonly line: number;
   readonly scriptName: string;
-};
-
-type ParsedCreateCrocoAppCommand = {
-  readonly projectName?: string;
-  readonly flags: Map<string, string | boolean>;
 };
 
 type PackageJsonWithScripts = {
@@ -86,14 +108,6 @@ const firstSuccessCommandContracts = [
     scriptName: "first-success:verify",
   },
 ] as const;
-
-const CREATE_CROCO_APP_CHOICES = new Map<string, readonly string[]>([
-  ["--preset", ["blank", "ddd-api", "ddd-fullstack", "ddd-vike-fullstack", "production-app"]],
-  ["--api", ["graphql", "trpc"]],
-  ["--api-hosting", ["standalone", "nextjs"]],
-  ["--backend-deploy", ["docker", "lambda"]],
-  ["--frontend-deploy", ["opennext", "vercel", "docker", "cloudflare-meta-vite", "vite-spa"]],
-]);
 
 function pass(label: string, detail?: string): void {
   console.log(`  ✅ ${label}${detail ? ` — ${detail}` : ""}`);
@@ -280,9 +294,9 @@ function extractCreateCrocoAppCommands(content: string): ExtractedCommand[] {
 }
 
 function isCreateCrocoAppCommandSnippet(snippet: string): boolean {
-  const args = splitShellWords(snippet);
+  const cliArgs = extractCreateCrocoAppArgs(splitShellWords(snippet));
 
-  return args.length > 1 && args.some(isCreateCrocoAppExecutable);
+  return cliArgs !== undefined && cliArgs.length > 0;
 }
 
 function splitShellWords(command: string): string[] {
@@ -335,173 +349,51 @@ function splitShellWords(command: string): string[] {
   return words;
 }
 
-function parseCreateCrocoAppCommand(command: string): ParsedCreateCrocoAppCommand | undefined {
-  const args = splitShellWords(command);
-  const executableIndex = args.findIndex(isCreateCrocoAppExecutable);
+function extractCreateCrocoAppArgs(args: readonly string[]): string[] | undefined {
+  const commandBoundary = args.findIndex((arg) => arg === "&&" || arg === ";");
+  const commandArgs = commandBoundary === -1 ? [...args] : args.slice(0, commandBoundary);
 
-  if (executableIndex === -1) {
-    return undefined;
+  if (commandArgs[0] === "npx" && isCreateCrocoAppExecutable(commandArgs[1])) {
+    return commandArgs.slice(2);
   }
 
-  let projectName: string | undefined;
-  const flags = new Map<string, string | boolean>();
-
-  for (let index = executableIndex + 1; index < args.length; index += 1) {
-    const arg = args[index];
-
-    if (arg === "&&" || arg === ";") {
-      break;
-    }
-
-    if (!arg.startsWith("--")) {
-      projectName ??= arg;
-      continue;
-    }
-
-    const [flag, inlineValue] = arg.split("=", 2);
-
-    if (flag === "--no-install" || flag === "--no-git" || flag === "--no-agent-rules") {
-      flags.set(flag, false);
-      continue;
-    }
-
-    if (inlineValue !== undefined) {
-      flags.set(flag, inlineValue);
-      continue;
-    }
-
-    const value = args[index + 1];
-    if (!value || value.startsWith("--") || value === "&&" || value === ";") {
-      flags.set(flag, "");
-      continue;
-    }
-
-    flags.set(flag, value);
-    index += 1;
+  if (commandArgs[0] === "pnpm" && commandArgs[1] === "create" && commandArgs[2] === "croco-app") {
+    return commandArgs.slice(3);
   }
 
-  return { projectName, flags };
+  if (
+    commandArgs[0] === "pnpm" &&
+    commandArgs[1] === "dlx" &&
+    isCreateCrocoAppExecutable(commandArgs[2])
+  ) {
+    return commandArgs.slice(3);
+  }
+
+  if (isCreateCrocoAppExecutable(commandArgs[0])) {
+    return commandArgs.slice(1);
+  }
+
+  return undefined;
 }
 
-function isCreateCrocoAppExecutable(arg: string): boolean {
-  return arg === "create-croco-app" || arg.startsWith("create-croco-app@");
+function isCreateCrocoAppExecutable(arg: string | undefined): boolean {
+  return arg === "create-croco-app" || arg?.startsWith("create-croco-app@") === true;
 }
 
-function readStringFlag(flags: Map<string, string | boolean>, flag: string): string | undefined {
-  const value = flags.get(flag);
-
-  return typeof value === "string" ? value : undefined;
-}
-
-function validatePublicCreateCommand(
+async function validatePublicCreateCommand(
   extracted: ExtractedCommand,
   source: PublicDocsSource,
-): string[] {
-  const parsed = parseCreateCrocoAppCommand(extracted.command);
+): Promise<string[]> {
+  const cliArgs = extractCreateCrocoAppArgs(splitShellWords(extracted.command));
 
-  if (!parsed) {
+  if (!cliArgs) {
     return [`${source.label}:${extracted.line} could not parse create-croco-app command`];
   }
 
   const failures: string[] = [];
-  const preset = readStringFlag(parsed.flags, "--preset");
-  const scope = readStringFlag(parsed.flags, "--scope");
-  const api = readStringFlag(parsed.flags, "--api");
-  const missingRequiredFlags = [
-    parsed.projectName ? undefined : "project=<missing>",
-    preset ? undefined : "--preset=<missing>",
-    scope ? undefined : "--scope=<missing>",
-    preset === "ddd-api" || preset === "ddd-fullstack"
-      ? api
-        ? undefined
-        : "--api=<missing>"
-      : undefined,
-    preset === "ddd-vike-fullstack" && !readStringFlag(parsed.flags, "--frontend-deploy")
-      ? "--frontend-deploy=<missing>"
-      : undefined,
-  ].filter((value): value is string => !!value);
-
-  if (missingRequiredFlags.length > 0) {
-    failures.push(
-      `${source.label}:${extracted.line} create-croco-app command is missing required noninteractive values: ${missingRequiredFlags.join(", ")}`,
-    );
-  }
-
-  if (scope && !scope.startsWith("@")) {
-    failures.push(`${source.label}:${extracted.line} create-croco-app --scope must start with @`);
-  }
-
-  for (const [flag, choices] of CREATE_CROCO_APP_CHOICES) {
-    const value = readStringFlag(parsed.flags, flag);
-    if (value && !choices.includes(value)) {
-      failures.push(
-        `${source.label}:${extracted.line} create-croco-app ${flag} value "${value}" is not one of ${choices.join(", ")}`,
-      );
-    }
-  }
-
-  if (preset === "blank") {
-    for (const unsupported of [
-      "--api",
-      "--api-hosting",
-      "--backend-deploy",
-      "--frontend-deploy",
-      "--web-apps",
-      "--db",
-    ]) {
-      if (parsed.flags.has(unsupported)) {
-        failures.push(
-          `${source.label}:${extracted.line} ${unsupported} is not supported with the blank preset`,
-        );
-      }
-    }
-  }
-
-  if (preset === "ddd-api") {
-    if (parsed.flags.has("--web-apps")) {
-      failures.push(
-        `${source.label}:${extracted.line} --web-apps is only supported with the ddd-fullstack preset`,
-      );
-    }
-    if (readStringFlag(parsed.flags, "--api-hosting") === "nextjs") {
-      failures.push(
-        `${source.label}:${extracted.line} --api-hosting nextjs is only supported with ddd-fullstack`,
-      );
-    }
-    if (parsed.flags.has("--frontend-deploy")) {
-      failures.push(
-        `${source.label}:${extracted.line} --frontend-deploy is only supported with fullstack presets`,
-      );
-    }
-  }
-
-  if (preset === "ddd-fullstack" && readStringFlag(parsed.flags, "--api-hosting") === "nextjs") {
-    const webApps = readStringFlag(parsed.flags, "--web-apps")?.split(",").filter(Boolean) ?? [
-      "web",
-    ];
-    if (webApps.length !== 1) {
-      failures.push(
-        `${source.label}:${extracted.line} --api-hosting nextjs requires exactly one web app`,
-      );
-    }
-    if (parsed.flags.has("--backend-deploy")) {
-      failures.push(
-        `${source.label}:${extracted.line} --backend-deploy is only supported with standalone API hosting`,
-      );
-    }
-  }
-
-  if (
-    preset === "ddd-vike-fullstack" &&
-    readStringFlag(parsed.flags, "--frontend-deploy") !== "cloudflare-meta-vite"
-  ) {
-    failures.push(
-      `${source.label}:${extracted.line} ddd-vike-fullstack only supports --frontend-deploy cloudflare-meta-vite`,
-    );
-  }
 
   if (source.requireSkipFlags) {
-    const missingSkipFlags = ["--no-install", "--no-git"].filter((flag) => !parsed.flags.has(flag));
+    const missingSkipFlags = ["--no-install", "--no-git"].filter((flag) => !cliArgs.includes(flag));
     if (missingSkipFlags.length > 0) {
       failures.push(
         `${source.label}:${extracted.line} create-croco-app command must include ${missingSkipFlags.join(" and ")} before manual install steps`,
@@ -509,7 +401,93 @@ function validatePublicCreateCommand(
     }
   }
 
+  const tempRoot = mkdtempSync(join(tmpdir(), "croco-first-success-command-"));
+  try {
+    const program = createCreateCrocoAppProgram()
+      .exitOverride()
+      .configureOutput({
+        writeErr: () => undefined,
+        writeOut: () => undefined,
+      });
+    program.parse(cliArgs, { from: "user" });
+
+    const directory = program.processedArgs[0];
+    const rawOptions = program.opts<Record<string, string | boolean | undefined>>();
+    const cliOptions = parseCliOptions(
+      typeof directory === "string" ? directory : undefined,
+      rawOptions,
+    );
+
+    if (!isNonInteractiveOptions(cliOptions)) {
+      throw new Error("command does not provide directory, --scope, and --goal or --preset");
+    }
+
+    const options = normalizeNonInteractiveOptions(cliOptions);
+    if (options.goal !== "saas-api" || options.preset !== "saas") {
+      failures.push(
+        `${source.label}:${extracted.line} create-croco-app command resolves to ${options.goal ? `goal ${options.goal}` : `preset ${options.preset}`}, not the canonical goal saas-api journey`,
+      );
+    }
+
+    const targetDir = join(tempRoot, options.projectName);
+    await generate(targetDir, {
+      ...options,
+      installDeps: false,
+      initGit: false,
+    });
+    failures.push(...validateGeneratedSaasJourney(targetDir, source, extracted));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    failures.push(
+      `${source.label}:${extracted.line} create-croco-app command failed the real CLI contract: ${message}`,
+    );
+  } finally {
+    rmSync(tempRoot, { force: true, recursive: true });
+  }
+
   return failures;
+}
+
+function validateGeneratedSaasJourney(
+  targetDir: string,
+  source: PublicDocsSource,
+  extracted: ExtractedCommand,
+): string[] {
+  const failures: string[] = [];
+  const prefix = `${source.label}:${extracted.line}`;
+  const manifest = parseJsonRecord(readFileSync(join(targetDir, "croco.app.json"), "utf-8"));
+  const packageJson = parsePackageJson(readFileSync(join(targetDir, "package.json"), "utf-8"));
+  const generatedReadme = readFileSync(join(targetDir, "README.md"), "utf-8");
+
+  if (manifest.goal !== "saas-api" || manifest.preset !== "saas" || manifest.protocol !== "rest") {
+    failures.push(`${prefix} generated manifest does not describe the REST saas-api journey`);
+  }
+  if (!packageJson.scripts?.["demo:smoke"]) {
+    failures.push(`${prefix} generated package.json is missing scripts.demo:smoke`);
+  }
+  if (!generatedReadme.includes("pnpm demo:smoke")) {
+    failures.push(`${prefix} generated README does not document pnpm demo:smoke`);
+  }
+  for (const controller of ["OperationsController.ts", "SaasController.ts"]) {
+    if (!existsSync(join(targetDir, "apps", "api-server", "src", "controllers", controller))) {
+      failures.push(`${prefix} generated REST controller is missing: ${controller}`);
+    }
+  }
+  if (source.label === "getting-started guide") {
+    failures.push(
+      ...validateGeneratedSaasDocsContract(targetDir, source.content).map(
+        (failure) => `${prefix} ${failure}`,
+      ),
+    );
+  }
+
+  return failures;
+}
+
+function parseJsonRecord(content: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(content);
+
+  return isRecord(parsed) ? parsed : {};
 }
 
 function extractPublicPackageCount(report: string): number | undefined {
@@ -645,6 +623,7 @@ const paths = {
     "getting-started.mdx",
   ),
   docsIndex: join(ROOT, "packages", "docs", "src", "content", "docs", "en", "index.mdx"),
+  createCrocoAppReadme: join(ROOT, "packages", "create-croco-app", "README.md"),
   packageCatalog: join(ROOT, "docs", "package-catalog.json"),
   packageDocsReport: join(ROOT, "docs", "package-docs-report.md"),
   prompts: join(ROOT, "packages", "create-croco-app", "src", "prompts.ts"),
@@ -992,6 +971,7 @@ console.log("\n📋 E. Docs contract\n");
 {
   const rootReadme = read(paths.rootReadme);
   const docsIndex = read(paths.docsIndex);
+  const createCrocoAppReadme = read(paths.createCrocoAppReadme);
   const gettingStarted = read(paths.gettingStarted);
   const packageCatalog = read(paths.packageCatalog);
   const packageDocsReport = read(paths.packageDocsReport);
@@ -1010,6 +990,11 @@ console.log("\n📋 E. Docs contract\n");
     {
       label: "getting-started guide",
       content: gettingStarted,
+      requireSkipFlags: true,
+    },
+    {
+      label: "create-croco-app package README",
+      content: createCrocoAppReadme,
       requireSkipFlags: true,
     },
   ];
@@ -1048,22 +1033,31 @@ console.log("\n📋 E. Docs contract\n");
     pass("D2", "Getting started docs document create-croco-app command");
   }
 
-  const commandFailures = publicDocsSources.flatMap((source) => {
-    const commands = extractCreateCrocoAppCommands(source.content);
+  const commandFailures = (
+    await Promise.all(
+      publicDocsSources.map(async (source) => {
+        const commands = extractCreateCrocoAppCommands(source.content);
 
-    if (commands.length === 0) {
-      return [`${source.label} missing a public create-croco-app command`];
-    }
+        if (commands.length === 0) {
+          return [`${source.label} missing a public create-croco-app command`];
+        }
 
-    return commands.flatMap((command) => validatePublicCreateCommand(command, source));
-  });
+        return (
+          await Promise.all(commands.map((command) => validatePublicCreateCommand(command, source)))
+        ).flat();
+      }),
+    )
+  ).flat();
 
   if (commandFailures.length > 0) {
     for (const commandFailure of commandFailures) {
       fail("D3", commandFailure);
     }
   } else {
-    pass("D3", "Public create-croco-app commands satisfy the noninteractive contract");
+    pass(
+      "D3",
+      "Public create-croco-app commands normalize and generate the canonical saas-api journey",
+    );
   }
 
   if (gettingStarted.includes("When prompted")) {

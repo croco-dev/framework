@@ -2,12 +2,13 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { validateGeneratedSaasDocsContract } from "../first-success-generated-contract.mts";
 
 const scriptPath = resolve(__dirname, "../first-success-verify.mts");
 const tempRoots: string[] = [];
 const validCreateCommand =
-  "npx create-croco-app@latest my-project --preset ddd-api --scope @myorg --api graphql --backend-deploy lambda --no-install --no-git";
+  "npx create-croco-app@latest my-saas-api --goal saas-api --scope @myorg --no-install --no-git";
 const saasPackageName = "@croco-example/saas-billing-golden-path";
 const saasSmokeScript = `pnpm --filter ${saasPackageName}... build && pnpm --filter ${saasPackageName} test`;
 const fixtureSpineStatusSummary =
@@ -47,10 +48,12 @@ type FixtureOptions = {
   readonly rootReadmeCommand?: string;
   readonly docsIndexPackageCount?: number;
   readonly extraReadmeToolingCommand?: string;
+  readonly gettingStartedDevCommand?: string;
   readonly gettingStartedPackageCount?: number;
   readonly includeSaasGettingStartedReference?: boolean;
   readonly omitReleaseFirstSuccessCommand?: string;
   readonly omittedReadmeToolingCommand?: string;
+  readonly packageReadmeCommand?: string | null;
   readonly rootSaasSmokeScript?: string | null;
   readonly saasReadmeCommands?: readonly string[];
   readonly staleReadmeRoadmapStatus?: boolean;
@@ -58,6 +61,15 @@ type FixtureOptions = {
 };
 
 describe("first-success-verify.mts", () => {
+  beforeAll(() => {
+    const result = spawnSync("pnpm", ["build", "--filter=create-croco-app"], {
+      cwd: resolve(__dirname, "../.."),
+      encoding: "utf-8",
+    });
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+  });
+
   afterEach(() => {
     for (const root of tempRoots.splice(0)) {
       rmSync(root, { force: true, recursive: true });
@@ -73,18 +85,55 @@ describe("first-success-verify.mts", () => {
     expect(result.stdout).toContain("first-success contract verification PASSED");
   });
 
-  it("fails when a public scaffold command omits ddd-api noninteractive values", () => {
+  it("fails through the real CLI contract when a public scaffold command omits scope", () => {
     const root = createFixture({
       rootReadmeCommand:
-        "npx create-croco-app@latest my-project --preset ddd-api --backend-deploy lambda --no-install --no-git",
+        "npx create-croco-app@latest my-saas-api --goal saas-api --no-install --no-git",
     });
 
     const result = runScript(root);
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("README.md");
-    expect(result.stdout).toContain("--scope=<missing>");
-    expect(result.stdout).toContain("--api=<missing>");
+    expect(result.stdout).toContain("failed the real CLI contract");
+    expect(result.stdout).toContain("directory, --scope, and --goal or --preset");
+  });
+
+  it("fails when a public command uses an option absent from the real Commander surface", () => {
+    const root = createFixture({
+      rootReadmeCommand:
+        "npx create-croco-app@latest my-saas-api --goal saas-api --scope @myorg --package-manager pnpm --no-install --no-git",
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("unknown option '--package-manager'");
+  });
+
+  it("fails when a valid generated command resolves to a different journey", () => {
+    const root = createFixture({
+      rootReadmeCommand:
+        "npx create-croco-app@latest my-api --preset ddd-api --scope @myorg --api graphql --no-install --no-git",
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "resolves to preset ddd-api, not the canonical goal saas-api journey",
+    );
+  });
+
+  it("fails when the create-croco-app package README omits the public command", () => {
+    const root = createFixture({ packageReadmeCommand: null });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "create-croco-app package README missing a public create-croco-app command",
+    );
   });
 
   it("fails when public package-count claims drift from the generated report", () => {
@@ -151,8 +200,48 @@ describe("first-success-verify.mts", () => {
     );
   });
 
+  it("fails when the generated SaaS runtime walkthrough drifts from the scaffold contract", () => {
+    const root = createFixture({
+      gettingStartedDevCommand:
+        "SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter @wrong/api-server dev",
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("D3");
+    expect(result.stdout).toContain(
+      "docs missing generated SaaS runtime contract `SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter @myorg/api-server dev`",
+    );
+  });
+
+  it("fails when the generated runtime port drifts from the documented URLs", () => {
+    const targetDir = createGeneratedRuntimeFixture();
+    const docsContent = [
+      "apps/api-server/src/controllers/SaasController.ts",
+      "apps/api-server/src/controllers/OperationsController.ts",
+      "SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter @myorg/api-server dev",
+      "http://localhost:3000/saas/demo/seed",
+      "http://localhost:3000/saas/demo/smoke",
+      "http://localhost:3000/ops/health",
+      "pnpm contract:check",
+    ].join("\n");
+    writeFile(targetDir, "apps/api-server/src/index.ts", "const port = Number(value ?? 4000);\n");
+
+    const failures = validateGeneratedSaasDocsContract(targetDir, docsContent);
+
+    expect(failures).toContain(
+      "docs missing generated SaaS runtime contract `http://localhost:4000/saas/demo/seed`",
+    );
+    expect(failures).toContain(
+      "docs missing generated SaaS runtime contract `http://localhost:4000/ops/health`",
+    );
+  });
+
   it("fails when the root README drops a checked tooling command", () => {
-    const root = createFixture({ omittedReadmeToolingCommand: "pnpm docs:catalog:check" });
+    const root = createFixture({
+      omittedReadmeToolingCommand: "pnpm docs:catalog:check",
+    });
 
     const result = runScript(root);
 
@@ -164,7 +253,9 @@ describe("first-success-verify.mts", () => {
   });
 
   it("fails when the root README documents an unknown tooling command", () => {
-    const root = createFixture({ extraReadmeToolingCommand: "pnpm made-up-tooling-command" });
+    const root = createFixture({
+      extraReadmeToolingCommand: "pnpm made-up-tooling-command",
+    });
 
     const result = runScript(root);
 
@@ -176,7 +267,9 @@ describe("first-success-verify.mts", () => {
   });
 
   it("fails when release spine docs drop a first-success command", () => {
-    const root = createFixture({ omitReleaseFirstSuccessCommand: "pnpm first-success:verify" });
+    const root = createFixture({
+      omitReleaseFirstSuccessCommand: "pnpm first-success:verify",
+    });
 
     const result = runScript(root);
 
@@ -212,13 +305,52 @@ describe("first-success-verify.mts", () => {
   });
 });
 
+function createGeneratedRuntimeFixture(): string {
+  const root = mkdtempSync(join(tmpdir(), "croco-generated-runtime-"));
+  tempRoots.push(root);
+  writeFile(root, "package.json", JSON.stringify({ scripts: { "contract:check": "croco" } }));
+  writeFile(root, "apps/api-server/package.json", JSON.stringify({ name: "@myorg/api-server" }));
+  writeFile(
+    root,
+    "apps/api-server/src/controllers/SaasController.ts",
+    "export class SaasController {}\n",
+  );
+  writeFile(
+    root,
+    "apps/api-server/src/controllers/OperationsController.ts",
+    "export class OperationsController {}\n",
+  );
+  writeFile(
+    root,
+    "apps/api-server/src/providerProfiles.ts",
+    'export const SAAS_DEMO_ENDPOINTS_ENABLED_ENV = "SAAS_DEMO_ENDPOINTS_ENABLED";\n',
+  );
+  writeFile(root, "apps/api-server/src/index.ts", "const port = Number(value ?? 3000);\n");
+  writeFile(
+    root,
+    "apps/api-server/src/controllers/schemas.ts",
+    [
+      'export const healthRoute = defineRouteContract({ path: "/ops/health" });',
+      'export const seedSaasDemoRoute = defineRouteContract({ path: "/saas/demo/seed" });',
+      'export const smokeSaasDemoRoute = defineRouteContract({ path: "/saas/demo/smoke" });',
+      "",
+    ].join("\n"),
+  );
+  return root;
+}
+
 function createFixture(options: FixtureOptions = {}): string {
   const root = mkdtempSync(join(tmpdir(), "croco-first-success-"));
   tempRoots.push(root);
 
   const rootReadmeCommand = options.rootReadmeCommand ?? validCreateCommand;
+  const packageReadmeCommand =
+    options.packageReadmeCommand === undefined ? validCreateCommand : options.packageReadmeCommand;
   const docsIndexPackageCount = options.docsIndexPackageCount ?? 97;
   const gettingStartedPackageCount = options.gettingStartedPackageCount ?? 97;
+  const gettingStartedDevCommand =
+    options.gettingStartedDevCommand ??
+    "SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter @myorg/api-server dev";
   const rootSaasSmokeScript =
     options.rootSaasSmokeScript === undefined ? saasSmokeScript : options.rootSaasSmokeScript;
   const saasReadmeCommands = options.saasReadmeCommands ?? defaultSaasReadmeCommands;
@@ -438,6 +570,13 @@ function createFixture(options: FixtureOptions = {}): string {
   );
   writeFile(
     root,
+    "packages/create-croco-app/README.md",
+    packageReadmeCommand
+      ? ["# create-croco-app", "", "```bash", packageReadmeCommand, "```", ""].join("\n")
+      : "# create-croco-app\n",
+  );
+  writeFile(
+    root,
     "packages/docs/src/content/docs/en/index.mdx",
     [
       "# Croco Framework",
@@ -457,6 +596,13 @@ function createFixture(options: FixtureOptions = {}): string {
       "See examples/quick-start-lambda for a working example.",
       "pnpm quick-start-lambda:smoke",
       "pnpm first-success:verify",
+      "apps/api-server/src/controllers/SaasController.ts",
+      "apps/api-server/src/controllers/OperationsController.ts",
+      gettingStartedDevCommand,
+      "http://localhost:3000/saas/demo/seed",
+      "http://localhost:3000/saas/demo/smoke",
+      "http://localhost:3000/ops/health",
+      "pnpm contract:check",
       ...(includeSaasGettingStartedReference
         ? [
             "See examples/saas-billing-golden-path for billing, retry, transactions, events, and Problems.",

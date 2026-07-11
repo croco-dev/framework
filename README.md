@@ -131,16 +131,16 @@ graph LR
 
 ## 🚀 Quick Start
 
-> Lambda 기반 REST API를 빠르게 시작하세요.
+> 실행 가능한 SaaS REST API 골든 패스를 빠르게 시작하세요.
 >
 > **첫 번째 프로젝트 생성**:
 >
 > ```bash
-> npx create-croco-app@latest my-project --preset ddd-api --scope @myorg --api graphql --backend-deploy lambda --no-install --no-git
-> cd my-project && pnpm install && pnpm dev
+> npx create-croco-app@latest my-saas-api --goal saas-api --scope @myorg --no-install --no-git
+> cd my-saas-api && pnpm install && pnpm demo:smoke
 > ```
 >
-> Generated projects are pnpm workspaces; use `--no-install` if you want to skip the automatic `pnpm install` step.
+> `demo:smoke` validates the generated REST contracts, in-memory SaaS flow, and operational smoke without external credentials.
 >
 > **Route A (Scaffold)**: [Getting Started Guide](packages/docs/src/content/docs/en/guides/getting-started.mdx)에서 scaffold부터 Auth, Metering, Lambda 배포까지 단계별로 SaaS API를 구축하세요.
 >

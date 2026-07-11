@@ -14,12 +14,14 @@ provides generated-app smoke coverage for the supported presets.
 ## Usage
 
 ```bash
-pnpm create croco-app my-service
-pnpm create croco-app my-service --preset saas-api --package-manager pnpm --json
+npx create-croco-app@latest my-saas-api --goal saas-api --scope @myorg --no-install --no-git
+cd my-saas-api && pnpm install && pnpm demo:smoke
 ```
 
-Generated projects include the package manager command and next-step instructions in
-the CLI result.
+The `saas-api` goal generates the REST SaaS workspace, provider and tenant manifests,
+and the zero-credential `demo:smoke` success path. Generated projects are pnpm
+workspaces; `--no-install --no-git` keeps the documented setup deterministic before
+the explicit install and smoke commands.
 
 ## Verification
 

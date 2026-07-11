@@ -177,6 +177,7 @@ describe("release workflow quality gates", () => {
       "scripts/create-croco-app-generated-smoke-matrix.mts",
       "scripts/create-croco-app-generated-smoke.mts",
       "scripts/dependency-audit-policy.mts",
+      "scripts/first-success-generated-contract.mts",
       "scripts/first-success-verify.mts",
       "scripts/normalize-packages.mjs",
       "scripts/package-bin-smoke.mts",

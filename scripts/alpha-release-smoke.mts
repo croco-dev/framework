@@ -66,7 +66,7 @@ type SmokeReport = {
   readonly error?: string;
   readonly generatedAppDirectory?: string;
   readonly packedPackageCount: number;
-  readonly smokeCase: typeof alphaReleaseGeneratedAppSmoke;
+  readonly smokeCases: typeof alphaReleaseGeneratedAppSmokeCases;
   readonly spineRoots: readonly string[];
   readonly status: "PASS" | "FAIL";
   readonly validations: readonly string[];
@@ -81,12 +81,6 @@ const skippedPackageJsonDirectories = new Set([".turbo", "coverage", "dist", "no
 
 export const alphaReleaseEvidenceReportPath = "ci-reports/release/alpha-release-smoke.md";
 
-export const alphaReleaseGeneratedAppSmoke = {
-  args: ["--preset", "production-app", "--scope", "@alpha", "--no-install", "--no-git"],
-  name: "alpha-production-app",
-  preset: "production-app",
-} as const;
-
 export const alphaReleaseGeneratedAppValidations = [
   "contract:snapshot",
   "contract:verify",
@@ -96,9 +90,37 @@ export const alphaReleaseGeneratedAppValidations = [
   "dev:smoke",
 ] as const;
 
+export const alphaReleaseGeneratedAppSmoke = {
+  args: ["--preset", "production-app", "--scope", "@alpha", "--no-install", "--no-git"],
+  name: "alpha-production-app",
+  preset: "production-app",
+} as const;
+
+export const alphaReleaseCanonicalSaasValidations = [
+  "typecheck",
+  "build",
+  "test",
+  "demo:smoke",
+] as const;
+
+export const alphaReleaseGeneratedAppSmokeCases = [
+  {
+    ...alphaReleaseGeneratedAppSmoke,
+    validations: alphaReleaseGeneratedAppValidations,
+  },
+  {
+    args: ["--goal", "saas-api", "--scope", "@myorg", "--no-install", "--no-git"],
+    goal: "saas-api",
+    name: "my-saas-api",
+    preset: "saas",
+    validations: alphaReleaseCanonicalSaasValidations,
+  },
+] as const;
+
 export const alphaReleaseBinarySmokeCommands = [
   "pnpm exec create-croco-app --version",
   "pnpm exec create-croco-app <project> --preset production-app --scope @alpha --no-install --no-git",
+  "pnpm exec create-croco-app my-saas-api --goal saas-api --scope @myorg --no-install --no-git",
   "pnpm exec croco --help",
 ] as const;
 
@@ -131,10 +153,12 @@ function main(): void {
     cleanInstallImportExclusions: alphaReleaseCleanInstallImportExclusions,
     cleanInstallImports: alphaReleaseCleanInstallImportPackages,
     packedPackageCount: 0,
-    smokeCase: alphaReleaseGeneratedAppSmoke,
+    smokeCases: alphaReleaseGeneratedAppSmokeCases,
     spineRoots: alphaReleaseSpineRoots,
     status: "FAIL",
-    validations: alphaReleaseGeneratedAppValidations,
+    validations: [
+      ...new Set(alphaReleaseGeneratedAppSmokeCases.flatMap((smokeCase) => smokeCase.validations)),
+    ],
   };
 
   try {
@@ -158,13 +182,17 @@ function main(): void {
       spineCoverage.cleanInstallImports,
       rootDir,
     );
-    const generatedAppDirectory = runPackedCreateCrocoAppSmoke(
-      smokeRoot,
-      packageIndex,
-      spineOverrides,
-      rootDir,
-      packedPackages,
+    const generatedAppDirectories = alphaReleaseGeneratedAppSmokeCases.map((smokeCase) =>
+      runPackedCreateCrocoAppSmoke(
+        smokeRoot,
+        packageIndex,
+        spineOverrides,
+        rootDir,
+        packedPackages,
+        smokeCase,
+      ),
     );
+    const generatedAppDirectory = generatedAppDirectories.at(-1);
 
     report = {
       cleanInstallImportExclusions: spineCoverage.cleanInstallImportExclusions,
@@ -172,10 +200,14 @@ function main(): void {
       cleanInstallImports: spineCoverage.cleanInstallImports,
       generatedAppDirectory,
       packedPackageCount: packedPackages.size,
-      smokeCase: alphaReleaseGeneratedAppSmoke,
+      smokeCases: alphaReleaseGeneratedAppSmokeCases,
       spineRoots: spineCoverage.spineRoots,
       status: "PASS",
-      validations: alphaReleaseGeneratedAppValidations,
+      validations: [
+        ...new Set(
+          alphaReleaseGeneratedAppSmokeCases.flatMap((smokeCase) => smokeCase.validations),
+        ),
+      ],
     };
 
     console.log("alpha-release-smoke: clean install and packed generated app smoke passed");
@@ -591,9 +623,10 @@ function runPackedCreateCrocoAppSmoke(
   spineOverrides: Record<string, string>,
   rootDir: string,
   packedPackages: Map<string, string>,
+  smokeCase: (typeof alphaReleaseGeneratedAppSmokeCases)[number],
 ): string {
   const cliConsumerDir = join(smokeRoot, "create-croco-app-consumer");
-  const projectDir = join(smokeRoot, alphaReleaseGeneratedAppSmoke.name);
+  const projectDir = join(smokeRoot, smokeCase.name);
   mkdirSync(cliConsumerDir, { recursive: true });
   writePackageJson(cliConsumerDir, {
     name: "croco-alpha-create-app-consumer",
@@ -607,11 +640,7 @@ function runPackedCreateCrocoAppSmoke(
     ["add", "--prod", "--ignore-scripts", rangeFor(spineOverrides, "create-croco-app")],
     cliConsumerDir,
   );
-  run(
-    "pnpm",
-    ["exec", "create-croco-app", projectDir, ...alphaReleaseGeneratedAppSmoke.args],
-    cliConsumerDir,
-  );
+  run("pnpm", ["exec", "create-croco-app", projectDir, ...smokeCase.args], cliConsumerDir);
 
   const generatedPackageIndex = createWorkspacePackageIndex(rootDir);
   const generatedPackages = resolveLocalCrocoPackagesForGeneratedProject(
@@ -640,9 +669,9 @@ function runPackedCreateCrocoAppSmoke(
     "packed create-croco-app generated app",
   );
 
-  for (const validation of alphaReleaseGeneratedAppValidations) {
+  for (const validation of smokeCase.validations) {
     run("pnpm", [validation], projectDir);
-    console.log(`alpha-release-smoke: generated app ${validation} passed`);
+    console.log(`alpha-release-smoke: ${smokeCase.name} ${validation} passed`);
   }
 
   return projectDir;
@@ -855,7 +884,13 @@ export function formatAlphaReleaseSmokeReport(report: SmokeReport): string {
     `- Clean install imports: ${report.cleanInstallImports.map((packageName) => `\`${packageName}\``).join(", ")}`,
     `- Clean install import exclusions: ${cleanInstallImportExclusions}`,
     `- Packed package tarballs: ${report.packedPackageCount}`,
-    `- Generated app preset: \`${report.smokeCase.preset}\``,
+    `- Generated app cases: ${report.smokeCases
+      .map((smokeCase) =>
+        "goal" in smokeCase
+          ? `\`${smokeCase.goal}\` goal (\`${smokeCase.name}\`)`
+          : `\`${smokeCase.preset}\` preset (\`${smokeCase.name}\`)`,
+      )
+      .join(", ")}`,
     `- Generated app validations: ${report.validations.map((validation) => `\`pnpm ${validation}\``).join(", ")}`,
   ];
 
@@ -877,9 +912,9 @@ export function formatAlphaReleaseSmokeReport(report: SmokeReport): string {
     "",
     "- The alpha spine package set installs into a clean project from packed artifacts.",
     "- Config-free alpha spine entrypoints import successfully from the clean install.",
-    "- The packed create-croco-app artifact generates the production-app preset outside the repository checkout.",
+    "- The packed create-croco-app artifact preserves the production-app smoke and generates the canonical saas-api goal outside the repository checkout.",
     "- Generated app install uses packed Croco artifacts with no `@croco/*` workspace ranges.",
-    "- Contract verification, typecheck, build, test, and zero-credential smoke run against the generated project.",
+    "- The canonical SaaS project passes typecheck, build, test, and the documented zero-credential `demo:smoke` scenario.",
   );
 
   return `${lines.join("\n")}\n`;
