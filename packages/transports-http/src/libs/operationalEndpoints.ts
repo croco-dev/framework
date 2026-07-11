@@ -8,6 +8,7 @@ import {
 import { EventBusDiagnosticsProvider } from "@croco/events-core";
 import { ContainerDiagnosticsProvider } from "@croco/framework-context";
 import type { Context as HonoContext } from "hono";
+import type { HealthCheckRegistryResult } from "./HealthCheckRegistry";
 
 export const DIAGNOSTICS_ENDPOINT_PATH = "/health/diagnostics";
 export const STANDARD_DIAGNOSTICS_ENDPOINT_PATH = "/diagnostics";
@@ -25,8 +26,14 @@ export const OPERATIONAL_ENDPOINT_PATHS = [
 
 const DEFAULT_RECENT_ERROR_LIMIT = 100;
 const DEFAULT_MESSAGE_LIMIT = 100;
+const OMITTED_DIAGNOSTIC_KEYS = new Set(["cause", "stack"]);
 const SENSITIVE_KEY_PATTERN =
   /authorization|cookie|credential|password|secret|token|api[-_]?key|private[-_]?key|access[-_]?key|database[-_]?url|redis[-_]?url|mongo(?:db)?[-_]?url|postgres(?:ql)?[-_]?url|connection[-_]?string|dsn/i;
+
+type RedactionOptions = {
+  readonly messageLimit?: number;
+  readonly omitDiagnosticInternals?: boolean;
+};
 
 export type DiagnosticsExposureMode = "off" | "private" | "token" | "custom";
 
@@ -192,6 +199,26 @@ export function sanitizeDiagnosticsReport(
   };
 }
 
+export function sanitizeReadinessResult(
+  result: HealthCheckRegistryResult,
+  messageLimit = DEFAULT_MESSAGE_LIMIT,
+): HealthCheckRegistryResult {
+  return {
+    ...result,
+    results: result.results.map((indicator) => ({
+      ...indicator,
+      ...(indicator.details
+        ? {
+            details: redactValue(indicator.details, 0, {
+              messageLimit,
+              omitDiagnosticInternals: true,
+            }) as typeof indicator.details,
+          }
+        : {}),
+    })),
+  };
+}
+
 export function createOperationalMetricsResponse(
   healthCheckCount: number,
 ): OperationalMetricsResponse {
@@ -224,13 +251,13 @@ function capMessage(message: string, maxLength: number): string {
   return `${message.slice(0, maxLength - 3)}...`;
 }
 
-function redactValue(value: unknown, depth = 0): unknown {
+function redactValue(value: unknown, depth = 0, options: RedactionOptions = {}): unknown {
   if (depth > 5) {
     return "[Truncated]";
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => redactValue(item, depth + 1));
+    return value.map((item) => redactValue(item, depth + 1, options));
   }
 
   if (!isRecord(value)) {
@@ -238,10 +265,25 @@ function redactValue(value: unknown, depth = 0): unknown {
   }
 
   return Object.fromEntries(
-    Object.entries(value).map(([key, entry]) => [
-      key,
-      SENSITIVE_KEY_PATTERN.test(key) ? "[Redacted]" : redactValue(entry, depth + 1),
-    ]),
+    Object.entries(value).flatMap(([key, entry]) => {
+      if (options.omitDiagnosticInternals && OMITTED_DIAGNOSTIC_KEYS.has(key.toLowerCase())) {
+        return [];
+      }
+
+      if (SENSITIVE_KEY_PATTERN.test(key)) {
+        return [[key, "[Redacted]"]];
+      }
+
+      if (
+        options.messageLimit !== undefined &&
+        (key === "error" || key === "message") &&
+        typeof entry === "string"
+      ) {
+        return [[key, capMessage(entry, options.messageLimit)]];
+      }
+
+      return [[key, redactValue(entry, depth + 1, options)]];
+    }),
   );
 }
 

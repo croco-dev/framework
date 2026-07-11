@@ -7,6 +7,7 @@ Health check monitoring system for Croco applications.
 - **Type-safe health indicators** with detailed error and success reporting
 - **Parallel execution** of all health checks with configurable timeout
 - **AbortController support** for cancellable health checks
+- **Independent readiness indicators** with detailed aggregate results
 - **Zero dependencies** — lightweight and fast
 
 ## Installation
@@ -107,8 +108,23 @@ Orchestrates health check execution.
 class HealthCheckService {
   constructor(options?: { timeout?: number });
 
-  register(indicator: HealthIndicator): void;
+  register(indicator: HealthIndicator, options?: { timeout?: number }): void;
+  registerReadiness(indicator: ReadinessIndicator, options?: { timeout?: number }): void;
   check(): Promise<HealthCheckResult>;
+  checkReadiness(): Promise<HealthCheckResult>;
+  isReady(): Promise<boolean>;
+}
+```
+
+Generic health and readiness indicators are separate collections. `check()` evaluates only generic
+indicators, while `checkReadiness()` and `isReady()` evaluate only readiness indicators. An empty
+readiness collection is considered `up`.
+
+### ReadinessIndicator
+
+```typescript
+interface ReadinessIndicator extends HealthIndicator {
+  isReady(signal?: AbortSignal): Promise<HealthIndicatorResult>;
 }
 ```
 
@@ -216,11 +232,11 @@ import { HealthCheckService } from "@croco/health-core";
 const app = new Hono();
 const healthService = new HealthCheckService();
 
-healthService.register(new DatabaseHealthIndicator(db));
-healthService.register(new RedisHealthIndicator(redis));
+healthService.registerReadiness(new DatabaseReadinessIndicator(db));
+healthService.registerReadiness(new RedisReadinessIndicator(redis));
 
-app.get("/health", async (c) => {
-  const result = await healthService.check();
+app.get("/ready", async (c) => {
+  const result = await healthService.checkReadiness();
   return c.json(result, result.status === "up" ? 200 : 503);
 });
 ```

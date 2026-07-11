@@ -2121,7 +2121,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:245:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:246:11` (problem-factory)
 
 <a id="croco-http-security-002"></a>
 
@@ -7143,7 +7143,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:282:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:283:11` (problem-factory)
 
 <a id="transports-http-duplicate-health-check"></a>
 
@@ -7161,7 +7161,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/HealthCheckRegistry.ts:35:13` (problem-factory)
+- `packages/transports-http/src/libs/HealthCheckRegistry.ts:71:10` (problem-factory)
 
 <a id="transports-http-duplicate-route-definition"></a>
 
@@ -7287,7 +7287,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:78:55` (problem-metadata)
+- `packages/transports-http/src/libs/CrocoApp.ts:79:55` (problem-metadata)
 
 <a id="transports-http-unsupported-route-method"></a>
 

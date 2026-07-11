@@ -168,20 +168,25 @@ JSON 응답은 문자열 body와 `isBase64Encoded: false`를 유지하고, binar
 await app.listen(3000);
 ```
 
-### 헬스체크 등록
+### 헬스체크와 readiness 등록
 
 ```typescript
 import { Container } from "@croco/framework-context";
 import { HealthCheckRegistry } from "@croco/transports-http";
 
-Container.get(HealthCheckRegistry).register("database", async () => ({ status: "up" }));
+const healthChecks = Container.get(HealthCheckRegistry);
+
+healthChecks.register("database-health", async () => ({ status: "up" }));
+healthChecks.registerReadiness("database", async () => ({ status: "up" }));
 ```
 
 ## Operational Endpoints
 
 `createApp()`는 별도 컨트롤러 없이 운영 endpoint를 등록합니다. Readiness 실행은
-`@croco/health-core`의 `HealthCheckService`를 통해 수행되며, `HealthCheckRegistry`는 HTTP에서
-간단히 이름별 체크를 등록하기 위한 adapter입니다.
+`@croco/health-core`의 `HealthCheckService`를 통해 수행되며, `HealthCheckRegistry`는 generic health와
+readiness를 독립된 이름 공간으로 등록하는 adapter입니다. `/ready`와 `/health/ready`는
+`registerReadiness()`로 등록한 체크만 실행합니다. 기존 `register()` 체크는 readiness 결과에
+포함되지 않습니다.
 
 | Endpoint                  | 기본 노출 | 성공 응답                               | 실패 응답                       |
 | ------------------------- | --------- | --------------------------------------- | ------------------------------- |
@@ -195,7 +200,8 @@ Container.get(HealthCheckRegistry).register("database", async () => ({ status: "
 그대로 반환합니다. 등록된 체크가 없으면 `{ "status": "up", "results": [] }`로 간주합니다. 체크
 함수가 실패하거나 timeout을 넘기면 해당 체크는 `results` 배열에서
 `{ "name": "...", "status": "down", "details": { "error": "..." } }`로 직렬화되고 전체 응답은
-`503`입니다.
+`503`입니다. HTTP 응답은 민감 key를 재귀적으로 `[Redacted]` 처리하고 `error`/`message`를 제한하며
+`stack`과 `cause`를 노출하지 않습니다.
 
 ### Diagnostics exposure policy
 

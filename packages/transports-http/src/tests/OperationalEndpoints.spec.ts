@@ -113,7 +113,8 @@ describe("Operational endpoints", () => {
 
   it("locks health, readiness, and metrics response contracts", async () => {
     const registry = Container.get(HealthCheckRegistry);
-    registry.register("db", async () => ({ status: "up", latency: 10 }));
+    registry.register("generic", async () => ({ status: "up" }));
+    registry.registerReadiness("db", async () => ({ status: "up", latency: 10 }));
     const app = createApp({ controllers: [], securityValidation: "off" });
 
     const contracts = await Promise.all(
@@ -195,7 +196,7 @@ describe("Operational endpoints", () => {
 
   it("locks readiness failure response contracts", async () => {
     const registry = Container.get(HealthCheckRegistry);
-    registry.register("db", async () => ({ status: "down", error: "not ready" }));
+    registry.registerReadiness("db", async () => ({ status: "down", error: "not ready" }));
     const app = createApp({ controllers: [], securityValidation: "off" });
 
     const contracts = await Promise.all(

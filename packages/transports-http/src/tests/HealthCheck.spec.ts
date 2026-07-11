@@ -44,6 +44,45 @@ describe("HealthCheck", () => {
         ],
       });
     });
+
+    it("should expose a separate readiness aggregate contract", async () => {
+      registry.register("generic", async () => ({ status: "down" }));
+      registry.registerReadiness("database", async () => ({ status: "up", latency: 10 }));
+
+      await expect(registry.checkReadiness()).resolves.toEqual({
+        status: "up",
+        results: [
+          {
+            name: "database",
+            status: "up",
+            details: { latency: 10 },
+          },
+        ],
+      });
+      expect(registry.getRegisteredCheckCount()).toBe(1);
+    });
+
+    it("should enforce duplicate names within independent health and readiness namespaces", () => {
+      registry.register("database", async () => ({ status: "up" }));
+      registry.registerReadiness("database", async () => ({ status: "up" }));
+
+      expect(() => registry.register("database", async () => ({ status: "up" }))).toThrow(
+        "Duplicate health check registration detected for 'database'",
+      );
+      expect(() => registry.registerReadiness("database", async () => ({ status: "up" }))).toThrow(
+        "Duplicate readiness check registration detected for 'database'",
+      );
+    });
+
+    it("should keep readiness failures out of generic health results", async () => {
+      registry.registerReadiness("database", async () => ({ status: "down" }));
+
+      await expect(registry.check()).resolves.toEqual({ status: "up", results: [] });
+      await expect(registry.checkReadiness()).resolves.toEqual({
+        status: "down",
+        results: [{ name: "database", status: "down" }],
+      });
+    });
   });
 
   describe("GET /health", () => {
@@ -60,6 +99,7 @@ describe("HealthCheck", () => {
   describe("GET /health/live", () => {
     it("should return the standard liveness contract", async () => {
       registry.register("db", async () => ({ status: "down", error: "not ready" }));
+      registry.registerReadiness("readiness", async () => ({ status: "down" }));
 
       const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/health/live"));
@@ -71,7 +111,7 @@ describe("HealthCheck", () => {
 
   describe("GET /health/ready", () => {
     it("should return the same readiness contract as /ready", async () => {
-      registry.register("db", async () => ({ status: "up", latency: 10 }));
+      registry.registerReadiness("db", async () => ({ status: "up", latency: 10 }));
 
       const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/health/ready"));
@@ -91,6 +131,16 @@ describe("HealthCheck", () => {
   });
 
   describe("GET /ready", () => {
+    it("should return the empty readiness contract from both aliases", async () => {
+      const app = createApp({ controllers: [], securityValidation: "off" });
+
+      for (const path of ["/ready", "/health/ready"]) {
+        const response = await app.fetch(new Request(`http://localhost${path}`));
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toEqual({ status: "up", results: [] });
+      }
+    });
+
     it("should return 200 OK when no checks registered", async () => {
       const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/ready"));
@@ -101,7 +151,7 @@ describe("HealthCheck", () => {
     });
 
     it("should return 200 OK when all checks pass", async () => {
-      registry.register("db", async () => ({ status: "up", latency: 10 }));
+      registry.registerReadiness("db", async () => ({ status: "up", latency: 10 }));
 
       const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/ready"));
@@ -123,7 +173,7 @@ describe("HealthCheck", () => {
     it("should preserve the health-core timeout path behind the HTTP readiness contract", async () => {
       vi.useFakeTimers();
       let didAbort = false;
-      registry.register(
+      registry.registerReadiness(
         "slow",
         async (signal?: AbortSignal) => {
           await new Promise<void>((resolve) => {
@@ -175,7 +225,7 @@ describe("HealthCheck", () => {
     });
 
     it("should return 503 Service Unavailable when a check fails", async () => {
-      registry.register("db", async () => {
+      registry.registerReadiness("db", async () => {
         throw new Error("Connection failed");
       });
 
@@ -190,10 +240,70 @@ describe("HealthCheck", () => {
       expect(json.results[0].details.error).toBe("Connection failed");
     });
 
+    it("should return sanitized thrown failures from both aliases", async () => {
+      registry.registerReadiness("database", async () => {
+        throw new Error("x".repeat(120));
+      });
+      const app = createApp({ controllers: [], securityValidation: "off" });
+
+      for (const path of ["/ready", "/health/ready"]) {
+        const response = await app.fetch(new Request(`http://localhost${path}`));
+        expect(response.status).toBe(503);
+        await expect(response.json()).resolves.toEqual({
+          status: "down",
+          results: [
+            {
+              name: "database",
+              status: "down",
+              details: { error: `${"x".repeat(97)}...` },
+            },
+          ],
+        });
+      }
+    });
+
+    it("should preserve timeout and abort behavior on both aliases", async () => {
+      let abortCount = 0;
+      registry.registerReadiness(
+        "slow",
+        (signal?: AbortSignal) =>
+          new Promise((resolve) => {
+            const timer = setTimeout(() => resolve({ status: "up" }), 1000);
+            signal?.addEventListener(
+              "abort",
+              () => {
+                abortCount += 1;
+                clearTimeout(timer);
+                resolve({ status: "up" });
+              },
+              { once: true },
+            );
+          }),
+        { timeout: 10 },
+      );
+      const app = createApp({ controllers: [], securityValidation: "off" });
+
+      for (const path of ["/ready", "/health/ready"]) {
+        const response = await app.fetch(new Request(`http://localhost${path}`));
+        expect(response.status).toBe(503);
+        await expect(response.json()).resolves.toEqual({
+          status: "down",
+          results: [
+            {
+              name: "slow",
+              status: "down",
+              details: { error: "Health check timeout for slow" },
+            },
+          ],
+        });
+      }
+      expect(abortCount).toBe(2);
+    });
+
     it("should handle timeout", async () => {
       vi.useFakeTimers();
       let didAbort = false;
-      registry.register("slow", async (signal?: AbortSignal) => {
+      registry.registerReadiness("slow", async (signal?: AbortSignal) => {
         await new Promise<void>((resolve) => {
           const timer = setTimeout(resolve, 6000);
           const onAbort = () => {
@@ -234,12 +344,58 @@ describe("HealthCheck", () => {
       vi.useRealTimers();
     });
 
-    it("should fail fast when a health check name is registered twice", async () => {
-      registry.register("db", async () => ({ status: "up", latency: 10 }));
+    it("should keep generic failures out of readiness", async () => {
+      registry.register("generic", async () => ({ status: "down", error: "not ready" }));
+      registry.registerReadiness("ready", async () => ({ status: "up" }));
+
+      const app = createApp({ controllers: [], securityValidation: "off" });
+      const response = await app.fetch(new Request("http://localhost/ready"));
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toEqual({
+        status: "up",
+        results: [{ name: "ready", status: "up" }],
+      });
+    });
+
+    it("should sanitize readiness diagnostics at the HTTP boundary", async () => {
+      registry.registerReadiness("database", async () => ({
+        status: "down",
+        error: "x".repeat(120),
+        message: "m".repeat(120),
+        apiToken: "secret-token",
+        nested: { authorization: "Bearer secret", safe: true },
+        stack: "internal stack",
+        cause: { password: "hidden" },
+      }));
+
+      const app = createApp({ controllers: [], securityValidation: "off" });
+      const response = await app.fetch(new Request("http://localhost/ready"));
+
+      expect(response.status).toBe(503);
+      await expect(response.json()).resolves.toEqual({
+        status: "down",
+        results: [
+          {
+            name: "database",
+            status: "down",
+            details: {
+              error: `${"x".repeat(97)}...`,
+              message: `${"m".repeat(97)}...`,
+              apiToken: "[Redacted]",
+              nested: { authorization: "[Redacted]", safe: true },
+            },
+          },
+        ],
+      });
+    });
+
+    it("should fail fast when a readiness check name is registered twice", async () => {
+      registry.registerReadiness("db", async () => ({ status: "up", latency: 10 }));
 
       expect(() => {
-        registry.register("db", async () => ({ status: "down" }));
-      }).toThrow("Duplicate health check registration detected for 'db'");
+        registry.registerReadiness("db", async () => ({ status: "down" }));
+      }).toThrow("Duplicate readiness check registration detected for 'db'");
 
       const app = createApp({ controllers: [], securityValidation: "off" });
       const response = await app.fetch(new Request("http://localhost/ready"));
