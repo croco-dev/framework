@@ -13,6 +13,24 @@ export class MissingTenantProblem extends Problem {
   }
 }
 
+export type SearchSyncIdentityConflictSource =
+  | "context.tenantId"
+  | "payload.id"
+  | "payload.tenantId";
+
+export class SearchSyncIdentityConflictProblem extends Problem {
+  constructor(source: SearchSyncIdentityConflictSource) {
+    super(
+      "search-core/sync-identity-conflict",
+      ProblemCategory.Conflict,
+      `Search sync identity conflicts with the event envelope: ${source}`,
+      {
+        extensions: { source },
+      },
+    );
+  }
+}
+
 export class TransformNotFoundProblem extends Problem {
   readonly code = "search-core/transform-not-found";
   readonly category = ProblemCategory.NotFound;

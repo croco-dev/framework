@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   IndexNotFoundProblem,
   MissingTenantProblem,
+  SearchSyncIdentityConflictProblem,
   StrategyUnavailableProblem,
   TransformNotFoundProblem,
 } from "../libs/problems/SearchProblems";
@@ -22,6 +23,22 @@ describe("SearchProblems", () => {
       expect(problem).toBeInstanceOf(Error);
       expect(problem.name).toBe("MissingTenantProblem");
     });
+  });
+
+  describe("SearchSyncIdentityConflictProblem", () => {
+    it.each(["context.tenantId", "payload.id", "payload.tenantId"] as const)(
+      "exposes a safe conflict source for %s",
+      (source) => {
+        const problem = new SearchSyncIdentityConflictProblem(source);
+
+        expect(problem.code).toBe("search-core/sync-identity-conflict");
+        expect(problem.category).toBe(ProblemCategory.Conflict);
+        expect(problem.status).toBe(409);
+        expect(problem.extensions).toEqual({ source });
+        expect(problem.message).not.toContain("tenant-1");
+        expect(problem.message).not.toContain("document-1");
+      },
+    );
   });
 
   describe("TransformNotFoundProblem", () => {

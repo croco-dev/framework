@@ -16760,6 +16760,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "SearchSyncIdentityConflictProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/SearchProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "SearchTransformRegistry",
           "exportKind": "named",
           "source": "./libs/transforms/SearchTransformRegistry",
@@ -16875,6 +16881,11 @@
           "name": "SearchServiceDependencies",
           "exportKind": "named",
           "source": "./libs/SearchService"
+        },
+        {
+          "name": "SearchSyncIdentityConflictSource",
+          "exportKind": "named",
+          "source": "./libs/problems/SearchProblems"
         },
         {
           "name": "SearchTransformAdapter",

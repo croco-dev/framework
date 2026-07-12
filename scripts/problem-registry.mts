@@ -2013,6 +2013,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
+  "search-core/sync-identity-conflict": recovery({
+    cause:
+      "The event envelope tenant or document identity conflicts with context.tenantId, payload.id, or payload.tenantId.",
+    userAction: "Correct the conflicting event or execution context, then replay the event.",
+    operatorAction:
+      "Use extensions.source to identify the conflicting field and verify envelope-authoritative tenant and document identity propagation.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
   "outbox-core/failure-metadata-missing": recovery({
     cause:
       "A dispatcher attempted to mark an outbox record failed without the required retry metadata extensions.",

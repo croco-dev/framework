@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 425,
+  problemCount: 426,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5237,7 +5237,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 39,
+          line: 57,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9932,7 +9932,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 47,
+          line: 65,
           column: 5,
           kind: "problem-constructor",
         },
@@ -9971,6 +9971,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "search-core/sync-identity-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#search-core-sync-identity-conflict",
+      recovery: {
+        cause:
+          "The event envelope tenant or document identity conflicts with context.tenantId, payload.id, or payload.tenantId.",
+        userAction: "Correct the conflicting event or execution context, then replay the event.",
+        operatorAction:
+          "Use extensions.source to identify the conflicting field and verify envelope-authoritative tenant and document identity propagation.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-core/src/libs/problems/SearchProblems.ts",
+          line: 23,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "search-core/transform-not-found",
       category: "NotFound",
       status: 404,
@@ -9995,7 +10027,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 17,
+          line: 35,
           column: 3,
           kind: "problem-class",
         },
@@ -10907,7 +10939,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-core/src/libs/problems/SearchProblems.ts",
-          line: 26,
+          line: 44,
           column: 5,
           kind: "problem-constructor",
         },

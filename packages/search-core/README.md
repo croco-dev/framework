@@ -57,7 +57,7 @@ void chosung;
 ### 이벤트와 문제 타입
 
 - 이벤트: `DocumentIndexedEvent`, `DocumentDeletedEvent`, `SearchSyncFailedEvent`
-- 문제 타입: `MissingTenantProblem`, `IndexNotFoundProblem`, `StrategyUnavailableProblem`, `TransformNotFoundProblem`, `SearchCapabilityUnavailableProblem`
+- 문제 타입: `MissingTenantProblem`, `SearchSyncIdentityConflictProblem`, `IndexNotFoundProblem`, `StrategyUnavailableProblem`, `TransformNotFoundProblem`, `SearchCapabilityUnavailableProblem`
 
 ## 구현 포인트
 
@@ -67,9 +67,17 @@ void chosung;
 
 ### SearchAutoSync 실패 이벤트 계약
 
+`SearchAutoSync`는 이벤트의 `tenantId`와 `documentId`를 동기화 작업의 authoritative identity로 사용합니다. 검색
+어댑터 호출은 이벤트 tenant의 `Context`에서 실행하며, 기존 Context tenant가 다르거나 payload의 `id` 또는
+`tenantId`가 이벤트와 충돌하면 `search-core/sync-identity-conflict` Problem으로 실패 이벤트를 발행합니다. 같은
+값의 reserved field는 허용하지만 실제 어댑터 입력에는 이벤트 envelope의 값이 적용됩니다.
+
 `SearchAutoSync`는 검색 인덱싱 또는 삭제 실패를 `SearchSyncFailedEvent`로 발행합니다. 이 실패 이벤트 발행은
 best-effort 계약입니다. `failedEventPublisher.publishNow()`가 reject되어도 `handle()`은 publisher 오류를 호출자에게
 전파하지 않고 완료됩니다.
+
+성공한 동기화만 중복 처리 캐시에 기록합니다. 실패한 이벤트는 이후 delivery에서 다시 시도할 수 있으며, 같은
+이벤트가 동시에 전달되면 진행 중인 작업을 공유하여 중복 어댑터 호출을 방지합니다.
 
 대신 운영 신호는 `LOGGER_TOKEN` 로거의 `error()` 호출로 남깁니다. 로그 컨텍스트의 `searchSyncFailedEvent`에는
 `eventName`, `indexName`, `documentId`, `tenantId`, `operation`, `syncErrorName`, `syncErrorMessage`가 포함됩니다.
