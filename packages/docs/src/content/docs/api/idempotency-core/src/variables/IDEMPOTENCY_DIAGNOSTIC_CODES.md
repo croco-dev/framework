@@ -17,6 +17,10 @@ title: "IDEMPOTENCY_DIAGNOSTIC_CODES"
 
 > `readonly` **keyConflict**: `"idempotency-core/key-conflict"` = `"idempotency-core/key-conflict"`
 
+### reservationExpired
+
+> `readonly` **reservationExpired**: `"idempotency-core/reservation-expired"` = `"idempotency-core/reservation-expired"`
+
 ### reservationNotFound
 
 > `readonly` **reservationNotFound**: `"idempotency-core/reservation-not-found"` = `"idempotency-core/reservation-not-found"`

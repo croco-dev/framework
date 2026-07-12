@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   deriveIdempotencyKey,
   IdempotencyConflictProblem,
+  IdempotencyReservationExpiredProblem,
   IdempotencyReservationNotFoundProblem,
   IdempotencyReservationStateProblem,
   InMemoryIdempotencyStore,
@@ -165,6 +166,205 @@ describe("InMemoryIdempotencyStore", () => {
     expect(fresh.outcome).toBe("reserved");
     expect(await store.expire({ key })).toBe(true);
     expect(await store.replay(key)).toBeNull();
+  });
+
+  it.each([
+    { transition: "commit" as const, observedAt: "2026-01-01T00:00:00.100Z" },
+    { transition: "commit" as const, observedAt: "2026-01-01T00:00:00.101Z" },
+    { transition: "fail" as const, observedAt: "2026-01-01T00:00:00.100Z" },
+    { transition: "fail" as const, observedAt: "2026-01-01T00:00:00.101Z" },
+  ])("rejects $transition at or after reservation expiry", async ({ transition, observedAt }) => {
+    let now = new Date("2026-01-01T00:00:00.000Z");
+    const clock = vi.fn(() => now);
+    const store = new InMemoryIdempotencyStore({ now: clock });
+    const key = createKey({});
+    const reserved = await store.reserve(key, { ttlMs: 100 });
+    expect(reserved.outcome).toBe("reserved");
+    if (reserved.outcome !== "reserved") {
+      throw new Error("expected a reservation");
+    }
+
+    now = new Date(observedAt);
+    clock.mockClear();
+    const operation = () =>
+      transition === "commit"
+        ? store.commit({
+            key,
+            reservationId: reserved.reservation.reservationId,
+            response: "stale-result",
+          })
+        : store.fail({
+            key,
+            reservationId: reserved.reservation.reservationId,
+            problem: { code: "stale-failure", status: 500 },
+          });
+
+    const error = await operation().catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(IdempotencyReservationExpiredProblem);
+    expect(error).toMatchObject({
+      code: "idempotency-core/reservation-expired",
+      status: 409,
+    });
+    expect(clock).toHaveBeenCalledTimes(1);
+
+    if (error instanceof IdempotencyReservationExpiredProblem) {
+      expect(error.toJSON()).toMatchObject({
+        code: "idempotency-core/reservation-expired",
+        expiredAt: "2026-01-01T00:00:00.100Z",
+        observedAt,
+      });
+      expect(error.toJSON()).not.toHaveProperty("key");
+      expect(error.toJSON()).not.toHaveProperty("storageKey");
+      expect(error.toJSON()).not.toHaveProperty("fingerprint");
+      expect(error.toJSON()).not.toHaveProperty("reservationId");
+    }
+  });
+
+  it.each(["commit", "fail"] as const)(
+    "allows %s immediately before reservation expiry with one clock read",
+    async (transition) => {
+      let now = new Date("2026-01-01T00:00:00.000Z");
+      const clock = vi.fn(() => now);
+      const store = new InMemoryIdempotencyStore({ now: clock });
+      const key = createKey({ key: transition });
+      const reserved = await store.reserve(key, { ttlMs: 100 });
+      expect(reserved.outcome).toBe("reserved");
+      if (reserved.outcome !== "reserved") {
+        throw new Error("expected a reservation");
+      }
+
+      now = new Date("2026-01-01T00:00:00.099Z");
+      clock.mockClear();
+      if (transition === "commit") {
+        const completed = await store.commit({
+          key,
+          reservationId: reserved.reservation.reservationId,
+          response: "result",
+        });
+        expect(completed.completedAt).toEqual(now);
+      } else {
+        const failed = await store.fail({
+          key,
+          reservationId: reserved.reservation.reservationId,
+          problem: { code: "expected-failure", status: 500 },
+        });
+        expect(failed.failedAt).toEqual(now);
+      }
+      expect(clock).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("keeps non-expiring reservations compatible with commit and fail", async () => {
+    const store = new InMemoryIdempotencyStore();
+    const commitKey = createKey({ key: "commit-without-ttl" });
+    const failKey = createKey({ key: "fail-without-ttl" });
+    const committedReservation = await store.reserve(commitKey);
+    const failedReservation = await store.reserve(failKey);
+    if (committedReservation.outcome !== "reserved" || failedReservation.outcome !== "reserved") {
+      throw new Error("expected reservations");
+    }
+
+    await expect(
+      store.commit({
+        key: commitKey,
+        reservationId: committedReservation.reservation.reservationId,
+        response: "result",
+      }),
+    ).resolves.toMatchObject({ status: "completed" });
+    await expect(
+      store.fail({
+        key: failKey,
+        reservationId: failedReservation.reservation.reservationId,
+        problem: { code: "expected-failure", status: 500 },
+      }),
+    ).resolves.toMatchObject({ status: "failed" });
+  });
+
+  it("preserves validation precedence for expired records", async () => {
+    let now = new Date("2026-01-01T00:00:00.000Z");
+    const store = new InMemoryIdempotencyStore({ now: () => now });
+    const key = createKey({ key: "precedence", fingerprint: "payload-a" });
+    const conflictingKey = createKey({ key: "precedence", fingerprint: "payload-b" });
+    const reserved = await store.reserve(key, { ttlMs: 100 });
+    if (reserved.outcome !== "reserved") {
+      throw new Error("expected a reservation");
+    }
+    now = new Date("2026-01-01T00:00:00.100Z");
+
+    await expect(
+      store.commit({
+        key: conflictingKey,
+        reservationId: reserved.reservation.reservationId,
+        response: "result",
+      }),
+    ).rejects.toBeInstanceOf(IdempotencyConflictProblem);
+    await expect(
+      store.commit({ key, reservationId: "wrong", response: "result" }),
+    ).rejects.toBeInstanceOf(IdempotencyReservationStateProblem);
+
+    const completedKey = createKey({ key: "completed-precedence" });
+    now = new Date("2026-01-01T00:00:01.000Z");
+    const completedReservation = await store.reserve(completedKey);
+    if (completedReservation.outcome !== "reserved") {
+      throw new Error("expected a reservation");
+    }
+    await store.commit({
+      key: completedKey,
+      reservationId: completedReservation.reservation.reservationId,
+      response: "result",
+      ttlMs: 100,
+    });
+    now = new Date("2026-01-01T00:00:01.100Z");
+    await expect(
+      store.commit({
+        key: completedKey,
+        reservationId: completedReservation.reservation.reservationId,
+        response: "late-result",
+      }),
+    ).rejects.toBeInstanceOf(IdempotencyReservationStateProblem);
+  });
+
+  it("keeps expired evidence until reserve replaces it and rejects the stale owner", async () => {
+    let now = new Date("2026-01-01T00:00:00.000Z");
+    const store = new InMemoryIdempotencyStore({ now: () => now });
+    const key = createKey({ key: "replacement" });
+    const stale = await store.reserve(key, { ttlMs: 100 });
+    if (stale.outcome !== "reserved") {
+      throw new Error("expected a reservation");
+    }
+    now = new Date("2026-01-01T00:00:00.100Z");
+
+    const staleCommit = () =>
+      store.commit({
+        key,
+        reservationId: stale.reservation.reservationId,
+        response: "stale-result",
+      });
+    await expect(staleCommit()).rejects.toBeInstanceOf(IdempotencyReservationExpiredProblem);
+    await expect(staleCommit()).rejects.toBeInstanceOf(IdempotencyReservationExpiredProblem);
+
+    const fresh = await store.reserve(key, { ttlMs: 100 });
+    expect(fresh.outcome).toBe("reserved");
+    if (fresh.outcome !== "reserved") {
+      throw new Error("expected a fresh reservation");
+    }
+    expect(fresh.reservation.reservationId).not.toBe(stale.reservation.reservationId);
+
+    await expect(staleCommit()).rejects.toBeInstanceOf(IdempotencyReservationStateProblem);
+    await expect(
+      store.fail({
+        key,
+        reservationId: stale.reservation.reservationId,
+        problem: { code: "stale-failure", status: 500 },
+      }),
+    ).rejects.toBeInstanceOf(IdempotencyReservationStateProblem);
+    await expect(
+      store.commit({
+        key,
+        reservationId: fresh.reservation.reservationId,
+        response: "fresh-result",
+      }),
+    ).resolves.toMatchObject({ status: "completed", response: "fresh-result" });
   });
 
   it("rejects missing or stale reservations when committing", async () => {
