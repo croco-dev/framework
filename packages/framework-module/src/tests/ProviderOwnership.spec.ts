@@ -259,6 +259,40 @@ describe("module provider ownership", () => {
     });
   });
 
+  it("rejects symbol and adapted TypeDI identifiers as the same provider ownership", async () => {
+    const token = Symbol("shared-adapted-symbol");
+    const identifier = FrameworkContainer.toTypeDIServiceIdentifier(token) as Token<unknown>;
+
+    CrocoModule.use({ name: "symbol-owner", providers: [{ provide: token, useValue: "symbol" }] });
+    CrocoModule.use({
+      name: "identifier-owner",
+      providers: [{ provide: identifier, useValue: "identifier" }],
+    });
+
+    await expect(CrocoModule.initialize()).rejects.toMatchObject({
+      code: "framework-module/provider-ownership-conflict",
+      extensions: { owners: ["identifier-owner", "symbol-owner"] },
+    });
+    expect(TypeDIContainer.has(identifier)).toBe(false);
+  });
+
+  it("allows an owner to write through the original symbol for an adapted declaration", async () => {
+    const token = Symbol("adapted-owner-write");
+    const identifier = FrameworkContainer.toTypeDIServiceIdentifier(token) as Token<string>;
+
+    CrocoModule.use({
+      name: "owner",
+      providers: [{ provide: identifier, useValue: "initial" }],
+      setup: (context) => {
+        context.set(token, "updated");
+      },
+    });
+
+    await CrocoModule.initialize();
+
+    expect(FrameworkContainer.get(token)).toBe("updated");
+  });
+
   it("ignores class bindings added to source metadata after registration snapshot", async () => {
     class Attacker {}
 

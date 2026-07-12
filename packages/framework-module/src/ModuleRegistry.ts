@@ -412,19 +412,23 @@ function assertUnambiguousProviderOwnership(modules: readonly ModuleOptions[]): 
 function getProviderOwnershipConflicts(
   modules: readonly ModuleOptions[],
 ): ModuleProviderOwnershipConflict[] {
-  const ownership = new Map<ModuleToken<unknown>, Set<string>>();
+  const ownership = new Map<
+    ServiceIdentifier<unknown>,
+    { readonly token: ModuleToken<unknown>; readonly owners: Set<string> }
+  >();
 
   for (const module of modules) {
     for (const provider of module.providers ?? []) {
       const token = getProviderToken(provider);
-      const owners = ownership.get(token) ?? new Set<string>();
-      owners.add(module.name);
-      ownership.set(token, owners);
+      const identifier = FrameworkContainer.toTypeDIServiceIdentifier(token);
+      const entry = ownership.get(identifier) ?? { token, owners: new Set<string>() };
+      entry.owners.add(module.name);
+      ownership.set(identifier, entry);
     }
   }
 
-  return Array.from(ownership.entries())
-    .flatMap(([token, owners]) => {
+  return Array.from(ownership.values())
+    .flatMap(({ token, owners }) => {
       const sortedOwners = Array.from(owners).sort();
       return sortedOwners.length > 1 ? [{ token, owners: sortedOwners }] : [];
     })
@@ -558,15 +562,22 @@ function validateProviderWrite(moduleName: string | undefined, token: ModuleToke
     throw new ModuleProviderWriteProblem("<root>", token);
   }
 
-  if (moduleStates.get(moduleName)?.providers.has(token)) {
+  const normalizedToken = normalizeTokenInStates(token, moduleStates);
+  if (hasEquivalentToken(moduleStates.get(moduleName)?.providers, normalizedToken)) {
     return;
   }
 
-  throw new ModuleProviderWriteProblem(moduleName, token, getDeclaredProviderOwner(token));
+  throw new ModuleProviderWriteProblem(
+    moduleName,
+    normalizedToken,
+    getDeclaredProviderOwner(normalizedToken),
+  );
 }
 
 function getDeclaredProviderOwner(token: ModuleToken<unknown>): string | undefined {
-  return Array.from(moduleStates.entries()).find(([, state]) => state.providers.has(token))?.[0];
+  return Array.from(moduleStates.entries()).find(([, state]) =>
+    hasEquivalentToken(state.providers, token),
+  )?.[0];
 }
 
 function isKnownToken(token: ModuleToken<unknown>): boolean {
@@ -577,8 +588,11 @@ function isKnownTokenInStates(
   token: ModuleToken<unknown>,
   states: ReadonlyMap<string, ModuleRuntimeState>,
 ): boolean {
+  const normalizedToken = normalizeTokenInStates(token, states);
   return Array.from(states.values()).some(
-    (state) => state.providers.has(token) || state.exports.has(token),
+    (state) =>
+      hasEquivalentToken(state.providers, normalizedToken) ||
+      hasEquivalentToken(state.exports, normalizedToken),
   );
 }
 
@@ -596,11 +610,14 @@ function canAccessTokenInStates(
     return false;
   }
 
-  if (state.providers.has(token)) {
+  const normalizedToken = normalizeTokenInStates(token, states);
+  if (hasEquivalentToken(state.providers, normalizedToken)) {
     return true;
   }
 
-  return (state.module.imports ?? []).some((module) => states.get(module.name)?.exports.has(token));
+  return (state.module.imports ?? []).some((module) =>
+    hasEquivalentToken(states.get(module.name)?.exports, normalizedToken),
+  );
 }
 
 function validateProviderAccess(
@@ -633,18 +650,21 @@ function getAccessibleClassProvider(
     return null;
   }
 
-  const localProviderClass = state.classProviders.get(token);
+  const normalizedToken = normalizeTokenInStates(token, states);
+  const localProviderClass = getEquivalentTokenValue(state.classProviders, normalizedToken);
   if (localProviderClass) {
     return { moduleName, providerClass: localProviderClass };
   }
 
   for (const importedModule of state.module.imports ?? []) {
     const importedState = states.get(importedModule.name);
-    if (!importedState?.exports.has(token)) {
+    if (!hasEquivalentToken(importedState?.exports, normalizedToken)) {
       continue;
     }
 
-    const providerClass = importedState.classProviders.get(token);
+    const providerClass = importedState
+      ? getEquivalentTokenValue(importedState.classProviders, normalizedToken)
+      : undefined;
     if (providerClass) {
       return { moduleName: importedModule.name, providerClass };
     }
@@ -687,15 +707,73 @@ function getClassProviderVisibilityFailures<T>(
   }
 
   for (const dependency of getTypediHandlerDependencies(providerClass)) {
+    const dependencyToken = normalizeTokenInStates(dependency, states);
     if (
-      isKnownTokenInStates(dependency, states) &&
-      !canAccessTokenInStates(moduleName, dependency, states)
+      isKnownTokenInStates(dependencyToken, states) &&
+      !canAccessTokenInStates(moduleName, dependencyToken, states)
     ) {
-      failures.push({ moduleName, providerClass, token: dependency });
+      failures.push({ moduleName, providerClass, token: dependencyToken });
     }
   }
 
   return failures;
+}
+
+function normalizeTokenInStates(
+  token: ModuleToken<unknown>,
+  states: ReadonlyMap<string, ModuleRuntimeState>,
+): ModuleToken<unknown> {
+  for (const state of states.values()) {
+    for (const candidate of state.providers) {
+      if (
+        typeof candidate === "symbol" &&
+        FrameworkContainer.toTypeDIServiceIdentifier(candidate) === token
+      ) {
+        return candidate;
+      }
+    }
+
+    for (const candidate of state.exports) {
+      if (
+        typeof candidate === "symbol" &&
+        FrameworkContainer.toTypeDIServiceIdentifier(candidate) === token
+      ) {
+        return candidate;
+      }
+    }
+  }
+
+  return token;
+}
+
+function hasEquivalentToken(
+  tokens: ReadonlySet<ModuleToken<unknown>> | undefined,
+  token: ModuleToken<unknown>,
+): boolean {
+  return tokens
+    ? Array.from(tokens).some((candidate) => areEquivalentTokens(candidate, token))
+    : false;
+}
+
+function getEquivalentTokenValue<T>(
+  values: ReadonlyMap<ModuleToken<unknown>, T>,
+  token: ModuleToken<unknown>,
+): T | undefined {
+  for (const [candidate, value] of values) {
+    if (areEquivalentTokens(candidate, token)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function areEquivalentTokens(left: ModuleToken<unknown>, right: ModuleToken<unknown>): boolean {
+  return (
+    left === right ||
+    (typeof left === "symbol" && FrameworkContainer.toTypeDIServiceIdentifier(left) === right) ||
+    (typeof right === "symbol" && FrameworkContainer.toTypeDIServiceIdentifier(right) === left)
+  );
 }
 
 function getConstructorDependencies<T>(providerClass: Constructor<T>): readonly unknown[] {
