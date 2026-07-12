@@ -7322,7 +7322,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/migration-runner/src/libs/problems/UnsupportedMigrationQueryResultProblem.ts",
-          line: 4,
+          line: 11,
           column: 3,
           kind: "problem-class",
         },
