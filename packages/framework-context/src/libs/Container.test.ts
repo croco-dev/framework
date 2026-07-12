@@ -166,3 +166,25 @@ describe("Container.getRequestScoped", () => {
     expect(instance.config).toBe("request-token-value");
   });
 });
+
+describe("Container.toTypeDIServiceIdentifier", () => {
+  beforeEach(() => Container.reset());
+
+  it("returns non-symbol identifiers unchanged", () => {
+    class Service {}
+    const token = new Token<string>("config");
+
+    expect(Container.toTypeDIServiceIdentifier(Service)).toBe(Service);
+    expect(Container.toTypeDIServiceIdentifier(token)).toBe(token);
+    expect(Container.toTypeDIServiceIdentifier("config")).toBe("config");
+  });
+
+  it("maps symbols to one TypeDI token until reset", () => {
+    const symbol = Symbol("config");
+    const first = Container.toTypeDIServiceIdentifier(symbol);
+
+    expect(Container.toTypeDIServiceIdentifier(symbol)).toBe(first);
+    Container.reset();
+    expect(Container.toTypeDIServiceIdentifier(symbol)).not.toBe(first);
+  });
+});

@@ -48,7 +48,9 @@ export {
   InvalidModuleDefinitionProblem,
   ModuleCircularDependencyProblem,
   ModuleLifecycleProblem,
+  ModuleProviderOwnershipProblem,
   ModuleProviderVisibilityProblem,
+  ModuleProviderWriteProblem,
 } from "./problems";
 export type {
   CrocoModule as CrocoModuleDefinition,

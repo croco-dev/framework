@@ -5,7 +5,7 @@ prev: false
 title: "ModuleToken"
 ---
 
-> **ModuleToken**\<`T`\> = `Constructor`\<`T`\> \| [`Token`](/api/framework-context/src/classes/token/)\<`T`\> \| `string`
+> **ModuleToken**\<`T`\> = `Constructor`\<`T`\> \| [`Token`](/api/framework-context/src/classes/token/)\<`T`\> \| `string` \| `symbol`
 
 ## Type Parameters
 

@@ -3120,7 +3120,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/Container.ts",
-      "line": 271,
+      "line": 272,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'CROCO_DI_VALIDATE' comes from an index signature, so it must be accessed with ['CROCO_DI_VALIDATE']."
@@ -3128,7 +3128,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/Container.ts",
-      "line": 276,
+      "line": 277,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."

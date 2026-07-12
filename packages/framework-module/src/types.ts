@@ -47,6 +47,7 @@ export type ModuleGraphManifestStatus = "ready" | "failed";
 
 export type ModuleGraphDiagnosticCode =
   | "framework-module/circular-dependency"
+  | "framework-module/provider-ownership-conflict"
   | "framework-module/provider-not-visible";
 
 export type ModuleGraphDiagnostic = {

@@ -90,6 +90,7 @@ describe("CrocoModule", () => {
 
     CrocoModule.use({
       name: "config",
+      providers: [token],
       exports: [token],
       setup: (ctx) => ctx.set(token, { name: "croco" }),
       start: () => {
@@ -326,6 +327,7 @@ describe("CrocoModule", () => {
 
     const databaseModule = defineCrocoModule({
       name: "database",
+      providers: [privateToken],
       start: (ctx) => {
         ctx.set(privateToken, "secret");
       },
@@ -359,6 +361,7 @@ describe("CrocoModule", () => {
 
     const databaseModule = defineCrocoModule({
       name: "database",
+      providers: [privateToken],
       exports: [serviceToken],
       start: (ctx) => {
         ctx.set(privateToken, "secret");
@@ -389,7 +392,7 @@ describe("CrocoModule", () => {
 
     const databaseModule = defineCrocoModule({
       name: "database",
-      providers: [DatabaseService],
+      providers: [DatabaseService, privateToken],
       exports: [DatabaseService],
       start: (ctx) => {
         ctx.set(privateToken, "secret");
@@ -418,7 +421,7 @@ describe("CrocoModule", () => {
     const serviceToken = new Token<DatabaseService>("database-service");
     const databaseModule = defineCrocoModule({
       name: "database",
-      providers: [{ provide: serviceToken, useClass: DatabaseService }],
+      providers: [{ provide: serviceToken, useClass: DatabaseService }, privateToken],
       exports: [serviceToken],
       start: (ctx) => {
         ctx.set(privateToken, "secret");

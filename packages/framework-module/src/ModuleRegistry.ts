@@ -7,15 +7,19 @@ import type {
   ServiceMetadata,
 } from "typedi";
 import "reflect-metadata";
+import { Container as FrameworkContainer } from "@croco/framework-context";
 import { detectCircularDependency } from "./CircularDependencyDetector";
 import { ModuleContext } from "./ModuleContext";
 import { getModuleTokenLabel } from "./moduleTokenLabels";
 import { getProviderToken, isConstructorToken, isProviderDefinition } from "./moduleTokens";
 import {
   InvalidModuleDefinitionProblem,
+  formatModuleProviderOwnershipDetail,
   ModuleCircularDependencyProblem,
   ModuleLifecycleProblem,
+  ModuleProviderOwnershipProblem,
   ModuleProviderVisibilityProblem,
+  ModuleProviderWriteProblem,
 } from "./problems";
 import type {
   ModuleGraphDiagnostic,
@@ -25,6 +29,7 @@ import type {
   ModuleDiagnosticsSnapshot,
   ModuleLifecyclePhase,
   ModuleOptions,
+  ModuleProvider,
   ModuleProviderDefinition,
   ModuleRuntimePhase,
 } from "./types";
@@ -53,6 +58,11 @@ type ModuleProviderVisibilityFailure = {
   readonly token: ModuleToken<unknown>;
 };
 
+type ModuleProviderOwnershipConflict = {
+  readonly token: ModuleToken<unknown>;
+  readonly owners: readonly string[];
+};
+
 class CapturedTypediInjectionToken extends Error {
   constructor(readonly token: ModuleToken<unknown>) {
     super("Captured TypeDI injection token");
@@ -75,15 +85,20 @@ let initializedModules: ModuleOptions[] = [];
 let activeContext: ModuleContext | null = null;
 
 export function registerModule(module: ModuleOptions): void {
-  validateModule(module);
-  registeredModules.set(module.name, module);
-  moduleStates.set(module.name, createModuleState(module));
+  const [snapshot] = collectModules([module]);
+  if (!snapshot) {
+    throw new InvalidModuleDefinitionProblem("Module graph must contain a root module.");
+  }
+
+  registeredModules.set(snapshot.name, snapshot);
+  moduleStates.set(snapshot.name, createModuleState(snapshot));
   isInitialized = false;
 }
 
 export async function initializeModules(): Promise<ModuleContext> {
   const modules = collectModules(Array.from(registeredModules.values()));
   detectCircularDependency(modules);
+  assertUnambiguousProviderOwnership(modules);
 
   const sortedModules = sortModules(modules);
   const container = Container.of(undefined);
@@ -222,6 +237,18 @@ function createModuleGraphDiagnostics(
 ): ModuleGraphDiagnostic[] {
   const diagnostics: ModuleGraphDiagnostic[] = [];
 
+  for (const conflict of getProviderOwnershipConflicts(modules)) {
+    const token = getModuleTokenLabel(conflict.token);
+    diagnostics.push({
+      code: "framework-module/provider-ownership-conflict",
+      severity: "error",
+      moduleName: conflict.owners[0] ?? "<unknown>",
+      token,
+      message: formatModuleProviderOwnershipDetail(token, conflict.owners),
+      path: conflict.owners,
+    });
+  }
+
   try {
     detectCircularDependency(modules);
   } catch (error) {
@@ -319,18 +346,36 @@ function createModuleGraphProvider(
 function collectModules(rootModules: readonly ModuleOptions[]): ModuleOptions[] {
   const modules = new Map<string, ModuleOptions>();
 
-  const visit = (module: ModuleOptions): void => {
-    validateModule(module);
-
-    if (modules.has(module.name)) {
-      return;
+  const visit = (module: ModuleOptions): ModuleOptions => {
+    const name = module.name;
+    const existing = modules.get(name);
+    if (existing) {
+      return existing;
     }
 
-    modules.set(module.name, module);
+    const sourceImports = module.imports;
+    const sourceProviders = module.providers;
+    const sourceExports = module.exports;
+    const sourceControllers = module.controllers;
+    const setup = module.setup;
+    const start = module.start;
+    const shutdown = module.shutdown;
+    const snapshot: ModuleOptions & { imports: ModuleOptions[] } = {
+      name,
+      imports: [],
+      ...(sourceProviders ? { providers: Array.from(sourceProviders, snapshotProvider) } : {}),
+      ...(sourceExports ? { exports: Array.from(sourceExports) } : {}),
+      ...(sourceControllers ? { controllers: Array.from(sourceControllers) } : {}),
+      ...(setup ? { setup } : {}),
+      ...(start ? { start } : {}),
+      ...(shutdown ? { shutdown } : {}),
+    };
 
-    for (const importedModule of module.imports ?? []) {
-      visit(importedModule);
-    }
+    modules.set(name, snapshot);
+    snapshot.imports.push(...Array.from(sourceImports ?? [], visit));
+    validateModule(snapshot);
+
+    return snapshot;
   };
 
   for (const module of rootModules) {
@@ -338,6 +383,64 @@ function collectModules(rootModules: readonly ModuleOptions[]): ModuleOptions[] 
   }
 
   return Array.from(modules.values());
+}
+
+function snapshotProvider(provider: ModuleProvider): ModuleProvider {
+  if (!isProviderDefinition(provider)) {
+    return provider;
+  }
+
+  const token = provider.provide;
+  if ("useValue" in provider) {
+    return { provide: token, useValue: provider.useValue };
+  }
+
+  if ("useClass" in provider) {
+    return { provide: token, useClass: provider.useClass };
+  }
+
+  return { provide: token, useFactory: provider.useFactory };
+}
+
+function assertUnambiguousProviderOwnership(modules: readonly ModuleOptions[]): void {
+  const conflict = getProviderOwnershipConflicts(modules)[0];
+  if (conflict) {
+    throw new ModuleProviderOwnershipProblem(conflict.token, conflict.owners);
+  }
+}
+
+function getProviderOwnershipConflicts(
+  modules: readonly ModuleOptions[],
+): ModuleProviderOwnershipConflict[] {
+  const ownership = new Map<ModuleToken<unknown>, Set<string>>();
+
+  for (const module of modules) {
+    for (const provider of module.providers ?? []) {
+      const token = getProviderToken(provider);
+      const owners = ownership.get(token) ?? new Set<string>();
+      owners.add(module.name);
+      ownership.set(token, owners);
+    }
+  }
+
+  return Array.from(ownership.entries())
+    .flatMap(([token, owners]) => {
+      const sortedOwners = Array.from(owners).sort();
+      return sortedOwners.length > 1 ? [{ token, owners: sortedOwners }] : [];
+    })
+    .sort((left, right) => {
+      const tokenOrder = getModuleTokenLabel(left.token).localeCompare(
+        getModuleTokenLabel(right.token),
+      );
+      if (tokenOrder !== 0) {
+        return tokenOrder;
+      }
+
+      const ownerOrder = (left.owners[0] ?? "").localeCompare(right.owners[0] ?? "");
+      return ownerOrder === 0
+        ? left.owners.join("\u0000").localeCompare(right.owners.join("\u0000"))
+        : ownerOrder;
+    });
 }
 
 function sortModules(modules: readonly ModuleOptions[]): ModuleOptions[] {
@@ -381,7 +484,9 @@ function createModuleState(module: ModuleOptions): ModuleRuntimeState {
 }
 
 function createRootContext(container: ReturnType<typeof Container.of>): ModuleContext {
-  return new ModuleContext(container);
+  return new ModuleContext(container, {
+    validateProviderWrite: validateProviderWrite,
+  });
 }
 
 function createModuleContext(
@@ -392,7 +497,7 @@ function createModuleContext(
     moduleName,
     canAccessToken: canAccessToken,
     isKnownToken: isKnownToken,
-    registerProvider: registerProviderOwnership,
+    validateProviderWrite: validateProviderWrite,
     validateClassProvider: validateClassProviderVisibility,
     validateProviderAccess: (ownerModuleName, token) => {
       validateProviderAccess(ownerModuleName, token, container);
@@ -406,13 +511,14 @@ async function registerProviders(
   container: ReturnType<typeof Container.of>,
 ): Promise<void> {
   for (const provider of module.providers ?? []) {
-    const token = getProviderToken(provider);
-    registerProviderOwnership(module.name, token);
-
     if (!isProviderDefinition(provider)) {
       if (isConstructorToken(provider)) {
         validateClassProviderVisibility(module.name, provider);
-        container.set({ id: provider, type: toTypediConstructable(provider) });
+        validateProviderWrite(module.name, provider);
+        container.set({
+          id: FrameworkContainer.toTypeDIServiceIdentifier(provider),
+          type: toTypediConstructable(provider),
+        });
       }
       continue;
     }
@@ -427,22 +533,40 @@ async function registerProviderDefinition<T>(
   context: ModuleContext,
   container: ReturnType<typeof Container.of>,
 ): Promise<void> {
+  const token = provider.provide;
+
   if ("useValue" in provider) {
-    context.set(provider.provide, provider.useValue);
+    context.set(token, provider.useValue);
     return;
   }
 
   if ("useClass" in provider) {
     validateClassProviderVisibility(moduleName, provider.useClass);
-    container.set({ id: provider.provide, type: toTypediConstructable(provider.useClass) });
+    validateProviderWrite(moduleName, token);
+    container.set({
+      id: FrameworkContainer.toTypeDIServiceIdentifier(token),
+      type: toTypediConstructable(provider.useClass),
+    });
     return;
   }
 
-  context.set(provider.provide, await provider.useFactory(context));
+  context.set(token, await provider.useFactory(context));
 }
 
-function registerProviderOwnership(moduleName: string, token: ModuleToken<unknown>): void {
-  moduleStates.get(moduleName)?.providers.add(token);
+function validateProviderWrite(moduleName: string | undefined, token: ModuleToken<unknown>): void {
+  if (!moduleName) {
+    throw new ModuleProviderWriteProblem("<root>", token);
+  }
+
+  if (moduleStates.get(moduleName)?.providers.has(token)) {
+    return;
+  }
+
+  throw new ModuleProviderWriteProblem(moduleName, token, getDeclaredProviderOwner(token));
+}
+
+function getDeclaredProviderOwner(token: ModuleToken<unknown>): string | undefined {
+  return Array.from(moduleStates.entries()).find(([, state]) => state.providers.has(token))?.[0];
 }
 
 function isKnownToken(token: ModuleToken<unknown>): boolean {
@@ -600,7 +724,8 @@ function getTypediServiceMetadata(
 ): ServiceMetadata<unknown> | undefined {
   const services = (container as unknown as ContainerServiceMetadataSnapshot).services ?? [];
 
-  return services.find((service) => service.id === token);
+  const identifier = FrameworkContainer.toTypeDIServiceIdentifier(token);
+  return services.find((service) => service.id === identifier);
 }
 
 function getClassProviderEntry(

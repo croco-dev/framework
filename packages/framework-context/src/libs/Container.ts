@@ -1,5 +1,6 @@
 import {
   type Service,
+  type ServiceIdentifier,
   Container as TypeDIContainer,
   ContainerInstance as TypeDIContainerInstance,
   Token as TypeDIToken,
@@ -134,7 +135,7 @@ export class Container {
   }
 
   static set<T>(token: TokenIdentifier<T>, instance: T): T {
-    TypeDIContainer.set({ id: Container.resolveIdentifier(token), value: instance });
+    TypeDIContainer.set({ id: Container.toTypeDIServiceIdentifier(token), value: instance });
     Container.lazyProviders.delete(token);
     Container.validated = false;
     return instance;
@@ -700,14 +701,16 @@ export class Container {
     return instance;
   }
 
-  private static resolveIdentifier<T>(
-    token: TokenIdentifier<T>,
-  ): Constructor<T> | TypeDIToken<T> | string {
+  /**
+   * Returns the TypeDI identifier used internally for a Croco token.
+   * Symbol mappings remain stable until {@link Container.reset}.
+   */
+  static toTypeDIServiceIdentifier<T>(token: TokenIdentifier<T>): ServiceIdentifier<T> {
     if (typeof token === "symbol") {
       return Container.getOrCreateSymbolToken(token) as TypeDIToken<T>;
     }
 
-    return token;
+    return token as ServiceIdentifier<T>;
   }
 
   private static getOrCreateSymbolToken(symbol: symbol): TypeDIToken<unknown> {
