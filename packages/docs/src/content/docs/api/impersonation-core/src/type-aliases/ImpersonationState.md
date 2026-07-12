@@ -11,34 +11,34 @@ title: "ImpersonationState"
 
 ### expiresAt
 
-> **expiresAt**: `Date`
+> `readonly` **expiresAt**: `Date`
 
-***
+---
 
 ### impersonatorId
 
-> **impersonatorId**: `string`
+> `readonly` **impersonatorId**: `string`
 
-***
+---
 
 ### reason?
 
-> `optional` **reason?**: `string`
+> `readonly` `optional` **reason?**: `string`
 
-***
+---
 
 ### sessionId
 
-> **sessionId**: `string`
+> `readonly` **sessionId**: `string`
 
-***
+---
 
 ### startedAt
 
-> **startedAt**: `Date`
+> `readonly` **startedAt**: `Date`
 
-***
+---
 
 ### targetUserId
 
-> **targetUserId**: `string`
+> `readonly` **targetUserId**: `string`

@@ -9387,6 +9387,12 @@
           "declarationKind": "const"
         },
         {
+          "name": "ImpersonationIdentityConflictProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/ImpersonationProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "ImpersonationReasonRequiredProblem",
           "exportKind": "declaration",
           "source": "./libs/problems/ImpersonationProblems",
@@ -9402,6 +9408,12 @@
           "name": "ImpersonationStore",
           "exportKind": "declaration",
           "source": "./libs/interfaces",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ImpersonationTargetNotFoundProblem",
+          "exportKind": "declaration",
+          "source": "./libs/problems/ImpersonationProblems",
           "declarationKind": "class"
         },
         {
@@ -9458,6 +9470,12 @@
           "name": "ImpersonationConfig",
           "exportKind": "declaration",
           "source": "./libs/types",
+          "declarationKind": "type"
+        },
+        {
+          "name": "ImpersonationPrincipal",
+          "exportKind": "declaration",
+          "source": "./libs/interfaces",
           "declarationKind": "type"
         },
         {

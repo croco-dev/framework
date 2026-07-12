@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 430,
+  problemCount: 432,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -2015,7 +2015,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 31,
+          line: 49,
           column: 3,
           kind: "problem-class",
         },
@@ -5213,6 +5213,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "IMPERSONATION_IDENTITY_CONFLICT",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-identity-conflict",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 13,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "IMPERSONATION_REASON_REQUIRED",
       category: "BadRequest",
       status: 400,
@@ -5237,7 +5267,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 22,
+          line: 40,
           column: 3,
           kind: "problem-class",
         },
@@ -5268,7 +5298,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 40,
+          line: 58,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "IMPERSONATION_TARGET_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#impersonation-target-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
+          line: 22,
           column: 3,
           kind: "problem-class",
         },
@@ -7414,7 +7475,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts",
-          line: 13,
+          line: 31,
           column: 3,
           kind: "problem-class",
         },

@@ -9,6 +9,24 @@ export class SelfImpersonationProblem extends Problem {
   }
 }
 
+export class ImpersonationIdentityConflictProblem extends Problem {
+  readonly code = "IMPERSONATION_IDENTITY_CONFLICT";
+  readonly category = ProblemCategory.Forbidden;
+
+  constructor() {
+    super(undefined, undefined, "Request context identity does not match authenticated identity");
+  }
+}
+
+export class ImpersonationTargetNotFoundProblem extends Problem {
+  readonly code = "IMPERSONATION_TARGET_NOT_FOUND";
+  readonly category = ProblemCategory.NotFound;
+
+  constructor(targetUserId: string) {
+    super(undefined, undefined, `Impersonation target not found: ${targetUserId}`);
+  }
+}
+
 export class NestedImpersonationProblem extends Problem {
   readonly code = "NESTED_IMPERSONATION_NOT_ALLOWED";
   readonly category = ProblemCategory.Forbidden;

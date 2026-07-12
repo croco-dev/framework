@@ -1,11 +1,7 @@
 import "reflect-metadata";
 import type { AuthRequest, RouteExecutionContext } from "@croco/auth-core";
-import { ForbiddenProblem, UnauthorizedProblem } from "@croco/auth-core";
+import { ForbiddenProblem, hasPermission, UnauthorizedProblem } from "@croco/auth-core";
 import { Component, type Guard } from "@croco/framework-context";
-
-function hasPermission(permissions: string[] | undefined, permission: string): boolean {
-  return permissions?.includes(permission) ?? false;
-}
 
 @Component()
 export class ImpersonationGuard implements Guard<RouteExecutionContext> {

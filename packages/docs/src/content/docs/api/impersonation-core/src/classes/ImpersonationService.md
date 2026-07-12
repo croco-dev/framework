@@ -51,7 +51,7 @@ title: "ImpersonationService"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getImpersonator()
 
@@ -67,7 +67,7 @@ title: "ImpersonationService"
 
 `string` \| `null`
 
-***
+---
 
 ### getTargetUser()
 
@@ -83,7 +83,7 @@ title: "ImpersonationService"
 
 `string` \| `null`
 
-***
+---
 
 ### isImpersonating()
 
@@ -99,17 +99,17 @@ title: "ImpersonationService"
 
 `context is ImpersonationContext`
 
-***
+---
 
 ### start()
 
-> **start**(`impersonatorId`, `targetUserId`, `reason?`): `Promise`\<[`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/)\>
+> **start**(`context`, `targetUserId`, `reason?`): `Promise`\<[`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/)\>
 
 #### Parameters
 
-##### impersonatorId
+##### context
 
-`string`
+[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
 
 ##### targetUserId
 
