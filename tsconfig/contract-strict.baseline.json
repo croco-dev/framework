@@ -3424,7 +3424,7 @@
     {
       "packageName": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/InMemoryIdempotencyStore.ts",
-      "line": 135,
+      "line": 136,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ status: \"failed\"; createdAt: Date; updatedAt: Date; expiresAt: Date | null; metadata: { [x: string]: unknown; }; failedAt: Date; problem: { readonly code: string; readonly status?: number; readonly detail?: string; } | undefined; ... 8 more ...; telemetryAttributes: IdempotencyTelemetryAttributes; }' is not assignable to type 'IdempotencyFailedRecord' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3432,7 +3432,7 @@
     {
       "packageName": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-      "line": 22,
+      "line": 23,
       "column": 11,
       "code": "TS2375",
       "message": "Type '{ extensions: Record<string, unknown> | undefined; }' is not assignable to type 'ProblemOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

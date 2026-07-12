@@ -64,8 +64,8 @@ export const handler = app.lambdaHandler({
 
 ### 초기화 수명주기
 
-`init({ enabled: false })`는 설정만 저장하고 OpenTelemetry SDK를 시작하지 않습니다. 같은 프로세스에서 나중에
-`init({ enabled: true, ... })`를 호출하면 SDK를 초기화할 수 있습니다.
+`init({ enabled: false })`와 `init({ trace: { enabled: false } })`는 설정만 저장하고 OpenTelemetry SDK를 시작하지
+않습니다. 같은 프로세스에서 나중에 telemetry와 trace를 활성화한 `init()`을 호출하면 SDK를 초기화할 수 있습니다.
 
 SDK가 이미 초기화된 뒤의 추가 `init()` 호출은 기존 런타임을 유지합니다. 설정을 바꾸려면 먼저 `shutdown()`을
 호출한 뒤 다시 `init()`을 호출합니다.
@@ -74,8 +74,9 @@ SDK가 이미 초기화된 뒤의 추가 `init()` 호출은 기존 런타임을 
 
 ### Degraded mode와 복구
 
-Telemetry가 의도적으로 꺼진 상태는 애플리케이션 실패가 아닙니다. `init({ enabled: false })` 또는
-`TELEMETRY_ENABLED=false`는 설정을 보존하지만 SDK와 exporter를 시작하지 않으며,
+Telemetry 또는 trace가 의도적으로 꺼진 상태는 애플리케이션 실패가 아닙니다. `init({ enabled: false })`,
+`init({ trace: { enabled: false } })`, 또는 `TELEMETRY_ENABLED=false`는 설정을 보존하지만 SDK와 exporter를 시작하지
+않으며,
 `TelemetryDiagnosticsProvider`는 이를 `degraded` 상태와 안전한 metadata(`serviceName`, `enabled`,
 `initialized`, `traceEnabled`, `probability`, `mode`)로 보고합니다. exporter URL이나 header 값은 diagnostics에
 노출하지 않습니다.

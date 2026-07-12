@@ -9,11 +9,12 @@ export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
     const config = runtime.getConfig();
     const initialized = runtime.isInitialized();
 
-    if (config?.enabled === false) {
+    if (config?.enabled === false || config?.trace?.enabled === false) {
+      const disabledTarget = config.enabled === false ? "runtime" : "tracing";
       return {
         status: "degraded",
         component: "telemetry",
-        message: "Telemetry runtime disabled by configuration; SDK startup and export are skipped",
+        message: `Telemetry ${disabledTarget} disabled by configuration; SDK startup and export are skipped`,
         details: createSafeTelemetryDetails(config, initialized, "disabled"),
         lastChecked: new Date().toISOString(),
       };

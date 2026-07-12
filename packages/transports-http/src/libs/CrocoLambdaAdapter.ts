@@ -99,6 +99,18 @@ export type LambdaHandlerOptions = {
 const WAIT_UNTIL_REJECTION_MESSAGE = "Lambda waitUntil task rejected";
 const LAMBDA_FLUSH_BOUNDARY_ERROR_CODE = "transports-http/lambda-flush-boundary-failed";
 const LAMBDA_EVENT_INVALID_CODE = "transports-http/lambda-event-invalid";
+const LAMBDA_WAIT_UNTIL_DEADLINE_ERROR_CODE = "transports-http/lambda-wait-until-deadline-exceeded";
+const LAMBDA_FLUSH_DIAGNOSTIC_RESERVE_MILLIS = 250;
+const MAX_TIMER_DELAY_MILLIS = 2_147_483_647;
+
+type LambdaWaitUntilDeadlineReason = "deadline-exceeded" | "invalid-remaining-time";
+
+type LambdaWaitUntilTaskRecord = {
+  readonly index: number;
+  observer: Promise<void>;
+  result?: PromiseSettledResult<unknown>;
+  rejectionReported: boolean;
+};
 
 type ValidatedApiGatewayV2Event = {
   method: string;
@@ -135,6 +147,50 @@ class LambdaEventValidationError extends Error {
   constructor(detail: string) {
     super(`Invalid API Gateway v2 Lambda event: ${detail}`);
     this.name = "LambdaEventValidationError";
+  }
+}
+
+class LambdaWaitUntilDeadlineError extends Error {
+  readonly code = LAMBDA_WAIT_UNTIL_DEADLINE_ERROR_CODE;
+  readonly reason: LambdaWaitUntilDeadlineReason;
+  readonly queuedCount: number;
+  readonly inFlightCount: number;
+  readonly outstandingTaskIndexes: readonly number[];
+  readonly remainingTimeInMillis: number | undefined;
+
+  constructor({
+    reason,
+    queuedTasks,
+    inFlightTasks,
+    remainingTimeInMillis,
+  }: {
+    reason: LambdaWaitUntilDeadlineReason;
+    queuedTasks: readonly LambdaWaitUntilTaskRecord[];
+    inFlightTasks: readonly LambdaWaitUntilTaskRecord[];
+    remainingTimeInMillis: number | undefined;
+  }) {
+    const queued = queuedTasks.filter((task) => task.result === undefined);
+    const inFlight = inFlightTasks.filter((task) => task.result === undefined);
+    super(`Lambda waitUntil drain failed: ${reason}`);
+    this.name = "LambdaWaitUntilDeadlineError";
+    this.reason = reason;
+    this.queuedCount = queued.length;
+    this.inFlightCount = inFlight.length;
+    this.remainingTimeInMillis = remainingTimeInMillis;
+    this.outstandingTaskIndexes = [...queued, ...inFlight]
+      .map((task) => task.index)
+      .sort((left, right) => left - right);
+  }
+}
+
+function readDiagnosticRemainingTime(lambdaContext: LambdaContext): number | undefined {
+  try {
+    const remainingTime = lambdaContext.getRemainingTimeInMillis();
+    return Number.isFinite(remainingTime) && Number.isSafeInteger(remainingTime)
+      ? remainingTime
+      : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -195,21 +251,150 @@ function decodeBase64Body(body: string): Uint8Array<ArrayBuffer> {
 }
 
 function reportWaitUntilRejections(
-  results: PromiseSettledResult<unknown>[],
+  tasks: readonly LambdaWaitUntilTaskRecord[],
   logger: ILogger | undefined,
 ): void {
-  results.forEach((result, taskIndex) => {
-    if (result.status !== "rejected") {
-      return;
+  for (const task of tasks) {
+    if (task.result?.status !== "rejected" || task.rejectionReported) {
+      continue;
     }
 
+    task.rejectionReported = true;
     if (logger) {
-      logger.error(WAIT_UNTIL_REJECTION_MESSAGE, { taskIndex, reason: result.reason });
-      return;
+      logger.error(WAIT_UNTIL_REJECTION_MESSAGE, {
+        taskIndex: task.index,
+        reason: task.result.reason,
+      });
+      continue;
     }
 
-    console.error(WAIT_UNTIL_REJECTION_MESSAGE, result.reason);
+    console.error(WAIT_UNTIL_REJECTION_MESSAGE, task.result.reason);
+  }
+}
+
+function createWaitUntilTaskRecord(
+  promise: Promise<unknown>,
+  index: number,
+): LambdaWaitUntilTaskRecord {
+  const task: LambdaWaitUntilTaskRecord = {
+    index,
+    observer: Promise.resolve(),
+    rejectionReported: false,
+  };
+  task.observer = Promise.resolve(promise).then(
+    (value) => {
+      task.result = { status: "fulfilled", value };
+    },
+    (reason: unknown) => {
+      task.result = { status: "rejected", reason };
+    },
+  );
+  return task;
+}
+
+function createWaitUntilDeadline(
+  lambdaContext: LambdaContext,
+  queuedTasks: readonly LambdaWaitUntilTaskRecord[],
+): number {
+  const startedAt = Date.now();
+  let remainingTime: number;
+  try {
+    remainingTime = lambdaContext.getRemainingTimeInMillis();
+  } catch {
+    throw new LambdaWaitUntilDeadlineError({
+      reason: "invalid-remaining-time",
+      queuedTasks,
+      inFlightTasks: [],
+      remainingTimeInMillis: readDiagnosticRemainingTime(lambdaContext),
+    });
+  }
+  if (
+    !Number.isFinite(remainingTime) ||
+    !Number.isSafeInteger(remainingTime) ||
+    remainingTime > MAX_TIMER_DELAY_MILLIS
+  ) {
+    throw new LambdaWaitUntilDeadlineError({
+      reason: "invalid-remaining-time",
+      queuedTasks,
+      inFlightTasks: [],
+      remainingTimeInMillis: readDiagnosticRemainingTime(lambdaContext),
+    });
+  }
+
+  const deadline = startedAt + Math.max(remainingTime - LAMBDA_FLUSH_DIAGNOSTIC_RESERVE_MILLIS, 0);
+  if (!Number.isSafeInteger(deadline)) {
+    throw new LambdaWaitUntilDeadlineError({
+      reason: "invalid-remaining-time",
+      queuedTasks,
+      inFlightTasks: [],
+      remainingTimeInMillis: readDiagnosticRemainingTime(lambdaContext),
+    });
+  }
+
+  return deadline;
+}
+
+function deadlineExceeded(
+  lambdaContext: LambdaContext,
+  queuedTasks: readonly LambdaWaitUntilTaskRecord[],
+  inFlightTasks: readonly LambdaWaitUntilTaskRecord[],
+): LambdaWaitUntilDeadlineError {
+  return new LambdaWaitUntilDeadlineError({
+    reason: "deadline-exceeded",
+    queuedTasks,
+    inFlightTasks,
+    remainingTimeInMillis: readDiagnosticRemainingTime(lambdaContext),
   });
+}
+
+async function drainWaitUntilTasks({
+  pendingTasks,
+  allTasks,
+  lambdaContext,
+  logger,
+}: {
+  pendingTasks: LambdaWaitUntilTaskRecord[];
+  allTasks: readonly LambdaWaitUntilTaskRecord[];
+  lambdaContext: LambdaContext;
+  logger: ILogger | undefined;
+}): Promise<void> {
+  if (pendingTasks.length === 0) {
+    return;
+  }
+
+  let inFlightTasks: LambdaWaitUntilTaskRecord[] = [];
+
+  try {
+    const deadline = createWaitUntilDeadline(lambdaContext, pendingTasks);
+    while (pendingTasks.length > 0) {
+      if (deadline <= Date.now()) {
+        throw deadlineExceeded(lambdaContext, pendingTasks, inFlightTasks);
+      }
+
+      inFlightTasks = pendingTasks.splice(0);
+      const remainingTime = deadline - Date.now();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const didTimeout = await Promise.race([
+        Promise.all(inFlightTasks.map((task) => task.observer)).then(() => false),
+        new Promise<true>((resolve) => {
+          timer = setTimeout(() => resolve(true), remainingTime);
+        }),
+      ]);
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+
+      if (didTimeout) {
+        throw deadlineExceeded(lambdaContext, pendingTasks, inFlightTasks);
+      }
+
+      reportWaitUntilRejections(allTasks, logger);
+      inFlightTasks = [];
+    }
+  } catch (error) {
+    reportWaitUntilRejections(allTasks, logger);
+    throw error;
+  }
 }
 
 async function collectLambdaFlushErrors(
@@ -278,7 +463,43 @@ export class CrocoLambdaAdapter {
 
   createHandler(options: LambdaHandlerOptions = {}): LambdaHandler {
     return async (event: LambdaEvent, lambdaContext: LambdaContext) => {
-      const pendingTasks: Promise<unknown>[] = [];
+      const pendingTasks: LambdaWaitUntilTaskRecord[] = [];
+      const allTasks: LambdaWaitUntilTaskRecord[] = [];
+      let activeFlush: Promise<void> | undefined;
+      let hasTerminalFlushError = false;
+      let terminalFlushError: unknown;
+      const flushWaitUntilTasks = (): Promise<void> => {
+        if (hasTerminalFlushError) {
+          return Promise.reject(terminalFlushError);
+        }
+
+        if (activeFlush !== undefined) {
+          return activeFlush;
+        }
+
+        const flush = drainWaitUntilTasks({
+          pendingTasks,
+          allTasks,
+          lambdaContext,
+          logger: options.logger,
+        });
+        activeFlush = flush;
+        void flush.then(
+          () => {
+            if (activeFlush === flush) {
+              activeFlush = undefined;
+            }
+          },
+          (error: unknown) => {
+            hasTerminalFlushError = true;
+            terminalFlushError = error;
+            if (activeFlush === flush) {
+              activeFlush = undefined;
+            }
+          },
+        );
+        return flush;
+      };
       const runtimeContext: RuntimeContextInit = {
         platform: "lambda",
         requestId: event?.requestContext?.requestId ?? lambdaContext.awsRequestId,
@@ -289,12 +510,11 @@ export class CrocoLambdaAdapter {
           lambdaContext,
         },
         waitUntil: (promise) => {
-          pendingTasks.push(Promise.resolve(promise));
+          const task = createWaitUntilTaskRecord(Promise.resolve(promise), allTasks.length);
+          allTasks.push(task);
+          pendingTasks.push(task);
         },
-        flush: async () => {
-          const results = await Promise.allSettled(pendingTasks.splice(0));
-          reportWaitUntilRejections(results, options.logger);
-        },
+        flush: flushWaitUntilTasks,
         capabilities: {
           env: true,
           filesystem: true,

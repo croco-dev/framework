@@ -1,7 +1,8 @@
 import "reflect-metadata";
 import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from "@croco/billing-core";
 import type { EventHandler } from "@croco/events-core";
-import { DomainEvent, RegisterEventHandler } from "@croco/events-core";
+import { DomainEvent, EventBusConfig, RegisterEventHandler } from "@croco/events-core";
+import type { InMemoryEventBus } from "@croco/events-inmemory";
 import type { TransactionContext } from "@croco/framework-context";
 import { Container, Context, Token, TRANSACTION_CONTEXT_TOKEN } from "@croco/framework-context";
 import type { GenerateParams, GenerateResult } from "@croco/llm-core";
@@ -18,16 +19,17 @@ import type {
 import { RateLimitStore } from "@croco/ratelimit-core";
 import { InMemoryStorageProvider } from "@croco/storage-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
+import { createGracefulShutdownController } from "@croco/transports-http";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertDrizzleProblem,
-  createFailureDrillCatalog,
   assertOpenAPIRoute,
   assertProblemResponse,
   createAuthProviderConformanceSuite,
   createBillingProviderConformanceSuite,
   createDrizzleProviderConformanceSuite,
   createEventTestingHarness,
+  createFailureDrillCatalog,
   createLlmProviderConformanceSuite,
   createProviderConformanceMatrixSuite,
   createQStashTaskConformanceSuite,
@@ -38,15 +40,15 @@ import {
   createTestingTransactionContext,
   createUpstashRedisRateLimitConformanceSuite,
   FAILURE_DRILL_SCENARIO_IDS,
-  installTestingTelemetryCapture,
-  runFailureDrillScenario,
-  runFailureDrills,
   type FailureDrillScenario,
+  installTestingTelemetryCapture,
   type QStashTaskConformanceScenario,
   type QStashTaskExecuteOptions,
   type QStashTaskPublisher,
   type QStashTaskPublishRecord,
   resetCrocoTestingContext,
+  runFailureDrillScenario,
+  runFailureDrills,
   runWithTestingContext,
   TestingTransactionContext,
   type TestLogger,
@@ -670,6 +672,63 @@ describe("@croco/testing", () => {
     expect(capturedEvents.userIds).toEqual(["user-1"]);
     await harness.flushAfterCommitHooks();
     expect(capturedEvents.userIds).toEqual(["user-1", "user-2"]);
+  });
+
+  it("keeps graceful shutdown pending until handlers active before clear settle", async () => {
+    vi.useFakeTimers();
+    const started = createDeferred();
+    const release = createDeferred();
+    let controller: ReturnType<typeof createGracefulShutdownController> | undefined;
+
+    class DeferredEvent extends DomainEvent {
+      static eventName = "testing.deferred";
+    }
+
+    class DeferredHandler implements EventHandler<DeferredEvent> {
+      async handle(): Promise<void> {
+        started.resolve();
+        await release.promise;
+      }
+    }
+
+    try {
+      const harness = await createEventTestingHarness<DeferredEvent>({
+        inMemoryEventBus: { maxConcurrency: 1 },
+        providers: [{ token: DeferredHandler, useValue: new DeferredHandler() }],
+        subscriptions: [{ eventName: DeferredEvent.eventName, handlerClass: DeferredHandler }],
+      });
+      const eventBus = harness.eventBus as InMemoryEventBus<DeferredEvent>;
+      const publishPromise = harness.publish(new DeferredEvent());
+      await started.promise;
+
+      harness.clear();
+      expect(eventBus.getRunningHandlerCount()).toBe(1);
+
+      controller = createGracefulShutdownController({
+        eventBusDrainTimeoutMs: 1_000,
+        isLambdaEnvironment: true,
+      });
+      let shutdownSettled = false;
+      const shutdownPromise = controller.shutdown().then(() => {
+        shutdownSettled = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(100);
+      expect(shutdownSettled).toBe(false);
+
+      release.resolve();
+      await publishPromise;
+      await vi.advanceTimersByTimeAsync(100);
+      await shutdownPromise;
+
+      expect(shutdownSettled).toBe(true);
+      expect(eventBus.getRunningHandlerCount()).toBe(0);
+    } finally {
+      release.resolve();
+      controller?.reset();
+      EventBusConfig.setInstance(new EventBusConfig());
+      vi.useRealTimers();
+    }
   });
 
   it("captures telemetry spans without a real telemetry SDK exporter", async () => {
@@ -1358,11 +1417,15 @@ describe("@croco/testing", () => {
       expect(report).toMatchObject({
         results: expect.arrayContaining([
           expect.objectContaining({
-            problem: expect.objectContaining({ code: "testing/provider-timeout" }),
+            problem: expect.objectContaining({
+              code: "testing/provider-timeout",
+            }),
             scenarioId: "provider-timeout",
           }),
           expect.objectContaining({
-            problem: expect.objectContaining({ code: "testing/quota-exceeded" }),
+            problem: expect.objectContaining({
+              code: "testing/quota-exceeded",
+            }),
             scenarioId: "quota-exceeded",
           }),
         ]),
@@ -1379,7 +1442,10 @@ describe("@croco/testing", () => {
           ...scenario,
           run: () => ({
             evidence: [
-              { kind: "telemetry", name: "failure_drill.provider_timeout.failed" },
+              {
+                kind: "telemetry",
+                name: "failure_drill.provider_timeout.failed",
+              },
               { kind: "audit", name: "failure_drill.provider_timeout.audit" },
             ],
             recoveryAction: scenario.expected.recoveryAction,

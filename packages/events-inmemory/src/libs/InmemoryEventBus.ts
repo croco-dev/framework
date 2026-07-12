@@ -500,24 +500,10 @@ export class InMemoryEventBus<
 
   unsubscribe(subscription: EventSubscription<TEvent>): void {
     this.index.delete(subscription.eventName, subscription.handlerClass);
-    this.cleanupRunningHandlers(subscription.eventName, subscription.handlerClass.name);
-  }
-
-  private cleanupRunningHandlers(eventName: string, handlerName: string): void {
-    for (const [id, runningHandler] of this.runningHandlers.entries()) {
-      if (runningHandler.eventName === eventName && runningHandler.handlerName === handlerName) {
-        this.runningHandlers.delete(id);
-      }
-    }
-
-    this.notifySlotAvailable();
   }
 
   clear(): void {
     this.index.clear();
-    this.runningHandlers.clear();
-    this.handlerCounter = 0;
-    this.notifySlotAvailable();
   }
 
   getRunningHandlerCount(): number {
