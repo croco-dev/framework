@@ -1,4 +1,5 @@
 import type { BillingStore, Subscription } from "@croco/billing-core";
+import { WebhookAlreadyProcessedProblem } from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { Trace } from "@croco/telemetry-api";
 import { validateEvent } from "@polar-sh/sdk/webhooks";
@@ -164,14 +165,15 @@ export class PolarWebhookHandler {
       await this.store.reserveWebhook(eventId, eventType);
       return true;
     } catch (error) {
-      if (this.isDuplicateWebhookError(error)) {
+      if (error instanceof WebhookAlreadyProcessedProblem) {
         return false;
       }
-      throw error instanceof WebhookProcessingProblem
-        ? error
-        : new WebhookProcessingProblem(
-            `Webhook reservation failed: ${this.getErrorMessage(error)}`,
-          );
+      if (error instanceof Error) {
+        throw new WebhookProcessingProblem("Webhook reservation failed", error);
+      }
+      const cause = new Error("Billing store rejected webhook reservation with a non-Error value");
+      Object.defineProperty(cause, "cause", { value: error });
+      throw new WebhookProcessingProblem("Webhook reservation failed", cause);
     }
   }
 
@@ -382,26 +384,6 @@ export class PolarWebhookHandler {
     } catch (error) {
       return this.getErrorMessage(error);
     }
-  }
-
-  private isDuplicateWebhookError(error: unknown): boolean {
-    if (!(error instanceof Error)) {
-      return false;
-    }
-
-    const errorWithCode = error as Error & { code?: unknown };
-    const errorCode = this.isNonEmptyString(errorWithCode.code)
-      ? errorWithCode.code.toLowerCase()
-      : "";
-    const normalizedMessage = error.message.toLowerCase();
-
-    return (
-      errorCode === "billing/webhook-already-processed" ||
-      errorCode === "23505" ||
-      normalizedMessage.includes("duplicate") ||
-      normalizedMessage.includes("already exists") ||
-      normalizedMessage.includes("unique constraint")
-    );
   }
 
   private getErrorMessage(error: unknown): string {

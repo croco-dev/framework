@@ -1,4 +1,5 @@
 import type { BillingStore } from "@croco/billing-core";
+import { WebhookAlreadyProcessedProblem } from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { createBillingProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -172,7 +173,7 @@ describe("PolarWebhookHandler", () => {
       vi.mocked(mockStore.failWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.reserveWebhook)
         .mockResolvedValueOnce(undefined)
-        .mockRejectedValue(new Error("duplicate webhook event"));
+        .mockRejectedValue(new WebhookAlreadyProcessedProblem(subscriptionEvent.id));
       vi.mocked(mockValidateEvent).mockImplementation(
         (body: Buffer | string, headers: Record<string, string>) => {
           if (headers["webhook-signature"] !== "valid") {
@@ -267,7 +268,7 @@ describe("PolarWebhookHandler", () => {
       vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.reserveWebhook)
         .mockResolvedValueOnce(undefined)
-        .mockRejectedValueOnce(new Error("duplicate webhook event"));
+        .mockRejectedValueOnce(new WebhookAlreadyProcessedProblem(signedSubscriptionEvent.id));
       vi.mocked(mockValidateEvent).mockImplementation(
         (body: Buffer | string, headers: Record<string, string>) => {
           expect(headers).toMatchObject({
@@ -347,11 +348,9 @@ describe("PolarWebhookHandler", () => {
       expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
     });
 
-    it("reserveWebhook에서 중복 충돌이 나면 이미 처리된 이벤트로 간주하고 스킵", async () => {
+    it("should skip only a typed already-processed reservation", async () => {
       vi.mocked(mockStore.reserveWebhook).mockRejectedValue(
-        new Error(
-          'duplicate key value violates unique constraint "processed_webhooks_event_id_key"',
-        ),
+        new WebhookAlreadyProcessedProblem("evt-dup-conflict"),
       );
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
 
@@ -380,6 +379,107 @@ describe("PolarWebhookHandler", () => {
       expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
       expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(1);
       expect(mockStore.completeWebhook).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      {
+        name: "an unrelated PostgreSQL uniqueness failure",
+        error: Object.assign(
+          new Error('duplicate key value violates unique constraint "billing_accounts_email_key"'),
+          { code: "23505" },
+        ),
+      },
+      {
+        name: "generic duplicate wording",
+        error: new Error("duplicate webhook event"),
+      },
+      {
+        name: "generic already-exists wording",
+        error: new Error("reservation already exists"),
+      },
+      {
+        name: "generic unique-constraint wording",
+        error: new Error("unique constraint rejected the reservation"),
+      },
+      {
+        name: "a spoofed typed Problem code",
+        error: Object.assign(new Error("spoofed duplicate"), {
+          code: "billing/webhook-already-processed",
+        }),
+      },
+    ])("should preserve $name as a retriable reservation failure", async ({ error }) => {
+      vi.mocked(mockStore.reserveWebhook).mockRejectedValue(error);
+      vi.mocked(mockValidateEvent).mockReturnValue({
+        id: "evt-reservation-failure",
+        type: "subscription.created",
+        data: {
+          id: "sub-reservation-failure",
+          customer: { externalId: "tenant-reservation-failure", metadata: {} },
+          product: { id: "plan-pro" },
+          status: "active",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      } as never);
+
+      await expect(
+        handler.handle("{}", { "webhook-id": "evt-reservation-failure" }),
+      ).rejects.toSatisfy((problem: unknown) => {
+        expect(problem).toBeInstanceOf(WebhookProcessingProblem);
+        expect(problem).toMatchObject({
+          detail: "Webhook processing failed: Webhook reservation failed",
+          cause: error,
+        });
+        expect((problem as WebhookProcessingProblem).toJSON()).toMatchObject({
+          detail: "Webhook processing failed: Webhook reservation failed",
+        });
+        expect(JSON.stringify((problem as WebhookProcessingProblem).toJSON())).not.toContain(
+          error.message,
+        );
+        return true;
+      });
+      expect(mockStore.saveSubscription).not.toHaveBeenCalled();
+      expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
+      expect(mockStore.completeWebhook).not.toHaveBeenCalled();
+      expect(mockStore.failWebhook).not.toHaveBeenCalled();
+    });
+
+    it("should preserve a non-Error reservation rejection without exposing it", async () => {
+      const rejection = { constraint: "billing_accounts_email_key" };
+      vi.mocked(mockStore.reserveWebhook).mockRejectedValue(rejection);
+      vi.mocked(mockValidateEvent).mockReturnValue({
+        id: "evt-non-error-reservation-failure",
+        type: "subscription.created",
+        data: {
+          id: "sub-non-error-reservation-failure",
+          customer: { externalId: "tenant-non-error-reservation-failure", metadata: {} },
+          product: { id: "plan-pro" },
+          status: "active",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      } as never);
+
+      await expect(
+        handler.handle("{}", { "webhook-id": "evt-non-error-reservation-failure" }),
+      ).rejects.toSatisfy((problem: unknown) => {
+        expect(problem).toBeInstanceOf(WebhookProcessingProblem);
+        expect(problem).toMatchObject({
+          detail: "Webhook processing failed: Webhook reservation failed",
+          cause: expect.objectContaining({
+            message: "Billing store rejected webhook reservation with a non-Error value",
+            cause: rejection,
+          }),
+        });
+        expect(JSON.stringify((problem as WebhookProcessingProblem).toJSON())).not.toContain(
+          rejection.constraint,
+        );
+        return true;
+      });
+      expect(mockStore.saveSubscription).not.toHaveBeenCalled();
+      expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
+      expect(mockStore.completeWebhook).not.toHaveBeenCalled();
+      expect(mockStore.failWebhook).not.toHaveBeenCalled();
     });
   });
 

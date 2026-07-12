@@ -2,7 +2,7 @@ import type { BillingAccount, Order, Subscription } from "../types";
 
 /**
  * Abstract storage for billing data.
- * Implementations: InMemoryBillingStore, DrizzleBillingStore
+ * The framework provides `InMemoryBillingStore`; applications may supply persistent adapters.
  */
 export abstract class BillingStore {
   // BillingAccount
@@ -24,6 +24,12 @@ export abstract class BillingStore {
   abstract findOrdersByAccount(billingAccountId: string): Promise<Order[]>;
 
   // Idempotency
+  /**
+   * Reserves a provider webhook event for processing.
+   *
+   * Store adapters must throw `WebhookAlreadyProcessedProblem` only when the exact event ID
+   * reservation already exists. Other storage failures must retain their original failure semantics.
+   */
   abstract reserveWebhook(eventId: string, eventType: string): Promise<void>;
   abstract completeWebhook(eventId: string): Promise<void>;
   abstract failWebhook(eventId: string): Promise<void>;
