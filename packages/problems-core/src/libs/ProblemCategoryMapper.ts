@@ -39,6 +39,8 @@ export function toHttpStatus(category: ProblemCategory): number {
       return 409;
     case ProblemCategory.Gone:
       return 410;
+    case ProblemCategory.PayloadTooLarge:
+      return 413;
     case ProblemCategory.ValidationError:
       return 422;
     case ProblemCategory.BusinessRuleViolation:
@@ -70,6 +72,8 @@ export function toTitle(category: ProblemCategory): string {
       return "Conflict";
     case ProblemCategory.Gone:
       return "Gone";
+    case ProblemCategory.PayloadTooLarge:
+      return "Payload Too Large";
     case ProblemCategory.ValidationError:
       return "Validation Error";
     case ProblemCategory.BusinessRuleViolation:

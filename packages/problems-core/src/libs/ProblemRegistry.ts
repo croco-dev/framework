@@ -19,6 +19,12 @@ export type ProblemRegistryVisibility = "public" | "private";
 export type ProblemRegistryRedaction = "public" | "safe" | "operator-only";
 export type ProblemLifecycleStatus = "active" | "deprecated";
 
+export type ProblemStatusPolicy = {
+  readonly kind: "runtime-configurable";
+  readonly defaultStatus: number;
+  readonly configuration: string;
+};
+
 export type ProblemDeprecationMetadata =
   | {
       readonly reason: string;
@@ -72,6 +78,7 @@ export type ProblemCodeRegistryEntry = {
   readonly code: string;
   readonly category: ProblemCategoryName;
   readonly status: number;
+  readonly statusPolicy?: ProblemStatusPolicy;
   readonly title: string;
   readonly cookbookPath: string;
   readonly recovery: ProblemRecoveryMetadata;
@@ -87,6 +94,7 @@ export type ProblemCodeRegistry = {
 
 export type CreateProblemCodeRegistryOptions = {
   readonly cookbookBasePath?: string;
+  readonly statusPolicies?: Readonly<Record<string, ProblemStatusPolicy>>;
 };
 
 export type ProblemRegistryProblemDefinition<
@@ -95,6 +103,7 @@ export type ProblemRegistryProblemDefinition<
 > = {
   readonly category: Category;
   readonly status?: Status;
+  readonly statusPolicy?: ProblemStatusPolicy;
   readonly retryable: boolean;
   readonly public: boolean;
   readonly redaction: ProblemRegistryRedaction;
@@ -118,17 +127,19 @@ export type ProblemRegistryStatusForCategory<Category extends ProblemCategory> =
             ? 409
             : Category extends ProblemCategory.Gone
               ? 410
-              : Category extends ProblemCategory.ValidationError
-                ? 422
-                : Category extends ProblemCategory.BusinessRuleViolation
+              : Category extends ProblemCategory.PayloadTooLarge
+                ? 413
+                : Category extends ProblemCategory.ValidationError
                   ? 422
-                  : Category extends ProblemCategory.TooManyRequests
-                    ? 429
-                    : Category extends ProblemCategory.InternalServerError
-                      ? 500
-                      : Category extends ProblemCategory.NotImplemented
-                        ? 501
-                        : number;
+                  : Category extends ProblemCategory.BusinessRuleViolation
+                    ? 422
+                    : Category extends ProblemCategory.TooManyRequests
+                      ? 429
+                      : Category extends ProblemCategory.InternalServerError
+                        ? 500
+                        : Category extends ProblemCategory.NotImplemented
+                          ? 501
+                          : number;
 
 export type DefinedProblemRegistryEntries<Problems extends ProblemRegistryProblemDefinitions> = {
   readonly [Code in keyof Problems & string]: PackageProblemRegistryEntry<
@@ -156,6 +167,7 @@ export type PackageProblemRegistryEntry<
   readonly code: Code;
   readonly category: Category;
   readonly status: Status;
+  readonly statusPolicy?: ProblemStatusPolicy;
   readonly retryable: boolean;
   readonly retryability: "retryable" | "not-retryable";
   readonly public: boolean;
@@ -336,6 +348,8 @@ export function getPackageProblemRegistryValidationErrors(
       );
     }
 
+    errors.push(...getProblemStatusPolicyValidationErrors(problem));
+
     if (problem.retryability !== (problem.retryable ? "retryable" : "not-retryable")) {
       errors.push(`Problem code '${problem.code}' has inconsistent retryability metadata.`);
     }
@@ -394,6 +408,7 @@ function createPackageProblemRegistryEntry(
     code,
     category: definition.category,
     status,
+    ...(definition.statusPolicy ? { statusPolicy: definition.statusPolicy } : {}),
     retryable: definition.retryable,
     retryability: definition.retryable ? "retryable" : "not-retryable",
     public: definition.public,
@@ -482,6 +497,15 @@ const CATEGORY_RECOVERY_METADATA = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  [ProblemCategory.PayloadTooLarge]: createRecoveryMetadata({
+    cause: "The request body exceeded the configured byte limit.",
+    userAction: "Reduce the request body and retry.",
+    operatorAction:
+      "Confirm route body limits and upstream proxy limits match the intended upload policy.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   [ProblemCategory.ValidationError]: createRecoveryMetadata({
     cause: "The request or generated contract failed schema or semantic validation.",
     userAction: "Fix the invalid fields and retry with schema-conformant input.",
@@ -534,6 +558,12 @@ export function createProblemCodeRegistry(
   const discoveriesByCode = groupDiscoveriesByCode(discoveries);
   const problems: ProblemCodeRegistryEntry[] = [];
 
+  for (const code of Object.keys(options.statusPolicies ?? {}).sort()) {
+    if (!discoveriesByCode.has(code)) {
+      errors.push(`Status policy references unknown Problem code '${code}'.`);
+    }
+  }
+
   for (const [code, codeDiscoveries] of discoveriesByCode) {
     const categories = new Set(codeDiscoveries.map((discovery) => discovery.category));
     const sources = getSortedSources(codeDiscoveries.flatMap((discovery) => discovery.sources));
@@ -563,6 +593,7 @@ export function createProblemCodeRegistry(
       code,
       category,
       status: ProblemCategoryMapper.toHttpStatus(toProblemCategory(category)),
+      ...(options.statusPolicies?.[code] ? { statusPolicy: options.statusPolicies[code] } : {}),
       title: ProblemCategoryMapper.toTitle(toProblemCategory(category)),
       cookbookPath: getProblemCookbookPath(code, cookbookBasePath),
       recovery: CATEGORY_RECOVERY_METADATA[category],
@@ -619,6 +650,8 @@ export function getProblemCodeRegistryValidationErrors(
         `Problem code '${problem.code}' has status ${problem.status}, expected ${expectedStatus} for ${problem.category}.`,
       );
     }
+
+    errors.push(...getProblemStatusPolicyValidationErrors(problem));
 
     if (problem.title !== expectedTitle) {
       errors.push(
@@ -766,4 +799,32 @@ function isCompleteRecoveryMetadata(metadata: ProblemRecoveryMetadata): boolean 
     metadata.telemetry.severity.length > 0 &&
     metadata.telemetry.attributes.length > 0
   );
+}
+
+function getProblemStatusPolicyValidationErrors(
+  problem: Pick<ProblemCodeRegistryEntry, "code" | "status" | "statusPolicy">,
+): readonly string[] {
+  const policy = problem.statusPolicy;
+
+  if (!policy) {
+    return [];
+  }
+
+  const errors: string[] = [];
+
+  if (policy.kind !== "runtime-configurable") {
+    errors.push(`Problem code '${problem.code}' has an unsupported status policy.`);
+  }
+
+  if (policy.defaultStatus !== problem.status) {
+    errors.push(
+      `Problem code '${problem.code}' has status policy default ${policy.defaultStatus}, expected ${problem.status}.`,
+    );
+  }
+
+  if (policy.configuration.trim().length === 0) {
+    errors.push(`Problem code '${problem.code}' has an empty status policy configuration.`);
+  }
+
+  return errors;
 }

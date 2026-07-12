@@ -1497,6 +1497,49 @@ describe("buildContractGraph", () => {
     expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
   });
 
+  it("should accept concrete route statuses for runtime-configurable ProblemRegistry entries", () => {
+    const registry = defineProblemRegistry({
+      package: "@croco/users-api",
+      problems: {
+        USERS_API_BODY_TOO_LARGE: {
+          category: ProblemCategory.PayloadTooLarge,
+          retryable: false,
+          public: true,
+          status: 413,
+          statusPolicy: {
+            kind: "runtime-configurable",
+            defaultStatus: 413,
+            configuration: "bodyLimitMiddleware.statusCode",
+          },
+          redaction: "public",
+        },
+      },
+    });
+
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ProblemResponse({
+        code: "USERS_API_BODY_TOO_LARGE",
+        category: ProblemCategory.PayloadTooLarge,
+        status: 422,
+      })
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const graph = buildContractGraph([UsersController], { problemRegistries: [registry] });
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(graph.routes[0]?.problemResponses?.[0]?.registry).toMatchObject({
+      status: 413,
+      statusPolicy: {
+        kind: "runtime-configurable",
+        defaultStatus: 413,
+        configuration: "bodyLimitMiddleware.statusCode",
+      },
+    });
+  });
+
   it("should report invalid supplied ProblemRegistry manifests as graph diagnostics", () => {
     const registry = defineProblemRegistry({
       package: "@croco/users-api",

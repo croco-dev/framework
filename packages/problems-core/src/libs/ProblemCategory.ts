@@ -15,6 +15,8 @@ export enum ProblemCategory {
   Conflict = "Conflict",
   /** 더 이상 사용되지 않는 리소스를 나타냅니다. (410) */
   Gone = "Gone",
+  /** 요청 본문이 허용된 크기를 초과한 상태를 나타냅니다. (413) */
+  PayloadTooLarge = "PayloadTooLarge",
   /** 입력 검증 실패를 나타냅니다. (422) */
   ValidationError = "ValidationError",
   /** 비즈니스 규칙 위반을 나타냅니다. (422) */

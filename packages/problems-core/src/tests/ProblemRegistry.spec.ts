@@ -54,6 +54,62 @@ describe("Problem code registry", () => {
     ]);
   });
 
+  it("models runtime-configurable statuses without weakening fixed entries", () => {
+    const policy = {
+      kind: "runtime-configurable",
+      defaultStatus: 413,
+      configuration: "bodyLimitMiddleware.statusCode",
+    } as const;
+    const registry = createProblemCodeRegistry(
+      [
+        discovery(
+          "transports-http/request-body-too-large",
+          ProblemCategory.PayloadTooLarge,
+          "packages/transports-http/src/problems.ts",
+          8,
+        ),
+      ],
+      {
+        statusPolicies: {
+          "transports-http/request-body-too-large": policy,
+        },
+      },
+    );
+
+    expect(registry.problems[0]).toMatchObject({
+      status: 413,
+      statusPolicy: policy,
+    });
+
+    const [entry] = registry.problems;
+
+    if (!entry) {
+      throw new Error("expected registry fixture entry");
+    }
+
+    expect(() =>
+      assertProblemCodeRegistryValid({
+        ...registry,
+        problems: [
+          {
+            ...entry,
+            statusPolicy: { ...policy, defaultStatus: 422 },
+          },
+        ],
+      }),
+    ).toThrow(ProblemRegistryValidationProblem);
+
+    expect(() =>
+      createProblemCodeRegistry([], {
+        statusPolicies: {
+          "transports-http/renamed-body-too-large": policy,
+        },
+      }),
+    ).toThrow(
+      "Status policy references unknown Problem code 'transports-http/renamed-body-too-large'.",
+    );
+  });
+
   it("defines package ProblemRegistry manifests with visibility and redaction metadata", () => {
     const registry = defineProblemRegistry({
       package: "@croco/billing-polar",
@@ -104,6 +160,32 @@ describe("Problem code registry", () => {
           problemCodes: ["BILLING_POLAR_MISSING_CONFIG"],
         },
       ],
+    });
+  });
+
+  it("retains runtime-configurable status policy in package registry manifests", () => {
+    const registry = defineProblemRegistry({
+      package: "@croco/transports-http",
+      problems: {
+        TRANSPORTS_HTTP_REQUEST_BODY_TOO_LARGE: {
+          category: ProblemCategory.PayloadTooLarge,
+          retryable: false,
+          public: true,
+          status: 413,
+          statusPolicy: {
+            kind: "runtime-configurable",
+            defaultStatus: 413,
+            configuration: "bodyLimitMiddleware.statusCode",
+          },
+          redaction: "public",
+        },
+      },
+    });
+
+    expect(registry.problems[0]?.statusPolicy).toEqual({
+      kind: "runtime-configurable",
+      defaultStatus: 413,
+      configuration: "bodyLimitMiddleware.statusCode",
     });
   });
 

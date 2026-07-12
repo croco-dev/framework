@@ -13871,6 +13871,11 @@
           "source": "./libs/ProblemRegistry"
         },
         {
+          "name": "ProblemStatusPolicy",
+          "exportKind": "named",
+          "source": "./libs/ProblemRegistry"
+        },
+        {
           "name": "ProblemTelemetryMapping",
           "exportKind": "named",
           "source": "./libs/ProblemRegistry"
@@ -19405,9 +19410,33 @@
           "source": null
         },
         {
+          "name": "HttpBodyLimitConfigurationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/HttpRequestBodyProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "HttpExecutionContext",
           "exportKind": "named",
           "source": null
+        },
+        {
+          "name": "HttpRequestBodyReadProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/HttpRequestBodyProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "HttpRequestBodyTooLargeProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/HttpRequestBodyProblems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "HttpRequestBodyUnavailableProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/HttpRequestBodyProblems",
+          "declarationKind": "class"
         },
         {
           "name": "isMiddlewareShortCircuit",
@@ -19661,6 +19690,11 @@
           "name": "HttpPipelineGraphConfig",
           "exportKind": "named",
           "source": "./libs/PipelineRunner"
+        },
+        {
+          "name": "HttpRequestBodyTooLargeProblemOptions",
+          "exportKind": "named",
+          "source": "./libs/problems/HttpRequestBodyProblems"
         },
         {
           "name": "InterceptorProvider",

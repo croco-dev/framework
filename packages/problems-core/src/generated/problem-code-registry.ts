@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 418,
+  problemCount: 422,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8364,7 +8364,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/problems-core/src/libs/ProblemRegistry.ts",
-          line: 198,
+          line: 210,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11538,7 +11538,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 55,
+          line: 47,
           column: 3,
           kind: "problem-class",
         },
@@ -11546,16 +11546,16 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
     },
     {
       code: "transports-graphql/request-body-too-large",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
+      category: "PayloadTooLarge",
+      status: 413,
+      title: "Payload Too Large",
       cookbookPath:
         "/reference/problem-recovery-cookbook/#transports-graphql-request-body-too-large",
       recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
+        cause: "The request body exceeded the configured byte limit.",
+        userAction: "Reduce the request body and retry.",
         operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
+          "Confirm route body limits and upstream proxy limits match the intended upload policy.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -11672,6 +11672,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 24,
           column: 3,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "transports-http/body-limit-invalid-configuration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-http-body-limit-invalid-configuration",
+      recovery: {
+        cause: "The HTTP body-limit middleware was configured with an invalid byte boundary.",
+        userAction: "Ask the operator to correct the service configuration before retrying.",
+        operatorAction:
+          "Set the body-limit value to a finite, nonnegative safe integer and restart the service.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/problems/HttpRequestBodyProblems.ts",
+          line: 15,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -11868,6 +11900,107 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 67,
           column: 11,
           kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "transports-http/request-body-read-failed",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-http-request-body-read-failed",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/problems/HttpRequestBodyProblems.ts",
+          line: 67,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "transports-http/request-body-too-large",
+      category: "PayloadTooLarge",
+      status: 413,
+      statusPolicy: {
+        kind: "runtime-configurable",
+        defaultStatus: 413,
+        configuration: "bodyLimitMiddleware.statusCode",
+      },
+      title: "Payload Too Large",
+      cookbookPath: "/reference/problem-recovery-cookbook/#transports-http-request-body-too-large",
+      recovery: {
+        cause: "The request body exceeded the configured byte limit.",
+        userAction: "Reduce the request body and retry.",
+        operatorAction:
+          "Confirm route body limits and upstream proxy limits match the intended upload policy.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/problems/HttpRequestBodyProblems.ts",
+          line: 31,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "transports-http/request-body-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-http-request-body-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/problems/HttpRequestBodyProblems.ts",
+          line: 52,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -13121,10 +13254,14 @@ export type CrocoProblemRegistry = typeof CROCO_PROBLEM_CODE_REGISTRY;
 export type CrocoProblemRegistryEntry = CrocoProblemRegistry["problems"][number];
 export type CrocoProblemCode = CrocoProblemRegistryEntry["code"];
 
-export type CrocoProblemStatus<Code extends CrocoProblemCode = CrocoProblemCode> = Extract<
-  CrocoProblemRegistryEntry,
-  { readonly code: Code }
->["status"];
+type CrocoProblemEntryStatus<Entry extends CrocoProblemRegistryEntry> = Entry extends {
+  readonly statusPolicy: { readonly kind: "runtime-configurable" };
+}
+  ? number
+  : Entry["status"];
+
+export type CrocoProblemStatus<Code extends CrocoProblemCode = CrocoProblemCode> =
+  CrocoProblemEntryStatus<Extract<CrocoProblemRegistryEntry, { readonly code: Code }>>;
 
 export type CrocoProblemDetails<Code extends CrocoProblemCode = CrocoProblemCode> =
   Code extends CrocoProblemCode ? TypedProblemDetails<Code, CrocoProblemStatus<Code>> : never;

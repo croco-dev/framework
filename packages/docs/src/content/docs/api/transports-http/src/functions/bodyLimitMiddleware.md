@@ -7,7 +7,7 @@ title: "bodyLimitMiddleware"
 
 > **bodyLimitMiddleware**(`options?`): [`MiddlewareFunction`](/api/transports-http/src/type-aliases/middlewarefunction/)
 
-Content-Length 기준으로 요청 본문 크기를 제한하는 미들웨어입니다.
+실제 요청 본문 바이트를 기준으로 크기를 제한하는 미들웨어입니다.
 
 ## Parameters
 

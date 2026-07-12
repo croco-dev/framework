@@ -61,6 +61,12 @@ title: "ProblemRegistryProblemDefinition"
 
 ***
 
+### statusPolicy?
+
+> `readonly` `optional` **statusPolicy?**: [`ProblemStatusPolicy`](/api/problems-core/src/type-aliases/problemstatuspolicy/)
+
+***
+
 ### type?
 
 > `readonly` `optional` **type?**: `string`

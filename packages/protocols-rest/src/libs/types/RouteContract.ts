@@ -31,17 +31,19 @@ export type RouteProblemStatus<Category extends ProblemCategory> =
             ? 409
             : Category extends ProblemCategory.Gone
               ? 410
-              : Category extends ProblemCategory.ValidationError
-                ? 422
-                : Category extends ProblemCategory.BusinessRuleViolation
+              : Category extends ProblemCategory.PayloadTooLarge
+                ? 413
+                : Category extends ProblemCategory.ValidationError
                   ? 422
-                  : Category extends ProblemCategory.TooManyRequests
-                    ? 429
-                    : Category extends ProblemCategory.InternalServerError
-                      ? 500
-                      : Category extends ProblemCategory.NotImplemented
-                        ? 501
-                        : number;
+                  : Category extends ProblemCategory.BusinessRuleViolation
+                    ? 422
+                    : Category extends ProblemCategory.TooManyRequests
+                      ? 429
+                      : Category extends ProblemCategory.InternalServerError
+                        ? 500
+                        : Category extends ProblemCategory.NotImplemented
+                          ? 501
+                          : number;
 
 export type RouteProblemDeclaration<
   TProblem extends Problem = Problem,

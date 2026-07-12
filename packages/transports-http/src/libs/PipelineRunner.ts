@@ -11,7 +11,7 @@ import {
   compileRequestPipelineGraph,
   recordRuntimeInspectionEvent,
 } from "@croco/framework-context";
-import { Problem, ProblemCategoryMapper, ProblemFactory } from "@croco/problems-core";
+import { Problem, ProblemFactory } from "@croco/problems-core";
 import type {
   CallHandler,
   ExceptionFilter,
@@ -332,7 +332,7 @@ export class PipelineRunner {
         ? {
             originalProblemCode: input.originalError.code,
             originalProblemCategory: input.originalError.category,
-            originalProblemStatus: ProblemCategoryMapper.toHttpStatus(input.originalError.category),
+            originalProblemStatus: input.originalError.status,
           }
         : {};
 
@@ -417,7 +417,7 @@ export class PipelineRunner {
         details: {
           code: error.code,
           category: error.category,
-          status: ProblemCategoryMapper.toHttpStatus(error.category),
+          status: error.status,
           title: error.title,
           detail: error.detail,
         },

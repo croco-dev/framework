@@ -74,6 +74,14 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 ***
 
+### PayloadTooLarge
+
+> **PayloadTooLarge**: `"PayloadTooLarge"`
+
+요청 본문이 허용된 크기를 초과한 상태를 나타냅니다. (413)
+
+***
+
 ### TooManyRequests
 
 > **TooManyRequests**: `"TooManyRequests"`

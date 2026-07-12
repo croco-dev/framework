@@ -460,6 +460,8 @@ with `CROCO_HTTP_SECURITY_001` and `legacyCode: "transports-http/security-middle
 Consumers that matched the previous slash-form code should migrate to `CROCO_HTTP_SECURITY_001`;
 the legacy value is preserved in `extensions.legacyCode` for compatibility during that migration.
 
+`bodyLimitMiddleware` counts the actual streamed request bytes. `Content-Length` is used only for strict early rejection, so missing, malformed, chunked, or false-low headers cannot bypass the configured limit. Register it before any middleware that reads the request body; accepted bytes are replayed once to downstream JSON, text, form, and raw Request consumers. Rejections use the stable `transports-http/request-body-too-large` Problem code, include the configured `limit`, and default to HTTP 413. Setting `bodyLimitMiddleware.statusCode` changes the runtime response status; the generated Problem registry records that status as runtime-configurable while preserving 413 as its canonical default.
+
 Use `securityValidation: 'off'` or `CROCO_HTTP_SECURITY_VALIDATION=off` only for explicit local
 migration/testing fixtures where the unsafe path is the behavior under test. For custom or wrapped
 middleware, prefer `declareSecurityMiddlewareCapabilities()` over disabling validation. Do not

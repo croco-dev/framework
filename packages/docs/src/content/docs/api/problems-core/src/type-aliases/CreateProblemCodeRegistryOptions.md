@@ -12,3 +12,9 @@ title: "CreateProblemCodeRegistryOptions"
 ### cookbookBasePath?
 
 > `readonly` `optional` **cookbookBasePath?**: `string`
+
+***
+
+### statusPolicies?
+
+> `readonly` `optional` **statusPolicies?**: `Readonly`\<`Record`\<`string`, [`ProblemStatusPolicy`](/api/problems-core/src/type-aliases/problemstatuspolicy/)\>\>

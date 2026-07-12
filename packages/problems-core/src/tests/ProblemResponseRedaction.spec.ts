@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   OPERATOR_ONLY_PROBLEM_DETAIL,
+  Problem,
   ProblemCategory,
   createProblemResponseDetail,
   createProblemResponseExtensions,
   resolveProblemCodeRedactionPolicy,
+  resolveProblemDetailsResponseRedactionPolicy,
 } from "../index";
 
 describe("ProblemResponseRedaction", () => {
@@ -51,5 +53,48 @@ describe("ProblemResponseRedaction", () => {
         "operator-only",
       ),
     ).toEqual({});
+  });
+
+  it("does not inherit public redaction across codes that only share a custom status", () => {
+    class CustomStatusBodyTooLargeProblem extends Problem {
+      constructor() {
+        super(
+          "transports-http/request-body-too-large",
+          ProblemCategory.PayloadTooLarge,
+          "sensitive body details",
+        );
+      }
+
+      override get status(): number {
+        return 500;
+      }
+    }
+
+    const sourceProblem = new CustomStatusBodyTooLargeProblem();
+
+    expect(
+      resolveProblemDetailsResponseRedactionPolicy(
+        {
+          type: "about:blank",
+          title: "Internal Server Error",
+          status: 500,
+          code: "filter/unregistered-code",
+          detail: "sensitive body details",
+        },
+        sourceProblem,
+      ),
+    ).toBe("operator-only");
+    expect(
+      resolveProblemDetailsResponseRedactionPolicy(
+        {
+          type: "about:blank",
+          title: "Payload Too Large",
+          status: 500,
+          code: sourceProblem.code,
+          detail: "public body details",
+        },
+        sourceProblem,
+      ),
+    ).toBe("public");
   });
 });

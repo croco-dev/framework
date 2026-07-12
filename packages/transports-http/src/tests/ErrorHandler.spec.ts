@@ -5,6 +5,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { HTTP_CONTEXT_KEYS } from "../libs/contextKeys";
 import { ErrorHandler } from "../libs/ErrorHandler";
+import { HttpRequestBodyTooLargeProblem } from "../libs/problems/HttpRequestBodyProblems";
 import type { CrocoHttpContext } from "../libs/types";
 
 type TestProblemOptions = {
@@ -172,6 +173,28 @@ describe("ErrorHandler", () => {
   });
 
   describe("handleProblem", () => {
+    it("should honor an explicit Problem status override in the response and body", async () => {
+      const problem = new HttpRequestBodyTooLargeProblem({
+        limit: 4,
+        status: 422,
+        detail: "Body exceeds route policy",
+        instance: "/source-instance",
+      });
+
+      const response = errorHandler.handleError(problem, mockCtx);
+      const body = await response.json();
+
+      expect(response.status).toBe(422);
+      expect(body).toMatchObject({
+        title: "Payload Too Large",
+        status: 422,
+        code: "transports-http/request-body-too-large",
+        detail: "Body exceeds route policy",
+        instance: "/test",
+        limit: 4,
+      });
+    });
+
     it("should correctly map Problem category to HTTP status", async () => {
       const problem = new TestProblem({
         detail: "Not found",

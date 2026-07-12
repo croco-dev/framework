@@ -15,7 +15,7 @@ import {
   type ILogger,
   type RuntimeTraceContext,
 } from "@croco/framework-context";
-import { Problem, ProblemCategoryMapper } from "@croco/problems-core";
+import { Problem } from "@croco/problems-core";
 import { HTTP_CONTEXT_KEYS } from "../contextKeys";
 import type { CrocoHttpContext, MiddlewareFunction } from "../types";
 
@@ -281,7 +281,7 @@ function resolveFailureStatus(error: unknown): number {
   }
 
   if (isProblem(error)) {
-    return ProblemCategoryMapper.toHttpStatus(error.category);
+    return error.status;
   }
 
   return 500;

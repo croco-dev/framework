@@ -63,6 +63,12 @@ title: "ProblemRegistryReferenceIR"
 
 ***
 
+### statusPolicy?
+
+> `readonly` `optional` **statusPolicy?**: [`ProblemStatusPolicy`](/api/problems-core/src/type-aliases/problemstatuspolicy/)
+
+***
+
 ### visibility
 
 > `readonly` **visibility**: [`ProblemRegistryVisibility`](/api/problems-core/src/type-aliases/problemregistryvisibility/)

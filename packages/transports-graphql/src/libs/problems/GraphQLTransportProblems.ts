@@ -1,4 +1,4 @@
-import { HttpStatus, Problem, ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export class GraphQLResolversNotConfiguredProblem extends Problem {
   readonly code = "transports-graphql/resolvers-not-configured";
@@ -32,7 +32,7 @@ export class GraphQLRequestBodyTooLargeProblem extends Problem {
   constructor(maxBodySizeBytes: number) {
     super(
       "transports-graphql/request-body-too-large",
-      ProblemCategory.BadRequest,
+      ProblemCategory.PayloadTooLarge,
       `Payload Too Large (max ${maxBodySizeBytes} bytes)`,
       {
         extensions: {
@@ -40,14 +40,6 @@ export class GraphQLRequestBodyTooLargeProblem extends Problem {
         },
       },
     );
-  }
-
-  get status(): number {
-    return HttpStatus.PAYLOAD_TOO_LARGE;
-  }
-
-  get title(): string {
-    return "Payload Too Large";
   }
 }
 

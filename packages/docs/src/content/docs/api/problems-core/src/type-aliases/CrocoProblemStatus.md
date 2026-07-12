@@ -5,7 +5,7 @@ prev: false
 title: "CrocoProblemStatus"
 ---
 
-> **CrocoProblemStatus**\<`Code`\> = `Extract`\<[`CrocoProblemRegistryEntry`](/api/problems-core/src/type-aliases/crocoproblemregistryentry/), \{ `code`: `Code`; \}\>\[`"status"`\]
+> **CrocoProblemStatus**\<`Code`\> = `CrocoProblemEntryStatus`\<`Extract`\<[`CrocoProblemRegistryEntry`](/api/problems-core/src/type-aliases/crocoproblemregistryentry/), \{ `code`: `Code`; \}\>\>
 
 ## Type Parameters
 

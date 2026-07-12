@@ -2,6 +2,7 @@ import type {
   ProblemCategory,
   ProblemRegistryRedaction,
   ProblemRegistryVisibility,
+  ProblemStatusPolicy,
 } from "@croco/problems-core";
 import type { z } from "zod";
 
@@ -72,6 +73,7 @@ export type ProblemRegistryReferenceIR = {
   readonly code: string;
   readonly category: ProblemCategory;
   readonly status: number;
+  readonly statusPolicy?: ProblemStatusPolicy;
   readonly retryable: boolean;
   readonly retryability: "retryable" | "not-retryable";
   readonly public: boolean;

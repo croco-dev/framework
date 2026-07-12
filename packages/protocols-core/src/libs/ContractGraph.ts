@@ -377,6 +377,7 @@ function toProblemRegistryReference(
     code: entry.code,
     category: entry.category,
     status: entry.status,
+    ...(entry.statusPolicy ? { statusPolicy: entry.statusPolicy } : {}),
     retryable: entry.retryable,
     retryability: entry.retryability,
     public: entry.public,
@@ -780,7 +781,10 @@ function validateProblemRegistryReferences(
       continue;
     }
 
-    if (entry.category !== response.category || entry.status !== response.status) {
+    const statusMatches =
+      entry.statusPolicy?.kind === "runtime-configurable" || entry.status === response.status;
+
+    if (entry.category !== response.category || !statusMatches) {
       diagnostics.push(
         createRouteDiagnostic(
           route,

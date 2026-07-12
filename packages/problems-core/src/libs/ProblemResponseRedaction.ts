@@ -145,6 +145,8 @@ function toFallbackCategory(status: number, sourceProblem: Problem | undefined):
       return ProblemCategory.Conflict;
     case 410:
       return ProblemCategory.Gone;
+    case 413:
+      return ProblemCategory.PayloadTooLarge;
     case 422:
       return ProblemCategory.BusinessRuleViolation;
     case 429:

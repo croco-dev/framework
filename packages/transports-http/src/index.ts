@@ -120,6 +120,14 @@ export {
   mb,
 } from "./libs/middleware/BodyLimitMiddleware";
 
+export {
+  HttpBodyLimitConfigurationProblem,
+  HttpRequestBodyReadProblem,
+  HttpRequestBodyTooLargeProblem,
+  HttpRequestBodyUnavailableProblem,
+  type HttpRequestBodyTooLargeProblemOptions,
+} from "./libs/problems/HttpRequestBodyProblems";
+
 /**
  * 응답 압축을 적용하는 미들웨어와 관련 타입입니다.
  */
