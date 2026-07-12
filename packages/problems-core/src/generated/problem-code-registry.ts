@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 426,
+  problemCount: 427,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12649,6 +12649,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "tx-drizzle/rls-configuration-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tx-drizzle-rls-configuration-invalid",
+      recovery: {
+        cause:
+          "A PostgreSQL RLS helper received malformed static identifier or setting-key configuration.",
+        userAction: "Ask the operator to correct the RLS configuration before retrying.",
+        operatorAction:
+          "Use the reported field name and the @croco/tx-drizzle RLS contract to correct the configuration, then restart the service.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
+          line: 7,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "tx-drizzle/rls-execute-unsupported",
       category: "InternalServerError",
       status: 500,
@@ -12674,7 +12706,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
-          line: 12,
+          line: 29,
           column: 3,
           kind: "problem-class",
         },
@@ -12706,7 +12738,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
-          line: 24,
+          line: 41,
           column: 3,
           kind: "problem-class",
         },
@@ -12738,7 +12770,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
-          line: 4,
+          line: 21,
           column: 3,
           kind: "problem-class",
         },

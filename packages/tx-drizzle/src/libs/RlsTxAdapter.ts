@@ -7,6 +7,7 @@ import {
   RlsExecuteUnsupportedProblem,
   TenantContextRequiredProblem,
 } from "./problems/TxDrizzleProblems";
+import { validateRlsConfigKey } from "./RlsSql";
 import type { DrizzleDb, InferTxClient, InferTxOptions } from "./types";
 
 export interface RlsTenantProvider {
@@ -54,8 +55,8 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
   tenantProvider: RlsTenantProvider,
   options: RlsOptions = {},
 ): TxAdapter<InferTxClient<TDb>, InferTxOptions<TDb>> {
+  const configKey = validateRlsConfigKey(options.configKey ?? "app.current_tenant");
   const baseAdapter = createDrizzleTxAdapter(db);
-  const configKey = options.configKey ?? "app.current_tenant";
 
   // Try to resolve logger, fallback to null if not available
   let logger: Logger | null = null;
@@ -86,7 +87,7 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
             throw problem;
           }
 
-          await tx.execute(sql`SET LOCAL ${sql.raw(configKey)} = ${tenantId}`);
+          await tx.execute(sql`select set_config(${configKey}, ${tenantId}, true)`);
 
           return fn(tx);
         },

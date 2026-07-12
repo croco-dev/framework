@@ -1883,6 +1883,16 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "tx-drizzle/rls-configuration-invalid": recovery({
+    cause:
+      "A PostgreSQL RLS helper received malformed static identifier or setting-key configuration.",
+    userAction: "Ask the operator to correct the RLS configuration before retrying.",
+    operatorAction:
+      "Use the reported field name and the @croco/tx-drizzle RLS contract to correct the configuration, then restart the service.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "transports-http/body-limit-invalid-configuration": recovery({
     cause: "The HTTP body-limit middleware was configured with an invalid byte boundary.",
     userAction: "Ask the operator to correct the service configuration before retrying.",
