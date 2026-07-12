@@ -219,6 +219,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`SnapshotTenantRequiredProblem`](/api/metrics-core/src/classes/snapshottenantrequiredproblem/)
 - [`DatabaseUrlRequiredProblem`](/api/migration-runner/src/classes/databaseurlrequiredproblem/)
 - [`InvalidMigrationCountProblem`](/api/migration-runner/src/classes/invalidmigrationcountproblem/)
+- [`MigrationHistoryDriftProblem`](/api/migration-runner/src/classes/migrationhistorydriftproblem/)
 - [`MigrationTransactionRequiredProblem`](/api/migration-runner/src/classes/migrationtransactionrequiredproblem/)
 - [`MissingDownFunctionProblem`](/api/migration-runner/src/classes/missingdownfunctionproblem/)
 - [`MissingUpFunctionProblem`](/api/migration-runner/src/classes/missingupfunctionproblem/)

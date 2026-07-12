@@ -4,6 +4,10 @@ import { MigrationStore } from "./MigrationStore";
 import { MigrationTransactionRequiredProblem } from "./problems/MigrationTransactionRequiredProblem";
 import { MissingDownFunctionProblem } from "./problems/MissingDownFunctionProblem";
 import { MissingUpFunctionProblem } from "./problems/MissingUpFunctionProblem";
+import {
+  assertUniqueMigrationFileIds,
+  reconcileMigrationHistory,
+} from "./reconcileMigrationHistory";
 import type { MigrationFile, MigrationStatus } from "./types";
 import { assertValidMigrationCount } from "./validateMigrationCount";
 
@@ -27,10 +31,10 @@ export class MigrationRunner {
   async status(): Promise<MigrationStatus[]> {
     const files = await this.scanner.scan();
     const executed = await this.store.getExecutedMigrations(this.db);
-    const executedMap = new Map(executed.map((m) => [m.id, m]));
+    const history = reconcileMigrationHistory(files, executed);
 
     return files.map((file) => {
-      const record = executedMap.get(file.id);
+      const record = history.executedById.get(file.id);
       return {
         id: file.id,
         name: file.name,
@@ -106,6 +110,13 @@ export class MigrationRunner {
       throw new MigrationTransactionRequiredProblem(direction);
     }
 
+    const files = await this.scanner.scan();
+    assertUniqueMigrationFileIds(files);
+    if (await this.store.hasTable(this.db)) {
+      const executed = await this.store.getExecutedMigrations(this.db);
+      reconcileMigrationHistory(files, executed);
+    }
+
     let selected: MigrationFile[] = [];
 
     try {
@@ -129,8 +140,8 @@ export class MigrationRunner {
   ): Promise<MigrationFile[]> {
     const files = await this.scanner.scan();
     const executed = await this.store.getExecutedMigrations(db);
-    const executedIds = new Set(executed.map((migration) => migration.id));
-    const pending = files.filter((file) => !executedIds.has(file.id));
+    const history = reconcileMigrationHistory(files, executed);
+    const pending = files.filter((file) => !history.executedById.has(file.id));
     return targetId ? pending.filter((file) => file.id <= targetId) : pending;
   }
 
@@ -141,11 +152,7 @@ export class MigrationRunner {
   ): Promise<MigrationFile[]> {
     const files = await this.scanner.scan();
     const executed = await this.store.getExecutedMigrations(db);
-    const fileMap = new Map(files.map((file) => [file.id, file]));
-    const runFiles = executed.flatMap((record) => {
-      const file = fileMap.get(record.id);
-      return file ? [file] : [];
-    });
+    const runFiles = reconcileMigrationHistory(files, executed).executedFiles;
 
     if (targetId) {
       return runFiles.filter((file) => file.id >= targetId).reverse();

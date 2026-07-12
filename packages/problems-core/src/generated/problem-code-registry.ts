@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 427,
+  problemCount: 428,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7073,6 +7073,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/migration-runner/src/libs/problems/DatabaseUrlRequiredProblem.ts",
           line: 4,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "migration-runner/history-drift",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#migration-runner-history-drift",
+      recovery: {
+        cause:
+          "Recorded migration history no longer matches the available migration files by stable id and name.",
+        userAction:
+          "Restore the original migration file identity or ask an operator to perform an explicitly verified history repair.",
+        operatorAction:
+          "Compare the checkpoint rows with version-controlled migration files, restore missing or renamed files when possible, and repair history only after verifying the deployed schema.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/migration-runner/src/libs/problems/MigrationHistoryDriftProblem.ts",
+          line: 16,
           column: 3,
           kind: "problem-class",
         },

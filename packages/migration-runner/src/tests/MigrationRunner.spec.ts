@@ -1,10 +1,12 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseClient } from "../libs/db-types";
 import { MigrationRunner } from "../libs/MigrationRunner";
 import { InvalidMigrationCountProblem } from "../libs/problems/InvalidMigrationCountProblem";
+import type { MigrationHistoryDriftProblem } from "../libs/problems/MigrationHistoryDriftProblem";
 import { MigrationTransactionRequiredProblem } from "../libs/problems/MigrationTransactionRequiredProblem";
 
 describe("MigrationRunner", () => {
@@ -14,7 +16,9 @@ describe("MigrationRunner", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    mockDb = { execute: vi.fn().mockResolvedValue([]) } as unknown as DatabaseClient;
+    mockDb = {
+      execute: vi.fn().mockResolvedValue([]),
+    } as unknown as DatabaseClient;
 
     const migrationsDir = join(__dirname, "fixtures", "migrations");
     runner = new MigrationRunner(mockDb, migrationsDir, "_migrations");
@@ -49,7 +53,10 @@ describe("MigrationRunner", () => {
         .mockResolvedValueOnce(undefined)
         .mockResolvedValueOnce(undefined);
       const transaction = vi.fn(async <T>(fn: (tx: DatabaseClient) => Promise<T>) => fn(txDb));
-      mockDb = { execute: vi.fn().mockResolvedValue([]), transaction } as unknown as DatabaseClient;
+      mockDb = {
+        execute: vi.fn().mockResolvedValue([]),
+        transaction,
+      } as unknown as DatabaseClient;
       runner = new MigrationRunner(
         mockDb,
         join(__dirname, "fixtures", "migrations"),
@@ -131,7 +138,13 @@ describe("MigrationRunner", () => {
         execute: vi.fn(async () => {
           executeCount += 1;
           if (executeCount === 2) {
-            return [{ id: "20240101000001", name: "create_users", executedAt: new Date() }];
+            return [
+              {
+                id: "20240101000001",
+                name: "create_users",
+                executedAt: new Date(),
+              },
+            ];
           }
 
           return [];
@@ -158,8 +171,16 @@ describe("MigrationRunner", () => {
           executeCount += 1;
           if (executeCount === 2) {
             return [
-              { id: "20240101000001", name: "create_users", executedAt: new Date() },
-              { id: "20240101000002", name: "create_posts", executedAt: new Date() },
+              {
+                id: "20240101000001",
+                name: "create_users",
+                executedAt: new Date(),
+              },
+              {
+                id: "20240101000002",
+                name: "create_posts",
+                executedAt: new Date(),
+              },
             ];
           }
 
@@ -215,6 +236,157 @@ describe("MigrationRunner", () => {
       }
     });
   });
+
+  describe("history reconciliation", () => {
+    it.each(["status", "up", "down", "previewUp", "previewDown"] as const)(
+      "should reject missing applied files before %s mutation",
+      async (operation) => {
+        const migrationsDir = createMigrationHistoryDir([["20260615000001", "create_accounts"]]);
+        const { db, transaction } = createHistoryDb([
+          ["20260615000001", "create_accounts"],
+          ["20260615000002", "add_account_status"],
+        ]);
+        const historyRunner = new MigrationRunner(db, migrationsDir, "_migrations");
+
+        try {
+          const result = invokeRunner(historyRunner, operation);
+          await expect(result).rejects.toMatchObject({
+            code: "migration-runner/history-drift",
+            extensions: {
+              reason: "missing-file",
+              migrationId: "20260615000002",
+              recordedName: "add_account_status",
+            },
+          });
+          expect(transaction).not.toHaveBeenCalled();
+        } finally {
+          rmSync(migrationsDir, { force: true, recursive: true });
+        }
+      },
+    );
+
+    it.each(["status", "up", "down", "previewUp", "previewDown"] as const)(
+      "should reject renamed applied files before %s mutation",
+      async (operation) => {
+        const migrationsDir = createMigrationHistoryDir([["20260615000001", "create_customers"]]);
+        const { db, transaction } = createHistoryDb([["20260615000001", "create_accounts"]]);
+        const historyRunner = new MigrationRunner(db, migrationsDir, "_migrations");
+
+        try {
+          await expect(invokeRunner(historyRunner, operation)).rejects.toMatchObject({
+            code: "migration-runner/history-drift",
+            extensions: {
+              reason: "name-mismatch",
+              migrationId: "20260615000001",
+              recordedName: "create_accounts",
+              currentName: "create_customers",
+            },
+          });
+          expect(transaction).not.toHaveBeenCalled();
+        } finally {
+          rmSync(migrationsDir, { force: true, recursive: true });
+        }
+      },
+    );
+
+    it("should reject duplicate file ids before preview database access", async () => {
+      const migrationsDir = createMigrationHistoryDir([
+        ["20260615000001", "create_accounts"],
+        ["20260615000001", "create_customers"],
+      ]);
+      const { db, execute, transaction } = createHistoryDb([]);
+      const historyRunner = new MigrationRunner(db, migrationsDir, "_migrations");
+
+      try {
+        await expect(historyRunner.previewUp()).rejects.toMatchObject({
+          code: "migration-runner/history-drift",
+          category: ProblemCategory.Conflict,
+          extensions: {
+            reason: "duplicate-file-id",
+            migrationId: "20260615000001",
+            recovery:
+              "Restore the original applied migration file with its recorded id and name, or use a separate explicit operator-controlled history repair after verifying the database state, then retry.",
+          },
+        } satisfies Partial<MigrationHistoryDriftProblem>);
+        expect(execute).not.toHaveBeenCalled();
+        expect(transaction).not.toHaveBeenCalled();
+      } finally {
+        rmSync(migrationsDir, { force: true, recursive: true });
+      }
+    });
+
+    it("should reject a missing applied migration in the middle of history", async () => {
+      const migrationsDir = createMigrationHistoryDir([
+        ["20260615000001", "create_accounts"],
+        ["20260615000003", "create_invoices"],
+      ]);
+      const { db, transaction } = createHistoryDb([
+        ["20260615000001", "create_accounts"],
+        ["20260615000002", "add_account_status"],
+        ["20260615000003", "create_invoices"],
+      ]);
+      const historyRunner = new MigrationRunner(db, migrationsDir, "_migrations");
+
+      try {
+        await expect(historyRunner.down(undefined, 2)).rejects.toMatchObject({
+          code: "migration-runner/history-drift",
+          extensions: {
+            reason: "missing-file",
+            migrationId: "20260615000002",
+          },
+        });
+        expect(transaction).not.toHaveBeenCalled();
+      } finally {
+        rmSync(migrationsDir, { force: true, recursive: true });
+      }
+    });
+
+    it.each([
+      ["malformed", async () => []],
+      ["failed", async () => Promise.reject(new Error("history probe unavailable"))],
+    ])(
+      "should reject a %s preview history probe before opening a transaction",
+      async (_label, probe) => {
+        const migrationsDir = createMigrationHistoryDir([["20260615000001", "create_accounts"]]);
+        const transaction = vi.fn();
+        const db = {
+          execute: vi.fn(probe),
+          transaction,
+        } as unknown as DatabaseClient;
+        const historyRunner = new MigrationRunner(db, migrationsDir, "_migrations");
+
+        try {
+          await expect(historyRunner.previewUp()).rejects.toThrow();
+          expect(transaction).not.toHaveBeenCalled();
+        } finally {
+          rmSync(migrationsDir, { force: true, recursive: true });
+        }
+      },
+    );
+
+    it("should preserve valid status ordering and persisted execution evidence", async () => {
+      const migrationsDir = createMigrationHistoryDir([
+        ["20260615000001", "create_accounts"],
+        ["20260615000002", "add_account_status"],
+        ["20260615000003", "create_invoices"],
+      ]);
+      const { db } = createHistoryDb([
+        ["20260615000001", "create_accounts"],
+        ["20260615000002", "add_account_status"],
+      ]);
+      const historyRunner = new MigrationRunner(db, migrationsDir, "_migrations");
+
+      try {
+        await expect(historyRunner.status()).resolves.toMatchObject([
+          { id: "20260615000001", name: "create_accounts", executed: true },
+          { id: "20260615000002", name: "add_account_status", executed: true },
+          { id: "20260615000003", name: "create_invoices", executed: false },
+        ]);
+      } finally {
+        rmSync(migrationsDir, { force: true, recursive: true });
+      }
+    });
+  });
 });
 
 type MigrationDirOptions = {
@@ -227,6 +399,57 @@ type ConcurrentDbOptions = {
 };
 
 type BodyCall = "up" | "down";
+
+type HistoryOperation = "status" | "up" | "down" | "previewUp" | "previewDown";
+
+function invokeRunner(runner: MigrationRunner, operation: HistoryOperation): Promise<unknown> {
+  return runner[operation]();
+}
+
+function createMigrationHistoryDir(
+  migrations: readonly (readonly [id: string, name: string])[],
+): string {
+  const migrationsDir = mkdtempSync(join(tmpdir(), "croco-migration-history-"));
+  for (const [id, name] of migrations) {
+    writeFileSync(
+      join(migrationsDir, `${id}_${name}.ts`),
+      [
+        "export async function up(): Promise<void> {}",
+        "export async function down(): Promise<void> {}",
+        "",
+      ].join("\n"),
+    );
+  }
+  return migrationsDir;
+}
+
+function createHistoryDb(executed: readonly (readonly [string, string])[]): {
+  readonly db: DatabaseClient;
+  readonly execute: ReturnType<typeof vi.fn>;
+  readonly transaction: ReturnType<typeof vi.fn>;
+} {
+  const execute = vi.fn(async (query: unknown) => {
+    const text = sqlText(query);
+    if (text.startsWith("CREATE TABLE")) return [];
+    if (text.includes("to_regclass")) return [{ exists: true }];
+    if (text.startsWith("SELECT id, name")) {
+      return executed.map(([id, name]) => ({
+        id,
+        name,
+        executedAt: new Date("2026-06-15T00:00:00.000Z"),
+      }));
+    }
+    return [];
+  });
+  const transaction = vi.fn(async <T>(fn: (tx: DatabaseClient) => Promise<T>) =>
+    fn({ execute } as unknown as DatabaseClient),
+  );
+  return {
+    db: { execute, transaction } as unknown as DatabaseClient,
+    execute,
+    transaction,
+  };
+}
 
 function createMigrationDir(options: MigrationDirOptions = {}): string {
   const migrationsDir = mkdtempSync(join(tmpdir(), "croco-migration-runner-"));

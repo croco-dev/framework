@@ -41,7 +41,7 @@ title: "MigrationStore"
 
 `Promise`\<`boolean`\>
 
-***
+---
 
 ### completeMigration()
 
@@ -61,7 +61,7 @@ title: "MigrationStore"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### ensureTable()
 
@@ -77,7 +77,7 @@ title: "MigrationStore"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getExecutedMigrations()
 
@@ -93,7 +93,23 @@ title: "MigrationStore"
 
 `Promise`\<[`MigrationRecord`](/api/migration-runner/src/interfaces/migrationrecord/)[]\>
 
-***
+---
+
+### hasTable()
+
+> **hasTable**(`db`): `Promise`\<`boolean`\>
+
+#### Parameters
+
+##### db
+
+[`DatabaseClient`](/api/migration-runner/src/type-aliases/databaseclient/)
+
+#### Returns
+
+`Promise`\<`boolean`\>
+
+---
 
 ### recordMigration()
 
@@ -117,7 +133,7 @@ title: "MigrationStore"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### removeMigration()
 
@@ -137,7 +153,7 @@ title: "MigrationStore"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### reserveMigration()
 
