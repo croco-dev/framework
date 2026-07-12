@@ -138,6 +138,36 @@ export interface ListExecutionsOptions {
 }
 
 /**
+ * Stable keyset options for scanning running executions.
+ */
+export interface ListRunningExecutionsOptions {
+  /** Return records whose ID sorts after this cursor. */
+  afterId?: string;
+  /** Maximum number of records to return. */
+  limit: number;
+}
+
+/**
+ * Options for an explicit timed-out execution reconciliation pass.
+ */
+export interface ReconcileTimedOutOptions {
+  /** Deadline comparison time. Defaults to the current time. */
+  now?: Date;
+  /** Maximum number of records fetched per stable keyset query. */
+  batchSize?: number;
+}
+
+/**
+ * Summary of an explicit timed-out execution reconciliation pass.
+ */
+export interface ReconcileTimedOutResult {
+  /** Number of running records inspected. */
+  scanned: number;
+  /** Number of records atomically transitioned to timed_out. */
+  timedOut: number;
+}
+
+/**
  * Execution entity representing a single execution record.
  */
 export interface Execution {

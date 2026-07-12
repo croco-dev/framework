@@ -52,8 +52,10 @@ timed_out → retrying
 import type {
   ExecutionStore,
   Execution,
+  ExecutionStatus,
   CreateExecutionParams,
   ListExecutionsOptions,
+  ListRunningExecutionsOptions,
 } from "@croco/execution-core";
 
 export class MyDynamoExecutionStore extends ExecutionStore {
@@ -71,6 +73,18 @@ export class MyDynamoExecutionStore extends ExecutionStore {
 
   async update(id: string, data: Partial<Execution>): Promise<Execution> {
     // 실행 업데이트
+  }
+
+  async updateIfStatus(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    // id와 현재 status를 함께 조건으로 사용한 원자적 업데이트
+  }
+
+  async listRunning(options: ListRunningExecutionsOptions): Promise<Execution[]> {
+    // id 오름차순으로 afterId 이후의 running 실행 조회
   }
 
   async list(options?: ListExecutionsOptions): Promise<Execution[]> {
@@ -206,8 +220,12 @@ const execution = await manager.create({
   timeout: 60000, // 60초
 });
 
-// 타임아웃 발생시
+// 실행 중인 프로세스가 타임아웃을 소유할 때
 await manager.timeout(execution.id);
+
+// 프로세스 재시작 후에는 저장된 deadline이 지난 실행을 명시적으로 조정
+const result = await manager.reconcileTimedOut({ batchSize: 100 });
+console.log(result.timedOut);
 
 // 이후 재시도 가능
 await manager.retry(execution.id);
@@ -290,14 +308,16 @@ await jobs.replay("exec_456", { reason: "provider restored" });
 | `updateProgress(id, progress)` | 진행률 업데이트. percent 자동 계산                                                     |
 | `checkpoint(id, key, value)`   | 체크포인트 저장                                                                        |
 | `timeout(id)`                  | 타임아웃 상태 전이 (`timed_out`)                                                       |
+| `get(id)`                      | 실행 ID로 단일 실행 조회                                                               |
+| `reconcileTimedOut(options?)`  | 저장된 deadline이 지난 `running` 실행을 안정적인 키셋 순회로 조정                      |
 
 ### ExecutionInspectionManager
 
-| 메서드                  | 설명                                          |
-| ----------------------- | --------------------------------------------- |
-| `get(id)`               | 실행 ID로 단일 실행 조회                      |
-| `list(options?)`        | 상태, 타입, 부모/리플레이 기준 실행 목록 조회 |
-| `recordLog(id, params)` | 실행 inspect 로그 추가                        |
+| 메서드                  | 설명                                                 |
+| ----------------------- | ---------------------------------------------------- |
+| `get(id)`               | 실행 ID로 단일 실행 조회 (기본 매니저 계약에도 포함) |
+| `list(options?)`        | 상태, 타입, 부모/리플레이 기준 실행 목록 조회        |
+| `recordLog(id, params)` | 실행 inspect 로그 추가                               |
 
 ### ExecutionReplayManager
 
@@ -396,7 +416,13 @@ throw ExecutionProblems.invalidStateTransition(`Cannot transition from '${from}'
 ### 커스텀 ExecutionStore 구현
 
 ```typescript
-import type { ExecutionStore, Execution, CreateExecutionParams } from "@croco/execution-core";
+import type {
+  CreateExecutionParams,
+  Execution,
+  ExecutionStatus,
+  ExecutionStore,
+  ListRunningExecutionsOptions,
+} from "@croco/execution-core";
 
 export class RedisExecutionStore extends ExecutionStore {
   constructor(private readonly redis: Redis) {
@@ -424,6 +450,20 @@ export class RedisExecutionStore extends ExecutionStore {
   async findById(id: string): Promise<Execution | null> {
     const data = await this.redis.get(`execution:${id}`);
     return data ? JSON.parse(data) : null;
+  }
+
+  // Lifecycle writes must compare the persisted status atomically.
+  async updateIfStatus(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    // Redis transaction/Lua script using both id and expectedStatus
+  }
+
+  // Return running executions ordered by ID after the supplied cursor.
+  async listRunning(options: ListRunningExecutionsOptions): Promise<Execution[]> {
+    // Stable keyset query
   }
 
   // ... 나머지 메서드 구현

@@ -1,8 +1,8 @@
 import {
-  ExecutionManagerImpl,
   type CreateExecutionParams,
   type Execution,
   type ExecutionManager,
+  ExecutionManagerImpl,
   type ExecutionStore,
   type ListExecutionsOptions,
 } from "@croco/execution-core";
@@ -47,7 +47,9 @@ describe("ChunkExecutor", () => {
     expect(executionManager.start).toHaveBeenCalledWith("exec-1");
     expect(reader.read).toHaveBeenCalledTimes(3);
     expect(writer.write).toHaveBeenCalledWith([1, 2]);
-    expect(executionManager.complete).toHaveBeenCalledWith("exec-1", { processedCount: 2 });
+    expect(executionManager.complete).toHaveBeenCalledWith("exec-1", {
+      processedCount: 2,
+    });
     expect(executionManager.updateProgress).not.toHaveBeenCalled();
   });
 
@@ -87,7 +89,9 @@ describe("ChunkExecutor", () => {
       current: 3,
       total: 3,
     });
-    expect(executionManager.complete).toHaveBeenCalledWith("exec-1", { processedCount: 3 });
+    expect(executionManager.complete).toHaveBeenCalledWith("exec-1", {
+      processedCount: 3,
+    });
   });
 
   it("should support checkpointing", async () => {
@@ -200,7 +204,10 @@ describe("ChunkExecutor", () => {
   it("should resume retryable failures from the last successful checkpoint", async () => {
     const realManager = new ExecutionManagerImpl(new TestExecutionStore());
     const realExecutor = new ChunkExecutor(realManager);
-    const execution = await realManager.create({ type: "batch-job", maxAttempts: 2 });
+    const execution = await realManager.create({
+      type: "batch-job",
+      maxAttempts: 2,
+    });
     await realManager.updateProgress(execution.id, { current: 0, total: 3 });
 
     const reader = createCheckpointReader([1, 2, 3]);
@@ -262,7 +269,10 @@ describe("ChunkExecutor", () => {
   it("should not seed retry progress without a restored step checkpoint", async () => {
     const realManager = new ExecutionManagerImpl(new TestExecutionStore());
     const realExecutor = new ChunkExecutor(realManager);
-    const execution = await realManager.create({ type: "batch-job", maxAttempts: 2 });
+    const execution = await realManager.create({
+      type: "batch-job",
+      maxAttempts: 2,
+    });
     await realManager.start(execution.id);
     await realManager.updateProgress(execution.id, { current: 2, total: 3 });
     await realManager.fail(execution.id, {
@@ -526,6 +536,26 @@ class TestExecutionStore implements ExecutionStore {
     const updated = { ...execution, ...data };
     this.executions.set(id, updated);
     return updated;
+  }
+
+  async updateIfStatus(
+    id: string,
+    expectedStatus: Execution["status"],
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const execution = this.executions.get(id);
+    return execution?.status === expectedStatus ? this.update(id, data) : null;
+  }
+
+  async listRunning(options: { afterId?: string; limit: number }): Promise<Execution[]> {
+    return [...this.executions.values()]
+      .filter(
+        (execution) =>
+          execution.status === "running" &&
+          (options.afterId === undefined || execution.id > options.afterId),
+      )
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .slice(0, options.limit);
   }
 
   async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {

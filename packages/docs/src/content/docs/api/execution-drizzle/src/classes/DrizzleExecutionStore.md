@@ -181,6 +181,28 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 ***
 
+### listRunning()
+
+> **listRunning**(`options`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)[]\>
+
+실행 중 레코드를 ID 기준 키셋 순서로 조회합니다.
+
+#### Parameters
+
+##### options
+
+[`ListRunningExecutionsOptions`](/api/execution-core/src/interfaces/listrunningexecutionsoptions/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)[]\>
+
+#### Overrides
+
+[`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`listRunning`](/api/execution-core/src/classes/executionstore/#listrunning)
+
+***
+
 ### update()
 
 > **update**(`id`, `data`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
@@ -204,3 +226,33 @@ idempotencyKey로 기존 실행을 조회합니다.
 #### Overrides
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`update`](/api/execution-core/src/classes/executionstore/#update)
+
+***
+
+### updateIfStatus()
+
+> **updateIfStatus**(`id`, `expectedStatus`, `data`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+현재 상태가 예상 상태와 일치할 때만 실행을 원자적으로 업데이트합니다.
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### expectedStatus
+
+[`ExecutionStatus`](/api/execution-core/src/type-aliases/executionstatus/)
+
+##### data
+
+`Partial`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+#### Overrides
+
+[`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`updateIfStatus`](/api/execution-core/src/classes/executionstore/#updateifstatus)

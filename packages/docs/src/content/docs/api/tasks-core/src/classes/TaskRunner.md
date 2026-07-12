@@ -54,3 +54,19 @@ title: "TaskRunner"
 #### Returns
 
 `Promise`\<`unknown`\>
+
+***
+
+### retry()
+
+> **retry**(`executionId`): `Promise`\<`unknown`\>
+
+#### Parameters
+
+##### executionId
+
+`string`
+
+#### Returns
+
+`Promise`\<`unknown`\>

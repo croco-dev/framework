@@ -40,3 +40,20 @@ export class TaskRunnerDIFailureProblem extends Problem {
     );
   }
 }
+
+export class TaskExecutionTimeoutProblem extends Problem {
+  constructor(executionId: string, timeoutMs: number) {
+    super(
+      "tasks-core/execution-timeout",
+      ProblemCategory.InternalServerError,
+      `Task execution '${executionId}' timed out after ${timeoutMs}ms`,
+      {
+        extensions: {
+          executionId,
+          timeoutMs,
+          retryable: true,
+        },
+      },
+    );
+  }
+}

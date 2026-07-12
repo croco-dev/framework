@@ -1,18 +1,18 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import {
-  createExecutionJobsOperations,
-  ExecutionManagerImpl,
   type CreateExecutionParams,
+  createExecutionJobsOperations,
   type Execution,
   type ExecutionLogEntry,
   type ExecutionLogStore,
+  ExecutionManagerImpl,
   type ExecutionStore,
   type JobsOperations,
   type ListExecutionsOptions,
 } from "@croco/execution-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { jobs } from "../../commands/jobs.js";
 import type { JobDetails, JobListReport, JobLogEntry } from "../../commands/jobs.js";
+import { jobs } from "../../commands/jobs.js";
 
 class TestExecutionStore implements ExecutionStore, ExecutionLogStore {
   private readonly executions = new Map<string, Execution>();
@@ -64,6 +64,26 @@ class TestExecutionStore implements ExecutionStore, ExecutionLogStore {
     const updated = { ...execution, ...data };
     this.executions.set(id, updated);
     return updated;
+  }
+
+  async updateIfStatus(
+    id: string,
+    expectedStatus: Execution["status"],
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const execution = this.executions.get(id);
+    return execution?.status === expectedStatus ? this.update(id, data) : null;
+  }
+
+  async listRunning(options: { afterId?: string; limit: number }): Promise<Execution[]> {
+    return [...this.executions.values()]
+      .filter(
+        (execution) =>
+          execution.status === "running" &&
+          (options.afterId === undefined || execution.id > options.afterId),
+      )
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .slice(0, options.limit);
   }
 
   async appendLog(id: string, entry: ExecutionLogEntry): Promise<Execution> {
@@ -314,7 +334,9 @@ async function handleJobsRequest(
 
     writeJson(response, 404, { detail: "not found" });
   } catch (error) {
-    writeJson(response, 500, { detail: error instanceof Error ? error.message : String(error) });
+    writeJson(response, 500, {
+      detail: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -369,7 +391,9 @@ async function seedCompletedBillingSync(manager: ExecutionManagerImpl): Promise<
   });
   await manager.start(execution.id);
   await manager.recordLog(execution.id, { message: "Billing sync started" });
-  await manager.recordLog(execution.id, { message: "Billing subscription active" });
+  await manager.recordLog(execution.id, {
+    message: "Billing subscription active",
+  });
   return manager.complete(execution.id, { subscriptionStatus: "active" });
 }
 

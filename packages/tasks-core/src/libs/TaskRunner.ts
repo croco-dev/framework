@@ -1,12 +1,18 @@
-import type { ExecutionManager } from "@croco/execution-core";
+import type { Execution, ExecutionManager } from "@croco/execution-core";
 import type { ILogger } from "@croco/framework-context";
 import { Container } from "@croco/framework-context";
 import { recordError } from "@croco/telemetry-api";
-import { TaskNotFoundProblem, TaskRunnerDIFailureProblem } from "./problems/TasksProblems";
+import {
+  TaskExecutionTimeoutProblem,
+  TaskNotFoundProblem,
+  TaskRunnerDIFailureProblem,
+} from "./problems/TasksProblems";
 import { TaskRegistry } from "./TaskRegistry";
-import type { TaskExecutionOptions } from "./types";
+import type { TaskExecutionContext, TaskExecutionOptions } from "./types";
 
 type Constructor<T = object> = new (...args: unknown[]) => T;
+
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
 const noopLogger: ILogger = {
   debug: () => {},
@@ -66,16 +72,119 @@ export class TaskRunner {
       return execution.result;
     }
 
-    await this.executionManager.start(execution.id);
+    return this.runExecution(task.target, task.methodName, execution);
+  }
+
+  async retry(executionId: string): Promise<unknown> {
+    const execution = await this.executionManager.get(executionId);
+    const task = this.registry.get(execution.type);
+    if (!task) {
+      throw new TaskNotFoundProblem(execution.type);
+    }
+
+    const retryingExecution = await this.executionManager.retry(executionId);
+    return this.runExecution(task.target, task.methodName, retryingExecution);
+  }
+
+  private async runExecution(
+    target: object,
+    methodName: string | symbol,
+    execution: Execution,
+  ): Promise<unknown> {
+    const startedExecution = await this.executionManager.start(execution.id);
+    const controller = new AbortController();
+    const context: TaskExecutionContext = {
+      executionId: startedExecution.id,
+      attempt: startedExecution.attempts,
+      signal: controller.signal,
+    };
+    const timeoutMs = startedExecution.timeout;
+    const deadline =
+      timeoutMs !== undefined && timeoutMs > 0 && startedExecution.startedAt !== undefined
+        ? startedExecution.startedAt.getTime() + timeoutMs
+        : undefined;
+    const timeoutProblem =
+      deadline === undefined || timeoutMs === undefined
+        ? undefined
+        : new TaskExecutionTimeoutProblem(startedExecution.id, timeoutMs);
+    let timeoutClaimed = false;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    let triggerTimeout: (() => void) | undefined;
+    const timeoutPromise =
+      timeoutProblem === undefined || deadline === undefined
+        ? undefined
+        : new Promise<never>((_resolve, reject) => {
+            triggerTimeout = () => {
+              if (timeoutClaimed) return;
+              timeoutClaimed = true;
+              controller.abort(timeoutProblem);
+              void this.claimTimeout(startedExecution.id).then(
+                () => reject(timeoutProblem),
+                reject,
+              );
+            };
+            const scheduleTimeout = () => {
+              const remaining = deadline - Date.now();
+              if (remaining <= 0) {
+                triggerTimeout?.();
+                return;
+              }
+
+              timeoutHandle = setTimeout(scheduleTimeout, Math.min(remaining, MAX_TIMER_DELAY_MS));
+            };
+            scheduleTimeout();
+          });
 
     try {
-      const instance = this.createInstance(task.target) as Record<string, unknown>;
-      const method = instance[task.methodName] as (payload: unknown) => unknown;
-      const result = await method.call(instance, payload);
+      const instance = this.createInstance(target) as Record<string | symbol, unknown>;
+      if (deadline !== undefined && Date.now() >= deadline) {
+        triggerTimeout?.();
+        return await timeoutPromise;
+      }
 
-      await this.executionManager.complete(execution.id, result);
+      const method = instance[methodName] as (
+        payload: unknown,
+        context: TaskExecutionContext,
+      ) => unknown;
+      const handlerPromise = Promise.resolve().then(() =>
+        method.call(instance, startedExecution.payload, context),
+      );
+      const result = await (timeoutPromise
+        ? Promise.race([handlerPromise, timeoutPromise])
+        : handlerPromise);
+
+      if (deadline !== undefined && Date.now() >= deadline) {
+        triggerTimeout?.();
+        return await timeoutPromise;
+      }
+
+      if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+
+      try {
+        await this.executionManager.complete(startedExecution.id, result);
+      } catch (error) {
+        const current = await this.executionManager.get(startedExecution.id);
+        if (current.status === "timed_out" && timeoutProblem !== undefined) {
+          throw timeoutProblem;
+        }
+        throw error;
+      }
       return result;
     } catch (error) {
+      if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+      if (timeoutClaimed && timeoutPromise !== undefined) {
+        return await timeoutPromise;
+      }
+
+      if (error instanceof TaskExecutionTimeoutProblem) {
+        throw error;
+      }
+
+      if (deadline !== undefined && Date.now() >= deadline && triggerTimeout !== undefined) {
+        triggerTimeout();
+        return await timeoutPromise;
+      }
+
       const executionError = {
         message: error instanceof Error ? error.message : String(error),
         retryable:
@@ -84,7 +193,27 @@ export class TaskRunner {
         stack: error instanceof Error ? error.stack : undefined,
       };
 
-      await this.executionManager.fail(execution.id, executionError);
+      try {
+        await this.executionManager.fail(startedExecution.id, executionError);
+      } catch (transitionError) {
+        const current = await this.executionManager.get(startedExecution.id);
+        if (current.status === "timed_out" && timeoutProblem !== undefined) {
+          throw timeoutProblem;
+        }
+        throw transitionError;
+      }
+      throw error;
+    }
+  }
+
+  private async claimTimeout(executionId: string): Promise<void> {
+    try {
+      await this.executionManager.timeout(executionId);
+    } catch (error) {
+      const current = await this.executionManager.get(executionId);
+      if (current.status === "timed_out") {
+        return;
+      }
       throw error;
     }
   }

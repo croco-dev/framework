@@ -2,7 +2,9 @@ import type {
   CreateExecutionParams,
   Execution,
   ExecutionLogEntry,
+  ExecutionStatus,
   ListExecutionsOptions,
+  ListRunningExecutionsOptions,
 } from "../types";
 
 /**
@@ -49,6 +51,24 @@ export abstract class ExecutionStore {
    * @throws Error if execution not found or update fails
    */
   abstract update(id: string, data: Partial<Execution>): Promise<Execution>;
+
+  /**
+   * Update an execution only when its persisted status still matches the expected status.
+   *
+   * This is the required atomic boundary for lifecycle transitions that may race across workers.
+   *
+   * @returns Updated execution, or null when another actor changed the status first
+   */
+  abstract updateIfStatus(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    data: Partial<Execution>,
+  ): Promise<Execution | null>;
+
+  /**
+   * List running executions in stable ID order using keyset pagination.
+   */
+  abstract listRunning(options: ListRunningExecutionsOptions): Promise<Execution[]>;
 
   /**
    * List executions with optional filtering.

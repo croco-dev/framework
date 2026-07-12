@@ -15,6 +15,8 @@ Optional inspection capabilities for execution managers.
 
 Get a single execution by ID.
 
+This remains available here for compatibility and is also part of the primary manager contract.
+
 #### Parameters
 
 ##### id
@@ -24,10 +26,6 @@ Get a single execution by ID.
 #### Returns
 
 `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
-
-#### Throws
-
-Error if execution not found
 
 ***
 

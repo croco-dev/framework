@@ -88,14 +88,14 @@ export type ExecutionJobsManager = ExecutionManager &
   Partial<ExecutionReplayManager>;
 
 type InspectableExecutionJobsManager = ExecutionManager &
-  Pick<ExecutionInspectionManager, "get" | "list"> &
+  Pick<ExecutionInspectionManager, "list"> &
   Partial<ExecutionReplayManager>;
 
 type ReplayableExecutionJobsManager = InspectableExecutionJobsManager &
   Pick<ExecutionReplayManager, "replay">;
 
 function isInspectable(manager: ExecutionJobsManager): manager is InspectableExecutionJobsManager {
-  return typeof manager.get === "function" && typeof manager.list === "function";
+  return typeof manager.list === "function";
 }
 
 function isReplayable(manager: ExecutionJobsManager): manager is ReplayableExecutionJobsManager {

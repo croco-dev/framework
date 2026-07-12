@@ -51,6 +51,18 @@ export type TaskExecutionOptions = {
 };
 
 /**
+ * Runtime context provided as the optional second argument to task handlers.
+ */
+export type TaskExecutionContext = {
+  /** Persisted execution identifier used for inspection and retry. */
+  executionId: string;
+  /** Persisted attempt number returned by ExecutionManager.start(). */
+  attempt: number;
+  /** Cooperative cancellation signal aborted when the execution deadline expires. */
+  signal: AbortSignal;
+};
+
+/**
  * Task metadata stored by the decorator.
  */
 export type TaskMetadata = {

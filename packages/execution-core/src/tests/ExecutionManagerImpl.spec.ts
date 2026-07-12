@@ -5,8 +5,10 @@ import type {
   ExecutionError,
   ExecutionLogEntry,
   ExecutionLogStore,
+  ExecutionStatus,
   ExecutionStore,
   ListExecutionsOptions,
+  ListRunningExecutionsOptions,
 } from "../index";
 import { createExecutionJobsOperations, ExecutionManagerImpl, ExecutionProblem } from "../index";
 
@@ -61,6 +63,30 @@ class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
     const updated = { ...existing, ...data };
     this.executions.set(id, updated);
     return updated;
+  }
+
+  async updateIfStatus(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    if (!existing || existing.status !== expectedStatus) {
+      return null;
+    }
+
+    return this.update(id, data);
+  }
+
+  async listRunning(options: ListRunningExecutionsOptions): Promise<Execution[]> {
+    return Array.from(this.executions.values())
+      .filter(
+        (execution) =>
+          execution.status === "running" &&
+          (options.afterId === undefined || execution.id > options.afterId),
+      )
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .slice(0, options.limit);
   }
 
   async appendLog(id: string, entry: ExecutionLogEntry): Promise<Execution> {
@@ -132,15 +158,27 @@ describe("ExecutionManagerImpl", () => {
     });
 
     it("returns existing execution for same idempotencyKey", async () => {
-      const first = await manager.create({ type: "task", idempotencyKey: "key-1" });
-      const second = await manager.create({ type: "task", idempotencyKey: "key-1" });
+      const first = await manager.create({
+        type: "task",
+        idempotencyKey: "key-1",
+      });
+      const second = await manager.create({
+        type: "task",
+        idempotencyKey: "key-1",
+      });
 
       expect(first.id).toBe(second.id);
     });
 
     it("creates new execution for different idempotencyKey", async () => {
-      const first = await manager.create({ type: "task", idempotencyKey: "key-1" });
-      const second = await manager.create({ type: "task", idempotencyKey: "key-2" });
+      const first = await manager.create({
+        type: "task",
+        idempotencyKey: "key-1",
+      });
+      const second = await manager.create({
+        type: "task",
+        idempotencyKey: "key-2",
+      });
 
       expect(first.id).not.toBe(second.id);
     });
@@ -215,7 +253,10 @@ describe("ExecutionManagerImpl", () => {
     it("clears previous attempt errors when restarting automatic retries", async () => {
       const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: "transient error", retryable: true });
+      await manager.fail(execution.id, {
+        message: "transient error",
+        retryable: true,
+      });
 
       const restarted = await manager.start(execution.id);
 
@@ -245,9 +286,16 @@ describe("ExecutionManagerImpl", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
 
-      const execution = await manager.create({ type: "task", maxAttempts: 3, timeout: 1000 });
+      const execution = await manager.create({
+        type: "task",
+        maxAttempts: 3,
+        timeout: 1000,
+      });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: "timeout retry", retryable: true });
+      await manager.fail(execution.id, {
+        message: "timeout retry",
+        retryable: true,
+      });
 
       vi.setSystemTime(new Date("2026-01-01T00:00:03.000Z"));
 
@@ -273,7 +321,9 @@ describe("ExecutionManagerImpl", () => {
       const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
 
-      const completed = await manager.complete(execution.id, { data: "success" });
+      const completed = await manager.complete(execution.id, {
+        data: "success",
+      });
 
       expect(completed.status).toBe("completed");
       expect(completed.result).toEqual({ data: "success" });
@@ -287,6 +337,26 @@ describe("ExecutionManagerImpl", () => {
         "Cannot transition from 'pending' to 'completed'",
       );
     });
+
+    it("cannot overwrite a timeout that wins the lifecycle race", async () => {
+      const execution = await manager.create({ type: "task", timeout: 1 });
+      await manager.start(execution.id);
+      const originalUpdateIfStatus = store.updateIfStatus.bind(store);
+      vi.spyOn(store, "updateIfStatus").mockImplementationOnce(async () => {
+        await originalUpdateIfStatus(execution.id, "running", {
+          status: "timed_out",
+          completedAt: new Date(),
+        });
+        return null;
+      });
+
+      await expect(manager.complete(execution.id, "late result")).rejects.toThrow(
+        "current status is 'timed_out'",
+      );
+      const persisted = await manager.get(execution.id);
+      expect(persisted.status).toBe("timed_out");
+      expect(persisted.result).toBeUndefined();
+    });
   });
 
   describe("fail", () => {
@@ -294,7 +364,10 @@ describe("ExecutionManagerImpl", () => {
       execution: Execution,
     ): Promise<void> {
       const before = await manager.get(execution.id);
-      const error: ExecutionError = { message: "transient error", retryable: true };
+      const error: ExecutionError = {
+        message: "transient error",
+        retryable: true,
+      };
       let thrown: unknown;
 
       try {
@@ -314,7 +387,10 @@ describe("ExecutionManagerImpl", () => {
       const execution = await manager.create({ type: "task" });
       await manager.start(execution.id);
 
-      const error: ExecutionError = { message: "fatal error", retryable: false };
+      const error: ExecutionError = {
+        message: "fatal error",
+        retryable: false,
+      };
       const failed = await manager.fail(execution.id, error);
 
       expect(failed.status).toBe("failed");
@@ -326,7 +402,10 @@ describe("ExecutionManagerImpl", () => {
       const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
 
-      const error: ExecutionError = { message: "transient error", retryable: true };
+      const error: ExecutionError = {
+        message: "transient error",
+        retryable: true,
+      };
       const failed = await manager.fail(execution.id, error);
 
       expect(failed.status).toBe("retrying");
@@ -447,7 +526,10 @@ describe("ExecutionManagerImpl", () => {
     it("updates progress with auto-calculated percent", async () => {
       const execution = await manager.create({ type: "batch" });
 
-      const updated = await manager.updateProgress(execution.id, { current: 50, total: 100 });
+      const updated = await manager.updateProgress(execution.id, {
+        current: 50,
+        total: 100,
+      });
 
       expect(updated.progress?.current).toBe(50);
       expect(updated.progress?.total).toBe(100);
@@ -469,7 +551,10 @@ describe("ExecutionManagerImpl", () => {
     it("handles zero total", async () => {
       const execution = await manager.create({ type: "batch" });
 
-      const updated = await manager.updateProgress(execution.id, { current: 0, total: 0 });
+      const updated = await manager.updateProgress(execution.id, {
+        current: 0,
+        total: 0,
+      });
 
       expect(updated.progress?.percent).toBe(0);
     });
@@ -515,6 +600,80 @@ describe("ExecutionManagerImpl", () => {
 
       await expect(manager.timeout(execution.id)).rejects.toThrow(
         "Cannot transition from 'completed' to 'timed_out'",
+      );
+    });
+  });
+
+  describe("reconcileTimedOut", () => {
+    it("uses deadline equality and ignores records without an enforceable deadline", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const due = await manager.create({ type: "task", timeout: 1000 });
+      const notDue = await manager.create({ type: "task", timeout: 1001 });
+      const noTimeout = await manager.create({ type: "task" });
+      await manager.start(due.id);
+      await manager.start(notDue.id);
+      await manager.start(noTimeout.id);
+
+      const result = await manager.reconcileTimedOut({
+        now: new Date("2026-01-01T00:00:01.000Z"),
+        batchSize: 2,
+      });
+
+      expect(result).toEqual({ scanned: 3, timedOut: 1 });
+      await expect(manager.get(due.id)).resolves.toMatchObject({
+        status: "timed_out",
+        attempts: 1,
+      });
+      await expect(manager.get(notDue.id)).resolves.toMatchObject({
+        status: "running",
+      });
+      await expect(manager.get(noTimeout.id)).resolves.toMatchObject({
+        status: "running",
+      });
+    });
+
+    it("advances a stable keyset across mixed batches to later overdue records", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const noTimeout = await manager.create({ type: "task" });
+      const notDue = await manager.create({ type: "task", timeout: 10_000 });
+      const overdue = await manager.create({ type: "task", timeout: 10 });
+      await manager.start(noTimeout.id);
+      await manager.start(notDue.id);
+      await manager.start(overdue.id);
+
+      const result = await manager.reconcileTimedOut({
+        now: new Date("2026-01-01T00:00:01.000Z"),
+        batchSize: 1,
+      });
+
+      expect(result).toEqual({ scanned: 3, timedOut: 1 });
+      await expect(manager.get(overdue.id)).resolves.toMatchObject({
+        status: "timed_out",
+      });
+    });
+
+    it("is idempotent when repeated", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const execution = await manager.create({ type: "task", timeout: 1 });
+      await manager.start(execution.id);
+      const now = new Date("2026-01-01T00:00:01.000Z");
+
+      await expect(manager.reconcileTimedOut({ now })).resolves.toEqual({
+        scanned: 1,
+        timedOut: 1,
+      });
+      await expect(manager.reconcileTimedOut({ now })).resolves.toEqual({
+        scanned: 0,
+        timedOut: 0,
+      });
+    });
+
+    it("rejects an invalid batch size", async () => {
+      await expect(manager.reconcileTimedOut({ batchSize: 0 })).rejects.toThrow(
+        "batchSize must be a positive integer",
       );
     });
   });
@@ -602,7 +761,10 @@ describe("ExecutionManagerImpl", () => {
         metadata: { source: "webhook" },
       });
       await manager.start(execution.id);
-      await manager.fail(execution.id, { message: "provider unavailable", retryable: false });
+      await manager.fail(execution.id, {
+        message: "provider unavailable",
+        retryable: false,
+      });
 
       const replayed = await manager.replay(execution.id, {
         reason: "operator requested replay",
@@ -681,11 +843,20 @@ describe("ExecutionManagerImpl", () => {
       await manager.start(completed.id);
       await manager.complete(completed.id);
 
-      const retrying = await manager.create({ type: "workflow", maxAttempts: 3 });
+      const retrying = await manager.create({
+        type: "workflow",
+        maxAttempts: 3,
+      });
       await manager.start(retrying.id);
-      await manager.fail(retrying.id, { message: "provider timeout", retryable: true });
+      await manager.fail(retrying.id, {
+        message: "provider timeout",
+        retryable: true,
+      });
 
-      const retryExhausted = await manager.create({ type: "billing-sync", maxAttempts: 1 });
+      const retryExhausted = await manager.create({
+        type: "billing-sync",
+        maxAttempts: 1,
+      });
       await manager.start(retryExhausted.id);
       await manager.fail(retryExhausted.id, {
         message: "provider still unavailable",
@@ -699,7 +870,10 @@ describe("ExecutionManagerImpl", () => {
         retryable: false,
       });
 
-      const timedOut = await manager.create({ type: "usage-rollup", maxAttempts: 2 });
+      const timedOut = await manager.create({
+        type: "usage-rollup",
+        maxAttempts: 2,
+      });
       await manager.start(timedOut.id);
       await manager.timeout(timedOut.id);
 
@@ -803,7 +977,10 @@ describe("ExecutionManagerImpl", () => {
     });
 
     it("does not expose stale terminal fields after retry restart", async () => {
-      const manualRetry = await manager.create({ type: "workflow", maxAttempts: 3 });
+      const manualRetry = await manager.create({
+        type: "workflow",
+        maxAttempts: 3,
+      });
       await manager.start(manualRetry.id);
       await manager.fail(manualRetry.id, {
         message: "manual failure",
@@ -812,7 +989,10 @@ describe("ExecutionManagerImpl", () => {
       await manager.retry(manualRetry.id);
       await manager.start(manualRetry.id);
 
-      const automaticRetry = await manager.create({ type: "workflow", maxAttempts: 3 });
+      const automaticRetry = await manager.create({
+        type: "workflow",
+        maxAttempts: 3,
+      });
       await manager.start(automaticRetry.id);
       await manager.fail(automaticRetry.id, {
         message: "automatic failure",
@@ -847,14 +1027,23 @@ describe("ExecutionManagerImpl", () => {
         payload: { run: "original" },
       });
       await manager.start(failed.id);
-      await manager.fail(failed.id, { message: "downstream failure", retryable: false });
+      await manager.fail(failed.id, {
+        message: "downstream failure",
+        retryable: false,
+      });
 
       const jobs = createExecutionJobsOperations(manager);
-      const cancelled = await jobs.cancel(running.id, { reason: "operator stop" });
-      const replayed = await jobs.replay(failed.id, { reason: "provider restored" });
+      const cancelled = await jobs.cancel(running.id, {
+        reason: "operator stop",
+      });
+      const replayed = await jobs.replay(failed.id, {
+        reason: "provider restored",
+      });
 
       expect(cancelled.status).toBe("cancelled");
-      expect(cancelled.metadata).toEqual({ cancellationReason: "operator stop" });
+      expect(cancelled.metadata).toEqual({
+        cancellationReason: "operator stop",
+      });
       expect(replayed.status).toBe("pending");
       expect(replayed.replayOf).toBe(failed.id);
       expect(replayed.failurePolicy).toEqual(
@@ -867,6 +1056,7 @@ describe("ExecutionManagerImpl", () => {
 
     it("fails visibly when inspection or replay support is unavailable", async () => {
       const lifecycleOnlyManager = {
+        get: vi.fn(),
         create: vi.fn(),
         start: vi.fn(),
         complete: vi.fn(),
@@ -876,6 +1066,7 @@ describe("ExecutionManagerImpl", () => {
         updateProgress: vi.fn(),
         checkpoint: vi.fn(),
         timeout: vi.fn(),
+        reconcileTimedOut: vi.fn(),
       };
       const inspectOnlyManager = {
         ...lifecycleOnlyManager,
@@ -1012,7 +1203,10 @@ describe("ExecutionManagerImpl", () => {
       const execution = await manager.create({ type: "batch" });
       await manager.updateProgress(execution.id, { current: 10, total: 100 });
 
-      const updated = await manager.updateProgress(execution.id, { current: 50, total: 100 });
+      const updated = await manager.updateProgress(execution.id, {
+        current: 50,
+        total: 100,
+      });
 
       expect(updated.progress?.current).toBe(50);
       expect(updated.progress?.percent).toBe(50);
@@ -1042,7 +1236,11 @@ describe("ExecutionManagerImpl", () => {
       const execution = await manager.create({ type: "task", maxAttempts: 3 });
       await manager.start(execution.id);
 
-      const error: ExecutionError = { message: "temp error", retryable: false, code: "TEMP_ERROR" };
+      const error: ExecutionError = {
+        message: "temp error",
+        retryable: false,
+        code: "TEMP_ERROR",
+      };
       await manager.fail(execution.id, error);
 
       const retrying = await manager.retry(execution.id);

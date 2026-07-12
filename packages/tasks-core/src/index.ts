@@ -8,6 +8,7 @@ export { TASK_METADATA_KEY, Task } from "./libs/decorators/Task";
  */
 export {
   DuplicateTaskRegistrationProblem,
+  TaskExecutionTimeoutProblem,
   TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,
 } from "./libs/problems/TasksProblems";
@@ -30,4 +31,10 @@ export { TaskRunner } from "./libs/TaskRunner";
 /**
  * 태스크 선언과 식별에 사용하는 공개 타입들입니다.
  */
-export type { TaskExecutionOptions, TaskMetadata, TaskOptions, TaskReference } from "./libs/types";
+export type {
+  TaskExecutionContext,
+  TaskExecutionOptions,
+  TaskMetadata,
+  TaskOptions,
+  TaskReference,
+} from "./libs/types";

@@ -1,17 +1,33 @@
-import type { ExecutionManager } from "@croco/execution-core";
+import type { Execution, ExecutionManager } from "@croco/execution-core";
 import type { ILogger } from "@croco/framework-context";
 import { Component, Container, MetadataStorage } from "@croco/framework-context";
 import * as telemetry from "@croco/telemetry-api";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Task } from "../libs/decorators/Task";
-import { TaskRunnerDIFailureProblem } from "../libs/problems/TasksProblems";
+import {
+  TaskExecutionTimeoutProblem,
+  TaskRunnerDIFailureProblem,
+} from "../libs/problems/TasksProblems";
 import { TaskRegistry } from "../libs/TaskRegistry";
 import { TaskRunner } from "../libs/TaskRunner";
-import type { TaskMetadata } from "../libs/types";
+import type { TaskExecutionContext, TaskMetadata } from "../libs/types";
+
+function execution(overrides: Partial<Execution> = {}): Execution {
+  return {
+    id: "exec-123",
+    type: "test-task",
+    status: "pending",
+    attempts: 0,
+    maxAttempts: 1,
+    createdAt: new Date(),
+    ...overrides,
+  };
+}
 
 describe("TaskRunner", () => {
   let mockExecutionManager!: ExecutionManager;
   let registry!: TaskRegistry;
+  let createdExecution!: Execution;
 
   beforeEach(() => {
     Container.reset();
@@ -20,14 +36,23 @@ describe("TaskRunner", () => {
     registry = new TaskRegistry();
 
     mockExecutionManager = {
-      create: vi.fn().mockResolvedValue({
-        id: "exec-123",
-        type: "test-task",
-        payload: { data: "test" },
-        status: "pending",
-        createdAt: new Date(),
+      get: vi.fn().mockResolvedValue(execution()),
+      create: vi.fn().mockImplementation(async (params) => {
+        createdExecution = execution({
+          type: params.type,
+          payload: params.payload,
+          maxAttempts: params.maxAttempts ?? 1,
+          timeout: params.timeout,
+        });
+        return createdExecution;
       }),
-      start: vi.fn().mockResolvedValue(undefined),
+      start: vi.fn().mockImplementation(async (id: string) => ({
+        ...createdExecution,
+        id,
+        status: "running",
+        attempts: 1,
+        startedAt: new Date(),
+      })),
       complete: vi.fn().mockResolvedValue(undefined),
       fail: vi.fn().mockResolvedValue(undefined),
       cancel: vi.fn().mockResolvedValue(undefined),
@@ -35,6 +60,7 @@ describe("TaskRunner", () => {
       updateProgress: vi.fn().mockResolvedValue(undefined),
       checkpoint: vi.fn().mockResolvedValue(undefined),
       timeout: vi.fn().mockResolvedValue(undefined),
+      reconcileTimedOut: vi.fn().mockResolvedValue({ scanned: 0, timedOut: 0 }),
     };
 
     @Component()
@@ -53,6 +79,11 @@ describe("TaskRunner", () => {
     new TestTaskHandler();
     Container.set(TestTaskHandler, new TestTaskHandler());
     registry.collectFromMetadata();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("should execute task and return result", async () => {
@@ -152,14 +183,14 @@ describe("TaskRunner", () => {
   });
 
   it("should return completed idempotent execution result without restarting it", async () => {
-    mockExecutionManager.create = vi.fn().mockResolvedValue({
-      id: "exec-completed",
-      type: "test-task",
-      payload: { data: "test" },
-      result: "processed: cached",
-      status: "completed",
-      createdAt: new Date(),
-    });
+    mockExecutionManager.create = vi.fn().mockResolvedValue(
+      execution({
+        id: "exec-completed",
+        payload: { data: "test" },
+        result: "processed: cached",
+        status: "completed",
+      }),
+    );
     const runner = new TaskRunner(mockExecutionManager, registry);
 
     const result = await runner.execute("test-task", { data: "test" }, { idempotencyKey: "key" });
@@ -371,5 +402,314 @@ describe("TaskRunner", () => {
     );
 
     recordErrorSpy.mockRestore();
+  });
+
+  it("should abort cooperative handlers and persist timeout at the deadline", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    let receivedContext: TaskExecutionContext | undefined;
+
+    @Component()
+    class TimedTaskHandler {
+      @Task({ name: "timed-task", timeout: 100 })
+      async handle(_payload: unknown, context: TaskExecutionContext): Promise<never> {
+        receivedContext = context;
+        return new Promise((_resolve, reject) => {
+          context.signal.addEventListener("abort", () => reject(context.signal.reason), {
+            once: true,
+          });
+        });
+      }
+    }
+
+    Container.set(TimedTaskHandler, new TimedTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.start = vi.fn().mockResolvedValue(
+      execution({
+        type: "timed-task",
+        payload: {},
+        status: "running",
+        attempts: 1,
+        startedAt: new Date(),
+        timeout: 100,
+      }),
+    );
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    const result = runner.execute("timed-task", {});
+    const rejection = expect(result).rejects.toBeInstanceOf(TaskExecutionTimeoutProblem);
+    await vi.advanceTimersByTimeAsync(100);
+
+    await rejection;
+    expect(receivedContext).toMatchObject({ executionId: "exec-123", attempt: 1 });
+    expect(receivedContext?.signal.aborted).toBe(true);
+    expect(mockExecutionManager.timeout).toHaveBeenCalledWith("exec-123");
+    expect(mockExecutionManager.complete).not.toHaveBeenCalled();
+    expect(mockExecutionManager.fail).not.toHaveBeenCalled();
+  });
+
+  it("should ignore a handler result that arrives after timeout", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    let resolveHandler!: (value: string) => void;
+
+    @Component()
+    class LateTaskHandler {
+      @Task({ name: "late-task", timeout: 50 })
+      async handle(): Promise<string> {
+        return new Promise((resolve) => {
+          resolveHandler = resolve;
+        });
+      }
+    }
+
+    Container.set(LateTaskHandler, new LateTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.start = vi.fn().mockResolvedValue(
+      execution({
+        type: "late-task",
+        status: "running",
+        attempts: 1,
+        startedAt: new Date(),
+        timeout: 50,
+      }),
+    );
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    const result = runner.execute("late-task", {});
+    const rejection = expect(result).rejects.toBeInstanceOf(TaskExecutionTimeoutProblem);
+    await vi.advanceTimersByTimeAsync(50);
+    await rejection;
+    resolveHandler("late success");
+    await Promise.resolve();
+
+    expect(mockExecutionManager.complete).not.toHaveBeenCalled();
+    expect(mockExecutionManager.fail).not.toHaveBeenCalled();
+  });
+
+  it("should treat handler settlement at the persisted deadline as timed out", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+    @Component()
+    class BoundaryTaskHandler {
+      @Task({ name: "boundary-task", timeout: 100 })
+      async handle(): Promise<string> {
+        return new Promise((resolve) => {
+          setTimeout(() => resolve("boundary success"), 100);
+        });
+      }
+    }
+
+    Container.set(BoundaryTaskHandler, new BoundaryTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.start = vi.fn().mockResolvedValue(
+      execution({
+        type: "boundary-task",
+        status: "running",
+        attempts: 1,
+        startedAt: new Date(),
+        timeout: 100,
+      }),
+    );
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    const result = runner.execute("boundary-task", {});
+    const rejection = expect(result).rejects.toBeInstanceOf(TaskExecutionTimeoutProblem);
+    await vi.advanceTimersByTimeAsync(100);
+
+    await rejection;
+    expect(mockExecutionManager.timeout).toHaveBeenCalledWith("exec-123");
+    expect(mockExecutionManager.complete).not.toHaveBeenCalled();
+  });
+
+  it("should chunk timeout scheduling beyond the Node timer limit", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    const largeTimeout = 2_147_483_648;
+
+    mockExecutionManager.start = vi.fn().mockResolvedValue(
+      execution({
+        type: "test-task",
+        payload: { data: "large timeout" },
+        status: "running",
+        attempts: 1,
+        startedAt: new Date(),
+        timeout: largeTimeout,
+      }),
+    );
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("test-task", { data: "large timeout" })).resolves.toBe(
+      "processed: large timeout",
+    );
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 2_147_483_647);
+    expect(mockExecutionManager.timeout).not.toHaveBeenCalled();
+  });
+
+  it("should not invoke the handler when DI resolution consumes the deadline", async () => {
+    vi.useFakeTimers();
+    const startedAt = new Date("2026-01-01T00:00:00.000Z");
+    vi.setSystemTime(startedAt);
+    const handle = vi.fn().mockResolvedValue("too late");
+
+    @Component()
+    class SlowSetupTaskHandler {
+      @Task({ name: "slow-setup-task", timeout: 100 })
+      async handle(): Promise<string> {
+        return handle();
+      }
+    }
+
+    const instance = new SlowSetupTaskHandler();
+    Container.set(SlowSetupTaskHandler, instance);
+    registry.collectFromMetadata();
+    mockExecutionManager.start = vi.fn().mockResolvedValue(
+      execution({
+        type: "slow-setup-task",
+        status: "running",
+        attempts: 1,
+        startedAt,
+        timeout: 100,
+      }),
+    );
+    vi.spyOn(Container, "get").mockImplementation(() => {
+      vi.setSystemTime(new Date(startedAt.getTime() + 100));
+      return instance;
+    });
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("slow-setup-task", {})).rejects.toBeInstanceOf(
+      TaskExecutionTimeoutProblem,
+    );
+
+    expect(handle).not.toHaveBeenCalled();
+    expect(mockExecutionManager.timeout).toHaveBeenCalledWith("exec-123");
+  });
+
+  it("should preserve the typed timeout when reconciliation wins the timeout transition", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+    @Component()
+    class ReconciledTaskHandler {
+      @Task({ name: "reconciled-task", timeout: 25 })
+      async handle(): Promise<never> {
+        return new Promise(() => {});
+      }
+    }
+
+    Container.set(ReconciledTaskHandler, new ReconciledTaskHandler());
+    registry.collectFromMetadata();
+    const running = execution({
+      type: "reconciled-task",
+      status: "running",
+      attempts: 1,
+      startedAt: new Date(),
+      timeout: 25,
+    });
+    mockExecutionManager.start = vi.fn().mockResolvedValue(running);
+    mockExecutionManager.timeout = vi.fn().mockRejectedValue(new Error("transition lost"));
+    mockExecutionManager.get = vi.fn().mockResolvedValue({
+      ...running,
+      status: "timed_out",
+      completedAt: new Date(),
+    });
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    const result = runner.execute("reconciled-task", {});
+    const rejection = expect(result).rejects.toBeInstanceOf(TaskExecutionTimeoutProblem);
+    await vi.advanceTimersByTimeAsync(25);
+
+    await rejection;
+    expect(mockExecutionManager.get).toHaveBeenCalledWith("exec-123");
+    expect(mockExecutionManager.fail).not.toHaveBeenCalled();
+  });
+
+  it("should observe but not persist a handler rejection after timeout", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+    let rejectHandler!: (error: Error) => void;
+
+    @Component()
+    class LateRejectingTaskHandler {
+      @Task({ name: "late-rejecting-task", timeout: 25 })
+      async handle(): Promise<never> {
+        return new Promise((_resolve, reject) => {
+          rejectHandler = reject;
+        });
+      }
+    }
+
+    Container.set(LateRejectingTaskHandler, new LateRejectingTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.start = vi.fn().mockResolvedValue(
+      execution({
+        type: "late-rejecting-task",
+        status: "running",
+        attempts: 1,
+        startedAt: new Date(),
+        timeout: 25,
+      }),
+    );
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    const result = runner.execute("late-rejecting-task", {});
+    const rejection = expect(result).rejects.toBeInstanceOf(TaskExecutionTimeoutProblem);
+    await vi.advanceTimersByTimeAsync(25);
+    await rejection;
+    rejectHandler(new Error("late failure"));
+    await Promise.resolve();
+
+    expect(mockExecutionManager.fail).not.toHaveBeenCalled();
+    expect(mockExecutionManager.complete).not.toHaveBeenCalled();
+  });
+
+  it("should retry the original execution without creating a replacement", async () => {
+    const timedOut = execution({
+      id: "exec-timeout",
+      type: "test-task",
+      payload: { data: "retry" },
+      status: "timed_out",
+      attempts: 1,
+      maxAttempts: 2,
+      timeout: 100,
+    });
+    mockExecutionManager.get = vi.fn().mockResolvedValue(timedOut);
+    mockExecutionManager.retry = vi.fn().mockResolvedValue({
+      ...timedOut,
+      status: "retrying",
+    });
+    mockExecutionManager.start = vi.fn().mockResolvedValue({
+      ...timedOut,
+      status: "running",
+      attempts: 2,
+      startedAt: new Date(),
+      timeout: undefined,
+    });
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    const result = await runner.retry("exec-timeout");
+
+    expect(result).toBe("processed: retry");
+    expect(mockExecutionManager.get).toHaveBeenCalledWith("exec-timeout");
+    expect(mockExecutionManager.retry).toHaveBeenCalledWith("exec-timeout");
+    expect(mockExecutionManager.create).not.toHaveBeenCalled();
+    expect(mockExecutionManager.complete).toHaveBeenCalledWith("exec-timeout", "processed: retry");
+  });
+
+  it("should leave timed-out execution unchanged when retry task registration is missing", async () => {
+    mockExecutionManager.get = vi
+      .fn()
+      .mockResolvedValue(
+        execution({ id: "exec-missing", type: "missing-task", status: "timed_out" }),
+      );
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.retry("exec-missing")).rejects.toThrow("Task not found: 'missing-task'");
+    expect(mockExecutionManager.retry).not.toHaveBeenCalled();
+    expect(mockExecutionManager.start).not.toHaveBeenCalled();
   });
 });
