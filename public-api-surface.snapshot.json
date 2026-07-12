@@ -5644,6 +5644,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "EventPublishDroppedProblem",
+          "exportKind": "named",
+          "source": "./libs/InmemoryEventBus",
+          "declarationKind": "class"
+        },
+        {
           "name": "EventPublishFailedError",
           "exportKind": "named",
           "source": "./libs/InmemoryEventBus",

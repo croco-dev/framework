@@ -1,4 +1,10 @@
-import { DomainEvent, type EventHandler, type EventSubscription } from "@croco/events-core";
+import {
+  DomainEvent,
+  EventBusConfig,
+  EventBusStats,
+  type EventHandler,
+  type EventSubscription,
+} from "@croco/events-core";
 import {
   Container,
   Context,
@@ -9,7 +15,7 @@ import * as telemetryApi from "@croco/telemetry-api";
 import * as otelApi from "@opentelemetry/api";
 import { SpanStatusCode } from "@opentelemetry/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EventPublishFailedError, InMemoryEventBus } from "../index";
+import { EventPublishDroppedProblem, EventPublishFailedError, InMemoryEventBus } from "../index";
 
 class TestEvent extends DomainEvent {
   static readonly eventName = "TestEvent";
@@ -53,6 +59,7 @@ describe("InMemoryEventBus", () => {
 
   beforeEach(() => {
     Container.reset();
+    EventBusConfig.setStats(new EventBusStats());
     eventBus = new InMemoryEventBus();
     testHandler = new TestHandler();
     Container.reset();
@@ -812,13 +819,22 @@ describe("InMemoryEventBus", () => {
       ]);
     });
 
-    it("should drop events when using drop strategy", async () => {
-      const executionCount: string[] = [];
+    it("should reject a fully dropped publish with explicit operational evidence", async () => {
+      let releaseHandler!: () => void;
+      let markHandlerStarted!: () => void;
+      const handlerStarted = new Promise<void>((resolve) => {
+        markHandlerStarted = resolve;
+      });
+      const handlerRelease = new Promise<void>((resolve) => {
+        releaseHandler = resolve;
+      });
+      const handledMessages: string[] = [];
 
       class SlowHandler implements EventHandler<TestEvent> {
         async handle(event: TestEvent): Promise<void> {
-          executionCount.push(event.message);
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          handledMessages.push(event.message);
+          markHandlerStarted();
+          await handlerRelease;
         }
       }
 
@@ -826,18 +842,171 @@ describe("InMemoryEventBus", () => {
         maxConcurrency: 1,
         backpressureStrategy: "drop",
       });
+      const stats = new EventBusStats();
+      EventBusConfig.setStats(stats);
+      const inspector = new RuntimeInspector();
+      inspector.startRequest({ requestId: "drop-req-1" });
+      Container.set(DEV_INSPECTOR_TOKEN, inspector);
+
+      const spans: Array<{
+        name: string;
+        attributes: Record<string, unknown>;
+        span: {
+          setStatus: ReturnType<typeof vi.fn>;
+          setAttributes: ReturnType<typeof vi.fn>;
+          recordException: ReturnType<typeof vi.fn>;
+          end: ReturnType<typeof vi.fn>;
+        };
+      }> = [];
+      const mockTracer = {
+        startActiveSpan: vi.fn(
+          async (
+            name: string,
+            options: { attributes: Record<string, unknown> },
+            callback: (span: (typeof spans)[number]["span"]) => Promise<void>,
+          ) => {
+            const span = {
+              setStatus: vi.fn(),
+              setAttributes: vi.fn(),
+              recordException: vi.fn(),
+              end: vi.fn(),
+            };
+            spans.push({ name, attributes: options.attributes, span });
+            await callback(span);
+          },
+        ),
+      };
+      Object.defineProperty(dropBus, "tracer", { value: mockTracer });
 
       Container.set(SlowHandler, new SlowHandler());
       dropBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
 
-      const promise1 = dropBus.publish(new TestEvent("first"));
-      const promise2 = dropBus.publish(new TestEvent("second"));
-      const promise3 = dropBus.publish(new TestEvent("third"));
+      const firstPublish = Context.run({ requestId: "drop-req-1" }, () =>
+        dropBus.publish(new TestEvent("first-secret")),
+      );
+      await handlerStarted;
 
-      await Promise.all([promise1, promise2, promise3]);
+      await expect(
+        Context.run({ requestId: "drop-req-1" }, () =>
+          dropBus.publish(new TestEvent("second-secret")),
+        ),
+      ).rejects.toMatchObject({
+        eventName: "TestEvent",
+        deliveredCount: 0,
+        droppedCount: 1,
+        failures: [],
+      });
 
-      expect(executionCount).toHaveLength(1);
-      expect(executionCount[0]).toBe("first");
+      releaseHandler();
+      await firstPublish;
+      inspector.finishRequest({ requestId: "drop-req-1", status: 500, outcome: "failed" });
+
+      expect(handledMessages).toEqual(["first-secret"]);
+      expect(stats.getStats()).toEqual({
+        publishedCount: 1,
+        failCount: 0,
+        droppedPublishCount: 1,
+      });
+
+      const publishSpans = spans.filter(({ name }) => name === "event.publish:TestEvent");
+      expect(publishSpans[1]?.attributes).toMatchObject({
+        "event.subscriber_count": 1,
+      });
+      expect(publishSpans[1]?.span.setAttributes).toHaveBeenCalledWith({
+        "event.delivered_count": 0,
+        "event.dropped_count": 1,
+      });
+      expect(publishSpans[1]?.span.setStatus).toHaveBeenCalledWith(
+        expect.objectContaining({ code: SpanStatusCode.ERROR }),
+      );
+      expect(publishSpans[1]?.span.recordException).toHaveBeenCalledWith(
+        expect.any(EventPublishDroppedProblem),
+      );
+
+      const timeline = inspector.snapshot().requests[0].timeline;
+      expect(timeline).toContainEqual(
+        expect.objectContaining({
+          kind: "event.publish",
+          outcome: "failed",
+          name: "TestEvent",
+          details: {
+            subscriberCount: 1,
+            deliveredCount: 0,
+            droppedCount: 1,
+          },
+        }),
+      );
+      expect(JSON.stringify(timeline)).not.toContain("second-secret");
+    });
+
+    it("should report deterministic partial delivery counts", async () => {
+      class FirstHandler extends TestHandler {}
+      class SecondHandler extends TestHandler {}
+
+      const firstHandler = new FirstHandler();
+      const secondHandler = new SecondHandler();
+      const dropBus = new InMemoryEventBus<TestEvent>({
+        maxConcurrency: 1,
+        backpressureStrategy: "drop",
+      });
+      const availability = vi.spyOn(
+        dropBus as unknown as { hasAvailableSlot(): boolean },
+        "hasAvailableSlot",
+      );
+      availability.mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValueOnce(false);
+
+      Container.set(FirstHandler, firstHandler);
+      Container.set(SecondHandler, secondHandler);
+      dropBus.subscribe({ eventName: "TestEvent", handlerClass: FirstHandler });
+      dropBus.subscribe({ eventName: "TestEvent", handlerClass: SecondHandler });
+
+      await expect(dropBus.publish(new TestEvent("partial"))).rejects.toMatchObject({
+        eventName: "TestEvent",
+        deliveredCount: 1,
+        droppedCount: 1,
+        failures: [],
+      });
+      expect(firstHandler.handledEvents).toHaveLength(1);
+      expect(secondHandler.handledEvents).toHaveLength(0);
+    });
+
+    it("should preserve invoked handler failures when remaining subscribers are dropped", async () => {
+      class FirstFailingHandler extends FailingHandler {}
+      class SecondHandler extends TestHandler {}
+
+      const dropBus = new InMemoryEventBus<TestEvent>({
+        maxConcurrency: 1,
+        backpressureStrategy: "drop",
+      });
+      const availability = vi.spyOn(
+        dropBus as unknown as { hasAvailableSlot(): boolean },
+        "hasAvailableSlot",
+      );
+      availability.mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValueOnce(false);
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      Container.set(FirstFailingHandler, new FirstFailingHandler());
+      Container.set(SecondHandler, new SecondHandler());
+      dropBus.subscribe({ eventName: "TestEvent", handlerClass: FirstFailingHandler });
+      dropBus.subscribe({ eventName: "TestEvent", handlerClass: SecondHandler });
+
+      try {
+        await expect(dropBus.publish(new TestEvent("failure-and-drop"))).rejects.toMatchObject({
+          eventName: "TestEvent",
+          deliveredCount: 1,
+          droppedCount: 1,
+          failures: [
+            expect.objectContaining({
+              handlerName: "FirstFailingHandler",
+              error: expect.objectContaining({
+                message: "Handler failed intentionally",
+              }),
+            }),
+          ],
+        });
+      } finally {
+        consoleError.mockRestore();
+      }
     });
 
     it("should throw error when using error strategy", async () => {

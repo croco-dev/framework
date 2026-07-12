@@ -17,6 +17,16 @@ title: "EventBusStats"
 
 ## Methods
 
+### drop()
+
+> **drop**(): `void`
+
+#### Returns
+
+`void`
+
+***
+
 ### getStats()
 
 > **getStats**(): `object`
@@ -24,6 +34,10 @@ title: "EventBusStats"
 #### Returns
 
 `object`
+
+##### droppedPublishCount
+
+> **droppedPublishCount**: `number`
 
 ##### failCount
 

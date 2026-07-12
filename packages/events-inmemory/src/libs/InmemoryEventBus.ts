@@ -45,6 +45,27 @@ export class EventPublishFailedError extends Problem {
 }
 
 /**
+ * drop 전략이 일부 또는 전체 이벤트 핸들러 호출을 생략했을 때 발생하는 오류입니다.
+ */
+export class EventPublishDroppedProblem extends Problem {
+  readonly code = "events-inmemory/publish-dropped";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(
+    readonly eventName: string,
+    readonly deliveredCount: number,
+    readonly droppedCount: number,
+    readonly failures: EventPublishFailure[],
+  ) {
+    super(
+      undefined,
+      undefined,
+      `Dropped ${droppedCount} event subscriber(s) while publishing ${eventName} after delivering ${deliveredCount}`,
+    );
+  }
+}
+
+/**
  * 이벤트 버스 옵션이 유효하지 않을 때 발생하는 구성 오류입니다.
  */
 export class InvalidEventBusConfigurationError extends Problem {
@@ -127,7 +148,9 @@ export class InMemoryEventBus<
     try {
       await this.tracer.startActiveSpan(
         `event.publish:${eventName}`,
-        { attributes: this.createPublishSpanAttributes(event, traceInfo) },
+        {
+          attributes: this.createPublishSpanAttributes(event, traceInfo, handlerClasses.length),
+        },
         async (publishSpan: Span) =>
           this.finishPublishSpan(publishSpan, handlerClasses, baseEvent, eventName),
       );
@@ -142,18 +165,26 @@ export class InMemoryEventBus<
       });
     } catch (error) {
       const normalizedError = this.normalizeError(error);
+      const details =
+        normalizedError instanceof EventPublishDroppedProblem
+          ? {
+              subscriberCount: handlerClasses.length,
+              deliveredCount: normalizedError.deliveredCount,
+              droppedCount: normalizedError.droppedCount,
+            }
+          : {
+              subscriberCount: handlerClasses.length,
+              error: {
+                name: normalizedError.name,
+                message: normalizedError.message,
+              },
+            };
       this.recordInspectionEvent(inspector, {
         kind: "event.publish",
         outcome: "failed",
         name: eventName,
         durationMs: Date.now() - startedAt,
-        details: {
-          subscriberCount: handlerClasses.length,
-          error: {
-            name: normalizedError.name,
-            message: normalizedError.message,
-          },
-        },
+        details,
       });
       throw normalizedError;
     }
@@ -176,7 +207,15 @@ export class InMemoryEventBus<
         code: SpanStatusCode.ERROR,
         message: normalizedError.message,
       });
-      EventBusConfig.getStats()?.publish(true);
+      if (normalizedError instanceof EventPublishDroppedProblem) {
+        publishSpan.setAttributes({
+          "event.delivered_count": normalizedError.deliveredCount,
+          "event.dropped_count": normalizedError.droppedCount,
+        });
+        EventBusConfig.getStats()?.drop();
+      } else {
+        EventBusConfig.getStats()?.publish(true);
+      }
       throw normalizedError;
     } finally {
       publishSpan.end();
@@ -189,12 +228,18 @@ export class InMemoryEventBus<
     eventName: string,
   ): Promise<void> {
     const failures: EventPublishFailure[] = [];
+    let deliveredCount = 0;
 
-    for (const handlerClass of handlerClasses) {
+    for (const [index, handlerClass] of handlerClasses.entries()) {
       if (!this.hasAvailableSlot()) {
         switch (this.backpressureStrategy) {
           case "drop": {
-            return;
+            throw new EventPublishDroppedProblem(
+              eventName,
+              deliveredCount,
+              handlerClasses.length - index,
+              failures,
+            );
           }
           case "error": {
             throw new BackpressureExceededProblem(this.runningHandlers.size);
@@ -207,6 +252,7 @@ export class InMemoryEventBus<
       }
 
       const failure = await this.executeSubscriberWithTracking(handlerClass, baseEvent, eventName);
+      deliveredCount++;
       if (failure) {
         failures.push(failure);
       }
@@ -344,9 +390,11 @@ export class InMemoryEventBus<
   private createPublishSpanAttributes(
     event: TEvent,
     traceInfo: TraceInfo,
+    subscriberCount: number,
   ): Record<string, boolean | number | string> {
     return {
       "event.name": event.eventName,
+      "event.subscriber_count": subscriberCount,
       "event.timestamp": event.timestamp.toISOString(),
       "trace.id": traceInfo.traceId ?? "",
       "trace.span_id": traceInfo.spanId ?? "",
