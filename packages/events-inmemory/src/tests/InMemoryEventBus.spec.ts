@@ -47,6 +47,19 @@ class FailingHandler implements EventHandler<TestEvent> {
   }
 }
 
+function createDeferred() {
+  let resolve: (() => void) | undefined;
+  const promise = new Promise<void>((resolver) => {
+    resolve = resolver;
+  });
+
+  if (!resolve) {
+    throw new Error("Deferred resolver was not initialized");
+  }
+
+  return { promise, resolve };
+}
+
 describe("InMemoryEventBus", () => {
   let eventBus!: InMemoryEventBus;
   let testHandler!: TestHandler;
@@ -115,7 +128,11 @@ describe("InMemoryEventBus", () => {
       await Context.run({ requestId: "event-req-1" }, async () => {
         await eventBus.publish(new TestEvent("payload-not-recorded"));
       });
-      inspector.finishRequest({ requestId: "event-req-1", status: 200, outcome: "succeeded" });
+      inspector.finishRequest({
+        requestId: "event-req-1",
+        status: 200,
+        outcome: "succeeded",
+      });
 
       const timeline = inspector.snapshot().requests[0].timeline;
 
@@ -180,7 +197,10 @@ describe("InMemoryEventBus", () => {
 
         const handler = new RecordingHandler();
         Container.set(RecordingHandler, handler);
-        eventBus.subscribe({ eventName: "TestEvent", handlerClass: RecordingHandler });
+        eventBus.subscribe({
+          eventName: "TestEvent",
+          handlerClass: RecordingHandler,
+        });
 
         await eventBus.publish(new TestEvent("characterization-single"));
 
@@ -205,8 +225,14 @@ describe("InMemoryEventBus", () => {
         Container.set(FirstHandler, new FirstHandler());
         Container.set(SecondHandler, new SecondHandler());
 
-        eventBus.subscribe({ eventName: "TestEvent", handlerClass: FirstHandler });
-        eventBus.subscribe({ eventName: "TestEvent", handlerClass: SecondHandler });
+        eventBus.subscribe({
+          eventName: "TestEvent",
+          handlerClass: FirstHandler,
+        });
+        eventBus.subscribe({
+          eventName: "TestEvent",
+          handlerClass: SecondHandler,
+        });
 
         await eventBus.publish(new TestEvent("characterization-order"));
 
@@ -238,9 +264,18 @@ describe("InMemoryEventBus", () => {
         Container.set(SecondHandler, new SecondHandler());
         Container.set(ThirdHandler, new ThirdHandler());
 
-        eventBus.subscribe({ eventName: "TestEvent", handlerClass: FirstHandler });
-        eventBus.subscribe({ eventName: "TestEvent", handlerClass: SecondHandler });
-        eventBus.subscribe({ eventName: "TestEvent", handlerClass: ThirdHandler });
+        eventBus.subscribe({
+          eventName: "TestEvent",
+          handlerClass: FirstHandler,
+        });
+        eventBus.subscribe({
+          eventName: "TestEvent",
+          handlerClass: SecondHandler,
+        });
+        eventBus.subscribe({
+          eventName: "TestEvent",
+          handlerClass: ThirdHandler,
+        });
 
         await eventBus.publish(new TestEvent("characterization-order-3"));
 
@@ -257,8 +292,14 @@ describe("InMemoryEventBus", () => {
         Container.set(SuccessHandler, successHandler);
         Container.set(FailHandler, new FailHandler());
 
-        eventBus.subscribe({ eventName: "TestEvent", handlerClass: FailHandler });
-        eventBus.subscribe({ eventName: "TestEvent", handlerClass: SuccessHandler });
+        eventBus.subscribe({
+          eventName: "TestEvent",
+          handlerClass: FailHandler,
+        });
+        eventBus.subscribe({
+          eventName: "TestEvent",
+          handlerClass: SuccessHandler,
+        });
 
         await expect(
           eventBus.publish(new TestEvent("characterization-error")),
@@ -267,7 +308,9 @@ describe("InMemoryEventBus", () => {
           failures: [
             expect.objectContaining({
               handlerName: "FailHandler",
-              error: expect.objectContaining({ message: "Handler failed intentionally" }),
+              error: expect.objectContaining({
+                message: "Handler failed intentionally",
+              }),
             }),
           ],
         });
@@ -350,7 +393,10 @@ describe("InMemoryEventBus", () => {
       Container.set(FailHandler, failHandler);
 
       eventBus.subscribe({ eventName: "TestEvent", handlerClass: FailHandler });
-      eventBus.subscribe({ eventName: "TestEvent", handlerClass: SuccessHandler });
+      eventBus.subscribe({
+        eventName: "TestEvent",
+        handlerClass: SuccessHandler,
+      });
 
       const event = new TestEvent("test");
       await expect(eventBus.publish(event)).rejects.toMatchObject({
@@ -358,7 +404,9 @@ describe("InMemoryEventBus", () => {
         failures: [
           expect.objectContaining({
             handlerName: "FailHandler",
-            error: expect.objectContaining({ message: "Handler failed intentionally" }),
+            error: expect.objectContaining({
+              message: "Handler failed intentionally",
+            }),
           }),
         ],
       });
@@ -395,7 +443,10 @@ describe("InMemoryEventBus", () => {
 
       const handler = new TraceContextMutatingHandler();
       Container.set(TraceContextMutatingHandler, handler);
-      eventBus.subscribe({ eventName: "TestEvent", handlerClass: TraceContextMutatingHandler });
+      eventBus.subscribe({
+        eventName: "TestEvent",
+        handlerClass: TraceContextMutatingHandler,
+      });
 
       const sharedTraceContext = {
         traceId: "trace-1",
@@ -477,7 +528,10 @@ describe("InMemoryEventBus", () => {
     it("should pass Error object to recordException", async () => {
       const failHandler = new FailingHandler();
       Container.set(FailingHandler, failHandler);
-      eventBus.subscribe({ eventName: "TestEvent", handlerClass: FailingHandler });
+      eventBus.subscribe({
+        eventName: "TestEvent",
+        handlerClass: FailingHandler,
+      });
 
       const publishSpan = {
         setStatus: vi.fn(),
@@ -526,7 +580,10 @@ describe("InMemoryEventBus", () => {
 
       const failHandler = new StackFailingHandler();
       Container.set(StackFailingHandler, failHandler);
-      eventBus.subscribe({ eventName: "TestEvent", handlerClass: StackFailingHandler });
+      eventBus.subscribe({
+        eventName: "TestEvent",
+        handlerClass: StackFailingHandler,
+      });
 
       const publishSpan = {
         setStatus: vi.fn(),
@@ -578,7 +635,10 @@ describe("InMemoryEventBus", () => {
       Container.set(FailHandler, failHandler);
 
       eventBus.subscribe({ eventName: "TestEvent", handlerClass: FailHandler });
-      eventBus.subscribe({ eventName: "TestEvent", handlerClass: SuccessHandler });
+      eventBus.subscribe({
+        eventName: "TestEvent",
+        handlerClass: SuccessHandler,
+      });
 
       const publishSpan = {
         setStatus: vi.fn(),
@@ -613,7 +673,9 @@ describe("InMemoryEventBus", () => {
         failures: [
           expect.objectContaining({
             handlerName: "FailHandler",
-            error: expect.objectContaining({ message: "Handler failed intentionally" }),
+            error: expect.objectContaining({
+              message: "Handler failed intentionally",
+            }),
           }),
         ],
       });
@@ -696,30 +758,43 @@ describe("InMemoryEventBus", () => {
       expect(() => eventBus.unsubscribe(subscription)).not.toThrow();
     });
 
-    it("should clean up running handlers on unsubscribe", async () => {
-      class SlowHandler implements EventHandler<TestEvent> {
-        public static completeCount = 0;
+    it("should preserve active handlers until they settle after unsubscribe", async () => {
+      const started = createDeferred();
+      const release = createDeferred();
+      const handledMessages: string[] = [];
 
-        async handle(): Promise<void> {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          SlowHandler.completeCount++;
+      class SlowHandler implements EventHandler<TestEvent> {
+        async handle(event: TestEvent): Promise<void> {
+          handledMessages.push(event.message);
+          started.resolve();
+          await release.promise;
         }
       }
 
       const limitedBus = new InMemoryEventBus({ maxConcurrency: 1 });
 
       Container.set(SlowHandler, new SlowHandler());
-      limitedBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
+      limitedBus.subscribe({
+        eventName: "TestEvent",
+        handlerClass: SlowHandler,
+      });
 
-      limitedBus.publish(new TestEvent("slow1"));
-      limitedBus.publish(new TestEvent("slow2"));
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      const publishPromise = limitedBus.publish(new TestEvent("active"));
+      await started.promise;
 
       expect(limitedBus.getRunningHandlerCount()).toBe(1);
 
-      limitedBus.unsubscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
+      limitedBus.unsubscribe({
+        eventName: "TestEvent",
+        handlerClass: SlowHandler,
+      });
 
+      expect(limitedBus.getRunningHandlerCount()).toBe(1);
+      await limitedBus.publish(new TestEvent("after-unsubscribe"));
+      expect(handledMessages).toEqual(["active"]);
+
+      release.resolve();
+      await publishPromise;
       expect(limitedBus.getRunningHandlerCount()).toBe(0);
     });
   });
@@ -736,26 +811,40 @@ describe("InMemoryEventBus", () => {
       expect(testHandler.handledEvents).toHaveLength(0);
     });
 
-    it("should clear running handlers", async () => {
+    it("should preserve active handlers until they settle after clear", async () => {
+      const started = createDeferred();
+      const release = createDeferred();
+      const handledMessages: string[] = [];
+
       class SlowHandler implements EventHandler<TestEvent> {
-        async handle(): Promise<void> {
-          await new Promise((resolve) => setTimeout(resolve, 100));
+        async handle(event: TestEvent): Promise<void> {
+          handledMessages.push(event.message);
+          started.resolve();
+          await release.promise;
         }
       }
 
       const limitedBus = new InMemoryEventBus({ maxConcurrency: 1 });
 
       Container.set(SlowHandler, new SlowHandler());
-      limitedBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
+      limitedBus.subscribe({
+        eventName: "TestEvent",
+        handlerClass: SlowHandler,
+      });
 
-      limitedBus.publish(new TestEvent("slow"));
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      const publishPromise = limitedBus.publish(new TestEvent("active"));
+      await started.promise;
 
       expect(limitedBus.getRunningHandlerCount()).toBe(1);
 
       limitedBus.clear();
 
+      expect(limitedBus.getRunningHandlerCount()).toBe(1);
+      await limitedBus.publish(new TestEvent("after-clear"));
+      expect(handledMessages).toEqual(["active"]);
+
+      release.resolve();
+      await publishPromise;
       expect(limitedBus.getRunningHandlerCount()).toBe(0);
     });
   });
@@ -794,7 +883,10 @@ describe("InMemoryEventBus", () => {
       });
 
       Container.set(SlowHandler, new SlowHandler());
-      limitedBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
+      limitedBus.subscribe({
+        eventName: "TestEvent",
+        handlerClass: SlowHandler,
+      });
 
       await Promise.all([
         limitedBus.publish(new TestEvent("first")),
@@ -810,6 +902,145 @@ describe("InMemoryEventBus", () => {
         "start-third",
         "end-third",
       ]);
+    });
+
+    it.each(["unsubscribe", "clear"] as const)(
+      "should not release a waiting publisher when subscriptions %s",
+      async (operation) => {
+        const firstStarted = createDeferred();
+        const firstRelease = createDeferred();
+        const secondStarted = createDeferred();
+        const secondRelease = createDeferred();
+        const executionOrder: string[] = [];
+
+        class BlockingHandler implements EventHandler<TestEvent> {
+          async handle(event: TestEvent): Promise<void> {
+            executionOrder.push(`start-${event.message}`);
+            if (event.message === "first") {
+              firstStarted.resolve();
+              await firstRelease.promise;
+            } else {
+              secondStarted.resolve();
+              await secondRelease.promise;
+            }
+            executionOrder.push(`end-${event.message}`);
+          }
+        }
+
+        const limitedBus = new InMemoryEventBus<TestEvent>({
+          maxConcurrency: 1,
+          backpressureStrategy: "block",
+        });
+        const subscription = {
+          eventName: "TestEvent",
+          handlerClass: BlockingHandler,
+        };
+
+        Container.set(BlockingHandler, new BlockingHandler());
+        limitedBus.subscribe(subscription);
+
+        const firstPublish = limitedBus.publish(new TestEvent("first"));
+        await firstStarted.promise;
+        const secondPublish = limitedBus.publish(new TestEvent("second"));
+        await Promise.resolve();
+
+        const internals = limitedBus as unknown as {
+          slotWaiters: Set<() => void>;
+        };
+        expect(internals.slotWaiters.size).toBe(1);
+
+        if (operation === "unsubscribe") {
+          limitedBus.unsubscribe(subscription);
+        } else {
+          limitedBus.clear();
+        }
+
+        expect(limitedBus.getRunningHandlerCount()).toBe(1);
+        expect(executionOrder).toEqual(["start-first"]);
+
+        firstRelease.resolve();
+        await secondStarted.promise;
+        expect(executionOrder).toEqual(["start-first", "end-first", "start-second"]);
+
+        secondRelease.resolve();
+        await Promise.all([firstPublish, secondPublish]);
+        expect(limitedBus.getRunningHandlerCount()).toBe(0);
+      },
+    );
+
+    it("should keep clear and re-subscribe invocation identifiers collision-free", async () => {
+      const firstStarted = createDeferred();
+      const firstRelease = createDeferred();
+      const secondStarted = createDeferred();
+      const secondRelease = createDeferred();
+
+      class BlockingHandler implements EventHandler<TestEvent> {
+        async handle(event: TestEvent): Promise<void> {
+          if (event.message === "first") {
+            firstStarted.resolve();
+            await firstRelease.promise;
+          } else {
+            secondStarted.resolve();
+            await secondRelease.promise;
+          }
+        }
+      }
+
+      const limitedBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 2 });
+      const subscription = {
+        eventName: "TestEvent",
+        handlerClass: BlockingHandler,
+      };
+
+      Container.set(BlockingHandler, new BlockingHandler());
+      limitedBus.subscribe(subscription);
+
+      const firstPublish = limitedBus.publish(new TestEvent("first"));
+      await firstStarted.promise;
+      limitedBus.clear();
+      limitedBus.subscribe(subscription);
+
+      const secondPublish = limitedBus.publish(new TestEvent("second"));
+      await secondStarted.promise;
+
+      expect(limitedBus.getRunningHandlerCount()).toBe(2);
+      expect(limitedBus.getRunningHandlers()).toHaveLength(2);
+
+      firstRelease.resolve();
+      secondRelease.resolve();
+      await Promise.all([firstPublish, secondPublish]);
+      expect(limitedBus.getRunningHandlerCount()).toBe(0);
+    });
+
+    it("should preserve failure aggregation when an active handler is unsubscribed", async () => {
+      const started = createDeferred();
+      const release = createDeferred();
+
+      class DeferredFailingHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          started.resolve();
+          await release.promise;
+          throw new Error("Deferred handler failed intentionally");
+        }
+      }
+
+      const limitedBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const subscription = {
+        eventName: "TestEvent",
+        handlerClass: DeferredFailingHandler,
+      };
+
+      Container.set(DeferredFailingHandler, new DeferredFailingHandler());
+      limitedBus.subscribe(subscription);
+
+      const publishPromise = limitedBus.publish(new TestEvent("failure"));
+      await started.promise;
+      limitedBus.unsubscribe(subscription);
+
+      expect(limitedBus.getRunningHandlerCount()).toBe(1);
+      release.resolve();
+      await expect(publishPromise).rejects.toBeInstanceOf(EventPublishFailedError);
+      expect(limitedBus.getRunningHandlerCount()).toBe(0);
     });
 
     it("should drop events when using drop strategy", async () => {
@@ -883,7 +1114,10 @@ describe("InMemoryEventBus", () => {
         });
 
         Container.set(SlowHandler, new SlowHandler());
-        timeoutBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
+        timeoutBus.subscribe({
+          eventName: "TestEvent",
+          handlerClass: SlowHandler,
+        });
 
         const firstPublish = timeoutBus.publish(new TestEvent("first"));
         await vi.advanceTimersByTimeAsync(1);
@@ -923,7 +1157,10 @@ describe("InMemoryEventBus", () => {
         });
 
         Container.set(BlockingHandler, new BlockingHandler());
-        blockBus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
+        blockBus.subscribe({
+          eventName: "TestEvent",
+          handlerClass: BlockingHandler,
+        });
 
         const firstPublish = blockBus.publish(new TestEvent("first"));
         await vi.advanceTimersByTimeAsync(1);
@@ -1006,7 +1243,10 @@ describe("InMemoryEventBus", () => {
       const limitedBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
 
       Container.set(BlockingHandler, new BlockingHandler());
-      limitedBus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
+      limitedBus.subscribe({
+        eventName: "TestEvent",
+        handlerClass: BlockingHandler,
+      });
 
       const publishPromise = limitedBus.publish(new TestEvent("block"));
 
@@ -1037,7 +1277,10 @@ describe("InMemoryEventBus", () => {
       const unlimitedBus = new InMemoryEventBus<TestEvent>();
 
       Container.set(SlowHandler, new SlowHandler());
-      unlimitedBus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });
+      unlimitedBus.subscribe({
+        eventName: "TestEvent",
+        handlerClass: SlowHandler,
+      });
 
       await Promise.all([
         unlimitedBus.publish(new TestEvent("first")),
@@ -1072,10 +1315,14 @@ describe("InMemoryEventBus", () => {
       expect(bus.getRunningHandlerCount()).toBe(0);
     });
 
-    it("should release all references on clear", async () => {
+    it("should release active handler references after settlement following clear", async () => {
+      const started = createDeferred();
+      const release = createDeferred();
+
       class SlowHandler implements EventHandler<TestEvent> {
         async handle(): Promise<void> {
-          await new Promise((resolve) => setTimeout(resolve, 50));
+          started.resolve();
+          await release.promise;
         }
       }
 
@@ -1086,13 +1333,14 @@ describe("InMemoryEventBus", () => {
 
       const publishPromise = bus.publish(new TestEvent("slow"));
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await started.promise;
       expect(bus.getRunningHandlerCount()).toBe(1);
 
       bus.clear();
 
-      expect(bus.getRunningHandlerCount()).toBe(0);
+      expect(bus.getRunningHandlerCount()).toBe(1);
 
+      release.resolve();
       await publishPromise;
 
       expect(bus.getRunningHandlerCount()).toBe(0);
