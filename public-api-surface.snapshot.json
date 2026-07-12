@@ -16180,6 +16180,12 @@
           "exportKind": "named",
           "source": "./libs/problems/BatchLoadProblems",
           "declarationKind": "class"
+        },
+        {
+          "name": "BatchLoaderScopeCollisionProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/BatchLoadProblems",
+          "declarationKind": "class"
         }
       ],
       "typeExports": [
@@ -16210,6 +16216,21 @@
           "name": "BatchLoaderLike",
           "exportKind": "named",
           "source": "./libs/IBatchLoaderFactory"
+        },
+        {
+          "name": "BatchLoadOptions",
+          "exportKind": "named",
+          "source": "./libs/decorators/BatchLoad"
+        },
+        {
+          "name": "BatchLoadScope",
+          "exportKind": "named",
+          "source": "./libs/decorators/BatchLoad"
+        },
+        {
+          "name": "BatchLoadScopeResolver",
+          "exportKind": "named",
+          "source": "./libs/decorators/BatchLoad"
         },
         {
           "name": "IBatchLoaderFactory",
