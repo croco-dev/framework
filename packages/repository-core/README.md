@@ -129,8 +129,53 @@ interface BatchLoadOptions {
    * Defaults to `${ClassName}:${methodName}` if not provided.
    */
   name?: string;
+
+  /**
+   * Resolves the identity of the repository, tenant, data source, or transaction boundary that
+   * may safely share one request-scoped loader. Defaults to the repository instance.
+   */
+  scope?: (repository: object) => string | number | bigint | boolean | symbol | object;
 }
 ```
+
+By default, two repository instances never share a loader, even when they have the same class. To
+share batching and cached values across instances, return the same safe scope identity explicitly:
+
+```typescript
+const dataSourceScope = Symbol("primary-data-source");
+
+class UserRepository {
+  @BatchLoad<UserRepository>({
+    by: "id",
+    scope: () => dataSourceScope,
+  })
+  async findById(id: string): Promise<User | null> {
+    // ...
+  }
+}
+```
+
+Transaction-aware repositories should resolve the active transaction on every invocation so a
+repository that changes transactions cannot reuse an earlier loader:
+
+```typescript
+class TransactionalUserRepository {
+  activeTransaction: object;
+
+  @BatchLoad<TransactionalUserRepository>({
+    by: "id",
+    scope: (repository) => repository.activeTransaction,
+  })
+  async findById(id: string): Promise<User | null> {
+    // ...
+  }
+}
+```
+
+Equal primitive scope values intentionally share. Prefer an object or symbol when the scope must
+use reference identity. An explicit `name` is a strict alias: reusing it with another decorated
+method or resolved scope in the same request throws `BatchLoaderScopeCollisionProblem` instead of
+silently reading from the wrong backing store.
 
 ## Type Safety
 

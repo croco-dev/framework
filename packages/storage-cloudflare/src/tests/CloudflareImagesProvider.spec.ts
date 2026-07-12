@@ -314,6 +314,24 @@ describe("CloudflareImagesProvider", () => {
         code: "storage-cloudflare/validation-failed",
       });
     });
+
+    it.each([
+      ["invalid JSON", async () => Promise.reject(new SyntaxError("Unexpected token"))],
+      ["missing success", async () => ({ errors: [] })],
+      ["missing errors", async () => ({ success: false })],
+      ["non-array errors", async () => ({ success: false, errors: "Invalid file" })],
+      ["invalid result shape", async () => ({ success: true, errors: [], result: [] })],
+    ])("should convert a %s upload response into a provider Problem", async (_label, json) => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json });
+
+      await expect(provider.put("test.jpg", Buffer.from("test-image-data"))).rejects.toMatchObject({
+        code: "storage-cloudflare/terminal-upstream",
+        extensions: {
+          operation: "put",
+          upstreamCode: "invalid-response",
+        },
+      });
+    });
   });
 
   describe("get", () => {
@@ -863,8 +881,39 @@ describe("CloudflareImagesProvider", () => {
       await provider.put(key, Readable.from(data), { contentType: "image/jpeg" });
 
       await expect(provider.get(key)).resolves.toEqual(data);
+      await expect(provider.getMetadata(key)).resolves.toMatchObject({ size: data.length });
       await provider.delete(key);
       await expect(provider.exists(key)).resolves.toBe(false);
+    });
+  });
+
+  describe("caller key validation", () => {
+    it.each([".", "..", "folder/../image.jpg", "folder/./image.jpg"])(
+      "should reject dot-segment key %s before URL construction",
+      async (key) => {
+        expect(() => provider.getPublicUrl(key)).toThrow(CloudflareImagesValidationProblem);
+        await expect(provider.delete(key)).rejects.toMatchObject({
+          code: "storage-cloudflare/validation-failed",
+          extensions: {
+            operation: "delete",
+            upstreamCode: "image-id-dot-segment",
+          },
+        });
+        expect(mockFetch).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should reject a dot-segment upload key before creating a request", async () => {
+      await expect(provider.put("folder/../image.jpg", Buffer.from("image"))).rejects.toMatchObject(
+        {
+          code: "storage-cloudflare/validation-failed",
+          extensions: {
+            operation: "put",
+            upstreamCode: "image-id-dot-segment",
+          },
+        },
+      );
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 
@@ -992,6 +1041,47 @@ describe("CloudflareImagesProvider", () => {
 
       await expect(provider.getUploadIntent("new-image.jpg")).rejects.toMatchObject({
         code: "storage-cloudflare/validation-failed",
+      });
+    });
+
+    it.each([
+      ["invalid JSON", async () => Promise.reject(new SyntaxError("Unexpected token"))],
+      ["missing success", async () => ({ errors: [] })],
+      ["missing errors", async () => ({ success: false })],
+      ["non-array errors", async () => ({ success: false, errors: "Invalid request" })],
+      ["invalid result shape", async () => ({ success: true, errors: [], result: [] })],
+    ])(
+      "should convert a %s upload-intent response into a provider Problem",
+      async (_label, json) => {
+        mockFetch.mockResolvedValueOnce({ ok: true, json });
+
+        await expect(provider.getUploadIntent("new-image.jpg")).rejects.toMatchObject({
+          code: "storage-cloudflare/terminal-upstream",
+          extensions: {
+            operation: "upload-intent",
+            upstreamCode: "invalid-response",
+          },
+        });
+      },
+    );
+
+    it.each([
+      ["missing upload URL", { id: "uploaded-image-id" }],
+      ["non-string upload URL", { uploadURL: 42, id: "uploaded-image-id" }],
+      ["missing image id", { uploadURL: "https://upload.cloudflare.com/example" }],
+      ["non-string image id", { uploadURL: "https://upload.cloudflare.com/example", id: 42 }],
+    ])("should reject a %s in a successful upload-intent response", async (_label, result) => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, errors: [], result }),
+      });
+
+      await expect(provider.getUploadIntent("new-image.jpg")).rejects.toMatchObject({
+        code: "storage-cloudflare/terminal-upstream",
+        extensions: {
+          operation: "upload-intent",
+          upstreamCode: "invalid-response",
+        },
       });
     });
 

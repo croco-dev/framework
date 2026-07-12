@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { describe, expect, it, vi } from "vitest";
 import { NoBackoff } from "../libs/BackoffPolicy";
+import { CircuitBreaker } from "../libs/CircuitBreaker";
 import { InMemoryCircuitBreakerStateStore } from "../libs/CircuitBreakerState";
 import {
   CircuitBreakerOpenProblem,
@@ -11,6 +12,18 @@ import { runWithLambdaContext } from "../libs/LambdaTimeoutGuard";
 import { Recover } from "../libs/Recover";
 import { Retryable } from "../libs/Retryable";
 import type { RetryPolicy } from "../libs/RetryPolicy";
+
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+} {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve };
+}
 
 describe("@Retryable", () => {
   it("retries method and succeeds", async () => {
@@ -257,7 +270,7 @@ describe("@Retryable", () => {
     }
   });
 
-  it("keeps the default circuit id shared across different arguments", async () => {
+  it("keeps open state for the default circuit id across sequential calls", async () => {
     const attempts: string[] = [];
 
     class TestService {
@@ -281,7 +294,7 @@ describe("@Retryable", () => {
     await expect(service.doWork("tenant-a")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
     await expect(service.doWork("tenant-b")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
 
-    expect(attempts).toEqual(["tenant-a", "tenant-b"]);
+    expect(attempts).toEqual(["tenant-a"]);
   });
 
   it("allows custom circuit ids to isolate circuit breaker state", async () => {
@@ -308,8 +321,401 @@ describe("@Retryable", () => {
 
     await expect(service.doWork("tenant-a")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
     await expect(service.doWork("tenant-b")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    await expect(service.doWork("tenant-a")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
 
     expect(attempts).toEqual(["tenant-a", "tenant-b"]);
+  });
+
+  it("shares circuit state across service instances", async () => {
+    let attempts = 0;
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 1,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: {
+          failureThreshold: 1,
+          timeout: 1000,
+        },
+      })
+      async doWork(): Promise<void> {
+        attempts++;
+        throw new Error("fail");
+      }
+    }
+
+    await expect(new TestService().doWork()).rejects.toThrow("fail");
+    await expect(new TestService().doWork()).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+
+    expect(attempts).toBe(1);
+  });
+
+  it("keeps open duration and half-open success state across calls", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    try {
+      let attempts = 0;
+      let shouldFail = true;
+
+      class TestService {
+        @Retryable({
+          maxAttempts: 1,
+          backoffPolicy: new NoBackoff(),
+          circuitBreaker: {
+            failureThreshold: 1,
+            successThreshold: 2,
+            timeout: 1000,
+          },
+        })
+        async doWork(): Promise<string> {
+          attempts++;
+          if (shouldFail) {
+            throw new Error("fail");
+          }
+
+          return "success";
+        }
+      }
+
+      const service = new TestService();
+      await expect(service.doWork()).rejects.toThrow("fail");
+
+      shouldFail = false;
+      await expect(service.doWork()).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+      expect(attempts).toBe(1);
+
+      vi.advanceTimersByTime(1000);
+
+      await expect(service.doWork()).resolves.toBe("success");
+      await expect(service.doWork()).resolves.toBe("success");
+      await expect(service.doWork()).resolves.toBe("success");
+      expect(attempts).toBe(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("preserves half-open recovery on the first call after a long open duration", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    try {
+      const openDuration = 10 * 60 * 1000;
+      let attempts = 0;
+      let shouldFail = true;
+
+      class TestService {
+        @Retryable({
+          maxAttempts: 1,
+          backoffPolicy: new NoBackoff(),
+          circuitBreaker: {
+            failureThreshold: 3,
+            successThreshold: 2,
+            timeout: openDuration,
+          },
+        })
+        async doWork(): Promise<void> {
+          attempts++;
+          if (shouldFail) {
+            throw new Error("fail");
+          }
+        }
+      }
+
+      const service = new TestService();
+      await expect(service.doWork()).rejects.toThrow("fail");
+      await expect(service.doWork()).rejects.toThrow("fail");
+      await expect(service.doWork()).rejects.toThrow("fail");
+
+      vi.advanceTimersByTime(openDuration + 1);
+      shouldFail = false;
+      await expect(service.doWork()).resolves.toBeUndefined();
+
+      shouldFail = true;
+      await expect(service.doWork()).rejects.toThrow("fail");
+      await expect(service.doWork()).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+      expect(attempts).toBe(5);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("reopens after a failed half-open probe across calls", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    try {
+      let attempts = 0;
+
+      class TestService {
+        @Retryable({
+          maxAttempts: 1,
+          backoffPolicy: new NoBackoff(),
+          circuitBreaker: {
+            failureThreshold: 1,
+            timeout: 1000,
+          },
+        })
+        async doWork(): Promise<void> {
+          attempts++;
+          throw new Error("fail");
+        }
+      }
+
+      const service = new TestService();
+      await expect(service.doWork()).rejects.toThrow("fail");
+      vi.advanceTimersByTime(1000);
+      await expect(service.doWork()).rejects.toThrow("fail");
+      await expect(service.doWork()).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+      expect(attempts).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shares same-id concurrent admission across decorated calls", async () => {
+    const first = createDeferred<void>();
+    const second = createDeferred<void>();
+    const entered: number[] = [];
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 1,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: {
+          failureThreshold: 2,
+          timeout: 1000,
+        },
+      })
+      async doWork(call: number): Promise<void> {
+        entered.push(call);
+        if (call === 1) {
+          return first.promise;
+        }
+        if (call === 2) {
+          return second.promise;
+        }
+      }
+    }
+
+    const service = new TestService();
+    const firstCall = service.doWork(1);
+    const secondCall = service.doWork(2);
+
+    await vi.waitFor(() => expect(entered).toEqual([1, 2]));
+    await expect(service.doWork(3)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(entered).toEqual([1, 2]);
+
+    first.resolve();
+    second.resolve();
+    await expect(firstCall).resolves.toBeUndefined();
+    await expect(secondCall).resolves.toBeUndefined();
+    await expect(service.doWork(4)).resolves.toBeUndefined();
+    expect(entered).toEqual([1, 2, 4]);
+  });
+
+  it("uses a supplied state store without resetting it during registry churn", async () => {
+    const stateStore = new InMemoryCircuitBreakerStateStore({
+      idleTtlMs: 0,
+      maxEntries: 2000,
+    });
+    const resetSpy = vi.spyOn(stateStore, "reset");
+    const attempts: string[] = [];
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 1,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: {
+          failureThreshold: 1,
+          stateStore,
+          timeout: 60_000,
+        },
+        circuitIdResolver: ({ args }) => String(args[0]),
+      })
+      async doWork(circuitId: string): Promise<void> {
+        attempts.push(circuitId);
+        throw new Error(`fail:${circuitId}`);
+      }
+    }
+
+    const service = new TestService();
+    for (let index = 0; index <= 1000; index++) {
+      await expect(service.doWork(`circuit-${index}`)).rejects.toThrow(`fail:circuit-${index}`);
+    }
+
+    await expect(service.doWork("circuit-0")).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(attempts.filter((circuitId) => circuitId === "circuit-0")).toHaveLength(1);
+    expect(resetSpy).not.toHaveBeenCalled();
+  });
+
+  it("releases registry activity when synchronous invocation setup fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    const stateStore = new InMemoryCircuitBreakerStateStore({
+      idleTtlMs: 0,
+      maxEntries: 2000,
+    });
+    const resetSpy = vi.spyOn(stateStore, "reset");
+    const executeSpy = vi.spyOn(CircuitBreaker.prototype, "execute");
+
+    try {
+      class TestService {
+        @Retryable({
+          maxAttempts: 1,
+          backoffPolicy: new NoBackoff(),
+          circuitBreaker: {
+            failureThreshold: 2,
+            stateStore,
+            timeout: 1000,
+          },
+          circuitIdResolver: ({ args }) => String(args[0]),
+        })
+        async doWork(_circuitId: string): Promise<void> {}
+      }
+
+      const service = new TestService();
+      const setupFailureReceiver = new Proxy(service, {
+        getPrototypeOf: () => {
+          throw new Error("prototype unavailable");
+        },
+      });
+
+      await expect(Reflect.apply(service.doWork, setupFailureReceiver, ["failed"])).rejects.toThrow(
+        "prototype unavailable",
+      );
+
+      for (let index = 0; index < 1000; index++) {
+        vi.setSystemTime(index + 1);
+        await expect(service.doWork(`normal-${index}`)).resolves.toBeUndefined();
+      }
+
+      const firstNormalBreaker = executeSpy.mock.contexts[0];
+      vi.setSystemTime(2000);
+      await expect(service.doWork("normal-0")).resolves.toBeUndefined();
+
+      expect(executeSpy.mock.contexts[1000]).toBe(firstNormalBreaker);
+      expect(resetSpy).not.toHaveBeenCalled();
+    } finally {
+      executeSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("retains exactly one thousand inactive registry entries", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+
+    const stateStore = new InMemoryCircuitBreakerStateStore({
+      idleTtlMs: 0,
+      maxEntries: 2000,
+    });
+    const resetSpy = vi.spyOn(stateStore, "reset");
+    const executeSpy = vi.spyOn(CircuitBreaker.prototype, "execute");
+
+    try {
+      class TestService {
+        @Retryable({
+          maxAttempts: 1,
+          backoffPolicy: new NoBackoff(),
+          circuitBreaker: {
+            failureThreshold: 2,
+            stateStore,
+            timeout: 1000,
+          },
+          circuitIdResolver: ({ args }) => String(args[0]),
+        })
+        async doWork(_circuitId: string): Promise<void> {}
+      }
+
+      const service = new TestService();
+      for (let index = 0; index < 1000; index++) {
+        vi.setSystemTime(index + 1);
+        await expect(service.doWork(`circuit-${index}`)).resolves.toBeUndefined();
+      }
+
+      const firstBreaker = executeSpy.mock.contexts[0];
+      const secondBreaker = executeSpy.mock.contexts[1];
+
+      vi.setSystemTime(2000);
+      await expect(service.doWork("circuit-0")).resolves.toBeUndefined();
+      expect(executeSpy.mock.contexts[1000]).toBe(firstBreaker);
+
+      vi.setSystemTime(2001);
+      await expect(service.doWork("circuit-1000")).resolves.toBeUndefined();
+      vi.setSystemTime(2002);
+      await expect(service.doWork("circuit-1")).resolves.toBeUndefined();
+
+      expect(executeSpy.mock.contexts[1002]).not.toBe(secondBreaker);
+      expect(resetSpy).not.toHaveBeenCalled();
+    } finally {
+      executeSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("releases cached closed admission exactly once when a store lock rejects", async () => {
+    class RejectFirstLockStore extends InMemoryCircuitBreakerStateStore {
+      private shouldReject = true;
+
+      override async withCircuitLock<T>(
+        circuitId: string,
+        operation: () => Promise<T>,
+      ): Promise<T> {
+        if (this.shouldReject) {
+          this.shouldReject = false;
+          throw new Error("lock unavailable");
+        }
+
+        return super.withCircuitLock(circuitId, operation);
+      }
+    }
+
+    const first = createDeferred<void>();
+    const third = createDeferred<void>();
+    const entered: number[] = [];
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 1,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: {
+          failureThreshold: 2,
+          stateStore: new RejectFirstLockStore(),
+          timeout: 1000,
+        },
+      })
+      async doWork(call: number): Promise<void> {
+        entered.push(call);
+        if (call === 1) {
+          return first.promise;
+        }
+        if (call === 2) {
+          throw new Error("dependency failed");
+        }
+        if (call === 3) {
+          return third.promise;
+        }
+      }
+    }
+
+    const service = new TestService();
+    const firstCall = service.doWork(1);
+    await vi.waitFor(() => expect(entered).toEqual([1]));
+
+    await expect(service.doWork(2)).rejects.toThrow("lock unavailable");
+
+    const thirdCall = service.doWork(3);
+    await vi.waitFor(() => expect(entered).toEqual([1, 2, 3]));
+    await expect(service.doWork(4)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(entered).toEqual([1, 2, 3]);
+
+    first.resolve();
+    third.resolve();
+    await expect(firstCall).resolves.toBeUndefined();
+    await expect(thirdCall).resolves.toBeUndefined();
   });
 
   it("calls recover only when error matches recover type", async () => {

@@ -23,9 +23,9 @@ import type {
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const MAX_CLOUDFLARE_IMAGE_ID_CODE_POINTS = 1024;
 
-type CloudflareUploadRuntimeResponse = {
+type CloudflareImagesRuntimeResponse = {
   readonly errors: string[];
-  readonly result?: { readonly id?: unknown } | null;
+  readonly result?: Record<string, unknown> | null;
   readonly success: boolean;
 };
 
@@ -133,7 +133,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       });
     }
 
-    const result = (await response.json()) as CloudflareUploadRuntimeResponse;
+    const result = await this.parseCloudflareImagesResponse(response, key, "put");
 
     if (!result.success) {
       throw createCloudflareImagesResponseProblem({
@@ -298,7 +298,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
 
   async getUploadIntent(key: string, options?: { ttlInSeconds?: number }): Promise<UploadIntent> {
     this.validateKey(key);
-    this.validateImageIdUnicode(key, "upload-intent");
+    this.validateImageId(key, "upload-intent");
 
     const ttl = options?.ttlInSeconds ?? this.ttl;
     if (!Number.isFinite(ttl) || !Number.isInteger(ttl) || ttl <= 0) {
@@ -338,7 +338,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       });
     }
 
-    const result = await response.json();
+    const result = await this.parseCloudflareImagesResponse(response, key, "upload-intent");
 
     if (!result.success) {
       throw createCloudflareImagesResponseProblem({
@@ -357,8 +357,18 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
     }
 
     const uploadUrl = result.result.uploadURL;
+    const imageId = result.result.id;
+    if (
+      typeof uploadUrl !== "string" ||
+      uploadUrl.length === 0 ||
+      typeof imageId !== "string" ||
+      imageId.length === 0
+    ) {
+      this.throwInvalidCloudflareImagesResponse(key, "upload-intent");
+    }
+
     const publicUrl = this.buildImageUrl(
-      result.result.id,
+      imageId,
       this.options.defaultVariant ?? "public",
       "upload-intent",
     );
@@ -376,7 +386,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   }
 
   private buildManagementImageUrl(key: string, operation: string): string {
-    this.validateImageIdUnicode(key, operation);
+    this.validateImageId(key, operation);
     return `${this.apiBaseUrl}/${encodeURIComponent(key)}`;
   }
 
@@ -407,7 +417,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   }
 
   private encodeDeliveryImageId(key: string, operation: string): string {
-    this.validateImageIdUnicode(key, operation);
+    this.validateImageId(key, operation);
     return key
       .split("/")
       .map((segment) => encodeURIComponent(segment))
@@ -415,7 +425,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   }
 
   private validateUploadImageId(key: string): void {
-    this.validateImageIdUnicode(key, "put");
+    this.validateImageId(key, "put");
 
     if (Array.from(key).length <= MAX_CLOUDFLARE_IMAGE_ID_CODE_POINTS) {
       return;
@@ -430,6 +440,22 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       },
       `Cloudflare Images image id must not exceed ${MAX_CLOUDFLARE_IMAGE_ID_CODE_POINTS} Unicode code points`,
     );
+  }
+
+  private validateImageId(key: string, operation: string): void {
+    this.validateImageIdUnicode(key, operation);
+
+    if (key.split("/").some((segment) => segment === "." || segment === "..")) {
+      throw new CloudflareImagesValidationProblem(
+        {
+          provider: "cloudflare-images",
+          operation,
+          key,
+          upstreamCode: "image-id-dot-segment",
+        },
+        "Cloudflare Images image id must not contain dot path segments",
+      );
+    }
   }
 
   private validateImageIdUnicode(key: string, operation: string): void {
@@ -462,6 +488,48 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       },
       "Cloudflare Images image id must contain well-formed Unicode",
     );
+  }
+
+  private async parseCloudflareImagesResponse(
+    response: Response,
+    key: string,
+    operation: string,
+  ): Promise<CloudflareImagesRuntimeResponse> {
+    let value: unknown;
+    try {
+      value = await response.json();
+    } catch {
+      return this.throwInvalidCloudflareImagesResponse(key, operation);
+    }
+
+    if (!isRecord(value) || typeof value.success !== "boolean") {
+      return this.throwInvalidCloudflareImagesResponse(key, operation);
+    }
+
+    const errors = value.errors;
+    if (!Array.isArray(errors) || !errors.every((error) => typeof error === "string")) {
+      return this.throwInvalidCloudflareImagesResponse(key, operation);
+    }
+
+    const result = value.result;
+    if (result !== undefined && result !== null && !isRecord(result)) {
+      return this.throwInvalidCloudflareImagesResponse(key, operation);
+    }
+
+    return {
+      errors,
+      success: value.success,
+      ...(result !== undefined && { result }),
+    };
+  }
+
+  private throwInvalidCloudflareImagesResponse(key: string, operation: string): never {
+    throw createCloudflareImagesResponseProblem({
+      operation,
+      key,
+      upstreamCode: "invalid-response",
+      detail: "Cloudflare Images API returned an invalid response",
+    });
   }
 
   private buildTransformParams(options: CloudflareTransformOptions): string {
@@ -629,4 +697,8 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       });
     }
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
