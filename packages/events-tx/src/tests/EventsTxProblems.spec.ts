@@ -1,6 +1,7 @@
 import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
+  InboxClaimConflictProblem,
   OutboxPublishExhaustedProblem,
   OutboxStorageProblem,
   OutboxTransactionRequiredProblem,
@@ -27,5 +28,26 @@ describe("EventsTxProblems", () => {
     expect(storage.detail).toBe("storage unavailable");
     expect(exhausted.code).toBe("events-tx/outbox-publish-exhausted");
     expect(exhausted.detail).toContain("message-1");
+  });
+
+  it("should expose inbox claim conflict evidence", () => {
+    const problem = new InboxClaimConflictProblem(
+      "ledger-projection",
+      "credit-acct-1",
+      1,
+      2,
+      "processed",
+    );
+
+    expect(problem.code).toBe("events-tx/inbox-claim-conflict");
+    expect(problem.category).toBe(ProblemCategory.Conflict);
+    expect(problem.detail).toContain("expected processing attempt 1");
+    expect(problem.extensions).toEqual({
+      consumerId: "ledger-projection",
+      inboxKey: "credit-acct-1",
+      expectedAttempts: 1,
+      actualAttempts: 2,
+      actualStatus: "processed",
+    });
   });
 });

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 424,
+  problemCount: 425,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -3744,6 +3744,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "events-tx/inbox-claim-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#events-tx-inbox-claim-conflict",
+      recovery: {
+        cause: "An inbox completion request no longer owns the processing attempt it started.",
+        userAction:
+          "Acquire a new inbox claim before retrying processing; discard the stale completion when a new claim cannot be acquired.",
+        operatorAction:
+          "Inspect concurrent writes, idempotency keys, and uniqueness constraints, then verify workers complete only the attempt they claimed.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
+          line: 46,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "events-tx/outbox-publish-exhausted",
       category: "InternalServerError",
       status: 500,
@@ -3769,7 +3801,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 30,
+          line: 31,
           column: 3,
           kind: "problem-class",
         },
@@ -3801,7 +3833,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 12,
+          line: 13,
           column: 3,
           kind: "problem-class",
         },
@@ -3833,7 +3865,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 21,
+          line: 22,
           column: 3,
           kind: "problem-class",
         },
@@ -3865,7 +3897,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 4,
+          line: 5,
           column: 3,
           kind: "problem-class",
         },

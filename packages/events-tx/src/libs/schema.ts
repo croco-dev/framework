@@ -8,12 +8,8 @@ import {
   uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
-import type {
-  InboxMessageStatus,
-  OutboxMessageStatus,
-  TransactionalEventDiagnostic,
-  TransactionalEventError,
-} from "./TransactionalEvents";
+import type { TransactionalEventDiagnostic, TransactionalEventError } from "./TransactionalEvents";
+import type { InboxMessageStatus, OutboxMessageStatus } from "./TransactionalEventTypes";
 
 export const transactionalOutboxMessages = pgTable(
   "croco_outbox_messages",

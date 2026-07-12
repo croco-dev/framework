@@ -2003,6 +2003,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "events-tx/inbox-claim-conflict": recovery({
+    cause: "An inbox completion request no longer owns the processing attempt it started.",
+    userAction:
+      "Acquire a new inbox claim before retrying processing; discard the stale completion when a new claim cannot be acquired.",
+    operatorAction:
+      "Inspect concurrent writes, idempotency keys, and uniqueness constraints, then verify workers complete only the attempt they claimed.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
   "outbox-core/failure-metadata-missing": recovery({
     cause:
       "A dispatcher attempted to mark an outbox record failed without the required retry metadata extensions.",

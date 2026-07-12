@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { InboxMessageStatus } from "../TransactionalEventTypes";
 
 export class TransactionStateProblem extends Problem {
   readonly code = "events-tx/transaction-state-error";
@@ -36,6 +37,35 @@ export class OutboxPublishExhaustedProblem extends Problem {
       undefined,
       `Outbox message '${messageId}' exhausted ${attempts} publish attempt(s).`,
       cause ? { cause } : undefined,
+    );
+  }
+}
+
+/** Raised when inbox completion no longer owns the processing attempt it started. */
+export class InboxClaimConflictProblem extends Problem {
+  readonly code = "events-tx/inbox-claim-conflict";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(
+    consumerId: string,
+    inboxKey: string,
+    expectedAttempts: number,
+    actualAttempts: number,
+    actualStatus: InboxMessageStatus,
+  ) {
+    super(
+      undefined,
+      undefined,
+      `Inbox claim '${consumerId}:${inboxKey}' expected processing attempt ${expectedAttempts}, but the current record is ${actualStatus} at attempt ${actualAttempts}.`,
+      {
+        extensions: {
+          consumerId,
+          inboxKey,
+          expectedAttempts,
+          actualAttempts,
+          actualStatus,
+        },
+      },
     );
   }
 }
