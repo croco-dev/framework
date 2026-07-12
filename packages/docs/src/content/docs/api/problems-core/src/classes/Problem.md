@@ -316,6 +316,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`TransactionContextProblem`](/api/tx-core/src/classes/transactioncontextproblem/)
 - [`TransactionDecoratorProblem`](/api/tx-core/src/classes/transactiondecoratorproblem/)
 - [`TransactionTimeoutProblem`](/api/tx-core/src/classes/transactiontimeoutproblem/)
+- [`RlsConfigurationProblem`](/api/tx-drizzle/src/classes/rlsconfigurationproblem/)
 - [`RlsExecuteUnsupportedProblem`](/api/tx-drizzle/src/classes/rlsexecuteunsupportedproblem/)
 - [`SavepointUnsupportedProblem`](/api/tx-drizzle/src/classes/savepointunsupportedproblem/)
 - [`TenantContextRequiredProblem`](/api/tx-drizzle/src/classes/tenantcontextrequiredproblem/)
