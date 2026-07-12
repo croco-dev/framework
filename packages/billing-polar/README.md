@@ -126,7 +126,10 @@ Polar 웹훅은 `eventId`를 멱등성 키로 사용합니다:
 - 동일한 `webhook-id`, timestamp, signature로 재전송된 delivery는 성공 응답을 유지하면서 도메인
   side effect를 반복하지 않습니다
 - 진행 중인 이벤트는 메모리에서 추적하여 중복 실행 방지
-- 저장소의 중복 reservation 충돌은 이미 처리된 delivery로 간주합니다
+- 저장소가 같은 `eventId` 예약에 대해 `WebhookAlreadyProcessedProblem`을 throw한 경우에만 이미
+  처리된 delivery로 간주합니다
+- 다른 unique constraint, SQLSTATE, 또는 generic duplicate 오류는 성공으로 확인되지 않으며
+  재시도 가능한 `WebhookProcessingProblem`으로 유지됩니다
 - 처리 실패 시 `failWebhook`으로 롤백 지원
 
 ## 스키마
