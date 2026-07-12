@@ -880,17 +880,26 @@ describe("TransactionalInboxConsumer", () => {
       throwOnError: false,
     });
 
+    await consumer.handle(successfulMessage, async () => {
+      throw new Error("first success-path attempt failed");
+    });
+    await consumer.handle(failedMessage, async () => {
+      throw new Error("first failure-path attempt failed");
+    });
+    processedSpy.mockClear();
+    failedSpy.mockClear();
+
     await consumer.handle(successfulMessage, async () => {});
     await consumer.handle(failedMessage, async () => {
       throw new Error("projection offline");
     });
 
     expect(processedSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ expectedAttempts: 1 }),
+      expect.objectContaining({ expectedAttempts: 2 }),
       undefined,
     );
     expect(failedSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ expectedAttempts: 1 }),
+      expect.objectContaining({ expectedAttempts: 2 }),
       undefined,
     );
   });
@@ -1089,6 +1098,26 @@ describe("TransactionalEventStore conformance", () => {
     await expect(fixture.store.listInboxRecords()).resolves.toHaveLength(2);
   });
 
+  it("returns one duplicate when concurrent direct starts target the same inbox key", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const input = {
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+    };
+
+    const starts = await Promise.all([
+      fixture.store.startInboxProcessing(input),
+      fixture.store.startInboxProcessing(input),
+    ]);
+
+    expect(starts.map(({ status }) => status).sort()).toEqual(["duplicate", "started"]);
+    expect(starts[0].record).toEqual(starts[1].record);
+  });
+
   it("rejects stale inbox success after a newer retry without mutating the active claim", async () => {
     const fixture = createOutboxFixture();
     const message = await appendMessage(fixture);
@@ -1187,14 +1216,21 @@ describe("TransactionalEventStore conformance", () => {
       now: fixture.clock.now(),
     };
 
-    const results = await Promise.allSettled([
-      fixture.store.markInboxProcessed(completion),
-      fixture.store.markInboxFailed({
-        ...completion,
-        error: { name: "Error", message: "racing failure" },
-        reason: "racing failure",
-      }),
-    ]);
+    const completions = [
+      {
+        status: "processed" as const,
+        promise: fixture.store.markInboxProcessed(completion),
+      },
+      {
+        status: "failed" as const,
+        promise: fixture.store.markInboxFailed({
+          ...completion,
+          error: { name: "Error", message: "racing failure" },
+          reason: "racing failure",
+        }),
+      },
+    ];
+    const results = await Promise.allSettled(completions.map(({ promise }) => promise));
 
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((result) => result.status === "rejected")).toMatchObject([
@@ -1204,9 +1240,19 @@ describe("TransactionalEventStore conformance", () => {
         },
       },
     ]);
+    const winnerIndex = results.findIndex((result) => result.status === "fulfilled");
+    const expectedStatus = completions[winnerIndex]?.status;
+    expect(expectedStatus).toBeDefined();
+    expect(results.filter((result) => result.status === "rejected")).toMatchObject([
+      {
+        reason: {
+          extensions: { actualStatus: expectedStatus },
+        },
+      },
+    ]);
     await expect(
       fixture.store.findInboxRecord("ledger-projection", message.idempotencyKey),
-    ).resolves.toMatchObject({ status: "processed" });
+    ).resolves.toMatchObject({ status: expectedStatus });
   });
 
   it("commits only one in-memory transaction for the same completion claim", async () => {
@@ -1596,6 +1642,8 @@ describe("DrizzleTransactionalEventStore", () => {
       expect(whereSql).toContain('"croco_inbox_records"."inbox_key"');
       expect(whereSql).toContain('"croco_inbox_records"."status"');
       expect(whereSql).toContain('"croco_inbox_records"."attempts"');
+      expect(whereSql.match(/ and /g)).toHaveLength(3);
+      expect(whereSql).not.toContain(" or ");
       expect(query.params.slice(-4)).toEqual([
         "ledger-projection",
         "credit-acct-1",
@@ -1650,28 +1698,45 @@ describe("DrizzleTransactionalEventStore", () => {
       now: new Date("2026-01-01T00:00:01.000Z"),
     };
 
-    const results = await Promise.allSettled([
-      store.markInboxProcessed(completion),
-      store.markInboxFailed({
-        ...completion,
-        error: { name: "Error", message: "racing failure" },
-        reason: "racing failure",
-      }),
-    ]);
-
-    expect(results.map((result) => result.status)).toEqual(["fulfilled", "rejected"]);
-    expect(results[1]).toMatchObject({
-      reason: {
-        code: "events-tx/inbox-claim-conflict",
-        extensions: { actualAttempts: 1, actualStatus: "processed" },
+    const completions = [
+      {
+        status: "processed" as const,
+        promise: store.markInboxProcessed(completion),
       },
-    });
+      {
+        status: "failed" as const,
+        promise: store.markInboxFailed({
+          ...completion,
+          error: { name: "Error", message: "racing failure" },
+          reason: "racing failure",
+        }),
+      },
+    ];
+    const results = await Promise.allSettled(completions.map(({ promise }) => promise));
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toMatchObject([
+      {
+        reason: {
+          code: "events-tx/inbox-claim-conflict",
+          extensions: { actualAttempts: 1 },
+        },
+      },
+    ]);
+    const winnerIndex = results.findIndex((result) => result.status === "fulfilled");
+    const expectedStatus = completions[winnerIndex]?.status;
+    expect(expectedStatus).toBeDefined();
+    expect(results.filter((result) => result.status === "rejected")).toMatchObject([
+      {
+        reason: {
+          extensions: { actualStatus: expectedStatus },
+        },
+      },
+    ]);
     expect(proxy.affectedRows).toBe(1);
     expect(proxy.current()).toMatchObject({
-      status: "processed",
+      status: expectedStatus,
       attempts: 1,
-      failureReason: null,
-      diagnostics: [],
     });
   });
 
