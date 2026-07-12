@@ -269,6 +269,27 @@ describe("lambdaPreset", () => {
     expect(events).toEqual(["request", "flush"]);
     await expect(runtime.forceFlush()).resolves.toEqual({ success: true, flushedSpans: -1 });
   });
+
+  it("should not initialize tracing when a Lambda-derived config disables the signal", async () => {
+    process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = "http://collector:4318/v1/traces";
+
+    const runtime = TelemetryRuntime.getInstance();
+    const config = lambdaPreset({ serviceName: "orders" });
+    config.trace = {
+      ...config.trace,
+      enabled: false,
+    };
+
+    await runtime.init(config);
+
+    expect(runtime.isInitialized()).toBe(false);
+    expect(runtime.isEnabled()).toBe(false);
+    expect(runtime.getConfig()).toEqual(config);
+    await expect(runtime.forceFlush()).resolves.toEqual({
+      success: true,
+      flushedSpans: -1,
+    });
+  });
 });
 
 async function runLambdaRequestWithFlush<T>(

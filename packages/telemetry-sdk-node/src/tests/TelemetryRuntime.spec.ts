@@ -1,3 +1,4 @@
+import type { Instrumentation } from "@opentelemetry/instrumentation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TelemetryRuntimeProblem } from "../libs/problems/TelemetryProblems";
 import { TelemetryRuntime } from "../runtime";
@@ -12,9 +13,14 @@ describe("TelemetryRuntime", () => {
 
   afterEach(async () => {
     vi.doUnmock("@opentelemetry/exporter-trace-otlp-http");
+    vi.doUnmock("@opentelemetry/resources");
+    vi.doUnmock("@opentelemetry/sdk-node");
+    vi.doUnmock("@opentelemetry/sdk-trace-base");
+    vi.doUnmock("../libs/samplers/ProbabilitySampler");
     vi.unstubAllEnvs();
     vi.useRealTimers();
     await TelemetryRuntime.reset();
+    vi.resetModules();
   });
 
   it("should return singleton instance", () => {
@@ -61,7 +67,7 @@ describe("TelemetryRuntime", () => {
     await runtime.init({
       serviceName: "test-service",
       enabled: true,
-      trace: { enabled: false },
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
 
     expect(runtime.isInitialized()).toBe(true);
@@ -69,7 +75,81 @@ describe("TelemetryRuntime", () => {
     expect(runtime.getConfig()).toEqual({
       serviceName: "test-service",
       enabled: true,
-      trace: { enabled: false },
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
+    });
+  });
+
+  it("should not start tracing components when tracing is disabled", async () => {
+    const instrumentationEnable = vi.fn();
+    const nodeSdkConstructor = vi.fn();
+    const nodeSdkStart = vi.fn(() => instrumentationEnable());
+    const exporterConstructor = vi.fn();
+    const processorConstructor = vi.fn();
+    const samplerConstructor = vi.fn();
+
+    vi.doMock("@opentelemetry/resources", () => ({
+      defaultResource: () => ({ merge: vi.fn() }),
+      resourceFromAttributes: vi.fn(),
+    }));
+    vi.doMock("@opentelemetry/sdk-node", () => ({
+      NodeSDK: class MockNodeSDK {
+        constructor(options: unknown) {
+          nodeSdkConstructor(options);
+        }
+
+        start(): void {
+          nodeSdkStart();
+        }
+
+        async shutdown(): Promise<void> {}
+      },
+    }));
+    vi.doMock("@opentelemetry/exporter-trace-otlp-http", () => ({
+      OTLPTraceExporter: class MockTraceExporter {
+        constructor(options: unknown) {
+          exporterConstructor(options);
+        }
+      },
+    }));
+    vi.doMock("@opentelemetry/sdk-trace-base", () => ({
+      BatchSpanProcessor: class MockBatchSpanProcessor {
+        constructor(exporter: unknown, options: unknown) {
+          processorConstructor(exporter, options);
+        }
+      },
+    }));
+    vi.doMock("../libs/samplers/ProbabilitySampler", () => ({
+      ProbabilitySampler: class MockProbabilitySampler {
+        constructor(options: unknown) {
+          samplerConstructor(options);
+        }
+      },
+    }));
+    vi.stubEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "http://env-collector:4318/v1/traces");
+    vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://generic-env-collector:4318");
+
+    await runtime.init({
+      serviceName: "trace-disabled-service",
+      enabled: true,
+      trace: {
+        enabled: false,
+        probability: 0.5,
+        instrumentations: [{ enable: instrumentationEnable } as unknown as Instrumentation],
+      },
+    });
+
+    expect(nodeSdkConstructor).not.toHaveBeenCalled();
+    expect(nodeSdkStart).not.toHaveBeenCalled();
+    expect(exporterConstructor).not.toHaveBeenCalled();
+    expect(processorConstructor).not.toHaveBeenCalled();
+    expect(samplerConstructor).not.toHaveBeenCalled();
+    expect(instrumentationEnable).not.toHaveBeenCalled();
+    expect(runtime.isInitialized()).toBe(false);
+    expect(runtime.isEnabled()).toBe(false);
+    expect(runtime.getConfig()?.trace?.enabled).toBe(false);
+    await expect(runtime.forceFlush()).resolves.toEqual({
+      success: true,
+      flushedSpans: -1,
     });
   });
 
@@ -77,7 +157,7 @@ describe("TelemetryRuntime", () => {
     await runtime.init({
       serviceName: "test-service",
       enabled: true,
-      trace: { enabled: false },
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
 
     await runtime.init({
@@ -90,15 +170,37 @@ describe("TelemetryRuntime", () => {
     expect(runtime.getConfig()).toEqual({
       serviceName: "test-service",
       enabled: true,
-      trace: { enabled: false },
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
+  });
+
+  it("should preserve initialized state when the caller mutates its config", async () => {
+    const config = {
+      serviceName: "test-service",
+      enabled: true,
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
+    };
+
+    await runtime.init(config);
+    config.enabled = false;
+    config.trace.enabled = false;
+    const returnedTraceConfig = runtime.getConfig()?.trace;
+    expect(returnedTraceConfig).toBeDefined();
+    if (returnedTraceConfig) {
+      returnedTraceConfig.enabled = false;
+    }
+
+    expect(runtime.isInitialized()).toBe(true);
+    expect(runtime.isEnabled()).toBe(true);
+    expect(runtime.getConfig()?.enabled).toBe(true);
+    expect(runtime.getConfig()?.trace?.enabled).toBe(true);
   });
 
   it("should initialize again after shutdown", async () => {
     await runtime.init({
       serviceName: "first-service",
       enabled: true,
-      trace: { enabled: false },
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
 
     expect(runtime.isInitialized()).toBe(true);
@@ -111,7 +213,7 @@ describe("TelemetryRuntime", () => {
     await runtime.init({
       serviceName: "second-service",
       enabled: true,
-      trace: { enabled: false },
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
 
     expect(runtime.isInitialized()).toBe(true);
@@ -119,7 +221,7 @@ describe("TelemetryRuntime", () => {
     expect(runtime.getConfig()).toEqual({
       serviceName: "second-service",
       enabled: true,
-      trace: { enabled: false },
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
   });
 
@@ -127,7 +229,7 @@ describe("TelemetryRuntime", () => {
     const config = {
       serviceName: "first-service",
       enabled: true,
-      trace: { enabled: false },
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     };
     const sdk = {
       shutdown: vi.fn().mockResolvedValue(undefined),
@@ -164,7 +266,7 @@ describe("TelemetryRuntime", () => {
     await runtime.init({
       serviceName: "second-service",
       enabled: true,
-      trace: { enabled: false },
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
 
     expect(runtime.isInitialized()).toBe(true);
@@ -172,7 +274,7 @@ describe("TelemetryRuntime", () => {
     expect(runtime.getConfig()).toEqual({
       serviceName: "second-service",
       enabled: true,
-      trace: { enabled: false },
+      trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
     });
   });
 
@@ -291,7 +393,10 @@ describe("TelemetryRuntime", () => {
       runtime.init({
         serviceName: "retry-after-exporter-failure",
         enabled: true,
-        trace: { enabled: false },
+        trace: {
+          enabled: true,
+          exporterUrl: "http://collector:4318/v1/traces",
+        },
       }),
     ).resolves.not.toThrow();
     expect(runtime.isInitialized()).toBe(true);
