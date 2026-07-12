@@ -31,7 +31,13 @@ graceful shutdown 상태를 관리하는 미들웨어와 제어 함수입니다.
 
 ### onShutdown?
 
-> `optional` **onShutdown?**: () => `void` \| `Promise`\<`void`\>
+> `optional` **onShutdown?**: (`signal`) => `void` \| `Promise`\<`void`\>
+
+#### Parameters
+
+##### signal
+
+`AbortSignal`
 
 #### Returns
 

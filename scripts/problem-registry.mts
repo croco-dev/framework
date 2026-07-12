@@ -1904,6 +1904,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "transports-http/graceful-shutdown-configuration": recovery({
+    cause: "Graceful shutdown was configured with a non-finite total or event-bus drain timeout.",
+    userAction:
+      "Ask the operator to correct the graceful shutdown timeout configuration before reconstructing the HTTP application.",
+    operatorAction:
+      "Set timeoutMs and eventBusDrainTimeoutMs to finite numbers, then reconstruct the middleware or controller before retrying shutdown.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "transports-http/body-limit-invalid-configuration": recovery({
     cause: "The HTTP body-limit middleware was configured with an invalid byte boundary.",
     userAction: "Ask the operator to correct the service configuration before retrying.",

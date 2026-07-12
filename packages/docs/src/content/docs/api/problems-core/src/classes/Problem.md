@@ -314,6 +314,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`HttpRequestBodyReadProblem`](/api/transports-http/src/classes/httprequestbodyreadproblem/)
 - [`HttpRequestBodyTooLargeProblem`](/api/transports-http/src/classes/httprequestbodytoolargeproblem/)
 - [`HttpRequestBodyUnavailableProblem`](/api/transports-http/src/classes/httprequestbodyunavailableproblem/)
+- [`GracefulShutdownConfigurationProblem`](/api/transports-http/src/classes/gracefulshutdownconfigurationproblem/)
+- [`GracefulShutdownTimeoutProblem`](/api/transports-http/src/classes/gracefulshutdowntimeoutproblem/)
 - [`DuplicateTxManagerRegistrationProblem`](/api/tx-core/src/classes/duplicatetxmanagerregistrationproblem/)
 - [`TxManagerNotRegisteredError`](/api/tx-core/src/classes/txmanagernotregisterederror/)
 - [`TxPropagationError`](/api/tx-core/src/classes/txpropagationerror/)

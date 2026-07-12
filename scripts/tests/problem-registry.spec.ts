@@ -139,6 +139,50 @@ describe("problem-registry.mts", () => {
     expect(generatedRegistrySource).toContain(': Entry["status"]');
   });
 
+  it("publishes deterministic recovery metadata for graceful shutdown configuration", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/transports-http/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class GracefulShutdownConfigurationProblem extends Problem {",
+        "  constructor() {",
+        '    super("transports-http/graceful-shutdown-configuration", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+        "export class HttpRequestBodyTooLargeProblem extends Problem {",
+        "  constructor() {",
+        '    super("transports-http/request-body-too-large", ProblemCategory.PayloadTooLarge);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+    const registry = readRegistry(repo);
+    const problem = registry.problems.find(
+      ({ code }) => code === "transports-http/graceful-shutdown-configuration",
+    );
+
+    expect(problem?.recovery).toEqual({
+      cause: "Graceful shutdown was configured with a non-finite total or event-bus drain timeout.",
+      userAction:
+        "Ask the operator to correct the graceful shutdown timeout configuration before reconstructing the HTTP application.",
+      operatorAction:
+        "Set timeoutMs and eventBusDrainTimeoutMs to finite numbers, then reconstruct the middleware or controller before retrying shutdown.",
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+      telemetry: {
+        eventName: "croco.problem.error",
+        severity: "error",
+        attributes: ["problem.code", "problem.category", "problem.status"],
+      },
+    });
+    expect(problem?.recovery.telemetry.attributes).not.toContain("receivedValue");
+  });
+
   it("fails when a configured status policy no longer resolves to a discovered code", () => {
     const repo = createTempRepo();
     writeFile(

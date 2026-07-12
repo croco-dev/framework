@@ -19620,10 +19620,22 @@
           "declarationKind": "function"
         },
         {
+          "name": "GracefulShutdownConfigurationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/GracefulShutdownProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "gracefulShutdownMiddleware",
           "exportKind": "named",
           "source": "./libs/middleware/GracefulShutdownMiddleware",
           "declarationKind": "const"
+        },
+        {
+          "name": "GracefulShutdownTimeoutProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/GracefulShutdownProblems",
+          "declarationKind": "class"
         },
         {
           "name": "hasSecurityMiddlewareCapability",
@@ -19874,6 +19886,11 @@
           "source": "./libs/types"
         },
         {
+          "name": "GracefulShutdownConfigurationProblemOptions",
+          "exportKind": "named",
+          "source": "./libs/problems/GracefulShutdownProblems"
+        },
+        {
           "name": "GracefulShutdownController",
           "exportKind": "named",
           "source": "./libs/middleware/GracefulShutdownMiddleware"
@@ -19882,6 +19899,21 @@
           "name": "GracefulShutdownOptions",
           "exportKind": "named",
           "source": "./libs/middleware/GracefulShutdownMiddleware"
+        },
+        {
+          "name": "GracefulShutdownPhase",
+          "exportKind": "named",
+          "source": "./libs/problems/GracefulShutdownProblems"
+        },
+        {
+          "name": "GracefulShutdownTimeoutOption",
+          "exportKind": "named",
+          "source": "./libs/problems/GracefulShutdownProblems"
+        },
+        {
+          "name": "GracefulShutdownTimeoutProblemOptions",
+          "exportKind": "named",
+          "source": "./libs/problems/GracefulShutdownProblems"
         },
         {
           "name": "GuardProvider",
