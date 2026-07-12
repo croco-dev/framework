@@ -536,8 +536,11 @@ describe("CrocoApp", () => {
   it("should preserve middleware short-circuit responses", async () => {
     const app = createApp({
       controllers: [TestController],
-      middlewares: [bodyLimitMiddleware({ limit: 4 })],
+      middlewares: [bodyLimitMiddleware({ limit: 4, statusCode: 422 })],
       securityValidation: "off",
+      devInspector: {
+        exposure: "private",
+      },
     });
 
     const response = await app.fetch(
@@ -551,12 +554,36 @@ describe("CrocoApp", () => {
       }),
     );
 
-    expect(response.status).toBe(413);
-    await expect(response.json()).resolves.toEqual({
-      error: "Request body too large",
+    expect(response.status).toBe(422);
+    const body = (await response.json()) as Record<string, unknown>;
+    const inspectorResponse = await app.fetch(new Request("http://localhost/dev/inspector"));
+    const snapshot = (await inspectorResponse.json()) as RuntimeInspectorSnapshot;
+
+    expect(body).toMatchObject({
+      type: "https://croco.dev/problems/transports-http/request-body-too-large",
+      title: "Payload Too Large",
+      status: 422,
+      code: "transports-http/request-body-too-large",
+      detail: "Request body too large",
+      instance: "http://localhost/api/users",
       limit: 4,
-      received: 16,
     });
+    expect(body).not.toHaveProperty("received");
+    expect(snapshot.requests[0]).toMatchObject({
+      path: "/api/users",
+      status: 422,
+      outcome: "failed",
+    });
+    expect(snapshot.requests[0]?.timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "problem",
+          outcome: "failed",
+          name: "transports-http/request-body-too-large",
+          details: expect.objectContaining({ status: 422 }),
+        }),
+      ]),
+    );
   });
 
   it("should preserve built-in CORS preflight short-circuits in the app pipeline", async () => {

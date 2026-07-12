@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "GraphQLRequestBodyTooLargeProblem"
+title: "HttpRequestBodyUnavailableProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+The limiter ran after another component disturbed or locked the request body.
 
 ## Extends
 
@@ -15,17 +15,17 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new GraphQLRequestBodyTooLargeProblem**(`maxBodySizeBytes`): `GraphQLRequestBodyTooLargeProblem`
+> **new HttpRequestBodyUnavailableProblem**(`instance`): `HttpRequestBodyUnavailableProblem`
 
 #### Parameters
 
-##### maxBodySizeBytes
+##### instance
 
-`number`
+`string`
 
 #### Returns
 
-`GraphQLRequestBodyTooLargeProblem`
+`HttpRequestBodyUnavailableProblem`
 
 #### Overrides
 

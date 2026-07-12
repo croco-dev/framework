@@ -23,6 +23,10 @@ class TestProblem extends Problem {
   constructor() {
     super("test/problem", ProblemCategory.BadRequest, "Test problem");
   }
+
+  override get status(): number {
+    return 418;
+  }
 }
 
 describe("TelemetryMiddleware", () => {
@@ -321,14 +325,14 @@ describe("TelemetryMiddleware", () => {
       }),
     ).rejects.toBe(problem);
 
-    expect(ctx.res.status).toBe(400);
+    expect(ctx.res.status).toBe(418);
     expect(span.recordException).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "TestProblem",
         message: "Test problem",
       }),
     );
-    expect(span.setAttribute).toHaveBeenCalledWith("http.status_code", 400);
+    expect(span.setAttribute).toHaveBeenCalledWith("http.status_code", 418);
     expect(span.setAttribute).toHaveBeenCalledWith("croco.failure.kind", "problem");
     expect(span.setAttribute).toHaveBeenCalledWith("croco.problem.code", "test/problem");
     expect(span.setStatus).toHaveBeenCalledWith({ code: SpanStatusCode.UNSET });
@@ -336,7 +340,7 @@ describe("TelemetryMiddleware", () => {
       "croco.problem",
       expect.objectContaining({
         "croco.problem.code": "test/problem",
-        "http.status_code": 400,
+        "http.status_code": 418,
       }),
     );
   });

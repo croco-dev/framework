@@ -51,6 +51,12 @@ title: "ProblemCodeRegistryEntry"
 
 ***
 
+### statusPolicy?
+
+> `readonly` `optional` **statusPolicy?**: [`ProblemStatusPolicy`](/api/problems-core/src/type-aliases/problemstatuspolicy/)
+
+***
+
 ### title
 
 > `readonly` **title**: `string`

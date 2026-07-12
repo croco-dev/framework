@@ -86,6 +86,7 @@ export type {
   ProblemRetryability,
   ProblemTelemetryMapping,
   ProblemTelemetrySeverity,
+  ProblemStatusPolicy,
 } from "./libs/ProblemRegistry";
 export { CROCO_PROBLEM_CODE_REGISTRY } from "./generated/problem-code-registry";
 export type {

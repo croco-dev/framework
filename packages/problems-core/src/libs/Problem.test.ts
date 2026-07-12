@@ -6,12 +6,16 @@ describe("ProblemCategoryMapper", () => {
     expect(ProblemCategoryMapper.toHttpStatus(ProblemCategory.NotFound)).toBe(404);
     expect(ProblemCategoryMapper.toHttpStatus(ProblemCategory.BadRequest)).toBe(400);
     expect(ProblemCategoryMapper.toHttpStatus(ProblemCategory.ValidationError)).toBe(422);
+    expect(ProblemCategoryMapper.toHttpStatus(ProblemCategory.PayloadTooLarge)).toBe(413);
   });
 
   it("should map all categories to titles", () => {
     expect(ProblemCategoryMapper.toTitle(ProblemCategory.NotFound)).toBe("Not Found");
     expect(ProblemCategoryMapper.toTitle(ProblemCategory.BadRequest)).toBe("Bad Request");
     expect(ProblemCategoryMapper.toTitle(ProblemCategory.ValidationError)).toBe("Validation Error");
+    expect(ProblemCategoryMapper.toTitle(ProblemCategory.PayloadTooLarge)).toBe(
+      "Payload Too Large",
+    );
   });
 });
 
@@ -90,6 +94,7 @@ describe("ProblemFactory", () => {
       ProblemFactory.notFound("NOT_FOUND"),
       ProblemFactory.conflict("CONFLICT"),
       ProblemFactory.gone("GONE"),
+      ProblemFactory.payloadTooLarge("PAYLOAD_TOO_LARGE"),
       ProblemFactory.validationError("VALIDATION"),
       ProblemFactory.businessRuleViolation("BUSINESS_RULE"),
       ProblemFactory.tooManyRequests("TOO_MANY"),

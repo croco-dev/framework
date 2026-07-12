@@ -92,6 +92,79 @@ describe("problem-registry.mts", () => {
     expect(checkResult.status).toBe("pass");
   });
 
+  it("publishes runtime-configurable status policy in generated contracts", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/transports-http/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class HttpRequestBodyTooLargeProblem extends Problem {",
+        "  constructor() {",
+        '    super("transports-http/request-body-too-large", ProblemCategory.PayloadTooLarge);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+
+    const registry = JSON.parse(
+      readFileSync(join(repo, "docs/problem-code-registry.json"), "utf-8"),
+    );
+    const cookbook = readFileSync(
+      join(repo, "packages/docs/src/content/docs/en/reference/problem-recovery-cookbook.md"),
+      "utf-8",
+    );
+    const generatedRegistrySource = readFileSync(
+      join(repo, "packages/problems-core/src/generated/problem-code-registry.ts"),
+      "utf-8",
+    );
+
+    expect(registry.problems[0]).toMatchObject({
+      code: "transports-http/request-body-too-large",
+      status: 413,
+      statusPolicy: {
+        kind: "runtime-configurable",
+        defaultStatus: 413,
+        configuration: "bodyLimitMiddleware.statusCode",
+      },
+    });
+    expect(cookbook).toContain("413\\*");
+    expect(cookbook).toContain("Runtime-configurable statuses show their canonical default");
+    expect(cookbook).toContain("runtime-configurable via `bodyLimitMiddleware.statusCode`");
+    expect(generatedRegistrySource).toContain("CrocoProblemEntryStatus");
+    expect(generatedRegistrySource).toContain("? number");
+    expect(generatedRegistrySource).toContain(': Entry["status"]');
+  });
+
+  it("fails when a configured status policy no longer resolves to a discovered code", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/transports-http/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class RenamedBodyTooLargeProblem extends Problem {",
+        "  constructor() {",
+        '    super("transports-http/renamed-body-too-large", ProblemCategory.PayloadTooLarge);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write")).toEqual(
+      expect.objectContaining({
+        status: "fail",
+        diagnostics: [
+          "Status policy references unknown Problem code 'transports-http/request-body-too-large'.",
+        ],
+      }),
+    );
+  });
+
   it("fails check mode when generated artifacts are missing", () => {
     const repo = createTempRepo();
     writeFile(

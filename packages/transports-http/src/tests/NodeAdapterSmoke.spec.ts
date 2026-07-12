@@ -1,15 +1,18 @@
 import "reflect-metadata";
+import { Buffer } from "node:buffer";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { request as sendHttpRequest } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
-import { Controller, Get, RequestValidationProblem } from "@croco/protocols-rest";
+import { Controller, Get, Post, Raw, RequestValidationProblem } from "@croco/protocols-rest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp, type CrocoApp } from "../libs/CrocoApp";
 import { startServer } from "../libs/adapters/NodeAdapter";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
+import { bodyLimitMiddleware } from "../libs/middleware/BodyLimitMiddleware";
 import type { MiddlewareFunction, NodeServerHandle } from "../libs/types";
 
 const LIFECYCLE_TIMEOUT_MS = 2_500;
@@ -26,6 +29,11 @@ class NodeSmokeController {
     throw new RequestValidationProblem("query", [
       { path: "mode", message: "must be a supported smoke mode" },
     ]);
+  }
+
+  @Post("/echo")
+  async echo(@Raw() raw: { req: { raw: Request } }) {
+    return { body: await raw.req.raw.text() };
   }
 }
 
@@ -148,15 +156,75 @@ describe("NodeAdapter real server smoke", () => {
     expect(assetResponse.headers.get("content-type")).toContain("javascript");
     expect(await assetResponse.text()).toContain("node adapter static smoke");
   });
+
+  it("enforces chunked request bytes and preserves the accepted body over a real Node socket", async () => {
+    const app = createNodeSmokeApp();
+    const server = await withTimeout(
+      startServer(app, 0),
+      "chunked body-limit server did not return a handle",
+    );
+    servers.push(server);
+    await waitForListening(server, "chunked body-limit server");
+    const baseUrl = getBaseUrl(server, "chunked body-limit server");
+
+    const accepted = await sendChunkedRequest(`${baseUrl}/node-smoke/echo`, ["12", "34"]);
+    expect(accepted.status).toBe(200);
+    expect(accepted.body).toEqual({ body: "1234" });
+
+    const rejected = await sendChunkedRequest(`${baseUrl}/node-smoke/echo`, ["1234", "5"]);
+    expect(rejected.status).toBe(413);
+    expect(rejected.body).toMatchObject({
+      code: "transports-http/request-body-too-large",
+      status: 413,
+      limit: 4,
+    });
+  });
 });
 
 function createNodeSmokeApp(): CrocoApp {
   return createApp({
     controllers: [NodeSmokeController],
-    middlewares: [nodeSmokeHeaderMiddleware],
+    middlewares: [bodyLimitMiddleware({ limit: 4 }), nodeSmokeHeaderMiddleware],
     securityValidation: "off",
     diValidation: "off",
   });
+}
+
+async function sendChunkedRequest(
+  url: string,
+  chunks: readonly string[],
+): Promise<{ status: number; body: unknown }> {
+  return withTimeout(
+    new Promise((resolve, reject) => {
+      const request = sendHttpRequest(
+        url,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "text/plain",
+            "transfer-encoding": "chunked",
+          },
+        },
+        (response) => {
+          const responseChunks: Buffer[] = [];
+          response.on("data", (chunk: Buffer) => responseChunks.push(chunk));
+          response.on("end", () => {
+            const text = Buffer.concat(responseChunks).toString("utf8");
+            resolve({
+              status: response.statusCode ?? 0,
+              body: JSON.parse(text) as unknown,
+            });
+          });
+        },
+      );
+      request.on("error", reject);
+      for (const chunk of chunks) {
+        request.write(chunk);
+      }
+      request.end();
+    }),
+    `chunked POST ${url} did not complete`,
+  );
 }
 
 async function waitForListening(server: NodeServerHandle, description: string): Promise<void> {

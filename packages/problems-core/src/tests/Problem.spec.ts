@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   assertProblemExhaustive,
+  type CrocoProblemDetails,
+  type CrocoProblemStatus,
   Problem,
   ProblemCategory,
   type TypedProblemDetails,
@@ -95,6 +97,23 @@ describe("Problem", () => {
       "Unhandled Problem variant: OTHER",
     );
   });
+
+  it("should preserve literal fixed statuses and widen only runtime-configurable codes", () => {
+    const configuredDetails: CrocoProblemDetails<"transports-http/request-body-too-large"> = {
+      type: "https://croco.dev/problems/transports-http/request-body-too-large",
+      title: "Payload Too Large",
+      status: 422,
+      code: "transports-http/request-body-too-large",
+    };
+
+    expectTypeOf<
+      CrocoProblemStatus<"transports-http/request-body-too-large">
+    >().toEqualTypeOf<number>();
+    expectTypeOf<
+      CrocoProblemStatus<"transports-graphql/request-body-too-large">
+    >().toEqualTypeOf<413>();
+    expect(configuredDetails.status).toBe(422);
+  });
 });
 
 describe("ProblemCategory", () => {
@@ -123,6 +142,10 @@ describe("ProblemCategory", () => {
 
   it("should have Gone category", () => {
     expect(ProblemCategory.Gone).not.toBeUndefined();
+  });
+
+  it("should have PayloadTooLarge category", () => {
+    expect(ProblemCategory.PayloadTooLarge).not.toBeUndefined();
   });
 
   it("should have ValidationError category", () => {

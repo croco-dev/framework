@@ -78,6 +78,16 @@ class OperatorOnlyProblem extends Problem {
   }
 }
 
+class CustomStatusProblem extends Problem {
+  constructor(detail: string) {
+    super("test/custom-status", ProblemCategory.BadRequest, detail);
+  }
+
+  override get status(): number {
+    return 418;
+  }
+}
+
 describe("PipelineRunner", () => {
   let logger!: {
     info: ReturnType<typeof vi.fn>;
@@ -258,7 +268,7 @@ describe("PipelineRunner", () => {
       class TestController {},
       "handler",
     );
-    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "original business error");
+    const originalProblem = new CustomStatusProblem("original business error");
 
     const brokenFilter: ExceptionFilter<unknown, HttpExecutionContext> = {
       catch: vi.fn().mockImplementation(() => {
@@ -279,11 +289,11 @@ describe("PipelineRunner", () => {
     );
 
     expect(result).toBeInstanceOf(Response);
-    expect((result as Response).status).toBe(400);
+    expect((result as Response).status).toBe(418);
     expect(await (result as Response).json()).toMatchObject({
-      code: "BAD_REQUEST",
+      code: "test/custom-status",
       detail: "original business error",
-      status: 400,
+      status: 418,
     });
     expect(logger.warn).toHaveBeenCalledWith(
       "CROCO_HTTP_FILTER_001",
@@ -291,9 +301,9 @@ describe("PipelineRunner", () => {
         diagnosticCode: "CROCO_HTTP_FILTER_001",
         filter: "filter[0]",
         reason: "thrown",
-        originalProblemCode: "BAD_REQUEST",
+        originalProblemCode: "test/custom-status",
         originalProblemCategory: originalProblem.category,
-        originalProblemStatus: 400,
+        originalProblemStatus: 418,
       }),
     );
   });
@@ -388,7 +398,7 @@ describe("PipelineRunner", () => {
       class TestController {},
       "handler",
     );
-    const originalProblem = ProblemFactory.badRequest("BAD_REQUEST", "preserved");
+    const originalProblem = new CustomStatusProblem("preserved");
 
     const filters: ExceptionFilter<unknown, HttpExecutionContext>[] = [
       {
@@ -418,11 +428,11 @@ describe("PipelineRunner", () => {
     );
 
     expect(result).toBeInstanceOf(Response);
-    expect((result as Response).status).toBe(400);
+    expect((result as Response).status).toBe(418);
     expect(await (result as Response).json()).toMatchObject({
-      code: "BAD_REQUEST",
+      code: "test/custom-status",
       detail: "preserved",
-      status: 400,
+      status: 418,
     });
     expect(logger.warn).toHaveBeenCalledTimes(2);
     expect(logger.warn).toHaveBeenNthCalledWith(
@@ -446,6 +456,15 @@ describe("PipelineRunner", () => {
 
     const timeline = inspector.snapshot().requests[0]?.timeline ?? [];
     expect(timeline.filter((event) => event.name === "CROCO_HTTP_FILTER_001")).toHaveLength(2);
+    expect(timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "problem",
+          name: "test/custom-status",
+          details: expect.objectContaining({ status: 418 }),
+        }),
+      ]),
+    );
   });
 
   it("should record invalid filter results and fall back to the original route error", async () => {

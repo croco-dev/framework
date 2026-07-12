@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "GraphQLRequestBodyTooLargeProblem"
+title: "HttpRequestBodyReadProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+The transport could not finish reading the request body.
 
 ## Extends
 
@@ -15,17 +15,25 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new GraphQLRequestBodyTooLargeProblem**(`maxBodySizeBytes`): `GraphQLRequestBodyTooLargeProblem`
+> **new HttpRequestBodyReadProblem**(`instance`, `aborted`, `cause`): `HttpRequestBodyReadProblem`
 
 #### Parameters
 
-##### maxBodySizeBytes
+##### instance
 
-`number`
+`string`
+
+##### aborted
+
+`boolean`
+
+##### cause
+
+`Error`
 
 #### Returns
 
-`GraphQLRequestBodyTooLargeProblem`
+`HttpRequestBodyReadProblem`
 
 #### Overrides
 

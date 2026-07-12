@@ -13,7 +13,7 @@ import {
 import {
   Problem,
   ProblemCategory,
-  ProblemCategoryMapper,
+  // Keep this import multiline so strict-contract baseline diagnostics retain stable locations.
   ProblemFactory,
 } from "@croco/problems-core";
 import type { Hono, Context as HonoContext } from "hono";
@@ -679,7 +679,7 @@ export class CrocoRouteRegistrar {
         details: {
           code: error.code,
           category: error.category,
-          status: ProblemCategoryMapper.toHttpStatus(error.category),
+          status: error.status,
           title: error.title,
           detail: error.detail,
         },

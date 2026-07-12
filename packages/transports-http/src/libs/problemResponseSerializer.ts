@@ -1,5 +1,4 @@
 import {
-  ProblemCategoryMapper,
   createProblemResponseDetail,
   createProblemResponseExtensions,
   extractProblemDetailsResponseExtensions,
@@ -16,7 +15,7 @@ export function createHttpProblemDetails(problem: Problem, instance: string): Pr
   return {
     type: problem.type,
     title: problem.title,
-    status: ProblemCategoryMapper.toHttpStatus(problem.category),
+    status: problem.status,
     code: problem.code,
     instance,
     ...(detail !== undefined ? { detail } : {}),

@@ -28,6 +28,7 @@ import {
 import { toLambdaHandler } from "../libs/adapters/LambdaAdapter";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
+import { bodyLimitMiddleware } from "../libs/middleware/BodyLimitMiddleware";
 import type { LambdaContext, LambdaEvent } from "../libs/types";
 
 type RawLambdaContext = LambdaExecutionContext & {
@@ -396,6 +397,76 @@ describe("Lambda adapter API Gateway v2 conformance", () => {
     expect(response.headers?.["x-byte-length"]).toBe("6");
     expect(response.isBase64Encoded).toBe(true);
     expect(Buffer.from(response.body ?? "", "base64")).toEqual(input);
+  });
+
+  it("enforces the same actual-byte limit for Lambda text and base64 bodies", async () => {
+    app = createApp({
+      controllers: [LambdaConformanceController],
+      middlewares: [bodyLimitMiddleware({ limit: 4 })],
+      securityValidation: "off",
+    });
+    handler = toLambdaHandler(app);
+
+    const acceptedText = await handler(
+      createLambdaEvent({
+        method: "PUT",
+        path: "/lambda-conformance/text",
+        headers: { "content-type": "text/plain" },
+        body: "1234",
+      }),
+      lambdaContext,
+    );
+    const falseLowText = await handler(
+      createLambdaEvent({
+        method: "PUT",
+        path: "/lambda-conformance/text",
+        headers: { "content-type": "text/plain", "content-length": "1" },
+        body: "12345",
+      }),
+      lambdaContext,
+    );
+    const malformedText = await handler(
+      createLambdaEvent({
+        method: "PUT",
+        path: "/lambda-conformance/text",
+        headers: { "content-type": "text/plain", "content-length": "4x" },
+        body: "12345",
+      }),
+      lambdaContext,
+    );
+    const acceptedBinary = await handler(
+      createLambdaEvent({
+        method: "POST",
+        path: "/lambda-conformance/binary",
+        headers: { "content-type": "application/octet-stream" },
+        body: Buffer.from([0, 1, 2, 3]).toString("base64"),
+        isBase64Encoded: true,
+      }),
+      lambdaContext,
+    );
+    const rejectedBinary = await handler(
+      createLambdaEvent({
+        method: "POST",
+        path: "/lambda-conformance/binary",
+        headers: { "content-type": "application/octet-stream", "content-length": "1" },
+        body: Buffer.from([0, 1, 2, 3, 4]).toString("base64"),
+        isBase64Encoded: true,
+      }),
+      lambdaContext,
+    );
+
+    expect(acceptedText.statusCode).toBe(202);
+    expect(acceptedText.body).toBe("1234");
+    for (const rejected of [falseLowText, malformedText, rejectedBinary]) {
+      expect(rejected.statusCode).toBe(413);
+      expect(await readJsonBody(rejected)).toMatchObject({
+        code: "transports-http/request-body-too-large",
+        status: 413,
+        limit: 4,
+      });
+    }
+    expect(acceptedBinary.statusCode).toBe(201);
+    expect(Buffer.from(acceptedBinary.body ?? "", "base64")).toEqual(Buffer.from([0, 1, 2, 3]));
   });
 
   it("serializes response status, headers, cookies, and JSON bodies", async () => {

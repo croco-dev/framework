@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "GraphQLRequestBodyTooLargeProblem"
+title: "HttpRequestBodyTooLargeProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Actual request bytes exceeded the configured transport boundary.
 
 ## Extends
 
@@ -15,17 +15,17 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new GraphQLRequestBodyTooLargeProblem**(`maxBodySizeBytes`): `GraphQLRequestBodyTooLargeProblem`
+> **new HttpRequestBodyTooLargeProblem**(`options`): `HttpRequestBodyTooLargeProblem`
 
 #### Parameters
 
-##### maxBodySizeBytes
+##### options
 
-`number`
+[`HttpRequestBodyTooLargeProblemOptions`](/api/transports-http/src/type-aliases/httprequestbodytoolargeproblemoptions/)
 
 #### Returns
 
-`GraphQLRequestBodyTooLargeProblem`
+`HttpRequestBodyTooLargeProblem`
 
 #### Overrides
 
@@ -163,7 +163,7 @@ not capture any frames.
 
 `number`
 
-#### Inherited from
+#### Overrides
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`status`](/api/problems-core/src/classes/problem/#status)
 

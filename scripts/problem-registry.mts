@@ -36,6 +36,12 @@ export type ProblemRedactionPolicy = "public" | "safe-message" | "operator-only"
 export type ProblemTelemetrySeverity = "info" | "warning" | "error";
 export type ProblemLifecycleStatus = "active" | "deprecated";
 
+export type ProblemStatusPolicy = {
+  readonly kind: "runtime-configurable";
+  readonly defaultStatus: number;
+  readonly configuration: string;
+};
+
 export type ProblemDeprecationMetadata =
   | {
       readonly reason: string;
@@ -87,6 +93,7 @@ export type ProblemCodeRegistryEntry = {
   readonly code: string;
   readonly category: ProblemCategory;
   readonly status: number;
+  readonly statusPolicy?: ProblemStatusPolicy;
   readonly title: string;
   readonly cookbookPath: string;
   readonly recovery: ProblemRecoveryMetadata;
@@ -158,6 +165,7 @@ export const ProblemCategory = {
   NotFound: "NotFound",
   Conflict: "Conflict",
   Gone: "Gone",
+  PayloadTooLarge: "PayloadTooLarge",
   ValidationError: "ValidationError",
   BusinessRuleViolation: "BusinessRuleViolation",
   TooManyRequests: "TooManyRequests",
@@ -183,6 +191,7 @@ const factoryMethodCategory = {
   notFound: ProblemCategory.NotFound,
   conflict: ProblemCategory.Conflict,
   gone: ProblemCategory.Gone,
+  payloadTooLarge: ProblemCategory.PayloadTooLarge,
   validationError: ProblemCategory.ValidationError,
   businessRuleViolation: ProblemCategory.BusinessRuleViolation,
   tooManyRequests: ProblemCategory.TooManyRequests,
@@ -205,7 +214,10 @@ export function runProblemRegistryCheck(
       baseRegistry,
       existingRegistry,
     );
-    const generatedRegistry = createProblemCodeRegistry(discoveries);
+    const generatedRegistry = createProblemCodeRegistry(
+      discoveries,
+      getApplicableStatusPolicies(absoluteRootDir),
+    );
     const registry = mergeDeprecatedProblemEntries(generatedRegistry, existingRegistry);
     const artifacts = formatProblemRegistryArtifacts(createProblemRegistryArtifacts(registry));
     const preflightDiagnostics = [
@@ -301,6 +313,7 @@ function getProblemDiscoveryKey(
 
 export function createProblemCodeRegistry(
   discoveries: readonly ProblemCodeDiscovery[],
+  statusPolicies: Readonly<Record<string, ProblemStatusPolicy>> = {},
 ): ProblemCodeRegistry {
   const errors: string[] = [];
   const discoveriesByCode = new Map<string, ProblemCodeDiscovery[]>();
@@ -311,6 +324,12 @@ export function createProblemCodeRegistry(
   }
 
   const problems: ProblemCodeRegistryEntry[] = [];
+
+  for (const code of Object.keys(statusPolicies).sort()) {
+    if (!discoveriesByCode.has(code)) {
+      errors.push(`Status policy references unknown Problem code '${code}'.`);
+    }
+  }
 
   for (const [code, codeDiscoveries] of discoveriesByCode) {
     const categories = new Set(codeDiscoveries.map((discovery) => discovery.category));
@@ -341,6 +360,7 @@ export function createProblemCodeRegistry(
       code,
       category,
       status: toHttpStatus(category),
+      ...(statusPolicies[code] ? { statusPolicy: statusPolicies[code] } : {}),
       title: toTitle(category),
       cookbookPath: `/reference/problem-recovery-cookbook/#${slugifyProblemCode(code)}`,
       recovery: recoveryMetadataByCode[code] ?? recoveryMetadataByCategory[category],
@@ -663,6 +683,11 @@ function getProblemContractChangeDiagnostics(
       existingProblem.status === generatedProblem.status
         ? null
         : `status ${existingProblem.status} -> ${generatedProblem.status}`,
+      formatOptionalContractFieldChange(
+        "statusPolicy",
+        formatProblemStatusPolicy(existingProblem.statusPolicy),
+        formatProblemStatusPolicy(generatedProblem.statusPolicy),
+      ),
       existingRetryability === generatedRetryability
         ? null
         : `retryability ${existingRetryability} -> ${generatedRetryability}`,
@@ -1732,6 +1757,30 @@ function getPropertyName(name: ts.PropertyName): string | null {
 
 const telemetryAttributes = ["problem.code", "problem.category", "problem.status"] as const;
 
+const statusPolicyByCode: Partial<Record<string, ProblemStatusPolicy>> = {
+  "transports-http/request-body-too-large": {
+    kind: "runtime-configurable",
+    defaultStatus: 413,
+    configuration: "bodyLimitMiddleware.statusCode",
+  },
+};
+
+function getApplicableStatusPolicies(
+  rootDir: string,
+): Readonly<Record<string, ProblemStatusPolicy>> {
+  const policies: Record<string, ProblemStatusPolicy> = {};
+
+  for (const [code, policy] of Object.entries(statusPolicyByCode)) {
+    const [packageName] = code.split("/");
+
+    if (policy && packageName && existsSync(join(rootDir, "packages", packageName))) {
+      policies[code] = policy;
+    }
+  }
+
+  return policies;
+}
+
 const recoveryMetadataByCategory = {
   [ProblemCategory.BadRequest]: recovery({
     cause: "The caller sent malformed input or unsupported request options.",
@@ -1781,6 +1830,15 @@ const recoveryMetadataByCategory = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  [ProblemCategory.PayloadTooLarge]: recovery({
+    cause: "The request body exceeded the configured byte limit.",
+    userAction: "Reduce the request body and retry.",
+    operatorAction:
+      "Confirm route body limits and upstream proxy limits match the intended upload policy.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   [ProblemCategory.ValidationError]: recovery({
     cause: "The request or generated contract failed schema or semantic validation.",
     userAction: "Fix the invalid fields and retry with schema-conformant input.",
@@ -1825,6 +1883,15 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "transports-http/body-limit-invalid-configuration": recovery({
+    cause: "The HTTP body-limit middleware was configured with an invalid byte boundary.",
+    userAction: "Ask the operator to correct the service configuration before retrying.",
+    operatorAction:
+      "Set the body-limit value to a finite, nonnegative safe integer and restart the service.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   CROCO_HTTP_SECURITY_001: recovery({
     cause:
       "HTTP bootstrap validation found a generated or application app without the required security middleware set.",
@@ -2021,6 +2088,8 @@ function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): 
       errors.push(`Problem code '${problem.code}' has a status/category mismatch.`);
     }
 
+    errors.push(...getProblemStatusPolicyValidationErrors(problem));
+
     if (!isCompleteRecoveryMetadata(problem.recovery)) {
       errors.push(`Problem code '${problem.code}' is missing recovery cookbook metadata.`);
     }
@@ -2049,6 +2118,38 @@ function getProblemLifecycleStatus(problem: ProblemCodeRegistryEntry): ProblemLi
   return getProblemLifecycle(problem).status;
 }
 
+function getProblemStatusPolicyValidationErrors(
+  problem: Pick<ProblemCodeRegistryEntry, "code" | "status" | "statusPolicy">,
+): readonly string[] {
+  const policy = problem.statusPolicy;
+
+  if (!policy) {
+    return [];
+  }
+
+  const errors: string[] = [];
+
+  if (policy.kind !== "runtime-configurable") {
+    errors.push(`Problem code '${problem.code}' has an unsupported status policy.`);
+  }
+
+  if (policy.defaultStatus !== problem.status) {
+    errors.push(
+      `Problem code '${problem.code}' has status policy default ${policy.defaultStatus}, expected ${problem.status}.`,
+    );
+  }
+
+  if (policy.configuration.trim().length === 0) {
+    errors.push(`Problem code '${problem.code}' has an empty status policy configuration.`);
+  }
+
+  return errors;
+}
+
+function formatProblemStatusPolicy(policy: ProblemStatusPolicy | undefined): string | undefined {
+  return policy ? `${policy.kind}:${policy.defaultStatus}:${policy.configuration}` : undefined;
+}
+
 function toHttpStatus(category: ProblemCategory): number {
   switch (category) {
     case ProblemCategory.BadRequest:
@@ -2063,6 +2164,8 @@ function toHttpStatus(category: ProblemCategory): number {
       return 409;
     case ProblemCategory.Gone:
       return 410;
+    case ProblemCategory.PayloadTooLarge:
+      return 413;
     case ProblemCategory.ValidationError:
     case ProblemCategory.BusinessRuleViolation:
       return 422;
@@ -2089,6 +2192,8 @@ function toTitle(category: ProblemCategory): string {
       return "Conflict";
     case ProblemCategory.Gone:
       return "Gone";
+    case ProblemCategory.PayloadTooLarge:
+      return "Payload Too Large";
     case ProblemCategory.ValidationError:
       return "Validation Error";
     case ProblemCategory.BusinessRuleViolation:
@@ -2140,7 +2245,9 @@ function formatGeneratedProblemRegistrySource(registry: ProblemCodeRegistry): st
     "export type CrocoProblemRegistryEntry = CrocoProblemRegistry['problems'][number];",
     "export type CrocoProblemCode = CrocoProblemRegistryEntry['code'];",
     "",
-    "export type CrocoProblemStatus<Code extends CrocoProblemCode = CrocoProblemCode> = Extract<CrocoProblemRegistryEntry, { readonly code: Code }>['status'];",
+    "type CrocoProblemEntryStatus<Entry extends CrocoProblemRegistryEntry> = Entry extends { readonly statusPolicy: { readonly kind: 'runtime-configurable' } } ? number : Entry['status'];",
+    "",
+    "export type CrocoProblemStatus<Code extends CrocoProblemCode = CrocoProblemCode> = CrocoProblemEntryStatus<Extract<CrocoProblemRegistryEntry, { readonly code: Code }>>;",
     "",
     "export type CrocoProblemDetails<Code extends CrocoProblemCode = CrocoProblemCode> = Code extends CrocoProblemCode ? TypedProblemDetails<Code, CrocoProblemStatus<Code>> : never;",
   ].join("\n")}\n`;
@@ -2165,8 +2272,10 @@ function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
     "| --- | --- | ---: | --- | --- | --- | ---: |",
     ...registry.problems.map(
       (problem) =>
-        `| [\`${escapeMarkdownTable(problem.code)}\`](#${slugifyProblemCode(problem.code)}) | ${problem.category} | ${problem.status} | ${problem.recovery.retryability} | ${problem.recovery.redactionPolicy} | ${getProblemLifecycleStatus(problem)} | ${problem.sources.length} |`,
+        `| [\`${escapeMarkdownTable(problem.code)}\`](#${slugifyProblemCode(problem.code)}) | ${problem.category} | ${formatProblemStatus(problem)} | ${problem.recovery.retryability} | ${problem.recovery.redactionPolicy} | ${getProblemLifecycleStatus(problem)} | ${problem.sources.length} |`,
     ),
+    "",
+    "\\* Runtime-configurable statuses show their canonical default; see the entry details for the configuration surface.",
     "",
   ];
 
@@ -2179,7 +2288,7 @@ function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
       `## \`${problem.code}\``,
       "",
       `- Category: \`${problem.category}\``,
-      `- HTTP status: \`${problem.status}\` ${problem.title}`,
+      `- HTTP status: ${formatProblemStatusDetails(problem)}`,
       `- Retryability: \`${problem.recovery.retryability}\``,
       `- Redaction policy: \`${problem.recovery.redactionPolicy}\``,
       `- Lifecycle: \`${lifecycle.status}\``,
@@ -2224,6 +2333,18 @@ function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
 
 function escapeMarkdownTable(value: string): string {
   return value.replace(/\|/g, "\\|");
+}
+
+function formatProblemStatus(problem: ProblemCodeRegistryEntry): string {
+  return problem.statusPolicy ? `${problem.status}*` : String(problem.status);
+}
+
+function formatProblemStatusDetails(problem: ProblemCodeRegistryEntry): string {
+  const fixed = `\`${problem.status}\` ${problem.title}`;
+
+  return problem.statusPolicy
+    ? `${fixed} by default; runtime-configurable via \`${problem.statusPolicy.configuration}\``
+    : fixed;
 }
 
 function compareSources(
