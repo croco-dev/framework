@@ -1,6 +1,13 @@
+import type { Checkpointable, ItemWriter, Step } from "@croco/batch-core";
 import { createStepExecutionError } from "@croco/batch-core";
-import type { Checkpointable, Step } from "@croco/batch-core";
-import type { ExecutionManager } from "@croco/execution-core";
+import type {
+  Execution,
+  ExecutionContinuationClaim,
+  ExecutionContinuationManager,
+  ExecutionContinuationPublication,
+  ExecutionManager,
+} from "@croco/execution-core";
+import { ExecutionProblems, INITIAL_EXECUTION_CONTINUATION_TOKEN } from "@croco/execution-core";
 import { Problem } from "@croco/problems-core";
 import type { Client } from "@upstash/qstash";
 import {
@@ -24,218 +31,359 @@ function isPeekable<I>(obj: unknown): obj is { peek(): Promise<I | null> } {
   return typeof obj === "object" && obj !== null && "peek" in obj && typeof obj.peek === "function";
 }
 
-/**
- * QStash 청크 실행기에 필요한 옵션입니다.
- */
-export interface QStashExecutorOptions {
-  qstashClient: Client;
-  webhookUrl: string;
+export interface QStashIdempotentWriteContext {
+  executionId: string;
+  stepName: string;
+  attempt: number;
+  processingToken: string;
 }
 
 /**
- * 배치 Step을 청크 단위로 실행하고 다음 청크를 QStash로 예약하는 실행기입니다.
+ * Writer capability required at the external side-effect boundary.
+ *
+ * Implementations must treat processingToken as an idempotency key. The token is
+ * stable when an expired continuation lease is reclaimed by another worker.
  */
+export interface QStashIdempotentWriter<O> {
+  writeIdempotent(items: O[], context: QStashIdempotentWriteContext): Promise<void>;
+}
+
+export type QStashStep<I, O> = Omit<Step<I, O>, "writer"> & {
+  writer: ItemWriter<O> & QStashIdempotentWriter<O>;
+};
+
+export interface QStashChunkDelivery {
+  continuationToken?: string;
+  workerId?: string;
+}
+
+export type QStashChunkResult =
+  | { hasMore: boolean; processedCount: number }
+  | {
+      kind: "stale";
+      hasMore: false;
+      processedCount: 0;
+      deliveryToken: string;
+    };
+
+/** Options required by the QStash chunk executor. */
+export interface QStashExecutorOptions {
+  qstashClient: Client;
+  webhookUrl: string;
+  heartbeatIntervalMs?: number;
+  tokenGenerator?: () => string;
+  workerIdGenerator?: () => string;
+}
+
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 10_000;
+
+/** Executes one fenced batch chunk and schedules its token-bound continuation. */
 export class QStashChunkExecutor {
+  private readonly continuationManager: ExecutionContinuationManager;
+  private readonly heartbeatIntervalMs: number;
+  private readonly tokenGenerator: () => string;
+  private readonly workerIdGenerator: () => string;
+
   constructor(
-    private executionManager: ExecutionManager,
-    private options: QStashExecutorOptions,
+    executionManager: ExecutionManager & ExecutionContinuationManager,
+    private readonly options: QStashExecutorOptions,
   ) {
-    validateExecutionManager(executionManager);
+    this.continuationManager = validateExecutionManager(executionManager);
     validateQStashClient(options.qstashClient);
     validateWebhookUrl(options.webhookUrl);
+    this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
+    if (!Number.isFinite(this.heartbeatIntervalMs) || this.heartbeatIntervalMs <= 0) {
+      throw new QStashBatchValidationProblem("heartbeatIntervalMs must be a positive number.");
+    }
+    this.tokenGenerator = options.tokenGenerator ?? (() => globalThis.crypto.randomUUID());
+    this.workerIdGenerator = options.workerIdGenerator ?? (() => globalThis.crypto.randomUUID());
   }
 
   async executeChunk<I, O>(
     executionId: string,
-    step: Step<I, O>,
-  ): Promise<{ hasMore: boolean; processedCount: number }> {
-    const execution = await this.executionManager.start(executionId);
+    step: QStashStep<I, O>,
+    delivery: QStashChunkDelivery = {},
+  ): Promise<QStashChunkResult> {
+    validateQStashStep(step);
 
-    const checkpointKey = `${step.name}.cursor`;
-    const processedCountKey = `${step.name}.processedCount`;
-    if (execution.checkpoints?.[checkpointKey]) {
-      if (isCheckpointable(step.reader)) {
-        step.reader.restoreCheckpoint(execution.checkpoints[checkpointKey]);
-      }
+    const deliveryToken = delivery.continuationToken ?? INITIAL_EXECUTION_CONTINUATION_TOKEN;
+    const workerId = delivery.workerId ?? this.workerIdGenerator();
+    const acquired = await this.continuationManager.claimContinuation(executionId, {
+      deliveryToken,
+      workerId,
+    });
+
+    if (acquired.kind === "stale") {
+      return {
+        kind: "stale",
+        hasMore: false,
+        processedCount: 0,
+        deliveryToken: acquired.deliveryToken,
+      };
     }
 
-    const previousProcessedCount = this.getProcessedCount(
-      execution.checkpoints?.[processedCountKey],
-    );
+    if (acquired.kind === "contended") {
+      throw ExecutionProblems.continuationConflict(
+        `Continuation delivery is already owned for execution '${executionId}'`,
+        {
+          currentWorkerId: acquired.claim.workerId,
+          currentLeaseExpiresAt: acquired.claim.expiresAt.toISOString(),
+        },
+      );
+    }
 
-    const items: O[] = [];
-    let hasMore = false;
-    let readCount = 0;
-    let checkpointAfterChunk: unknown;
-
+    const heartbeat = this.createHeartbeat(executionId, acquired.claim, workerId);
     try {
-      for (let i = 0; i < step.chunkSize; i++) {
-        const item = await step.reader.read();
-
-        if (item === null) {
-          break;
-        }
-
-        readCount += 1;
-
-        let processedItem: O | null = null;
-        if (step.processor) {
-          processedItem = await step.processor.process(item);
-        } else {
-          processedItem = item as unknown as O;
-        }
-
-        if (processedItem !== null) {
-          items.push(processedItem);
-        }
-      }
-
-      if (items.length > 0) {
-        await step.writer.write(items);
-      }
-
-      if (isCheckpointable(step.reader)) {
-        checkpointAfterChunk = step.reader.getCheckpoint();
-        await this.executionManager.checkpoint(executionId, checkpointKey, checkpointAfterChunk);
-      }
-
-      hasMore = await this.hasMoreItems(step, readCount, checkpointAfterChunk);
-      const cumulativeProcessedCount = previousProcessedCount + items.length;
-
-      if (hasMore) {
-        await this.executionManager.checkpoint(
-          executionId,
-          processedCountKey,
-          cumulativeProcessedCount,
+      if (acquired.kind === "publish_pending") {
+        await heartbeat.renew();
+        await this.publishContinuation(executionId, step.name, acquired.publication);
+        await heartbeat.assertOwned();
+        await heartbeat.runOwned(() =>
+          this.continuationManager.confirmContinuationPublication(executionId, acquired.claim),
         );
-        await this.triggerNextChunk(
-          executionId,
-          step.name,
-          checkpointAfterChunk,
-          cumulativeProcessedCount,
-        );
-      } else {
-        await this.executionManager.complete(executionId, {
-          processedCount: cumulativeProcessedCount,
-        });
+        return { hasMore: true, processedCount: 0 };
       }
 
-      return { hasMore, processedCount: items.length };
+      return await this.processClaimedChunk(
+        executionId,
+        step,
+        acquired.execution,
+        acquired.claim,
+        heartbeat,
+      );
     } catch (error) {
-      await this.executionManager.fail(executionId, {
-        ...createStepExecutionError(error, step.classifyFailure, {
-          executionId,
-          stepName: step.name,
-        }),
-      });
+      await this.failWhileOwned(executionId, step, acquired.claim, error, heartbeat);
       throw error;
+    } finally {
+      heartbeat.stop();
     }
   }
 
-  private getProcessedCount(value: unknown): number {
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      return 0;
+  private async processClaimedChunk<I, O>(
+    executionId: string,
+    step: QStashStep<I, O>,
+    execution: Execution,
+    claim: ExecutionContinuationClaim,
+    heartbeat: ContinuationHeartbeat,
+  ): Promise<{ hasMore: boolean; processedCount: number }> {
+    const checkpointKey = `${step.name}.cursor`;
+    const processedCountKey = `${step.name}.processedCount`;
+    const checkpoint = execution.checkpoints?.[checkpointKey];
+    if (checkpoint !== undefined && isCheckpointable(step.reader)) {
+      step.reader.restoreCheckpoint(checkpoint);
     }
 
-    return value;
+    const previousProcessedCount = getProcessedCount(execution.checkpoints?.[processedCountKey]);
+    const items: O[] = [];
+    let readCount = 0;
+
+    for (let i = 0; i < step.chunkSize; i++) {
+      await heartbeat.assertOwned();
+      const item = await step.reader.read();
+      if (item === null) break;
+      readCount += 1;
+      const processedItem = step.processor
+        ? await step.processor.process(item)
+        : (item as unknown as O);
+      if (processedItem !== null) items.push(processedItem);
+    }
+
+    await heartbeat.renew();
+    if (items.length > 0) {
+      await step.writer.writeIdempotent(items, {
+        executionId,
+        stepName: step.name,
+        attempt: claim.attempt,
+        processingToken: claim.processingToken,
+      });
+    }
+    await heartbeat.assertOwned();
+
+    const checkpointAfterChunk = isCheckpointable(step.reader)
+      ? step.reader.getCheckpoint()
+      : undefined;
+    const hasMore = await this.hasMoreItems(step, readCount, checkpointAfterChunk);
+    const cumulativeProcessedCount = previousProcessedCount + items.length;
+
+    if (!hasMore) {
+      await heartbeat.renew();
+      await heartbeat.runOwned(() =>
+        this.continuationManager.completeContinuation(executionId, claim, {
+          processedCount: cumulativeProcessedCount,
+        }),
+      );
+      return { hasMore: false, processedCount: items.length };
+    }
+
+    const nextToken = this.tokenGenerator();
+    const checkpoints = {
+      ...execution.checkpoints,
+      ...(checkpointAfterChunk !== undefined ? { [checkpointKey]: checkpointAfterChunk } : {}),
+      [processedCountKey]: cumulativeProcessedCount,
+    };
+    await heartbeat.runOwned(() =>
+      this.continuationManager.stageContinuation(executionId, claim, {
+        checkpoints,
+        nextToken,
+      }),
+    );
+    await heartbeat.renew();
+    await this.publishContinuation(executionId, step.name, {
+      attempt: claim.attempt,
+      sourceToken: claim.processingToken,
+      nextToken,
+    });
+    await heartbeat.assertOwned();
+    await heartbeat.runOwned(() =>
+      this.continuationManager.confirmContinuationPublication(executionId, claim),
+    );
+    return { hasMore: true, processedCount: items.length };
   }
 
   private async hasMoreItems<I, O>(
-    step: Step<I, O>,
+    step: QStashStep<I, O>,
     readCount: number,
     checkpointAfterChunk: unknown,
   ): Promise<boolean> {
-    if (readCount < step.chunkSize) {
-      return false;
-    }
-
-    // 청크 경계에서 read-ahead로 아이템이 유실되지 않도록 보장한다.
-    // 1) peek 지원: 비소모 조회
-    // 2) checkpointable: 1개 read 후 즉시 restore
-    // 3) 그 외: 보수적으로 hasMore=true 처리 (빈 청크 1회 추가 가능)
-    if (isPeekable<I>(step.reader)) {
-      const nextItem = await step.reader.peek();
-      return nextItem !== null;
-    }
-
+    if (readCount < step.chunkSize) return false;
+    if (isPeekable<I>(step.reader)) return (await step.reader.peek()) !== null;
     if (isCheckpointable(step.reader)) {
       const nextItem = await step.reader.read();
       step.reader.restoreCheckpoint(checkpointAfterChunk);
       return nextItem !== null;
     }
-
     return true;
   }
 
-  private extractCursorValue(checkpoint: unknown): string {
-    if (checkpoint === null || checkpoint === undefined) {
-      return "no-checkpoint";
-    }
-
-    if (typeof checkpoint !== "object") {
-      return String(checkpoint);
-    }
-
-    const checkpointRecord = checkpoint as Record<string, unknown>;
-    const cursorValue =
-      checkpointRecord.cursor ??
-      checkpointRecord.offset ??
-      checkpointRecord.index ??
-      checkpointRecord.position;
-
-    if (cursorValue !== undefined) {
-      return String(cursorValue);
-    }
-
-    return JSON.stringify(checkpoint);
-  }
-
-  private buildIdempotencyKey(
+  private async publishContinuation(
     executionId: string,
     stepName: string,
-    checkpoint: unknown,
-    processedCount: number,
-  ): string {
-    const cursorValue = this.extractCursorValue(checkpoint);
-
-    if (cursorValue === "no-checkpoint") {
-      return `chunk:${executionId}:${stepName}:${cursorValue}:${processedCount}`;
-    }
-
-    return `chunk:${executionId}:${stepName}:${cursorValue}`;
-  }
-
-  private async triggerNextChunk(
-    executionId: string,
-    stepName: string,
-    checkpoint: unknown,
-    processedCount: number,
+    publication: ExecutionContinuationPublication,
   ): Promise<void> {
-    const idempotencyKey = this.buildIdempotencyKey(
-      executionId,
-      stepName,
-      checkpoint,
-      processedCount,
-    );
-
     await runQStashBatchOperation("publishJSON", () =>
       this.options.qstashClient.publishJSON({
         url: this.options.webhookUrl,
         body: {
           executionId,
           stepName,
+          continuationToken: publication.nextToken,
         },
         headers: {
-          "Idempotency-Key": idempotencyKey,
+          "Idempotency-Key": `chunk:${executionId}:${stepName}:${publication.attempt}:${publication.nextToken}`,
         },
       }),
     );
   }
+
+  private createHeartbeat(
+    executionId: string,
+    claim: ExecutionContinuationClaim,
+    workerId: string,
+  ): ContinuationHeartbeat {
+    let failure: unknown;
+    let mutation = Promise.resolve();
+    const runOwned = async <T>(action: () => Promise<T>): Promise<T> => {
+      if (failure !== undefined) throw failure;
+      const result = mutation.then(action);
+      mutation = result.then(
+        () => undefined,
+        (error: unknown) => {
+          failure = error;
+        },
+      );
+      try {
+        return await result;
+      } catch (error) {
+        failure = error;
+        throw error;
+      }
+    };
+    const renew = (): Promise<void> =>
+      runOwned(() =>
+        this.continuationManager.renewContinuationClaim(executionId, claim, { workerId }),
+      ).then(() => undefined);
+    const timer = setInterval(() => {
+      void renew().catch(() => undefined);
+    }, this.heartbeatIntervalMs);
+
+    return {
+      renew,
+      runOwned,
+      assertOwned: async () => {
+        if (failure !== undefined) throw failure;
+        await mutation;
+        if (failure !== undefined) throw failure;
+      },
+      stop: () => clearInterval(timer),
+    };
+  }
+
+  private async failWhileOwned<I, O>(
+    executionId: string,
+    step: QStashStep<I, O>,
+    claim: ExecutionContinuationClaim,
+    error: unknown,
+    heartbeat: ContinuationHeartbeat,
+  ): Promise<void> {
+    try {
+      await heartbeat.runOwned(() =>
+        this.continuationManager.failContinuation(
+          executionId,
+          claim,
+          createStepExecutionError(error, step.classifyFailure, {
+            executionId,
+            stepName: step.name,
+          }),
+        ),
+      );
+    } catch (failureError) {
+      if (isContinuationConflict(failureError)) {
+        // A lost fence must never be followed by an unconditional failure mutation.
+        return;
+      }
+      throw failureError;
+    }
+  }
 }
 
-function validateExecutionManager(value: ExecutionManager): void {
-  if (!value) {
-    throw new QStashBatchConfigProblem("executionManager");
+interface ContinuationHeartbeat {
+  renew(): Promise<void>;
+  runOwned<T>(action: () => Promise<T>): Promise<T>;
+  assertOwned(): Promise<void>;
+  stop(): void;
+}
+
+function getProcessedCount(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function isContinuationConflict(error: unknown): boolean {
+  return error instanceof Problem && error.code === "execution/continuation-conflict";
+}
+
+function validateExecutionManager(
+  value: ExecutionManager & ExecutionContinuationManager,
+): ExecutionContinuationManager {
+  if (!value) throw new QStashBatchConfigProblem("executionManager");
+  const candidate = value as ExecutionManager & Partial<ExecutionContinuationManager>;
+  const methods: readonly (keyof ExecutionContinuationManager)[] = [
+    "claimContinuation",
+    "renewContinuationClaim",
+    "stageContinuation",
+    "confirmContinuationPublication",
+    "completeContinuation",
+    "failContinuation",
+  ];
+  if (methods.some((method) => typeof candidate[method] !== "function")) {
+    throw new QStashBatchConfigProblem("executionManager.continuation");
+  }
+  return candidate as ExecutionManager & ExecutionContinuationManager;
+}
+
+function validateQStashStep<I, O>(step: QStashStep<I, O>): void {
+  const writer = step?.writer as Partial<QStashIdempotentWriter<O>> | undefined;
+  if (!writer || typeof writer.writeIdempotent !== "function") {
+    throw new QStashBatchConfigProblem("step.writer.writeIdempotent");
   }
 }
 
@@ -247,20 +395,14 @@ function validateQStashClient(value: Client): void {
 }
 
 function validateWebhookUrl(value: string): void {
-  if (!value || value.trim().length === 0) {
-    throw new QStashBatchConfigProblem("webhookUrl");
-  }
-
+  if (!value || value.trim().length === 0) throw new QStashBatchConfigProblem("webhookUrl");
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" && url.protocol !== "http:") {
       throw new QStashBatchValidationProblem("QStash batch webhookUrl must use http or https.");
     }
   } catch (error) {
-    if (error instanceof QStashBatchValidationProblem) {
-      throw error;
-    }
-
+    if (error instanceof QStashBatchValidationProblem) throw error;
     throw new QStashBatchValidationProblem("QStash batch webhookUrl must be a valid URL.");
   }
 }
@@ -272,10 +414,7 @@ async function runQStashBatchOperation<T>(
   try {
     return await action();
   } catch (error) {
-    if (error instanceof Problem) {
-      throw error;
-    }
-
+    if (error instanceof Problem) throw error;
     throw new QStashBatchPublishProblem(operation, error);
   }
 }

@@ -2,6 +2,8 @@ import type {
   AddExecutionLogParams,
   CreateExecutionParams,
   Execution,
+  ExecutionContinuationClaim,
+  ExecutionContinuationPublication,
   ExecutionError,
   ListExecutionsOptions,
   ProgressInfo,
@@ -9,6 +11,45 @@ import type {
   ReconcileTimedOutResult,
   ReplayExecutionParams,
 } from "../types";
+
+export interface ClaimExecutionContinuationInput {
+  deliveryToken: string;
+  workerId: string;
+}
+
+export type ClaimExecutionContinuationResult =
+  | {
+      kind: "process";
+      execution: Execution;
+      claim: ExecutionContinuationClaim;
+    }
+  | {
+      kind: "publish_pending";
+      execution: Execution;
+      claim: ExecutionContinuationClaim;
+      publication: ExecutionContinuationPublication;
+    }
+  | {
+      kind: "stale";
+      execution: Execution;
+      deliveryToken: string;
+      expectedToken?: string;
+    }
+  | {
+      kind: "contended";
+      execution: Execution;
+      deliveryToken: string;
+      claim: ExecutionContinuationClaim;
+    };
+
+export interface RenewExecutionContinuationInput {
+  workerId: string;
+}
+
+export interface StageExecutionContinuationInput {
+  checkpoints: Record<string, unknown>;
+  nextToken: string;
+}
 
 /**
  * ExecutionManager defines the lifecycle management interface for executions.
@@ -160,4 +201,40 @@ export interface ExecutionReplayManager {
    * @throws Error if execution not found or source execution is not replayable
    */
   replay(id: string, params?: ReplayExecutionParams): Promise<Execution>;
+}
+
+/**
+ * Optional atomic continuation capabilities for execution managers.
+ */
+export interface ExecutionContinuationManager {
+  claimContinuation(
+    id: string,
+    input: ClaimExecutionContinuationInput,
+  ): Promise<ClaimExecutionContinuationResult>;
+
+  renewContinuationClaim(
+    id: string,
+    claim: ExecutionContinuationClaim,
+    input: RenewExecutionContinuationInput,
+  ): Promise<Execution>;
+
+  stageContinuation(
+    id: string,
+    claim: ExecutionContinuationClaim,
+    input: StageExecutionContinuationInput,
+  ): Promise<Execution>;
+
+  confirmContinuationPublication(id: string, claim: ExecutionContinuationClaim): Promise<Execution>;
+
+  completeContinuation(
+    id: string,
+    claim: ExecutionContinuationClaim,
+    result?: unknown,
+  ): Promise<Execution>;
+
+  failContinuation(
+    id: string,
+    claim: ExecutionContinuationClaim,
+    error: ExecutionError,
+  ): Promise<Execution>;
 }

@@ -5,7 +5,7 @@ prev: false
 title: "QStashChunkExecutor"
 ---
 
-배치 Step을 청크 단위로 실행하고 다음 청크를 QStash로 예약하는 실행기입니다.
+Executes one fenced batch chunk and schedules its token-bound continuation.
 
 ## Constructors
 
@@ -17,7 +17,7 @@ title: "QStashChunkExecutor"
 
 ##### executionManager
 
-[`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/)
+[`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/) & [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/)
 
 ##### options
 
@@ -31,7 +31,7 @@ title: "QStashChunkExecutor"
 
 ### executeChunk()
 
-> **executeChunk**\<`I`, `O`\>(`executionId`, `step`): `Promise`\<\{ `hasMore`: `boolean`; `processedCount`: `number`; \}\>
+> **executeChunk**\<`I`, `O`\>(`executionId`, `step`, `delivery?`): `Promise`\<[`QStashChunkResult`](/api/batch-qstash/src/type-aliases/qstashchunkresult/)\>
 
 #### Type Parameters
 
@@ -51,8 +51,12 @@ title: "QStashChunkExecutor"
 
 ##### step
 
-[`Step`](/api/batch-core/src/classes/step/)\<`I`, `O`\>
+[`QStashStep`](/api/batch-qstash/src/type-aliases/qstashstep/)\<`I`, `O`\>
+
+##### delivery?
+
+[`QStashChunkDelivery`](/api/batch-qstash/src/interfaces/qstashchunkdelivery/) = `{}`
 
 #### Returns
 
-`Promise`\<\{ `hasMore`: `boolean`; `processedCount`: `number`; \}\>
+`Promise`\<[`QStashChunkResult`](/api/batch-qstash/src/type-aliases/qstashchunkresult/)\>

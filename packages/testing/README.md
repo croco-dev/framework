@@ -175,8 +175,8 @@ The serverless provider helpers currently cover:
   shape, delay/header/deduplication evidence, invalid task input, redacted retryable and terminal
   upstream failures, and no-credential live-smoke gates.
 - `createQStashBatchConformanceSuite()` for QStash-backed batch continuations: terminal chunks,
-  continuation envelopes, execution failure evidence, redacted retryable and terminal upstream
-  failures, and no-credential live-smoke gates.
+  dual-interface idempotent writer context, token-bearing continuation envelopes, execution failure
+  evidence, redacted retryable and terminal upstream failures, and no-credential live-smoke gates.
 - `createQStashTriggerConformanceSuite()` for QStash-backed trigger schedules: schedule sync
   evidence, webhook signature rejection, verified dispatch, redacted retryable and terminal
   schedule diagnostics, and no-credential live-smoke gates.

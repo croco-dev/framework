@@ -5,15 +5,31 @@ export enum ExecutionProblemCode {
   CONFLICT = "execution/conflict",
   MAX_RETRIES_EXCEEDED = "execution/max-retries-exceeded",
   INVALID_STATE_TRANSITION = "execution/invalid-state-transition",
+  CONTINUATION_UNSUPPORTED = "execution/continuation-unsupported",
+  CONTINUATION_CONFLICT = "execution/continuation-conflict",
+}
+
+export interface ExecutionContinuationConflictEvidence {
+  currentWorkerId?: string;
+  currentLeaseExpiresAt?: string;
+  currentStatus?: string;
 }
 
 /**
  * Execution-specific Problem errors extending the base Problem class.
  */
 export class ExecutionProblem extends Problem {
+  readonly evidence?: ExecutionContinuationConflictEvidence;
+
   // biome-ignore lint: base class Problem has protected constructor requiring explicit constructor
-  constructor(code: ExecutionProblemCode, category: ProblemCategory, detail?: string) {
-    super(code, category, detail);
+  constructor(
+    code: ExecutionProblemCode,
+    category: ProblemCategory,
+    detail?: string,
+    evidence?: ExecutionContinuationConflictEvidence,
+  ) {
+    super(code, category, detail, evidence ? { extensions: { ...evidence } } : undefined);
+    this.evidence = evidence;
   }
 }
 
@@ -42,6 +58,26 @@ export class ExecutionProblems {
       ExecutionProblemCode.INVALID_STATE_TRANSITION,
       ProblemCategory.Conflict,
       detail,
+    );
+  }
+
+  static continuationUnsupported(detail: string): ExecutionProblem {
+    return new ExecutionProblem(
+      ExecutionProblemCode.CONTINUATION_UNSUPPORTED,
+      ProblemCategory.InternalServerError,
+      detail,
+    );
+  }
+
+  static continuationConflict(
+    detail: string,
+    evidence?: ExecutionContinuationConflictEvidence,
+  ): ExecutionProblem {
+    return new ExecutionProblem(
+      ExecutionProblemCode.CONTINUATION_CONFLICT,
+      ProblemCategory.Conflict,
+      detail,
+      evidence,
     );
   }
 }

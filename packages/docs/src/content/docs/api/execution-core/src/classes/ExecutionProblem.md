@@ -15,7 +15,7 @@ Execution-specific Problem errors extending the base Problem class.
 
 ### Constructor
 
-> **new ExecutionProblem**(`code`, `category`, `detail?`): `ExecutionProblem`
+> **new ExecutionProblem**(`code`, `category`, `detail?`, `evidence?`): `ExecutionProblem`
 
 #### Parameters
 
@@ -30,6 +30,10 @@ Execution-specific Problem errors extending the base Problem class.
 ##### detail?
 
 `string`
+
+##### evidence?
+
+[`ExecutionContinuationConflictEvidence`](/api/execution-core/src/interfaces/executioncontinuationconflictevidence/)
 
 #### Returns
 
@@ -78,6 +82,12 @@ Execution-specific Problem errors extending the base Problem class.
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`detail`](/api/problems-core/src/classes/problem/#detail)
+
+***
+
+### evidence?
+
+> `readonly` `optional` **evidence?**: [`ExecutionContinuationConflictEvidence`](/api/execution-core/src/interfaces/executioncontinuationconflictevidence/)
 
 ***
 
