@@ -1,5 +1,6 @@
 import {
   IdempotencyConflictProblem,
+  IdempotencyReservationExpiredProblem,
   IdempotencyReservationNotFoundProblem,
   IdempotencyReservationStateProblem,
 } from "./problems/IdempotencyProblems";
@@ -93,10 +94,10 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
   async commit(
     options: IdempotencyCommitOptions<TResult>,
   ): Promise<IdempotencyCompletedRecord<TResult>> {
-    const existing = this.records.get(options.key.storageKey);
-    this.assertActiveReservation(existing, options.key, options.reservationId);
-
     const completedAt = this.now();
+    const existing = this.records.get(options.key.storageKey);
+    this.assertActiveReservation(existing, options.key, options.reservationId, completedAt);
+
     const record: IdempotencyCompletedRecord<TResult> = {
       ...options.key,
       status: "completed",
@@ -128,10 +129,10 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
   }
 
   async fail(options: IdempotencyFailOptions): Promise<IdempotencyFailedRecord> {
-    const existing = this.records.get(options.key.storageKey);
-    this.assertActiveReservation(existing, options.key, options.reservationId);
-
     const failedAt = this.now();
+    const existing = this.records.get(options.key.storageKey);
+    this.assertActiveReservation(existing, options.key, options.reservationId, failedAt);
+
     const record: IdempotencyFailedRecord = {
       ...options.key,
       status: "failed",
@@ -194,6 +195,7 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
     record: IdempotencyRecord<TResult> | undefined,
     key: DerivedIdempotencyKey,
     reservationId: string,
+    observedAt: Date,
   ): asserts record is IdempotencyInFlightRecord {
     if (record === undefined) {
       throw new IdempotencyReservationNotFoundProblem({
@@ -219,6 +221,13 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
         expected: record.reservationId,
         actual: reservationId,
         reservationId,
+      });
+    }
+
+    if (record.expiresAt !== null && record.expiresAt.getTime() <= observedAt.getTime()) {
+      throw new IdempotencyReservationExpiredProblem({
+        expiredAt: record.expiresAt,
+        observedAt,
       });
     }
   }

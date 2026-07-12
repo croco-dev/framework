@@ -35,6 +35,9 @@ const result = await coordinator.execute({ key, ttlMs: 86_400_000 }, async () =>
 
 동일 key와 동일 fingerprint는 완료된 응답을 replay합니다. 동일 key에 다른 fingerprint가 들어오면 `IdempotencyConflictProblem`으로 실패합니다.
 
+TTL이 설정된 in-flight reservation은 `expiresAt` 직전까지만 완료할 수 있습니다. 만료 시각부터 `commit`과 `fail`은
+`IdempotencyReservationExpiredProblem`으로 거부되며, 새 `reserve`가 발급한 reservation만 상태를 전이할 수 있습니다.
+
 ## 통합 키 헬퍼
 
 ```ts
@@ -89,6 +92,7 @@ for (const testCase of suite.cases) {
 - `IdempotencyCoordinator`: 저장소 계약 위에서 execute/replay/in-flight/failure 결과를 통합합니다.
 - `InMemoryIdempotencyStore`: conformance와 로컬 개발에 사용할 수 있는 reference store입니다.
 - `IdempotencyConflictProblem`: 동일 key와 다른 fingerprint 충돌을 표준 Problem으로 표현합니다.
+- `IdempotencyReservationExpiredProblem`: 만료된 reservation의 완료 시도를 안전한 진단 시각과 함께 표현합니다.
 
 ## 라이선스
 
