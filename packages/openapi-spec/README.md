@@ -23,6 +23,10 @@ const document = emitOpenAPIFromContractGraph(graph, {
 });
 ```
 
+Array query parameters are emitted with OpenAPI `style: form` and `explode: true`, matching
+repeated query-key transport semantics. Array header parameters use `style: simple` and
+`explode: false`, matching comma-delimited HTTP header values.
+
 ## Verification
 
 ```bash

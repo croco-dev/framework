@@ -13893,6 +13893,12 @@
       "entrypoint": "packages/protocols-core/src/index.ts",
       "runtimeExports": [
         {
+          "name": "acceptsZodArrayInput",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
           "name": "assertContractGraphConsumerRouteCoverage",
           "exportKind": "named",
           "source": "./libs/ContractGraphConsumerCoverage",
@@ -14031,6 +14037,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "getHttpParamFallbackSchema",
+          "exportKind": "named",
+          "source": "./libs/schemaBuilder",
+          "declarationKind": "function"
+        },
+        {
           "name": "getSchemaDescriptorDiagnostics",
           "exportKind": "named",
           "source": "./libs/SchemaDescriptor",
@@ -14038,6 +14050,12 @@
         },
         {
           "name": "getZodArrayElementSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "getZodArrayInputSchema",
           "exportKind": "named",
           "source": "./libs/SchemaDescriptor",
           "declarationKind": "function"
@@ -14088,6 +14106,18 @@
           "name": "isControllerConstructor",
           "exportKind": "named",
           "source": "./libs/controllerDiscovery",
+          "declarationKind": "function"
+        },
+        {
+          "name": "isZodArraySchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "isZodType",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
           "declarationKind": "function"
         },
         {
@@ -14152,6 +14182,12 @@
         },
         {
           "name": "unwrapZodEffectsSchema",
+          "exportKind": "named",
+          "source": "./libs/SchemaDescriptor",
+          "declarationKind": "function"
+        },
+        {
+          "name": "unwrapZodParameterSchema",
           "exportKind": "named",
           "source": "./libs/SchemaDescriptor",
           "declarationKind": "function"

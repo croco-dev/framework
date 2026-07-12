@@ -60,6 +60,22 @@ const app = createApp({
 export const handler = app.lambdaHandler();
 ```
 
+### Repeated query and header parameters
+
+Repeated query keys are preserved in `CrocoRequest.query`: one `?tag=a` value is a string and
+`?tag=a&tag=b` is `string[]`. Accordingly, `CrocoHttpContext.query(name)` now returns
+`string | string[] | undefined`. Applications that read query values directly must narrow or
+validate the value before treating it as a scalar.
+
+Named `@Query("tag")` parameters without an explicit schema retain the generated optional-scalar
+contract and reject repeated values. Declare a Zod array schema when the controller parameter is
+intended to accept repeated keys.
+
+`Fetch` and Hono normalize duplicate request header lines into a comma-separated header value.
+Croco retains that scalar header record, while `@Header()` parameters declared with Zod array
+schemas receive a trimmed comma-separated string array before validation. Scalar header schemas
+continue to receive one string.
+
 ### 요청 관측성과 Problem 메타데이터
 
 등록된 컨트롤러 요청은 기본 HTTP server span 안에서 실행됩니다. 요청 중 `Problem` 또는 일반 에러가

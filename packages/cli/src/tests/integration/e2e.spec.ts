@@ -348,6 +348,12 @@ declare module '@croco/protocols-rest' {
   export function Post(path: string | RouteContractFixture): MethodDecorator;
   export function Put(path: string | RouteContractFixture): MethodDecorator;
   export function ProblemResponses(...responses: readonly unknown[]): MethodDecorator;
+  export class RequestValidationProblem {
+    constructor(
+      source: 'body' | 'query' | 'params' | 'headers',
+      issues: Array<{ path: string; message: string }>,
+    );
+  }
   export function ResponseSchema(schema: unknown): MethodDecorator;
   export function routeProblemResponses(
     contract: { readonly problems: readonly unknown[] },
@@ -357,7 +363,7 @@ declare module '@croco/protocols-rest' {
 declare module '@croco/transports-http' {
   export type CrocoHttpContext = {
     header(name: string): string | undefined;
-    query(name: string): string | undefined;
+    query(name: string): string | string[] | undefined;
   };
 
   export function createApp(): {

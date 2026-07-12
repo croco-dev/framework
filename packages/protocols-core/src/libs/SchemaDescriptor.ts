@@ -135,6 +135,12 @@ export const JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX = [
     note: "Unwraps to the inner schema and marks object fields as optional.",
   },
   {
+    typeName: "ZodCatch",
+    kind: "catch",
+    jsonSafe: "supported",
+    note: "Unwraps to the inner schema while retaining the runtime fallback.",
+  },
+  {
     typeName: "ZodEffects",
     kind: "effects",
     jsonSafe: "supported",
@@ -251,6 +257,21 @@ type ZodDefinition = {
   };
 };
 
+type TransparentZodWrapperChildKey = "innerType" | "type";
+
+const TRANSPARENT_ZOD_WRAPPER_CHILD_KEYS: Readonly<Record<string, TransparentZodWrapperChildKey>> =
+  {
+    ZodOptional: "innerType",
+    ZodNullable: "innerType",
+    ZodDefault: "innerType",
+    ZodCatch: "innerType",
+    ZodBranded: "type",
+    ZodReadonly: "innerType",
+  };
+
+const PARAMETER_SCHEMA_CACHE = new WeakMap<z.ZodType, z.ZodType>();
+const ARRAY_INPUT_SCHEMA_CACHE = new WeakMap<object, z.ZodType | null>();
+
 export function describeZodSchema(
   schema: z.ZodType | null | undefined,
 ): ContractSchemaDescriptor | null {
@@ -295,16 +316,267 @@ export function getZodInnerSchema(schema: unknown): unknown {
   return definition?.innerType ?? definition?.schema ?? definition?.type;
 }
 
+/**
+ * Returns whether a schema accepts an array without changing its input shape.
+ *
+ * Optional, nullable, default, catch, branded, readonly, and refinement wrappers
+ * preserve array input. Transform and preprocess effects remain opaque because
+ * they may change the runtime value shape.
+ */
+export function isZodArraySchema(schema: unknown): boolean {
+  return getTransparentZodArraySchema(schema) !== undefined;
+}
+
+/**
+ * Returns whether a parameter schema explicitly accepts array input.
+ *
+ * Arrays, any, unknown, transparent wrappers and refinements around them, and
+ * ordinary unions containing an array-capable option accept repeated values.
+ * Value-changing effects remain opaque so coercion and preprocessing cannot
+ * silently reinterpret repeated scalar parameters.
+ */
+export function acceptsZodArrayInput(schema: unknown): boolean {
+  return getZodArrayInputSchema(schema) !== undefined;
+}
+
+/**
+ * Projects a parameter schema to the branches that preserve array input.
+ *
+ * Scalar and value-changing union branches are removed so their coercion,
+ * preprocessing, or catch behavior cannot consume repeated parameter values.
+ * The projection is cached by source schema for request-path reuse.
+ */
+export function getZodArrayInputSchema(schema: unknown): z.ZodType | undefined {
+  if (!isRecord(schema)) {
+    return undefined;
+  }
+
+  const cachedSchema = ARRAY_INPUT_SCHEMA_CACHE.get(schema);
+  if (cachedSchema !== undefined) {
+    return cachedSchema ?? undefined;
+  }
+
+  const projectedSchema = projectZodArrayInputSchema(schema, new Map());
+  const result = isZodType(projectedSchema) ? projectedSchema : undefined;
+  ARRAY_INPUT_SCHEMA_CACHE.set(schema, result ?? null);
+  return result;
+}
+
+function projectZodArrayInputSchema(
+  schema: unknown,
+  projectedSchemas: Map<object, unknown | undefined>,
+): unknown | undefined {
+  if (!isRecord(schema)) {
+    return undefined;
+  }
+
+  if (projectedSchemas.has(schema)) {
+    return projectedSchemas.get(schema);
+  }
+
+  projectedSchemas.set(schema, undefined);
+
+  const typeName = getSchemaTypeName(schema);
+  if (typeName === "ZodArray" || typeName === "ZodAny" || typeName === "ZodUnknown") {
+    projectedSchemas.set(schema, schema);
+    return schema;
+  }
+
+  const definition = getZodDefinition(schema);
+  if (!definition) {
+    return undefined;
+  }
+
+  const childKey = getCatchRewriteChildKey(typeName, schema);
+  if (childKey) {
+    const child = definition[childKey];
+    const projectedChild = projectZodArrayInputSchema(child, projectedSchemas);
+    if (projectedChild === undefined) {
+      return undefined;
+    }
+
+    const projected =
+      typeName === "ZodCatch"
+        ? projectedChild
+        : projectedChild === child
+          ? schema
+          : reconstructZodSchema(schema, {
+              ...definition,
+              [childKey]: projectedChild,
+            });
+    projectedSchemas.set(schema, projected);
+    return projected;
+  }
+
+  if (typeName === "ZodUnion" && Array.isArray(definition?.options)) {
+    const projectedOptions: unknown[] = [];
+    for (const option of definition.options) {
+      const projectedOption = projectZodArrayInputSchema(option, projectedSchemas);
+      if (projectedOption !== undefined) {
+        projectedOptions.push(projectedOption);
+      }
+    }
+
+    if (projectedOptions.length === 0) {
+      return undefined;
+    }
+
+    const projected =
+      projectedOptions.length === 1
+        ? projectedOptions[0]
+        : definition.options.length === projectedOptions.length &&
+            definition.options.every((option, index) => option === projectedOptions[index])
+          ? schema
+          : reconstructZodSchema(schema, {
+              ...definition,
+              options: projectedOptions,
+            });
+    projectedSchemas.set(schema, projected);
+    return projected;
+  }
+
+  return undefined;
+}
+
+/**
+ * Removes catch wrappers that parameter-schema consumers cannot interpret.
+ *
+ * Transparent wrappers and ordinary union options are reconstructed only when
+ * they contain a catch. Value-changing effects and discriminated unions remain opaque.
+ */
+export function unwrapZodParameterSchema<TSchema extends z.ZodType | null | undefined>(
+  schema: TSchema,
+): TSchema {
+  if (!schema) {
+    return schema;
+  }
+
+  const cachedSchema = PARAMETER_SCHEMA_CACHE.get(schema);
+  if (cachedSchema) {
+    return cachedSchema as TSchema;
+  }
+
+  const rewrittenSchema = rewriteZodCatchSchemas(schema, new Map()) as z.ZodType;
+  PARAMETER_SCHEMA_CACHE.set(schema, rewrittenSchema);
+  return rewrittenSchema as TSchema;
+}
+
+export function getZodArrayElementSchema(schema: unknown): unknown {
+  const arraySchema = getTransparentZodArraySchema(schema);
+  const definition = getZodDefinition(arraySchema);
+
+  return definition?.element ?? definition?.type;
+}
+
+function getTransparentZodArraySchema(schema: unknown): unknown | undefined {
+  const unwrapped = getTransparentZodSchema(schema);
+
+  return getSchemaTypeName(unwrapped) === "ZodArray" ? unwrapped : undefined;
+}
+
+function getTransparentZodSchema(schema: unknown): unknown {
+  const seen = new Set<object>();
+  let current = schema;
+
+  while (isRecord(current) && !seen.has(current)) {
+    seen.add(current);
+
+    const typeName = getSchemaTypeName(current);
+    if (
+      isTransparentArrayWrapper(typeName) ||
+      (typeName === "ZodEffects" && isZodRefinementEffect(current))
+    ) {
+      current = getZodInnerSchema(current);
+      continue;
+    }
+
+    break;
+  }
+
+  return current;
+}
+
+function rewriteZodCatchSchemas(schema: unknown, rewrittenSchemas: Map<object, unknown>): unknown {
+  if (!isRecord(schema)) {
+    return schema;
+  }
+
+  if (rewrittenSchemas.has(schema)) {
+    return rewrittenSchemas.get(schema);
+  }
+
+  rewrittenSchemas.set(schema, schema);
+
+  const typeName = getSchemaTypeName(schema);
+  const definition = getZodDefinition(schema);
+  if (!definition) {
+    return schema;
+  }
+
+  const childKey = getCatchRewriteChildKey(typeName, schema);
+  if (childKey) {
+    const child = definition[childKey];
+    const rewrittenChild = rewriteZodCatchSchemas(child, rewrittenSchemas);
+
+    if (typeName === "ZodCatch") {
+      rewrittenSchemas.set(schema, rewrittenChild);
+      return rewrittenChild;
+    }
+
+    const rewritten =
+      rewrittenChild === child
+        ? schema
+        : reconstructZodSchema(schema, {
+            ...definition,
+            [childKey]: rewrittenChild,
+          });
+    rewrittenSchemas.set(schema, rewritten);
+    return rewritten;
+  }
+
+  if (typeName === "ZodUnion" && Array.isArray(definition.options)) {
+    const rewrittenOptions = definition.options.map((option) =>
+      rewriteZodCatchSchemas(option, rewrittenSchemas),
+    );
+    const rewritten = definition.options.every(
+      (option, index) => option === rewrittenOptions[index],
+    )
+      ? schema
+      : reconstructZodSchema(schema, {
+          ...definition,
+          options: rewrittenOptions,
+        });
+    rewrittenSchemas.set(schema, rewritten);
+    return rewritten;
+  }
+
+  return schema;
+}
+
+function getCatchRewriteChildKey(
+  typeName: string,
+  schema: unknown,
+): "innerType" | "schema" | "type" | undefined {
+  const wrapperChildKey = TRANSPARENT_ZOD_WRAPPER_CHILD_KEYS[typeName];
+  if (wrapperChildKey) {
+    return wrapperChildKey;
+  }
+
+  if (typeName === "ZodEffects" && isZodRefinementEffect(schema)) {
+    return "schema";
+  }
+
+  return undefined;
+}
+
+function reconstructZodSchema(schema: object, definition: ZodDefinition): unknown {
+  return Reflect.construct(schema.constructor, [definition]);
+}
+
 export function getZodDefaultValue(schema: unknown): unknown {
   const defaultValue = getZodDefinition(schema)?.defaultValue;
 
   return typeof defaultValue === "function" ? defaultValue() : defaultValue;
-}
-
-export function getZodArrayElementSchema(schema: unknown): unknown {
-  const definition = getZodDefinition(schema);
-
-  return definition?.element ?? definition?.type;
 }
 
 export function getZodObjectShape(schema: unknown): Record<string, unknown> {
@@ -487,6 +759,15 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
 
     return {
       ...descriptorFromChildren(kind, typeName, [inner]),
+      inner,
+    };
+  }
+
+  if (typeName === "ZodCatch") {
+    const inner = describeMaybeSchema(definition?.innerType, seen);
+
+    return {
+      ...descriptorFromChildren("catch", typeName, [inner]),
       inner,
     };
   }
@@ -681,6 +962,14 @@ function isOptionalInputSchema(schema: unknown): boolean {
   return false;
 }
 
+function isTransparentArrayWrapper(typeName: string): boolean {
+  return TRANSPARENT_ZOD_WRAPPER_CHILD_KEYS[typeName] !== undefined;
+}
+
+function isZodRefinementEffect(schema: unknown): boolean {
+  return getZodDefinition(schema)?.effect?.type === "refinement";
+}
+
 function unwrapUnknownZodEffectsSchema(schema: unknown): unknown {
   if (!isZodType(schema) || getSchemaTypeName(schema) !== "ZodEffects") {
     return schema;
@@ -742,14 +1031,14 @@ function getSchemaOptions(definition: ZodDefinition | undefined): unknown[] {
   return [];
 }
 
-function isZodType(value: unknown): value is z.ZodType {
+export function isZodType(value: unknown): value is z.ZodType {
   if (!value || typeof value !== "object") {
     return false;
   }
 
   const candidate = value as { readonly safeParse?: unknown };
 
-  return typeof candidate.safeParse === "function";
+  return "_def" in value && typeof candidate.safeParse === "function";
 }
 
 function normalizeLiteralValue(value: unknown):

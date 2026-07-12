@@ -16,6 +16,7 @@ import {
   Controller,
   defineRouteContract,
   defineRouteProblem,
+  Get,
   Header,
   HttpMethod,
   Param,
@@ -165,6 +166,88 @@ class NestedBodyValidationController {
   }
 }
 
+@Controller("/contract-parity/repeated")
+class RepeatedParametersController {
+  @Get("/")
+  read(
+    @Query(
+      "tag",
+      z
+        .array(z.string())
+        .refine((tags) => tags.every((tag) => tag.length > 0))
+        .optional(),
+    )
+    tags: string[] | undefined,
+    @Header("x-scope", z.array(z.string()).optional()) scopes: string[] | undefined,
+    @Query("mode", z.string().optional()) mode: string | undefined,
+  ): { tags: string[] | null; scopes: string[] | null; mode: string | null } {
+    return {
+      tags: tags ?? null,
+      scopes: scopes ?? null,
+      mode: mode ?? null,
+    };
+  }
+
+  @Get("/fallback")
+  readFallback(@Query("mode", z.string().catch("fallback")) mode: string): { mode: string } {
+    return { mode };
+  }
+
+  @Get("/variants")
+  readVariants(
+    @Query("plain", z.union([z.string(), z.array(z.string())])) plain: string | string[],
+    @Query("catch-first", z.union([z.string().catch("fallback"), z.array(z.string())]))
+    catchFirst: string | string[],
+    @Query("catch-last", z.union([z.array(z.string()), z.string().catch("fallback")]))
+    catchLast: string | string[],
+    @Query("any", z.any()) anyValue: unknown,
+    @Query("unknown", z.unknown()) unknownValue: unknown,
+  ): Record<string, unknown> {
+    return { plain, catchFirst, catchLast, anyValue, unknownValue };
+  }
+
+  @Get("/validated")
+  readValidated(
+    @Query("tag", z.array(z.string().min(2)).catch([])) tags: string[],
+    @Query(
+      "scope",
+      z
+        .array(z.string())
+        .refine((values) => values.length >= 3, "Expected at least three values")
+        .catch([]),
+    )
+    scopes: string[],
+  ): { tags: string[]; scopes: string[] } {
+    return { tags, scopes };
+  }
+
+  @Get("/header-validated")
+  readValidatedHeaders(
+    @Header("x-tag", z.array(z.string().min(2)).catch([])) tags: string[],
+    @Header(
+      "x-scope",
+      z
+        .array(z.string())
+        .refine((values) => values.length >= 3, "Expected at least three scopes")
+        .catch([]),
+    )
+    scopes: string[],
+  ): { tags: string[]; scopes: string[] } {
+    return { tags, scopes };
+  }
+}
+
+@Controller("/contract-parity/schema-less")
+class SchemaLessParametersController {
+  @Get("/")
+  read(
+    @Query("tag") tag: string | undefined,
+    @Header("x-request-id") requestId: string | undefined,
+  ): { tag: string | null; requestId: string | null } {
+    return { tag: tag ?? null, requestId: requestId ?? null };
+  }
+}
+
 type ValidationProblemDetails = ProblemDetails & {
   readonly issues?: readonly {
     readonly path: string;
@@ -210,7 +293,11 @@ describe("REST contract-to-runtime parity", () => {
 
     route = graphRoute;
     app = createApp({
-      controllers: [ContractParityController],
+      controllers: [
+        ContractParityController,
+        RepeatedParametersController,
+        SchemaLessParametersController,
+      ],
       securityValidation: "off",
     });
   });
@@ -267,6 +354,210 @@ describe("REST contract-to-runtime parity", () => {
       tenantId: "tenant-a",
       name: "Contract widget",
       enabled: true,
+    });
+  });
+
+  it("accepts missing, single, and repeated optional list parameters", async () => {
+    const missing = await app.fetch(new Request("http://localhost/contract-parity/repeated"));
+    expect(await missing.json()).toEqual({
+      tags: null,
+      scopes: null,
+      mode: null,
+    });
+
+    const single = await app.fetch(
+      new Request("http://localhost/contract-parity/repeated?tag=first", {
+        headers: { "x-scope": "read" },
+      }),
+    );
+    expect(await single.json()).toEqual({
+      tags: ["first"],
+      scopes: ["read"],
+      mode: null,
+    });
+
+    const headers = new Headers([
+      ["x-scope", "read"],
+      ["x-scope", "write"],
+    ]);
+    const repeated = await app.fetch(
+      new Request("http://localhost/contract-parity/repeated?tag=first&tag=second", { headers }),
+    );
+    expect(await repeated.json()).toEqual({
+      tags: ["first", "second"],
+      scopes: ["read", "write"],
+      mode: null,
+    });
+  });
+
+  it("rejects repeated query values for scalar schemas", async () => {
+    const response = await app.fetch(
+      new Request("http://localhost/contract-parity/repeated?mode=first&mode=second"),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      code: "protocols-rest/request-validation-failed",
+      status: 422,
+    });
+  });
+
+  it("keeps schema-less named parameter runtime and generated fallbacks scalar", async () => {
+    const missing = await app.fetch(new Request("http://localhost/contract-parity/schema-less"));
+    expect(await missing.json()).toEqual({ tag: null, requestId: null });
+
+    const single = await app.fetch(
+      new Request("http://localhost/contract-parity/schema-less?tag=first", {
+        headers: { "x-request-id": "request-1" },
+      }),
+    );
+    expect(await single.json()).toEqual({ tag: "first", requestId: "request-1" });
+
+    const repeated = await app.fetch(
+      new Request("http://localhost/contract-parity/schema-less?tag=first&tag=second"),
+    );
+    expect(repeated.status).toBe(422);
+    expect(await repeated.json()).toMatchObject({
+      code: "protocols-rest/request-validation-failed",
+      issues: [expect.objectContaining({ path: "query.value" })],
+    });
+
+    const fallbackGraph = buildContractGraph([SchemaLessParametersController]);
+    const fallbackRoute = fallbackGraph.routes[0];
+    expect(fallbackRoute?.params).toEqual([
+      expect.objectContaining({ kind: "query", name: "tag", schema: null }),
+      expect.objectContaining({ kind: "header", name: "x-request-id", schema: null }),
+    ]);
+
+    const fallbackSpec = emitOpenAPIFromContractGraph(fallbackGraph);
+    expect(fallbackSpec.paths?.["/contract-parity/schema-less"]?.get?.parameters).toEqual([
+      { in: "query", name: "tag", required: false, schema: { type: "string" } },
+      {
+        in: "header",
+        name: "x-request-id",
+        required: false,
+        schema: { type: "string" },
+      },
+    ]);
+
+    const generatedSource = generateClientFilesFromContractGraph(fallbackGraph, rpcOutDir)
+      .map((file) => fs.readFileSync(file, "utf8"))
+      .join("\n");
+    expect(generatedSource).toContain(
+      "query: { tag: string | undefined; }; headers: { 'x-request-id': string | undefined; };",
+    );
+  });
+
+  it("rejects repeated query values before a scalar catch schema can mask them", async () => {
+    const single = await app.fetch(
+      new Request("http://localhost/contract-parity/repeated/fallback?mode=first"),
+    );
+    expect(await single.json()).toEqual({ mode: "first" });
+
+    const repeated = await app.fetch(
+      new Request("http://localhost/contract-parity/repeated/fallback?mode=first&mode=second"),
+    );
+
+    expect(repeated.status).toBe(422);
+    expect(await repeated.json()).toMatchObject({
+      code: "protocols-rest/request-validation-failed",
+      status: 422,
+      issues: [{ path: "query.value", message: "Expected a single query value" }],
+    });
+  });
+
+  it("preserves repeated query arrays for plain, catch-union, any, and unknown schemas", async () => {
+    const response = await app.fetch(
+      new Request(
+        "http://localhost/contract-parity/repeated/variants?plain=one&plain=two&catch-first=one&catch-first=two&catch-last=one&catch-last=two&any=one&any=two&unknown=one&unknown=two",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      plain: ["one", "two"],
+      catchFirst: ["one", "two"],
+      catchLast: ["one", "two"],
+      anyValue: ["one", "two"],
+      unknownValue: ["one", "two"],
+    });
+  });
+
+  it("keeps single query values scalar for mixed union schemas", async () => {
+    const response = await app.fetch(
+      new Request(
+        "http://localhost/contract-parity/repeated/variants?plain=one&catch-first=one&catch-last=one&any=one&unknown=one",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      plain: "one",
+      catchFirst: "one",
+      catchLast: "one",
+      anyValue: "one",
+      unknownValue: "one",
+    });
+  });
+
+  it("surfaces catch-free array element and refinement failures", async () => {
+    const invalidElement = await app.fetch(
+      new Request(
+        "http://localhost/contract-parity/repeated/validated?tag=a&tag=valid&scope=one&scope=two&scope=three",
+      ),
+    );
+    expect(invalidElement.status).toBe(422);
+    expect(await invalidElement.json()).toMatchObject({
+      issues: [expect.objectContaining({ path: "query.0" })],
+    });
+
+    const invalidRefinement = await app.fetch(
+      new Request(
+        "http://localhost/contract-parity/repeated/validated?tag=valid&tag=also-valid&scope=one&scope=two",
+      ),
+    );
+    expect(invalidRefinement.status).toBe(422);
+    expect(await invalidRefinement.json()).toMatchObject({
+      issues: [{ path: "query.value", message: "Expected at least three values" }],
+    });
+  });
+
+  it("validates present catch-array headers while preserving missing-header fallbacks", async () => {
+    const missing = await app.fetch(
+      new Request("http://localhost/contract-parity/repeated/header-validated"),
+    );
+    expect(missing.status).toBe(200);
+    expect(await missing.json()).toEqual({ tags: [], scopes: [] });
+
+    const valid = await app.fetch(
+      new Request("http://localhost/contract-parity/repeated/header-validated", {
+        headers: { "x-tag": "first, second", "x-scope": "read, write, admin" },
+      }),
+    );
+    expect(valid.status).toBe(200);
+    expect(await valid.json()).toEqual({
+      tags: ["first", "second"],
+      scopes: ["read", "write", "admin"],
+    });
+
+    const invalidElement = await app.fetch(
+      new Request("http://localhost/contract-parity/repeated/header-validated", {
+        headers: { "x-tag": "a, valid", "x-scope": "read, write, admin" },
+      }),
+    );
+    expect(invalidElement.status).toBe(422);
+    expect(await invalidElement.json()).toMatchObject({
+      issues: [expect.objectContaining({ path: "headers.0" })],
+    });
+
+    const invalidRefinement = await app.fetch(
+      new Request("http://localhost/contract-parity/repeated/header-validated", {
+        headers: { "x-tag": "valid, also-valid", "x-scope": "read, write" },
+      }),
+    );
+    expect(invalidRefinement.status).toBe(422);
+    expect(await invalidRefinement.json()).toMatchObject({
+      issues: [{ path: "headers.value", message: "Expected at least three scopes" }],
     });
   });
 

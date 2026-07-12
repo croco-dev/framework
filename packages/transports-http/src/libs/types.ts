@@ -50,7 +50,7 @@ export interface CrocoHttpContext {
   readonly res: CrocoResponse;
   readonly raw: HonoContext;
   param(name: string): string | undefined;
-  query(name: string): string | undefined;
+  query(name: string): string | string[] | undefined;
   header(name: string): string | undefined;
   json<T = unknown>(): Promise<T>;
   set<T>(key: string, value: T): void;
@@ -65,7 +65,7 @@ export interface CrocoRequest {
   url: string;
   path: string;
   params: Record<string, string>;
-  query: Record<string, string>;
+  query: Record<string, string | string[]>;
   headers: Record<string, string>;
 }
 

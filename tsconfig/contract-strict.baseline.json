@@ -3440,7 +3440,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 137,
+      "line": 139,
       "column": 35,
       "code": "TS2379",
       "message": "Argument of type '{ openapi: string; info: { [x: `x-${string}`]: any; title: string; description?: string; termsOfService?: string; contact?: ContactObject; license?: LicenseObject; version: string; }; servers: ServerObject[] | undefined; security: SecurityRequirementObject[]; tags: TagObject[] | { ...; }[]; }' is not assignable to parameter of type 'OpenAPIObjectConfigV31' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3448,7 +3448,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 257,
+      "line": 259,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ request?: { body?: ZodRequestBody; params?: RouteParameter; query?: RouteParameter; cookies?: RouteParameter; headers?: RouteParameter | ZodType<unknown>[]; } | undefined; ... 6 more ...; responses: { ...; }; }' is not assignable to type 'RouteConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3456,7 +3456,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 486,
+      "line": 512,
       "column": 52,
       "code": "TS4111",
       "message": "Property 'summary' comes from an index signature, so it must be accessed with ['summary']."
@@ -3464,7 +3464,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 491,
+      "line": 517,
       "column": 26,
       "code": "TS4111",
       "message": "Property 'operationId' comes from an index signature, so it must be accessed with ['operationId']."
@@ -3472,7 +3472,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 491,
+      "line": 517,
       "column": 63,
       "code": "TS4111",
       "message": "Property 'operationId' comes from an index signature, so it must be accessed with ['operationId']."
@@ -3480,7 +3480,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 494,
+      "line": 520,
       "column": 28,
       "code": "TS4111",
       "message": "Property 'summary' comes from an index signature, so it must be accessed with ['summary']."
@@ -3488,7 +3488,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 498,
+      "line": 524,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'summary' comes from an index signature, so it must be accessed with ['summary']."
@@ -3496,7 +3496,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 526,
+      "line": 552,
       "column": 26,
       "code": "TS4111",
       "message": "Property 'operationId' comes from an index signature, so it must be accessed with ['operationId']."
@@ -3504,7 +3504,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 544,
+      "line": 570,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'requestBody' comes from an index signature, so it must be accessed with ['requestBody']."
@@ -3512,7 +3512,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 551,
+      "line": 577,
       "column": 46,
       "code": "TS4111",
       "message": "Property 'parameters' comes from an index signature, so it must be accessed with ['parameters']."
@@ -3520,7 +3520,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 551,
+      "line": 577,
       "column": 70,
       "code": "TS4111",
       "message": "Property 'parameters' comes from an index signature, so it must be accessed with ['parameters']."
@@ -3528,7 +3528,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 555,
+      "line": 581,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'in' comes from an index signature, so it must be accessed with ['in']."
@@ -3536,7 +3536,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 555,
+      "line": 581,
       "column": 72,
       "code": "TS4111",
       "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
@@ -3544,7 +3544,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 559,
+      "line": 585,
       "column": 40,
       "code": "TS4111",
       "message": "Property 'responses' comes from an index signature, so it must be accessed with ['responses']."
@@ -3552,7 +3552,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 559,
+      "line": 585,
       "column": 63,
       "code": "TS4111",
       "message": "Property 'responses' comes from an index signature, so it must be accessed with ['responses']."
@@ -3560,7 +3560,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 562,
+      "line": 588,
       "column": 63,
       "code": "TS4111",
       "message": "Property 'content' comes from an index signature, so it must be accessed with ['content']."
@@ -3568,7 +3568,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 566,
+      "line": 592,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'content' comes from an index signature, so it must be accessed with ['content']."
@@ -3576,7 +3576,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 568,
+      "line": 594,
       "column": 56,
       "code": "TS4111",
       "message": "Property 'schema' comes from an index signature, so it must be accessed with ['schema']."
@@ -3584,7 +3584,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 572,
+      "line": 598,
       "column": 40,
       "code": "TS4111",
       "message": "Property 'responses' comes from an index signature, so it must be accessed with ['responses']."
@@ -3592,7 +3592,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 572,
+      "line": 598,
       "column": 63,
       "code": "TS4111",
       "message": "Property 'responses' comes from an index signature, so it must be accessed with ['responses']."
@@ -3600,7 +3600,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 594,
+      "line": 620,
       "column": 26,
       "code": "TS4111",
       "message": "Property 'code' comes from an index signature, so it must be accessed with ['code']."
@@ -3608,7 +3608,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 595,
+      "line": 621,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'category' comes from an index signature, so it must be accessed with ['category']."
@@ -3616,7 +3616,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 596,
+      "line": 622,
       "column": 28,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -3624,7 +3624,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 596,
+      "line": 622,
       "column": 58,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -3632,7 +3632,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 596,
+      "line": 622,
       "column": 82,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -3640,7 +3640,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 597,
+      "line": 623,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'description' comes from an index signature, so it must be accessed with ['description']."
@@ -3648,7 +3648,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 597,
+      "line": 623,
       "column": 74,
       "code": "TS4111",
       "message": "Property 'description' comes from an index signature, so it must be accessed with ['description']."
@@ -3656,7 +3656,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 598,
+      "line": 624,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'type' comes from an index signature, so it must be accessed with ['type']."
@@ -3664,7 +3664,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 598,
+      "line": 624,
       "column": 60,
       "code": "TS4111",
       "message": "Property 'type' comes from an index signature, so it must be accessed with ['type']."
@@ -3672,7 +3672,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 617,
+      "line": 643,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'feature' comes from an index signature, so it must be accessed with ['feature']."
@@ -3680,7 +3680,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 618,
+      "line": 644,
       "column": 28,
       "code": "TS4111",
       "message": "Property 'description' comes from an index signature, so it must be accessed with ['description']."
@@ -3688,7 +3688,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 619,
+      "line": 645,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'description' comes from an index signature, so it must be accessed with ['description']."
@@ -3696,7 +3696,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 621,
+      "line": 647,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'resource' comes from an index signature, so it must be accessed with ['resource']."
@@ -3704,7 +3704,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 622,
+      "line": 648,
       "column": 73,
       "code": "TS4111",
       "message": "Property 'resource' comes from an index signature, so it must be accessed with ['resource']."
@@ -3712,7 +3712,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 631,
+      "line": 657,
       "column": 27,
       "code": "TS4111",
       "message": "Property 'type' comes from an index signature, so it must be accessed with ['type']."
@@ -3720,7 +3720,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 632,
+      "line": 658,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'id' comes from an index signature, so it must be accessed with ['id']."
@@ -3728,7 +3728,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 632,
+      "line": 658,
       "column": 58,
       "code": "TS4111",
       "message": "Property 'id' comes from an index signature, so it must be accessed with ['id']."
@@ -3736,7 +3736,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 633,
+      "line": 659,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'idParam' comes from an index signature, so it must be accessed with ['idParam']."
@@ -3744,7 +3744,7 @@
     {
       "packageName": "@croco/openapi-spec",
       "file": "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-      "line": 633,
+      "line": 659,
       "column": 68,
       "code": "TS4111",
       "message": "Property 'idParam' comes from an index signature, so it must be accessed with ['idParam']."
@@ -3944,7 +3944,7 @@
     {
       "packageName": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 756,
+      "line": 761,
       "column": 16,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -3952,7 +3952,7 @@
     {
       "packageName": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 756,
+      "line": 761,
       "column": 49,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -4451,7 +4451,7 @@
       "line": 81,
       "column": 9,
       "code": "TS2379",
-      "message": "Argument of type '{ requestId: string; method: string; path: string; route: string; url: string; headers: Record<string, string>; query: Record<string, string>; runtime: Record<string, unknown>; trace: Record<...> | undefined; }' is not assignable to parameter of type 'RuntimeInspectorRequestStart' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
+      "message": "Argument of type '{ requestId: string; method: string; path: string; route: string; url: string; headers: Record<string, string>; query: Record<string, string | string[]>; runtime: Record<string, unknown>; trace: Record<...> | undefined; }' is not assignable to parameter of type 'RuntimeInspectorRequestStart' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/transports-http",

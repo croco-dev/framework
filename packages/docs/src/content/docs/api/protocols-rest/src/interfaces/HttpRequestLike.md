@@ -11,25 +11,25 @@ title: "HttpRequestLike"
 
 > **headers**: `Headers` \| `Record`\<`string`, `string`\>
 
-***
+---
 
 ### method
 
 > **method**: `string`
 
-***
+---
 
 ### params?
 
 > `optional` **params?**: `Record`\<`string`, `string`\>
 
-***
+---
 
 ### query?
 
-> `optional` **query?**: `Record`\<`string`, `string`\>
+> `optional` **query?**: `Record`\<`string`, `string` \| `string`[]\>
 
-***
+---
 
 ### url
 

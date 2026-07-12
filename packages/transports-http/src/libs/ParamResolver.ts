@@ -1,4 +1,5 @@
 import { ProblemFactory } from "@croco/problems-core";
+import { getHttpParamFallbackSchema, isZodType } from "@croco/protocols-core";
 import {
   type ArgumentMetadata,
   type Constructor,
@@ -8,7 +9,7 @@ import {
   type PipeTransform,
   type PipeTransformConstructor,
   RequestValidationProblem,
-  type ValidationIssue,
+  ValidationPipe,
 } from "@croco/protocols-rest";
 import type { z } from "zod";
 import type { CrocoHttpContext } from "./types";
@@ -24,42 +25,10 @@ const PARAM_TYPE_MAP: Record<ParamType, ArgumentMetadata["type"]> = {
 
 const BODY_PARSE_FAILURE_MESSAGE = "Request body must contain valid JSON";
 
-class ZodValidationPipe implements PipeTransform<unknown, unknown> {
-  constructor(private readonly schema: z.ZodType) {}
-
-  transform(value: unknown, metadata: ArgumentMetadata): unknown {
-    const result = this.schema.safeParse(value);
-
-    if (!result.success) {
-      const issues: ValidationIssue[] = result.error.issues.map((issue) => ({
-        path: issue.path.join(".") || "value",
-        message: issue.message,
-      }));
-
-      const source = this.mapMetadataTypeToSource(metadata.type);
-      throw new RequestValidationProblem(source, issues);
-    }
-
-    return result.data;
-  }
-
-  private mapMetadataTypeToSource(
-    type: ArgumentMetadata["type"],
-  ): "body" | "query" | "params" | "headers" {
-    switch (type) {
-      case "body":
-        return "body";
-      case "query":
-        return "query";
-      case "param":
-        return "params";
-      case "header":
-        return "headers";
-      default:
-        return "body";
-    }
-  }
-}
+const SCHEMALESS_NAMED_PARAM_PIPES: Partial<Record<ParamType, PipeTransform>> = {
+  [ParamType.QUERY]: new ValidationPipe(getHttpParamFallbackSchema("query")),
+  [ParamType.HEADER]: new ValidationPipe(getHttpParamFallbackSchema("header")),
+};
 
 /**
  * 컨트롤러 파라미터 메타데이터를 읽어 실제 메서드 인자 배열로 변환합니다.
@@ -157,30 +126,28 @@ export class ParamResolver {
   }
 
   private async runPipes(value: unknown, param: ParamMetadata): Promise<unknown> {
-    if (!param.pipes || param.pipes.length === 0) {
-      return value;
-    }
-
     const metadata: ArgumentMetadata = {
       type: PARAM_TYPE_MAP[param.type] ?? "custom",
       ...(param.name ? { name: param.name } : {}),
     };
 
+    if (!param.pipes || param.pipes.length === 0) {
+      const fallbackPipe = param.name ? SCHEMALESS_NAMED_PARAM_PIPES[param.type] : undefined;
+      return fallbackPipe ? fallbackPipe.transform(value, metadata) : value;
+    }
+
     let result = value;
     for (const pipe of param.pipes) {
-      const pipeInstance: PipeTransform = this.resolvePipe(pipe, metadata);
+      const pipeInstance: PipeTransform = this.resolvePipe(pipe);
       result = await pipeInstance.transform(result, metadata);
     }
 
     return result;
   }
 
-  private resolvePipe(
-    pipe: PipeTransformConstructor | PipeTransform | z.ZodType,
-    _metadata: ArgumentMetadata,
-  ): PipeTransform {
-    if (this.isZodSchema(pipe)) {
-      return new ZodValidationPipe(pipe as z.ZodType);
+  private resolvePipe(pipe: PipeTransformConstructor | PipeTransform | z.ZodType): PipeTransform {
+    if (isZodType(pipe)) {
+      return new ValidationPipe(pipe);
     }
 
     if (typeof pipe === "object" && pipe !== null) {
@@ -196,19 +163,5 @@ export class ParamResolver {
     }
 
     return pipeInstance;
-  }
-
-  private isZodSchema(value: unknown): boolean {
-    if (typeof value !== "object" || value === null) {
-      return false;
-    }
-
-    const zodValue = value as { _def?: unknown; safeParse?: unknown; parse?: unknown };
-
-    return (
-      "_def" in zodValue ||
-      typeof zodValue.safeParse === "function" ||
-      typeof zodValue.parse === "function"
-    );
   }
 }

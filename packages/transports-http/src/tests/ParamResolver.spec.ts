@@ -1,7 +1,8 @@
 import "reflect-metadata";
 import type { PipeTransform } from "@croco/protocols-rest";
-import { Body, REST_PARAMS_KEY } from "@croco/protocols-rest";
+import { Body, ParamType, REST_PARAMS_KEY } from "@croco/protocols-rest";
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { ParamResolver } from "../libs/ParamResolver";
 import type { CrocoHttpContext } from "../libs/types";
 
@@ -47,6 +48,31 @@ function createMockHttpContext(json: CrocoHttpContext["json"]): CrocoHttpContext
       .fn()
       .mockImplementation((url: string, status: number = 302) => Response.redirect(url, status)),
   };
+}
+
+function defineNamedParamMetadata(
+  controller: object,
+  methodName: string,
+  type: ParamType,
+  pipe?: PipeTransform | z.ZodType,
+): void {
+  Reflect.defineMetadata(
+    REST_PARAMS_KEY,
+    new Map([
+      [
+        methodName,
+        [
+          {
+            type,
+            index: 0,
+            name: "value",
+            ...(pipe ? { pipes: [pipe as PipeTransform] } : {}),
+          },
+        ],
+      ],
+    ]),
+    controller,
+  );
 }
 
 describe("ParamResolver", () => {
@@ -186,5 +212,135 @@ describe("ParamResolver", () => {
     await expect(resolver.resolveParams(ctx, TestController, "create")).rejects.toThrow(
       "Container did not return an instance for pipe MissingPipe",
     );
+  });
+
+  it("recognizes a native raw Zod schema as a validation pipe", async () => {
+    class TestController {
+      read(_value: unknown) {}
+    }
+
+    defineNamedParamMetadata(TestController, "read", ParamType.QUERY, z.string().trim().min(2));
+
+    const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
+    ctx.query = vi.fn().mockReturnValue(" croco ");
+
+    await expect(new ParamResolver().resolveParams(ctx, TestController, "read")).resolves.toEqual([
+      "croco",
+    ]);
+  });
+
+  it("recognizes a structurally compatible Zod schema with a foreign prototype", async () => {
+    class TestController {
+      read(_value: unknown) {}
+    }
+
+    const schema = z.string().trim().min(2);
+    const foreignSchema = Object.assign(
+      Object.create({ constructor: schema.constructor }),
+      schema,
+      {
+        safeParse: schema.safeParse.bind(schema),
+      },
+    ) as z.ZodType;
+    expect(foreignSchema).not.toBeInstanceOf(z.ZodType);
+    defineNamedParamMetadata(TestController, "read", ParamType.QUERY, foreignSchema);
+
+    const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
+    ctx.query = vi.fn().mockReturnValue(" croco ");
+
+    await expect(new ParamResolver().resolveParams(ctx, TestController, "read")).resolves.toEqual([
+      "croco",
+    ]);
+  });
+
+  it("keeps an ordinary parse-like object on the PipeTransform path", async () => {
+    class TestController {
+      read(_value: unknown) {}
+    }
+
+    const safeParse = vi.fn();
+    const transform = vi.fn((value: unknown) => `pipe:${String(value)}`);
+    defineNamedParamMetadata(TestController, "read", ParamType.QUERY, {
+      parse: vi.fn(),
+      safeParse,
+      transform,
+    });
+
+    const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
+    ctx.query = vi.fn().mockReturnValue("croco");
+
+    await expect(new ParamResolver().resolveParams(ctx, TestController, "read")).resolves.toEqual([
+      "pipe:croco",
+    ]);
+    expect(transform).toHaveBeenCalledWith("croco", {
+      type: "query",
+      name: "value",
+    });
+    expect(safeParse).not.toHaveBeenCalled();
+  });
+
+  it("routes invalid repeated query input through the shared ValidationPipe", async () => {
+    class TestController {
+      read(_value: unknown) {}
+    }
+
+    defineNamedParamMetadata(TestController, "read", ParamType.QUERY, z.string().catch("fallback"));
+
+    const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
+    ctx.query = vi.fn().mockReturnValue(["first", "second"]);
+
+    await expect(
+      new ParamResolver().resolveParams(ctx, TestController, "read"),
+    ).rejects.toMatchObject({
+      code: "protocols-rest/request-validation-failed",
+      issues: [
+        {
+          path: "query.value",
+          message: "Expected a single query value",
+        },
+      ],
+    });
+  });
+
+  it("validates schema-less named query values against the scalar fallback contract", async () => {
+    class TestController {
+      read(_value: unknown) {}
+    }
+
+    defineNamedParamMetadata(TestController, "read", ParamType.QUERY);
+
+    const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
+    ctx.query = vi.fn().mockReturnValue("first");
+    const resolver = new ParamResolver();
+
+    await expect(resolver.resolveParams(ctx, TestController, "read")).resolves.toEqual(["first"]);
+
+    vi.mocked(ctx.query).mockReturnValue(undefined);
+    await expect(resolver.resolveParams(ctx, TestController, "read")).resolves.toEqual([undefined]);
+
+    vi.mocked(ctx.query).mockReturnValue(["first", "second"]);
+    await expect(resolver.resolveParams(ctx, TestController, "read")).rejects.toMatchObject({
+      code: "protocols-rest/request-validation-failed",
+      issues: [expect.objectContaining({ path: "query.value" })],
+    });
+  });
+
+  it("keeps schema-less named headers on the optional scalar fallback contract", async () => {
+    class TestController {
+      read(_value: unknown) {}
+    }
+
+    defineNamedParamMetadata(TestController, "read", ParamType.HEADER);
+
+    const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
+    ctx.header = vi.fn().mockReturnValue("request-1");
+    const resolver = new ParamResolver();
+
+    await expect(resolver.resolveParams(ctx, TestController, "read")).resolves.toEqual([
+      "request-1",
+    ]);
+
+    vi.mocked(ctx.header).mockReturnValue(undefined);
+    await expect(resolver.resolveParams(ctx, TestController, "read")).resolves.toEqual([undefined]);
   });
 });

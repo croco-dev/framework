@@ -25,9 +25,9 @@ import {
   ProblemResponse,
   Query,
   RequestValidationProblem,
+  ResponseSchema,
   type RouteBody,
   type RouteMethodReturn,
-  ResponseSchema,
 } from "@croco/protocols-rest";
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -292,6 +292,138 @@ describe("emitOpenAPI", () => {
         }),
       ]),
     );
+  });
+
+  it("should describe catch-wrapped scalar and array parameter serialization", () => {
+    const nonEmptyTags = z
+      .array(z.string())
+      .refine((tags) => tags.every((tag) => tag.length > 0))
+      .catch([])
+      .optional();
+    const scopes = z.array(z.string()).catch([]).optional().readonly();
+    const directScopes = z.array(z.string()).catch([]);
+
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/filters")
+      filterReports(
+        @Query("mode", z.string().catch("summary")) _mode: string,
+        @Query("tag", nonEmptyTags) _tags: string[] | undefined,
+        @Header("x-scope", scopes) _scopes: readonly string[] | undefined,
+        @Header("x-direct-scope", directScopes) _directScopes: string[],
+      ): void {}
+    }
+
+    const spec = emitOpenAPIFromContractGraph(buildContractGraph([ReportsController]));
+
+    expect(spec.paths?.["/reports/filters"]?.get?.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          in: "query",
+          name: "mode",
+          required: false,
+          schema: { type: "string" },
+        }),
+        expect.objectContaining({
+          in: "query",
+          name: "tag",
+          required: false,
+          style: "form",
+          explode: true,
+          schema: {
+            type: "array",
+            items: { type: "string" },
+          },
+        }),
+        expect.objectContaining({
+          in: "header",
+          name: "x-scope",
+          required: false,
+          style: "simple",
+          explode: false,
+          schema: {
+            type: "array",
+            items: { type: "string" },
+          },
+        }),
+        expect.objectContaining({
+          in: "header",
+          name: "x-direct-scope",
+          required: false,
+          style: "simple",
+          explode: false,
+          schema: {
+            type: "array",
+            items: { type: "string" },
+          },
+        }),
+      ]),
+    );
+  });
+
+  it("should preserve nullable defaults and mixed unions when removing parameter catches", () => {
+    const catchInsideDefault = z.array(z.string()).catch([]).nullable().default(null);
+    const catchOutsideDefault = z.array(z.string()).nullable().default(null).catch([]);
+    const catchFirstUnion = z.union([z.string().catch("summary"), z.array(z.string())]);
+    const catchLastUnion = z.union([z.array(z.string()), z.string().catch("summary")]);
+
+    @Controller("/reports")
+    class ReportsController {
+      @Get("/advanced-filters")
+      filterReports(
+        @Query("inside", catchInsideDefault) _inside: string[] | null,
+        @Query("outside", catchOutsideDefault) _outside: string[] | null,
+        @Query("mixed", catchFirstUnion) _mixed: string | string[],
+        @Header("x-mixed", catchLastUnion) _headerMixed: string | string[],
+      ): void {}
+    }
+
+    const parameters = emitOpenAPIFromContractGraph(buildContractGraph([ReportsController]))
+      .paths?.["/reports/advanced-filters"]?.get?.parameters;
+
+    expect(parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          in: "query",
+          name: "inside",
+          required: false,
+          style: "form",
+          explode: true,
+          schema: expect.objectContaining({ default: null }),
+        }),
+        expect.objectContaining({
+          in: "query",
+          name: "outside",
+          required: false,
+          style: "form",
+          explode: true,
+          schema: expect.objectContaining({ default: null }),
+        }),
+        expect.objectContaining({
+          in: "query",
+          name: "mixed",
+          required: false,
+          schema: expect.objectContaining({ anyOf: expect.any(Array) }),
+        }),
+        expect.objectContaining({
+          in: "header",
+          name: "x-mixed",
+          required: false,
+          schema: expect.objectContaining({ anyOf: expect.any(Array) }),
+        }),
+      ]),
+    );
+
+    const mixedQuery = parameters?.find(
+      (parameter) => "name" in parameter && parameter.name === "mixed",
+    );
+    const mixedHeader = parameters?.find(
+      (parameter) => "name" in parameter && parameter.name === "x-mixed",
+    );
+    expect(mixedQuery).not.toHaveProperty("style");
+    expect(mixedQuery).not.toHaveProperty("explode");
+    expect(mixedHeader).not.toHaveProperty("style");
+    expect(mixedHeader).not.toHaveProperty("explode");
   });
 
   it("should not rewrite path parameters with matching prefixes", () => {
