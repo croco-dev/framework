@@ -11,8 +11,20 @@ type UpstashRedisLike = {
   incr: (key: string) => Promise<number>;
   del: (...keys: string[]) => Promise<number>;
   expire: (key: string, seconds: number) => Promise<number>;
+  eval: (script: string, keys: string[], args: string[]) => Promise<unknown>;
   scan: (cursor: number, opts?: { match?: string; count?: number }) => Promise<[string, string[]]>;
 };
+
+const LOCK_TTL_SECONDS = 10;
+const LOCK_WAIT_TIMEOUT_MS = 1000;
+const LOCK_RETRY_BASE_DELAY_MS = 10;
+const LOCK_RETRY_MAX_DELAY_MS = 50;
+const RELEASE_LOCK_SCRIPT = `
+if redis.call('get', KEYS[1]) == ARGV[1] then
+  return redis.call('del', KEYS[1])
+end
+return 0
+`;
 
 /**
  * Redis 저장소 접근 실패 시 서킷 브레이커가 취할 동작입니다.
@@ -289,10 +301,11 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     }
 
     const lockKey = this.key(circuitId, "lock");
+    const ownerToken = crypto.randomUUID();
 
-    let acquired: "OK" | null;
+    let acquired: boolean;
     try {
-      acquired = await this.redis.set(lockKey, "1", { nx: true, ex: 10 });
+      acquired = await this.acquireLock(lockKey, ownerToken);
     } catch (error) {
       return this.handleStoreError(
         circuitId,
@@ -303,20 +316,47 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
     }
 
     if (!acquired) {
-      throw new CircuitBreakerLockProblem(
-        `Failed to acquire circuit breaker lock for ${circuitId}`,
-      );
+      throw new CircuitBreakerLockProblem("Circuit breaker lock contention exhausted");
     }
 
     try {
       return await operation();
     } finally {
       try {
-        await this.redis.del(lockKey);
+        await this.redis.eval(RELEASE_LOCK_SCRIPT, [lockKey], [ownerToken]);
       } catch (error) {
         await this.handleStoreErrorWithoutResult(circuitId, error);
       }
     }
+  }
+
+  private async acquireLock(lockKey: string, ownerToken: string): Promise<boolean> {
+    const deadline = performance.now() + LOCK_WAIT_TIMEOUT_MS;
+    let attempt = 0;
+
+    while (true) {
+      const acquired = await this.redis.set(lockKey, ownerToken, {
+        nx: true,
+        ex: LOCK_TTL_SECONDS,
+      });
+      if (acquired) {
+        return true;
+      }
+
+      const remainingMs = deadline - performance.now();
+      if (remainingMs <= 0) {
+        return false;
+      }
+
+      const retryCapMs = Math.min(LOCK_RETRY_MAX_DELAY_MS, LOCK_RETRY_BASE_DELAY_MS * 2 ** attempt);
+      const jitteredDelayMs = Math.max(1, Math.floor(Math.random() * retryCapMs));
+      await this.sleep(Math.min(jitteredDelayMs, remainingMs));
+      attempt += 1;
+    }
+  }
+
+  private async sleep(delayMs: number): Promise<void> {
+    await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
   }
 
   private async getStateFromStore(

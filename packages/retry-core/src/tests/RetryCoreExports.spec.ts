@@ -38,6 +38,7 @@ function createRootExportRedis(): RedisCircuitBreakerStoreOptions["redis"] {
       return deleted;
     }),
     expire: vi.fn(async () => 1),
+    eval: vi.fn(async () => 1),
     scan: vi.fn(async (): Promise<[string, string[]]> => ["0", []]),
   };
 }
