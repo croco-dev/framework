@@ -144,18 +144,20 @@ function assertNotAborted(signal?: AbortSignal): void {
 export class InMemoryTransactionalEventStore implements TransactionalEventStore<InMemoryTransactionalEventStoreClient> {
   private rootState = createEmptyState();
   private commitTail: Promise<void> = Promise.resolve();
+  private clearGeneration = 0;
 
   createTxAdapter(): TxAdapter<InMemoryTransactionalEventStoreClient> {
     return {
       transaction: async (fn, _options, signal) => {
         assertNotAborted(signal);
+        const clearGeneration = this.clearGeneration;
         const baseState = cloneState(this.rootState);
         const client: InMemoryTransactionalEventStoreClient = {
           state: cloneState(baseState),
         };
         const result = await fn(client);
         assertNotAborted(signal);
-        await this.commitTransaction(baseState, client.state);
+        await this.commitTransaction(baseState, client.state, clearGeneration);
         return result;
       },
       savepoint: async (client, fn, _options, signal) => {
@@ -173,6 +175,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
   }
 
   clear(): void {
+    this.clearGeneration += 1;
     this.rootState = createEmptyState();
   }
 
@@ -532,6 +535,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
   private async commitTransaction(
     baseState: InMemoryTransactionalEventStoreState,
     stagedState: InMemoryTransactionalEventStoreState,
+    clearGeneration: number,
   ): Promise<void> {
     const previousCommit = this.commitTail;
     let releaseCommit = (): void => {};
@@ -541,6 +545,9 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
 
     await previousCommit;
     try {
+      if (clearGeneration !== this.clearGeneration) {
+        throw new OutboxStorageProblem("In-memory transaction was invalidated by clear().");
+      }
       this.mergeTransactionState(baseState, stagedState);
     } finally {
       releaseCommit();

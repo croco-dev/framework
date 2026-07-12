@@ -3609,9 +3609,9 @@
       "title": "Conflict",
       "cookbookPath": "/reference/problem-recovery-cookbook/#events-tx-inbox-claim-conflict",
       "recovery": {
-        "cause": "The request conflicts with current state or an idempotency constraint.",
-        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
-        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "cause": "An inbox completion request no longer owns the processing attempt it started.",
+        "userAction": "Acquire a new inbox claim before retrying processing; discard the stale completion when a new claim cannot be acquired.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints, then verify workers complete only the attempt they claimed.",
         "retryability": "conditional",
         "redactionPolicy": "safe-message",
         "telemetry": {

@@ -2610,9 +2610,9 @@ Sources:
 - Retryability: `conditional`
 - Redaction policy: `safe-message`
 - Lifecycle: `active`
-- Cause: The request conflicts with current state or an idempotency constraint.
-- User action: Refresh state, resolve the conflict, and retry with the updated intent.
-- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Cause: An inbox completion request no longer owns the processing attempt it started.
+- User action: Acquire a new inbox claim before retrying processing; discard the stale completion when a new claim cannot be acquired.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints, then verify workers complete only the attempt they claimed.
 - Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

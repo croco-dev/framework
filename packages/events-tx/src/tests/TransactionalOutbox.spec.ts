@@ -21,7 +21,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createEventBusOutboxPublisher,
   DrizzleTransactionalEventStore,
-  type DrizzleTransactionalEventStoreDb,
   InboxClaimConflictProblem,
   InMemoryTransactionalEventStore,
   normalizeTransactionalEventError,
@@ -33,6 +32,7 @@ import {
   TransactionalOutboxRelay,
   type TransactionalOutboxMessage,
 } from "../index";
+import type { DrizzleTransactionalEventStoreDb } from "../index";
 
 class AccountCreditedEvent extends DomainEvent {
   static eventName = "account.credited";
@@ -1438,6 +1438,53 @@ describe("TransactionalEventStore conformance", () => {
     await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
       { idempotencyKey: "credit-inner" },
       { idempotencyKey: "credit-outer" },
+    ]);
+  });
+
+  it("invalidates in-flight transaction snapshots when the store is cleared", async () => {
+    const store = new InMemoryTransactionalEventStore();
+    const adapter = store.createTxAdapter();
+    let releaseTransaction = (): void => {};
+    let markTransactionStarted = (): void => {};
+    const transactionGate = new Promise<void>((resolve) => {
+      releaseTransaction = resolve;
+    });
+    const transactionStarted = new Promise<void>((resolve) => {
+      markTransactionStarted = resolve;
+    });
+    const createMessage = (id: string) => ({
+      id,
+      eventId: `event-${id}`,
+      eventType: "account.credited",
+      aggregateId: `acct-${id}`,
+      idempotencyKey: `credit-${id}`,
+      payload: { accountId: `acct-${id}`, amount: 100 },
+      metadata: {},
+      maxAttempts: 3,
+      visibleAt: new Date("2026-01-01T00:00:00.000Z"),
+      occurredAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
+
+    const staleTransaction = adapter.transaction(async (client) => {
+      await store.appendOutbox(createMessage("before-clear"), { client });
+      markTransactionStarted();
+      await transactionGate;
+    });
+    const staleTransactionResult = expect(staleTransaction).rejects.toMatchObject({
+      code: "events-tx/storage-error",
+    });
+
+    await transactionStarted;
+    store.clear();
+    releaseTransaction();
+    await staleTransactionResult;
+    await expect(store.listOutboxMessages()).resolves.toEqual([]);
+
+    await adapter.transaction((client) =>
+      store.appendOutbox(createMessage("after-clear"), { client }),
+    );
+    await expect(store.listOutboxMessages()).resolves.toMatchObject([
+      { id: "after-clear", idempotencyKey: "credit-after-clear" },
     ]);
   });
 
