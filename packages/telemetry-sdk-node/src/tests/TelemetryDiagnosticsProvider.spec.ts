@@ -56,6 +56,37 @@ describe("TelemetryDiagnosticsProvider", () => {
     expect(JSON.stringify(health)).not.toContain("collector");
   });
 
+  it("should report disabled tracing as degraded with safe metadata", async () => {
+    await runtime.init({
+      serviceName: "orders",
+      enabled: true,
+      trace: {
+        enabled: false,
+        exporterUrl: "http://collector:4318/v1/traces",
+        exporterHeaders: { Authorization: "Bearer secret" },
+        probability: 0.25,
+      },
+    });
+
+    const health = await diagnostics.getHealth();
+
+    expect(health.status).toBe("degraded");
+    expect(health.component).toBe("telemetry");
+    expect(health.message).toBe(
+      "Telemetry tracing disabled by configuration; SDK startup and export are skipped",
+    );
+    expect(health.details).toEqual({
+      serviceName: "orders",
+      enabled: true,
+      initialized: false,
+      traceEnabled: false,
+      probability: 0.25,
+      mode: "disabled",
+    });
+    expect(JSON.stringify(health)).not.toContain("Bearer secret");
+    expect(JSON.stringify(health)).not.toContain("collector");
+  });
+
   it("should report sampling probability zero as degraded with safe metadata", async () => {
     await runtime.init({
       serviceName: "orders",

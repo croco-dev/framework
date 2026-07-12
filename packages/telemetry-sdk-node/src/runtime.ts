@@ -66,11 +66,11 @@ class TelemetryRuntime {
       return this.initPromise;
     }
 
+    config = { ...config, ...(config.trace && { trace: { ...config.trace } }) };
     this.config = config;
 
-    if (config.enabled === false) {
-      // Disabled init stores the requested config without starting the SDK, so
-      // a later enabled init can still initialize telemetry in the same process.
+    if (config.enabled === false || config.trace?.enabled === false) {
+      // Store disabled config so a later enabled init can initialize telemetry in the same process.
       return;
     }
 
@@ -233,7 +233,7 @@ class TelemetryRuntime {
   }
 
   isInitialized(): boolean {
-    return this.initialized && this.config?.enabled !== false;
+    return this.initialized;
   }
 
   isEnabled(): boolean {
@@ -241,7 +241,13 @@ class TelemetryRuntime {
   }
 
   getConfig(): TelemetryConfig | null {
-    return this.config;
+    if (!this.config) {
+      return null;
+    }
+    return {
+      ...this.config,
+      ...(this.config.trace && { trace: { ...this.config.trace } }),
+    };
   }
 }
 
