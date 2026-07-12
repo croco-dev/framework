@@ -97,6 +97,11 @@ export class DeterministicMigrationDatabase implements DatabaseClient {
       return [];
     }
 
+    if (text.includes("to_regclass")) {
+      this.events.push("schema:exists");
+      return [{ exists: state.tableExists }];
+    }
+
     if (text.startsWith("SELECT id, name")) {
       const selectFailure = this.selectFailure;
       this.selectFailure = undefined;
