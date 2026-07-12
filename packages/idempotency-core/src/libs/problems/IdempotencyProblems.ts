@@ -3,6 +3,7 @@ import { Problem, ProblemCategory, type ProblemOptions } from "@croco/problems-c
 export const IDEMPOTENCY_DIAGNOSTIC_CODES = {
   keyConflict: "idempotency-core/key-conflict",
   invalidKey: "idempotency-core/invalid-key",
+  reservationExpired: "idempotency-core/reservation-expired",
   reservationNotFound: "idempotency-core/reservation-not-found",
   reservationState: "idempotency-core/reservation-state",
 } as const;
@@ -67,6 +68,20 @@ export class IdempotencyReservationNotFoundProblem extends IdempotencyProblem {
       extensions: {
         storageKey: options.storageKey,
         reservationId: options.reservationId,
+      },
+    });
+  }
+}
+
+export class IdempotencyReservationExpiredProblem extends IdempotencyProblem {
+  constructor(options: { readonly expiredAt: Date; readonly observedAt: Date }) {
+    super({
+      code: IDEMPOTENCY_DIAGNOSTIC_CODES.reservationExpired,
+      category: ProblemCategory.Conflict,
+      detail: "Idempotency reservation ownership expired before completion",
+      extensions: {
+        expiredAt: options.expiredAt.toISOString(),
+        observedAt: options.observedAt.toISOString(),
       },
     });
   }

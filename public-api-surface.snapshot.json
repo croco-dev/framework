@@ -9154,6 +9154,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "IdempotencyReservationExpiredProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/IdempotencyProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "IdempotencyReservationNotFoundProblem",
           "exportKind": "named",
           "source": "./libs/problems/IdempotencyProblems",
