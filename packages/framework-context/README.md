@@ -26,6 +26,12 @@ class UserService {
 const service = Container.get(UserService);
 ```
 
+Provider adapters that write directly to TypeDI can use
+`Container.toTypeDIServiceIdentifier(token)` to share the same identifier as the
+Croco container. Strings, TypeDI tokens, and constructors are returned unchanged;
+symbols map to one stable TypeDI token until `Container.reset()` clears both the
+container registrations and symbol mapping.
+
 ### 요청 컨텍스트 실행
 
 ```typescript
@@ -57,7 +63,7 @@ ShutdownManager.getInstance().listen();
 
 ## API 레퍼런스
 
-- `Container`: 의존성 등록, 조회, 초기화
+- `Container`: 의존성 등록, 조회, 초기화 및 TypeDI provider 식별자 변환
 - `Component`: 클래스를 singleton, request, transient scope로 등록
 - `Context`: AsyncLocalStorage 기반 요청 컨텍스트 실행과 조회
 - `MetadataStorage`: 데코레이터 메타데이터 저장과 조회

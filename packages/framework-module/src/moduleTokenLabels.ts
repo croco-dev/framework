@@ -5,6 +5,10 @@ export function getModuleTokenLabel(token: ModuleToken<unknown>): string {
     return token;
   }
 
+  if (typeof token === "symbol") {
+    return Symbol.keyFor(token) ?? token.description ?? token.toString();
+  }
+
   if (typeof token === "function") {
     return token.name || "anonymous-constructor";
   }

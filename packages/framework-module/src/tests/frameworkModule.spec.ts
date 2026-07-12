@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Inject, Service as Component, Container, Token } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
+import { Container as FrameworkContainer } from "@croco/framework-context";
 import {
   CrocoModule,
   defineCrocoModule,
@@ -90,6 +91,7 @@ describe("CrocoModule", () => {
 
     CrocoModule.use({
       name: "config",
+      providers: [token],
       exports: [token],
       setup: (ctx) => ctx.set(token, { name: "croco" }),
       start: () => {
@@ -237,6 +239,164 @@ describe("CrocoModule", () => {
     });
   });
 
+  it("rejects TypeDI identifiers adapted from non-exported symbol providers", async () => {
+    const privateToken = Symbol("private-symbol-config");
+    const privateIdentifier = FrameworkContainer.toTypeDIServiceIdentifier(
+      privateToken,
+    ) as Token<string>;
+
+    class UserService {
+      constructor(@Inject(privateIdentifier) readonly secret: string) {}
+    }
+
+    const databaseModule = defineCrocoModule({
+      name: "database",
+      providers: [{ provide: privateToken, useValue: "secret" }],
+    });
+
+    CrocoModule.use({
+      name: "users",
+      imports: [databaseModule],
+      providers: [UserService],
+    });
+
+    await expect(CrocoModule.initialize()).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        code: "framework-module/provider-not-visible",
+        extensions: { moduleName: "users", provider: "private-symbol-config" },
+      }),
+    });
+  });
+
+  it("rejects direct access through TypeDI identifiers adapted from private symbols", async () => {
+    const privateToken = Symbol("private-direct-symbol-config");
+    const privateIdentifier = FrameworkContainer.toTypeDIServiceIdentifier(
+      privateToken,
+    ) as Token<string>;
+    const databaseModule = defineCrocoModule({
+      name: "database",
+      providers: [{ provide: privateToken, useValue: "secret" }],
+    });
+
+    CrocoModule.use({
+      name: "users",
+      imports: [databaseModule],
+      setup: (context) => {
+        context.get(privateIdentifier);
+      },
+    });
+
+    await expect(CrocoModule.initialize()).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        code: "framework-module/provider-not-visible",
+        extensions: { moduleName: "users", provider: "private-direct-symbol-config" },
+      }),
+    });
+  });
+
+  it("allows TypeDI identifiers adapted from exported symbol providers", async () => {
+    const publicToken = Symbol("public-symbol-config");
+    const publicIdentifier = FrameworkContainer.toTypeDIServiceIdentifier(
+      publicToken,
+    ) as Token<string>;
+
+    const databaseModule = defineCrocoModule({
+      name: "database",
+      providers: [{ provide: publicToken, useValue: "public" }],
+      exports: [publicToken],
+    });
+
+    CrocoModule.use({
+      name: "users",
+      imports: [databaseModule],
+      setup: (context) => {
+        expect(context.get(publicIdentifier)).toBe("public");
+      },
+    });
+
+    await CrocoModule.initialize();
+  });
+
+  it("rejects original symbol access when the private provider uses its adapted identifier", async () => {
+    const privateToken = Symbol("private-adapted-config");
+    const privateIdentifier = FrameworkContainer.toTypeDIServiceIdentifier(
+      privateToken,
+    ) as Token<string>;
+    const databaseModule = defineCrocoModule({
+      name: "database",
+      providers: [{ provide: privateIdentifier, useValue: "secret" }],
+    });
+
+    CrocoModule.use({
+      name: "users",
+      imports: [databaseModule],
+      setup: (context) => {
+        context.get(privateToken);
+      },
+    });
+
+    await expect(CrocoModule.initialize()).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        code: "framework-module/provider-not-visible",
+        extensions: { moduleName: "users", provider: "private-adapted-config" },
+      }),
+    });
+  });
+
+  it("allows original symbol access when its adapted provider identifier is exported", async () => {
+    const publicToken = Symbol("public-adapted-config");
+    const publicIdentifier = FrameworkContainer.toTypeDIServiceIdentifier(
+      publicToken,
+    ) as Token<string>;
+    const databaseModule = defineCrocoModule({
+      name: "database",
+      providers: [{ provide: publicIdentifier, useValue: "public" }],
+      exports: [publicIdentifier],
+    });
+
+    CrocoModule.use({
+      name: "users",
+      imports: [databaseModule],
+      setup: (context) => {
+        expect(context.get(publicToken)).toBe("public");
+      },
+    });
+
+    await CrocoModule.initialize();
+  });
+
+  it("treats mixed symbol and adapted identifiers as the same exported provider", async () => {
+    const symbolProviderToken = Symbol("symbol-provider");
+    const symbolProviderIdentifier = FrameworkContainer.toTypeDIServiceIdentifier(
+      symbolProviderToken,
+    ) as Token<string>;
+    const identifierProviderToken = Symbol("identifier-provider");
+    const identifierProviderIdentifier = FrameworkContainer.toTypeDIServiceIdentifier(
+      identifierProviderToken,
+    ) as Token<string>;
+    const symbolProviderModule = defineCrocoModule({
+      name: "symbol-provider",
+      providers: [{ provide: symbolProviderToken, useValue: "symbol" }],
+      exports: [symbolProviderIdentifier],
+    });
+    const identifierProviderModule = defineCrocoModule({
+      name: "identifier-provider",
+      providers: [{ provide: identifierProviderIdentifier, useValue: "identifier" }],
+      exports: [identifierProviderToken],
+    });
+
+    CrocoModule.use({
+      name: "users",
+      imports: [symbolProviderModule, identifierProviderModule],
+      setup: (context) => {
+        expect(context.get(symbolProviderToken)).toBe("symbol");
+        expect(context.get(identifierProviderIdentifier)).toBe("identifier");
+      },
+    });
+
+    await CrocoModule.initialize();
+  });
+
   it("rejects property token injections of non-exported imported providers", async () => {
     const privateToken = new Token<string>("private-config");
 
@@ -326,6 +486,7 @@ describe("CrocoModule", () => {
 
     const databaseModule = defineCrocoModule({
       name: "database",
+      providers: [privateToken],
       start: (ctx) => {
         ctx.set(privateToken, "secret");
       },
@@ -359,6 +520,7 @@ describe("CrocoModule", () => {
 
     const databaseModule = defineCrocoModule({
       name: "database",
+      providers: [privateToken],
       exports: [serviceToken],
       start: (ctx) => {
         ctx.set(privateToken, "secret");
@@ -389,7 +551,7 @@ describe("CrocoModule", () => {
 
     const databaseModule = defineCrocoModule({
       name: "database",
-      providers: [DatabaseService],
+      providers: [DatabaseService, privateToken],
       exports: [DatabaseService],
       start: (ctx) => {
         ctx.set(privateToken, "secret");
@@ -418,7 +580,7 @@ describe("CrocoModule", () => {
     const serviceToken = new Token<DatabaseService>("database-service");
     const databaseModule = defineCrocoModule({
       name: "database",
-      providers: [{ provide: serviceToken, useClass: DatabaseService }],
+      providers: [{ provide: serviceToken, useClass: DatabaseService }, privateToken],
       exports: [serviceToken],
       start: (ctx) => {
         ctx.set(privateToken, "secret");

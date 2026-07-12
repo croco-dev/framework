@@ -7471,7 +7471,19 @@
           "declarationKind": "class"
         },
         {
+          "name": "ModuleProviderOwnershipProblem",
+          "exportKind": "named",
+          "source": "./problems",
+          "declarationKind": "class"
+        },
+        {
           "name": "ModuleProviderVisibilityProblem",
+          "exportKind": "named",
+          "source": "./problems",
+          "declarationKind": "class"
+        },
+        {
+          "name": "ModuleProviderWriteProblem",
           "exportKind": "named",
           "source": "./problems",
           "declarationKind": "class"

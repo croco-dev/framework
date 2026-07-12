@@ -55,6 +55,36 @@ Token-backed TypeDI classes should be declared as
 `{ provide: Token, useClass: ServiceClass }`; exporting a token alone does not
 make global `@Service(token)` class metadata part of the module contract.
 
+## Provider Ownership
+
+Each provider token has exactly one declaring module. Croco validates the complete
+module graph before provider factories, lifecycle hooks, or global TypeDI
+registration run. If unrelated modules declare the same string, symbol, TypeDI
+token, or class token, initialization throws `ModuleProviderOwnershipProblem`
+with every owner in deterministic name order. Importing an exported provider
+grants read access and does not create another owner.
+
+Module metadata is snapshotted when the module is registered. Later mutations to
+source `imports`, `providers`, `exports`, or `controllers` arrays do not change
+the graph that initialization validates and executes.
+
+`ModuleContext.set()` may only bind a token already listed in the current
+module's `providers`. Imported providers are read-only, undeclared writes fail
+before container mutation, and the root context returned by initialization does
+not have provider-write authority. Use a token-only provider declaration when a
+lifecycle hook supplies the value:
+
+```ts
+const ConfigToken = Symbol("config");
+
+defineCrocoModule({
+  name: "config",
+  providers: [ConfigToken],
+  exports: [ConfigToken],
+  setup: (ctx) => ctx.set(ConfigToken, loadConfig()),
+});
+```
+
 This package intentionally records controllers but does not bind them to an HTTP,
 GraphQL, RPC, or worker transport. Transport packages decide how controller
 tokens become routes or handlers.

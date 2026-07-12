@@ -361,6 +361,31 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 ***
 
+### toTypeDIServiceIdentifier()
+
+> `static` **toTypeDIServiceIdentifier**\<`T`\>(`token`): `ServiceIdentifier`\<`T`\>
+
+Returns the TypeDI identifier used internally for a Croco token.
+Symbol mappings remain stable until [Container.reset](/api/framework-context/src/classes/container/#reset).
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### token
+
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
+
+#### Returns
+
+`ServiceIdentifier`\<`T`\>
+
+***
+
 ### validate()
 
 > `static` **validate**(`options?`): `void`
