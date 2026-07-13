@@ -28,6 +28,22 @@ describe("MigrationStore", () => {
     await expect(store.hasTable(db)).rejects.toBeInstanceOf(UnsupportedMigrationQueryResultProblem);
   });
 
+  it("should reject inherited or accessor table-existence fields without invoking getters", async () => {
+    const getter = vi.fn(() => true);
+    const inherited = Object.create({ exists: true }) as object;
+    const accessor = Object.defineProperty({}, "exists", { get: getter });
+    const store = new MigrationStore("_migrations");
+
+    for (const row of [inherited, accessor]) {
+      const db = { execute: vi.fn().mockResolvedValue([row]) } as unknown as DatabaseClient;
+      await expect(store.hasTable(db)).rejects.toBeInstanceOf(
+        UnsupportedMigrationQueryResultProblem,
+      );
+    }
+
+    expect(getter).not.toHaveBeenCalled();
+  });
+
   it("should preserve table-existence query failures", async () => {
     const failure = new Error("checkpoint visibility denied");
     const db = { execute: vi.fn().mockRejectedValue(failure) } as unknown as DatabaseClient;

@@ -25,10 +25,17 @@ export class MigrationStore {
       SELECT to_regclass(quote_ident(${this.tableName})) IS NOT NULL AS "exists"
     `);
     const rows = getResultRows(result);
-    if (rows.length !== 1 || typeof rows[0]?.exists !== "boolean") {
+    const row = rows[0];
+    if (rows.length !== 1 || !isRecord(row)) {
       throw new UnsupportedMigrationQueryResultProblem();
     }
-    return rows[0].exists;
+
+    const exists = getOwnDataPropertyValue(row, "exists");
+    if (typeof exists !== "boolean") {
+      throw new UnsupportedMigrationQueryResultProblem();
+    }
+
+    return exists;
   }
 
   async getExecutedMigrations(db: DatabaseClient): Promise<MigrationRecord[]> {
