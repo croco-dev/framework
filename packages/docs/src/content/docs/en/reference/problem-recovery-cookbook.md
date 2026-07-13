@@ -4674,7 +4674,7 @@ Sources:
 
 Sources:
 
-- `packages/migration-runner/src/libs/problems/UnsupportedMigrationQueryResultProblem.ts:4:3` (problem-class)
+- `packages/migration-runner/src/libs/problems/UnsupportedMigrationQueryResultProblem.ts:11:3` (problem-class)
 
 <a id="missing-tenant"></a>
 

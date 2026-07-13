@@ -12177,6 +12177,11 @@
           "source": "./libs/problems/MigrationHistoryDriftProblem"
         },
         {
+          "name": "MigrationQueryResultField",
+          "exportKind": "named",
+          "source": "./libs/problems/UnsupportedMigrationQueryResultProblem"
+        },
+        {
           "name": "MigrationRecord",
           "exportKind": "named",
           "source": "./libs/types"
@@ -12190,6 +12195,11 @@
           "name": "MigrationStatus",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "UnsupportedMigrationQueryResultContext",
+          "exportKind": "named",
+          "source": "./libs/problems/UnsupportedMigrationQueryResultProblem"
         }
       ]
     },

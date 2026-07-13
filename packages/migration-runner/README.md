@@ -154,13 +154,19 @@ Common operator failures:
 | `migration-runner/invalid-count`            | `down --count` is zero, negative, fractional, non-numeric, or unsafe.     | Choose a positive integer or use `--target`.                                              |
 | `migration-runner/history-drift`            | Applied history references a missing, renamed, or duplicate migration.    | Restore the original migration identity or perform an explicitly verified history repair. |
 | `migration-runner/transaction-required`     | Direct API client has no `transaction` function for execution or preview. | Wrap the adapter with transaction support.                                                |
-| `migration-runner/unsupported-query-result` | Adapter returns neither an array nor a `{ rows: [...] }` result.          | Normalize the adapter result shape.                                                       |
+| `migration-runner/unsupported-query-result` | Adapter returns an unsupported wrapper or malformed migration row.        | Normalize the wrapper and persisted row fields.                                           |
 | `migration-runner/missing-up-function`      | A migration file lacks `up`.                                              | Add the forward migration body.                                                           |
 | `migration-runner/missing-down-function`    | A migration file lacks `down`.                                            | Add a rollback body or do not select it for rollback.                                     |
 
 Database connection and query failures are not hidden as success. They make the command exit nonzero after the pool
 cleanup attempt. If cleanup itself fails, the CLI adds a `Cleanup failed: ...` diagnostic and exits nonzero without
 discarding earlier command output or failure diagnostics.
+
+Persisted migration rows must contain non-blank string `id` and `name` fields plus an `executedAt`, `executed_at`, or
+`executedat` timestamp. Timestamps may be valid `Date` objects, ISO date-times with an explicit `Z` or numeric offset, or
+database timestamps shaped as `YYYY-MM-DD HH:mm:ss[.fraction]` (interpreted as UTC). Malformed rows fail before status,
+execution, preview, or rollback selection. The Problem may identify the zero-based row and canonical field, but never
+echoes persisted row contents. Inspect and repair the checkpoint table or normalize the adapter result before retrying.
 
 When an `up` or `down` command fails after opening the database, the CLI prints conservative direction-specific recovery
 guidance: inspect `migrate status` and the database state, correct the reported failure, then rerun the same command. The

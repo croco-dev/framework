@@ -8,6 +8,7 @@ import { MigrationRunner } from "../libs/MigrationRunner";
 import { InvalidMigrationCountProblem } from "../libs/problems/InvalidMigrationCountProblem";
 import type { MigrationHistoryDriftProblem } from "../libs/problems/MigrationHistoryDriftProblem";
 import { MigrationTransactionRequiredProblem } from "../libs/problems/MigrationTransactionRequiredProblem";
+import { UnsupportedMigrationQueryResultProblem } from "../libs/problems/UnsupportedMigrationQueryResultProblem";
 
 describe("MigrationRunner", () => {
   let runner!: MigrationRunner;
@@ -387,6 +388,31 @@ describe("MigrationRunner", () => {
       }
     });
   });
+
+  describe("malformed persisted metadata", () => {
+    it.each([
+      ["status", (candidate: MigrationRunner) => candidate.status()],
+      ["up", (candidate: MigrationRunner) => candidate.up()],
+      ["down", (candidate: MigrationRunner) => candidate.down()],
+      ["previewUp", (candidate: MigrationRunner) => candidate.previewUp()],
+      ["previewDown", (candidate: MigrationRunner) => candidate.previewDown()],
+    ])("should reject %s before executing migration bodies", async (_method, invoke) => {
+      const migrationsDir = createMigrationDir();
+      const { bodyCalls, db } = createMalformedMetadataDb();
+      const candidate = new MigrationRunner(db, migrationsDir, "_migrations");
+
+      try {
+        const result = invoke(candidate);
+        await expect(result).rejects.toBeInstanceOf(UnsupportedMigrationQueryResultProblem);
+        await expect(result).rejects.toMatchObject({
+          extensions: { rowIndex: 0, field: "executedAt" },
+        });
+        expect(bodyCalls).toEqual([]);
+      } finally {
+        rmSync(migrationsDir, { force: true, recursive: true });
+      }
+    });
+  });
 });
 
 type MigrationDirOptions = {
@@ -644,6 +670,44 @@ function createRollbackFailureDb(): {
   } as unknown as DatabaseClient;
 
   return { committedBodyCalls, committedRemovedIds, db };
+}
+
+function createMalformedMetadataDb(): {
+  readonly bodyCalls: BodyCall[];
+  readonly db: DatabaseClient;
+} {
+  const bodyCalls: BodyCall[] = [];
+  const execute = vi.fn(async (query: unknown) => {
+    const bodyCall = getBodyCall(query);
+    if (bodyCall) {
+      bodyCalls.push(bodyCall);
+      return [];
+    }
+
+    const text = sqlText(query);
+    if (text.startsWith("SELECT to_regclass")) {
+      return [{ exists: true }];
+    }
+
+    if (text.startsWith("SELECT id, name")) {
+      return [
+        {
+          id: "20260615000001",
+          name: "create_accounts",
+          executedAt: "not-a-timestamp",
+        },
+      ];
+    }
+
+    return [];
+  });
+  const txDb = { execute } as unknown as DatabaseClient;
+  const db = {
+    execute,
+    transaction: vi.fn(async <T>(fn: (tx: DatabaseClient) => Promise<T>) => fn(txDb)),
+  } as unknown as DatabaseClient;
+
+  return { bodyCalls, db };
 }
 
 function createBarrier(size: number): { readonly wait: () => Promise<void> } {
