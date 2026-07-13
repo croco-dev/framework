@@ -1,15 +1,16 @@
 import {
-  createExecutionJobsOperations,
-  ExecutionManagerImpl,
   type CreateExecutionParams,
+  createExecutionJobsOperations,
   type Execution,
   type ExecutionLogEntry,
   type ExecutionLogStore,
+  ExecutionManagerImpl,
   type ExecutionStore,
   type ListExecutionsOptions,
 } from "@croco/execution-core";
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { JobsCommandClient, JobsStatusFetch } from "../commands/jobs.js";
 import {
   formatJobDetails,
   formatJobLogs,
@@ -23,7 +24,6 @@ import {
   runJobsReplay,
   runJobsShow,
 } from "../commands/jobs.js";
-import type { JobsCommandClient, JobsStatusFetch } from "../commands/jobs.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
 class TestExecutionStore implements ExecutionStore, ExecutionLogStore {
@@ -71,6 +71,26 @@ class TestExecutionStore implements ExecutionStore, ExecutionLogStore {
     const updated = { ...execution, ...data };
     this.executions.set(id, updated);
     return updated;
+  }
+
+  async updateIfStatus(
+    id: string,
+    expectedStatus: Execution["status"],
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const execution = this.executions.get(id);
+    return execution?.status === expectedStatus ? this.update(id, data) : null;
+  }
+
+  async listRunning(options: { afterId?: string; limit: number }): Promise<Execution[]> {
+    return [...this.executions.values()]
+      .filter(
+        (execution) =>
+          execution.status === "running" &&
+          (options.afterId === undefined || execution.id > options.afterId),
+      )
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .slice(0, options.limit);
   }
 
   async appendLog(id: string, entry: ExecutionLogEntry): Promise<Execution> {
@@ -134,7 +154,10 @@ describe("jobs command", () => {
     });
     await manager.start(failed.id);
     await manager.recordLog(failed.id, { message: "Billing sync failed" });
-    await manager.fail(failed.id, { message: "provider unavailable", retryable: true });
+    await manager.fail(failed.id, {
+      message: "provider unavailable",
+      retryable: true,
+    });
 
     const running = await manager.create({ type: "usage-rollup" });
     await manager.start(running.id);
@@ -205,7 +228,11 @@ describe("jobs command", () => {
       }
       if (input.endsWith("/jobs/exec-1/logs")) {
         return Response.json([
-          { timestamp: "2026-01-01T00:00:00.000Z", level: "info", message: "started" },
+          {
+            timestamp: "2026-01-01T00:00:00.000Z",
+            level: "info",
+            message: "started",
+          },
         ]);
       }
       if (input.endsWith("/jobs/exec-1/cancel")) {
@@ -235,12 +262,16 @@ describe("jobs command", () => {
       summary: "attention",
     });
     await expect(
-      runJobsShow("exec-1", "https://api.example.test/ops", { fetch: fetchJobs }),
+      runJobsShow("exec-1", "https://api.example.test/ops", {
+        fetch: fetchJobs,
+      }),
     ).resolves.toMatchObject({
       id: "exec-1",
     });
     await expect(
-      runJobsLogs("exec-1", "https://api.example.test/ops", { fetch: fetchJobs }),
+      runJobsLogs("exec-1", "https://api.example.test/ops", {
+        fetch: fetchJobs,
+      }),
     ).resolves.toHaveLength(1);
     await expect(
       runJobsCancel(

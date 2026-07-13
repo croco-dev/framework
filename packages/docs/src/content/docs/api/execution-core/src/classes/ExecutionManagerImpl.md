@@ -8,6 +8,7 @@ title: "ExecutionManagerImpl"
 ExecutionManagerImpl provides lifecycle management for executions.
 
 Features:
+
 - State transition validation
 - Idempotency check via ExecutionStore
 - Timeout handling
@@ -71,7 +72,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`cancel`](/api/execution-core/src/interfaces/executionmanager/#cancel)
 
-***
+---
 
 ### checkpoint()
 
@@ -111,7 +112,7 @@ Error if execution not found
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`checkpoint`](/api/execution-core/src/interfaces/executionmanager/#checkpoint)
 
-***
+---
 
 ### complete()
 
@@ -145,7 +146,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`complete`](/api/execution-core/src/interfaces/executionmanager/#complete)
 
-***
+---
 
 ### create()
 
@@ -174,7 +175,7 @@ Created or existing execution
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`create`](/api/execution-core/src/interfaces/executionmanager/#create)
 
-***
+---
 
 ### fail()
 
@@ -209,7 +210,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`fail`](/api/execution-core/src/interfaces/executionmanager/#fail)
 
-***
+---
 
 ### get()
 
@@ -235,7 +236,7 @@ Error if execution not found
 
 [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/).[`get`](/api/execution-core/src/interfaces/executioninspectionmanager/#get)
 
-***
+---
 
 ### list()
 
@@ -257,7 +258,29 @@ List executions for inspection and operations views.
 
 [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/).[`list`](/api/execution-core/src/interfaces/executioninspectionmanager/#list)
 
-***
+---
+
+### reconcileTimedOut()
+
+> **reconcileTimedOut**(`options?`): `Promise`\<[`ReconcileTimedOutResult`](/api/execution-core/src/interfaces/reconciletimedoutresult/)\>
+
+Reconcile persisted running executions whose configured deadline has elapsed.
+
+#### Parameters
+
+##### options?
+
+[`ReconcileTimedOutOptions`](/api/execution-core/src/interfaces/reconciletimedoutoptions/) = `{}`
+
+#### Returns
+
+`Promise`\<[`ReconcileTimedOutResult`](/api/execution-core/src/interfaces/reconciletimedoutresult/)\>
+
+#### Implementation of
+
+[`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`reconcileTimedOut`](/api/execution-core/src/interfaces/executionmanager/#reconciletimedout)
+
+---
 
 ### recordLog()
 
@@ -287,7 +310,7 @@ Error if execution not found
 
 [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/).[`recordLog`](/api/execution-core/src/interfaces/executioninspectionmanager/#recordlog)
 
-***
+---
 
 ### replay()
 
@@ -320,7 +343,7 @@ Error if execution not found or source execution is not replayable
 
 [`ExecutionReplayManager`](/api/execution-core/src/interfaces/executionreplaymanager/).[`replay`](/api/execution-core/src/interfaces/executionreplaymanager/#replay)
 
-***
+---
 
 ### retry()
 
@@ -328,8 +351,8 @@ Error if execution not found or source execution is not replayable
 
 Retry a failed or timed-out execution.
 
-Increments attempts counter and transitions to 'retrying' status.
-Subsequent start() call will transition to 'running'.
+Preserves the consumed attempt count and transitions to 'retrying' status.
+The subsequent start() call transitions to 'running' and increments attempts exactly once.
 
 #### Parameters
 
@@ -349,7 +372,7 @@ Error if execution not found or maxAttempts exhausted
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`retry`](/api/execution-core/src/interfaces/executionmanager/#retry)
 
-***
+---
 
 ### start()
 
@@ -377,7 +400,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`start`](/api/execution-core/src/interfaces/executionmanager/#start)
 
-***
+---
 
 ### timeout()
 
@@ -406,7 +429,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`timeout`](/api/execution-core/src/interfaces/executionmanager/#timeout)
 
-***
+---
 
 ### updateProgress()
 

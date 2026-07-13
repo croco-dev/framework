@@ -1,21 +1,21 @@
 import {
   type CreateExecutionParams,
+  createExecutionJobsOperations,
   type Execution,
-  type ExecutionManager,
-  ExecutionManagerImpl,
   type ExecutionLogEntry,
   type ExecutionLogStore,
+  type ExecutionManager,
+  ExecutionManagerImpl,
   ExecutionProblems,
   ExecutionStore,
   type ListExecutionsOptions,
-  createExecutionJobsOperations,
 } from "@croco/execution-core";
 import { Component, Container, MetadataStorage } from "@croco/framework-context";
-import { trace } from "@opentelemetry/api";
-import type { Span, SpanOptions as OtelSpanOptions, Tracer } from "@opentelemetry/api";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { Task, TaskRegistry } from "@croco/tasks-core";
 import { Cron, OnWebhook } from "@croco/triggers-core";
+import type { SpanOptions as OtelSpanOptions, Span, Tracer } from "@opentelemetry/api";
+import { trace } from "@opentelemetry/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Workflow } from "../libs/decorators/Workflow";
 import { WorkflowDiagnosticsProvider } from "../libs/diagnostics/WorkflowDiagnosticsProvider";
@@ -83,6 +83,26 @@ class InMemoryExecutionStore extends ExecutionStore implements ExecutionLogStore
     const updated = { ...existing, ...data };
     this.executions.set(id, updated);
     return updated;
+  }
+
+  async updateIfStatus(
+    id: string,
+    expectedStatus: Execution["status"],
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    return existing?.status === expectedStatus ? this.update(id, data) : null;
+  }
+
+  async listRunning(options: { afterId?: string; limit: number }): Promise<Execution[]> {
+    return [...this.executions.values()]
+      .filter(
+        (execution) =>
+          execution.status === "running" &&
+          (options.afterId === undefined || execution.id > options.afterId),
+      )
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .slice(0, options.limit);
   }
 
   async appendLog(id: string, entry: ExecutionLogEntry): Promise<Execution> {
@@ -247,7 +267,11 @@ describe("workflow-core", () => {
       expect.objectContaining({ type: "cron", expression: "0 * * * *" }),
     ]);
     expect(webhook?.triggers).toEqual([
-      expect.objectContaining({ type: "webhook", path: "/webhooks/billing", method: "POST" }),
+      expect.objectContaining({
+        type: "webhook",
+        path: "/webhooks/billing",
+        method: "POST",
+      }),
     ]);
     expect(scheduled?.steps).toEqual([{ name: "billing.refresh", task: "billing.refresh" }]);
     expect(registry.get("StaticBillingWorkflows.staticSync")).toEqual(
@@ -260,8 +284,15 @@ describe("workflow-core", () => {
   it("runs a scheduled workflow as a parent execution with child task executions", async () => {
     @Component()
     class BillingTasks {
-      @Task({ name: "billing.fetch-subscription", maxAttempts: 2, timeout: 10_000 })
-      fetchSubscription(payload: unknown): { subscriptionId: string; plan: string } {
+      @Task({
+        name: "billing.fetch-subscription",
+        maxAttempts: 2,
+        timeout: 10_000,
+      })
+      fetchSubscription(payload: unknown): {
+        subscriptionId: string;
+        plan: string;
+      } {
         return { subscriptionId: getSubscriptionId(payload), plan: "pro" };
       }
 
@@ -294,9 +325,13 @@ describe("workflow-core", () => {
     Container.set(BillingWorkflows, new BillingWorkflows());
     const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
-    const result = await runner.execute("billing-sync", { subscriptionId: "sub_123" });
+    const result = await runner.execute("billing-sync", {
+      subscriptionId: "sub_123",
+    });
     const workflowExecution = await manager.get(result.executionId);
-    const childExecutions = await manager.list({ parentId: result.executionId });
+    const childExecutions = await manager.list({
+      parentId: result.executionId,
+    });
 
     expect(result.reused).toBe(false);
     expect(workflowExecution).toEqual(
@@ -369,7 +404,9 @@ describe("workflow-core", () => {
     const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     const result = await runner.execute("billing-repeat-steps", {});
-    const childExecutions = await manager.list({ parentId: result.executionId });
+    const childExecutions = await manager.list({
+      parentId: result.executionId,
+    });
 
     expect(handledCount).toBe(2);
     expect(result.steps).toEqual([
@@ -426,8 +463,12 @@ describe("workflow-core", () => {
     Container.set(WebhookWorkflows, new WebhookWorkflows());
     const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
-    const first = await runner.execute("billing-webhook", { subscriptionId: "sub_123" });
-    const second = await runner.execute("billing-webhook", { subscriptionId: "sub_123" });
+    const first = await runner.execute("billing-webhook", {
+      subscriptionId: "sub_123",
+    });
+    const second = await runner.execute("billing-webhook", {
+      subscriptionId: "sub_123",
+    });
     const allExecutions = await manager.list();
 
     expect(first.reused).toBe(false);
@@ -532,9 +573,13 @@ describe("workflow-core", () => {
     Container.set(WebhookWorkflows, new WebhookWorkflows());
     const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
-    const first = runner.execute("billing-slow-webhook", { subscriptionId: "sub_123" });
+    const first = runner.execute("billing-slow-webhook", {
+      subscriptionId: "sub_123",
+    });
     const started = await waitForWorkflowExecution(manager);
-    const second = await runner.execute("billing-slow-webhook", { subscriptionId: "sub_123" });
+    const second = await runner.execute("billing-slow-webhook", {
+      subscriptionId: "sub_123",
+    });
 
     releaseTask();
     const firstResult = await first;
@@ -605,7 +650,9 @@ describe("workflow-core", () => {
     ).rejects.toThrow("billing provider retryable outage");
 
     const [retryingWorkflow] = await manager.list({ type: "workflow" });
-    const retryingChildren = await manager.list({ parentId: retryingWorkflow.id });
+    const retryingChildren = await manager.list({
+      parentId: retryingWorkflow.id,
+    });
 
     expect(retryingWorkflow).toEqual(
       expect.objectContaining({
@@ -624,9 +671,13 @@ describe("workflow-core", () => {
       }),
     ]);
 
-    const retried = await runner.execute("billing-retry-webhook", { subscriptionId: "sub_123" });
+    const retried = await runner.execute("billing-retry-webhook", {
+      subscriptionId: "sub_123",
+    });
     const completedWorkflow = await manager.get(retryingWorkflow.id);
-    const childExecutions = await manager.list({ parentId: retryingWorkflow.id });
+    const childExecutions = await manager.list({
+      parentId: retryingWorkflow.id,
+    });
     const childJobs = await createExecutionJobsOperations(manager).list({
       parentId: retryingWorkflow.id,
     });
@@ -688,7 +739,10 @@ describe("workflow-core", () => {
     @Component()
     class MultiStepBillingTasks {
       @Task({ name: "billing.retry-fetch-subscription", maxAttempts: 2 })
-      fetchSubscription(payload: unknown): { subscriptionId: string; plan: string } {
+      fetchSubscription(payload: unknown): {
+        subscriptionId: string;
+        plan: string;
+      } {
         fetchAttempts += 1;
         return { subscriptionId: getSubscriptionId(payload), plan: "pro" };
       }
@@ -732,11 +786,15 @@ describe("workflow-core", () => {
     const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     await expect(
-      runner.execute("billing-retry-entitlements", { subscriptionId: "sub_123" }),
+      runner.execute("billing-retry-entitlements", {
+        subscriptionId: "sub_123",
+      }),
     ).rejects.toThrow("entitlement provider retryable outage");
 
     const [retryingWorkflow] = await manager.list({ type: "workflow" });
-    const retryingChildren = await manager.list({ parentId: retryingWorkflow.id });
+    const retryingChildren = await manager.list({
+      parentId: retryingWorkflow.id,
+    });
 
     expect(retryingChildren).toEqual([
       expect.objectContaining({
@@ -756,7 +814,9 @@ describe("workflow-core", () => {
       subscriptionId: "sub_123",
     });
     const completedWorkflow = await manager.get(retryingWorkflow.id);
-    const completedChildren = await manager.list({ parentId: retryingWorkflow.id });
+    const completedChildren = await manager.list({
+      parentId: retryingWorkflow.id,
+    });
     const childJobs = await createExecutionJobsOperations(manager).list({
       parentId: retryingWorkflow.id,
     });
@@ -977,7 +1037,9 @@ describe("workflow-core", () => {
     expect(failedWorkflow).toEqual(
       expect.objectContaining({
         status: "failed",
-        error: expect.objectContaining({ message: "billing provider unavailable" }),
+        error: expect.objectContaining({
+          message: "billing provider unavailable",
+        }),
       }),
     );
     expect(failedWorkflow.logs?.at(-1)).toEqual(
@@ -1180,7 +1242,10 @@ describe("workflow-core", () => {
 
     const controller = new AbortController();
     const listWorkflowExecutions = vi.fn(async (options?: ListExecutionsOptions) => {
-      const page = await manager.list({ ...options, limit: options?.limit ?? 50 });
+      const page = await manager.list({
+        ...options,
+        limit: options?.limit ?? 50,
+      });
       controller.abort();
       return page;
     });

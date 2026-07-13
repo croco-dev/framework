@@ -4,10 +4,12 @@ import {
   type ExecutionLogEntry,
   type ExecutionLogStore,
   ExecutionProblems,
+  type ExecutionStatus,
   ExecutionStore,
   type ListExecutionsOptions,
+  type ListRunningExecutionsOptions,
 } from "@croco/execution-core";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
 import { ulid } from "ulid";
 import type { ExecutionRow, NewExecutionRow } from "./schema";
 import { executions } from "./schema";
@@ -63,6 +65,26 @@ type ExecutionDb = {
 
 function hasUpdateField(data: Partial<Execution>, key: keyof Execution): boolean {
   return Object.prototype.hasOwnProperty.call(data, key);
+}
+
+function toUpdateData(data: Partial<Execution>): Record<string, unknown> {
+  return {
+    ...(data.status !== undefined ? { status: data.status } : {}),
+    ...(data.payload !== undefined ? { payload: data.payload } : {}),
+    ...(data.result !== undefined ? { result: data.result } : {}),
+    ...(hasUpdateField(data, "error") ? { error: data.error ?? null } : {}),
+    ...(data.attempts !== undefined ? { attempts: data.attempts } : {}),
+    ...(data.maxAttempts !== undefined ? { maxAttempts: data.maxAttempts } : {}),
+    ...(data.startedAt !== undefined ? { startedAt: data.startedAt } : {}),
+    ...(hasUpdateField(data, "completedAt") ? { completedAt: data.completedAt ?? null } : {}),
+    ...(data.scheduledFor !== undefined ? { scheduledFor: data.scheduledFor } : {}),
+    ...(data.timeout !== undefined ? { timeout: data.timeout } : {}),
+    ...(data.replayOf !== undefined ? { replayOf: data.replayOf } : {}),
+    ...(data.logs !== undefined ? { logs: data.logs } : {}),
+    ...(data.metadata !== undefined ? { metadata: data.metadata } : {}),
+    ...(data.checkpoints !== undefined ? { checkpoints: data.checkpoints } : {}),
+    ...(data.progress !== undefined ? { progress: data.progress } : {}),
+  };
 }
 
 /**
@@ -175,23 +197,7 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
    * 실행 상태와 메타데이터를 부분 업데이트합니다.
    */
   async update(id: string, data: Partial<Execution>): Promise<Execution> {
-    const updateData = {
-      ...(data.status !== undefined ? { status: data.status } : {}),
-      ...(data.payload !== undefined ? { payload: data.payload } : {}),
-      ...(data.result !== undefined ? { result: data.result } : {}),
-      ...(hasUpdateField(data, "error") ? { error: data.error ?? null } : {}),
-      ...(data.attempts !== undefined ? { attempts: data.attempts } : {}),
-      ...(data.maxAttempts !== undefined ? { maxAttempts: data.maxAttempts } : {}),
-      ...(data.startedAt !== undefined ? { startedAt: data.startedAt } : {}),
-      ...(hasUpdateField(data, "completedAt") ? { completedAt: data.completedAt ?? null } : {}),
-      ...(data.scheduledFor !== undefined ? { scheduledFor: data.scheduledFor } : {}),
-      ...(data.timeout !== undefined ? { timeout: data.timeout } : {}),
-      ...(data.replayOf !== undefined ? { replayOf: data.replayOf } : {}),
-      ...(data.logs !== undefined ? { logs: data.logs } : {}),
-      ...(data.metadata !== undefined ? { metadata: data.metadata } : {}),
-      ...(data.checkpoints !== undefined ? { checkpoints: data.checkpoints } : {}),
-      ...(data.progress !== undefined ? { progress: data.progress } : {}),
-    };
+    const updateData = toUpdateData(data);
 
     const result = (await this.dbOp
       .update(executions)
@@ -204,6 +210,40 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
     }
 
     return this.mapToExecution(result[0]);
+  }
+
+  /**
+   * 현재 상태가 예상 상태와 일치할 때만 실행을 원자적으로 업데이트합니다.
+   */
+  async updateIfStatus(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const result = (await this.dbOp
+      .update(executions)
+      .set(toUpdateData(data))
+      .where(and(eq(executions.id, id), eq(executions.status, expectedStatus)))
+      .returning()) as ExecutionRow[];
+
+    return result.length > 0 ? this.mapToExecution(result[0]) : null;
+  }
+
+  /**
+   * 실행 중 레코드를 ID 기준 키셋 순서로 조회합니다.
+   */
+  async listRunning(options: ListRunningExecutionsOptions): Promise<Execution[]> {
+    const condition = options.afterId
+      ? and(eq(executions.status, "running"), gt(executions.id, options.afterId))
+      : eq(executions.status, "running");
+    const result = (await this.dbOp
+      .select()
+      .from(executions)
+      .where(condition)
+      .orderBy(asc(executions.id))
+      .limit(options.limit)) as ExecutionRow[];
+
+    return result.map((row) => this.mapToExecution(row));
   }
 
   /**

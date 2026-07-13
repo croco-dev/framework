@@ -25,6 +25,9 @@ import { NotificationChannel } from "../libs/types";
 import { createProvider, type MockNotificationProvider } from "./__fixtures__/mockProvider";
 
 const createExecutionManager = (): ExecutionManager => ({
+  get: vi.fn(async () => {
+    throw new Error("not used in NotificationService tests");
+  }),
   create: vi.fn(async () => {
     throw new Error("not used in NotificationService tests");
   }),
@@ -50,6 +53,9 @@ const createExecutionManager = (): ExecutionManager => ({
     throw new Error("not used in NotificationService tests");
   }),
   timeout: vi.fn(async () => {
+    throw new Error("not used in NotificationService tests");
+  }),
+  reconcileTimedOut: vi.fn(async () => {
     throw new Error("not used in NotificationService tests");
   }),
 });

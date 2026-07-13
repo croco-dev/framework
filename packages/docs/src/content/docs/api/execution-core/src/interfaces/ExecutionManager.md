@@ -164,14 +164,54 @@ Error if execution not found or state transition is invalid
 
 ***
 
+### get()
+
+> **get**(`id`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+Get a single execution by ID.
+
+#### Parameters
+
+##### id
+
+`string`
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Throws
+
+Error if execution not found
+
+***
+
+### reconcileTimedOut()
+
+> **reconcileTimedOut**(`options?`): `Promise`\<[`ReconcileTimedOutResult`](/api/execution-core/src/interfaces/reconciletimedoutresult/)\>
+
+Reconcile persisted running executions whose configured deadline has elapsed.
+
+#### Parameters
+
+##### options?
+
+[`ReconcileTimedOutOptions`](/api/execution-core/src/interfaces/reconciletimedoutoptions/)
+
+#### Returns
+
+`Promise`\<[`ReconcileTimedOutResult`](/api/execution-core/src/interfaces/reconciletimedoutresult/)\>
+
+***
+
 ### retry()
 
 > **retry**(`id`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
 Retry a failed or timed-out execution.
 
-Increments attempts counter and transitions to 'retrying' status.
-Subsequent start() call will transition to 'running'.
+Preserves the consumed attempt count and transitions to 'retrying' status.
+The subsequent start() call transitions to 'running' and increments attempts exactly once.
 
 #### Parameters
 

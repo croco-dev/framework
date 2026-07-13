@@ -5,6 +5,8 @@ import type {
   ExecutionError,
   ListExecutionsOptions,
   ProgressInfo,
+  ReconcileTimedOutOptions,
+  ReconcileTimedOutResult,
   ReplayExecutionParams,
 } from "../types";
 
@@ -15,6 +17,13 @@ import type {
  * and checkpoint management for batch resume functionality.
  */
 export interface ExecutionManager {
+  /**
+   * Get a single execution by ID.
+   *
+   * @throws Error if execution not found
+   */
+  get(id: string): Promise<Execution>;
+
   /**
    * Create a new execution.
    *
@@ -70,8 +79,8 @@ export interface ExecutionManager {
   /**
    * Retry a failed or timed-out execution.
    *
-   * Increments attempts counter and transitions to 'retrying' status.
-   * Subsequent start() call will transition to 'running'.
+   * Preserves the consumed attempt count and transitions to 'retrying' status.
+   * The subsequent start() call transitions to 'running' and increments attempts exactly once.
    *
    * @throws Error if execution not found or maxAttempts exhausted
    */
@@ -107,6 +116,11 @@ export interface ExecutionManager {
    * @throws Error if execution not found or state transition is invalid
    */
   timeout(id: string): Promise<Execution>;
+
+  /**
+   * Reconcile persisted running executions whose configured deadline has elapsed.
+   */
+  reconcileTimedOut(options?: ReconcileTimedOutOptions): Promise<ReconcileTimedOutResult>;
 }
 
 /**
@@ -116,7 +130,7 @@ export interface ExecutionInspectionManager {
   /**
    * Get a single execution by ID.
    *
-   * @throws Error if execution not found
+   * This remains available here for compatibility and is also part of the primary manager contract.
    */
   get(id: string): Promise<Execution>;
 

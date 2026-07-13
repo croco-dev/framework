@@ -1,5 +1,3 @@
-import { getTableColumns } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type Execution, ExecutionProblem, type ExecutionStatus } from "@croco/execution-core";
 import { ProblemFactory } from "@croco/problems-core";
 import {
@@ -7,6 +5,9 @@ import {
   createDrizzleProviderConformanceSuite,
 } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
+import { getTableColumns, type SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DrizzleExecutionStore } from "../libs/DrizzleExecutionStore";
 import { executions } from "../libs/schema";
 
@@ -37,7 +38,10 @@ function createMockDb(): MockDb {
   }));
 
   const limitMock = vi.fn((_n: number) => Promise.resolve([]));
-  const whereClauseMock = vi.fn(() => ({ orderBy: orderByMock, limit: limitMock }));
+  const whereClauseMock = vi.fn(() => ({
+    orderBy: orderByMock,
+    limit: limitMock,
+  }));
 
   return {
     select: vi.fn(() => ({
@@ -179,7 +183,10 @@ describe("DrizzleExecutionStore", () => {
                   }));
 
                   await assertDrizzleProblem(
-                    () => store.update("missing-execution-id", { status: "completed" }),
+                    () =>
+                      store.update("missing-execution-id", {
+                        status: "completed",
+                      }),
                     {
                       code: "execution/not-found",
                       status: 404,
@@ -285,7 +292,9 @@ describe("DrizzleExecutionStore", () => {
     });
 
     it("should return existing execution when idempotency key is provided and exists", async () => {
-      const existing = createMockExecution({ idempotencyKey: "unique-key-123" });
+      const existing = createMockExecution({
+        idempotencyKey: "unique-key-123",
+      });
       vi.spyOn(store, "findByIdempotencyKey").mockResolvedValueOnce(existing);
 
       const params = {
@@ -679,6 +688,77 @@ describe("DrizzleExecutionStore", () => {
           message: "missing",
         }),
       ).rejects.toThrow(ExecutionProblem);
+    });
+  });
+
+  describe("updateIfStatus", () => {
+    it("uses both execution ID and expected status predicates", async () => {
+      const execution = createMockExecution({ status: "completed" });
+      const whereMock = vi.fn((_condition: unknown) => ({
+        returning: vi.fn(() => Promise.resolve([execution])),
+      }));
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({ where: whereMock })),
+      }));
+
+      await store.updateIfStatus(execution.id, "running", {
+        status: "completed",
+      });
+
+      const whereCall = whereMock.mock.calls[0];
+      if (!whereCall) throw new Error("expected conditional update predicate");
+      const condition = whereCall[0] as SQL;
+      const query = new PgDialect().sqlToQuery(condition);
+      expect(query.sql).toContain('"executions"."id" = $1');
+      expect(query.sql).toContain('"executions"."status" = $2');
+      expect(query.params).toEqual([execution.id, "running"]);
+    });
+
+    it("returns null when the expected status no longer matches", async () => {
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => ({
+            returning: vi.fn(() => Promise.resolve([])),
+          })),
+        })),
+      }));
+
+      await expect(
+        store.updateIfStatus("lost-race", "running", { status: "timed_out" }),
+      ).resolves.toBeNull();
+    });
+  });
+
+  describe("listRunning", () => {
+    it("uses a stable ID keyset and requested batch limit", async () => {
+      const running = createMockExecution({
+        id: "exec-003",
+        status: "running",
+      });
+      const limitMock = vi.fn(() => Promise.resolve([running]));
+      const orderByMock = vi.fn(() => ({ limit: limitMock }));
+      const whereMock = vi.fn((_condition: unknown) => ({
+        orderBy: orderByMock,
+      }));
+      mockDb.select = vi.fn(() => ({
+        from: vi.fn(() => ({ where: whereMock })),
+      }));
+
+      const result = await store.listRunning({
+        afterId: "exec-002",
+        limit: 25,
+      });
+
+      const whereCall = whereMock.mock.calls[0];
+      if (!whereCall) throw new Error("expected running keyset predicate");
+      const condition = whereCall[0] as SQL;
+      const query = new PgDialect().sqlToQuery(condition);
+      expect(query.sql).toContain('"executions"."status" = $1');
+      expect(query.sql).toContain('"executions"."id" > $2');
+      expect(query.params).toEqual(["running", "exec-002"]);
+      expect(orderByMock).toHaveBeenCalledWith(expect.anything());
+      expect(limitMock).toHaveBeenCalledWith(25);
+      expect(result).toEqual([running]);
     });
   });
 

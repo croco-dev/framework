@@ -11,11 +11,15 @@ import type {
   Execution,
   ExecutionError,
   ExecutionLogEntry,
-  ListExecutionsOptions,
   ExecutionStatus,
-  ReplayExecutionParams,
+  ListExecutionsOptions,
   ProgressInfo,
+  ReconcileTimedOutOptions,
+  ReconcileTimedOutResult,
+  ReplayExecutionParams,
 } from "./types";
+
+const DEFAULT_RECONCILIATION_BATCH_SIZE = 100;
 
 /**
  * State transition rules for ExecutionStatus.
@@ -133,7 +137,7 @@ export class ExecutionManagerImpl
     const startedAt = new Date();
     const attempts = execution.attempts + 1;
 
-    return this.store.update(id, {
+    return this.transition(execution, targetStatus, {
       status: targetStatus,
       startedAt,
       attempts,
@@ -147,7 +151,7 @@ export class ExecutionManagerImpl
 
     validateTransition(execution.status, "completed");
 
-    return this.store.update(id, {
+    return this.transition(execution, "completed", {
       status: "completed",
       result,
       completedAt: new Date(),
@@ -162,7 +166,7 @@ export class ExecutionManagerImpl
       const targetStatus: ExecutionStatus = "retrying";
       validateTransition(execution.status, targetStatus);
 
-      return this.store.update(id, {
+      return this.transition(execution, targetStatus, {
         status: targetStatus,
         error,
       });
@@ -171,7 +175,7 @@ export class ExecutionManagerImpl
     // Max attempts exhausted or not retryable
     validateTransition(execution.status, "failed");
 
-    return this.store.update(id, {
+    return this.transition(execution, "failed", {
       status: "failed",
       error,
       completedAt: new Date(),
@@ -187,7 +191,7 @@ export class ExecutionManagerImpl
       ? { ...execution.metadata, cancellationReason: reason }
       : execution.metadata;
 
-    return this.store.update(id, {
+    return this.transition(execution, "cancelled", {
       status: "cancelled",
       completedAt: new Date(),
       metadata,
@@ -205,7 +209,7 @@ export class ExecutionManagerImpl
     const targetStatus: ExecutionStatus = "retrying";
     validateTransition(execution.status, targetStatus);
 
-    return this.store.update(id, {
+    return this.transition(execution, targetStatus, {
       status: targetStatus,
       error: undefined, // Clear previous error
       completedAt: undefined,
@@ -241,7 +245,7 @@ export class ExecutionManagerImpl
 
     validateTransition(execution.status, "timed_out");
 
-    return this.store.update(id, {
+    return this.transition(execution, "timed_out", {
       status: "timed_out",
       completedAt: new Date(),
       error: {
@@ -249,6 +253,55 @@ export class ExecutionManagerImpl
         retryable: true,
       },
     });
+  }
+
+  async reconcileTimedOut(
+    options: ReconcileTimedOutOptions = {},
+  ): Promise<ReconcileTimedOutResult> {
+    const now = options.now ?? new Date();
+    const batchSize = options.batchSize ?? DEFAULT_RECONCILIATION_BATCH_SIZE;
+
+    if (!Number.isInteger(batchSize) || batchSize <= 0) {
+      throw ExecutionProblems.conflict("Reconciliation batchSize must be a positive integer");
+    }
+
+    let afterId: string | undefined;
+    let scanned = 0;
+    let timedOut = 0;
+
+    while (true) {
+      const page = await this.store.listRunning({ afterId, limit: batchSize });
+      if (page.length === 0) {
+        break;
+      }
+
+      for (const execution of page) {
+        scanned += 1;
+
+        if (this.isTimedOutAt(execution, now)) {
+          const updated = await this.store.updateIfStatus(execution.id, "running", {
+            status: "timed_out",
+            completedAt: now,
+            error: {
+              message: "Execution timed out",
+              retryable: true,
+            },
+          });
+
+          if (updated) {
+            timedOut += 1;
+          }
+        }
+      }
+
+      afterId = page[page.length - 1]?.id;
+
+      if (page.length < batchSize) {
+        break;
+      }
+    }
+
+    return { scanned, timedOut };
   }
 
   async recordLog(id: string, params: AddExecutionLogParams): Promise<Execution> {
@@ -315,5 +368,31 @@ export class ExecutionManagerImpl
     }
 
     return execution;
+  }
+
+  private async transition(
+    execution: Execution,
+    targetStatus: ExecutionStatus,
+    data: Partial<Execution>,
+  ): Promise<Execution> {
+    const updated = await this.store.updateIfStatus(execution.id, execution.status, data);
+
+    if (updated) {
+      return updated;
+    }
+
+    const current = await this.findExisting(execution.id);
+    throw ExecutionProblems.invalidStateTransition(
+      `Cannot transition execution '${execution.id}' from '${execution.status}' to '${targetStatus}'; current status is '${current.status}'`,
+    );
+  }
+
+  private isTimedOutAt(execution: Execution, now: Date): boolean {
+    return (
+      execution.startedAt !== undefined &&
+      execution.timeout !== undefined &&
+      execution.timeout > 0 &&
+      execution.startedAt.getTime() + execution.timeout <= now.getTime()
+    );
   }
 }

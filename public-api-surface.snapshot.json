@@ -6130,7 +6130,22 @@
           "source": "./libs/types"
         },
         {
+          "name": "ListRunningExecutionsOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
           "name": "ProgressInfo",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "ReconcileTimedOutOptions",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "ReconcileTimedOutResult",
           "exportKind": "named",
           "source": "./libs/types"
         },
@@ -17527,6 +17542,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "TaskExecutionTimeoutProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TasksProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "TaskNotFoundProblem",
           "exportKind": "named",
           "source": "./libs/problems/TasksProblems",
@@ -17556,6 +17577,11 @@
           "name": "RegisteredTask",
           "exportKind": "named",
           "source": "./libs/TaskRegistry"
+        },
+        {
+          "name": "TaskExecutionContext",
+          "exportKind": "named",
+          "source": "./libs/types"
         },
         {
           "name": "TaskExecutionOptions",

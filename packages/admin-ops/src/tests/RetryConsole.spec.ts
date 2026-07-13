@@ -16,18 +16,18 @@ import type {
   LifecycleRunStore,
 } from "@croco/lifecycle-core";
 import { describe, expect, it, vi } from "vitest";
+import type {
+  RetryConsoleAuditDescriptor,
+  RetryConsolePermissionDescriptor,
+  RetryConsolePermissionGrant,
+  RetryConsoleRecoveryInput,
+} from "../index";
 import {
   createBatchRetryConsoleSource,
   createLifecycleRetryConsoleSource,
   createRetryConsole,
   createTaskRetryConsoleSource,
   createWorkflowRetryConsoleSource,
-} from "../index";
-import type {
-  RetryConsoleAuditDescriptor,
-  RetryConsolePermissionDescriptor,
-  RetryConsolePermissionGrant,
-  RetryConsoleRecoveryInput,
 } from "../index";
 
 class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
@@ -89,6 +89,26 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
     const updated = { ...existing, ...data };
     this.executions.set(id, updated);
     return updated;
+  }
+
+  async updateIfStatus(
+    id: string,
+    expectedStatus: Execution["status"],
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const existing = this.executions.get(id);
+    return existing?.status === expectedStatus ? this.update(id, data) : null;
+  }
+
+  async listRunning(options: { afterId?: string; limit: number }): Promise<Execution[]> {
+    return [...this.executions.values()]
+      .filter(
+        (execution) =>
+          execution.status === "running" &&
+          (options.afterId === undefined || execution.id > options.afterId),
+      )
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .slice(0, options.limit);
   }
 
   async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {
@@ -437,7 +457,9 @@ describe("RetryConsole", () => {
         }),
       ]),
     );
-    const lifecycleRecover = vi.fn(async () => ({ providerResult: { accepted: true } }));
+    const lifecycleRecover = vi.fn(async () => ({
+      providerResult: { accepted: true },
+    }));
     const lifecycleRun: LifecycleRun = {
       id: "lifecycle-1",
       ruleId: "past-due-recovery",
@@ -517,7 +539,9 @@ describe("RetryConsole", () => {
       startedAt: new Date("2026-01-01T00:00:04.000Z"),
       completedAt: new Date("2026-01-01T00:00:05.000Z"),
     };
-    const lifecycleRecover = vi.fn(async () => ({ providerResult: { accepted: true } }));
+    const lifecycleRecover = vi.fn(async () => ({
+      providerResult: { accepted: true },
+    }));
     const console = createRetryConsole([
       createLifecycleRetryConsoleSource({
         store: new MemoryLifecycleRunStore([lifecycleRun]),

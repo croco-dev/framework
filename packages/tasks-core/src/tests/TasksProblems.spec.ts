@@ -2,6 +2,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
   DuplicateTaskRegistrationProblem,
+  TaskExecutionTimeoutProblem,
   TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,
 } from "../libs/problems/TasksProblems";
@@ -40,6 +41,18 @@ describe("TasksProblems", () => {
       taskName: "task-123",
       cause: "container unavailable",
       retryable: false,
+    });
+  });
+
+  it("should create TaskExecutionTimeoutProblem with recovery metadata", () => {
+    const problem = new TaskExecutionTimeoutProblem("exec-123", 250);
+
+    expect(problem.code).toBe("tasks-core/execution-timeout");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.toJSON()).toMatchObject({
+      executionId: "exec-123",
+      timeoutMs: 250,
+      retryable: true,
     });
   });
 });

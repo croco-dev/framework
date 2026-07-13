@@ -35,7 +35,17 @@ await store.update(execution.id, {
   ],
 });
 
+const completed = await store.updateIfStatus(execution.id, "running", {
+  status: "completed",
+  completedAt: new Date(),
+});
+
+if (!completed) {
+  // 다른 worker가 먼저 terminal 상태를 커밋했습니다.
+}
+
 const pending = await store.list({ status: "pending", limit: 20 });
+const runningBatch = await store.listRunning({ afterId: undefined, limit: 100 });
 ```
 
 ## API 레퍼런스
@@ -46,6 +56,8 @@ const pending = await store.list({ status: "pending", limit: 20 });
 - `findById(id)`, 실행 ID로 조회합니다.
 - `findByIdempotencyKey(key)`, 중복 키로 기존 실행을 조회합니다.
 - `update(id, data)`, 상태, 결과, 오류, 리플레이 연결, 로그, 진행률을 갱신합니다.
+- `updateIfStatus(id, expectedStatus, data)`, ID와 예상 상태가 모두 일치할 때만 원자적으로 갱신하며 경쟁에서 지면 `null`을 반환합니다.
+- `listRunning(options)`, 실행 중인 레코드를 ID 오름차순의 안정적인 키셋으로 조회합니다.
 - `appendLog(id, entry)`, 실행 로그를 원자적으로 추가합니다.
 - `list(options)`, 상태, 타입, 부모 실행, 리플레이 원본 기준으로 목록을 조회합니다.
 - `delete(id)`, 실행을 삭제합니다.

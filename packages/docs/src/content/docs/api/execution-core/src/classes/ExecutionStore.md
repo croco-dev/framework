@@ -135,6 +135,24 @@ Array of executions matching the criteria
 
 ***
 
+### listRunning()
+
+> `abstract` **listRunning**(`options`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)[]\>
+
+List running executions in stable ID order using keyset pagination.
+
+#### Parameters
+
+##### options
+
+[`ListRunningExecutionsOptions`](/api/execution-core/src/interfaces/listrunningexecutionsoptions/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)[]\>
+
+***
+
 ### update()
 
 > `abstract` **update**(`id`, `data`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
@@ -164,3 +182,33 @@ Updated execution
 #### Throws
 
 Error if execution not found or update fails
+
+***
+
+### updateIfStatus()
+
+> `abstract` **updateIfStatus**(`id`, `expectedStatus`, `data`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+Update an execution only when its persisted status still matches the expected status.
+
+This is the required atomic boundary for lifecycle transitions that may race across workers.
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### expectedStatus
+
+[`ExecutionStatus`](/api/execution-core/src/type-aliases/executionstatus/)
+
+##### data
+
+`Partial`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+Updated execution, or null when another actor changed the status first

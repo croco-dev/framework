@@ -7,6 +7,7 @@ import type {
   RelationTuple,
   RevokeRequest,
 } from "@croco/access-core";
+import type { DomainEvent, EventBus, EventSubscription } from "@croco/events-core";
 import type {
   CreateExecutionParams,
   Execution,
@@ -15,13 +16,12 @@ import type {
   ExecutionStore,
   ListExecutionsOptions,
 } from "@croco/execution-core";
-import type { DomainEvent, EventBus, EventSubscription } from "@croco/events-core";
 import {
-  MeterRepository,
   type AtomicQuotaCheckOptions,
   type AtomicQuotaCheckResult,
   type MeterDefinition,
   type MeterRegistrationOptions,
+  MeterRepository,
   type RedisClient,
   type UsageQueryOptions,
   type UsageRecord,
@@ -399,6 +399,26 @@ export class InMemoryExecutionStore implements ExecutionStore, ExecutionLogStore
     const updated = { ...execution, ...data };
     this.executions.set(id, updated);
     return updated;
+  }
+
+  async updateIfStatus(
+    id: string,
+    expectedStatus: Execution["status"],
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const execution = this.executions.get(id);
+    return execution?.status === expectedStatus ? this.update(id, data) : null;
+  }
+
+  async listRunning(options: { afterId?: string; limit: number }): Promise<Execution[]> {
+    return [...this.executions.values()]
+      .filter(
+        (execution) =>
+          execution.status === "running" &&
+          (options.afterId === undefined || execution.id > options.afterId),
+      )
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .slice(0, options.limit);
   }
 
   async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {
