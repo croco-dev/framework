@@ -2,7 +2,7 @@
 editUrl: false
 next: false
 prev: false
-title: "WebhookProcessingProblem"
+title: "MigrationHistoryDriftProblem"
 ---
 
 RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
@@ -15,21 +15,17 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new WebhookProcessingProblem**(`reason`, `cause?`): `WebhookProcessingProblem`
+> **new MigrationHistoryDriftProblem**(`drift`): `MigrationHistoryDriftProblem`
 
 #### Parameters
 
-##### reason
+##### drift
 
-`string`
-
-##### cause?
-
-`Error`
+[`MigrationHistoryDrift`](/api/migration-runner/src/type-aliases/migrationhistorydrift/)
 
 #### Returns
 
-`WebhookProcessingProblem`
+`MigrationHistoryDriftProblem`
 
 #### Overrides
 
@@ -39,7 +35,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### category
 
-> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
+> `readonly` **category**: [`Conflict`](/api/problems-core/src/enumerations/problemcategory/#conflict) = `ProblemCategory.Conflict`
 
 #### Overrides
 
@@ -59,7 +55,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### code
 
-> `readonly` **code**: `"WEBHOOK_PROCESSING_FAILED"` = `"WEBHOOK_PROCESSING_FAILED"`
+> `readonly` **code**: `"migration-runner/history-drift"` = `"migration-runner/history-drift"`
 
 #### Overrides
 

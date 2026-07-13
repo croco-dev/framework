@@ -6,7 +6,7 @@ title: "BillingStore"
 ---
 
 Abstract storage for billing data.
-Implementations: InMemoryBillingStore, DrizzleBillingStore
+The framework provides `InMemoryBillingStore`; applications may supply persistent adapters.
 
 ## Extended by
 
@@ -38,7 +38,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### deleteAccount()
 
@@ -54,7 +54,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### deleteSubscription()
 
@@ -70,7 +70,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### failWebhook()
 
@@ -86,7 +86,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### findAccountByExternalId()
 
@@ -102,7 +102,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
-***
+---
 
 ### findAccountByTenantId()
 
@@ -118,7 +118,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
-***
+---
 
 ### findOrdersByAccount()
 
@@ -134,7 +134,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<[`Order`](/api/billing-core/src/type-aliases/order/)[]\>
 
-***
+---
 
 ### findSubscription()
 
@@ -150,7 +150,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
-***
+---
 
 ### findSubscriptionByExternalId()
 
@@ -166,11 +166,16 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
-***
+---
 
 ### reserveWebhook()
 
 > `abstract` **reserveWebhook**(`eventId`, `eventType`): `Promise`\<`void`\>
+
+Reserves a provider webhook event for processing.
+
+Store adapters must throw `WebhookAlreadyProcessedProblem` only when the exact event ID
+reservation already exists. Other storage failures must retain their original failure semantics.
 
 #### Parameters
 
@@ -186,7 +191,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveAccount()
 
@@ -202,7 +207,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveOrder()
 
@@ -218,7 +223,7 @@ Implementations: InMemoryBillingStore, DrizzleBillingStore
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveSubscription()
 

@@ -1,8 +1,11 @@
 import type { TxAdapter } from "@croco/tx-core";
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 import {
   createDrizzleTxAdapter,
   createRlsTxAdapter,
+  RlsConfigurationProblem,
   RlsExecuteUnsupportedProblem,
   SavepointUnsupportedProblem,
 } from "../index";
@@ -443,7 +446,49 @@ describe("RlsTxAdapter", () => {
       expect(db.transaction).toHaveBeenCalledTimes(1);
       expect(db.execute).toHaveBeenCalledTimes(1);
       expect(runQuery).toHaveBeenCalledTimes(1);
+      const query = db.execute.mock.calls[0]?.[0] as SQL;
+      expect(new PgDialect().sqlToQuery(query)).toEqual({
+        sql: "select set_config($1, $2, true)",
+        params: ["app.current_tenant", "tenant-123"],
+        typings: ["none", "none"],
+      });
     });
+
+    it("should parameterize custom config keys and tenant ids", async () => {
+      const db = createMockRlsDrizzleDb();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => "tenant-'quoted"),
+      };
+      const adapter = createRlsTxAdapter(db, tenantProvider, {
+        configKey: "app.current_workspace",
+      });
+
+      await adapter.transaction(async () => "result");
+
+      const query = db.execute.mock.calls[0]?.[0] as SQL;
+      expect(new PgDialect().sqlToQuery(query)).toEqual({
+        sql: "select set_config($1, $2, true)",
+        params: ["app.current_workspace", "tenant-'quoted"],
+        typings: ["none", "none"],
+      });
+    });
+
+    it.each(["", "app", "app.current.tenant", "app-current.tenant", '"app".tenant'])(
+      "should reject invalid config key %j before transaction setup",
+      (configKey) => {
+        const db = createMockRlsDrizzleDb();
+        const tenantProvider = {
+          getTenantId: vi.fn((): string | null => "tenant-123"),
+        };
+
+        expect(() => createRlsTxAdapter(db, tenantProvider, { configKey })).toThrow(
+          RlsConfigurationProblem,
+        );
+        expect(tenantProvider.getTenantId).not.toHaveBeenCalled();
+        expect(db.transaction).not.toHaveBeenCalled();
+        expect(db.execute).not.toHaveBeenCalled();
+      },
+    );
 
     it("should fail fast when transaction client does not support execute", async () => {
       const dbWithoutExecute = createMockRlsDrizzleDbWithoutExecute();

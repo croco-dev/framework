@@ -4,6 +4,11 @@ export { MigrationScanner } from "./libs/MigrationScanner";
 export { MigrationStore } from "./libs/MigrationStore";
 export { DatabaseUrlRequiredProblem } from "./libs/problems/DatabaseUrlRequiredProblem";
 export { InvalidMigrationCountProblem } from "./libs/problems/InvalidMigrationCountProblem";
+export {
+  MigrationHistoryDriftProblem,
+  type MigrationHistoryDrift,
+  type MigrationHistoryDriftReason,
+} from "./libs/problems/MigrationHistoryDriftProblem";
 export { MigrationTransactionRequiredProblem } from "./libs/problems/MigrationTransactionRequiredProblem";
 export { MissingDownFunctionProblem } from "./libs/problems/MissingDownFunctionProblem";
 export { MissingUpFunctionProblem } from "./libs/problems/MissingUpFunctionProblem";

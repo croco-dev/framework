@@ -12096,6 +12096,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "MigrationHistoryDriftProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/MigrationHistoryDriftProblem",
+          "declarationKind": "class"
+        },
+        {
           "name": "MigrationRunner",
           "exportKind": "named",
           "source": "./libs/MigrationRunner",
@@ -12159,6 +12165,16 @@
           "name": "MigrationFile",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "MigrationHistoryDrift",
+          "exportKind": "named",
+          "source": "./libs/problems/MigrationHistoryDriftProblem"
+        },
+        {
+          "name": "MigrationHistoryDriftReason",
+          "exportKind": "named",
+          "source": "./libs/problems/MigrationHistoryDriftProblem"
         },
         {
           "name": "MigrationRecord",
@@ -20209,6 +20225,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "RlsConfigurationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TxDrizzleProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "RlsExecuteUnsupportedProblem",
           "exportKind": "named",
           "source": "./libs/problems/TxDrizzleProblems",
@@ -20277,6 +20299,11 @@
           "name": "InferTxOptions",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "RlsConfigurationField",
+          "exportKind": "named",
+          "source": "./libs/problems/TxDrizzleProblems"
         },
         {
           "name": "RlsOptions",

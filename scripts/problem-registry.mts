@@ -1883,6 +1883,27 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "migration-runner/history-drift": recovery({
+    cause:
+      "Recorded migration history no longer matches the available migration files by stable id and name.",
+    userAction:
+      "Restore the original migration file identity or ask an operator to perform an explicitly verified history repair.",
+    operatorAction:
+      "Compare the checkpoint rows with version-controlled migration files, restore missing or renamed files when possible, and repair history only after verifying the deployed schema.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
+  "tx-drizzle/rls-configuration-invalid": recovery({
+    cause:
+      "A PostgreSQL RLS helper received malformed static identifier or setting-key configuration.",
+    userAction: "Ask the operator to correct the RLS configuration before retrying.",
+    operatorAction:
+      "Use the reported field name and the @croco/tx-drizzle RLS contract to correct the configuration, then restart the service.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "transports-http/body-limit-invalid-configuration": recovery({
     cause: "The HTTP body-limit middleware was configured with an invalid byte boundary.",
     userAction: "Ask the operator to correct the service configuration before retrying.",

@@ -4,6 +4,51 @@ import { MigrationStore } from "../libs/MigrationStore";
 import { UnsupportedMigrationQueryResultProblem } from "../libs/problems/UnsupportedMigrationQueryResultProblem";
 
 describe("MigrationStore", () => {
+  it.each([
+    ["array", [{ exists: true }]],
+    ["rows", { rows: [{ exists: false }] }],
+  ])("should detect checkpoint table existence from %s results", async (_label, result) => {
+    const db = { execute: vi.fn().mockResolvedValue(result) } as unknown as DatabaseClient;
+    const store = new MigrationStore("Audit.Migrations");
+
+    await expect(store.hasTable(db)).resolves.toBe(_label === "array");
+    expect(sqlText(vi.mocked(db.execute).mock.calls[0]?.[0])).toContain("to_regclass(quote_ident(");
+    expect(sqlParams(vi.mocked(db.execute).mock.calls[0]?.[0])).toContain("Audit.Migrations");
+  });
+
+  it.each([
+    ["empty rows", []],
+    ["multiple rows", [{ exists: true }, { exists: false }]],
+    ["missing boolean", [{}]],
+    ["non-boolean", [{ exists: 1 }]],
+  ])("should reject %s table-existence results", async (_label, result) => {
+    const db = { execute: vi.fn().mockResolvedValue(result) } as unknown as DatabaseClient;
+    const store = new MigrationStore("_migrations");
+
+    await expect(store.hasTable(db)).rejects.toBeInstanceOf(UnsupportedMigrationQueryResultProblem);
+  });
+
+  it("should preserve table-existence query failures", async () => {
+    const failure = new Error("checkpoint visibility denied");
+    const db = { execute: vi.fn().mockRejectedValue(failure) } as unknown as DatabaseClient;
+    const store = new MigrationStore("_migrations");
+
+    await expect(store.hasTable(db)).rejects.toBe(failure);
+  });
+
+  it("should bind hostile checkpoint table names without interpolating SQL text", async () => {
+    const tableName = '감사.Migrations"); DROP TABLE users; --';
+    const db = {
+      execute: vi.fn().mockResolvedValue([{ exists: true }]),
+    } as unknown as DatabaseClient;
+    const store = new MigrationStore(tableName);
+
+    await expect(store.hasTable(db)).resolves.toBe(true);
+    const query = vi.mocked(db.execute).mock.calls[0]?.[0];
+    expect(sqlText(query)).not.toContain(tableName);
+    expect(sqlParams(query)).toEqual([tableName]);
+  });
+
   it("should read executed migrations from array-shaped adapter results", async () => {
     const executedAt = new Date("2026-06-15T00:00:00.000Z");
     const db = {
@@ -134,6 +179,10 @@ function sqlText(query: unknown): string {
     .join("")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function sqlParams(query: unknown): string[] {
+  return getQueryChunks(query).filter((chunk): chunk is string => typeof chunk === "string");
 }
 
 function getQueryChunks(query: unknown): readonly unknown[] {

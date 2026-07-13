@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "WebhookProcessingProblem"
+title: "RlsConfigurationProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Invalid static configuration for PostgreSQL row-level security helpers.
 
 ## Extends
 
@@ -15,21 +15,17 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new WebhookProcessingProblem**(`reason`, `cause?`): `WebhookProcessingProblem`
+> **new RlsConfigurationProblem**(`field`): `RlsConfigurationProblem`
 
 #### Parameters
 
-##### reason
+##### field
 
-`string`
-
-##### cause?
-
-`Error`
+[`RlsConfigurationField`](/api/tx-drizzle/src/type-aliases/rlsconfigurationfield/)
 
 #### Returns
 
-`WebhookProcessingProblem`
+`RlsConfigurationProblem`
 
 #### Overrides
 
@@ -59,7 +55,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### code
 
-> `readonly` **code**: `"WEBHOOK_PROCESSING_FAILED"` = `"WEBHOOK_PROCESSING_FAILED"`
+> `readonly` **code**: `"tx-drizzle/rls-configuration-invalid"` = `"tx-drizzle/rls-configuration-invalid"`
 
 #### Overrides
 
