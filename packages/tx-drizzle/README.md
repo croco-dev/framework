@@ -105,6 +105,32 @@ type TxClient = InferTxClient<typeof db>;
 type TxOptions = InferTxOptions<typeof db>;
 ```
 
+### PostgreSQL RLS
+
+`createRlsPolicy`와 `createRlsTxAdapter`는 동일한 PostgreSQL 설정 키 규칙을 사용하며, 잘못된 설정은 SQL 또는 트랜잭션이 실행되기 전에 `RlsConfigurationProblem`으로 거부합니다. Problem에는 잘못된 필드 이름만 포함되고 설정 값은 포함되지 않습니다.
+
+- 테이블 이름: `table` 또는 `schema.table`
+- 테넌트 컬럼과 관리자 역할: 단일 식별자
+- 설정 키: 정확히 `namespace.parameter` 두 부분
+- 각 식별자 부분: `[A-Za-z_][A-Za-z0-9_$]*`, 최대 63 UTF-8 바이트
+- 미리 따옴표 처리된 이름은 허용하지 않습니다. 논리 이름을 전달하면 헬퍼가 PostgreSQL 식별자 인용을 적용합니다.
+- 정책 이름은 테이블의 마지막 부분에 `_tenant_isolation`을 붙여 생성하며, 생성된 이름도 63바이트 제한을 지켜야 합니다.
+
+```ts
+const policySql = createRlsPolicy({
+  tableName: "Tenant.Order",
+  tenantColumn: "tenant_id",
+  configKey: "app.current_tenant",
+  adminRoles: ["app_admin", "support_admin"],
+});
+
+const adapter = createRlsTxAdapter(db, tenantProvider, {
+  configKey: "app.current_tenant",
+});
+```
+
+런타임 어댑터는 `set_config(name, value, true)`를 파라미터화하여 현재 트랜잭션 범위에만 테넌트 값을 설정합니다.
+
 ## Dialect 지원
 
 이 패키지는 dialect-agnostic으로 설계되어 Drizzle이 지원하는 모든 데이터베이스에서 동작합니다:

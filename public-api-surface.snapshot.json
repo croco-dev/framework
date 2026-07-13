@@ -20219,6 +20219,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "RlsConfigurationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TxDrizzleProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "RlsExecuteUnsupportedProblem",
           "exportKind": "named",
           "source": "./libs/problems/TxDrizzleProblems",
@@ -20287,6 +20293,11 @@
           "name": "InferTxOptions",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "RlsConfigurationField",
+          "exportKind": "named",
+          "source": "./libs/problems/TxDrizzleProblems"
         },
         {
           "name": "RlsOptions",
