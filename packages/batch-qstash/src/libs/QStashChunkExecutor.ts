@@ -95,6 +95,17 @@ export class QStashChunkExecutor {
     if (!Number.isFinite(this.heartbeatIntervalMs) || this.heartbeatIntervalMs <= 0) {
       throw new QStashBatchValidationProblem("heartbeatIntervalMs must be a positive number.");
     }
+    const continuationLeaseDurationMs = this.continuationManager.getContinuationLeaseDurationMs();
+    if (!Number.isFinite(continuationLeaseDurationMs) || continuationLeaseDurationMs <= 0) {
+      throw new QStashBatchValidationProblem(
+        "The execution continuation lease duration must be a positive number.",
+      );
+    }
+    if (this.heartbeatIntervalMs >= continuationLeaseDurationMs) {
+      throw new QStashBatchValidationProblem(
+        "heartbeatIntervalMs must be less than the execution continuation lease duration.",
+      );
+    }
     this.tokenGenerator = options.tokenGenerator ?? (() => globalThis.crypto.randomUUID());
     this.workerIdGenerator = options.workerIdGenerator ?? (() => globalThis.crypto.randomUUID());
   }
@@ -367,6 +378,7 @@ function validateExecutionManager(
   if (!value) throw new QStashBatchConfigProblem("executionManager");
   const candidate = value as ExecutionManager & Partial<ExecutionContinuationManager>;
   const methods: readonly (keyof ExecutionContinuationManager)[] = [
+    "getContinuationLeaseDurationMs",
     "claimContinuation",
     "renewContinuationClaim",
     "stageContinuation",

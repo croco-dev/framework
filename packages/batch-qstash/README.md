@@ -22,6 +22,11 @@ const executor = new QStashChunkExecutor(executionManager, {
 const result = await executor.executeChunk("execution-1", step);
 ```
 
+`QStashChunkExecutor` reads the configured continuation lease duration from the execution manager
+and rejects `heartbeatIntervalMs` values that are greater than or equal to that lease. Keep the
+heartbeat comfortably below expiry; the defaults use a 10-second heartbeat with a 30-second lease,
+and one-third of the lease duration is the recommended operational target.
+
 QStash steps require a writer that implements both the generic `ItemWriter.write()` contract and
 `QStashIdempotentWriter.writeIdempotent()`. Use `processingToken` as the provider or database
 idempotency key; it remains stable if an expired continuation lease is reclaimed.

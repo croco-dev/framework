@@ -157,6 +157,10 @@ export class ExecutionManagerImpl
       options.initialContinuationToken ?? INITIAL_EXECUTION_CONTINUATION_TOKEN;
   }
 
+  getContinuationLeaseDurationMs(): number {
+    return this.continuationLeaseDurationMs;
+  }
+
   async get(id: string): Promise<Execution> {
     return this.findExisting(id);
   }

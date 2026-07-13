@@ -347,6 +347,25 @@ Error if execution not found
 
 ---
 
+### getContinuationLeaseDurationMs()
+
+> **getContinuationLeaseDurationMs**(): `number`
+
+Return the lease duration used for continuation claims.
+
+Continuation runtimes use this value to validate that their heartbeat
+cadence renews ownership before the lease can expire.
+
+#### Returns
+
+`number`
+
+#### Implementation of
+
+[`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`getContinuationLeaseDurationMs`](/api/execution-core/src/interfaces/executioncontinuationmanager/#getcontinuationleasedurationms)
+
+---
+
 ### list()
 
 > **list**(`options?`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)[]\>

@@ -207,6 +207,14 @@ export interface ExecutionReplayManager {
  * Optional atomic continuation capabilities for execution managers.
  */
 export interface ExecutionContinuationManager {
+  /**
+   * Return the lease duration used for continuation claims.
+   *
+   * Continuation runtimes use this value to validate that their heartbeat
+   * cadence renews ownership before the lease can expire.
+   */
+  getContinuationLeaseDurationMs(): number;
+
   claimContinuation(
     id: string,
     input: ClaimExecutionContinuationInput,

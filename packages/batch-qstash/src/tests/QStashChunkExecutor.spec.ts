@@ -39,7 +39,7 @@ function createHarness(
   const manager = new ExecutionManagerImpl(store, {
     clock: () => now,
     tokenGenerator: () => managerTokens.shift() ?? "manager-fallback",
-    continuationLeaseDurationMs: options.leaseDurationMs ?? 1_000,
+    continuationLeaseDurationMs: options.leaseDurationMs ?? 120_000,
   });
   const publishJSON = options.publishJSON ?? vi.fn().mockResolvedValue({ messageId: "message-1" });
   const executor = new QStashChunkExecutor(manager, {
@@ -380,7 +380,7 @@ describe("QStashChunkExecutor continuation execution", () => {
   });
 
   it("reuses the processing token after lease takeover and fences the stale owner", async () => {
-    const harness = createHarness({ leaseDurationMs: 100 });
+    const harness = createHarness({ leaseDurationMs: 60_001 });
     const execution = await harness.createExecution();
     const committed = new Set<string>();
     let releaseFirst!: () => void;
@@ -400,7 +400,7 @@ describe("QStashChunkExecutor continuation execution", () => {
     );
     await vi.waitFor(() => expect(writer.writeIdempotent).toHaveBeenCalledTimes(1));
     const startedAt = (await harness.manager.get(execution.id)).startedAt;
-    harness.advance(101);
+    harness.advance(60_002);
 
     await harness.executor.executeChunk(
       execution.id,
@@ -512,5 +512,15 @@ describe("QStashChunkExecutor continuation execution", () => {
       chunkSize: 1,
     };
     expect(step.writer.writeIdempotent).toBeTypeOf("function");
+  });
+
+  it("rejects a heartbeat interval that can occur at or after lease expiry", () => {
+    expect(() => createHarness({ leaseDurationMs: 100, heartbeatIntervalMs: 100 })).toThrow(
+      "heartbeatIntervalMs must be less than the execution continuation lease duration.",
+    );
+  });
+
+  it("accepts a heartbeat interval below the configured continuation lease", () => {
+    expect(() => createHarness({ leaseDurationMs: 100, heartbeatIntervalMs: 99 })).not.toThrow();
   });
 });

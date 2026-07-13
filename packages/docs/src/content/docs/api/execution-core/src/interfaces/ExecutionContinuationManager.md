@@ -27,7 +27,7 @@ Optional atomic continuation capabilities for execution managers.
 
 `Promise`\<[`ClaimExecutionContinuationResult`](/api/execution-core/src/type-aliases/claimexecutioncontinuationresult/)\>
 
-***
+---
 
 ### completeContinuation()
 
@@ -51,7 +51,7 @@ Optional atomic continuation capabilities for execution managers.
 
 `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
-***
+---
 
 ### confirmContinuationPublication()
 
@@ -71,7 +71,7 @@ Optional atomic continuation capabilities for execution managers.
 
 `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
-***
+---
 
 ### failContinuation()
 
@@ -95,7 +95,22 @@ Optional atomic continuation capabilities for execution managers.
 
 `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
-***
+---
+
+### getContinuationLeaseDurationMs()
+
+> **getContinuationLeaseDurationMs**(): `number`
+
+Return the lease duration used for continuation claims.
+
+Continuation runtimes use this value to validate that their heartbeat
+cadence renews ownership before the lease can expire.
+
+#### Returns
+
+`number`
+
+---
 
 ### renewContinuationClaim()
 
@@ -119,7 +134,7 @@ Optional atomic continuation capabilities for execution managers.
 
 `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
-***
+---
 
 ### stageContinuation()
 
