@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 435,
+  problemCount: 437,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12177,6 +12177,74 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 115,
           column: 15,
           kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "transports-http/graceful-shutdown-configuration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-http-graceful-shutdown-configuration",
+      recovery: {
+        cause:
+          "Graceful shutdown was configured with a non-finite total or event-bus drain timeout.",
+        userAction:
+          "Ask the operator to correct the graceful shutdown timeout configuration before reconstructing the HTTP application.",
+        operatorAction:
+          "Set timeoutMs and eventBusDrainTimeoutMs to finite numbers, then reconstruct the middleware or controller before retrying shutdown.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/problems/GracefulShutdownProblems.ts",
+          line: 20,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "transports-http/graceful-shutdown-timeout",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-http-graceful-shutdown-timeout",
+      recovery: {
+        cause:
+          "Graceful shutdown did not finish a phase before that phase's configured deadline elapsed.",
+        userAction:
+          "Wait for the stalled shutdown phase to be investigated before retrying; active requests or cleanup work may still be settling.",
+        operatorAction:
+          "Inspect the reported phase, timeoutMs, and elapsedMs extensions, then investigate slow request handlers, event-bus draining, or shutdown hooks.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-http/src/libs/problems/GracefulShutdownProblems.ts",
+          line: 47,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },

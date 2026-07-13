@@ -169,6 +169,15 @@ export {
   setupGracefulShutdown,
 } from "./libs/middleware/GracefulShutdownMiddleware";
 
+export {
+  GracefulShutdownConfigurationProblem,
+  type GracefulShutdownConfigurationProblemOptions,
+  type GracefulShutdownPhase,
+  type GracefulShutdownTimeoutOption,
+  GracefulShutdownTimeoutProblem,
+  type GracefulShutdownTimeoutProblemOptions,
+} from "./libs/problems/GracefulShutdownProblems";
+
 /**
  * HTTP 요청에 레이트 리밋 정책을 적용하는 미들웨어 팩토리입니다.
  */

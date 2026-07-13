@@ -4503,22 +4503,6 @@
     },
     {
       "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/middleware/GracefulShutdownMiddleware.ts",
-      "line": 56,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'AWS_LAMBDA_FUNCTION_NAME' comes from an index signature, so it must be accessed with ['AWS_LAMBDA_FUNCTION_NAME']."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/middleware/GracefulShutdownMiddleware.ts",
-      "line": 56,
-      "column": 65,
-      "code": "TS4111",
-      "message": "Property 'AWS_EXECUTION_ENV' comes from an index signature, so it must be accessed with ['AWS_EXECUTION_ENV']."
-    },
-    {
-      "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
       "line": 295,
       "column": 3,
