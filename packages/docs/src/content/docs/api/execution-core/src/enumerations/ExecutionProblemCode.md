@@ -13,6 +13,18 @@ title: "ExecutionProblemCode"
 
 ***
 
+### CONTINUATION\_CONFLICT
+
+> **CONTINUATION\_CONFLICT**: `"execution/continuation-conflict"`
+
+***
+
+### CONTINUATION\_UNSUPPORTED
+
+> **CONTINUATION\_UNSUPPORTED**: `"execution/continuation-unsupported"`
+
+***
+
 ### INVALID\_STATE\_TRANSITION
 
 > **INVALID\_STATE\_TRANSITION**: `"execution/invalid-state-transition"`

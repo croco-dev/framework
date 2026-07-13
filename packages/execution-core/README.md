@@ -9,6 +9,7 @@
 - **재시도 관리**: 최대 시도 횟수 기반의 자동 재시도 및 상태 관리
 - **진행률 추적**: 진행률 정보 자동 계산 및 추적
 - **체크포인트**: 배치 작업 재개를 위한 체크포인트 관리
+- **Continuation fencing**: 외부 전달 토큰, lease, fencing token으로 분산 chunk 소유권 보호
 - **멱등성 지원**: idempotency key를 통한 중복 실행 방지
 - **실행 로그**: 실행별 append-only 로그로 inspect 가능한 이력 제공
 - **명시적 리플레이**: 실패/타임아웃 실행에서 새 실행을 생성하고 원본을 `replayOf`로 연결
@@ -168,6 +169,32 @@ for (let i = 0; i < items.length; i++) {
 const execution = await store.findById(executionId);
 const lastIndex = execution.checkpoints?.lastIndex ?? 0;
 ```
+
+### 원자적 continuation
+
+`ExecutionManagerImpl`은 저장소가 선택적 `ExecutionContinuationStore` capability를 구현할 때
+token-bound chunk 실행을 제공합니다. `claimContinuation()`은 전달 토큰과 lease를 검증하고,
+이후 renew, stage, publish-confirm, complete, fail 연산은 획득한 fencing token이 현재 claim과
+일치할 때만 상태를 변경합니다.
+
+```typescript
+const claimed = await manager.claimContinuation(executionId, {
+  deliveryToken: continuationToken,
+  workerId,
+});
+
+if (claimed.kind === "process") {
+  await manager.stageContinuation(executionId, claimed.claim, {
+    checkpoints,
+    nextToken,
+  });
+}
+```
+
+오래된 전달은 `stale`, 아직 유효한 다른 worker의 claim은 `contended`로 반환됩니다. claim을
+잃은 뒤의 mutation은 `execution/continuation-conflict` Problem으로 실패합니다. 저장소가 이
+capability를 제공하지 않으면 `execution/continuation-unsupported` Problem이 발생하므로 runtime
+fallback으로 원자성을 가장하지 않습니다.
 
 ### 멱등성 보장
 

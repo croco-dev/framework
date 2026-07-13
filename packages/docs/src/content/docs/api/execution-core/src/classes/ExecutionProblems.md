@@ -35,6 +35,42 @@ Factory methods for creating ExecutionProblem instances.
 
 ***
 
+### continuationConflict()
+
+> `static` **continuationConflict**(`detail`, `evidence?`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+#### Parameters
+
+##### detail
+
+`string`
+
+##### evidence?
+
+[`ExecutionContinuationConflictEvidence`](/api/execution-core/src/interfaces/executioncontinuationconflictevidence/)
+
+#### Returns
+
+[`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+***
+
+### continuationUnsupported()
+
+> `static` **continuationUnsupported**(`detail`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+#### Parameters
+
+##### detail
+
+`string`
+
+#### Returns
+
+[`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+***
+
 ### invalidStateTransition()
 
 > `static` **invalidStateTransition**(`detail`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)

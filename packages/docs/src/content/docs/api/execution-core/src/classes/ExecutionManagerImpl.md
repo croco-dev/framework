@@ -21,18 +21,23 @@ Features:
 - [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/)
 - [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/)
 - [`ExecutionReplayManager`](/api/execution-core/src/interfaces/executionreplaymanager/)
+- [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/)
 
 ## Constructors
 
 ### Constructor
 
-> **new ExecutionManagerImpl**(`store`): `ExecutionManagerImpl`
+> **new ExecutionManagerImpl**(`store`, `options?`): `ExecutionManagerImpl`
 
 #### Parameters
 
 ##### store
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/)
+
+##### options?
+
+[`ExecutionManagerOptions`](/api/execution-core/src/interfaces/executionmanageroptions/) = `{}`
 
 #### Returns
 
@@ -114,6 +119,30 @@ Error if execution not found
 
 ---
 
+### claimContinuation()
+
+> **claimContinuation**(`id`, `input`): `Promise`\<[`ClaimExecutionContinuationResult`](/api/execution-core/src/type-aliases/claimexecutioncontinuationresult/)\>
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### input
+
+[`ClaimExecutionContinuationInput`](/api/execution-core/src/interfaces/claimexecutioncontinuationinput/)
+
+#### Returns
+
+`Promise`\<[`ClaimExecutionContinuationResult`](/api/execution-core/src/type-aliases/claimexecutioncontinuationresult/)\>
+
+#### Implementation of
+
+[`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`claimContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#claimcontinuation)
+
+---
+
 ### complete()
 
 > **complete**(`id`, `result?`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
@@ -145,6 +174,58 @@ Error if execution not found or state transition is invalid
 #### Implementation of
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`complete`](/api/execution-core/src/interfaces/executionmanager/#complete)
+
+---
+
+### completeContinuation()
+
+> **completeContinuation**(`id`, `claim`, `result?`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### claim
+
+[`ExecutionContinuationClaim`](/api/execution-core/src/interfaces/executioncontinuationclaim/)
+
+##### result?
+
+`unknown`
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`completeContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#completecontinuation)
+
+---
+
+### confirmContinuationPublication()
+
+> **confirmContinuationPublication**(`id`, `claim`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### claim
+
+[`ExecutionContinuationClaim`](/api/execution-core/src/interfaces/executioncontinuationclaim/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`confirmContinuationPublication`](/api/execution-core/src/interfaces/executioncontinuationmanager/#confirmcontinuationpublication)
 
 ---
 
@@ -212,6 +293,34 @@ Error if execution not found or state transition is invalid
 
 ---
 
+### failContinuation()
+
+> **failContinuation**(`id`, `claim`, `error`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### claim
+
+[`ExecutionContinuationClaim`](/api/execution-core/src/interfaces/executioncontinuationclaim/)
+
+##### error
+
+[`ExecutionError`](/api/execution-core/src/interfaces/executionerror/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`failContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#failcontinuation)
+
+---
+
 ### get()
 
 > **get**(`id`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
@@ -235,6 +344,25 @@ Error if execution not found
 #### Implementation of
 
 [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/).[`get`](/api/execution-core/src/interfaces/executioninspectionmanager/#get)
+
+---
+
+### getContinuationLeaseDurationMs()
+
+> **getContinuationLeaseDurationMs**(): `number`
+
+Return the lease duration used for continuation claims.
+
+Continuation runtimes use this value to validate that their heartbeat
+cadence renews ownership before the lease can expire.
+
+#### Returns
+
+`number`
+
+#### Implementation of
+
+[`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`getContinuationLeaseDurationMs`](/api/execution-core/src/interfaces/executioncontinuationmanager/#getcontinuationleasedurationms)
 
 ---
 
@@ -312,6 +440,34 @@ Error if execution not found
 
 ---
 
+### renewContinuationClaim()
+
+> **renewContinuationClaim**(`id`, `claim`, `input`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### claim
+
+[`ExecutionContinuationClaim`](/api/execution-core/src/interfaces/executioncontinuationclaim/)
+
+##### input
+
+[`RenewExecutionContinuationInput`](/api/execution-core/src/interfaces/renewexecutioncontinuationinput/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`renewContinuationClaim`](/api/execution-core/src/interfaces/executioncontinuationmanager/#renewcontinuationclaim)
+
+---
+
 ### replay()
 
 > **replay**(`id`, `params?`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
@@ -371,6 +527,34 @@ Error if execution not found or maxAttempts exhausted
 #### Implementation of
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`retry`](/api/execution-core/src/interfaces/executionmanager/#retry)
+
+---
+
+### stageContinuation()
+
+> **stageContinuation**(`id`, `claim`, `input`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### claim
+
+[`ExecutionContinuationClaim`](/api/execution-core/src/interfaces/executioncontinuationclaim/)
+
+##### input
+
+[`StageExecutionContinuationInput`](/api/execution-core/src/interfaces/stageexecutioncontinuationinput/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Implementation of
+
+[`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`stageContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#stagecontinuation)
 
 ---
 

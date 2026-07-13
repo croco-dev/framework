@@ -33,6 +33,14 @@ Execution completion timestamp
 
 ***
 
+### continuation?
+
+> `optional` **continuation?**: [`ExecutionContinuationState`](/api/execution-core/src/interfaces/executioncontinuationstate/)
+
+Optional atomic continuation state for chunked deliveries
+
+***
+
 ### createdAt
 
 > **createdAt**: `Date`

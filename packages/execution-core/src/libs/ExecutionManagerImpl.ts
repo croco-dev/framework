@@ -1,15 +1,25 @@
 import { ExecutionProblems } from "./ExecutionProblem";
 import type {
+  ExecutionContinuationManager,
   ExecutionInspectionManager,
   ExecutionManager,
   ExecutionReplayManager,
+  ClaimExecutionContinuationInput,
+  ClaimExecutionContinuationResult,
+  RenewExecutionContinuationInput,
+  StageExecutionContinuationInput,
 } from "./interfaces/ExecutionManager";
-import type { ExecutionLogStore, ExecutionStore } from "./interfaces/ExecutionStore";
+import type {
+  ExecutionContinuationStore,
+  ExecutionLogStore,
+  ExecutionStore,
+} from "./interfaces/ExecutionStore";
 import type {
   AddExecutionLogParams,
   CreateExecutionParams,
   Execution,
   ExecutionError,
+  ExecutionContinuationClaim,
   ExecutionLogEntry,
   ExecutionStatus,
   ListExecutionsOptions,
@@ -20,6 +30,16 @@ import type {
 } from "./types";
 
 const DEFAULT_RECONCILIATION_BATCH_SIZE = 100;
+export const INITIAL_EXECUTION_CONTINUATION_TOKEN = "initial";
+
+export interface ExecutionManagerOptions {
+  clock?: () => Date;
+  tokenGenerator?: () => string;
+  continuationLeaseDurationMs?: number;
+  initialContinuationToken?: string;
+}
+
+const DEFAULT_CONTINUATION_LEASE_DURATION_MS = 30_000;
 
 /**
  * State transition rules for ExecutionStatus.
@@ -84,6 +104,24 @@ function supportsExecutionLogStore(
   return typeof candidate.appendLog === "function";
 }
 
+function supportsExecutionContinuationStore(
+  store: ExecutionStore,
+): store is ExecutionStore & ExecutionContinuationStore {
+  const candidate = store as ExecutionStore & {
+    acquireContinuation?: unknown;
+    updateClaimedContinuation?: unknown;
+  };
+
+  return (
+    typeof candidate.acquireContinuation === "function" &&
+    typeof candidate.updateClaimedContinuation === "function"
+  );
+}
+
+function defaultTokenGenerator(): string {
+  return globalThis.crypto.randomUUID();
+}
+
 /**
  * ExecutionManagerImpl provides lifecycle management for executions.
  *
@@ -96,9 +134,32 @@ function supportsExecutionLogStore(
  * - Automatic retry transition on failure
  */
 export class ExecutionManagerImpl
-  implements ExecutionManager, ExecutionInspectionManager, ExecutionReplayManager
+  implements
+    ExecutionManager,
+    ExecutionInspectionManager,
+    ExecutionReplayManager,
+    ExecutionContinuationManager
 {
-  constructor(private readonly store: ExecutionStore) {}
+  private readonly clock: () => Date;
+  private readonly tokenGenerator: () => string;
+  private readonly continuationLeaseDurationMs: number;
+  private readonly initialContinuationToken: string;
+
+  constructor(
+    private readonly store: ExecutionStore,
+    options: ExecutionManagerOptions = {},
+  ) {
+    this.clock = options.clock ?? (() => new Date());
+    this.tokenGenerator = options.tokenGenerator ?? defaultTokenGenerator;
+    this.continuationLeaseDurationMs =
+      options.continuationLeaseDurationMs ?? DEFAULT_CONTINUATION_LEASE_DURATION_MS;
+    this.initialContinuationToken =
+      options.initialContinuationToken ?? INITIAL_EXECUTION_CONTINUATION_TOKEN;
+  }
+
+  getContinuationLeaseDurationMs(): number {
+    return this.continuationLeaseDurationMs;
+  }
 
   async get(id: string): Promise<Execution> {
     return this.findExisting(id);
@@ -304,6 +365,81 @@ export class ExecutionManagerImpl
     return { scanned, timedOut };
   }
 
+  async claimContinuation(
+    id: string,
+    input: ClaimExecutionContinuationInput,
+  ): Promise<ClaimExecutionContinuationResult> {
+    const store = this.continuationStore();
+    const now = this.clock();
+
+    return store.acquireContinuation(id, {
+      deliveryToken: input.deliveryToken,
+      workerId: input.workerId,
+      proposedAttemptToken: this.tokenGenerator(),
+      fencingToken: this.tokenGenerator(),
+      now,
+      leaseDurationMs: this.continuationLeaseDurationMs,
+      initialToken: this.initialContinuationToken,
+    });
+  }
+
+  async renewContinuationClaim(
+    id: string,
+    claim: ExecutionContinuationClaim,
+    input: RenewExecutionContinuationInput,
+  ): Promise<Execution> {
+    const now = this.clock();
+    return this.updateClaimedContinuation(id, claim, {
+      kind: "renew",
+      workerId: input.workerId,
+      now,
+      expiresAt: new Date(now.getTime() + this.continuationLeaseDurationMs),
+    });
+  }
+
+  async stageContinuation(
+    id: string,
+    claim: ExecutionContinuationClaim,
+    input: StageExecutionContinuationInput,
+  ): Promise<Execution> {
+    return this.updateClaimedContinuation(id, claim, {
+      kind: "stage",
+      checkpoints: input.checkpoints,
+      nextToken: input.nextToken,
+    });
+  }
+
+  async confirmContinuationPublication(
+    id: string,
+    claim: ExecutionContinuationClaim,
+  ): Promise<Execution> {
+    return this.updateClaimedContinuation(id, claim, { kind: "confirm_publication" });
+  }
+
+  async completeContinuation(
+    id: string,
+    claim: ExecutionContinuationClaim,
+    result?: unknown,
+  ): Promise<Execution> {
+    return this.updateClaimedContinuation(id, claim, {
+      kind: "complete",
+      result,
+      completedAt: this.clock(),
+    });
+  }
+
+  async failContinuation(
+    id: string,
+    claim: ExecutionContinuationClaim,
+    error: ExecutionError,
+  ): Promise<Execution> {
+    return this.updateClaimedContinuation(id, claim, {
+      kind: "fail",
+      error,
+      failedAt: this.clock(),
+    });
+  }
+
   async recordLog(id: string, params: AddExecutionLogParams): Promise<Execution> {
     if (!supportsExecutionLogStore(this.store)) {
       throw ExecutionProblems.conflict(
@@ -368,6 +504,42 @@ export class ExecutionManagerImpl
     }
 
     return execution;
+  }
+
+  private continuationStore(): ExecutionStore & ExecutionContinuationStore {
+    if (!supportsExecutionContinuationStore(this.store)) {
+      throw ExecutionProblems.continuationUnsupported(
+        "Execution store does not support atomic continuation claims",
+      );
+    }
+
+    return this.store;
+  }
+
+  private async updateClaimedContinuation(
+    id: string,
+    claim: ExecutionContinuationClaim,
+    update: Parameters<ExecutionContinuationStore["updateClaimedContinuation"]>[1]["update"],
+  ): Promise<Execution> {
+    const store = this.continuationStore();
+    const updated = await store.updateClaimedContinuation(id, {
+      fencingToken: claim.fencingToken,
+      update,
+    });
+
+    if (updated) {
+      return updated;
+    }
+
+    const current = await store.findById(id);
+    throw ExecutionProblems.continuationConflict(
+      `Continuation claim no longer owns execution '${id}'`,
+      {
+        currentWorkerId: current?.continuation?.claim?.workerId,
+        currentLeaseExpiresAt: current?.continuation?.claim?.expiresAt.toISOString(),
+        currentStatus: current?.status,
+      },
+    );
   }
 
   private async transition(

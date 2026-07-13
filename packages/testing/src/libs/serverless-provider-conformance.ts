@@ -136,7 +136,16 @@ export type QStashBatchStep = {
     process(item: unknown): Promise<unknown | null> | unknown | null;
   };
   readonly writer: {
-    write(items: readonly unknown[]): Promise<void> | void;
+    write(items: unknown[]): Promise<void> | void;
+    writeIdempotent(
+      items: unknown[],
+      context: {
+        readonly attempt: number;
+        readonly executionId: string;
+        readonly processingToken: string;
+        readonly stepName: string;
+      },
+    ): Promise<void>;
   };
   readonly chunkSize: number;
 };
@@ -145,7 +154,16 @@ export type QStashBatchChunkExecutor = {
   executeChunk(
     executionId: string,
     step: QStashBatchStep,
-  ): Promise<{ readonly hasMore: boolean; readonly processedCount: number }>;
+    delivery?: { readonly continuationToken?: string; readonly workerId?: string },
+  ): Promise<
+    | { readonly hasMore: boolean; readonly processedCount: number }
+    | {
+        readonly deliveryToken: string;
+        readonly hasMore: false;
+        readonly kind: "stale";
+        readonly processedCount: 0;
+      }
+  >;
 };
 
 export type QStashBatchPublishRecord = {
@@ -155,6 +173,7 @@ export type QStashBatchPublishRecord = {
 };
 
 export type QStashBatchConformanceHarness = {
+  readonly executionId: string;
   readonly executor: QStashBatchChunkExecutor;
   readonly getExecutionFailures?: () => readonly unknown[];
   readonly getPublishedMessages: () => readonly QStashBatchPublishRecord[];
@@ -572,18 +591,25 @@ export function createQStashBatchConformanceSuite(
       name: "executes a terminal chunk without publishing a follow-up message",
       run: async () => {
         const harness = await options.createExecutor("success");
-        const written: unknown[][] = [];
+        const writes: QStashBatchWriteRecord[] = [];
         const step = createBatchStep({
           chunkSize: 10,
           items: [1, 2],
           name: "conformance-terminal",
-          written,
+          writes,
         });
 
-        const result = await harness.executor.executeChunk("exec-terminal", step);
+        const result = await harness.executor.executeChunk(harness.executionId, step);
 
         assert.deepEqual(result, { hasMore: false, processedCount: 2 });
-        assert.deepEqual(written, [[1, 2]]);
+        assert.deepEqual(
+          writes.map(({ items }) => items),
+          [[1, 2]],
+        );
+        assert.equal(writes[0]?.context.executionId, harness.executionId);
+        assert.equal(writes[0]?.context.stepName, "conformance-terminal");
+        assert.equal(writes[0]?.context.attempt, 1);
+        assert.ok(writes[0]?.context.processingToken);
         assert.equal(harness.getPublishedMessages().length, 0);
       },
     },
@@ -591,29 +617,34 @@ export function createQStashBatchConformanceSuite(
       name: "publishes next chunk envelopes with idempotency evidence",
       run: async () => {
         const harness = await options.createExecutor("success");
-        const written: unknown[][] = [];
+        const writes: QStashBatchWriteRecord[] = [];
         const step = createBatchStep({
           chunkSize: 2,
           items: [1, 2, 3],
           name: "conformance-chained",
-          written,
+          writes,
         });
 
-        const result = await harness.executor.executeChunk("exec-chained", step);
+        const result = await harness.executor.executeChunk(harness.executionId, step);
 
         assert.deepEqual(result, { hasMore: true, processedCount: 2 });
-        assert.deepEqual(written, [[1, 2]]);
+        assert.deepEqual(
+          writes.map(({ items }) => items),
+          [[1, 2]],
+        );
 
         const [published] = harness.getPublishedMessages();
         assert.ok(published, `${options.providerName} must publish the next chunk.`);
         assert.equal(published.url, "https://example.com/batch/conformance");
+        assertRecord(published.body, `${options.providerName} must publish an object body.`);
+        assert.equal(published.body["executionId"], harness.executionId);
+        assert.equal(published.body["stepName"], "conformance-chained");
+        assert.equal(typeof published.body["continuationToken"], "string");
+        assert.ok(published.body["continuationToken"]);
         assert.equal(
           published.headers?.["Idempotency-Key"],
-          "chunk:exec-chained:conformance-chained:2",
+          `chunk:${harness.executionId}:conformance-chained:1:${published.body["continuationToken"]}`,
         );
-        assertRecord(published.body, `${options.providerName} must publish an object body.`);
-        assert.equal(published.body.executionId, "exec-chained");
-        assert.equal(published.body.stepName, "conformance-chained");
         assertNoSecretLeak(JSON.stringify(published), options.secretSamples);
       },
     },
@@ -625,14 +656,17 @@ export function createQStashBatchConformanceSuite(
           chunkSize: 1,
           items: [1, 2],
           name: "conformance-retryable",
-          written: [],
+          writes: [],
         });
 
-        await assertProblemFromAction(() => harness.executor.executeChunk("exec-retryable", step), {
-          providerName: options.providerName,
-          retryable: true,
-          secretSamples: options.secretSamples,
-        });
+        await assertProblemFromAction(
+          () => harness.executor.executeChunk(harness.executionId, step),
+          {
+            providerName: options.providerName,
+            retryable: true,
+            secretSamples: options.secretSamples,
+          },
+        );
         assertFailureEvidence(harness, options.providerName, true);
       },
     },
@@ -644,14 +678,17 @@ export function createQStashBatchConformanceSuite(
           chunkSize: 1,
           items: [1, 2],
           name: "conformance-terminal-failure",
-          written: [],
+          writes: [],
         });
 
-        await assertProblemFromAction(() => harness.executor.executeChunk("exec-terminal", step), {
-          providerName: options.providerName,
-          retryable: false,
-          secretSamples: options.secretSamples,
-        });
+        await assertProblemFromAction(
+          () => harness.executor.executeChunk(harness.executionId, step),
+          {
+            providerName: options.providerName,
+            retryable: false,
+            secretSamples: options.secretSamples,
+          },
+        );
         assertFailureEvidence(harness, options.providerName, false);
       },
     },
@@ -769,11 +806,16 @@ export function createQStashTriggerConformanceSuite(
   };
 }
 
+type QStashBatchWriteRecord = {
+  readonly context: Parameters<QStashBatchStep["writer"]["writeIdempotent"]>[1];
+  readonly items: unknown[];
+};
+
 function createBatchStep(options: {
   readonly chunkSize: number;
   readonly items: readonly unknown[];
   readonly name: string;
-  readonly written: unknown[][];
+  readonly writes: QStashBatchWriteRecord[];
 }): QStashBatchStep {
   let cursor = 0;
 
@@ -796,8 +838,9 @@ function createBatchStep(options: {
       },
     },
     writer: {
-      write: async (items) => {
-        options.written.push([...items]);
+      write: async () => undefined,
+      writeIdempotent: async (items, context) => {
+        options.writes.push({ context, items: [...items] });
       },
     },
     classifyFailure: (error) => {

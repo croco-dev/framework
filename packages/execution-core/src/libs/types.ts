@@ -94,6 +94,40 @@ export interface ProgressInfo {
 }
 
 /**
+ * A lease held by one continuation worker.
+ *
+ * The fencing token is required for every mutation made while the lease is held.
+ * The processing token is stable for one logical checkpoint, including lease takeover.
+ */
+export interface ExecutionContinuationClaim {
+  fencingToken: string;
+  processingToken: string;
+  workerId: string;
+  attempt: number;
+  expiresAt: Date;
+}
+
+/**
+ * Publication staged atomically with checkpoint changes.
+ */
+export interface ExecutionContinuationPublication {
+  attempt: number;
+  sourceToken: string;
+  nextToken: string;
+}
+
+/**
+ * Optional continuation state for chunked or externally delivered executions.
+ */
+export interface ExecutionContinuationState {
+  attempt: number;
+  expectedToken?: string;
+  retrySourceToken?: string;
+  claim?: ExecutionContinuationClaim;
+  pendingPublication?: ExecutionContinuationPublication;
+}
+
+/**
  * Parameters for creating a new execution.
  */
 export interface CreateExecutionParams {
@@ -211,4 +245,6 @@ export interface Execution {
   checkpoints?: Record<string, unknown>;
   /** Progress information */
   progress?: ProgressInfo;
+  /** Optional atomic continuation state for chunked deliveries */
+  continuation?: ExecutionContinuationState;
 }

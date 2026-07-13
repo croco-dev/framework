@@ -9,6 +9,12 @@ title: "QStashBatchConformanceHarness"
 
 ## Properties
 
+### executionId
+
+> `readonly` **executionId**: `string`
+
+***
+
 ### executor
 
 > `readonly` **executor**: [`QStashBatchChunkExecutor`](/api/testing/src/type-aliases/qstashbatchchunkexecutor/)

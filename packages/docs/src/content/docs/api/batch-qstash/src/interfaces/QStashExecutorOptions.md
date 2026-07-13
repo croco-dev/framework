@@ -5,9 +5,15 @@ prev: false
 title: "QStashExecutorOptions"
 ---
 
-QStash 청크 실행기에 필요한 옵션입니다.
+Options required by the QStash chunk executor.
 
 ## Properties
+
+### heartbeatIntervalMs?
+
+> `optional` **heartbeatIntervalMs?**: `number`
+
+***
 
 ### qstashClient
 
@@ -15,6 +21,26 @@ QStash 청크 실행기에 필요한 옵션입니다.
 
 ***
 
+### tokenGenerator?
+
+> `optional` **tokenGenerator?**: () => `string`
+
+#### Returns
+
+`string`
+
+***
+
 ### webhookUrl
 
 > **webhookUrl**: `string`
+
+***
+
+### workerIdGenerator?
+
+> `optional` **workerIdGenerator?**: () => `string`
+
+#### Returns
+
+`string`

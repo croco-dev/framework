@@ -11,7 +11,7 @@ title: "QStashBatchChunkExecutor"
 
 ### executeChunk()
 
-> **executeChunk**(`executionId`, `step`): `Promise`\<\{ `hasMore`: `boolean`; `processedCount`: `number`; \}\>
+> **executeChunk**(`executionId`, `step`, `delivery?`): `Promise`\<\{ `hasMore`: `boolean`; `processedCount`: `number`; \} \| \{ `deliveryToken`: `string`; `hasMore`: `false`; `kind`: `"stale"`; `processedCount`: `0`; \}\>
 
 #### Parameters
 
@@ -23,6 +23,16 @@ title: "QStashBatchChunkExecutor"
 
 [`QStashBatchStep`](/api/testing/src/type-aliases/qstashbatchstep/)
 
+##### delivery?
+
+###### continuationToken?
+
+`string`
+
+###### workerId?
+
+`string`
+
 #### Returns
 
-`Promise`\<\{ `hasMore`: `boolean`; `processedCount`: `number`; \}\>
+`Promise`\<\{ `hasMore`: `boolean`; `processedCount`: `number`; \} \| \{ `deliveryToken`: `string`; `hasMore`: `false`; `kind`: `"stale"`; `processedCount`: `0`; \}\>

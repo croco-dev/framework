@@ -6,6 +6,7 @@ import {
 } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { getTableColumns, type SQL } from "drizzle-orm";
+import { CasingCache } from "drizzle-orm/casing";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DrizzleExecutionStore } from "../libs/DrizzleExecutionStore";
@@ -17,6 +18,24 @@ type MockDb = {
   update: () => any;
   delete: () => any;
 };
+
+type SQLRenderable = {
+  toQuery(config: {
+    escapeName: (value: string) => string;
+    escapeParam: () => string;
+    escapeString: (value: string) => string;
+    casing: CasingCache;
+  }): { sql: string };
+};
+
+function renderSql(value: unknown): string {
+  return (value as SQLRenderable).toQuery({
+    escapeName: (name: string) => `"${name}"`,
+    escapeParam: () => "$1",
+    escapeString: (text: string) => `'${text}'`,
+    casing: new CasingCache(),
+  }).sql;
+}
 
 function createMockExecution(overrides: Partial<Execution> = {}): Execution {
   return {
@@ -725,6 +744,340 @@ describe("DrizzleExecutionStore", () => {
 
       await expect(
         store.updateIfStatus("lost-race", "running", { status: "timed_out" }),
+      ).resolves.toBeNull();
+    });
+  });
+
+  describe("continuation compare-and-set", () => {
+    const now = new Date("2026-01-01T00:00:00.000Z");
+
+    it("atomically starts an initial continuation claim", async () => {
+      const pending = createMockExecution();
+      mockDb.select = vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ limit: vi.fn(() => Promise.resolve([pending])) })),
+        })),
+      }));
+
+      let written: Record<string, unknown> = {};
+      let predicate: unknown;
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn((values: Record<string, unknown>) => {
+          written = values;
+          return {
+            where: vi.fn((condition: unknown) => {
+              predicate = condition;
+              return {
+                returning: vi.fn(() => Promise.resolve([{ ...pending, ...values }])),
+              };
+            }),
+          };
+        }),
+      }));
+
+      const result = await store.acquireContinuation(pending.id, {
+        deliveryToken: "initial",
+        workerId: "worker-a",
+        proposedAttemptToken: "attempt-2",
+        fencingToken: "fence-1",
+        now,
+        leaseDurationMs: 1_000,
+        initialToken: "initial",
+      });
+
+      expect(result).toMatchObject({
+        kind: "process",
+        execution: { status: "running", attempts: 1 },
+        claim: {
+          fencingToken: "fence-1",
+          processingToken: "attempt-2",
+          expiresAt: new Date("2026-01-01T00:00:01.000Z"),
+        },
+      });
+      expect(written).toMatchObject({ status: "running", attempts: 1, error: null });
+      expect(renderSql(predicate)).toContain('"executions"."continuation" is null');
+    });
+
+    it("preserves the original start time when reclaiming a running continuation", async () => {
+      const startedAt = new Date("2025-12-31T23:59:00.000Z");
+      const running = createMockExecution({
+        status: "running",
+        attempts: 1,
+        startedAt,
+        continuation: {
+          attempt: 1,
+          expectedToken: "initial",
+          claim: {
+            fencingToken: "expired-fence",
+            processingToken: "attempt-1",
+            workerId: "expired-worker",
+            attempt: 1,
+            expiresAt: new Date("2025-12-31T23:59:59.000Z"),
+          },
+        },
+      });
+      mockDb.select = vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ limit: vi.fn(() => Promise.resolve([running])) })),
+        })),
+      }));
+
+      let written: Record<string, unknown> = {};
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn((values: Record<string, unknown>) => {
+          written = values;
+          return {
+            where: vi.fn(() => ({
+              returning: vi.fn(() => Promise.resolve([{ ...running, ...values }])),
+            })),
+          };
+        }),
+      }));
+
+      const result = await store.acquireContinuation(running.id, {
+        deliveryToken: "initial",
+        workerId: "takeover-worker",
+        proposedAttemptToken: "unused-attempt-token",
+        fencingToken: "takeover-fence",
+        now,
+        leaseDurationMs: 1_000,
+        initialToken: "initial",
+      });
+
+      expect(written).not.toHaveProperty("startedAt");
+      expect(result.execution.startedAt).toEqual(startedAt);
+      expect(result).toMatchObject({
+        kind: "process",
+        claim: { processingToken: "attempt-1", fencingToken: "takeover-fence" },
+      });
+    });
+
+    it("rereads a winning claim after losing acquisition CAS", async () => {
+      const pending = createMockExecution();
+      const winner = createMockExecution({
+        status: "running",
+        attempts: 1,
+        continuation: {
+          attempt: 1,
+          expectedToken: "initial",
+          claim: {
+            fencingToken: "winner-fence",
+            processingToken: "attempt-1",
+            workerId: "worker-a",
+            attempt: 1,
+            expiresAt: new Date("2026-01-01T00:00:05.000Z"),
+          },
+        },
+      });
+      const limit = vi.fn().mockResolvedValueOnce([pending]).mockResolvedValueOnce([winner]);
+      mockDb.select = vi.fn(() => ({
+        from: vi.fn(() => ({ where: vi.fn(() => ({ limit })) })),
+      }));
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => ({ returning: vi.fn(() => Promise.resolve([])) })),
+        })),
+      }));
+
+      const result = await store.acquireContinuation(pending.id, {
+        deliveryToken: "initial",
+        workerId: "worker-b",
+        proposedAttemptToken: "attempt-2",
+        fencingToken: "loser-fence",
+        now,
+        leaseDurationMs: 1_000,
+        initialToken: "initial",
+      });
+
+      expect(result).toMatchObject({
+        kind: "contended",
+        execution: { attempts: 1 },
+        claim: { fencingToken: "winner-fence", workerId: "worker-a" },
+      });
+      expect(mockDb.update).toHaveBeenCalledTimes(1);
+    });
+
+    it("allows exactly one winner across concurrent initial acquisitions", async () => {
+      let row = createMockExecution();
+      let releaseInitialReads!: () => void;
+      const initialReadsReady = new Promise<void>((resolve) => {
+        releaseInitialReads = resolve;
+      });
+      let initialReadCount = 0;
+      mockDb.select = vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => {
+              if (initialReadCount < 2) {
+                const snapshot = row;
+                initialReadCount += 1;
+                if (initialReadCount === 2) releaseInitialReads();
+                await initialReadsReady;
+                return [snapshot];
+              }
+              return [row];
+            }),
+          })),
+        })),
+      }));
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn((values: Partial<Execution>) => ({
+          where: vi.fn(() => ({
+            returning: vi.fn(async () => {
+              if (row.status !== "pending") return [];
+              row = { ...row, ...values };
+              return [row];
+            }),
+          })),
+        })),
+      }));
+
+      const contender = new DrizzleExecutionStore(mockDb);
+      const baseInput = {
+        deliveryToken: "initial",
+        proposedAttemptToken: "attempt-2",
+        now,
+        leaseDurationMs: 1_000,
+        initialToken: "initial",
+      };
+      const results = await Promise.all([
+        store.acquireContinuation(row.id, {
+          ...baseInput,
+          workerId: "worker-a",
+          fencingToken: "fence-a",
+        }),
+        contender.acquireContinuation(row.id, {
+          ...baseInput,
+          workerId: "worker-b",
+          fencingToken: "fence-b",
+        }),
+      ]);
+
+      expect(results.map((result) => result.kind).sort()).toEqual(["contended", "process"]);
+      expect(row).toMatchObject({ status: "running", attempts: 1 });
+      expect(mockDb.update).toHaveBeenCalledTimes(2);
+    });
+
+    it("terminates repeated acquisition CAS losses with a fresh stale snapshot", async () => {
+      const pending = createMockExecution();
+      mockDb.select = vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ limit: vi.fn(() => Promise.resolve([pending])) })),
+        })),
+      }));
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => ({ returning: vi.fn(() => Promise.resolve([])) })),
+        })),
+      }));
+
+      const result = await store.acquireContinuation(pending.id, {
+        deliveryToken: "initial",
+        workerId: "worker-a",
+        proposedAttemptToken: "attempt-2",
+        fencingToken: "fence-a",
+        now,
+        leaseDurationMs: 1_000,
+        initialToken: "initial",
+      });
+
+      expect(result).toMatchObject({ kind: "stale", execution: { status: "pending" } });
+      expect(mockDb.update).toHaveBeenCalledTimes(2);
+      expect(mockDb.select).toHaveBeenCalledTimes(3);
+    });
+
+    it("stages checkpoints only under the complete observed continuation CAS", async () => {
+      const running = createMockExecution({
+        status: "running",
+        attempts: 1,
+        continuation: {
+          attempt: 1,
+          expectedToken: "initial",
+          claim: {
+            fencingToken: "fence-1",
+            processingToken: "attempt-1",
+            workerId: "worker-a",
+            attempt: 1,
+            expiresAt: new Date("2026-01-01T00:00:05.000Z"),
+          },
+        },
+      });
+      mockDb.select = vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ limit: vi.fn(() => Promise.resolve([running])) })),
+        })),
+      }));
+
+      let written: Record<string, unknown> = {};
+      let predicate: unknown;
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn((values: Record<string, unknown>) => {
+          written = values;
+          return {
+            where: vi.fn((condition: unknown) => {
+              predicate = condition;
+              return {
+                returning: vi.fn(() => Promise.resolve([{ ...running, ...values }])),
+              };
+            }),
+          };
+        }),
+      }));
+
+      const result = await store.updateClaimedContinuation(running.id, {
+        fencingToken: "fence-1",
+        update: { kind: "stage", checkpoints: { cursor: 7 }, nextToken: "next-1" },
+      });
+
+      expect(result).toMatchObject({
+        checkpoints: { cursor: 7 },
+        continuation: {
+          pendingPublication: { sourceToken: "initial", nextToken: "next-1" },
+        },
+      });
+      expect(written).toMatchObject({ checkpoints: { cursor: 7 } });
+      const sql = renderSql(predicate);
+      expect(sql).toContain('"executions"."status" = $1');
+      expect(sql).toContain('"executions"."continuation" = $1::jsonb');
+    });
+
+    it("returns null when another same-fence mutation wins the whole-state CAS", async () => {
+      const running = createMockExecution({
+        status: "running",
+        attempts: 1,
+        continuation: {
+          attempt: 1,
+          expectedToken: "initial",
+          claim: {
+            fencingToken: "fence-1",
+            processingToken: "attempt-1",
+            workerId: "worker-a",
+            attempt: 1,
+            expiresAt: new Date("2026-01-01T00:00:05.000Z"),
+          },
+        },
+      });
+      mockDb.select = vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({ limit: vi.fn(() => Promise.resolve([running])) })),
+        })),
+      }));
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => ({ returning: vi.fn(() => Promise.resolve([])) })),
+        })),
+      }));
+
+      await expect(
+        store.updateClaimedContinuation(running.id, {
+          fencingToken: "fence-1",
+          update: {
+            kind: "renew",
+            workerId: "worker-a",
+            now,
+            expiresAt: new Date(now.getTime() + 1_000),
+          },
+        }),
       ).resolves.toBeNull();
     });
   });

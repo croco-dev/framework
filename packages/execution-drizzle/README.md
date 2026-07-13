@@ -59,12 +59,18 @@ const runningBatch = await store.listRunning({ afterId: undefined, limit: 100 })
 - `updateIfStatus(id, expectedStatus, data)`, ID와 예상 상태가 모두 일치할 때만 원자적으로 갱신하며 경쟁에서 지면 `null`을 반환합니다.
 - `listRunning(options)`, 실행 중인 레코드를 ID 오름차순의 안정적인 키셋으로 조회합니다.
 - `appendLog(id, entry)`, 실행 로그를 원자적으로 추가합니다.
+- `acquireContinuation(id, input)`, 전달 토큰을 검증하고 continuation lease를 compare-and-set으로 획득합니다.
+- `updateClaimedContinuation(id, input)`, fencing token이 유효한 claim만 갱신합니다.
 - `list(options)`, 상태, 타입, 부모 실행, 리플레이 원본 기준으로 목록을 조회합니다.
 - `delete(id)`, 실행을 삭제합니다.
 
 ### `executions`
 
 실행 영속화에 사용하는 PostgreSQL 스키마입니다. `idempotency_key`, `parent_id`, `replay_of`, `status`, `type` 인덱스를 포함합니다.
+
+`continuation`은 nullable JSONB 컬럼입니다. 이 버전을 배포하기 전에 애플리케이션이 사용하는 migration 도구로
+`executions.continuation jsonb null` 컬럼을 먼저 추가해야 합니다. 스키마 migration보다 새 애플리케이션 코드를 먼저
+배포하면 continuation claim 쿼리가 실패하므로, migration 완료를 확인한 뒤 순차적으로 배포하세요.
 
 ### 타입
 

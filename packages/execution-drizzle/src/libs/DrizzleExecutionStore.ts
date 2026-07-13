@@ -1,6 +1,11 @@
 import {
+  type AcquireExecutionContinuationInput,
+  type AcquireExecutionContinuationResult,
   type CreateExecutionParams,
   type Execution,
+  type ExecutionContinuationClaim,
+  type ExecutionContinuationState,
+  type ExecutionContinuationStore,
   type ExecutionLogEntry,
   type ExecutionLogStore,
   ExecutionProblems,
@@ -8,6 +13,7 @@ import {
   ExecutionStore,
   type ListExecutionsOptions,
   type ListRunningExecutionsOptions,
+  type UpdateClaimedExecutionContinuationInput,
 } from "@croco/execution-core";
 import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
 import { ulid } from "ulid";
@@ -84,6 +90,7 @@ function toUpdateData(data: Partial<Execution>): Record<string, unknown> {
     ...(data.metadata !== undefined ? { metadata: data.metadata } : {}),
     ...(data.checkpoints !== undefined ? { checkpoints: data.checkpoints } : {}),
     ...(data.progress !== undefined ? { progress: data.progress } : {}),
+    ...(hasUpdateField(data, "continuation") ? { continuation: data.continuation ?? null } : {}),
   };
 }
 
@@ -92,7 +99,7 @@ function toUpdateData(data: Partial<Execution>): Record<string, unknown> {
  */
 export class DrizzleExecutionStore<TDb extends ExecutionDb>
   extends ExecutionStore
-  implements ExecutionLogStore
+  implements ExecutionLogStore, ExecutionContinuationStore
 {
   /**
    * Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
@@ -137,6 +144,7 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
       metadata: params.metadata ?? null,
       checkpoints: null,
       progress: null,
+      continuation: null,
     };
 
     if (params.idempotencyKey) {
@@ -266,6 +274,233 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
   }
 
   /**
+   * 전달 토큰과 현재 continuation 상태를 비교해 실행 소유권을 원자적으로 획득합니다.
+   */
+  async acquireContinuation(
+    id: string,
+    input: AcquireExecutionContinuationInput,
+  ): Promise<AcquireExecutionContinuationResult> {
+    return this.acquireContinuationCas(id, input, true);
+  }
+
+  private async acquireContinuationCas(
+    id: string,
+    input: AcquireExecutionContinuationInput,
+    retryOnCasLoss: boolean,
+  ): Promise<AcquireExecutionContinuationResult> {
+    const row = await this.findRowById(id);
+    if (!row) {
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+    }
+
+    const execution = this.mapToExecution(row);
+    const continuation = execution.continuation;
+    const activeClaim = continuation?.claim;
+    if (execution.status === "running" && activeClaim && activeClaim.expiresAt > input.now) {
+      return this.acceptsToken(continuation, input.deliveryToken)
+        ? {
+            kind: "contended",
+            execution,
+            deliveryToken: input.deliveryToken,
+            claim: activeClaim,
+          }
+        : this.stale(execution, input.deliveryToken);
+    }
+
+    let attempt: number;
+    let processingToken: string;
+    let nextContinuation: ExecutionContinuationState;
+    let publication: ExecutionContinuationState["pendingPublication"];
+
+    if (execution.status === "pending" && !continuation) {
+      if (input.deliveryToken !== input.initialToken) {
+        return this.stale(execution, input.deliveryToken);
+      }
+      attempt = 1;
+      processingToken = input.proposedAttemptToken;
+      nextContinuation = { attempt, expectedToken: input.initialToken };
+    } else if (execution.status === "retrying" && continuation?.pendingPublication) {
+      publication = continuation.pendingPublication;
+      if (
+        input.deliveryToken !== publication.sourceToken &&
+        input.deliveryToken !== publication.nextToken
+      ) {
+        return this.stale(execution, input.deliveryToken);
+      }
+      attempt = execution.attempts + 1;
+      processingToken = input.proposedAttemptToken;
+      publication = { ...publication, attempt };
+      nextContinuation = {
+        ...continuation,
+        attempt,
+        expectedToken: publication.nextToken,
+        retrySourceToken: undefined,
+        pendingPublication: publication,
+      };
+    } else if (execution.status === "retrying" && continuation?.retrySourceToken) {
+      if (!continuation.expectedToken || input.deliveryToken !== continuation.expectedToken) {
+        return this.stale(execution, input.deliveryToken);
+      }
+      attempt = execution.attempts + 1;
+      processingToken = continuation.retrySourceToken;
+      nextContinuation = { attempt, expectedToken: continuation.expectedToken };
+    } else if (execution.status === "running" && continuation) {
+      if (!this.acceptsToken(continuation, input.deliveryToken)) {
+        return this.stale(execution, input.deliveryToken);
+      }
+      attempt = execution.attempts;
+      processingToken =
+        continuation.claim?.processingToken ??
+        continuation.pendingPublication?.nextToken ??
+        continuation.expectedToken ??
+        input.deliveryToken;
+      publication = continuation.pendingPublication;
+      nextContinuation = continuation;
+    } else {
+      return this.stale(execution, input.deliveryToken);
+    }
+
+    const claim: ExecutionContinuationClaim = {
+      fencingToken: input.fencingToken,
+      processingToken,
+      workerId: input.workerId,
+      attempt,
+      expiresAt: new Date(input.now.getTime() + input.leaseDurationMs),
+    };
+    nextContinuation = { ...nextContinuation, attempt, claim };
+
+    const result = (await this.dbOp
+      .update(executions)
+      .set({
+        status: "running",
+        attempts: attempt,
+        ...(execution.status === "running" ? {} : { startedAt: input.now }),
+        completedAt: null,
+        error: null,
+        continuation: nextContinuation,
+      })
+      .where(this.compareContinuation(row))
+      .returning()) as ExecutionRow[];
+
+    if (result.length === 0) {
+      if (retryOnCasLoss) {
+        return this.acquireContinuationCas(id, input, false);
+      }
+
+      const latest = await this.findRowById(id);
+      if (!latest) {
+        throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+      }
+      const latestExecution = this.mapToExecution(latest);
+      const latestClaim = latestExecution.continuation?.claim;
+      if (
+        latestExecution.status === "running" &&
+        latestClaim &&
+        latestClaim.expiresAt > input.now &&
+        latestExecution.continuation &&
+        this.acceptsToken(latestExecution.continuation, input.deliveryToken)
+      ) {
+        return {
+          kind: "contended",
+          execution: latestExecution,
+          deliveryToken: input.deliveryToken,
+          claim: latestClaim,
+        };
+      }
+      return this.stale(latestExecution, input.deliveryToken);
+    }
+
+    const acquired = this.mapToExecution(result[0]);
+    return publication
+      ? { kind: "publish_pending", execution: acquired, claim, publication }
+      : { kind: "process", execution: acquired, claim };
+  }
+
+  /**
+   * fencing token이 현재 claim과 일치할 때만 continuation 상태를 갱신합니다.
+   */
+  async updateClaimedContinuation(
+    id: string,
+    input: UpdateClaimedExecutionContinuationInput,
+  ): Promise<Execution | null> {
+    const row = await this.findRowById(id);
+    if (!row) {
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+    }
+
+    const execution = this.mapToExecution(row);
+    const continuation = execution.continuation;
+    const claim = continuation?.claim;
+    if (
+      execution.status !== "running" ||
+      !continuation ||
+      !claim ||
+      claim.fencingToken !== input.fencingToken
+    ) {
+      return null;
+    }
+
+    const values: Partial<ExecutionRow> = {};
+    switch (input.update.kind) {
+      case "renew":
+        values.continuation = {
+          ...continuation,
+          claim: {
+            ...claim,
+            workerId: input.update.workerId,
+            expiresAt: input.update.expiresAt,
+          },
+        };
+        break;
+      case "stage":
+        if (!continuation.expectedToken) return null;
+        values.checkpoints = input.update.checkpoints;
+        values.continuation = {
+          ...continuation,
+          pendingPublication: {
+            attempt: claim.attempt,
+            sourceToken: continuation.expectedToken,
+            nextToken: input.update.nextToken,
+          },
+        };
+        break;
+      case "confirm_publication": {
+        const pending = continuation.pendingPublication;
+        values.continuation = pending
+          ? { attempt: continuation.attempt, expectedToken: pending.nextToken }
+          : continuation;
+        break;
+      }
+      case "complete":
+        values.status = "completed";
+        values.result = input.update.result ?? null;
+        values.completedAt = input.update.completedAt;
+        values.continuation = { ...continuation, claim: undefined };
+        break;
+      case "fail": {
+        const retrying = input.update.error.retryable && execution.attempts < execution.maxAttempts;
+        values.status = retrying ? "retrying" : "failed";
+        values.error = input.update.error;
+        values.completedAt = retrying ? null : input.update.failedAt;
+        values.continuation = {
+          ...continuation,
+          claim: undefined,
+          retrySourceToken: continuation.pendingPublication ? undefined : claim.processingToken,
+        };
+        break;
+      }
+    }
+
+    const result = (await this.dbOp
+      .update(executions)
+      .set(values)
+      .where(this.compareContinuation(row))
+      .returning()) as ExecutionRow[];
+
+    return result.length > 0 ? this.mapToExecution(result[0]) : null;
+  }
+
+  /**
    * 상태, 타입, 부모 실행 조건으로 실행 목록을 조회합니다.
    */
   async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {
@@ -347,6 +582,61 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
       metadata: (row.metadata as Execution["metadata"]) ?? undefined,
       checkpoints: (row.checkpoints as Execution["checkpoints"]) ?? undefined,
       progress: (row.progress as Execution["progress"]) ?? undefined,
+      continuation: this.mapContinuation(row.continuation),
+    };
+  }
+
+  private async findRowById(id: string): Promise<ExecutionRow | null> {
+    const result = (await this.dbOp
+      .select()
+      .from(executions)
+      .where(eq(executions.id, id))
+      .limit(1)) as ExecutionRow[];
+    return result[0] ?? null;
+  }
+
+  private compareContinuation(row: ExecutionRow): unknown {
+    const continuationMatches =
+      row.continuation === null || row.continuation === undefined
+        ? isNull(executions.continuation)
+        : sql`${executions.continuation} = ${JSON.stringify(row.continuation)}::jsonb`;
+    return and(eq(executions.id, row.id), eq(executions.status, row.status), continuationMatches);
+  }
+
+  private mapContinuation(
+    continuation: ExecutionRow["continuation"],
+  ): ExecutionContinuationState | undefined {
+    if (!continuation) return undefined;
+    return {
+      ...continuation,
+      claim: continuation.claim
+        ? {
+            ...continuation.claim,
+            expiresAt:
+              continuation.claim.expiresAt instanceof Date
+                ? continuation.claim.expiresAt
+                : new Date(continuation.claim.expiresAt),
+          }
+        : undefined,
+    };
+  }
+
+  private acceptsToken(continuation: ExecutionContinuationState, token: string): boolean {
+    return (
+      continuation.expectedToken === token ||
+      continuation.pendingPublication?.sourceToken === token ||
+      continuation.pendingPublication?.nextToken === token
+    );
+  }
+
+  private stale(execution: Execution, deliveryToken: string): AcquireExecutionContinuationResult {
+    return {
+      kind: "stale",
+      execution,
+      deliveryToken,
+      expectedToken:
+        execution.continuation?.pendingPublication?.nextToken ??
+        execution.continuation?.expectedToken,
     };
   }
 

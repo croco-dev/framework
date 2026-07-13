@@ -123,8 +123,40 @@ title: "QStashBatchStep"
 
 ###### items
 
-readonly `unknown`[]
+`unknown`[]
 
 ##### Returns
 
 `void` \| `Promise`\<`void`\>
+
+#### writeIdempotent()
+
+> **writeIdempotent**(`items`, `context`): `Promise`\<`void`\>
+
+##### Parameters
+
+###### items
+
+`unknown`[]
+
+###### context
+
+###### attempt
+
+`number`
+
+###### executionId
+
+`string`
+
+###### processingToken
+
+`string`
+
+###### stepName
+
+`string`
+
+##### Returns
+
+`Promise`\<`void`\>

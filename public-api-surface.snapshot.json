@@ -3090,10 +3090,40 @@
       ],
       "typeExports": [
         {
+          "name": "QStashChunkDelivery",
+          "exportKind": "declaration",
+          "source": "./libs/QStashChunkExecutor",
+          "declarationKind": "interface"
+        },
+        {
+          "name": "QStashChunkResult",
+          "exportKind": "declaration",
+          "source": "./libs/QStashChunkExecutor",
+          "declarationKind": "type"
+        },
+        {
           "name": "QStashExecutorOptions",
           "exportKind": "declaration",
           "source": "./libs/QStashChunkExecutor",
           "declarationKind": "interface"
+        },
+        {
+          "name": "QStashIdempotentWriteContext",
+          "exportKind": "declaration",
+          "source": "./libs/QStashChunkExecutor",
+          "declarationKind": "interface"
+        },
+        {
+          "name": "QStashIdempotentWriter",
+          "exportKind": "declaration",
+          "source": "./libs/QStashChunkExecutor",
+          "declarationKind": "interface"
+        },
+        {
+          "name": "QStashStep",
+          "exportKind": "declaration",
+          "source": "./libs/QStashChunkExecutor",
+          "declarationKind": "type"
         }
       ]
     },
@@ -6007,6 +6037,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "INITIAL_EXECUTION_CONTINUATION_TOKEN",
+          "exportKind": "named",
+          "source": "./libs/ExecutionManagerImpl",
+          "declarationKind": "const"
+        },
+        {
           "name": "summarizeJob",
           "exportKind": "named",
           "source": "./libs/JobsOperations",
@@ -6014,6 +6050,16 @@
         }
       ],
       "typeExports": [
+        {
+          "name": "AcquireExecutionContinuationInput",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionStore"
+        },
+        {
+          "name": "AcquireExecutionContinuationResult",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionStore"
+        },
         {
           "name": "AddExecutionLogParams",
           "exportKind": "named",
@@ -6025,6 +6071,21 @@
           "source": "./libs/JobsOperations"
         },
         {
+          "name": "ClaimedExecutionContinuationUpdate",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionStore"
+        },
+        {
+          "name": "ClaimExecutionContinuationInput",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionManager"
+        },
+        {
+          "name": "ClaimExecutionContinuationResult",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionManager"
+        },
+        {
           "name": "CreateExecutionParams",
           "exportKind": "named",
           "source": "./libs/types"
@@ -6033,6 +6094,41 @@
           "name": "Execution",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "ExecutionContinuationAcquired",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionStore"
+        },
+        {
+          "name": "ExecutionContinuationClaim",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "ExecutionContinuationConflictEvidence",
+          "exportKind": "named",
+          "source": "./libs/ExecutionProblem"
+        },
+        {
+          "name": "ExecutionContinuationManager",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionManager"
+        },
+        {
+          "name": "ExecutionContinuationPublication",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "ExecutionContinuationState",
+          "exportKind": "named",
+          "source": "./libs/types"
+        },
+        {
+          "name": "ExecutionContinuationStore",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionStore"
         },
         {
           "name": "ExecutionError",
@@ -6068,6 +6164,11 @@
           "name": "ExecutionManager",
           "exportKind": "named",
           "source": "./libs/interfaces/ExecutionManager"
+        },
+        {
+          "name": "ExecutionManagerOptions",
+          "exportKind": "named",
+          "source": "./libs/ExecutionManagerImpl"
         },
         {
           "name": "ExecutionProblemCode",
@@ -6150,9 +6251,24 @@
           "source": "./libs/types"
         },
         {
+          "name": "RenewExecutionContinuationInput",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionManager"
+        },
+        {
           "name": "ReplayExecutionParams",
           "exportKind": "named",
           "source": "./libs/types"
+        },
+        {
+          "name": "StageExecutionContinuationInput",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionManager"
+        },
+        {
+          "name": "UpdateClaimedExecutionContinuationInput",
+          "exportKind": "named",
+          "source": "./libs/interfaces/ExecutionStore"
         }
       ]
     },

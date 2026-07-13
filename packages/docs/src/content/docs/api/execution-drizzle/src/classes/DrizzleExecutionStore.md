@@ -15,11 +15,12 @@ title: "DrizzleExecutionStore"
 
 ### TDb
 
-`TDb` *extends* `ExecutionDb`
+`TDb` _extends_ `ExecutionDb`
 
 ## Implements
 
 - [`ExecutionLogStore`](/api/execution-core/src/interfaces/executionlogstore/)
+- [`ExecutionContinuationStore`](/api/execution-core/src/interfaces/executioncontinuationstore/)
 
 ## Constructors
 
@@ -45,6 +46,32 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 ## Methods
 
+### acquireContinuation()
+
+> **acquireContinuation**(`id`, `input`): `Promise`\<[`AcquireExecutionContinuationResult`](/api/execution-core/src/type-aliases/acquireexecutioncontinuationresult/)\>
+
+전달 토큰과 현재 continuation 상태를 비교해 실행 소유권을 원자적으로 획득합니다.
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### input
+
+[`AcquireExecutionContinuationInput`](/api/execution-core/src/interfaces/acquireexecutioncontinuationinput/)
+
+#### Returns
+
+`Promise`\<[`AcquireExecutionContinuationResult`](/api/execution-core/src/type-aliases/acquireexecutioncontinuationresult/)\>
+
+#### Implementation of
+
+[`ExecutionContinuationStore`](/api/execution-core/src/interfaces/executioncontinuationstore/).[`acquireContinuation`](/api/execution-core/src/interfaces/executioncontinuationstore/#acquirecontinuation)
+
+---
+
 ### appendLog()
 
 > **appendLog**(`id`, `entry`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
@@ -69,7 +96,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionLogStore`](/api/execution-core/src/interfaces/executionlogstore/).[`appendLog`](/api/execution-core/src/interfaces/executionlogstore/#appendlog)
 
-***
+---
 
 ### create()
 
@@ -91,7 +118,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`create`](/api/execution-core/src/classes/executionstore/#create)
 
-***
+---
 
 ### delete()
 
@@ -113,7 +140,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`delete`](/api/execution-core/src/classes/executionstore/#delete)
 
-***
+---
 
 ### findById()
 
@@ -135,7 +162,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`findById`](/api/execution-core/src/classes/executionstore/#findbyid)
 
-***
+---
 
 ### findByIdempotencyKey()
 
@@ -157,7 +184,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`findByIdempotencyKey`](/api/execution-core/src/classes/executionstore/#findbyidempotencykey)
 
-***
+---
 
 ### list()
 
@@ -179,7 +206,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`list`](/api/execution-core/src/classes/executionstore/#list)
 
-***
+---
 
 ### listRunning()
 
@@ -201,7 +228,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`listRunning`](/api/execution-core/src/classes/executionstore/#listrunning)
 
-***
+---
 
 ### update()
 
@@ -227,7 +254,33 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`update`](/api/execution-core/src/classes/executionstore/#update)
 
-***
+---
+
+### updateClaimedContinuation()
+
+> **updateClaimedContinuation**(`id`, `input`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+fencing token이 현재 claim과 일치할 때만 continuation 상태를 갱신합니다.
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### input
+
+[`UpdateClaimedExecutionContinuationInput`](/api/execution-core/src/interfaces/updateclaimedexecutioncontinuationinput/)
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/) \| `null`\>
+
+#### Implementation of
+
+[`ExecutionContinuationStore`](/api/execution-core/src/interfaces/executioncontinuationstore/).[`updateClaimedContinuation`](/api/execution-core/src/interfaces/executioncontinuationstore/#updateclaimedcontinuation)
+
+---
 
 ### updateIfStatus()
 

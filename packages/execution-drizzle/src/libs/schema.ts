@@ -1,4 +1,4 @@
-import type { ExecutionStatus } from "@croco/execution-core";
+import type { ExecutionContinuationState, ExecutionStatus } from "@croco/execution-core";
 import {
   index,
   integer,
@@ -41,6 +41,7 @@ export const executions = pgTable(
     metadata: json("metadata"),
     checkpoints: json("checkpoints"),
     progress: json("progress"),
+    continuation: jsonb("continuation").$type<ExecutionContinuationState>(),
   },
   (table) => ({
     idempotencyKeyIdx: uniqueIndex("executions_idempotency_key_idx").on(table.idempotencyKey),

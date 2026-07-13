@@ -22,15 +22,53 @@ const executor = new QStashChunkExecutor(executionManager, {
 const result = await executor.executeChunk("execution-1", step);
 ```
 
-`executeChunk()` starts the execution, processes up to `step.chunkSize` records, checkpoints
-checkpointable readers, publishes the next chunk only when more input remains, and completes the
-execution when the step reaches the end of input.
+`QStashChunkExecutor` reads the configured continuation lease duration from the execution manager
+and rejects `heartbeatIntervalMs` values that are greater than or equal to that lease. Keep the
+heartbeat comfortably below expiry; the defaults use a 10-second heartbeat with a 30-second lease,
+and one-third of the lease duration is the recommended operational target.
+
+QStash steps require a writer that implements both the generic `ItemWriter.write()` contract and
+`QStashIdempotentWriter.writeIdempotent()`. Use `processingToken` as the provider or database
+idempotency key; it remains stable if an expired continuation lease is reclaimed.
+
+```typescript
+import type { ItemWriter } from "@croco/batch-core";
+import type { QStashIdempotentWriteContext, QStashIdempotentWriter } from "@croco/batch-qstash";
+
+class OrderWriter implements ItemWriter<Order>, QStashIdempotentWriter<Order> {
+  async write(items: Order[]): Promise<void> {
+    await orders.insert(items);
+  }
+
+  async writeIdempotent(items: Order[], context: QStashIdempotentWriteContext): Promise<void> {
+    await orders.insertOnce(items, { idempotencyKey: context.processingToken });
+  }
+}
+```
+
+This dual interface preserves compatibility with generic batch executors while making the QStash
+external side-effect boundary explicitly idempotent. A plain `ItemWriter` is rejected before a
+continuation claim is acquired.
+
+`executeChunk()` claims the initial or delivered continuation token, processes up to
+`step.chunkSize` records, checkpoints checkpointable readers, publishes the next token only when
+more input remains, and completes the execution when the step reaches the end of input. The webhook
+handler must pass the published token back to the executor:
+
+```typescript
+await executor.executeChunk(body.executionId, step, {
+  continuationToken: body.continuationToken,
+});
+```
 
 ## Public API
 
 | API                             | Description                                                             |
 | ------------------------------- | ----------------------------------------------------------------------- |
 | `QStashChunkExecutor`           | Executes a batch chunk and schedules the next chunk through QStash.     |
+| `QStashStep`                    | Batch step whose writer supports generic and idempotent QStash writes.  |
+| `QStashIdempotentWriter`        | External writer capability fenced by a stable processing token.         |
+| `QStashChunkDelivery`           | Continuation token and optional worker identity from the webhook.       |
 | `QStashExecutorOptions`         | Requires `qstashClient` and a public `webhookUrl`.                      |
 | `QStashBatchConfigProblem`      | Terminal Problem for missing execution manager, client, or webhook URL. |
 | `QStashBatchValidationProblem`  | Terminal Problem for malformed publish URLs.                            |
@@ -40,6 +78,10 @@ execution when the step reaches the end of input.
 ## Failure Modes
 
 - Missing execution manager, QStash client, or webhook URL throws `QStashBatchConfigProblem`.
+- Execution managers without atomic continuation support and steps without an idempotent writer
+  fail before processing begins.
+- Duplicate stale tokens return a zero-work `stale` result; an actively owned token throws
+  `execution/continuation-conflict` so QStash can retry it.
 - Non-HTTP(S) webhook URLs throw `QStashBatchValidationProblem`.
 - Next-chunk publish failures throw `QStashBatchPublishProblem`.
 - Upstream status `408`, `429`, and `5xx` are marked retryable. Terminal upstream failures are marked
