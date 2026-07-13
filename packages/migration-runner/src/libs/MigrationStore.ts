@@ -20,6 +20,17 @@ export class MigrationStore {
     `);
   }
 
+  async hasTable(db: DatabaseClient): Promise<boolean> {
+    const result = await db.execute(sql`
+      SELECT to_regclass(quote_ident(${this.tableName})) IS NOT NULL AS "exists"
+    `);
+    const rows = getResultRows(result);
+    if (rows.length !== 1 || typeof rows[0]?.exists !== "boolean") {
+      throw new UnsupportedMigrationQueryResultProblem();
+    }
+    return rows[0].exists;
+  }
+
   async getExecutedMigrations(db: DatabaseClient): Promise<MigrationRecord[]> {
     const result = await db.execute(sql`
       SELECT id, name, executed_at as executedAt

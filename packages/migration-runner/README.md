@@ -147,15 +147,16 @@ Migration failed: migration-runner/invalid-count (400 Bad Request): Migration ro
 
 Common operator failures:
 
-| Code                                        | When it happens                                                           | Recovery                                               |
-| ------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `migration-runner/database-url-required`    | No `--connection` and no `DATABASE_URL`.                                  | Provide a Postgres URL for the target environment.     |
-| `migration-runner/unsupported-dialect`      | `--dialect` is not `postgres`.                                            | Use Postgres or provide a direct API `DatabaseClient`. |
-| `migration-runner/invalid-count`            | `down --count` is zero, negative, fractional, non-numeric, or unsafe.     | Choose a positive integer or use `--target`.           |
-| `migration-runner/transaction-required`     | Direct API client has no `transaction` function for execution or preview. | Wrap the adapter with transaction support.             |
-| `migration-runner/unsupported-query-result` | Adapter returns neither an array nor a `{ rows: [...] }` result.          | Normalize the adapter result shape.                    |
-| `migration-runner/missing-up-function`      | A migration file lacks `up`.                                              | Add the forward migration body.                        |
-| `migration-runner/missing-down-function`    | A migration file lacks `down`.                                            | Add a rollback body or do not select it for rollback.  |
+| Code                                        | When it happens                                                           | Recovery                                                                                  |
+| ------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `migration-runner/database-url-required`    | No `--connection` and no `DATABASE_URL`.                                  | Provide a Postgres URL for the target environment.                                        |
+| `migration-runner/unsupported-dialect`      | `--dialect` is not `postgres`.                                            | Use Postgres or provide a direct API `DatabaseClient`.                                    |
+| `migration-runner/invalid-count`            | `down --count` is zero, negative, fractional, non-numeric, or unsafe.     | Choose a positive integer or use `--target`.                                              |
+| `migration-runner/history-drift`            | Applied history references a missing, renamed, or duplicate migration.    | Restore the original migration identity or perform an explicitly verified history repair. |
+| `migration-runner/transaction-required`     | Direct API client has no `transaction` function for execution or preview. | Wrap the adapter with transaction support.                                                |
+| `migration-runner/unsupported-query-result` | Adapter returns neither an array nor a `{ rows: [...] }` result.          | Normalize the adapter result shape.                                                       |
+| `migration-runner/missing-up-function`      | A migration file lacks `up`.                                              | Add the forward migration body.                                                           |
+| `migration-runner/missing-down-function`    | A migration file lacks `down`.                                            | Add a rollback body or do not select it for rollback.                                     |
 
 Database connection and query failures are not hidden as success. They make the command exit nonzero after the pool
 cleanup attempt. If cleanup itself fails, the CLI adds a `Cleanup failed: ...` diagnostic and exits nonzero without
@@ -194,6 +195,14 @@ await runner.down(undefined, 1);
 support for rollback-only checkpoint initialization. `up` and `down` also require transaction support so checkpoint changes
 and migration body side effects commit or roll back together. Concurrent runners reserve or claim checkpoint rows atomically
 through the checkpoint table and skip migrations already claimed by another transaction.
+
+Every status, execution, rollback, and preview decision reconciles checkpoint history with the migration files first.
+If an applied file is missing or renamed, or file ids are duplicated, the runner reports
+`migration-runner/history-drift` before opening an execution transaction. Preview initialization uses a rollback-only
+transaction only when the checkpoint table does not exist yet; an existing table is reconciled through the base client.
+Programmatic previews are Postgres-only because this preflight uses Postgres checkpoint-table introspection. Reconciliation
+is guaranteed at each decision snapshot; existing atomic reserve/claim operations remain the contention boundary if files
+or checkpoint history change after selection.
 
 ## Verification
 

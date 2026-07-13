@@ -1883,6 +1883,17 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "migration-runner/history-drift": recovery({
+    cause:
+      "Recorded migration history no longer matches the available migration files by stable id and name.",
+    userAction:
+      "Restore the original migration file identity or ask an operator to perform an explicitly verified history repair.",
+    operatorAction:
+      "Compare the checkpoint rows with version-controlled migration files, restore missing or renamed files when possible, and repair history only after verifying the deployed schema.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
   "tx-drizzle/rls-configuration-invalid": recovery({
     cause:
       "A PostgreSQL RLS helper received malformed static identifier or setting-key configuration.",

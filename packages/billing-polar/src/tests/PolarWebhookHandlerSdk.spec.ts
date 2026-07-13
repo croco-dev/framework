@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import type { BillingStore } from "@croco/billing-core";
+import { WebhookAlreadyProcessedProblem } from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
@@ -169,7 +170,7 @@ describe("PolarWebhookHandler SDK-backed webhook verification", () => {
     vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
     vi.mocked(mockStore.reserveWebhook)
       .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error("duplicate webhook event"));
+      .mockRejectedValueOnce(new WebhookAlreadyProcessedProblem(eventId));
 
     const firstResult = await handler.handle(body, headers);
     const replayResult = await handler.handle(body, headers);

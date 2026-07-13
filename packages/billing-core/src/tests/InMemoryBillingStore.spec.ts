@@ -256,6 +256,22 @@ describe("InMemoryBillingStore", () => {
         WebhookAlreadyProcessedProblem,
       );
     });
+
+    it("should allow exactly one concurrent reservation for the same event", async () => {
+      const results = await Promise.allSettled([
+        store.reserveWebhook("event-concurrent", "subscription.created"),
+        store.reserveWebhook("event-concurrent", "subscription.created"),
+      ]);
+
+      const fulfilled = results.filter((result) => result.status === "fulfilled");
+      const rejected = results.filter((result) => result.status === "rejected");
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0]).toMatchObject({
+        reason: expect.any(WebhookAlreadyProcessedProblem),
+      });
+    });
   });
 
   describe("reset", () => {
