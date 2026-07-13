@@ -6482,20 +6482,14 @@
           "title": "Middleware and request pipeline",
           "owner": "Middleware pipeline owner",
           "breakingChangePolicy": "Middleware callable shape, pipeline graph node/phase constants, and failure propagation changes require a documented migration path.",
-          "coverage": [
-            "public-api:check grouped snapshot",
-            "generated app request pipeline usage"
-          ]
+          "coverage": ["public-api:check grouped snapshot", "generated app request pipeline usage"]
         },
         {
           "id": "shutdown",
           "title": "Shutdown lifecycle",
           "owner": "Shutdown lifecycle owner",
           "breakingChangePolicy": "Shutdown hook signatures, timeout/configuration problem behavior, and signal listener semantics are breaking without migration guidance.",
-          "coverage": [
-            "public-api:check grouped snapshot",
-            "generated app smoke workspace build"
-          ]
+          "coverage": ["public-api:check grouped snapshot", "generated app smoke workspace build"]
         }
       ],
       "runtimeExports": [

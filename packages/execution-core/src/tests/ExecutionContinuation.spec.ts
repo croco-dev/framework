@@ -8,8 +8,10 @@ import type {
   ExecutionContinuationClaim,
   ExecutionContinuationState,
   ExecutionContinuationStore,
+  ExecutionStatus,
   ExecutionStore,
   ListExecutionsOptions,
+  ListRunningExecutionsOptions,
   UpdateClaimedExecutionContinuationInput,
 } from "../index";
 import { ExecutionManagerImpl, ExecutionProblem } from "../index";
@@ -41,6 +43,24 @@ class InMemoryExecutionStore implements ExecutionStore, ExecutionContinuationSto
     const execution = await this.required(id);
     this.execution = { ...execution, ...data };
     return this.execution;
+  }
+
+  async updateIfStatus(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const execution = await this.required(id);
+    if (execution.status !== expectedStatus) return null;
+    this.execution = { ...execution, ...data };
+    return this.execution;
+  }
+
+  async listRunning(options: ListRunningExecutionsOptions): Promise<Execution[]> {
+    const execution = this.execution;
+    if (!execution || execution.status !== "running") return [];
+    if (options.afterId !== undefined && execution.id <= options.afterId) return [];
+    return [execution].slice(0, options.limit);
   }
 
   async list(_options?: ListExecutionsOptions): Promise<Execution[]> {
@@ -524,6 +544,8 @@ describe("ExecutionManagerImpl continuation claims", () => {
       update: async () => {
         throw new Error("unused");
       },
+      updateIfStatus: async () => null,
+      listRunning: async () => [],
       list: async () => [],
       delete: async () => undefined,
     } satisfies ExecutionStore;

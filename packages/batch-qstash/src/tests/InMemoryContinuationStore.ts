@@ -7,8 +7,10 @@ import type {
   ExecutionContinuationClaim,
   ExecutionContinuationState,
   ExecutionContinuationStore,
+  ExecutionStatus,
   ExecutionStore,
   ListExecutionsOptions,
+  ListRunningExecutionsOptions,
   UpdateClaimedExecutionContinuationInput,
 } from "@croco/execution-core";
 
@@ -42,6 +44,29 @@ export class InMemoryContinuationStore implements ExecutionStore, ExecutionConti
     const updated = { ...execution, ...data };
     this.executions.set(id, updated);
     return updated;
+  }
+
+  async updateIfStatus(
+    id: string,
+    expectedStatus: ExecutionStatus,
+    data: Partial<Execution>,
+  ): Promise<Execution | null> {
+    const execution = this.required(id);
+    if (execution.status !== expectedStatus) return null;
+    const updated = { ...execution, ...data };
+    this.executions.set(id, updated);
+    return updated;
+  }
+
+  async listRunning(options: ListRunningExecutionsOptions): Promise<Execution[]> {
+    return [...this.executions.values()]
+      .filter(
+        (execution) =>
+          execution.status === "running" &&
+          (options.afterId === undefined || execution.id > options.afterId),
+      )
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .slice(0, options.limit);
   }
 
   async list(_options?: ListExecutionsOptions): Promise<Execution[]> {

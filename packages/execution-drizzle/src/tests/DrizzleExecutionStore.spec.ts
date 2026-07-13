@@ -6,6 +6,7 @@ import {
 } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { getTableColumns, type SQL } from "drizzle-orm";
+import { CasingCache } from "drizzle-orm/casing";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DrizzleExecutionStore } from "../libs/DrizzleExecutionStore";
@@ -17,6 +18,24 @@ type MockDb = {
   update: () => any;
   delete: () => any;
 };
+
+type SQLRenderable = {
+  toQuery(config: {
+    escapeName: (value: string) => string;
+    escapeParam: () => string;
+    escapeString: (value: string) => string;
+    casing: CasingCache;
+  }): { sql: string };
+};
+
+function renderSql(value: unknown): string {
+  return (value as SQLRenderable).toQuery({
+    escapeName: (name: string) => `"${name}"`,
+    escapeParam: () => "$1",
+    escapeString: (text: string) => `'${text}'`,
+    casing: new CasingCache(),
+  }).sql;
+}
 
 function createMockExecution(overrides: Partial<Execution> = {}): Execution {
   return {
