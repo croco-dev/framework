@@ -39,7 +39,11 @@ export type {
 /**
  * `@croco/events-core` EventBus를 인메모리로 구현한 기본 이벤트 버스입니다.
  */
-export { EventPublishFailedError, InMemoryEventBus } from "./libs/InmemoryEventBus";
+export {
+  EventPublishDroppedProblem,
+  EventPublishFailedError,
+  InMemoryEventBus,
+} from "./libs/InmemoryEventBus";
 
 /**
  * 동시 처리 한도를 초과했을 때 발생하는 Problem 타입입니다.

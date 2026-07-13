@@ -39,12 +39,19 @@ export class EventBusDiagnosticsProvider implements DiagnosticsProvider {
 
   private buildDetails(
     subscriberCount: number,
-    stats: { publishedCount: number; failCount: number } | undefined,
+    stats:
+      | {
+          publishedCount: number;
+          failCount: number;
+          droppedPublishCount: number;
+        }
+      | undefined,
   ): Record<string, unknown> {
     return {
       subscriberCount,
       publishedCount: stats?.publishedCount ?? 0,
       failCount: stats?.failCount ?? 0,
+      droppedPublishCount: stats?.droppedPublishCount ?? 0,
     };
   }
 }

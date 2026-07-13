@@ -1,6 +1,7 @@
 export class EventBusStats {
   private publishedCount = 0;
   private failCount = 0;
+  private droppedPublishCount = 0;
 
   publish(failed: boolean): void {
     if (failed) {
@@ -10,7 +11,19 @@ export class EventBusStats {
     }
   }
 
-  getStats(): { publishedCount: number; failCount: number } {
-    return { publishedCount: this.publishedCount, failCount: this.failCount };
+  drop(): void {
+    this.droppedPublishCount++;
+  }
+
+  getStats(): {
+    publishedCount: number;
+    failCount: number;
+    droppedPublishCount: number;
+  } {
+    return {
+      publishedCount: this.publishedCount,
+      failCount: this.failCount,
+      droppedPublishCount: this.droppedPublishCount,
+    };
   }
 }
