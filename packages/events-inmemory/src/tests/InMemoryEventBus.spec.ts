@@ -1150,6 +1150,9 @@ describe("InMemoryEventBus", () => {
       expect(publishSpans[1]?.span.setStatus).toHaveBeenCalledWith(
         expect.objectContaining({ code: SpanStatusCode.ERROR }),
       );
+      expect(publishSpans[1]?.span.setStatus).not.toHaveBeenCalledWith(
+        expect.objectContaining({ code: SpanStatusCode.OK }),
+      );
       expect(publishSpans[1]?.span.recordException).toHaveBeenCalledWith(
         expect.any(EventPublishDroppedProblem),
       );
@@ -1215,14 +1218,22 @@ describe("InMemoryEventBus", () => {
       );
       availability.mockReturnValueOnce(true).mockReturnValueOnce(true).mockReturnValueOnce(false);
       const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const secondHandler = new SecondHandler();
+      const inspector = new RuntimeInspector();
+      inspector.startRequest({ requestId: "failure-drop-req" });
+      Container.set(DEV_INSPECTOR_TOKEN, inspector);
 
       Container.set(FirstFailingHandler, new FirstFailingHandler());
-      Container.set(SecondHandler, new SecondHandler());
+      Container.set(SecondHandler, secondHandler);
       dropBus.subscribe({ eventName: "TestEvent", handlerClass: FirstFailingHandler });
       dropBus.subscribe({ eventName: "TestEvent", handlerClass: SecondHandler });
 
       try {
-        await expect(dropBus.publish(new TestEvent("failure-and-drop"))).rejects.toMatchObject({
+        await expect(
+          Context.run({ requestId: "failure-drop-req" }, () =>
+            dropBus.publish(new TestEvent("failure-and-drop-secret")),
+          ),
+        ).rejects.toMatchObject({
           eventName: "TestEvent",
           deliveredCount: 1,
           droppedCount: 1,
@@ -1238,6 +1249,27 @@ describe("InMemoryEventBus", () => {
       } finally {
         consoleError.mockRestore();
       }
+
+      inspector.finishRequest({ requestId: "failure-drop-req", status: 500, outcome: "failed" });
+
+      expect(secondHandler.handledEvents).toHaveLength(0);
+      const failedPublish = inspector
+        .snapshot()
+        .requests[0].timeline.find(
+          (entry) => entry.kind === "event.publish" && entry.outcome === "failed",
+        );
+      expect(failedPublish).toMatchObject({
+        name: "TestEvent",
+      });
+      expect(failedPublish?.details).toEqual({
+        subscriberCount: 2,
+        deliveredCount: 1,
+        droppedCount: 1,
+      });
+      const serializedDetails = JSON.stringify(failedPublish?.details);
+      expect(serializedDetails).not.toContain("FirstFailingHandler");
+      expect(serializedDetails).not.toContain("Handler failed intentionally");
+      expect(serializedDetails).not.toContain("failure-and-drop-secret");
     });
 
     it("should throw error when using error strategy", async () => {
