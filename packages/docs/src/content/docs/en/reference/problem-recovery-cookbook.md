@@ -7482,9 +7482,9 @@ Sources:
 - Retryability: `conditional`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: Graceful shutdown did not finish a phase before that phase's configured deadline elapsed.
+- User action: Wait for the stalled shutdown phase to be investigated before retrying; active requests or cleanup work may still be settling.
+- Operator action: Inspect the reported phase, timeoutMs, and elapsedMs extensions, then investigate slow request handlers, event-bus draining, or shutdown hooks.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

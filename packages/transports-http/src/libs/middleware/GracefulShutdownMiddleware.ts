@@ -390,6 +390,7 @@ async function waitForPromise(
   phase: GracefulShutdownPhase,
   deadline: ShutdownDeadline,
 ): Promise<void> {
+  void promise.catch(() => undefined);
   const remainingMs = deadline.deadline - monotonicNow();
   if (remainingMs <= 0) {
     throw createTimeoutProblem(phase, deadline);

@@ -12222,11 +12222,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#transports-http-graceful-shutdown-timeout",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause:
+          "Graceful shutdown did not finish a phase before that phase's configured deadline elapsed.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Wait for the stalled shutdown phase to be investigated before retrying; active requests or cleanup work may still be settling.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+          "Inspect the reported phase, timeoutMs, and elapsedMs extensions, then investigate slow request handlers, event-bus draining, or shutdown hooks.",
         retryability: "conditional",
         redactionPolicy: "operator-only",
         telemetry: {

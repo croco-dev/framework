@@ -1914,6 +1914,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "transports-http/graceful-shutdown-timeout": recovery({
+    cause:
+      "Graceful shutdown did not finish a phase before that phase's configured deadline elapsed.",
+    userAction:
+      "Wait for the stalled shutdown phase to be investigated before retrying; active requests or cleanup work may still be settling.",
+    operatorAction:
+      "Inspect the reported phase, timeoutMs, and elapsedMs extensions, then investigate slow request handlers, event-bus draining, or shutdown hooks.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "transports-http/body-limit-invalid-configuration": recovery({
     cause: "The HTTP body-limit middleware was configured with an invalid byte boundary.",
     userAction: "Ask the operator to correct the service configuration before retrying.",

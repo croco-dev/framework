@@ -906,6 +906,30 @@ describe("GracefulShutdownMiddleware", () => {
       );
     });
 
+    it("should observe a late hook rejection after the total deadline has already expired", async () => {
+      const hook = deferred();
+      const unhandledRejection = vi.fn();
+      process.on("unhandledRejection", unhandledRejection);
+      const controller = createGracefulShutdownController({
+        isLambdaEnvironment: true,
+        timeoutMs: 0,
+        onShutdown: () => hook.promise,
+      });
+
+      try {
+        await expect(controller.shutdown()).rejects.toMatchObject({
+          phase: "on-shutdown",
+          timeoutMs: 0,
+        });
+        hook.reject(new Error("late hook failure"));
+        await new Promise<void>((resolve) => setImmediate(resolve));
+
+        expect(unhandledRejection).not.toHaveBeenCalled();
+      } finally {
+        process.off("unhandledRejection", unhandledRejection);
+      }
+    });
+
     it("should reject a zero-timeout hook when the monotonic clock does not advance", async () => {
       vi.spyOn(performance, "now").mockReturnValue(100);
       const onShutdown = vi.fn();
