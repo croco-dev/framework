@@ -20,7 +20,7 @@ import { ImpersonationService } from "@croco/impersonation-core";
 const service = new ImpersonationService(store, authProvider, config);
 
 // 사칭 시작
-const session = await service.start("admin-1", "user-123", "Support request");
+const session = await service.start(requestContext, "user-123", "Support request");
 
 // 사칭 종료
 await service.end(session.sessionId);
@@ -99,11 +99,9 @@ class UserService {
 ```typescript
 import { ImpersonationGuard } from "@croco/impersonation-core";
 
-const guard = new ImpersonationGuard(service);
+const guard = new ImpersonationGuard();
 
-if (guard.canPerformAction(context, "deleteUser")) {
-  // 작업 수행
-}
+guard.canActivate(routeExecutionContext);
 ```
 
 ### InMemoryImpersonationStore
@@ -120,13 +118,17 @@ const store = new InMemoryImpersonationStore();
 
 ### ImpersonationService
 
-| 메서드                                         | 설명                |
-| ---------------------------------------------- | ------------------- |
-| `start(impersonatorId, targetUserId, reason?)` | 사칭 세션 시작      |
-| `end(sessionId)`                               | 사칭 세션 종료      |
-| `isImpersonating(context)`                     | 사칭 여부 확인      |
-| `getImpersonator(context)`                     | 사칭자 ID 반환      |
-| `getTargetUser(context)`                       | 타겟 사용자 ID 반환 |
+| 메서드                                  | 설명                                |
+| --------------------------------------- | ----------------------------------- |
+| `start(context, targetUserId, reason?)` | 인증된 현재 사용자로 사칭 세션 시작 |
+| `end(sessionId)`                        | 사칭 세션 종료                      |
+| `isImpersonating(context)`              | 사칭 여부 확인                      |
+| `getImpersonator(context)`              | 검증된 원래 사용자 ID 반환          |
+| `getTargetUser(context)`                | 타겟 사용자 ID 반환                 |
+
+`start`는 전달된 actor ID를 신뢰하지 않습니다. `AuthProvider.resolvePrincipal()`이 반환한 현재 principal을 사용하고,
+`impersonation:manage` 권한과 `targetExists()` 결과를 서비스 경계에서 직접 검증합니다. `context.user.id`가 존재하는
+경우 provider identity와 일치해야 하며, 모든 검증이 성공한 뒤에만 세션 저장과 시작 이벤트 발행이 수행됩니다.
 
 ### ImpersonationConfig
 
@@ -160,14 +162,25 @@ const store = new InMemoryImpersonationStore();
 
 ```typescript
 import "reflect-metadata";
-import { Container } from "@croco/framework-context";
-import { ImpersonationService } from "@croco/impersonation-core";
-import { InMemoryImpersonationStore } from "@croco/impersonation-core";
-import type { AuthProvider } from "@croco/impersonation-core";
+import type { RequestContext } from "@croco/framework-context";
+import {
+  AuthProvider,
+  ImpersonationService,
+  InMemoryImpersonationStore,
+} from "@croco/impersonation-core";
+import type { ImpersonationContext, ImpersonationPrincipal } from "@croco/impersonation-core";
 
-class MyAuthProvider implements AuthProvider {
-  getCurrentUserId(): string | null {
-    return "admin-1";
+class MyAuthProvider extends AuthProvider {
+  async resolvePrincipal(context: RequestContext): Promise<ImpersonationPrincipal | null> {
+    if (!context.user) return null;
+    return {
+      id: context.user.id,
+      permissions: ["impersonation:manage"],
+    };
+  }
+
+  async targetExists(_context: RequestContext, targetUserId: string): Promise<boolean> {
+    return targetUserId === "user-123";
   }
 }
 
@@ -181,7 +194,12 @@ const config = {
 
 const service = new ImpersonationService(store, authProvider, config);
 
-const session = await service.start("admin-1", "user-123", "Customer support");
+const requestContext: RequestContext = {
+  requestId: "req-1",
+  user: { id: "admin-1" },
+};
+
+const session = await service.start(requestContext, "user-123", "Customer support");
 
 const context: ImpersonationContext = {
   requestId: "req-1",
@@ -191,3 +209,9 @@ const context: ImpersonationContext = {
 const isImpersonating = service.isImpersonating(context);
 console.log(isImpersonating);
 ```
+
+## 마이그레이션
+
+기존 `start(impersonatorId, targetUserId, reason?)` 호출은 `start(context, targetUserId, reason?)`로 변경해야 합니다.
+패키지 로컬 `AuthProvider` 구현은 `resolvePrincipal(context)`과 `targetExists(context, targetUserId)`를 제공해야 합니다.
+이는 transport guard 없이 서비스를 직접 호출하는 경로에도 동일한 인증·권한·타겟 검증을 적용하기 위한 보안 계약 변경입니다.

@@ -2,6 +2,11 @@ import type { RequestContext } from "@croco/framework-context";
 import { Token } from "@croco/framework-context";
 import type { ImpersonationState } from "./types";
 
+export type ImpersonationPrincipal = {
+  readonly id: string;
+  readonly permissions: readonly string[];
+};
+
 export abstract class ImpersonationStore {
   static readonly token = new Token<ImpersonationStore>("ImpersonationStore");
 
@@ -14,5 +19,6 @@ export abstract class ImpersonationStore {
 export abstract class AuthProvider {
   static readonly token = new Token<AuthProvider>("AuthProvider");
 
-  abstract getCurrentUserId(context: RequestContext): string | null;
+  abstract resolvePrincipal(context: RequestContext): Promise<ImpersonationPrincipal | null>;
+  abstract targetExists(context: RequestContext, targetUserId: string): Promise<boolean>;
 }

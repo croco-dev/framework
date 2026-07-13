@@ -1,3 +1,4 @@
+import { ForbiddenProblem, hasPermission, UnauthorizedProblem } from "@croco/auth-core";
 import { EventBusConfig, EventPublisher } from "@croco/events-core";
 import type { RequestContext } from "@croco/framework-context";
 import { Component, Inject } from "@croco/framework-context";
@@ -5,8 +6,10 @@ import { IdPrefix } from "@croco/gid-core";
 import { ImpersonationEndedEvent, ImpersonationStartedEvent } from "./events";
 import { AuthProvider, ImpersonationStore } from "./interfaces";
 import {
+  ImpersonationIdentityConflictProblem,
   ImpersonationReasonRequiredProblem,
   ImpersonationSessionNotFoundProblem,
+  ImpersonationTargetNotFoundProblem,
   NestedImpersonationProblem,
   SelfImpersonationProblem,
 } from "./problems/ImpersonationProblems";
@@ -29,15 +32,32 @@ export class ImpersonationService {
   ) {}
 
   async start(
-    impersonatorId: string,
+    context: RequestContext,
     targetUserId: string,
     reason?: string,
   ): Promise<ImpersonationState> {
-    if (impersonatorId === targetUserId) {
+    const principal = await this._authProvider.resolvePrincipal(context);
+    if (!principal) {
+      throw new UnauthorizedProblem();
+    }
+
+    if (context.user && context.user.id !== principal.id) {
+      throw new ImpersonationIdentityConflictProblem();
+    }
+
+    if (!hasPermission([...principal.permissions], "impersonation:manage")) {
+      throw new ForbiddenProblem("impersonation:manage");
+    }
+
+    if (principal.id === targetUserId) {
       throw new SelfImpersonationProblem();
     }
 
-    const existing = await this.store.findByImpersonator(impersonatorId);
+    if (!(await this._authProvider.targetExists(context, targetUserId))) {
+      throw new ImpersonationTargetNotFoundProblem(targetUserId);
+    }
+
+    const existing = await this.store.findByImpersonator(principal.id);
     if (existing) {
       throw new NestedImpersonationProblem();
     }
@@ -50,14 +70,14 @@ export class ImpersonationService {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + this.config.maxDurationMs);
 
-    const session: ImpersonationState = {
+    const session: ImpersonationState = Object.freeze({
       sessionId,
-      impersonatorId,
+      impersonatorId: principal.id,
       targetUserId,
       reason,
       startedAt: now,
       expiresAt,
-    };
+    });
 
     await this.store.save(session);
 

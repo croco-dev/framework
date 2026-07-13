@@ -1,12 +1,12 @@
 import { Token } from "@croco/framework-context";
 
 export type ImpersonationState = {
-  sessionId: string;
-  impersonatorId: string;
-  targetUserId: string;
-  reason?: string;
-  startedAt: Date;
-  expiresAt: Date;
+  readonly sessionId: string;
+  readonly impersonatorId: string;
+  readonly targetUserId: string;
+  readonly reason?: string;
+  readonly startedAt: Date;
+  readonly expiresAt: Date;
 };
 
 export type ImpersonationConfig = {

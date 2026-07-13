@@ -33,6 +33,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ConfigValidationProblem`](/api/framework-config/src/classes/configvalidationproblem/)
 - [`InvalidBooleanEnvProblem`](/api/framework-config/src/classes/invalidbooleanenvproblem/)
 - [`SelfImpersonationProblem`](/api/impersonation-core/src/classes/selfimpersonationproblem/)
+- [`ImpersonationIdentityConflictProblem`](/api/impersonation-core/src/classes/impersonationidentityconflictproblem/)
+- [`ImpersonationTargetNotFoundProblem`](/api/impersonation-core/src/classes/impersonationtargetnotfoundproblem/)
 - [`NestedImpersonationProblem`](/api/impersonation-core/src/classes/nestedimpersonationproblem/)
 - [`ImpersonationReasonRequiredProblem`](/api/impersonation-core/src/classes/impersonationreasonrequiredproblem/)
 - [`BlockedDuringImpersonationProblem`](/api/impersonation-core/src/classes/blockedduringimpersonationproblem/)

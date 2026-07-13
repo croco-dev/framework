@@ -23,9 +23,9 @@ title: "AuthProvider"
 
 ## Methods
 
-### getCurrentUserId()
+### resolvePrincipal()
 
-> `abstract` **getCurrentUserId**(`context`): `string` \| `null`
+> `abstract` **resolvePrincipal**(`context`): `Promise`\<[`ImpersonationPrincipal`](/api/impersonation-core/src/type-aliases/impersonationprincipal/) \| `null`\>
 
 #### Parameters
 
@@ -35,4 +35,24 @@ title: "AuthProvider"
 
 #### Returns
 
-`string` \| `null`
+`Promise`\<[`ImpersonationPrincipal`](/api/impersonation-core/src/type-aliases/impersonationprincipal/) \| `null`\>
+
+---
+
+### targetExists()
+
+> `abstract` **targetExists**(`context`, `targetUserId`): `Promise`\<`boolean`\>
+
+#### Parameters
+
+##### context
+
+[`RequestContext`](/api/framework-context/src/interfaces/requestcontext/)
+
+##### targetUserId
+
+`string`
+
+#### Returns
+
+`Promise`\<`boolean`\>
