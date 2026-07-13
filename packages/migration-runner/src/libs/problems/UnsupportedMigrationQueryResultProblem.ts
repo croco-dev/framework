@@ -1,8 +1,8 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
-type MigrationQueryResultField = "row" | "id" | "name" | "executedAt";
+export type MigrationQueryResultField = "row" | "id" | "name" | "executedAt";
 
-type UnsupportedMigrationQueryResultContext = {
+export type UnsupportedMigrationQueryResultContext = {
   readonly rowIndex?: number;
   readonly field?: MigrationQueryResultField;
 };

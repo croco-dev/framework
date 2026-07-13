@@ -13,7 +13,11 @@ export { MigrationTransactionRequiredProblem } from "./libs/problems/MigrationTr
 export { MissingDownFunctionProblem } from "./libs/problems/MissingDownFunctionProblem";
 export { MissingUpFunctionProblem } from "./libs/problems/MissingUpFunctionProblem";
 export { UnsupportedDialectProblem } from "./libs/problems/UnsupportedDialectProblem";
-export { UnsupportedMigrationQueryResultProblem } from "./libs/problems/UnsupportedMigrationQueryResultProblem";
+export {
+  type MigrationQueryResultField,
+  type UnsupportedMigrationQueryResultContext,
+  UnsupportedMigrationQueryResultProblem,
+} from "./libs/problems/UnsupportedMigrationQueryResultProblem";
 export type {
   MigrationDirection,
   MigrationFile,

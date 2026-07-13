@@ -402,9 +402,11 @@ describe("MigrationRunner", () => {
       const candidate = new MigrationRunner(db, migrationsDir, "_migrations");
 
       try {
-        await expect(invoke(candidate)).rejects.toBeInstanceOf(
-          UnsupportedMigrationQueryResultProblem,
-        );
+        const result = invoke(candidate);
+        await expect(result).rejects.toBeInstanceOf(UnsupportedMigrationQueryResultProblem);
+        await expect(result).rejects.toMatchObject({
+          extensions: { rowIndex: 0, field: "executedAt" },
+        });
         expect(bodyCalls).toEqual([]);
       } finally {
         rmSync(migrationsDir, { force: true, recursive: true });
@@ -682,7 +684,12 @@ function createMalformedMetadataDb(): {
       return [];
     }
 
-    if (sqlText(query).startsWith("SELECT id, name")) {
+    const text = sqlText(query);
+    if (text.startsWith("SELECT to_regclass")) {
+      return [{ exists: true }];
+    }
+
+    if (text.startsWith("SELECT id, name")) {
       return [
         {
           id: "20260615000001",
