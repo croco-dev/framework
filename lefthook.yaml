@@ -10,13 +10,14 @@ pre-commit:
       run: pnpm oxfmt --write --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore {staged_files} && git add {staged_files}
 
 pre-push:
+  parallel: false
   commands:
     auto-changeset:
       run: node --experimental-strip-types scripts/auto-changeset.mts
     test:
       run: pnpm exec turbo run test --output-logs=errors-only --ui=stream --log-order=grouped
     typecheck:
-      run: pnpm exec turbo run typecheck --output-logs=errors-only --ui=stream --log-order=grouped
+      run: pnpm tracked-files:guard --recovery 'Fix the reported TypeScript diagnostics' -- pnpm exec turbo run typecheck --output-logs=errors-only --ui=stream --log-order=grouped
 
 post-merge:
   commands:

@@ -11,7 +11,7 @@ describe("benchmark workflow", () => {
     const workflow = readBenchmarkWorkflow();
     const orderedMarkers = [
       "- name: Run benchmarks with threshold check",
-      "run: pnpm bench:check --output-json=benchmark-result.json",
+      "run: pnpm tracked-files:guard --recovery 'pnpm bench:update' -- pnpm bench:check --output-json=benchmark-result.json",
       "- name: Publish benchmark enforce-readiness report",
       "continue-on-error: true",
       "set +e",

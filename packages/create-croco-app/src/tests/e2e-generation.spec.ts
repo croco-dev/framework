@@ -885,7 +885,7 @@ describe("E2E: generate()", () => {
         "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
         doctor: "croco doctor --json",
         "di:verify": expect.stringMatching(
-          /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+          /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
         ),
       });
       expect(rootPackageJson.scripts?.["contract:client"]).toContain(
@@ -999,7 +999,7 @@ describe("E2E: generate()", () => {
         "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
         doctor: "croco doctor --json",
         "di:verify": expect.stringMatching(
-          /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+          /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
         ),
       });
       expect(rootPackageJson.scripts?.["contract:client"]).toContain(
@@ -1103,7 +1103,7 @@ describe("E2E: generate()", () => {
       "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
       doctor: "NODE_PATH=./node_modules croco doctor --json",
       "di:verify": expect.stringMatching(
-        /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+        /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
       ),
       "profile:smoke:real": "pnpm --filter @test/api-server profile:smoke:real",
       "demo:smoke":
@@ -2241,7 +2241,7 @@ describe("E2E: generate()", () => {
         "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
         doctor: "NODE_PATH=./node_modules croco doctor --json",
         "di:verify": expect.stringMatching(
-          /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+          /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
         ),
         "demo:smoke":
           "pnpm profile:check && pnpm architecture-policy:check && pnpm runtime-policy:check && pnpm contract:check && pnpm --filter @test/api-server demo:smoke && pnpm --filter @test/api-server ops:smoke && pnpm --filter @test/api-server jobs:smoke",
@@ -2345,7 +2345,7 @@ describe("E2E: generate()", () => {
         "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
         doctor: "NODE_PATH=./node_modules croco doctor --json",
         "di:verify": expect.stringMatching(
-          /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+          /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
         ),
       });
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");

@@ -50,16 +50,16 @@ describe("CI package quality dashboard", () => {
       "- name: Build",
       "run: pnpm turbo run build --summarize --continue=always",
       "- name: TypeScript check",
-      "run: pnpm turbo run typecheck --summarize --continue=always",
+      "run: pnpm tracked-files:guard --recovery 'Fix the reported TypeScript diagnostics' -- pnpm turbo run typecheck --summarize --continue=always",
       "- name: Test",
       "run: pnpm turbo run test --summarize --continue=always",
       "- name: Provider certification gate",
-      "run: |\n          set +e\n          pnpm provider-certification:check",
+      "run: |\n          set +e\n          pnpm tracked-files:guard --recovery 'Fix the reported provider certification metadata' -- pnpm provider-certification:check",
       "- name: Production-ready package gate",
       "production_ready_args+=(--require-task-summaries)",
-      'pnpm production-ready:check -- "${production_ready_args[@]}"',
+      "pnpm tracked-files:guard --recovery 'Fix the reported production-ready package violations' -- pnpm production-ready:check -- \"${production_ready_args[@]}\"",
       "- name: Beta spine promotion gate",
-      "pnpm spine-promotion:check",
+      "pnpm tracked-files:guard --recovery 'Fix the reported beta spine promotion violations' -- pnpm spine-promotion:check",
       "- name: Publish package quality dashboard",
       "pnpm package-quality:report",
       "- name: Upload package quality dashboard",
@@ -378,7 +378,9 @@ describe("CI package quality dashboard", () => {
       metadataStepStart,
       "metadata gate should run after security report upload",
     ).toBeGreaterThan(uploadStepStart);
-    expect(metadataStep).toContain("run: pnpm security-allowlists:check");
+    expect(metadataStep).toContain(
+      "run: pnpm tracked-files:guard --recovery 'Fix the reported security allowlist metadata' -- pnpm security-allowlists:check",
+    );
     expect(metadataStep).not.toContain("continue-on-error");
     expect(workflow.slice(summaryStepStart)).toContain("Security allowlist metadata: blocking");
     expect(workflow.slice(summaryStepStart)).toContain("scripts/security-allowlist-metadata.json");

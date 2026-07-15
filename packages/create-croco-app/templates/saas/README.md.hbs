@@ -77,7 +77,7 @@ Artifact 책임은 다음과 같습니다.
 - `contract-graph.snapshot.json`: breaking change 기준선이므로 커밋합니다.
 - `contract-graph.coverage.json`: OpenAPI/RPC consumer coverage report입니다. CI/build에서 재생성하거나 감사용 산출물이 필요할 때 커밋합니다.
 - `.croco/manifest`: Project Map에서 파생된 inspectable manifest bundle입니다. `contract:verify`가 생성 후 drift를 확인하며, `openapi.json`과 generated RPC client는 같은 bundle 경로를 source reference로 남깁니다.
-- `.croco/build/di-graph.manifest.json`: API bootstrap에서 생성한 DI graph manifest입니다. `pnpm di:verify`가 생성, `croco di check`, 존재 확인, project-map bundle 갱신/검사, `croco doctor --json` 순서로 검증합니다.
+- `.croco/build/di-graph.manifest.json`: API bootstrap에서 생성한 DI graph manifest입니다. 의도적으로 갱신할 때 `pnpm di:graph`를 실행하고, `pnpm di:verify`는 기존 DI graph와 Project Map 산출물을 변경하지 않은 채 검사합니다.
 - `openapi.json`: 외부 소비자나 배포 산출물이 필요하면 커밋하고, 아니면 CI/build에서 재생성합니다.
 - `libs/shared/provider-rpc/src`: 앱 내부 generated client 산출물입니다. 커밋 여부와 무관하게 `contract:verify`가 현재 서버 계약에서 다시 생성하고 typecheck합니다.
 

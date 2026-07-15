@@ -8,13 +8,15 @@
     "build": "turbo build",
     "setup": "pnpm install && pnpm build && pnpm typecheck && pnpm test",
     "audit:prod": "pnpm audit --audit-level high --prod",
+    "audit:read-only": "pnpm tracked-files:guard --recovery 'Use the failing check output to run its explicit writer or fix command' -- pnpm check && pnpm tracked-files:guard --recovery 'Fix the reported circular dependency' -- pnpm architecture:check:circular && pnpm tracked-files:guard --recovery 'pnpm bench:update' -- pnpm bench:check",
     "security:audit-policy": "node --experimental-strip-types scripts/dependency-audit-policy.mts",
-    "check": "pnpm package-manifests:check && pnpm docs:catalog:check && pnpm provider-certification:check && pnpm docs:api-triggers:check && pnpm problem-registry:check && pnpm docs:examples:check && pnpm release-docs:check && pnpm architecture-policy:check && pnpm architecture:check:circular:allowlist && pnpm dependency-boundaries:check && pnpm security-allowlists:check && pnpm generated-secret-placeholders:check && pnpm strict-contract-typecheck && pnpm static-misuse:check && pnpm public-api:check && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
+    "check": "pnpm verification-policy:check && pnpm package-manifests:check && pnpm docs:catalog:check && pnpm provider-certification:check && pnpm docs:api-triggers:check && pnpm problem-registry:check && pnpm docs:examples:check && pnpm release-docs:check && pnpm architecture-policy:check && pnpm architecture:check:circular:allowlist && pnpm dependency-boundaries:check && pnpm security-allowlists:check && pnpm generated-secret-placeholders:check && pnpm strict-contract-typecheck && pnpm static-misuse:check && pnpm public-api:check && oxlint . && oxfmt --check . --ignore-path=.gitignore --ignore-path=.prettierignore --ignore-path=.oxfmtignore",
     "changeset": "changeset",
     "deploy": "turbo deploy",
     "dev": "turbo dev",
     "doctor": "pnpm --filter @croco/cli... build && node packages/cli/dist/bin/croco.js doctor",
     "docs:build": "turbo run docs:build",
+    "docs:api:check": "node --experimental-strip-types scripts/api-docs-drift-check.mts",
     "docs:dev": "turbo run docs:dev",
     "docs:api-triggers:check": "node --experimental-strip-types scripts/api-docs-trigger-check.mts --check",
     "docs:api-triggers:write": "node --experimental-strip-types scripts/api-docs-trigger-check.mts --write",
@@ -59,7 +61,9 @@
     "release:spine-evidence": "node --experimental-strip-types scripts/release-spine-evidence.mts",
     "security-allowlists:check": "node --experimental-strip-types scripts/security-allowlist-metadata-check.mts",
     "static-misuse:check": "node --experimental-strip-types scripts/static-misuse-check.mts",
-    "strict-contract-typecheck": "node --experimental-strip-types scripts/strict-contract-typecheck.mts"
+    "strict-contract-typecheck": "node --experimental-strip-types scripts/strict-contract-typecheck.mts",
+    "tracked-files:guard": "node --experimental-strip-types scripts/tracked-file-mutation-guard.mts",
+    "verification-policy:check": "node --experimental-strip-types scripts/verification-policy.mts"
   },
   "dependencies": {
     "@vitejs/plugin-rsc": "0.5.26"

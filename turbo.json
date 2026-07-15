@@ -30,12 +30,20 @@
       "cache": true,
       "dependsOn": ["build", "^build", "^test"]
     },
+    "@croco/docs#test": {
+      "cache": true,
+      "dependsOn": ["^build", "^test"]
+    },
     "@croco/oxlint-rules#test": {
       "cache": true
     },
     "typecheck": {
       "cache": true,
       "dependsOn": ["build", "^build", "^typecheck"]
+    },
+    "@croco/docs#typecheck": {
+      "cache": true,
+      "dependsOn": ["^build", "^typecheck"]
     }
   }
 }

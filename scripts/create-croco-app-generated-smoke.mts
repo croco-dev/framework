@@ -114,6 +114,8 @@ type GraphQLContractProblemJson = {
 
 type SmokeValidation = {
   readonly label: string;
+  readonly readOnly?: boolean;
+  readonly recovery?: string;
   readonly packagePath?: readonly string[];
   readonly args?: readonly string[];
   readonly paths?: readonly string[];
@@ -964,7 +966,19 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         artifacts: ["libs/shared/provider-rpc/src/user.ts"],
       },
       {
+        label: "Project Map generation",
+        args: ["project-map:write"],
+        paths: ["croco.project-map.json"],
+      },
+      {
+        label: "DI graph generation",
+        args: ["di:graph"],
+        paths: [".croco/build/di-graph.manifest.json"],
+      },
+      {
         label: "DI graph verify",
+        readOnly: true,
+        recovery: "pnpm di:graph && pnpm project-map:write",
         args: ["di:verify"],
         paths: [".croco/build/di-graph.manifest.json"],
         artifacts: [".croco/build/di-graph.manifest.json"],
@@ -1007,7 +1021,14 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         paths: ["libs/shared/provider-rpc/src/admin.ts"],
       },
       {
+        label: "DI graph generation",
+        args: ["di:graph"],
+        paths: [".croco/build/di-graph.manifest.json"],
+      },
+      {
         label: "DI graph verify",
+        readOnly: true,
+        recovery: "pnpm di:graph && pnpm project-map:write",
         args: ["di:verify"],
         paths: [".croco/build/di-graph.manifest.json"],
         json: {
@@ -1041,6 +1062,8 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
     validations: [
       {
         label: "provider profile manifest",
+        readOnly: true,
+        recovery: "Regenerate the application from its create-croco-app preset",
         args: ["profile:check"],
         paths: [
           "croco-saas-profile.manifest.json",
@@ -1101,7 +1124,14 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         paths: ["contract-graph.coverage.json"],
       },
       {
+        label: "DI graph generation",
+        args: ["di:graph"],
+        paths: [".croco/build/di-graph.manifest.json"],
+      },
+      {
         label: "DI graph verify",
+        readOnly: true,
+        recovery: "pnpm di:graph && pnpm project-map:write",
         args: ["di:verify"],
         paths: [".croco/build/di-graph.manifest.json"],
         json: {
@@ -1208,6 +1238,8 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
     validations: [
       {
         label: "provider profile manifest",
+        readOnly: true,
+        recovery: "Regenerate the application from its create-croco-app preset",
         args: ["profile:check"],
         paths: [
           "croco-saas-profile.manifest.json",
@@ -1247,6 +1279,8 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
     validations: [
       {
         label: "provider profile manifest",
+        readOnly: true,
+        recovery: "Regenerate the application from its create-croco-app preset",
         args: ["profile:check"],
         paths: [
           "croco-saas-profile.manifest.json",
@@ -1296,7 +1330,14 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         paths: ["contract-graph.coverage.json"],
       },
       {
+        label: "DI graph generation",
+        args: ["di:graph"],
+        paths: [".croco/build/di-graph.manifest.json"],
+      },
+      {
         label: "DI graph verify",
+        readOnly: true,
+        recovery: "pnpm di:graph && pnpm project-map:write",
         args: ["di:verify"],
         paths: [".croco/build/di-graph.manifest.json"],
         json: {
@@ -1351,6 +1392,10 @@ if (isMainModule()) {
       (smokeCase) => smokeCase.name === REST_SPA_CONTRACT_SMOKE_CASE_NAME,
     );
     const isFilteredRun = smokeSelection.filteredRun;
+
+    assertGeneratedVerificationValidationsAreReadOnly(
+      smokeSelection.cases.flatMap(({ validations }) => validations),
+    );
 
     assertGraphQLSmokeContractCoverage(selectedSmokeCases);
 
@@ -2415,15 +2460,34 @@ function runValidation(
         appendSmokeCaseOutput(caseResult, validation.label, commandResult);
         step.diagnosticCodes = commandResult.diagnosticCodes;
       } else {
+        if (validation.readOnly) ensureGeneratedVerificationBaseline(validationDir);
         appendSmokeCaseOutput(
           caseResult,
           validation.label,
-          run(
-            "corepack",
-            ["pnpm", "--dir", validationDir, ...validation.args],
-            rootDir,
-            validation.env,
-          ),
+          validation.readOnly
+            ? run(
+                process.execPath,
+                [
+                  "--experimental-strip-types",
+                  join(rootDir, "scripts", "tracked-file-mutation-guard.mts"),
+                  "--recovery",
+                  validation.recovery ?? `Run the explicit writer for ${validation.label}`,
+                  "--",
+                  "corepack",
+                  "pnpm",
+                  "--dir",
+                  validationDir,
+                  ...validation.args,
+                ],
+                validationDir,
+                validation.env,
+              )
+            : run(
+                "corepack",
+                ["pnpm", "--dir", validationDir, ...validation.args],
+                rootDir,
+                validation.env,
+              ),
         );
       }
     }
@@ -2484,6 +2548,35 @@ function runValidation(
   }
 
   console.log(`create-croco-app-generated-smoke: ${smokeCase.name} ${validation.label} passed`);
+}
+
+export function assertGeneratedVerificationValidationsAreReadOnly(
+  validations: readonly Pick<SmokeValidation, "args" | "readOnly" | "recovery">[],
+): void {
+  const violations = validations.filter((validation) => {
+    const name = validation.args?.[0];
+    return (
+      name !== undefined &&
+      !name.startsWith("contract:") &&
+      /:(?:check|verify)$/.test(name) &&
+      (!validation.readOnly || !validation.recovery)
+    );
+  });
+  if (violations.length === 0) return;
+  throw new Error(
+    `Generated verification validations must be guarded with recovery guidance: ${violations
+      .map(({ args }) => args?.[0])
+      .join(", ")}`,
+  );
+}
+
+function ensureGeneratedVerificationBaseline(validationDir: string): void {
+  if (existsSync(join(validationDir, ".git"))) return;
+  run("git", ["init", "--quiet"], validationDir);
+  run("git", ["config", "user.email", "generated-smoke@croco.local"], validationDir);
+  run("git", ["config", "user.name", "Croco Generated Smoke"], validationDir);
+  run("git", ["add", "-A"], validationDir);
+  run("git", ["commit", "--quiet", "-m", "generated verification baseline"], validationDir);
 }
 
 function runGraphQLContractDriftCanaries(
