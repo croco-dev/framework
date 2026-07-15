@@ -7,6 +7,21 @@ The machine-readable source of truth is `docs/package-catalog.json` `spine.packa
 
 Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alpha/WIP, 0 deprecated; 8 beta promotion records.
 
+## Silent-Success Public Contract Audit
+
+The finite package-by-package inventory for issue
+[#1332](https://github.com/croco-dev/framework/issues/1332) is
+[`silent-success-audit.json`](silent-success-audit.json). Each spine package reconciles exported
+configuration, external or persisted decoders, lifecycle hooks, compatibility fallbacks, and
+check/verify/dry-run commands to concrete source and test evidence. Unresolved surfaces link a
+focused issue and name the owning regression-test boundary.
+
+`pnpm release-docs:check` derives the expected package set from `docs/package-catalog.json`, rejects
+missing coverage classes or duplicate surface ids, and verifies that evidence files, symbols, test
+identifiers resolve while focused issue links match this repository's issue URL format. The artifact
+remains a human-reviewed semantic audit; the gate intentionally does not claim to infer runtime
+behavior from syntax.
+
 ## Package Set
 
 | Package                     | Gate role                                                         |

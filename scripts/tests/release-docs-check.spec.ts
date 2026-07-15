@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -251,12 +251,121 @@ describe("release-docs-check.mts", () => {
       "migration matrix Package table must include @croco/cli from docs/package-catalog.json spine.packages",
     );
   });
+
+  it("fails when the silent-success audit omits a package or coverage class", () => {
+    const audit = validSilentSuccessAudit(["framework-context", "cli"]);
+    audit.packages = audit.packages.filter((entry) => entry.package !== "cli");
+    delete audit.packages[0].coverage.decoder;
+    const root = createFixture({ fixed: [], linked: [] }, validReleaseGuide(), {
+      audit,
+      spinePackages: ["framework-context", "cli"],
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("audit must include cli");
+    expect(result.stdout).toContain("coverage.decoder.status must be reviewed or none-found");
+  });
+
+  it("fails when audit evidence does not resolve to a repository symbol or test", () => {
+    const audit = validSilentSuccessAudit(["framework-context"]);
+    audit.packages[0].surfaces[0].source.identifier = "missingSourceSymbol";
+    audit.packages[0].surfaces[0].test.path =
+      "packages/framework-context/src/tests/missing.spec.ts";
+    const root = createFixture({ fixed: [], linked: [] }, validReleaseGuide(), {
+      audit,
+      spinePackages: ["framework-context"],
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("source.identifier must occur");
+    expect(result.stdout).toContain("test.path must reference an existing file");
+  });
+
+  it("fails when audit evidence leaves the repository or a surface is not covered", () => {
+    const audit = validSilentSuccessAudit(["framework-context"]);
+    audit.packages[0].surfaces[0].source.path = "../outside.ts";
+    audit.packages[0].coverage.configuration.surfaceIds = [];
+    const root = createFixture({ fixed: [], linked: [] }, validReleaseGuide(), {
+      audit,
+      spinePackages: ["framework-context"],
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("source.path must stay inside the repository");
+    expect(result.stdout).toContain("surface public-options must be listed by its coverage class");
+  });
+
+  it("fails when audit evidence escapes through a repository symlink", () => {
+    const audit = validSilentSuccessAudit(["framework-context"]);
+    audit.packages[0].surfaces[0].source.path =
+      "packages/framework-context/src/external-evidence.ts";
+    const root = createFixture({ fixed: [], linked: [] }, validReleaseGuide(), {
+      audit,
+      spinePackages: ["framework-context"],
+    });
+    const externalRoot = mkdtempSync(join(tmpdir(), "release-docs-external-"));
+    tempRoots.push(externalRoot);
+    const externalFile = join(externalRoot, "external-evidence.ts");
+    writeFileSync(externalFile, "export type PublicOptions = { enabled: boolean };\n");
+    symlinkSync(externalFile, join(root, audit.packages[0].surfaces[0].source.path));
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("source.path must stay inside the repository");
+  });
+
+  it("fails when required audit arrays are empty", () => {
+    const audit = validSilentSuccessAudit(["framework-context"]);
+    audit.packages[0].surfaces[0].members = [];
+    audit.packages[0].coverage.configuration.reviewPaths = [];
+    audit.packages[0].coverage.configuration.searchTerms = [];
+    (audit.packages[0].surfaces[0] as { sources?: unknown }).sources = [];
+    const root = createFixture({ fixed: [], linked: [] }, validReleaseGuide(), {
+      audit,
+      spinePackages: ["framework-context"],
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("members must be a non-empty string array");
+    expect(result.stdout).toContain("must include non-empty reviewPaths and searchTerms");
+    expect(result.stdout).toContain("sources must be a non-empty evidence array when provided");
+  });
+
+  it("fails when unresolved or duplicate audit surfaces lack focused evidence", () => {
+    const audit = validSilentSuccessAudit(["framework-context"]);
+    const surface = audit.packages[0].surfaces[0];
+    surface.status = "unresolved";
+    surface.issue = "https://example.com/issue/1";
+    surface.regressionTest = "";
+    audit.packages[0].surfaces.push({ ...surface });
+    const root = createFixture({ fixed: [], linked: [] }, validReleaseGuide(), {
+      audit,
+      spinePackages: ["framework-context"],
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("must not repeat surface id");
+    expect(result.stdout).toContain("must link a focused croco-dev/framework issue");
+    expect(result.stdout).toContain("must name the owning-package acceptance boundary");
+  });
 });
 
 function createFixture(
   config: unknown,
   docs: string,
   options: {
+    readonly audit?: ReturnType<typeof validSilentSuccessAudit>;
     readonly spineDocs?: string;
     readonly spinePackages?: readonly string[];
   } = {},
@@ -271,6 +380,11 @@ function createFixture(
     join(root, "docs/package-catalog.json"),
     `${JSON.stringify({ schemaVersion: 1, spine: { packages: spinePackages } }, null, 2)}\n`,
   );
+  writeAuditFixtureFiles(root, spinePackages);
+  writeFileSync(
+    join(root, "docs/release/silent-success-audit.json"),
+    `${JSON.stringify(options.audit ?? validSilentSuccessAudit(spinePackages), null, 2)}\n`,
+  );
   writeFileSync(join(root, "RELEASING.md"), `${docs}\n`);
   writeFileSync(
     join(root, "docs/release/croco-1.0-spine.md"),
@@ -278,6 +392,58 @@ function createFixture(
   );
 
   return root;
+}
+
+function validSilentSuccessAudit(spinePackages: readonly string[]) {
+  return {
+    schemaVersion: 1,
+    sourceIssue: "https://github.com/croco-dev/framework/issues/1332",
+    packages: spinePackages.map((packageName) => ({
+      package: packageName,
+      coverage: Object.fromEntries(
+        ["configuration", "decoder", "lifecycle", "fallback", "verification"].map((category) => [
+          category,
+          {
+            status: category === "configuration" ? "reviewed" : "none-found",
+            surfaceIds: category === "configuration" ? ["public-options"] : [],
+            reviewPaths: [`packages/${packageName}/src`],
+            searchTerms: [category],
+          },
+        ]),
+      ),
+      surfaces: [
+        {
+          id: "public-options",
+          category: "configuration",
+          disposition: "implemented-tested",
+          status: "complete",
+          members: ["PublicOptions.enabled"],
+          source: {
+            path: `packages/${packageName}/src/index.ts`,
+            identifier: "PublicOptions",
+          },
+          test: {
+            path: `packages/${packageName}/src/tests/AuditEvidence.spec.ts`,
+            identifier: "exercises public options",
+          },
+        },
+      ],
+    })),
+  };
+}
+
+function writeAuditFixtureFiles(root: string, spinePackages: readonly string[]): void {
+  for (const packageName of spinePackages) {
+    mkdirSync(join(root, `packages/${packageName}/src/tests`), { recursive: true });
+    writeFileSync(
+      join(root, `packages/${packageName}/src/index.ts`),
+      "export type PublicOptions = { enabled: boolean };\n",
+    );
+    writeFileSync(
+      join(root, `packages/${packageName}/src/tests/AuditEvidence.spec.ts`),
+      "it('exercises public options', () => {});\n",
+    );
+  }
 }
 
 function validReleaseGuide(): string {
@@ -302,6 +468,8 @@ function validReleaseGuide(): string {
 function validSpineDocs(spinePackages: readonly string[]): string {
   return [
     "# Croco 1.0 Spine",
+    "",
+    "The checked inventory is [silent-success-audit.json](silent-success-audit.json).",
     "",
     "## 0.x-to-1.0 Migration Matrix",
     "",

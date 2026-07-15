@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { argv, exit, stdout } from "node:process";
 
 type ChangesetsConfig = {
@@ -13,6 +13,52 @@ type PackageCatalog = {
   readonly spine?: {
     readonly packages?: unknown;
   };
+};
+
+type AuditSurfaceCategory = "configuration" | "decoder" | "lifecycle" | "fallback" | "verification";
+
+type AuditDisposition =
+  | "implemented-tested"
+  | "unsupported-rejected"
+  | "compatibility-fallback-tested"
+  | "remove-deprecate";
+
+type AuditEvidence = {
+  readonly path?: unknown;
+  readonly identifier?: unknown;
+};
+
+type AuditSurface = {
+  readonly id?: unknown;
+  readonly category?: unknown;
+  readonly disposition?: unknown;
+  readonly status?: unknown;
+  readonly members?: unknown;
+  readonly source?: AuditEvidence;
+  readonly test?: AuditEvidence;
+  readonly sources?: unknown;
+  readonly tests?: unknown;
+  readonly issue?: unknown;
+  readonly regressionTest?: unknown;
+};
+
+type AuditCoverage = {
+  readonly status?: unknown;
+  readonly surfaceIds?: unknown;
+  readonly reviewPaths?: unknown;
+  readonly searchTerms?: unknown;
+};
+
+type AuditPackage = {
+  readonly package?: unknown;
+  readonly coverage?: unknown;
+  readonly surfaces?: unknown;
+};
+
+type SilentSuccessAudit = {
+  readonly schemaVersion?: unknown;
+  readonly sourceIssue?: unknown;
+  readonly packages?: unknown;
 };
 
 type VersioningMode = "independent" | "fixed" | "linked" | "fixed-and-linked";
@@ -32,6 +78,20 @@ const REQUIRED_MIGRATION_MATRIX_TERMS = [
   "deprecated",
   "removed",
 ] as const;
+const AUDIT_CATEGORIES = [
+  "configuration",
+  "decoder",
+  "lifecycle",
+  "fallback",
+  "verification",
+] as const satisfies readonly AuditSurfaceCategory[];
+const AUDIT_DISPOSITIONS = new Set<AuditDisposition>([
+  "implemented-tested",
+  "unsupported-rejected",
+  "compatibility-fallback-tested",
+  "remove-deprecate",
+]);
+const GITHUB_ISSUE_URL = /^https:\/\/github\.com\/croco-dev\/framework\/issues\/\d+$/;
 
 function log(message: string): void {
   stdout.write(`${message}\n`);
@@ -78,6 +138,221 @@ function readSpinePackages(catalog: PackageCatalog): string[] {
 
     return packageName;
   });
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function readStringArray(value: unknown, allowEmpty = false): string[] | null {
+  return Array.isArray(value) && (allowEmpty || value.length > 0) && value.every(isNonEmptyString)
+    ? value
+    : null;
+}
+
+function validateRepositoryEvidence(
+  rootDir: string,
+  evidence: AuditEvidence | undefined,
+  label: string,
+): string[] {
+  if (!evidence || !isNonEmptyString(evidence.path) || !isNonEmptyString(evidence.identifier)) {
+    return [`${label} must include non-empty path and identifier fields.`];
+  }
+
+  if (isAbsolute(evidence.path)) {
+    return [`${label}.path must be repository-relative.`];
+  }
+
+  const resolvedPath = resolve(rootDir, evidence.path);
+  if (relative(rootDir, resolvedPath).startsWith("..")) {
+    return [`${label}.path must stay inside the repository.`];
+  }
+
+  if (!existsSync(resolvedPath) || !statSync(resolvedPath).isFile()) {
+    return [`${label}.path must reference an existing file: ${evidence.path}.`];
+  }
+
+  if (relative(realpathSync(rootDir), realpathSync(resolvedPath)).startsWith("..")) {
+    return [`${label}.path must stay inside the repository.`];
+  }
+
+  if (!readFileSync(resolvedPath, "utf-8").includes(evidence.identifier)) {
+    return [`${label}.identifier must occur in ${evidence.path}: ${evidence.identifier}.`];
+  }
+
+  return [];
+}
+
+function validateRepositoryEvidenceList(rootDir: string, value: unknown, label: string): string[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length === 0) {
+    return [`${label} must be a non-empty evidence array when provided.`];
+  }
+
+  return value.flatMap((entry, index) =>
+    validateRepositoryEvidence(
+      rootDir,
+      entry && typeof entry === "object" ? (entry as AuditEvidence) : undefined,
+      `${label}[${index}]`,
+    ),
+  );
+}
+
+function collectSilentSuccessAuditErrors(
+  rootDir: string,
+  audit: SilentSuccessAudit,
+  spinePackageSlugs: readonly string[],
+): string[] {
+  const errors: string[] = [];
+  if (audit.schemaVersion !== 1) {
+    errors.push("docs/release/silent-success-audit.json schemaVersion must be 1.");
+  }
+  if (audit.sourceIssue !== "https://github.com/croco-dev/framework/issues/1332") {
+    errors.push("docs/release/silent-success-audit.json sourceIssue must reference issue #1332.");
+  }
+  if (!Array.isArray(audit.packages)) {
+    return [...errors, "docs/release/silent-success-audit.json packages must be an array."];
+  }
+
+  const expectedPackages = new Set(spinePackageSlugs);
+  const packageCounts = new Map<string, number>();
+
+  for (const [packageIndex, rawPackage] of audit.packages.entries()) {
+    if (!rawPackage || typeof rawPackage !== "object") {
+      errors.push(`audit packages[${packageIndex}] must be an object.`);
+      continue;
+    }
+    const packageRecord = rawPackage as AuditPackage;
+    if (!isNonEmptyString(packageRecord.package)) {
+      errors.push(`audit packages[${packageIndex}].package must be a package slug.`);
+      continue;
+    }
+    const packageName = packageRecord.package;
+    packageCounts.set(packageName, (packageCounts.get(packageName) ?? 0) + 1);
+    if (!expectedPackages.has(packageName)) {
+      errors.push(
+        `audit package ${packageName} is not in docs/package-catalog.json spine.packages.`,
+      );
+    }
+
+    if (!Array.isArray(packageRecord.surfaces) || packageRecord.surfaces.length === 0) {
+      errors.push(`audit package ${packageName} must include at least one surface record.`);
+      continue;
+    }
+    const surfaceIds = new Set<string>();
+    const surfacesById = new Map<string, AuditSurface>();
+    for (const [surfaceIndex, rawSurface] of packageRecord.surfaces.entries()) {
+      if (!rawSurface || typeof rawSurface !== "object") {
+        errors.push(`audit package ${packageName} surfaces[${surfaceIndex}] must be an object.`);
+        continue;
+      }
+      const surface = rawSurface as AuditSurface;
+      const label = `audit package ${packageName} surfaces[${surfaceIndex}]`;
+      if (!isNonEmptyString(surface.id)) {
+        errors.push(`${label}.id must be non-empty.`);
+        continue;
+      }
+      if (surfaceIds.has(surface.id)) {
+        errors.push(`audit package ${packageName} must not repeat surface id ${surface.id}.`);
+      }
+      surfaceIds.add(surface.id);
+      surfacesById.set(surface.id, surface);
+      if (!AUDIT_CATEGORIES.includes(surface.category as AuditSurfaceCategory)) {
+        errors.push(`${label}.category must be one of ${AUDIT_CATEGORIES.join(", ")}.`);
+      }
+      if (!AUDIT_DISPOSITIONS.has(surface.disposition as AuditDisposition)) {
+        errors.push(`${label}.disposition is invalid.`);
+      }
+      if (surface.status !== "complete" && surface.status !== "unresolved") {
+        errors.push(`${label}.status must be complete or unresolved.`);
+      }
+      if (!readStringArray(surface.members)) {
+        errors.push(`${label}.members must be a non-empty string array.`);
+      }
+      errors.push(...validateRepositoryEvidence(rootDir, surface.source, `${label}.source`));
+      errors.push(...validateRepositoryEvidence(rootDir, surface.test, `${label}.test`));
+      errors.push(...validateRepositoryEvidenceList(rootDir, surface.sources, `${label}.sources`));
+      errors.push(...validateRepositoryEvidenceList(rootDir, surface.tests, `${label}.tests`));
+      if (surface.status === "unresolved") {
+        if (!isNonEmptyString(surface.issue) || !GITHUB_ISSUE_URL.test(surface.issue)) {
+          errors.push(`${label}.issue must link a focused croco-dev/framework issue.`);
+        }
+        if (!isNonEmptyString(surface.regressionTest)) {
+          errors.push(`${label}.regressionTest must name the owning-package acceptance boundary.`);
+        }
+      }
+    }
+
+    if (!packageRecord.coverage || typeof packageRecord.coverage !== "object") {
+      errors.push(`audit package ${packageName}.coverage must cover all required surface classes.`);
+      continue;
+    }
+    const coverage = packageRecord.coverage as Record<string, AuditCoverage>;
+    const coveredSurfaceIds = new Set<string>();
+    for (const category of AUDIT_CATEGORIES) {
+      const entry = coverage[category];
+      const label = `audit package ${packageName}.coverage.${category}`;
+      if (!entry || (entry.status !== "reviewed" && entry.status !== "none-found")) {
+        errors.push(`${label}.status must be reviewed or none-found.`);
+        continue;
+      }
+      const ids = readStringArray(entry.surfaceIds, entry.status === "none-found");
+      const reviewPaths = readStringArray(entry.reviewPaths);
+      const searchTerms = readStringArray(entry.searchTerms);
+      if (!reviewPaths || !searchTerms) {
+        errors.push(`${label} must include non-empty reviewPaths and searchTerms.`);
+      } else {
+        for (const reviewPath of reviewPaths) {
+          const resolvedPath = resolve(rootDir, reviewPath);
+          if (
+            isAbsolute(reviewPath) ||
+            relative(rootDir, resolvedPath).startsWith("..") ||
+            !existsSync(resolvedPath) ||
+            relative(realpathSync(rootDir), realpathSync(resolvedPath)).startsWith("..")
+          ) {
+            errors.push(
+              `${label}.reviewPaths must stay in the repository and exist: ${reviewPath}.`,
+            );
+          }
+        }
+      }
+      if (entry.status === "reviewed") {
+        if (!ids) {
+          errors.push(`${label}.surfaceIds must be non-empty when reviewed.`);
+          continue;
+        }
+        for (const id of ids) {
+          coveredSurfaceIds.add(id);
+          if (!surfacesById.has(id)) {
+            errors.push(`${label}.surfaceIds references unknown surface ${id}.`);
+          } else if (surfacesById.get(id)?.category !== category) {
+            errors.push(`${label}.surfaceIds references ${id} with a different category.`);
+          }
+        }
+      } else if (Array.isArray(entry.surfaceIds) && entry.surfaceIds.length > 0) {
+        errors.push(`${label}.surfaceIds must be empty when status is none-found.`);
+      }
+    }
+    for (const surfaceId of surfaceIds) {
+      if (!coveredSurfaceIds.has(surfaceId)) {
+        errors.push(
+          `audit package ${packageName} surface ${surfaceId} must be listed by its coverage class.`,
+        );
+      }
+    }
+  }
+
+  for (const [packageName, count] of packageCounts) {
+    if (count > 1) errors.push(`audit must not repeat package ${packageName}.`);
+  }
+  for (const packageName of spinePackageSlugs) {
+    if (!packageCounts.has(packageName)) {
+      errors.push(
+        `audit must include ${packageName} from docs/package-catalog.json spine.packages.`,
+      );
+    }
+  }
+  return errors;
 }
 
 function readGroups(value: unknown, fieldName: "fixed" | "linked"): string[][] {
@@ -300,14 +575,20 @@ function collectMigrationMatrixErrors(
 }
 
 function collectErrors(
+  rootDir: string,
   docs: string,
   spineDocs: string,
+  audit: SilentSuccessAudit,
   spinePackageSlugs: readonly string[],
   mode: VersioningMode,
   fixedGroups: readonly string[][],
   linkedGroups: readonly string[][],
 ): string[] {
   const errors: string[] = [];
+
+  if (!spineDocs.includes("silent-success-audit.json")) {
+    errors.push("docs/release/croco-1.0-spine.md must link silent-success-audit.json.");
+  }
 
   if (!docs.includes("`.changeset/config.json`")) {
     errors.push("RELEASING.md must identify .changeset/config.json as the source of truth.");
@@ -357,6 +638,7 @@ function collectErrors(
   }
 
   errors.push(...collectMigrationMatrixErrors(docs, spineDocs, spinePackageSlugs));
+  errors.push(...collectSilentSuccessAuditErrors(rootDir, audit, spinePackageSlugs));
 
   if (mode === "independent") {
     if (!docs.includes("**Mode**: Independent")) {
@@ -412,13 +694,18 @@ function main(): void {
     const packageCatalog = readJson<PackageCatalog>(join(rootDir, "docs/package-catalog.json"));
     const docs = readFileSync(join(rootDir, "RELEASING.md"), "utf-8");
     const spineDocs = readFileSync(join(rootDir, "docs/release/croco-1.0-spine.md"), "utf-8");
+    const audit = readJson<SilentSuccessAudit>(
+      join(rootDir, "docs/release/silent-success-audit.json"),
+    );
     const fixedGroups = readGroups(config.fixed ?? [], "fixed");
     const linkedGroups = readGroups(config.linked ?? [], "linked");
     const mode = getVersioningMode(fixedGroups, linkedGroups);
     const spinePackageSlugs = readSpinePackages(packageCatalog);
     const errors = collectErrors(
+      rootDir,
       docs,
       spineDocs,
+      audit,
       spinePackageSlugs,
       mode,
       fixedGroups,
