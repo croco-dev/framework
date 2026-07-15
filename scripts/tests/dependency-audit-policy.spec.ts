@@ -420,9 +420,9 @@ describe("dependency-audit-policy.mts", () => {
 
   it("merges advisories by canonical CVE-only and numeric audit identities", () => {
     const repo = createRuntimeRepo();
-    writeAudit(repo, [
+    const auditPass = [
       advisory({
-        cves: [" cve-2026-1234 "],
+        cves: [" cve-2026-9999 "],
         ghsa: undefined,
         id: undefined,
         path: "packages__runtime-core>runtime-lib>cve-left",
@@ -435,8 +435,8 @@ describe("dependency-audit-policy.mts", () => {
         path: "packages__runtime-core>runtime-lib>id-left",
         severity: "low",
       }),
-    ]);
-    writeAuditFile(repo, "prod-audit.json", [
+    ];
+    const prodAuditPass = [
       advisory({
         cves: ["CVE-2026-9999", "CVE-2026-1234"],
         ghsa: undefined,
@@ -451,18 +451,34 @@ describe("dependency-audit-policy.mts", () => {
         path: "packages__runtime-core>runtime-lib>id-right",
         severity: "moderate",
       }),
-    ]);
+    ];
+    writeAudit(repo, auditPass);
+    writeAuditFile(repo, "prod-audit.json", prodAuditPass);
 
     const result = runDependencyAuditPolicy({
       auditJsonPath: "audit.json",
       prodAuditJsonPath: "prod-audit.json",
       rootDir: repo,
     });
+    writeAudit(repo, prodAuditPass);
+    writeAuditFile(repo, "prod-audit.json", auditPass);
+    const reversed = runDependencyAuditPolicy({
+      auditJsonPath: "audit.json",
+      prodAuditJsonPath: "prod-audit.json",
+      rootDir: repo,
+    });
 
+    expect(reversed.advisoryFindings).toEqual(result.advisoryFindings);
     expect(result.advisoryFindings).toHaveLength(4);
-    expect(
-      result.advisoryFindings.filter((finding) => finding.advisory.cves?.includes("CVE-2026-1234")),
-    ).toHaveLength(2);
+    const cveFindings = result.advisoryFindings.filter((finding) =>
+      finding.advisory.cves?.includes("CVE-2026-9999"),
+    );
+    expect(cveFindings).toHaveLength(2);
+    expect(cveFindings.map((finding) => finding.advisory.cves)).toEqual([
+      ["CVE-2026-1234", "CVE-2026-9999"],
+      ["CVE-2026-1234", "CVE-2026-9999"],
+    ]);
+    expect(cveFindings.map((finding) => finding.advisory.severity)).toEqual(["high", "high"]);
     expect(result.advisoryFindings.filter((finding) => finding.advisory.id === 42)).toHaveLength(2);
   });
 
@@ -948,17 +964,18 @@ function writeAuditFile(repo: string, path: string, advisories: readonly Advisor
 }
 
 function expectPolicyProblem(run: () => unknown, message: string): void {
+  let caught: unknown;
   try {
     run();
-    throw new Error("Expected dependency audit policy to reject invalid evidence");
   } catch (error) {
-    expect(error).toEqual(
-      expect.objectContaining({
-        category: "BadRequest",
-        message,
-      }),
-    );
+    caught = error;
   }
+  expect(caught).toEqual(
+    expect.objectContaining({
+      category: "BadRequest",
+      message,
+    }),
+  );
 }
 
 function writeMetadata(repo: string, metadata: Record<string, unknown>): void {

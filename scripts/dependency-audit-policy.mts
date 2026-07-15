@@ -330,31 +330,60 @@ function emptyAuditJson(): AuditJson {
 }
 
 function mergeAuditJsons(auditJsons: readonly AuditJson[]): AuditJson {
-  const advisories = new Map<string, AuditAdvisory>();
+  const groups: { advisory: AuditAdvisory; aliases: Set<string> }[] = [];
   for (const auditJson of auditJsons) {
     for (const advisory of Object.values(auditJson.advisories)) {
       const normalized = normalizeAdvisory(advisory);
-      const key = advisoryKey(normalized);
-      const existing = advisories.get(key);
-      advisories.set(key, existing ? mergeAdvisories(existing, normalized) : normalized);
+      const aliases = new Set(advisoryKeys(normalized));
+      let merged = normalized;
+
+      for (let index = groups.length - 1; index >= 0; index -= 1) {
+        const group = groups[index];
+        if (group && [...aliases].some((alias) => group.aliases.has(alias))) {
+          merged = mergeAdvisories(group.advisory, merged);
+          for (const alias of group.aliases) {
+            aliases.add(alias);
+          }
+          groups.splice(index, 1);
+        }
+      }
+
+      groups.push({ advisory: merged, aliases });
     }
   }
   return {
     advisories: Object.fromEntries(
-      [...advisories.entries()].sort(([leftKey], [rightKey]) => compareStrings(leftKey, rightKey)),
+      groups
+        .map(({ advisory, aliases }) => [minimumAdvisoryKey(aliases), advisory] as const)
+        .sort(([leftKey], [rightKey]) => compareStrings(leftKey, rightKey)),
     ),
   };
 }
 
-function advisoryKey(advisory: AuditAdvisory): string {
+function advisoryKeys(advisory: AuditAdvisory): readonly string[] {
+  const keys: string[] = [];
   if (advisory.github_advisory_id) {
-    return `ghsa:${advisory.github_advisory_id}`;
+    keys.push(`ghsa:${advisory.github_advisory_id}`);
   }
-  if (advisory.cves?.[0]) {
-    return `cve:${advisory.cves[0]}`;
+  for (const cve of advisory.cves ?? []) {
+    keys.push(`cve:${cve}`);
   }
   if (advisory.id !== undefined) {
-    return `audit:${String(advisory.id)}`;
+    keys.push(`audit:${String(advisory.id)}`);
+  }
+  if (keys.length > 0) {
+    return keys;
+  }
+  throw new DependencyAuditPolicyProblem(
+    "Invalid audit advisory identity: expected GHSA, CVE, or audit id",
+    "BadRequest",
+  );
+}
+
+function minimumAdvisoryKey(aliases: ReadonlySet<string>): string {
+  const [key] = [...aliases].sort(compareStrings);
+  if (key) {
+    return key;
   }
   throw new DependencyAuditPolicyProblem(
     "Invalid audit advisory identity: expected GHSA, CVE, or audit id",
