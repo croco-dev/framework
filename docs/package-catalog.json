@@ -218,6 +218,120 @@
           "recoveryAction": "Complete test harness docs and conformance evidence, then move testing from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
         }
       }
+    },
+    "behavioralEvidence": {
+      "packages": {
+        "events-core": {
+          "runtime": "node",
+          "positive": {
+            "testFile": "src/tests/BehavioralEvidence.spec.ts",
+            "testName": "registers and resolves a public domain event by its stable event name"
+          },
+          "negative": {
+            "testFile": "src/tests/BehavioralEvidence.spec.ts",
+            "testName": "rejects duplicate public event names with a typed Problem"
+          }
+        },
+        "framework-context": {
+          "runtime": "node",
+          "positive": {
+            "testFile": "src/tests/RuntimeCapabilities.spec.ts",
+            "testName": "emits deterministic RuntimeCapabilityManifest v1 artifacts"
+          },
+          "negative": {
+            "testFile": "src/tests/RuntimeCapabilities.spec.ts",
+            "testName": "reports unsupported runtime requirements with a stable CROCO diagnostic"
+          }
+        },
+        "problems-core": {
+          "runtime": "node",
+          "positive": {
+            "testFile": "src/tests/ProblemSerializer.spec.ts",
+            "testName": "should serialize basic ProblemDetails"
+          },
+          "negative": {
+            "testFile": "src/tests/ProblemSerializer.spec.ts",
+            "testName": "should throw for missing required fields"
+          }
+        },
+        "protocols-rest": {
+          "runtime": "node",
+          "positive": {
+            "testFile": "src/tests/BehavioralEvidence.spec.ts",
+            "testName": "validates and returns a public REST request payload"
+          },
+          "negative": {
+            "testFile": "src/tests/BehavioralEvidence.spec.ts",
+            "testName": "rejects an invalid public REST request payload with a typed Problem"
+          }
+        },
+        "retry-core": {
+          "runtime": "node",
+          "positive": {
+            "testFile": "src/tests/FailureSemantics.spec.ts",
+            "testName": "retries transient Problem categories until success"
+          },
+          "negative": {
+            "testFile": "src/tests/FailureSemantics.spec.ts",
+            "testName": "exposes timeout guard failures as a typed Problem from the package root"
+          }
+        },
+        "telemetry-api": {
+          "runtime": "node",
+          "positive": {
+            "testFile": "src/tests/BehavioralEvidence.spec.ts",
+            "testName": "returns the public span callback result to the caller"
+          },
+          "negative": {
+            "testFile": "src/tests/BehavioralEvidence.spec.ts",
+            "testName": "propagates a public span callback failure to the caller"
+          }
+        },
+        "telemetry-sdk-node": {
+          "runtime": "node",
+          "positive": {
+            "testFile": "src/tests/BehavioralEvidence.spec.ts",
+            "testName": "samples a valid trace through the public Node telemetry sampler"
+          },
+          "negative": {
+            "testFile": "src/tests/BehavioralEvidence.spec.ts",
+            "testName": "rejects an invalid public sampling probability with a typed Problem"
+          }
+        },
+        "transports-http": {
+          "runtime": "node",
+          "positive": {
+            "testFile": "src/tests/BehavioralEvidence.spec.ts",
+            "testName": "declares and reads public HTTP middleware capabilities deterministically"
+          },
+          "negative": {
+            "testFile": "src/tests/BehavioralEvidence.spec.ts",
+            "testName": "rejects an unsupported public HTTP middleware capability with a stable diagnostic"
+          }
+        },
+        "tx-core": {
+          "runtime": "node",
+          "positive": {
+            "testFile": "src/tests/Transactional.spec.ts",
+            "testName": "should create new transaction when not in transaction"
+          },
+          "negative": {
+            "testFile": "src/tests/Transactional.spec.ts",
+            "testName": "should throw TxPropagationError when not in transaction"
+          }
+        },
+        "tx-drizzle": {
+          "runtime": "node",
+          "positive": {
+            "testFile": "src/tests/DrizzleTxAdapter.spec.ts",
+            "testName": "should delegate to drizzle db.transaction"
+          },
+          "negative": {
+            "testFile": "src/tests/DrizzleTxAdapter.spec.ts",
+            "testName": "should fail fast when nested transaction client does not support savepoint"
+          }
+        }
+      }
     }
   },
   "groups": {
