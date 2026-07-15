@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Container, Context as FrameworkContext } from "@croco/framework-context";
+import { Container, Context as FrameworkContext, LOGGER_TOKEN } from "@croco/framework-context";
 import type { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -56,6 +56,13 @@ describe("ErrorHandler", () => {
         });
       },
     } as unknown as CrocoHttpContext;
+  });
+
+  it("should resolve its logger token when constructed by the container", () => {
+    Container.register(ErrorHandler, "singleton");
+    Container.set(LOGGER_TOKEN, mockLogger);
+
+    expect(Container.get(ErrorHandler)).toBeInstanceOf(ErrorHandler);
   });
 
   describe("RFC 7807 Standard Field Protection", () => {
