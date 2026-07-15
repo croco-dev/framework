@@ -1,17 +1,25 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
   buildSpinePromotionMarkdown,
+  createCiPromotionEvidenceContext,
+  createReleasePromotionEvidenceContext,
   createSpinePromotionReport,
   hasSpinePromotionFailures,
+  type PromotionEvidenceContext,
+  type PromotionEvidenceReference,
   parseArgs,
+  readExplicitPromotionEvidenceContext,
   writeSpinePromotionReport,
 } from "../spine-promotion-check.mts";
 
 const tempRepos: string[] = [];
+const commitSha = "0123456789abcdef";
+const startedAt = "2026-01-01T00:00:00.000Z";
+const completedAt = "2026-01-01T00:10:00.000Z";
 
 describe("spine-promotion-check.mts", () => {
   afterEach(() => {
@@ -20,196 +28,427 @@ describe("spine-promotion-check.mts", () => {
     }
   });
 
-  it("passes when beta spine packages have promotion accountability", () => {
+  it("passes structured references backed by the current blocking test task", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    const report = createReport(fixture.repo, createContext("@croco/protocols-core"));
+
+    expect(hasSpinePromotionFailures(report)).toBe(false);
+    expect(buildSpinePromotionMarkdown(report)).toContain("promotion-ready");
+  });
+
+  it("rejects arbitrary prose instead of treating it as executable evidence", () => {
     const repo = createTempRepo();
     writePackage(repo, "protocols-core");
-    writeCatalogMetadata(repo, {
-      betaPackages: ["protocols-core"],
-      promotionPackages: {
-        "protocols-core": {
-          owner: "protocol-contracts",
-          targetEvidence: ["route contract graph fixtures"],
-          recoveryAction: "Promote after strict contract diagnostics evidence is complete.",
-        },
-      },
-      spinePackages: ["protocols-core"],
-    });
+    writeCatalogMetadata(repo, "protocols-core", ["route contract graph fixtures"]);
 
-    const report = createReport(repo);
-    const markdown = buildSpinePromotionMarkdown(report);
-
-    expect(hasSpinePromotionFailures(report)).toBe(false);
-    expect(markdown).toContain("| `@croco/protocols-core` | Core | `packages/protocols-core`");
-    expect(markdown).toContain("protocol-contracts");
-    expect(markdown).toContain("route contract graph fixtures");
-    expect(markdown).toContain("Promote after strict contract diagnostics evidence is complete.");
-  });
-
-  it("fails when a beta spine package lacks promotion metadata", () => {
-    const repo = createTempRepo();
-    writePackage(repo, "openapi-spec");
-    writeCatalogMetadata(repo, {
-      betaPackages: ["openapi-spec"],
-      spinePackages: ["openapi-spec"],
-    });
-
-    const report = createReport(repo);
-    const markdown = buildSpinePromotionMarkdown(report);
+    const report = createReport(repo, createContext("@croco/protocols-core"));
 
     expect(hasSpinePromotionFailures(report)).toBe(true);
-    expect(markdown).toContain("unaccounted: missing owner, targetEvidence, recoveryAction");
+    expect(report.betaSpineRows[0]?.missingFields).toContain("targetEvidence");
   });
 
-  it("fails when promotion metadata has empty required fields", () => {
-    const repo = createTempRepo();
-    writePackage(repo, "rpc-codegen");
-    writeCatalogMetadata(repo, {
-      betaPackages: ["rpc-codegen"],
-      promotionPackages: {
-        "rpc-codegen": {
-          owner: " ",
-          targetEvidence: [" "],
-          recoveryAction: "",
-        },
-      },
-      spinePackages: ["rpc-codegen"],
-    });
-
-    const report = createReport(repo);
-    const markdown = buildSpinePromotionMarkdown(report);
-
-    expect(hasSpinePromotionFailures(report)).toBe(true);
-    expect(markdown).toContain("unaccounted: missing owner, targetEvidence, recoveryAction");
-  });
-
-  it("does not fail for unrelated non-spine beta packages", () => {
-    const repo = createTempRepo();
-    writePackage(repo, "stable");
-    writePackage(repo, "non-spine-beta");
-    writeCatalogMetadata(repo, {
-      betaPackages: ["non-spine-beta"],
-      productionPackages: ["stable"],
-      spinePackages: ["stable"],
-    });
-
-    const report = createReport(repo);
-    const markdown = buildSpinePromotionMarkdown(report);
-
-    expect(hasSpinePromotionFailures(report)).toBe(false);
-    expect(report.ignoredNonSpineNonProductionCount).toBe(1);
-    expect(markdown).toContain("Beta spine packages: 0");
-  });
-
-  it("fails when an alpha package is added to the release spine", () => {
-    const repo = createTempRepo();
-    writePackage(repo, "experimental-spine");
-    writeCatalogMetadata(repo, {
-      alphaPackages: ["experimental-spine"],
-      spinePackages: ["experimental-spine"],
-    });
-
-    const report = createReport(repo);
-    const markdown = buildSpinePromotionMarkdown(report);
-
-    expect(hasSpinePromotionFailures(report)).toBe(true);
-    expect(report.catalogErrors).toContain(
-      "docs/package-catalog.json: spine package experimental-spine is alpha; move it to maturity.beta.packages with spine.promotion.packages.experimental-spine metadata before 1.0 promotion, or remove it from spine.packages",
-    );
-    expect(markdown).toContain("spine package experimental-spine is alpha");
-  });
-
-  it("warns without failing for stale promotion metadata outside the beta spine", () => {
-    const repo = createTempRepo();
-    writePackage(repo, "stable");
-    writeCatalogMetadata(repo, {
-      productionPackages: ["stable"],
-      promotionPackages: {
-        stable: {
-          owner: "release",
-          targetEvidence: ["already production-ready"],
-          recoveryAction: "Remove stale promotion metadata.",
-        },
-      },
-      spinePackages: ["stable"],
-    });
-
-    const report = createReport(repo);
-    const markdown = buildSpinePromotionMarkdown(report);
-
-    expect(hasSpinePromotionFailures(report)).toBe(false);
-    expect(report.catalogWarnings).toEqual([
-      "docs/package-catalog.json: spine.promotion.packages.stable is outside the current beta spine and should be removed when promotion is complete or out of scope",
+  it("rejects malformed references even when other references are valid", () => {
+    const fixture = createPromotionFixture("protocols-core", [
+      ...defaultReferences(),
+      { description: "ambiguous", role: "behavior", commandId: "test", testPath: 42 },
     ]);
-    expect(markdown).toContain(
-      "spine.promotion.packages.stable is outside the current beta spine and should be removed when promotion is complete or out of scope",
+
+    const report = createReport(fixture.repo, createContext("@croco/protocols-core"));
+
+    expect(report.catalogErrors).toContainEqual(
+      expect.stringContaining("targetEvidence entries require"),
     );
   });
 
-  it("accounts for unscoped create-croco-app beta spine metadata", () => {
-    const repo = createTempRepo();
-    writePackage(repo, "create-croco-app", { packageName: "create-croco-app" });
-    writeCatalogMetadata(repo, {
-      betaPackages: ["create-croco-app"],
-      groupName: "Tooling",
-      promotionPackages: {
-        "create-croco-app": {
-          owner: "generated-app-tooling",
-          targetEvidence: ["generated app smoke matrix"],
-          recoveryAction: "Promote after clean install provenance is complete.",
-        },
-      },
-      spinePackages: ["create-croco-app"],
-    });
+  it("rejects empty selectors instead of degrading them to command-only evidence", () => {
+    const fixture = createPromotionFixture("protocols-core", [
+      reference("behavior", { testPath: " " }),
+      reference("compatibility"),
+      reference("failure-recovery"),
+    ]);
 
-    const report = createReport(repo);
-    const markdown = buildSpinePromotionMarkdown(report);
-
-    expect(hasSpinePromotionFailures(report)).toBe(false);
-    expect(markdown).toContain("| `create-croco-app` | Tooling | `packages/create-croco-app`");
-    expect(markdown).toContain("generated-app-tooling");
+    expect(
+      createReport(fixture.repo, createContext("@croco/protocols-core")).catalogErrors,
+    ).toContainEqual(expect.stringContaining("targetEvidence entries require"));
   });
 
-  it("accepts the pnpm CLI separator before options", () => {
-    const repo = createTempRepo();
+  it("rejects unknown and self-referencing command IDs", () => {
+    const fixture = createPromotionFixture("protocols-core", [
+      reference("behavior", { commandId: "missing-command" }),
+      reference("compatibility", { commandId: "spine-promotion" }),
+      reference("failure-recovery"),
+    ]);
+    const report = createReport(fixture.repo, createContext("@croco/protocols-core"));
 
-    const options = parseArgs(["--", "--root", repo, "--output-dir", "reports"]);
+    expect(report.betaSpineRows[0]?.evidenceFailures).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("unknown blocking command missing-command"),
+        expect.stringContaining("spine-promotion cannot reference itself"),
+      ]),
+    );
+  });
+
+  it.each(["pending", "skipped", "failed", "timed_out", "interrupted"] as const)(
+    "rejects a %s current-run result",
+    (outcome) => {
+      const fixture = createPromotionFixture("protocols-core");
+      const context = createContext("@croco/protocols-core", { outcome });
+
+      expect(hasSpinePromotionFailures(createReport(fixture.repo, context))).toBe(true);
+    },
+  );
+
+  it("rejects advisory-only and mismatched run-attempt evidence", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    const context = createContext("@croco/protocols-core", {
+      blocking: false,
+      commandRunAttempt: "2",
+    });
+    const failures = createReport(fixture.repo, context).betaSpineRows[0]?.evidenceFailures ?? [];
+
+    expect(failures).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("advisory-only"),
+        expect.stringContaining("another run or attempt"),
+      ]),
+    );
+  });
+
+  it("rejects a renamed test and a test excluded from the package task", () => {
+    const missing = createPromotionFixture("protocols-core", [
+      reference("behavior", { testPath: "src/tests/renamed.spec.ts" }),
+      reference("compatibility"),
+      reference("failure-recovery"),
+    ]);
+    const excluded = createPromotionFixture(
+      "cli",
+      undefined,
+      "vitest run --exclude src/tests/evidence.spec.ts",
+    );
+
+    expect(
+      hasSpinePromotionFailures(createReport(missing.repo, createContext("@croco/protocols-core"))),
+    ).toBe(true);
+    expect(
+      hasSpinePromotionFailures(createReport(excluded.repo, createContext("@croco/cli"))),
+    ).toBe(true);
+  });
+
+  it("rejects a test omitted by an explicit Vitest selector", () => {
+    const fixture = createPromotionFixture(
+      "protocols-core",
+      undefined,
+      "vitest run src/tests/another.spec.ts",
+    );
+
+    expect(
+      buildSpinePromotionMarkdown(
+        createReport(fixture.repo, createContext("@croco/protocols-core")),
+      ),
+    ).toContain("is not selected by the package test task");
+  });
+
+  it("rejects specs absent from the effective Vitest inventory and symlink escapes", () => {
+    const inventoryFixture = createPromotionFixture("protocols-core");
+    const inventoryReport = createSpinePromotionReport({
+      currentCommit: commitSha,
+      evidenceContext: createContext("@croco/protocols-core"),
+      rootDir: inventoryFixture.repo,
+      testInventory: () => [],
+    });
+    const symlinkFixture = createPromotionFixture("testing");
+    const linkedTest = join(
+      symlinkFixture.repo,
+      "packages",
+      "testing",
+      "src",
+      "tests",
+      "evidence.spec.ts",
+    );
+    rmSync(linkedTest);
+    writeFileSync(join(symlinkFixture.repo, "outside.spec.ts"), "export {};\n");
+    symlinkSync(join(symlinkFixture.repo, "outside.spec.ts"), linkedTest);
+
+    expect(buildSpinePromotionMarkdown(inventoryReport)).toContain(
+      "absent from the effective Vitest test inventory",
+    );
+    expect(
+      buildSpinePromotionMarkdown(
+        createReport(symlinkFixture.repo, createContext("@croco/testing")),
+      ),
+    ).toContain("resolves outside the package");
+  });
+
+  it("requires the selected package task to pass in the current Turbo result", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    const context = createContext("@croco/another-package");
+
+    expect(buildSpinePromotionMarkdown(createReport(fixture.repo, context))).toContain(
+      "@croco/protocols-core test task did not pass in the current run",
+    );
+  });
+
+  it.each([
+    { exists: false, fresh: true, semanticStatus: "passed" as const },
+    { exists: true, fresh: false, semanticStatus: "passed" as const },
+    { exists: true, fresh: true, semanticStatus: "failed" as const },
+  ])("rejects missing, stale, or semantically failed required reports", (artifact) => {
+    const fixture = createPromotionFixture("create-croco-app", [
+      reference("behavior", {
+        artifactPath: "ci-reports/generated-apps/spine-blocking-matrix.json",
+        commandId: "generated-app-smoke",
+        testPath: undefined,
+      }),
+      reference("compatibility"),
+      reference("failure-recovery"),
+    ]);
+    const context = createContext("create-croco-app", { artifact });
+
+    expect(hasSpinePromotionFailures(createReport(fixture.repo, context))).toBe(true);
+  });
+
+  it("rejects reports not declared by the authoritative command manifest", () => {
+    const fixture = createPromotionFixture("create-croco-app", [
+      reference("behavior", {
+        artifactPath: "ci-reports/arbitrary.json",
+        commandId: "generated-app-smoke",
+        testPath: undefined,
+      }),
+      reference("compatibility"),
+      reference("failure-recovery"),
+    ]);
+
+    expect(
+      buildSpinePromotionMarkdown(createReport(fixture.repo, createContext("create-croco-app"))),
+    ).toContain("is not declared by generated-app-smoke");
+  });
+
+  it("rejects unknown and traversal artifact paths in local contexts", () => {
+    const fixture = createPromotionFixture("create-croco-app");
+    const contextPath = join(fixture.repo, "local-context.json");
+    writeJson(contextPath, {
+      schemaVersion: 1,
+      source: "local",
+      commitSha,
+      runId: "run-1",
+      runAttempt: "1",
+      startedAt,
+      completedAt,
+      commands: [
+        { commandId: "test", artifacts: [] },
+        { commandId: "generated-app-smoke", artifacts: [{ path: "../../outside.json" }] },
+      ],
+    });
+
+    expect(() => readExplicitPromotionEvidenceContext(contextPath, fixture.repo)).toThrow(
+      "is not declared by generated-app-smoke",
+    );
+  });
+
+  it("rejects commit mismatch and release references to later commands", () => {
+    const fixture = createPromotionFixture("protocols-core", [
+      reference("behavior", { commandId: "public-api", testPath: undefined }),
+      reference("compatibility"),
+      reference("failure-recovery"),
+    ]);
+    const context = createContext("@croco/protocols-core", {
+      commitSha: "stale",
+      source: "release",
+    });
+    const failures = createReport(fixture.repo, context).betaSpineRows[0]?.evidenceFailures ?? [];
+
+    expect(failures).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("does not match HEAD"),
+        expect.stringContaining("does not precede spine-promotion"),
+      ]),
+    );
+  });
+
+  it("rejects command timestamps outside the evidence run interval", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    const context = createContext("@croco/protocols-core", {
+      commandCompletedAt: "2026-01-01T00:11:00.000Z",
+    });
+
+    expect(buildSpinePromotionMarkdown(createReport(fixture.repo, context))).toContain(
+      "timestamps are outside the current-run interval",
+    );
+  });
+
+  it("normalizes equivalent CI and release evidence from existing run artifacts", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    const runId = "run-1";
+    const runAttempt = "1";
+    writeJson(join(fixture.repo, "ci-run.json"), {
+      commitSha,
+      runId,
+      runAttempt,
+      startedAt,
+    });
+    writeTurboTestSummary(fixture.repo, "random-summary-name.json", "@croco/protocols-core");
+
+    const ciContext = createCiPromotionEvidenceContext({
+      env: { SPINE_PROMOTION_TEST_OUTCOME: "success" },
+      rootDir: fixture.repo,
+      runFile: join(fixture.repo, "ci-run.json"),
+    });
+    writeReleaseCheckpoint(fixture.repo, runId, runAttempt);
+    const releaseContext = createReleasePromotionEvidenceContext({
+      checkpointPath: join(fixture.repo, "release-checkpoint.json"),
+      commitSha,
+      runId,
+      runAttempt,
+    });
+
+    expect(hasSpinePromotionFailures(createReport(fixture.repo, ciContext))).toBe(false);
+    expect(hasSpinePromotionFailures(createReport(fixture.repo, releaseContext))).toBe(false);
+    expect(() =>
+      createReleasePromotionEvidenceContext({
+        checkpointPath: join(fixture.repo, "release-checkpoint.json"),
+        commitSha,
+        runId: "another-run",
+        runAttempt,
+      }),
+    ).toThrow("checkpoint provenance does not match");
+  });
+
+  it("fails stale promotion metadata outside the beta spine", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "stable");
+    writeCatalog(repo, {
+      betaPackages: [],
+      productionPackages: ["stable"],
+      promotionPackages: { stable: metadata(defaultReferences()) },
+      spinePackages: ["stable"],
+    });
+
+    const report = createReport(repo, createContext("@croco/stable"));
+
+    expect(hasSpinePromotionFailures(report)).toBe(true);
+    expect(report.catalogErrors[0]).toContain("must be removed");
+  });
+
+  it("fails closed when no current-run context is supplied", () => {
+    const fixture = createPromotionFixture("protocols-core");
+
+    expect(hasSpinePromotionFailures(createReport(fixture.repo, null))).toBe(true);
+  });
+
+  it("accepts pnpm separators and explicit context input", () => {
+    const repo = createTempRepo();
+    const options = parseArgs(["--", "--root", repo, "--context", "context.json"]);
 
     expect(options.rootDir).toBe(repo);
-    expect(options.outputDir).toBe(join(repo, "reports"));
+    expect(options.contextFile).toBe(join(repo, "context.json"));
   });
 
-  it("writes the spine promotion markdown report artifact", () => {
-    const repo = createTempRepo();
-    writePackage(repo, "testing");
-    writeCatalogMetadata(repo, {
-      betaPackages: ["testing"],
-      promotionPackages: {
-        testing: {
-          owner: "release-tooling",
-          targetEvidence: ["test harness API docs"],
-          recoveryAction: "Promote after conformance utility coverage is complete.",
-        },
-      },
-      spinePackages: ["testing"],
-    });
+  it("writes the markdown report artifact", () => {
+    const fixture = createPromotionFixture("testing");
+    const report = createReport(fixture.repo, createContext("@croco/testing"));
+    const markdownPath = writeSpinePromotionReport(report, join(fixture.repo, "reports"));
 
-    const report = createReport(repo);
-    const markdownPath = writeSpinePromotionReport(
-      report,
-      join(repo, "ci-reports", "package-quality"),
-    );
-    const markdown = readFileSync(markdownPath, "utf-8");
-
-    expect(markdownPath).toBe(join(repo, "ci-reports", "package-quality", "spine-promotion.md"));
-    expect(markdown).toContain("# Beta Spine Promotion Gate");
+    expect(readFileSync(markdownPath, "utf-8")).toContain("# Beta Spine Promotion Gate");
   });
 });
 
-function createReport(repo: string) {
+function createPromotionFixture(
+  shortName: string,
+  references: readonly unknown[] = defaultReferences(),
+  testScript = "vitest run",
+): { readonly repo: string } {
+  const repo = createTempRepo();
+  writePackage(repo, shortName, testScript);
+  writeCatalogMetadata(repo, shortName, references);
+  return { repo };
+}
+
+function createReport(repo: string, evidenceContext: PromotionEvidenceContext | null) {
   return createSpinePromotionReport({
-    generatedAt: "2026-01-01T00:00:00.000Z",
+    currentCommit: commitSha,
+    evidenceContext,
+    generatedAt: completedAt,
     rootDir: repo,
+    testInventory: () => ["src/tests/evidence.spec.ts"],
   });
+}
+
+function createContext(
+  packageName: string,
+  options: {
+    readonly artifact?: {
+      readonly exists: boolean;
+      readonly fresh: boolean;
+      readonly semanticStatus: "passed" | "failed";
+    };
+    readonly blocking?: boolean;
+    readonly commandRunAttempt?: string;
+    readonly commandCompletedAt?: string;
+    readonly commitSha?: string;
+    readonly outcome?: "passed" | "failed" | "pending" | "skipped" | "timed_out" | "interrupted";
+    readonly source?: "ci" | "release" | "local";
+  } = {},
+): PromotionEvidenceContext {
+  const base = {
+    artifacts: [],
+    blocking: options.blocking ?? true,
+    completedAt: options.commandCompletedAt ?? completedAt,
+    outcome: options.outcome ?? "passed",
+    runAttempt: options.commandRunAttempt ?? "1",
+    runId: "run-1",
+    startedAt,
+    testTasks: [{ packageName, status: "passed" as const, taskId: `${packageName}#test` }],
+  };
+  return {
+    schemaVersion: 1,
+    source: options.source ?? "local",
+    commitSha: options.commitSha ?? commitSha,
+    runId: "run-1",
+    runAttempt: "1",
+    startedAt,
+    completedAt,
+    commands: [
+      { ...base, commandId: "test" },
+      {
+        ...base,
+        commandId: "generated-app-smoke",
+        artifacts: [
+          {
+            exists: options.artifact?.exists ?? true,
+            fresh: options.artifact?.fresh ?? true,
+            path: "ci-reports/generated-apps/spine-blocking-matrix.json",
+            semanticStatus: options.artifact?.semanticStatus ?? "passed",
+          },
+        ],
+      },
+      { ...base, commandId: "public-api" },
+    ],
+  };
+}
+
+function defaultReferences(): readonly PromotionEvidenceReference[] {
+  return [reference("behavior"), reference("compatibility"), reference("failure-recovery")];
+}
+
+function reference(
+  role: PromotionEvidenceReference["role"],
+  overrides: Partial<PromotionEvidenceReference> = {},
+): PromotionEvidenceReference {
+  return {
+    description: `${role} evidence`,
+    role,
+    commandId: "test",
+    testPath: "src/tests/evidence.spec.ts",
+    ...overrides,
+  };
+}
+
+function metadata(targetEvidence: readonly unknown[]) {
+  return {
+    owner: "owner",
+    targetEvidence,
+    recoveryAction: "Fix the referenced blocking evidence and rerun the gate.",
+  };
 }
 
 function createTempRepo(): string {
@@ -219,91 +458,54 @@ function createTempRepo(): string {
   return repo;
 }
 
-function writePackage(
-  repo: string,
-  dirName: string,
-  options: { readonly packageName?: string } = {},
-): void {
-  const packageDir = join(repo, "packages", dirName);
-  mkdirSync(packageDir, { recursive: true });
+function writePackage(repo: string, shortName: string, testScript = "vitest run"): void {
+  const packageDir = join(repo, "packages", shortName);
   writeJson(join(packageDir, "package.json"), {
-    name: options.packageName ?? `@croco/${dirName}`,
-    scripts: {
-      build: "tsup",
-      test: "vitest run",
-      typecheck: "tsc --noEmit",
-    },
+    name: shortName === "create-croco-app" ? shortName : `@croco/${shortName}`,
+    scripts: { build: "tsup", test: testScript, typecheck: "tsc --noEmit" },
   });
+  mkdirSync(join(packageDir, "src", "tests"), { recursive: true });
+  writeFileSync(join(packageDir, "src", "tests", "evidence.spec.ts"), "export {};\n");
 }
 
 function writeCatalogMetadata(
   repo: string,
+  shortName: string,
+  targetEvidence: readonly unknown[],
+): void {
+  writeCatalog(repo, {
+    betaPackages: [shortName],
+    productionPackages: [],
+    promotionPackages: { [shortName]: metadata(targetEvidence) },
+    spinePackages: [shortName],
+  });
+}
+
+function writeCatalog(
+  repo: string,
   options: {
-    readonly alphaPackages?: readonly string[];
-    readonly betaPackages?: readonly string[];
-    readonly groupName?: string;
-    readonly productionPackages?: readonly string[];
-    readonly promotionPackages?: Record<
-      string,
-      {
-        readonly owner: string;
-        readonly targetEvidence: readonly string[];
-        readonly recoveryAction: string;
-      }
-    >;
-    readonly spinePackages?: readonly string[];
+    readonly betaPackages: readonly string[];
+    readonly productionPackages: readonly string[];
+    readonly promotionPackages: Readonly<Record<string, unknown>>;
+    readonly spinePackages: readonly string[];
   },
 ): void {
-  const alphaPackages = options.alphaPackages ?? [];
-  const groupName = options.groupName ?? "Core";
-  const betaPackages = options.betaPackages ?? [];
-  const productionPackages = options.productionPackages ?? [];
-  const spinePackages = options.spinePackages ?? [];
-  const allPackageNames = [
-    ...new Set([...spinePackages, ...productionPackages, ...betaPackages, ...alphaPackages]),
-  ];
-  const spine =
-    options.promotionPackages === undefined
-      ? {
-          label: "Croco 1.0 spine",
-          description: "Fixture spine",
-          packages: spinePackages,
-        }
-      : {
-          label: "Croco 1.0 spine",
-          description: "Fixture spine",
-          packages: spinePackages,
-          promotion: {
-            packages: options.promotionPackages,
-          },
-        };
-
   writeJson(join(repo, "docs", "package-catalog.json"), {
     schemaVersion: 1,
-    spine,
+    spine: {
+      packages: options.spinePackages,
+      promotion: { packages: options.promotionPackages },
+    },
     groups: {
-      [groupName]: {
-        description: "Fixture packages",
-        packages: allPackageNames,
+      Core: {
+        packages: [...new Set([...options.spinePackages, ...options.productionPackages])],
       },
     },
     maturity: {
-      production: {
-        label: "production-ready",
-        packages: productionPackages,
-      },
-      beta: {
-        label: "beta",
-        packages: betaPackages,
-      },
-      alpha: {
-        label: "alpha",
-        packages: alphaPackages,
-      },
-      deprecated: {
-        label: "deprecated",
-        packages: [],
-      },
+      production: { packages: options.productionPackages },
+      beta: { packages: options.betaPackages },
+      alpha: { packages: [] },
+      deprecated: { packages: [] },
     },
   });
 }
@@ -311,4 +513,50 @@ function writeCatalogMetadata(
 function writeJson(filePath: string, value: unknown): void {
   mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function writeTurboTestSummary(repo: string, fileName: string, packageName: string): void {
+  writeJson(join(repo, ".turbo", "runs", fileName), {
+    execution: {
+      command: "turbo run test --summarize --continue=always",
+      endTime: Date.now(),
+      exitCode: 0,
+    },
+    tasks: [
+      {
+        taskId: `${packageName}#test`,
+        task: "test",
+        package: packageName,
+        directory: `packages/${packageName.replace(/^@croco\//, "")}`,
+        execution: { exitCode: 0 },
+      },
+    ],
+  });
+}
+
+function writeReleaseCheckpoint(repo: string, runId: string, runAttempt: string): void {
+  writeJson(join(repo, "release-checkpoint.json"), {
+    schemaVersion: 1,
+    generatedAt: startedAt,
+    rootDir: repo,
+    provenance: { commitSha, runId, runAttempt },
+    checks: [
+      {
+        id: "test",
+        status: "passed",
+        startedAt,
+        completedAt,
+        artifacts: [],
+      },
+      {
+        id: "spine-promotion",
+        status: "running",
+        startedAt: completedAt,
+        completedAt: null,
+        artifacts: [],
+      },
+    ],
+    runId,
+    runAttempt,
+  });
 }

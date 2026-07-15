@@ -264,7 +264,7 @@ describe("release workflow quality gates", () => {
     expect(workflow).toContain("pnpm first-success:verify");
     expect(workflow).toContain("pnpm production-ready:check");
     expect(workflow).not.toContain("pnpm production-ready:check -- --require-task-summaries");
-    expect(workflow).toContain("pnpm spine-promotion:check");
+    expect(workflow).not.toContain("          pnpm spine-promotion:check\n");
     expect(workflow).toContain("pnpm test:coverage:core:warning");
     expect(workflow).toContain("pnpm public-api:check");
     expect(workflow).toContain("if: steps.release_work.outputs.should_run_publish_gates == 'true'");

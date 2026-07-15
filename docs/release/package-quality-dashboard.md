@@ -170,22 +170,25 @@ The CI gate appends `ci-reports/package-quality/provider-certification.md` to th
 
 ## Beta Spine Promotion Gate
 
-`pnpm spine-promotion:check` verifies promotion accountability for packages that are both in `docs/package-catalog.json` `spine.packages` and `maturity.beta.packages`.
+`pnpm spine-promotion:check` verifies executable promotion evidence for packages that are both in `docs/package-catalog.json` `spine.packages` and `maturity.beta.packages`.
 It also fails catalog entries that place alpha, deprecated, or uncategorized packages in the spine, because release-critical packages must reach beta before promotion accountability can be evaluated.
+The gate resolves command IDs through the unchanged release spine manifest and requires passed evidence from the current commit, run ID, and run attempt. CI adapts existing step outcomes, Turbo test summaries, and generated-app reports; `release:spine-evidence` reuses its in-progress checkpoint without rerunning commands.
 The gate writes `ci-reports/package-quality/spine-promotion.md`, appends that report to the GitHub Actions job summary, and uploads it with the package quality dashboard artifact.
 
 For each beta spine package, `docs/package-catalog.json` must define `spine.promotion.packages.<name>` with:
 
 - `owner`;
-- `targetEvidence`;
+- `targetEvidence`, as structured `description`, `role`, `commandId`, and optional package-owned `testPath` or `artifactPath` references;
 - `recoveryAction`.
 
-The gate is intentionally scoped to the beta spine. It does not fail unrelated beta, alpha, or deprecated packages outside `spine.packages`, and it does not require promotion metadata for spine packages already listed in `maturity.production.packages`.
+Each package must provide behavior, compatibility, and failure-recovery evidence. A referenced test must exist under the owning package, be included by its Vitest task, and have a passed package task in the current Turbo summary. A referenced report must exist, be fresh for the run, and contain machine-readable pass status. Arbitrary prose, advisory-only results, unknown IDs, stale reports, and skipped or failed commands block promotion.
+
+The gate is intentionally scoped to the beta spine. It does not fail unrelated beta, alpha, or deprecated packages outside `spine.packages`. Promotion metadata for a package outside the beta spine is stale and fails until removed.
 
 Local recovery:
 
 ```bash
-pnpm spine-promotion:check
+pnpm spine-promotion:check -- --context /path/to/current-run-context.json
 ```
 
 When the target evidence is complete, move the package from `maturity.beta.packages` to `maturity.production.packages`, remove stale promotion metadata, and run:

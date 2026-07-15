@@ -121,9 +121,8 @@ jobs:
           fi
           pnpm quick-start-lambda:smoke
           pnpm first-success:verify
-          # CI and release:spine-evidence cover --require-task-summaries after summarized build/typecheck/test.
+          # CI and release:spine-evidence cover current-run task and promotion evidence.
           pnpm production-ready:check
-          pnpm spine-promotion:check
           pnpm test:coverage:core:warning
           pnpm public-api:check
 

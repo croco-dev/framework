@@ -24,6 +24,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Initialize beta spine promotion evidence
+        env:
+          SPINE_PROMOTION_COMMIT_SHA: ${{ github.sha }}
+          SPINE_PROMOTION_RUN_ATTEMPT: ${{ github.run_attempt }}
+          SPINE_PROMOTION_RUN_ID: ${{ github.run_id }}
+        run: |
+          mkdir -p ci-reports/package-quality
+          node -e 'const fs = require("node:fs"); fs.writeFileSync("ci-reports/package-quality/spine-promotion-run.json", JSON.stringify({ commitSha: process.env.SPINE_PROMOTION_COMMIT_SHA, runId: process.env.SPINE_PROMOTION_RUN_ID, runAttempt: process.env.SPINE_PROMOTION_RUN_ATTEMPT, startedAt: new Date().toISOString() }, null, 2) + "\n")'
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
@@ -278,10 +287,13 @@ jobs:
       - name: Beta spine promotion gate
         id: spine_promotion_gate
         if: always()
+        env:
+          SPINE_PROMOTION_GENERATED_APP_OUTCOME: ${{ steps.generated_app_smoke_spine.outcome || 'skipped' }}
+          SPINE_PROMOTION_TEST_OUTCOME: ${{ steps.test.outcome || 'skipped' }}
         shell: bash
         run: |
           set +e
-          pnpm spine-promotion:check
+          pnpm spine-promotion:check -- --ci-run ci-reports/package-quality/spine-promotion-run.json
           status=$?
           set -e
           if [ -f ci-reports/package-quality/spine-promotion.md ]; then

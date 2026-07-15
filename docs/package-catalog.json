@@ -28,72 +28,192 @@
         "cli": {
           "owner": "operator-tooling",
           "targetEvidence": [
-            "croco doctor spine-readiness command",
-            "CLI e2e smoke",
-            "diagnostic recovery docs"
+            {
+              "description": "croco doctor behavior",
+              "role": "behavior",
+              "commandId": "test",
+              "testPath": "src/tests/doctor.spec.ts"
+            },
+            {
+              "description": "CLI contract compatibility",
+              "role": "compatibility",
+              "commandId": "test",
+              "testPath": "src/tests/contractsCheck.spec.ts"
+            },
+            {
+              "description": "stable diagnostic recovery codes",
+              "role": "failure-recovery",
+              "commandId": "test",
+              "testPath": "src/tests/diagnosticCodes.spec.ts"
+            }
           ],
           "recoveryAction": "Complete CLI spine-readiness diagnostics and smoke evidence, then move cli from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
         },
         "create-croco-app": {
           "owner": "generated-app-tooling",
           "targetEvidence": [
-            "generated app smoke matrix",
-            "clean install artifact provenance",
-            "CLI template compatibility evidence"
+            {
+              "description": "spine-blocking generated app smoke",
+              "role": "behavior",
+              "commandId": "generated-app-smoke",
+              "artifactPath": "ci-reports/generated-apps/spine-blocking-matrix.json"
+            },
+            {
+              "description": "generated template compatibility",
+              "role": "compatibility",
+              "commandId": "test",
+              "testPath": "src/tests/templates-build.spec.ts"
+            },
+            {
+              "description": "secret placeholder failure policy",
+              "role": "failure-recovery",
+              "commandId": "test",
+              "testPath": "src/tests/secret-placeholder-policy.spec.ts"
+            }
           ],
           "recoveryAction": "Complete generated app smoke and provenance evidence, then move create-croco-app from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
         },
         "events-tx": {
           "owner": "events-reliability",
           "targetEvidence": [
-            "transactional outbox dispatch coverage",
-            "retry and idempotency interaction tests",
-            "failure recovery diagnostics"
+            {
+              "description": "transactional outbox dispatch",
+              "role": "behavior",
+              "commandId": "test",
+              "testPath": "src/tests/TransactionalOutbox.spec.ts"
+            },
+            {
+              "description": "transactional event contract compatibility",
+              "role": "compatibility",
+              "commandId": "test",
+              "testPath": "src/tests/TransactionalOutbox.spec.ts"
+            },
+            {
+              "description": "event transaction Problem diagnostics",
+              "role": "failure-recovery",
+              "commandId": "test",
+              "testPath": "src/tests/EventsTxProblems.spec.ts"
+            }
           ],
           "recoveryAction": "Complete transactional event dispatch and recovery evidence, then move events-tx from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
         },
         "idempotency-core": {
           "owner": "reliability-core",
           "targetEvidence": [
-            "idempotency key contract tests",
-            "retry interaction coverage",
-            "Problem diagnostics coverage"
+            {
+              "description": "idempotency coordinator behavior",
+              "role": "behavior",
+              "commandId": "test",
+              "testPath": "src/tests/IdempotencyCoordinator.spec.ts"
+            },
+            {
+              "description": "idempotency conformance contract",
+              "role": "compatibility",
+              "commandId": "test",
+              "testPath": "src/tests/IdempotencyConformance.spec.ts"
+            },
+            {
+              "description": "idempotency key failure boundaries",
+              "role": "failure-recovery",
+              "commandId": "test",
+              "testPath": "src/tests/KeyDerivation.spec.ts"
+            }
           ],
           "recoveryAction": "Complete idempotency contract and diagnostics evidence, then move idempotency-core from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
         },
         "openapi-spec": {
           "owner": "protocol-codegen",
           "targetEvidence": [
-            "OpenAPI snapshot drift gate",
-            "contract-to-spec regression fixtures",
-            "public API docs"
+            {
+              "description": "OpenAPI emission behavior",
+              "role": "behavior",
+              "commandId": "test",
+              "testPath": "src/tests/emitOpenAPI.spec.ts"
+            },
+            {
+              "description": "OpenAPI round-trip compatibility",
+              "role": "compatibility",
+              "commandId": "test",
+              "testPath": "src/tests/round-trip.spec.ts"
+            },
+            {
+              "description": "OpenAPI CLI failure diagnostics",
+              "role": "failure-recovery",
+              "commandId": "test",
+              "testPath": "src/tests/Cli.spec.ts"
+            }
           ],
           "recoveryAction": "Complete OpenAPI generation drift and docs evidence, then move openapi-spec from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
         },
         "protocols-core": {
           "owner": "protocol-contracts",
           "targetEvidence": [
-            "strict contract diagnostics baseline",
-            "route contract graph fixtures",
-            "generated protocol compatibility smoke"
+            {
+              "description": "route contract extraction behavior",
+              "role": "behavior",
+              "commandId": "test",
+              "testPath": "src/tests/extractRouteIR.spec.ts"
+            },
+            {
+              "description": "route contract graph compatibility",
+              "role": "compatibility",
+              "commandId": "test",
+              "testPath": "src/tests/ContractGraph.spec.ts"
+            },
+            {
+              "description": "schema descriptor diagnostics",
+              "role": "failure-recovery",
+              "commandId": "test",
+              "testPath": "src/tests/SchemaDescriptor.spec.ts"
+            }
           ],
           "recoveryAction": "Complete protocol contract hardening evidence, then move protocols-core from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
         },
         "rpc-codegen": {
           "owner": "protocol-codegen",
           "targetEvidence": [
-            "generated RPC client compatibility fixtures",
-            "query-key serialization tests",
-            "generated app smoke coverage"
+            {
+              "description": "RPC client generation behavior",
+              "role": "behavior",
+              "commandId": "test",
+              "testPath": "src/tests/codegen.spec.ts"
+            },
+            {
+              "description": "RPC round-trip compatibility",
+              "role": "compatibility",
+              "commandId": "test",
+              "testPath": "src/tests/round-trip.spec.ts"
+            },
+            {
+              "description": "RPC contract-check diagnostics",
+              "role": "failure-recovery",
+              "commandId": "test",
+              "testPath": "src/tests/ContractCheckCli.spec.ts"
+            }
           ],
           "recoveryAction": "Complete RPC codegen compatibility evidence, then move rpc-codegen from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
         },
         "testing": {
           "owner": "release-tooling",
           "targetEvidence": [
-            "test harness API docs",
-            "conformance utility coverage",
-            "consumer smoke fixtures"
+            {
+              "description": "test harness behavior",
+              "role": "behavior",
+              "commandId": "test",
+              "testPath": "src/tests/testing.spec.ts"
+            },
+            {
+              "description": "conformance utility contract",
+              "role": "compatibility",
+              "commandId": "test",
+              "testPath": "src/tests/ConformanceContract.spec.ts"
+            },
+            {
+              "description": "operational failure drills",
+              "role": "failure-recovery",
+              "commandId": "test",
+              "testPath": "src/tests/OperationalFailureDrill.spec.ts"
+            }
           ],
           "recoveryAction": "Complete test harness docs and conformance evidence, then move testing from maturity.beta.packages to maturity.production.packages when production-ready:check passes."
         }

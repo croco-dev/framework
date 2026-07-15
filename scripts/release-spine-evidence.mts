@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
@@ -89,6 +89,11 @@ export type ReleaseSpineEvidenceReport = {
   readonly completedAt: string | null;
   readonly generatedAt: string;
   readonly outputDir: string;
+  readonly provenance: {
+    readonly commitSha: string;
+    readonly runAttempt: string;
+    readonly runId: string;
+  };
   readonly rootDir: string;
   readonly status: "running" | "passed" | "failed" | "timed_out" | "interrupted";
   readonly summary: {
@@ -119,6 +124,7 @@ export type CommandRunner = (
   command: EvidenceCommand,
   context: {
     readonly cwd: string;
+    readonly env?: NodeJS.ProcessEnv;
     readonly timeoutMs: number;
   },
 ) => CommandRunResult | Promise<CommandRunResult>;
@@ -146,6 +152,22 @@ const systemClock: Clock = {
   nowIso: () => new Date().toISOString(),
   nowMs: () => Date.now(),
 };
+
+function readCurrentCommit(rootDir: string): string {
+  return execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: rootDir,
+    encoding: "utf-8",
+    stdio: ["ignore", "pipe", "ignore"],
+  }).trim();
+}
+
+function readCurrentCommitOrUnknown(rootDir: string): string {
+  try {
+    return readCurrentCommit(rootDir);
+  } catch {
+    return "unknown";
+  }
+}
 let activeCommandProcess: ChildProcess | null = null;
 
 function minutes(value: number): number {
@@ -398,6 +420,7 @@ function createInitialReport(options: {
   readonly commands: readonly EvidenceCommand[];
   readonly generatedAt: string;
   readonly outputDir: string;
+  readonly provenance: ReleaseSpineEvidenceReport["provenance"];
   readonly rootDir: string;
   readonly totalTimeoutMs: number;
 }): ReleaseSpineEvidenceReport {
@@ -406,6 +429,7 @@ function createInitialReport(options: {
     completedAt: null,
     generatedAt: options.generatedAt,
     outputDir: options.outputDir,
+    provenance: options.provenance,
     rootDir: options.rootDir,
     status: "running",
     summary: emptySummary(options.commands.length),
@@ -587,7 +611,7 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
     const child = spawn(command, args, {
       cwd: context.cwd,
       detached: process.platform !== "win32",
-      env: process.env,
+      env: context.env ?? process.env,
       stdio: ["ignore", "pipe", "pipe"],
     });
     activeCommandProcess = child;
@@ -859,11 +883,18 @@ export async function runReleaseSpineEvidence(
   const maxOutputExcerptLength = options.maxOutputExcerptLength ?? defaultOutputExcerptLength;
   const rootDir = resolve(options.rootDir);
   const outputDir = resolve(rootDir, options.outputDir);
+  const generatedAt = clock.nowIso();
+  const provenance = {
+    commitSha: process.env.GITHUB_SHA ?? readCurrentCommitOrUnknown(rootDir),
+    runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
+    runId: process.env.GITHUB_RUN_ID ?? generatedAt,
+  };
   const runStartedAtMs = clock.nowMs();
   let report = createInitialReport({
     commands,
-    generatedAt: clock.nowIso(),
+    generatedAt,
     outputDir,
+    provenance,
     rootDir,
     totalTimeoutMs: options.totalTimeoutMs,
   });
@@ -897,6 +928,16 @@ export async function runReleaseSpineEvidence(
 
     const result = await runner(check, {
       cwd: rootDir,
+      env:
+        check.id === "spine-promotion"
+          ? {
+              ...process.env,
+              SPINE_PROMOTION_COMMIT_SHA: report.provenance.commitSha,
+              SPINE_PROMOTION_RELEASE_CHECKPOINT: join(outputDir, reportJsonFileName),
+              SPINE_PROMOTION_RUN_ATTEMPT: report.provenance.runAttempt,
+              SPINE_PROMOTION_RUN_ID: report.provenance.runId,
+            }
+          : process.env,
       timeoutMs: effectiveTimeoutMs,
     });
     const completedAt = clock.nowIso();
@@ -995,6 +1036,8 @@ export function buildReleaseSpineEvidenceMarkdown(report: ReleaseSpineEvidenceRe
     `- Completed at: ${report.completedAt ?? "not complete"}`,
     `- Root: \`${toPosixPath(report.rootDir)}\``,
     `- Output directory: \`${toPosixPath(report.outputDir)}\``,
+    `- Commit: \`${report.provenance.commitSha}\``,
+    `- Run: \`${report.provenance.runId}\` attempt \`${report.provenance.runAttempt}\``,
     `- Total timeout: ${formatTimeout(report.totalTimeoutMs)}`,
     `- Checks: ${report.summary.passed}/${report.summary.total} passed, ${report.summary.failed} failed, ${report.summary.timedOut} timed out, ${report.summary.interrupted} interrupted, ${report.summary.skippedAfterTimeout} skipped after timeout`,
     "",
@@ -1133,6 +1176,11 @@ async function main(): Promise<void> {
     commands,
     generatedAt: systemClock.nowIso(),
     outputDir: options.outputDir,
+    provenance: {
+      commitSha: process.env.GITHUB_SHA ?? readCurrentCommitOrUnknown(options.rootDir),
+      runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
+      runId: process.env.GITHUB_RUN_ID ?? systemClock.nowIso(),
+    },
     rootDir: options.rootDir,
     totalTimeoutMs: options.totalTimeoutMs,
   });

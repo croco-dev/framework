@@ -132,7 +132,9 @@ describe("CI package quality dashboard", () => {
     const gateStep = workflow.slice(gateStart, dashboardStart);
     const orderedMarkers = [
       "id: spine_promotion_gate",
-      "pnpm spine-promotion:check",
+      "SPINE_PROMOTION_GENERATED_APP_OUTCOME",
+      "SPINE_PROMOTION_TEST_OUTCOME",
+      "pnpm spine-promotion:check -- --ci-run ci-reports/package-quality/spine-promotion-run.json",
       "status=$?",
       "ci-reports/package-quality/spine-promotion.md",
       'cat ci-reports/package-quality/spine-promotion.md >> "$GITHUB_STEP_SUMMARY"',
@@ -150,6 +152,18 @@ describe("CI package quality dashboard", () => {
       );
       previousIndex = index;
     }
+  });
+
+  it("captures one current-run identity before promotion evidence commands execute", () => {
+    const workflow = readCiWorkflow();
+    const initialization = workflow.indexOf("- name: Initialize beta spine promotion evidence");
+    const build = workflow.indexOf("- name: Build");
+
+    expect(initialization).toBeGreaterThan(-1);
+    expect(initialization).toBeLessThan(build);
+    expect(workflow).toContain("SPINE_PROMOTION_COMMIT_SHA: ${{ github.sha }}");
+    expect(workflow).toContain("SPINE_PROMOTION_RUN_ID: ${{ github.run_id }}");
+    expect(workflow).toContain("SPINE_PROMOTION_RUN_ATTEMPT: ${{ github.run_attempt }}");
   });
 
   it("publishes generated app smoke matrix artifacts after the smoke gate", () => {
