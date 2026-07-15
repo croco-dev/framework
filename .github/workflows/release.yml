@@ -18,9 +18,8 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    # release:spine-evidence has a 150-minute internal budget; the job keeps
-    # 45-minute budgets for both publish setup/wrapper work and the optional
-    # release-gate maintenance self-check when both paths run in one job.
+    # The publish profile has a 150-minute internal budget; the job leaves
+    # 90 minutes for setup, artifact publication, and Changesets.
     timeout-minutes: 240
     env:
       NPM_CONFIG_PROVENANCE: "true"
@@ -31,68 +30,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect release work
+      - name: Select release work and verification profile
         id: release_work
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            {
-              echo "should_run=true"
-              echo "should_update_release_pr=true"
-              echo "should_run_publish_gates=true"
-              echo "should_verify_release_gate_maintenance=false"
-            } >> "$GITHUB_OUTPUT"
-            exit 0
+          base=""
+          args=(--event "$GITHUB_EVENT_NAME" --workflow release --github-output "$GITHUB_OUTPUT")
+          if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then
+            base="${{ github.event.before }}"
+            if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+              base="$(git rev-parse HEAD^)"
+            fi
+            args+=(--base "$base" --head HEAD)
           fi
-
-          base="${{ github.event.before }}"
-          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-            base="$(git rev-parse HEAD^)"
-          fi
-
-          release_pr_update_pattern='^\.changeset/(pre\.json|[^/]+\.md)$'
-          release_pr_update_ignore_pattern='^\.changeset/README\.md$'
-          publish_candidate_pattern='^packages/[^/]+/(package\.json|CHANGELOG\.md)$|^package\.json$|^pnpm-lock\.yaml$|^pnpm-workspace\.yaml$'
-          release_gate_maintenance_pattern='^\.github/(renovate\.json|workflows/(ci|release)\.yml)$|^scripts/(alpha-release-smoke\.mts|certification-policy\.mts|changeset-required-check\.mts|ci-executable-policy\.mts|core-coverage-warning-check\.mts|create-croco-app-generated-smoke(-(support|matrix|journey-report))?\.mts|dependency-audit-policy\.mts|first-success-generated-contract\.mts|first-success-verify\.mts|normalize-packages\.mjs|package-bin-smoke\.mts|package-entrypoint-smoke\.mts|package-manifest-contracts\.mjs|package-quality-report\.mts|production-ready-check\.mts|provider-certification-check\.mts|public-api-surface\.mts|quick-start-lambda-smoke\.mts|release-docs-check\.mts|release-metadata-check\.mts|release-spine-evidence\.mts|security-allowlist-metadata-check\.mts|spine-promotion-check\.mts)$|^scripts/tests/(alpha-release-smoke|changeset-required-check|ci-executable-policy|core-coverage-warning-check|create-croco-app-generated-smoke|dependency-audit-policy|first-success-verify|normalize-packages|package-bin-smoke|package-entrypoint-smoke|package-quality-report|production-ready-check|provider-certification-check|public-api-surface|release-docs-check|release-metadata-check|release-spine-evidence|release-workflow|security-allowlist-metadata-check|spine-promotion-check)\.spec\.ts$'
-
-          changed_files="$(git diff --name-only "$base" HEAD)"
-          should_update_release_pr=false
-          should_run_publish_gates=false
-          should_verify_release_gate_maintenance=false
-          should_run=false
-
-          release_pr_update_files="$(echo "$changed_files" | grep -Ev "$release_pr_update_ignore_pattern" || true)"
-          if echo "$release_pr_update_files" | grep -Eq "$release_pr_update_pattern"; then
-            should_update_release_pr=true
-          fi
-
-          if echo "$changed_files" | grep -Eq "$publish_candidate_pattern"; then
-            should_run_publish_gates=true
-          fi
-
-          if echo "$changed_files" | grep -Eq "$release_gate_maintenance_pattern"; then
-            should_verify_release_gate_maintenance=true
-          fi
-
-          if [ "$should_update_release_pr" = "true" ] || [ "$should_run_publish_gates" = "true" ] || [ "$should_verify_release_gate_maintenance" = "true" ]; then
-            should_run=true
-          else
-            echo "No changeset release-PR update, publish candidate, or release-gate maintenance changes detected; skipping release pipeline."
-          fi
-
-          {
-            echo "should_update_release_pr=${should_update_release_pr}"
-            echo "should_run_publish_gates=${should_run_publish_gates}"
-            echo "should_verify_release_gate_maintenance=${should_verify_release_gate_maintenance}"
-            echo "should_run=${should_run}"
-          } >> "$GITHUB_OUTPUT"
+          node --experimental-strip-types scripts/verification-change-classifier.mts "${args[@]}"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
-        if: steps.release_work.outputs.should_run == 'true'
+        if: steps.release_work.outputs.should_run_verification == 'true' || steps.release_work.outputs.should_run_changesets_action == 'true'
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
-        if: steps.release_work.outputs.should_run == 'true'
+        if: steps.release_work.outputs.should_run_verification == 'true' || steps.release_work.outputs.should_run_changesets_action == 'true'
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
@@ -100,70 +59,24 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
-        if: steps.release_work.outputs.should_run == 'true'
+        if: steps.release_work.outputs.should_run_verification == 'true' || steps.release_work.outputs.should_run_changesets_action == 'true'
         run: pnpm install --frozen-lockfile
 
-      - name: Release gate maintenance self-check
-        if: steps.release_work.outputs.should_verify_release_gate_maintenance == 'true'
-        run: |
-          pnpm build
-          pnpm exec vitest run scripts/tests/release-workflow.spec.ts scripts/tests/release-spine-evidence.spec.ts scripts/tests/alpha-release-smoke.spec.ts scripts/tests/package-entrypoint-smoke.spec.ts scripts/tests/package-bin-smoke.spec.ts scripts/tests/release-docs-check.spec.ts scripts/tests/release-metadata-check.spec.ts scripts/tests/security-allowlist-metadata-check.spec.ts scripts/tests/changeset-required-check.spec.ts scripts/tests/ci-executable-policy.spec.ts scripts/tests/dependency-audit-policy.spec.ts scripts/tests/normalize-packages.spec.ts scripts/tests/create-croco-app-generated-smoke.spec.ts scripts/tests/first-success-verify.spec.ts scripts/tests/package-quality-report.spec.ts scripts/tests/provider-certification-check.spec.ts scripts/tests/production-ready-check.spec.ts scripts/tests/spine-promotion-check.spec.ts scripts/tests/core-coverage-warning-check.spec.ts scripts/tests/public-api-surface.spec.ts scripts/tests/tracked-file-mutation-guard.spec.ts scripts/tests/api-docs-drift-check.spec.ts scripts/tests/verification-policy.spec.ts --config vitest.config.ts
-          pnpm tracked-files:guard --recovery 'pnpm package-manifests:write' -- pnpm package-manifests:check
-          pnpm tracked-files:guard --recovery 'Fix the reported provider certification metadata' -- pnpm provider-certification:check
-          pnpm tracked-files:guard --recovery 'Fix the reported security allowlist metadata' -- pnpm security-allowlists:check
-          pnpm tracked-files:guard --recovery 'Fix the reported release documentation contract' -- pnpm release-docs:check
-          node --experimental-strip-types scripts/release-metadata-check.mts --allow-pending-changesets
-          pnpm package-entrypoints:smoke
-          pnpm package-bins:smoke
-          pnpm create-croco-app:smoke -- --tier spine-blocking
-          if ! pnpm create-croco-app:smoke -- --tier ecosystem-advisory; then
-            echo "Ecosystem-advisory generated app smoke failed; inspect its matrix report for the owner and recovery action."
-          fi
-          pnpm quick-start-lambda:smoke
-          pnpm tracked-files:guard --recovery 'Follow the reported scaffold or documentation recovery command' -- pnpm first-success:verify
-          # CI and release:spine-evidence cover current-run task and promotion evidence.
-          pnpm tracked-files:guard --recovery 'Fix the reported production-ready package violations' -- pnpm production-ready:check
-          pnpm test:coverage:core:warning
-          pnpm tracked-files:guard --recovery 'pnpm public-api:write' -- pnpm public-api:check
-
-      # Release duplicates the publish-blocking CI quality gates that protect
-      # npm publishing. PR-only checks, secret-scan reports, and docs/coverage
-      # report artifact jobs stay in CI before release-triggering changes land.
-      - name: Security allowlist metadata check
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: pnpm tracked-files:guard --recovery 'Fix the reported security allowlist metadata' -- pnpm security-allowlists:check
-
-      # Release routes dependency audit enforcement through the path-aware
-      # security:audit-policy gate so raw advisories stay visible while
-      # publish-blocking risk is classified by manifest/runtime edge.
-      - name: Production dependency audit
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: pnpm security:audit-policy
-
-      - name: Lint, format, and repository policy checks
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: pnpm audit:read-only
-
-      - name: Verify npm provenance configuration
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
+      # Release reruns the complete publish profile as defense in depth. Tokens,
+      # provenance permissions, summaries, uploads, and Changesets remain Actions-owned.
+      - name: Release publish verification
+        id: release_spine_evidence
+        if: steps.release_work.outputs.should_run_verification == 'true'
         shell: bash
         run: |
-          npm_provenance="$(npm config get provenance)"
-          pnpm_provenance="$(pnpm config get provenance)"
-          echo "npm provenance: ${npm_provenance}"
-          echo "pnpm provenance: ${pnpm_provenance}"
-          if [ "$npm_provenance" != "true" ] || [ "$pnpm_provenance" != "true" ]; then
-            echo "::error::NPM_CONFIG_PROVENANCE must resolve to true before publishing."
-            exit 1
+          args=(--output-dir ci-reports/release)
+          if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then
+            args+=(--base "${{ steps.release_work.outputs.base }}" --head HEAD)
           fi
-
-      - name: Release spine evidence
-        id: release_spine_evidence
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: pnpm release:spine-evidence
+          pnpm verify:publish -- "${args[@]}"
 
       - name: Publish release spine evidence summary
-        if: always() && steps.release_work.outputs.should_run_publish_gates == 'true'
+        if: always() && steps.release_work.outputs.should_run_verification == 'true'
         shell: bash
         run: |
           if [ -f ci-reports/release/spine-evidence.md ]; then
@@ -173,7 +86,7 @@ jobs:
           fi
 
       - name: Upload release spine evidence
-        if: always() && steps.release_work.outputs.should_run_publish_gates == 'true'
+        if: always() && steps.release_work.outputs.should_run_verification == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release-spine-evidence
@@ -181,12 +94,8 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
 
-      - name: Dry-run publish gate
-        if: steps.release_work.outputs.should_run_publish_gates == 'true'
-        run: pnpm -r publish --dry-run --no-git-checks
-
       - name: Create Release Pull Request or Publish
-        if: steps.release_work.outputs.should_update_release_pr == 'true' || steps.release_work.outputs.should_run_publish_gates == 'true'
+        if: steps.release_work.outputs.should_run_changesets_action == 'true'
         uses: changesets/action@v1
         with:
           publish: pnpm exec changeset publish

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseCoreCoveragePackageFilters } from "../packages/cli/src/libs/coreCoverageFilters.ts";
+import { getVerificationCommand } from "./verification-manifest.mts";
 
 export { parseCoreCoveragePackageFilters } from "../packages/cli/src/libs/coreCoverageFilters.ts";
 
@@ -133,13 +134,25 @@ function readCoreCoveragePackages(): string[] {
     throw new Error(`failed to read test:coverage:core script from ${packageJsonPath}`);
   }
 
-  const packages = parseCoreCoveragePackageFilters(coreCoverageCommand);
+  return resolveCoreCoveragePackageFilters(coreCoverageCommand);
+}
 
-  if (packages.length === 0) {
+export function resolveCoreCoveragePackageFilters(coreCoverageCommand: string): string[] {
+  const dispatcher =
+    /(?:^|&&\s*)node --experimental-strip-types scripts\/verification-command\.mts --id ([\w-]+)(?:\s|$)/.exec(
+      coreCoverageCommand,
+    );
+  if (dispatcher?.[1]) {
+    const packages = parseCoreCoveragePackageFilters(
+      getVerificationCommand(dispatcher[1]).command.join(" "),
+    );
+    if (packages.length > 0) return packages;
     throw new Error(`failed to read core coverage package filters from ${packageJsonPath}`);
   }
 
-  return packages;
+  const directPackages = parseCoreCoveragePackageFilters(coreCoverageCommand);
+  if (directPackages.length > 0) return directPackages;
+  throw new Error(`failed to read core coverage package filters from ${packageJsonPath}`);
 }
 
 function readVitestCoreCoveragePackages(): string[] {

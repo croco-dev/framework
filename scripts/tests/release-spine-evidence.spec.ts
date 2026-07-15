@@ -19,10 +19,12 @@ import {
 import {
   createReleaseSpineEvidenceManifest,
   defaultCommandRunner,
+  failedCheckDiagnostics,
   markReportInterrupted,
   parseArgs,
   runReleaseSpineEvidence,
 } from "../release-spine-evidence.mts";
+import { createVerificationManifest } from "../verification-manifest.mts";
 import type {
   Clock,
   CommandRunResult,
@@ -43,33 +45,24 @@ describe("release-spine-evidence.mts", () => {
 
   it("defines the full release spine evidence manifest", () => {
     const manifest = createReleaseSpineEvidenceManifest();
+    const publishManifest = createVerificationManifest("publish");
 
-    expect(manifest.map((check) => check.id)).toEqual([
-      "build",
-      "quick-start-lambda-smoke",
-      "first-success",
-      "package-entrypoints-smoke",
-      "package-bins-smoke",
-      "release-metadata",
-      "generated-app-smoke",
-      "alpha-release-smoke",
-      "typecheck",
-      "test",
-      "provider-certification",
-      "production-ready",
-      "spine-promotion",
-      "spine-bundle-size",
-      "core-coverage",
-      "core-coverage-warning",
-      "public-api",
-    ]);
+    expect(manifest[0]?.id).toBe("verification-policy");
+    expect(manifest.at(-1)?.id).toBe("public-api");
+    expect(findCheck(manifest, "changeset-required").applicable).toBe(false);
     expect(findCheck(manifest, "production-ready").command).toEqual([
-      "pnpm",
-      "production-ready:check",
+      "node",
+      "--experimental-strip-types",
+      "scripts/tracked-file-mutation-guard.mts",
+      "--recovery",
+      "Fix the reported production-ready package violations",
       "--",
+      "node",
+      "--experimental-strip-types",
+      "scripts/production-ready-check.mts",
       "--require-task-summaries",
     ]);
-    expect(findCheck(manifest, "release-metadata").command).toEqual([
+    expect(findCheck(publishManifest, "release-metadata").command).toEqual([
       "node",
       "--experimental-strip-types",
       "scripts/release-metadata-check.mts",
@@ -82,40 +75,24 @@ describe("release-spine-evidence.mts", () => {
       "ci-reports/generated-apps/spine-blocking-journeys",
     ]);
     expect(findCheck(manifest, "generated-app-smoke").command).toEqual([
-      "pnpm",
-      "create-croco-app:smoke",
-      "--",
+      "node",
+      "--experimental-strip-types",
+      "scripts/create-croco-app-generated-smoke.mts",
       "--tier",
       "spine-blocking",
-    ]);
-    expect(findCheck(manifest, "alpha-release-smoke").command).toEqual([
-      "pnpm",
-      "alpha-release:smoke",
     ]);
     expect(
       findCheck(manifest, "alpha-release-smoke").artifacts?.map((artifact) => artifact.path),
     ).toEqual(["ci-reports/release/alpha-release-smoke.md"]);
-    expect(findCheck(manifest, "spine-bundle-size").command).toEqual([
-      "pnpm",
-      "package-quality:report",
-      "--",
-      "--enforce-spine-bundle-size",
-    ]);
     expect(
-      findCheck(manifest, "spine-bundle-size").artifacts?.map((artifact) => artifact.path),
+      findCheck(publishManifest, "spine-bundle-size").artifacts?.map((artifact) => artifact.path),
     ).toEqual([
       "ci-reports/package-quality/report.md",
       "ci-reports/package-quality/summary.json",
       "ci-reports/package-quality/bundle-size.md",
     ]);
-    expect(manifest.findIndex((check) => check.id === "release-metadata")).toBeLessThan(
-      manifest.findIndex((check) => check.id === "generated-app-smoke"),
-    );
-    expect(manifest.findIndex((check) => check.id === "generated-app-smoke")).toBeLessThan(
-      manifest.findIndex((check) => check.id === "alpha-release-smoke"),
-    );
-    expect(manifest.findIndex((check) => check.id === "alpha-release-smoke")).toBeLessThan(
-      manifest.findIndex((check) => check.id === "typecheck"),
+    expect(manifest.findIndex((check) => check.id === "format")).toBeLessThan(
+      manifest.findIndex((check) => check.id === "build"),
     );
   });
 
@@ -163,6 +140,59 @@ describe("release-spine-evidence.mts", () => {
     );
   });
 
+  it("derives the publish manifest for programmatic runs when commands are omitted", async () => {
+    const repo = createTempRepo();
+    const calledIds: string[] = [];
+    const calledCommands: EvidenceCommand[] = [];
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "ci-reports", "verification", "publish"),
+      totalTimeoutMs: 10_000,
+      profile: "publish",
+      base: "origin/trunk",
+      changedFiles: [],
+      head: "HEAD",
+      runner: (command) => {
+        calledIds.push(command.id);
+        calledCommands.push(command);
+        return okResult(command.id);
+      },
+    });
+
+    expect(report.profile).toBe("publish");
+    expect(calledIds).toContain("dependency-audit-policy");
+    expect(calledIds).toContain("provenance-config");
+    expect(calledIds.at(-1)).toBe("publish-dry-run");
+    expect(findCheck(calledCommands, "changeset-required").command).toContain("origin/trunk");
+    expect(report.checks.map(({ id }) => id).at(-1)).toBe("publish-dry-run");
+  });
+
+  it.each([
+    ["scripts/release-metadata-check.mts", "release-metadata"],
+    ["scripts/package-quality-report.mts", "spine-bundle-size"],
+  ])("executes and fails changed publish verifier %s", async (changedFile, failingId) => {
+    const repo = createTempRepo();
+    const calledIds: string[] = [];
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "ci-reports", "verification", "publish"),
+      totalTimeoutMs: 10_000,
+      profile: "publish",
+      base: "origin/trunk",
+      changedFiles: [changedFile],
+      head: "HEAD",
+      runner: (command) => {
+        calledIds.push(command.id);
+        return command.id === failingId
+          ? { ...okResult(command.id), status: 2 }
+          : okResult(command.id);
+      },
+    });
+
+    expect(calledIds).toContain(failingId);
+    expect(findCheck(report.checks, failingId)).toMatchObject({ status: "failed" });
+  });
+
   it("fails a passing command when a required artifact is missing", async () => {
     const repo = createTempRepo();
     const report = await runReleaseSpineEvidence({
@@ -186,6 +216,9 @@ describe("release-spine-evidence.mts", () => {
     expect(report.status).toBe("failed");
     expect(report.checks[0]?.status).toBe("failed");
     expect(report.checks[0]?.failureReason).toContain("Required release evidence artifact");
+    expect(failedCheckDiagnostics(report)).toEqual([
+      expect.stringContaining("generated-app-smoke: failed: Required release evidence artifact"),
+    ]);
   });
 
   it("preserves journey report relative links when copying release evidence", async () => {
@@ -336,6 +369,34 @@ describe("release-spine-evidence.mts", () => {
     expect(report.checks[0]?.stdoutExcerpt).toContain("diagnostics");
     expect(report.checks[0]?.stderrExcerpt).toContain("[truncated");
     expect(report.checks[0]?.stderrExcerpt).toContain("failed");
+  });
+
+  it("fails spine and publish execution on the same broken shared command ID", async () => {
+    for (const profile of ["spine", "publish"] as const) {
+      const sharedCommand = createVerificationManifest(profile).find(({ id }) => id === "build");
+      expect(sharedCommand).toBeDefined();
+
+      const repo = createTempRepo();
+      const report = await runReleaseSpineEvidence({
+        rootDir: repo,
+        outputDir: join(repo, "ci-reports", profile),
+        totalTimeoutMs: 1_000,
+        profile,
+        commands: sharedCommand ? [sharedCommand] : [],
+        runner: () => ({
+          errorCode: null,
+          errorMessage: null,
+          signal: null,
+          status: 2,
+          stderr: "shared build gate failed",
+          stdout: "",
+          timedOut: false,
+        }),
+      });
+
+      expect(report.status).toBe("failed");
+      expect(report.checks[0]).toMatchObject({ id: "build", status: "failed" });
+    }
   });
 
   it("reports command failure reasons before missing artifact reasons", async () => {
@@ -507,6 +568,17 @@ describe("release-spine-evidence.mts", () => {
     expect(options.totalTimeoutMs).toBe(25);
   });
 
+  it("enables pending release metadata only through the explicit option", () => {
+    expect(parseArgs([]).allowPendingReleaseMetadata).toBe(false);
+    expect(parseArgs(["--allow-pending-release-metadata"]).allowPendingReleaseMetadata).toBe(true);
+  });
+
+  it("rejects profile overrides after a profile alias has selected one", () => {
+    expect(() => parseArgs(["--profile", "publish", "--", "--profile", "repo"])).toThrow(
+      "--profile may be provided only once",
+    );
+  });
+
   it("preserves explicit output options when root is parsed later", () => {
     const repo = createTempRepo();
     const outputDir = "ci-reports/custom-release";
@@ -527,9 +599,7 @@ describe("release-spine-evidence.mts", () => {
       scripts?: Record<string, string>;
     };
 
-    expect(packageJson.scripts?.["release:spine-evidence"]).toBe(
-      "node --experimental-strip-types scripts/release-spine-evidence.mts",
-    );
+    expect(packageJson.scripts?.["release:spine-evidence"]).toBe("pnpm verify:spine");
   });
 });
 

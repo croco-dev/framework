@@ -17,12 +17,30 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      NPM_CONFIG_PROVENANCE: "true"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Select verification profile
+        id: verification
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="origin/${{ github.base_ref }}"
+          else
+            base="${{ github.event.before }}"
+            if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+              base="HEAD^"
+            fi
+          fi
+          node --experimental-strip-types scripts/verification-change-classifier.mts \
+            --event "$GITHUB_EVENT_NAME" --workflow ci --base "$base" --head HEAD --github-output "$GITHUB_OUTPUT"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
 
       - name: Initialize beta spine promotion evidence
         env:
@@ -41,11 +59,6 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "pnpm"
-
-      - name: Changeset required check
-        id: changeset_required
-        if: github.event_name == 'pull_request'
-        run: pnpm tracked-files:guard --recovery 'pnpm changeset or revert the publishable change' -- pnpm changeset-required:check -- --base origin/${{ github.base_ref }} --head HEAD
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -71,22 +84,6 @@ jobs:
             echo "::warning::pnpm audit:prod reported production vulnerabilities. CI keeps the raw audit advisory-only and uploads security-report; release publish gates run pnpm security:audit-policy as the blocker."
           fi
           exit "$exit_code"
-
-      - name: Dependency audit policy report
-        id: security_audit_policy
-        shell: bash
-        run: |
-          mkdir -p ci-reports/security
-          set +e
-          pnpm security:audit-policy
-          status=$?
-          set -e
-          if [ -f ci-reports/security/dependency-audit-policy.md ]; then
-            cat ci-reports/security/dependency-audit-policy.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Dependency audit policy report was not generated." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          exit "$status"
 
       - name: Secret scan warning report
         id: security_gitleaks_warning
@@ -121,6 +118,11 @@ jobs:
         shell: bash
         run: |
           mkdir -p ci-reports/security
+          if [ "${{ steps.verification.outputs.profile }}" = "publish" ]; then
+            audit_policy_result="selected by the shared publish profile"
+          else
+            audit_policy_result="not selected by the ${{ steps.verification.outputs.profile }} profile"
+          fi
           {
             echo "# Security policy summary"
             echo ""
@@ -135,7 +137,7 @@ jobs:
             echo ""
             echo "- Audit advisory exit code: ${{ steps.security_audit_advisory.outputs.exit_code || 'unknown' }}"
             echo "- Audit advisory duration (seconds): ${{ steps.security_audit_advisory.outputs.duration_seconds || 'unknown' }}"
-            echo "- Audit policy result: ${{ steps.security_audit_policy.outcome || 'unknown' }}"
+            echo "- Audit policy result: $audit_policy_result"
             echo "- Gitleaks exit code: ${{ steps.security_gitleaks_warning.outputs.exit_code || 'unknown' }}"
             echo "- Gitleaks duration (seconds): ${{ steps.security_gitleaks_warning.outputs.duration_seconds || 'unknown' }}"
             echo ""
@@ -161,39 +163,43 @@ jobs:
           path: ci-reports/security
           if-no-files-found: warn
 
-      - name: Security allowlist metadata check
-        run: pnpm tracked-files:guard --recovery 'Fix the reported security allowlist metadata' -- pnpm security-allowlists:check
-
-      - name: Architecture circular dependency check
-        run: pnpm tracked-files:guard --recovery 'Update code or intentionally update the circular dependency allowlist' -- pnpm architecture:check:circular:allowlist
-
-      - name: First-Success Contract Verify
-        run: pnpm tracked-files:guard --recovery 'Follow the reported scaffold or documentation recovery command' -- pnpm first-success:verify
-
-      - name: Quick-start Lambda smoke
-        run: pnpm quick-start-lambda:smoke
-
-      - name: Lint & Format Check
-        id: lint_format_check
+      - name: Run selected verification profile
+        id: verification_profile
+        shell: bash
         run: |
-          pnpm audit:read-only
-          echo "✓ Lint gate: 0 errors verified"
+          args=(--profile "${{ steps.verification.outputs.profile }}")
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            args+=(--allow-pending-release-metadata --base "${{ steps.verification.outputs.base }}" --head HEAD)
+          fi
+          node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"
 
-      - name: Build
-        id: build
-        run: pnpm turbo run build --summarize --continue=always
+      - name: Publish verification summary
+        if: always()
+        shell: bash
+        run: |
+          report="ci-reports/verification/${{ steps.verification.outputs.profile }}/spine-evidence.md"
+          if [ "${{ steps.verification.outputs.profile }}" = "spine" ]; then
+            report="ci-reports/release/spine-evidence.md"
+          fi
+          if [ -f "$report" ]; then
+            cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Verification report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
-      - name: Package entrypoint smoke
-        run: pnpm package-entrypoints:smoke
-
-      - name: Package binary smoke
-        run: pnpm package-bins:smoke
-
-      - name: create-croco-app spine-blocking generated app smoke
-        id: generated_app_smoke_spine
-        run: pnpm create-croco-app:smoke -- --tier spine-blocking
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-${{ steps.verification.outputs.profile }}
+          path: |
+            ci-reports/verification
+            ci-reports/release
+          include-hidden-files: true
+          if-no-files-found: warn
 
       - name: create-croco-app ecosystem-advisory generated app smoke
+        if: steps.verification.outputs.profile != 'repo'
         id: generated_app_smoke_advisory
         continue-on-error: true
         run: pnpm create-croco-app:smoke -- --tier ecosystem-advisory
@@ -241,89 +247,6 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
-      - name: TypeScript check
-        id: typecheck
-        run: pnpm tracked-files:guard --recovery 'Fix the reported TypeScript diagnostics' -- pnpm turbo run typecheck --summarize --continue=always
-
-      - name: Test
-        id: test
-        run: pnpm turbo run test --summarize --continue=always
-
-      - name: Provider certification gate
-        id: provider_certification_gate
-        if: always()
-        shell: bash
-        run: |
-          set +e
-          pnpm tracked-files:guard --recovery 'Fix the reported provider certification metadata' -- pnpm provider-certification:check
-          status=$?
-          set -e
-          if [ -f ci-reports/package-quality/provider-certification.md ]; then
-            cat ci-reports/package-quality/provider-certification.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Provider certification matrix report was not generated." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          exit "$status"
-
-      - name: Production-ready package gate
-        id: production_ready_package_gate
-        if: always()
-        shell: bash
-        run: |
-          production_ready_args=()
-          if [ "${{ steps.build.outcome }}" != "skipped" ] && [ "${{ steps.typecheck.outcome }}" != "skipped" ] && [ "${{ steps.test.outcome }}" != "skipped" ]; then
-            production_ready_args+=(--require-task-summaries)
-          fi
-          set +e
-          pnpm tracked-files:guard --recovery 'Fix the reported production-ready package violations' -- pnpm production-ready:check -- "${production_ready_args[@]}"
-          status=$?
-          set -e
-          if [ -f ci-reports/package-quality/production-ready.md ]; then
-            cat ci-reports/package-quality/production-ready.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Production-ready package report was not generated." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          exit "$status"
-
-      - name: Beta spine promotion gate
-        id: spine_promotion_gate
-        if: always()
-        env:
-          SPINE_PROMOTION_GENERATED_APP_OUTCOME: ${{ steps.generated_app_smoke_spine.outcome || 'skipped' }}
-          SPINE_PROMOTION_TEST_OUTCOME: ${{ steps.test.outcome || 'skipped' }}
-        shell: bash
-        run: |
-          set +e
-          pnpm tracked-files:guard --recovery 'Fix the reported beta spine promotion violations' -- pnpm spine-promotion:check -- --ci-run ci-reports/package-quality/spine-promotion-run.json
-          status=$?
-          set -e
-          if [ -f ci-reports/package-quality/spine-promotion.md ]; then
-            cat ci-reports/package-quality/spine-promotion.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Beta spine promotion report was not generated." >> "$GITHUB_STEP_SUMMARY"
-          fi
-          exit "$status"
-
-      - name: Publish package quality dashboard
-        if: always()
-        env:
-          PACKAGE_QUALITY_CHANGESET_STATUS: ${{ steps.changeset_required.outcome || 'skipped' }}
-          PACKAGE_QUALITY_CHECK_STATUS: ${{ steps.lint_format_check.outcome || 'skipped' }}
-          PACKAGE_QUALITY_BUILD_STATUS: ${{ steps.build.outcome || 'skipped' }}
-          PACKAGE_QUALITY_TYPECHECK_STATUS: ${{ steps.typecheck.outcome || 'skipped' }}
-          PACKAGE_QUALITY_TEST_STATUS: ${{ steps.test.outcome || 'skipped' }}
-          PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS: ${{ steps.provider_certification_gate.outcome || 'skipped' }}
-          PACKAGE_QUALITY_PRODUCTION_READY_STATUS: ${{ steps.production_ready_package_gate.outcome || 'skipped' }}
-          PACKAGE_QUALITY_SPINE_PROMOTION_STATUS: ${{ steps.spine_promotion_gate.outcome || 'skipped' }}
-        shell: bash
-        run: |
-          pnpm package-quality:report
-          if [ -f ci-reports/package-quality/report.md ]; then
-            cat ci-reports/package-quality/report.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Package quality dashboard was not generated." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
       - name: Upload package quality dashboard
         if: always()
         uses: actions/upload-artifact@v4
@@ -331,16 +254,6 @@ jobs:
           name: package-quality-dashboard
           path: ci-reports/package-quality
           if-no-files-found: warn
-
-      - name: CLI integration tests
-        run: pnpm --filter @croco/cli test:e2e
-
-      - name: Core package coverage gate
-        run: pnpm test:coverage:core
-
-      - name: Core package coverage warning report
-        if: always()
-        run: pnpm test:coverage:core:warning
 
       - name: Publish core coverage warning summary
         if: always()

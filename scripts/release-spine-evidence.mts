@@ -1,27 +1,29 @@
 #!/usr/bin/env node
 
-import { type ChildProcess, execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 
 import {
   assertGeneratedSmokeJourneyLinks,
   assertGeneratedSmokeJourneyReport,
   renderGeneratedSmokeJourneyReport,
 } from "./create-croco-app-generated-smoke-journey-report.mts";
+import { createVerificationManifest } from "./verification-manifest.mts";
+import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
+import type { ChildProcess } from "node:child_process";
+import type { VerificationProfile } from "./verification-manifest.mts";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const defaultOutputDirectory = join("ci-reports", "release");
-const reportMarkdownFileName = "spine-evidence.md";
-const reportJsonFileName = "spine-evidence.json";
-const releaseArtifactDirectory = "artifacts";
-const defaultTotalTimeoutMs = 150 * 60 * 1000;
-const defaultOutputExcerptLength = 4_000;
-const commandOutputMaxBuffer = 50 * 1024 * 1024;
-const commandTimeoutKillGraceMs = 5_000;
+const DEFAULT_OUTPUT_DIRECTORY = join("ci-reports", "release");
+const REPORT_MARKDOWN_FILE_NAME = "spine-evidence.md";
+const REPORT_JSON_FILE_NAME = "spine-evidence.json";
+const RELEASE_ARTIFACT_DIRECTORY = "artifacts";
+const DEFAULT_TOTAL_TIMEOUT_MS = 150 * 60 * 1000;
+const DEFAULT_OUTPUT_EXCERPT_LENGTH = 4_000;
+const COMMAND_OUTPUT_MAX_BUFFER = 50 * 1024 * 1024;
+const COMMAND_TIMEOUT_KILL_GRACE_MS = 5_000;
 
 type EvidenceCategory =
   | "build"
@@ -41,7 +43,8 @@ export type EvidenceStatus =
   | "failed"
   | "timed_out"
   | "interrupted"
-  | "skipped_after_timeout";
+  | "skipped_after_timeout"
+  | "not_applicable";
 
 export type EvidenceArtifactExpectation = {
   readonly label: string;
@@ -65,6 +68,7 @@ export type EvidenceCommand = {
   readonly category: EvidenceCategory;
   readonly command: readonly string[];
   readonly timeoutMs: number;
+  readonly applicable?: boolean;
   readonly artifacts?: readonly EvidenceArtifactExpectation[];
 };
 
@@ -89,6 +93,7 @@ export type ReleaseSpineEvidenceReport = {
   readonly completedAt: string | null;
   readonly generatedAt: string;
   readonly outputDir: string;
+  readonly profile: VerificationProfile;
   readonly provenance: {
     readonly commitSha: string;
     readonly runAttempt: string;
@@ -99,6 +104,7 @@ export type ReleaseSpineEvidenceReport = {
   readonly summary: {
     readonly failed: number;
     readonly interrupted: number;
+    readonly notApplicable: number;
     readonly passed: number;
     readonly pending: number;
     readonly running: number;
@@ -135,12 +141,17 @@ export type Clock = {
 };
 
 type Options = {
+  readonly allowPendingReleaseMetadata?: boolean;
   readonly rootDir: string;
   readonly outputDir: string;
   readonly totalTimeoutMs: number;
+  readonly profile?: VerificationProfile;
+  readonly base?: string;
+  readonly head?: string;
 };
 
 type RunOptions = Options & {
+  readonly changedFiles?: readonly string[];
   readonly clock?: Clock;
   readonly commands?: readonly EvidenceCommand[];
   readonly maxOutputExcerptLength?: number;
@@ -168,221 +179,25 @@ function readCurrentCommitOrUnknown(rootDir: string): string {
     return "unknown";
   }
 }
+
+function readChangedFiles(
+  rootDir: string,
+  base?: string,
+  head?: string,
+): readonly string[] | undefined {
+  if (!base || !head) return undefined;
+  return execFileSync("git", ["diff", "--name-only", base, head], {
+    cwd: rootDir,
+    encoding: "utf8",
+  })
+    .trim()
+    .split("\n")
+    .filter(Boolean);
+}
 let activeCommandProcess: ChildProcess | null = null;
 
-function minutes(value: number): number {
-  return value * 60 * 1000;
-}
-
 export function createReleaseSpineEvidenceManifest(): readonly EvidenceCommand[] {
-  return [
-    {
-      id: "build",
-      label: "Summarized build",
-      category: "build",
-      command: ["pnpm", "turbo", "run", "build", "--summarize", "--continue=always"],
-      timeoutMs: minutes(30),
-    },
-    {
-      id: "quick-start-lambda-smoke",
-      label: "Quick-start Lambda smoke",
-      category: "runtime-smoke",
-      command: ["pnpm", "quick-start-lambda:smoke"],
-      timeoutMs: minutes(10),
-    },
-    {
-      id: "first-success",
-      label: "First-success contract",
-      category: "generated-app",
-      command: ["pnpm", "first-success:verify"],
-      timeoutMs: minutes(10),
-    },
-    {
-      id: "package-entrypoints-smoke",
-      label: "Package entrypoint smoke",
-      category: "package-smoke",
-      command: ["pnpm", "package-entrypoints:smoke"],
-      timeoutMs: minutes(10),
-    },
-    {
-      id: "package-bins-smoke",
-      label: "Package binary smoke",
-      category: "package-smoke",
-      command: ["pnpm", "package-bins:smoke"],
-      timeoutMs: minutes(20),
-    },
-    {
-      id: "release-metadata",
-      label: "Release metadata",
-      category: "metadata",
-      command: ["node", "--experimental-strip-types", "scripts/release-metadata-check.mts"],
-      timeoutMs: minutes(10),
-    },
-    {
-      id: "generated-app-smoke",
-      label: "create-croco-app generated app smoke",
-      category: "generated-app",
-      command: ["pnpm", "create-croco-app:smoke", "--", "--tier", "spine-blocking"],
-      timeoutMs: minutes(45),
-      artifacts: [
-        {
-          label: "Spine-blocking generated app smoke matrix markdown",
-          path: "ci-reports/generated-apps/spine-blocking-matrix.md",
-          required: true,
-        },
-        {
-          label: "Spine-blocking generated app smoke matrix JSON",
-          path: "ci-reports/generated-apps/spine-blocking-matrix.json",
-          required: true,
-        },
-        {
-          label: "Generated app smoke journey bundle",
-          path: "ci-reports/generated-apps/spine-blocking-journeys",
-          required: true,
-          copyRelativePath: "spine-blocking-journeys",
-        },
-      ],
-    },
-    {
-      id: "alpha-release-smoke",
-      label: "Packed generated app release smoke",
-      category: "generated-app",
-      command: ["pnpm", "alpha-release:smoke"],
-      timeoutMs: minutes(45),
-      artifacts: [
-        {
-          label: "Packed generated app smoke report",
-          path: "ci-reports/release/alpha-release-smoke.md",
-          required: true,
-        },
-      ],
-    },
-    {
-      id: "typecheck",
-      label: "Summarized TypeScript check",
-      category: "typecheck",
-      command: ["pnpm", "turbo", "run", "typecheck", "--summarize", "--continue=always"],
-      timeoutMs: minutes(30),
-    },
-    {
-      id: "test",
-      label: "Summarized tests",
-      category: "quality",
-      command: ["pnpm", "turbo", "run", "test", "--summarize", "--continue=always"],
-      timeoutMs: minutes(45),
-    },
-    {
-      id: "provider-certification",
-      label: "Provider certification",
-      category: "quality",
-      command: ["pnpm", "provider-certification:check"],
-      timeoutMs: minutes(10),
-      artifacts: [
-        {
-          label: "Provider certification markdown",
-          path: "ci-reports/package-quality/provider-certification.md",
-          required: true,
-        },
-        {
-          label: "Provider certification JSON",
-          path: "ci-reports/package-quality/provider-certification.json",
-          required: true,
-        },
-      ],
-    },
-    {
-      id: "production-ready",
-      label: "Production-ready package evidence",
-      category: "quality",
-      command: ["pnpm", "production-ready:check", "--", "--require-task-summaries"],
-      timeoutMs: minutes(10),
-      artifacts: [
-        {
-          label: "Production-ready package markdown",
-          path: "ci-reports/package-quality/production-ready.md",
-          required: true,
-        },
-      ],
-    },
-    {
-      id: "spine-promotion",
-      label: "Beta spine promotion accountability",
-      category: "quality",
-      command: ["pnpm", "spine-promotion:check"],
-      timeoutMs: minutes(10),
-      artifacts: [
-        {
-          label: "Beta spine promotion markdown",
-          path: "ci-reports/package-quality/spine-promotion.md",
-          required: true,
-        },
-      ],
-    },
-    {
-      id: "spine-bundle-size",
-      label: "Spine bundle-size enforcement",
-      category: "quality",
-      command: ["pnpm", "package-quality:report", "--", "--enforce-spine-bundle-size"],
-      timeoutMs: minutes(10),
-      artifacts: [
-        {
-          label: "Package quality dashboard markdown",
-          path: "ci-reports/package-quality/report.md",
-          required: true,
-        },
-        {
-          label: "Package quality dashboard JSON",
-          path: "ci-reports/package-quality/summary.json",
-          required: true,
-        },
-        {
-          label: "Bundle-size enforcement markdown",
-          path: "ci-reports/package-quality/bundle-size.md",
-          required: true,
-        },
-      ],
-    },
-    {
-      id: "core-coverage",
-      label: "Core coverage gate",
-      category: "coverage",
-      command: ["pnpm", "test:coverage:core"],
-      timeoutMs: minutes(45),
-    },
-    {
-      id: "core-coverage-warning",
-      label: "Core coverage warning report",
-      category: "coverage",
-      command: ["pnpm", "test:coverage:core:warning"],
-      timeoutMs: minutes(10),
-      artifacts: [
-        {
-          label: "Core coverage warning markdown",
-          path: "ci-reports/coverage/core-warning/report.md",
-          required: true,
-        },
-      ],
-    },
-    {
-      id: "public-api",
-      label: "Public API snapshot",
-      category: "public-api",
-      command: ["pnpm", "public-api:check"],
-      timeoutMs: minutes(10),
-      artifacts: [
-        {
-          label: "Public API diff markdown",
-          path: "ci-reports/package-quality/public-api-diff.md",
-          required: true,
-        },
-        {
-          label: "Public API summary JSON",
-          path: "ci-reports/package-quality/public-api-summary.json",
-          required: true,
-        },
-      ],
-    },
-  ];
+  return createVerificationManifest("spine");
 }
 
 function emptyArtifactReferences(command: EvidenceCommand): readonly EvidenceArtifactReference[] {
@@ -420,6 +235,7 @@ function createInitialReport(options: {
   readonly commands: readonly EvidenceCommand[];
   readonly generatedAt: string;
   readonly outputDir: string;
+  readonly profile: VerificationProfile;
   readonly provenance: ReleaseSpineEvidenceReport["provenance"];
   readonly rootDir: string;
   readonly totalTimeoutMs: number;
@@ -429,6 +245,7 @@ function createInitialReport(options: {
     completedAt: null,
     generatedAt: options.generatedAt,
     outputDir: options.outputDir,
+    profile: options.profile,
     provenance: options.provenance,
     rootDir: options.rootDir,
     status: "running",
@@ -442,6 +259,7 @@ function emptySummary(total: number): ReleaseSpineEvidenceReport["summary"] {
   return {
     failed: 0,
     interrupted: 0,
+    notApplicable: 0,
     passed: 0,
     pending: total,
     running: 0,
@@ -466,6 +284,9 @@ function summarizeReport(report: ReleaseSpineEvidenceReport): ReleaseSpineEviden
       if (check.status === "interrupted") {
         return { ...counts, interrupted: counts.interrupted + 1 };
       }
+      if (check.status === "not_applicable") {
+        return { ...counts, notApplicable: counts.notApplicable + 1 };
+      }
       if (check.status === "skipped_after_timeout") {
         return { ...counts, skippedAfterTimeout: counts.skippedAfterTimeout + 1 };
       }
@@ -477,6 +298,7 @@ function summarizeReport(report: ReleaseSpineEvidenceReport): ReleaseSpineEviden
     {
       failed: 0,
       interrupted: 0,
+      notApplicable: 0,
       passed: 0,
       pending: 0,
       running: 0,
@@ -557,11 +379,11 @@ function getErrorCode(error: Error | undefined): string | null {
 
 function appendBoundedText(current: string, chunk: string): string {
   const next = `${current}${chunk}`;
-  if (next.length <= commandOutputMaxBuffer) {
+  if (next.length <= COMMAND_OUTPUT_MAX_BUFFER) {
     return next;
   }
 
-  return next.slice(-commandOutputMaxBuffer);
+  return next.slice(-COMMAND_OUTPUT_MAX_BUFFER);
 }
 
 function killActiveCommand(signal: NodeJS.Signals): void {
@@ -621,7 +443,7 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
       signalCommandProcessTree(child, "SIGTERM");
       killTimer = setTimeout(() => {
         signalCommandProcessTree(child, "SIGKILL");
-      }, commandTimeoutKillGraceMs);
+      }, COMMAND_TIMEOUT_KILL_GRACE_MS);
     }, context.timeoutMs);
 
     const resolveOnce = (result: CommandRunResult) => {
@@ -697,7 +519,7 @@ function artifactCopyPath(
     "\\",
     "/",
   );
-  const copyRoot = join(outputDir, releaseArtifactDirectory, checkId);
+  const copyRoot = join(outputDir, RELEASE_ARTIFACT_DIRECTORY, checkId);
   const destination = resolve(copyRoot, copyRelativePath);
   const destinationRelativePath = relative(copyRoot, destination).replaceAll("\\", "/");
   if (
@@ -706,7 +528,11 @@ function artifactCopyPath(
     destinationRelativePath === ".." ||
     destinationRelativePath.startsWith("../")
   ) {
-    throw new Error(`Unsafe release evidence copy path: ${copyRelativePath}`);
+    throw new VerificationProblem(
+      "UNSAFE_EVIDENCE_COPY_PATH",
+      "input",
+      `Unsafe release evidence copy path: ${copyRelativePath}`,
+    );
   }
   return destination;
 }
@@ -746,10 +572,10 @@ function collectArtifactReferences(
     };
   });
 
-  if (check.id === "generated-app-smoke") {
+  if (check.id === "generated-app-spine-smoke" || check.id === "generated-app-smoke") {
     try {
       assertCopiedGeneratedSmokeJourneyBundle(
-        join(outputDir, releaseArtifactDirectory, check.id, "spine-blocking-journeys"),
+        join(outputDir, RELEASE_ARTIFACT_DIRECTORY, check.id, "spine-blocking-journeys"),
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -771,7 +597,11 @@ function assertCopiedGeneratedSmokeJourneyBundle(bundleRoot: string): void {
   assertGeneratedSmokeJourneyReport(reportJson);
   const reportMarkdown = readFileSync(join(bundleRoot, "report.md"), "utf8");
   if (reportMarkdown !== renderGeneratedSmokeJourneyReport(reportJson)) {
-    throw new Error("Copied generated smoke journey Markdown does not match report.json");
+    throw new VerificationProblem(
+      "GENERATED_SMOKE_EVIDENCE_MISMATCH",
+      "contract",
+      "Copied generated smoke journey Markdown does not match report.json",
+    );
   }
   assertGeneratedSmokeJourneyLinks(bundleRoot, reportJson);
 }
@@ -878,10 +708,18 @@ export async function runReleaseSpineEvidence(
   options: RunOptions,
 ): Promise<ReleaseSpineEvidenceReport> {
   const clock = options.clock ?? systemClock;
-  const commands = options.commands ?? createReleaseSpineEvidenceManifest();
-  const runner = options.runner ?? defaultCommandRunner;
-  const maxOutputExcerptLength = options.maxOutputExcerptLength ?? defaultOutputExcerptLength;
+  const profile = options.profile ?? "spine";
   const rootDir = resolve(options.rootDir);
+  const commands =
+    options.commands ??
+    createVerificationManifest(profile, {
+      allowPendingReleaseMetadata: options.allowPendingReleaseMetadata,
+      base: options.base,
+      changedFiles: options.changedFiles ?? readChangedFiles(rootDir, options.base, options.head),
+      head: options.head,
+    });
+  const runner = options.runner ?? defaultCommandRunner;
+  const maxOutputExcerptLength = options.maxOutputExcerptLength ?? DEFAULT_OUTPUT_EXCERPT_LENGTH;
   const outputDir = resolve(rootDir, options.outputDir);
   const generatedAt = clock.nowIso();
   const provenance = {
@@ -894,6 +732,7 @@ export async function runReleaseSpineEvidence(
     commands,
     generatedAt,
     outputDir,
+    profile,
     provenance,
     rootDir,
     totalTimeoutMs: options.totalTimeoutMs,
@@ -904,9 +743,26 @@ export async function runReleaseSpineEvidence(
     options.onCheckpoint?.(writtenReport);
   };
 
+  const dashboardStatus = (id: string): string => {
+    const status = report.checks.find((candidate) => candidate.id === id)?.status;
+    if (status === "passed") return "success";
+    if (status === "failed" || status === "timed_out" || status === "interrupted") return "failure";
+    return "skipped";
+  };
+
   checkpoint();
 
   for (const [index, check] of commands.entries()) {
+    if (check.applicable === false) {
+      report = updateCheck(report, index, {
+        ...report.checks[index],
+        completedAt: clock.nowIso(),
+        failureReason: "Not applicable to the changed files in this verification context.",
+        status: "not_applicable",
+      });
+      checkpoint();
+      continue;
+    }
     const elapsedMs = clock.nowMs() - runStartedAtMs;
     const remainingTotalTimeoutMs = options.totalTimeoutMs - elapsedMs;
     if (remainingTotalTimeoutMs <= 0) {
@@ -926,6 +782,30 @@ export async function runReleaseSpineEvidence(
     });
     checkpoint();
 
+    const baseCommandEnv =
+      check.id === "core-coverage"
+        ? { ...process.env, CORE_COVERAGE: "true", SKIP_ENV_VALIDATION: "true" }
+        : process.env;
+    const commandEnv =
+      check.id === "spine-bundle-size"
+        ? {
+            ...baseCommandEnv,
+            PACKAGE_QUALITY_CHANGESET_STATUS: dashboardStatus("changeset-required"),
+            PACKAGE_QUALITY_CHECK_STATUS:
+              dashboardStatus("lint") === "success" && dashboardStatus("format") === "success"
+                ? "success"
+                : dashboardStatus("lint") === "failure" || dashboardStatus("format") === "failure"
+                  ? "failure"
+                  : "skipped",
+            PACKAGE_QUALITY_BUILD_STATUS: dashboardStatus("build"),
+            PACKAGE_QUALITY_TYPECHECK_STATUS: dashboardStatus("typecheck"),
+            PACKAGE_QUALITY_TEST_STATUS: dashboardStatus("test"),
+            PACKAGE_QUALITY_PROVIDER_CERTIFICATION_STATUS:
+              dashboardStatus("provider-certification"),
+            PACKAGE_QUALITY_PRODUCTION_READY_STATUS: dashboardStatus("production-ready"),
+            PACKAGE_QUALITY_SPINE_PROMOTION_STATUS: dashboardStatus("spine-promotion"),
+          }
+        : baseCommandEnv;
     const result = await runner(check, {
       cwd: rootDir,
       env:
@@ -933,11 +813,11 @@ export async function runReleaseSpineEvidence(
           ? {
               ...process.env,
               SPINE_PROMOTION_COMMIT_SHA: report.provenance.commitSha,
-              SPINE_PROMOTION_RELEASE_CHECKPOINT: join(outputDir, reportJsonFileName),
+              SPINE_PROMOTION_RELEASE_CHECKPOINT: join(outputDir, REPORT_JSON_FILE_NAME),
               SPINE_PROMOTION_RUN_ATTEMPT: report.provenance.runAttempt,
               SPINE_PROMOTION_RUN_ID: report.provenance.runId,
             }
-          : process.env,
+          : commandEnv,
       timeoutMs: effectiveTimeoutMs,
     });
     const completedAt = clock.nowIso();
@@ -1036,10 +916,11 @@ export function buildReleaseSpineEvidenceMarkdown(report: ReleaseSpineEvidenceRe
     `- Completed at: ${report.completedAt ?? "not complete"}`,
     `- Root: \`${toPosixPath(report.rootDir)}\``,
     `- Output directory: \`${toPosixPath(report.outputDir)}\``,
+    `- Profile: \`${report.profile}\``,
     `- Commit: \`${report.provenance.commitSha}\``,
     `- Run: \`${report.provenance.runId}\` attempt \`${report.provenance.runAttempt}\``,
     `- Total timeout: ${formatTimeout(report.totalTimeoutMs)}`,
-    `- Checks: ${report.summary.passed}/${report.summary.total} passed, ${report.summary.failed} failed, ${report.summary.timedOut} timed out, ${report.summary.interrupted} interrupted, ${report.summary.skippedAfterTimeout} skipped after timeout`,
+    `- Checks: ${report.summary.passed}/${report.summary.total} passed, ${report.summary.notApplicable} not applicable, ${report.summary.failed} failed, ${report.summary.timedOut} timed out, ${report.summary.interrupted} interrupted, ${report.summary.skippedAfterTimeout} skipped after timeout`,
     "",
     "## Check summary",
     "",
@@ -1092,22 +973,47 @@ export function writeReleaseSpineEvidenceReport(
 ): ReleaseSpineEvidenceReport {
   mkdirSync(outputDir, { recursive: true });
   const summarized = summarizeReport(report);
-  writeFileSync(join(outputDir, reportJsonFileName), `${JSON.stringify(summarized, null, 2)}\n`);
+  writeFileSync(join(outputDir, REPORT_JSON_FILE_NAME), `${JSON.stringify(summarized, null, 2)}\n`);
   writeFileSync(
-    join(outputDir, reportMarkdownFileName),
+    join(outputDir, REPORT_MARKDOWN_FILE_NAME),
     buildReleaseSpineEvidenceMarkdown(summarized),
   );
   return summarized;
 }
 
+export function failedCheckDiagnostics(report: ReleaseSpineEvidenceReport): readonly string[] {
+  return report.checks
+    .filter(
+      ({ status }) =>
+        status === "failed" ||
+        status === "timed_out" ||
+        status === "interrupted" ||
+        status === "skipped_after_timeout",
+    )
+    .map(({ errorMessage, failureReason, id, status, stderrExcerpt }) => {
+      const details = [failureReason, errorMessage, stderrExcerpt.trim()]
+        .filter(Boolean)
+        .join(" | ");
+      return `${id}: ${status}${details ? `: ${details}` : ""}`;
+    });
+}
+
 function parsePositiveInteger(value: string, flag: string): number {
   if (!/^[1-9]\d*$/.test(value)) {
-    throw new Error(`${flag} must be a positive integer`);
+    throw new VerificationProblem(
+      "INVALID_POSITIVE_INTEGER",
+      "input",
+      `${flag} must be a positive integer`,
+    );
   }
 
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    throw new Error(`${flag} must be a positive integer`);
+    throw new VerificationProblem(
+      "INVALID_POSITIVE_INTEGER",
+      "input",
+      `${flag} must be a positive integer`,
+    );
   }
 
   return parsed;
@@ -1115,9 +1021,14 @@ function parsePositiveInteger(value: string, flag: string): number {
 
 export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
   let rootDir = process.cwd();
-  let outputDir = join(rootDir, defaultOutputDirectory);
+  let outputDir = join(rootDir, DEFAULT_OUTPUT_DIRECTORY);
   let outputDirWasExplicit = false;
-  let totalTimeoutMs = defaultTotalTimeoutMs;
+  let totalTimeoutMs = DEFAULT_TOTAL_TIMEOUT_MS;
+  let profile: VerificationProfile = "spine";
+  let profileWasExplicit = false;
+  let base: string | undefined;
+  let head: string | undefined;
+  let allowPendingReleaseMetadata = false;
 
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
@@ -1125,14 +1036,22 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
       continue;
     }
 
+    if (arg === "--allow-pending-release-metadata") {
+      allowPendingReleaseMetadata = true;
+      continue;
+    }
+
     if (arg === "--root") {
       const value = args[index + 1];
       if (!value) {
-        throw new Error("--root requires a path");
+        throw new VerificationProblem("MISSING_ROOT_PATH", "input", "--root requires a path");
       }
       rootDir = resolve(value);
       if (!outputDirWasExplicit) {
-        outputDir = join(rootDir, defaultOutputDirectory);
+        outputDir =
+          profile === "spine"
+            ? join(rootDir, DEFAULT_OUTPUT_DIRECTORY)
+            : join(rootDir, "ci-reports", "verification", profile);
       }
       index++;
       continue;
@@ -1141,7 +1060,11 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
     if (arg === "--output-dir") {
       const value = args[index + 1];
       if (!value) {
-        throw new Error("--output-dir requires a path");
+        throw new VerificationProblem(
+          "MISSING_OUTPUT_DIRECTORY",
+          "input",
+          "--output-dir requires a path",
+        );
       }
       outputDir = resolve(value);
       outputDirWasExplicit = true;
@@ -1152,30 +1075,85 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
     if (arg === "--total-timeout-ms") {
       const value = args[index + 1];
       if (!value) {
-        throw new Error("--total-timeout-ms requires a value");
+        throw new VerificationProblem(
+          "MISSING_TOTAL_TIMEOUT",
+          "input",
+          "--total-timeout-ms requires a value",
+        );
       }
       totalTimeoutMs = parsePositiveInteger(value, "--total-timeout-ms");
       index++;
       continue;
     }
 
-    throw new Error(`Unknown option: ${arg}`);
+    if (arg === "--profile") {
+      if (profileWasExplicit) {
+        throw new VerificationProblem(
+          "DUPLICATE_VERIFICATION_PROFILE",
+          "input",
+          "--profile may be provided only once",
+        );
+      }
+      const value = args[index + 1];
+      if (value !== "repo" && value !== "spine" && value !== "publish") {
+        throw new VerificationProblem(
+          "INVALID_VERIFICATION_PROFILE",
+          "input",
+          "--profile must be repo, spine, or publish",
+        );
+      }
+      profile = value;
+      profileWasExplicit = true;
+      if (!outputDirWasExplicit && profile !== "spine") {
+        outputDir = join(rootDir, "ci-reports", "verification", profile);
+      }
+      index++;
+      continue;
+    }
+
+    if (arg === "--base" || arg === "--head") {
+      const value = args[index + 1];
+      if (!value) {
+        throw new VerificationProblem(
+          "MISSING_VERIFICATION_REVISION",
+          "input",
+          `${arg} requires a revision`,
+        );
+      }
+      if (arg === "--base") base = value;
+      else head = value;
+      index++;
+      continue;
+    }
+
+    throw new VerificationProblem("UNKNOWN_VERIFICATION_OPTION", "input", `Unknown option: ${arg}`);
   }
 
   return {
+    allowPendingReleaseMetadata,
     rootDir: resolve(rootDir),
     outputDir: resolve(outputDir),
     totalTimeoutMs,
+    profile,
+    base,
+    head,
   };
 }
 
 async function main(): Promise<void> {
   const options = parseArgs(argv.slice(2));
-  const commands = createReleaseSpineEvidenceManifest();
+  const profile = options.profile ?? "spine";
+  const commands = createVerificationManifest(profile, {
+    allowPendingReleaseMetadata: options.allowPendingReleaseMetadata,
+    base: options.base,
+    changedFiles: readChangedFiles(options.rootDir, options.base, options.head),
+    head: options.head,
+  });
   let latestReport: ReleaseSpineEvidenceReport | null = createInitialReport({
     commands,
     generatedAt: systemClock.nowIso(),
     outputDir: options.outputDir,
+    profile,
     provenance: {
       commitSha: process.env.GITHUB_SHA ?? readCurrentCommitOrUnknown(options.rootDir),
       runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
@@ -1207,19 +1185,23 @@ async function main(): Promise<void> {
     onCheckpoint: checkpoint,
   });
 
-  console.log(`release-spine-evidence: wrote ${join(options.outputDir, reportMarkdownFileName)}`);
-  console.log(`release-spine-evidence: wrote ${join(options.outputDir, reportJsonFileName)}`);
+  console.log(
+    `release-spine-evidence: wrote ${join(options.outputDir, REPORT_MARKDOWN_FILE_NAME)}`,
+  );
+  console.log(`release-spine-evidence: wrote ${join(options.outputDir, REPORT_JSON_FILE_NAME)}`);
   console.log(
     `release-spine-evidence: status=${report.status} passed=${report.summary.passed}/${report.summary.total}`,
   );
+  for (const diagnostic of failedCheckDiagnostics(report)) {
+    console.error(`release-spine-evidence: check failed: ${diagnostic}`);
+  }
 
   exit(report.status === "passed" ? 0 : 1);
 }
 
 if (import.meta.url === pathToFileURL(argv[1] ?? "").href) {
   main().catch((error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`release-spine-evidence: failed: ${message}`);
+    console.error(`release-spine-evidence: failed: ${formatVerificationProblem(error)}`);
     exit(1);
   });
 }

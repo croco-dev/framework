@@ -122,47 +122,29 @@ describe("workflow read-only contracts", () => {
     expect(findUnclassifiedVerificationPaths(discoveries)).toEqual([]);
   });
 
-  it("guards every authoritative CI invocation at its exact site", () => {
-    const guardedChildren = [
-      "pnpm changeset-required:check -- --base origin/${{ github.base_ref }} --head HEAD",
-      "pnpm security-allowlists:check",
-      "pnpm architecture:check:circular:allowlist",
-      "pnpm first-success:verify",
-      "pnpm turbo run typecheck --summarize --continue=always",
-      "pnpm provider-certification:check",
-      'pnpm production-ready:check -- "${production_ready_args[@]}"',
-      "pnpm spine-promotion:check",
-    ];
+  it("routes authoritative CI verification through the guarded shared manifest", () => {
+    expect(ci).toContain("scripts/release-spine-evidence.mts");
+    expect(ci).toContain('--profile "${{ steps.verification.outputs.profile }}"');
+    expect(ci).not.toContain("pnpm audit:read-only");
 
-    for (const child of guardedChildren) {
-      const sites = ci.split("\n").filter((line) => line.includes(child));
-      expect(sites.length, `${child} should have an authoritative invocation`).toBeGreaterThan(0);
-      expect(
-        sites.every(
-          (line) =>
-            line.includes("pnpm tracked-files:guard --recovery '") && line.includes(` -- ${child}`),
-        ),
-        `${child} should be guarded at every occurrence`,
-      ).toBe(true);
+    const manifest = readFileSync(
+      resolve(repositoryRoot, "scripts/verification-manifest.mts"),
+      "utf-8",
+    );
+    for (const recovery of Object.values(ROOT_VERIFICATION_POLICY)) {
+      if (!recovery.nonmutationEvidence.includes("shared verification manifest")) continue;
+      expect(recovery.owner).toBeTruthy();
     }
+    expect(manifest).toContain("scripts/tracked-file-mutation-guard.mts");
   });
 
-  it("routes repository validation through the exact read-only audit aggregation", () => {
-    expect(ci).toContain("pnpm audit:read-only");
-
+  it("keeps compatibility aliases on the authoritative repository profile", () => {
     const packageJson = JSON.parse(
       readFileSync(resolve(repositoryRoot, "package.json"), "utf-8"),
     ) as { readonly scripts: Readonly<Record<string, string>> };
-    const audit = packageJson.scripts["audit:read-only"];
-    const guardedChildren = [...(audit?.matchAll(/ -- (pnpm [^&]+)/g) ?? [])].map((match) =>
-      match[1]?.trim(),
-    );
 
-    expect(guardedChildren).toEqual([
-      "pnpm check",
-      "pnpm architecture:check:circular",
-      "pnpm bench:check",
-    ]);
+    expect(packageJson.scripts.check).toBe("pnpm verify:repo");
+    expect(packageJson.scripts["audit:read-only"]).toBe("pnpm verify:repo");
   });
 
   it("uses isolated API-doc comparison without checkout repair or formatting", () => {
