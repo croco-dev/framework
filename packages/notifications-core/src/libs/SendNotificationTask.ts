@@ -1,8 +1,10 @@
+// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
+/* oxlint-disable typescript/consistent-type-imports */
 import { Component } from "@croco/framework-context";
 import { Problem } from "@croco/problems-core";
 import { Task } from "@croco/tasks-core";
 import { recordError, recordEvent } from "@croco/telemetry-api";
-import type { NotificationProviderRegistry } from "./NotificationProviderRegistry";
+import { NotificationProviderRegistry } from "./NotificationProviderRegistry";
 import {
   NotificationDeliveryFailedProblem,
   NotificationProviderNotFoundProblem,

@@ -1,4 +1,10 @@
-import { Component, Context as FrameworkContext, type ILogger } from "@croco/framework-context";
+import {
+  Component,
+  Context as FrameworkContext,
+  Inject,
+  type ILogger,
+  LOGGER_TOKEN,
+} from "@croco/framework-context";
 import { Problem, type ProblemDetails } from "@croco/problems-core";
 import { HTTP_CONTEXT_KEYS } from "./contextKeys";
 import {
@@ -23,7 +29,7 @@ type FailureMetadata = {
  * 일반 예외와 Problem 예외를 HTTP 응답으로 변환하는 기본 에러 핸들러입니다.
  */
 export class ErrorHandler {
-  constructor(private readonly logger: ILogger) {}
+  constructor(@Inject(LOGGER_TOKEN) private readonly logger: ILogger) {}
 
   handleError(error: unknown, ctx: CrocoHttpContext): Response {
     if (error instanceof Problem) {

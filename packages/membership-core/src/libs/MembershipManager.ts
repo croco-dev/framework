@@ -1,12 +1,14 @@
+// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
+/* oxlint-disable typescript/consistent-type-imports */
 import { randomUUID } from "node:crypto";
-import type { EventPublisher } from "@croco/events-core";
+import { EventPublisher } from "@croco/events-core";
 import { Component } from "@croco/framework-context";
 import { MembershipCreatedEvent } from "./events/MembershipCreatedEvent";
 import { MembershipRemovedEvent } from "./events/MembershipRemovedEvent";
 import { MembershipUpdatedEvent } from "./events/MembershipUpdatedEvent";
 import type { MembershipManager as AbstractMembershipManager } from "./interfaces/AbstractMembershipManager";
 import { MembershipOwnerGuard } from "./MembershipOwnerGuard";
-import type { MembershipStore } from "./MembershipStore";
+import { MembershipStore } from "./MembershipStore";
 import {
   AlreadyMemberProblem,
   InvalidRoleProblem,
@@ -15,7 +17,7 @@ import {
   RoleHierarchyViolationProblem,
   SeatLimitExceededProblem,
 } from "./problems/MembershipProblems";
-import type { SeatLimitChecker } from "./SeatLimitChecker";
+import { SeatLimitChecker } from "./SeatLimitChecker";
 import {
   canDemote,
   canPromote,
@@ -32,7 +34,7 @@ export class MembershipManager implements AbstractMembershipManager {
   constructor(
     private readonly store: MembershipStore,
     private readonly eventPublisher: EventPublisher,
-    private readonly seatLimitChecker?: SeatLimitChecker,
+    private readonly seatLimitChecker: SeatLimitChecker | undefined = undefined,
   ) {
     this.ownerGuard = new MembershipOwnerGuard(store);
   }

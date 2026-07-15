@@ -1,9 +1,11 @@
+// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
+/* oxlint-disable typescript/consistent-type-imports */
 import type { Readable } from "node:stream";
 import { S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import type { ConfigService } from "@croco/framework-config";
+import { ConfigService } from "@croco/framework-config";
 import { Component } from "@croco/framework-context";
-import type { Logger } from "@croco/framework-logger";
+import { Logger } from "@croco/framework-logger";
 import type { RetryPolicy } from "@croco/retry-core";
 import { RetryTemplate } from "@croco/retry-core";
 import type { ObjectMetadata, PutOptions, SignedUrlOptions } from "@croco/storage-core";

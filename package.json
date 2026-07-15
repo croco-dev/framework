@@ -66,6 +66,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "2.29.8",
+    "@swc/core": "1.15.43",
     "@types/node": "^22",
     "@vitest/coverage-v8": "4.0.16",
     "lefthook": "2.0.13",

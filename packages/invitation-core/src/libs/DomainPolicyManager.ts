@@ -1,13 +1,15 @@
+// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
+/* oxlint-disable typescript/consistent-type-imports */
 import { randomUUID } from "node:crypto";
-import type { EventPublisher } from "@croco/events-core";
+import { EventPublisher } from "@croco/events-core";
 import { Component } from "@croco/framework-context";
 import {
   AlreadyMemberProblem,
   type Membership,
-  type MembershipManager,
+  MembershipManager,
   type MembershipRole,
 } from "@croco/membership-core";
-import type { DomainPolicyStore } from "./DomainPolicyStore";
+import { DomainPolicyStore } from "./DomainPolicyStore";
 import {
   DomainAutoJoinedEvent,
   DomainPolicyAddedEvent,

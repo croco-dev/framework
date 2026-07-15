@@ -217,6 +217,69 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("summary checked=3 exempt=0 skippedPrivate=0");
   });
 
+  it("verifies packed ESM and CJS decorator metadata with implicit DI", () => {
+    const root = createTempRoot();
+    writeDecoratorMetadataPackages(root);
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "cjs decorator metadata and implicit DI ok @croco/auth-better-auth",
+    );
+    expect(result.stdout).toContain(
+      "esm decorator metadata and implicit DI ok @croco/auth-better-auth",
+    );
+    expect(result.stdout).toContain(
+      "cjs decorator metadata and implicit DI ok @croco/features-posthog",
+    );
+    expect(result.stdout).toContain(
+      "esm decorator metadata and implicit DI ok @croco/features-posthog",
+    );
+    expect(result.stdout).toContain(
+      "cjs decorator metadata and implicit DI ok @croco/metering-core",
+    );
+    expect(result.stdout).toContain(
+      "esm decorator metadata and implicit DI ok @croco/metering-core",
+    );
+  });
+
+  it("fails when the packed auth service loses concrete constructor metadata", () => {
+    const root = createTempRoot();
+    writeDecoratorMetadataPackages(root, { missingAuthMetadata: true });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      "BetterAuthProvider design:paramtypes expected [BetterAuthFactory], received [missing]",
+    );
+  });
+
+  it("fails when the packed feature service loses concrete constructor metadata", () => {
+    const root = createTempRoot();
+    writeDecoratorMetadataPackages(root, { missingFeatureMetadata: true });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      "PostHogFeatureManager design:paramtypes expected [PostHogClient], received [missing]",
+    );
+  });
+
+  it("fails when the packed container injects trailing metadata instead of preserving defaults", () => {
+    const root = createTempRoot();
+    writeDecoratorMetadataPackages(root, { brokenDefaultResolution: true });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      "Container.get(MeterRegistry) expected default cacheTtlMs=60000",
+    );
+  });
+
   it("matches packed tarballs by manifest name when package names share a prefix", () => {
     const root = createTempRoot();
     const prefixedExport = {
@@ -409,6 +472,134 @@ function writeImportablePackage(
       2,
     )}\n`,
   );
+}
+
+function writeDecoratorMetadataPackages(
+  root: string,
+  options: {
+    readonly brokenDefaultResolution?: boolean;
+    readonly missingAuthMetadata?: boolean;
+    readonly missingFeatureMetadata?: boolean;
+  } = {},
+): void {
+  const dependencyResolution = options.brokenDefaultResolution
+    ? "dependencies.map((dependency) => this.get(dependency))"
+    : "dependencies.map((dependency, index) => index >= token.length ? undefined : this.get(dependency))";
+  const cjsContainer = [
+    "const metadata = new WeakMap();",
+    "Reflect.defineMetadata = (key, value, target) => {",
+    "  const targetMetadata = metadata.get(target) ?? new Map();",
+    "  targetMetadata.set(key, value);",
+    "  metadata.set(target, targetMetadata);",
+    "};",
+    "Reflect.getMetadata = (key, target) => metadata.get(target)?.get(key);",
+    "class Container {",
+    "  static values = new Map();",
+    "  static set(token, value) { this.values.set(token, value); return value; }",
+    "  static get(token) {",
+    "    if (this.values.has(token)) return this.values.get(token);",
+    '    const dependencies = Reflect.getMetadata("design:paramtypes", token) ?? [];',
+    `    const value = new token(...${dependencyResolution});`,
+    "    this.values.set(token, value);",
+    "    return value;",
+    "  }",
+    "  static reset() { this.values.clear(); }",
+    "}",
+    "exports.Container = Container;",
+    "",
+  ].join("\n");
+  const esmContainer = cjsContainer
+    .replace("class Container", "export class Container")
+    .replace("exports.Container = Container;", "");
+  writeImportablePackage(root, "framework-context", {
+    cjsContent: cjsContainer,
+    declarationContent: "export declare class Container {}\n",
+    esmContent: esmContainer,
+    packageName: "@croco/framework-context",
+  });
+
+  writeImportablePackage(root, "integrations-posthog", {
+    cjsContent: "class PostHogClient {}\nexports.PostHogClient = PostHogClient;\n",
+    declarationContent: "export declare class PostHogClient {}\n",
+    esmContent: "export class PostHogClient {}\n",
+    packageName: "@croco/integrations-posthog",
+  });
+
+  const authMetadata = options.missingAuthMetadata
+    ? ""
+    : 'Reflect.defineMetadata("design:paramtypes", [BetterAuthFactory], BetterAuthProvider);\n';
+  writeImportablePackage(root, "auth-better-auth", {
+    cjsContent: [
+      'require("@croco/framework-context");',
+      "class BetterAuthFactory {}",
+      "class BetterAuthProvider { constructor(factory) { this.factory = factory; } }",
+      authMetadata,
+      "exports.BetterAuthFactory = BetterAuthFactory;",
+      "exports.BetterAuthProvider = BetterAuthProvider;",
+      "",
+    ].join("\n"),
+    declarationContent:
+      "export declare class BetterAuthFactory {}\nexport declare class BetterAuthProvider {}\n",
+    dependencies: { "@croco/framework-context": "0.0.0" },
+    esmContent: [
+      'import "@croco/framework-context";',
+      "export class BetterAuthFactory {}",
+      "export class BetterAuthProvider { constructor(factory) { this.factory = factory; } }",
+      authMetadata,
+      "",
+    ].join("\n"),
+    packageName: "@croco/auth-better-auth",
+  });
+
+  const featureMetadata = options.missingFeatureMetadata
+    ? ""
+    : 'Reflect.defineMetadata("design:paramtypes", [PostHogClient], PostHogFeatureManager);\n';
+  writeImportablePackage(root, "features-posthog", {
+    cjsContent: [
+      'require("@croco/framework-context");',
+      'const { PostHogClient } = require("@croco/integrations-posthog");',
+      "class PostHogFeatureManager { constructor(posthogClient) { this.posthogClient = posthogClient; } }",
+      featureMetadata,
+      "exports.PostHogFeatureManager = PostHogFeatureManager;",
+      "",
+    ].join("\n"),
+    declarationContent: "export declare class PostHogFeatureManager {}\n",
+    dependencies: {
+      "@croco/framework-context": "0.0.0",
+      "@croco/integrations-posthog": "0.0.0",
+    },
+    esmContent: [
+      'import "@croco/framework-context";',
+      'import { PostHogClient } from "@croco/integrations-posthog";',
+      "export class PostHogFeatureManager { constructor(posthogClient) { this.posthogClient = posthogClient; } }",
+      featureMetadata,
+      "",
+    ].join("\n"),
+    packageName: "@croco/features-posthog",
+  });
+
+  writeImportablePackage(root, "metering-core", {
+    cjsContent: [
+      'require("@croco/framework-context");',
+      "class MeterRepository {}",
+      "class MeterRegistry { constructor(repository, cacheTtlMs = 60000) { this.repository = repository; this.cacheTtlMs = cacheTtlMs; } }",
+      'Reflect.defineMetadata("design:paramtypes", [MeterRepository, Number], MeterRegistry);',
+      "exports.MeterRepository = MeterRepository;",
+      "exports.MeterRegistry = MeterRegistry;",
+      "",
+    ].join("\n"),
+    declarationContent:
+      "export declare class MeterRepository {}\nexport declare class MeterRegistry {}\n",
+    dependencies: { "@croco/framework-context": "0.0.0" },
+    esmContent: [
+      'import "@croco/framework-context";',
+      "export class MeterRepository {}",
+      "export class MeterRegistry { constructor(repository, cacheTtlMs = 60000) { this.repository = repository; this.cacheTtlMs = cacheTtlMs; } }",
+      'Reflect.defineMetadata("design:paramtypes", [MeterRepository, Number], MeterRegistry);',
+      "",
+    ].join("\n"),
+    packageName: "@croco/metering-core",
+  });
 }
 
 function writePackageLocalDependency(

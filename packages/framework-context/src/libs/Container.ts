@@ -291,7 +291,8 @@ export class Container {
       const paramTypes =
         (Reflect.getMetadata("design:paramtypes", node) as Constructor[] | undefined) ?? [];
       const dependencies = paramTypes.filter(
-        (dep): dep is Constructor => typeof dep === "function" && nodeSet.has(dep),
+        (dep, parameterIndex): dep is Constructor =>
+          parameterIndex < node.length && typeof dep === "function" && nodeSet.has(dep),
       );
       graph.set(node, dependencies);
     }
@@ -865,8 +866,6 @@ export class Container {
     const handlerContainer = Container.createHandlerContainer(trace, stack);
 
     return paramTypes.map((paramType: Constructor, index: number) => {
-      Container.assertScopeCompatibility(paramType, stack, trace);
-
       const handler = TypeDIContainer.handlers.find(
         (candidate) =>
           (candidate.object === token || candidate.object === Object.getPrototypeOf(token)) &&
@@ -877,6 +876,11 @@ export class Container {
         return handler.value(handlerContainer);
       }
 
+      if (index >= token.length) {
+        return undefined;
+      }
+
+      Container.assertScopeCompatibility(paramType, stack, trace);
       return Container.resolveWithTrace(paramType, trace, stack);
     });
   }
@@ -962,6 +966,9 @@ export class Container {
       (Reflect.getMetadata("design:paramtypes", token) as Constructor[] | undefined) ?? [];
     paramTypes.forEach((paramType, parameterIndex) => {
       const injectedToken = getParameterInjectionToken(token, parameterIndex);
+      if (!injectedToken && parameterIndex >= token.length) {
+        return;
+      }
       Container.collectResolutionSteps(injectedToken ?? paramType, nextPath, steps, {
         dependencyOf: step.token,
         dependencyOfId: step.tokenId,

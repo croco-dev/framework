@@ -1,3 +1,5 @@
+// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
+/* oxlint-disable typescript/consistent-type-imports */
 import { Component, Inject, Token } from "@croco/framework-context";
 import {
   type Membership,
@@ -5,7 +7,7 @@ import {
   type MembershipRole,
   MembershipStore,
 } from "@croco/membership-core";
-import type { TxManager } from "@croco/tx-core";
+import { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
 import { and, count, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";

@@ -1,7 +1,14 @@
-import type { BillingStore, PlanRegistry } from "@croco/billing-core";
-import { OrderPaidEvent, PlanChangedEvent, SubscriptionCanceledEvent } from "@croco/billing-core";
+// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
+/* oxlint-disable typescript/consistent-type-imports */
+import {
+  BillingStore,
+  OrderPaidEvent,
+  PlanChangedEvent,
+  type PlanRegistry,
+  SubscriptionCanceledEvent,
+} from "@croco/billing-core";
 import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croco/events-core";
-import type { MetricsRepository, Money, PlanProvider } from "@croco/metrics-core";
+import { MetricsRepository, type Money, type PlanProvider } from "@croco/metrics-core";
 import type { MRRMovement } from "@croco/metrics-core";
 import { MrrCalculator } from "@croco/metrics-core";
 import {
