@@ -149,7 +149,7 @@ describe("package-quality-report.mts", () => {
       "| `production-ready:check` | production-ready package maturity evidence",
     );
     expect(markdown).toContain(
-      "| `spine-promotion:check` | beta Croco 1.0 spine promotion accountability",
+      "| `spine-promotion:check` | beta Croco 1.0 spine executable promotion evidence",
     );
     expect(markdown).toContain(
       "provider-certification, production-ready, spine-promotion, and the dedicated benchmark workflow",
