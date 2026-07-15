@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  assertGeneratedVerificationValidationsAreReadOnly,
   assertGeneratedPresentationProfileMatchesCatalog,
   readCommandOutputSegment,
   readGeneratedSmokeAllowlistMetadata,
@@ -58,6 +59,21 @@ const journeySourceCaseNames = [
   "graphql-lambda-api",
   "rest-spa-contracts",
 ] as const;
+
+describe("generated verification mutation coverage", () => {
+  it("requires guards and recovery for non-codegen check and verify validations", () => {
+    expect(() =>
+      assertGeneratedVerificationValidationsAreReadOnly([
+        { args: ["contract:verify"] },
+        { args: ["profile:check"], readOnly: true, recovery: "regenerate profile" },
+        { args: ["di:verify"], readOnly: true, recovery: "pnpm di:graph" },
+      ]),
+    ).not.toThrow();
+    expect(() =>
+      assertGeneratedVerificationValidationsAreReadOnly([{ args: ["profile:check"] }]),
+    ).toThrow("profile:check");
+  });
+});
 
 describe("create-croco-app generated smoke journey report", () => {
   it("projects the seven stable user journeys from exact executed smoke steps", () => {
