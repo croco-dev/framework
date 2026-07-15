@@ -1,0 +1,2350 @@
+{
+  "schemaVersion": 1,
+  "sourceIssue": "https://github.com/croco-dev/framework/issues/1332",
+  "reviewedAt": "2026-07-15",
+  "scope": "The finite package set in docs/package-catalog.json spine.packages. Human review establishes semantic completeness; release-docs:check validates catalog, schema, and evidence references.",
+  "packages": [
+    {
+      "package": "framework-context",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["component-and-runtime-options"],
+          "reviewPaths": ["packages/framework-context/src"],
+          "searchTerms": ["Options", "Config", "enabled"]
+        },
+        "decoder": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/framework-context/src"],
+          "searchTerms": ["parse", "deserialize", "JSON.parse"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["shutdown-hooks"],
+          "reviewPaths": ["packages/framework-context/src"],
+          "searchTerms": ["shutdown", "OnShutdown", "lifecycle"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["shutdown-best-effort"],
+          "reviewPaths": ["packages/framework-context/src"],
+          "searchTerms": ["catch", "continue", "fallback"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["runtime-contract-checks"],
+          "reviewPaths": ["packages/framework-context/src"],
+          "searchTerms": ["check", "assert", "diagnostic"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "component-and-runtime-options",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "unresolved",
+          "members": [
+            "ComponentOptions.scope",
+            "ContainerValidationOptions.force",
+            "DefinePolicyOptions.override/order/requiredCapabilities/source",
+            "DefineRuntimePolicyOptions.override/order/requiredCapabilities/source",
+            "RuntimePolicyPresetConfig.platform/capabilities/source/capabilitySupport",
+            "CompileRequestPipelineGraphOptions.target/policyPlan/requireHandler",
+            "PolicyPipelineNodeOptions.idPrefix/orderOffset",
+            "RuntimeInspectorOptions.maxRequests/maxEventsPerRequest/sensitiveKeyPattern/maxStringLength"
+          ],
+          "source": {
+            "path": "packages/framework-context/src/index.ts",
+            "identifier": "ComponentOptions"
+          },
+          "test": {
+            "path": "packages/framework-context/src/tests/FrameworkContext.spec.ts",
+            "identifier": "Component"
+          },
+          "sources": [
+            {
+              "path": "packages/framework-context/src/libs/Container.ts",
+              "identifier": "ContainerValidationOptions"
+            },
+            {
+              "path": "packages/framework-context/src/libs/RuntimePolicy.ts",
+              "identifier": "DefinePolicyOptions"
+            },
+            {
+              "path": "packages/framework-context/src/libs/RequestPipelineGraph.ts",
+              "identifier": "CompileRequestPipelineGraphOptions"
+            },
+            {
+              "path": "packages/framework-context/src/libs/RuntimeInspector.ts",
+              "identifier": "RuntimeInspectorOptions"
+            }
+          ],
+          "tests": [
+            {
+              "path": "packages/framework-context/src/tests/DependencyGraphManifest.spec.ts",
+              "identifier": "force: true"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RuntimePolicy.spec.ts",
+              "identifier": "policy options"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RequestPipelineGraph.spec.ts",
+              "identifier": "policy nodes"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
+              "identifier": "maxEventsPerRequest"
+            }
+          ],
+          "issue": "https://github.com/croco-dev/framework/issues/1406",
+          "regressionTest": "Exercise requireHandler, maxRequests, and maxStringLength with explicit and omitted values at their owning runtime boundaries."
+        },
+        {
+          "id": "shutdown-hooks",
+          "category": "lifecycle",
+          "disposition": "implemented-tested",
+          "status": "unresolved",
+          "members": ["ShutdownManager", "OnShutdown method decorator"],
+          "source": {
+            "path": "packages/framework-context/src/libs/decorators/OnShutdown.ts",
+            "identifier": "OnShutdown"
+          },
+          "test": {
+            "path": "packages/framework-context/src/tests/ApplicationLifecycle.spec.ts",
+            "identifier": "shutdown"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1311",
+          "regressionTest": "Execute a method-form @OnShutdown hook through the owning class instance and prove exactly-once invocation."
+        },
+        {
+          "id": "shutdown-best-effort",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["shutdown hook failure continuation"],
+          "source": {
+            "path": "packages/framework-context/src/libs/ShutdownManager.ts",
+            "identifier": "catch"
+          },
+          "test": {
+            "path": "packages/framework-context/src/tests/ApplicationLifecycle.spec.ts",
+            "identifier": "SIGTERM"
+          }
+        },
+        {
+          "id": "runtime-contract-checks",
+          "category": "verification",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["runtime capability checks", "runtime policy assertions"],
+          "source": {
+            "path": "packages/framework-context/src/index.ts",
+            "identifier": "RuntimeCapability"
+          },
+          "test": {
+            "path": "packages/framework-context/src/tests/RuntimeCapabilities.spec.ts",
+            "identifier": "RuntimeCapability"
+          }
+        }
+      ]
+    },
+    {
+      "package": "problems-core",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["problem-options"],
+          "reviewPaths": ["packages/problems-core/src"],
+          "searchTerms": ["ProblemOptions", "Registry", "redact"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["problem-json-decoder"],
+          "reviewPaths": ["packages/problems-core/src"],
+          "searchTerms": ["fromJson", "deserialize", "status"]
+        },
+        "lifecycle": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/problems-core/src"],
+          "searchTerms": ["shutdown", "flush", "dispose"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["problem-redaction"],
+          "reviewPaths": ["packages/problems-core/src"],
+          "searchTerms": ["redact", "extensions", "fallback"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["problem-registry-validation"],
+          "reviewPaths": ["packages/problems-core/src"],
+          "searchTerms": ["validate", "assert", "check"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "problem-options",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": [
+            "ProblemOptions.type/instance/extensions/cause",
+            "CreateProblemCodeRegistryOptions.cookbookBasePath/statusPolicies",
+            "DefineProblemRegistryOptions.package/problems"
+          ],
+          "source": {
+            "path": "packages/problems-core/src/index.ts",
+            "identifier": "ProblemOptions"
+          },
+          "test": {
+            "path": "packages/problems-core/src/tests/Problem.spec.ts",
+            "identifier": "Problem"
+          },
+          "sources": [
+            {
+              "path": "packages/problems-core/src/libs/Problem.ts",
+              "identifier": "ProblemOptions"
+            },
+            {
+              "path": "packages/problems-core/src/libs/ProblemRegistry.ts",
+              "identifier": "CreateProblemCodeRegistryOptions"
+            },
+            {
+              "path": "packages/problems-core/src/libs/ProblemRegistry.ts",
+              "identifier": "DefineProblemRegistryOptions"
+            }
+          ],
+          "tests": [
+            { "path": "packages/problems-core/src/tests/Problem.spec.ts", "identifier": "Problem" },
+            {
+              "path": "packages/problems-core/src/tests/ProblemRegistry.spec.ts",
+              "identifier": "statusPolicies"
+            },
+            {
+              "path": "packages/problems-core/src/tests/ProblemRegistry.spec.ts",
+              "identifier": "defineProblemRegistry"
+            }
+          ]
+        },
+        {
+          "id": "problem-json-decoder",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": [
+            "ProblemSerializer.fromJson required strings",
+            "ProblemSerializer.fromJson status"
+          ],
+          "source": {
+            "path": "packages/problems-core/src/libs/ProblemSerializer.ts",
+            "identifier": "fromJson"
+          },
+          "test": {
+            "path": "packages/problems-core/src/tests/ProblemSerializer.spec.ts",
+            "identifier": "fromJson"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1391",
+          "regressionTest": "Reject empty required strings and non-finite, fractional, or out-of-range status values in ProblemSerializer.spec.ts."
+        },
+        {
+          "id": "problem-redaction",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["public Problem response redaction"],
+          "source": { "path": "packages/problems-core/src/index.ts", "identifier": "Problem" },
+          "test": {
+            "path": "packages/problems-core/src/tests/ProblemResponseRedaction.spec.ts",
+            "identifier": "redact"
+          }
+        },
+        {
+          "id": "problem-registry-validation",
+          "category": "verification",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["Problem registry validation", "Problem definition assertion"],
+          "source": {
+            "path": "packages/problems-core/src/index.ts",
+            "identifier": "ProblemRegistry"
+          },
+          "test": {
+            "path": "packages/problems-core/src/tests/ProblemRegistry.spec.ts",
+            "identifier": "ProblemRegistry"
+          }
+        }
+      ]
+    },
+    {
+      "package": "protocols-core",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["contract-graph-options"],
+          "reviewPaths": ["packages/protocols-core/src"],
+          "searchTerms": ["BuildContractGraphOptions", "strict", "compatibility"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["contract-snapshot-decoder"],
+          "reviewPaths": ["packages/protocols-core/src"],
+          "searchTerms": ["isContractGraphSnapshot", "isContractGraphV1", "JSON.parse"]
+        },
+        "lifecycle": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/protocols-core/src"],
+          "searchTerms": ["shutdown", "flush", "start"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["schema-compatibility"],
+          "reviewPaths": ["packages/protocols-core/src"],
+          "searchTerms": ["compatibility", "fallback", "schema"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["contract-graph-diagnostics"],
+          "reviewPaths": ["packages/protocols-core/src"],
+          "searchTerms": ["check", "assert", "diagnostic"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "contract-graph-options",
+          "category": "configuration",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": [
+            "BuildContractGraphOptions.strictSchemas",
+            "BuildContractGraphOptions.strictProblemResponses",
+            "BuildContractGraphOptions.problemRegistries"
+          ],
+          "source": {
+            "path": "packages/protocols-core/src/index.ts",
+            "identifier": "BuildContractGraphOptions"
+          },
+          "test": {
+            "path": "packages/protocols-core/src/tests/ContractGraph.spec.ts",
+            "identifier": "strictSchemas"
+          }
+        },
+        {
+          "id": "contract-snapshot-decoder",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": ["isContractGraphSnapshot nested controllers", "routes", "diagnostics"],
+          "source": {
+            "path": "packages/protocols-core/src/libs/ContractGraphSnapshot.ts",
+            "identifier": "isContractGraphSnapshot"
+          },
+          "test": {
+            "path": "packages/protocols-core/src/tests/ContractGraph.spec.ts",
+            "identifier": "snapshot"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1392",
+          "regressionTest": "Reject malformed nested snapshot controller, route, and diagnostic members at protocols-core and CLI persisted-file boundaries."
+        },
+        {
+          "id": "schema-compatibility",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["schema-less path parameter compatibility", "query/header compatibility"],
+          "source": {
+            "path": "packages/protocols-core/src/libs/schemaBuilder.ts",
+            "identifier": "schema"
+          },
+          "test": {
+            "path": "packages/protocols-core/src/tests/extractRouteIR.spec.ts",
+            "identifier": "schema"
+          }
+        },
+        {
+          "id": "contract-graph-diagnostics",
+          "category": "verification",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["ContractGraph diagnostics", "strict graph assertion"],
+          "source": {
+            "path": "packages/protocols-core/src/index.ts",
+            "identifier": "ContractGraph"
+          },
+          "test": {
+            "path": "packages/protocols-core/src/tests/ContractGraph.spec.ts",
+            "identifier": "diagnostic"
+          }
+        }
+      ]
+    },
+    {
+      "package": "protocols-rest",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["rest-decorator-options"],
+          "reviewPaths": ["packages/protocols-rest/src"],
+          "searchTerms": ["Options", "Contract", "AuthGuard"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["route-contract-guard", "request-validation"],
+          "reviewPaths": ["packages/protocols-rest/src"],
+          "searchTerms": ["isRouteContractSpec", "parse", "safeParse"]
+        },
+        "lifecycle": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/protocols-rest/src"],
+          "searchTerms": ["shutdown", "flush", "start"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["parameter-normalization"],
+          "reviewPaths": ["packages/protocols-rest/src"],
+          "searchTerms": ["normalize", "array", "fallback"]
+        },
+        "verification": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/protocols-rest/src"],
+          "searchTerms": ["check", "verify", "dry-run"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "rest-decorator-options",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "unresolved",
+          "members": [
+            "AuthGuardOptions.verifier/headerName/scheme",
+            "ProblemResponseOptions.code/category/status/description/type",
+            "TypedRouteConfig.method/path/body/query/params/inputSchemas/response"
+          ],
+          "source": {
+            "path": "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
+            "identifier": "AuthGuardOptions"
+          },
+          "test": {
+            "path": "packages/protocols-rest/src/tests/AuthGuard.spec.ts",
+            "identifier": "header"
+          },
+          "sources": [
+            {
+              "path": "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
+              "identifier": "AuthGuardOptions"
+            },
+            {
+              "path": "packages/protocols-rest/src/libs/types.ts",
+              "identifier": "ProblemResponseOptions"
+            },
+            {
+              "path": "packages/protocols-rest/src/libs/types/RouteTypes.ts",
+              "identifier": "TypedRouteConfig"
+            }
+          ],
+          "tests": [
+            {
+              "path": "packages/protocols-rest/src/tests/AuthGuard.spec.ts",
+              "identifier": "scheme"
+            },
+            {
+              "path": "packages/protocols-rest/src/tests/RouteContractTypes.spec.ts",
+              "identifier": "ProblemResponse"
+            }
+          ],
+          "issue": "https://github.com/croco-dev/framework/issues/1407",
+          "regressionTest": "Implement and behavior-test every TypedRouteConfig field, or remove/deprecate the unused public contract."
+        },
+        {
+          "id": "route-contract-guard",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": ["isRouteContractSpec.problems entries"],
+          "source": {
+            "path": "packages/protocols-rest/src/libs/types/RouteContract.ts",
+            "identifier": "isRouteContractSpec"
+          },
+          "test": {
+            "path": "packages/protocols-rest/src/tests/Controller.spec.ts",
+            "identifier": "Controller"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1395",
+          "regressionTest": "Reject missing or invalid Problem contract entries, including mixed valid and invalid arrays."
+        },
+        {
+          "id": "request-validation",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["ValidationPipe request parsing", "SchemaValidator response parsing"],
+          "source": {
+            "path": "packages/protocols-rest/src/libs/validators/ValidationPipe.ts",
+            "identifier": "ValidationPipe"
+          },
+          "test": {
+            "path": "packages/protocols-rest/src/tests/ValidationPipe.spec.ts",
+            "identifier": "ValidationPipe"
+          }
+        },
+        {
+          "id": "parameter-normalization",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["repeated query normalization", "repeated header normalization"],
+          "source": {
+            "path": "packages/protocols-rest/src/libs/validators/ValidationPipe.ts",
+            "identifier": "normalizeHttpParameterValue"
+          },
+          "test": {
+            "path": "packages/protocols-rest/src/tests/InputValidation.spec.ts",
+            "identifier": "query"
+          }
+        }
+      ]
+    },
+    {
+      "package": "openapi-spec",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["openapi-options", "openapi-cli-arguments"],
+          "reviewPaths": ["packages/openapi-spec/src"],
+          "searchTerms": ["EmitOpenAPIOptions", "--", "compatibility"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["openapi-controller-loading"],
+          "reviewPaths": ["packages/openapi-spec/src"],
+          "searchTerms": ["loadControllers", "parse", "import"]
+        },
+        "lifecycle": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/openapi-spec/src"],
+          "searchTerms": ["shutdown", "flush", "start"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["openapi-compatibility"],
+          "reviewPaths": ["packages/openapi-spec/src"],
+          "searchTerms": ["compatibility", "default", "fallback"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["openapi-check"],
+          "reviewPaths": ["packages/openapi-spec/src"],
+          "searchTerms": ["--check", "verify", "writeFile"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "openapi-options",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": [
+            "EmitOpenAPIOptions.info/servers/security/securitySchemes/tags/defaultResponses/problemResponses/manifestBundlePath",
+            "ProblemResponseConfig.status/description"
+          ],
+          "source": {
+            "path": "packages/openapi-spec/src/index.ts",
+            "identifier": "EmitOpenAPIOptions"
+          },
+          "test": {
+            "path": "packages/openapi-spec/src/tests/emitOpenAPI.spec.ts",
+            "identifier": "emitOpenAPI"
+          }
+        },
+        {
+          "id": "openapi-cli-arguments",
+          "category": "configuration",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": ["unknown flags", "unexpected positional arguments"],
+          "source": { "path": "packages/openapi-spec/src/libs/cli.ts", "identifier": "parseArgs" },
+          "test": { "path": "packages/openapi-spec/src/tests/Cli.spec.ts", "identifier": "CLI" },
+          "issue": "https://github.com/croco-dev/framework/issues/1397",
+          "regressionTest": "Reject unknown OpenAPI CLI flags and unsupported positional arguments with a non-zero stable diagnostic."
+        },
+        {
+          "id": "openapi-controller-loading",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["controller module loading", "ContractGraph input"],
+          "source": {
+            "path": "packages/openapi-spec/src/libs/loadControllers.ts",
+            "identifier": "loadControllers"
+          },
+          "test": {
+            "path": "packages/openapi-spec/src/tests/loadControllers.spec.ts",
+            "identifier": "loadControllers"
+          }
+        },
+        {
+          "id": "openapi-compatibility",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["compatibilitySchemas", "default document metadata"],
+          "source": {
+            "path": "packages/openapi-spec/src/libs/cli.ts",
+            "identifier": "compatibility"
+          },
+          "test": {
+            "path": "packages/openapi-spec/src/tests/Cli.spec.ts",
+            "identifier": "compatibility"
+          }
+        },
+        {
+          "id": "openapi-check",
+          "category": "verification",
+          "disposition": "implemented-tested",
+          "status": "unresolved",
+          "members": [
+            "--check non-mutating graph validation",
+            "committed output drift verification"
+          ],
+          "source": { "path": "packages/openapi-spec/src/libs/cli.ts", "identifier": "check" },
+          "test": { "path": "packages/openapi-spec/src/tests/Cli.spec.ts", "identifier": "check" },
+          "issue": "https://github.com/croco-dev/framework/issues/1322",
+          "regressionTest": "Prove contract verification detects stale committed OpenAPI output without writing any file."
+        }
+      ]
+    },
+    {
+      "package": "rpc-codegen",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["rpc-options", "rpc-cli-arguments"],
+          "reviewPaths": ["packages/rpc-codegen/src"],
+          "searchTerms": ["GenerateClientOptions", "--", "manifest"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["rpc-route-loading"],
+          "reviewPaths": ["packages/rpc-codegen/src"],
+          "searchTerms": ["loadRoutes", "diagnostic", "import"]
+        },
+        "lifecycle": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/rpc-codegen/src"],
+          "searchTerms": ["shutdown", "flush", "start"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["rpc-compatibility"],
+          "reviewPaths": ["packages/rpc-codegen/src"],
+          "searchTerms": ["compatibility", "default", "fallback"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["rpc-checks"],
+          "reviewPaths": ["packages/rpc-codegen/src"],
+          "searchTerms": ["--check", "manifest-check", "verify"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "rpc-options",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": [
+            "GenerateClientOptions.frontendActionManifestPath",
+            "GenerateClientOptions.manifestBundlePath",
+            "GenerateClientOptions.problemRuntime",
+            "GenerateClientOptions.reactQuery"
+          ],
+          "source": {
+            "path": "packages/rpc-codegen/src/libs/generate.ts",
+            "identifier": "GenerateClientOptions"
+          },
+          "test": {
+            "path": "packages/rpc-codegen/src/tests/codegen.spec.ts",
+            "identifier": "manifest"
+          }
+        },
+        {
+          "id": "rpc-cli-arguments",
+          "category": "configuration",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": ["unknown flags", "unexpected positional arguments"],
+          "source": { "path": "packages/rpc-codegen/src/libs/cli.ts", "identifier": "parseArgs" },
+          "test": { "path": "packages/rpc-codegen/src/tests/Cli.spec.ts", "identifier": "CLI" },
+          "issue": "https://github.com/croco-dev/framework/issues/1397",
+          "regressionTest": "Reject unknown RPC CLI flags and unsupported positional arguments with a non-zero stable diagnostic."
+        },
+        {
+          "id": "rpc-route-loading",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": [
+            "TypeScript route loading",
+            "compiler diagnostic rejection",
+            "empty controller rejection"
+          ],
+          "source": {
+            "path": "packages/rpc-codegen/src/libs/loadRoutes.ts",
+            "identifier": "loadRoutes"
+          },
+          "test": {
+            "path": "packages/rpc-codegen/src/tests/ContractCheckCli.spec.ts",
+            "identifier": "diagnostic"
+          }
+        },
+        {
+          "id": "rpc-compatibility",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["compatibilitySchemas", "compatibilityProblems"],
+          "source": {
+            "path": "packages/rpc-codegen/src/libs/cli.ts",
+            "identifier": "compatibility"
+          },
+          "test": {
+            "path": "packages/rpc-codegen/src/tests/Cli.spec.ts",
+            "identifier": "compatibility"
+          }
+        },
+        {
+          "id": "rpc-checks",
+          "category": "verification",
+          "disposition": "implemented-tested",
+          "status": "unresolved",
+          "members": [
+            "--check graph validation",
+            "frontend action manifest check",
+            "committed client drift verification"
+          ],
+          "source": { "path": "packages/rpc-codegen/src/libs/cli.ts", "identifier": "check" },
+          "test": {
+            "path": "packages/rpc-codegen/src/tests/ContractCheckCli.spec.ts",
+            "identifier": "check"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1322",
+          "regressionTest": "Prove contract verification detects stale committed RPC output without writing any file."
+        }
+      ]
+    },
+    {
+      "package": "transports-http",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["http-app-options"],
+          "reviewPaths": ["packages/transports-http/src"],
+          "searchTerms": ["AppConfig", "Options", "securityValidation"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["http-request-decoding"],
+          "reviewPaths": ["packages/transports-http/src"],
+          "searchTerms": ["body", "param", "parse"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["graceful-shutdown"],
+          "reviewPaths": ["packages/transports-http/src"],
+          "searchTerms": ["shutdown", "forceFlush", "signal"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["http-compatibility-modes"],
+          "reviewPaths": ["packages/transports-http/src"],
+          "searchTerms": ["warn", "off", "fallback"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["health-readiness"],
+          "reviewPaths": ["packages/transports-http/src"],
+          "searchTerms": ["readiness", "health", "check"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "http-app-options",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": [
+            "AppConfig.controllers/middlewares/securityValidation/unsafeSkipSecurityValidation/diValidation/unsafeSkipDiValidation/globalFilters/globalGuards/globalInterceptors/globalPipes/diagnostics/devInspector",
+            "ListenOptions.staticDir/spaFallback",
+            "CompiledRoutePipelineGraphConfig.guards/interceptors/filters/handlerId/handlerLabel/target/policyPlan",
+            "PipelineConfig.guards/interceptors/filters",
+            "HttpPipelineGraphConfig.middlewares/guards/interceptors/filters/handlerId/handlerLabel/target/policyPlan",
+            "CompileOptions.container/globalGuards/globalInterceptors/globalFilters/globalPipes",
+            "LambdaHandlerOptions.logger/flush",
+            "HealthCheckOptions.timeout",
+            "DiagnosticsEndpointOptions.exposure/token/tokenHeader/guard/collector/providers/recentErrorLimit/messageLimit",
+            "DevInspectorEndpointOptions.maxRequests/maxEventsPerRequest/sensitiveKeyPattern/maxStringLength/exposure/token/tokenHeader/guard/inspector/allowProduction",
+            "BodyLimitOptions.limit/statusCode/message",
+            "CompressionOptions.threshold/encodings",
+            "CorsOptions.origins/methods/allowedHeaders/credentials/maxAge/exposedHeaders",
+            "GracefulShutdownOptions.timeoutMs/onShutdown/signals/logger/eventBusDrainTimeoutMs/isLambdaEnvironment",
+            "RateLimitHttpOptions.rateLimiter/policy/keySegments/failOpen/addHeaders/clientIdentity/skipSuccessfulRequests/skipFailedRequests/skip",
+            "RateLimitMiddlewareFactoryOptions.rateLimiter/defaultPolicy/clientIdentity/skipSuccessfulRequests/skipFailedRequests/skip",
+            "SecurityHeadersOptions.contentTypeOptions/strictTransportSecurity/frameOptions/frameOptionsAllowFrom/xssProtection/referrerPolicy/contentSecurityPolicy/permissionsPolicy",
+            "HttpRequestBodyTooLargeProblemOptions.limit/status/detail/instance",
+            "GracefulShutdownConfigurationProblemOptions.option/receivedValue",
+            "GracefulShutdownTimeoutProblemOptions.phase/timeoutMs/elapsedMs"
+          ],
+          "source": { "path": "packages/transports-http/src/index.ts", "identifier": "AppConfig" },
+          "test": {
+            "path": "packages/transports-http/src/tests/CrocoApp.spec.ts",
+            "identifier": "CrocoApp"
+          },
+          "sources": [
+            { "path": "packages/transports-http/src/libs/types.ts", "identifier": "AppConfig" },
+            {
+              "path": "packages/transports-http/src/libs/PipelineRunner.ts",
+              "identifier": "PipelineConfig"
+            },
+            {
+              "path": "packages/transports-http/src/libs/RouteCompiler.ts",
+              "identifier": "CompileOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
+              "identifier": "LambdaHandlerOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/HealthCheckRegistry.ts",
+              "identifier": "HealthCheckServiceOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/operationalEndpoints.ts",
+              "identifier": "DiagnosticsEndpointOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/devInspectorEndpoint.ts",
+              "identifier": "DevInspectorEndpointOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/middleware/BodyLimitMiddleware.ts",
+              "identifier": "BodyLimitOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts",
+              "identifier": "CompressionOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/middleware/CorsMiddleware.ts",
+              "identifier": "CorsOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/middleware/GracefulShutdownMiddleware.ts",
+              "identifier": "GracefulShutdownOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/middleware/RateLimitMiddleware.ts",
+              "identifier": "RateLimitHttpOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/middleware/SecurityHeadersMiddleware.ts",
+              "identifier": "SecurityHeadersOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/problems/HttpRequestBodyProblems.ts",
+              "identifier": "HttpRequestBodyTooLargeProblemOptions"
+            },
+            {
+              "path": "packages/transports-http/src/libs/problems/GracefulShutdownProblems.ts",
+              "identifier": "GracefulShutdownConfigurationProblemOptions"
+            }
+          ],
+          "tests": [
+            {
+              "path": "packages/transports-http/src/tests/CrocoApp.spec.ts",
+              "identifier": "pipeline"
+            },
+            {
+              "path": "packages/transports-http/src/tests/PipelineRunner.spec.ts",
+              "identifier": "PipelineRunner"
+            },
+            {
+              "path": "packages/transports-http/src/tests/RouteCompiler.spec.ts",
+              "identifier": "RouteCompiler"
+            },
+            {
+              "path": "packages/transports-http/src/tests/CrocoLambdaAdapter.spec.ts",
+              "identifier": "flush"
+            },
+            {
+              "path": "packages/transports-http/src/tests/HealthCheck.spec.ts",
+              "identifier": "timeout"
+            },
+            {
+              "path": "packages/transports-http/src/tests/OperationalEndpoints.spec.ts",
+              "identifier": "diagnostics"
+            },
+            {
+              "path": "packages/transports-http/src/tests/BodyLimitMiddleware.spec.ts",
+              "identifier": "status"
+            },
+            {
+              "path": "packages/transports-http/src/tests/CompressionMiddleware.spec.ts",
+              "identifier": "threshold"
+            },
+            {
+              "path": "packages/transports-http/src/tests/CorsMiddleware.spec.ts",
+              "identifier": "credentials"
+            },
+            {
+              "path": "packages/transports-http/src/tests/GracefulShutdownMiddleware.spec.ts",
+              "identifier": "timeout"
+            },
+            {
+              "path": "packages/transports-http/src/tests/RateLimitMiddleware.spec.ts",
+              "identifier": "skip"
+            },
+            {
+              "path": "packages/transports-http/src/tests/SecurityHeadersMiddleware.spec.ts",
+              "identifier": "SecurityHeaders"
+            }
+          ]
+        },
+        {
+          "id": "http-request-decoding",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["request body decoding", "parameter resolution", "security middleware input"],
+          "source": {
+            "path": "packages/transports-http/src/index.ts",
+            "identifier": "ParamResolver"
+          },
+          "test": {
+            "path": "packages/transports-http/src/tests/ParamResolver.spec.ts",
+            "identifier": "ParamResolver"
+          }
+        },
+        {
+          "id": "graceful-shutdown",
+          "category": "lifecycle",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": [
+            "timeout validation",
+            "request drain",
+            "event bus drain",
+            "custom hook",
+            "signal listener cleanup"
+          ],
+          "source": {
+            "path": "packages/transports-http/src/index.ts",
+            "identifier": "GracefulShutdown"
+          },
+          "test": {
+            "path": "packages/transports-http/src/tests/GracefulShutdownMiddleware.spec.ts",
+            "identifier": "shutdown"
+          }
+        },
+        {
+          "id": "http-compatibility-modes",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": [
+            "security enforce/warn/off",
+            "unsafeSkipSecurityValidation",
+            "static SPA fallback",
+            "SilentLogger"
+          ],
+          "source": {
+            "path": "packages/transports-http/src/libs/CrocoApp.ts",
+            "identifier": "securityValidation"
+          },
+          "test": {
+            "path": "packages/transports-http/src/tests/CrocoApp.spec.ts",
+            "identifier": "security"
+          }
+        },
+        {
+          "id": "health-readiness",
+          "category": "verification",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["health indicators", "readiness indicators", "operational endpoints"],
+          "source": {
+            "path": "packages/transports-http/src/libs/CrocoApp.ts",
+            "identifier": "checkReadiness"
+          },
+          "test": {
+            "path": "packages/transports-http/src/tests/OperationalEndpoints.spec.ts",
+            "identifier": "readiness"
+          }
+        }
+      ]
+    },
+    {
+      "package": "telemetry-api",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["trace-options"],
+          "reviewPaths": ["packages/telemetry-api/src"],
+          "searchTerms": ["Options", "Tracer", "headers"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["frontend-trace-context"],
+          "reviewPaths": ["packages/telemetry-api/src"],
+          "searchTerms": ["header", "traceparent", "parse"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["span-and-sink-lifecycle"],
+          "reviewPaths": ["packages/telemetry-api/src"],
+          "searchTerms": ["startSpan", "end", "Promise"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["telemetry-no-active-span"],
+          "reviewPaths": ["packages/telemetry-api/src"],
+          "searchTerms": ["active", "noop", "crypto"]
+        },
+        "verification": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/telemetry-api/src"],
+          "searchTerms": ["check", "verify", "dry-run"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "trace-options",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "unresolved",
+          "members": [
+            "TraceDecoratorOptions.name/attributes",
+            "SpanOptions.name/attributes",
+            "TracerOptions.name/version",
+            "FrontendTelemetryBridgeOptions.sink/interactionId/correlationId/traceparent/headerNames.correlationId/headerNames.interactionId/headerNames.traceparent"
+          ],
+          "source": { "path": "packages/telemetry-api/src/index.ts", "identifier": "SpanOptions" },
+          "test": {
+            "path": "packages/telemetry-api/src/tests/Trace.spec.ts",
+            "identifier": "Span"
+          },
+          "sources": [
+            {
+              "path": "packages/telemetry-api/src/libs/decorators/Trace.ts",
+              "identifier": "TraceDecoratorOptions"
+            },
+            { "path": "packages/telemetry-api/src/libs/span.ts", "identifier": "SpanOptions" },
+            { "path": "packages/telemetry-api/src/libs/tracer.ts", "identifier": "TracerOptions" },
+            {
+              "path": "packages/telemetry-api/src/libs/frontendBridge.ts",
+              "identifier": "FrontendTelemetryBridgeOptions"
+            }
+          ],
+          "tests": [
+            {
+              "path": "packages/telemetry-api/src/tests/Trace.spec.ts",
+              "identifier": "getTraceOptions"
+            },
+            { "path": "packages/telemetry-api/src/tests/Trace.spec.ts", "identifier": "withSpan" },
+            { "path": "packages/telemetry-api/src/tests/Trace.spec.ts", "identifier": "getTracer" },
+            {
+              "path": "packages/telemetry-api/src/tests/frontendBridge.spec.ts",
+              "identifier": "correlation"
+            }
+          ],
+          "issue": "https://github.com/croco-dev/framework/issues/1396",
+          "regressionTest": "Exercise custom frontend header names and make async sink completion or rejection caller-observable."
+        },
+        {
+          "id": "frontend-trace-context",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["traceparent header", "frontend trace identifiers"],
+          "source": {
+            "path": "packages/telemetry-api/src/libs/frontendBridge.ts",
+            "identifier": "traceparent"
+          },
+          "test": {
+            "path": "packages/telemetry-api/src/tests/frontendBridge.spec.ts",
+            "identifier": "trace"
+          }
+        },
+        {
+          "id": "span-and-sink-lifecycle",
+          "category": "lifecycle",
+          "disposition": "implemented-tested",
+          "status": "unresolved",
+          "members": [
+            "span end on sync/async/iterable",
+            "FrontendTelemetrySink.record async completion"
+          ],
+          "source": {
+            "path": "packages/telemetry-api/src/libs/frontendBridge.ts",
+            "identifier": "FrontendTelemetrySink"
+          },
+          "test": {
+            "path": "packages/telemetry-api/src/tests/frontendBridge.spec.ts",
+            "identifier": "record"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1396",
+          "regressionTest": "Exercise async sink resolution and rejection through a caller-observable completion contract."
+        },
+        {
+          "id": "telemetry-no-active-span",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": [
+            "recordEvent without active span",
+            "recordError without active span",
+            "browser crypto fallback"
+          ],
+          "source": { "path": "packages/telemetry-api/src/index.ts", "identifier": "recordEvent" },
+          "test": {
+            "path": "packages/telemetry-api/src/tests/Trace.spec.ts",
+            "identifier": "recordEvent"
+          }
+        }
+      ]
+    },
+    {
+      "package": "telemetry-sdk-node",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["telemetry-config", "telemetry-unsupported-config"],
+          "reviewPaths": ["packages/telemetry-sdk-node/src"],
+          "searchTerms": ["TelemetryConfig", "autoInstrumentation", "metrics", "logs"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["otlp-environment"],
+          "reviewPaths": ["packages/telemetry-sdk-node/src"],
+          "searchTerms": ["process.env", "headers", "endpoint"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["telemetry-runtime-lifecycle"],
+          "reviewPaths": ["packages/telemetry-sdk-node/src"],
+          "searchTerms": ["init", "forceFlush", "shutdown"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["telemetry-disabled"],
+          "reviewPaths": ["packages/telemetry-sdk-node/src"],
+          "searchTerms": ["enabled", "disabled", "noop"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["telemetry-diagnostics"],
+          "reviewPaths": ["packages/telemetry-sdk-node/src"],
+          "searchTerms": ["diagnostic", "readiness", "check"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "telemetry-config",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "unresolved",
+          "members": [
+            "TelemetryConfig.serviceName/serviceVersion/environment/enabled/trace/metrics/logs/resourceAttributes",
+            "TraceConfig.enabled/exporterUrl/exporterHeaders/sampler/probability/batchTimeout/batchCount/batchSize/instrumentations/autoInstrumentation",
+            "AutoInstrumentationConfig.enabled/modules/excludeModules/customInstrumentations/moduleOptions/exclude/include"
+          ],
+          "source": {
+            "path": "packages/telemetry-sdk-node/src/config.ts",
+            "identifier": "autoInstrumentation"
+          },
+          "test": {
+            "path": "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
+            "identifier": "instrumentation"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1325",
+          "regressionTest": "Prove autoInstrumentation changes the NodeSDK instrumentation set for enabled and disabled values."
+        },
+        {
+          "id": "telemetry-unsupported-config",
+          "category": "configuration",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": [
+            "MetricsConfig.enabled/exporterUrl/exporterHeaders/exportIntervalMillis/exportTimeoutMillis",
+            "LogsConfig.enabled/exporterUrl/exporterHeaders/maxQueueSize/maxExportBatchSize",
+            "LogRecordOptions.severity/body/attributes/context",
+            "LoggerOptions.name/version/schemaUrl/attributes",
+            "CounterOptions.name/description/unit",
+            "HistogramOptions.name/description/unit/boundaries",
+            "GaugeOptions.name/description/unit"
+          ],
+          "source": {
+            "path": "packages/telemetry-sdk-node/src/config.ts",
+            "identifier": "metrics"
+          },
+          "test": {
+            "path": "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
+            "identifier": "TelemetryRuntime"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1324",
+          "regressionTest": "Reject enabled metrics/logs until processors exist, covering each signal independently and together."
+        },
+        {
+          "id": "otlp-environment",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "OTEL_EXPORTER_OTLP_ENDPOINT"],
+          "source": { "path": "packages/telemetry-sdk-node/src/runtime.ts", "identifier": "OTLP" },
+          "test": {
+            "path": "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
+            "identifier": "endpoint"
+          }
+        },
+        {
+          "id": "telemetry-runtime-lifecycle",
+          "category": "lifecycle",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": ["init", "forceFlush", "shutdown", "in-flight init failure"],
+          "source": {
+            "path": "packages/telemetry-sdk-node/src/runtime.ts",
+            "identifier": "forceFlush"
+          },
+          "test": {
+            "path": "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
+            "identifier": "forceFlush"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1394",
+          "regressionTest": "Distinguish completed, disabled/skipped, unsupported, and failed flush/shutdown outcomes and preserve init rejection."
+        },
+        {
+          "id": "telemetry-disabled",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["trace.enabled false", "pre-init no SDK state"],
+          "source": {
+            "path": "packages/telemetry-sdk-node/src/runtime.ts",
+            "identifier": "enabled"
+          },
+          "test": {
+            "path": "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
+            "identifier": "disabled"
+          }
+        },
+        {
+          "id": "telemetry-diagnostics",
+          "category": "verification",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["TelemetryDiagnosticsProvider", "Lambda preset diagnostics"],
+          "source": {
+            "path": "packages/telemetry-sdk-node/src/index.ts",
+            "identifier": "TelemetryDiagnosticsProvider"
+          },
+          "test": {
+            "path": "packages/telemetry-sdk-node/src/tests/TelemetryDiagnosticsProvider.spec.ts",
+            "identifier": "TelemetryDiagnosticsProvider"
+          }
+        }
+      ]
+    },
+    {
+      "package": "tx-core",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["transaction-options"],
+          "reviewPaths": ["packages/tx-core/src"],
+          "searchTerms": ["TxManagerConfig", "TxRunOptions", "TransactionalOptions"]
+        },
+        "decoder": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/tx-core/src"],
+          "searchTerms": ["parse", "deserialize", "JSON.parse"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["transaction-lifecycle"],
+          "reviewPaths": ["packages/tx-core/src"],
+          "searchTerms": ["afterCommit", "abort", "savepoint"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["savepoint-compatibility"],
+          "reviewPaths": ["packages/tx-core/src"],
+          "searchTerms": ["savepoint", "warn", "join"]
+        },
+        "verification": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/tx-core/src"],
+          "searchTerms": ["check", "verify", "dry-run"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "transaction-options",
+          "category": "configuration",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": [
+            "TxManagerConfig.defaultNesting/defaultTimeout",
+            "TxRunOptions.nesting/options/timeout",
+            "TransactionalOptions.propagation/managerKey/nesting/options/timeout"
+          ],
+          "source": {
+            "path": "packages/tx-core/src/libs/TxManager.ts",
+            "identifier": "defaultTimeout"
+          },
+          "test": {
+            "path": "packages/tx-core/src/tests/TxManager.concurrency.spec.ts",
+            "identifier": "timeout"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1398",
+          "regressionTest": "Reject zero, negative, non-finite, fractional, and overflowing default and per-run timeouts before transaction side effects."
+        },
+        {
+          "id": "transaction-lifecycle",
+          "category": "lifecycle",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["transaction begin/commit/rollback", "AbortSignal", "afterCommit hooks"],
+          "source": {
+            "path": "packages/tx-core/src/libs/TxManager.ts",
+            "identifier": "afterCommit"
+          },
+          "test": {
+            "path": "packages/tx-core/src/tests/TxManager.concurrency.spec.ts",
+            "identifier": "abort"
+          }
+        },
+        {
+          "id": "savepoint-compatibility",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["unsupported nested savepoint warning and join"],
+          "source": { "path": "packages/tx-core/src/libs/TxManager.ts", "identifier": "savepoint" },
+          "test": {
+            "path": "packages/tx-core/src/tests/TxManager.spec.ts",
+            "identifier": "savepoint"
+          }
+        }
+      ]
+    },
+    {
+      "package": "tx-drizzle",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["drizzle-options"],
+          "reviewPaths": ["packages/tx-drizzle/src"],
+          "searchTerms": ["RlsOptions", "RlsPolicyOptions", "Options"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["rls-identifiers"],
+          "reviewPaths": ["packages/tx-drizzle/src"],
+          "searchTerms": ["identifier", "tenant", "validate"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["drizzle-transaction-lifecycle"],
+          "reviewPaths": ["packages/tx-drizzle/src"],
+          "searchTerms": ["transaction", "abort", "savepoint"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["rls-debug"],
+          "reviewPaths": ["packages/tx-drizzle/src"],
+          "searchTerms": ["debug", "logger", "catch"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["drizzle-health"],
+          "reviewPaths": ["packages/tx-drizzle/src"],
+          "searchTerms": ["health", "check", "name"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "drizzle-options",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": [
+            "RlsPolicyOptions.tableName/tenantColumn/configKey/adminRoles",
+            "RlsOptions.configKey",
+            "DrizzleHealthIndicatorOptions.name",
+            "InferTxOptions.adapter-inferred options"
+          ],
+          "source": { "path": "packages/tx-drizzle/src/index.ts", "identifier": "RlsOptions" },
+          "test": {
+            "path": "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+            "identifier": "transaction"
+          }
+        },
+        {
+          "id": "rls-debug",
+          "category": "fallback",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": ["RlsOptions.debug", "logger resolution"],
+          "source": {
+            "path": "packages/tx-drizzle/src/libs/RlsTxAdapter.ts",
+            "identifier": "debug"
+          },
+          "test": {
+            "path": "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+            "identifier": "RLS"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1393",
+          "regressionTest": "Prove debug-enabled logger presence, absence, and failure produce explicit outcomes instead of a silent no-op."
+        },
+        {
+          "id": "rls-identifiers",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["RLS table/schema identifiers", "tenant context"],
+          "source": {
+            "path": "packages/tx-drizzle/src/libs/RlsSql.ts",
+            "identifier": "identifier"
+          },
+          "test": {
+            "path": "packages/tx-drizzle/src/tests/createRlsPolicy.spec.ts",
+            "identifier": "identifier"
+          }
+        },
+        {
+          "id": "drizzle-transaction-lifecycle",
+          "category": "lifecycle",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["transaction commit/rollback", "AbortSignal", "savepoints"],
+          "source": {
+            "path": "packages/tx-drizzle/src/libs/DrizzleTxAdapter.ts",
+            "identifier": "transaction"
+          },
+          "test": {
+            "path": "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+            "identifier": "savepoint"
+          }
+        },
+        {
+          "id": "drizzle-health",
+          "category": "verification",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": [
+            "DrizzleHealthIndicator.name",
+            "database readiness check",
+            "failure redaction"
+          ],
+          "source": {
+            "path": "packages/tx-drizzle/src/libs/DrizzleHealthIndicator.ts",
+            "identifier": "check"
+          },
+          "test": {
+            "path": "packages/tx-drizzle/src/tests/DrizzleHealthIndicator.spec.ts",
+            "identifier": "health"
+          }
+        }
+      ]
+    },
+    {
+      "package": "events-core",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["event-bus-options", "event-ordering-options", "event-replay-options"],
+          "reviewPaths": ["packages/events-core/src"],
+          "searchTerms": ["EventBusStartOptions", "resolver", "handlers"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["event-serializer"],
+          "reviewPaths": ["packages/events-core/src"],
+          "searchTerms": ["deserialize", "eventId", "occurredAt"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["event-bus-lifecycle"],
+          "reviewPaths": ["packages/events-core/src"],
+          "searchTerms": ["start", "clear", "switch"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["event-resolver-default"],
+          "reviewPaths": ["packages/events-core/src"],
+          "searchTerms": ["resolver", "default", "fallback"]
+        },
+        "verification": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/events-core/src"],
+          "searchTerms": ["check", "verify", "dry-run"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "event-bus-options",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["EventBusStartOptions.handlers", "EventBusStartOptions.resolver"],
+          "source": {
+            "path": "packages/events-core/src/libs/EventBusConfig.ts",
+            "identifier": "EventBusStartOptions"
+          },
+          "test": {
+            "path": "packages/events-core/src/tests/EventBusConfig.spec.ts",
+            "identifier": "resolver"
+          }
+        },
+        {
+          "id": "event-ordering-options",
+          "category": "configuration",
+          "disposition": "remove-deprecate",
+          "status": "unresolved",
+          "members": [
+            "EventOrderingConfig.strategy/bufferSize/flushTimeoutMs/maxConcurrency/partitionKeyExtractor"
+          ],
+          "source": {
+            "path": "packages/events-core/src/libs/interfaces/EventOrdering.ts",
+            "identifier": "EventOrderingConfig"
+          },
+          "test": {
+            "path": "packages/events-core/src/tests/EventBusConfig.spec.ts",
+            "identifier": "EventBusConfig"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1404",
+          "regressionTest": "Implement and behavior-test every ordering field, or remove/deprecate the unused public contract."
+        },
+        {
+          "id": "event-replay-options",
+          "category": "configuration",
+          "disposition": "remove-deprecate",
+          "status": "unresolved",
+          "members": ["ReplayOptions.from/to/eventTypes/partitionKeys/mode/batchSize/onProgress"],
+          "source": {
+            "path": "packages/events-core/src/libs/interfaces/EventReplay.ts",
+            "identifier": "ReplayOptions"
+          },
+          "test": {
+            "path": "packages/events-core/src/tests/EventBusConfig.spec.ts",
+            "identifier": "EventBusConfig"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1404",
+          "regressionTest": "Implement and behavior-test every replay field, or remove/deprecate the unused public contract."
+        },
+        {
+          "id": "event-serializer",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": ["eventId", "event type", "occurredAt", "payload reconstruction"],
+          "source": {
+            "path": "packages/events-core/src/libs/EventSerializer.ts",
+            "identifier": "deserialize"
+          },
+          "test": {
+            "path": "packages/events-core/src/tests/EventSerializer.spec.ts",
+            "identifier": "eventId"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1400",
+          "regressionTest": "Reject missing, non-string, and empty serialized event identifiers before DomainEvent reconstruction."
+        },
+        {
+          "id": "event-bus-lifecycle",
+          "category": "lifecycle",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["event bus start", "idempotent start", "handler switch", "clear"],
+          "source": {
+            "path": "packages/events-core/src/libs/EventBusConfig.ts",
+            "identifier": "start"
+          },
+          "test": {
+            "path": "packages/events-core/src/tests/EventBusConfig.spec.ts",
+            "identifier": "clear"
+          }
+        },
+        {
+          "id": "event-resolver-default",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["default handler resolver", "batch per-result failures"],
+          "source": {
+            "path": "packages/events-core/src/libs/EventBusConfig.ts",
+            "identifier": "resolver"
+          },
+          "test": {
+            "path": "packages/events-core/src/tests/EventPublisher.spec.ts",
+            "identifier": "failure"
+          }
+        }
+      ]
+    },
+    {
+      "package": "events-tx",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["transactional-event-options"],
+          "reviewPaths": ["packages/events-tx/src"],
+          "searchTerms": ["maxAttempts", "batch", "visibility", "retry"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["persisted-event-rows"],
+          "reviewPaths": ["packages/events-tx/src"],
+          "searchTerms": ["mapOutboxRow", "mapInboxRow", "JSON.parse"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["outbox-inbox-lifecycle"],
+          "reviewPaths": ["packages/events-tx/src"],
+          "searchTerms": ["claim", "retry", "dead-letter"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["outbox-recovery"],
+          "reviewPaths": ["packages/events-tx/src"],
+          "searchTerms": ["retry", "unknown", "dead"]
+        },
+        "verification": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/events-tx/src"],
+          "searchTerms": ["check", "verify", "dry-run"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "transactional-event-options",
+          "category": "configuration",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": [
+            "OutboxAppendOptions.id/aggregateId/idempotencyKey/visibleAt/metadata/maxAttempts",
+            "OutboxClaimOptions.now/limit/visibilityTimeoutMs",
+            "ListOutboxMessagesOptions.status/limit",
+            "ListInboxRecordsOptions.consumerId/status/limit",
+            "TransactionalOutboxConfig.store/txManager/serializer/now/idFactory/maxAttempts",
+            "OutboxRelayConfig.store/publish/deadLetter/txManager/now/batchSize/visibilityTimeoutMs/retry.baseDelayMs/retry.multiplier/retry.maxDelayMs",
+            "TransactionalInboxConsumerConfig.store/txManager/now/throwOnError/consumerId",
+            "DrizzleTransactionalEventStoreConfig.db/txManager/tables"
+          ],
+          "source": { "path": "packages/events-tx/src/index.ts", "identifier": "Transactional" },
+          "test": {
+            "path": "packages/events-tx/src/tests/TransactionalOutbox.spec.ts",
+            "identifier": "maxAttempts"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1402",
+          "regressionTest": "Reject invalid worker numeric controls and empty consumer identifiers before persistence, claiming, or scheduling side effects."
+        },
+        {
+          "id": "persisted-event-rows",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": [
+            "outbox required identifiers",
+            "inbox status",
+            "dates",
+            "payload JSON",
+            "diagnostics"
+          ],
+          "source": {
+            "path": "packages/events-tx/src/libs/DrizzleTransactionalEventStore.ts",
+            "identifier": "mapOutboxRow"
+          },
+          "test": {
+            "path": "packages/events-tx/src/tests/TransactionalOutbox.spec.ts",
+            "identifier": "diagnostic"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1323",
+          "regressionTest": "Reject malformed outbox and inbox identifiers, enums, dates, payloads, errors, and diagnostics without coercion."
+        },
+        {
+          "id": "outbox-inbox-lifecycle",
+          "category": "lifecycle",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": [
+            "outbox claim/publish/complete",
+            "inbox claim/complete",
+            "stale claim recovery"
+          ],
+          "source": { "path": "packages/events-tx/src/index.ts", "identifier": "Outbox" },
+          "test": {
+            "path": "packages/events-tx/src/tests/TransactionalOutbox.spec.ts",
+            "identifier": "stale"
+          }
+        },
+        {
+          "id": "outbox-recovery",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["retry scheduling", "dead-letter transition", "diagnostic normalization"],
+          "source": { "path": "packages/events-tx/src/index.ts", "identifier": "Transactional" },
+          "test": {
+            "path": "packages/events-tx/src/tests/TransactionalOutbox.spec.ts",
+            "identifier": "dead-letter"
+          }
+        }
+      ]
+    },
+    {
+      "package": "retry-core",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["reliability-options"],
+          "reviewPaths": ["packages/retry-core/src"],
+          "searchTerms": ["Options", "delay", "ttl", "reserve"]
+        },
+        "decoder": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/retry-core/src"],
+          "searchTerms": ["deserialize", "JSON.parse", "external input"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["circuit-lifecycle"],
+          "reviewPaths": ["packages/retry-core/src"],
+          "searchTerms": ["reset", "force", "HALF_OPEN"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["redis-error-policy"],
+          "reviewPaths": ["packages/retry-core/src"],
+          "searchTerms": ["fallback-inmemory", "open", "throw"]
+        },
+        "verification": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/retry-core/src"],
+          "searchTerms": ["check", "verify", "dry-run"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "reliability-options",
+          "category": "configuration",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": [
+            "BackoffOptions.delay/multiplier/maxDelay/jitter",
+            "CircuitBreakerOptions.circuitId/failureThreshold/openDuration/halfOpenRequests/stateStore/fallback",
+            "InMemoryCircuitBreakerStateStoreOptions.maxEntries/idleTtlMs",
+            "RedisCircuitBreakerStoreOptions.redis/onStoreError/ttlSeconds",
+            "TimeoutGuardOptions.getRemainingTime/reserveTimeMs",
+            "RetryPolicyOptions.maxAttempts/retryFor/noRetryFor/retryForCategories",
+            "CircuitBreakerConfig.failureThreshold/successThreshold/timeout/stateStore",
+            "RetryableOptions.maxAttempts/retryFor/noRetryFor/retryForCategories/backoff/retryPolicy/backoffPolicy/wrapExhausted/recover/trace/listeners/circuitBreaker/circuitIdResolver/lambdaTimeoutReserveMs",
+            "RetryTemplateOptions.maxAttempts/retryFor/noRetryFor/retryForCategories/backoff/retryPolicy/backoffPolicy/wrapExhausted/listeners",
+            "RetryOrchestratorOptions.maxAttempts/retryFor/noRetryFor/retryForCategories/backoff/retryPolicy/backoffPolicy/wrapExhausted/listeners"
+          ],
+          "source": { "path": "packages/retry-core/src/index.ts", "identifier": "BackoffOptions" },
+          "test": {
+            "path": "packages/retry-core/src/tests/BackoffPolicy.spec.ts",
+            "identifier": "delay"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1399",
+          "regressionTest": "Reject invalid numeric values for every reliability option before timers, state, or Redis I/O."
+        },
+        {
+          "id": "circuit-lifecycle",
+          "category": "lifecycle",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["closed/open/half-open transitions", "reset", "force open/close"],
+          "source": { "path": "packages/retry-core/src/index.ts", "identifier": "CircuitBreaker" },
+          "test": {
+            "path": "packages/retry-core/src/tests/FailureSemantics.spec.ts",
+            "identifier": "CircuitBreaker"
+          }
+        },
+        {
+          "id": "redis-error-policy",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["throw", "open", "fallback-inmemory"],
+          "source": {
+            "path": "packages/retry-core/src/libs/stores/RedisCircuitBreakerStore.ts",
+            "identifier": "fallback-inmemory"
+          },
+          "test": {
+            "path": "packages/retry-core/src/tests/RedisCircuitBreaker.spec.ts",
+            "identifier": "fallback-inmemory"
+          }
+        }
+      ]
+    },
+    {
+      "package": "idempotency-core",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["idempotency-options"],
+          "reviewPaths": ["packages/idempotency-core/src"],
+          "searchTerms": ["ttlMs", "scope", "fingerprint", "namespace"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["idempotency-key-boundary"],
+          "reviewPaths": ["packages/idempotency-core/src"],
+          "searchTerms": ["derive", "segment", "tenant"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["reservation-lifecycle"],
+          "reviewPaths": ["packages/idempotency-core/src"],
+          "searchTerms": ["reserve", "commit", "fail", "expire"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["idempotency-replay"],
+          "reviewPaths": ["packages/idempotency-core/src"],
+          "searchTerms": ["replay", "conflict", "retryable"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["idempotency-conformance"],
+          "reviewPaths": ["packages/idempotency-core/src"],
+          "searchTerms": ["conformance", "check", "assert"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "idempotency-options",
+          "category": "configuration",
+          "disposition": "unsupported-rejected",
+          "status": "unresolved",
+          "members": [
+            "IdempotencyCoordinatorOptions.store/auditSink",
+            "InMemoryIdempotencyStoreOptions.now",
+            "IdempotencyStoreConformanceOptions.createStore/createResponse",
+            "DeriveIdempotencyKeyOptions.source/namespace/tenantId",
+            "IdempotencyReserveOptions.ttlMs/metadata",
+            "IdempotencyCommitOptions.key/reservationId/response/ttlMs/metadata",
+            "IdempotencyFailOptions.key/reservationId/retryable/ttlMs/metadata/problem",
+            "IdempotencyExpireOptions.key"
+          ],
+          "source": {
+            "path": "packages/idempotency-core/src/libs/InMemoryIdempotencyStore.ts",
+            "identifier": "ttlMs"
+          },
+          "test": {
+            "path": "packages/idempotency-core/src/tests/InMemoryIdempotencyStore.spec.ts",
+            "identifier": "ttlMs"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1403",
+          "regressionTest": "Reject invalid TTL values before reservation state changes across reserve, commit, and failure paths."
+        },
+        {
+          "id": "idempotency-key-boundary",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["non-empty key segments", "tenant consistency", "fingerprint"],
+          "source": {
+            "path": "packages/idempotency-core/src/libs/deriveIdempotencyKey.ts",
+            "identifier": "deriveIdempotencyKey"
+          },
+          "test": {
+            "path": "packages/idempotency-core/src/tests/KeyDerivation.spec.ts",
+            "identifier": "tenant"
+          }
+        },
+        {
+          "id": "reservation-lifecycle",
+          "category": "lifecycle",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["reserve", "commit", "fail", "expire", "stale owner rejection"],
+          "source": {
+            "path": "packages/idempotency-core/src/libs/InMemoryIdempotencyStore.ts",
+            "identifier": "reserve"
+          },
+          "test": {
+            "path": "packages/idempotency-core/src/tests/InMemoryIdempotencyStore.spec.ts",
+            "identifier": "reserve"
+          }
+        },
+        {
+          "id": "idempotency-replay",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["completed replay", "in-flight conflict", "retryable failure"],
+          "source": {
+            "path": "packages/idempotency-core/src/libs/IdempotencyCoordinator.ts",
+            "identifier": "replay"
+          },
+          "test": {
+            "path": "packages/idempotency-core/src/tests/IdempotencyCoordinator.spec.ts",
+            "identifier": "replay"
+          }
+        },
+        {
+          "id": "idempotency-conformance",
+          "category": "verification",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["IdempotencyStore conformance"],
+          "source": {
+            "path": "packages/idempotency-core/src/index.ts",
+            "identifier": "conformance"
+          },
+          "test": {
+            "path": "packages/idempotency-core/src/tests/IdempotencyConformance.spec.ts",
+            "identifier": "conformance"
+          }
+        }
+      ]
+    },
+    {
+      "package": "testing",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["testing-options"],
+          "reviewPaths": ["packages/testing/src"],
+          "searchTerms": ["Options", "runtime", "transactionContext"]
+        },
+        "decoder": {
+          "status": "none-found",
+          "surfaceIds": [],
+          "reviewPaths": ["packages/testing/src"],
+          "searchTerms": ["deserialize", "JSON.parse", "external"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["test-runtime-lifecycle"],
+          "reviewPaths": ["packages/testing/src"],
+          "searchTerms": ["flush", "shutdown", "waitUntil"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["explicit-disabled-harnesses"],
+          "reviewPaths": ["packages/testing/src"],
+          "searchTerms": ["false", "null", "skipped"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["conformance-harnesses"],
+          "reviewPaths": ["packages/testing/src"],
+          "searchTerms": ["conformance", "failure drill", "evidence"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "testing-options",
+          "category": "configuration",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": [
+            "TestingHarnessOptions.baseUrl",
+            "TestingTransactionContextOptions.inTransaction",
+            "ResetCrocoTestingContextOptions.logger/providers/transactionContext",
+            "TestingAppOptions.AppConfig/baseUrl/autoRegisterControllers/controllers/logger/providers/resetContainer/transactionContext",
+            "TestingRequestOptions.RequestInit/body/json/query",
+            "TestingRequestContextOptions.Partial<RequestContext>/runtime",
+            "EventTestingHarnessOptions.eventBus/handlers/inMemoryEventBus/logger/providers/resetContainer/subscriptions/transactionContext",
+            "AuthProviderConformanceOptions.auth/liveSmoke/providerName/readiness/secretSamples/tenantMapping/webhooks",
+            "StorageProviderConformanceOptions.createProvider/keyPrefix/providerName/metadata/publicUrl/signedUrl",
+            "ProviderConformanceMatrixOptions.profiles",
+            "LlmProviderConformanceOptions.createModel/createFailingModel/modelId/providerName/prompts",
+            "BillingGatewayConformanceOptions.createGateway/fixtures/assertions/failureScenarios",
+            "BillingWebhookConformanceOptions.createHandler/fixtures/assertions",
+            "BillingProviderConformanceOptions.providerName/gateway/webhook",
+            "DrizzleProviderConformanceOptions.providerName/schema/diagnostics/transaction/tenantIsolation/repositoryErrors",
+            "UpstashRedisMeteringConformanceOptions.createClient/createMissingConfig/keyPrefix/liveSmoke/providerName/secretSamples",
+            "UpstashRedisRateLimitConformanceOptions.createMissingConfig/createStore/invalidPolicy/keyPrefix/liveSmoke/policy/providerName/secretSamples",
+            "QStashTaskExecuteOptions.delay/headers/idempotencyKey",
+            "QStashTaskConformanceOptions.createMissingConfig/createPublisher/liveSmoke/providerName/secretSamples",
+            "QStashBatchConformanceOptions.createExecutor/liveSmoke/providerName/secretSamples",
+            "QStashTriggerConformanceOptions.createHarness/liveSmoke/providerName/secretSamples"
+          ],
+          "source": { "path": "packages/testing/src/index.ts", "identifier": "create" },
+          "test": { "path": "packages/testing/src/tests/testing.spec.ts", "identifier": "runtime" },
+          "sources": [
+            {
+              "path": "packages/testing/src/libs/testing.ts",
+              "identifier": "TestingHarnessOptions"
+            },
+            {
+              "path": "packages/testing/src/libs/auth-provider-conformance.ts",
+              "identifier": "AuthProviderConformanceOptions"
+            },
+            {
+              "path": "packages/testing/src/libs/provider-conformance.ts",
+              "identifier": "StorageProviderConformanceOptions"
+            },
+            {
+              "path": "packages/testing/src/libs/provider-conformance-matrix.ts",
+              "identifier": "ProviderConformanceMatrixOptions"
+            },
+            {
+              "path": "packages/testing/src/libs/llm-provider-conformance.ts",
+              "identifier": "LlmProviderConformanceOptions"
+            },
+            {
+              "path": "packages/testing/src/libs/billing-provider-conformance.ts",
+              "identifier": "BillingGatewayConformanceOptions"
+            },
+            {
+              "path": "packages/testing/src/libs/drizzle-provider-conformance.ts",
+              "identifier": "DrizzleProviderConformanceOptions"
+            },
+            {
+              "path": "packages/testing/src/libs/serverless-provider-conformance.ts",
+              "identifier": "QStashTaskExecuteOptions"
+            }
+          ],
+          "tests": [
+            {
+              "path": "packages/testing/src/tests/testing.spec.ts",
+              "identifier": "createTestingApp"
+            },
+            {
+              "path": "packages/testing/src/tests/testing.spec.ts",
+              "identifier": "createEventTestingHarness"
+            },
+            {
+              "path": "packages/testing/src/tests/ConformanceContract.spec.ts",
+              "identifier": "createAuthProviderConformanceSuite"
+            },
+            {
+              "path": "packages/testing/src/tests/ConformanceContract.spec.ts",
+              "identifier": "createStorageProviderConformanceSuite"
+            },
+            {
+              "path": "packages/testing/src/tests/ConformanceContract.spec.ts",
+              "identifier": "createLlmProviderConformanceSuite"
+            }
+          ]
+        },
+        {
+          "id": "test-runtime-lifecycle",
+          "category": "lifecycle",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["waitUntil", "flush", "shutdown", "after-commit hook flush"],
+          "source": { "path": "packages/testing/src/libs/testing.ts", "identifier": "waitUntil" },
+          "test": {
+            "path": "packages/testing/src/tests/testing.spec.ts",
+            "identifier": "waitUntil"
+          }
+        },
+        {
+          "id": "explicit-disabled-harnesses",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": [
+            "runtime: false",
+            "transactionContext: false",
+            "null transaction context",
+            "skipped conformance capability"
+          ],
+          "source": {
+            "path": "packages/testing/src/libs/testing.ts",
+            "identifier": "transactionContext"
+          },
+          "test": {
+            "path": "packages/testing/src/tests/testing.spec.ts",
+            "identifier": "transactionContext"
+          }
+        },
+        {
+          "id": "conformance-harnesses",
+          "category": "verification",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": [
+            "provider conformance",
+            "operational failure drill",
+            "supported/unsupported/skipped evidence"
+          ],
+          "source": { "path": "packages/testing/src/index.ts", "identifier": "Conformance" },
+          "test": {
+            "path": "packages/testing/src/tests/ConformanceContract.spec.ts",
+            "identifier": "conformance"
+          }
+        }
+      ]
+    },
+    {
+      "package": "create-croco-app",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["generator-options"],
+          "reviewPaths": ["packages/create-croco-app/src"],
+          "searchTerms": ["GeneratorOptions", "installDeps", "initGit"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["generator-cli-input"],
+          "reviewPaths": ["packages/create-croco-app/src"],
+          "searchTerms": ["parse", "validateCliOptions", "validateResolvedOptions"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["generator-lifecycle"],
+          "reviewPaths": ["packages/create-croco-app/src"],
+          "searchTerms": ["install", "git", "cleanup"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["generator-skips"],
+          "reviewPaths": ["packages/create-croco-app/src"],
+          "searchTerms": ["installDeps", "initGit", "skipped"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["generated-contract-verification"],
+          "reviewPaths": ["packages/create-croco-app/src", "packages/create-croco-app/templates"],
+          "searchTerms": ["contract:verify", "di:verify", "--check"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "generator-options",
+          "category": "configuration",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": [
+            "GeneratorOptions.projectName/scope/goal/preset/webApps/api/apiHosting/backendDeploy/frontendDeploy/ui/saasProviderProfile/tenantModel/db/agentRules/installDeps/initGit"
+          ],
+          "source": {
+            "path": "packages/create-croco-app/src/types.ts",
+            "identifier": "GeneratorOptions"
+          },
+          "test": {
+            "path": "packages/create-croco-app/src/tests/options.spec.ts",
+            "identifier": "validateResolvedOptions"
+          }
+        },
+        {
+          "id": "generator-cli-input",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["raw CLI enums", "lists", "unsupported combinations"],
+          "source": {
+            "path": "packages/create-croco-app/src/options.ts",
+            "identifier": "validateCliOptions"
+          },
+          "test": {
+            "path": "packages/create-croco-app/src/tests/options.spec.ts",
+            "identifier": "validateCliOptions"
+          }
+        },
+        {
+          "id": "generator-lifecycle",
+          "category": "lifecycle",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": [
+            "dependency installation",
+            "git initialization",
+            "generation failure propagation"
+          ],
+          "source": {
+            "path": "packages/create-croco-app/src/generator.ts",
+            "identifier": "installDeps"
+          },
+          "test": {
+            "path": "packages/create-croco-app/src/tests/e2e-generation.spec.ts",
+            "identifier": "install"
+          }
+        },
+        {
+          "id": "generator-skips",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": ["installDeps: false", "initGit: false", "manual install recovery output"],
+          "source": {
+            "path": "packages/create-croco-app/src/cli-result.ts",
+            "identifier": "install"
+          },
+          "test": {
+            "path": "packages/create-croco-app/src/tests/cli-result.spec.ts",
+            "identifier": "install"
+          }
+        },
+        {
+          "id": "generated-contract-verification",
+          "category": "verification",
+          "disposition": "implemented-tested",
+          "status": "unresolved",
+          "members": ["contract:verify", "di:verify", "generated OpenAPI/RPC/project-map drift"],
+          "source": {
+            "path": "packages/create-croco-app/templates/saas/package.json.hbs",
+            "identifier": "contract:verify"
+          },
+          "test": {
+            "path": "packages/create-croco-app/src/tests/templates-build.spec.ts",
+            "identifier": "contract:verify"
+          },
+          "issue": "https://github.com/croco-dev/framework/issues/1322",
+          "regressionTest": "Generated verification commands must detect stale artifacts without rewriting project-map, OpenAPI, RPC, or coverage output."
+        }
+      ]
+    },
+    {
+      "package": "cli",
+      "coverage": {
+        "configuration": {
+          "status": "reviewed",
+          "surfaceIds": ["cli-command-options"],
+          "reviewPaths": ["packages/cli/src"],
+          "searchTerms": ["--check", "--dry-run", "--write"]
+        },
+        "decoder": {
+          "status": "reviewed",
+          "surfaceIds": ["cli-external-artifacts"],
+          "reviewPaths": ["packages/cli/src"],
+          "searchTerms": ["JSON.parse", "manifest", "schema"]
+        },
+        "lifecycle": {
+          "status": "reviewed",
+          "surfaceIds": ["cli-subprocess-lifecycle"],
+          "reviewPaths": ["packages/cli/src"],
+          "searchTerms": ["spawn", "status", "signal"]
+        },
+        "fallback": {
+          "status": "reviewed",
+          "surfaceIds": ["cli-explicit-skips"],
+          "reviewPaths": ["packages/cli/src"],
+          "searchTerms": ["skipped", "unsupported", "warning"]
+        },
+        "verification": {
+          "status": "reviewed",
+          "surfaceIds": ["cli-check-and-dry-run"],
+          "reviewPaths": ["packages/cli/src"],
+          "searchTerms": ["check", "verify", "dry-run"]
+        }
+      },
+      "surfaces": [
+        {
+          "id": "cli-command-options",
+          "category": "configuration",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": [
+            "WriteOptions.dryRun/overwrite",
+            "RunDoctorOptions.cwd",
+            "RunJobsOptions.client/fetch/timeoutMs/token/tokenHeader",
+            "RunOpsStatusOptions.fetch/includeMetrics/requiredEndpoints/timeoutMs/token/tokenHeader",
+            "architecture-policy/runtime-policy/contracts/DI/project-map/upgrade CLI flags"
+          ],
+          "source": { "path": "packages/cli/src/index.ts", "identifier": "WriteOptions" },
+          "test": {
+            "path": "packages/cli/src/tests/runtimePolicyCheck.spec.ts",
+            "identifier": "Policy"
+          },
+          "sources": [
+            { "path": "packages/cli/src/libs/fileWriter.ts", "identifier": "WriteOptions" },
+            { "path": "packages/cli/src/commands/doctor.ts", "identifier": "RunDoctorOptions" },
+            { "path": "packages/cli/src/commands/jobs.ts", "identifier": "RunJobsOptions" },
+            { "path": "packages/cli/src/libs/ops.ts", "identifier": "RunOpsStatusOptions" }
+          ],
+          "tests": [
+            { "path": "packages/cli/src/tests/fileWriter.spec.ts", "identifier": "dry-run" },
+            { "path": "packages/cli/src/tests/doctor.spec.ts", "identifier": "cwd" },
+            { "path": "packages/cli/src/tests/jobs.spec.ts", "identifier": "timeout" },
+            { "path": "packages/cli/src/tests/opsStatus.spec.ts", "identifier": "metrics" }
+          ]
+        },
+        {
+          "id": "cli-external-artifacts",
+          "category": "decoder",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": [
+            "contract snapshots",
+            "runtime manifests",
+            "project maps",
+            "doctor JSON inputs"
+          ],
+          "source": {
+            "path": "packages/cli/src/commands/contractsDiff.ts",
+            "identifier": "JSON.parse"
+          },
+          "test": {
+            "path": "packages/cli/src/tests/contractsDiff.spec.ts",
+            "identifier": "snapshot"
+          }
+        },
+        {
+          "id": "cli-subprocess-lifecycle",
+          "category": "lifecycle",
+          "disposition": "unsupported-rejected",
+          "status": "complete",
+          "members": ["OpenAPI/RPC/migration child exit", "child process error propagation"],
+          "source": {
+            "path": "packages/cli/src/commands/codegenOpenapi.ts",
+            "identifier": "spawn"
+          },
+          "test": { "path": "packages/cli/src/tests/codegenOpenapi.spec.ts", "identifier": "exit" }
+        },
+        {
+          "id": "cli-explicit-skips",
+          "category": "fallback",
+          "disposition": "compatibility-fallback-tested",
+          "status": "complete",
+          "members": [
+            "doctor skipped checks",
+            "generator skipped-dry-run",
+            "optional unavailable capabilities"
+          ],
+          "source": { "path": "packages/cli/src/commands/doctor.ts", "identifier": "skipped" },
+          "test": { "path": "packages/cli/src/tests/doctor.spec.ts", "identifier": "skipped" }
+        },
+        {
+          "id": "cli-check-and-dry-run",
+          "category": "verification",
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": [
+            "architecture-policy check",
+            "runtime-policy check",
+            "contracts check/diff",
+            "DI check",
+            "project-map --check",
+            "upgrade --dry-run"
+          ],
+          "source": { "path": "packages/cli/src/commands/upgrade.ts", "identifier": "dry-run" },
+          "test": { "path": "packages/cli/src/tests/upgrade.spec.ts", "identifier": "dry-run" }
+        }
+      ]
+    }
+  ]
+}
