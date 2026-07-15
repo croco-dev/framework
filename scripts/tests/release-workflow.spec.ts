@@ -168,10 +168,13 @@ describe("release workflow quality gates", () => {
   it("runs focused self-checks for release-gate maintenance changes", () => {
     const workflow = readReleaseWorkflow();
     const releaseGateFiles = [
+      ".github/renovate.json",
+      ".github/workflows/ci.yml",
       ".github/workflows/release.yml",
       "scripts/alpha-release-smoke.mts",
       "scripts/certification-policy.mts",
       "scripts/changeset-required-check.mts",
+      "scripts/ci-executable-policy.mts",
       "scripts/core-coverage-warning-check.mts",
       "scripts/create-croco-app-generated-smoke-support.mts",
       "scripts/create-croco-app-generated-smoke-matrix.mts",
@@ -196,6 +199,7 @@ describe("release workflow quality gates", () => {
       "scripts/spine-promotion-check.mts",
       "scripts/tests/alpha-release-smoke.spec.ts",
       "scripts/tests/changeset-required-check.spec.ts",
+      "scripts/tests/ci-executable-policy.spec.ts",
       "scripts/tests/core-coverage-warning-check.spec.ts",
       "scripts/tests/create-croco-app-generated-smoke.spec.ts",
       "scripts/tests/dependency-audit-policy.spec.ts",
@@ -232,6 +236,7 @@ describe("release workflow quality gates", () => {
     );
     expect(workflow).toContain("pnpm exec vitest run scripts/tests/release-workflow.spec.ts");
     expect(workflow).toContain("scripts/tests/alpha-release-smoke.spec.ts");
+    expect(workflow).toContain("scripts/tests/ci-executable-policy.spec.ts");
     expect(workflow).toContain("scripts/tests/dependency-audit-policy.spec.ts");
     expect(workflow).toContain("scripts/tests/release-spine-evidence.spec.ts");
     expect(workflow).toContain("scripts/tests/release-metadata-check.spec.ts");

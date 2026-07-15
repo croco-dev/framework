@@ -1,0 +1,17 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "docker:pinDigests"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update the Gitleaks tag and immutable OCI digest together",
+      "managerFilePatterns": ["/^\\.github/workflows/ci\\.yml$/"],
+      "matchStrings": [
+        "# renovate: datasource=docker depName=ghcr\\.io/gitleaks/gitleaks\\s+docker run[^\\n]*ghcr\\.io/gitleaks/gitleaks:(?<currentValue>v?[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "ghcr.io/gitleaks/gitleaks",
+      "versioningTemplate": "semver-coerced"
+    }
+  ]
+}

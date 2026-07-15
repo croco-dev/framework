@@ -97,7 +97,8 @@ jobs:
           mkdir -p ci-reports/security
           start=$(date +%s)
           set +e
-          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.23.0 detect --source /repo --redact --no-banner --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
+          # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e detect --source /repo --redact --no-banner --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
           exit_code=$?
           set -e
           end=$(date +%s)

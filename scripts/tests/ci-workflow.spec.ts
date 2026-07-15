@@ -3,13 +3,63 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ciWorkflowPath = resolve(__dirname, "../../.github/workflows/ci.yml");
+const renovateConfigPath = resolve(__dirname, "../../.github/renovate.json");
 const rootPackageJsonPath = resolve(__dirname, "../../package.json");
+const pnpmLockPath = resolve(__dirname, "../../pnpm-lock.yaml");
+const circularVerifierPath = resolve(__dirname, "../verify-circular-allowlist.mts");
 const pnpmWorkspacePath = resolve(__dirname, "../../pnpm-workspace.yaml");
 
 const readCiWorkflow = () => readFileSync(ciWorkflowPath, "utf-8");
+const readRenovateConfig = () =>
+  JSON.parse(readFileSync(renovateConfigPath, "utf-8")) as Record<string, unknown>;
 const readRootPackageJson = () =>
   JSON.parse(readFileSync(rootPackageJsonPath, "utf-8")) as Record<string, unknown>;
 const readPnpmWorkspace = () => readFileSync(pnpmWorkspacePath, "utf-8");
+
+describe("CI executable supply chain", () => {
+  it("pins Gitleaks to a readable version and immutable OCI digest", () => {
+    const workflow = readCiWorkflow();
+
+    expect(workflow).toContain(
+      "ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e",
+    );
+    expect(workflow).toContain("# renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks");
+    expect(workflow).not.toContain("ghcr.io/gitleaks/gitleaks:v8.23.0 detect");
+  });
+
+  it("keeps Madge inside the exact workspace dependency and frozen lockfile", () => {
+    const rootPackageJson = readRootPackageJson();
+    const scripts = rootPackageJson.scripts as Record<string, string>;
+    const devDependencies = rootPackageJson.devDependencies as Record<string, string>;
+    const verifier = readFileSync(circularVerifierPath, "utf-8");
+    const lockfile = readFileSync(pnpmLockPath, "utf-8");
+
+    expect(scripts["architecture:check:circular"]).toBe(
+      "pnpm exec madge --circular --extensions ts packages",
+    );
+    expect(devDependencies.madge).toBe("8.0.0");
+    expect(lockfile).toContain("madge:\n        specifier: 8.0.0\n        version: 8.0.0");
+    expect(verifier).toContain('["exec", "madge", "--circular"');
+    expect(verifier).not.toContain('["--yes", "madge"');
+  });
+
+  it("configures Renovate to rotate the Gitleaks tag and digest together", () => {
+    const config = readRenovateConfig();
+    const managers = config.customManagers as Array<Record<string, unknown>>;
+    const manager = managers[0];
+    const matchString = String((manager?.matchStrings as string[])[0]);
+    const match = new RegExp(matchString).exec(readCiWorkflow());
+
+    expect(config.extends).toEqual(expect.arrayContaining(["docker:pinDigests"]));
+    expect(manager?.customType).toBe("regex");
+    expect(manager?.datasourceTemplate).toBe("docker");
+    expect(manager?.depNameTemplate).toBe("ghcr.io/gitleaks/gitleaks");
+    expect(match?.groups).toMatchObject({
+      currentValue: "v8.23.0",
+      currentDigest: "sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e",
+    });
+  });
+});
 
 describe("CI package quality dashboard", () => {
   it("runs dependency audit policy after the advisory audit and publishes the report", () => {

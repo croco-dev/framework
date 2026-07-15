@@ -51,6 +51,22 @@ describe("verification policy", () => {
     );
   });
 
+  it("classifies the CI executable policy as a guarded root verification", () => {
+    const [discovery] = discoverRootVerificationScripts(
+      JSON.stringify({
+        scripts: {
+          "ci-executables:check":
+            "node --experimental-strip-types scripts/ci-executable-policy.mts",
+        },
+      }),
+    );
+
+    expect(discovery && classifyVerificationPath(discovery)).toMatchObject({
+      classification: "repository-guarded",
+      recoveryCommand: "Pin the reported executable to an immutable reviewed source",
+    });
+  });
+
   it("fails closed for a new workflow verification command", () => {
     const discoveries = discoverWorkflowVerificationCommands({
       ".github/workflows/synthetic.yml": "steps:\n  - run: pnpm synthetic:check",
