@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -27,7 +27,7 @@ describe("dependency-audit-policy.mts", () => {
     });
     writeAudit(repo, [
       advisory({
-        ghsa: "GHSA-runtime-risk",
+        ghsa: "GHSA-2345-2345-2345",
         path: "packages__runtime-core>runtime-lib@1.0.0>vulnerable@2.0.0",
         severity: "high",
       }),
@@ -79,7 +79,7 @@ describe("dependency-audit-policy.mts", () => {
       audit: {
         ignoreGhsas: [
           {
-            id: "GHSA-runtime-risk",
+            id: "GHSA-234c-fghj-mpqr",
             owner: "security-owner",
             reason: "Reviewed runtime exception while upstream fix is scheduled.",
             reviewBy: "2027-01-31",
@@ -90,7 +90,7 @@ describe("dependency-audit-policy.mts", () => {
     });
     writeAudit(repo, [
       advisory({
-        ghsa: "GHSA-runtime-risk",
+        ghsa: "ghsa-234C-FGHJ-MPQR",
         path: "packages__runtime-core>runtime-lib>vulnerable",
         severity: "high",
       }),
@@ -125,7 +125,7 @@ describe("dependency-audit-policy.mts", () => {
         ignoreGhsas: [
           {
             expiresOn: "2027-01-31",
-            id: "GHSA-runtime-risk",
+            id: "GHSA-2345-2345-2345",
             owner: "security-owner",
             reason: "Reviewed runtime exception while upstream fix is scheduled.",
           },
@@ -135,7 +135,7 @@ describe("dependency-audit-policy.mts", () => {
     });
     writeAudit(repo, [
       advisory({
-        ghsa: "GHSA-runtime-risk",
+        ghsa: "GHSA-2345-2345-2345",
         path: "packages__runtime-core>runtime-lib>vulnerable",
         severity: "high",
       }),
@@ -168,7 +168,7 @@ describe("dependency-audit-policy.mts", () => {
     writeAudit(repo, []);
     writeAuditFile(repo, "prod-audit.json", [
       advisory({
-        ghsa: "GHSA-prod-runtime",
+        ghsa: "GHSA-2346-2346-2346",
         path: "packages__runtime-core>runtime-lib>bad",
         severity: "high",
       }),
@@ -201,7 +201,7 @@ describe("dependency-audit-policy.mts", () => {
     });
     writeAudit(repo, [
       advisory({
-        ghsa: "GHSA-vitest-risk",
+        ghsa: "GHSA-2347-2347-2347",
         path: ".>vitest>vite",
         severity: "critical",
       }),
@@ -233,7 +233,7 @@ describe("dependency-audit-policy.mts", () => {
     });
     writeAudit(repo, [
       advisory({
-        ghsa: "GHSA-create-croco-app-vitest",
+        ghsa: "GHSA-2348-2348-2348",
         path: "packages__create-croco-app>vitest",
         severity: "critical",
       }),
@@ -280,7 +280,7 @@ describe("dependency-audit-policy.mts", () => {
     );
     writeAudit(repo, [
       advisory({
-        ghsa: "GHSA-template-vite",
+        ghsa: "GHSA-2349-2349-2349",
         path: "packages__create-croco-app__templates__addons__web>vite>bad",
         severity: "high",
       }),
@@ -325,7 +325,7 @@ describe("dependency-audit-policy.mts", () => {
     writeAudit(repo, []);
     writeAuditFile(repo, "template-audit.json", [
       advisory({
-        ghsa: "GHSA-template-runtime",
+        ghsa: "GHSA-2352-2352-2352",
         path: "packages__create-croco-app__templates__addons__web>vite",
         severity: "high",
       }),
@@ -346,6 +346,266 @@ describe("dependency-audit-policy.mts", () => {
     ]);
   });
 
+  it("preserves the maximum advisory severity in both audit-pass orders", () => {
+    const severities = ["low", "moderate", "high", "critical"] as const;
+    const rank = new Map(severities.map((severity, index) => [severity, index]));
+
+    for (const leftSeverity of severities) {
+      for (const rightSeverity of severities) {
+        for (const [firstSeverity, secondSeverity] of [
+          [leftSeverity, rightSeverity],
+          [rightSeverity, leftSeverity],
+        ] as const) {
+          const repo = createRuntimeRepo();
+          writeAudit(repo, [
+            advisory({
+              ghsa: "GHSA-2353-2353-2353",
+              path: "packages__runtime-core>runtime-lib>left",
+              severity: firstSeverity,
+            }),
+          ]);
+          writeAuditFile(repo, "prod-audit.json", [
+            advisory({
+              ghsa: "GHSA-2353-2353-2353",
+              path: "packages__runtime-core>runtime-lib>right",
+              severity: secondSeverity,
+            }),
+          ]);
+
+          const result = runDependencyAuditPolicy({
+            auditJsonPath: "audit.json",
+            prodAuditJsonPath: "prod-audit.json",
+            rootDir: repo,
+          });
+          const expectedSeverity =
+            (rank.get(leftSeverity) ?? 0) >= (rank.get(rightSeverity) ?? 0)
+              ? leftSeverity
+              : rightSeverity;
+
+          expect(result.advisoryFindings.map((finding) => finding.advisory.severity)).toEqual([
+            expectedSeverity,
+            expectedSeverity,
+          ]);
+          expect(result.blockingFindings.length > 0).toBe(
+            expectedSeverity === "high" || expectedSeverity === "critical",
+          );
+        }
+      }
+    }
+  });
+
+  it.each([
+    [undefined, "Invalid audit advisory severity: expected one of low, moderate, high, critical"],
+    ["unknown", "Invalid audit advisory severity: expected one of low, moderate, high, critical"],
+    [
+      "constructor",
+      "Invalid audit advisory severity: expected one of low, moderate, high, critical",
+    ],
+    ["toString", "Invalid audit advisory severity: expected one of low, moderate, high, critical"],
+  ])("rejects invalid severity evidence with a stable diagnostic", (severity, message) => {
+    const repo = createRuntimeRepo();
+    writeAudit(repo, [
+      advisory({
+        ghsa: "GHSA-2354-2354-2354",
+        path: "packages__runtime-core>runtime-lib>bad",
+        severity,
+      }),
+    ]);
+
+    expectPolicyProblem(
+      () => runDependencyAuditPolicy({ auditJsonPath: "audit.json", rootDir: repo }),
+      message,
+    );
+  });
+
+  it("merges advisories by canonical CVE-only and numeric audit identities", () => {
+    const repo = createRuntimeRepo();
+    const auditPass = [
+      advisory({
+        cves: [" cve-2026-9999 "],
+        ghsa: undefined,
+        id: undefined,
+        path: "packages__runtime-core>runtime-lib>cve-left",
+        severity: "moderate",
+      }),
+      advisory({
+        cves: [],
+        ghsa: undefined,
+        id: 42,
+        path: "packages__runtime-core>runtime-lib>id-left",
+        severity: "low",
+      }),
+    ];
+    const prodAuditPass = [
+      advisory({
+        cves: ["CVE-2026-9999", "CVE-2026-1234"],
+        ghsa: undefined,
+        id: undefined,
+        path: "packages__runtime-core>runtime-lib>cve-right",
+        severity: "high",
+      }),
+      advisory({
+        cves: [],
+        ghsa: undefined,
+        id: "42",
+        path: "packages__runtime-core>runtime-lib>id-right",
+        severity: "moderate",
+      }),
+    ];
+    writeAudit(repo, auditPass);
+    writeAuditFile(repo, "prod-audit.json", prodAuditPass);
+
+    const result = runDependencyAuditPolicy({
+      auditJsonPath: "audit.json",
+      prodAuditJsonPath: "prod-audit.json",
+      rootDir: repo,
+    });
+    writeAudit(repo, prodAuditPass);
+    writeAuditFile(repo, "prod-audit.json", auditPass);
+    const reversed = runDependencyAuditPolicy({
+      auditJsonPath: "audit.json",
+      prodAuditJsonPath: "prod-audit.json",
+      rootDir: repo,
+    });
+
+    expect(reversed.advisoryFindings).toEqual(result.advisoryFindings);
+    expect(result.advisoryFindings).toHaveLength(4);
+    const cveFindings = result.advisoryFindings.filter((finding) =>
+      finding.advisory.cves?.includes("CVE-2026-9999"),
+    );
+    expect(cveFindings).toHaveLength(2);
+    expect(cveFindings.map((finding) => finding.advisory.cves)).toEqual([
+      ["CVE-2026-1234", "CVE-2026-9999"],
+      ["CVE-2026-1234", "CVE-2026-9999"],
+    ]);
+    expect(cveFindings.map((finding) => finding.advisory.severity)).toEqual(["high", "high"]);
+    expect(result.advisoryFindings.filter((finding) => finding.advisory.id === 42)).toHaveLength(2);
+  });
+
+  it("rejects identifier-less advisories instead of conflating them", () => {
+    const repo = createRuntimeRepo();
+    writeAudit(repo, [
+      advisory({
+        cves: [],
+        ghsa: undefined,
+        id: undefined,
+        path: "packages__runtime-core>runtime-lib>first",
+        severity: "high",
+      }),
+      advisory({
+        cves: [],
+        ghsa: undefined,
+        id: undefined,
+        path: "packages__runtime-core>runtime-lib>second",
+        severity: "low",
+      }),
+    ]);
+
+    expectPolicyProblem(
+      () => runDependencyAuditPolicy({ auditJsonPath: "audit.json", rootDir: repo }),
+      "Invalid audit advisory identity: expected GHSA, CVE, or audit id",
+    );
+  });
+
+  it.each(["not-a-ghsa", "GHSA-A-B", "GHSA-RUNTIME-RISK", "GHSA-0001-0001-0001"])(
+    "rejects malformed GHSA identity evidence before lower-priority fallback: %s",
+    (ghsa) => {
+      const repo = createRuntimeRepo();
+      writeAudit(repo, [
+        advisory({
+          cves: ["CVE-2026-1234"],
+          ghsa,
+          id: 42,
+          path: "packages__runtime-core>runtime-lib>bad",
+          severity: "high",
+        }),
+      ]);
+
+      expectPolicyProblem(
+        () => runDependencyAuditPolicy({ auditJsonPath: "audit.json", rootDir: repo }),
+        "Invalid audit advisory github_advisory_id: expected GHSA-xxxx-xxxx-xxxx",
+      );
+    },
+  );
+
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, "01", " 1 ", null, {}])(
+    "rejects malformed audit ids even when a GHSA identity is available",
+    (id) => {
+      const repo = createRuntimeRepo();
+      writeAudit(repo, [
+        {
+          ...advisory({
+            ghsa: "GHSA-2355-2355-2355",
+            path: "packages__runtime-core>runtime-lib>bad-id",
+            severity: "high",
+          }),
+          id,
+        },
+      ]);
+
+      expectPolicyProblem(
+        () => runDependencyAuditPolicy({ auditJsonPath: "audit.json", rootDir: repo }),
+        "Invalid audit advisory id: expected a positive integer or canonical unsigned decimal string",
+      );
+    },
+  );
+
+  it("produces identical merged evidence and reports when audit-pass order is reversed", () => {
+    const repo = createRuntimeRepo();
+    const first = advisory({
+      cves: ["CVE-2026-9999", "cve-2026-1234"],
+      ghsa: "ghsa-cccc-cccc-cccc",
+      id: 17,
+      moduleName: "z-module",
+      path: "packages__runtime-core>runtime-lib>z-path",
+      severity: "critical",
+      title: "Z title",
+      url: "https://example.test/z",
+    });
+    const second = advisory({
+      cves: ["CVE-2026-1234", "CVE-2026-9999"],
+      ghsa: " GHSA-CCCC-CCCC-CCCC ",
+      id: 9,
+      moduleName: "a-module",
+      path: "packages__runtime-core>runtime-lib>a-path",
+      severity: "low",
+      title: "A title",
+      url: "https://example.test/a",
+    });
+
+    writeAudit(repo, [first]);
+    writeAuditFile(repo, "prod-audit.json", [second]);
+    const forward = runDependencyAuditPolicy({
+      auditJsonPath: "audit.json",
+      prodAuditJsonPath: "prod-audit.json",
+      reportPath: "forward.md",
+      rootDir: repo,
+    });
+    writeAudit(repo, [second]);
+    writeAuditFile(repo, "prod-audit.json", [first]);
+    const reverse = runDependencyAuditPolicy({
+      auditJsonPath: "audit.json",
+      prodAuditJsonPath: "prod-audit.json",
+      reportPath: "reverse.md",
+      rootDir: repo,
+    });
+
+    expect(reverse.advisoryFindings).toEqual(forward.advisoryFindings);
+    expect(readFileSync(join(repo, "reverse.md"), "utf-8")).toBe(
+      readFileSync(join(repo, "forward.md"), "utf-8"),
+    );
+    expect(forward.advisoryFindings[0]?.advisory).toEqual(
+      expect.objectContaining({
+        github_advisory_id: "GHSA-cccc-cccc-cccc",
+        id: 9,
+        module_name: "a-module",
+        severity: "critical",
+        title: "A title",
+        url: "https://example.test/a",
+      }),
+    );
+  });
+
   it("elevates explicit release evidence tools but not generic Vitest paths", () => {
     const repo = createRepo();
     writePackage(repo, "package.json", {
@@ -359,12 +619,12 @@ describe("dependency-audit-policy.mts", () => {
     });
     writeAudit(repo, [
       advisory({
-        ghsa: "GHSA-release-tool",
+        ghsa: "GHSA-2356-2356-2356",
         path: ".>@changesets/cli>js-yaml",
         severity: "high",
       }),
       advisory({
-        ghsa: "GHSA-vitest-risk",
+        ghsa: "GHSA-2347-2347-2347",
         path: ".>vitest>vite",
         severity: "critical",
       }),
@@ -554,7 +814,7 @@ describe("dependency-audit-policy.mts", () => {
     writeAudit(repo, [
       advisory({
         cves: ["CVE-2026-1234"],
-        ghsa: "GHSA-runtime-risk",
+        ghsa: "GHSA-2345-2345-2345",
         path: "packages__runtime-core>runtime-lib>vulnerable",
         severity: "high",
       }),
@@ -587,7 +847,7 @@ describe("dependency-audit-policy.mts", () => {
       audit: {
         ignoreGhsas: [
           {
-            id: "GHSA-runtime-risk",
+            id: "GHSA-2345-2345-2345",
             owner: "security-owner",
             reason: "Expired runtime exception.",
             reviewDate: "2026-01-01",
@@ -598,7 +858,7 @@ describe("dependency-audit-policy.mts", () => {
     });
     writeAudit(repo, [
       advisory({
-        ghsa: "GHSA-runtime-risk",
+        ghsa: "GHSA-2345-2345-2345",
         path: "packages__runtime-core>runtime-lib>vulnerable",
         severity: "high",
       }),
@@ -630,12 +890,42 @@ function createRepo(): string {
   return repo;
 }
 
+function createRuntimeRepo(): string {
+  const repo = createRepo();
+  writePackage(repo, "packages/runtime-core/package.json", {
+    name: "@croco/runtime-core",
+    version: "0.0.1",
+    dependencies: {
+      "runtime-lib": "1.0.0",
+    },
+  });
+  return repo;
+}
+
+type AdvisoryFixture = {
+  readonly cves: readonly unknown[];
+  readonly findings: readonly {
+    readonly paths: readonly string[];
+    readonly version: string;
+  }[];
+  readonly github_advisory_id?: unknown;
+  readonly id?: unknown;
+  readonly module_name: string;
+  readonly severity?: unknown;
+  readonly title: string;
+  readonly url: string;
+};
+
 function advisory(options: {
   readonly cves?: readonly string[];
-  readonly ghsa: string;
+  readonly ghsa?: string;
+  readonly id?: number | string;
+  readonly moduleName?: string;
   readonly path: string;
-  readonly severity: "critical" | "high" | "moderate" | "low";
-}) {
+  readonly severity?: string;
+  readonly title?: string;
+  readonly url?: string;
+}): AdvisoryFixture {
   return {
     cves: options.cves ?? [],
     findings: [
@@ -645,29 +935,47 @@ function advisory(options: {
       },
     ],
     github_advisory_id: options.ghsa,
-    id: ++advisoryId,
-    module_name: options.path.split(">").at(-1) ?? "vulnerable",
+    id: options.id === undefined && options.ghsa !== undefined ? ++advisoryId : options.id,
+    module_name: options.moduleName ?? options.path.split(">").at(-1) ?? "vulnerable",
     severity: options.severity,
-    title: `${options.ghsa} fixture`,
-    url: `https://github.com/advisories/${options.ghsa}`,
+    title: options.title ?? `${options.ghsa ?? "advisory"} fixture`,
+    url: options.url ?? `https://github.com/advisories/${options.ghsa ?? "unknown"}`,
   };
 }
 
-function writeAudit(repo: string, advisories: readonly ReturnType<typeof advisory>[]): void {
+function writeAudit(repo: string, advisories: readonly AdvisoryFixture[]): void {
   writeAuditFile(repo, "audit.json", advisories);
 }
 
-function writeAuditFile(
-  repo: string,
-  path: string,
-  advisories: readonly ReturnType<typeof advisory>[],
-): void {
+function writeAuditFile(repo: string, path: string, advisories: readonly AdvisoryFixture[]): void {
   writeJson(repo, path, {
-    advisories: Object.fromEntries(advisories.map((entry) => [entry.id, entry])),
+    advisories: Object.fromEntries(
+      advisories.map((entry, index) => [
+        typeof entry.id === "string" || typeof entry.id === "number"
+          ? String(entry.id)
+          : `fixture-${index}`,
+        entry,
+      ]),
+    ),
     metadata: {
       vulnerabilities: {},
     },
   });
+}
+
+function expectPolicyProblem(run: () => unknown, message: string): void {
+  let caught: unknown;
+  try {
+    run();
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toEqual(
+    expect.objectContaining({
+      category: "BadRequest",
+      message,
+    }),
+  );
 }
 
 function writeMetadata(repo: string, metadata: Record<string, unknown>): void {
