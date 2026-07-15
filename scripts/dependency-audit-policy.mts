@@ -33,7 +33,7 @@ type FindingClass =
   | "unknown";
 
 type AuditAdvisory = {
-  readonly id: number | string;
+  readonly id?: number | string;
   readonly module_name?: string;
   readonly severity?: string;
   readonly title?: string;
@@ -45,6 +45,8 @@ type AuditAdvisory = {
     readonly paths?: readonly string[];
   }[];
 };
+
+type AuditSeverity = "critical" | "high" | "low" | "moderate";
 
 type AuditJson = {
   readonly advisories: Record<string, AuditAdvisory>;
@@ -124,6 +126,12 @@ const blockingClasses = new Set<FindingClass>([
   "release-evidence",
 ]);
 const blockingSeverities = new Set(["high", "critical"]);
+const severityRank: Readonly<Record<AuditSeverity, number>> = {
+  low: 0,
+  moderate: 1,
+  high: 2,
+  critical: 3,
+};
 const releaseEvidenceDirectDependencyNames = new Set([
   "@changesets/cli",
   "oxfmt",
@@ -325,16 +333,140 @@ function mergeAuditJsons(auditJsons: readonly AuditJson[]): AuditJson {
   const advisories = new Map<string, AuditAdvisory>();
   for (const auditJson of auditJsons) {
     for (const advisory of Object.values(auditJson.advisories)) {
-      const key = advisoryKey(advisory);
+      const normalized = normalizeAdvisory(advisory);
+      const key = advisoryKey(normalized);
       const existing = advisories.get(key);
-      advisories.set(key, existing ? mergeAdvisories(existing, advisory) : advisory);
+      advisories.set(key, existing ? mergeAdvisories(existing, normalized) : normalized);
     }
   }
-  return { advisories: Object.fromEntries(advisories) };
+  return {
+    advisories: Object.fromEntries(
+      [...advisories.entries()].sort(([leftKey], [rightKey]) => compareStrings(leftKey, rightKey)),
+    ),
+  };
 }
 
 function advisoryKey(advisory: AuditAdvisory): string {
-  return advisory.github_advisory_id || advisory.cves?.[0] || String(advisory.id);
+  if (advisory.github_advisory_id) {
+    return `ghsa:${advisory.github_advisory_id}`;
+  }
+  if (advisory.cves?.[0]) {
+    return `cve:${advisory.cves[0]}`;
+  }
+  if (advisory.id !== undefined) {
+    return `audit:${String(advisory.id)}`;
+  }
+  throw new DependencyAuditPolicyProblem(
+    "Invalid audit advisory identity: expected GHSA, CVE, or audit id",
+    "BadRequest",
+  );
+}
+
+function normalizeAdvisory(advisory: AuditAdvisory): AuditAdvisory {
+  const severity = normalizeSeverity(advisory.severity);
+  const githubAdvisoryId = normalizeGithubAdvisoryId(advisory.github_advisory_id);
+  const cves = normalizeCves(advisory.cves);
+  const id = normalizeAuditId(advisory.id);
+  const moduleName = canonicalOptionalString(advisory.module_name);
+  const title = canonicalOptionalString(advisory.title);
+  const url = canonicalOptionalString(advisory.url);
+
+  if (!githubAdvisoryId && cves.length === 0 && id === undefined) {
+    throw new DependencyAuditPolicyProblem(
+      "Invalid audit advisory identity: expected GHSA, CVE, or audit id",
+      "BadRequest",
+    );
+  }
+
+  return {
+    cves,
+    findings: advisory.findings,
+    github_advisory_id: githubAdvisoryId,
+    ...(id === undefined ? {} : { id }),
+    ...(moduleName === undefined ? {} : { module_name: moduleName }),
+    severity,
+    ...(title === undefined ? {} : { title }),
+    ...(url === undefined ? {} : { url }),
+  };
+}
+
+function normalizeSeverity(severity: unknown): AuditSeverity {
+  const normalized = typeof severity === "string" ? severity.trim().toLowerCase() : "";
+  if (Object.hasOwn(severityRank, normalized)) {
+    return normalized as AuditSeverity;
+  }
+  throw new DependencyAuditPolicyProblem(
+    "Invalid audit advisory severity: expected one of low, moderate, high, critical",
+    "BadRequest",
+  );
+}
+
+function normalizeGithubAdvisoryId(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    throw new DependencyAuditPolicyProblem(
+      "Invalid audit advisory github_advisory_id: expected GHSA-xxxx-xxxx-xxxx",
+      "BadRequest",
+    );
+  }
+  const trimmed = value.trim();
+  if (
+    !/^GHSA-[23456789CFGHJMPQRVWX]{4}-[23456789CFGHJMPQRVWX]{4}-[23456789CFGHJMPQRVWX]{4}$/i.test(
+      trimmed,
+    )
+  ) {
+    throw new DependencyAuditPolicyProblem(
+      "Invalid audit advisory github_advisory_id: expected GHSA-xxxx-xxxx-xxxx",
+      "BadRequest",
+    );
+  }
+  return `GHSA-${trimmed.slice(5).toLowerCase()}`;
+}
+
+function normalizeCves(value: unknown): readonly string[] {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    throw new DependencyAuditPolicyProblem(
+      "Invalid audit advisory cves: expected non-empty CVE-YYYY-NNNN identifier strings",
+      "BadRequest",
+    );
+  }
+  const normalized = value.map((candidate) =>
+    typeof candidate === "string" ? candidate.trim().toUpperCase() : "",
+  );
+  if (normalized.some((candidate) => !/^CVE-[0-9]{4}-[0-9]{4,}$/.test(candidate))) {
+    throw new DependencyAuditPolicyProblem(
+      "Invalid audit advisory cves: expected non-empty CVE-YYYY-NNNN identifier strings",
+      "BadRequest",
+    );
+  }
+  return [...new Set(normalized)].sort();
+}
+
+function normalizeAuditId(value: unknown): number | string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "number") {
+    if (Number.isSafeInteger(value) && value > 0) {
+      return value;
+    }
+  } else if (typeof value === "string" && /^[1-9][0-9]*$/.test(value)) {
+    const numeric = BigInt(value);
+    return numeric <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(value) : value;
+  }
+  throw new DependencyAuditPolicyProblem(
+    "Invalid audit advisory id: expected a positive integer or canonical unsigned decimal string",
+    "BadRequest",
+  );
+}
+
+function canonicalOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
 function mergeAdvisories(left: AuditAdvisory, right: AuditAdvisory): AuditAdvisory {
@@ -347,16 +479,50 @@ function mergeAdvisories(left: AuditAdvisory, right: AuditAdvisory): AuditAdviso
     }
   }
   return {
-    ...left,
-    ...right,
-    cves: [...new Set([...(left.cves ?? []), ...(right.cves ?? [])])],
+    cves: [...new Set([...(left.cves ?? []), ...(right.cves ?? [])])].sort(),
     findings: [
       {
         paths: [...paths].sort(),
       },
     ],
-    github_advisory_id: left.github_advisory_id ?? right.github_advisory_id,
+    github_advisory_id: minimumString(left.github_advisory_id, right.github_advisory_id),
+    id: minimumAuditId(left.id, right.id),
+    module_name: minimumString(left.module_name, right.module_name),
+    severity: maximumSeverity(left.severity, right.severity),
+    title: minimumString(left.title, right.title),
+    url: minimumString(left.url, right.url),
   };
+}
+
+function maximumSeverity(left: string | undefined, right: string | undefined): AuditSeverity {
+  const normalizedLeft = normalizeSeverity(left);
+  const normalizedRight = normalizeSeverity(right);
+  return severityRank[normalizedLeft] >= severityRank[normalizedRight]
+    ? normalizedLeft
+    : normalizedRight;
+}
+
+function minimumString(left: string | undefined, right: string | undefined): string | undefined {
+  return [left, right]
+    .filter((value): value is string => value !== undefined)
+    .sort(compareStrings)[0];
+}
+
+function compareStrings(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function minimumAuditId(
+  left: number | string | undefined,
+  right: number | string | undefined,
+): number | string | undefined {
+  return [left, right]
+    .filter((value): value is number | string => value !== undefined)
+    .sort((first, second) => {
+      const firstValue = BigInt(first);
+      const secondValue = BigInt(second);
+      return firstValue < secondValue ? -1 : firstValue > secondValue ? 1 : 0;
+    })[0];
 }
 
 function classifyAuditJson(
@@ -1060,7 +1226,9 @@ function writeReport(
     lines.push(
       [
         finding.advisory.severity ?? "unknown",
-        finding.advisory.github_advisory_id ?? String(finding.advisory.id),
+        finding.advisory.github_advisory_id ??
+          finding.advisory.cves?.[0] ??
+          String(finding.advisory.id),
         finding.advisory.module_name ?? "unknown",
         finding.classification,
         `\`${finding.path}\``,
