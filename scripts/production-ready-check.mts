@@ -1,9 +1,18 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
 import { pathToFileURL } from "node:url";
+
+import ts from "typescript";
 
 import {
   createPackageQualityReport,
@@ -42,6 +51,19 @@ type CatalogEvidence = {
   readonly groupByPackage: ReadonlyMap<string, string>;
   readonly maturityByPackage: ReadonlyMap<string, MaturityKey>;
   readonly productionPackages: readonly string[];
+  readonly spinePackages: ReadonlySet<string>;
+  readonly behavioralEvidenceByPackage: ReadonlyMap<string, BehavioralEvidence>;
+};
+
+type BehavioralEvidenceReference = {
+  readonly testFile: string;
+  readonly testName: string;
+};
+
+type BehavioralEvidence = {
+  readonly runtime: "node";
+  readonly positive: BehavioralEvidenceReference;
+  readonly negative: BehavioralEvidenceReference;
 };
 
 type BaselineEvidence = {
@@ -250,6 +272,118 @@ function parseExtensionEvidence(extensionMatrix: unknown): {
   };
 }
 
+function parseBehavioralEvidenceReference(
+  value: unknown,
+  metadataPath: string,
+  errors: string[],
+): BehavioralEvidenceReference | null {
+  if (!isRecord(value)) {
+    errors.push(`${metadataPath} must be an object`);
+    return null;
+  }
+
+  const keys = Object.keys(value);
+  if (keys.some((key) => key !== "testFile" && key !== "testName")) {
+    errors.push(`${metadataPath} only supports testFile and testName`);
+  }
+
+  if (typeof value.testFile !== "string" || value.testFile.trim().length === 0) {
+    errors.push(`${metadataPath}.testFile must be a non-empty string`);
+    return null;
+  }
+
+  if (typeof value.testName !== "string" || value.testName.trim().length === 0) {
+    errors.push(`${metadataPath}.testName must be a non-empty string`);
+    return null;
+  }
+
+  return {
+    testFile: value.testFile,
+    testName: value.testName,
+  };
+}
+
+function parseBehavioralEvidence(
+  spineValue: unknown,
+  actualPackageNames: ReadonlySet<string>,
+  productionPackageNames: ReadonlySet<string>,
+  errors: string[],
+): {
+  readonly spinePackages: ReadonlySet<string>;
+  readonly behavioralEvidenceByPackage: ReadonlyMap<string, BehavioralEvidence>;
+} {
+  const spinePackages = new Set<string>();
+  const behavioralEvidenceByPackage = new Map<string, BehavioralEvidence>();
+  if (!isRecord(spineValue)) {
+    errors.push(`${catalogMetadataPath}: spine must be an object`);
+    return { spinePackages, behavioralEvidenceByPackage };
+  }
+
+  if (!isStringArray(spineValue.packages)) {
+    errors.push(`${catalogMetadataPath}: spine.packages must be a string array`);
+  } else {
+    for (const packageName of spineValue.packages) {
+      spinePackages.add(packageName);
+    }
+  }
+
+  const behavioralEvidence = spineValue.behavioralEvidence;
+  if (!isRecord(behavioralEvidence) || !isRecord(behavioralEvidence.packages)) {
+    return { spinePackages, behavioralEvidenceByPackage };
+  }
+
+  if (Object.keys(behavioralEvidence).some((key) => key !== "packages")) {
+    errors.push(`${catalogMetadataPath}: spine.behavioralEvidence only supports packages`);
+  }
+
+  for (const [packageName, value] of Object.entries(behavioralEvidence.packages)) {
+    const metadataPath = `${catalogMetadataPath}: spine.behavioralEvidence.packages.${packageName}`;
+    if (!actualPackageNames.has(packageName)) {
+      errors.push(`${metadataPath} references a missing package`);
+      continue;
+    }
+    if (!spinePackages.has(packageName)) {
+      errors.push(`${metadataPath} is stale because ${packageName} is not a spine package`);
+      continue;
+    }
+    if (!productionPackageNames.has(packageName)) {
+      errors.push(`${metadataPath} is stale because ${packageName} is not production-ready`);
+      continue;
+    }
+    if (!isRecord(value)) {
+      errors.push(`${metadataPath} must be an object`);
+      continue;
+    }
+    if (
+      Object.keys(value).some(
+        (key) => key !== "runtime" && key !== "positive" && key !== "negative",
+      )
+    ) {
+      errors.push(`${metadataPath} only supports runtime, positive, and negative`);
+    }
+    if (value.runtime !== "node") {
+      errors.push(`${metadataPath}.runtime must be the literal "node"`);
+      continue;
+    }
+
+    const positive = parseBehavioralEvidenceReference(
+      value.positive,
+      `${metadataPath}.positive`,
+      errors,
+    );
+    const negative = parseBehavioralEvidenceReference(
+      value.negative,
+      `${metadataPath}.negative`,
+      errors,
+    );
+    if (positive && negative) {
+      behavioralEvidenceByPackage.set(packageName, { runtime: "node", positive, negative });
+    }
+  }
+
+  return { spinePackages, behavioralEvidenceByPackage };
+}
+
 function loadCatalogEvidence(rootDir: string): CatalogEvidence {
   const errors: string[] = [];
   const catalog = readJsonFile(join(rootDir, catalogMetadataPath));
@@ -262,12 +396,21 @@ function loadCatalogEvidence(rootDir: string): CatalogEvidence {
       groupByPackage: new Map(),
       maturityByPackage: new Map(),
       productionPackages: [],
+      spinePackages: new Set(),
+      behavioralEvidenceByPackage: new Map(),
     };
   }
 
   const groupByPackage = parseCatalogGroups(catalog.groups, errors);
   const maturity = parseCatalogMaturity(catalog.maturity, errors);
   const extension = parseExtensionEvidence(catalog.extensionMatrix);
+  const actualPackageNames = new Set(groupByPackage.keys());
+  const behavioral = parseBehavioralEvidence(
+    catalog.spine,
+    actualPackageNames,
+    new Set(maturity.productionPackages),
+    errors,
+  );
 
   return {
     errors,
@@ -276,6 +419,8 @@ function loadCatalogEvidence(rootDir: string): CatalogEvidence {
     groupByPackage,
     maturityByPackage: maturity.maturityByPackage,
     productionPackages: maturity.productionPackages,
+    spinePackages: behavioral.spinePackages,
+    behavioralEvidenceByPackage: behavioral.behavioralEvidenceByPackage,
   };
 }
 
@@ -619,6 +764,624 @@ function createMaturityEvidenceCheck(
   );
 }
 
+function staticPropertyName(name: ts.PropertyName): string | null {
+  if (ts.isIdentifier(name) || ts.isStringLiteral(name) || ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+  return null;
+}
+
+function findObjectProperty(
+  object: ts.ObjectLiteralExpression,
+  propertyName: string,
+): ts.PropertyAssignment | undefined {
+  return object.properties.find(
+    (property): property is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(property) && staticPropertyName(property.name) === propertyName,
+  );
+}
+
+function readStaticStringArray(expression: ts.Expression): readonly string[] | null {
+  if (!ts.isArrayLiteralExpression(expression)) {
+    return null;
+  }
+
+  const values: string[] = [];
+  for (const element of expression.elements) {
+    if (!ts.isStringLiteral(element) && !ts.isNoSubstitutionTemplateLiteral(element)) {
+      return null;
+    }
+    values.push(element.text);
+  }
+  return values;
+}
+
+type VitestTestConfig = {
+  readonly root: ts.ObjectLiteralExpression;
+  readonly test: ts.ObjectLiteralExpression;
+};
+
+function findVitestTestConfig(sourceFile: ts.SourceFile): VitestTestConfig | null {
+  const exports = sourceFile.statements.filter(
+    (statement): statement is ts.ExportAssignment =>
+      ts.isExportAssignment(statement) && !statement.isExportEquals,
+  );
+  if (exports.length !== 1) return null;
+  const expression = exports[0]?.expression;
+  if (
+    !expression ||
+    !ts.isCallExpression(expression) ||
+    !ts.isIdentifier(expression.expression) ||
+    expression.expression.text !== "defineConfig"
+  ) {
+    return null;
+  }
+  const root = expression.arguments[0];
+  if (!root || !ts.isObjectLiteralExpression(root)) return null;
+  const test = findObjectProperty(root, "test");
+  if (!test || !ts.isObjectLiteralExpression(test.initializer)) return null;
+  return { root, test: test.initializer };
+}
+
+function validateVitestInclusion(rootDir: string, pkg: WorkspacePackage): readonly string[] {
+  const errors: string[] = [];
+  if (pkg.scripts.test?.trim() !== "vitest run") {
+    errors.push(`${pkg.relativeDir}/package.json test script must be exactly "vitest run"`);
+  }
+
+  const configNames = [
+    "vitest.config.ts",
+    "vitest.config.mts",
+    "vitest.config.js",
+    "vitest.config.mjs",
+  ];
+  for (const configName of configNames) {
+    const configPath = join(rootDir, pkg.relativeDir, configName);
+    if (!existsSync(configPath)) {
+      continue;
+    }
+    const sourceFile = ts.createSourceFile(
+      configPath,
+      readFileSync(configPath, "utf-8"),
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    const config = findVitestTestConfig(sourceFile);
+    if (!config) {
+      errors.push(
+        `${pkg.relativeDir}/${configName} must expose a static defineConfig({ test: { ... } }) block`,
+      );
+      continue;
+    }
+    const { root: rootConfig, test: testConfig } = config;
+
+    const unsafeRootProperties = rootConfig.properties.filter(
+      (property) =>
+        !ts.isPropertyAssignment(property) ||
+        !new Set(["resolve", "test"]).has(staticPropertyName(property.name) ?? ""),
+    );
+    const testProperties = rootConfig.properties.filter(
+      (property) =>
+        ts.isPropertyAssignment(property) && staticPropertyName(property.name) === "test",
+    );
+    if (unsafeRootProperties.length > 0 || testProperties.length !== 1) {
+      errors.push(
+        `${pkg.relativeDir}/${configName} root config must expose one static test property without spreads or computed properties`,
+      );
+    }
+
+    const unsafeProperties = testConfig.properties.filter(
+      (property) =>
+        !ts.isPropertyAssignment(property) ||
+        !new Set([
+          "globals",
+          "environment",
+          "include",
+          "exclude",
+          "testTimeout",
+          "env",
+          "fileParallelism",
+          "setupFiles",
+        ]).has(staticPropertyName(property.name) ?? ""),
+    );
+    if (unsafeProperties.length > 0) {
+      errors.push(
+        `${pkg.relativeDir}/${configName} test config contains unsupported execution or selection properties`,
+      );
+    }
+    for (const propertyName of [
+      "globals",
+      "environment",
+      "include",
+      "exclude",
+      "testTimeout",
+      "env",
+      "fileParallelism",
+      "setupFiles",
+    ] as const) {
+      const matches = testConfig.properties.filter(
+        (property) =>
+          ts.isPropertyAssignment(property) && staticPropertyName(property.name) === propertyName,
+      );
+      if (matches.length > 1) {
+        errors.push(
+          `${pkg.relativeDir}/${configName} has duplicate test.${propertyName} properties`,
+        );
+      }
+    }
+
+    const include = findObjectProperty(testConfig, "include");
+    if (include) {
+      const patterns = readStaticStringArray(include.initializer);
+      const supportedIncludes = new Set(["src/**/*.spec.ts", "src/tests/**/*.spec.ts"]);
+      if (
+        !patterns ||
+        patterns.some((pattern) => pattern.startsWith("!")) ||
+        !patterns.some((pattern) => supportedIncludes.has(pattern))
+      ) {
+        errors.push(
+          `${pkg.relativeDir}/${configName} does not statically include package spec tests`,
+        );
+      }
+    }
+
+    const environment = findObjectProperty(testConfig, "environment");
+    if (
+      !environment ||
+      !ts.isStringLiteral(environment.initializer) ||
+      environment.initializer.text !== "node"
+    ) {
+      errors.push(`${pkg.relativeDir}/${configName} must use the static Node test environment`);
+    }
+
+    const exclude = findObjectProperty(testConfig, "exclude");
+    if (exclude) {
+      const patterns = readStaticStringArray(exclude.initializer);
+      const supported = new Set(["**/node_modules/**", "**/dist/**"]);
+      if (!patterns || patterns.some((pattern) => !supported.has(pattern))) {
+        errors.push(`${pkg.relativeDir}/${configName} has an unsupported test exclusion`);
+      }
+    }
+  }
+  return errors;
+}
+
+function validateEvidencePath(
+  rootDir: string,
+  pkg: WorkspacePackage,
+  testFile: string,
+): string | null {
+  if (
+    isAbsolute(testFile) ||
+    testFile.includes("\\") ||
+    testFile.split("/").some((segment) => segment === "." || segment === "..") ||
+    !/^src\/tests\/(?:[^/]+\/)*[^/]+\.spec\.ts$/.test(testFile)
+  ) {
+    return null;
+  }
+
+  const packageRoot = resolve(rootDir, pkg.relativeDir);
+  const absoluteTestFile = resolve(packageRoot, testFile);
+  const packageRelativePath = relative(packageRoot, absoluteTestFile);
+  if (packageRelativePath.startsWith("..") || isAbsolute(packageRelativePath)) {
+    return null;
+  }
+  return absoluteTestFile;
+}
+
+type TestDeclaration = {
+  readonly name: string;
+  readonly runnable: boolean;
+  readonly skippedParent: boolean;
+};
+
+function expressionSegments(expression: ts.Expression): readonly string[] | null {
+  if (ts.isIdentifier(expression)) {
+    return [expression.text];
+  }
+  if (ts.isPropertyAccessExpression(expression)) {
+    const parent = expressionSegments(expression.expression);
+    return parent ? [...parent, expression.name.text] : null;
+  }
+  if (ts.isElementAccessExpression(expression)) {
+    const parent = expressionSegments(expression.expression);
+    const argument = expression.argumentExpression;
+    if (
+      parent &&
+      argument &&
+      (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument))
+    ) {
+      return [...parent, argument.text];
+    }
+  }
+  return null;
+}
+
+function staticTestTitle(argument: ts.Expression | undefined): string | null {
+  return argument && (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument))
+    ? argument.text
+    : null;
+}
+
+function isInsideSkippedSuite(node: ts.Node): boolean {
+  for (let parent = node.parent; parent; parent = parent.parent) {
+    if (!ts.isCallExpression(parent)) {
+      continue;
+    }
+    const segments = expressionSegments(parent.expression);
+    if (!segments) {
+      continue;
+    }
+    const [base, ...modifiers] = segments;
+    if (
+      (base === "describe" || base === "suite") &&
+      modifiers.some((modifier) => modifier === "skip" || modifier === "todo")
+    ) {
+      return true;
+    }
+    if (base === "xdescribe" || base === "xsuite") {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isStaticallyRegisteredTest(node: ts.Node, suiteBindings: ReadonlySet<string>): boolean {
+  for (let parent = node.parent; parent && !ts.isSourceFile(parent); parent = parent.parent) {
+    if (
+      ts.isIfStatement(parent) ||
+      ts.isConditionalExpression(parent) ||
+      ts.isSwitchStatement(parent) ||
+      ts.isForStatement(parent) ||
+      ts.isForInStatement(parent) ||
+      ts.isForOfStatement(parent) ||
+      ts.isWhileStatement(parent) ||
+      ts.isDoStatement(parent) ||
+      ts.isTryStatement(parent)
+    ) {
+      return false;
+    }
+    if (ts.isFunctionLike(parent)) {
+      const call = parent.parent;
+      if (!ts.isCallExpression(call) || call.arguments[1] !== parent) {
+        return false;
+      }
+      const segments = expressionSegments(call.expression);
+      if (
+        !segments ||
+        !segments[0] ||
+        !suiteBindings.has(segments[0]) ||
+        segments.slice(1).some((modifier) => modifier !== "concurrent")
+      ) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function hasFocusedTestDeclaration(sourceFile: ts.SourceFile): boolean {
+  let focused = false;
+  const visit = (node: ts.Node): void => {
+    if (focused) return;
+    if (ts.isCallExpression(node)) {
+      const segments = expressionSegments(node.expression);
+      const options = node.arguments[1];
+      const onlyOption =
+        options && ts.isObjectLiteralExpression(options)
+          ? findObjectProperty(options, "only")
+          : undefined;
+      if (
+        segments &&
+        (segments[0] === "fit" ||
+          segments[0] === "fdescribe" ||
+          (["it", "test", "describe", "suite"].includes(segments[0] ?? "") &&
+            (segments.slice(1).includes("only") ||
+              (onlyOption !== undefined &&
+                onlyOption.initializer.kind === ts.SyntaxKind.TrueKeyword))))
+      ) {
+        focused = true;
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return focused;
+}
+
+function vitestBindings(sourceFile: ts.SourceFile): ReadonlySet<string> {
+  const bindings = new Set<string>();
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "vitest" ||
+      !statement.importClause ||
+      statement.importClause.isTypeOnly ||
+      !statement.importClause.namedBindings ||
+      !ts.isNamedImports(statement.importClause.namedBindings)
+    ) {
+      continue;
+    }
+    for (const element of statement.importClause.namedBindings.elements) {
+      const importedName = element.propertyName?.text ?? element.name.text;
+      if (
+        !element.isTypeOnly &&
+        element.name.text === importedName &&
+        ["it", "test", "describe", "suite"].includes(importedName)
+      ) {
+        bindings.add(element.name.text);
+      }
+    }
+  }
+  return bindings;
+}
+
+function hasUnsupportedTestOptions(sourceFile: ts.SourceFile): boolean {
+  const testBindings = vitestBindings(sourceFile);
+  let unsupported = false;
+  const visit = (node: ts.Node): void => {
+    if (unsupported) return;
+    if (ts.isCallExpression(node)) {
+      const segments = expressionSegments(node.expression);
+      const base = segments?.[0];
+      const secondArgument = node.arguments[1];
+      if (
+        base &&
+        testBindings.has(base) &&
+        secondArgument !== undefined &&
+        !ts.isArrowFunction(secondArgument) &&
+        !ts.isFunctionExpression(secondArgument)
+      ) {
+        unsupported = true;
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return unsupported;
+}
+
+function hasShadowedVitestBinding(sourceFile: ts.SourceFile): boolean {
+  const bindings = vitestBindings(sourceFile);
+  let shadowed = false;
+  const visit = (node: ts.Node): void => {
+    if (shadowed) return;
+    if (ts.isIdentifier(node) && bindings.has(node.text)) {
+      const parent = node.parent;
+      const declaration =
+        (ts.isVariableDeclaration(parent) && parent.name === node) ||
+        (ts.isParameter(parent) && parent.name === node) ||
+        (ts.isBindingElement(parent) && parent.name === node) ||
+        ((ts.isFunctionDeclaration(parent) ||
+          ts.isFunctionExpression(parent) ||
+          ts.isClassDeclaration(parent) ||
+          ts.isClassExpression(parent)) &&
+          parent.name === node);
+      const assignment =
+        (ts.isBinaryExpression(parent) &&
+          parent.left === node &&
+          parent.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+          parent.operatorToken.kind <= ts.SyntaxKind.LastAssignment) ||
+        ((ts.isPrefixUnaryExpression(parent) || ts.isPostfixUnaryExpression(parent)) &&
+          (parent.operator === ts.SyntaxKind.PlusPlusToken ||
+            parent.operator === ts.SyntaxKind.MinusMinusToken));
+      if (declaration || assignment) {
+        shadowed = true;
+        return;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return shadowed;
+}
+
+function collectTestDeclarations(sourceFile: ts.SourceFile): readonly TestDeclaration[] {
+  const declarations: TestDeclaration[] = [];
+  const testBindings = vitestBindings(sourceFile);
+  const suiteBindings = new Set(
+    [...testBindings].filter((binding) => binding === "describe" || binding === "suite"),
+  );
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const segments = expressionSegments(node.expression);
+      if (segments) {
+        const [base, ...modifiers] = segments;
+        if (base === "it" || base === "test" || base === "xit" || base === "xtest") {
+          const name = staticTestTitle(node.arguments[0]);
+          if (name) {
+            const supportedModifiers = new Set(["concurrent"]);
+            const handler = node.arguments[1];
+            const hasStaticHandler =
+              handler !== undefined &&
+              (ts.isArrowFunction(handler) || ts.isFunctionExpression(handler));
+            declarations.push({
+              name,
+              runnable:
+                testBindings.has(base) &&
+                modifiers.every((modifier) => supportedModifiers.has(modifier)) &&
+                hasStaticHandler &&
+                isStaticallyRegisteredTest(node, suiteBindings),
+              skippedParent: isInsideSkippedSuite(node),
+            });
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return declarations;
+}
+
+function validatePublicPackageImports(
+  sourceFile: ts.SourceFile,
+  pkg: WorkspacePackage,
+): readonly string[] {
+  const errors: string[] = [];
+  let hasPublicImport = false;
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) {
+      continue;
+    }
+    const moduleName = statement.moduleSpecifier.text;
+    if (moduleName === "../index" || moduleName === pkg.name) {
+      const clause = statement.importClause;
+      const hasValueBinding =
+        clause !== undefined &&
+        !clause.isTypeOnly &&
+        (clause.name !== undefined ||
+          (clause.namedBindings !== undefined &&
+            (ts.isNamespaceImport(clause.namedBindings) ||
+              clause.namedBindings.elements.some((element) => !element.isTypeOnly))));
+      hasPublicImport ||= hasValueBinding;
+      continue;
+    }
+    if (moduleName.startsWith(".") || moduleName.startsWith(`${pkg.name}/`)) {
+      errors.push(`imports same-package private module ${moduleName}`);
+    }
+  }
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      node.arguments[0] &&
+      (ts.isStringLiteral(node.arguments[0]) ||
+        ts.isNoSubstitutionTemplateLiteral(node.arguments[0])) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === "require"))
+    ) {
+      const moduleName = node.arguments[0].text;
+      if (moduleName.startsWith(".") || moduleName.startsWith(`${pkg.name}/`)) {
+        errors.push(`imports same-package private module ${moduleName}`);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  if (!hasPublicImport) {
+    errors.push(`does not import ${pkg.name} through ../index or its published package name`);
+  }
+  return errors;
+}
+
+function validateEvidenceReference(
+  rootDir: string,
+  pkg: WorkspacePackage,
+  kind: "positive" | "negative",
+  reference: BehavioralEvidenceReference,
+): readonly string[] {
+  const absolutePath = validateEvidencePath(rootDir, pkg, reference.testFile);
+  if (!absolutePath) {
+    return [`${kind}.testFile must be a package-scoped src/tests/**/*.spec.ts path`];
+  }
+  if (!existsSync(absolutePath)) {
+    return [`${kind}.testFile ${reference.testFile} does not exist`];
+  }
+  const packageRoot = realpathSync(resolve(rootDir, pkg.relativeDir));
+  const realTestPath = realpathSync(absolutePath);
+  const realRelativePath = relative(packageRoot, realTestPath);
+  if (
+    lstatSync(absolutePath).isSymbolicLink() ||
+    realRelativePath.startsWith("..") ||
+    isAbsolute(realRelativePath) ||
+    !/^src\/tests\/(?:[^/]+\/)*[^/]+\.spec\.ts$/.test(realRelativePath)
+  ) {
+    return [`${kind}.testFile ${reference.testFile} must not escape the package through a symlink`];
+  }
+
+  const sourceFile = ts.createSourceFile(
+    absolutePath,
+    readFileSync(absolutePath, "utf-8"),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const errors = validatePublicPackageImports(sourceFile, pkg).map(
+    (error) => `${kind}.testFile ${reference.testFile} ${error}`,
+  );
+  if (hasFocusedTestDeclaration(sourceFile)) {
+    errors.push(
+      `${kind}.testFile ${reference.testFile} must not contain focused Vitest declarations`,
+    );
+  }
+  if (hasUnsupportedTestOptions(sourceFile)) {
+    errors.push(
+      `${kind}.testFile ${reference.testFile} must not use Vitest test options overloads`,
+    );
+  }
+  if (hasShadowedVitestBinding(sourceFile)) {
+    errors.push(`${kind}.testFile ${reference.testFile} must not shadow imported Vitest bindings`);
+  }
+  const matches = collectTestDeclarations(sourceFile).filter(
+    (declaration) => declaration.name === reference.testName,
+  );
+  if (matches.length !== 1) {
+    errors.push(
+      `${kind}.testName ${JSON.stringify(reference.testName)} must identify exactly one static test declaration`,
+    );
+  } else if (!matches[0]?.runnable || matches[0].skippedParent) {
+    errors.push(
+      `${kind}.testName ${JSON.stringify(reference.testName)} must identify a runnable, non-skipped test`,
+    );
+  }
+  return errors;
+}
+
+function createBehavioralEvidenceCheck(
+  rootDir: string,
+  pkg: WorkspacePackage,
+  qualityRow: PackageQualityRow | undefined,
+  catalog: CatalogEvidence,
+  requireTaskSummaries: boolean,
+): ProductionReadyCheck {
+  if (!catalog.spinePackages.has(pkg.shortName)) {
+    return notApplicable(
+      "behavioral-evidence",
+      "Behavioral evidence",
+      `${pkg.name} is not in the Croco spine`,
+    );
+  }
+
+  const evidence = catalog.behavioralEvidenceByPackage.get(pkg.shortName);
+  const recovery = `Add public positive/negative evidence for ${pkg.shortName} and run pnpm --filter ${pkg.name} test.`;
+  if (!evidence) {
+    return fail(
+      "behavioral-evidence",
+      "Behavioral evidence",
+      `spine.behavioralEvidence.packages.${pkg.shortName} is missing or invalid`,
+      recovery,
+    );
+  }
+
+  const errors = [
+    ...validateVitestInclusion(rootDir, pkg),
+    ...validateEvidenceReference(rootDir, pkg, "positive", evidence.positive),
+    ...validateEvidenceReference(rootDir, pkg, "negative", evidence.negative),
+  ];
+  if (
+    evidence.positive.testFile === evidence.negative.testFile &&
+    evidence.positive.testName === evidence.negative.testName
+  ) {
+    errors.push("positive and negative evidence must identify different tests");
+  }
+
+  if (requireTaskSummaries && qualityRow?.tasks.test.status !== "pass") {
+    errors.push(`${pkg.name}#test must pass in the current Turbo summary`);
+  }
+
+  if (errors.length > 0) {
+    return fail("behavioral-evidence", "Behavioral evidence", errors.join("; "), recovery);
+  }
+  return pass(
+    "behavioral-evidence",
+    "Behavioral evidence",
+    `node: ${evidence.positive.testFile} (${evidence.positive.testName}; ${evidence.negative.testName})`,
+  );
+}
+
 function createProductionRow(
   rootDir: string,
   pkg: WorkspacePackage,
@@ -639,6 +1402,7 @@ function createProductionRow(
       ...qualityTasks.map((task) => createTaskCheck(pkg, qualityRow, task, requireTaskSummaries)),
       createPublicApiCheck(pkg, snapshot),
       createMaturityEvidenceCheck(rootDir, pkg, catalog),
+      createBehavioralEvidenceCheck(rootDir, pkg, qualityRow, catalog, requireTaskSummaries),
     ],
   };
 }
@@ -778,11 +1542,11 @@ export function buildProductionReadyMarkdown(report: ProductionReadyReport): str
     "",
     "## Production package evidence",
     "",
-    "| Package | Group | README | API docs | Tests | Build | Typecheck | Test | Public API | Maturity evidence |",
-    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    "| Package | Group | README | API docs | Tests | Build | Typecheck | Test | Public API | Maturity evidence | Behavioral evidence |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ...report.productionRows.map(
       (row) =>
-        `| \`${row.packageName}\` | ${formatTableCell(row.group)} | ${formatSummaryCheck(row, "readme")} | ${formatSummaryCheck(row, "api-docs")} | ${formatSummaryCheck(row, "tests")} | ${formatSummaryCheck(row, "build-report")} | ${formatSummaryCheck(row, "typecheck-report")} | ${formatSummaryCheck(row, "test-report")} | ${formatSummaryCheck(row, "public-api-snapshot")} | ${formatSummaryCheck(row, "maturity-evidence")} |`,
+        `| \`${row.packageName}\` | ${formatTableCell(row.group)} | ${formatSummaryCheck(row, "readme")} | ${formatSummaryCheck(row, "api-docs")} | ${formatSummaryCheck(row, "tests")} | ${formatSummaryCheck(row, "build-report")} | ${formatSummaryCheck(row, "typecheck-report")} | ${formatSummaryCheck(row, "test-report")} | ${formatSummaryCheck(row, "public-api-snapshot")} | ${formatSummaryCheck(row, "maturity-evidence")} | ${formatSummaryCheck(row, "behavioral-evidence")} |`,
     ),
     "",
     "## Non-production package summary",
@@ -805,6 +1569,7 @@ export function buildProductionReadyMarkdown(report: ProductionReadyReport): str
     "- Keep production package `build`, `typecheck`, and `test` scripts wired into Turbo summaries before CI runs this gate with required task summaries.",
     "- Run `pnpm public-api:write` when a publishable package entrypoint is intentionally added to the public API snapshot.",
     "- Link adapter, provider, integration, transport, or presentation production evidence from the relevant reference docs before promotion.",
+    "- Map one public positive and one public negative test for every production-ready spine package under `spine.behavioralEvidence.packages`.",
   ];
 
   return `${lines.join("\n")}\n`;
