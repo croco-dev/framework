@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "TelemetryAutoInstrumentationProblem"
+title: "InvalidTransactionTimeoutProblem"
 ---
 
-자동 계측 설정을 설치된 OpenTelemetry 런타임이 정확히 실행할 수 없을 때 발생합니다.
+설정된 트랜잭션 제한 시간이 지원 범위를 벗어나면 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,17 +15,21 @@ title: "TelemetryAutoInstrumentationProblem"
 
 ### Constructor
 
-> **new TelemetryAutoInstrumentationProblem**(`detail`): `TelemetryAutoInstrumentationProblem`
+> **new InvalidTransactionTimeoutProblem**(`source`, `timeoutMs`): `InvalidTransactionTimeoutProblem`
 
 #### Parameters
 
-##### detail
+##### source
 
-`string`
+`TransactionTimeoutSource`
+
+##### timeoutMs
+
+`number`
 
 #### Returns
 
-`TelemetryAutoInstrumentationProblem`
+`InvalidTransactionTimeoutProblem`
 
 #### Overrides
 
@@ -55,7 +59,7 @@ title: "TelemetryAutoInstrumentationProblem"
 
 ### code
 
-> `readonly` **code**: `"TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG"` = `"TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG"`
+> `readonly` **code**: `"tx-core/invalid-transaction-timeout"` = `"tx-core/invalid-transaction-timeout"`
 
 #### Overrides
 

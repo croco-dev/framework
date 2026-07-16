@@ -20304,6 +20304,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "InvalidTransactionTimeoutProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TransactionProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "Transactional",
           "exportKind": "named",
           "source": "./libs/Transactional",

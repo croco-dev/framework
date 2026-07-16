@@ -12,6 +12,7 @@ export {
  */
 export {
   AfterCommitHooksProblem,
+  InvalidTransactionTimeoutProblem,
   TransactionContextProblem,
   TransactionDecoratorProblem,
   TransactionTimeoutProblem,

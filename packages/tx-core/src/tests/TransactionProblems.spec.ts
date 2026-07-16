@@ -7,6 +7,7 @@ import {
 } from "../libs/errors";
 import {
   AfterCommitHooksProblem,
+  InvalidTransactionTimeoutProblem,
   TransactionContextProblem,
   TransactionDecoratorProblem,
 } from "../libs/problems/TransactionProblems";
@@ -26,6 +27,16 @@ describe("TransactionProblems", () => {
     expect(problem.code).toBe("tx-core/missing-transaction-context");
     expect(problem.category).toBe(ProblemCategory.InternalServerError);
     expect(problem.detail).toBe("onAfterCommit must be called within a transaction");
+  });
+
+  it("should create InvalidTransactionTimeoutProblem with expected metadata", () => {
+    const problem = new InvalidTransactionTimeoutProblem("run", Number.NaN);
+
+    expect(problem.code).toBe("tx-core/invalid-transaction-timeout");
+    expect(problem.category).toBe(ProblemCategory.ValidationError);
+    expect(problem.detail).toBe(
+      "Transaction run timeout must be an integer between 1 and 2147483647 milliseconds; received NaN",
+    );
   });
 
   it("should create AfterCommitHooksProblem with expected metadata", () => {

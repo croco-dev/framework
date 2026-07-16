@@ -30,3 +30,5 @@ title: "TxRunOptions"
 ### timeout?
 
 > `optional` **timeout?**: `number`
+
+Positive integer milliseconds up to 2,147,483,647. Omit for no timeout.

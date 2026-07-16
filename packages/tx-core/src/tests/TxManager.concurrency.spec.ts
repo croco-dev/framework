@@ -1,6 +1,7 @@
 import { Container } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  InvalidTransactionTimeoutProblem,
   Transactional,
   TransactionTimeoutProblem,
   type TxAdapter,
@@ -270,6 +271,15 @@ describe("TxManager Concurrent Tests", () => {
 });
 
 describe("TxManager Transaction Timeout", () => {
+  const invalidTimeouts = [
+    0,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    1.5,
+    2_147_483_648,
+  ];
   let txManager!: TxManager<{ id: string }>;
   let slowAdapter!: TxAdapter<{ id: string }>;
   let fastAdapter!: TxAdapter<{ id: string }>;
@@ -277,6 +287,60 @@ describe("TxManager Transaction Timeout", () => {
   beforeEach(() => {
     Container.reset();
     TxManagerRegistry.clear();
+  });
+
+  describe("timeout validation", () => {
+    it.each(invalidTimeouts)(
+      "should reject invalid default timeout %s when the manager is created",
+      (timeout) => {
+        const adapter = createMockAdapter();
+
+        expect(() => new TxManager(adapter, { defaultTimeout: timeout })).toThrow(
+          InvalidTransactionTimeoutProblem,
+        );
+        expect(adapter.transaction).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(invalidTimeouts)(
+      "should reject invalid run timeout %s before transaction side effects",
+      async (timeout) => {
+        const adapter = createMockAdapter();
+        const operation = vi.fn(async () => "result");
+        txManager = new TxManager(adapter);
+
+        await expect(txManager.run(operation, { timeout })).rejects.toThrow(
+          InvalidTransactionTimeoutProblem,
+        );
+        expect(adapter.transaction).not.toHaveBeenCalled();
+        expect(operation).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should reject an invalid joined timeout before invoking the nested operation", async () => {
+      const adapter = createMockAdapter();
+      const nestedOperation = vi.fn(async () => "nested");
+      txManager = new TxManager(adapter);
+
+      await txManager.run(async () => {
+        await expect(txManager.run(nestedOperation, { timeout: 0 })).rejects.toThrow(
+          InvalidTransactionTimeoutProblem,
+        );
+      });
+
+      expect(adapter.transaction).toHaveBeenCalledTimes(1);
+      expect(nestedOperation).not.toHaveBeenCalled();
+    });
+
+    it("should accept the maximum timer delay", async () => {
+      const adapter = createMockAdapter();
+      txManager = new TxManager(adapter);
+
+      await expect(txManager.run(async () => "result", { timeout: 2_147_483_647 })).resolves.toBe(
+        "result",
+      );
+      expect(adapter.transaction).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("timeout with run options", () => {

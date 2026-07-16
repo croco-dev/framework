@@ -323,6 +323,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`TxManagerNotRegisteredError`](/api/tx-core/src/classes/txmanagernotregisterederror/)
 - [`TxPropagationError`](/api/tx-core/src/classes/txpropagationerror/)
 - [`AfterCommitHooksProblem`](/api/tx-core/src/classes/aftercommithooksproblem/)
+- [`InvalidTransactionTimeoutProblem`](/api/tx-core/src/classes/invalidtransactiontimeoutproblem/)
 - [`TransactionContextProblem`](/api/tx-core/src/classes/transactioncontextproblem/)
 - [`TransactionDecoratorProblem`](/api/tx-core/src/classes/transactiondecoratorproblem/)
 - [`TransactionTimeoutProblem`](/api/tx-core/src/classes/transactiontimeoutproblem/)

@@ -3,6 +3,7 @@ import type { TransactionContext } from "@croco/framework-context";
 import type { Logger } from "@croco/framework-logger";
 import {
   AfterCommitHooksProblem,
+  InvalidTransactionTimeoutProblem,
   TransactionContextProblem,
   TransactionTimeoutProblem,
 } from "./problems/TransactionProblems";
@@ -26,6 +27,13 @@ type AfterCommitHookFailure = {
 };
 
 const DEFAULT_LOGGER: TxManagerLogger = console;
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+
+function assertValidTimeout(timeout: number, source: "default" | "run"): void {
+  if (!Number.isSafeInteger(timeout) || timeout <= 0 || timeout > MAX_TIMER_DELAY_MS) {
+    throw new InvalidTransactionTimeoutProblem(source, timeout);
+  }
+}
 
 function getAbortReason(signal: AbortSignal): Error {
   return signal.reason instanceof Error ? signal.reason : new Error("Transaction aborted");
@@ -74,12 +82,20 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     config: TxManagerConfig = {},
     logger: TxManagerLogger = DEFAULT_LOGGER,
   ) {
+    if (config.defaultTimeout !== undefined) {
+      assertValidTimeout(config.defaultTimeout, "default");
+    }
+
     this.defaultNesting = config.defaultNesting ?? "join";
     this.defaultTimeout = config.defaultTimeout;
     this.logger = logger;
   }
 
   async run<T>(fn: () => Promise<T>, runOptions?: TxRunOptions<TOptions>): Promise<T> {
+    if (runOptions?.timeout !== undefined) {
+      assertValidTimeout(runOptions.timeout, "run");
+    }
+
     const nesting = runOptions?.nesting ?? this.defaultNesting;
     const options = runOptions?.options;
     const timeout = runOptions?.timeout ?? this.defaultTimeout;
@@ -126,7 +142,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       return result;
     };
 
-    if (timeout !== undefined && timeout > 0) {
+    if (timeout !== undefined) {
       return executeWithTimeout(executeTransaction, timeout, controller);
     }
 
@@ -174,7 +190,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       return result;
     };
 
-    if (timeout !== undefined && timeout > 0) {
+    if (timeout !== undefined) {
       return executeWithTimeout(executeSavepoint, timeout, controller);
     }
 

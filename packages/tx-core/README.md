@@ -31,6 +31,10 @@ const txManager = new TxManager(adapter, { defaultNesting: "join", defaultTimeou
 await txManager.run(async () => undefined);
 ```
 
+`defaultTimeout`과 실행별 `timeout`은 1~2,147,483,647 범위의 정수 밀리초여야 합니다. 제한 시간이 필요하지
+않으면 해당 옵션을 생략합니다. 잘못된 값은 트랜잭션이나 사용자 콜백이 시작되기 전에
+`InvalidTransactionTimeoutProblem`으로 거부됩니다.
+
 ### `@Transactional` 데코레이터 사용
 
 ```typescript
@@ -49,7 +53,8 @@ class OrderService {
 - `Transactional`: 메서드 단위 트랜잭션 데코레이터
 - `TxManagerRegistry`, `DEFAULT_TX_MANAGER_KEY`: 다중 매니저 등록과 조회
 - 타입: `TxRunOptions`, `TxManagerConfig`, `TransactionalOptions`, `Propagation`, `NestingStrategy`
-- Problem: `TransactionTimeoutProblem`, `TransactionContextProblem`, `AfterCommitHooksProblem`, `TxPropagationError`
+- Problem: `TransactionTimeoutProblem`, `InvalidTransactionTimeoutProblem`, `TransactionContextProblem`,
+  `AfterCommitHooksProblem`, `TxPropagationError`
 
 ## 전파 규칙
 

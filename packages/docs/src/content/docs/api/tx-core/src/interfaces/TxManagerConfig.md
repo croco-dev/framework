@@ -18,3 +18,5 @@ title: "TxManagerConfig"
 ### defaultTimeout?
 
 > `optional` **defaultTimeout?**: `number`
+
+Positive integer milliseconds up to 2,147,483,647. Omit for no timeout.
