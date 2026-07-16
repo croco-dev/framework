@@ -54,9 +54,36 @@ After a package version is published, maintainers verify provenance in two ways:
    npm audit signatures
    ```
 
-   Missing or invalid registry signatures or provenance attestations must be treated as a release
-   incident. Deprecate the affected version if consumers could install it before the provenance issue
-   is corrected, then publish a fixed patch version through the normal Changesets release flow.
+Missing or invalid registry signatures or provenance attestations must be treated as a release
+incident. Deprecate the affected version if consumers could install it before the provenance issue
+is corrected, then publish a fixed patch version through the normal Changesets release flow.
+
+### Immutable CI executable rotation
+
+Blocking CI and release verification may execute tools only from the frozen pnpm lockfile, a full
+OCI digest, a full commit SHA, or a directly downloaded artifact whose checksum or signature is
+verified before execution. Run `pnpm ci-executables:check` after changing any workflow, root script,
+or executable under `scripts/`; the policy reports the repository-relative file, line, rule, and
+recovery action for mutable references.
+
+Routine Gitleaks updates are proposed by Renovate from the metadata beside the image reference in
+`.github/workflows/ci.yml`. Review both the readable version and `sha256` digest in the PR, confirm the
+tag resolves to that digest with `docker buildx imagetools inspect`, then run the pinned scan and the
+policy tests before merge. Madge updates must remain exact in `package.json` and `pnpm-lock.yaml` and
+must execute through `pnpm exec` after `pnpm install --frozen-lockfile`.
+
+If an artifact is compromised, revoked, or unexpectedly repointed:
+
+1. Disable the affected verification or release path only by reverting to the last known-good
+   immutable reference; never fall back to a mutable tag, branch, short SHA, or network-resolved
+   package.
+2. Verify the replacement against the upstream release record and registry digest, checksum, or
+   signature. Record the old and new immutable identifiers in the emergency PR.
+3. Run `pnpm ci-executables:check`, its focused fixture suite, the affected real executable, and the
+   normal repository quality gates. The replacement must be visible as an explicit repository diff.
+4. Revoke compromised credentials or allowlists separately when relevant, merge through normal
+   branch protection, and retain the revert commit as the rollback path until the replacement has a
+   green protected-branch run.
 
 ---
 

@@ -183,8 +183,8 @@ function readDetectedCycles(options: Options): Cycle[] {
   }
 
   const result = spawnSync(
-    "npx",
-    ["--yes", "madge", "--circular", "--extensions", "ts", "--json", "packages"],
+    "pnpm",
+    ["exec", "madge", "--circular", "--extensions", "ts", "--json", "packages"],
     {
       cwd: options.rootDir,
       encoding: "utf-8",
