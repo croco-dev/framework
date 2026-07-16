@@ -5746,6 +5746,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "InvalidTransactionalEventConfigurationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/EventsTxProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "normalizeTransactionalEventError",
           "exportKind": "named",
           "source": "./libs/TransactionalEvents",
@@ -5868,6 +5874,11 @@
           "source": "./libs/InMemoryTransactionalEventStore"
         },
         {
+          "name": "InvalidTransactionalEventConfigurationProblemOptions",
+          "exportKind": "named",
+          "source": "./libs/problems/EventsTxProblems"
+        },
+        {
           "name": "ListInboxRecordsOptions",
           "exportKind": "named",
           "source": "./libs/TransactionalEvents"
@@ -5936,6 +5947,16 @@
           "name": "OutboxRelayRetryPolicy",
           "exportKind": "named",
           "source": "./libs/TransactionalEvents"
+        },
+        {
+          "name": "TransactionalEventConfigurationConstraint",
+          "exportKind": "named",
+          "source": "./libs/problems/EventsTxProblems"
+        },
+        {
+          "name": "TransactionalEventConfigurationField",
+          "exportKind": "named",
+          "source": "./libs/problems/EventsTxProblems"
         },
         {
           "name": "TransactionalEventDiagnostic",
