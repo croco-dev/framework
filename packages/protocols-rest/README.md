@@ -180,6 +180,18 @@ class UserController {
 
 `defineRouteContract`는 path params, query, body, response, Problem union을 TypeScript 계약으로 연결합니다. `@Get(createUser)`처럼 HTTP 메서드가 맞지 않거나 `@Param(getUser, "userId")`처럼 path에 없는 이름, response schema와 맞지 않는 반환 타입은 typecheck 단계에서 실패합니다. `RouteContract.path`는 `/users/:id` 같은 최종 경로이며, `@Controller("/users")`는 컨트롤러 그룹/런타임 prefix로 유지됩니다. 런타임 값 검증은 기존처럼 Zod schema와 pipe가 담당합니다.
 
+### 기존 라우트 설정 타입에서 마이그레이션
+
+런타임에서 소비되지 않던 `TypedRouteConfig`, `ApiEndpoint`와 관련 추론 타입은 제거되었습니다. 다음 대응 관계로 `defineRouteContract` 기반 계약으로 옮기세요.
+
+- `TypedRouteConfig`, `ApiEndpoint` → `defineRouteContract`와 `RouteContractSpec`
+- `TypedRouteHandler` → `RouteContractHandler`
+- 전체 요청 객체 → `RouteContractRequest`
+- 전체 path params 객체 → `RoutePathParams`; `RouteParam`은 이름 하나를 지정한 path param에만 사용
+- 응답 값 → `RouteResponse`; 동기 또는 `Promise`를 허용하는 handler 반환값 → `RouteContractResult`
+
+이 마이그레이션은 drop-in 교체가 아닙니다. 제거된 요청 추론 타입과 `RouteContractRequest`는 schema가 없는 body, query, params의 타입 의미가 서로 다릅니다. `inputSchemas` 전체를 대신하는 단일 필드도 없습니다. 기존 body, query, path schema는 각각 `body`, `query`, `params`로 이동해야 합니다. 단, `RouteContractSpec.query`와 `RouteContractSpec.params`는 `z.object(...)` 형태의 객체 스키마만 받습니다. 기존 query 또는 path schema가 scalar, array, union, transform이라면 각 값을 이름 있는 객체 필드로 재구성한 뒤 옮겨야 하며 직접 대입할 수 없습니다. `inputSchemas.headers`에 대응하는 `RouteContractSpec` 필드는 현재 없으며, 이 설정은 기존에도 런타임에서 소비되지 않았습니다. Header schema 지원은 별도의 런타임 소유 계약으로 설계되어야 하므로 마이그레이션 과정에서 조용히 생략하지 마세요.
+
 ## API 레퍼런스
 
 - 데코레이터: `Controller`, `Get`, `Post`, `Put`, `Patch`, `Delete`, `Options`, `Head`, `All`
@@ -190,4 +202,4 @@ class UserController {
 - 검증 유틸리티: `createValidator`, `validateRequest`, `validateResponse`, `createValidationPipe`
 - 검증 Problem: `ValidationProblem`, `RequestValidationProblem`, `ResponseValidationProblem`
 - 스키마 계약: `defineRouteSchema`, `InferRouteSchemaRequest`, `InferRouteSchemaResponse`, `defineRouteContract`, `routeParam`, `routeParamSchema`, `routeQueryParam`, `routeQueryParamSchema`, `routePathParamsSchema`, `routeQuerySchema`, `routeBodySchema`, `routeResponseSchema`
-- 타입: `ExecutionContext`, `PipeTransform`, `ExceptionFilter`, `CallHandler`, `RouteSchema`, `TypedRouteConfig`, `RouteContractSpec`, `RouteContractSourceLocation`, `RouteBody`, `RouteResponse`, `RouteMethodReturn`, `RouteParam`, `RouteQueryParam`
+- 타입: `ExecutionContext`, `PipeTransform`, `ExceptionFilter`, `CallHandler`, `RouteSchema`, `RouteHandler`, `RouteContractSpec`, `RouteContractSourceLocation`, `RouteContractRequest`, `RouteContractResult`, `RouteBody`, `RoutePathParams`, `RouteResponse`, `RouteMethodReturn`, `RouteParam`, `RouteQueryParam`
