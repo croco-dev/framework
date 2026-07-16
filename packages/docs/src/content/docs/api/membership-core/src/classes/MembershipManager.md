@@ -10,6 +10,7 @@ title: "MembershipManager"
 ## Description
 
 멤버십 라이프사이클을 관리하는 매니저입니다.
+
 - 역할 계층 검증 (owner > admin > member > viewer)
 - 소유권 보호 (마지막 소유자 제거/강등 방지)
 - 소유권 이전 지원
@@ -23,16 +24,16 @@ title: "MembershipManager"
 const manager = new MembershipManager(store, eventPublisher, seatLimitChecker);
 
 // 멤버 추가
-await manager.addMember('tenant-123', 'user-456', 'admin');
+await manager.addMember("tenant-123", "user-456", "admin");
 
 // 역할 변경
-await manager.updateRole('tenant-123', 'user-456', 'owner');
+await manager.updateRole("tenant-123", "user-456", "owner");
 
 // 소유권 이전
-await manager.transferOwnership('tenant-123', 'current-owner', 'new-owner');
+await manager.transferOwnership("tenant-123", "current-owner", "new-owner");
 
 // 멤버 제거
-await manager.removeMember('tenant-123', 'user-456');
+await manager.removeMember("tenant-123", "user-456");
 ```
 
 ## Implements
@@ -57,7 +58,7 @@ await manager.removeMember('tenant-123', 'user-456');
 
 ##### seatLimitChecker?
 
-[`SeatLimitChecker`](/api/membership-core/src/classes/seatlimitchecker/)
+[`SeatLimitChecker`](/api/membership-core/src/classes/seatlimitchecker/) \| `undefined`
 
 #### Returns
 
@@ -91,7 +92,7 @@ await manager.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`addMember`](/api/membership-core/src/classes/abstractmembershipmanager/#addmember)
 
-***
+---
 
 ### getMember()
 
@@ -115,7 +116,7 @@ await manager.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`getMember`](/api/membership-core/src/classes/abstractmembershipmanager/#getmember)
 
-***
+---
 
 ### listMembers()
 
@@ -135,7 +136,7 @@ await manager.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`listMembers`](/api/membership-core/src/classes/abstractmembershipmanager/#listmembers)
 
-***
+---
 
 ### listTenants()
 
@@ -155,7 +156,7 @@ await manager.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`listTenants`](/api/membership-core/src/classes/abstractmembershipmanager/#listtenants)
 
-***
+---
 
 ### removeMember()
 
@@ -179,7 +180,7 @@ await manager.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`removeMember`](/api/membership-core/src/classes/abstractmembershipmanager/#removemember)
 
-***
+---
 
 ### transferOwnership()
 
@@ -207,7 +208,7 @@ await manager.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`transferOwnership`](/api/membership-core/src/classes/abstractmembershipmanager/#transferownership)
 
-***
+---
 
 ### updateRole()
 

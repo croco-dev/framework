@@ -25,7 +25,7 @@ title: "RateLimitedInvitationService"
 
 ##### config?
 
-[`RateLimitConfig`](/api/invitation-core/src/type-aliases/ratelimitconfig/)
+[`RateLimitConfig`](/api/invitation-core/src/type-aliases/ratelimitconfig/) \| `undefined`
 
 #### Returns
 
@@ -55,7 +55,7 @@ title: "RateLimitedInvitationService"
 
 `Promise`\<[`BatchInviteResult`](/api/invitation-core/src/type-aliases/batchinviteresult/)\>
 
-***
+---
 
 ### checkRateLimit()
 
@@ -71,7 +71,7 @@ title: "RateLimitedInvitationService"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### createEmailInvitationWithRateLimit()
 
@@ -87,7 +87,7 @@ title: "RateLimitedInvitationService"
 
 `Promise`\<`string`\>
 
-***
+---
 
 ### createLinkInvitationWithRateLimit()
 
