@@ -1403,9 +1403,9 @@
         {
           "id": "rls-debug",
           "category": "fallback",
-          "disposition": "unsupported-rejected",
-          "status": "unresolved",
-          "members": ["RlsOptions.debug", "logger resolution"],
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["RlsOptions.debug/logger", "logger resolution and write failure"],
           "source": {
             "path": "packages/tx-drizzle/src/libs/RlsTxAdapter.ts",
             "identifier": "debug"
@@ -1413,9 +1413,7 @@
           "test": {
             "path": "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
             "identifier": "RLS"
-          },
-          "issue": "https://github.com/croco-dev/framework/issues/1393",
-          "regressionTest": "Prove debug-enabled logger presence, absence, and failure produce explicit outcomes instead of a silent no-op."
+          }
         },
         {
           "id": "rls-identifiers",

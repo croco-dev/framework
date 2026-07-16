@@ -20433,6 +20433,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "RlsDebugLoggingProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TxDrizzleProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "RlsExecuteUnsupportedProblem",
           "exportKind": "named",
           "source": "./libs/problems/TxDrizzleProblems",
@@ -20506,6 +20512,16 @@
           "name": "RlsConfigurationField",
           "exportKind": "named",
           "source": "./libs/problems/TxDrizzleProblems"
+        },
+        {
+          "name": "RlsDebugLoggingPhase",
+          "exportKind": "named",
+          "source": "./libs/problems/TxDrizzleProblems"
+        },
+        {
+          "name": "RlsLogger",
+          "exportKind": "named",
+          "source": "./libs/RlsTxAdapter"
         },
         {
           "name": "RlsOptions",
