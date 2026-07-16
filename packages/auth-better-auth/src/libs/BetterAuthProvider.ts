@@ -1,7 +1,7 @@
-// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
-/* oxlint-disable typescript/consistent-type-imports */
 import type { AuthProvider, AuthUser } from "@croco/auth-core";
 import { Component } from "@croco/framework-context";
+// Runtime value required for constructor metadata.
+// oxlint-disable-next-line typescript/consistent-type-imports
 import { BetterAuthFactory } from "./BetterAuthFactory";
 import { BetterAuthAuthenticationProblem } from "./problems/BetterAuthAuthenticationProblem";
 import { BetterAuthInvalidSessionProblem } from "./problems/BetterAuthInvalidSessionProblem";

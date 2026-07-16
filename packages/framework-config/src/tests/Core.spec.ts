@@ -84,6 +84,14 @@ describe("framework-config core skipValidation parser", () => {
     }
   });
 
+  it("reads SKIP_ENV_VALIDATION on first env access", async () => {
+    const core = await importCoreWithEnv(undefined, { omitRequiredServices: true });
+
+    process.env.SKIP_ENV_VALIDATION = "true";
+
+    expect(core.env.DATABASE_URL).toBeUndefined();
+  });
+
   it("preserves server-only environment access failures on the client", async () => {
     const core = await importCoreWithEnv(undefined);
     Reflect.set(globalThis, "window", {});
@@ -119,10 +127,14 @@ describe("framework-config core skipValidation parser", () => {
     expect(Object.getOwnPropertyDescriptor(core.env, "PORT")?.value).toBe(core.env.PORT);
   });
 
-  it("fails fast for invalid SKIP_ENV_VALIDATION values", async () => {
-    await expect(importCoreWithEnv("banana")).rejects.toMatchObject({
-      code: "framework-config/invalid-boolean-env",
-      detail: "Invalid boolean env value for 'SKIP_ENV_VALIDATION': 'banana'",
-    });
+  it("rejects invalid SKIP_ENV_VALIDATION values on first env access", async () => {
+    const core = await importCoreWithEnv("banana");
+
+    expect(() => core.env.NODE_ENV).toThrow(
+      expect.objectContaining({
+        code: "framework-config/invalid-boolean-env",
+        detail: "Invalid boolean env value for 'SKIP_ENV_VALIDATION': 'banana'",
+      }),
+    );
   });
 });

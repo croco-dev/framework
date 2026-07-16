@@ -26,8 +26,6 @@ function parseOptionalBooleanEnv(envName: string): boolean {
   throw new InvalidBooleanEnvProblem(envName, rawValue);
 }
 
-const skipValidation = parseOptionalBooleanEnv("SKIP_ENV_VALIDATION");
-
 function createRuntimeEnv() {
   return createEnv({
     server: {
@@ -51,7 +49,7 @@ function createRuntimeEnv() {
     },
     runtimeEnv: process.env,
     emptyStringAsUndefined: true,
-    skipValidation,
+    skipValidation: parseOptionalBooleanEnv("SKIP_ENV_VALIDATION"),
   });
 }
 

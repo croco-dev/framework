@@ -62,7 +62,10 @@ describe("ErrorHandler", () => {
     Container.register(ErrorHandler, "singleton");
     Container.set(LOGGER_TOKEN, mockLogger);
 
-    expect(Container.get(ErrorHandler)).toBeInstanceOf(ErrorHandler);
+    const handler = Container.get(ErrorHandler);
+
+    expect(handler).toBeInstanceOf(ErrorHandler);
+    expect(Reflect.get(handler, "logger")).toBe(mockLogger);
   });
 
   describe("RFC 7807 Standard Field Protection", () => {

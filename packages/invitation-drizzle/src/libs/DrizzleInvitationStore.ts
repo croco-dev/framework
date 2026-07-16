@@ -1,7 +1,8 @@
-// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
-/* oxlint-disable typescript/consistent-type-imports */
 import { Component, Inject, Token } from "@croco/framework-context";
-import { type Invitation, type InvitationStatus, InvitationStore } from "@croco/invitation-core";
+import { InvitationStore } from "@croco/invitation-core";
+import type { Invitation, InvitationStatus } from "@croco/invitation-core";
+// Runtime value required for constructor metadata.
+// oxlint-disable-next-line typescript/consistent-type-imports
 import { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
 import { and, count, eq, gte } from "drizzle-orm";

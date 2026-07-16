@@ -69,6 +69,19 @@ describe("Container", () => {
 
       expect(Container.get(ConfiguredService).cacheTtlMs).toBe(5_000);
     });
+
+    it("resolves source-mode injections without emitted parameter metadata", () => {
+      const dependencyToken = new Token<SimpleService>("source-mode.dependency");
+      class SourceModeService {
+        constructor(readonly dependency: SimpleService) {}
+      }
+
+      Component()(SourceModeService);
+      (Inject(dependencyToken) as ParameterDecorator)(SourceModeService, undefined, 0);
+      const dependency = Container.set(dependencyToken, new SimpleService());
+
+      expect(Container.get(SourceModeService).dependency).toBe(dependency);
+    });
   });
 
   describe("getMany", () => {
