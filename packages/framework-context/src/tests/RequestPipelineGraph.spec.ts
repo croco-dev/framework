@@ -162,6 +162,21 @@ describe("RequestPipelineGraph", () => {
       ]),
     ).toThrow("Pipeline graph contains a cycle: guard:a -> guard:b");
   });
+
+  it("should allow handlerless graphs when requireHandler is false", () => {
+    const graph = compileRequestPipelineGraph([], { requireHandler: false });
+
+    expect(graph.nodes).toEqual([]);
+    expect(graph.successOrder).toEqual([]);
+    expect(graph.phaseOrder.handler).toEqual([]);
+  });
+
+  it("should require exactly one handler when requireHandler is omitted", () => {
+    expect(() => compileRequestPipelineGraph([])).toThrow(PipelineGraphProblem);
+    expect(() => compileRequestPipelineGraph([])).toThrow(
+      "Request pipeline graph must declare exactly one handler node, found 0.",
+    );
+  });
 });
 
 function node(
