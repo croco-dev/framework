@@ -92,6 +92,24 @@ class ConstructorSensitiveEventWithFactory extends DomainEvent {
   }
 }
 
+class HostileIdentityEvent extends DomainEvent {
+  static eventName = "HostileIdentityEvent";
+  static reconstructionCount = 0;
+
+  @EventField()
+  public readonly value: string;
+
+  constructor(value: string) {
+    super();
+    this.value = value;
+  }
+
+  static fromPayload(payload: Record<string, unknown>): HostileIdentityEvent {
+    HostileIdentityEvent.reconstructionCount += 1;
+    return new HostileIdentityEvent(String(payload.value ?? ""));
+  }
+}
+
 class DuplicateSerializedKeyEvent extends DomainEvent {
   static eventName = "DuplicateSerializedKeyEvent";
 
@@ -201,6 +219,8 @@ describe("DefaultEventSerializer", () => {
       registry.register(TestEventWithAggregate);
       registry.register(ConstructorSensitiveEvent);
       registry.register(ConstructorSensitiveEventWithFactory);
+      registry.register(HostileIdentityEvent);
+      HostileIdentityEvent.reconstructionCount = 0;
     });
 
     it("should deserialize event successfully", () => {
@@ -250,6 +270,68 @@ describe("DefaultEventSerializer", () => {
       };
 
       expect(() => serializer.deserialize(data)).toThrow("Unknown event type: 'UnknownEvent'");
+    });
+
+    it.each([
+      ["missing", undefined],
+      ["non-string", 42],
+      ["empty", ""],
+      ["whitespace-only", "   "],
+    ])("should reject a %s eventId before reconstructing the event", (_, eventId) => {
+      const data = {
+        eventType: "HostileIdentityEvent",
+        eventId,
+        occurredAt: "2026-01-02T03:04:05.000Z",
+        payload: { value: "hostile" },
+      } as unknown as SerializedEvent;
+
+      expect(() => serializer.deserialize<HostileIdentityEvent>(data)).toThrow(
+        EventDeserializationError,
+      );
+      expect(() => serializer.deserialize<HostileIdentityEvent>(data)).toThrow(
+        "Cannot deserialize event 'HostileIdentityEvent': eventId must be a non-empty string",
+      );
+      expect(HostileIdentityEvent.reconstructionCount).toBe(0);
+    });
+
+    it.each([
+      ["missing", undefined],
+      ["non-string", 42],
+      ["empty", ""],
+      ["whitespace-only", "   "],
+    ])("should reject a %s eventType before registry lookup", (_, eventType) => {
+      const data = {
+        eventType,
+        eventId: "evt_hostile_identity",
+        occurredAt: "2026-01-02T03:04:05.000Z",
+        payload: { value: "hostile" },
+      } as unknown as SerializedEvent;
+
+      expect(() => serializer.deserialize<HostileIdentityEvent>(data)).toThrow(
+        EventDeserializationError,
+      );
+      expect(() => serializer.deserialize<HostileIdentityEvent>(data)).toThrow(
+        "Cannot deserialize event '<unknown>': eventType must be a non-empty string",
+      );
+      expect(HostileIdentityEvent.reconstructionCount).toBe(0);
+    });
+
+    it("should restore the validated eventId snapshot when the external envelope changes", () => {
+      let eventIdAccessCount = 0;
+      const data = {
+        eventType: "HostileIdentityEvent",
+        get eventId() {
+          eventIdAccessCount += 1;
+          return eventIdAccessCount === 1 ? "evt_stable_identity" : "";
+        },
+        occurredAt: "2026-01-02T03:04:05.000Z",
+        payload: { value: "hostile" },
+      } satisfies SerializedEvent;
+
+      const event = serializer.deserialize<HostileIdentityEvent>(data);
+
+      expect(event.eventId).toBe("evt_stable_identity");
+      expect(eventIdAccessCount).toBe(1);
     });
 
     it("should fail fast when occurredAt is not a valid serialized timestamp", () => {
