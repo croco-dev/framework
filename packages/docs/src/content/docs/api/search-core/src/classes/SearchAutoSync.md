@@ -21,7 +21,7 @@ title: "SearchAutoSync"
 
 ##### failedEventPublisher?
 
-[`SearchSyncFailedEventPublisher`](/api/search-core/src/type-aliases/searchsyncfailedeventpublisher/)
+[`SearchSyncFailedEventPublisher`](/api/search-core/src/type-aliases/searchsyncfailedeventpublisher/) \| `undefined`
 
 #### Returns
 

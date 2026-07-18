@@ -1,6 +1,6 @@
-import type { AnalyticsManager } from "@croco/analytics-core";
+import { AnalyticsManager } from "@croco/analytics-core"; // oxlint-disable-line typescript/consistent-type-imports
 import { Component, Context } from "@croco/framework-context";
-import type { OnboardingStore } from "./OnboardingStore";
+import { OnboardingStore } from "./OnboardingStore"; // oxlint-disable-line typescript/consistent-type-imports
 import {
   OnboardingContextRequiredProblem,
   OnboardingDefinitionNotFoundProblem,

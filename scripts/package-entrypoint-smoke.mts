@@ -75,6 +75,17 @@ type PackageSmokeResult = {
   readonly typesCount: number;
 };
 
+type DecoratorMetadataSmokeContract = {
+  readonly defaults?: Readonly<Record<string, boolean | number | string>>;
+  readonly injections: Readonly<Record<string, number>>;
+  readonly metadataTypes: readonly {
+    readonly className: string;
+    readonly packageName?: string;
+  }[];
+  readonly serviceClass: string;
+  readonly servicePackage: string;
+};
+
 type ExemptionResult = {
   readonly packageName: string;
   readonly reason: string;
@@ -423,6 +434,11 @@ function runPackageSmoke(
 
   if (packageInfo.packageName === "@croco/frontend-vite") {
     runFrontendViteOptionalPeerSmoke(packageSmokeRoot, packageInfo.packageName);
+  }
+
+  const decoratorMetadataContract = decoratorMetadataContractFor(packageInfo.packageName);
+  if (decoratorMetadataContract) {
+    runDecoratorMetadataSmoke(packageSmokeRoot, graphPackages, decoratorMetadataContract);
   }
 }
 
@@ -1154,6 +1170,134 @@ function writeTypesConsumer(smokeRoot: string, targets: readonly SmokeTarget[]):
       2,
     )}\n`,
   );
+}
+
+function decoratorMetadataContractFor(
+  packageName: string,
+): DecoratorMetadataSmokeContract | undefined {
+  if (packageName === "@croco/auth-better-auth") {
+    return {
+      injections: { factory: 0 },
+      metadataTypes: [{ className: "BetterAuthFactory", packageName: "@croco/auth-better-auth" }],
+      serviceClass: "BetterAuthProvider",
+      servicePackage: "@croco/auth-better-auth",
+    };
+  }
+
+  if (packageName === "@croco/features-posthog") {
+    return {
+      injections: { posthogClient: 0 },
+      metadataTypes: [{ className: "PostHogClient", packageName: "@croco/integrations-posthog" }],
+      serviceClass: "PostHogFeatureManager",
+      servicePackage: "@croco/features-posthog",
+    };
+  }
+
+  if (packageName === "@croco/metering-core") {
+    return {
+      defaults: { cacheTtlMs: 60_000 },
+      injections: { repository: 0 },
+      metadataTypes: [
+        { className: "MeterRepository", packageName: "@croco/metering-core" },
+        { className: "Number" },
+      ],
+      serviceClass: "MeterRegistry",
+      servicePackage: "@croco/metering-core",
+    };
+  }
+
+  return undefined;
+}
+
+function runDecoratorMetadataSmoke(
+  smokeRoot: string,
+  graphPackages: readonly PackedPackageInfo[],
+  contract: DecoratorMetadataSmokeContract,
+): void {
+  const directDependencyTarballs = graphPackages
+    .filter(
+      (packageInfo) =>
+        packageInfo.packageName === "@croco/framework-context" ||
+        contract.metadataTypes.some(
+          (metadataType) => metadataType.packageName === packageInfo.packageName,
+        ),
+    )
+    .filter((packageInfo) => packageInfo.packageName !== contract.servicePackage)
+    .map((packageInfo) => packageInfo.tarballPath);
+  if (directDependencyTarballs.length > 0) {
+    run("pnpm", ["add", "--prod", ...directDependencyTarballs, "--ignore-scripts"], smokeRoot, {
+      label: `${contract.servicePackage}: install decorator metadata smoke dependencies`,
+    });
+  }
+
+  const contractJson = JSON.stringify(contract);
+  writeFileSync(
+    join(smokeRoot, "decorator-metadata.cjs"),
+    [
+      `const contract = ${contractJson};`,
+      'const { Container } = require("@croco/framework-context");',
+      "const serviceModule = require(contract.servicePackage);",
+      "const metadataModules = Object.fromEntries(contract.metadataTypes.filter((type) => type.packageName).map((type) => [type.packageName, require(type.packageName)]));",
+      'verifyDecoratorMetadata("cjs", Container, serviceModule, metadataModules, contract);',
+      decoratorMetadataVerificationSource(),
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(smokeRoot, "decorator-metadata.mjs"),
+    [
+      `const contract = ${contractJson};`,
+      'const { Container } = await import("@croco/framework-context");',
+      "const serviceModule = await import(contract.servicePackage);",
+      "const metadataModules = Object.fromEntries(await Promise.all(contract.metadataTypes.filter((type) => type.packageName).map(async (type) => [type.packageName, await import(type.packageName)])));",
+      'verifyDecoratorMetadata("esm", Container, serviceModule, metadataModules, contract);',
+      decoratorMetadataVerificationSource(),
+      "",
+    ].join("\n"),
+  );
+
+  run("node", [join(smokeRoot, "decorator-metadata.cjs")], smokeRoot, {
+    label: `${contract.servicePackage}: cjs decorator metadata and implicit DI`,
+  });
+  console.log(`cjs decorator metadata and implicit DI ok ${contract.servicePackage}`);
+  run("node", [join(smokeRoot, "decorator-metadata.mjs")], smokeRoot, {
+    label: `${contract.servicePackage}: esm decorator metadata and implicit DI`,
+  });
+  console.log(`esm decorator metadata and implicit DI ok ${contract.servicePackage}`);
+}
+
+function decoratorMetadataVerificationSource(): string {
+  return [
+    "function verifyDecoratorMetadata(format, Container, serviceModule, metadataModules, contract) {",
+    "  const Service = serviceModule[contract.serviceClass];",
+    "  const expectedParamTypes = contract.metadataTypes.map((type) => type.packageName ? metadataModules[type.packageName][type.className] : globalThis[type.className]);",
+    '  const paramTypes = Reflect.getMetadata?.("design:paramtypes", Service);',
+    "  if (!Array.isArray(paramTypes) || paramTypes.length !== expectedParamTypes.length || paramTypes.some((value, index) => value !== expectedParamTypes[index])) {",
+    '    const actual = Array.isArray(paramTypes) ? paramTypes.map((value) => value?.name ?? typeof value).join(", ") : "missing";',
+    '    const expected = contract.metadataTypes.map((type) => type.className).join(", ");',
+    "    throw new Error(`[${format}] ${contract.serviceClass} design:paramtypes expected [${expected}], received [${actual}]`);",
+    "  }",
+    "  const injectedValues = Object.fromEntries(Object.entries(contract.injections).map(([field, metadataIndex]) => {",
+    "    const Dependency = expectedParamTypes[metadataIndex];",
+    "    const dependency = Object.create(Dependency.prototype);",
+    "    Container.set(Dependency, dependency);",
+    "    return [field, dependency];",
+    "  }));",
+    "  const service = Container.get(Service);",
+    "  for (const [field, dependency] of Object.entries(injectedValues)) {",
+    "    if (service[field] !== dependency) {",
+    "      throw new Error(`[${format}] Container.get(${contract.serviceClass}) did not inject the registered ${expectedParamTypes[contract.injections[field]].name}`);",
+    "    }",
+    "  }",
+    "  for (const [field, expected] of Object.entries(contract.defaults ?? {})) {",
+    "    if (!Object.is(service[field], expected)) {",
+    "      throw new Error(`[${format}] Container.get(${contract.serviceClass}) expected default ${field}=${expected}, received ${String(service[field])}`);",
+    "    }",
+    "  }",
+    "  Container.reset();",
+    "  console.log(`${format} decorator metadata and implicit DI ok ${contract.servicePackage}`);",
+    "}",
+  ].join("\n");
 }
 
 function runFrontendViteOptionalPeerSmoke(smokeRoot: string, packageName: string): void {

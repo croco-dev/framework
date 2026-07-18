@@ -2,7 +2,9 @@ import { Component } from "@croco/framework-context";
 import { Problem } from "@croco/problems-core";
 import { Task } from "@croco/tasks-core";
 import { recordError, recordEvent } from "@croco/telemetry-api";
-import type { NotificationProviderRegistry } from "./NotificationProviderRegistry";
+// Runtime value required for constructor metadata.
+// oxlint-disable-next-line typescript/consistent-type-imports
+import { NotificationProviderRegistry } from "./NotificationProviderRegistry";
 import {
   NotificationDeliveryFailedProblem,
   NotificationProviderNotFoundProblem,

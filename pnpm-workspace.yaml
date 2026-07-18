@@ -50,6 +50,7 @@ catalog:
 
 allowBuilds:
   "@clerk/shared": true
+  "@swc/core": true
   better-sqlite3: true
   core-js: false
   esbuild: true
