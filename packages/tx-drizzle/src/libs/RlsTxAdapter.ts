@@ -1,9 +1,10 @@
-import { Container } from "@croco/framework-context";
+import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import type { TxAdapter } from "@croco/tx-core";
 import { sql } from "drizzle-orm";
 import { createDrizzleTxAdapter } from "./DrizzleTxAdapter";
 import {
+  RlsDebugLoggingProblem,
   RlsExecuteUnsupportedProblem,
   TenantContextRequiredProblem,
 } from "./problems/TxDrizzleProblems";
@@ -13,6 +14,8 @@ import type { DrizzleDb, InferTxClient, InferTxOptions } from "./types";
 export interface RlsTenantProvider {
   getTenantId(): string | null;
 }
+
+export type RlsLogger = Pick<ILogger, "error" | "info">;
 
 export interface RlsOptions {
   /**
@@ -25,6 +28,11 @@ export interface RlsOptions {
    * @default false
    */
   debug?: boolean;
+  /**
+   * Logger used for RLS diagnostics. When omitted, the framework logger is resolved from the container.
+   * Debug-enabled adapters fail during creation if neither source provides a usable logger.
+   */
+  logger?: RlsLogger;
 }
 
 type ExecutableTransactionClient = {
@@ -50,6 +58,42 @@ function getTenantIdOrThrow(tenantProvider: RlsTenantProvider): string {
   return tenantId;
 }
 
+function isRlsLogger(value: unknown): value is RlsLogger {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const logger = value as Partial<Record<keyof RlsLogger, unknown>>;
+  return typeof logger.error === "function" && typeof logger.info === "function";
+}
+
+function resolveLogger(options: RlsOptions): RlsLogger | null {
+  if (isRlsLogger(options.logger)) {
+    return options.logger;
+  }
+
+  let logger: unknown;
+  try {
+    logger = Container.getOptional(LOGGER_TOKEN) ?? Container.get(Logger);
+  } catch (cause) {
+    if (options.debug) {
+      throw new RlsDebugLoggingProblem("initialization", cause);
+    }
+
+    return null;
+  }
+
+  if (isRlsLogger(logger)) {
+    return logger;
+  }
+
+  if (options.debug) {
+    throw new RlsDebugLoggingProblem("initialization", undefined);
+  }
+
+  return null;
+}
+
 export function createRlsTxAdapter<TDb extends DrizzleDb>(
   db: TDb,
   tenantProvider: RlsTenantProvider,
@@ -57,14 +101,7 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
 ): TxAdapter<InferTxClient<TDb>, InferTxOptions<TDb>> {
   const configKey = validateRlsConfigKey(options.configKey ?? "app.current_tenant");
   const baseAdapter = createDrizzleTxAdapter(db);
-
-  // Try to resolve logger, fallback to null if not available
-  let logger: Logger | null = null;
-  try {
-    logger = Container.get(Logger);
-  } catch {
-    // Logger might not be registered
-  }
+  const logger = resolveLogger(options);
 
   return {
     async transaction<T>(
@@ -77,7 +114,11 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
       return baseAdapter.transaction(
         async (tx) => {
           if (options.debug) {
-            logger?.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
+            try {
+              await logger?.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
+            } catch (cause) {
+              throw new RlsDebugLoggingProblem("write", cause);
+            }
           }
 
           // Drizzle transaction client usually has .execute

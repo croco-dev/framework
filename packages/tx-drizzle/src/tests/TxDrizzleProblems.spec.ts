@@ -2,6 +2,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
   RlsConfigurationProblem,
+  RlsDebugLoggingProblem,
   RlsExecuteUnsupportedProblem,
   SavepointUnsupportedProblem,
   TenantContextRequiredProblem,
@@ -38,6 +39,26 @@ describe("TxDrizzleProblems", () => {
     expect(problem.detail).toBe(
       "Transaction client does not support execute(), cannot set RLS key 'app.current_tenant'",
     );
+  });
+
+  it("should create value-redacted RlsDebugLoggingProblem metadata", () => {
+    const cause = new Error("secret logger details");
+    const problem = new RlsDebugLoggingProblem("initialization", cause);
+
+    expect(problem.code).toBe("tx-drizzle/rls-debug-logging-failed");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.detail).toBe("RLS debug logging failed during initialization");
+    expect(problem.extensions).toEqual({ phase: "initialization", retryable: false });
+    expect(problem.cause).toBe(cause);
+    expect(problem.toJSON()).toEqual({
+      type: "about:blank",
+      title: "Internal Server Error",
+      status: 500,
+      code: "tx-drizzle/rls-debug-logging-failed",
+      detail: "RLS debug logging failed during initialization",
+      phase: "initialization",
+      retryable: false,
+    });
   });
 
   it("should create SavepointUnsupportedProblem with expected metadata", () => {

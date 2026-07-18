@@ -1,3 +1,4 @@
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
 import type { TxAdapter } from "@croco/tx-core";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
@@ -6,6 +7,7 @@ import {
   createDrizzleTxAdapter,
   createRlsTxAdapter,
   RlsConfigurationProblem,
+  RlsDebugLoggingProblem,
   RlsExecuteUnsupportedProblem,
   SavepointUnsupportedProblem,
 } from "../index";
@@ -413,6 +415,124 @@ describe("RlsTxAdapter", () => {
   }
 
   describe("transaction", () => {
+    it("should emit requested debug logging through an injected logger", async () => {
+      const db = createMockRlsDrizzleDb();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => "tenant-123"),
+      };
+      const logger = {
+        error: vi.fn(),
+        info: vi.fn(),
+      };
+      const adapter = createRlsTxAdapter(db, tenantProvider, { debug: true, logger });
+
+      await expect(adapter.transaction(async () => "result")).resolves.toBe("result");
+
+      expect(logger.info).toHaveBeenCalledWith(
+        "[RlsTxAdapter] Setting app.current_tenant = 'tenant-123'",
+      );
+      expect(db.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it("should emit requested debug logging through the canonical logger token", async () => {
+      const db = createMockRlsDrizzleDb();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => "tenant-123"),
+      };
+      const logger = {
+        child: vi.fn(),
+        debug: vi.fn(),
+        error: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+      };
+      Container.set(LOGGER_TOKEN, logger);
+
+      try {
+        const adapter = createRlsTxAdapter(db, tenantProvider, { debug: true });
+        await expect(adapter.transaction(async () => "result")).resolves.toBe("result");
+      } finally {
+        Container.remove(LOGGER_TOKEN);
+      }
+
+      expect(logger.info).toHaveBeenCalledWith(
+        "[RlsTxAdapter] Setting app.current_tenant = 'tenant-123'",
+      );
+      expect(db.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it("should reject debug mode when logger resolution fails", () => {
+      const db = createMockRlsDrizzleDb();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => "tenant-123"),
+      };
+      const resolutionFailure = new Error("logger unavailable");
+      const getLogger = vi.spyOn(Container, "get").mockImplementation(() => {
+        throw resolutionFailure;
+      });
+
+      let thrown: unknown;
+      try {
+        createRlsTxAdapter(db, tenantProvider, { debug: true });
+      } catch (cause) {
+        thrown = cause;
+      } finally {
+        getLogger.mockRestore();
+      }
+
+      expect(thrown).toBeInstanceOf(RlsDebugLoggingProblem);
+      expect(thrown).toMatchObject({
+        cause: resolutionFailure,
+        code: "tx-drizzle/rls-debug-logging-failed",
+        detail: "RLS debug logging failed during initialization",
+        extensions: { phase: "initialization", retryable: false },
+      });
+      expect(db.transaction).not.toHaveBeenCalled();
+      expect(db.execute).not.toHaveBeenCalled();
+    });
+
+    it("should reject the transaction when requested debug logging fails", async () => {
+      const db = createMockRlsDrizzleDb();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => "tenant-123"),
+      };
+      const writeFailure = new Error("logger write failed");
+      const logger = {
+        error: vi.fn(),
+        info: vi.fn(async () => {
+          throw writeFailure;
+        }),
+      };
+      const adapter = createRlsTxAdapter(db, tenantProvider, { debug: true, logger });
+
+      await expect(adapter.transaction(async () => "result")).rejects.toMatchObject({
+        cause: writeFailure,
+        code: "tx-drizzle/rls-debug-logging-failed",
+        detail: "RLS debug logging failed during write",
+        extensions: { phase: "write", retryable: false },
+      });
+      expect(db.execute).not.toHaveBeenCalled();
+    });
+
+    it("should keep debug-disabled transactions independent of logger availability", async () => {
+      const db = createMockRlsDrizzleDb();
+      const tenantProvider = {
+        getTenantId: vi.fn((): string | null => "tenant-123"),
+      };
+      const getLogger = vi.spyOn(Container, "get").mockImplementation(() => {
+        throw new Error("logger unavailable");
+      });
+
+      try {
+        const adapter = createRlsTxAdapter(db, tenantProvider, { debug: false });
+        await expect(adapter.transaction(async () => "result")).resolves.toBe("result");
+      } finally {
+        getLogger.mockRestore();
+      }
+
+      expect(db.execute).toHaveBeenCalledTimes(1);
+    });
+
     it("should throw an error when tenant id is null", async () => {
       const db = createMockRlsDrizzleDb();
       const tenantProvider = {
