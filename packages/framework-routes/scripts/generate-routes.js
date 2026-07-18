@@ -6,6 +6,10 @@ const scriptDir = dirname(__filename);
 const projectRoot = resolve(scriptDir, "..");
 const generatedFixtureDir = resolve(projectRoot, ".croco/build/fixtures");
 const generatedFixturePath = resolve(generatedFixtureDir, "SampleController.js");
+const sampleControllerSourcePath = resolve(
+  projectRoot,
+  "src/__tests__/fixtures/SampleController.ts",
+);
 
 const controllerPaths = process.argv
   .slice(2)
@@ -16,7 +20,7 @@ async function buildGeneratedControllerFixture() {
   const { build } = await import("tsup");
 
   await build({
-    entry: [resolve(projectRoot, "src/__tests__/fixtures/SampleController.ts")],
+    entry: [sampleControllerSourcePath.replaceAll("\\", "/")],
     format: ["cjs"],
     outDir: generatedFixtureDir,
     clean: true,
@@ -38,7 +42,7 @@ async function main() {
       await buildGeneratedControllerFixture();
       controllerPaths.push(pathToFileURL(generatedFixturePath).href);
       sourcePaths.push(
-        pathToFileURL(resolve(projectRoot, "src/__tests__/fixtures/SampleController.ts")).href,
+        pathToFileURL(sampleControllerSourcePath).href,
         pathToFileURL(resolve(projectRoot, "src/__tests__/fixtures/IntentMapModule.ts")).href,
       );
     }
