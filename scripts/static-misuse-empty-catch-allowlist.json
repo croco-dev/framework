@@ -81,14 +81,6 @@
       "excerpt": "} catch {",
       "reason": "Event bus diagnostics provider registration is optional; unavailable providers should not prevent default operational diagnostics.",
       "owner": "framework-error-handling"
-    },
-    {
-      "package": "@croco/tx-drizzle",
-      "file": "packages/tx-drizzle/src/libs/RlsTxAdapter.ts",
-      "line": 65,
-      "excerpt": "} catch {",
-      "reason": "Logger resolution is optional; RLS transaction behavior must continue when no logger is registered.",
-      "owner": "framework-error-handling"
     }
   ]
 }

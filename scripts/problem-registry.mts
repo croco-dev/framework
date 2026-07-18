@@ -1904,6 +1904,15 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "tx-drizzle/rls-debug-logging-failed": recovery({
+    cause: "Requested RLS debug logging could not initialize or write its diagnostic event.",
+    userAction: "Ask the operator to restore the configured logger before retrying.",
+    operatorAction:
+      "Provide an RlsLogger or register the framework Logger, then verify its info() output path before retrying the transaction.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "transports-http/graceful-shutdown-configuration": recovery({
     cause: "Graceful shutdown was configured with a non-finite total or event-bus drain timeout.",
     userAction:

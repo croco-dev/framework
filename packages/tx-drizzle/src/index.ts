@@ -62,11 +62,15 @@ export { createDrizzleTxAdapter } from "./libs/DrizzleTxAdapter";
 
 export {
   RlsConfigurationProblem,
+  RlsDebugLoggingProblem,
   RlsExecuteUnsupportedProblem,
   SavepointUnsupportedProblem,
   TenantContextRequiredProblem,
 } from "./libs/problems/TxDrizzleProblems";
-export type { RlsConfigurationField } from "./libs/problems/TxDrizzleProblems";
+export type {
+  RlsConfigurationField,
+  RlsDebugLoggingPhase,
+} from "./libs/problems/TxDrizzleProblems";
 
 /**
  * Row-Level Security(RLS)를 지원하는 Drizzle 트랜잭션 어댑터를 생성합니다.
@@ -88,7 +92,12 @@ export type { RlsConfigurationField } from "./libs/problems/TxDrizzleProblems";
  */
 
 export { createRlsPolicy, type RlsPolicyOptions } from "./libs/createRlsPolicy";
-export { createRlsTxAdapter, type RlsOptions, type RlsTenantProvider } from "./libs/RlsTxAdapter";
+export {
+  createRlsTxAdapter,
+  type RlsLogger,
+  type RlsOptions,
+  type RlsTenantProvider,
+} from "./libs/RlsTxAdapter";
 
 /**
  * Drizzle 트랜잭션 관련 타입 유틸리티입니다.

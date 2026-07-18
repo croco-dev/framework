@@ -134,7 +134,7 @@ describe("Route decorators", () => {
   });
 
   describe("@ProblemResponse decorators", () => {
-    it("should register declared Problem responses with category-derived status", () => {
+    it("should register declared Problem responses with normalized options", () => {
       @Controller("/users")
       class UserController {
         @Get("/:id")
@@ -143,7 +143,9 @@ describe("Route decorators", () => {
           {
             code: "USER_FORBIDDEN",
             category: ProblemCategory.Forbidden,
+            status: 451,
             description: "User cannot be read by the current actor.",
+            type: "https://example.com/problems/user-forbidden",
           },
         )
         getUser() {}
@@ -165,7 +167,8 @@ describe("Route decorators", () => {
           code: "USER_FORBIDDEN",
           category: ProblemCategory.Forbidden,
           description: "User cannot be read by the current actor.",
-          status: 403,
+          status: 451,
+          type: "https://example.com/problems/user-forbidden",
         },
       ]);
     });

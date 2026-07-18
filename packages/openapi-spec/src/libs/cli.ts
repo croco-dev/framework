@@ -22,7 +22,7 @@ type CliOptions = {
 
 type CliParseResult =
   | { readonly kind: "help" }
-  | { readonly kind: "invalid" }
+  | { readonly kind: "invalid"; readonly diagnostic?: string }
   | { readonly kind: "run"; readonly options: CliOptions };
 
 type CliIo = {
@@ -42,6 +42,9 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
   }
 
   if (result.kind === "invalid") {
+    if (result.diagnostic) {
+      io.stdout(result.diagnostic);
+    }
     printHelp(io);
     return 1;
   }
@@ -97,13 +100,19 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
 }
 
 export function parseArgs(args: readonly string[]): CliParseResult {
-  if (args.includes("--help") || args.includes("-h")) {
+  const unsupportedArgument = findUnsupportedArgument(args);
+
+  if (unsupportedArgument) {
+    return { kind: "invalid", diagnostic: unsupportedArgument };
+  }
+
+  if (args.includes(CLI_FLAGS.boolean.help) || args.includes(CLI_FLAGS.boolean.helpShort)) {
     return { kind: "help" };
   }
 
-  const controllers = getFlagValue(args, "--controllers");
-  const outFile = getFlagValue(args, "--out");
-  const check = args.includes("--check");
+  const controllers = getFlagValue(args, CLI_FLAGS.value.controllers);
+  const outFile = getFlagValue(args, CLI_FLAGS.value.out);
+  const check = args.includes(CLI_FLAGS.boolean.check);
   const strictProblems = parseStrictProblems(args);
   const strictSchemas = parseStrictSchemas(args);
 
@@ -116,32 +125,32 @@ export function parseArgs(args: readonly string[]): CliParseResult {
     options: {
       controllers,
       outFile,
-      title: getFlagValue(args, "--title") ?? "Croco API",
-      version: getFlagValue(args, "--version") ?? "1.0.0",
-      servers: getFlagValues(args, "--server").map((url) => ({ url })),
-      bearerAuthScheme: args.includes("--bearer-auth")
-        ? (getFlagValue(args, "--bearer-auth") ?? "bearerAuth")
+      title: getFlagValue(args, CLI_FLAGS.value.title) ?? "Croco API",
+      version: getFlagValue(args, CLI_FLAGS.value.version) ?? "1.0.0",
+      servers: getFlagValues(args, CLI_FLAGS.value.server).map((url) => ({ url })),
+      bearerAuthScheme: args.includes(CLI_FLAGS.value.bearerAuth)
+        ? (getFlagValue(args, CLI_FLAGS.value.bearerAuth) ?? "bearerAuth")
         : null,
       strictProblems,
       strictSchemas,
-      failOnDiagnostics: args.includes("--fail-on-diagnostics"),
+      failOnDiagnostics: args.includes(CLI_FLAGS.boolean.failOnDiagnostics),
       check,
-      manifestBundlePath: getFlagValue(args, "--manifest-bundle"),
+      manifestBundlePath: getFlagValue(args, CLI_FLAGS.value.manifestBundle),
     },
   };
 }
 
 function parseStrictProblems(args: readonly string[]): boolean | null {
   return parseContractGraphStrictModeFlag(args, {
-    strict: "--strict-problems",
-    compatibility: "--compatibility-problems",
+    strict: CLI_FLAGS.boolean.strictProblems,
+    compatibility: CLI_FLAGS.boolean.compatibilityProblems,
   });
 }
 
 function parseStrictSchemas(args: readonly string[]): boolean | null {
   return parseContractGraphStrictModeFlag(args, {
-    strict: "--strict-schemas",
-    compatibility: "--compatibility-schemas",
+    strict: CLI_FLAGS.boolean.strictSchemas,
+    compatibility: CLI_FLAGS.boolean.compatibilitySchemas,
   });
 }
 
@@ -173,6 +182,60 @@ function getFlagValue(args: readonly string[], flag: string): string | null {
   const value = index >= 0 ? args[index + 1] : undefined;
 
   return value && !value.startsWith("--") ? value : null;
+}
+
+const CLI_FLAGS = {
+  value: {
+    bearerAuth: "--bearer-auth",
+    controllers: "--controllers",
+    manifestBundle: "--manifest-bundle",
+    out: "--out",
+    server: "--server",
+    title: "--title",
+    version: "--version",
+  },
+  boolean: {
+    check: "--check",
+    compatibilityProblems: "--compatibility-problems",
+    compatibilitySchemas: "--compatibility-schemas",
+    failOnDiagnostics: "--fail-on-diagnostics",
+    help: "--help",
+    helpShort: "-h",
+    strictProblems: "--strict-problems",
+    strictSchemas: "--strict-schemas",
+  },
+} as const;
+
+const VALUE_FLAGS: ReadonlySet<string> = new Set(Object.values(CLI_FLAGS.value));
+const BOOLEAN_FLAGS: ReadonlySet<string> = new Set(Object.values(CLI_FLAGS.boolean));
+
+function findUnsupportedArgument(args: readonly string[]): string | null {
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+
+    if (argument === undefined) {
+      break;
+    }
+
+    if (VALUE_FLAGS.has(argument)) {
+      const value = args[index + 1];
+
+      if (value && !value.startsWith("--")) {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (BOOLEAN_FLAGS.has(argument)) {
+      continue;
+    }
+
+    return argument.startsWith("-")
+      ? `[CROCO_CLI_UNKNOWN_OPTION] Unknown option "${argument}".`
+      : `[CROCO_CLI_UNEXPECTED_POSITIONAL] Unexpected positional argument "${argument}".`;
+  }
+
+  return null;
 }
 
 function getFlagValues(args: readonly string[], flag: string): string[] {

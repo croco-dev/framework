@@ -15720,11 +15720,6 @@
           "source": "./RouteContract"
         },
         {
-          "name": "ApiEndpoint",
-          "exportKind": "named",
-          "source": "./RouteTypes"
-        },
-        {
           "name": "ArgumentMetadata",
           "exportKind": "named",
           "source": "./PipeTransform"
@@ -15743,16 +15738,6 @@
           "name": "DefinedRouteSchema",
           "exportKind": "named",
           "source": "@croco/protocols-core"
-        },
-        {
-          "name": "EndpointRequest",
-          "exportKind": "named",
-          "source": "./RouteTypes"
-        },
-        {
-          "name": "EndpointResponse",
-          "exportKind": "named",
-          "source": "./RouteTypes"
         },
         {
           "name": "ExceptionFilter",
@@ -15783,16 +15768,6 @@
           "name": "InferResponseType",
           "exportKind": "named",
           "source": "./ValidationSchema"
-        },
-        {
-          "name": "InferRouteRequest",
-          "exportKind": "named",
-          "source": "./RouteTypes"
-        },
-        {
-          "name": "InferRouteResponse",
-          "exportKind": "named",
-          "source": "./RouteTypes"
         },
         {
           "name": "InferRouteSchemaRequest",
@@ -15964,16 +15939,6 @@
           "name": "TokenVerifier",
           "exportKind": "named",
           "source": "./AuthGuard"
-        },
-        {
-          "name": "TypedRouteConfig",
-          "exportKind": "named",
-          "source": "./RouteTypes"
-        },
-        {
-          "name": "TypedRouteHandler",
-          "exportKind": "named",
-          "source": "./RouteTypes"
         },
         {
           "name": "UserWithRoles",
@@ -20454,6 +20419,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "RlsDebugLoggingProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TxDrizzleProblems",
+          "declarationKind": "class"
+        },
+        {
           "name": "RlsExecuteUnsupportedProblem",
           "exportKind": "named",
           "source": "./libs/problems/TxDrizzleProblems",
@@ -20527,6 +20498,16 @@
           "name": "RlsConfigurationField",
           "exportKind": "named",
           "source": "./libs/problems/TxDrizzleProblems"
+        },
+        {
+          "name": "RlsDebugLoggingPhase",
+          "exportKind": "named",
+          "source": "./libs/problems/TxDrizzleProblems"
+        },
+        {
+          "name": "RlsLogger",
+          "exportKind": "named",
+          "source": "./libs/RlsTxAdapter"
         },
         {
           "name": "RlsOptions",

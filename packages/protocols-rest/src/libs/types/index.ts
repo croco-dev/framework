@@ -41,13 +41,4 @@ export type {
   RouteQueryParam,
   RouteResponse,
 } from "./RouteContract";
-export type {
-  ApiEndpoint,
-  EndpointRequest,
-  EndpointResponse,
-  InferRouteRequest,
-  InferRouteResponse,
-  RouteHandler,
-  TypedRouteConfig,
-  TypedRouteHandler,
-} from "./RouteTypes";
+export type { RouteHandler } from "./RouteTypes";
