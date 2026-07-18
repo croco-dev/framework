@@ -4,6 +4,7 @@ import { lambdaPreset, TelemetryRuntime } from "@croco/telemetry-sdk-node";
 import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { formatCrocoGraphQLError } from "./formatGraphQLError.js";
 import { createGraphQLContext, createSchema } from "./schema.js";
+import { runWithTelemetryFlush } from "./telemetryFlush.js";
 import type { GraphQLAuthContext } from "./schema.js";
 
 const telemetry = TelemetryRuntime.getInstance();
@@ -31,12 +32,11 @@ const lambdaHandlerPromise: Promise<APIGatewayProxyHandlerV2> = createSchema().t
 export const handler = async (
   ...args: Parameters<APIGatewayProxyHandlerV2>
 ): Promise<Awaited<ReturnType<APIGatewayProxyHandlerV2>>> => {
-  try {
-    await telemetryReady;
-    const lambdaHandler = await lambdaHandlerPromise;
+  await telemetryReady;
+  const lambdaHandler = await lambdaHandlerPromise;
 
-    return await lambdaHandler(...args);
-  } finally {
-    await telemetry.forceFlush();
-  }
+  return runWithTelemetryFlush(
+    () => lambdaHandler(...args),
+    () => telemetry.forceFlush(),
+  );
 };

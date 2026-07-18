@@ -186,7 +186,7 @@ function createTelemetryExporterScenario(): OperationalFailureDrillScenario {
         });
         const flush = await runtime.forceFlush(1_000);
 
-        if (flush.success || !flush.error) {
+        if (flush.outcome !== "failed") {
           throw new Error("Expected telemetry forceFlush to surface an unavailable exporter.");
         }
         if (receivedRequests === 0) {

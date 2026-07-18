@@ -233,8 +233,11 @@ describe("lambdaPreset", () => {
         async () => {
           events.push("flush");
           const result = await runtime.forceFlush(5000);
-          if (!result.success) {
-            throw result.error ?? new Error("telemetry flush failed");
+          if (result.outcome === "failed") {
+            throw result.error;
+          }
+          if (result.outcome === "unsupported") {
+            throw new Error("telemetry flush is unsupported before initialization");
           }
         },
       ),
@@ -260,15 +263,22 @@ describe("lambdaPreset", () => {
         async () => {
           events.push("flush");
           const result = await runtime.forceFlush(5000);
-          if (!result.success) {
-            throw result.error ?? new Error("telemetry flush failed");
+          if (result.outcome === "failed") {
+            throw result.error;
+          }
+          if (result.outcome === "unsupported") {
+            throw new Error("telemetry flush is unsupported before initialization");
           }
         },
       ),
     ).resolves.toBe("ok");
 
     expect(events).toEqual(["request", "flush"]);
-    await expect(runtime.forceFlush()).resolves.toEqual({ success: true, flushedSpans: -1 });
+    await expect(runtime.forceFlush()).resolves.toEqual({
+      outcome: "skipped",
+      reason: "telemetry-disabled",
+      flushedSpans: 0,
+    });
   });
 
   it("should not initialize tracing when a Lambda-derived config disables the signal", async () => {
@@ -287,8 +297,9 @@ describe("lambdaPreset", () => {
     expect(runtime.isEnabled()).toBe(false);
     expect(runtime.getConfig()).toEqual(config);
     await expect(runtime.forceFlush()).resolves.toEqual({
-      success: true,
-      flushedSpans: -1,
+      outcome: "skipped",
+      reason: "tracing-disabled",
+      flushedSpans: 0,
     });
   });
 });

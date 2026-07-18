@@ -18042,9 +18042,19 @@
           "source": "./config"
         },
         {
+          "name": "ShutdownResult",
+          "exportKind": "named",
+          "source": "./runtime"
+        },
+        {
           "name": "TelemetryConfig",
           "exportKind": "named",
           "source": "./config"
+        },
+        {
+          "name": "TelemetryLifecycleSkipReason",
+          "exportKind": "named",
+          "source": "./runtime"
         },
         {
           "name": "TraceConfig",

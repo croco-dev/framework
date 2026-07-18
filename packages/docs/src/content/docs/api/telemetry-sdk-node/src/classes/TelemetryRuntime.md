@@ -81,11 +81,11 @@ title: "TelemetryRuntime"
 
 ### shutdown()
 
-> **shutdown**(): `Promise`\<`void`\>
+> **shutdown**(): `Promise`\<[`ShutdownResult`](/api/telemetry-sdk-node/src/type-aliases/shutdownresult/)\>
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<[`ShutdownResult`](/api/telemetry-sdk-node/src/type-aliases/shutdownresult/)\>
 
 ---
 

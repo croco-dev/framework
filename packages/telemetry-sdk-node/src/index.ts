@@ -52,7 +52,7 @@ export { TelemetryAutoInstrumentationProblem } from "./libs/problems/TelemetryAu
  * 확률 기반 샘플링을 수행하는 OpenTelemetry 샘플러 구현체입니다.
  */
 export { ProbabilitySampler } from "./libs/samplers/ProbabilitySampler";
-export type { ForceFlushResult } from "./runtime";
+export type { ForceFlushResult, ShutdownResult, TelemetryLifecycleSkipReason } from "./runtime";
 
 export { TelemetryRuntime } from "./runtime";
 export { TelemetryDiagnosticsProvider } from "./libs/diagnostics/TelemetryDiagnosticsProvider";

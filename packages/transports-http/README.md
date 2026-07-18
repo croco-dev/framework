@@ -145,8 +145,11 @@ await telemetry.init(lambdaPreset({ serviceName: "orders" }));
 export const handler = app.lambdaHandler({
   flush: async () => {
     const result = await telemetry.forceFlush(5000);
-    if (!result.success) {
-      throw result.error ?? new Error("telemetry flush failed");
+    if (result.outcome === "failed") {
+      throw result.error;
+    }
+    if (result.outcome === "unsupported") {
+      throw new Error("telemetry flush is unsupported before initialization");
     }
   },
 });
