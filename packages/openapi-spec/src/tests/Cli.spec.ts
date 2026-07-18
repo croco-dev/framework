@@ -105,7 +105,7 @@ vi.mock("@croco/protocols-core", () => {
   };
 });
 
-import { runCli } from "../libs/cli";
+import { parseArgs, runCli } from "../libs/cli";
 
 describe("openapi-spec CLI", () => {
   let stdout: string[];
@@ -196,6 +196,61 @@ describe("openapi-spec CLI", () => {
       lastBuildOptions: null,
       lastEmitOptions: null,
       graph: generationModuleImports.graph,
+    });
+  });
+
+  it.each([
+    [
+      "a close output flag misspelling",
+      ["--otu"],
+      '[CROCO_CLI_UNKNOWN_OPTION] Unknown option "--otu".',
+    ],
+    [
+      "a close check flag misspelling",
+      ["--chek"],
+      '[CROCO_CLI_UNKNOWN_OPTION] Unknown option "--chek".',
+    ],
+    [
+      "an unexpected positional value",
+      ["openapi.json"],
+      '[CROCO_CLI_UNEXPECTED_POSITIONAL] Unexpected positional argument "openapi.json".',
+    ],
+    [
+      "an unknown option combined with help",
+      ["--help", "--otu"],
+      '[CROCO_CLI_UNKNOWN_OPTION] Unknown option "--otu".',
+    ],
+  ])("rejects %s before loading generation modules", async (_name, arguments_, diagnostic) => {
+    const exitCode = await runCli(
+      ["--controllers", "src/controllers/**/*.ts", "--out", "generated.json", ...arguments_],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout[0]).toBe(diagnostic);
+    expect(generationModuleImports.loadControllers).toBe(0);
+    expect(generationModuleImports.emitOpenAPIFromContractGraph).toBe(0);
+    expect(fileSystemImports.writeFile).toBe(0);
+  });
+
+  it("preserves single-dash-prefixed option values", () => {
+    expect(
+      parseArgs([
+        "--controllers",
+        "src/**/*.ts",
+        "--out",
+        "-generated.json",
+        "--title",
+        "-internal",
+      ]),
+    ).toMatchObject({
+      kind: "run",
+      options: {
+        outFile: "-generated.json",
+        title: "-internal",
+      },
     });
   });
 
