@@ -1044,7 +1044,7 @@
           "id": "trace-options",
           "category": "configuration",
           "disposition": "implemented-tested",
-          "status": "unresolved",
+          "status": "complete",
           "members": [
             "TraceDecoratorOptions.name/attributes",
             "SpanOptions.name/attributes",
@@ -1077,11 +1077,13 @@
             { "path": "packages/telemetry-api/src/tests/Trace.spec.ts", "identifier": "getTracer" },
             {
               "path": "packages/telemetry-api/src/tests/frontendBridge.spec.ts",
-              "identifier": "correlation"
+              "identifier": "uses every configured frontend telemetry header name"
+            },
+            {
+              "path": "packages/telemetry-api/src/tests/frontendBridge.spec.ts",
+              "identifier": "uses defaults for header names omitted alongside"
             }
-          ],
-          "issue": "https://github.com/croco-dev/framework/issues/1396",
-          "regressionTest": "Exercise custom frontend header names and make async sink completion or rejection caller-observable."
+          ]
         },
         {
           "id": "frontend-trace-context",
@@ -1102,7 +1104,7 @@
           "id": "span-and-sink-lifecycle",
           "category": "lifecycle",
           "disposition": "implemented-tested",
-          "status": "unresolved",
+          "status": "complete",
           "members": [
             "span end on sync/async/iterable",
             "FrontendTelemetrySink.record async completion"
@@ -1113,10 +1115,18 @@
           },
           "test": {
             "path": "packages/telemetry-api/src/tests/frontendBridge.spec.ts",
-            "identifier": "record"
+            "identifier": "returns asynchronous sink completion by identity"
           },
-          "issue": "https://github.com/croco-dev/framework/issues/1396",
-          "regressionTest": "Exercise async sink resolution and rejection through a caller-observable completion contract."
+          "tests": [
+            {
+              "path": "packages/telemetry-api/src/tests/frontendBridge.spec.ts",
+              "identifier": "returns asynchronous sink completion by identity"
+            },
+            {
+              "path": "packages/telemetry-api/src/tests/frontendBridge.spec.ts",
+              "identifier": "exposes asynchronous rejection and allows caller recovery"
+            }
+          ]
         },
         {
           "id": "telemetry-no-active-span",
