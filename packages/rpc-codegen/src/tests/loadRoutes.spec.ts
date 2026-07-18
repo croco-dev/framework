@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { loadContractGraph, loadRoutes } from "../libs/loadRoutes";
+import { isNodeModulesPath, loadContractGraph, loadRoutes } from "../libs/loadRoutes";
 
 let tempRoot!: string;
 let sourceDir!: string;
@@ -19,6 +19,12 @@ describe("loadRoutes", () => {
 
   afterEach(() => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  it("recognizes node_modules paths with either platform separator", () => {
+    expect(isNodeModulesPath("C:\\workspace\\node_modules\\pkg\\index.ts")).toBe(true);
+    expect(isNodeModulesPath("C:/workspace/node_modules/pkg/index.ts")).toBe(true);
+    expect(isNodeModulesPath("C:/workspace/src/index.ts")).toBe(false);
   });
 
   it(

@@ -439,8 +439,8 @@ function formatDiagnosticLocation(diagnostic: ControllerTypeScriptDiagnostic): s
   return `${diagnostic.file}:${diagnostic.line}:${diagnostic.column}`;
 }
 
-function isNodeModulesPath(filePath: string): boolean {
-  return filePath.split(path.sep).includes("node_modules");
+export function isNodeModulesPath(filePath: string): boolean {
+  return filePath.split(/[\\/]/).includes("node_modules");
 }
 
 function isEmittableProjectSourcePath(filePath: string): boolean {
