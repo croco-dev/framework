@@ -24,6 +24,12 @@ describe("noninteractive CLI option validation", () => {
     generateMock.mockClear();
   });
 
+  it("resolves the project name from a Windows drive path", () => {
+    expect(parseCliOptions("C:\\Users\\runner admin\\generated-app", {}).projectName).toBe(
+      "generated-app",
+    );
+  });
+
   it("documents the pnpm-only install contract in CLI help", () => {
     const help = createProgram().helpInformation();
 
