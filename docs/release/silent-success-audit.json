@@ -43,7 +43,7 @@
           "id": "component-and-runtime-options",
           "category": "configuration",
           "disposition": "implemented-tested",
-          "status": "unresolved",
+          "status": "complete",
           "members": [
             "ComponentOptions.scope",
             "ContainerValidationOptions.force",
@@ -94,12 +94,34 @@
               "identifier": "policy nodes"
             },
             {
+              "path": "packages/framework-context/src/tests/RequestPipelineGraph.spec.ts",
+              "identifier": "should allow handlerless graphs when requireHandler is false"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RequestPipelineGraph.spec.ts",
+              "identifier": "should require exactly one handler when requireHandler is omitted"
+            },
+            {
               "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
               "identifier": "maxEventsPerRequest"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
+              "identifier": "retains the configured maximum number of requests"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
+              "identifier": "retains 50 requests when maxRequests is omitted"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
+              "identifier": "truncates strings at the configured maximum length"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
+              "identifier": "truncates strings at 500 characters when maxStringLength is omitted"
             }
-          ],
-          "issue": "https://github.com/croco-dev/framework/issues/1406",
-          "regressionTest": "Exercise requireHandler, maxRequests, and maxStringLength with explicit and omitted values at their owning runtime boundaries."
+          ]
         },
         {
           "id": "shutdown-hooks",
