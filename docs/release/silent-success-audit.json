@@ -420,11 +420,10 @@
           "id": "rest-decorator-options",
           "category": "configuration",
           "disposition": "implemented-tested",
-          "status": "unresolved",
+          "status": "complete",
           "members": [
             "AuthGuardOptions.verifier/headerName/scheme",
-            "ProblemResponseOptions.code/category/status/description/type",
-            "TypedRouteConfig.method/path/body/query/params/inputSchemas/response"
+            "ProblemResponseOptions.code/category/status/description/type"
           ],
           "source": {
             "path": "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
@@ -442,10 +441,6 @@
             {
               "path": "packages/protocols-rest/src/libs/types.ts",
               "identifier": "ProblemResponseOptions"
-            },
-            {
-              "path": "packages/protocols-rest/src/libs/types/RouteTypes.ts",
-              "identifier": "TypedRouteConfig"
             }
           ],
           "tests": [
@@ -454,12 +449,10 @@
               "identifier": "scheme"
             },
             {
-              "path": "packages/protocols-rest/src/tests/RouteContractTypes.spec.ts",
-              "identifier": "ProblemResponse"
+              "path": "packages/protocols-rest/src/tests/decorators/Route.spec.ts",
+              "identifier": "ProblemResponse decorators"
             }
-          ],
-          "issue": "https://github.com/croco-dev/framework/issues/1407",
-          "regressionTest": "Implement and behavior-test every TypedRouteConfig field, or remove/deprecate the unused public contract."
+          ]
         },
         {
           "id": "route-contract-guard",

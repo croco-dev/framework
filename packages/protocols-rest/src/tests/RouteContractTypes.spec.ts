@@ -14,9 +14,14 @@ import {
   ResponseSchema,
   type RouteBody,
   type RouteContractHandler,
+  type RouteContractRequest,
+  type RouteContractResult,
+  type RouteContractSpec,
+  type RouteHandler,
   type RouteMethodReturn,
   type RouteParam,
   type RoutePathParamName,
+  type RoutePathParams,
   type RouteProblem,
   type RouteQuery,
   type RouteQueryParam,
@@ -28,6 +33,23 @@ import {
   routeQuerySchema,
   routeResponseSchema,
 } from "../index";
+
+/* oxlint-disable import/no-duplicates */
+// @ts-expect-error TypedRouteConfig was removed because it had no owning runtime path.
+import type { TypedRouteConfig as RemovedTypedRouteConfig } from "../index";
+// @ts-expect-error InferRouteRequest was coupled to the removed TypedRouteConfig surface.
+import type { InferRouteRequest as RemovedInferRouteRequest } from "../index";
+// @ts-expect-error InferRouteResponse was coupled to the removed TypedRouteConfig surface.
+import type { InferRouteResponse as RemovedInferRouteResponse } from "../index";
+// @ts-expect-error TypedRouteHandler was coupled to the removed TypedRouteConfig surface.
+import type { TypedRouteHandler as RemovedTypedRouteHandler } from "../index";
+// @ts-expect-error ApiEndpoint duplicated the removed route configuration surface.
+import type { ApiEndpoint as RemovedApiEndpoint } from "../index";
+// @ts-expect-error EndpointRequest was coupled to the removed ApiEndpoint surface.
+import type { EndpointRequest as RemovedEndpointRequest } from "../index";
+// @ts-expect-error EndpointResponse was coupled to the removed ApiEndpoint surface.
+import type { EndpointResponse as RemovedEndpointResponse } from "../index";
+/* oxlint-enable import/no-duplicates */
 
 const userSchema = z.object({
   id: z.string(),
@@ -150,6 +172,24 @@ describe("route contract types", () => {
     expectTypeOf<RouteProblem<typeof getUserContract>>().toEqualTypeOf<UserNotFoundProblem>();
     expectTypeOf<RouteProblem<typeof updateUserContract>>().toEqualTypeOf<UserForbiddenProblem>();
     expectTypeOf(routeProblemResponses(updateUserContract)[0]?.status).toEqualTypeOf<403>();
+    expectTypeOf<RoutePathParams<typeof getUserContract>>().toEqualTypeOf<{ id: string }>();
+    expectTypeOf<RouteContractRequest<typeof createUserContract>["body"]>().toEqualTypeOf<{
+      name: string;
+    }>();
+    expectTypeOf<RouteContractRequest<typeof createUserContract>["params"]>().toEqualTypeOf<
+      RoutePathParams<typeof createUserContract>
+    >();
+    expectTypeOf<RouteContractResult<typeof createUserContract>>().toEqualTypeOf<
+      { id: string; name: string } | Promise<{ id: string; name: string }>
+    >();
+
+    const routeHandler: RouteHandler<{ id: string }, { found: boolean }> = ({ id }) => ({
+      found: id.length > 0,
+    });
+    const contractSpec: RouteContractSpec = getUserContract;
+
+    expect(routeHandler({ id: "user_1" })).toEqual({ found: true });
+    expect(contractSpec.path).toBe("/users/:id");
 
     const handler: RouteContractHandler<typeof createUserContract> = async ({ body }) => ({
       id: "user_1",
@@ -246,3 +286,16 @@ ProblemResponse({
   // @ts-expect-error route contract provenance is attached only by routeProblemResponses(contract).
   routeContractProblems: [],
 });
+
+type RemovedRouteTypes = [
+  RemovedTypedRouteConfig,
+  RemovedInferRouteRequest<never>,
+  RemovedInferRouteResponse<never>,
+  RemovedTypedRouteHandler<never>,
+  RemovedApiEndpoint,
+  RemovedEndpointRequest<never>,
+  RemovedEndpointResponse<never>,
+];
+
+const removedRouteTypes: RemovedRouteTypes | undefined = undefined;
+void removedRouteTypes;
