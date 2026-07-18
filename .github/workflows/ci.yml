@@ -316,7 +316,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "packed create-croco-app extraction failed" }
           $packageDir = Join-Path $runnerDir "package"
           $cliDependencies = Join-Path $env:GITHUB_WORKSPACE "packages/create-croco-app/node_modules"
-          New-Item -ItemType Junction -Path (Join-Path $packageDir "node_modules") -Target $cliDependencies | Out-Null
+          $packedNodeModules = Join-Path $packageDir "node_modules"
+          New-Item -ItemType Directory -Force -Path $packedNodeModules | Out-Null
+          $packedManifest = Get-Content (Join-Path $packageDir "package.json") | ConvertFrom-Json
+          foreach ($dependency in $packedManifest.dependencies.PSObject.Properties.Name) {
+            $source = Get-Item (Join-Path $cliDependencies $dependency)
+            $resolvedSource = $source.ResolveLinkTarget($true)
+            if ($null -eq $resolvedSource) { $resolvedSource = $source }
+            $destination = Join-Path $packedNodeModules $dependency
+            New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
+            New-Item -ItemType Junction -Path $destination -Target $resolvedSource.FullName | Out-Null
+          }
           node (Join-Path $packageDir "dist/index.js") $targetDir --preset blank --scope '@windows-smoke' --no-install --no-git --json
           if ($LASTEXITCODE -ne 0) { throw "packed create-croco-app generation failed" }
           if (-not (Test-Path (Join-Path $targetDir "package.json"))) {
