@@ -1,14 +1,14 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const apiIndexPath = fileURLToPath(new URL("../src/content/docs/api/README.md", import.meta.url));
-const apiDocsPath = (relativePath) =>
-  fileURLToPath(new URL(`../src/content/docs/api/${relativePath}`, import.meta.url));
-const policyExecutionPlanPath = fileURLToPath(
-  new URL(
-    "../src/content/docs/api/framework-context/src/functions/getPolicyExecutionPlan.md",
-    import.meta.url,
-  ),
+const apiDocsRoot = process.env.CROCO_DOCS_BUILD_ROOT
+  ? join(process.env.CROCO_DOCS_BUILD_ROOT, "src", "content", "docs", "api")
+  : fileURLToPath(new URL("../src/content/docs/api", import.meta.url));
+const apiIndexPath = join(apiDocsRoot, "README.md");
+const apiDocsPath = (relativePath) => join(apiDocsRoot, relativePath);
+const policyExecutionPlanPath = apiDocsPath(
+  "framework-context/src/functions/getPolicyExecutionPlan.md",
 );
 const diagnosticCodeDefinitionsPath = apiDocsPath(
   "diagnostics-core/src/variables/CROCO_DIAGNOSTIC_CODE_DEFINITIONS.md",

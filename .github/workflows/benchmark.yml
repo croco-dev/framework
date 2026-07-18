@@ -40,7 +40,7 @@ jobs:
       - run: pnpm build
       - name: Run benchmarks with threshold check
         id: bench
-        run: pnpm bench:check --output-json=benchmark-result.json
+        run: pnpm tracked-files:guard --recovery 'pnpm bench:update' -- pnpm bench:check --output-json=benchmark-result.json
         continue-on-error: true
         env:
           CI: true

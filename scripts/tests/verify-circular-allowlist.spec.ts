@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -119,6 +119,13 @@ describe("verify-circular-allowlist.mts", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("Invalid allowlist entries:");
     expect(result.stdout).toContain('must contain at least two paths separated by " > "');
+  });
+
+  it("executes the workspace-locked Madge binary without ad-hoc package resolution", () => {
+    const source = readFileSync(scriptPath, "utf-8");
+
+    expect(source).toContain('spawnSync(\n    "pnpm",\n    ["exec", "madge"');
+    expect(source).not.toContain('spawnSync(\n    "npx"');
   });
 });
 

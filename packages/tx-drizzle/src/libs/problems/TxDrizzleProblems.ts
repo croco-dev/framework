@@ -37,6 +37,41 @@ export class RlsExecuteUnsupportedProblem extends Problem {
   }
 }
 
+export type RlsDebugLoggingPhase = "initialization" | "write";
+
+/**
+ * Requested RLS debug logging could not initialize or write its diagnostic event.
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   await adapter.transaction(runQuery);
+ * } catch (problem) {
+ *   if (problem instanceof RlsDebugLoggingProblem) {
+ *     console.error(problem.extensions?.phase);
+ *   }
+ * }
+ * ```
+ */
+export class RlsDebugLoggingProblem extends Problem {
+  readonly code = "tx-drizzle/rls-debug-logging-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(phase: RlsDebugLoggingPhase, cause: unknown) {
+    const options = {
+      extensions: { phase, retryable: false },
+      ...(cause instanceof Error ? { cause } : {}),
+    };
+
+    super(
+      "tx-drizzle/rls-debug-logging-failed",
+      ProblemCategory.InternalServerError,
+      `RLS debug logging failed during ${phase}`,
+      options,
+    );
+  }
+}
+
 export class SavepointUnsupportedProblem extends Problem {
   readonly code = "tx-drizzle/savepoint-unsupported";
   readonly category = ProblemCategory.InternalServerError;

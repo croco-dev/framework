@@ -30,7 +30,18 @@ type FindingClass =
   | "private-tooling"
   | "generated-app"
   | "release-evidence"
+  | "unclassified"
   | "unknown";
+
+type UnclassifiedEvidence =
+  | "findings-empty"
+  | "findings-missing"
+  | "findings-non-array"
+  | "paths-empty"
+  | "paths-missing"
+  | "paths-non-array"
+  | "path-blank"
+  | "path-non-string";
 
 type AuditAdvisory = {
   readonly id?: number | string;
@@ -40,10 +51,8 @@ type AuditAdvisory = {
   readonly url?: string;
   readonly cves?: readonly string[];
   readonly github_advisory_id?: string;
-  readonly findings?: readonly {
-    readonly version?: string;
-    readonly paths?: readonly string[];
-  }[];
+  readonly paths: readonly string[];
+  readonly unclassifiedEvidence: readonly UnclassifiedEvidence[];
 };
 
 type AuditSeverity = "critical" | "high" | "low" | "moderate";
@@ -66,6 +75,7 @@ type ClassifiedFinding = {
   readonly advisory: AuditAdvisory;
   readonly classification: FindingClass;
   readonly dependencyField: DependencyField | "unknown";
+  readonly diagnostic: string;
   readonly directDependency: string;
   readonly importerPath: string;
   readonly metadataStatus: "reviewed" | "missing" | "invalid" | "not-required";
@@ -94,6 +104,7 @@ type DependencyAuditPolicyProblemCategory = "BadRequest" | "InternalServerError"
 
 type DependencyAuditPolicyProblemOptions = {
   readonly cause?: Error;
+  readonly code?: string;
 };
 
 type RunOptions = {
@@ -119,6 +130,8 @@ const defaultRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const defaultMetadataPath = "scripts/security-allowlist-metadata.json";
 const defaultReportPath = "ci-reports/security/dependency-audit-policy.md";
 const pnpmAuditTimeoutMs = 120_000;
+const unclassifiedDiagnosticCode = "DEPENDENCY_AUDIT_EVIDENCE_UNCLASSIFIED";
+const unclassifiedPath = "<unclassified>";
 const blockingClasses = new Set<FindingClass>([
   "runtime",
   "runtime-peer",
@@ -143,7 +156,7 @@ const releaseEvidenceDirectDependencyNames = new Set([
 
 class DependencyAuditPolicyProblem extends Error {
   public readonly category: DependencyAuditPolicyProblemCategory;
-  public readonly code = "DEPENDENCY_AUDIT_POLICY_FAILED";
+  public readonly code: string;
   public readonly detail: string;
   public readonly cause?: Error;
 
@@ -154,6 +167,7 @@ class DependencyAuditPolicyProblem extends Error {
   ) {
     super(detail);
     this.category = category;
+    this.code = options?.code ?? "DEPENDENCY_AUDIT_POLICY_FAILED";
     this.detail = detail;
     this.name = new.target.name;
 
@@ -318,9 +332,17 @@ function parseAuditJson(source: string, label: string): AuditJson {
   }
   return {
     advisories: Object.fromEntries(
-      Object.entries(parsed.advisories).filter((entry): entry is [string, AuditAdvisory] =>
-        isRecord(entry[1]),
-      ),
+      Object.entries(parsed.advisories).map(([advisoryId, advisory]) => {
+        if (!isRecord(advisory)) {
+          const code = "DEPENDENCY_AUDIT_SCHEMA_UNSUPPORTED";
+          throw new DependencyAuditPolicyProblem(
+            `${code}: ${label} advisory ${advisoryId} is not a JSON object`,
+            "InternalServerError",
+            { code },
+          );
+        }
+        return [advisoryId, normalizeAdvisory(advisory, advisoryId)];
+      }),
     ),
   };
 }
@@ -333,9 +355,8 @@ function mergeAuditJsons(auditJsons: readonly AuditJson[]): AuditJson {
   const groups: { advisory: AuditAdvisory; aliases: Set<string> }[] = [];
   for (const auditJson of auditJsons) {
     for (const advisory of Object.values(auditJson.advisories)) {
-      const normalized = normalizeAdvisory(advisory);
-      const aliases = new Set(advisoryKeys(normalized));
-      let merged = normalized;
+      const aliases = new Set(advisoryKeys(advisory));
+      let merged = advisory;
 
       for (let index = groups.length - 1; index >= 0; index -= 1) {
         const group = groups[index];
@@ -391,14 +412,20 @@ function minimumAdvisoryKey(aliases: ReadonlySet<string>): string {
   );
 }
 
-function normalizeAdvisory(advisory: AuditAdvisory): AuditAdvisory {
+function normalizeAdvisory(
+  advisory: Readonly<Record<string, unknown>>,
+  advisoryMapKey: string,
+): AuditAdvisory {
   const severity = normalizeSeverity(advisory.severity);
   const githubAdvisoryId = normalizeGithubAdvisoryId(advisory.github_advisory_id);
   const cves = normalizeCves(advisory.cves);
-  const id = normalizeAuditId(advisory.id);
+  const id = normalizeAuditId(
+    advisory.id === undefined ? numericAuditMapKey(advisoryMapKey) : advisory.id,
+  );
   const moduleName = canonicalOptionalString(advisory.module_name);
   const title = canonicalOptionalString(advisory.title);
   const url = canonicalOptionalString(advisory.url);
+  const evidence = normalizeAdvisoryEvidence(advisory);
 
   if (!githubAdvisoryId && cves.length === 0 && id === undefined) {
     throw new DependencyAuditPolicyProblem(
@@ -409,13 +436,57 @@ function normalizeAdvisory(advisory: AuditAdvisory): AuditAdvisory {
 
   return {
     cves,
-    findings: advisory.findings,
     github_advisory_id: githubAdvisoryId,
     ...(id === undefined ? {} : { id }),
     ...(moduleName === undefined ? {} : { module_name: moduleName }),
     severity,
     ...(title === undefined ? {} : { title }),
     ...(url === undefined ? {} : { url }),
+    paths: evidence.paths,
+    unclassifiedEvidence: evidence.unclassifiedEvidence,
+  };
+}
+
+function numericAuditMapKey(value: string): string | undefined {
+  return /^[1-9][0-9]*$/.test(value) ? value : undefined;
+}
+
+function normalizeAdvisoryEvidence(advisory: Readonly<Record<string, unknown>>): {
+  readonly paths: readonly string[];
+  readonly unclassifiedEvidence: readonly UnclassifiedEvidence[];
+} {
+  const paths = new Set<string>();
+  const unclassifiedEvidence = new Set<UnclassifiedEvidence>();
+  if (!("findings" in advisory)) {
+    unclassifiedEvidence.add("findings-missing");
+  } else if (!Array.isArray(advisory.findings)) {
+    unclassifiedEvidence.add("findings-non-array");
+  } else if (advisory.findings.length === 0) {
+    unclassifiedEvidence.add("findings-empty");
+  } else {
+    for (const finding of advisory.findings) {
+      if (!isRecord(finding) || !("paths" in finding)) {
+        unclassifiedEvidence.add("paths-missing");
+      } else if (!Array.isArray(finding.paths)) {
+        unclassifiedEvidence.add("paths-non-array");
+      } else if (finding.paths.length === 0) {
+        unclassifiedEvidence.add("paths-empty");
+      } else {
+        for (const path of finding.paths) {
+          if (typeof path !== "string") {
+            unclassifiedEvidence.add("path-non-string");
+          } else if (path.trim().length === 0) {
+            unclassifiedEvidence.add("path-blank");
+          } else {
+            paths.add(path);
+          }
+        }
+      }
+    }
+  }
+  return {
+    paths: [...paths].sort(compareStrings),
+    unclassifiedEvidence: [...unclassifiedEvidence].sort(compareStrings),
   };
 }
 
@@ -499,26 +570,17 @@ function canonicalOptionalString(value: unknown): string | undefined {
 }
 
 function mergeAdvisories(left: AuditAdvisory, right: AuditAdvisory): AuditAdvisory {
-  const paths = new Set<string>();
-  for (const advisory of [left, right]) {
-    for (const finding of advisory.findings ?? []) {
-      for (const path of finding.paths ?? []) {
-        paths.add(path);
-      }
-    }
-  }
   return {
     cves: [...new Set([...(left.cves ?? []), ...(right.cves ?? [])])].sort(),
-    findings: [
-      {
-        paths: [...paths].sort(),
-      },
-    ],
     github_advisory_id: minimumString(left.github_advisory_id, right.github_advisory_id),
     id: minimumAuditId(left.id, right.id),
     module_name: minimumString(left.module_name, right.module_name),
+    paths: [...new Set([...left.paths, ...right.paths])].sort(compareStrings),
     severity: maximumSeverity(left.severity, right.severity),
     title: minimumString(left.title, right.title),
+    unclassifiedEvidence: [
+      ...new Set([...left.unclassifiedEvidence, ...right.unclassifiedEvidence]),
+    ].sort(compareStrings),
     url: minimumString(left.url, right.url),
   };
 }
@@ -562,44 +624,87 @@ function classifyAuditJson(
   const findings: ClassifiedFinding[] = [];
 
   for (const advisory of Object.values(auditJson.advisories)) {
-    for (const finding of advisory.findings ?? []) {
-      for (const path of finding.paths ?? []) {
-        const parsedPath = parseAuditPath(path);
-        const manifest = manifests.get(parsedPath.importerPath);
-        const field = manifest
-          ? dependencyFieldFor(manifest, parsedPath.directDependency)
-          : "unknown";
-        const classification = classifyPath(manifest, parsedPath.directDependency, field);
-        const metadataEntry = metadataEntryFor(advisory, metadata);
-        const metadataRequired = blockingClasses.has(classification) && isHighRisk(advisory);
-        const metadataStatus = metadataRequired
-          ? metadataEntry?.valid
-            ? "reviewed"
-            : metadataEntry
-              ? "invalid"
-              : "missing"
-          : "not-required";
+    for (const path of advisory.paths) {
+      const parsedPath = parseAuditPath(path);
+      const manifest = manifests.get(parsedPath.importerPath);
+      const field = manifest
+        ? dependencyFieldFor(manifest, parsedPath.directDependency)
+        : "unknown";
+      const classification = classifyPath(manifest, parsedPath.directDependency, field);
+      const metadataEntry = metadataEntryFor(advisory, metadata);
+      const metadataRequired = blockingClasses.has(classification) && isHighRisk(advisory);
+      const metadataStatus = metadataRequired
+        ? metadataEntry?.valid
+          ? "reviewed"
+          : metadataEntry
+            ? "invalid"
+            : "missing"
+        : "not-required";
 
-        findings.push({
-          advisory,
+      findings.push({
+        advisory,
+        classification,
+        dependencyField: field,
+        diagnostic: "",
+        directDependency: parsedPath.directDependency,
+        importerPath: parsedPath.importerPath,
+        metadataStatus,
+        path,
+        reasons: classificationReasons(
+          manifest,
+          parsedPath.directDependency,
+          field,
           classification,
-          dependencyField: field,
-          directDependency: parsedPath.directDependency,
-          importerPath: parsedPath.importerPath,
-          metadataStatus,
-          path,
-          reasons: classificationReasons(
-            manifest,
-            parsedPath.directDependency,
-            field,
-            classification,
-          ),
-        });
-      }
+        ),
+      });
+    }
+    for (const evidence of advisory.unclassifiedEvidence) {
+      findings.push({
+        advisory,
+        classification: "unclassified",
+        dependencyField: "unknown",
+        diagnostic: unclassifiedDiagnostic(advisory, evidence),
+        directDependency: "",
+        importerPath: "",
+        metadataStatus: "not-required",
+        path: unclassifiedPath,
+        reasons: [unclassifiedEvidenceMessage(evidence)],
+      });
     }
   }
 
-  return findings;
+  return findings.sort(compareClassifiedFindings);
+}
+
+function unclassifiedDiagnostic(advisory: AuditAdvisory, evidence: UnclassifiedEvidence): string {
+  return `${unclassifiedDiagnosticCode}: Advisory ${displayAdvisoryId(advisory)} has unusable audit evidence (${unclassifiedEvidenceMessage(evidence)}).`;
+}
+
+function unclassifiedEvidenceMessage(evidence: UnclassifiedEvidence): string {
+  const messages: Record<UnclassifiedEvidence, string> = {
+    "findings-empty": "findings array is empty",
+    "findings-missing": "findings are missing",
+    "findings-non-array": "findings are not an array",
+    "paths-empty": "paths array is empty",
+    "paths-missing": "paths are missing",
+    "paths-non-array": "paths are not an array",
+    "path-blank": "path value is blank",
+    "path-non-string": "path value is not a string",
+  };
+  return messages[evidence];
+}
+
+function displayAdvisoryId(advisory: AuditAdvisory): string {
+  return advisory.github_advisory_id ?? advisory.cves?.[0] ?? String(advisory.id);
+}
+
+function compareClassifiedFindings(left: ClassifiedFinding, right: ClassifiedFinding): number {
+  return (
+    compareStrings(displayAdvisoryId(left.advisory), displayAdvisoryId(right.advisory)) ||
+    compareStrings(left.classification, right.classification) ||
+    compareStrings(left.path, right.path) ||
+    compareStrings(left.diagnostic, right.diagnostic)
+  );
 }
 
 function parseAuditPath(path: string): {
@@ -711,6 +816,9 @@ function dependencyFieldFor(
 }
 
 function isBlockingFinding(finding: ClassifiedFinding): boolean {
+  if (finding.classification === "unclassified") {
+    return isHighRisk(finding.advisory);
+  }
   return (
     blockingClasses.has(finding.classification) &&
     isHighRisk(finding.advisory) &&
@@ -1248,8 +1356,8 @@ function writeReport(
   lines.push(
     "## Findings",
     "",
-    "| Severity | Advisory | Package | Class | Path | Metadata |",
-    "| --- | --- | --- | --- | --- | --- |",
+    "| Severity | Advisory | Package | Class | Path | Metadata | Diagnostic |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
   );
   for (const finding of [...blockingFindings, ...advisoryFindings]) {
     lines.push(
@@ -1262,6 +1370,7 @@ function writeReport(
         finding.classification,
         `\`${finding.path}\``,
         finding.metadataStatus,
+        finding.diagnostic,
       ]
         .join(" | ")
         .replace(/^/, "| ")

@@ -1,11 +1,29 @@
 import { describe, expect, it } from "vitest";
 import {
   isValidExtensions,
+  Problem,
   ProblemCategory,
   ProblemCategoryMapper,
   ProblemSerializer,
   validateExtensions,
 } from "../index";
+
+function expectParseProblem(parse: () => unknown, detail: string): void {
+  let thrown: unknown;
+
+  try {
+    parse();
+  } catch (error) {
+    thrown = error;
+  }
+
+  expect(thrown).toBeInstanceOf(Problem);
+  expect(thrown).toMatchObject({
+    code: "problems-core/parse-error",
+    detail,
+    status: 400,
+  });
+}
 
 describe("ProblemCategoryMapper - exhaustive switch", () => {
   it("should map all ProblemCategory values to HTTP status codes", () => {
@@ -251,6 +269,51 @@ describe("ProblemSerializer", () => {
       expect(() =>
         ProblemSerializer.fromJson({ type: "test", title: "Test", status: 400, code: 123 }),
       ).toThrow('Missing or invalid "code" field');
+    });
+
+    it.each([
+      ["type", { type: "", title: "Test", status: 400, code: "TEST" }],
+      ["title", { type: "test", title: "", status: 400, code: "TEST" }],
+      ["code", { type: "test", title: "Test", status: 400, code: "" }],
+    ])('should throw for an empty required "%s" field', (field, json) => {
+      expectParseProblem(
+        () => ProblemSerializer.fromJson(json),
+        `Missing or invalid "${field}" field`,
+      );
+    });
+
+    it.each([
+      ["NaN", Number.NaN],
+      ["positive infinity", Number.POSITIVE_INFINITY],
+      ["negative infinity", Number.NEGATIVE_INFINITY],
+      ["fraction", 400.5],
+      ["below the HTTP status range", 99],
+      ["above the HTTP status range", 600],
+    ])("should throw for a %s status", (_case, status) => {
+      expectParseProblem(
+        () => ProblemSerializer.fromJson({ type: "test", title: "Test", status, code: "TEST" }),
+        'Missing or invalid "status" field',
+      );
+    });
+
+    it.each([100, 599])("should accept the HTTP status range boundary %i", (status) => {
+      expect(
+        ProblemSerializer.fromJson({ type: "test", title: "Test", status, code: "TEST" }),
+      ).toMatchObject({ status });
+    });
+
+    it("should preserve a valid RFC 7807 round trip", () => {
+      const problem = {
+        type: "https://example.com/problems/not-found",
+        title: "Not Found",
+        status: 404,
+        detail: "The user could not be found",
+        instance: "/users/123",
+        code: "USER_NOT_FOUND",
+        traceId: "abc-123",
+      };
+
+      expect(ProblemSerializer.fromJson(JSON.parse(JSON.stringify(problem)))).toEqual(problem);
     });
   });
 });

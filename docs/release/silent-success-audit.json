@@ -43,7 +43,7 @@
           "id": "component-and-runtime-options",
           "category": "configuration",
           "disposition": "implemented-tested",
-          "status": "unresolved",
+          "status": "complete",
           "members": [
             "ComponentOptions.scope",
             "ContainerValidationOptions.force",
@@ -94,12 +94,34 @@
               "identifier": "policy nodes"
             },
             {
+              "path": "packages/framework-context/src/tests/RequestPipelineGraph.spec.ts",
+              "identifier": "should allow handlerless graphs when requireHandler is false"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RequestPipelineGraph.spec.ts",
+              "identifier": "should require exactly one handler when requireHandler is omitted"
+            },
+            {
               "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
               "identifier": "maxEventsPerRequest"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
+              "identifier": "retains the configured maximum number of requests"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
+              "identifier": "retains 50 requests when maxRequests is omitted"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
+              "identifier": "truncates strings at the configured maximum length"
+            },
+            {
+              "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
+              "identifier": "truncates strings at 500 characters when maxStringLength is omitted"
             }
-          ],
-          "issue": "https://github.com/croco-dev/framework/issues/1406",
-          "regressionTest": "Exercise requireHandler, maxRequests, and maxStringLength with explicit and omitted values at their owning runtime boundaries."
+          ]
         },
         {
           "id": "shutdown-hooks",
@@ -420,11 +442,10 @@
           "id": "rest-decorator-options",
           "category": "configuration",
           "disposition": "implemented-tested",
-          "status": "unresolved",
+          "status": "complete",
           "members": [
             "AuthGuardOptions.verifier/headerName/scheme",
-            "ProblemResponseOptions.code/category/status/description/type",
-            "TypedRouteConfig.method/path/body/query/params/inputSchemas/response"
+            "ProblemResponseOptions.code/category/status/description/type"
           ],
           "source": {
             "path": "packages/protocols-rest/src/libs/guards/AuthGuard.ts",
@@ -442,10 +463,6 @@
             {
               "path": "packages/protocols-rest/src/libs/types.ts",
               "identifier": "ProblemResponseOptions"
-            },
-            {
-              "path": "packages/protocols-rest/src/libs/types/RouteTypes.ts",
-              "identifier": "TypedRouteConfig"
             }
           ],
           "tests": [
@@ -454,12 +471,10 @@
               "identifier": "scheme"
             },
             {
-              "path": "packages/protocols-rest/src/tests/RouteContractTypes.spec.ts",
-              "identifier": "ProblemResponse"
+              "path": "packages/protocols-rest/src/tests/decorators/Route.spec.ts",
+              "identifier": "ProblemResponse decorators"
             }
-          ],
-          "issue": "https://github.com/croco-dev/framework/issues/1407",
-          "regressionTest": "Implement and behavior-test every TypedRouteConfig field, or remove/deprecate the unused public contract."
+          ]
         },
         {
           "id": "route-contract-guard",
@@ -1403,9 +1418,9 @@
         {
           "id": "rls-debug",
           "category": "fallback",
-          "disposition": "unsupported-rejected",
-          "status": "unresolved",
-          "members": ["RlsOptions.debug", "logger resolution"],
+          "disposition": "implemented-tested",
+          "status": "complete",
+          "members": ["RlsOptions.debug/logger", "logger resolution and write failure"],
           "source": {
             "path": "packages/tx-drizzle/src/libs/RlsTxAdapter.ts",
             "identifier": "debug"
@@ -1413,9 +1428,7 @@
           "test": {
             "path": "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
             "identifier": "RLS"
-          },
-          "issue": "https://github.com/croco-dev/framework/issues/1393",
-          "regressionTest": "Prove debug-enabled logger presence, absence, and failure produce explicit outcomes instead of a silent no-op."
+          }
         },
         {
           "id": "rls-identifiers",

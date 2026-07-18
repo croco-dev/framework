@@ -22,7 +22,7 @@ type CliOptions = {
 
 type CliParseResult =
   | { readonly kind: "help" }
-  | { readonly kind: "invalid" }
+  | { readonly kind: "invalid"; readonly diagnostic?: string }
   | { readonly kind: "run"; readonly options: CliOptions };
 
 type CliIo = {
@@ -42,6 +42,9 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
   }
 
   if (result.kind === "invalid") {
+    if (result.diagnostic) {
+      io.stdout(result.diagnostic);
+    }
     printHelp(io);
     return 1;
   }
@@ -102,16 +105,22 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
 }
 
 export function parseArgs(args: readonly string[]): CliParseResult {
-  if (args.includes("--help") || args.includes("-h")) {
+  const unsupportedArgument = findUnsupportedArgument(args);
+
+  if (unsupportedArgument) {
+    return { kind: "invalid", diagnostic: unsupportedArgument };
+  }
+
+  if (args.includes(CLI_FLAGS.boolean.help) || args.includes(CLI_FLAGS.boolean.helpShort)) {
     return { kind: "help" };
   }
 
-  const controllers = getFlagValue(args, "--controllers");
-  const frontendActionManifestPath = getFlagValue(args, "--frontend-action-manifest");
-  const frontendActionManifestCheck = args.includes("--frontend-action-manifest-check");
-  const manifestBundlePath = getFlagValue(args, "--manifest-bundle");
-  const outDir = getFlagValue(args, "--out");
-  const check = args.includes("--check");
+  const controllers = getFlagValue(args, CLI_FLAGS.value.controllers);
+  const frontendActionManifestPath = getFlagValue(args, CLI_FLAGS.value.frontendActionManifest);
+  const frontendActionManifestCheck = args.includes(CLI_FLAGS.boolean.frontendActionManifestCheck);
+  const manifestBundlePath = getFlagValue(args, CLI_FLAGS.value.manifestBundle);
+  const outDir = getFlagValue(args, CLI_FLAGS.value.out);
+  const check = args.includes(CLI_FLAGS.boolean.check);
   const strictProblems = parseStrictProblems(args);
   const strictSchemas = parseStrictSchemas(args);
   const problemRuntime = parseProblemRuntime(args);
@@ -136,10 +145,10 @@ export function parseArgs(args: readonly string[]): CliParseResult {
       manifestBundlePath,
       outDir,
       problemRuntime,
-      reactQuery: args.includes("--react-query"),
+      reactQuery: args.includes(CLI_FLAGS.boolean.reactQuery),
       strictProblems,
       strictSchemas,
-      failOnDiagnostics: args.includes("--fail-on-diagnostics"),
+      failOnDiagnostics: args.includes(CLI_FLAGS.boolean.failOnDiagnostics),
       check,
     },
   };
@@ -147,15 +156,15 @@ export function parseArgs(args: readonly string[]): CliParseResult {
 
 function parseStrictProblems(args: readonly string[]): boolean | null {
   return parseContractGraphStrictModeFlag(args, {
-    strict: "--strict-problems",
-    compatibility: "--compatibility-problems",
+    strict: CLI_FLAGS.boolean.strictProblems,
+    compatibility: CLI_FLAGS.boolean.compatibilityProblems,
   });
 }
 
 function parseStrictSchemas(args: readonly string[]): boolean | null {
   return parseContractGraphStrictModeFlag(args, {
-    strict: "--strict-schemas",
-    compatibility: "--compatibility-schemas",
+    strict: CLI_FLAGS.boolean.strictSchemas,
+    compatibility: CLI_FLAGS.boolean.compatibilitySchemas,
   });
 }
 
@@ -166,9 +175,63 @@ function getFlagValue(args: readonly string[], flag: string): string | null {
   return value && !value.startsWith("--") ? value : null;
 }
 
+const CLI_FLAGS = {
+  value: {
+    controllers: "--controllers",
+    frontendActionManifest: "--frontend-action-manifest",
+    manifestBundle: "--manifest-bundle",
+    out: "--out",
+    problemRuntime: "--problem-runtime",
+  },
+  boolean: {
+    check: "--check",
+    compatibilityProblems: "--compatibility-problems",
+    compatibilitySchemas: "--compatibility-schemas",
+    failOnDiagnostics: "--fail-on-diagnostics",
+    frontendActionManifestCheck: "--frontend-action-manifest-check",
+    help: "--help",
+    helpShort: "-h",
+    reactQuery: "--react-query",
+    strictProblems: "--strict-problems",
+    strictSchemas: "--strict-schemas",
+  },
+} as const;
+
+const VALUE_FLAGS: ReadonlySet<string> = new Set(Object.values(CLI_FLAGS.value));
+const BOOLEAN_FLAGS: ReadonlySet<string> = new Set(Object.values(CLI_FLAGS.boolean));
+
+function findUnsupportedArgument(args: readonly string[]): string | null {
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+
+    if (argument === undefined) {
+      break;
+    }
+
+    if (VALUE_FLAGS.has(argument)) {
+      const value = args[index + 1];
+
+      if (value && !value.startsWith("--")) {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (BOOLEAN_FLAGS.has(argument)) {
+      continue;
+    }
+
+    return argument.startsWith("-")
+      ? `[CROCO_CLI_UNKNOWN_OPTION] Unknown option "${argument}".`
+      : `[CROCO_CLI_UNEXPECTED_POSITIONAL] Unexpected positional argument "${argument}".`;
+  }
+
+  return null;
+}
+
 function parseProblemRuntime(args: readonly string[]): GenerateClientProblemRuntime | null {
-  const hasFlag = args.includes("--problem-runtime");
-  const value = getFlagValue(args, "--problem-runtime");
+  const hasFlag = args.includes(CLI_FLAGS.value.problemRuntime);
+  const value = getFlagValue(args, CLI_FLAGS.value.problemRuntime);
 
   if (!value) {
     return hasFlag ? null : "inline";

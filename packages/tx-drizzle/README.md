@@ -131,6 +131,15 @@ const adapter = createRlsTxAdapter(db, tenantProvider, {
 
 런타임 어댑터는 `set_config(name, value, true)`를 파라미터화하여 현재 트랜잭션 범위에만 테넌트 값을 설정합니다.
 
+`debug: true`는 RLS 설정 직전에 진단 로그를 기록합니다. `logger`를 직접 주입할 수 있으며, 생략하면 프레임워크 컨테이너에서 `Logger`를 해석합니다. 디버그가 요청된 상태에서 로거를 해석할 수 없거나 로그 기록이 실패하면 `RlsDebugLoggingProblem`으로 명시적으로 실패합니다. `debug`가 꺼져 있으면 로거가 없어도 트랜잭션 동작은 바뀌지 않습니다.
+
+```ts
+const adapter = createRlsTxAdapter(db, tenantProvider, {
+  debug: true,
+  logger,
+});
+```
+
 ## Dialect 지원
 
 이 패키지는 dialect-agnostic으로 설계되어 Drizzle이 지원하는 모든 데이터베이스에서 동작합니다:

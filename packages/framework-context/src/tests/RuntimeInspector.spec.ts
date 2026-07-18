@@ -78,6 +78,52 @@ describe("RuntimeInspector", () => {
     expect(timeline.map((event) => event.kind)).toEqual(["request.start", "handler.end"]);
   });
 
+  it("retains the configured maximum number of requests", () => {
+    const inspector = new RuntimeInspector({ maxRequests: 2 });
+
+    inspector.startRequest({ requestId: "req-1" });
+    inspector.startRequest({ requestId: "req-2" });
+    inspector.startRequest({ requestId: "req-3" });
+
+    const snapshot = inspector.snapshot();
+
+    expect(snapshot.requestCount).toBe(2);
+    expect(snapshot.activeRequestCount).toBe(2);
+    expect(snapshot.requests.map((request) => request.requestId)).toEqual(["req-3", "req-2"]);
+  });
+
+  it("retains 50 requests when maxRequests is omitted", () => {
+    const inspector = new RuntimeInspector();
+
+    for (let requestNumber = 1; requestNumber <= 51; requestNumber += 1) {
+      inspector.startRequest({ requestId: `req-${requestNumber}` });
+    }
+
+    const snapshot = inspector.snapshot();
+
+    expect(snapshot.requestCount).toBe(50);
+    expect(snapshot.activeRequestCount).toBe(50);
+    expect(snapshot.requests[0].requestId).toBe("req-51");
+    expect(snapshot.requests[49].requestId).toBe("req-2");
+    expect(snapshot.requests.some((request) => request.requestId === "req-1")).toBe(false);
+  });
+
+  it("truncates strings at the configured maximum length", () => {
+    const inspector = new RuntimeInspector({ maxStringLength: 3 });
+
+    inspector.startRequest({ requestId: "req-1", runtime: { note: "abcdef" } });
+
+    expect(inspector.snapshot().requests[0].runtime?.note).toBe("abc...[Truncated]");
+  });
+
+  it("truncates strings at 500 characters when maxStringLength is omitted", () => {
+    const inspector = new RuntimeInspector();
+
+    inspector.startRequest({ requestId: "req-1", runtime: { note: "x".repeat(501) } });
+
+    expect(inspector.snapshot().requests[0].runtime?.note).toBe(`${"x".repeat(500)}...[Truncated]`);
+  });
+
   it("keeps duplicate request ids isolated when an inspection id is active", async () => {
     const inspector = new RuntimeInspector();
     const first = inspector.startRequest({ requestId: "duplicate-req" });

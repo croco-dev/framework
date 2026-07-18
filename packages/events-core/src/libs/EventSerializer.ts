@@ -52,16 +52,31 @@ export class DefaultEventSerializer implements EventSerializer {
   }
 
   deserialize<T extends DomainEvent>(data: SerializedEvent): T {
-    const EventClass = this.registry.get(data.eventType);
+    const eventType = this.requireNonEmptyIdentifier(data.eventType, "eventType", "<unknown>");
+    const eventId = this.requireNonEmptyIdentifier(data.eventId, "eventId", eventType);
+
+    const EventClass = this.registry.get(eventType);
 
     if (!EventClass) {
-      throw new UnknownEventTypeProblem(data.eventType);
+      throw new UnknownEventTypeProblem(eventType);
     }
 
     const event = this.reconstructEvent(EventClass, data);
-    restoreSerializedEventIdentity(event, data.eventId, data.occurredAt);
+    restoreSerializedEventIdentity(event, eventId, data.occurredAt);
 
     return event as T;
+  }
+
+  private requireNonEmptyIdentifier(
+    value: unknown,
+    fieldName: "eventType" | "eventId",
+    eventName: string,
+  ): string {
+    if (typeof value !== "string" || value.trim().length === 0) {
+      throw new EventDeserializationError(eventName, `${fieldName} must be a non-empty string`);
+    }
+
+    return value;
   }
 
   private extractAggregateId(event: DomainEvent): string | undefined {

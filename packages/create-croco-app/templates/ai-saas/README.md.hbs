@@ -87,7 +87,7 @@ pnpm demo:smoke
 `pnpm demo:smoke` runs the base SaaS demo, operational smoke checks, and the AI SaaS smoke flow. `pnpm ai:smoke` runs only the AI portion.
 
 Intentional API contract changes should update and commit `contract-graph.snapshot.json` with `pnpm contract:snapshot`. CI should run `pnpm contract:verify` or `pnpm ci:contracts`; it does not rewrite the snapshot before diffing, writes `contract-graph.coverage.json`, regenerates and checks `.croco/manifest`, then regenerates `openapi.json` and `libs/shared/provider-rpc/src` from the accepted controller contract. The manifest bundle is referenced by generated OpenAPI and RPC outputs. Commit `contract-graph.coverage.json` only when audit artifacts need it. Commit `openapi.json` only when external consumers or deployment artifacts need it; the provider-rpc client is generated from the server contract and is typechecked by the verification gate.
-`pnpm di:verify` runs `di:graph`, `di:check`, and `di:assert` to generate the DI graph, validate it with Croco diagnostics, and assert required manifest fields before refreshing/checking the project-map bundle and running `croco doctor --json`.
+Run `pnpm di:graph` when intentionally regenerating the DI graph. `pnpm di:verify` validates the existing DI graph and Project Map artifacts without rewriting them, asserts required manifest fields, and runs `croco doctor --json`.
 
 Generated OpenAPI/RPC commands run strict ContractGraph schema checks by default and pass `--fail-on-diagnostics`, so strict Problem contract diagnostics block generated artifacts. `--compatibility-schemas` and `--compatibility-problems` are migration-only opt-outs for legacy routes, not generated app CI settings.
 

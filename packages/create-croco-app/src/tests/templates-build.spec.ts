@@ -175,7 +175,7 @@ function checkSpaBeSplitStructure() {
       "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
       doctor: "croco doctor --json",
       "di:verify": expect.stringMatching(
-        /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+        /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
       ),
       "contract:openapi": expect.stringMatching(
         /^pnpm contract:check &&[\s\S]*croco-openapi-spec[\s\S]*--strict-schemas[\s\S]*--manifest-bundle \.croco\/manifest$/,
@@ -324,7 +324,7 @@ function checkAdminConsoleStructure() {
       "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
       doctor: "croco doctor --json",
       "di:verify": expect.stringMatching(
-        /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+        /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
       ),
       "contract:client": expect.stringMatching(
         /admin\.ts,users\.ts,problems\.ts[\s\S]*--strict-schemas[\s\S]*--problem-runtime frontend-problems --manifest-bundle \.croco\/manifest/,
@@ -571,7 +571,7 @@ function checkSaasStructure() {
       "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
       doctor: "NODE_PATH=./node_modules croco doctor --json",
       "di:verify": expect.stringMatching(
-        /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+        /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
       ),
       "contract:client": expect.stringMatching(
         /^NODE_PATH=\.\/node_modules node \.\/node_modules\/@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--strict-schemas[\s\S]*--out[\s\S]*--manifest-bundle \.croco\/manifest$/,
@@ -869,7 +869,7 @@ function checkAiSaasStructure() {
       "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
       doctor: "NODE_PATH=./node_modules croco doctor --json",
       "di:verify": expect.stringMatching(
-        /^pnpm di:graph && pnpm di:check && pnpm di:assert && pnpm project-map:write && pnpm project-map:check && pnpm doctor$/,
+        /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
       ),
       "contract:openapi": expect.stringMatching(
         /--strict-schemas[\s\S]*AI SaaS API[\s\S]*--manifest-bundle \.croco\/manifest$/,

@@ -89,7 +89,7 @@ vi.mock("../libs/loadRoutes", () => {
   };
 });
 
-import { runCli } from "../libs/cli";
+import { parseArgs, runCli } from "../libs/cli";
 
 describe("rpc-codegen CLI", () => {
   let stdout: string[];
@@ -208,6 +208,50 @@ describe("rpc-codegen CLI", () => {
       manifestCheckResult: generationModuleImports.manifestCheckResult,
       frontendActionManifest: generationModuleImports.frontendActionManifest,
       graph: generationModuleImports.graph,
+    });
+  });
+
+  it.each([
+    [
+      "a close output flag misspelling",
+      ["--otu"],
+      '[CROCO_CLI_UNKNOWN_OPTION] Unknown option "--otu".',
+    ],
+    [
+      "a close check flag misspelling",
+      ["--chek"],
+      '[CROCO_CLI_UNKNOWN_OPTION] Unknown option "--chek".',
+    ],
+    [
+      "an unexpected positional value",
+      ["client"],
+      '[CROCO_CLI_UNEXPECTED_POSITIONAL] Unexpected positional argument "client".',
+    ],
+    [
+      "an unknown option combined with help",
+      ["--help", "--otu"],
+      '[CROCO_CLI_UNKNOWN_OPTION] Unknown option "--otu".',
+    ],
+  ])("rejects %s before loading generation modules", async (_name, arguments_, diagnostic) => {
+    const exitCode = await runCli(
+      ["--controllers", "src/controllers/**/*.ts", "--out", "generated", ...arguments_],
+      {
+        stdout: (message) => stdout.push(message),
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout[0]).toBe(diagnostic);
+    expect(generationModuleImports.loadContractGraph).toBe(0);
+    expect(generationModuleImports.generateClientFiles).toBe(0);
+  });
+
+  it("preserves single-dash-prefixed option values", () => {
+    expect(parseArgs(["--controllers", "src/**/*.ts", "--out", "-generated"])).toMatchObject({
+      kind: "run",
+      options: {
+        outDir: "-generated",
+      },
     });
   });
 

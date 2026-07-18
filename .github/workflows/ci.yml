@@ -45,7 +45,7 @@ jobs:
       - name: Changeset required check
         id: changeset_required
         if: github.event_name == 'pull_request'
-        run: pnpm changeset-required:check -- --base origin/${{ github.base_ref }} --head HEAD
+        run: pnpm tracked-files:guard --recovery 'pnpm changeset or revert the publishable change' -- pnpm changeset-required:check -- --base origin/${{ github.base_ref }} --head HEAD
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -97,7 +97,8 @@ jobs:
           mkdir -p ci-reports/security
           start=$(date +%s)
           set +e
-          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.23.0 detect --source /repo --redact --no-banner --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
+          # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e detect --source /repo --redact --no-banner --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
           exit_code=$?
           set -e
           end=$(date +%s)
@@ -161,13 +162,13 @@ jobs:
           if-no-files-found: warn
 
       - name: Security allowlist metadata check
-        run: pnpm security-allowlists:check
+        run: pnpm tracked-files:guard --recovery 'Fix the reported security allowlist metadata' -- pnpm security-allowlists:check
 
       - name: Architecture circular dependency check
-        run: pnpm architecture:check:circular:allowlist
+        run: pnpm tracked-files:guard --recovery 'Update code or intentionally update the circular dependency allowlist' -- pnpm architecture:check:circular:allowlist
 
       - name: First-Success Contract Verify
-        run: pnpm first-success:verify
+        run: pnpm tracked-files:guard --recovery 'Follow the reported scaffold or documentation recovery command' -- pnpm first-success:verify
 
       - name: Quick-start Lambda smoke
         run: pnpm quick-start-lambda:smoke
@@ -175,7 +176,7 @@ jobs:
       - name: Lint & Format Check
         id: lint_format_check
         run: |
-          pnpm check
+          pnpm audit:read-only
           echo "✓ Lint gate: 0 errors verified"
 
       - name: Build
@@ -242,7 +243,7 @@ jobs:
 
       - name: TypeScript check
         id: typecheck
-        run: pnpm turbo run typecheck --summarize --continue=always
+        run: pnpm tracked-files:guard --recovery 'Fix the reported TypeScript diagnostics' -- pnpm turbo run typecheck --summarize --continue=always
 
       - name: Test
         id: test
@@ -254,7 +255,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          pnpm provider-certification:check
+          pnpm tracked-files:guard --recovery 'Fix the reported provider certification metadata' -- pnpm provider-certification:check
           status=$?
           set -e
           if [ -f ci-reports/package-quality/provider-certification.md ]; then
@@ -274,7 +275,7 @@ jobs:
             production_ready_args+=(--require-task-summaries)
           fi
           set +e
-          pnpm production-ready:check -- "${production_ready_args[@]}"
+          pnpm tracked-files:guard --recovery 'Fix the reported production-ready package violations' -- pnpm production-ready:check -- "${production_ready_args[@]}"
           status=$?
           set -e
           if [ -f ci-reports/package-quality/production-ready.md ]; then
@@ -293,7 +294,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          pnpm spine-promotion:check -- --ci-run ci-reports/package-quality/spine-promotion-run.json
+          pnpm tracked-files:guard --recovery 'Fix the reported beta spine promotion violations' -- pnpm spine-promotion:check -- --ci-run ci-reports/package-quality/spine-promotion-run.json
           status=$?
           set -e
           if [ -f ci-reports/package-quality/spine-promotion.md ]; then
@@ -509,16 +510,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build docs and check for drift
-        run: |
-          pnpm turbo run docs:build --force
-          mapfile -t generated_api_docs < <(git diff --name-only -- packages/docs/src/content/docs/api/)
-          if [ "${#generated_api_docs[@]}" -gt 0 ]; then
-            pnpm exec oxfmt --write "${generated_api_docs[@]}"
-          fi
-          if ! git diff --exit-code -- packages/docs/src/content/docs/api/; then
-            echo "::error::API docs are out of sync. Run 'pnpm docs:build', format the changed API docs with oxfmt, then commit the changes."
-            exit 1
-          fi
+        run: pnpm docs:api:check
 
   docs-build:
     needs: changes

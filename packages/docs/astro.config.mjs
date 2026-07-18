@@ -2,8 +2,31 @@
 
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import starlightTypeDoc, { typeDocSidebarGroup } from "starlight-typedoc";
 import { sanitizeTypeDocIndex } from "./scripts/sanitize-typedoc-index.mjs";
+
+const isolatedBuildRoot = process.env.CROCO_DOCS_BUILD_ROOT;
+const isolatedDirectories = isolatedBuildRoot
+  ? {
+      srcDir: join(isolatedBuildRoot, "src"),
+      outDir: join(isolatedBuildRoot, "dist"),
+      cacheDir: join(isolatedBuildRoot, "cache"),
+      vite: {
+        resolve: {
+          alias: {
+            "@astrojs/starlight/loaders": fileURLToPath(
+              import.meta.resolve("@astrojs/starlight/loaders"),
+            ),
+            "@astrojs/starlight/schema": fileURLToPath(
+              import.meta.resolve("@astrojs/starlight/schema"),
+            ),
+          },
+        },
+      },
+    }
+  : {};
 
 function sanitizeGeneratedTypeDocIndex() {
   return {
@@ -18,6 +41,7 @@ function sanitizeGeneratedTypeDocIndex() {
 
 // https://astro.build/config
 export default defineConfig({
+  ...isolatedDirectories,
   integrations: [
     starlight({
       title: "Croco Framework Documentation",
@@ -163,27 +187,29 @@ export default defineConfig({
         }),
         sanitizeGeneratedTypeDocIndex(),
       ],
-      sidebar: [
-        {
-          label: "Guides",
-          items: [
-            { label: "Getting Started", slug: "guides/getting-started" },
-            { label: "Architecture", slug: "guides/architecture" },
-            { label: "Schema Source Of Truth", slug: "guides/schema-source-of-truth" },
-            { label: "Runtime Contract", slug: "guides/runtime-contract" },
-            { label: "Reliability Path RFC", slug: "guides/reliability-path-rfc" },
-            { label: "Failure Semantics", slug: "guides/failure-semantics" },
-            { label: "Deployment Recipes", slug: "guides/deployment-recipes" },
-            { label: "Events Core", slug: "guides/events-core" },
-            { label: "Retry Core", slug: "guides/retry-core" },
+      sidebar: isolatedBuildRoot
+        ? [typeDocSidebarGroup]
+        : [
+            {
+              label: "Guides",
+              items: [
+                { label: "Getting Started", slug: "guides/getting-started" },
+                { label: "Architecture", slug: "guides/architecture" },
+                { label: "Schema Source Of Truth", slug: "guides/schema-source-of-truth" },
+                { label: "Runtime Contract", slug: "guides/runtime-contract" },
+                { label: "Reliability Path RFC", slug: "guides/reliability-path-rfc" },
+                { label: "Failure Semantics", slug: "guides/failure-semantics" },
+                { label: "Deployment Recipes", slug: "guides/deployment-recipes" },
+                { label: "Events Core", slug: "guides/events-core" },
+                { label: "Retry Core", slug: "guides/retry-core" },
+              ],
+            },
+            {
+              label: "Reference",
+              items: [{ autogenerate: { directory: "reference" } }],
+            },
+            typeDocSidebarGroup,
           ],
-        },
-        {
-          label: "Reference",
-          items: [{ autogenerate: { directory: "reference" } }],
-        },
-        typeDocSidebarGroup,
-      ],
     }),
   ],
 });

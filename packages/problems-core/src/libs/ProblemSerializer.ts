@@ -84,39 +84,45 @@ export const ProblemSerializer = {
     }
 
     const obj = json as Record<string, unknown>;
+    const type = obj["type"];
+    const title = obj["title"];
+    const status = obj["status"];
+    const code = obj["code"];
 
-    if (typeof obj.type !== "string") {
+    if (typeof type !== "string" || type.length === 0) {
       throw new ProblemDetailsParseProblem('Missing or invalid "type" field');
     }
-    if (typeof obj.title !== "string") {
+    if (typeof title !== "string" || title.length === 0) {
       throw new ProblemDetailsParseProblem('Missing or invalid "title" field');
     }
-    if (typeof obj.status !== "number") {
+    if (typeof status !== "number" || !Number.isInteger(status) || status < 100 || status > 599) {
       throw new ProblemDetailsParseProblem('Missing or invalid "status" field');
     }
-    if (typeof obj.code !== "string") {
+    if (typeof code !== "string" || code.length === 0) {
       throw new ProblemDetailsParseProblem('Missing or invalid "code" field');
     }
 
     const result: ProblemDetails = {
-      type: obj.type,
-      title: obj.title,
-      status: obj.status,
-      code: obj.code,
+      type,
+      title,
+      status,
+      code,
     };
 
-    if (obj.detail !== undefined) {
-      if (typeof obj.detail !== "string") {
+    const detail = obj["detail"];
+    if (detail !== undefined) {
+      if (typeof detail !== "string") {
         throw new ProblemDetailsParseProblem('Invalid "detail" field');
       }
-      result.detail = obj.detail;
+      result.detail = detail;
     }
 
-    if (obj.instance !== undefined) {
-      if (typeof obj.instance !== "string") {
+    const instance = obj["instance"];
+    if (instance !== undefined) {
+      if (typeof instance !== "string") {
         throw new ProblemDetailsParseProblem('Invalid "instance" field');
       }
-      result.instance = obj.instance;
+      result.instance = instance;
     }
 
     const knownFields = new Set(["type", "title", "status", "code", "detail", "instance"]);

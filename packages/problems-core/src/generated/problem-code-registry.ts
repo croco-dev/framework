@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 437,
+  problemCount: 438,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -12999,6 +12999,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "tx-drizzle/rls-debug-logging-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tx-drizzle-rls-debug-logging-failed",
+      recovery: {
+        cause: "Requested RLS debug logging could not initialize or write its diagnostic event.",
+        userAction: "Ask the operator to restore the configured logger before retrying.",
+        operatorAction:
+          "Provide an RlsLogger or register the framework Logger, then verify its info() output path before retrying the transaction.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
+          line: 57,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "tx-drizzle/rls-execute-unsupported",
       category: "InternalServerError",
       status: 500,
@@ -13056,7 +13087,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts",
-          line: 41,
+          line: 76,
           column: 3,
           kind: "problem-class",
         },
