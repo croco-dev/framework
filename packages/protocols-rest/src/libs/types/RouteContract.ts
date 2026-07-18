@@ -1,4 +1,4 @@
-import { type Problem, type ProblemCategory, ProblemCategoryMapper } from "@croco/problems-core";
+import { Problem, ProblemCategory, ProblemCategoryMapper } from "@croco/problems-core";
 import type { z } from "zod";
 import { HttpMethod } from "../constants";
 import { attachRouteContractProblems } from "../internal/routeContractProblemMetadata";
@@ -215,7 +215,7 @@ export function isRouteContractSpec(value: unknown): value is AnyRouteContractSp
     isOptionalZodObject(candidate.query) &&
     isOptionalZodType(candidate.body) &&
     isOptionalZodType(candidate.response) &&
-    (candidate.problems === undefined || Array.isArray(candidate.problems))
+    isOptionalRouteContractProblems(candidate.problems)
   );
 }
 
@@ -408,6 +408,72 @@ function isOptionalZodType(value: unknown): value is z.ZodType | undefined {
   return value === undefined || isZodType(value);
 }
 
+function isOptionalRouteContractProblems(
+  value: unknown,
+): value is readonly RouteContractProblem[] | undefined {
+  if (value === undefined) {
+    return true;
+  }
+
+  try {
+    if (!Array.isArray(value)) {
+      return false;
+    }
+
+    const problemCount = value.length;
+    for (let index = 0; index < problemCount; index += 1) {
+      if (!isRouteContractProblem(value[index])) {
+        return false;
+      }
+    }
+  } catch {
+    return false;
+  }
+
+  return true;
+}
+
+function isRouteContractProblem(value: unknown): value is RouteContractProblem {
+  return isProblemConstructor(value) || isRouteProblemDeclaration(value);
+}
+
+function isProblemConstructor(value: unknown): value is ProblemConstructor {
+  return (
+    typeof value === "function" &&
+    typeof value.name === "string" &&
+    value.prototype instanceof Problem
+  );
+}
+
+function isRouteProblemDeclaration(value: unknown): value is RouteProblemDeclaration {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as {
+    readonly category?: unknown;
+    readonly code?: unknown;
+    readonly description?: unknown;
+    readonly problem?: unknown;
+    readonly status?: unknown;
+    readonly type?: unknown;
+  };
+
+  return (
+    isProblemConstructor(candidate.problem) &&
+    typeof candidate.code === "string" &&
+    candidate.code.trim().length > 0 &&
+    isProblemCategory(candidate.category) &&
+    candidate.status === ProblemCategoryMapper.toHttpStatus(candidate.category) &&
+    isOptionalString(candidate.description) &&
+    isOptionalString(candidate.type)
+  );
+}
+
+function isProblemCategory(value: unknown): value is ProblemCategory {
+  return typeof value === "string" && PROBLEM_CATEGORIES.has(value);
+}
+
 function isZodObject(value: unknown): value is AnyZodObject {
   return isZodType(value) && "shape" in value;
 }
@@ -423,6 +489,7 @@ function isZodType(value: unknown): value is z.ZodType {
 }
 
 const HTTP_METHODS = new Set<string>(Object.values(HttpMethod));
+const PROBLEM_CATEGORIES = new Set<string>(Object.values(ProblemCategory));
 
 type RouteProblemResponses<TProblems extends readonly RouteProblemDeclaration[]> = {
   readonly [Index in keyof TProblems]: RouteProblemResponseFor<TProblems[Index]>;
