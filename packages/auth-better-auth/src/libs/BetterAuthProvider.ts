@@ -1,6 +1,8 @@
 import type { AuthProvider, AuthUser } from "@croco/auth-core";
 import { Component } from "@croco/framework-context";
-import type { BetterAuthFactory } from "./BetterAuthFactory";
+// Runtime value required for constructor metadata.
+// oxlint-disable-next-line typescript/consistent-type-imports
+import { BetterAuthFactory } from "./BetterAuthFactory";
 import { BetterAuthAuthenticationProblem } from "./problems/BetterAuthAuthenticationProblem";
 import { BetterAuthInvalidSessionProblem } from "./problems/BetterAuthInvalidSessionProblem";
 

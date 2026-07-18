@@ -1,7 +1,9 @@
+// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
+/* oxlint-disable typescript/consistent-type-imports */
 import { Component } from "@croco/framework-context";
 import type { MembershipRole } from "@croco/membership-core";
-import type { InvitationManager } from "./InvitationManager";
-import type { InvitationStore } from "./InvitationStore";
+import { InvitationManager } from "./InvitationManager";
+import { InvitationStore } from "./InvitationStore";
 import { BatchSizeExceededProblem } from "./problems/BatchInviteProblems";
 import {
   DuplicateInvitationProblem,
@@ -34,7 +36,7 @@ export class RateLimitedInvitationService {
   constructor(
     private readonly manager: InvitationManager,
     private readonly store: InvitationStore,
-    private readonly config?: RateLimitConfig,
+    private readonly config: RateLimitConfig | undefined = undefined,
   ) {}
 
   async checkRateLimit(tenantId: string): Promise<void> {

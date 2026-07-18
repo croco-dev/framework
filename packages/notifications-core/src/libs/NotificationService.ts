@@ -1,5 +1,7 @@
+// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
+/* oxlint-disable typescript/consistent-type-imports */
 import { Component } from "@croco/framework-context";
-import type { TaskRunner } from "@croco/tasks-core";
+import { TaskRunner } from "@croco/tasks-core";
 import {
   createNotificationDispatchRequest,
   getNotificationProviderCapabilities,
@@ -12,7 +14,7 @@ import {
   type NotificationPreferenceDecision,
   type NotificationPreferenceRule,
 } from "./NotificationPreferences";
-import type { NotificationProviderRegistry } from "./NotificationProviderRegistry";
+import { NotificationProviderRegistry } from "./NotificationProviderRegistry";
 import {
   NotificationTemplateRegistry,
   type NotificationTemplate,

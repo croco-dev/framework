@@ -5,7 +5,9 @@ import {
   type MembershipRole,
   MembershipStore,
 } from "@croco/membership-core";
-import type { TxManager } from "@croco/tx-core";
+// Runtime value required for constructor metadata.
+// oxlint-disable-next-line typescript/consistent-type-imports
+import { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
 import { and, count, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";

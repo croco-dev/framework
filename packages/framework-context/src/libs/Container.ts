@@ -290,9 +290,19 @@ export class Container {
     for (const node of nodes) {
       const paramTypes =
         (Reflect.getMetadata("design:paramtypes", node) as Constructor[] | undefined) ?? [];
-      const dependencies = paramTypes.filter(
-        (dep): dep is Constructor => typeof dep === "function" && nodeSet.has(dep),
-      );
+      const dependencies: Constructor[] = [];
+
+      Container.getConstructorParameterIndices(node, paramTypes).forEach((parameterIndex) => {
+        const injectedToken = getParameterInjectionToken(node, parameterIndex);
+        if (parameterIndex >= node.length && injectedToken === undefined) {
+          return;
+        }
+
+        const dependency = injectedToken ?? paramTypes[parameterIndex];
+        if (typeof dependency === "function" && nodeSet.has(dependency as Constructor)) {
+          dependencies.push(dependency as Constructor);
+        }
+      });
       graph.set(node, dependencies);
     }
 
@@ -863,20 +873,34 @@ export class Container {
     const paramTypes =
       (Reflect.getMetadata("design:paramtypes", token) as Constructor[] | undefined) ?? [];
     const handlerContainer = Container.createHandlerContainer(trace, stack);
+    const handlers = TypeDIContainer.handlers.filter(
+      (candidate) =>
+        (candidate.object === token || candidate.object === Object.getPrototypeOf(token)) &&
+        typeof candidate.index === "number",
+    );
 
-    return paramTypes.map((paramType: Constructor, index: number) => {
-      Container.assertScopeCompatibility(paramType, stack, trace);
-
-      const handler = TypeDIContainer.handlers.find(
-        (candidate) =>
-          (candidate.object === token || candidate.object === Object.getPrototypeOf(token)) &&
-          candidate.index === index,
-      );
+    return Container.getConstructorParameterIndices(token, paramTypes).map((index) => {
+      const handler = handlers.find((candidate) => candidate.index === index);
 
       if (handler) {
         return handler.value(handlerContainer);
       }
 
+      if (index >= token.length) {
+        return undefined;
+      }
+
+      const paramType = paramTypes[index];
+      if (paramType === undefined) {
+        const failureTrace = Container.withTraceStatus(trace, "missing");
+        throw new ContainerResolutionProblem(
+          `DI resolution failed for ${token.name}: constructor parameter ${index} has no runtime token. Add an explicit @Inject(...) token or emit design:paramtypes metadata.`,
+          failureTrace,
+          "missing-provider",
+        );
+      }
+
+      Container.assertScopeCompatibility(paramType, stack, trace);
       return Container.resolveWithTrace(paramType, trace, stack);
     });
   }
@@ -960,14 +984,43 @@ export class Container {
 
     const paramTypes =
       (Reflect.getMetadata("design:paramtypes", token) as Constructor[] | undefined) ?? [];
-    paramTypes.forEach((paramType, parameterIndex) => {
+    Container.getConstructorParameterIndices(token, paramTypes).forEach((parameterIndex) => {
       const injectedToken = getParameterInjectionToken(token, parameterIndex);
-      Container.collectResolutionSteps(injectedToken ?? paramType, nextPath, steps, {
+      if (!injectedToken && parameterIndex >= token.length) {
+        return;
+      }
+
+      const dependency = injectedToken ?? paramTypes[parameterIndex];
+      if (dependency === undefined) {
+        return;
+      }
+
+      Container.collectResolutionSteps(dependency, nextPath, steps, {
         dependencyOf: step.token,
         dependencyOfId: step.tokenId,
         parameterIndex,
       });
     });
+  }
+
+  private static getConstructorParameterIndices(
+    token: Constructor,
+    paramTypes: readonly Constructor[],
+  ): number[] {
+    const parameterCount = TypeDIContainer.handlers.reduce(
+      (count, handler) => {
+        const belongsToToken =
+          handler.object === token || handler.object === Object.getPrototypeOf(token);
+        if (!belongsToToken || typeof handler.index !== "number") {
+          return count;
+        }
+
+        return Math.max(count, handler.index + 1);
+      },
+      Math.max(paramTypes.length, token.length),
+    );
+
+    return Array.from({ length: parameterCount }, (_, index) => index);
   }
 
   private static createResolutionStep<T>(

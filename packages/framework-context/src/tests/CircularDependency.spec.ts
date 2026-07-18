@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import "reflect-metadata";
-import { Container, MetadataStorage } from "../index";
+import { Container, Inject, MetadataStorage } from "../index";
 import { CircularDependencyProblem } from "../libs/problems/CircularDependencyProblem";
 
 describe("Container.validate", () => {
@@ -78,6 +78,26 @@ describe("Container.validate", () => {
     expect(() => {
       Container.validate();
     }).toThrowError(/Circular dependency detected: SelfReferencing → SelfReferencing/);
+  });
+
+  it("should detect explicit injected cycles beyond constructor arity", () => {
+    class ServiceA {
+      constructor(_dependency: unknown = undefined) {}
+    }
+
+    class ServiceB {
+      constructor(_dependency: unknown = undefined) {}
+    }
+
+    Inject(() => ServiceB)(ServiceA, undefined, 0);
+    Inject(() => ServiceA)(ServiceB, undefined, 0);
+
+    Container.register(ServiceA, "transient");
+    Container.register(ServiceB, "transient");
+
+    expect(() => {
+      Container.validate();
+    }).toThrowError(/Circular dependency detected: ServiceA → ServiceB → ServiceA/);
   });
 
   it("should detect a cycle in a branched dependency graph", () => {

@@ -1,4 +1,10 @@
-import { Component, Context as FrameworkContext, type ILogger } from "@croco/framework-context";
+import {
+  Component,
+  Context as FrameworkContext,
+  type ILogger,
+  Inject,
+  LOGGER_TOKEN,
+} from "@croco/framework-context";
 import { Problem, type ProblemDetails } from "@croco/problems-core";
 import { HTTP_CONTEXT_KEYS } from "./contextKeys";
 import {
@@ -133,3 +139,6 @@ export class ErrorHandler {
     }
   }
 }
+
+// Source-mode consumers can execute this package without a parameter-decorator transform.
+(Inject(LOGGER_TOKEN) as ParameterDecorator)(ErrorHandler, undefined, 0);

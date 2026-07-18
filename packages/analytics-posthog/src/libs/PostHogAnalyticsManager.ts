@@ -151,7 +151,7 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
   }
 }
 
-// tsup currently skips decorator metadata emission without @swc/core, so publish the DI edge explicitly.
+// Source-mode test execution bypasses tsup/SWC, so preserve the DI edge explicitly there.
 Reflect.defineMetadata("design:paramtypes", [PostHogClient], PostHogAnalyticsManager);
 
 type SafePostHogErrorLogMetadata = {
