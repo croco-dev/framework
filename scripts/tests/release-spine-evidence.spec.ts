@@ -98,6 +98,7 @@ describe("release-spine-evidence.mts", () => {
 
   it("writes checkpointed markdown and JSON reports and copies required artifacts", async () => {
     const repo = createTempRepo();
+    const fakeTime = createFakeClock();
     const outputDir = join(repo, "ci-reports", "release");
     const sourceArtifact = join(repo, "ci-reports", "source", "provider.md");
     const checkpoints: ReleaseSpineEvidenceReport[] = [];
@@ -122,6 +123,7 @@ describe("release-spine-evidence.mts", () => {
       rootDir: repo,
       outputDir,
       totalTimeoutMs: 1_000,
+      clock: fakeTime.clock,
       commands,
       runner,
       onCheckpoint: (checkpoint) => checkpoints.push(checkpoint),
