@@ -1,5 +1,9 @@
 import type { DiagnosticsProvider, HealthStatus } from "@croco/diagnostics-core";
 import { TelemetryRuntime } from "../../runtime";
+import {
+  getTelemetrySignalSupport,
+  getUnsupportedTelemetrySignals,
+} from "../signals/TelemetrySignalSupport";
 
 export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
   readonly name = "telemetry";
@@ -8,6 +12,20 @@ export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
     const runtime = TelemetryRuntime.getInstance();
     const config = runtime.getConfig();
     const initialized = runtime.isInitialized();
+
+    if (config) {
+      const unsupportedSignals = getUnsupportedTelemetrySignals(config);
+
+      if (unsupportedSignals) {
+        return {
+          status: "unhealthy",
+          component: "telemetry",
+          message: `Unsupported telemetry signals requested: ${unsupportedSignals.join(", ")}`,
+          details: createSafeTelemetryDetails(config, initialized, "unsupported_requested"),
+          lastChecked: new Date().toISOString(),
+        };
+      }
+    }
 
     if (config?.enabled === false || config?.trace?.enabled === false) {
       const disabledTarget = config.enabled === false ? "runtime" : "tracing";
@@ -62,7 +80,7 @@ export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
 function createSafeTelemetryDetails(
   config: NonNullable<ReturnType<TelemetryRuntime["getConfig"]>>,
   initialized: boolean,
-  mode: "active" | "disabled" | "not_initialized" | "sampling_disabled",
+  mode: "active" | "disabled" | "not_initialized" | "sampling_disabled" | "unsupported_requested",
 ): Record<string, unknown> {
   const enabled = config.enabled !== false;
   return {
@@ -71,6 +89,7 @@ function createSafeTelemetryDetails(
     initialized,
     traceEnabled: enabled && config.trace?.enabled !== false,
     probability: config.trace?.probability,
+    signals: getTelemetrySignalSupport(config),
     mode,
   };
 }

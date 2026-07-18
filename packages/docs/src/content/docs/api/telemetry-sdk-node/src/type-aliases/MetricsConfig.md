@@ -9,8 +9,8 @@ title: "MetricsConfig"
 
 Configuration for telemetry metrics.
 
-Defines how metric data is collected and exported.
-Currently disabled by default in Lambda environments.
+Reserved configuration for future metric runtime providers.
+Setting enabled to true currently rejects TelemetryRuntime initialization.
 
 ## Properties
 
@@ -18,9 +18,9 @@ Currently disabled by default in Lambda environments.
 
 > `optional` **enabled?**: `boolean`
 
-Whether metrics collection is enabled. Default: false
+Requests metrics collection. Must remain false until a runtime provider is available.
 
-***
+---
 
 ### exporterHeaders?
 
@@ -28,7 +28,7 @@ Whether metrics collection is enabled. Default: false
 
 Additional HTTP headers for the exporter
 
-***
+---
 
 ### exporterUrl?
 
@@ -36,7 +36,7 @@ Additional HTTP headers for the exporter
 
 OTLP metrics exporter URL
 
-***
+---
 
 ### exportIntervalMillis?
 
@@ -44,7 +44,7 @@ OTLP metrics exporter URL
 
 Export interval in milliseconds
 
-***
+---
 
 ### exportTimeoutMillis?
 

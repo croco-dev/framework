@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 438,
+  problemCount: 439,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8422,7 +8422,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 19,
+          line: 20,
           column: 3,
           kind: "problem-class",
         },
@@ -11411,7 +11411,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 32,
+          line: 59,
           column: 3,
           kind: "problem-class",
         },
@@ -11442,7 +11442,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 7,
+          line: 8,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "TELEMETRY_SIGNAL_UNSUPPORTED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-signal-unsupported",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
+          line: 36,
           column: 3,
           kind: "problem-class",
         },
