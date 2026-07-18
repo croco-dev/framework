@@ -1,6 +1,7 @@
 import type { AppShellProps } from "@astryxdesign/core/AppShell";
 
 import { AppShell } from "@astryxdesign/core/AppShell";
+import * as React from "react";
 import type { ReactNode } from "react";
 
 export type AstryxAppShellProps = {

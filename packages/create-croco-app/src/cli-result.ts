@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory, type ProblemDetails } from "@croco/problems-core";
+import { GENERATED_NODE_ENGINE_RANGE, GENERATED_NODE_VERSION } from "./node-runtime.js";
 import type { GeneratorOptions } from "./types.js";
 
 export type CreateCrocoAppSuccessResult = {
@@ -8,6 +9,8 @@ export type CreateCrocoAppSuccessResult = {
   readonly projectName: string;
   readonly preset: GeneratorOptions["preset"];
   readonly packageManager: "pnpm";
+  readonly nodeRequirement: string;
+  readonly nodeRecovery: string;
   readonly nextSteps: readonly string[];
 };
 
@@ -47,6 +50,8 @@ export function createSuccessResult(
     projectName: options.projectName,
     preset: options.preset,
     packageManager: "pnpm",
+    nodeRequirement: GENERATED_NODE_ENGINE_RANGE,
+    nodeRecovery: `Run nvm install ${GENERATED_NODE_VERSION} && nvm use ${GENERATED_NODE_VERSION}.`,
     nextSteps: createNextStepCommands(targetDir, options),
   };
 }
@@ -67,6 +72,7 @@ export function createFailureResult(error: unknown): CreateCrocoAppFailureResult
 export function formatHumanSuccess(result: CreateCrocoAppSuccessResult): string {
   return [
     `Project created in ${result.targetDir}.`,
+    `Node.js ${result.nodeRequirement} is required for install and build. Recovery: ${result.nodeRecovery}`,
     "Next steps:",
     ...result.nextSteps.map((command) => `  ${command}`),
   ].join("\n");

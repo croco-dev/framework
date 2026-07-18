@@ -19,11 +19,14 @@ describe("CLI result contract", () => {
       projectName: "my-app",
       preset: "blank",
       packageManager: "pnpm",
+      nodeRequirement: ">=22",
+      nodeRecovery: "Run nvm install 22 && nvm use 22.",
       nextSteps: ["cd /tmp/my-app", "pnpm install", "pnpm dev"],
     });
     expect(formatHumanSuccess(result)).toBe(
       [
         "Project created in /tmp/my-app.",
+        "Node.js >=22 is required for install and build. Recovery: Run nvm install 22 && nvm use 22.",
         "Next steps:",
         "  cd /tmp/my-app",
         "  pnpm install",

@@ -1,5 +1,6 @@
 import { Banner } from "@astryxdesign/core/Banner";
 import { Button } from "@astryxdesign/core/Button";
+import * as React from "react";
 
 import type { ProblemDetails } from "@croco/problems-core";
 

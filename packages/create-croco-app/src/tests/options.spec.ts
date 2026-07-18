@@ -540,6 +540,8 @@ describe("noninteractive CLI option validation", () => {
         projectName: targetDir.split("/").at(-1),
         preset: "blank",
         packageManager: "pnpm",
+        nodeRequirement: ">=22",
+        nodeRecovery: "Run nvm install 22 && nvm use 22.",
         nextSteps: [`cd ${targetDir}`, "pnpm install", "pnpm dev"],
       });
     } finally {

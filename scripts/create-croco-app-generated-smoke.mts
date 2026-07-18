@@ -21,6 +21,7 @@ import {
   scanGeneratedTemplateSecretText,
 } from "../packages/create-croco-app/src/secret-placeholder-policy.ts";
 import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../packages/create-croco-app/src/supported-options.ts";
+import { VERSIONS } from "../packages/create-croco-app/src/consts.ts";
 import {
   classifySmokeCommandFailure,
   classifySmokeFailure,
@@ -62,6 +63,8 @@ import {
 } from "./create-croco-app-generated-smoke-support.mts";
 
 const DEFAULT_TENANT_MODEL = "org";
+const GENERATED_NODE_VERSION = VERSIONS.node;
+const GENERATED_NODE_ENGINE_RANGE = `>=${GENERATED_NODE_VERSION}`;
 const GRAPHQL_CONTRACT_CHECK_LABEL = "GraphQL contract check";
 const GRAPHQL_CONTRACT_SNAPSHOT_LABEL = "GraphQL contract snapshot";
 const GRAPHQL_CONTRACT_SNAPSHOT_PATH = "graphql-contract.snapshot.json";
@@ -1511,6 +1514,7 @@ if (isMainModule()) {
           generatedSmokeExternalCrocoRangeExceptions,
         );
         assertGeneratedReadme(projectDir, smokeCase);
+        assertGeneratedNodeRuntimeContract(projectDir, smokeCase);
         assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
         assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
         writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
@@ -2325,6 +2329,44 @@ function assertGeneratedReadme(projectDir: string, smokeCase: SmokeCase): void {
   }
 
   console.log(`create-croco-app-generated-smoke: ${smokeCase.name} README.md exists`);
+}
+
+function assertGeneratedNodeRuntimeContract(projectDir: string, smokeCase: SmokeCase): void {
+  const packageJson = JSON.parse(readFileSync(join(projectDir, "package.json"), "utf8")) as {
+    engines?: { node?: unknown };
+  };
+  const nvmrc = readFileSync(join(projectDir, ".nvmrc"), "utf8");
+  const readme = readFileSync(join(projectDir, "README.md"), "utf8");
+
+  if (packageJson.engines?.node !== GENERATED_NODE_ENGINE_RANGE) {
+    throw new Error(
+      `${smokeCase.name} generated package.json engines.node=${String(packageJson.engines?.node)}; expected ${GENERATED_NODE_ENGINE_RANGE}`,
+    );
+  }
+  if (nvmrc !== `${GENERATED_NODE_VERSION}\n`) {
+    throw new Error(
+      `${smokeCase.name} generated .nvmrc=${JSON.stringify(nvmrc)}; expected ${GENERATED_NODE_VERSION}`,
+    );
+  }
+  if (!readme.includes(`Node.js ${GENERATED_NODE_ENGINE_RANGE}`) || !readme.includes("nvm use")) {
+    throw new Error(
+      `${smokeCase.name} generated README.md is missing Node version recovery guidance`,
+    );
+  }
+  if (
+    smokeCase.runtimeTarget.includes("browser") ||
+    smokeCase.runtimeTarget.includes("cloudflare-workers")
+  ) {
+    if (!readme.includes("does not change the deployment runtime")) {
+      throw new Error(
+        `${smokeCase.name} generated README.md falsely conflates Node build tooling with its ${smokeCase.runtimeTarget} deployment runtime`,
+      );
+    }
+  }
+
+  console.log(
+    `create-croco-app-generated-smoke: ${smokeCase.name} Node runtime contract matches ${GENERATED_NODE_ENGINE_RANGE}`,
+  );
 }
 
 function assertNoGeneratedSecurityValidationOptOut(projectDir: string, smokeCase: SmokeCase): void {

@@ -3865,7 +3865,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/cli-result.ts",
-      "line": 129,
+      "line": 135,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'recovery' comes from an index signature, so it must be accessed with ['recovery']."
@@ -3881,7 +3881,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/cli-result.ts",
-      "line": 29,
+      "line": 32,
       "column": 41,
       "code": "TS2379",
       "message": "Argument of type '{ cause: Error | undefined; extensions: { recovery: string; }; }' is not assignable to parameter of type 'ProblemOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3905,7 +3905,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 159,
+      "line": 161,
       "column": 37,
       "code": "TS2379",
       "message": "Argument of type '{ api: \"graphql\" | \"trpc\" | undefined; frontendDeploy: \"docker\" | \"opennext\" | \"vercel\" | \"cloudflare-meta-vite\" | \"vite-spa\" | undefined; webApps: string[]; projectName: string; scope: string; }' is not assignable to parameter of type 'Pick<GeneratorOptions, \"projectName\" | \"scope\" | \"webApps\" | \"api\" | \"frontendDeploy\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3913,7 +3913,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 166,
+      "line": 168,
       "column": 37,
       "code": "TS2379",
       "message": "Argument of type '{ api: \"graphql\" | \"trpc\" | undefined; projectName: string; scope: string; }' is not assignable to parameter of type 'Pick<GeneratorOptions, \"projectName\" | \"scope\" | \"api\">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
