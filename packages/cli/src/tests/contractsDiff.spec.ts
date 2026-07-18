@@ -5,7 +5,7 @@ import {
   type ContractGraph,
 } from "@croco/protocols-core";
 import { Container } from "typedi";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runContractsDiff } from "../commands/contractsDiff.js";
 
 describe("contractsDiff", () => {
@@ -146,6 +146,118 @@ describe("contractsDiff", () => {
       nonBreakingChangeCount: 1,
       hasBreakingChanges: false,
     });
+  });
+
+  it("should reject malformed nested baseline snapshot rows before loading controllers", async () => {
+    const baseline = createContractGraphSnapshot(createGraph(["UsersController.listUsers"]));
+    const loadContractGraph = vi.fn<() => Promise<ContractGraph>>();
+    const malformedBaseline = JSON.stringify({
+      ...baseline,
+      routes: [
+        {
+          ...baseline.routes[0],
+          problems: [
+            {
+              code: "UPSTREAM_FAILURE",
+              category: "InternalServerError",
+              status: 500,
+            },
+          ],
+        },
+      ],
+    }).replace('"status":500', '"status":1e309');
+
+    await expect(
+      runContractsDiff(
+        ["--baseline", "contract-graph.snapshot.json", "--controllers", "src/**/*.ts"],
+        {
+          loadContractGraph,
+          io: {
+            cwd: "/workspace/app",
+            readFile: () => malformedBaseline,
+          },
+        },
+      ),
+    ).rejects.toThrow(
+      "contract-graph.snapshot.json is not a croco.contract-graph.snapshot.v1 JSON snapshot.",
+    );
+    expect(loadContractGraph).not.toHaveBeenCalled();
+  });
+
+  it("should reject modern baseline routes with a deleted required field", async () => {
+    const baseline = createContractGraphSnapshot(createGraph(["UsersController.listUsers"]));
+    const loadContractGraph = vi.fn<() => Promise<ContractGraph>>();
+    const malformedRoute = { ...baseline.routes[0] } as Record<string, unknown>;
+    delete malformedRoute["problems"];
+
+    await expect(
+      runContractsDiff(
+        ["--baseline", "contract-graph.snapshot.json", "--controllers", "src/**/*.ts"],
+        {
+          loadContractGraph,
+          io: {
+            cwd: "/workspace/app",
+            readFile: () => JSON.stringify({ ...baseline, routes: [malformedRoute] }),
+          },
+        },
+      ),
+    ).rejects.toThrow(
+      "contract-graph.snapshot.json is not a croco.contract-graph.snapshot.v1 JSON snapshot.",
+    );
+    expect(loadContractGraph).not.toHaveBeenCalled();
+  });
+
+  it("should normalize historical v1 baselines before diffing", async () => {
+    const stdout: string[] = [];
+    const graph = createGraph(["UsersController.listUsers"]);
+    const current = createContractGraphSnapshot(graph);
+    const route = current.routes[0];
+
+    expect(route).toBeDefined();
+    if (!route) {
+      return;
+    }
+
+    const legacyBaseline = JSON.stringify({
+      snapshotVersion: current.snapshotVersion,
+      graphVersion: current.graphVersion,
+      controllerCount: current.controllerCount,
+      routeCount: current.routeCount,
+      operationIds: current.operationIds,
+      controllers: current.controllers,
+      routes: [
+        {
+          routeId: route.routeId,
+          operationId: route.operationId,
+          controllerName: route.controllerName,
+          methodName: route.methodName,
+          httpMethod: route.httpMethod,
+          path: route.path,
+          controllerPath: route.controllerPath,
+          domain: route.domain,
+          access: route.access,
+          params: route.params,
+          request: route.request,
+          response: route.response,
+        },
+      ],
+      diagnostics: current.diagnostics,
+    });
+
+    const exitCode = await runContractsDiff(
+      ["--baseline", "legacy.snapshot.json", "--controllers", "src/**/*.ts"],
+      {
+        loadContractGraph: async () => graph,
+        io: {
+          cwd: "/workspace/app",
+          readFile: () => legacyBaseline,
+          stdout: (message) => stdout.push(message),
+        },
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toEqual(["Contract graph diff passed with no changes (1 current route(s))."]);
   });
 });
 

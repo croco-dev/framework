@@ -18,7 +18,9 @@ import { diffContractGraphSnapshots } from "../libs/ContractGraphDiff";
 import {
   createContractGraphV1,
   createContractGraphSnapshot,
+  isContractGraphSnapshot,
   isContractGraphV1,
+  parseContractGraphSnapshot,
   stringifyContractGraphV1,
   stringifyContractGraphSnapshot,
 } from "../libs/ContractGraphSnapshot";
@@ -880,7 +882,6 @@ describe("buildContractGraph", () => {
             headers: null,
           },
           outputSchema: null,
-          problems: [],
           policies: [],
           runtime: [{ type: "rest.route", method: "GET", path: "/health" }],
           di: [],
@@ -1034,6 +1035,212 @@ describe("buildContractGraph", () => {
         diagnostics: [{ ...validDiagnostic, message: undefined }],
       }),
     ).toBe(false);
+  });
+
+  it("should deep-validate persisted ContractGraph snapshot members", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      @ResponseSchema(z.object({ id: z.string() }))
+      getUser(@Param("id") _id: string): void {}
+    }
+
+    const snapshot = createContractGraphSnapshot(buildContractGraph([UsersController]));
+    const controller = snapshot.controllers[0];
+    const route = snapshot.routes[0];
+
+    expect(controller).toBeDefined();
+    expect(route).toBeDefined();
+    if (!controller || !route) {
+      return;
+    }
+
+    const validDiagnostic = {
+      code: "contract-route-missing-problem-union",
+      severity: "warning",
+      target: "problem",
+      message: "Declare generated client Problem responses.",
+      routeId: route.routeId,
+    } as const;
+    const malformedSnapshots: readonly unknown[] = [
+      { ...snapshot, controllerCount: "1" },
+      { ...snapshot, operationIds: [route.operationId, 42] },
+      { ...snapshot, controllers: [{ ...controller, roles: ["admin", 42] }] },
+      { ...snapshot, routes: [{ ...route, httpMethod: 42 }] },
+      {
+        ...snapshot,
+        routes: [
+          {
+            ...route,
+            problems: [
+              {
+                code: "UPSTREAM_FAILURE",
+                category: "InternalServerError",
+                status: JSON.parse("1e309") as unknown,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        ...snapshot,
+        controllers: [
+          {
+            ...controller,
+            guards: [
+              {
+                type: "rest.guard",
+                id: "guard:legacy",
+                kind: "constructor",
+                name: "LegacyGuard",
+                declaredAt: "controller",
+                owner: { controllerName: controller.name },
+                index: -1,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        ...snapshot,
+        routes: [
+          {
+            ...route,
+            params: [{ kind: "cookie", name: "id", schema: null }],
+          },
+        ],
+      },
+      {
+        ...snapshot,
+        routes: [
+          {
+            ...route,
+            response: {
+              kind: "object",
+              typeName: "ZodObject",
+              jsonSafe: true,
+              fields: [{ name: "id", required: "true", schema: route.response }],
+            },
+          },
+        ],
+      },
+      { ...snapshot, diagnostics: [{ ...validDiagnostic, target: "unknown" }] },
+      {
+        ...snapshot,
+        consumerCoverage: snapshot.consumerCoverage
+          ? {
+              ...snapshot.consumerCoverage,
+              consumers: [
+                {
+                  ...snapshot.consumerCoverage.consumers[0],
+                  consumerId: "unknown",
+                },
+              ],
+            }
+          : null,
+      },
+    ];
+
+    expect(isContractGraphSnapshot({ ...snapshot, diagnostics: [validDiagnostic] })).toBe(true);
+    for (const malformed of malformedSnapshots) {
+      expect(isContractGraphSnapshot(malformed)).toBe(false);
+    }
+
+    const modernRouteWithoutProblems = { ...route } as Record<string, unknown>;
+    delete modernRouteWithoutProblems["problems"];
+    expect(parseContractGraphSnapshot({ ...snapshot, routes: [modernRouteWithoutProblems] })).toBe(
+      null,
+    );
+  });
+
+  it("should normalize historical ContractGraph snapshot v1 artifacts", () => {
+    const persisted = {
+      snapshotVersion: "croco.contract-graph.snapshot.v1",
+      graphVersion: "croco.contract-graph.v1",
+      controllerCount: 1,
+      routeCount: 1,
+      operationIds: ["LegacyController_list"],
+      controllers: [
+        {
+          name: "LegacyController",
+          path: "/legacy",
+          guards: [],
+          roles: [],
+          routeIds: ["LegacyController.list"],
+        },
+      ],
+      routes: [
+        {
+          routeId: "LegacyController.list",
+          operationId: "LegacyController_list",
+          controllerName: "LegacyController",
+          methodName: "list",
+          httpMethod: "GET",
+          path: "/legacy",
+          controllerPath: "/legacy",
+          domain: null,
+          access: { guards: [], roles: [] },
+          params: [],
+          request: { body: null, path: null, query: null, headers: null },
+          response: {
+            kind: "object",
+            typeName: "ZodObject",
+            fields: [
+              {
+                name: "id",
+                required: true,
+                schema: { kind: "string", typeName: "ZodString" },
+              },
+            ],
+          },
+        },
+      ],
+      diagnostics: [],
+    };
+
+    expect(isContractGraphSnapshot(persisted)).toBe(false);
+    expect(parseContractGraphSnapshot(persisted)).toMatchObject({
+      routes: [
+        {
+          routeContract: null,
+          entitlements: [],
+          problems: [],
+          response: {
+            jsonSafe: true,
+            fields: [{ schema: { jsonSafe: true } }],
+          },
+        },
+      ],
+    });
+
+    const legacyRoute = persisted.routes[0];
+    expect(
+      parseContractGraphSnapshot({
+        ...persisted,
+        routes: [
+          {
+            ...legacyRoute,
+            response: {
+              kind: "effects",
+              typeName: "ZodEffects",
+              effectType: "transform",
+              inner: { kind: "string", typeName: "ZodString" },
+            },
+          },
+        ],
+      }),
+    ).toBe(null);
+    expect(
+      parseContractGraphSnapshot({
+        ...persisted,
+        routes: [
+          {
+            ...legacyRoute,
+            response: { kind: "enum", typeName: "ZodEnum", values: [1] },
+          },
+        ],
+      }),
+    ).toBe(null);
   });
 
   it("should report consumer coverage diagnostics instead of silently dropping unsupported fields", () => {

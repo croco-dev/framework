@@ -14,7 +14,7 @@ import {
   type ContractGraphConsumerCoverageReport,
 } from "./ContractGraphConsumerCoverage";
 import type { ParamIR, ProblemRegistryReferenceIR } from "./RouteIR";
-import { describeZodSchema } from "./SchemaDescriptor";
+import { describeZodSchema, JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX } from "./SchemaDescriptor";
 import type { ContractSchemaDescriptor, ContractSchemaFieldDescriptor } from "./SchemaDescriptor";
 
 export type ContractGraphSnapshotVersion = "croco.contract-graph.snapshot.v1";
@@ -94,6 +94,51 @@ export type ContractGraphSnapshot = {
   readonly controllers: readonly ContractGraphSnapshotController[];
   readonly routes: readonly ContractGraphSnapshotRoute[];
   readonly diagnostics: readonly ContractDiagnostic[];
+};
+
+type LegacyContractSchemaSnapshot = Omit<
+  ContractSchemaSnapshot,
+  | "effectType"
+  | "element"
+  | "fields"
+  | "inner"
+  | "jsonSafe"
+  | "options"
+  | "unsupportedReason"
+  | "values"
+> & {
+  readonly fields?: readonly LegacyContractSchemaFieldSnapshot[];
+  readonly element?: LegacyContractSchemaSnapshot | null;
+  readonly inner?: LegacyContractSchemaSnapshot | null;
+  readonly options?: readonly LegacyContractSchemaSnapshot[];
+  readonly values?: readonly string[];
+};
+
+type LegacyContractSchemaFieldSnapshot = Omit<ContractSchemaFieldSnapshot, "schema"> & {
+  readonly schema: LegacyContractSchemaSnapshot;
+};
+
+type LegacyContractGraphSnapshotParam = Omit<ContractGraphSnapshotParam, "schema"> & {
+  readonly schema: LegacyContractSchemaSnapshot | null;
+};
+
+type LegacyContractGraphSnapshotRoute = Omit<
+  ContractGraphSnapshotRoute,
+  "entitlements" | "params" | "problems" | "request" | "response" | "routeContract"
+> & {
+  readonly params: readonly LegacyContractGraphSnapshotParam[];
+  readonly request: {
+    readonly body: LegacyContractSchemaSnapshot | null;
+    readonly path: LegacyContractSchemaSnapshot | null;
+    readonly query: LegacyContractSchemaSnapshot | null;
+    readonly headers: LegacyContractSchemaSnapshot | null;
+  };
+  readonly response: LegacyContractSchemaSnapshot | null;
+  readonly problems?: readonly ContractGraphSnapshotProblemResponse[];
+};
+
+type LegacyContractGraphSnapshot = Omit<ContractGraphSnapshot, "routes"> & {
+  readonly routes: readonly LegacyContractGraphSnapshotRoute[];
 };
 
 /**
@@ -215,10 +260,46 @@ export function isContractGraphSnapshot(value: unknown): value is ContractGraphS
   return (
     value["snapshotVersion"] === "croco.contract-graph.snapshot.v1" &&
     value["graphVersion"] === "croco.contract-graph.v1" &&
+    isNonNegativeInteger(value["controllerCount"]) &&
+    isNonNegativeInteger(value["routeCount"]) &&
+    isStringArray(value["operationIds"]) &&
+    (value["consumerCoverage"] === undefined ||
+      isContractGraphConsumerCoverageReport(value["consumerCoverage"])) &&
     Array.isArray(value["controllers"]) &&
+    value["controllers"].every(isContractGraphSnapshotController) &&
     Array.isArray(value["routes"]) &&
-    Array.isArray(value["diagnostics"])
+    value["routes"].every(isContractGraphSnapshotRoute) &&
+    Array.isArray(value["diagnostics"]) &&
+    value["diagnostics"].every(isContractDiagnosticSnapshot)
   );
+}
+
+/**
+ * Validates and normalizes persisted ContractGraph snapshot v1 artifacts.
+ *
+ * Historical v1 snapshots predate consumer coverage, route contracts, entitlements, and schema
+ * JSON-safety metadata. The initial epoch also predates Problem responses. Those coherent
+ * artifact-wide shapes are normalized only after every persisted member has been validated.
+ */
+export function parseContractGraphSnapshot(value: unknown): ContractGraphSnapshot | null {
+  if (isContractGraphSnapshot(value)) {
+    return value;
+  }
+
+  if (!isLegacyContractGraphSnapshot(value)) {
+    return null;
+  }
+
+  return {
+    snapshotVersion: value.snapshotVersion,
+    graphVersion: value.graphVersion,
+    controllerCount: value.controllerCount,
+    routeCount: value.routeCount,
+    operationIds: value.operationIds,
+    controllers: value.controllers,
+    routes: value.routes.map(normalizeLegacyContractGraphSnapshotRoute),
+    diagnostics: value.diagnostics,
+  };
 }
 
 /**
@@ -457,13 +538,13 @@ function isContractGraphV1Route(value: unknown): value is ContractGraphV1Route {
     isContractGraphV1InputSchemas(value["inputSchemas"]) &&
     isContractSchemaSnapshotOrNull(value["outputSchema"]) &&
     Array.isArray(problems) &&
-    problems.every(isContractGraphV1ProblemResponse) &&
+    problems.every(isContractGraphProblemResponse) &&
     Array.isArray(policies) &&
     policies.every(isContractGraphV1PolicyRef) &&
     Array.isArray(runtime) &&
     runtime.every(isContractGraphV1RuntimeRequirement) &&
     Array.isArray(di) &&
-    di.every(isContractGraphV1DiRef)
+    di.every(isContractMetadataReference)
   );
 }
 
@@ -483,10 +564,382 @@ function isContractGraphV1InputSchemas(
 }
 
 function isContractSchemaSnapshotOrNull(value: unknown): value is ContractSchemaSnapshot | null {
-  return value === null || (isRecord(value) && typeof value["kind"] === "string");
+  return value === null || isContractSchemaSnapshot(value, new Set());
 }
 
-function isContractGraphV1ProblemResponse(
+function isLegacyContractGraphSnapshot(value: unknown): value is LegacyContractGraphSnapshot {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const routes = value["routes"];
+  if (!Array.isArray(routes)) {
+    return false;
+  }
+
+  const hasUniformProblemEpoch =
+    routes.every((route) => isRecord(route) && hasOwnProperty(route, "problems")) ||
+    routes.every((route) => isRecord(route) && !hasOwnProperty(route, "problems"));
+
+  return (
+    value["snapshotVersion"] === "croco.contract-graph.snapshot.v1" &&
+    value["graphVersion"] === "croco.contract-graph.v1" &&
+    isNonNegativeInteger(value["controllerCount"]) &&
+    isNonNegativeInteger(value["routeCount"]) &&
+    isStringArray(value["operationIds"]) &&
+    value["consumerCoverage"] === undefined &&
+    Array.isArray(value["controllers"]) &&
+    value["controllers"].every(isContractGraphSnapshotController) &&
+    hasUniformProblemEpoch &&
+    routes.every(isLegacyContractGraphSnapshotRoute) &&
+    Array.isArray(value["diagnostics"]) &&
+    value["diagnostics"].every(isContractDiagnosticSnapshot)
+  );
+}
+
+function isLegacyContractGraphSnapshotRoute(
+  value: unknown,
+): value is LegacyContractGraphSnapshotRoute {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value["routeId"] === "string" &&
+    typeof value["operationId"] === "string" &&
+    typeof value["controllerName"] === "string" &&
+    typeof value["methodName"] === "string" &&
+    typeof value["httpMethod"] === "string" &&
+    typeof value["path"] === "string" &&
+    typeof value["controllerPath"] === "string" &&
+    (value["domain"] === null || typeof value["domain"] === "string") &&
+    value["routeContract"] === undefined &&
+    isContractAccessMetadata(value["access"]) &&
+    value["entitlements"] === undefined &&
+    Array.isArray(value["params"]) &&
+    value["params"].every(isLegacyContractGraphSnapshotParam) &&
+    isLegacyContractGraphSnapshotRequest(value["request"]) &&
+    isLegacyContractSchemaSnapshotOrNull(value["response"]) &&
+    (value["problems"] === undefined ||
+      (Array.isArray(value["problems"]) && value["problems"].every(isContractGraphProblemResponse)))
+  );
+}
+
+function isLegacyContractGraphSnapshotParam(
+  value: unknown,
+): value is LegacyContractGraphSnapshotParam {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isContractGraphSnapshotParamKind(value["kind"]) &&
+    typeof value["name"] === "string" &&
+    isLegacyContractSchemaSnapshotOrNull(value["schema"])
+  );
+}
+
+function isLegacyContractGraphSnapshotRequest(
+  value: unknown,
+): value is LegacyContractGraphSnapshotRoute["request"] {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isLegacyContractSchemaSnapshotOrNull(value["body"]) &&
+    isLegacyContractSchemaSnapshotOrNull(value["path"]) &&
+    isLegacyContractSchemaSnapshotOrNull(value["query"]) &&
+    isLegacyContractSchemaSnapshotOrNull(value["headers"])
+  );
+}
+
+function isLegacyContractSchemaSnapshotOrNull(
+  value: unknown,
+): value is LegacyContractSchemaSnapshot | null {
+  return value === null || isLegacyContractSchemaSnapshot(value, new Set());
+}
+
+function isLegacyContractSchemaSnapshot(
+  value: unknown,
+  ancestors: Set<object>,
+): value is LegacyContractSchemaSnapshot {
+  if (!isRecord(value) || ancestors.has(value)) {
+    return false;
+  }
+
+  ancestors.add(value);
+  const valid =
+    typeof value["kind"] === "string" &&
+    typeof value["typeName"] === "string" &&
+    value["jsonSafe"] === undefined &&
+    value["unsupportedReason"] === undefined &&
+    value["effectType"] === undefined &&
+    (value["fields"] === undefined ||
+      (Array.isArray(value["fields"]) &&
+        value["fields"].every((field) => isLegacyContractSchemaFieldSnapshot(field, ancestors)))) &&
+    (value["element"] === undefined ||
+      value["element"] === null ||
+      isLegacyContractSchemaSnapshot(value["element"], ancestors)) &&
+    (value["inner"] === undefined ||
+      value["inner"] === null ||
+      isLegacyContractSchemaSnapshot(value["inner"], ancestors)) &&
+    (value["options"] === undefined ||
+      (Array.isArray(value["options"]) &&
+        value["options"].every((option) => isLegacyContractSchemaSnapshot(option, ancestors)))) &&
+    (value["values"] === undefined ||
+      (Array.isArray(value["values"]) &&
+        value["values"].every((entry) => typeof entry === "string"))) &&
+    (value["value"] === undefined || isContractSchemaPrimitiveValue(value["value"]));
+  ancestors.delete(value);
+
+  return valid;
+}
+
+function isLegacyContractSchemaFieldSnapshot(
+  value: unknown,
+  ancestors: Set<object>,
+): value is LegacyContractSchemaFieldSnapshot {
+  return (
+    isRecord(value) &&
+    typeof value["name"] === "string" &&
+    typeof value["required"] === "boolean" &&
+    isLegacyContractSchemaSnapshot(value["schema"], ancestors)
+  );
+}
+
+function normalizeLegacyContractGraphSnapshotRoute(
+  route: LegacyContractGraphSnapshotRoute,
+): ContractGraphSnapshotRoute {
+  return {
+    ...route,
+    routeContract: null,
+    entitlements: [],
+    params: route.params.map((param) => ({
+      ...param,
+      schema: param.schema ? normalizeLegacyContractSchemaSnapshot(param.schema) : null,
+    })),
+    request: {
+      body: route.request.body ? normalizeLegacyContractSchemaSnapshot(route.request.body) : null,
+      path: route.request.path ? normalizeLegacyContractSchemaSnapshot(route.request.path) : null,
+      query: route.request.query
+        ? normalizeLegacyContractSchemaSnapshot(route.request.query)
+        : null,
+      headers: route.request.headers
+        ? normalizeLegacyContractSchemaSnapshot(route.request.headers)
+        : null,
+    },
+    response: route.response ? normalizeLegacyContractSchemaSnapshot(route.response) : null,
+    problems: route.problems ?? [],
+  };
+}
+
+function normalizeLegacyContractSchemaSnapshot(
+  schema: LegacyContractSchemaSnapshot,
+): ContractSchemaSnapshot {
+  const fields = schema.fields?.map((field) => ({
+    ...field,
+    schema: normalizeLegacyContractSchemaSnapshot(field.schema),
+  }));
+  const element = schema.element
+    ? normalizeLegacyContractSchemaSnapshot(schema.element)
+    : schema.element;
+  const inner = schema.inner ? normalizeLegacyContractSchemaSnapshot(schema.inner) : schema.inner;
+  const options = schema.options?.map(normalizeLegacyContractSchemaSnapshot);
+  const children = [
+    ...(fields?.map((field) => field.schema) ?? []),
+    ...(element ? [element] : []),
+    ...(inner ? [inner] : []),
+    ...(options ?? []),
+  ];
+  const support = JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX.find(
+    (entry) => entry.typeName === schema.typeName,
+  );
+
+  return {
+    kind: schema.kind,
+    typeName: schema.typeName,
+    jsonSafe: support?.jsonSafe === "supported" && children.every((child) => child.jsonSafe),
+    ...(fields ? { fields } : {}),
+    ...(element !== undefined ? { element } : {}),
+    ...(inner !== undefined ? { inner } : {}),
+    ...(options ? { options } : {}),
+    ...(schema.values ? { values: schema.values } : {}),
+    ...(schema.value !== undefined ? { value: schema.value } : {}),
+  };
+}
+
+function isContractGraphSnapshotController(
+  value: unknown,
+): value is ContractGraphSnapshotController {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value["name"] === "string" &&
+    typeof value["path"] === "string" &&
+    Array.isArray(value["guards"]) &&
+    value["guards"].every(isContractMetadataReference) &&
+    isStringArray(value["roles"]) &&
+    isStringArray(value["routeIds"])
+  );
+}
+
+function isContractGraphSnapshotRoute(value: unknown): value is ContractGraphSnapshotRoute {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value["routeId"] === "string" &&
+    typeof value["operationId"] === "string" &&
+    typeof value["controllerName"] === "string" &&
+    typeof value["methodName"] === "string" &&
+    typeof value["httpMethod"] === "string" &&
+    typeof value["path"] === "string" &&
+    typeof value["controllerPath"] === "string" &&
+    (value["domain"] === null || typeof value["domain"] === "string") &&
+    (value["routeContract"] === null ||
+      isContractGraphSnapshotRouteContract(value["routeContract"])) &&
+    isContractAccessMetadata(value["access"]) &&
+    Array.isArray(value["entitlements"]) &&
+    value["entitlements"].every(isContractEntitlementRequirement) &&
+    Array.isArray(value["params"]) &&
+    value["params"].every(isContractGraphSnapshotParam) &&
+    isContractGraphSnapshotRequest(value["request"]) &&
+    isContractSchemaSnapshotOrNull(value["response"]) &&
+    Array.isArray(value["problems"]) &&
+    value["problems"].every(isContractGraphProblemResponse)
+  );
+}
+
+function isContractGraphSnapshotRouteContract(
+  value: unknown,
+): value is ContractGraphSnapshotRouteContract {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    (value["id"] === null || typeof value["id"] === "string") &&
+    typeof value["method"] === "string" &&
+    typeof value["path"] === "string" &&
+    isOptionalString(value["operationId"]) &&
+    (value["sourceLocation"] === undefined || isContractSourceLocation(value["sourceLocation"]))
+  );
+}
+
+function isContractAccessMetadata(value: unknown): value is ContractAccessMetadata {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    Array.isArray(value["guards"]) &&
+    value["guards"].every(isContractMetadataReference) &&
+    isStringArray(value["roles"])
+  );
+}
+
+function isContractGraphSnapshotParam(value: unknown): value is ContractGraphSnapshotParam {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isContractGraphSnapshotParamKind(value["kind"]) &&
+    typeof value["name"] === "string" &&
+    isContractSchemaSnapshotOrNull(value["schema"])
+  );
+}
+
+function isContractGraphSnapshotParamKind(value: unknown): value is ParamIR["kind"] {
+  return (
+    value === "body" ||
+    value === "query" ||
+    value === "path" ||
+    value === "header" ||
+    value === "ctx"
+  );
+}
+
+function isContractGraphSnapshotRequest(
+  value: unknown,
+): value is ContractGraphSnapshotRoute["request"] {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isContractSchemaSnapshotOrNull(value["body"]) &&
+    isContractSchemaSnapshotOrNull(value["path"]) &&
+    isContractSchemaSnapshotOrNull(value["query"]) &&
+    isContractSchemaSnapshotOrNull(value["headers"])
+  );
+}
+
+function isContractSchemaSnapshot(
+  value: unknown,
+  ancestors: Set<object>,
+): value is ContractSchemaSnapshot {
+  if (!isRecord(value) || ancestors.has(value)) {
+    return false;
+  }
+
+  ancestors.add(value);
+  const valid =
+    typeof value["kind"] === "string" &&
+    typeof value["typeName"] === "string" &&
+    typeof value["jsonSafe"] === "boolean" &&
+    isOptionalString(value["unsupportedReason"]) &&
+    isOptionalString(value["effectType"]) &&
+    (value["fields"] === undefined ||
+      (Array.isArray(value["fields"]) &&
+        value["fields"].every((field) => isContractSchemaFieldSnapshot(field, ancestors)))) &&
+    (value["element"] === undefined ||
+      value["element"] === null ||
+      isContractSchemaSnapshot(value["element"], ancestors)) &&
+    (value["inner"] === undefined ||
+      value["inner"] === null ||
+      isContractSchemaSnapshot(value["inner"], ancestors)) &&
+    (value["options"] === undefined ||
+      (Array.isArray(value["options"]) &&
+        value["options"].every((option) => isContractSchemaSnapshot(option, ancestors)))) &&
+    (value["values"] === undefined ||
+      (Array.isArray(value["values"]) &&
+        value["values"].every(
+          (entry) =>
+            typeof entry === "string" || (typeof entry === "number" && Number.isFinite(entry)),
+        ))) &&
+    (value["value"] === undefined || isContractSchemaPrimitiveValue(value["value"]));
+  ancestors.delete(value);
+
+  return valid;
+}
+
+function isContractSchemaFieldSnapshot(
+  value: unknown,
+  ancestors: Set<object>,
+): value is ContractSchemaFieldSnapshot {
+  return (
+    isRecord(value) &&
+    typeof value["name"] === "string" &&
+    typeof value["required"] === "boolean" &&
+    isContractSchemaSnapshot(value["schema"], ancestors)
+  );
+}
+
+function isContractSchemaPrimitiveValue(value: unknown): boolean {
+  return (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value))
+  );
+}
+
+function isContractGraphProblemResponse(
   value: unknown,
 ): value is ContractGraphSnapshotProblemResponse {
   if (!isRecord(value)) {
@@ -496,10 +949,62 @@ function isContractGraphV1ProblemResponse(
   return (
     typeof value["code"] === "string" &&
     typeof value["category"] === "string" &&
-    typeof value["status"] === "number" &&
+    isFiniteNumber(value["status"]) &&
     isOptionalString(value["cookbookPath"]) &&
     isOptionalString(value["description"]) &&
-    isOptionalString(value["type"])
+    isOptionalString(value["type"]) &&
+    (value["registry"] === undefined || isProblemRegistryReference(value["registry"]))
+  );
+}
+
+function isProblemRegistryReference(value: unknown): value is ProblemRegistryReferenceIR {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value["package"] === "string" &&
+    typeof value["code"] === "string" &&
+    isProblemCategory(value["category"]) &&
+    isFiniteNumber(value["status"]) &&
+    (value["statusPolicy"] === undefined || isProblemStatusPolicy(value["statusPolicy"])) &&
+    typeof value["retryable"] === "boolean" &&
+    (value["retryability"] === "retryable" || value["retryability"] === "not-retryable") &&
+    typeof value["public"] === "boolean" &&
+    (value["visibility"] === "public" || value["visibility"] === "private") &&
+    (value["redaction"] === "public" ||
+      value["redaction"] === "safe" ||
+      value["redaction"] === "operator-only") &&
+    typeof value["cookbookPath"] === "string"
+  );
+}
+
+function isProblemCategory(value: unknown): boolean {
+  return (
+    value === "BadRequest" ||
+    value === "Unauthorized" ||
+    value === "Forbidden" ||
+    value === "NotFound" ||
+    value === "Conflict" ||
+    value === "Gone" ||
+    value === "PayloadTooLarge" ||
+    value === "ValidationError" ||
+    value === "BusinessRuleViolation" ||
+    value === "TooManyRequests" ||
+    value === "InternalServerError" ||
+    value === "NotImplemented"
+  );
+}
+
+function isProblemStatusPolicy(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    value["kind"] === "runtime-configurable" &&
+    isFiniteNumber(value["defaultStatus"]) &&
+    typeof value["configuration"] === "string"
   );
 }
 
@@ -541,7 +1046,7 @@ function isContractGraphV1RuntimeRequirement(
   );
 }
 
-function isContractGraphV1DiRef(value: unknown): value is ContractGraphV1DiRef {
+function isContractMetadataReference(value: unknown): value is ContractGraphV1DiRef {
   if (!isRecord(value)) {
     return false;
   }
@@ -553,7 +1058,7 @@ function isContractGraphV1DiRef(value: unknown): value is ContractGraphV1DiRef {
     typeof value["name"] === "string" &&
     (value["declaredAt"] === "controller" || value["declaredAt"] === "route") &&
     isContractMetadataOwner(value["owner"]) &&
-    typeof value["index"] === "number"
+    isNonNegativeInteger(value["index"])
   );
 }
 
@@ -595,6 +1100,82 @@ function isContractEntitlementResource(value: unknown): value is Record<string, 
   );
 }
 
+function isContractGraphConsumerCoverageReport(
+  value: unknown,
+): value is ContractGraphConsumerCoverageReport {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    value["version"] === "croco.contract-consumer-coverage.v1" &&
+    isNonNegativeInteger(value["routeCount"]) &&
+    Array.isArray(value["consumers"]) &&
+    value["consumers"].every(isContractGraphConsumerCoverage) &&
+    Array.isArray(value["diagnostics"]) &&
+    value["diagnostics"].every(isContractDiagnosticSnapshot)
+  );
+}
+
+function isContractGraphConsumerCoverage(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    isContractGraphConsumerId(value["consumerId"]) &&
+    typeof value["label"] === "string" &&
+    typeof value["generatedArtifact"] === "string" &&
+    isNonNegativeInteger(value["routeCount"]) &&
+    isContractGraphConsumerRouteFieldArray(value["requiredRouteFields"]) &&
+    isContractGraphConsumerRouteFieldArray(value["unsupportedRouteFields"]) &&
+    Array.isArray(value["routes"]) &&
+    value["routes"].every(isContractGraphConsumerRouteCoverage) &&
+    Array.isArray(value["diagnostics"]) &&
+    value["diagnostics"].every(isContractDiagnosticSnapshot)
+  );
+}
+
+function isContractGraphConsumerRouteCoverage(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value["routeId"] === "string" &&
+    typeof value["operationId"] === "string" &&
+    isContractGraphConsumerRouteFieldArray(value["coveredFields"]) &&
+    isContractGraphConsumerRouteFieldArray(value["missingFields"]) &&
+    isContractGraphConsumerRouteFieldArray(value["unsupportedFields"])
+  );
+}
+
+function isContractGraphConsumerId(value: unknown): boolean {
+  return value === "admin-generated" || value === "openapi" || value === "rpc-client";
+}
+
+function isContractGraphConsumerRouteFieldArray(value: unknown): boolean {
+  return Array.isArray(value) && value.every(isContractGraphConsumerRouteField);
+}
+
+function isContractGraphConsumerRouteField(value: unknown): boolean {
+  return (
+    value === "routeId" ||
+    value === "operationId" ||
+    value === "httpMethod" ||
+    value === "path" ||
+    value === "request.body" ||
+    value === "request.path" ||
+    value === "request.query" ||
+    value === "request.headers" ||
+    value === "response" ||
+    value === "problems" ||
+    value === "entitlements" ||
+    value === "access.guards" ||
+    value === "access.roles"
+  );
+}
+
 function isContractDiagnosticSnapshot(value: unknown): value is ContractDiagnostic {
   if (!isRecord(value)) {
     return false;
@@ -620,7 +1201,8 @@ function isContractDiagnosticTarget(value: unknown): boolean {
     value === "controller" ||
     value === "route" ||
     value === "param" ||
-    value === "schema"
+    value === "schema" ||
+    value === "problem"
   );
 }
 
@@ -643,9 +1225,25 @@ function isOptionalString(value: unknown): value is string | undefined {
 }
 
 function isOptionalNumber(value: unknown): value is number | undefined {
-  return value === undefined || typeof value === "number";
+  return value === undefined || isFiniteNumber(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return isFiniteNumber(value) && Number.isInteger(value) && value >= 0;
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasOwnProperty(value: object, key: PropertyKey): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
 }

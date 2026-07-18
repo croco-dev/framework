@@ -304,6 +304,37 @@ describe("projectMap", () => {
     expect(stdout).toEqual([message]);
   });
 
+  it("rejects malformed nested Contract Graph snapshot rows with stable evidence", async () => {
+    const stdout: string[] = [];
+    const workspaceIo = createWorkspaceIo(stdout);
+    const contractGraphPath = "/workspace/app/malformed-contract.json";
+    const malformedSnapshot = JSON.stringify({
+      ...createContractSnapshot(),
+    }).replace('"status":404', '"status":1e309');
+
+    const exitCode = await runProjectMap(
+      [
+        "--framework-manifest",
+        "committed-framework.json",
+        "--contract-graph",
+        "malformed-contract.json",
+      ],
+      {
+        io: {
+          ...workspaceIo,
+          exists: (path) => path === contractGraphPath || workspaceIo.exists?.(path) === true,
+          readFile: (path) =>
+            path === contractGraphPath ? malformedSnapshot : (workspaceIo.readFile?.(path) ?? ""),
+        },
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([
+      `Contract Graph snapshot '${contractGraphPath}' must be croco.contract-graph.snapshot.v1.`,
+    ]);
+  });
+
   it("reads an explicit framework manifest instead of regenerating from discovered sources", async () => {
     const stdout: string[] = [];
 
