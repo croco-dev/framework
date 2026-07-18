@@ -38,8 +38,8 @@ async function main() {
       await buildGeneratedControllerFixture();
       controllerPaths.push(pathToFileURL(generatedFixturePath).href);
       sourcePaths.push(
-        resolve(projectRoot, "src/__tests__/fixtures/SampleController.ts"),
-        resolve(projectRoot, "src/__tests__/fixtures/IntentMapModule.ts"),
+        pathToFileURL(resolve(projectRoot, "src/__tests__/fixtures/SampleController.ts")).href,
+        pathToFileURL(resolve(projectRoot, "src/__tests__/fixtures/IntentMapModule.ts")).href,
       );
     }
 

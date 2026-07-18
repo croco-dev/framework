@@ -484,6 +484,7 @@ function runTypecheck(
   const result = spawnSync("pnpm", ["exec", "tsc", "--pretty", "false", "-p", pkg.tsconfig], {
     cwd: rootDir,
     encoding: "utf-8",
+    shell: process.platform === "win32",
   });
 
   if (result.error) {
