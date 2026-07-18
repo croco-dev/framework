@@ -15,6 +15,7 @@ type ScriptResult = {
 };
 
 type TempRootOptions = {
+  readonly catalog?: Record<string, string>;
   readonly packageManager?: string | false;
 };
 
@@ -74,6 +75,20 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.status).toBe(1);
     expect(`${result.stdout}\n${result.stderr}`).toContain(
       "packageManager must pin the pnpm version",
+    );
+  });
+
+  it("rejects an unbounded catalog peer after pnpm resolves the packed manifest", () => {
+    const root = createTempRoot({ catalog: { unsafePeer: "*" } });
+    writeImportablePackage(root, "unsafe-catalog-peer", {
+      peerDependencies: { unsafePeer: "catalog:" },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      '@croco/unsafe-catalog-peer: packed peerDependencies.unsafePeer must use a bounded semver range, not "*"',
     );
   });
 
@@ -338,6 +353,7 @@ function createTempRoot(options: TempRootOptions = {}): string {
     join(root, "pnpm-workspace.yaml"),
     `${JSON.stringify(
       {
+        ...(options.catalog ? { catalog: options.catalog } : {}),
         packages: ["packages/*"],
       },
       null,
@@ -359,6 +375,7 @@ function writeImportablePackage(
     readonly exportsValue?: unknown;
     readonly importTarget?: string;
     readonly packageName?: string;
+    readonly peerDependencies?: Record<string, string>;
     readonly typesTarget?: string;
   } = {},
 ): void {
@@ -386,6 +403,7 @@ function writeImportablePackage(
       {
         ...(options.dependencies ? { dependencies: options.dependencies } : {}),
         name: packageName,
+        peerDependencies: options.peerDependencies,
         version: "0.0.0",
         dependencies: options.dependencies,
         files: ["dist"],

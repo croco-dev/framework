@@ -19,6 +19,7 @@ import {
   findPackageJsonFiles,
   packageHasSourceEntrypoint,
 } from "./package-manifest-contracts.mjs";
+import { isBoundedPeerDependencyRange } from "./peer-dependency-range-policy.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -167,8 +168,10 @@ function main(): void {
         return packedGraphPackage;
       });
       const plan = planPackageSmoke(packedPackage);
+      const peerMetadataDiagnostics = packedPeerMetadataDiagnostics(packedPackage);
+      diagnostics.push(...peerMetadataDiagnostics);
       diagnostics.push(...plan.diagnostics);
-      if (plan.diagnostics.length === 0) {
+      if (peerMetadataDiagnostics.length === 0 && plan.diagnostics.length === 0) {
         runPackageSmoke(consumerRoot, packedPackage, graphTarballs, packageManager, plan);
       }
       packageResults.push({
@@ -195,6 +198,42 @@ function main(): void {
     rmSync(packRoot, { force: true, recursive: true });
     rmSync(consumerRoot, { force: true, recursive: true });
   }
+}
+
+function packedPeerMetadataDiagnostics(packageInfo: PackedPackageInfo): string[] {
+  const diagnostics: string[] = [];
+  const sourcePeers = packageInfo.sourceManifest.peerDependencies ?? {};
+  const packedPeers = packageInfo.packedManifest.peerDependencies ?? {};
+
+  for (const [dependencyName, packedRange] of Object.entries(packedPeers)) {
+    if (!isBoundedPeerDependencyRange(packedRange)) {
+      diagnostics.push(
+        `${packageInfo.packageName}: packed peerDependencies.${dependencyName} must use a bounded semver range, not ${JSON.stringify(packedRange)}`,
+      );
+    }
+  }
+
+  for (const [dependencyName, sourceRange] of Object.entries(sourcePeers)) {
+    const packedRange = packedPeers[dependencyName];
+    if (packedRange === undefined) {
+      diagnostics.push(
+        `${packageInfo.packageName}: packed peerDependencies.${dependencyName} is missing`,
+      );
+      continue;
+    }
+
+    if (sourceRange === "catalog:" || sourceRange.startsWith("workspace:")) {
+      continue;
+    }
+
+    if (packedRange !== sourceRange) {
+      diagnostics.push(
+        `${packageInfo.packageName}: packed peerDependencies.${dependencyName} must preserve ${JSON.stringify(sourceRange)}, received ${JSON.stringify(packedRange)}`,
+      );
+    }
+  }
+
+  return diagnostics;
 }
 
 function parseArgs(args: readonly string[]): { readonly rootDir: string } {
