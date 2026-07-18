@@ -1108,18 +1108,17 @@ describe("E2E: generate()", () => {
       test: "turbo test",
       "demo:seed": "pnpm --filter @test/api-server demo:seed",
       "profile:check": "pnpm --filter @test/api-server profile:check",
-      "architecture-policy:check":
-        "NODE_PATH=./node_modules croco architecture-policy check --manifest croco.arch.json",
+      "architecture-policy:check": "croco architecture-policy check --manifest croco.arch.json",
       "runtime-policy:check":
-        "NODE_PATH=./node_modules croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
+        "croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
       "project-map:write":
-        "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --out croco.project-map.json --manifest-bundle .croco/manifest",
+        'croco project map --controllers "apps/api-server/src/controllers/**/*.ts" --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --out croco.project-map.json --manifest-bundle .croco/manifest',
       "project-map:check":
-        "NODE_PATH=./node_modules croco project map --controllers 'apps/api-server/src/controllers/**/*.ts' --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --check --manifest croco.project-map.json --manifest-bundle .croco/manifest",
+        'croco project map --controllers "apps/api-server/src/controllers/**/*.ts" --runtime-policy croco-runtime-policy.manifest.json --provider-profile croco-saas-profile.manifest.json --check --manifest croco.project-map.json --manifest-bundle .croco/manifest',
       "di:graph": "pnpm --filter @test/api-server di:graph",
-      "di:check": "NODE_PATH=./node_modules croco di check .croco/build/di-graph.manifest.json",
+      "di:check": "croco di check .croco/build/di-graph.manifest.json",
       "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
-      doctor: "NODE_PATH=./node_modules croco doctor --json",
+      doctor: "croco doctor --json",
       "di:verify": expect.stringMatching(
         /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
       ),
@@ -2255,9 +2254,9 @@ describe("E2E: generate()", () => {
         "contract:verify":
           "pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
         "di:graph": "pnpm --filter @test/api-server di:graph",
-        "di:check": "NODE_PATH=./node_modules croco di check .croco/build/di-graph.manifest.json",
+        "di:check": "croco di check .croco/build/di-graph.manifest.json",
         "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
-        doctor: "NODE_PATH=./node_modules croco doctor --json",
+        doctor: "croco doctor --json",
         "di:verify": expect.stringMatching(
           /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
         ),
@@ -2359,9 +2358,9 @@ describe("E2E: generate()", () => {
         "failure-drill:smoke": "pnpm --filter @test/api-server failure-drill:smoke",
         "failure-drill:integration": "pnpm --filter @test/api-server failure-drill:integration",
         "di:graph": "pnpm --filter @test/api-server di:graph",
-        "di:check": "NODE_PATH=./node_modules croco di check .croco/build/di-graph.manifest.json",
+        "di:check": "croco di check .croco/build/di-graph.manifest.json",
         "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
-        doctor: "NODE_PATH=./node_modules croco doctor --json",
+        doctor: "croco doctor --json",
         "di:verify": expect.stringMatching(
           /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
         ),

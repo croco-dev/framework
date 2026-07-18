@@ -21,7 +21,10 @@ describe("CLI result contract", () => {
       packageManager: "pnpm",
       nodeRequirement: ">=22",
       nodeRecovery: "Run nvm install 22 && nvm use 22.",
-      nextSteps: ["cd /tmp/my-app", "pnpm install", "pnpm dev"],
+      nextSteps: [
+        { command: "pnpm", args: ["install"], cwd: "/tmp/my-app" },
+        { command: "pnpm", args: ["dev"], cwd: "/tmp/my-app" },
+      ],
     });
     expect(formatHumanSuccess(result)).toBe(
       [
@@ -38,7 +41,18 @@ describe("CLI result contract", () => {
   it("uses the SaaS API dev command for SaaS template next steps", () => {
     const result = createSuccessResult("/tmp/my-saas", createOptions({ preset: "saas" }));
 
-    expect(result.nextSteps).toEqual(["cd /tmp/my-saas", "pnpm dev:api"]);
+    expect(result.nextSteps).toEqual([{ command: "pnpm", args: ["dev:api"], cwd: "/tmp/my-saas" }]);
+  });
+
+  it("keeps shell quoting out of structured next steps", () => {
+    const targetDir = "/tmp/Owen's Croco App";
+    const result = createSuccessResult(targetDir, createOptions({ installDeps: false }));
+
+    expect(result.nextSteps).toEqual([
+      { command: "pnpm", args: ["install"], cwd: targetDir },
+      { command: "pnpm", args: ["dev"], cwd: targetDir },
+    ]);
+    expect(formatHumanSuccess(result)).toContain("cd '/tmp/Owen'\\''s Croco App'");
   });
 
   it("serializes filesystem Problems with stable code, reason, and recovery", () => {

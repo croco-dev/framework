@@ -15,6 +15,7 @@ import {
   assertGeneratedPresentationProfileMatchesCatalog,
   readCommandOutputSegment,
   readGeneratedSmokeAllowlistMetadata,
+  requiresCommandShell,
 } from "../create-croco-app-generated-smoke.mts";
 import {
   classifySmokeCommandFailure,
@@ -59,6 +60,15 @@ const journeySourceCaseNames = [
   "graphql-lambda-api",
   "rest-spa-contracts",
 ] as const;
+
+describe("generated smoke command execution", () => {
+  it("uses the native Windows command shell only for cmd shims", () => {
+    expect(requiresCommandShell("corepack.cmd", "win32")).toBe(true);
+    expect(requiresCommandShell("COREPACK.CMD", "win32")).toBe(true);
+    expect(requiresCommandShell("node.exe", "win32")).toBe(false);
+    expect(requiresCommandShell("corepack", "linux")).toBe(false);
+  });
+});
 
 describe("generated verification mutation coverage", () => {
   it("requires guards and recovery for non-codegen check and verify validations", () => {

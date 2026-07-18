@@ -11,7 +11,7 @@ export type CreateCrocoAppSuccessResult = {
   readonly packageManager: "pnpm";
   readonly nodeRequirement: string;
   readonly nodeRecovery: string;
-  readonly nextSteps: readonly string[];
+  readonly nextSteps: readonly CreateCrocoAppNextStep[];
 };
 
 export type CreateCrocoAppFailureResult = {
@@ -38,6 +38,12 @@ class UnexpectedCliFailureProblem extends Problem {
     });
   }
 }
+
+export type CreateCrocoAppNextStep = {
+  readonly command: "pnpm";
+  readonly args: readonly string[];
+  readonly cwd: string;
+};
 
 export function createSuccessResult(
   targetDir: string,
@@ -70,11 +76,16 @@ export function createFailureResult(error: unknown): CreateCrocoAppFailureResult
 }
 
 export function formatHumanSuccess(result: CreateCrocoAppSuccessResult): string {
+  const commands = [
+    formatChangeDirectoryCommand(result.targetDir),
+    ...result.nextSteps.map(formatNextStepCommand),
+  ];
+
   return [
     `Project created in ${result.targetDir}.`,
     `Node.js ${result.nodeRequirement} is required for install and build. Recovery: ${result.nodeRecovery}`,
     "Next steps:",
-    ...result.nextSteps.map((command) => `  ${command}`),
+    ...commands.map((command) => `  ${command}`),
   ].join("\n");
 }
 
@@ -99,24 +110,27 @@ export function formatJsonResult(result: CreateCrocoAppResult): string {
   return JSON.stringify(result, null, 2);
 }
 
-function createNextStepCommands(targetDir: string, options: GeneratorOptions): string[] {
-  const commands = [`cd ${quoteShellArg(targetDir)}`];
+function createNextStepCommands(
+  targetDir: string,
+  options: GeneratorOptions,
+): CreateCrocoAppNextStep[] {
+  const commands: CreateCrocoAppNextStep[] = [];
 
   if (!options.installDeps) {
-    commands.push("pnpm install");
+    commands.push({ command: "pnpm", args: ["install"], cwd: targetDir });
   }
 
-  commands.push(resolveRunCommand(options));
+  commands.push({ command: "pnpm", args: [resolveRunScript(options)], cwd: targetDir });
 
   return commands;
 }
 
-function resolveRunCommand(options: GeneratorOptions): string {
+function resolveRunScript(options: GeneratorOptions): string {
   if (options.preset === "saas" || options.preset === "ai-saas") {
-    return "pnpm dev:api";
+    return "dev:api";
   }
 
-  return "pnpm dev";
+  return "dev";
 }
 
 function toCliProblem(error: unknown): Problem {
@@ -137,10 +151,29 @@ function readRecovery(extensions: Problem["extensions"]): string | undefined {
   return typeof recovery === "string" ? recovery : undefined;
 }
 
-function quoteShellArg(value: string): string {
+function formatChangeDirectoryCommand(
+  targetDir: string,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  if (platform === "win32") {
+    return `cd /d ${quoteWindowsCommandArg(targetDir)}`;
+  }
+
+  return `cd ${quotePosixShellArg(targetDir)}`;
+}
+
+function formatNextStepCommand(step: CreateCrocoAppNextStep): string {
+  return [step.command, ...step.args].join(" ");
+}
+
+function quotePosixShellArg(value: string): string {
   if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) {
     return value;
   }
 
   return `'${value.split("'").join("'\\''")}'`;
+}
+
+function quoteWindowsCommandArg(value: string): string {
+  return /^[A-Za-z0-9_@%+=:,./\\-]+$/.test(value) ? value : `"${value}"`;
 }

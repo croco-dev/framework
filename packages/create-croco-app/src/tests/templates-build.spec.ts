@@ -552,43 +552,42 @@ function checkSaasStructure() {
         /^pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
       "contract:snapshot": expect.stringMatching(
-        /^NODE_PATH=\.\/node_modules croco contracts check[\s\S]*--strict-schemas[\s\S]*--json --out contract-graph\.snapshot\.json$/,
+        /^croco contracts check[\s\S]*--strict-schemas[\s\S]*--json --out contract-graph\.snapshot\.json$/,
       ),
       "contract:diff": expect.stringMatching(
-        /^NODE_PATH=\.\/node_modules croco contracts diff --baseline contract-graph\.snapshot\.json[\s\S]*--controllers[\s\S]*--strict-schemas$/,
+        /^croco contracts diff --baseline contract-graph\.snapshot\.json[\s\S]*--controllers[\s\S]*--strict-schemas$/,
       ),
       "contract:coverage": expect.stringMatching(
-        /^NODE_PATH=\.\/node_modules croco contracts check[\s\S]*--strict-schemas[\s\S]*--json --out contract-graph\.coverage\.json$/,
+        /^croco contracts check[\s\S]*--strict-schemas[\s\S]*--json --out contract-graph\.coverage\.json$/,
       ),
       "project-map:write": expect.stringMatching(
-        /^NODE_PATH=\.\/node_modules croco project map[\s\S]*--runtime-policy croco-runtime-policy\.manifest\.json[\s\S]*--provider-profile croco-saas-profile\.manifest\.json[\s\S]*--out croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
+        /^croco project map[\s\S]*--runtime-policy croco-runtime-policy\.manifest\.json[\s\S]*--provider-profile croco-saas-profile\.manifest\.json[\s\S]*--out croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
       ),
       "project-map:check": expect.stringMatching(
-        /^NODE_PATH=\.\/node_modules croco project map[\s\S]*--runtime-policy croco-runtime-policy\.manifest\.json[\s\S]*--provider-profile croco-saas-profile\.manifest\.json[\s\S]*--check --manifest croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
+        /^croco project map[\s\S]*--runtime-policy croco-runtime-policy\.manifest\.json[\s\S]*--provider-profile croco-saas-profile\.manifest\.json[\s\S]*--check --manifest croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
       ),
       "contract:verify": expect.stringMatching(
         /^pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
       "ci:contracts": "pnpm contract:verify",
       "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
-      "di:check": "NODE_PATH=./node_modules croco di check .croco/build/di-graph.manifest.json",
+      "di:check": "croco di check .croco/build/di-graph.manifest.json",
       "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
-      doctor: "NODE_PATH=./node_modules croco doctor --json",
+      doctor: "croco doctor --json",
       "di:verify": expect.stringMatching(
         /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
       ),
       "contract:client": expect.stringMatching(
-        /^NODE_PATH=\.\/node_modules node \.\/node_modules\/@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--strict-schemas[\s\S]*--out[\s\S]*--manifest-bundle \.croco\/manifest$/,
+        /^croco-rpc-codegen[\s\S]*--strict-schemas[\s\S]*--out[\s\S]*--manifest-bundle \.croco\/manifest$/,
       ),
       "contract:openapi": expect.stringMatching(
-        /^pnpm contract:check && NODE_PATH=\.\/node_modules croco-openapi-spec[\s\S]*--strict-schemas[\s\S]*--out openapi\.json[\s\S]*--manifest-bundle \.croco\/manifest$/,
+        /^pnpm contract:check && croco-openapi-spec[\s\S]*--strict-schemas[\s\S]*--out openapi\.json[\s\S]*--manifest-bundle \.croco\/manifest$/,
       ),
       "demo:seed": expect.any(String),
       "profile:check": "pnpm --filter {{scope}}/api-server profile:check",
-      "architecture-policy:check":
-        "NODE_PATH=./node_modules croco architecture-policy check --manifest croco.arch.json",
+      "architecture-policy:check": "croco architecture-policy check --manifest croco.arch.json",
       "runtime-policy:check":
-        "NODE_PATH=./node_modules croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
+        "croco runtime-policy check --manifest croco-runtime-policy.manifest.json",
       "profile:smoke:real": "pnpm --filter {{scope}}/api-server profile:smoke:real",
       "demo:smoke": expect.stringMatching(
         /profile:check[\s\S]*architecture-policy:check[\s\S]*runtime-policy:check[\s\S]*contract:check[\s\S]*api-server demo:smoke[\s\S]*api-server ops:smoke[\s\S]*api-server jobs:smoke/,
@@ -609,6 +608,12 @@ function checkSaasStructure() {
       "@croco/rpc-codegen": "workspace:*",
     }),
   });
+  expect(Object.values(rootPackageJson.scripts ?? {})).not.toEqual(
+    expect.arrayContaining([expect.stringMatching(/(?:^|\s)[A-Z][A-Z0-9_]*=/)]),
+  );
+  expect(Object.values(rootPackageJson.scripts ?? {})).not.toEqual(
+    expect.arrayContaining([expect.stringContaining("./node_modules/")]),
+  );
 
   const apiPackageJson = readJsonTemplate("saas", "apps", "api-server", "package.json.hbs");
   expect(apiPackageJson).toMatchObject({
@@ -864,19 +869,19 @@ function checkAiSaasStructure() {
         /--strict-schemas[\s\S]*contract-graph\.coverage\.json/,
       ),
       "project-map:write": expect.stringMatching(
-        /^NODE_PATH=\.\/node_modules croco project map[\s\S]*--out croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
+        /^croco project map[\s\S]*--out croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
       ),
       "project-map:check": expect.stringMatching(
-        /^NODE_PATH=\.\/node_modules croco project map[\s\S]*--check --manifest croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
+        /^croco project map[\s\S]*--check --manifest croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
       ),
       "contract:verify": expect.stringMatching(
         /^pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check/,
       ),
       "ci:contracts": "pnpm contract:verify",
       "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
-      "di:check": "NODE_PATH=./node_modules croco di check .croco/build/di-graph.manifest.json",
+      "di:check": "croco di check .croco/build/di-graph.manifest.json",
       "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
-      doctor: "NODE_PATH=./node_modules croco doctor --json",
+      doctor: "croco doctor --json",
       "di:verify": expect.stringMatching(
         /^pnpm di:check && pnpm di:assert && pnpm project-map:check && pnpm doctor$/,
       ),
@@ -885,6 +890,12 @@ function checkAiSaasStructure() {
       ),
     }),
   });
+  expect(Object.values(rootPackageJson.scripts ?? {})).not.toEqual(
+    expect.arrayContaining([expect.stringMatching(/(?:^|\s)[A-Z][A-Z0-9_]*=/)]),
+  );
+  expect(Object.values(rootPackageJson.scripts ?? {})).not.toEqual(
+    expect.arrayContaining([expect.stringContaining("./node_modules/")]),
+  );
 
   const apiPackageJson = readJsonTemplate("ai-saas", "apps", "api-server", "package.json.hbs");
   expect(apiPackageJson).toMatchObject({

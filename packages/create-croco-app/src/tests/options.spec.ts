@@ -542,7 +542,10 @@ describe("noninteractive CLI option validation", () => {
         packageManager: "pnpm",
         nodeRequirement: ">=22",
         nodeRecovery: "Run nvm install 22 && nvm use 22.",
-        nextSteps: [`cd ${targetDir}`, "pnpm install", "pnpm dev"],
+        nextSteps: [
+          { command: "pnpm", args: ["install"], cwd: targetDir },
+          { command: "pnpm", args: ["dev"], cwd: targetDir },
+        ],
       });
     } finally {
       logSpy.mockRestore();
