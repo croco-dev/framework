@@ -321,9 +321,11 @@ function getProgramEmitSourceFilePaths(
     : sourceFiles.map((sourceFile) => sourceFile.getFilePath());
 }
 
-function getCommonSourceDir(sourceFilePaths: readonly string[]): string {
-  const dirs = sourceFilePaths.map((sourceFilePath) => path.dirname(sourceFilePath));
-  const [firstDir, ...remainingDirs] = dirs.map((dir) => dir.split(path.sep));
+export function getCommonSourceDir(sourceFilePaths: readonly string[]): string {
+  const dirs = sourceFilePaths.map((sourceFilePath) =>
+    toCommonDirPath(path.dirname(path.normalize(sourceFilePath))),
+  );
+  const [firstDir, ...remainingDirs] = dirs.map((dir) => dir.split("/"));
 
   if (!firstDir) {
     return process.cwd();
@@ -332,9 +334,21 @@ function getCommonSourceDir(sourceFilePaths: readonly string[]): string {
   const commonParts = firstDir.filter((part, index) =>
     remainingDirs.every((dir) => dir[index] === part),
   );
-  const commonDir = commonParts.join(path.sep);
+  const commonDir = commonParts.join("/");
 
-  return path.isAbsolute(commonDir) ? commonDir : `${path.sep}${commonDir}`;
+  if (isWindowsDriveRootedPath(commonParts)) {
+    return commonDir;
+  }
+
+  return path.isAbsolute(commonDir) ? path.normalize(commonDir) : `${path.sep}${commonDir}`;
+}
+
+function toCommonDirPath(dir: string): string {
+  return dir.replace(/\\/g, "/");
+}
+
+function isWindowsDriveRootedPath(parts: readonly string[]): boolean {
+  return /^[A-Za-z]:$/.test(parts[0] ?? "");
 }
 
 function getModuleResolutionRoot(sourceDir: string): string {

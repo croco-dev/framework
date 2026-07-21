@@ -3,7 +3,12 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { isNodeModulesPath, loadContractGraph, loadRoutes } from "../libs/loadRoutes";
+import {
+  getCommonSourceDir,
+  isNodeModulesPath,
+  loadContractGraph,
+  loadRoutes,
+} from "../libs/loadRoutes";
 
 let tempRoot!: string;
 let sourceDir!: string;
@@ -25,6 +30,16 @@ describe("loadRoutes", () => {
     expect(isNodeModulesPath("C:\\workspace\\node_modules\\pkg\\index.ts")).toBe(true);
     expect(isNodeModulesPath("C:/workspace/node_modules/pkg/index.ts")).toBe(true);
     expect(isNodeModulesPath("C:/workspace/src/index.ts")).toBe(false);
+  });
+
+  it("keeps Windows drive roots when source files use forward slashes", () => {
+    expect(
+      getCommonSourceDir([
+        "C:/workspace/apps/api-server/src/controllers/UsersController.ts",
+        "C:/workspace/apps/api-server/src/controllers/schemas.ts",
+        "C:/workspace/apps/api-server/src/saasDemo.ts",
+      ]),
+    ).toBe("C:/workspace/apps/api-server/src");
   });
 
   it(
