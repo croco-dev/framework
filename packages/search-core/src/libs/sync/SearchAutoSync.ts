@@ -63,7 +63,9 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
   private readonly inFlightEvents = new Map<string, Promise<void>>();
   private readonly searchEngineToken = SearchEngine.token;
 
-  constructor(private readonly failedEventPublisher?: SearchSyncFailedEventPublisher) {}
+  constructor(
+    private readonly failedEventPublisher: SearchSyncFailedEventPublisher | undefined = undefined,
+  ) {}
 
   async handle(event: DocumentIndexedEvent | DocumentDeletedEvent): Promise<void> {
     const metadata = this.getSearchableMetadata(event.indexName);

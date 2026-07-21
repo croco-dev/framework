@@ -34,11 +34,11 @@ export type TraceConfig = {
 /**
  * Configuration for telemetry metrics.
  *
- * Defines how metric data is collected and exported.
- * Currently disabled by default in Lambda environments.
+ * Reserved configuration for future metric runtime providers.
+ * Setting enabled to true currently rejects TelemetryRuntime initialization.
  */
 export type MetricsConfig = {
-  /** Whether metrics collection is enabled. Default: false */
+  /** Requests metrics collection. Must remain false until a runtime provider is available. */
   enabled?: boolean;
   /** OTLP metrics exporter URL */
   exporterUrl?: string;
@@ -53,11 +53,11 @@ export type MetricsConfig = {
 /**
  * Configuration for telemetry logs.
  *
- * Defines how log data is collected and exported.
- * Currently disabled by default in Lambda environments.
+ * Reserved configuration for future log runtime providers.
+ * Setting enabled to true currently rejects TelemetryRuntime initialization.
  */
 export type LogsConfig = {
-  /** Whether logs collection is enabled. Default: false */
+  /** Requests log collection. Must remain false until a runtime provider is available. */
   enabled?: boolean;
   /** OTLP logs exporter URL */
   exporterUrl?: string;
@@ -73,7 +73,7 @@ export type LogsConfig = {
  * Main configuration for the OpenTelemetry SDK.
  *
  * This is the top-level configuration object passed to TelemetryRuntime.init.
- * It combines service metadata with trace, metrics, and logs configurations.
+ * It combines service metadata with trace configuration and reserved metrics/logs configuration.
  *
  * @example
  * ```typescript

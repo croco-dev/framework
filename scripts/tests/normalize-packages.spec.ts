@@ -879,6 +879,58 @@ describe("normalize-packages.mjs", () => {
     expect(result.stdout).not.toContain("external-croco-scope/package.json");
   });
 
+  it("rejects wildcard, latest, and upper-unbounded published runtime peers", () => {
+    const root = createTempRoot();
+    writePackage(
+      root,
+      "unbounded-peers",
+      publishablePackage("@croco/unbounded-peers", {
+        peerDependencies: {
+          caretWildcard: "^*",
+          latestPeer: "latest",
+          lowerBoundOnly: ">=1.0.0",
+          malformedPeer: "1.0.0 definitely-not-semver",
+          tildeWildcard: "~x",
+          wildcardPeer: "*",
+        },
+      }),
+    );
+    writePackage(
+      root,
+      "bounded-peers",
+      publishablePackage("@croco/bounded-peers", {
+        peerDependencies: {
+          caretPeer: "^1.0.0",
+          comparatorPeer: ">=1.0.0 <2",
+          exactPeer: "1.0.0",
+        },
+      }),
+    );
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      'peerDependencies.caretWildcard must use a bounded semver range, not "^*"',
+    );
+    expect(result.stdout).toContain(
+      'peerDependencies.latestPeer must use a bounded semver range, not "latest"',
+    );
+    expect(result.stdout).toContain(
+      'peerDependencies.lowerBoundOnly must use a bounded semver range, not ">=1.0.0"',
+    );
+    expect(result.stdout).toContain(
+      'peerDependencies.malformedPeer must use a bounded semver range, not "1.0.0 definitely-not-semver"',
+    );
+    expect(result.stdout).toContain(
+      'peerDependencies.tildeWildcard must use a bounded semver range, not "~x"',
+    );
+    expect(result.stdout).toContain(
+      'peerDependencies.wildcardPeer must use a bounded semver range, not "*"',
+    );
+    expect(result.stdout).not.toContain("- packages/bounded-peers/package.json:");
+  });
+
   it("allows checked peer-only internal semver range exceptions", () => {
     const root = createTempRoot();
     writePackage(root, "internal-runtime", publishablePackage("@croco/internal-runtime"));
@@ -984,7 +1036,8 @@ describe("normalize-packages.mjs", () => {
         range: "file:../internal-runtime",
         reason: "Non-semver dependency specs are not published peer compatibility ranges.",
         owner: "release",
-        compatibilityRationale: "File dependencies are checkout-local and cannot define npm compatibility.",
+        compatibilityRationale:
+          "File dependencies are checkout-local and cannot define npm compatibility.",
       },
       {
         package: "@croco/peer-compat",

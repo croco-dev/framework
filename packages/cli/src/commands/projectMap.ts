@@ -19,7 +19,7 @@ import { createFrameworkManifest } from "@croco/framework-routes";
 import {
   createContractGraphSnapshot,
   formatContractDiagnostic,
-  isContractGraphSnapshot,
+  parseContractGraphSnapshot,
   PROJECT_MANIFEST_BUNDLE_ARTIFACTS,
   type ContractDiagnostic,
   type ContractGraph,
@@ -1432,9 +1432,9 @@ function readOptionalContractGraphSnapshot(
     return undefined;
   }
 
-  const snapshot = readJson(manifestPath, io);
+  const snapshot = parseContractGraphSnapshot(readJson(manifestPath, io));
 
-  if (!isContractGraphSnapshot(snapshot)) {
+  if (!snapshot) {
     throw new Error(
       `Contract Graph snapshot '${manifestPath}' must be croco.contract-graph.snapshot.v1.`,
     );

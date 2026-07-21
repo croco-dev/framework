@@ -26,27 +26,123 @@ function parseOptionalBooleanEnv(envName: string): boolean {
   throw new InvalidBooleanEnvProblem(envName, rawValue);
 }
 
-export const env = createEnv({
-  server: {
-    ...appConfig.server,
-    ...databaseConfig.server,
-    ...redisConfig.server,
-    ...storageConfig.server,
+function createRuntimeEnv() {
+  return createEnv({
+    server: {
+      ...appConfig.server,
+      ...databaseConfig.server,
+      ...redisConfig.server,
+      ...storageConfig.server,
+    },
+    clientPrefix: "NEXT_PUBLIC_",
+    client: {
+      ...appConfig.client,
+      ...databaseConfig.client,
+      ...redisConfig.client,
+      ...storageConfig.client,
+    },
+    shared: {
+      ...appConfig.shared,
+      ...databaseConfig.shared,
+      ...redisConfig.shared,
+      ...storageConfig.shared,
+    },
+    runtimeEnv: process.env,
+    emptyStringAsUndefined: true,
+    skipValidation: parseOptionalBooleanEnv("SKIP_ENV_VALIDATION"),
+  });
+}
+
+type RuntimeEnv = ReturnType<typeof createRuntimeEnv>;
+
+const runtimeEnvTarget = {} as RuntimeEnv;
+let resolvedRuntimeEnv: RuntimeEnv | undefined;
+let runtimeEnvInitialized = false;
+
+function getResolvedRuntimeEnv(): RuntimeEnv {
+  resolvedRuntimeEnv ??= createRuntimeEnv();
+  return resolvedRuntimeEnv;
+}
+
+function getRuntimeEnvTarget(): RuntimeEnv {
+  if (!runtimeEnvInitialized) {
+    const resolvedEnv = getResolvedRuntimeEnv();
+    Reflect.setPrototypeOf(runtimeEnvTarget, Reflect.getPrototypeOf(resolvedEnv));
+    Object.defineProperties(runtimeEnvTarget, Object.getOwnPropertyDescriptors(resolvedEnv));
+    runtimeEnvInitialized = true;
+  }
+
+  return runtimeEnvTarget;
+}
+
+function synchronizeRuntimeEnvTarget(): RuntimeEnv {
+  const target = getRuntimeEnvTarget();
+  const resolvedEnv = getResolvedRuntimeEnv();
+  const resolvedKeys = new Set(Reflect.ownKeys(resolvedEnv));
+
+  for (const property of Reflect.ownKeys(target)) {
+    if (!resolvedKeys.has(property)) {
+      Reflect.deleteProperty(target, property);
+    }
+  }
+
+  Object.defineProperties(target, Object.getOwnPropertyDescriptors(resolvedEnv));
+  return target;
+}
+
+export const env = new Proxy(runtimeEnvTarget, {
+  get: (_target, property) => {
+    getRuntimeEnvTarget();
+    const resolvedEnv = getResolvedRuntimeEnv();
+    return Reflect.get(resolvedEnv, property, resolvedEnv);
   },
-  clientPrefix: "NEXT_PUBLIC_",
-  client: {
-    ...appConfig.client,
-    ...databaseConfig.client,
-    ...redisConfig.client,
-    ...storageConfig.client,
+  set: (_target, property, value) => {
+    const resolvedEnv = getResolvedRuntimeEnv();
+    if (!Reflect.set(resolvedEnv, property, value, resolvedEnv)) {
+      return false;
+    }
+
+    synchronizeRuntimeEnvTarget();
+    return true;
   },
-  shared: {
-    ...appConfig.shared,
-    ...databaseConfig.shared,
-    ...redisConfig.shared,
-    ...storageConfig.shared,
+  has: (_target, property) => {
+    getRuntimeEnvTarget();
+    return Reflect.has(getResolvedRuntimeEnv(), property);
   },
-  runtimeEnv: process.env,
-  emptyStringAsUndefined: true,
-  skipValidation: parseOptionalBooleanEnv("SKIP_ENV_VALIDATION"),
+  ownKeys: () => {
+    synchronizeRuntimeEnvTarget();
+    return Reflect.ownKeys(getResolvedRuntimeEnv());
+  },
+  getOwnPropertyDescriptor: (_target, property) =>
+    Reflect.getOwnPropertyDescriptor(synchronizeRuntimeEnvTarget(), property),
+  defineProperty: (_target, property, attributes) => {
+    const target = getRuntimeEnvTarget();
+    return (
+      Reflect.defineProperty(getResolvedRuntimeEnv(), property, attributes) &&
+      Reflect.defineProperty(target, property, attributes)
+    );
+  },
+  deleteProperty: (_target, property) => {
+    const target = getRuntimeEnvTarget();
+    return (
+      Reflect.deleteProperty(getResolvedRuntimeEnv(), property) &&
+      Reflect.deleteProperty(target, property)
+    );
+  },
+  getPrototypeOf: () => {
+    getRuntimeEnvTarget();
+    return Reflect.getPrototypeOf(getResolvedRuntimeEnv());
+  },
+  setPrototypeOf: (_target, prototype) => {
+    const target = getRuntimeEnvTarget();
+    return (
+      Reflect.setPrototypeOf(getResolvedRuntimeEnv(), prototype) &&
+      Reflect.setPrototypeOf(target, prototype)
+    );
+  },
+  isExtensible: () => Reflect.isExtensible(getRuntimeEnvTarget()),
+  preventExtensions: () => {
+    const target = getRuntimeEnvTarget();
+    return Reflect.preventExtensions(getResolvedRuntimeEnv()) && Reflect.preventExtensions(target);
+  },
 });

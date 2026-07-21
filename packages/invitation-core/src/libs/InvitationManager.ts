@@ -1,21 +1,23 @@
+// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
+/* oxlint-disable typescript/consistent-type-imports */
 import { randomUUID } from "node:crypto";
-import type { EventPublisher } from "@croco/events-core";
+import { EventPublisher } from "@croco/events-core";
 import { Component } from "@croco/framework-context";
-import type { AbstractMembershipManager, MembershipRole } from "@croco/membership-core";
+import { AbstractMembershipManager, type MembershipRole } from "@croco/membership-core";
 import {
   createNotificationIdempotencyKey,
   NotificationChannel,
   type NotificationPayload,
-  type NotificationService,
+  NotificationService,
 } from "@croco/notifications-core";
-import type { TxManager } from "@croco/tx-core";
+import { TxManager } from "@croco/tx-core";
 import {
   InvitationAcceptedEvent,
   InvitationCreatedEvent,
   InvitationDeclinedEvent,
   InvitationRevokedEvent,
 } from "./events/InvitationEvents";
-import type { InvitationStore } from "./InvitationStore";
+import { InvitationStore } from "./InvitationStore";
 import {
   InvitationAlreadyAcceptedProblem,
   InvitationEmailMismatchProblem,

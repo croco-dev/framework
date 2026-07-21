@@ -39,6 +39,7 @@
     "@croco/protocols-graphql": "workspace:*",
     "class-validator": "^0.14.3",
     "graphql": "^16.12.0",
+    "graphql-scalars": "^1.25.0",
     "graphql-yoga": "^5.10.1",
     "reflect-metadata": "^0.2.2",
     "type-graphql": "^2.0.0-rc.3"

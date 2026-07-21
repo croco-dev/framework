@@ -6,7 +6,7 @@ import {
   diffContractGraphSnapshots,
   formatContractDiagnostic,
   getContractGraphErrors,
-  isContractGraphSnapshot,
+  parseContractGraphSnapshot,
   type BuildContractGraphOptions,
   type ContractGraph,
   type ContractGraphDiff,
@@ -206,13 +206,13 @@ function formatChange(change: ContractGraphDiffChange): string {
 }
 
 function readSnapshot(path: string, io: ContractsDiffIo): ContractGraphSnapshot {
-  const parsed = JSON.parse(io.readFile(resolvePath(path, io.cwd))) as unknown;
+  const snapshot = parseContractGraphSnapshot(JSON.parse(io.readFile(resolvePath(path, io.cwd))));
 
-  if (!isContractGraphSnapshot(parsed)) {
+  if (!snapshot) {
     throw new Error(`${path} is not a croco.contract-graph.snapshot.v1 JSON snapshot.`);
   }
 
-  return parsed;
+  return snapshot;
 }
 
 async function loadContractGraphFromRpcCodegen(

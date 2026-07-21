@@ -3,6 +3,7 @@ import {
   OtlpEndpointRequiredProblem,
   SamplerProblem,
   TelemetryRuntimeProblem,
+  UnsupportedTelemetrySignalProblem,
 } from "../libs/problems/TelemetryProblems";
 
 describe("SamplerProblem", () => {
@@ -83,5 +84,20 @@ describe("TelemetryRuntimeProblem", () => {
     const cause = new Error("root cause");
     const problem = new TelemetryRuntimeProblem("init", cause);
     expect(problem.cause).toBe(cause);
+  });
+});
+
+describe("UnsupportedTelemetrySignalProblem", () => {
+  it("should expose stable, actionable signal support evidence without configuration values", () => {
+    const problem = new UnsupportedTelemetrySignalProblem(["metrics", "logs"]);
+
+    expect(problem.code).toBe("TELEMETRY_SIGNAL_UNSUPPORTED");
+    expect(problem.category).toBe("BadRequest");
+    expect(problem.signals).toEqual(["metrics", "logs"]);
+    expect(problem.supportState).toBe("unsupported-requested");
+    expect(problem.detail).toBe(
+      "Telemetry signals 'metrics, logs' are not supported by TelemetryRuntime; set metrics.enabled and logs.enabled to false or omit them until runtime providers are available",
+    );
+    expect(JSON.stringify(problem)).not.toContain("exporter");
   });
 });

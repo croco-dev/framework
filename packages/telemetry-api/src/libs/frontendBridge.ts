@@ -67,7 +67,7 @@ export type FrontendTelemetryBridge = {
   readonly correlationId: string;
   readonly traceparent: string;
   readonly createHeaders: (context: FrontendTelemetryRequestContext) => Record<string, string>;
-  readonly record: (event: FrontendTelemetryEvent) => void;
+  readonly record: (event: FrontendTelemetryEvent) => void | Promise<void>;
 };
 
 const DEFAULT_CORRELATION_HEADER = "x-croco-correlation-id";
@@ -113,9 +113,7 @@ export function createFrontendTelemetryBridge(
       [headerNames.interactionId]: context.interactionId ?? interactionId,
       [headerNames.traceparent]: context.traceparent ?? traceparent,
     }),
-    record: (event) => {
-      options.sink?.record(event);
-    },
+    record: (event) => options.sink?.record(event),
   };
 }
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "reflect-metadata";
-import { Component, Container, Context, MetadataStorage, Token } from "../index";
+import { Component, Container, Context, Inject, MetadataStorage, Token } from "../index";
 import type { RuntimeContext } from "../index";
 import { getComponentScope } from "../libs/decorators/Component";
 
@@ -34,6 +34,53 @@ describe("Container", () => {
       const instance2 = Container.get(SimpleService);
 
       expect(instance1).toBe(instance2);
+    });
+
+    it("preserves trailing constructor defaults when metadata includes non-DI types", () => {
+      class Repository {}
+      class DefaultedService {
+        constructor(
+          readonly repository: Repository,
+          readonly cacheTtlMs: number = 60_000,
+          readonly options: { enabled: boolean } | undefined = undefined,
+        ) {}
+      }
+
+      Reflect.defineMetadata("design:paramtypes", [Repository, Number, Object], DefaultedService);
+      Component()(DefaultedService);
+      const repository = Container.set(Repository, new Repository());
+
+      const service = Container.get(DefaultedService);
+
+      expect(service.repository).toBe(repository);
+      expect(service.cacheTtlMs).toBe(60_000);
+      expect(service.options).toBeUndefined();
+    });
+
+    it("resolves explicit injections even when the constructor parameter has a default", () => {
+      const cacheTtlToken = new Token<number>("cache.ttl");
+      class ConfiguredService {
+        constructor(@Inject(cacheTtlToken) readonly cacheTtlMs: number = 60_000) {}
+      }
+
+      Reflect.defineMetadata("design:paramtypes", [Number], ConfiguredService);
+      Component()(ConfiguredService);
+      Container.set(cacheTtlToken, 5_000);
+
+      expect(Container.get(ConfiguredService).cacheTtlMs).toBe(5_000);
+    });
+
+    it("resolves source-mode injections without emitted parameter metadata", () => {
+      const dependencyToken = new Token<SimpleService>("source-mode.dependency");
+      class SourceModeService {
+        constructor(readonly dependency: SimpleService) {}
+      }
+
+      Component()(SourceModeService);
+      (Inject(dependencyToken) as ParameterDecorator)(SourceModeService, undefined, 0);
+      const dependency = Container.set(dependencyToken, new SimpleService());
+
+      expect(Container.get(SourceModeService).dependency).toBe(dependency);
     });
   });
 

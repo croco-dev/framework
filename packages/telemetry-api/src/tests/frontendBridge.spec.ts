@@ -5,27 +5,38 @@ import {
   createFrontendInteractionId,
   createFrontendTelemetryBridge,
   type FrontendTelemetryEvent,
+  type FrontendTelemetryHeaderNames,
 } from "../libs/frontendBridge";
+
+const TRACEPARENT = "00-00000000000000000000000000000001-0000000000000001-01";
+
+const REQUEST_CONTEXT = {
+  routeId: "UsersController.getUser",
+  operationId: "UsersController_getUser",
+  methodName: "getUser",
+  method: "GET",
+  path: "/users/:id",
+  routeKind: "query",
+} as const;
+
+const FRONTEND_EVENT: FrontendTelemetryEvent = {
+  ...REQUEST_CONTEXT,
+  kind: "rpc.request.problem",
+  timestamp: 1,
+};
 
 describe("frontend telemetry bridge", () => {
   it("creates browser-safe correlation and trace headers", () => {
     const bridge = createFrontendTelemetryBridge({
       correlationId: "corr-1",
       interactionId: "interaction-1",
-      traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+      traceparent: TRACEPARENT,
     });
 
-    const headers = bridge.createHeaders({
-      routeId: "UsersController.getUser",
-      operationId: "UsersController_getUser",
-      methodName: "getUser",
-      method: "GET",
-      path: "/users/:id",
-      routeKind: "query",
-    });
+    const headers = bridge.createHeaders(REQUEST_CONTEXT);
 
     expect(headers).toEqual({
-      traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+      traceparent: TRACEPARENT,
       "x-croco-correlation-id": "corr-1",
       "x-croco-interaction-id": "interaction-1",
     });
@@ -35,7 +46,7 @@ describe("frontend telemetry bridge", () => {
     const bridge = createFrontendTelemetryBridge({
       correlationId: "corr-default",
       interactionId: "interaction-default",
-      traceparent: "00-00000000000000000000000000000001-0000000000000001-01",
+      traceparent: TRACEPARENT,
     });
 
     const headers = bridge.createHeaders({
@@ -80,9 +91,122 @@ describe("frontend telemetry bridge", () => {
       },
     };
 
-    bridge.record(event);
+    const result = bridge.record(event);
 
     expect(record).toHaveBeenCalledWith(event);
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined when no telemetry sink is configured", () => {
+    expect(createFrontendTelemetryBridge().record(FRONTEND_EVENT)).toBeUndefined();
+  });
+
+  it("preserves synchronous sink failures", () => {
+    const failure = new TypeError("sink unavailable");
+    const bridge = createFrontendTelemetryBridge({
+      sink: {
+        record: () => {
+          throw failure;
+        },
+      },
+    });
+
+    expect(() => bridge.record(FRONTEND_EVENT)).toThrow(failure);
+  });
+
+  it("returns asynchronous sink completion by identity", async () => {
+    let resolveSink!: () => void;
+    const completion = new Promise<void>((resolve) => {
+      resolveSink = resolve;
+    });
+    const bridge = createFrontendTelemetryBridge({ sink: { record: () => completion } });
+
+    const result = bridge.record(FRONTEND_EVENT);
+
+    expect(result).toBe(completion);
+    resolveSink();
+    await expect(result).resolves.toBeUndefined();
+  });
+
+  it("exposes asynchronous rejection and allows caller recovery", async () => {
+    const failure = new TypeError("export failed");
+    const record = vi
+      .fn<(event: FrontendTelemetryEvent) => Promise<void>>()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce(undefined);
+    const bridge = createFrontendTelemetryBridge({ sink: { record } });
+
+    await expect(bridge.record(FRONTEND_EVENT)).rejects.toBe(failure);
+    await expect(bridge.record(FRONTEND_EVENT)).resolves.toBeUndefined();
+    expect(record).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses every configured frontend telemetry header name", () => {
+    const bridge = createFrontendTelemetryBridge({
+      correlationId: "corr-custom",
+      interactionId: "interaction-custom",
+      traceparent: TRACEPARENT,
+      headerNames: {
+        correlationId: "x-app-correlation",
+        interactionId: "x-app-interaction",
+        traceparent: "x-app-traceparent",
+      },
+    });
+
+    expect(bridge.createHeaders(REQUEST_CONTEXT)).toEqual({
+      "x-app-correlation": "corr-custom",
+      "x-app-interaction": "interaction-custom",
+      "x-app-traceparent": TRACEPARENT,
+    });
+  });
+
+  it.each([
+    ["correlationId", "x-app-correlation", ["x-croco-interaction-id", "traceparent"]],
+    ["interactionId", "x-app-interaction", ["x-croco-correlation-id", "traceparent"]],
+    ["traceparent", "x-app-traceparent", ["x-croco-correlation-id", "x-croco-interaction-id"]],
+  ] as const)(
+    "uses defaults for header names omitted alongside %s",
+    (field, customName, defaultNames) => {
+      const headerNames: FrontendTelemetryHeaderNames = { [field]: customName };
+      const bridge = createFrontendTelemetryBridge({
+        correlationId: "corr-partial",
+        interactionId: "interaction-partial",
+        traceparent: TRACEPARENT,
+        headerNames,
+      });
+
+      const headers = bridge.createHeaders(REQUEST_CONTEXT);
+
+      expect(headers).toHaveProperty(customName);
+      expect(headers).toHaveProperty(defaultNames[0]);
+      expect(headers).toHaveProperty(defaultNames[1]);
+    },
+  );
+
+  it("associates request-local values with configured header names", () => {
+    const bridge = createFrontendTelemetryBridge({
+      correlationId: "corr-default",
+      interactionId: "interaction-default",
+      traceparent: TRACEPARENT,
+      headerNames: {
+        correlationId: "x-app-correlation",
+        interactionId: "x-app-interaction",
+        traceparent: "x-app-traceparent",
+      },
+    });
+
+    expect(
+      bridge.createHeaders({
+        ...REQUEST_CONTEXT,
+        correlationId: "corr-request",
+        interactionId: "interaction-request",
+        traceparent: "00-00000000000000000000000000000002-0000000000000002-01",
+      }),
+    ).toEqual({
+      "x-app-correlation": "corr-request",
+      "x-app-interaction": "interaction-request",
+      "x-app-traceparent": "00-00000000000000000000000000000002-0000000000000002-01",
+    });
   });
 
   it("generates stable-prefixed interaction ids without Node-only imports", () => {

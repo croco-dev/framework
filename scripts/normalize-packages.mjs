@@ -30,6 +30,7 @@ import {
   findPackageJsonFiles,
   packageHasSourceEntrypoint,
 } from "./package-manifest-contracts.mjs";
+import { isBoundedPeerDependencyRange } from "./peer-dependency-range-policy.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -582,7 +583,26 @@ function rootImportTargetFor(exportsValue) {
 function validateWorkspacePackagePolicy(pkg, policyContext) {
   const violations = [];
   validateInternalDependencyRangePolicy(pkg, policyContext, violations);
+  validateBoundedPublishedPeerDependencies(pkg, violations);
   return violations;
+}
+
+function validateBoundedPublishedPeerDependencies(pkg, violations) {
+  if (pkg.private === true || !pkg.peerDependencies || typeof pkg.peerDependencies !== "object") {
+    return;
+  }
+
+  for (const [dependencyName, range] of Object.entries(pkg.peerDependencies)) {
+    if (range === "workspace:*" || range === "catalog:") {
+      continue;
+    }
+
+    if (!isBoundedPeerDependencyRange(range)) {
+      violations.push(
+        `peerDependencies.${dependencyName} must use a bounded semver range, not ${JSON.stringify(range)}`,
+      );
+    }
+  }
 }
 
 function validatePackage(pkg, pkgPath, rootDir, context = {}) {

@@ -39,9 +39,13 @@ export type {
 export { lambdaPreset } from "./libs/presets/lambda";
 
 /**
- * OTLP 설정 오류와 샘플러 설정 오류를 나타내는 Problem 타입입니다.
+ * OTLP, 지원되지 않는 신호, 샘플러 설정 오류를 나타내는 Problem 타입입니다.
  */
-export { OtlpEndpointRequiredProblem, SamplerProblem } from "./libs/problems/TelemetryProblems";
+export {
+  OtlpEndpointRequiredProblem,
+  SamplerProblem,
+  UnsupportedTelemetrySignalProblem,
+} from "./libs/problems/TelemetryProblems";
 
 /**
  * 확률 기반 샘플링을 수행하는 OpenTelemetry 샘플러 구현체입니다.

@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
-import type { EventPublisher } from "@croco/events-core";
+// Runtime values required for constructor metadata.
+// oxlint-disable-next-line typescript/consistent-type-imports
+import { EventPublisher } from "@croco/events-core";
 import { Component } from "@croco/framework-context";
-import {
-  AlreadyMemberProblem,
-  type Membership,
-  type MembershipManager,
-  type MembershipRole,
-} from "@croco/membership-core";
-import type { DomainPolicyStore } from "./DomainPolicyStore";
+import { AlreadyMemberProblem } from "@croco/membership-core";
+// oxlint-disable-next-line typescript/consistent-type-imports
+import { MembershipManager } from "@croco/membership-core";
+import type { Membership, MembershipRole } from "@croco/membership-core";
+// oxlint-disable-next-line typescript/consistent-type-imports
+import { DomainPolicyStore } from "./DomainPolicyStore";
 import {
   DomainAutoJoinedEvent,
   DomainPolicyAddedEvent,
@@ -17,7 +18,8 @@ import {
   InvalidAutoJoinRoleProblem,
   PublicEmailDomainNotAllowedProblem,
 } from "./problems/DomainPolicyProblems";
-import { type DomainPolicy, PUBLIC_EMAIL_DOMAINS } from "./types";
+import { PUBLIC_EMAIL_DOMAINS } from "./types";
+import type { DomainPolicy } from "./types";
 
 const AUTO_JOIN_ROLES: MembershipRole[] = ["member", "viewer"];
 

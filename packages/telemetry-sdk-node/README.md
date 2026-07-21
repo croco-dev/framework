@@ -72,13 +72,25 @@ SDK가 이미 초기화된 뒤의 추가 `init()` 호출은 기존 런타임을 
 
 `isInitialized()`와 `isEnabled()`는 SDK가 실제로 초기화되어 활성화된 경우에만 `true`를 반환합니다.
 
+### 지원 신호
+
+현재 런타임 provider가 연결된 신호는 trace뿐입니다. `metrics.enabled: true` 또는 `logs.enabled: true`는 설정이
+조용히 무시되지 않도록 OpenTelemetry SDK를 불러오거나 시작하기 전에
+`UnsupportedTelemetrySignalProblem`(`TELEMETRY_SIGNAL_UNSUPPORTED`)으로 실패합니다. 해당 설정을 생략하거나
+`enabled: false`로 두면 기존 trace 동작을 유지합니다.
+
+`MetricsConfig`와 `LogsConfig`의 exporter 필드는 향후 provider 연결을 위한 예약 계약이며, 현재 export가 활성화된다는
+뜻이 아닙니다. 실패 Problem과 diagnostics에는 신호 이름과 지원 상태, 복구 방법만 포함되고 exporter URL이나 header는
+포함되지 않습니다.
+
 ### Degraded mode와 복구
 
 Telemetry 또는 trace가 의도적으로 꺼진 상태는 애플리케이션 실패가 아닙니다. `init({ enabled: false })`,
 `init({ trace: { enabled: false } })`, 또는 `TELEMETRY_ENABLED=false`는 설정을 보존하지만 SDK와 exporter를 시작하지
 않으며,
 `TelemetryDiagnosticsProvider`는 이를 `degraded` 상태와 안전한 metadata(`serviceName`, `enabled`,
-`initialized`, `traceEnabled`, `probability`, `mode`)로 보고합니다. exporter URL이나 header 값은 diagnostics에
+`initialized`, `traceEnabled`, `probability`, `signals`, `mode`)로 보고합니다. `signals`는 각 신호를
+`supported`, `disabled`, `unsupported-requested`로 구분합니다. exporter URL이나 header 값은 diagnostics에
 노출하지 않습니다.
 
 Trace export를 켠 상태에서 OTLP endpoint가 없으면 초기화가 fail-closed 됩니다. `trace.enabled: false`로 명시해
@@ -99,7 +111,7 @@ Lambda에서는 handler 작업이 끝난 뒤 `forceFlush()` 결과를 확인하�
 - `lambdaPreset`: Lambda 환경 기본 설정 생성
 - `ProbabilitySampler`: 확률 기반 샘플링 구현체
 - 자동 계측: `normalizeAutoInstrumentationConfig`, `LAMBDA_DEFAULT_MODULES`, `NODE_DEFAULT_MODULES`
-- Problem: `OtlpEndpointRequiredProblem`, `SamplerProblem`
+- Problem: `OtlpEndpointRequiredProblem`, `UnsupportedTelemetrySignalProblem`, `SamplerProblem`
 - 타입: `TelemetryConfig`, `TraceConfig`, `MetricsConfig`, `LogsConfig`, `ForceFlushResult`
 - 메트릭 타입: `MetricsApi`, `Counter`, `Histogram`, `Gauge`
 - 로그 타입: `LogsApi`, `Logger`, `LogRecord`, `LogSeverity`

@@ -1,6 +1,8 @@
 import { Component, Inject, Token } from "@croco/framework-context";
 import { type OnboardingState, OnboardingStore } from "@croco/onboarding-core";
-import type { TxManager } from "@croco/tx-core";
+// Runtime value required for constructor metadata.
+// oxlint-disable-next-line typescript/consistent-type-imports
+import { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
 import { and, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";

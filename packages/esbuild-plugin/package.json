@@ -36,7 +36,7 @@
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "esbuild": ">=0.17.0",
-    "typescript": ">=5.0.0"
+    "esbuild": ">=0.17.0 <1",
+    "typescript": ">=5.0.0 <6"
   }
 }

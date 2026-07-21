@@ -50,6 +50,7 @@ describe("TelemetryDiagnosticsProvider", () => {
       initialized: false,
       traceEnabled: false,
       probability: 0.25,
+      signals: { logs: "disabled", metrics: "disabled", traces: "disabled" },
       mode: "disabled",
     });
     expect(JSON.stringify(health)).not.toContain("Bearer secret");
@@ -81,6 +82,7 @@ describe("TelemetryDiagnosticsProvider", () => {
       initialized: false,
       traceEnabled: false,
       probability: 0.25,
+      signals: { logs: "disabled", metrics: "disabled", traces: "disabled" },
       mode: "disabled",
     });
     expect(JSON.stringify(health)).not.toContain("Bearer secret");
@@ -110,9 +112,56 @@ describe("TelemetryDiagnosticsProvider", () => {
       initialized: true,
       traceEnabled: true,
       probability: 0,
+      signals: { logs: "disabled", metrics: "disabled", traces: "supported" },
       mode: "sampling_disabled",
     });
     expect(JSON.stringify(health)).not.toContain("Bearer secret");
     expect(JSON.stringify(health)).not.toContain("collector");
+  });
+
+  it("should distinguish supported, disabled, and unsupported-requested signals safely", async () => {
+    await expect(
+      runtime.init({
+        serviceName: "orders",
+        trace: { enabled: true, exporterUrl: "http://collector:4318/v1/traces" },
+        metrics: {
+          enabled: true,
+          exporterUrl: "https://metrics.example.test/v1/metrics",
+          exporterHeaders: { Authorization: "Bearer metrics-secret" },
+        },
+        logs: { enabled: false },
+      }),
+    ).rejects.toMatchObject({ code: "TELEMETRY_SIGNAL_UNSUPPORTED" });
+
+    const health = await diagnostics.getHealth();
+
+    expect(health.status).toBe("unhealthy");
+    expect(health.message).toBe("Unsupported telemetry signals requested: metrics");
+    expect(health.details).toMatchObject({
+      mode: "unsupported_requested",
+      signals: {
+        logs: "disabled",
+        metrics: "unsupported-requested",
+        traces: "supported",
+      },
+    });
+    expect(JSON.stringify(health)).not.toContain("metrics-secret");
+    expect(JSON.stringify(health)).not.toContain("metrics.example.test");
+    expect(JSON.stringify(health)).not.toContain("collector");
+  });
+
+  it("should report multiple unsupported signals in canonical order", async () => {
+    await expect(
+      runtime.init({
+        serviceName: "orders",
+        trace: { enabled: false },
+        logs: { enabled: true },
+        metrics: { enabled: true },
+      }),
+    ).rejects.toMatchObject({ signals: ["metrics", "logs"] });
+
+    const health = await diagnostics.getHealth();
+
+    expect(health.message).toBe("Unsupported telemetry signals requested: metrics, logs");
   });
 });
