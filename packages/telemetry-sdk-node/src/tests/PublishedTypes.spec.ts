@@ -34,9 +34,9 @@ describe("published telemetry SDK types", () => {
           devDependencies?: Record<string, string>;
         };
 
-        expect(packedManifest.dependencies?.["@opentelemetry/instrumentation"]).toBe("^0.218.0");
+        expect(packedManifest.dependencies?.["@opentelemetry/instrumentation"]).toBe("^0.220.0");
         expect(packedManifest.dependencies?.["@opentelemetry/auto-instrumentations-node"]).toBe(
-          "^0.76.0",
+          "^0.78.0",
         );
         expect(packedManifest.devDependencies?.["@opentelemetry/instrumentation"]).toBeUndefined();
 
