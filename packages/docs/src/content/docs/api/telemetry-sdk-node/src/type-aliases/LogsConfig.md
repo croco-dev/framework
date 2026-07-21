@@ -20,7 +20,7 @@ Setting enabled to true currently rejects TelemetryRuntime initialization.
 
 Requests log collection. Must remain false until a runtime provider is available.
 
----
+***
 
 ### exporterHeaders?
 
@@ -28,7 +28,7 @@ Requests log collection. Must remain false until a runtime provider is available
 
 Additional HTTP headers for the exporter
 
----
+***
 
 ### exporterUrl?
 
@@ -36,7 +36,7 @@ Additional HTTP headers for the exporter
 
 OTLP logs exporter URL
 
----
+***
 
 ### maxExportBatchSize?
 
@@ -44,7 +44,7 @@ OTLP logs exporter URL
 
 Maximum batch size for export
 
----
+***
 
 ### maxQueueSize?
 

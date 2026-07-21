@@ -9,9 +9,11 @@ import {
 import { getActiveTraceInfo, recordError, recordEvent, withSpan } from "@croco/telemetry-api";
 import type { TxManager } from "@croco/tx-core";
 import {
+  InvalidTransactionalEventConfigurationProblem,
   OutboxPublishExhaustedProblem,
   OutboxTransactionRequiredProblem,
 } from "./problems/EventsTxProblems";
+import type { TransactionalEventConfigurationField } from "./problems/EventsTxProblems";
 import type { InboxMessageStatus, OutboxMessageStatus } from "./TransactionalEventTypes";
 
 export type TransactionalEventDiagnostic = {
@@ -315,11 +317,68 @@ export type InboxConsumerResult =
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_BATCH_SIZE = 25;
 const DEFAULT_VISIBILITY_TIMEOUT_MS = 30_000;
+const MAX_INT32 = 2_147_483_647;
 const DEFAULT_RETRY_POLICY: OutboxRelayRetryPolicy = {
   baseDelayMs: 1_000,
   multiplier: 2,
   maxDelayMs: 30_000,
 };
+
+function toConfigurationReceivedValue(value: number | string): number | string {
+  if (typeof value === "string" || Number.isFinite(value)) {
+    return value;
+  }
+  if (Number.isNaN(value)) {
+    return "NaN";
+  }
+  return value === Number.POSITIVE_INFINITY ? "Infinity" : "-Infinity";
+}
+
+function validatePositiveInt32(value: number, field: TransactionalEventConfigurationField): void {
+  if (!Number.isInteger(value) || value <= 0 || value > MAX_INT32) {
+    throw new InvalidTransactionalEventConfigurationProblem({
+      field,
+      constraint: "positive-int32",
+      receivedValue: toConfigurationReceivedValue(value),
+    });
+  }
+}
+
+function validateNonNegativeInt32(
+  value: number,
+  field: TransactionalEventConfigurationField,
+): void {
+  if (!Number.isInteger(value) || value < 0 || value > MAX_INT32) {
+    throw new InvalidTransactionalEventConfigurationProblem({
+      field,
+      constraint: "non-negative-int32",
+      receivedValue: toConfigurationReceivedValue(value),
+    });
+  }
+}
+
+function validatePositiveFiniteNumber(
+  value: number,
+  field: TransactionalEventConfigurationField,
+): void {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new InvalidTransactionalEventConfigurationProblem({
+      field,
+      constraint: "positive-finite-number",
+      receivedValue: toConfigurationReceivedValue(value),
+    });
+  }
+}
+
+function validateConsumerId(consumerId: string): void {
+  if (consumerId.trim().length === 0 || [...consumerId].length > 128) {
+    throw new InvalidTransactionalEventConfigurationProblem({
+      field: "consumerId",
+      constraint: "non-blank-string-at-most-128",
+      receivedValue: consumerId,
+    });
+  }
+}
 
 function defaultNow(): Date {
   return new Date();
@@ -371,9 +430,12 @@ function buildSerializedEvent(message: TransactionalOutboxMessage): SerializedEv
 }
 
 function calculateRetryDelayMs(attempts: number, retry: OutboxRelayRetryPolicy): number {
+  if (retry.baseDelayMs === 0 || retry.maxDelayMs === 0) {
+    return 0;
+  }
   const exponent = Math.max(attempts - 1, 0);
   const delay = retry.baseDelayMs * retry.multiplier ** exponent;
-  return Math.min(delay, retry.maxDelayMs);
+  return Number.isFinite(delay) ? Math.min(delay, retry.maxDelayMs) : retry.maxDelayMs;
 }
 
 function addMs(date: Date, ms: number): Date {
@@ -390,6 +452,9 @@ export class TransactionalOutbox<TClient = unknown> {
   private readonly idFactory: () => string;
 
   constructor(private readonly config: TransactionalOutboxConfig<TClient>) {
+    if (config.maxAttempts !== undefined) {
+      validatePositiveInt32(config.maxAttempts, "maxAttempts");
+    }
     this.serializer = config.serializer ?? new DefaultEventSerializer();
     this.maxAttempts = config.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
     this.now = config.now ?? defaultNow;
@@ -400,6 +465,9 @@ export class TransactionalOutbox<TClient = unknown> {
     event: DomainEvent,
     options: OutboxAppendOptions = {},
   ): Promise<TransactionalOutboxMessage> {
+    if (options.maxAttempts !== undefined) {
+      validatePositiveInt32(options.maxAttempts, "maxAttempts");
+    }
     if (!this.config.txManager.isInTransaction()) {
       throw new OutboxTransactionRequiredProblem();
     }
@@ -472,6 +540,21 @@ export class TransactionalOutboxRelay<TClient = unknown> {
   private readonly now: () => Date;
 
   constructor(private readonly config: OutboxRelayConfig<TClient>) {
+    if (config.batchSize !== undefined) {
+      validatePositiveInt32(config.batchSize, "batchSize");
+    }
+    if (config.visibilityTimeoutMs !== undefined) {
+      validatePositiveInt32(config.visibilityTimeoutMs, "visibilityTimeoutMs");
+    }
+    if (config.retry?.baseDelayMs !== undefined) {
+      validateNonNegativeInt32(config.retry.baseDelayMs, "retry.baseDelayMs");
+    }
+    if (config.retry?.maxDelayMs !== undefined) {
+      validateNonNegativeInt32(config.retry.maxDelayMs, "retry.maxDelayMs");
+    }
+    if (config.retry?.multiplier !== undefined) {
+      validatePositiveFiniteNumber(config.retry.multiplier, "retry.multiplier");
+    }
     this.batchSize = config.batchSize ?? DEFAULT_BATCH_SIZE;
     this.visibilityTimeoutMs = config.visibilityTimeoutMs ?? DEFAULT_VISIBILITY_TIMEOUT_MS;
     this.retry = {
@@ -482,6 +565,12 @@ export class TransactionalOutboxRelay<TClient = unknown> {
   }
 
   async publishBatch(options: Partial<OutboxClaimOptions> = {}): Promise<OutboxRelayBatchResult> {
+    if (options.limit !== undefined) {
+      validatePositiveInt32(options.limit, "limit");
+    }
+    if (options.visibilityTimeoutMs !== undefined) {
+      validatePositiveInt32(options.visibilityTimeoutMs, "visibilityTimeoutMs");
+    }
     const now = options.now ?? this.now();
     const claimed = await this.config.store.claimOutboxBatch(
       {
@@ -664,10 +753,13 @@ export class TransactionalOutboxRelay<TClient = unknown> {
  * Provides inbox idempotency for at-least-once event consumers.
  */
 export class TransactionalInboxConsumer<TClient = unknown> {
+  private readonly consumerId: string;
   private readonly now: () => Date;
   private readonly throwOnError: boolean;
 
   constructor(private readonly config: TransactionalInboxConsumerConfig<TClient>) {
+    validateConsumerId(config.consumerId);
+    this.consumerId = config.consumerId;
     this.now = config.now ?? defaultNow;
     this.throwOnError = config.throwOnError ?? true;
   }
@@ -680,7 +772,7 @@ export class TransactionalInboxConsumer<TClient = unknown> {
     const inboxKey = message.idempotencyKey || message.eventId || message.id;
     const start = await this.config.store.startInboxProcessing(
       {
-        consumerId: this.config.consumerId,
+        consumerId: this.consumerId,
         messageId: message.id,
         inboxKey,
         eventType: message.eventType,
@@ -705,7 +797,7 @@ export class TransactionalInboxConsumer<TClient = unknown> {
       const normalized = normalizeTransactionalEventError(error);
       const failed = await this.config.store.markInboxFailed(
         {
-          consumerId: this.config.consumerId,
+          consumerId: this.consumerId,
           inboxKey,
           expectedAttempts: start.record.attempts,
           now: this.now(),
@@ -736,7 +828,7 @@ export class TransactionalInboxConsumer<TClient = unknown> {
 
     const processed = await this.config.store.markInboxProcessed(
       {
-        consumerId: this.config.consumerId,
+        consumerId: this.consumerId,
         inboxKey,
         expectedAttempts: start.record.attempts,
         now: this.now(),

@@ -13,31 +13,31 @@ title: "ImpersonationState"
 
 > `readonly` **expiresAt**: `Date`
 
----
+***
 
 ### impersonatorId
 
 > `readonly` **impersonatorId**: `string`
 
----
+***
 
 ### reason?
 
 > `readonly` `optional` **reason?**: `string`
 
----
+***
 
 ### sessionId
 
 > `readonly` **sessionId**: `string`
 
----
+***
 
 ### startedAt
 
 > `readonly` **startedAt**: `Date`
 
----
+***
 
 ### targetUserId
 

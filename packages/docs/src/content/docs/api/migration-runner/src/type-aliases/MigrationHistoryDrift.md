@@ -13,19 +13,19 @@ title: "MigrationHistoryDrift"
 
 > `readonly` `optional` **currentName?**: `string`
 
----
+***
 
 ### migrationId
 
 > `readonly` **migrationId**: `string`
 
----
+***
 
 ### reason
 
 > `readonly` **reason**: [`MigrationHistoryDriftReason`](/api/migration-runner/src/type-aliases/migrationhistorydriftreason/)
 
----
+***
 
 ### recordedName?
 

@@ -13,7 +13,7 @@ title: "ImpersonationPrincipal"
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### permissions
 
