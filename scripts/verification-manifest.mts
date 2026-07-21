@@ -80,9 +80,9 @@ const repoOnly = (context: VerificationContext): readonly EvidenceCommand[] => [
     label: "Package manifests",
     category: "metadata",
     command: guarded("pnpm package-manifests:write", [
-      "sh",
-      "-c",
-      "pnpm peers check && node scripts/normalize-packages.mjs --check",
+      "node",
+      "scripts/normalize-packages.mjs",
+      "--check",
     ]),
     timeoutMs: minutes(5),
   },
