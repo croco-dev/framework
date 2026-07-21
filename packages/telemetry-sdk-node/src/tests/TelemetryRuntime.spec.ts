@@ -116,6 +116,14 @@ describe("TelemetryRuntime", () => {
         constructor(exporter: unknown, options: unknown) {
           processorConstructor(exporter, options);
         }
+
+        onStart(): void {}
+
+        onEnd(): void {}
+
+        async forceFlush(): Promise<void> {}
+
+        async shutdown(): Promise<void> {}
       },
     }));
     vi.doMock("../libs/samplers/ProbabilitySampler", () => ({
