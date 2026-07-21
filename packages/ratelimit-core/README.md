@@ -65,5 +65,6 @@ class ApiController {
 - outcome 기반 HTTP skip처럼 성공한 체크를 되돌려야 하는 어댑터는 `RateLimitResult.refundReceipt`를 `refund()`에 넘겨 quota와 통계를 함께 복구합니다.
 - refund는 receipt 기준으로 idempotent하게 동작합니다. 이미 환불됐거나 저장소에 남아 있지 않은 receipt는 quota를 변경하지 않습니다.
 - `failOpen` 옵션으로 저장소 장애 시 허용 전략을 선택할 수 있습니다.
+- 저장소 장애 시 `resetAtMs`는 장애를 관측한 시각을 기준으로 계산한 추정값입니다. fixed/sliding/legacy 정책은 `windowMs`, token-bucket 정책은 다음 토큰 보충 간격(`refillIntervalMs / refillRate`)을 사용하며, 사용할 수 없는 저장소의 정확한 경계를 의미하지 않습니다.
 - `getStats()`는 저장소 통계 조회가 실패하면 `degraded: true`와 직렬화 가능한 `error` 메타데이터를 함께 반환합니다.
 - 윈도우 문자열은 `1s`, `1m`, `1h`, `1d` 형식을 사용합니다.

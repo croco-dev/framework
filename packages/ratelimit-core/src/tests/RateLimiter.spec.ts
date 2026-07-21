@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RateLimiter } from "../libs/RateLimiter";
 import { type KeyContext, RateLimitKeyBuilder } from "../libs/RateLimitKeyBuilder";
 import type { RateLimitStore } from "../libs/RateLimitStore";
@@ -54,6 +54,10 @@ describe("RateLimiter", () => {
     rateLimiter = new RateLimiter(mockStore, keyBuilder);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   describe("check", () => {
     it("should build key and call store", async () => {
       const context = createContext({
@@ -107,7 +111,10 @@ describe("RateLimiter", () => {
     });
 
     it("should fill a missing store policy identity with the configured name", async () => {
-      vi.mocked(mockStore.check).mockResolvedValue({ ...successResult, policyName: undefined });
+      vi.mocked(mockStore.check).mockResolvedValue({
+        ...successResult,
+        policyName: undefined,
+      });
 
       const result = await rateLimiter.checkWithKey("custom:key", policy);
 
@@ -155,6 +162,139 @@ describe("RateLimiter", () => {
   });
 
   describe("error handling", () => {
+    const degradedCases: Array<{
+      name: string;
+      entrypoint: "check" | "checkWithKey";
+      policy: RateLimitPolicy;
+      expectedIntervalMs: number;
+    }> = [
+      {
+        name: "one-second fixed window",
+        entrypoint: "check",
+        policy: {
+          name: "fixed-short",
+          algorithm: "fixed",
+          limit: 5,
+          windowMs: 1000,
+        },
+        expectedIntervalMs: 1000,
+      },
+      {
+        name: "one-hour fixed window",
+        entrypoint: "checkWithKey",
+        policy: {
+          name: "fixed-long",
+          algorithm: "fixed",
+          limit: 5,
+          windowMs: 3600000,
+        },
+        expectedIntervalMs: 3600000,
+      },
+      {
+        name: "one-second sliding window",
+        entrypoint: "check",
+        policy: {
+          name: "sliding-short",
+          algorithm: "sliding",
+          limit: 5,
+          windowMs: 1000,
+        },
+        expectedIntervalMs: 1000,
+      },
+      {
+        name: "one-hour sliding window",
+        entrypoint: "checkWithKey",
+        policy: {
+          name: "sliding-long",
+          algorithm: "sliding",
+          limit: 5,
+          windowMs: 3600000,
+        },
+        expectedIntervalMs: 3600000,
+      },
+      {
+        name: "token bucket next-token cadence",
+        entrypoint: "check",
+        policy: {
+          name: "token-bucket",
+          algorithm: "token-bucket",
+          capacity: 12,
+          refillRate: 3,
+          refillIntervalMs: 1000,
+        },
+        expectedIntervalMs: 1000 / 3,
+      },
+      {
+        name: "legacy window",
+        entrypoint: "checkWithKey",
+        policy: { name: "legacy", limit: 5, windowMs: 2500 },
+        expectedIntervalMs: 2500,
+      },
+    ];
+
+    it.each(degradedCases)(
+      "should derive the degraded reset from the $name policy in both fail modes",
+      async ({ entrypoint, policy: degradedPolicy, expectedIntervalMs }) => {
+        vi.useFakeTimers();
+        const now = Date.UTC(2026, 0, 1);
+        vi.setSystemTime(now);
+        vi.mocked(mockStore.check).mockRejectedValue(new Error("Redis timeout"));
+
+        for (const failOpen of [true, false]) {
+          const limiter = new RateLimiter(mockStore, keyBuilder, { failOpen });
+          const result =
+            entrypoint === "check"
+              ? await limiter.check(createContext({ tenant: { id: "t1" } }), degradedPolicy)
+              : await limiter.checkWithKey("custom:key", degradedPolicy);
+          const limit =
+            "capacity" in degradedPolicy ? degradedPolicy.capacity : degradedPolicy.limit;
+
+          expect(result).toMatchObject({
+            success: failOpen,
+            degraded: true,
+            limit,
+            remaining: failOpen ? limit : 0,
+            resetAtMs: now + expectedIntervalMs,
+            policyName: degradedPolicy.name,
+          });
+        }
+      },
+    );
+
+    it("should use the failure timestamp captured before the store error callback", async () => {
+      vi.useFakeTimers();
+      const now = Date.UTC(2026, 0, 1);
+      vi.setSystemTime(now);
+      vi.mocked(mockStore.check).mockRejectedValue(new Error("Redis timeout"));
+      const onStoreError = vi.fn(() => vi.setSystemTime(now + 5000));
+      rateLimiter = new RateLimiter(mockStore, keyBuilder, { onStoreError });
+
+      const result = await rateLimiter.checkWithKey("custom:key", {
+        name: "callback-clock",
+        algorithm: "sliding",
+        limit: 5,
+        windowMs: 1000,
+      });
+
+      expect(result.resetAtMs).toBe(now + 1000);
+      expect(onStoreError).toHaveBeenCalledOnce();
+    });
+
+    it("should preserve a healthy store reset timestamp through both check entrypoints", async () => {
+      const resetAtMs = Date.UTC(2030, 0, 1);
+      vi.mocked(mockStore.check).mockResolvedValue({
+        ...successResult,
+        resetAtMs,
+      });
+      const context = createContext({ tenant: { id: "t1" } });
+
+      const contextResult = await rateLimiter.check(context, policy);
+      const keyResult = await rateLimiter.checkWithKey("custom:key", policy);
+
+      expect(contextResult.resetAtMs).toBe(resetAtMs);
+      expect(keyResult.resetAtMs).toBe(resetAtMs);
+    });
+
     it("should allow request when store fails and failOpen is true (default)", async () => {
       vi.mocked(mockStore.check).mockRejectedValue(new Error("Redis timeout"));
       const context = createContext({ tenant: { id: "t1" } });

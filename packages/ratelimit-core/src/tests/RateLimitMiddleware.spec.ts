@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createRateLimitMiddleware,
   type HttpContext,
@@ -53,6 +53,10 @@ describe("createRateLimitMiddleware", () => {
     mockRateLimiter = {
       checkWithKey: vi.fn().mockResolvedValue(successResult),
     } as unknown as RateLimiter;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("should allow request within limit", async () => {
@@ -178,6 +182,42 @@ describe("createRateLimitMiddleware", () => {
     expect(headers).not.toBeUndefined();
     expect(headers?.["X-RateLimit-Limit"]).toBe("100");
     expect(headers?.["X-RateLimit-Remaining"]).toBe("99");
+  });
+
+  it.each([
+    { success: true, remaining: 100, retryAfter: undefined },
+    { success: false, remaining: 0, retryAfter: "3" },
+  ])("should expose policy-derived degraded headers when success is $success", async (testCase) => {
+    vi.useFakeTimers();
+    const now = Date.UTC(2026, 0, 1);
+    vi.setSystemTime(now);
+    vi.mocked(mockRateLimiter.checkWithKey).mockResolvedValue({
+      success: testCase.success,
+      degraded: true,
+      limit: 100,
+      remaining: testCase.remaining,
+      resetAtMs: now + 2500,
+    });
+    const middleware = createRateLimitMiddleware({
+      rateLimiter: mockRateLimiter,
+      policy,
+      addHeaders: true,
+      failOpen: testCase.success,
+    });
+    const ctx = createContext();
+
+    if (testCase.success) {
+      await middleware(ctx, vi.fn().mockResolvedValue(undefined));
+    } else {
+      await expect(middleware(ctx, vi.fn())).rejects.toThrow(RateLimitExceededProblem);
+    }
+
+    expect(ctx.get<Record<string, string>>("rateLimitHeaders")).toEqual({
+      "X-RateLimit-Limit": "100",
+      "X-RateLimit-Remaining": String(testCase.remaining),
+      "X-RateLimit-Reset": String(Math.ceil((now + 2500) / 1000)),
+      ...(testCase.retryAfter === undefined ? {} : { "Retry-After": testCase.retryAfter }),
+    });
   });
 
   it("should not add headers when addHeaders is false", async () => {

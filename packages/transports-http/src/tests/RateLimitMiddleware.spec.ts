@@ -1,18 +1,20 @@
 import "reflect-metadata";
 
 import type { RuntimeContext } from "@croco/framework-context";
-import type { RateLimitResult } from "@croco/ratelimit-core";
 import { Container, Context as FrameworkContext } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Controller, Get } from "@croco/protocols-rest";
+import type { RateLimitResult, RateLimitStore } from "@croco/ratelimit-core";
 import {
   createSlidingWindowPolicy,
+  createTokenBucketPolicy,
   RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY,
+  RateLimitExceededProblem,
   RateLimiter,
   RateLimitKeyBuilder,
   SlidingWindowInMemoryStore,
 } from "@croco/ratelimit-core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
@@ -91,6 +93,10 @@ describe("RateLimitMiddleware", () => {
     const store = new SlidingWindowInMemoryStore();
     const keyBuilder = new RateLimitKeyBuilder(["ip"]);
     rateLimiter = new RateLimiter(store, keyBuilder, { failOpen: false });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe("rateLimitHttpMiddleware", () => {
@@ -185,6 +191,34 @@ describe("RateLimitMiddleware", () => {
       expect(rateLimitHeaders?.["X-RateLimit-Limit"]).toBeDefined();
       expect(rateLimitHeaders?.["X-RateLimit-Remaining"]).toBeDefined();
       expect(rateLimitResult?.policyName).toBe("test");
+    });
+
+    it("should apply policy-derived degraded headers on the exception path", async () => {
+      vi.useFakeTimers();
+      const now = Date.UTC(2026, 0, 1);
+      vi.setSystemTime(now);
+      const rejectingStore = {
+        check: vi.fn().mockRejectedValue(new Error("store unavailable")),
+      } as unknown as RateLimitStore;
+      const degradedRateLimiter = new RateLimiter(rejectingStore, () => "degraded:key", {
+        failOpen: false,
+      });
+      const middleware = rateLimitHttpMiddleware({
+        rateLimiter: degradedRateLimiter,
+        policy: createTokenBucketPolicy("degraded", 10, 3, 1000),
+        addHeaders: true,
+        failOpen: false,
+      });
+      const { ctx, headers } = createRateLimitTestContext();
+
+      await expect(middleware(ctx, async () => {})).rejects.toBeInstanceOf(
+        RateLimitExceededProblem,
+      );
+
+      expect(headers.get("X-RateLimit-Limit")).toBe("10");
+      expect(headers.get("X-RateLimit-Remaining")).toBe("0");
+      expect(headers.get("X-RateLimit-Reset")).toBe(String(Math.ceil((now + 1000 / 3) / 1000)));
+      expect(headers.get("Retry-After")).toBe("1");
     });
 
     it("should ignore spoofable proxy headers for Node requests", async () => {

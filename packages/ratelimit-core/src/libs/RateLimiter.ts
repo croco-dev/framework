@@ -98,11 +98,13 @@ export class RateLimiter<TContext = KeyContext> {
   }
 
   private handleStoreError(error: unknown, policy: RateLimitPolicy): RateLimitResult {
+    const now = Date.now();
     const storeError = normalizeStoreError(error);
     this.onStoreError?.(storeError);
 
     const limit =
       policy.algorithm === "token-bucket" ? (policy as TokenBucketPolicy).capacity : policy.limit;
+    const resetAtMs = now + getDegradedResetIntervalMs(policy);
 
     if (this.failOpen) {
       return {
@@ -110,7 +112,7 @@ export class RateLimiter<TContext = KeyContext> {
         degraded: true,
         limit,
         remaining: limit,
-        resetAtMs: Date.now() + 60000,
+        resetAtMs,
         policyName: policy.name,
       };
     }
@@ -120,10 +122,19 @@ export class RateLimiter<TContext = KeyContext> {
       degraded: true,
       limit,
       remaining: 0,
-      resetAtMs: Date.now() + 60000,
+      resetAtMs,
       policyName: policy.name,
     };
   }
+}
+
+function getDegradedResetIntervalMs(policy: RateLimitPolicy): number {
+  if (policy.algorithm === "token-bucket") {
+    const tokenBucketPolicy = policy as TokenBucketPolicy;
+    return tokenBucketPolicy.refillIntervalMs / tokenBucketPolicy.refillRate;
+  }
+
+  return policy.windowMs;
 }
 
 function normalizeStoreError(error: unknown): Error {
