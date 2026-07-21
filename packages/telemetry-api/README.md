@@ -67,6 +67,9 @@ await userClient.getUser(
 `createFrontendTelemetryBridge()` is browser-safe and does not initialize an SDK or import
 `@croco/telemetry-sdk-node`. Generated RPC clients can use it to attach `traceparent`,
 `x-croco-correlation-id`, and `x-croco-interaction-id` headers without app-local fetch wrappers.
+Generated clients emit telemetry without awaiting the sink, so awaiting an RPC call does not imply
+that an asynchronous sink has settled. Direct callers can await `bridge.record(event)` and handle
+sink rejection when delivery completion is part of their own workflow.
 
 Frontend telemetry events intentionally carry route metadata, latency, HTTP status, retry/cancel
 markers, and stable Problem metadata (`code`, `status`, `category`, `type`, `title`). They do not
