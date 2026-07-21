@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -106,19 +106,56 @@ describe("published telemetry SDK types", () => {
 });
 
 function ensureBuilt(): void {
+  const packages = [
+    { name: "@croco/problems-core", directory: resolve(rootDir, "packages/problems-core") },
+    { name: "@croco/diagnostics-core", directory: resolve(rootDir, "packages/diagnostics-core") },
+    { name: "@croco/telemetry-sdk-node", directory: packageDir },
+  ];
+  const missingBuildPackages = packages.filter(({ directory }) => shouldBuildPackage(directory));
+
+  if (missingBuildPackages.length === 0) {
+    return;
+  }
+
   run(
     "pnpm",
-    [
-      "--filter",
-      "@croco/problems-core",
-      "--filter",
-      "@croco/diagnostics-core",
-      "--filter",
-      "@croco/telemetry-sdk-node",
-      "build",
-    ],
+    [...missingBuildPackages.flatMap(({ name }) => ["--filter", name]), "build"],
     rootDir,
   );
+}
+
+function shouldBuildPackage(directory: string): boolean {
+  const declarationPath = join(directory, "dist/index.d.ts");
+
+  if (!existsSync(declarationPath)) {
+    return true;
+  }
+
+  const declarationModifiedAt = statSync(declarationPath).mtimeMs;
+  return latestInputModifiedAt(directory) > declarationModifiedAt;
+}
+
+function latestInputModifiedAt(directory: string): number {
+  return Math.max(
+    statSync(join(directory, "package.json")).mtimeMs,
+    latestTypeScriptModifiedAt(join(directory, "src")),
+  );
+}
+
+function latestTypeScriptModifiedAt(directory: string): number {
+  return readdirSync(directory, { withFileTypes: true }).reduce((latest, entry) => {
+    const entryPath = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      return Math.max(latest, latestTypeScriptModifiedAt(entryPath));
+    }
+
+    if (!entry.isFile() || (!entry.name.endsWith(".ts") && !entry.name.endsWith(".mts"))) {
+      return latest;
+    }
+
+    return Math.max(latest, statSync(entryPath).mtimeMs);
+  }, 0);
 }
 
 function pack(packageName: string, packRoot: string): void {

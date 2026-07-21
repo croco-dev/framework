@@ -93,6 +93,8 @@ describe("TelemetryRuntime", () => {
         start(): void {
           nodeSdkStart();
         }
+
+        async shutdown(): Promise<void> {}
       },
     }));
 
