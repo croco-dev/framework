@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { buildContractGraph } from "@croco/protocols-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { emitOpenAPI } from "../libs/emitOpenAPI";
-import { loadControllers } from "../libs/loadControllers";
+import { getCommonSourceDir, loadControllers } from "../libs/loadControllers";
 
 let tempRoot!: string;
 let sourceDir!: string;
@@ -21,6 +21,16 @@ describe("loadControllers", () => {
 
   afterEach(() => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  it("keeps Windows drive roots when source files use forward slashes", () => {
+    expect(
+      getCommonSourceDir([
+        "C:/workspace/apps/api-server/src/controllers/UsersController.ts",
+        "C:/workspace/apps/api-server/src/controllers/schemas.ts",
+        "C:/workspace/apps/api-server/src/saasDemo.ts",
+      ]),
+    ).toBe("C:/workspace/apps/api-server/src");
   });
 
   it(
