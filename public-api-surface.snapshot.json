@@ -17909,6 +17909,12 @@
           "exportKind": "named",
           "source": "./runtime",
           "declarationKind": "class"
+        },
+        {
+          "name": "UnsupportedTelemetrySignalProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TelemetryProblems",
+          "declarationKind": "class"
         }
       ],
       "typeExports": [

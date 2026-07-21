@@ -8,7 +8,9 @@ import type { TelemetryConfig } from "./config";
 import {
   OtlpEndpointRequiredProblem,
   TelemetryRuntimeProblem,
+  UnsupportedTelemetrySignalProblem,
 } from "./libs/problems/TelemetryProblems";
+import { getUnsupportedTelemetrySignals } from "./libs/signals/TelemetrySignalSupport";
 
 type ForceFlushResult = {
   success: boolean;
@@ -58,6 +60,17 @@ class TelemetryRuntime {
   }
 
   async init(config: TelemetryConfig): Promise<void> {
+    const requestedConfig = snapshotTelemetryConfig(config);
+
+    if (!this.initialized && !this.initPromise) {
+      this.config = requestedConfig;
+    }
+
+    const unsupportedSignals = getUnsupportedTelemetrySignals(requestedConfig);
+    if (unsupportedSignals) {
+      throw new UnsupportedTelemetrySignalProblem(unsupportedSignals);
+    }
+
     if (this.initialized) {
       return;
     }
@@ -66,7 +79,7 @@ class TelemetryRuntime {
       return this.initPromise;
     }
 
-    config = { ...config, ...(config.trace && { trace: { ...config.trace } }) };
+    config = requestedConfig;
     this.config = config;
 
     if (config.enabled === false || config.trace?.enabled === false) {
@@ -244,11 +257,40 @@ class TelemetryRuntime {
     if (!this.config) {
       return null;
     }
-    return {
-      ...this.config,
-      ...(this.config.trace && { trace: { ...this.config.trace } }),
-    };
+    return snapshotTelemetryConfig(this.config);
   }
+}
+
+function snapshotTelemetryConfig(config: TelemetryConfig): TelemetryConfig {
+  return {
+    ...config,
+    ...(config.logs && {
+      logs: {
+        ...config.logs,
+        ...(config.logs.exporterHeaders && { exporterHeaders: { ...config.logs.exporterHeaders } }),
+      },
+    }),
+    ...(config.metrics && {
+      metrics: {
+        ...config.metrics,
+        ...(config.metrics.exporterHeaders && {
+          exporterHeaders: { ...config.metrics.exporterHeaders },
+        }),
+      },
+    }),
+    ...(config.resourceAttributes && { resourceAttributes: { ...config.resourceAttributes } }),
+    ...(config.trace && {
+      trace: {
+        ...config.trace,
+        ...(config.trace.exporterHeaders && {
+          exporterHeaders: { ...config.trace.exporterHeaders },
+        }),
+        ...(config.trace.instrumentations && {
+          instrumentations: [...config.trace.instrumentations],
+        }),
+      },
+    }),
+  };
 }
 
 export { TelemetryRuntime };

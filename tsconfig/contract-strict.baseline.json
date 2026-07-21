@@ -3920,7 +3920,7 @@
     {
       "packageName": "@croco/telemetry-sdk-node",
       "file": "packages/telemetry-sdk-node/src/runtime.ts",
-      "line": 107,
+      "line": 120,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT' comes from an index signature, so it must be accessed with ['OTEL_EXPORTER_OTLP_TRACES_ENDPOINT']."
@@ -3928,7 +3928,7 @@
     {
       "packageName": "@croco/telemetry-sdk-node",
       "file": "packages/telemetry-sdk-node/src/runtime.ts",
-      "line": 108,
+      "line": 121,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'OTEL_EXPORTER_OTLP_ENDPOINT' comes from an index signature, so it must be accessed with ['OTEL_EXPORTER_OTLP_ENDPOINT']."
@@ -3936,7 +3936,7 @@
     {
       "packageName": "@croco/telemetry-sdk-node",
       "file": "packages/telemetry-sdk-node/src/runtime.ts",
-      "line": 114,
+      "line": 127,
       "column": 50,
       "code": "TS2379",
       "message": "Argument of type '{ url: string; headers: Record<string, string> | undefined; }' is not assignable to parameter of type 'OTLPExporterNodeConfigBase' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3944,7 +3944,7 @@
     {
       "packageName": "@croco/telemetry-sdk-node",
       "file": "packages/telemetry-sdk-node/src/runtime.ts",
-      "line": 126,
+      "line": 139,
       "column": 32,
       "code": "TS2379",
       "message": "Argument of type '{ resource: Resource; spanProcessor: BatchSpanProcessor | undefined; sampler: Sampler | undefined; instrumentations: Instrumentation<InstrumentationConfig>[]; }' is not assignable to parameter of type 'Partial<NodeSDKConfiguration>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
