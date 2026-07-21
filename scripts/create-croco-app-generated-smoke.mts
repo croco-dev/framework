@@ -1018,9 +1018,15 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         paths: ["contract-graph.snapshot.json"],
       },
       {
+        label: "Contract codegen",
+        args: ["codegen"],
+        paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/admin.ts"],
+      },
+      {
         label: "Contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
         args: ["contract:verify"],
-        paths: ["contract-graph.coverage.json"],
       },
       {
         label: "Admin RPC client",
@@ -1126,9 +1132,15 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         paths: ["contract-graph.snapshot.json"],
       },
       {
+        label: "Contract codegen",
+        args: ["codegen"],
+        paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/saas.ts"],
+      },
+      {
         label: "Contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
         args: ["contract:verify"],
-        paths: ["contract-graph.coverage.json"],
       },
       {
         label: "DI graph generation",
@@ -1332,9 +1344,15 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         paths: ["contract-graph.snapshot.json"],
       },
       {
+        label: "Contract codegen",
+        args: ["codegen"],
+        paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/ai.ts"],
+      },
+      {
         label: "Contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
         args: ["contract:verify"],
-        paths: ["contract-graph.coverage.json"],
       },
       {
         label: "DI graph generation",
@@ -2607,7 +2625,7 @@ export function assertGeneratedVerificationValidationsAreReadOnly(
     const name = validation.args?.[0];
     return (
       name !== undefined &&
-      !name.startsWith("contract:") &&
+      (name === "contract:verify" || !name.startsWith("contract:")) &&
       /:(?:check|verify)$/.test(name) &&
       (!validation.readOnly || !validation.recovery)
     );
@@ -2625,7 +2643,7 @@ function ensureGeneratedVerificationBaseline(validationDir: string): void {
   run("git", ["init", "--quiet"], validationDir);
   run("git", ["config", "user.email", "generated-smoke@croco.local"], validationDir);
   run("git", ["config", "user.name", "Croco Generated Smoke"], validationDir);
-  run("git", ["add", "-A"], validationDir);
+  run("git", ["add", "-A", "--", ".", ":(exclude)**/node_modules/**"], validationDir);
   run("git", ["commit", "--quiet", "-m", "generated verification baseline"], validationDir);
 }
 
@@ -3136,14 +3154,29 @@ function runSpaBeSplitContractSmoke(
       report,
       caseResult,
       projectDir,
-      "contract verify",
+      "contract codegen",
       corepackCommand,
-      ["pnpm", "contract:verify"],
+      ["pnpm", "codegen"],
       projectDir,
     );
-    assertExists(
-      join(projectDir, "contract-graph.coverage.json"),
-      "REST SPA contract smoke did not create contract-graph.coverage.json",
+    ensureGeneratedVerificationBaseline(projectDir);
+    runSmokeCaseCommand(
+      report,
+      caseResult,
+      projectDir,
+      "contract verify",
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        join(rootDir, "scripts", "tracked-file-mutation-guard.mts"),
+        "--recovery",
+        "pnpm codegen",
+        "--",
+        "corepack",
+        "pnpm",
+        "contract:verify",
+      ],
+      projectDir,
     );
     assertExists(
       join(projectDir, "openapi.json"),

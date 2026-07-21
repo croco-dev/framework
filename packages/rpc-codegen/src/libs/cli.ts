@@ -12,6 +12,7 @@ type CliOptions = {
   readonly frontendActionManifestPath: string | null;
   readonly manifestBundlePath: string | null;
   readonly outDir: string | null;
+  readonly outputCheck: boolean;
   readonly problemRuntime: GenerateClientProblemRuntime;
   readonly reactQuery: boolean;
   readonly strictProblems: boolean;
@@ -85,17 +86,32 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
     return 1;
   }
 
-  const { generateClientFilesFromContractGraph } = await import("./generate");
-  const files = generateClientFilesFromContractGraph(graph, outDir, {
-    ...(result.options.frontendActionManifestPath
-      ? { frontendActionManifestPath: result.options.frontendActionManifestPath }
-      : {}),
-    ...(result.options.manifestBundlePath
-      ? { manifestBundlePath: result.options.manifestBundlePath }
-      : {}),
-    problemRuntime: result.options.problemRuntime,
-    reactQuery: result.options.reactQuery,
-  });
+  const generateOptions = toGenerateClientOptions(result.options);
+  const { checkClientFilesFromContractGraph, generateClientFilesFromContractGraph } =
+    await import("./generate");
+
+  if (result.options.outputCheck) {
+    const drifts = checkClientFilesFromContractGraph(graph, outDir, generateOptions);
+
+    if (drifts.length === 0) {
+      io.stdout(`Generated RPC outputs are current: ${outDir}`);
+      return 0;
+    }
+
+    for (const drift of drifts) {
+      io.stdout(`[CROCO_RPC_OUTPUT_${drift.status.toUpperCase()}] ${drift.filePath}`);
+    }
+    io.stdout(
+      `RPC output drift detected. Regenerate with: ${formatRegenerationCommand(
+        "croco-rpc-codegen",
+        args,
+        drifts.filter(({ status }) => status === "unexpected").map(({ filePath }) => filePath),
+      )}`,
+    );
+    return 1;
+  }
+
+  const files = generateClientFilesFromContractGraph(graph, outDir, generateOptions);
 
   for (const file of files) {
     io.stdout(file);
@@ -121,6 +137,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
   const manifestBundlePath = getFlagValue(args, CLI_FLAGS.value.manifestBundle);
   const outDir = getFlagValue(args, CLI_FLAGS.value.out);
   const check = args.includes(CLI_FLAGS.boolean.check);
+  const outputCheck = args.includes(CLI_FLAGS.boolean.outputCheck);
   const strictProblems = parseStrictProblems(args);
   const strictSchemas = parseStrictSchemas(args);
   const problemRuntime = parseProblemRuntime(args);
@@ -129,6 +146,8 @@ export function parseArgs(args: readonly string[]): CliParseResult {
     !controllers ||
     (!outDir && !check && !frontendActionManifestCheck) ||
     (frontendActionManifestCheck && !frontendActionManifestPath) ||
+    (frontendActionManifestCheck && outputCheck) ||
+    (check && outputCheck) ||
     strictProblems === null ||
     strictSchemas === null ||
     !problemRuntime
@@ -144,6 +163,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
       frontendActionManifestPath,
       manifestBundlePath,
       outDir,
+      outputCheck,
       problemRuntime,
       reactQuery: args.includes(CLI_FLAGS.boolean.reactQuery),
       strictProblems,
@@ -191,6 +211,7 @@ const CLI_FLAGS = {
     frontendActionManifestCheck: "--frontend-action-manifest-check",
     help: "--help",
     helpShort: "-h",
+    outputCheck: "--output-check",
     reactQuery: "--react-query",
     strictProblems: "--strict-problems",
     strictSchemas: "--strict-schemas",
@@ -240,6 +261,43 @@ function parseProblemRuntime(args: readonly string[]): GenerateClientProblemRunt
   return value === "inline" || value === "frontend-problems" ? value : null;
 }
 
+function toGenerateClientOptions(options: CliOptions): {
+  readonly frontendActionManifestPath?: string;
+  readonly manifestBundlePath?: string;
+  readonly problemRuntime: GenerateClientProblemRuntime;
+  readonly reactQuery: boolean;
+} {
+  return {
+    ...(options.frontendActionManifestPath
+      ? { frontendActionManifestPath: options.frontendActionManifestPath }
+      : {}),
+    ...(options.manifestBundlePath ? { manifestBundlePath: options.manifestBundlePath } : {}),
+    problemRuntime: options.problemRuntime,
+    reactQuery: options.reactQuery,
+  };
+}
+
+function formatRegenerationCommand(
+  binary: string,
+  args: readonly string[],
+  unexpectedPaths: readonly string[],
+): string {
+  const generationArgs = args.filter((argument) => argument !== CLI_FLAGS.boolean.outputCheck);
+  const generationCommand = [binary, ...generationArgs].map(quoteShellArgument).join(" ");
+
+  if (unexpectedPaths.length === 0) {
+    return generationCommand;
+  }
+
+  return `rm -- ${unexpectedPaths.map(quoteShellArgument).join(" ")} && ${generationCommand}`;
+}
+
+function quoteShellArgument(argument: string): string {
+  return /^[A-Za-z0-9_./:@%+=,-]+$/.test(argument)
+    ? argument
+    : `'${argument.replace(/'/g, `'"'"'`)}'`;
+}
+
 function printHelp(io: CliIo): void {
   io.stdout(`Usage: croco-rpc-codegen --controllers <glob> --out <dir> [--react-query] [--problem-runtime inline|frontend-problems] [--frontend-action-manifest <path>]
        croco-rpc-codegen --controllers <glob> --check [--strict-problems]
@@ -257,6 +315,7 @@ Options:
   --manifest-bundle <dir>
                        Generate a source reference to the shared Project manifest bundle
   --check               Validate the canonical contract graph without writing clients
+  --output-check        Fail when generated client outputs drift without writing files
   --strict-problems     Warn when routes do not declare generated client Problem unions (default)
   --compatibility-problems
                        Allow legacy routes without declared generated client Problem unions

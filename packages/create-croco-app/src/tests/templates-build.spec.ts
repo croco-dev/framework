@@ -171,7 +171,7 @@ function checkSpaBeSplitStructure() {
         /^croco project map[\s\S]*--check --manifest croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
       ),
       "contract:verify": expect.stringMatching(
-        /^pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
+        /^pnpm contract:diff && pnpm contract:check && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
       "ci:contracts": "pnpm contract:verify",
       "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
@@ -187,7 +187,11 @@ function checkSpaBeSplitStructure() {
       "contract:client": expect.stringMatching(
         /^pnpm contract:check &&[\s\S]*croco-rpc-codegen[\s\S]*--strict-schemas[\s\S]*--problem-runtime frontend-problems --manifest-bundle \.croco\/manifest[\s\S]*provider-rpc typecheck$/,
       ),
-      codegen: expect.any(String),
+      "contract:openapi:check": expect.stringMatching(/croco-openapi-spec[\s\S]*--output-check$/),
+      "contract:client:check": expect.stringMatching(
+        /croco-rpc-codegen[\s\S]*--output-check[\s\S]*provider-rpc typecheck$/,
+      ),
+      codegen: "pnpm project-map:write && pnpm contract:openapi && pnpm contract:client",
       lint: "biome lint .",
       test: "turbo test",
     }),
@@ -321,7 +325,7 @@ function checkAdminConsoleStructure() {
         /croco project map[\s\S]*--check[\s\S]*--manifest-bundle \.croco\/manifest/,
       ),
       "contract:verify": expect.stringMatching(
-        /contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check/,
+        /contract:diff[\s\S]*contract:openapi:check && pnpm contract:client:check/,
       ),
       "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
       "di:check": "croco di check .croco/build/di-graph.manifest.json",
@@ -333,6 +337,9 @@ function checkAdminConsoleStructure() {
       "contract:client": expect.stringMatching(
         /admin\.ts,users\.ts,problems\.ts[\s\S]*--strict-schemas[\s\S]*--problem-runtime frontend-problems --manifest-bundle \.croco\/manifest/,
       ),
+      "contract:openapi:check": expect.stringMatching(/croco-openapi-spec[\s\S]*--output-check$/),
+      "contract:client:check": expect.stringMatching(/croco-rpc-codegen[\s\S]*--output-check/),
+      codegen: "pnpm project-map:write && pnpm contract:openapi && pnpm contract:client",
       typecheck: "pnpm contract:client && turbo typecheck",
       build: "pnpm contract:client && turbo build",
     }),
@@ -549,7 +556,7 @@ function checkSaasStructure() {
   expect(rootPackageJson).toMatchObject({
     scripts: expect.objectContaining({
       "contract:check": expect.stringMatching(
-        /^pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
+        /^NODE_PATH=\.\/node_modules node \.\/node_modules\/@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--check[\s\S]*--strict-schemas[\s\S]*--fail-on-diagnostics$/,
       ),
       "contract:snapshot": expect.stringMatching(
         /^croco contracts check[\s\S]*--strict-schemas[\s\S]*--json --out contract-graph\.snapshot\.json$/,
@@ -567,7 +574,7 @@ function checkSaasStructure() {
         /^croco project map[\s\S]*--runtime-policy croco-runtime-policy\.manifest\.json[\s\S]*--provider-profile croco-saas-profile\.manifest\.json[\s\S]*--check --manifest croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
       ),
       "contract:verify": expect.stringMatching(
-        /^pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check && pnpm contract:openapi && pnpm contract:client && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
+        /^pnpm contract:diff && pnpm contract:check && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
       ),
       "ci:contracts": "pnpm contract:verify",
       "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
@@ -583,6 +590,11 @@ function checkSaasStructure() {
       "contract:openapi": expect.stringMatching(
         /^pnpm contract:check && croco-openapi-spec[\s\S]*--strict-schemas[\s\S]*--out openapi\.json[\s\S]*--manifest-bundle \.croco\/manifest$/,
       ),
+      "contract:openapi:check": expect.stringMatching(/croco-openapi-spec[\s\S]*--output-check$/),
+      "contract:client:check": expect.stringMatching(
+        /@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--output-check$/,
+      ),
+      codegen: "pnpm project-map:write && pnpm contract:openapi && pnpm contract:client",
       "demo:seed": expect.any(String),
       "profile:check": "pnpm --filter {{scope}}/api-server profile:check",
       "architecture-policy:check": "croco architecture-policy check --manifest croco.arch.json",
@@ -875,7 +887,7 @@ function checkAiSaasStructure() {
         /^croco project map[\s\S]*--check --manifest croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
       ),
       "contract:verify": expect.stringMatching(
-        /^pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check/,
+        /^pnpm contract:diff[\s\S]*contract:openapi:check && pnpm contract:client:check/,
       ),
       "ci:contracts": "pnpm contract:verify",
       "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
@@ -888,6 +900,11 @@ function checkAiSaasStructure() {
       "contract:openapi": expect.stringMatching(
         /--strict-schemas[\s\S]*AI SaaS API[\s\S]*--manifest-bundle \.croco\/manifest$/,
       ),
+      "contract:openapi:check": expect.stringMatching(/croco-openapi-spec[\s\S]*--output-check$/),
+      "contract:client:check": expect.stringMatching(
+        /@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--output-check$/,
+      ),
+      codegen: "pnpm project-map:write && pnpm contract:openapi && pnpm contract:client",
     }),
   });
   expect(Object.values(rootPackageJson.scripts ?? {})).not.toEqual(

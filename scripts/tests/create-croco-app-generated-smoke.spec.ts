@@ -71,14 +71,17 @@ describe("generated smoke command execution", () => {
 });
 
 describe("generated verification mutation coverage", () => {
-  it("requires guards and recovery for non-codegen check and verify validations", () => {
+  it("requires guards and recovery for contract and non-codegen verify validations", () => {
     expect(() =>
       assertGeneratedVerificationValidationsAreReadOnly([
-        { args: ["contract:verify"] },
+        { args: ["contract:verify"], readOnly: true, recovery: "pnpm codegen" },
         { args: ["profile:check"], readOnly: true, recovery: "regenerate profile" },
         { args: ["di:verify"], readOnly: true, recovery: "pnpm di:graph" },
       ]),
     ).not.toThrow();
+    expect(() =>
+      assertGeneratedVerificationValidationsAreReadOnly([{ args: ["contract:verify"] }]),
+    ).toThrow("contract:verify");
     expect(() =>
       assertGeneratedVerificationValidationsAreReadOnly([{ args: ["profile:check"] }]),
     ).toThrow("profile:check");

@@ -13,6 +13,7 @@ const generationModuleImports = vi.hoisted(() => ({
   buildContractGraph: 0,
   lastBuildOptions: null as null | Record<string, unknown>,
   lastEmitOptions: null as null | Record<string, unknown>,
+  outputDrift: null as null | "changed" | "missing",
   graph: {
     version: "croco.contract-graph.v1",
     controllers: [
@@ -53,6 +54,11 @@ vi.mock("../libs/emitOpenAPI", () => {
     },
   };
 });
+
+vi.mock("../libs/output", () => ({
+  checkOpenAPIOutput: async () => generationModuleImports.outputDrift,
+  serializeOpenAPIDocument: (document: unknown) => JSON.stringify(document, null, 2),
+}));
 
 vi.mock("../libs/loadControllers", () => {
   return {
@@ -118,6 +124,7 @@ describe("openapi-spec CLI", () => {
     generationModuleImports.buildContractGraph = 0;
     generationModuleImports.lastBuildOptions = null;
     generationModuleImports.lastEmitOptions = null;
+    generationModuleImports.outputDrift = null;
     fileSystemImports.writeFile = 0;
     fileSystemImports.lastWritePath = null;
     fileSystemImports.lastWriteContents = null;
@@ -151,6 +158,7 @@ describe("openapi-spec CLI", () => {
       buildContractGraph: 0,
       lastBuildOptions: null,
       lastEmitOptions: null,
+      outputDrift: null,
       graph: generationModuleImports.graph,
     });
   });
@@ -195,6 +203,7 @@ describe("openapi-spec CLI", () => {
       buildContractGraph: 0,
       lastBuildOptions: null,
       lastEmitOptions: null,
+      outputDrift: null,
       graph: generationModuleImports.graph,
     });
   });
@@ -473,4 +482,31 @@ describe("openapi-spec CLI", () => {
       manifestBundlePath: ".croco/manifest",
     });
   });
+
+  it.each(["changed", "missing"] as const)(
+    "reports stable %s output drift without writing OpenAPI",
+    async (drift) => {
+      generationModuleImports.outputDrift = drift;
+
+      const exitCode = await runCli(
+        [
+          "--controllers",
+          "src/controllers/**/*.ts",
+          "--out",
+          "openapi.json",
+          "--title",
+          "Croco API",
+          "--output-check",
+        ],
+        { stdout: (message) => stdout.push(message) },
+      );
+
+      expect(exitCode).toBe(1);
+      expect(stdout).toEqual([
+        `[CROCO_OPENAPI_OUTPUT_${drift.toUpperCase()}] openapi.json`,
+        "OpenAPI output drift detected. Regenerate with: croco-openapi-spec --controllers 'src/controllers/**/*.ts' --out openapi.json --title 'Croco API'",
+      ]);
+      expect(fileSystemImports.writeFile).toBe(0);
+    },
+  );
 });

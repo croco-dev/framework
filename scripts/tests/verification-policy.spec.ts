@@ -109,6 +109,20 @@ describe("verification policy", () => {
       "--dry-run",
     ]);
   });
+
+  it("classifies codegen output checks as regression-tested read-only verification", () => {
+    const discoveries = discoverCliVerificationDeclarations({
+      "packages/openapi-spec/src/libs/cli.ts":
+        'const outputCheck = args.includes("--output-check");',
+      "packages/rpc-codegen/src/libs/cli.ts":
+        'const outputCheck = args.includes("--output-check");',
+    });
+
+    expect(discoveries.map(({ name }) => name)).toEqual(["--output-check", "--output-check"]);
+    expect(
+      discoveries.map((discovery) => classifyVerificationPath(discovery)?.classification),
+    ).toEqual(["generator-regression-tested", "generator-regression-tested"]);
+  });
 });
 
 describe("workflow read-only contracts", () => {

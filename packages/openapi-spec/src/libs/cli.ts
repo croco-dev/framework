@@ -9,6 +9,7 @@ import type { EmitOpenAPIOptions } from "./emitOpenAPI";
 type CliOptions = {
   readonly controllers: string;
   readonly outFile: string | null;
+  readonly outputCheck: boolean;
   readonly title: string;
   readonly version: string;
   readonly servers: { readonly url: string }[];
@@ -49,17 +50,12 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
     return 1;
   }
 
-  const [
-    { writeFile },
-    { buildContractGraph },
-    { emitOpenAPIFromContractGraph },
-    { loadControllers },
-  ] = await Promise.all([
-    import("node:fs/promises"),
-    import("@croco/protocols-core"),
-    import("./emitOpenAPI"),
-    import("./loadControllers"),
-  ]);
+  const [{ buildContractGraph }, { emitOpenAPIFromContractGraph }, { loadControllers }] =
+    await Promise.all([
+      import("@croco/protocols-core"),
+      import("./emitOpenAPI"),
+      import("./loadControllers"),
+    ]);
   const controllers = await loadControllers(result.options.controllers);
   const graph = buildContractGraph(controllers, {
     strictProblemResponses: result.options.strictProblems,
@@ -93,8 +89,26 @@ export async function runCli(args: readonly string[], io: CliIo = defaultCliIo):
   }
 
   const document = emitOpenAPIFromContractGraph(graph, toEmitOpenAPIOptions(result.options));
+  const { checkOpenAPIOutput, serializeOpenAPIDocument } = await import("./output");
+  const content = serializeOpenAPIDocument(document);
 
-  await writeFile(outFile, JSON.stringify(document, null, 2));
+  if (result.options.outputCheck) {
+    const drift = await checkOpenAPIOutput(outFile, content);
+
+    if (!drift) {
+      io.stdout(`Generated OpenAPI output is current: ${outFile}`);
+      return 0;
+    }
+
+    io.stdout(`[CROCO_OPENAPI_OUTPUT_${drift.toUpperCase()}] ${outFile}`);
+    io.stdout(
+      `OpenAPI output drift detected. Regenerate with: ${formatRegenerationCommand("croco-openapi-spec", args)}`,
+    );
+    return 1;
+  }
+
+  const { writeFile } = await import("node:fs/promises");
+  await writeFile(outFile, content);
 
   return 0;
 }
@@ -113,10 +127,17 @@ export function parseArgs(args: readonly string[]): CliParseResult {
   const controllers = getFlagValue(args, CLI_FLAGS.value.controllers);
   const outFile = getFlagValue(args, CLI_FLAGS.value.out);
   const check = args.includes(CLI_FLAGS.boolean.check);
+  const outputCheck = args.includes(CLI_FLAGS.boolean.outputCheck);
   const strictProblems = parseStrictProblems(args);
   const strictSchemas = parseStrictSchemas(args);
 
-  if (!controllers || (!outFile && !check) || strictProblems === null || strictSchemas === null) {
+  if (
+    !controllers ||
+    (!outFile && !check) ||
+    (check && outputCheck) ||
+    strictProblems === null ||
+    strictSchemas === null
+  ) {
     return { kind: "invalid" };
   }
 
@@ -125,6 +146,7 @@ export function parseArgs(args: readonly string[]): CliParseResult {
     options: {
       controllers,
       outFile,
+      outputCheck,
       title: getFlagValue(args, CLI_FLAGS.value.title) ?? "Croco API",
       version: getFlagValue(args, CLI_FLAGS.value.version) ?? "1.0.0",
       servers: getFlagValues(args, CLI_FLAGS.value.server).map((url) => ({ url })),
@@ -201,6 +223,7 @@ const CLI_FLAGS = {
     failOnDiagnostics: "--fail-on-diagnostics",
     help: "--help",
     helpShort: "-h",
+    outputCheck: "--output-check",
     strictProblems: "--strict-problems",
     strictSchemas: "--strict-schemas",
   },
@@ -250,6 +273,18 @@ function getFlagValues(args: readonly string[], flag: string): string[] {
   });
 }
 
+function formatRegenerationCommand(binary: string, args: readonly string[]): string {
+  const generationArgs = args.filter((argument) => argument !== CLI_FLAGS.boolean.outputCheck);
+
+  return [binary, ...generationArgs].map(quoteShellArgument).join(" ");
+}
+
+function quoteShellArgument(argument: string): string {
+  return /^[A-Za-z0-9_./:@%+=,-]+$/.test(argument)
+    ? argument
+    : `'${argument.replace(/'/g, `'"'"'`)}'`;
+}
+
 function printHelp(io: CliIo): void {
   io.stdout(`Usage: croco-openapi-spec --controllers <glob> --out <file> [--title <s>] [--version <s>] [--server <url>] [--bearer-auth [name]]
        croco-openapi-spec --controllers <glob> --check [--strict-problems]
@@ -264,6 +299,7 @@ Options:
   --manifest-bundle <dir>
                        Reference the shared Project manifest bundle in generated OpenAPI
   --check               Validate the canonical contract graph without writing OpenAPI
+  --output-check        Fail when generated OpenAPI output drifts without writing files
   --strict-problems     Warn when routes do not declare generated client Problem unions (default)
   --compatibility-problems
                        Allow legacy routes without declared generated client Problem unions

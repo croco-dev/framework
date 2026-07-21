@@ -14,6 +14,7 @@ import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  checkGeneratedClientFiles,
   createFrontendActionManifestFromContractGraph,
   generateClientFiles,
   generateClientFilesFromContractGraph,
@@ -258,6 +259,41 @@ describe("generateClientFiles", () => {
 
   afterEach(() => {
     fs.rmSync(TEMP_DIR, { recursive: true, force: true });
+  });
+
+  it("checks unchanged outputs without changing their bytes, mtimes, or directory contents", () => {
+    const routes = [createBasicRoute()];
+    const files = generateClientFiles(routes, TEMP_DIR);
+    const before = files.map((filePath) => ({
+      content: fs.readFileSync(filePath),
+      filePath,
+      mtimeMs: fs.statSync(filePath).mtimeMs,
+    }));
+    const directoryEntries = fs.readdirSync(TEMP_DIR);
+
+    expect(checkGeneratedClientFiles(routes, TEMP_DIR)).toEqual([]);
+    expect(fs.readdirSync(TEMP_DIR)).toEqual(directoryEntries);
+    expect(
+      before.map(({ filePath }) => ({
+        content: fs.readFileSync(filePath),
+        filePath,
+        mtimeMs: fs.statSync(filePath).mtimeMs,
+      })),
+    ).toEqual(before);
+  });
+
+  it("reports changed, missing, and unexpected generated client outputs", () => {
+    const routes = [createBasicRoute()];
+    generateClientFiles(routes, TEMP_DIR);
+    fs.appendFileSync(path.join(TEMP_DIR, "user.ts"), "// drift\n");
+    fs.rmSync(path.join(TEMP_DIR, "rpc.ts"));
+    fs.writeFileSync(path.join(TEMP_DIR, "stale.ts"), "export {};\n");
+
+    expect(checkGeneratedClientFiles(routes, TEMP_DIR)).toEqual([
+      { filePath: path.join(TEMP_DIR, "rpc.ts"), status: "missing" },
+      { filePath: path.join(TEMP_DIR, "stale.ts"), status: "unexpected" },
+      { filePath: path.join(TEMP_DIR, "user.ts"), status: "changed" },
+    ]);
   });
 
   it("should generate a GET fetch client", () => {
@@ -2724,6 +2760,21 @@ void updateResult;
     );
   });
 });
+
+function createBasicRoute(): RouteIR {
+  return {
+    controllerName: "UserController",
+    methodName: "list",
+    httpMethod: "GET",
+    path: "/users",
+    routeContract: null,
+    params: [],
+    inputSchema: null,
+    inputSchemas: EMPTY_INPUT_SCHEMAS,
+    outputSchema: null,
+    domain: null,
+  };
+}
 
 function assertGeneratedClientTypechecks(
   source: string,

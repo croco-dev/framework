@@ -94,8 +94,10 @@ const TEMPLATE_SCRIPT_NAMES = new Set([
   "ci:contracts",
   "contract:check",
   "contract:client",
+  "contract:client:check",
   "contract:coverage",
   "contract:openapi",
+  "contract:openapi:check",
   "contract:snapshot",
   "contract:verify",
   "demo:smoke",
@@ -125,7 +127,11 @@ const CLI_POLICIES: Readonly<Record<string, VerificationPolicy>> = {
     "MigrationCommandE2E.spec.ts and transaction harness coverage",
   ),
   "packages/openapi-spec/src/libs/cli.ts:--check": relatedIssuePolicy("OpenAPI --check"),
+  "packages/openapi-spec/src/libs/cli.ts:--output-check": outputCheckPolicy("OpenAPI output check"),
   "packages/rpc-codegen/src/libs/cli.ts:--check": relatedIssuePolicy("RPC codegen --check"),
+  "packages/rpc-codegen/src/libs/cli.ts:--output-check": outputCheckPolicy(
+    "RPC codegen output check",
+  ),
 };
 
 export function discoverRootVerificationScripts(packageJson: string): VerificationPath[] {
@@ -207,6 +213,9 @@ export function discoverCliVerificationDeclarations(
     if (/args\.includes\(["']--dry-run["']\)|\.option\(["']--dry-run["']/.test(source)) {
       declarations.add("--dry-run");
     }
+    if (/args\.includes\(["']--output-check["']\)|\.option\(["']--output-check["']/.test(source)) {
+      declarations.add("--output-check");
+    }
     if (/name:\s*["']check["']/.test(source)) declarations.add("check-subcommand");
 
     for (const declaration of declarations) {
@@ -246,6 +255,16 @@ export function classifyVerificationPath(path: VerificationPath): VerificationPo
   if (path.surface === "package-script") {
     if (path.path.startsWith("packages/create-croco-app/templates/")) {
       if (!TEMPLATE_SCRIPT_NAMES.has(path.name)) return undefined;
+      if (
+        [
+          "ci:contracts",
+          "contract:client:check",
+          "contract:openapi:check",
+          "contract:verify",
+        ].includes(path.name)
+      ) {
+        return outputCheckPolicy(`generated template script ${path.name}`);
+      }
       const excluded = path.name.startsWith("contract:") || path.name === "ci:contracts";
       return excluded
         ? relatedIssuePolicy(`generated template script ${path.name}`)
@@ -398,6 +417,16 @@ function relatedIssuePolicy(owner: string): VerificationPolicy {
     owner: `#1322 (${owner})`,
     nonmutationEvidence: "Output drift and generated-project isolation are owned by #1322",
     recoveryCommand: "Follow #1322 output regeneration guidance",
+  };
+}
+
+function outputCheckPolicy(owner: string): VerificationPolicy {
+  return {
+    classification: "generator-regression-tested",
+    owner,
+    nonmutationEvidence:
+      "OpenAPI Output.spec.ts and RPC codegen.spec.ts assert unchanged checks preserve bytes, mtimes, and directory contents",
+    recoveryCommand: "Run the reported regeneration command and commit the generated outputs",
   };
 }
 

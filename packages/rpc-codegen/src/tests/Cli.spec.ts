@@ -3,12 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const generationModuleImports = vi.hoisted(() => ({
   generate: 0,
   generateClientFiles: 0,
+  checkClientFiles: 0,
   manifestChecks: 0,
   loadRoutes: 0,
   loadContractGraph: 0,
   lastLoadOptions: null as null | Record<string, unknown>,
   lastCheckedManifestPath: null as null | string,
   lastGenerateOptions: null as null | Record<string, unknown>,
+  clientDrifts: [] as {
+    readonly filePath: string;
+    readonly status: "changed" | "missing" | "unexpected";
+  }[],
   manifestCheckResult: {
     ok: true,
     status: "current",
@@ -52,6 +57,15 @@ vi.mock("../libs/generate", () => {
       generationModuleImports.generateClientFiles += 1;
       generationModuleImports.lastGenerateOptions = options;
       return ["client/user.ts"];
+    },
+    checkClientFilesFromContractGraph: (
+      _graph: unknown,
+      _outDir: string,
+      options: Record<string, unknown>,
+    ) => {
+      generationModuleImports.checkClientFiles += 1;
+      generationModuleImports.lastGenerateOptions = options;
+      return generationModuleImports.clientDrifts;
     },
     createFrontendActionManifestFromContractGraph: () => {
       return generationModuleImports.frontendActionManifest;
@@ -98,12 +112,14 @@ describe("rpc-codegen CLI", () => {
     stdout = [];
     generationModuleImports.generate = 0;
     generationModuleImports.generateClientFiles = 0;
+    generationModuleImports.checkClientFiles = 0;
     generationModuleImports.manifestChecks = 0;
     generationModuleImports.loadRoutes = 0;
     generationModuleImports.loadContractGraph = 0;
     generationModuleImports.lastLoadOptions = null;
     generationModuleImports.lastCheckedManifestPath = null;
     generationModuleImports.lastGenerateOptions = null;
+    generationModuleImports.clientDrifts = [];
     generationModuleImports.manifestCheckResult = {
       ok: true,
       status: "current",
@@ -139,12 +155,14 @@ describe("rpc-codegen CLI", () => {
     expect(generationModuleImports).toEqual({
       generate: 0,
       generateClientFiles: 0,
+      checkClientFiles: 0,
       manifestChecks: 0,
       loadRoutes: 0,
       loadContractGraph: 0,
       lastLoadOptions: null,
       lastCheckedManifestPath: null,
       lastGenerateOptions: null,
+      clientDrifts: [],
       manifestCheckResult: generationModuleImports.manifestCheckResult,
       frontendActionManifest: generationModuleImports.frontendActionManifest,
       graph: generationModuleImports.graph,
@@ -199,12 +217,14 @@ describe("rpc-codegen CLI", () => {
     expect(generationModuleImports).toEqual({
       generate: 0,
       generateClientFiles: 0,
+      checkClientFiles: 0,
       manifestChecks: 0,
       loadRoutes: 0,
       loadContractGraph: 0,
       lastLoadOptions: null,
       lastCheckedManifestPath: null,
       lastGenerateOptions: null,
+      clientDrifts: [],
       manifestCheckResult: generationModuleImports.manifestCheckResult,
       frontendActionManifest: generationModuleImports.frontendActionManifest,
       graph: generationModuleImports.graph,
@@ -543,5 +563,40 @@ describe("rpc-codegen CLI", () => {
     expect(generationModuleImports.lastCheckedManifestPath).toBe(
       "client/frontend-action-manifest.json",
     );
+  });
+
+  it("reports stable output drift diagnostics and an exact regeneration command", async () => {
+    generationModuleImports.clientDrifts = [
+      { filePath: "client/rpc.ts", status: "missing" },
+      { filePath: "client/stale.ts", status: "unexpected" },
+      { filePath: "client/user.ts", status: "changed" },
+    ];
+
+    const exitCode = await runCli(
+      [
+        "--controllers",
+        "src/controllers/**/*.ts",
+        "--out",
+        "client",
+        "--problem-runtime",
+        "frontend-problems",
+        "--output-check",
+      ],
+      { stdout: (message) => stdout.push(message) },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toEqual([
+      "[CROCO_RPC_OUTPUT_MISSING] client/rpc.ts",
+      "[CROCO_RPC_OUTPUT_UNEXPECTED] client/stale.ts",
+      "[CROCO_RPC_OUTPUT_CHANGED] client/user.ts",
+      "RPC output drift detected. Regenerate with: rm -- client/stale.ts && croco-rpc-codegen --controllers 'src/controllers/**/*.ts' --out client --problem-runtime frontend-problems",
+    ]);
+    expect(generationModuleImports.checkClientFiles).toBe(1);
+    expect(generationModuleImports.generateClientFiles).toBe(0);
+    expect(generationModuleImports.lastGenerateOptions).toEqual({
+      problemRuntime: "frontend-problems",
+      reactQuery: false,
+    });
   });
 });

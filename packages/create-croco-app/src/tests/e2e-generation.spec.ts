@@ -2252,7 +2252,7 @@ describe("E2E: generate()", () => {
         build: "turbo build",
         test: "turbo test",
         "contract:verify":
-          "pnpm contract:diff && pnpm contract:coverage && pnpm project-map:write && pnpm project-map:check && pnpm contract:openapi && pnpm contract:client && pnpm --filter @test/provider-rpc typecheck",
+          "pnpm contract:diff && pnpm contract:check && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check && pnpm --filter @test/provider-rpc typecheck",
         "di:graph": "pnpm --filter @test/api-server di:graph",
         "di:check": "croco di check .croco/build/di-graph.manifest.json",
         "di:assert": "node scripts/assert-di-graph.mjs .croco/build/di-graph.manifest.json",
@@ -2265,6 +2265,11 @@ describe("E2E: generate()", () => {
       });
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(rootPackageJson.scripts?.["contract:openapi"]).toContain("--strict-schemas");
+      expect(rootPackageJson.scripts?.["contract:client:check"]).toContain("--output-check");
+      expect(rootPackageJson.scripts?.["contract:openapi:check"]).toContain("--output-check");
+      expect(rootPackageJson.scripts?.codegen).toBe(
+        "pnpm project-map:write && pnpm contract:openapi && pnpm contract:client",
+      );
       expect(manifest).toMatchObject({
         schemaVersion: 1,
         projectName: "my-saas-api",

@@ -3265,7 +3265,7 @@
     {
       "packageName": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 761,
+      "line": 777,
       "column": 16,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -3273,7 +3273,7 @@
     {
       "packageName": "@croco/rpc-codegen",
       "file": "packages/rpc-codegen/src/libs/generate.ts",
-      "line": 761,
+      "line": 777,
       "column": 49,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
