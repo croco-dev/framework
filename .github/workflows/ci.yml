@@ -278,66 +278,6 @@ jobs:
           path: ci-reports/coverage/core-warning/report.md
           if-no-files-found: warn
 
-  windows-scaffold:
-    runs-on: windows-latest
-    timeout-minutes: 60
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: ".nvmrc"
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packaged CLI
-        run: pnpm turbo run build --filter=create-croco-app... --force
-
-      - name: Run packed CLI from a path containing spaces
-        shell: pwsh
-        run: |
-          $packDir = Join-Path $env:RUNNER_TEMP "croco packed cli"
-          $runnerDir = Join-Path $env:RUNNER_TEMP "croco packed runner"
-          $targetDir = Join-Path $runnerDir "generated-app"
-          New-Item -ItemType Directory -Force -Path $packDir, $runnerDir | Out-Null
-          pnpm --filter create-croco-app pack --pack-destination $packDir
-          if ($LASTEXITCODE -ne 0) { throw "create-croco-app pack failed" }
-          $tarball = Get-ChildItem -Path $packDir -Filter "*.tgz" | Select-Object -First 1
-          if ($null -eq $tarball) { throw "create-croco-app tarball was not created" }
-          tar -xf $tarball.FullName -C $runnerDir
-          if ($LASTEXITCODE -ne 0) { throw "packed create-croco-app extraction failed" }
-          $packageDir = Join-Path $runnerDir "package"
-          $cliDependencies = Join-Path $env:GITHUB_WORKSPACE "packages/create-croco-app/node_modules"
-          $packedNodeModules = Join-Path $packageDir "node_modules"
-          New-Item -ItemType Directory -Force -Path $packedNodeModules | Out-Null
-          $packedManifest = Get-Content (Join-Path $packageDir "package.json") | ConvertFrom-Json
-          foreach ($dependency in $packedManifest.dependencies.PSObject.Properties.Name) {
-            $source = Get-Item (Join-Path $cliDependencies $dependency)
-            $resolvedSource = $source.ResolveLinkTarget($true)
-            if ($null -eq $resolvedSource) { $resolvedSource = $source }
-            $destination = Join-Path $packedNodeModules $dependency
-            New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
-            New-Item -ItemType Junction -Path $destination -Target $resolvedSource.FullName | Out-Null
-          }
-          node (Join-Path $packageDir "dist/index.js") $targetDir --preset blank --scope '@windows-smoke' --no-install --no-git --json
-          if ($LASTEXITCODE -ne 0) { throw "packed create-croco-app generation failed" }
-          if (-not (Test-Path (Join-Path $targetDir "package.json"))) {
-            throw "packed create-croco-app did not generate package.json"
-          }
-
-      - name: Validate generated SaaS application
-        env:
-          CROCO_GENERATED_SMOKE_CASES: goal-saas-api
-        run: pnpm create-croco-app:smoke
-
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -469,6 +409,66 @@ jobs:
               - 'packages/workflow-core/src/**'
               - 'packages/docs/astro.config.mjs'
               - 'packages/docs/tsconfig.typedoc.json'
+
+  windows-scaffold:
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packaged CLI
+        run: pnpm turbo run build --filter=create-croco-app... --force
+
+      - name: Run packed CLI from a path containing spaces
+        shell: pwsh
+        run: |
+          $packDir = Join-Path $env:RUNNER_TEMP "croco packed cli"
+          $runnerDir = Join-Path $env:RUNNER_TEMP "croco packed runner"
+          $targetDir = Join-Path $runnerDir "generated-app"
+          New-Item -ItemType Directory -Force -Path $packDir, $runnerDir | Out-Null
+          pnpm --filter create-croco-app pack --pack-destination $packDir
+          if ($LASTEXITCODE -ne 0) { throw "create-croco-app pack failed" }
+          $tarball = Get-ChildItem -Path $packDir -Filter "*.tgz" | Select-Object -First 1
+          if ($null -eq $tarball) { throw "create-croco-app tarball was not created" }
+          tar -xf $tarball.FullName -C $runnerDir
+          if ($LASTEXITCODE -ne 0) { throw "packed create-croco-app extraction failed" }
+          $packageDir = Join-Path $runnerDir "package"
+          $cliDependencies = Join-Path $env:GITHUB_WORKSPACE "packages/create-croco-app/node_modules"
+          $packedNodeModules = Join-Path $packageDir "node_modules"
+          New-Item -ItemType Directory -Force -Path $packedNodeModules | Out-Null
+          $packedManifest = Get-Content (Join-Path $packageDir "package.json") | ConvertFrom-Json
+          foreach ($dependency in $packedManifest.dependencies.PSObject.Properties.Name) {
+            $source = Get-Item (Join-Path $cliDependencies $dependency)
+            $resolvedSource = $source.ResolveLinkTarget($true)
+            if ($null -eq $resolvedSource) { $resolvedSource = $source }
+            $destination = Join-Path $packedNodeModules $dependency
+            New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
+            New-Item -ItemType Junction -Path $destination -Target $resolvedSource.FullName | Out-Null
+          }
+          node (Join-Path $packageDir "dist/index.js") $targetDir --preset blank --scope '@windows-smoke' --no-install --no-git --json
+          if ($LASTEXITCODE -ne 0) { throw "packed create-croco-app generation failed" }
+          if (-not (Test-Path (Join-Path $targetDir "package.json"))) {
+            throw "packed create-croco-app did not generate package.json"
+          }
+
+      - name: Validate generated SaaS application
+        env:
+          CROCO_GENERATED_SMOKE_CASES: goal-saas-api
+        run: pnpm create-croco-app:smoke
 
   docs-sync-check:
     needs: [validate, changes]
