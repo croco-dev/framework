@@ -4214,11 +4214,11 @@ const doctorSourceProject = new Project({
 });
 
 function hasCrocoLambdaFlush(source: string): boolean {
-  const sourceFile = doctorSourceProject.createSourceFile("/doctor/lambda.ts", source, {
-    overwrite: true,
-  });
-
+  let sourceFile: Morph.SourceFile | undefined;
   try {
+    sourceFile = doctorSourceProject.createSourceFile("/doctor/lambda.ts", source, {
+      overwrite: true,
+    });
     const configuredHandlers = new Set(
       sourceFile.getVariableDeclarations().filter(isConfiguredCrocoLambdaHandler),
     );
@@ -4228,8 +4228,12 @@ function hasCrocoLambdaFlush(source: string): boolean {
       (exportedHandlerDelegatesTo(sourceFile, configuredHandlers) ||
         exportsConfiguredHandlerAlias(sourceFile, configuredHandlers))
     );
+  } catch {
+    return false;
   } finally {
-    doctorSourceProject.removeSourceFile(sourceFile);
+    if (sourceFile) {
+      doctorSourceProject.removeSourceFile(sourceFile);
+    }
   }
 }
 

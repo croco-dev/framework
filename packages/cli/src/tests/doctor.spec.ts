@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { renderUsage } from "citty";
-import { afterEach, describe, expect, it } from "vitest";
+import { Project } from "ts-morph";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { doctor, formatDoctorReport, getDoctorExitCode, runDoctor } from "../commands/doctor.js";
 import type { DoctorDiagnostic, DoctorLocation, DoctorReport } from "../commands/doctor.js";
 import { createCrocoCommand } from "../commands/root.js";
@@ -12,6 +13,7 @@ const tempRepos: string[] = [];
 
 describe("doctor", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     for (const repo of tempRepos.splice(0)) {
       rmSync(repo, { force: true, recursive: true });
     }
@@ -385,6 +387,37 @@ describe("doctor", () => {
         legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
       }),
     ]);
+  });
+
+  it("falls back to a missing flush diagnostic when Lambda AST analysis fails", () => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/handler.ts",
+      [
+        'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const telemetryReady = telemetry.init({ serviceName: 'api' });",
+        "const crocoHandler = createCrocoApp().lambdaHandler({ flush: flushTelemetry });",
+        "export const handler = async (...args: Parameters<typeof crocoHandler>) => {",
+        "  await telemetryReady;",
+        "  return crocoHandler(...args);",
+        "};",
+        "",
+      ].join("\n"),
+    );
+    vi.spyOn(Project.prototype, "createSourceFile").mockImplementationOnce(() => {
+      throw new Error("AST analysis failed");
+    });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
+      }),
+    );
   });
 
   it("accepts a delegated Croco Lambda handler configured with a telemetry flush boundary", () => {
