@@ -47,6 +47,13 @@ type ConsumedChangesetMetadata = {
   readonly packageNames: ReadonlySet<string>;
 };
 
+type ChangesetCoverage = {
+  readonly validPublishableNames: ReadonlySet<string>;
+  readonly privateNames: readonly string[];
+  readonly unknownNames: readonly string[];
+  readonly uncoveredPackages: ReadonlyMap<string, ReleaseSignificantChange>;
+};
+
 const realChangesetPattern = /^\.changeset\/[^/]+\.md$/;
 const noReleaseReasonLinePattern = /^Changeset-required no-release reason:\s*(.+)$/im;
 const publicApiSnapshotPath = "public-api-surface.snapshot.json";
@@ -209,10 +216,6 @@ function isRealChangesetPath(file: string): boolean {
   return realChangesetPattern.test(file) && basename(file) !== "README.md";
 }
 
-function isValidChangesetContent(content: string): boolean {
-  return parseChangesetPackageNames(content).size > 0;
-}
-
 function parseChangesetPackageNames(content: string): Set<string> {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   if (lines[0] !== "---") {
@@ -237,7 +240,12 @@ function parseChangesetPackageNames(content: string): Set<string> {
   return packageNames;
 }
 
-function hasValidChangeset(options: CheckOptions, changedFiles: readonly string[]): boolean {
+function getChangedChangesetPackageNames(
+  options: CheckOptions,
+  changedFiles: readonly string[],
+): Set<string> {
+  const packageNames = new Set<string>();
+
   for (const file of changedFiles) {
     if (!isRealChangesetPath(file)) {
       continue;
@@ -245,15 +253,51 @@ function hasValidChangeset(options: CheckOptions, changedFiles: readonly string[
 
     try {
       const content = runGit(options.rootDir, ["show", `${options.headRef}:${file}`]);
-      if (isValidChangesetContent(content)) {
-        return true;
+      for (const packageName of parseChangesetPackageNames(content)) {
+        packageNames.add(packageName);
       }
     } catch {
-      continue;
+      // Deleted changesets are handled by generated Version Packages validation.
     }
   }
 
-  return false;
+  return packageNames;
+}
+
+function getChangesetCoverage(
+  options: CheckOptions,
+  changedFiles: readonly string[],
+  packages: readonly PackageInfo[],
+  significantChanges: ReadonlyMap<string, ReleaseSignificantChange>,
+): ChangesetCoverage {
+  const packageByName = new Map(packages.map((pkg) => [pkg.name, pkg] as const));
+  const validPublishableNames = new Set<string>();
+  const privateNames: string[] = [];
+  const unknownNames: string[] = [];
+
+  for (const packageName of [...getChangedChangesetPackageNames(options, changedFiles)].sort()) {
+    const pkg = packageByName.get(packageName);
+    if (!pkg) {
+      unknownNames.push(packageName);
+    } else if (pkg.private) {
+      privateNames.push(packageName);
+    } else {
+      validPublishableNames.add(packageName);
+    }
+  }
+
+  const uncoveredPackages = new Map(
+    [...significantChanges]
+      .filter(([packageName]) => !validPublishableNames.has(packageName))
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
+
+  return {
+    validPublishableNames,
+    privateNames,
+    unknownNames,
+    uncoveredPackages,
+  };
 }
 
 function getConsumedChangesetMetadata(
@@ -1038,6 +1082,32 @@ function isSnapshotOnlyReleaseChange(
   );
 }
 
+function logInvalidChangesetPackageNames(coverage: ChangesetCoverage): void {
+  log("");
+  log("Invalid changeset package names:");
+  for (const packageName of coverage.unknownNames) {
+    log(`- ${packageName} (unknown package)`);
+  }
+  for (const packageName of coverage.privateNames) {
+    log(`- ${packageName} (private package)`);
+  }
+}
+
+function logUncoveredPackages(coverage: ChangesetCoverage): void {
+  if (coverage.uncoveredPackages.size === 0) {
+    return;
+  }
+
+  log("");
+  log("Uncovered release-significant packages:");
+  for (const [packageName, change] of coverage.uncoveredPackages) {
+    log(`- ${packageName} (${change.surface})`);
+    for (const file of [...change.files].sort()) {
+      log(`  - ${file}`);
+    }
+  }
+}
+
 function main(): void {
   try {
     const options = parseArgs(process.argv.slice(2));
@@ -1045,14 +1115,24 @@ function main(): void {
     const packages = readPackages(options.rootDir);
     const significantChanges = getReleaseSignificantChanges(changedFiles, packages);
     addPublicApiSnapshotChanges(significantChanges, options, changedFiles);
+    const coverage = getChangesetCoverage(options, changedFiles, packages, significantChanges);
+
+    if (coverage.privateNames.length > 0 || coverage.unknownNames.length > 0) {
+      log("changeset-required: changed changesets contain invalid package names.");
+      logInvalidChangesetPackageNames(coverage);
+      logUncoveredPackages(coverage);
+      exit(1);
+    }
 
     if (significantChanges.size === 0) {
       log("changeset-required: no publishable package behavior changes detected (passing)");
       exit(0);
     }
 
-    if (hasValidChangeset(options, changedFiles)) {
-      log("changeset-required: valid non-README changeset found (passing)");
+    if (coverage.uncoveredPackages.size === 0) {
+      log(
+        "changeset-required: changed changesets cover all affected publishable packages (passing)",
+      );
       exit(0);
     }
 
@@ -1075,15 +1155,8 @@ function main(): void {
     log(
       "Add .changeset/<name>.md for release-significant package changes, or add `Changeset-required no-release reason: <reason>` to the PR body for snapshot-only corrections.",
     );
-    log("");
-    log("Release-significant changes:");
 
-    for (const [packageName, change] of significantChanges) {
-      log(`- ${packageName} (${change.surface})`);
-      for (const file of change.files) {
-        log(`  - ${file}`);
-      }
-    }
+    logUncoveredPackages(coverage);
 
     exit(1);
   } catch (error) {
