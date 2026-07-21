@@ -41,7 +41,7 @@ export class RateLimiter<TContext = KeyContext> {
 
     try {
       const result = await this.store.check(key, policy);
-      return { ...result, policyName: policy.algorithm };
+      return { ...result, policyName: policy.name };
     } catch (error) {
       return this.handleStoreError(error, policy);
     }
@@ -50,7 +50,7 @@ export class RateLimiter<TContext = KeyContext> {
   async checkWithKey(key: string, policy: RateLimitPolicy): Promise<RateLimitResult> {
     try {
       const result = await this.store.check(key, policy);
-      return { ...result, policyName: policy.algorithm };
+      return { ...result, policyName: policy.name };
     } catch (error) {
       return this.handleStoreError(error, policy);
     }
@@ -72,7 +72,7 @@ export class RateLimiter<TContext = KeyContext> {
   ): Promise<RateLimitRefundResult> {
     try {
       const result = await this.store.refund(key, policy, receipt);
-      return { ...result, policyName: policy.algorithm };
+      return { ...result, policyName: policy.name };
     } catch (error) {
       const storeError = normalizeStoreError(error);
       this.onStoreError?.(storeError);
@@ -111,7 +111,7 @@ export class RateLimiter<TContext = KeyContext> {
         limit,
         remaining: limit,
         resetAtMs: Date.now() + 60000,
-        policyName: policy.algorithm,
+        policyName: policy.name,
       };
     }
 
@@ -121,7 +121,7 @@ export class RateLimiter<TContext = KeyContext> {
       limit,
       remaining: 0,
       resetAtMs: Date.now() + 60000,
-      policyName: policy.algorithm,
+      policyName: policy.name,
     };
   }
 }

@@ -26,7 +26,7 @@ describe("RateLimiter", () => {
     limit: 10,
     remaining: 9,
     resetAtMs: Date.now() + 60000,
-    policyName: "sliding",
+    policyName: "store-policy-name",
   };
   const refundReceipt: RateLimitRefundReceipt = {
     algorithm: "sliding",
@@ -40,7 +40,7 @@ describe("RateLimiter", () => {
     limit: 10,
     remaining: 0,
     resetAtMs: Date.now() + 60000,
-    policyName: "sliding",
+    policyName: "store-policy-name",
   };
 
   beforeEach(() => {
@@ -64,7 +64,7 @@ describe("RateLimiter", () => {
       const result = await rateLimiter.check(context, policy);
 
       expect(mockStore.check).toHaveBeenCalledWith("rl:test-policy:tenant_123:user_456", policy);
-      expect(result).toEqual(successResult);
+      expect(result).toEqual({ ...successResult, policyName: "test-policy" });
     });
 
     it("should return failed result when limit exceeded", async () => {
@@ -75,6 +75,7 @@ describe("RateLimiter", () => {
 
       expect(result.success).toBe(false);
       expect(result.remaining).toBe(0);
+      expect(result.policyName).toBe("test-policy");
     });
   });
 
@@ -83,7 +84,34 @@ describe("RateLimiter", () => {
       const result = await rateLimiter.checkWithKey("custom:key", policy);
 
       expect(mockStore.check).toHaveBeenCalledWith("custom:key", policy);
-      expect(result).toEqual(successResult);
+      expect(result).toEqual({ ...successResult, policyName: "test-policy" });
+    });
+
+    it("should keep policies using the same algorithm distinguishable", async () => {
+      const loginPolicy = { ...policy, name: "login-per-user" };
+      const signupPolicy = { ...policy, name: "signup-per-user" };
+
+      const loginResult = await rateLimiter.checkWithKey("login:key", loginPolicy);
+      const signupResult = await rateLimiter.checkWithKey("signup:key", signupPolicy);
+
+      expect(loginResult.policyName).toBe("login-per-user");
+      expect(signupResult.policyName).toBe("signup-per-user");
+    });
+
+    it("should preserve configured policy names verbatim", async () => {
+      const namedPolicy = { ...policy, name: "로그인 정책 / v2" };
+
+      const result = await rateLimiter.checkWithKey("custom:key", namedPolicy);
+
+      expect(result.policyName).toBe("로그인 정책 / v2");
+    });
+
+    it("should fill a missing store policy identity with the configured name", async () => {
+      vi.mocked(mockStore.check).mockResolvedValue({ ...successResult, policyName: undefined });
+
+      const result = await rateLimiter.checkWithKey("custom:key", policy);
+
+      expect(result.policyName).toBe("test-policy");
     });
   });
 
@@ -102,6 +130,7 @@ describe("RateLimiter", () => {
         refundReceipt,
       );
       expect(result.remaining).toBe(10);
+      expect(result.policyName).toBe("test-policy");
     });
 
     it("should refund a provided key directly", async () => {
@@ -109,6 +138,7 @@ describe("RateLimiter", () => {
 
       expect(mockStore.refund).toHaveBeenCalledWith("custom:key", policy, refundReceipt);
       expect(result.remaining).toBe(10);
+      expect(result.policyName).toBe("test-policy");
     });
 
     it("should report refund store errors without failing open", async () => {
@@ -134,6 +164,7 @@ describe("RateLimiter", () => {
       expect(result.success).toBe(true);
       expect(result.degraded).toBe(true);
       expect(result.remaining).toBe(10);
+      expect(result.policyName).toBe("test-policy");
     });
 
     it("should reject request when store fails and failOpen is false", async () => {
@@ -146,6 +177,7 @@ describe("RateLimiter", () => {
       expect(result.success).toBe(false);
       expect(result.degraded).toBe(true);
       expect(result.remaining).toBe(0);
+      expect(result.policyName).toBe("test-policy");
     });
 
     it("should call onStoreError callback when store fails", async () => {
