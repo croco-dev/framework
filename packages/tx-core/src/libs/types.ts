@@ -3,11 +3,13 @@ export type NestingStrategy = "join" | "savepoint";
 export interface TxRunOptions<TOptions = unknown> {
   nesting?: NestingStrategy;
   options?: TOptions;
+  /** Positive integer milliseconds up to 2,147,483,647. Omit for no timeout. */
   timeout?: number;
 }
 
 export interface TxManagerConfig {
   defaultNesting?: NestingStrategy;
+  /** Positive integer milliseconds up to 2,147,483,647. Omit for no timeout. */
   defaultTimeout?: number;
 }
 
@@ -24,5 +26,6 @@ export interface TransactionalOptions<TOptions = unknown> {
   managerKey?: TxManagerKey;
   nesting?: NestingStrategy;
   options?: TOptions;
+  /** Positive integer milliseconds up to 2,147,483,647. Omit for no timeout. */
   timeout?: number;
 }
