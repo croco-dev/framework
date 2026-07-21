@@ -101,5 +101,5 @@ Export the `handler` from `src/index.ts` as your AWS Lambda entry point.
 
 ## Prerequisites
 
-- Node.js >= 18
+- Node.js >=22 (run `nvm install 22 && nvm use 22` if your current version is unsupported)
 - pnpm (install via `corepack enable && corepack prepare pnpm@latest --activate`)

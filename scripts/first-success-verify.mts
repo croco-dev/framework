@@ -33,6 +33,8 @@ if (!existsSync(cliContractBundle)) {
 
 const {
   createCreateCrocoAppProgram,
+  GENERATED_NODE_ENGINE_RANGE,
+  GENERATED_NODE_VERSION,
   generate,
   isNonInteractiveOptions,
   normalizeNonInteractiveOptions,
@@ -699,6 +701,16 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
     fail("A1d", "README missing `pnpm quick-start-lambda:smoke` validation command");
   } else {
     pass("A1d", "README documents `pnpm quick-start-lambda:smoke`");
+  }
+
+  const nodeRequirement = `Node.js ${GENERATED_NODE_ENGINE_RANGE}`;
+  if (
+    !readme.includes(nodeRequirement) ||
+    !readme.includes(`nvm install ${GENERATED_NODE_VERSION}`)
+  ) {
+    fail("A1f", `README must advertise ${nodeRequirement} and the canonical nvm recovery command`);
+  } else {
+    pass("A1f", `README advertises the canonical ${nodeRequirement} contract and recovery`);
   }
 
   const rootPackageJson = parsePackageJson(rootPkg);

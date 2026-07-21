@@ -2,6 +2,7 @@ import type { DefinedTheme, ThemeMode } from "@astryxdesign/core/theme";
 
 import { Theme } from "@astryxdesign/core/theme";
 import { neutralTheme as neutralSourceTheme } from "@astryxdesign/theme-neutral";
+import * as React from "react";
 import type { ReactNode } from "react";
 
 const neutralTheme = { ...neutralSourceTheme, __built: true } satisfies DefinedTheme;

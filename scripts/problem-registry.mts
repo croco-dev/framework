@@ -17,6 +17,7 @@ import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
+import { VERSIONS } from "../packages/create-croco-app/src/consts.ts";
 import { getProblemCodeDeprecationValidationErrors } from "../packages/problems-core/src/libs/ProblemCodeRegistryValidation.mts";
 
 export type ProblemRegistryMode = "check" | "write";
@@ -1883,6 +1884,14 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "create-croco-app/unsupported-node-version": recovery({
+    cause: "The detected Node.js version is outside the supported generated-app toolchain train.",
+    userAction: `Install and activate Node.js ${VERSIONS.node} with \`nvm install ${VERSIONS.node} && nvm use ${VERSIONS.node}\`, then rerun the command.`,
+    operatorAction: `Compare the reported actual Node.js version with the supported Node.js ${VERSIONS.node} train and verify the active version-manager configuration.`,
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
   "migration-runner/history-drift": recovery({
     cause:
       "Recorded migration history no longer matches the available migration files by stable id and name.",

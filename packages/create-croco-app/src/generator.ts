@@ -39,6 +39,7 @@ import {
   installWebTrpc,
 } from "./installers/index.js";
 import { DirectoryNotEmptyProblem } from "./libs/problems/DirectoryNotEmptyProblem.js";
+import { assertSupportedNodeVersion, writeGeneratedNodeRuntimeContract } from "./node-runtime.js";
 import { validateResolvedOptions } from "./options.js";
 import {
   DEFAULT_SAAS_PROVIDER_PROFILE,
@@ -56,6 +57,7 @@ import type { GeneratorOptions } from "./types.js";
 import type { SaasProviderProfileManifest } from "./saas-provider-profiles.js";
 
 export async function generate(targetDir: string, options: GeneratorOptions): Promise<void> {
+  assertSupportedNodeVersion();
   validateResolvedOptions(options);
 
   const vars = { projectName: options.projectName, scope: options.scope };
@@ -450,6 +452,7 @@ function writeSaasProviderPackageDependencies(
 
 async function finalize(targetDir: string, options: GeneratorOptions): Promise<void> {
   rewriteExternalCrocoWorkspaceRanges(targetDir);
+  writeGeneratedNodeRuntimeContract(targetDir);
   writeGoalManifest(targetDir, options);
   writeRuntimeCapabilityManifest(targetDir, options);
 

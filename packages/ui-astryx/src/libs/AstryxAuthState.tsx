@@ -1,6 +1,7 @@
 import { Badge } from "@astryxdesign/core/Badge";
 import { Button } from "@astryxdesign/core/Button";
 import { Card } from "@astryxdesign/core/Card";
+import * as React from "react";
 
 import type { BadgeVariant } from "@astryxdesign/core/Badge";
 import type { ProblemDetails } from "@croco/problems-core";

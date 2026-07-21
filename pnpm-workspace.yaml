@@ -10,9 +10,9 @@ onlyBuiltDependencies:
 overrides:
   "@clerk/shared": 3.47.7
   "@hono/node-server": 1.19.10
-  "@opentelemetry/auto-instrumentations-node": 0.76.0
-  "@opentelemetry/exporter-prometheus": 0.218.0
-  "@opentelemetry/sdk-node": 0.218.0
+  "@opentelemetry/auto-instrumentations-node": 0.78.0
+  "@opentelemetry/exporter-prometheus": 0.220.0
+  "@opentelemetry/sdk-node": 0.220.0
   "@grpc/grpc-js": 1.14.4
   "@isaacs/brace-expansion": 5.0.1
   "@croco/auth-better-auth>@vitest/coverage-v8": 4.1.8
@@ -42,7 +42,7 @@ overrides:
   openai>ws: 8.21.0
   protobufjs: 7.6.1
   rollup: 4.59.0
-  svgo: 4.0.1
+  svgo: 4.0.2
   brace-expansion@>=2.0.0 <2.1.2: 2.1.2
   brace-expansion@>=3.0.0 <5.0.7: 5.0.7
   typedoc>minimatch: 9.0.7

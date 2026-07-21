@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 441,
+  "problemCount": 442,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -2426,7 +2426,37 @@
       "sources": [
         {
           "file": "packages/create-croco-app/src/cli-result.ts",
-          "line": 25,
+          "line": 28,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "create-croco-app/unsupported-node-version",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#create-croco-app-unsupported-node-version",
+      "recovery": {
+        "cause": "The detected Node.js version is outside the supported generated-app toolchain train.",
+        "userAction": "Install and activate Node.js 22 with `nvm install 22 && nvm use 22`, then rerun the command.",
+        "operatorAction": "Compare the reported actual Node.js version with the supported Node.js 22 train and verify the active version-manager configuration.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/create-croco-app/src/libs/problems/UnsupportedNodeVersionProblem.ts",
+          "line": 4,
           "column": 3,
           "kind": "problem-class"
         }
