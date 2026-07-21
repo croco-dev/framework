@@ -13,8 +13,7 @@ Defines which modules should be automatically instrumented.
 ```typescript
 const autoInstrumentConfig: AutoInstrumentationConfig = {
   enabled: true,
-  modules: ['http', 'express', 'pg'],
-  exclude: ['http.server.request'], // Exclude specific operations
+  modules: ["http", "https", "express", "pg"],
 };
 ```
 
@@ -27,7 +26,7 @@ const autoInstrumentConfig: AutoInstrumentationConfig = {
 Custom instrumentation instances to include.
 These are merged with auto-loaded instrumentations.
 
-***
+---
 
 ### enabled?
 
@@ -38,25 +37,24 @@ Whether auto-instrumentation is enabled.
 #### Default
 
 ```ts
-true
+true;
 ```
 
-***
+---
 
-### exclude?
+### ~~exclude?~~
 
 > `optional` **exclude?**: `string`[]
 
-Patterns for operation names to exclude.
-Supports simple wildcards with '*'.
+Unsupported operation exclusion filters.
+Non-empty values fail SDK startup because the Node instrumentation bundle cannot apply them
+consistently across modules.
 
-#### Example
+:::caution[Deprecated]
+Use module-specific supported options or custom instrumentation instances.
+:::
 
-```ts
-['health.check', 'metrics.*']
-```
-
-***
+---
 
 ### excludeModules?
 
@@ -65,22 +63,21 @@ Supports simple wildcards with '*'.
 List of modules to exclude from auto-instrumentation.
 Takes precedence over 'modules'.
 
-***
+---
 
-### include?
+### ~~include?~~
 
 > `optional` **include?**: `string`[]
 
-Patterns for operation names to include (whitelist).
-If specified, only matching operations are instrumented.
+Unsupported operation inclusion filters.
+Non-empty values fail SDK startup because the Node instrumentation bundle cannot apply them
+consistently across modules.
 
-#### Example
+:::caution[Deprecated]
+Use module-specific supported options or custom instrumentation instances.
+:::
 
-```ts
-['api.*', 'service.*']
-```
-
-***
+---
 
 ### moduleOptions?
 
@@ -89,7 +86,7 @@ If specified, only matching operations are instrumented.
 Configuration for specific instrumentations.
 Keys are module names, values are module-specific options.
 
-***
+---
 
 ### modules?
 

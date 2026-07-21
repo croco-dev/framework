@@ -296,6 +296,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`OtlpEndpointRequiredProblem`](/api/telemetry-sdk-node/src/classes/otlpendpointrequiredproblem/)
 - [`SamplerProblem`](/api/telemetry-sdk-node/src/classes/samplerproblem/)
 - [`UnsupportedTelemetrySignalProblem`](/api/telemetry-sdk-node/src/classes/unsupportedtelemetrysignalproblem/)
+- [`TelemetryAutoInstrumentationProblem`](/api/telemetry-sdk-node/src/classes/telemetryautoinstrumentationproblem/)
 - [`DuplicateTaskRegistrationProblem`](/api/tasks-core/src/classes/duplicatetaskregistrationproblem/)
 - [`TaskExecutionTimeoutProblem`](/api/tasks-core/src/classes/taskexecutiontimeoutproblem/)
 - [`TaskNotFoundProblem`](/api/tasks-core/src/classes/tasknotfoundproblem/)

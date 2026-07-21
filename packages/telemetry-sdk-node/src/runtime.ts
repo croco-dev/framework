@@ -5,6 +5,8 @@ import {
   SEMRESATTRS_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 import type { TelemetryConfig } from "./config";
+import { resolveAutoInstrumentation } from "./libs/instrumentation/AutoInstrumentation";
+import { TelemetryAutoInstrumentationProblem } from "./libs/problems/TelemetryAutoInstrumentationProblem";
 import {
   OtlpEndpointRequiredProblem,
   TelemetryRuntimeProblem,
@@ -25,6 +27,7 @@ class TelemetryRuntime {
   private initialized = false;
   private initPromise: Promise<void> | null = null;
   private config: TelemetryConfig | null = null;
+  private enabledAutoInstrumentationModules: string[] = [];
 
   private constructor() {}
 
@@ -106,6 +109,18 @@ class TelemetryRuntime {
       const sampler = await this.createSampler(config);
 
       try {
+        const instrumentationEnvironment =
+          config.resourceAttributes?.["cloud.platform"] === "aws_lambda" ||
+          process.env["AWS_LAMBDA_FUNCTION_NAME"] !== undefined ||
+          process.env["AWS_EXECUTION_ENV"]?.includes("AWS_Lambda") === true
+            ? "lambda"
+            : "node";
+        const resolvedInstrumentation = await resolveAutoInstrumentation(
+          traceConfig.autoInstrumentation,
+          instrumentationEnvironment,
+          traceConfig.instrumentations ?? [],
+        );
+
         const resource = defaultResource().merge(
           resourceFromAttributes({
             [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
@@ -117,8 +132,8 @@ class TelemetryRuntime {
         if (traceConfig.enabled !== false) {
           const endpoint =
             traceConfig.exporterUrl ??
-            process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
-            process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+            process.env["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] ??
+            process.env["OTEL_EXPORTER_OTLP_ENDPOINT"];
 
           if (!endpoint) {
             throw new OtlpEndpointRequiredProblem();
@@ -126,7 +141,9 @@ class TelemetryRuntime {
 
           const exporter = new OTLPTraceExporter({
             url: endpoint,
-            headers: traceConfig.exporterHeaders,
+            ...(traceConfig.exporterHeaders !== undefined && {
+              headers: traceConfig.exporterHeaders,
+            }),
           });
 
           this.processor = new BatchSpanProcessor(exporter, {
@@ -138,18 +155,23 @@ class TelemetryRuntime {
 
         this.sdk = new NodeSDK({
           resource,
-          spanProcessor: this.processor ?? undefined,
-          sampler,
-          instrumentations: traceConfig.instrumentations ?? [],
+          ...(this.processor !== null && { spanProcessor: this.processor }),
+          ...(sampler !== undefined && { sampler }),
+          instrumentations: resolvedInstrumentation.instrumentations,
         });
 
         this.sdk.start();
+        this.enabledAutoInstrumentationModules = resolvedInstrumentation.enabledModules;
         this.initialized = true;
       } catch (error) {
         this.initialized = false;
         this.sdk = null;
         this.processor = null;
-        if (error instanceof OtlpEndpointRequiredProblem) {
+        this.enabledAutoInstrumentationModules = [];
+        if (
+          error instanceof OtlpEndpointRequiredProblem ||
+          error instanceof TelemetryAutoInstrumentationProblem
+        ) {
           throw error;
         }
         throw this.createRuntimeProblem("init", error);
@@ -230,6 +252,7 @@ class TelemetryRuntime {
       await this.sdk.shutdown();
       this.sdk = null;
       this.processor = null;
+      this.enabledAutoInstrumentationModules = [];
       this.initialized = false;
       this.initPromise = null;
     } catch (error) {
@@ -258,6 +281,10 @@ class TelemetryRuntime {
       return null;
     }
     return snapshotTelemetryConfig(this.config);
+  }
+
+  getEnabledAutoInstrumentationModules(): string[] {
+    return [...this.enabledAutoInstrumentationModules];
   }
 }
 

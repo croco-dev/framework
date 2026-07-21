@@ -25,6 +25,37 @@ await telemetry.init({
 });
 ```
 
+### 자동 계측
+
+`trace.autoInstrumentation`을 설정하면 Node 환경에서는 HTTP/HTTPS, Express, DNS, Net 계측이 기본으로
+`NodeSDK`에 전달됩니다. `lambdaPreset()`은 HTTP/HTTPS, AWS SDK, AWS Lambda 계측을 자동으로 활성화합니다.
+OpenTelemetry가 HTTP와 HTTPS에 하나의 공용 계측기를 제공하므로 `http`와 `https`는 항상 함께 선택하거나 함께
+제외해야 하며, 부분 선택은 초기화 전에 명시적으로 실패합니다.
+
+```typescript
+await telemetry.init({
+  serviceName: "orders",
+  trace: {
+    exporterUrl: "http://localhost:4318/v1/traces",
+    autoInstrumentation: {
+      modules: ["http", "https", "express", "pg"],
+      excludeModules: ["express"],
+      moduleOptions: {
+        pg: { enhancedDatabaseReporting: true },
+      },
+    },
+  },
+});
+```
+
+`trace.instrumentations`의 custom 인스턴스가 먼저 적용되며, 같은 `instrumentationName`의 자동 인스턴스를
+대체합니다. 그 다음 `autoInstrumentation.customInstrumentations`, 자동 인스턴스 순서로 병합되고, 각 이름의 첫
+custom 인스턴스만 유지됩니다. `enabled: false`는 자동 인스턴스를 만들지 않습니다.
+
+Upstream Node 자동 계측이 공통으로 실행할 수 없는 operation `include`/`exclude` 필터, 설치된 번들에 없는 모듈,
+선택되지 않은 모듈의 options는 `TelemetryAutoInstrumentationProblem`으로 SDK 시작 전에 거부됩니다. Diagnostics에는
+활성화된 OpenTelemetry 모듈 이름만 노출되고 exporter URL, header, 요청 데이터는 포함되지 않습니다.
+
 ### Lambda 프리셋
 
 ```typescript
@@ -89,7 +120,7 @@ Telemetry 또는 trace가 의도적으로 꺼진 상태는 애플리케이션 �
 `init({ trace: { enabled: false } })`, 또는 `TELEMETRY_ENABLED=false`는 설정을 보존하지만 SDK와 exporter를 시작하지
 않으며,
 `TelemetryDiagnosticsProvider`는 이를 `degraded` 상태와 안전한 metadata(`serviceName`, `enabled`,
-`initialized`, `traceEnabled`, `probability`, `signals`, `mode`)로 보고합니다. `signals`는 각 신호를
+`initialized`, `traceEnabled`, `probability`, `signals`, `autoInstrumentationModules`, `mode`)로 보고합니다. `signals`는 각 신호를
 `supported`, `disabled`, `unsupported-requested`로 구분합니다. exporter URL이나 header 값은 diagnostics에
 노출하지 않습니다.
 
@@ -111,7 +142,7 @@ Lambda에서는 handler 작업이 끝난 뒤 `forceFlush()` 결과를 확인하�
 - `lambdaPreset`: Lambda 환경 기본 설정 생성
 - `ProbabilitySampler`: 확률 기반 샘플링 구현체
 - 자동 계측: `normalizeAutoInstrumentationConfig`, `LAMBDA_DEFAULT_MODULES`, `NODE_DEFAULT_MODULES`
-- Problem: `OtlpEndpointRequiredProblem`, `UnsupportedTelemetrySignalProblem`, `SamplerProblem`
+- Problem: `OtlpEndpointRequiredProblem`, `UnsupportedTelemetrySignalProblem`, `SamplerProblem`, `TelemetryAutoInstrumentationProblem`
 - 타입: `TelemetryConfig`, `TraceConfig`, `MetricsConfig`, `LogsConfig`, `ForceFlushResult`
 - 메트릭 타입: `MetricsApi`, `Counter`, `Histogram`, `Gauge`
 - 로그 타입: `LogsApi`, `Logger`, `LogRecord`, `LogSeverity`

@@ -35,6 +35,9 @@ describe("published telemetry SDK types", () => {
         };
 
         expect(packedManifest.dependencies?.["@opentelemetry/instrumentation"]).toBe("^0.218.0");
+        expect(packedManifest.dependencies?.["@opentelemetry/auto-instrumentations-node"]).toBe(
+          "^0.76.0",
+        );
         expect(packedManifest.devDependencies?.["@opentelemetry/instrumentation"]).toBeUndefined();
 
         writeFileSync(
@@ -96,6 +99,27 @@ describe("published telemetry SDK types", () => {
           [join(rootDir, "node_modules", "typescript", "bin", "tsc"), "-p", "tsconfig.json"],
           consumerRoot,
         );
+        writeFileSync(
+          join(consumerRoot, "runtime.mjs"),
+          [
+            'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+            "",
+            "const runtime = TelemetryRuntime.getInstance();",
+            "await runtime.init({",
+            '  serviceName: "packed-auto-instrumentation-smoke",',
+            "  trace: {",
+            '    exporterUrl: "http://127.0.0.1:4318/v1/traces",',
+            '    autoInstrumentation: { modules: ["http", "https"] },',
+            "  },",
+            "});",
+            "if (!runtime.isInitialized()) {",
+            '  throw new Error("packed telemetry runtime did not initialize");',
+            "}",
+            "await runtime.shutdown();",
+            "",
+          ].join("\n"),
+        );
+        run("node", ["runtime.mjs"], consumerRoot);
       } finally {
         rmSync(packRoot, { force: true, recursive: true });
         rmSync(consumerRoot, { force: true, recursive: true });

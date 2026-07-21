@@ -46,6 +46,7 @@ export {
   SamplerProblem,
   UnsupportedTelemetrySignalProblem,
 } from "./libs/problems/TelemetryProblems";
+export { TelemetryAutoInstrumentationProblem } from "./libs/problems/TelemetryAutoInstrumentationProblem";
 
 /**
  * 확률 기반 샘플링을 수행하는 OpenTelemetry 샘플러 구현체입니다.

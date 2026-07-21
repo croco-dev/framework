@@ -9,21 +9,25 @@ type LambdaPresetOptions = {
 };
 
 function lambdaPreset(options: LambdaPresetOptions): TelemetryConfig {
-  const configuredEnvironment = process.env.NODE_ENV ?? process.env.ENVIRONMENT;
+  const configuredEnvironment = process.env["NODE_ENV"] ?? process.env["ENVIRONMENT"];
   const isLambdaEnvironment =
-    process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined ||
-    process.env.AWS_EXECUTION_ENV?.includes("AWS_Lambda") === true;
+    process.env["AWS_LAMBDA_FUNCTION_NAME"] !== undefined ||
+    process.env["AWS_EXECUTION_ENV"]?.includes("AWS_Lambda") === true;
 
   const environment = configuredEnvironment ?? (isLambdaEnvironment ? "production" : "development");
   const isDevelopment = environment === "development";
 
   const probability = options.probability ?? (isDevelopment ? 1.0 : 0.1);
+  const exporterUrl =
+    options.exporterUrl ??
+    process.env["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] ??
+    process.env["OTEL_EXPORTER_OTLP_ENDPOINT"];
 
   return {
     serviceName: options.serviceName,
-    serviceVersion: options.serviceVersion,
+    ...(options.serviceVersion !== undefined && { serviceVersion: options.serviceVersion }),
     environment,
-    enabled: process.env.TELEMETRY_ENABLED !== "false",
+    enabled: process.env["TELEMETRY_ENABLED"] !== "false",
     resourceAttributes: {
       "cloud.provider": "aws",
       "cloud.platform": "aws_lambda",
@@ -31,10 +35,7 @@ function lambdaPreset(options: LambdaPresetOptions): TelemetryConfig {
     },
     trace: {
       enabled: true,
-      exporterUrl:
-        options.exporterUrl ??
-        process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ??
-        process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+      ...(exporterUrl !== undefined && { exporterUrl }),
       exporterHeaders: {
         "X-Croco-Source": "lambda",
         ...options.exporterHeaders,
@@ -43,6 +44,7 @@ function lambdaPreset(options: LambdaPresetOptions): TelemetryConfig {
       batchTimeout: 3000,
       batchCount: 512,
       batchSize: 256,
+      autoInstrumentation: { enabled: true },
     },
     metrics: {
       enabled: false,
