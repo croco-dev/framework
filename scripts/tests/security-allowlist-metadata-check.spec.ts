@@ -204,6 +204,135 @@ describe("security-allowlist-metadata-check.mts", () => {
     );
   });
 
+  it("accepts a regex-escaped fully anchored literal Gitleaks path", () => {
+    const root = createTempRoot();
+    const path = "^packages/foo/file\\.env$";
+    writeRepo(root, {
+      gitleaksConfig: gitleaksAllowlistFixture("paths", path),
+      metadata: metadataFixture({
+        gitleaksAllowlists: [gitleaksMetadataEntry("path", path)],
+      }),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+  });
+
+  it.each([
+    "allowlist.paths = ['''^.*\\.txt$''']",
+    "allowlist . paths = ['''^.*\\.txt$''']",
+    "rules.allowlist.paths = ['''^.*\\.txt$''']",
+    "allowlist = { paths = ['''^.*\\.txt$'''] }",
+  ])("semantically validates alternate TOML allowlist syntax: %s", (allowlist) => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      gitleaksConfig: [
+        'title = "Croco gitleaks config"',
+        "",
+        allowlist,
+        "",
+        "[extend]",
+        "useDefault = true",
+        "",
+      ].join("\n"),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("not narrowly bounded");
+  });
+
+  it("semantically validates quoted TOML allowlist tables", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      gitleaksConfig: [
+        'title = "Croco gitleaks config"',
+        "",
+        '["allowlist"]',
+        "paths = ['''^.*\\.txt$''']",
+        "",
+        "[extend]",
+        "useDefault = true",
+        "",
+      ].join("\n"),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("not narrowly bounded");
+  });
+
+  it.each([
+    "packages/foo/file.env",
+    ".*",
+    "^.*$",
+    "(?s)^.*$",
+    "[\\s\\S]*",
+    "(^|/).*$",
+    ".*\\.env$",
+    "(^|/)packages/(foo)/file\\.env$",
+    "(^|/)packages/foo|bar/file\\.env$",
+    "(^|/)[^/]+/file\\.env$",
+    "(^|/)packages/(?=foo)/file\\.env$",
+    "(^|/)packages/foo/file\\q$",
+    "(^|/)packages/foo\n/file\\.env$",
+  ])("rejects an unbounded or unsupported Gitleaks path grammar: %j", (path) => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      gitleaksConfig: gitleaksAllowlistFixture("paths", path),
+      metadata: metadataFixture({
+        gitleaksAllowlists: [gitleaksMetadataEntry("path", path)],
+      }),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(`Gitleaks path allowlist ${path} is not narrowly bounded`);
+    expect(result.stdout).toContain("Use ^<regex-escaped-repository-path>$");
+  });
+
+  it("rejects control characters as invalid TOML before allowlist evaluation", () => {
+    const root = createTempRoot();
+    const path = "(^|/)packages/foo\u0001/file\\.env$";
+    writeRepo(root, {
+      gitleaksConfig: gitleaksAllowlistFixture("paths", path),
+      metadata: metadataFixture({
+        gitleaksAllowlists: [gitleaksMetadataEntry("path", path)],
+      }),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("is not valid TOML");
+  });
+
+  it.each([
+    ["commit", "commits", "0123456789abcdef"],
+    ["regex", "regexes", "FIXTURE_TOKEN"],
+    ["stopword", "stopwords", "fixture-token"],
+  ])("rejects unsupported Gitleaks %s recovery", (kind, bucket, value) => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      gitleaksConfig: gitleaksAllowlistFixture(bucket, value),
+      metadata: metadataFixture({
+        gitleaksAllowlists: [gitleaksMetadataEntry(kind, value)],
+      }),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      `Gitleaks ${kind} allowlist ${value} uses an unsupported recovery kind`,
+    );
+    expect(result.stdout).toContain("exact .gitleaksignore fingerprint");
+  });
+
   it("parses TOML array brackets inside quoted Gitleaks regexes", () => {
     const root = createTempRoot();
     writeRepo(root, {
@@ -284,7 +413,7 @@ describe("security-allowlist-metadata-check.mts", () => {
     expect(result.stdout).toContain("has no effective detection rules");
   });
 
-  it("accepts Gitleaks configs with custom detection rules", () => {
+  it("rejects custom Gitleaks detection rules that can override pinned defaults", () => {
     const root = createTempRoot();
     writeRepo(root, {
       gitleaksConfig: [
@@ -301,7 +430,27 @@ describe("security-allowlist-metadata-check.mts", () => {
 
     const result = runScript(root);
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("defines custom or overriding detection rules");
+  });
+
+  it("rejects disabled pinned default Gitleaks rules", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      gitleaksConfig: [
+        'title = "Croco gitleaks config"',
+        "",
+        "[extend]",
+        "useDefault = true",
+        'disabledRules = ["github-pat"]',
+        "",
+      ].join("\n"),
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("disables default detection rules");
   });
 
   it("requires metadata for Gitleaks allowlists from extended configs", () => {
@@ -803,6 +952,29 @@ function gitleaksConfigFixture(): string {
     "paths = ['''(^|/)packages/[^/]+/src/tests/.*\\.spec\\.ts$''']",
     "",
   ].join("\n");
+}
+
+function gitleaksAllowlistFixture(bucket: string, value: string): string {
+  return [
+    'title = "Croco gitleaks config"',
+    "",
+    "[extend]",
+    "useDefault = true",
+    "",
+    "[allowlist]",
+    `${bucket} = ['''${value}''']`,
+    "",
+  ].join("\n");
+}
+
+function gitleaksMetadataEntry(kind: string, value: string): Record<string, unknown> {
+  return {
+    kind,
+    value,
+    owner: "security",
+    reason: "Test fixture exception.",
+    reviewBy: "2027-01-31",
+  };
 }
 
 function metadataFixture(

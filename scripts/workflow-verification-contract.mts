@@ -15,11 +15,13 @@ export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   'node -e \'const fs = require("node:fs"); fs.writeFileSync("ci-reports/package-quality/spine-promotion-run.json", JSON.stringify({ commitSha: process.env.SPINE_PROMOTION_COMMIT_SHA, runId: process.env.SPINE_PROMOTION_RUN_ID, runAttempt: process.env.SPINE_PROMOTION_RUN_ATTEMPT, startedAt: new Date().toISOString() }, null, 2) + "\\n")\'',
   "node --experimental-strip-types scripts/verification-change-classifier.mts",
   "node --experimental-strip-types scripts/release-spine-evidence.mts",
+  "node --experimental-strip-types scripts/security-gitleaks-smoke.mts --ensure-sarif ci-reports/security/gitleaks.sarif",
   "pnpm install --frozen-lockfile",
   "pnpm audit:prod",
+  "pnpm security:gitleaks-smoke",
   "pnpm create-croco-app:smoke -- --tier ecosystem-advisory",
   "pnpm verify:publish",
-  'docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e detect',
+  'docker run --rm -v "$PWD:/repo" "$GITLEAKS_IMAGE" detect',
 ] as const;
 
 function splitShellCommands(command: string): readonly string[] {

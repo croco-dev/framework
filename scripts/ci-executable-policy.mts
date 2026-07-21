@@ -4,6 +4,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
+import { parse as parseYaml } from "yaml";
 
 export const CI_EXECUTABLE_POLICY_RULE_ID = "ci-executable-immutability";
 export const CI_EXECUTABLE_POLICY_CODE = "CROCO_CI_EXECUTABLE_IMMUTABILITY";
@@ -129,49 +130,130 @@ function finding(
 function workflowCommandUnits(file: string, source: string): CommandUnit[] {
   const lines = source.split(/\r?\n/);
   const units: CommandUnit[] = [];
+  let workflow: unknown;
+  try {
+    workflow = parseYaml(source);
+  } catch {
+    return units;
+  }
+  if (!isPlainRecord(workflow) || !isPlainRecord(workflow.jobs)) {
+    return units;
+  }
 
-  for (let index = 0; index < lines.length; index++) {
-    const line = lines[index] ?? "";
-    if (/^\s*uses\s*:/.test(line) || /^\s*runs-on\s*:/.test(line)) {
+  let runLineCursor = 0;
+  let imageLineCursor = 0;
+  for (const job of Object.values(workflow.jobs)) {
+    if (!isPlainRecord(job)) {
       continue;
     }
-
-    const run = line.match(/^(\s*)(?:-\s+)?run\s*:\s*(.*)$/);
-    const image = line.match(/^\s*(?:container\s*:\s*(\S.*)|image\s*:\s*(\S.*))$/);
-    if (image) {
-      units.push({ file, line: index + 1, text: `docker run ${image[1] ?? image[2]}` });
+    for (const image of workflowJobImages(job)) {
+      const location = findWorkflowKeyLine(lines, image.key, imageLineCursor);
+      imageLineCursor = location.index + 1;
+      units.push({ file, line: location.line, text: `docker run ${image.value}` });
+    }
+    if (!Array.isArray(job.steps)) {
       continue;
     }
-    if (!run) {
-      continue;
-    }
-
-    const inline = run[2] ?? "";
-    if (inline !== "|" && inline !== ">" && !inline.startsWith("|-") && !inline.startsWith(">-")) {
-      units.push({ file, line: index + 1, text: inline });
-      continue;
-    }
-
-    const indentation = run[1]?.length ?? 0;
-    const block: string[] = [];
-    const firstLine = index + 2;
-    while (index + 1 < lines.length) {
-      const next = lines[index + 1] ?? "";
-      const nextIndentation = next.match(/^\s*/)?.[0].length ?? 0;
-      if (next.trim() && nextIndentation <= indentation) {
-        break;
+    const jobEnvironment = applyWorkflowEnvironment(new Map(), job.env);
+    for (const step of job.steps) {
+      if (!isPlainRecord(step) || typeof step.run !== "string") {
+        continue;
       }
-      block.push(next);
-      index++;
+      const location = findWorkflowKeyLine(lines, "run", runLineCursor);
+      runLineCursor = location.index + 1;
+      units.push({
+        file,
+        line: location.blockScalar ? location.line + 1 : location.line,
+        text: resolveWorkflowEnvironment(
+          step.run,
+          applyWorkflowEnvironment(new Map(jobEnvironment), step.env),
+        ),
+      });
     }
-    units.push({
-      file,
-      line: firstLine,
-      text: inline.startsWith(">") ? block.join(" ") : block.join("\n"),
-    });
   }
 
   return units;
+}
+
+function workflowJobImages(
+  job: Record<string, unknown>,
+): readonly { readonly key: "container" | "image"; readonly value: string }[] {
+  const images: { key: "container" | "image"; value: string }[] = [];
+  if (typeof job.container === "string") {
+    images.push({ key: "container", value: job.container });
+  } else if (isPlainRecord(job.container) && typeof job.container.image === "string") {
+    images.push({ key: "image", value: job.container.image });
+  }
+  if (isPlainRecord(job.services)) {
+    for (const service of Object.values(job.services)) {
+      if (isPlainRecord(service) && typeof service.image === "string") {
+        images.push({ key: "image", value: service.image });
+      }
+    }
+  }
+  return images;
+}
+
+function findWorkflowKeyLine(
+  lines: readonly string[],
+  key: "container" | "image" | "run",
+  start: number,
+): { readonly blockScalar: boolean; readonly index: number; readonly line: number } {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `(?:^\\s*(?:-\\s*)?|[{,]\\s*)["']?${escapedKey}["']?\\s*:\\s*([^,}]*)`,
+  );
+  for (let index = start; index < lines.length; index++) {
+    const match = pattern.exec(lines[index] ?? "");
+    if (match) {
+      return {
+        blockScalar: /^[|>][-+]?\s*$/.test((match[1] ?? "").trim()),
+        index,
+        line: index + 1,
+      };
+    }
+  }
+  return { blockScalar: false, index: start, line: 1 };
+}
+
+function applyWorkflowEnvironment(
+  environment: Map<string, string>,
+  value: unknown,
+): Map<string, string> {
+  if (!isPlainRecord(value)) {
+    return environment;
+  }
+  for (const [name, rawValue] of Object.entries(value)) {
+    if (
+      /^[A-Z][A-Z0-9_]+$/.test(name) &&
+      typeof rawValue === "string" &&
+      rawValue.length > 0 &&
+      !rawValue.includes("\${{")
+    ) {
+      environment.set(name, rawValue);
+    } else {
+      environment.delete(name);
+    }
+  }
+  return environment;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function resolveWorkflowEnvironment(
+  text: string,
+  environment: ReadonlyMap<string, string>,
+): string {
+  let resolved = text;
+  for (const [name, value] of environment) {
+    resolved = resolved
+      .replaceAll(`"$${name}"`, value)
+      .replaceAll(`\${${name}}`, value)
+      .replaceAll(`$${name}`, value);
+  }
+  return resolved;
 }
 
 function packageScriptUnits(file: string, source: string, rootPackage: RootPackage): CommandUnit[] {

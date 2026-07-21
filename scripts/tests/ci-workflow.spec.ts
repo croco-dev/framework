@@ -1,8 +1,10 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { getVerificationCommand } from "../verification-manifest.mts";
+import { ensureSarif, GITLEAKS_CORE_ARGS } from "../security-gitleaks-smoke.mts";
 import { findWorkflowVerificationViolations } from "../workflow-verification-contract.mts";
 
 const ROOT_DIR = resolve(__dirname, "../..");
@@ -14,9 +16,17 @@ const ROOT_PACKAGE_JSON = JSON.parse(
   readFileSync(resolve(ROOT_DIR, "package.json"), "utf8"),
 ) as Record<string, unknown>;
 const PNPM_LOCK = readFileSync(resolve(ROOT_DIR, "pnpm-lock.yaml"), "utf8");
+const GITLEAKS_SMOKE = readFileSync(
+  resolve(ROOT_DIR, "scripts/security-gitleaks-smoke.mts"),
+  "utf8",
+);
 const VALIDATE_JOB = WORKFLOW.slice(
   WORKFLOW.indexOf("  validate:"),
   WORKFLOW.indexOf("  changes:"),
+);
+const SECRET_SCAN = WORKFLOW.slice(
+  WORKFLOW.indexOf("      - name: Secret scan blocking report"),
+  WORKFLOW.indexOf("      - name: Assemble security policy summary"),
 );
 
 describe("CI executable supply chain", () => {
@@ -26,6 +36,7 @@ describe("CI executable supply chain", () => {
     );
     expect(WORKFLOW).toContain("# renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks");
     expect(WORKFLOW).not.toContain("ghcr.io/gitleaks/gitleaks:v8.23.0 detect");
+    expect(WORKFLOW.match(/ghcr\.io\/gitleaks\/gitleaks:v8\.23\.0@sha256:/g)).toHaveLength(1);
   });
 
   it("keeps Madge inside the exact workspace dependency and authoritative manifest", () => {
@@ -82,12 +93,87 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).not.toContain("test:release-gates");
   });
 
-  it("keeps advisory scans and ecosystem smoke outside blocking profiles", () => {
+  it("keeps the advisory audit and ecosystem smoke outside blocking profiles", () => {
     expect(WORKFLOW).toContain("continue-on-error: true");
     expect(WORKFLOW).toContain("pnpm audit:prod > ci-reports/security/pnpm-audit-prod.txt");
     expect(WORKFLOW).toContain("ghcr.io/gitleaks/gitleaks:v8.23.0");
     expect(WORKFLOW).toContain("pnpm create-croco-app:smoke -- --tier ecosystem-advisory");
     expect(WORKFLOW).not.toContain("pnpm create-croco-app:smoke -- --tier spine-blocking");
+  });
+
+  it("makes the Gitleaks result blocking while preserving redacted evidence", () => {
+    const initializeText = SECRET_SCAN.indexOf(": > ci-reports/security/gitleaks.txt");
+    const initializeSarif = SECRET_SCAN.indexOf("ci-reports/security/gitleaks.sarif");
+    const scanner = SECRET_SCAN.indexOf('docker run --rm -v "$PWD:/repo" "$GITLEAKS_IMAGE"');
+
+    expect(SECRET_SCAN).toContain("if: always()");
+    expect(SECRET_SCAN).not.toContain("continue-on-error");
+    expect(initializeText).toBeGreaterThan(-1);
+    expect(initializeSarif).toBeGreaterThan(-1);
+    expect(initializeText).toBeLessThan(scanner);
+    expect(initializeSarif).toBeLessThan(scanner);
+    expect(SECRET_SCAN).toContain("detect --source /repo --redact --no-banner");
+    expect(SECRET_SCAN).toContain(
+      "--report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif",
+    );
+    expect(SECRET_SCAN).toContain('exit "$exit_code"');
+    expect(SECRET_SCAN).toContain("Scanner operational failures are also blocking.");
+    expect(SECRET_SCAN).not.toContain("warning-only for PR");
+  });
+
+  it("runs the four-case Gitleaks smoke before the always-run production scan", () => {
+    const install = WORKFLOW.indexOf("      - name: Install dependencies");
+    const smoke = WORKFLOW.indexOf("      - name: Security Gitleaks acceptance smoke");
+    const production = WORKFLOW.indexOf("      - name: Secret scan blocking report");
+
+    expect(smoke).toBeGreaterThan(install);
+    expect(production).toBeGreaterThan(smoke);
+    expect(WORKFLOW.slice(smoke, production)).not.toContain("if: always()");
+    expect(SECRET_SCAN).toContain(GITLEAKS_CORE_ARGS.slice(0, -1).join(" "));
+    expect(SECRET_SCAN).toContain("--report-path /repo/ci-reports/security/gitleaks.sarif");
+    expect(GITLEAKS_SMOKE).toContain('reportHasRule(detectableResult.report, "github-pat")');
+    expect(GITLEAKS_SMOKE).toContain('reportHasRule(invalidConfigResult.report, "github-pat")');
+    expect(GITLEAKS_SMOKE).toContain('"detectable", detectable');
+    expect(GITLEAKS_SMOKE).toContain('"allowlisted", allowlisted');
+    expect(GITLEAKS_SMOKE).toContain('"stale-metadata", stale');
+    expect(GITLEAKS_SMOKE).toContain('"dotted-allowlist", dotted');
+    expect(GITLEAKS_SMOKE).toContain('"spaced-dotted-allowlist", spacedDotted');
+    expect(GITLEAKS_SMOKE).toContain('"quoted-table-allowlist", quotedTable');
+    expect(GITLEAKS_SMOKE).toContain('"rule-override", ruleOverride');
+    expect(GITLEAKS_SMOKE).toContain('"clean", clean');
+    expect(GITLEAKS_SMOKE).toContain('"invalid-config", invalidConfig');
+    expect(GITLEAKS_SMOKE).not.toMatch(/ghp_[A-Za-z0-9]{36}/);
+  });
+
+  it("keeps the blocking Gitleaks summary and report upload observable", () => {
+    const summary = WORKFLOW.indexOf("      - name: Assemble security policy summary");
+    const upload = WORKFLOW.indexOf("      - name: Upload security report");
+
+    expect(WORKFLOW).toContain(
+      "\\`gitleaks\\` secret scanning: blocking on pull requests, trunk pushes, and manual runs",
+    );
+    expect(WORKFLOW).toContain("steps.security_gitleaks.outputs.exit_code");
+    expect(upload).toBeGreaterThan(summary);
+    expect(
+      WORKFLOW.slice(upload, WORKFLOW.indexOf("      - name: Security allowlist metadata check")),
+    ).toContain("if: always()");
+    expect(WORKFLOW).toContain("path: ci-reports/security");
+    expect(WORKFLOW).toContain('cat ci-reports/security/summary.md >> "$GITHUB_STEP_SUMMARY"');
+    expect(SECRET_SCAN).toContain("--ensure-sarif ci-reports/security/gitleaks.sarif");
+  });
+
+  it("replaces malformed SARIF with a valid redacted upload artifact and fails closed", () => {
+    const directory = mkdtempSync(join(tmpdir(), "croco-gitleaks-sarif-"));
+    const report = join(directory, "gitleaks.sarif");
+    try {
+      writeFileSync(report, "not-json");
+
+      expect(ensureSarif(report)).toBe(1);
+      expect(JSON.parse(readFileSync(report, "utf8"))).toEqual({ version: "2.1.0", runs: [] });
+      expect(readFileSync(`${report}.invalid.txt`, "utf8")).toBe("not-json");
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
   });
 
   it("allows only manifest entrypoints and explicit Actions-owned commands", () => {

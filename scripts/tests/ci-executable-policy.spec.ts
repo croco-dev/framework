@@ -407,6 +407,202 @@ describe("ci-executable-policy.mts", () => {
     ]);
   });
 
+  it("resolves a statically pinned workflow environment image", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "jobs:",
+        "  security:",
+        "    env:",
+        `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
+        "    steps:",
+        '      - run: docker run "$SECURITY_IMAGE" scan',
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
+    ).toEqual([]);
+  });
+
+  it("rejects a mutable workflow environment image after resolving it", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "jobs:",
+        "  security:",
+        "    env:",
+        "      SECURITY_IMAGE: tool:latest",
+        "    steps:",
+        '      - run: docker run "$SECURITY_IMAGE" scan',
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
+    ).toEqual([expect.objectContaining({ kind: "mutable-container-reference" })]);
+  });
+
+  it("does not resolve an image environment variable from another workflow job", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "jobs:",
+        "  source:",
+        "    env:",
+        "      SECURITY_IMAGE: tool:v1@sha256:" + "a".repeat(64),
+        "    steps: []",
+        "  consumer:",
+        "    steps:",
+        '      - run: docker run "$SECURITY_IMAGE" scan',
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
+    ).toEqual([expect.objectContaining({ kind: "mutable-container-reference" })]);
+  });
+
+  it("does not retain a job pin when a step overrides it dynamically", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "jobs:",
+        "  security:",
+        "    env:",
+        `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
+        "    steps:",
+        "      - env:",
+        "          SECURITY_IMAGE: ${{ inputs.security_image }}",
+        '        run: docker run "$SECURITY_IMAGE" scan',
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
+    ).toEqual([expect.objectContaining({ kind: "mutable-container-reference" })]);
+  });
+
+  it.each(["${{ inputs.security_image }}", "attacker/scanner:latest"])(
+    "rejects a step image override declared after run: %s",
+    (override) => {
+      const repo = createRepo();
+      writeFile(
+        repo,
+        ".github/workflows/ci.yml",
+        [
+          "jobs:",
+          "  security:",
+          "    env:",
+          `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
+          "    steps:",
+          '      - run: docker run "$SECURITY_IMAGE" scan',
+          "        env:",
+          `          SECURITY_IMAGE: ${override}`,
+          "",
+        ].join("\n"),
+      );
+
+      expect(
+        runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo })
+          .findings,
+      ).toEqual([expect.objectContaining({ kind: "mutable-container-reference" })]);
+    },
+  );
+
+  it.each(["${{ inputs.security_image }}", "attacker/scanner:latest"])(
+    "rejects a bare-dash step image override declared after run: %s",
+    (override) => {
+      const repo = createRepo();
+      writeFile(
+        repo,
+        ".github/workflows/ci.yml",
+        [
+          "jobs:",
+          "  security:",
+          "    env:",
+          `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
+          "    steps:",
+          "      -",
+          '        run: docker run "$SECURITY_IMAGE" scan',
+          "        env:",
+          `          SECURITY_IMAGE: ${override}`,
+          "",
+        ].join("\n"),
+      );
+
+      expect(
+        runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo })
+          .findings,
+      ).toEqual([expect.objectContaining({ kind: "mutable-container-reference" })]);
+    },
+  );
+
+  it.each(["${{ inputs.security_image }}", "attacker/scanner:latest"])(
+    "rejects a flow-mapping step image override: %s",
+    (override) => {
+      const repo = createRepo();
+      writeFile(
+        repo,
+        ".github/workflows/ci.yml",
+        [
+          "jobs:",
+          "  security:",
+          "    env:",
+          `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
+          "    steps:",
+          '      - run: docker run "$SECURITY_IMAGE" scan',
+          `        env: { SECURITY_IMAGE: "${override}" }`,
+          "",
+        ].join("\n"),
+      );
+
+      expect(
+        runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo })
+          .findings,
+      ).toEqual([expect.objectContaining({ kind: "mutable-container-reference" })]);
+    },
+  );
+
+  it.each(["${{ inputs.security_image }}", "attacker/scanner:latest"])(
+    "keeps semantic command and environment pairing after a flow-style run: %s",
+    (override) => {
+      const repo = createRepo();
+      writeFile(
+        repo,
+        ".github/workflows/ci.yml",
+        [
+          "jobs:",
+          "  security:",
+          "    env:",
+          `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
+          "    steps:",
+          '      - { run: "echo harmless" }',
+          '      - run: docker run "$SECURITY_IMAGE" scan',
+          `        env: { SECURITY_IMAGE: "${override}" }`,
+          "",
+        ].join("\n"),
+      );
+
+      expect(
+        runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo })
+          .findings,
+      ).toEqual([expect.objectContaining({ kind: "mutable-container-reference" })]);
+    },
+  );
+
   it("applies YAML folding before scanning folded workflow commands", () => {
     const repo = createRepo();
     writeFile(

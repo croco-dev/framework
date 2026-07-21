@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
+      # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
+      GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e
       NPM_CONFIG_PROVENANCE: "true"
 
     steps:
@@ -90,17 +92,20 @@ jobs:
           fi
           exit "$exit_code"
 
-      - name: Secret scan warning report
-        id: security_gitleaks_warning
+      - name: Security Gitleaks acceptance smoke
+        run: pnpm security:gitleaks-smoke
+
+      - name: Secret scan blocking report
+        id: security_gitleaks
         if: always()
         shell: bash
-        continue-on-error: ${{ github.event_name == 'pull_request' }}
         run: |
           mkdir -p ci-reports/security
+          : > ci-reports/security/gitleaks.txt
+          printf '%s\n' '{"version":"2.1.0","runs":[]}' > ci-reports/security/gitleaks.sarif
           start=$(date +%s)
           set +e
-          # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
-          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e detect --source /repo --redact --no-banner --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
+          docker run --rm -v "$PWD:/repo" "$GITLEAKS_IMAGE" detect --source /repo --redact --no-banner --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
           exit_code=$?
           set -e
           end=$(date +%s)
@@ -110,12 +115,9 @@ jobs:
             echo "duration_seconds=$duration"
           } >> "$GITHUB_OUTPUT"
           if [ "$exit_code" -ne 0 ]; then
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-              echo "::warning::gitleaks detected potential secrets (warning-only for PR). Review the SARIF/text report."
-            else
-              echo "::error::gitleaks detected potential secrets on protected branch. Please review and resolve before merge."
-            fi
+            echo "::error::Gitleaks secret scanning failed. Review the redacted SARIF/text report; remove findings from reachable history or use a reviewed exact fingerprint or bounded path. Scanner operational failures are also blocking."
           fi
+          node --experimental-strip-types scripts/security-gitleaks-smoke.mts --ensure-sarif ci-reports/security/gitleaks.sarif || exit_code=$?
           exit "$exit_code"
 
       - name: Assemble security policy summary
@@ -134,7 +136,7 @@ jobs:
             echo "- \`pnpm audit:prod\` dependency audit: advisory-only in CI on pull requests, trunk pushes, and manual runs"
             echo "- \`pnpm security:audit-policy\` dependency audit policy: blocks unreviewed runtime, generated-app, and release-evidence high-risk findings"
             echo "- \`pnpm security:audit-policy\` release enforcement: blocking in the Release workflow before publish"
-            echo "- \`gitleaks\` secret scanning: warning-only on pull requests; blocking on trunk pushes and manual runs"
+            echo "- \`gitleaks\` secret scanning: blocking on pull requests, trunk pushes, and manual runs"
             echo "- Security allowlist metadata: blocking; audit and secret-scan exceptions require owner, reason, and reviewBy/expiresOn"
             echo "- Release path: release-triggering changes still pass through CI before merge; publish-specific gates live in the Release workflow"
             echo ""
@@ -143,15 +145,15 @@ jobs:
             echo "- Audit advisory exit code: ${{ steps.security_audit_advisory.outputs.exit_code || 'unknown' }}"
             echo "- Audit advisory duration (seconds): ${{ steps.security_audit_advisory.outputs.duration_seconds || 'unknown' }}"
             echo "- Audit policy result: $audit_policy_result"
-            echo "- Gitleaks exit code: ${{ steps.security_gitleaks_warning.outputs.exit_code || 'unknown' }}"
-            echo "- Gitleaks duration (seconds): ${{ steps.security_gitleaks_warning.outputs.duration_seconds || 'unknown' }}"
+            echo "- Gitleaks exit code: ${{ steps.security_gitleaks.outputs.exit_code || 'unknown' }}"
+            echo "- Gitleaks duration (seconds): ${{ steps.security_gitleaks.outputs.duration_seconds || 'unknown' }}"
             echo ""
             echo "## False positive management"
             echo ""
             echo "1. Review the SARIF/text finding and confirm the secret or dependency path is non-production or test-only data."
-            echo "2. For confirmed false positives, add the fingerprint to \`.gitleaksignore\` or an explicit allowlist rule in \`.gitleaks.toml\`."
+            echo "2. For confirmed false positives, add an exact fingerprint to \`.gitleaksignore\` or a fully anchored bounded path to \`.gitleaks.toml\`."
             echo "3. Add matching metadata in \`scripts/security-allowlist-metadata.json\` with owner, reason, and reviewBy/expiresOn."
-            echo "4. Keep the ignore entry scoped to the exact fingerprint or path, and document the reason in the pull request before any future enforce rollout."
+            echo "4. Keep the entry scoped to the exact fingerprint or bounded path and document the reason in the pull request."
             echo ""
             echo "## Runtime impact"
             echo ""
@@ -159,6 +161,7 @@ jobs:
             echo "- \`pnpm security:audit-policy\` reuses the full lockfile audit output and local manifests without installing extra tooling."
             echo "- \`ghcr.io/gitleaks/gitleaks\` adds one cold-start image pull plus repository scan time; use the recorded duration above as the baseline for enforce decisions."
           } > ci-reports/security/summary.md
+          cat ci-reports/security/summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload security report
         if: always()
