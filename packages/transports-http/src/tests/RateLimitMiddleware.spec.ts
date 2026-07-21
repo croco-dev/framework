@@ -1,6 +1,7 @@
 import "reflect-metadata";
 
 import type { RuntimeContext } from "@croco/framework-context";
+import type { RateLimitResult } from "@croco/ratelimit-core";
 import { Container, Context as FrameworkContext } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Controller, Get } from "@croco/protocols-rest";
@@ -179,9 +180,11 @@ describe("RateLimitMiddleware", () => {
       await middleware(ctx, async () => {});
 
       const rateLimitHeaders = ctx.get<Record<string, string>>("rateLimitHeaders");
+      const rateLimitResult = ctx.get<RateLimitResult>("rateLimitResult");
       expect(rateLimitHeaders).toBeDefined();
       expect(rateLimitHeaders?.["X-RateLimit-Limit"]).toBeDefined();
       expect(rateLimitHeaders?.["X-RateLimit-Remaining"]).toBeDefined();
+      expect(rateLimitResult?.policyName).toBe("test");
     });
 
     it("should ignore spoofable proxy headers for Node requests", async () => {
