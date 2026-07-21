@@ -12896,7 +12896,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 52,
+          line: 54,
           column: 3,
           kind: "problem-class",
         },
@@ -12928,7 +12928,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 14,
+          line: 16,
           column: 3,
           kind: "problem-class",
         },
@@ -12991,7 +12991,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 36,
+          line: 38,
           column: 3,
           kind: "problem-class",
         },
@@ -13055,7 +13055,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 25,
+          line: 27,
           column: 3,
           kind: "problem-class",
         },
@@ -13118,7 +13118,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 76,
+          line: 78,
           column: 3,
           kind: "problem-class",
         },

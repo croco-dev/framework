@@ -5,7 +5,9 @@ type AfterCommitFailureSummary = {
   message: string;
 };
 
-type TransactionTimeoutSource = "default" | "run";
+export const MAX_TRANSACTION_TIMEOUT_MS = 2_147_483_647;
+
+export type TransactionTimeoutSource = "default" | "run";
 
 /**
  * `@Transactional`이 메서드가 아닌 대상에 적용되면 발생하는 Problem입니다.
@@ -40,7 +42,7 @@ export class InvalidTransactionTimeoutProblem extends Problem {
     super(
       undefined,
       undefined,
-      `Transaction ${source} timeout must be an integer between 1 and 2147483647 milliseconds; received ${timeoutMs}`,
+      `Transaction ${source} timeout must be an integer between 1 and ${MAX_TRANSACTION_TIMEOUT_MS} milliseconds; received ${timeoutMs}`,
     );
   }
 }

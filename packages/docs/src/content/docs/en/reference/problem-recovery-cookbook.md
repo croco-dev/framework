@@ -7855,7 +7855,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:52:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:54:3` (problem-class)
 
 <a id="tx-core-decorator-misuse"></a>
 
@@ -7873,7 +7873,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:14:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:16:3` (problem-class)
 
 <a id="tx-core-duplicate-tx-manager-registration"></a>
 
@@ -7909,7 +7909,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:36:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:38:3` (problem-class)
 
 <a id="tx-core-manager-not-registered"></a>
 
@@ -7945,7 +7945,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:25:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:27:3` (problem-class)
 
 <a id="tx-core-propagation-error"></a>
 
@@ -7981,7 +7981,7 @@ Sources:
 
 Sources:
 
-- `packages/tx-core/src/libs/problems/TransactionProblems.ts:76:3` (problem-class)
+- `packages/tx-core/src/libs/problems/TransactionProblems.ts:78:3` (problem-class)
 
 <a id="tx-drizzle-rls-configuration-invalid"></a>
 

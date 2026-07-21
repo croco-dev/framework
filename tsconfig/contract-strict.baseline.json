@@ -3857,7 +3857,7 @@
     {
       "packageName": "@croco/tx-core",
       "file": "packages/tx-core/src/libs/TxManager.ts",
-      "line": 244,
+      "line": 245,
       "column": 9,
       "code": "TS2532",
       "message": "Object is possibly 'undefined'."

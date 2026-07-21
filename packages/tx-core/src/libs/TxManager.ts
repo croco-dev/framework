@@ -1,9 +1,11 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { TransactionContext } from "@croco/framework-context";
 import type { Logger } from "@croco/framework-logger";
+import type { TransactionTimeoutSource } from "./problems/TransactionProblems";
 import {
   AfterCommitHooksProblem,
   InvalidTransactionTimeoutProblem,
+  MAX_TRANSACTION_TIMEOUT_MS,
   TransactionContextProblem,
   TransactionTimeoutProblem,
 } from "./problems/TransactionProblems";
@@ -27,10 +29,9 @@ type AfterCommitHookFailure = {
 };
 
 const DEFAULT_LOGGER: TxManagerLogger = console;
-const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
-function assertValidTimeout(timeout: number, source: "default" | "run"): void {
-  if (!Number.isSafeInteger(timeout) || timeout <= 0 || timeout > MAX_TIMER_DELAY_MS) {
+function assertValidTimeout(timeout: number, source: TransactionTimeoutSource): void {
+  if (!Number.isSafeInteger(timeout) || timeout <= 0 || timeout > MAX_TRANSACTION_TIMEOUT_MS) {
     throw new InvalidTransactionTimeoutProblem(source, timeout);
   }
 }
