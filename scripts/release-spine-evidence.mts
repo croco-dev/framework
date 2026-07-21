@@ -186,13 +186,18 @@ function readChangedFiles(
   head?: string,
 ): readonly string[] | undefined {
   if (!base || !head) return undefined;
-  return execFileSync("git", ["diff", "--name-only", base, head], {
-    cwd: rootDir,
-    encoding: "utf8",
-  })
-    .trim()
-    .split("\n")
-    .filter(Boolean);
+  try {
+    return execFileSync("git", ["diff", "--name-only", base, head], {
+      cwd: rootDir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .trim()
+      .split("\n")
+      .filter(Boolean);
+  } catch {
+    return undefined;
+  }
 }
 let activeCommandProcess: ChildProcess | null = null;
 

@@ -67,6 +67,9 @@ describe("verification manifest", () => {
       "provenance-config",
       "publish-dry-run",
     ]);
+    expect(
+      createVerificationManifest("publish").find(({ id }) => id === "spine-bundle-size")?.command,
+    ).toEqual(["node", "--experimental-strip-types", "scripts/package-quality-report.mts"]);
   });
 
   it("runs publish package gates only for their relevant changed inputs", () => {

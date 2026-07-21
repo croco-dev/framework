@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
 
@@ -37,7 +38,7 @@ export function verifyProvenanceConfig(): void {
   assertProvenanceConfig({ envValue: process.env.NPM_CONFIG_PROVENANCE, npmValue });
 }
 
-if (import.meta.url === new URL(process.argv[1] ?? "", "file:").href) {
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   try {
     verifyProvenanceConfig();
   } catch (error) {

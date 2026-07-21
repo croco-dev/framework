@@ -14,7 +14,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type * as CreateCrocoAppVerification from "../packages/create-croco-app/src/verification.ts";
 import { validateGeneratedSaasDocsContract } from "./first-success-generated-contract.mts";
-import { getVerificationCommand } from "./verification-manifest.mts";
+import { resolvesVerificationDispatcherToScript } from "./verification-dispatcher.mts";
 
 const scriptRepoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cliContractBundle = join(
@@ -141,13 +141,9 @@ function runsVerificationScript(
   commandId: string,
   scriptPath: string,
 ): boolean {
-  if (rootScript.includes(scriptPath)) return true;
-  const match =
-    /^node --experimental-strip-types scripts\/verification-command\.mts --id ([\w-]+)$/.exec(
-      rootScript,
-    );
-  if (match?.[1] !== commandId) return false;
-  return getVerificationCommand(commandId).command.includes(scriptPath);
+  return resolvesVerificationDispatcherToScript(rootScript, commandId, scriptPath, {
+    exact: true,
+  });
 }
 
 function readRootArg(): string {

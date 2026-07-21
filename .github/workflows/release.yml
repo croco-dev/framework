@@ -29,15 +29,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Select release work and verification profile
         id: release_work
         shell: bash
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
         run: |
           base=""
           args=(--event "$GITHUB_EVENT_NAME" --workflow release --github-output "$GITHUB_OUTPUT")
           if [ "$GITHUB_EVENT_NAME" != "workflow_dispatch" ]; then
-            base="${{ github.event.before }}"
+            base="$EVENT_BEFORE"
             if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
               base="$(git rev-parse HEAD^)"
             fi

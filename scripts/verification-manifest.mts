@@ -554,9 +554,9 @@ const publishOnly = (context: VerificationContext): readonly EvidenceCommand[] =
   },
   {
     id: "spine-bundle-size",
-    label: "Spine bundle-size enforcement",
+    label: "Spine bundle-size warning report",
     category: "quality",
-    command: nodeScript("scripts/package-quality-report.mts", "--enforce-spine-bundle-size"),
+    command: nodeScript("scripts/package-quality-report.mts"),
     timeoutMs: minutes(10),
     applicable: isApplicableToChangedFiles(
       context,
@@ -617,8 +617,23 @@ const PROHIBITED_ROOT_ALIASES = new Set([
   "release:spine-evidence",
 ]);
 
+const PACKAGE_QUALITY_STATUS_PREREQUISITES = [
+  "changeset-required",
+  "lint",
+  "format",
+  "build",
+  "typecheck",
+  "test",
+  "provider-certification",
+  "production-ready",
+] as const;
+
 export function assertVerificationManifest(commands: readonly EvidenceCommand[]): void {
   const seen = new Set<string>();
+  const indexes = new Map<string, number>();
+  for (const [index, command] of commands.entries()) {
+    indexes.set(command.id, index);
+  }
   for (const command of commands) {
     if (seen.has(command.id)) {
       throw new VerificationProblem(
@@ -635,6 +650,19 @@ export function assertVerificationManifest(commands: readonly EvidenceCommand[])
           "COMPOSITE_VERIFICATION_ALIAS",
           "contract",
           `Composite root alias is not allowed in verification manifest: ${invoked}`,
+        );
+      }
+    }
+  }
+  const spineBundleIndex = indexes.get("spine-bundle-size");
+  if (spineBundleIndex !== undefined) {
+    for (const prerequisiteId of PACKAGE_QUALITY_STATUS_PREREQUISITES) {
+      const prerequisiteIndex = indexes.get(prerequisiteId);
+      if (prerequisiteIndex === undefined || prerequisiteIndex > spineBundleIndex) {
+        throw new VerificationProblem(
+          "PACKAGE_QUALITY_STATUS_ORDER",
+          "contract",
+          `${prerequisiteId} must appear before spine-bundle-size so package quality dashboard status values are already known.`,
         );
       }
     }

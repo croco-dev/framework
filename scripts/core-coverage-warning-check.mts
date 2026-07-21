@@ -3,6 +3,8 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseCoreCoveragePackageFilters } from "../packages/cli/src/libs/coreCoverageFilters.ts";
 import { getVerificationCommand } from "./verification-manifest.mts";
+import { matchVerificationDispatcherCommand } from "./verification-dispatcher.mts";
+import { VerificationProblem } from "./verification-problem.mts";
 
 export { parseCoreCoveragePackageFilters } from "../packages/cli/src/libs/coreCoverageFilters.ts";
 
@@ -138,21 +140,26 @@ function readCoreCoveragePackages(): string[] {
 }
 
 export function resolveCoreCoveragePackageFilters(coreCoverageCommand: string): string[] {
-  const dispatcher =
-    /(?:^|&&\s*)node --experimental-strip-types scripts\/verification-command\.mts --id ([\w-]+)(?:\s|$)/.exec(
-      coreCoverageCommand,
-    );
-  if (dispatcher?.[1]) {
+  const dispatcherCommandId = matchVerificationDispatcherCommand(coreCoverageCommand);
+  if (dispatcherCommandId) {
     const packages = parseCoreCoveragePackageFilters(
-      getVerificationCommand(dispatcher[1]).command.join(" "),
+      getVerificationCommand(dispatcherCommandId).command.join(" "),
     );
     if (packages.length > 0) return packages;
-    throw new Error(`failed to read core coverage package filters from ${packageJsonPath}`);
+    throw new VerificationProblem(
+      "CORE_COVERAGE_FILTERS_UNAVAILABLE",
+      "contract",
+      `failed to read core coverage package filters from ${packageJsonPath}`,
+    );
   }
 
   const directPackages = parseCoreCoveragePackageFilters(coreCoverageCommand);
   if (directPackages.length > 0) return directPackages;
-  throw new Error(`failed to read core coverage package filters from ${packageJsonPath}`);
+  throw new VerificationProblem(
+    "CORE_COVERAGE_FILTERS_UNAVAILABLE",
+    "contract",
+    `failed to read core coverage package filters from ${packageJsonPath}`,
+  );
 }
 
 function readVitestCoreCoveragePackages(): string[] {

@@ -3,6 +3,7 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { argv } from "node:process";
+import { pathToFileURL } from "node:url";
 
 import { verificationImplementationPaths } from "./verification-manifest.mts";
 import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
@@ -238,7 +239,7 @@ function main(): void {
   if (options.githubOutput) appendFileSync(options.githubOutput, `${lines}\n`);
 }
 
-if (import.meta.url === new URL(argv[1] ?? "", "file:").href) {
+if (import.meta.url === pathToFileURL(argv[1] ?? "").href) {
   try {
     main();
   } catch (error) {

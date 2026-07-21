@@ -43,7 +43,7 @@
     "docs:catalog:write": "node --experimental-strip-types scripts/package-docs-check.mts --write",
     "dependency-boundaries:check": "node --experimental-strip-types scripts/verification-command.mts --id dependency-boundaries",
     "first-success:verify": "pnpm build --filter=create-croco-app && node --experimental-strip-types scripts/verification-command.mts --id first-success",
-    "package-quality:report": "node --experimental-strip-types scripts/package-quality-report.mts",
+    "package-quality:report": "node --experimental-strip-types scripts/verification-command.mts --id spine-bundle-size",
     "provider-certification:check": "node --experimental-strip-types scripts/verification-command.mts --id provider-certification",
     "production-ready:check": "node --experimental-strip-types scripts/verification-command.mts --id production-ready",
     "spine-promotion:check": "node --experimental-strip-types scripts/verification-command.mts --id spine-promotion",
