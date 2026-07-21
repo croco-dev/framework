@@ -63,6 +63,7 @@ describe("alpha-release-smoke.mts", () => {
     });
     expect(alphaReleaseGeneratedAppValidations).toEqual([
       "contract:snapshot",
+      "codegen",
       "contract:verify",
       "typecheck",
       "build",
