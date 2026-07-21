@@ -17926,6 +17926,12 @@
           "declarationKind": "class"
         },
         {
+          "name": "TelemetryAutoInstrumentationProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/TelemetryAutoInstrumentationProblem",
+          "declarationKind": "class"
+        },
+        {
           "name": "TelemetryDiagnosticsProvider",
           "exportKind": "named",
           "source": "./libs/diagnostics/TelemetryDiagnosticsProvider",

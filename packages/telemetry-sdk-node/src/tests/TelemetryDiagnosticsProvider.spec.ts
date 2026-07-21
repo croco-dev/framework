@@ -51,6 +51,7 @@ describe("TelemetryDiagnosticsProvider", () => {
       traceEnabled: false,
       probability: 0.25,
       signals: { logs: "disabled", metrics: "disabled", traces: "disabled" },
+      autoInstrumentationModules: [],
       mode: "disabled",
     });
     expect(JSON.stringify(health)).not.toContain("Bearer secret");
@@ -83,6 +84,7 @@ describe("TelemetryDiagnosticsProvider", () => {
       traceEnabled: false,
       probability: 0.25,
       signals: { logs: "disabled", metrics: "disabled", traces: "disabled" },
+      autoInstrumentationModules: [],
       mode: "disabled",
     });
     expect(JSON.stringify(health)).not.toContain("Bearer secret");
@@ -113,6 +115,7 @@ describe("TelemetryDiagnosticsProvider", () => {
       traceEnabled: true,
       probability: 0,
       signals: { logs: "disabled", metrics: "disabled", traces: "supported" },
+      autoInstrumentationModules: [],
       mode: "sampling_disabled",
     });
     expect(JSON.stringify(health)).not.toContain("Bearer secret");

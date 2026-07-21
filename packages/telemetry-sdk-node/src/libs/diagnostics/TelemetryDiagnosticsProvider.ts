@@ -90,6 +90,8 @@ function createSafeTelemetryDetails(
     traceEnabled: enabled && config.trace?.enabled !== false,
     probability: config.trace?.probability,
     signals: getTelemetrySignalSupport(config),
+    autoInstrumentationModules:
+      TelemetryRuntime.getInstance().getEnabledAutoInstrumentationModules(),
     mode,
   };
 }

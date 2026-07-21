@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TelemetryAutoInstrumentationProblem } from "../libs/problems/TelemetryAutoInstrumentationProblem";
 import {
   OtlpEndpointRequiredProblem,
   SamplerProblem,
@@ -27,6 +28,19 @@ describe("SamplerProblem", () => {
     const problem = new SamplerProblem("test");
     const json = problem.toJSON();
     expect(json.code).toBe("TELEMETRY_SAMPLER_INVALID_CONFIG");
+  });
+});
+
+describe("TelemetryAutoInstrumentationProblem", () => {
+  it("exposes stable validation evidence without configuration values", () => {
+    const problem = new TelemetryAutoInstrumentationProblem("Operation filters are unsupported");
+
+    expect(problem.code).toBe("TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG");
+    expect(problem.detail).toBe("Operation filters are unsupported");
+    expect(problem.toJSON()).toMatchObject({
+      code: "TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG",
+      detail: "Operation filters are unsupported",
+    });
   });
 });
 

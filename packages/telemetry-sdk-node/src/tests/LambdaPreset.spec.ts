@@ -35,6 +35,7 @@ describe("lambdaPreset", () => {
     expect(config.environment).toBe("development");
     expect(config.enabled).toBe(true);
     expect(config.trace?.enabled).toBe(true);
+    expect(config.trace?.autoInstrumentation).toEqual({ enabled: true });
   });
 
   it("should use custom serviceVersion", () => {

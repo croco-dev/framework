@@ -77,13 +77,6 @@
       "targetMilestone": "1.0 RC"
     },
     {
-      "packageName": "@croco/telemetry-sdk-node",
-      "reason": "Full-spine strict-contract enrollment captures existing diagnostics for targeted hardening before the 1.0 RC gate.",
-      "owner": "@croco/telemetry",
-      "debt": "staged-rollout",
-      "targetMilestone": "1.0 RC"
-    },
-    {
       "packageName": "@croco/tx-core",
       "reason": "Full-spine strict-contract enrollment captures existing diagnostics for targeted hardening before the 1.0 RC gate.",
       "owner": "@croco/transactions",
@@ -3300,102 +3293,6 @@
       "column": 5,
       "code": "TS2412",
       "message": "Type 'string | undefined' is not assignable to type 'string' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/libs/presets/lambda.ts",
-      "line": 12,
-      "column": 45,
-      "code": "TS4111",
-      "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/libs/presets/lambda.ts",
-      "line": 12,
-      "column": 69,
-      "code": "TS4111",
-      "message": "Property 'ENVIRONMENT' comes from an index signature, so it must be accessed with ['ENVIRONMENT']."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/libs/presets/lambda.ts",
-      "line": 14,
-      "column": 17,
-      "code": "TS4111",
-      "message": "Property 'AWS_LAMBDA_FUNCTION_NAME' comes from an index signature, so it must be accessed with ['AWS_LAMBDA_FUNCTION_NAME']."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/libs/presets/lambda.ts",
-      "line": 15,
-      "column": 17,
-      "code": "TS4111",
-      "message": "Property 'AWS_EXECUTION_ENV' comes from an index signature, so it must be accessed with ['AWS_EXECUTION_ENV']."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/libs/presets/lambda.ts",
-      "line": 26,
-      "column": 26,
-      "code": "TS4111",
-      "message": "Property 'TELEMETRY_ENABLED' comes from an index signature, so it must be accessed with ['TELEMETRY_ENABLED']."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/libs/presets/lambda.ts",
-      "line": 32,
-      "column": 5,
-      "code": "TS2375",
-      "message": "Type '{ enabled: true; exporterUrl: string | undefined; exporterHeaders: { \"X-Croco-Source\": string; }; probability: number; batchTimeout: number; batchCount: number; batchSize: number; }' is not assignable to type 'TraceConfig' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/libs/presets/lambda.ts",
-      "line": 36,
-      "column": 21,
-      "code": "TS4111",
-      "message": "Property 'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT' comes from an index signature, so it must be accessed with ['OTEL_EXPORTER_OTLP_TRACES_ENDPOINT']."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/libs/presets/lambda.ts",
-      "line": 37,
-      "column": 21,
-      "code": "TS4111",
-      "message": "Property 'OTEL_EXPORTER_OTLP_ENDPOINT' comes from an index signature, so it must be accessed with ['OTEL_EXPORTER_OTLP_ENDPOINT']."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/runtime.ts",
-      "line": 120,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT' comes from an index signature, so it must be accessed with ['OTEL_EXPORTER_OTLP_TRACES_ENDPOINT']."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/runtime.ts",
-      "line": 121,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'OTEL_EXPORTER_OTLP_ENDPOINT' comes from an index signature, so it must be accessed with ['OTEL_EXPORTER_OTLP_ENDPOINT']."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/runtime.ts",
-      "line": 127,
-      "column": 50,
-      "code": "TS2379",
-      "message": "Argument of type '{ url: string; headers: Record<string, string> | undefined; }' is not assignable to parameter of type 'OTLPExporterNodeConfigBase' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/telemetry-sdk-node",
-      "file": "packages/telemetry-sdk-node/src/runtime.ts",
-      "line": 139,
-      "column": 32,
-      "code": "TS2379",
-      "message": "Argument of type '{ resource: Resource; spanProcessor: BatchSpanProcessor | undefined; sampler: Sampler | undefined; instrumentations: Instrumentation<InstrumentationConfig>[]; }' is not assignable to parameter of type 'Partial<NodeSDKConfiguration>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/testing",

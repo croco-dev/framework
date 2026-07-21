@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 440,
+  problemCount: 441,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -11412,6 +11412,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
           line: 4,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#telemetry-auto-instrumentation-invalid-config",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryAutoInstrumentationProblem.ts",
+          line: 7,
           column: 3,
           kind: "problem-class",
         },
