@@ -36,7 +36,7 @@ export const handler = async (
   const lambdaHandler = await lambdaHandlerPromise;
 
   return runWithTelemetryFlush(
-    () => lambdaHandler(...args),
+    async () => lambdaHandler(...args),
     () => telemetry.forceFlush(),
   );
 };
