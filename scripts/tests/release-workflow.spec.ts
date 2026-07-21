@@ -18,6 +18,7 @@ describe("Release verification profile contract", () => {
     );
     expect(workflow).toContain('pnpm verify:publish -- "${args[@]}"');
     expect(workflow.match(/verify:publish/g)).toHaveLength(1);
+    expect(workflow).not.toContain("test:release-gates");
     expect(workflow).not.toContain("--allow-pending-release-metadata");
   });
 

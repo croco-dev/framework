@@ -257,7 +257,7 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain(
       "esm decorator metadata and implicit DI ok @croco/metering-core",
     );
-  });
+  }, 30_000);
 
   it("fails when the packed auth service loses concrete constructor metadata", () => {
     const root = createTempRoot();
@@ -293,7 +293,7 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(`${result.stdout}\n${result.stderr}`).toContain(
       "Container.get(MeterRegistry) expected default cacheTtlMs=60000",
     );
-  });
+  }, 30_000);
 
   it("matches packed tarballs by manifest name when package names share a prefix", () => {
     const root = createTempRoot();

@@ -6,6 +6,7 @@ import { argv } from "node:process";
 import { pathToFileURL } from "node:url";
 
 import { verificationImplementationPaths } from "./verification-manifest.mts";
+import { isReleaseGateMaintenancePath } from "./release-gate-maintenance.mts";
 import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
 import type { VerificationProfile } from "./verification-manifest.mts";
 
@@ -26,6 +27,7 @@ const PROFILE_STRENGTH: Record<VerificationProfile, number> = { repo: 1, spine: 
 const MANIFEST_IMPLEMENTATION_PATHS = new Set(verificationImplementationPaths());
 
 function classifyPath(path: string): PathKind {
+  if (isReleaseGateMaintenancePath(path)) return "publish";
   if (path === ".changeset/README.md") return "repo";
   if (path === ".changeset/config.json") return "publish";
   if (/^\.changeset\/(pre\.json|[^/]+\.md)$/.test(path)) return "changeset";

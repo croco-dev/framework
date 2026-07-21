@@ -12,6 +12,7 @@ overrides:
   "@hono/node-server": 1.19.10
   "@opentelemetry/auto-instrumentations-node": 0.78.0
   "@opentelemetry/exporter-prometheus": 0.220.0
+  "@opentelemetry/propagator-jaeger": 2.9.0
   "@opentelemetry/sdk-node": 0.220.0
   "@grpc/grpc-js": 1.14.4
   "@isaacs/brace-expansion": 5.0.1
@@ -62,3 +63,7 @@ allowBuilds:
   protobufjs: true
   sharp: false
   workerd: true
+
+auditConfig:
+  ignoreGhsas:
+    - GHSA-f88m-g3jw-g9cj

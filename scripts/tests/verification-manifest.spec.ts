@@ -1,12 +1,57 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { basename, dirname, extname, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
   assertVerificationManifest,
   createVerificationManifest,
+  verificationImplementationPaths,
 } from "../verification-manifest.mts";
+import {
+  RELEASE_GATE_ENTRYPOINT_PATHS,
+  RELEASE_GATE_IMPLEMENTATION_PATHS,
+  RELEASE_GATE_MAINTENANCE_PATHS,
+  RELEASE_GATE_POLICY_INPUT_PATHS,
+  RELEASE_GATE_SUPPORT_PATHS,
+  RELEASE_GATE_TEST_PATHS,
+  RELEASE_GATE_WORKFLOW_PATHS,
+} from "../release-gate-maintenance.mts";
 import type { EvidenceCommand } from "../release-spine-evidence.mts";
+
+const ROOT_DIR = resolve(__dirname, "../..");
+const SCRIPT_EXTENSIONS = [".mts", ".ts", ".mjs", ".js"] as const;
+
+function releaseGateImportSpecifiers(source: string): readonly string[] {
+  return [...source.matchAll(/(?:\bfrom\s+|\bimport\s*(?:\(\s*)?)(["'])(\.{1,2}\/[^"']+)\1/g)]
+    .map((match) => match[2])
+    .filter((specifier): specifier is string => specifier !== undefined);
+}
+
+function discoverReleaseGateScriptPaths(roots: readonly string[]): readonly string[] {
+  const discovered = new Set<string>();
+  const pending = [...roots];
+
+  for (const path of pending) {
+    if (discovered.has(path)) continue;
+    discovered.add(path);
+
+    const source = readFileSync(resolve(ROOT_DIR, path), "utf8");
+    for (const specifier of releaseGateImportSpecifiers(source)) {
+      const unresolved = resolve(ROOT_DIR, dirname(path), specifier);
+      const candidates = extname(unresolved)
+        ? [unresolved]
+        : SCRIPT_EXTENSIONS.map((extension) => `${unresolved}${extension}`);
+      const resolved = candidates.find((candidate) => existsSync(candidate));
+      if (!resolved) continue;
+      const repositoryPath = relative(ROOT_DIR, resolved).replaceAll("\\", "/");
+      if (repositoryPath.startsWith("scripts/") && !discovered.has(repositoryPath)) {
+        pending.push(repositoryPath);
+      }
+    }
+  }
+
+  return [...discovered].sort();
+}
 
 const repoIds = [
   "verification-policy",
@@ -52,6 +97,16 @@ const spineOnlyIds = [
 ];
 
 describe("verification manifest", () => {
+  it("discovers static, dynamic, and side-effect relative imports", () => {
+    expect(
+      releaseGateImportSpecifiers(`
+        import value from "./static.mts";
+        import("./dynamic.mts");
+        import "./side-effect.mts";
+      `),
+    ).toEqual(["./static.mts", "./dynamic.mts", "./side-effect.mts"]);
+  });
+
   it("composes exact ordered repo, spine, and publish profiles", () => {
     expect(createVerificationManifest("repo").map(({ id }) => id)).toEqual(repoIds);
     expect(createVerificationManifest("spine").map(({ id }) => id)).toEqual([
@@ -61,6 +116,7 @@ describe("verification manifest", () => {
     expect(createVerificationManifest("publish").map(({ id }) => id)).toEqual([
       ...repoIds,
       ...spineOnlyIds,
+      "release-gate-tests",
       "release-metadata",
       "spine-bundle-size",
       "dependency-audit-policy",
@@ -70,6 +126,103 @@ describe("verification manifest", () => {
     expect(
       createVerificationManifest("publish").find(({ id }) => id === "spine-bundle-size")?.command,
     ).toEqual(["node", "--experimental-strip-types", "scripts/package-quality-report.mts"]);
+  });
+
+  it("runs one authoritative release-gate suite without duplicating contract tests", () => {
+    const manual = createVerificationManifest("publish");
+    expect(manual.find(({ id }) => id === "release-gate-tests")?.applicable).toBe(true);
+    expect(manual.find(({ id }) => id === "verification-contract-tests")?.applicable).toBe(false);
+
+    const maintenance = createVerificationManifest("publish", {
+      base: "origin/trunk",
+      changedFiles: ["scripts/production-ready-check.mts"],
+      head: "HEAD",
+    });
+    expect(maintenance.find(({ id }) => id === "release-gate-tests")?.applicable).toBe(true);
+    expect(maintenance.find(({ id }) => id === "verification-contract-tests")?.applicable).toBe(
+      false,
+    );
+
+    const packageCandidate = createVerificationManifest("publish", {
+      base: "origin/trunk",
+      changedFiles: ["packages/retry-core/package.json"],
+      head: "HEAD",
+    });
+    expect(packageCandidate.find(({ id }) => id === "release-gate-tests")?.applicable).toBe(false);
+    expect(
+      packageCandidate.find(({ id }) => id === "verification-contract-tests")?.applicable,
+    ).toBe(true);
+
+    expect(
+      createVerificationManifest("repo").find(({ id }) => id === "verification-contract-tests")
+        ?.applicable,
+    ).toBe(true);
+    expect(
+      createVerificationManifest("spine").find(({ id }) => id === "verification-contract-tests")
+        ?.applicable,
+    ).toBe(true);
+  });
+
+  it("keeps the release-gate inventory complete, sorted, and executable from one root alias", () => {
+    const command = createVerificationManifest("publish").find(
+      ({ id }) => id === "release-gate-tests",
+    );
+    const packageJson = JSON.parse(
+      readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
+    ) as { scripts?: Record<string, string> };
+
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(39);
+    expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
+    expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
+    expect(RELEASE_GATE_SUPPORT_PATHS).toEqual([...RELEASE_GATE_SUPPORT_PATHS].sort());
+    expect(RELEASE_GATE_POLICY_INPUT_PATHS).toEqual([...RELEASE_GATE_POLICY_INPUT_PATHS].sort());
+    expect(RELEASE_GATE_WORKFLOW_PATHS).toEqual([...RELEASE_GATE_WORKFLOW_PATHS].sort());
+    expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual(verificationImplementationPaths());
+    expect(new Set(RELEASE_GATE_MAINTENANCE_PATHS).size).toBe(
+      RELEASE_GATE_MAINTENANCE_PATHS.length,
+    );
+    expect(RELEASE_GATE_MAINTENANCE_PATHS).toContain("scripts/release-gate-maintenance.mts");
+    expect(command?.command).toEqual([
+      "pnpm",
+      "exec",
+      "vitest",
+      "run",
+      "--no-file-parallelism",
+      ...RELEASE_GATE_TEST_PATHS,
+      "--config",
+      "vitest.config.ts",
+    ]);
+    expect(packageJson.scripts?.["test:release-gates"]).toBe(
+      "node --experimental-strip-types scripts/verification-command.mts --id release-gate-tests",
+    );
+    for (const path of RELEASE_GATE_MAINTENANCE_PATHS) {
+      expect(existsSync(resolve(ROOT_DIR, path)), path).toBe(true);
+    }
+    for (const workflowPath of RELEASE_GATE_WORKFLOW_PATHS) {
+      const workflowContractPath = `scripts/tests/${basename(workflowPath, ".yml")}-workflow.spec.ts`;
+      expect(RELEASE_GATE_TEST_PATHS, workflowContractPath).toContain(workflowContractPath);
+    }
+
+    const discoveredScriptPaths = discoverReleaseGateScriptPaths([
+      ...RELEASE_GATE_ENTRYPOINT_PATHS,
+      ...RELEASE_GATE_TEST_PATHS,
+      "scripts/release-gate-maintenance.mts",
+    ]);
+    expect(RELEASE_GATE_MAINTENANCE_PATHS).toEqual(expect.arrayContaining(discoveredScriptPaths));
+    expect(RELEASE_GATE_IMPLEMENTATION_PATHS).toEqual(
+      expect.arrayContaining(discoveredScriptPaths.filter((path) => !path.includes("/tests/"))),
+    );
+
+    const matchingImplementationSpecs = discoveredScriptPaths
+      .filter((path) => /^scripts\/[^/]+\.(?:mts|mjs|ts)$/.test(path))
+      .map(
+        (implementationPath) =>
+          `scripts/tests/${basename(implementationPath).replace(/\.(?:mts|mjs|ts)$/, ".spec.ts")}`,
+      )
+      .filter((testPath) => existsSync(testPath));
+    expect(RELEASE_GATE_TEST_PATHS).toEqual(
+      expect.arrayContaining([...new Set(matchingImplementationSpecs)]),
+    );
   });
 
   it("runs publish package gates only for their relevant changed inputs", () => {
@@ -84,6 +237,20 @@ describe("verification manifest", () => {
     });
     expect(maintenance.find(({ id }) => id === "release-metadata")?.applicable).toBe(false);
     expect(maintenance.find(({ id }) => id === "spine-bundle-size")?.applicable).toBe(false);
+
+    for (const path of [
+      ".changeset/config.json",
+      "ci-reports/bundle-size/baseline.json",
+      "docs/package-catalog.json",
+    ]) {
+      const directInput = createVerificationManifest("publish", {
+        base: "origin/trunk",
+        changedFiles: [path],
+        head: "HEAD",
+      });
+      expect(directInput.find(({ id }) => id === "release-gate-tests")?.applicable).toBe(true);
+      expect(directInput.find(({ id }) => id === "spine-bundle-size")?.applicable).toBe(true);
+    }
 
     const verifierChanges = createVerificationManifest("publish", {
       base: "origin/trunk",
