@@ -46,6 +46,7 @@ type ScriptResult = {
 
 type FixtureOptions = {
   readonly rootReadmeCommand?: string;
+  readonly rootQuickStartSmokeScript?: string;
   readonly docsIndexPackageCount?: number;
   readonly extraReadmeToolingCommand?: string;
   readonly gettingStartedDevCommand?: string;
@@ -84,6 +85,29 @@ describe("first-success-verify.mts", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("first-success contract verification PASSED");
+  });
+
+  it("accepts the authoritative quick-start smoke dispatcher", () => {
+    const root = createFixture({
+      rootQuickStartSmokeScript:
+        "node --experimental-strip-types scripts/verification-command.mts --id quick-start-lambda-smoke",
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+  });
+
+  it("rejects a quick-start smoke dispatcher with the wrong command ID", () => {
+    const root = createFixture({
+      rootQuickStartSmokeScript:
+        "node --experimental-strip-types scripts/verification-command.mts --id first-success",
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("does not run the smoke script");
   });
 
   it("fails through the real CLI contract when a public scaffold command omits scope", () => {
@@ -401,6 +425,7 @@ function createFixture(options: FixtureOptions = {}): string {
     format: "oxfmt --write .",
     lint: "turbo lint",
     "quick-start-lambda:smoke":
+      options.rootQuickStartSmokeScript ??
       "node --experimental-strip-types scripts/quick-start-lambda-smoke.mts",
     "release-docs:check": "node --experimental-strip-types scripts/release-docs-check.mts",
     "release:spine-evidence": "node --experimental-strip-types scripts/release-spine-evidence.mts",

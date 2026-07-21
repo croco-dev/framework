@@ -14,6 +14,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type * as CreateCrocoAppVerification from "../packages/create-croco-app/src/verification.ts";
 import { validateGeneratedSaasDocsContract } from "./first-success-generated-contract.mts";
+import { resolvesVerificationDispatcherToScript } from "./verification-dispatcher.mts";
 
 const scriptRepoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cliContractBundle = join(
@@ -133,6 +134,16 @@ function read(path: string): string {
     fail("File read error", `${path}: ${message}`);
     return "";
   }
+}
+
+function runsVerificationScript(
+  rootScript: string,
+  commandId: string,
+  scriptPath: string,
+): boolean {
+  return resolvesVerificationDispatcherToScript(rootScript, commandId, scriptPath, {
+    exact: true,
+  });
 }
 
 function readRootArg(): string {
@@ -694,7 +705,13 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
   const smokeScript: string | undefined = rootPackageJson.scripts?.["quick-start-lambda:smoke"];
   if (!smokeScript) {
     fail("A1e", "root package.json missing `quick-start-lambda:smoke` script");
-  } else if (!smokeScript.includes("scripts/quick-start-lambda-smoke.mts")) {
+  } else if (
+    !runsVerificationScript(
+      smokeScript,
+      "quick-start-lambda-smoke",
+      "scripts/quick-start-lambda-smoke.mts",
+    )
+  ) {
     fail("A1e", `quick-start-lambda:smoke="${smokeScript}" does not run the smoke script`);
   } else {
     pass("A1e", "root package.json exposes `quick-start-lambda:smoke`");

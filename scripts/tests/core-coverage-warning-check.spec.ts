@@ -9,6 +9,7 @@ import {
   parseBaselineContent,
   parseCoreCoverageThresholds,
   parseCoreCoveragePackageFilters,
+  resolveCoreCoveragePackageFilters,
   parseStringArrayExport,
   validateBaselineEntries,
 } from "../core-coverage-warning-check.mts";
@@ -64,6 +65,24 @@ describe("core-coverage-warning-check.mts", () => {
     );
 
     expect(packages).toEqual(["@croco/framework-context", "create-croco-app"]);
+  });
+
+  it("resolves core coverage filters through the authoritative dispatcher", () => {
+    const packages = resolveCoreCoveragePackageFilters(
+      "pnpm --filter @croco/problems-core build && node --experimental-strip-types scripts/verification-command.mts --id core-coverage",
+    );
+
+    expect(packages).toContain("@croco/framework-context");
+    expect(packages).toContain("create-croco-app");
+    expect(packages).not.toContain("@croco/tenant-core");
+  });
+
+  it("rejects a dispatcher whose command has no core coverage filters", () => {
+    expect(() =>
+      resolveCoreCoveragePackageFilters(
+        "pnpm --filter @croco/problems-core build && node --experimental-strip-types scripts/verification-command.mts --id first-success",
+      ),
+    ).toThrow("failed to read core coverage package filters");
   });
 
   it("parses the vitest core coverage threshold package export", () => {

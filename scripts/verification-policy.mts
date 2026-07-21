@@ -56,6 +56,9 @@ const ROOT_SCRIPT_RECOVERY = {
   "static-misuse:check": "Fix the reported source misuse",
   "strict-contract-typecheck": "Fix the reported strict contract diagnostic",
   typecheck: "Fix the reported TypeScript diagnostics",
+  "verify:publish": "Fix the failing publish-profile command",
+  "verify:repo": "Fix the failing repository-profile command",
+  "verify:spine": "Fix the failing spine-profile command",
   "verification-policy:check": "Guard or classify the reported verification path",
 } as const;
 
@@ -68,7 +71,9 @@ export const ROOT_VERIFICATION_POLICY = Object.fromEntries(
       nonmutationEvidence:
         name === "docs:api:check"
           ? "Generation, sanitization, and formatting run in an isolated temporary workspace"
-          : "The authoritative workflow invocation or root audit runs through tracked-files:guard",
+          : name.startsWith("verify:") || name === "check"
+            ? "The shared verification manifest guards mutation-prone leaf commands at their authoritative definition"
+            : "The authoritative workflow invocation or root audit runs through tracked-files:guard",
       recoveryCommand,
     } satisfies VerificationPolicy,
   ]),
@@ -259,6 +264,9 @@ export function classifyVerificationPath(path: VerificationPath): VerificationPo
 
 function isAllowedWorkflowInvocation(path: VerificationPath): boolean {
   if (path.name === "publish:--dry-run") return true;
+  if (["verify:publish", "verify:repo", "verify:spine"].includes(path.name)) {
+    return path.command === `pnpm ${path.name}` || path.command.startsWith(`pnpm ${path.name} `);
+  }
   if (["audit:read-only", "docs:api:check", "verification-policy:check"].includes(path.name))
     return path.command === `pnpm ${path.name}`;
   return (
