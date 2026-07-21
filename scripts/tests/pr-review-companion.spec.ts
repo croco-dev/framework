@@ -247,6 +247,7 @@ describe("pr-review-companion.mts", () => {
     expect(rootPackageJson.scripts?.["pr-review-companion"]).toBe(
       "node --experimental-strip-types scripts/pr-review-companion.mts",
     );
+    expect(workflow).toContain("timeout-minutes: 30");
     expect(workflow).toContain("pnpm pr-review-companion --");
     expect(workflow).toContain("--run-required-checks --github-annotations");
     expect(workflow).toContain(
