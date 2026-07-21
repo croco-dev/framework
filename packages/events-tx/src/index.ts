@@ -3,10 +3,17 @@
  */
 export {
   InboxClaimConflictProblem,
+  InvalidTransactionalEventConfigurationProblem,
   OutboxPublishExhaustedProblem,
   OutboxStorageProblem,
   OutboxTransactionRequiredProblem,
   TransactionStateProblem,
+} from "./libs/problems/EventsTxProblems";
+
+export type {
+  InvalidTransactionalEventConfigurationProblemOptions,
+  TransactionalEventConfigurationConstraint,
+  TransactionalEventConfigurationField,
 } from "./libs/problems/EventsTxProblems";
 
 /**

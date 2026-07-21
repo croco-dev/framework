@@ -8,7 +8,6 @@ onlyBuiltDependencies:
   - better-sqlite3
 
 overrides:
-  "@changesets/parse>js-yaml": 4.3.0
   "@clerk/shared": 3.47.7
   "@hono/node-server": 1.19.10
   "@opentelemetry/auto-instrumentations-node": 0.76.0
@@ -21,7 +20,7 @@ overrides:
   "@croco/frontend-vite>vite": 6.4.3
   anymatch>picomatch: 2.3.2
   astro>vite: 7.3.5
-  axios: 1.18.0
+  axios: 1.18.1
   better-auth>next: 16.2.3
   better-auth>vitest: 4.1.8
   defu: 6.1.7
@@ -30,10 +29,11 @@ overrides:
   flatted: 3.4.2
   glob: 11.1.0
   h3: 1.15.6
+  js-yaml@>=3.0.0 <3.15.0: 3.15.0
+  js-yaml@>=4.0.0 <4.3.0: 4.3.0
   js-cookie: 3.0.8
   kysely: 0.28.17
   lodash: 4.18.1
-  "minimatch@9.0.7>brace-expansion": 5.0.7
   miniflare>undici: 7.24.0
   path-to-regexp: 0.1.13
   picomatch: 4.0.4
@@ -41,9 +41,10 @@ overrides:
   linkify-it: 5.0.2
   openai>ws: 8.21.0
   protobufjs: 7.6.1
-  read-yaml-file>js-yaml: 3.15.0
   rollup: 4.59.0
   svgo: 4.0.1
+  brace-expansion@>=2.0.0 <2.1.2: 2.1.2
+  brace-expansion@>=3.0.0 <5.0.7: 5.0.7
   typedoc>minimatch: 9.0.7
   validator: 13.15.22
   vitest>vite: 7.3.5

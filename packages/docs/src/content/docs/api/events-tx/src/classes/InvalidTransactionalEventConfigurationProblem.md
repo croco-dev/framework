@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "ImpersonationTargetNotFoundProblem"
+title: "InvalidTransactionalEventConfigurationProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Raised when a public transactional event option violates its declared boundary.
 
 ## Extends
 
@@ -15,17 +15,17 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new ImpersonationTargetNotFoundProblem**(`targetUserId`): `ImpersonationTargetNotFoundProblem`
+> **new InvalidTransactionalEventConfigurationProblem**(`options`): `InvalidTransactionalEventConfigurationProblem`
 
 #### Parameters
 
-##### targetUserId
+##### options
 
-`string`
+[`InvalidTransactionalEventConfigurationProblemOptions`](/api/events-tx/src/type-aliases/invalidtransactionaleventconfigurationproblemoptions/)
 
 #### Returns
 
-`ImpersonationTargetNotFoundProblem`
+`InvalidTransactionalEventConfigurationProblem`
 
 #### Overrides
 
@@ -35,7 +35,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### category
 
-> `readonly` **category**: [`NotFound`](/api/problems-core/src/enumerations/problemcategory/#notfound) = `ProblemCategory.NotFound`
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
 #### Overrides
 
@@ -55,11 +55,17 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### code
 
-> `readonly` **code**: `"IMPERSONATION_TARGET_NOT_FOUND"` = `"IMPERSONATION_TARGET_NOT_FOUND"`
+> `readonly` **code**: `"events-tx/configuration-invalid"` = `"events-tx/configuration-invalid"`
 
 #### Overrides
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
+
+***
+
+### constraint
+
+> `readonly` **constraint**: [`TransactionalEventConfigurationConstraint`](/api/events-tx/src/type-aliases/transactionaleventconfigurationconstraint/)
 
 ***
 
@@ -80,6 +86,12 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
+
+***
+
+### field
+
+> `readonly` **field**: [`TransactionalEventConfigurationField`](/api/events-tx/src/type-aliases/transactionaleventconfigurationfield/)
 
 ***
 
@@ -110,6 +122,12 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`name`](/api/problems-core/src/classes/problem/#name)
+
+***
+
+### receivedValue
+
+> `readonly` **receivedValue**: `string` \| `number`
 
 ***
 

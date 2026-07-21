@@ -20,7 +20,7 @@ Setting enabled to true currently rejects TelemetryRuntime initialization.
 
 Requests metrics collection. Must remain false until a runtime provider is available.
 
----
+***
 
 ### exporterHeaders?
 
@@ -28,7 +28,7 @@ Requests metrics collection. Must remain false until a runtime provider is avail
 
 Additional HTTP headers for the exporter
 
----
+***
 
 ### exporterUrl?
 
@@ -36,7 +36,7 @@ Additional HTTP headers for the exporter
 
 OTLP metrics exporter URL
 
----
+***
 
 ### exportIntervalMillis?
 
@@ -44,7 +44,7 @@ OTLP metrics exporter URL
 
 Export interval in milliseconds
 
----
+***
 
 ### exportTimeoutMillis?
 
