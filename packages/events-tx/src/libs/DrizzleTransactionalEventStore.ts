@@ -80,7 +80,66 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function parseJson(value: unknown): unknown {
+type StorageRowKind = "outbox" | "inbox";
+
+type StorageRowContext = {
+  kind: StorageRowKind;
+  identity: string;
+};
+
+const OUTBOX_STATUSES = new Set([
+  "pending",
+  "publishing",
+  "published",
+  "retrying",
+  "poisoned",
+  "dead_lettered",
+]);
+const INBOX_STATUSES = new Set(["processing", "processed", "failed"]);
+
+function safeIdentityPart(value: unknown): string | undefined {
+  return typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.length <= 255 &&
+    ![...value].some((character) => {
+      const codePoint = character.codePointAt(0);
+      return codePoint !== undefined && (codePoint <= 31 || codePoint === 127);
+    })
+    ? value
+    : undefined;
+}
+
+function storageRowContext(kind: StorageRowKind, row: unknown): StorageRowContext {
+  if (!isRecord(row)) {
+    return { kind, identity: "<unknown>" };
+  }
+
+  if (kind === "outbox") {
+    return { kind, identity: safeIdentityPart(row["id"]) ?? "<unknown>" };
+  }
+
+  const consumerId = safeIdentityPart(row["consumerId"]);
+  const inboxKey = safeIdentityPart(row["inboxKey"]);
+  return {
+    kind,
+    identity: consumerId && inboxKey ? `${consumerId}:${inboxKey}` : "<unknown>",
+  };
+}
+
+function invalidStorageField(context: StorageRowContext, field: string, expected: string): never {
+  throw new OutboxStorageProblem(
+    `Persisted ${context.kind} row '${context.identity}' has invalid field '${field}'; expected ${expected}. Inspect and repair or remove the corrupt row before retrying.`,
+  );
+}
+
+function requireRow(value: unknown, kind: StorageRowKind): Record<string, unknown> {
+  if (!isRecord(value)) {
+    invalidStorageField(storageRowContext(kind, value), "row", "a record object");
+  }
+  return value;
+}
+
+function parseJsonField(value: unknown, context: StorageRowContext, field: string): unknown {
   if (typeof value !== "string") {
     return value;
   }
@@ -88,61 +147,181 @@ function parseJson(value: unknown): unknown {
   try {
     return JSON.parse(value) as unknown;
   } catch {
-    return value;
+    return invalidStorageField(
+      context,
+      field,
+      "valid serialized JSON or its driver-native representation",
+    );
   }
 }
 
-function toRecord(value: unknown): Record<string, unknown> {
-  const parsed = parseJson(value);
-  return isRecord(parsed) ? parsed : {};
-}
-
-function toDate(value: unknown): Date {
-  if (value instanceof Date) {
-    return new Date(value.getTime());
+function requireRecordField(
+  value: unknown,
+  context: StorageRowContext,
+  field: string,
+): Record<string, unknown> {
+  const parsed = parseJsonField(value, context, field);
+  if (!isRecord(parsed)) {
+    return invalidStorageField(context, field, "a JSON object");
   }
-
-  return new Date(String(value));
+  return parsed;
 }
 
-function toOptionalDate(value: unknown): Date | undefined {
+function requireNonEmptyString(value: unknown, context: StorageRowContext, field: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return invalidStorageField(context, field, "a non-empty string");
+  }
+  return value;
+}
+
+function requireString(value: unknown, context: StorageRowContext, field: string): string {
+  if (typeof value !== "string") {
+    return invalidStorageField(context, field, "a string");
+  }
+  return value;
+}
+
+function optionalNonEmptyString(
+  value: unknown,
+  context: StorageRowContext,
+  field: string,
+): string | undefined {
   if (value === null || value === undefined) {
     return undefined;
   }
-
-  return toDate(value);
+  return requireNonEmptyString(value, context, field);
 }
 
-function toOptionalString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function toError(value: unknown): TransactionalEventError | undefined {
-  const parsed = parseJson(value);
-  if (!isRecord(parsed)) {
+function optionalString(
+  value: unknown,
+  context: StorageRowContext,
+  field: string,
+): string | undefined {
+  if (value === null || value === undefined) {
     return undefined;
   }
+  return requireString(value, context, field);
+}
 
+function requireCount(
+  value: unknown,
+  context: StorageRowContext,
+  field: string,
+  minimum: number,
+): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < minimum) {
+    return invalidStorageField(
+      context,
+      field,
+      `a finite integer greater than or equal to ${minimum}`,
+    );
+  }
+  return value;
+}
+
+function requireDate(value: unknown, context: StorageRowContext, field: string): Date {
+  if (!(value instanceof Date) && typeof value !== "string") {
+    return invalidStorageField(context, field, "a valid Date or date string");
+  }
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return invalidStorageField(context, field, "a valid Date or date string");
+  }
+  return date;
+}
+
+function optionalDate(value: unknown, context: StorageRowContext, field: string): Date | undefined {
+  return value === null || value === undefined ? undefined : requireDate(value, context, field);
+}
+
+function requireStatus<T extends string>(
+  value: unknown,
+  context: StorageRowContext,
+  field: string,
+  statuses: ReadonlySet<string>,
+): T {
+  if (typeof value !== "string" || !statuses.has(value)) {
+    return invalidStorageField(context, field, `one of ${[...statuses].join(", ")}`);
+  }
+  return value as T;
+}
+
+function optionalError(
+  value: unknown,
+  context: StorageRowContext,
+  field: string,
+): TransactionalEventError | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  const parsed = requireRecordField(value, context, field);
+  const name = requireString(parsed["name"], context, `${field}.name`);
+  const message = requireString(parsed["message"], context, `${field}.message`);
+  const stack = optionalString(parsed["stack"], context, `${field}.stack`);
+  const code = optionalString(parsed["code"], context, `${field}.code`);
   return {
-    name: typeof parsed.name === "string" ? parsed.name : "Error",
-    message: typeof parsed.message === "string" ? parsed.message : "Unknown error",
-    ...(typeof parsed.stack === "string" ? { stack: parsed.stack } : {}),
-    ...(typeof parsed.code === "string" ? { code: parsed.code } : {}),
+    name,
+    message,
+    ...(stack !== undefined ? { stack } : {}),
+    ...(code !== undefined ? { code } : {}),
   };
 }
 
-function toDiagnostics(value: unknown): TransactionalEventDiagnostic[] {
-  const parsed = parseJson(value);
+function requireDiagnostics(
+  value: unknown,
+  context: StorageRowContext,
+  field: string,
+): TransactionalEventDiagnostic[] {
+  const parsed = parseJsonField(value, context, field);
   if (!Array.isArray(parsed)) {
-    return [];
+    return invalidStorageField(context, field, "a JSON array of diagnostic objects");
   }
+  return parsed.map((value, index) => {
+    const itemField = `${field}[${index}]`;
+    if (!isRecord(value)) {
+      return invalidStorageField(context, itemField, "a diagnostic object");
+    }
+    const code = requireString(value["code"], context, `${itemField}.code`);
+    const message = requireString(value["message"], context, `${itemField}.message`);
+    const at = requireDate(value["at"], context, `${itemField}.at`);
+    if (value["details"] !== undefined && !isRecord(value["details"])) {
+      return invalidStorageField(context, `${itemField}.details`, "a JSON object when present");
+    }
+    return {
+      code,
+      message,
+      at,
+      ...(value["details"] ? { details: value["details"] } : {}),
+    };
+  });
+}
 
-  return parsed.filter(isRecord).map((diagnostic) => ({
-    code: typeof diagnostic.code === "string" ? diagnostic.code : "events-tx/unknown-diagnostic",
-    message: typeof diagnostic.message === "string" ? diagnostic.message : "Unknown diagnostic",
-    at: toDate(diagnostic.at),
-    ...(isRecord(diagnostic.details) ? { details: diagnostic.details } : {}),
-  }));
+function optionalTraceContext(
+  value: unknown,
+  context: StorageRowContext,
+): EventTraceContext | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  const parsed = requireRecordField(value, context, "traceContext");
+  if (parsed["traceId"] !== undefined && typeof parsed["traceId"] !== "string") {
+    return invalidStorageField(context, "traceContext.traceId", "a string when present");
+  }
+  if (parsed["spanId"] !== undefined && typeof parsed["spanId"] !== "string") {
+    return invalidStorageField(context, "traceContext.spanId", "a string when present");
+  }
+  if (parsed["traceFlags"] !== undefined && typeof parsed["traceFlags"] !== "number") {
+    return invalidStorageField(context, "traceContext.traceFlags", "a number when present");
+  }
+  if (parsed["isValid"] !== undefined && typeof parsed["isValid"] !== "boolean") {
+    return invalidStorageField(context, "traceContext.isValid", "a boolean when present");
+  }
+  return {
+    ...(typeof parsed["traceId"] === "string" ? { traceId: parsed["traceId"] } : {}),
+    ...(typeof parsed["spanId"] === "string" ? { spanId: parsed["spanId"] } : {}),
+    ...(typeof parsed["traceFlags"] === "number" ? { traceFlags: parsed["traceFlags"] } : {}),
+    ...(typeof parsed["isValid"] === "boolean" ? { isValid: parsed["isValid"] } : {}),
+  };
 }
 
 function appendDiagnostic(
@@ -150,10 +329,6 @@ function appendDiagnostic(
   diagnostic: TransactionalEventDiagnostic,
 ): TransactionalEventDiagnostic[] {
   return [...diagnostics, diagnostic];
-}
-
-function outboxId(row: Record<string, unknown>): string {
-  return String(row.id);
 }
 
 /**
@@ -208,7 +383,7 @@ export class DrizzleTransactionalEventStore<
       .onConflictDoNothing({ target: this.outbox.idempotencyKey })
       .returning();
 
-    if (inserted && isRecord(inserted)) {
+    if (inserted !== undefined) {
       return this.mapOutboxRow(inserted);
     }
 
@@ -229,7 +404,7 @@ export class DrizzleTransactionalEventStore<
       .from(this.outbox)
       .where(eq(this.outbox.id, id))
       .limit(1);
-    return isRecord(row) ? this.mapOutboxRow(row) : null;
+    return row === undefined ? null : this.mapOutboxRow(row);
   }
 
   async findOutboxByIdempotencyKey(
@@ -241,7 +416,7 @@ export class DrizzleTransactionalEventStore<
       .from(this.outbox)
       .where(eq(this.outbox.idempotencyKey, idempotencyKey))
       .limit(1);
-    return isRecord(row) ? this.mapOutboxRow(row) : null;
+    return row === undefined ? null : this.mapOutboxRow(row);
   }
 
   async claimOutboxBatch(
@@ -259,10 +434,6 @@ export class DrizzleTransactionalEventStore<
     const claimed: TransactionalOutboxMessage[] = [];
 
     for (const row of rows) {
-      if (!isRecord(row)) {
-        continue;
-      }
-
       const current = this.mapOutboxRow(row);
       const [updated] = await this.client(context)
         .update(this.outbox)
@@ -286,7 +457,7 @@ export class DrizzleTransactionalEventStore<
         .where(and(eq(this.outbox.id, current.id), this.outboxClaimableCondition(options.now)))
         .returning();
 
-      if (isRecord(updated)) {
+      if (updated !== undefined) {
         claimed.push(this.mapOutboxRow(updated));
       }
     }
@@ -321,7 +492,7 @@ export class DrizzleTransactionalEventStore<
       })
       .where(this.activeClaimCondition(input.id, input.expectedAttempts))
       .returning();
-    return isRecord(updated) ? this.mapOutboxRow(updated) : null;
+    return updated === undefined ? null : this.mapOutboxRow(updated);
   }
 
   async markOutboxFailed(
@@ -361,7 +532,7 @@ export class DrizzleTransactionalEventStore<
       })
       .where(this.activeClaimCondition(input.id, input.expectedAttempts))
       .returning();
-    return isRecord(updated) ? this.mapOutboxRow(updated) : null;
+    return updated === undefined ? null : this.mapOutboxRow(updated);
   }
 
   async markOutboxDeadLettered(
@@ -385,7 +556,7 @@ export class DrizzleTransactionalEventStore<
       })
       .where(this.poisonedClaimCondition(input.id, input.expectedAttempts))
       .returning();
-    return isRecord(updated) ? this.mapOutboxRow(updated) : null;
+    return updated === undefined ? null : this.mapOutboxRow(updated);
   }
 
   async listOutboxMessages(
@@ -398,7 +569,7 @@ export class DrizzleTransactionalEventStore<
       .where(options.status ? eq(this.outbox.status, options.status) : undefined)
       .orderBy(asc(this.outbox.createdAt))
       .limit(options.limit ?? 100);
-    return rows.filter(isRecord).map((row) => this.mapOutboxRow(row));
+    return rows.map((row) => this.mapOutboxRow(row));
   }
 
   async startInboxProcessing(
@@ -431,7 +602,7 @@ export class DrizzleTransactionalEventStore<
         })
         .where(this.failedInboxCondition(input.consumerId, input.inboxKey))
         .returning();
-      return isRecord(updated)
+      return updated !== undefined
         ? {
             status: "started",
             record: this.mapInboxRow(updated),
@@ -472,7 +643,7 @@ export class DrizzleTransactionalEventStore<
       .onConflictDoNothing({ target: [this.inbox.consumerId, this.inbox.inboxKey] })
       .returning();
 
-    if (!inserted || !isRecord(inserted)) {
+    if (inserted === undefined) {
       const duplicated = await this.findInboxRecord(input.consumerId, input.inboxKey, context);
       if (!duplicated) {
         throw new OutboxStorageProblem(
@@ -505,7 +676,7 @@ export class DrizzleTransactionalEventStore<
         .where(this.failedInboxCondition(input.consumerId, input.inboxKey))
         .returning();
 
-      return isRecord(retrying)
+      return retrying !== undefined
         ? {
             status: "started",
             record: this.mapInboxRow(retrying),
@@ -518,7 +689,7 @@ export class DrizzleTransactionalEventStore<
 
     return {
       status: "started",
-      record: this.requireMappedInbox(inserted, input.consumerId, input.inboxKey),
+      record: this.mapInboxRow(inserted),
     };
   }
 
@@ -541,7 +712,7 @@ export class DrizzleTransactionalEventStore<
         this.activeInboxClaimCondition(input.consumerId, input.inboxKey, input.expectedAttempts),
       )
       .returning();
-    return isRecord(updated)
+    return updated !== undefined
       ? this.mapInboxRow(updated)
       : this.throwInboxClaimConflict(input, context);
   }
@@ -567,7 +738,7 @@ export class DrizzleTransactionalEventStore<
         this.activeInboxClaimCondition(input.consumerId, input.inboxKey, input.expectedAttempts),
       )
       .returning();
-    return isRecord(updated)
+    return updated !== undefined
       ? this.mapInboxRow(updated)
       : this.throwInboxClaimConflict(input, context);
   }
@@ -582,7 +753,7 @@ export class DrizzleTransactionalEventStore<
       .from(this.inbox)
       .where(this.inboxStorageCondition(consumerId, inboxKey))
       .limit(1);
-    return isRecord(row) ? this.mapInboxRow(row) : null;
+    return row === undefined ? null : this.mapInboxRow(row);
   }
 
   async listInboxRecords(
@@ -603,7 +774,7 @@ export class DrizzleTransactionalEventStore<
       .where(whereClause)
       .orderBy(asc(this.inbox.createdAt))
       .limit(options.limit ?? 100);
-    return rows.filter(isRecord).map((row) => this.mapInboxRow(row));
+    return rows.map((row) => this.mapInboxRow(row));
   }
 
   private client(
@@ -700,94 +871,77 @@ export class DrizzleTransactionalEventStore<
     );
   }
 
-  private requireMappedOutbox(row: unknown, id: string): TransactionalOutboxMessage {
-    if (!isRecord(row)) {
-      throw new OutboxStorageProblem(`Outbox message '${id}' was not found.`);
-    }
-    return this.mapOutboxRow(row);
-  }
-
   private isActiveClaim(message: TransactionalOutboxMessage, expectedAttempts: number): boolean {
     return message.status === "publishing" && message.attempts === expectedAttempts;
   }
 
-  private requireMappedInbox(
-    row: unknown,
-    consumerId: string,
-    inboxKey: string,
-  ): TransactionalInboxRecord {
-    if (!isRecord(row)) {
-      throw new OutboxStorageProblem(`Inbox record '${consumerId}:${inboxKey}' was not found.`);
-    }
-    return this.mapInboxRow(row);
-  }
-
-  private mapOutboxRow(row: Record<string, unknown>): TransactionalOutboxMessage {
+  private mapOutboxRow(value: unknown): TransactionalOutboxMessage {
+    const row = requireRow(value, "outbox");
+    const context = storageRowContext("outbox", row);
+    const aggregateId = optionalNonEmptyString(row["aggregateId"], context, "aggregateId");
+    const traceContext = optionalTraceContext(row["traceContext"], context);
+    const lockedUntil = optionalDate(row["lockedUntil"], context, "lockedUntil");
+    const publishedAt = optionalDate(row["publishedAt"], context, "publishedAt");
+    const lastError = optionalError(row["lastError"], context, "lastError");
+    const deadLetteredAt = optionalDate(row["deadLetteredAt"], context, "deadLetteredAt");
+    const deadLetterReason = optionalString(row["deadLetterReason"], context, "deadLetterReason");
     return {
-      id: outboxId(row),
-      eventId: String(row.eventId),
-      eventType: String(row.eventType),
-      ...(toOptionalString(row.aggregateId)
-        ? { aggregateId: toOptionalString(row.aggregateId) }
-        : {}),
-      idempotencyKey: String(row.idempotencyKey),
-      payload: toRecord(row.payload),
-      metadata: toRecord(row.metadata),
-      ...(this.toTraceContext(row.traceContext)
-        ? { traceContext: this.toTraceContext(row.traceContext) }
-        : {}),
-      attempts: Number(row.attempts ?? 0),
-      maxAttempts: Number(row.maxAttempts ?? 1),
-      status: String(row.status) as TransactionalOutboxMessage["status"],
-      visibleAt: toDate(row.visibleAt),
-      occurredAt: toDate(row.occurredAt),
-      createdAt: toDate(row.createdAt),
-      updatedAt: toDate(row.updatedAt),
-      ...(toOptionalDate(row.lockedUntil) ? { lockedUntil: toOptionalDate(row.lockedUntil) } : {}),
-      ...(toOptionalDate(row.publishedAt) ? { publishedAt: toOptionalDate(row.publishedAt) } : {}),
-      lastError: toError(row.lastError),
-      ...(toOptionalDate(row.deadLetteredAt)
-        ? { deadLetteredAt: toOptionalDate(row.deadLetteredAt) }
-        : {}),
-      ...(toOptionalString(row.deadLetterReason)
-        ? { deadLetterReason: toOptionalString(row.deadLetterReason) }
-        : {}),
-      diagnostics: toDiagnostics(row.diagnostics),
+      id: requireNonEmptyString(row["id"], context, "id"),
+      eventId: requireNonEmptyString(row["eventId"], context, "eventId"),
+      eventType: requireNonEmptyString(row["eventType"], context, "eventType"),
+      ...(aggregateId ? { aggregateId } : {}),
+      idempotencyKey: requireNonEmptyString(row["idempotencyKey"], context, "idempotencyKey"),
+      payload: requireRecordField(row["payload"], context, "payload"),
+      metadata: requireRecordField(row["metadata"], context, "metadata"),
+      ...(traceContext ? { traceContext } : {}),
+      attempts: requireCount(row["attempts"], context, "attempts", 0),
+      maxAttempts: requireCount(row["maxAttempts"], context, "maxAttempts", 1),
+      status: requireStatus<TransactionalOutboxMessage["status"]>(
+        row["status"],
+        context,
+        "status",
+        OUTBOX_STATUSES,
+      ),
+      visibleAt: requireDate(row["visibleAt"], context, "visibleAt"),
+      occurredAt: requireDate(row["occurredAt"], context, "occurredAt"),
+      createdAt: requireDate(row["createdAt"], context, "createdAt"),
+      updatedAt: requireDate(row["updatedAt"], context, "updatedAt"),
+      ...(lockedUntil ? { lockedUntil } : {}),
+      ...(publishedAt ? { publishedAt } : {}),
+      ...(lastError !== undefined ? { lastError } : {}),
+      ...(deadLetteredAt ? { deadLetteredAt } : {}),
+      ...(deadLetterReason !== undefined ? { deadLetterReason } : {}),
+      diagnostics: requireDiagnostics(row["diagnostics"], context, "diagnostics"),
     };
   }
 
-  private mapInboxRow(row: Record<string, unknown>): TransactionalInboxRecord {
+  private mapInboxRow(value: unknown): TransactionalInboxRecord {
+    const row = requireRow(value, "inbox");
+    const context = storageRowContext("inbox", row);
+    const processedAt = optionalDate(row["processedAt"], context, "processedAt");
+    const failedAt = optionalDate(row["failedAt"], context, "failedAt");
+    const lastError = optionalError(row["lastError"], context, "lastError");
+    const failureReason = optionalString(row["failureReason"], context, "failureReason");
     return {
-      consumerId: String(row.consumerId),
-      messageId: String(row.messageId),
-      inboxKey: String(row.inboxKey),
-      eventType: String(row.eventType),
-      status: String(row.status) as TransactionalInboxRecord["status"],
-      attempts: Number(row.attempts ?? 0),
-      createdAt: toDate(row.createdAt),
-      updatedAt: toDate(row.updatedAt),
-      ...(toOptionalDate(row.processedAt) ? { processedAt: toOptionalDate(row.processedAt) } : {}),
-      ...(toOptionalDate(row.failedAt) ? { failedAt: toOptionalDate(row.failedAt) } : {}),
-      lastError: toError(row.lastError),
-      ...(toOptionalString(row.failureReason)
-        ? { failureReason: toOptionalString(row.failureReason) }
-        : {}),
-      metadata: toRecord(row.metadata),
-      diagnostics: toDiagnostics(row.diagnostics),
-    };
-  }
-
-  private toTraceContext(value: unknown): EventTraceContext | undefined {
-    const parsed = parseJson(value);
-    if (!isRecord(parsed)) {
-      return undefined;
-    }
-
-    return {
-      ...(typeof parsed.traceId === "string" ? { traceId: parsed.traceId } : {}),
-      ...(typeof parsed.spanId === "string" ? { spanId: parsed.spanId } : {}),
-      ...(typeof parsed.traceFlags === "number" ? { traceFlags: parsed.traceFlags } : {}),
-      ...(typeof parsed.isValid === "boolean" ? { isValid: parsed.isValid } : {}),
+      consumerId: requireNonEmptyString(row["consumerId"], context, "consumerId"),
+      messageId: requireNonEmptyString(row["messageId"], context, "messageId"),
+      inboxKey: requireNonEmptyString(row["inboxKey"], context, "inboxKey"),
+      eventType: requireNonEmptyString(row["eventType"], context, "eventType"),
+      status: requireStatus<TransactionalInboxRecord["status"]>(
+        row["status"],
+        context,
+        "status",
+        INBOX_STATUSES,
+      ),
+      attempts: requireCount(row["attempts"], context, "attempts", 0),
+      createdAt: requireDate(row["createdAt"], context, "createdAt"),
+      updatedAt: requireDate(row["updatedAt"], context, "updatedAt"),
+      ...(processedAt ? { processedAt } : {}),
+      ...(failedAt ? { failedAt } : {}),
+      ...(lastError !== undefined ? { lastError } : {}),
+      ...(failureReason !== undefined ? { failureReason } : {}),
+      metadata: requireRecordField(row["metadata"], context, "metadata"),
+      diagnostics: requireDiagnostics(row["diagnostics"], context, "diagnostics"),
     };
   }
 }

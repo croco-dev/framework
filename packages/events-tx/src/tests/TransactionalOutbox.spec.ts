@@ -1801,8 +1801,8 @@ describe("DrizzleTransactionalEventStore", () => {
               traceFlags: 1,
               isValid: true,
             }),
-            attempts: undefined,
-            maxAttempts: undefined,
+            attempts: 0,
+            maxAttempts: 1,
             lockedUntil: "2026-01-01T00:00:10.000Z",
             publishedAt: "2026-01-01T00:00:11.000Z",
             lastError: JSON.stringify({
@@ -1823,6 +1823,8 @@ describe("DrizzleTransactionalEventStore", () => {
                 },
               },
               {
+                code: "events-tx/test-two",
+                message: "second diagnostic",
                 at: "2026-01-01T00:00:01.000Z",
               },
             ]),
@@ -1868,10 +1870,116 @@ describe("DrizzleTransactionalEventStore", () => {
           },
         },
         {
-          code: "events-tx/unknown-diagnostic",
-          message: "Unknown diagnostic",
+          code: "events-tx/test-two",
+          message: "second diagnostic",
         },
       ],
+    });
+  });
+
+  it("accepts public empty-string error and diagnostic fields from a failure update", async () => {
+    const now = new Date("2026-01-01T00:00:01.000Z");
+    const nextVisibleAt = new Date("2026-01-01T00:00:02.000Z");
+    const diagnostic = { code: "", message: "", at: now };
+    const db = createMockDrizzleDb({
+      selectResults: [[createOutboxRow({ status: "publishing", attempts: 1 })]],
+      updateResults: [
+        [
+          createOutboxRow({
+            status: "retrying",
+            attempts: 1,
+            visibleAt: nextVisibleAt,
+            lastError: { name: "Error", message: "", stack: "", code: "" },
+            diagnostics: [diagnostic],
+          }),
+        ],
+      ],
+    });
+    const store = new DrizzleTransactionalEventStore({ db });
+
+    await expect(
+      store.markOutboxFailed({
+        id: "message-1",
+        expectedAttempts: 1,
+        now,
+        nextVisibleAt,
+        error: { name: "Error", message: "", stack: "", code: "" },
+        diagnostic,
+      }),
+    ).resolves.toMatchObject({
+      status: "retrying",
+      lastError: { name: "Error", message: "", stack: "", code: "" },
+      diagnostics: [diagnostic],
+    });
+  });
+
+  it.each([
+    ["id", { id: undefined }],
+    ["payload", { payload: '{"secret":"do-not-leak"' }],
+    ["metadata", { metadata: [] }],
+    ["status", { status: "unknown" }],
+    ["attempts", { attempts: Number.NaN }],
+    ["maxAttempts", { maxAttempts: 0 }],
+    ["visibleAt", { visibleAt: "not-a-date" }],
+    ["lastError.message", { lastError: { name: "Error" } }],
+    ["diagnostics[0].code", { diagnostics: [{ message: "bad", at: new Date() }] }],
+  ])("rejects a persisted outbox row with an invalid %s field", async (field, overrides) => {
+    const row = createOutboxRow(overrides);
+    const db = createMockDrizzleDb({ selectResults: [[row], [row]] });
+    const store = new DrizzleTransactionalEventStore({ db });
+
+    await expect(store.findOutboxById("message-1")).rejects.toMatchObject({
+      code: "events-tx/storage-error",
+      detail: expect.stringContaining(`field '${field}'`),
+    });
+    await expect(store.findOutboxById("message-1")).rejects.not.toThrow("do-not-leak");
+  });
+
+  it.each([
+    ["consumerId", { consumerId: "" }],
+    ["messageId", { messageId: undefined }],
+    ["status", { status: "unknown" }],
+    ["attempts", { attempts: Number.POSITIVE_INFINITY }],
+    ["createdAt", { createdAt: "not-a-date" }],
+    ["metadata", { metadata: "not-json" }],
+    ["lastError.name", { lastError: { message: "bad" } }],
+    ["diagnostics", { diagnostics: {} }],
+  ])("rejects a persisted inbox row with an invalid %s field", async (field, overrides) => {
+    const db = createMockDrizzleDb({
+      selectResults: [[createInboxRow(overrides)]],
+    });
+    const store = new DrizzleTransactionalEventStore({ db });
+
+    await expect(store.findInboxRecord("ledger-projection", "credit-acct-1")).rejects.toMatchObject(
+      {
+        code: "events-tx/storage-error",
+        detail: expect.stringContaining(`field '${field}'`),
+      },
+    );
+  });
+
+  it("accepts serialized inbox JSON and date fields", async () => {
+    const db = createMockDrizzleDb({
+      selectResults: [
+        [
+          createInboxRow({
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:01.000Z",
+            metadata: JSON.stringify({ source: "serialized" }),
+            diagnostics: JSON.stringify([]),
+          }),
+        ],
+      ],
+    });
+    const store = new DrizzleTransactionalEventStore({ db });
+
+    await expect(
+      store.findInboxRecord("ledger-projection", "credit-acct-1"),
+    ).resolves.toMatchObject({
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:01.000Z"),
+      metadata: { source: "serialized" },
+      diagnostics: [],
     });
   });
 });
@@ -2019,11 +2127,11 @@ function createStatefulInboxProxyDb(overrides: Partial<Record<string, unknown>> 
     record = {
       ...record,
       status: nextStatus,
-      updatedAt: params[2],
+      updatedAt: new Date(String(params[1])),
       ...(nextStatus === "processed"
-        ? { processedAt: params[1] }
+        ? { processedAt: new Date(String(params[2])) }
         : {
-            failedAt: params[1],
+            failedAt: new Date(String(params[2])),
             lastError: params[3],
             failureReason: params[4],
           }),
