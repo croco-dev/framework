@@ -84,6 +84,7 @@ export {
   createContractGraphSnapshot,
   isContractGraphV1,
   isContractGraphSnapshot,
+  parseContractGraphSnapshot,
   snapshotZodSchema,
   stringifyContractGraphV1,
   stringifyContractGraphSnapshot,

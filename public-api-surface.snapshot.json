@@ -14349,6 +14349,12 @@
           "declarationKind": "function"
         },
         {
+          "name": "parseContractGraphSnapshot",
+          "exportKind": "named",
+          "source": "./libs/ContractGraphSnapshot",
+          "declarationKind": "function"
+        },
+        {
           "name": "parseContractGraphStrictModeFlag",
           "exportKind": "named",
           "source": "./libs/ContractGraphCli",
