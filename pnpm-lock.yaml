@@ -33,7 +33,7 @@ overrides:
   glob: 11.1.0
   h3: 1.15.6
   js-yaml@>=3.0.0 <3.15.0: 3.15.0
-  js-yaml@>=4.0.0 <4.3.0: 5.2.1
+  js-yaml@>=4.0.0 <4.3.0: 4.3.0
   js-cookie: 3.0.8
   kysely: 0.28.17
   lodash: 4.18.1
@@ -8317,8 +8317,8 @@ packages:
     resolution: {integrity: sha512-ttBQIIQPDeLjpPOohtUdXuXUVoA2uIB6fEH9HyJ7234s5mBJ5wTx20njxplLZQgLaOfpmPQA7X2t5AX6tIPbog==}
     hasBin: true
 
-  js-yaml@5.2.1:
-    resolution: {integrity: sha512-zfLtNfQqxVqq3uaTqSkh4x4hZw3KHobGUA0fJUj4wawW8bsQLTVqpHdXSIzidh7o+4lEW36tANuAGdaFx6Zgnw==}
+  js-yaml@4.3.0:
+    resolution: {integrity: sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q==}
     hasBin: true
 
   json-bigint@1.0.0:
@@ -10717,7 +10717,7 @@ snapshots:
     dependencies:
       '@types/hast': 3.0.4
       '@types/mdast': 4.0.4
-      js-yaml: 5.2.1
+      js-yaml: 4.3.0
       picomatch: 4.0.4
       retext-smartypants: 6.2.0
       shiki: 4.2.0
@@ -10793,7 +10793,7 @@ snapshots:
       hast-util-to-string: 3.0.1
       hastscript: 9.0.1
       i18next: 26.3.1(typescript@5.9.3)
-      js-yaml: 5.2.1
+      js-yaml: 4.3.0
       klona: 2.0.6
       magic-string: 0.30.21
       mdast-util-directive: 3.1.0
@@ -11309,7 +11309,7 @@ snapshots:
   '@changesets/parse@0.4.2':
     dependencies:
       '@changesets/types': 6.1.0
-      js-yaml: 5.2.1
+      js-yaml: 4.3.0
 
   '@changesets/pre@2.0.2':
     dependencies:
@@ -13307,7 +13307,7 @@ snapshots:
       colorette: 1.4.0
       https-proxy-agent: 7.0.6
       js-levenshtein: 1.1.6
-      js-yaml: 5.2.1
+      js-yaml: 4.3.0
       minimatch: 5.1.9
       pluralize: 8.0.0
       yaml-ast-parser: 0.0.43
@@ -13322,7 +13322,7 @@ snapshots:
       ajv-formats: 3.0.1(@redocly/ajv@8.18.1)
       colorette: 1.4.0
       js-levenshtein: 1.1.6
-      js-yaml: 5.2.1
+      js-yaml: 4.3.0
       picomatch: 4.0.4
       pluralize: 8.0.0
       yaml-ast-parser: 0.0.43
@@ -14238,7 +14238,7 @@ snapshots:
       github-slugger: 2.0.0
       html-escaper: 3.0.3
       http-cache-semantics: 4.2.0
-      js-yaml: 5.2.1
+      js-yaml: 4.3.0
       jsonc-parser: 3.3.1
       magic-string: 0.30.21
       magicast: 0.5.3
@@ -15829,7 +15829,7 @@ snapshots:
       argparse: 1.0.10
       esprima: 4.0.1
 
-  js-yaml@5.2.1:
+  js-yaml@4.3.0:
     dependencies:
       argparse: 2.0.1
 
@@ -16786,7 +16786,7 @@ snapshots:
       find-up: 8.0.0
       fs-extra: 11.3.3
       jiti: 2.6.1
-      js-yaml: 5.2.1
+      js-yaml: 4.3.0
       remeda: 2.34.0
       string-argv: 0.3.2
       tsconfck: 3.1.6(typescript@5.9.3)
