@@ -9,8 +9,8 @@ title: "LogsConfig"
 
 Configuration for telemetry logs.
 
-Defines how log data is collected and exported.
-Currently disabled by default in Lambda environments.
+Reserved configuration for future log runtime providers.
+Setting enabled to true currently rejects TelemetryRuntime initialization.
 
 ## Properties
 
@@ -18,7 +18,7 @@ Currently disabled by default in Lambda environments.
 
 > `optional` **enabled?**: `boolean`
 
-Whether logs collection is enabled. Default: false
+Requests log collection. Must remain false until a runtime provider is available.
 
 ***
 

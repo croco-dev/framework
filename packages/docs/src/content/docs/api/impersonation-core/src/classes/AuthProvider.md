@@ -37,7 +37,7 @@ title: "AuthProvider"
 
 `Promise`\<[`ImpersonationPrincipal`](/api/impersonation-core/src/type-aliases/impersonationprincipal/) \| `null`\>
 
----
+***
 
 ### targetExists()
 

@@ -41,7 +41,7 @@ title: "FrontendTelemetryBridge"
 
 ### record
 
-> `readonly` **record**: (`event`) => `void`
+> `readonly` **record**: (`event`) => `void` \| `Promise`\<`void`\>
 
 #### Parameters
 
@@ -51,7 +51,7 @@ title: "FrontendTelemetryBridge"
 
 #### Returns
 
-`void`
+`void` \| `Promise`\<`void`\>
 
 ***
 

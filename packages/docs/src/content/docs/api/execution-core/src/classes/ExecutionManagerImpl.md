@@ -8,7 +8,6 @@ title: "ExecutionManagerImpl"
 ExecutionManagerImpl provides lifecycle management for executions.
 
 Features:
-
 - State transition validation
 - Idempotency check via ExecutionStore
 - Timeout handling
@@ -77,7 +76,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`cancel`](/api/execution-core/src/interfaces/executionmanager/#cancel)
 
----
+***
 
 ### checkpoint()
 
@@ -117,7 +116,7 @@ Error if execution not found
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`checkpoint`](/api/execution-core/src/interfaces/executionmanager/#checkpoint)
 
----
+***
 
 ### claimContinuation()
 
@@ -141,7 +140,7 @@ Error if execution not found
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`claimContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#claimcontinuation)
 
----
+***
 
 ### complete()
 
@@ -175,7 +174,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`complete`](/api/execution-core/src/interfaces/executionmanager/#complete)
 
----
+***
 
 ### completeContinuation()
 
@@ -203,7 +202,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`completeContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#completecontinuation)
 
----
+***
 
 ### confirmContinuationPublication()
 
@@ -227,7 +226,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`confirmContinuationPublication`](/api/execution-core/src/interfaces/executioncontinuationmanager/#confirmcontinuationpublication)
 
----
+***
 
 ### create()
 
@@ -256,7 +255,7 @@ Created or existing execution
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`create`](/api/execution-core/src/interfaces/executionmanager/#create)
 
----
+***
 
 ### fail()
 
@@ -291,7 +290,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`fail`](/api/execution-core/src/interfaces/executionmanager/#fail)
 
----
+***
 
 ### failContinuation()
 
@@ -319,7 +318,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`failContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#failcontinuation)
 
----
+***
 
 ### get()
 
@@ -345,7 +344,7 @@ Error if execution not found
 
 [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/).[`get`](/api/execution-core/src/interfaces/executioninspectionmanager/#get)
 
----
+***
 
 ### getContinuationLeaseDurationMs()
 
@@ -364,7 +363,7 @@ cadence renews ownership before the lease can expire.
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`getContinuationLeaseDurationMs`](/api/execution-core/src/interfaces/executioncontinuationmanager/#getcontinuationleasedurationms)
 
----
+***
 
 ### list()
 
@@ -386,7 +385,7 @@ List executions for inspection and operations views.
 
 [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/).[`list`](/api/execution-core/src/interfaces/executioninspectionmanager/#list)
 
----
+***
 
 ### reconcileTimedOut()
 
@@ -408,7 +407,7 @@ Reconcile persisted running executions whose configured deadline has elapsed.
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`reconcileTimedOut`](/api/execution-core/src/interfaces/executionmanager/#reconciletimedout)
 
----
+***
 
 ### recordLog()
 
@@ -438,7 +437,7 @@ Error if execution not found
 
 [`ExecutionInspectionManager`](/api/execution-core/src/interfaces/executioninspectionmanager/).[`recordLog`](/api/execution-core/src/interfaces/executioninspectionmanager/#recordlog)
 
----
+***
 
 ### renewContinuationClaim()
 
@@ -466,7 +465,7 @@ Error if execution not found
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`renewContinuationClaim`](/api/execution-core/src/interfaces/executioncontinuationmanager/#renewcontinuationclaim)
 
----
+***
 
 ### replay()
 
@@ -499,7 +498,7 @@ Error if execution not found or source execution is not replayable
 
 [`ExecutionReplayManager`](/api/execution-core/src/interfaces/executionreplaymanager/).[`replay`](/api/execution-core/src/interfaces/executionreplaymanager/#replay)
 
----
+***
 
 ### retry()
 
@@ -528,7 +527,7 @@ Error if execution not found or maxAttempts exhausted
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`retry`](/api/execution-core/src/interfaces/executionmanager/#retry)
 
----
+***
 
 ### stageContinuation()
 
@@ -556,7 +555,7 @@ Error if execution not found or maxAttempts exhausted
 
 [`ExecutionContinuationManager`](/api/execution-core/src/interfaces/executioncontinuationmanager/).[`stageContinuation`](/api/execution-core/src/interfaces/executioncontinuationmanager/#stagecontinuation)
 
----
+***
 
 ### start()
 
@@ -584,7 +583,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`start`](/api/execution-core/src/interfaces/executionmanager/#start)
 
----
+***
 
 ### timeout()
 
@@ -613,7 +612,7 @@ Error if execution not found or state transition is invalid
 
 [`ExecutionManager`](/api/execution-core/src/interfaces/executionmanager/).[`timeout`](/api/execution-core/src/interfaces/executionmanager/#timeout)
 
----
+***
 
 ### updateProgress()
 

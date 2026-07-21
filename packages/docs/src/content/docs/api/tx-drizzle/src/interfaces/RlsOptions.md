@@ -16,10 +16,10 @@ The configuration parameter name to use for RLS.
 #### Default
 
 ```ts
-"app.current_tenant";
+'app.current_tenant'
 ```
 
----
+***
 
 ### debug?
 
@@ -30,10 +30,10 @@ If true, logs when RLS variable is set.
 #### Default
 
 ```ts
-false;
+false
 ```
 
----
+***
 
 ### logger?
 

@@ -10,7 +10,7 @@ title: "TelemetryConfig"
 Main configuration for the OpenTelemetry SDK.
 
 This is the top-level configuration object passed to TelemetryRuntime.init.
-It combines service metadata with trace, metrics, and logs configurations.
+It combines service metadata with trace configuration and reserved metrics/logs configuration.
 
 ## Example
 

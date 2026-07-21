@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "ImpersonationTargetNotFoundProblem"
+title: "UnsupportedTelemetrySignalProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Raised when metrics or logs are requested before TelemetryRuntime has a provider for that signal.
 
 ## Extends
 
@@ -15,17 +15,17 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new ImpersonationTargetNotFoundProblem**(`targetUserId`): `ImpersonationTargetNotFoundProblem`
+> **new UnsupportedTelemetrySignalProblem**(`signals`): `UnsupportedTelemetrySignalProblem`
 
 #### Parameters
 
-##### targetUserId
+##### signals
 
-`string`
+readonly \[`UnsupportedTelemetrySignalName`, `UnsupportedTelemetrySignalName`\]
 
 #### Returns
 
-`ImpersonationTargetNotFoundProblem`
+`UnsupportedTelemetrySignalProblem`
 
 #### Overrides
 
@@ -35,7 +35,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### category
 
-> `readonly` **category**: [`NotFound`](/api/problems-core/src/enumerations/problemcategory/#notfound) = `ProblemCategory.NotFound`
+> `readonly` **category**: [`BadRequest`](/api/problems-core/src/enumerations/problemcategory/#badrequest) = `ProblemCategory.BadRequest`
 
 #### Overrides
 
@@ -55,7 +55,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### code
 
-> `readonly` **code**: `"IMPERSONATION_TARGET_NOT_FOUND"` = `"IMPERSONATION_TARGET_NOT_FOUND"`
+> `readonly` **code**: `"TELEMETRY_SIGNAL_UNSUPPORTED"` = `"TELEMETRY_SIGNAL_UNSUPPORTED"`
 
 #### Overrides
 
@@ -113,6 +113,18 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ***
 
+### signal
+
+> `readonly` **signal**: `UnsupportedTelemetrySignalName` \| `undefined`
+
+***
+
+### signals
+
+> `readonly` **signals**: readonly `UnsupportedTelemetrySignalName`[]
+
+***
+
 ### stack?
 
 > `optional` **stack?**: `string`
@@ -120,6 +132,12 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`stack`](/api/problems-core/src/classes/problem/#stack)
+
+***
+
+### supportState
+
+> `readonly` **supportState**: `"unsupported-requested"`
 
 ***
 
