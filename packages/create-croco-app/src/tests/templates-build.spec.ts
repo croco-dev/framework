@@ -171,7 +171,7 @@ function checkSpaBeSplitStructure() {
         /^croco project map[\s\S]*--check --manifest croco\.project-map\.json --manifest-bundle \.croco\/manifest$/,
       ),
       "contract:verify": expect.stringMatching(
-        /^pnpm contract:diff && pnpm contract:check && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check && pnpm --filter \{\{scope\}\}\/provider-rpc typecheck$/,
+        /^pnpm contract:diff && pnpm contract:check && pnpm project-map:check && pnpm contract:openapi:check && pnpm contract:client:check$/,
       ),
       "ci:contracts": "pnpm contract:verify",
       "di:graph": "pnpm --filter {{scope}}/api-server di:graph",
