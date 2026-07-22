@@ -1,22 +1,24 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
-import { parse as parseYaml } from "yaml";
+import { isAlias, isMap, isScalar, isSeq, parse as parseYaml, parseDocument } from "yaml";
+
+import type { Pair } from "yaml";
 
 export const CI_EXECUTABLE_POLICY_RULE_ID = "ci-executable-immutability";
 export const CI_EXECUTABLE_POLICY_CODE = "CROCO_CI_EXECUTABLE_IMMUTABILITY";
 export const DEFAULT_CI_EXECUTABLE_POLICY_PATHS = [
-  ".github/workflows/ci.yml",
-  ".github/workflows/release.yml",
+  ".github/workflows",
   "package.json",
   "scripts",
 ] as const;
 
 export type CiExecutablePolicyFindingKind =
   | "ad-hoc-package-execution"
+  | "mutable-action-reference"
   | "mutable-container-reference"
   | "mutable-download-reference"
   | "remote-shell-installer"
@@ -48,6 +50,11 @@ type CommandUnit = {
   readonly file: string;
   readonly line: number;
   readonly text: string;
+};
+
+type ActionReferenceUnit = CommandUnit & {
+  readonly comment: string;
+  readonly reference: string;
 };
 
 type RootPackage = {
@@ -95,6 +102,9 @@ const packageBinaryAliases: Readonly<Record<string, string>> = {
   changeset: "@changesets/cli",
 };
 const taggedDigestPattern = /(?:^|\/)[^/@\s]+:[^/@\s]+@sha256:[a-f0-9]{64}\b/i;
+const dockerActionDigestPattern = /^[^@\s]+:[^/@\s]+@sha256:[a-f0-9]{64}$/i;
+const fullCommitShaPattern = /^[a-f0-9]{40}$/;
+const semanticVersionCommentPattern = /^#\s*v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?\s*$/;
 const executableDownloadPattern =
   /(?:\/releases\/download\/|\.(?:AppImage|bin|bz2|exe|gz|msi|sh|tar|tgz|xz|zip)(?:[?#\s]|$))/i;
 const verificationPattern =
@@ -234,7 +244,7 @@ function applyWorkflowEnvironment(
       /^[A-Z][A-Z0-9_]+$/.test(name) &&
       typeof rawValue === "string" &&
       rawValue.length > 0 &&
-      !rawValue.includes("\${{")
+      !rawValue.includes("${{")
     ) {
       environment.set(name, rawValue);
     } else {
@@ -257,6 +267,127 @@ function resolveWorkflowEnvironment(
     resolved = resolved.replace(new RegExp(`\\$\\{\\{\\s*env\\.${name}\\s*\\}\\}`, "g"), value);
   }
   return resolved;
+}
+
+function workflowActionReferenceUnits(file: string, source: string): ActionReferenceUnit[] {
+  const document = parseDocument(source, { keepSourceTokens: true });
+  const units: ActionReferenceUnit[] = [];
+
+  const appendReference = (pair: Pair): void => {
+    const offset = pair.key && isScalar(pair.key) ? (pair.key.range?.[0] ?? 0) : 0;
+    const lineStart = source.lastIndexOf("\n", offset - 1) + 1;
+    const lineEnd = source.indexOf("\n", offset);
+    const value = isScalar(pair.value) ? pair.value : null;
+    units.push({
+      comment: value?.comment ? `#${value.comment}` : "",
+      file,
+      line: lineAt(source, offset),
+      reference: typeof value?.value === "string" ? value.value : "",
+      text: source.slice(lineStart, lineEnd < 0 ? source.length : lineEnd),
+    });
+  };
+  const pairNamed = (pairs: readonly Pair[], name: string): Pair | undefined =>
+    pairs.find((pair) => isScalar(pair.key) && pair.key.value === name);
+  const resolveAlias = (node: unknown): unknown => {
+    const visited = new Set<unknown>();
+    let resolved = node;
+    while (isAlias(resolved)) {
+      if (visited.has(resolved)) {
+        return null;
+      }
+      visited.add(resolved);
+      resolved = resolved.resolve(document);
+    }
+    return resolved;
+  };
+  const jobs = document.get("jobs", true);
+  if (!isMap(jobs)) {
+    return units;
+  }
+
+  for (const jobPair of jobs.items) {
+    const job = resolveAlias(jobPair.value);
+    if (!isMap(job)) {
+      continue;
+    }
+    const jobUses = pairNamed(job.items, "uses");
+    if (jobUses) {
+      appendReference(jobUses);
+    }
+    const steps = resolveAlias(pairNamed(job.items, "steps")?.value);
+    if (!isSeq(steps)) {
+      continue;
+    }
+    for (const unresolvedStep of steps.items) {
+      const step = resolveAlias(unresolvedStep);
+      if (!isMap(step)) {
+        continue;
+      }
+      const stepUses = pairNamed(step.items, "uses");
+      if (stepUses) {
+        appendReference(stepUses);
+      }
+    }
+  }
+
+  return units;
+}
+
+function actionReferenceFinding(
+  unit: ActionReferenceUnit,
+  message: string,
+  recovery: string,
+): CiExecutablePolicyFinding {
+  return finding(unit, "mutable-action-reference", message, recovery);
+}
+
+function actionReferenceFindings(unit: ActionReferenceUnit): CiExecutablePolicyFinding[] {
+  if (unit.reference.startsWith("./")) {
+    return [];
+  }
+  if (unit.reference.startsWith("docker://")) {
+    return dockerActionDigestPattern.test(unit.reference.slice("docker://".length))
+      ? []
+      : [
+          actionReferenceFinding(
+            unit,
+            `Docker action ${unit.reference} must retain a readable tag and be pinned to an OCI digest.`,
+            "Pin the readable image tag together with its immutable sha256 digest.",
+          ),
+        ];
+  }
+
+  const repositoryAction = unit.reference.match(/^([^\s@/]+\/[^\s@/]+(?:\/[^\s@/]+)*)@([^\s@]+)$/);
+  if (!repositoryAction) {
+    return [
+      actionReferenceFinding(
+        unit,
+        `Unsupported or malformed workflow action reference: ${unit.reference || "<empty>"}.`,
+        "Use a local ./ reference, a tagged-and-digested docker:// reference, or owner/repository[/path] pinned to a full commit SHA.",
+      ),
+    ];
+  }
+
+  const revision = repositoryAction[2] ?? "";
+  if (!fullCommitShaPattern.test(revision)) {
+    return [
+      actionReferenceFinding(
+        unit,
+        `Workflow action ${unit.reference} must be pinned to a full lowercase commit SHA.`,
+        "Replace the branch, tag, or malformed revision with the reviewed 40-character lowercase commit SHA and retain its release in a same-line comment.",
+      ),
+    ];
+  }
+  if (!semanticVersionCommentPattern.test(unit.comment)) {
+    return [
+      actionReferenceFinding(
+        unit,
+        `Workflow action ${unit.reference} is missing a same-line semantic version comment.`,
+        "Add a same-line release comment such as # v4.2.0 so reviewers and dependency automation retain version context.",
+      ),
+    ];
+  }
+  return [];
 }
 
 function packageScriptUnits(file: string, source: string, rootPackage: RootPackage): CommandUnit[] {
@@ -396,6 +527,35 @@ function listScriptFiles(directory: string): string[] {
   });
 }
 
+function listWorkflowFiles(directory: string): string[] {
+  if (!existsSync(directory)) {
+    return [];
+  }
+  return readdirSync(directory, { withFileTypes: true })
+    .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
+    .flatMap((entry) => {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        return listWorkflowFiles(path);
+      }
+      return entry.isFile() && /\.ya?ml$/i.test(entry.name) ? [path] : [];
+    });
+}
+
+function expandCheckedPaths(rootDir: string, checkedPaths: readonly string[]): string[] {
+  return checkedPaths.flatMap((checkedPath) => {
+    const absolutePath = resolve(rootDir, checkedPath);
+    if (
+      existsSync(absolutePath) &&
+      statSync(absolutePath).isDirectory() &&
+      toPosixPath(relative(rootDir, absolutePath)).startsWith(".github/workflows")
+    ) {
+      return listWorkflowFiles(absolutePath).map((path) => toPosixPath(relative(rootDir, path)));
+    }
+    return [checkedPath];
+  });
+}
+
 function readRootPackage(rootDir: string): RootPackage {
   const path = join(rootDir, "package.json");
   if (!existsSync(path)) {
@@ -410,9 +570,8 @@ function hasLockfileEvidence(rootDir: string, packageName: string, version: stri
     return false;
   }
   const lockfile = readFileSync(lockfilePath, "utf-8");
-  const rootImporter = /(?:^|\n)  \.:\s*\n([\s\S]*?)(?=\n  \S[^\n]*:\s*\n|\npackages:\s*\n|$)/.exec(
-    lockfile,
-  )?.[1];
+  const rootImporter =
+    /(?:^|\n) {2}\.:\s*\n([\s\S]*?)(?=\n {2}\S[^\n]*:\s*\n|\npackages:\s*\n|$)/.exec(lockfile)?.[1];
   if (!rootImporter) {
     return false;
   }
@@ -680,7 +839,10 @@ function scanUnit(
   rootDir: string,
   rootPackage: RootPackage,
 ): CiExecutablePolicyFinding[] {
-  const normalizedUnit = { ...unit, text: unit.text.replace(/\\\r?\n\s*/g, " ") };
+  const normalizedUnit = {
+    ...unit,
+    text: unit.text.replace(/\\\r?\n\s*/g, " "),
+  };
   return [
     ...containerFindings(normalizedUnit),
     ...packageExecutionFindings(normalizedUnit, rootDir, rootPackage),
@@ -692,9 +854,13 @@ export function runCiExecutablePolicy(
   options: CiExecutablePolicyOptions,
 ): CiExecutablePolicyResult {
   const rootDir = resolve(options.rootDir);
-  const checkedPaths = options.checkedPaths ?? DEFAULT_CI_EXECUTABLE_POLICY_PATHS;
+  const checkedPaths = expandCheckedPaths(
+    rootDir,
+    options.checkedPaths ?? DEFAULT_CI_EXECUTABLE_POLICY_PATHS,
+  );
   const rootPackage = readRootPackage(rootDir);
   const units: CommandUnit[] = [];
+  const actionReferenceUnits: ActionReferenceUnit[] = [];
 
   for (const checkedPath of checkedPaths) {
     const absolutePath = resolve(rootDir, checkedPath);
@@ -720,12 +886,16 @@ export function runCiExecutablePolicy(
       units.push(...packageScriptUnits(file, source, rootPackage));
     } else if (/\.ya?ml$/i.test(file)) {
       units.push(...workflowCommandUnits(file, source));
+      actionReferenceUnits.push(...workflowActionReferenceUnits(file, source));
     } else if (scriptExtensions.has(extname(file))) {
       units.push(...scriptCommandUnits(file, source));
     }
   }
 
-  const findings = units.flatMap((unit) => scanUnit(unit, rootDir, rootPackage));
+  const findings = [
+    ...units.flatMap((unit) => scanUnit(unit, rootDir, rootPackage)),
+    ...actionReferenceUnits.flatMap(actionReferenceFindings),
+  ];
   return { checkedPaths, findings, ok: findings.length === 0 };
 }
 
@@ -749,7 +919,10 @@ function parseArgs(args: readonly string[]): CiExecutablePolicyOptions {
     }
     throw new Error(`Unknown option: ${arg}`);
   }
-  return { checkedPaths: checkedPaths.length > 0 ? checkedPaths : undefined, rootDir };
+  return {
+    checkedPaths: checkedPaths.length > 0 ? checkedPaths : undefined,
+    rootDir,
+  };
 }
 
 function main(): void {
