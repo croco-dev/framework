@@ -15,7 +15,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  release_ref_guard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      verified_sha: ${{ steps.verify_ref.outputs.verified_sha }}
+    steps:
+      - name: Verify protected release ref
+        id: verify_ref
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/trunk" ]; then
+            rejected_ref="${GITHUB_REF:-<unset>}"
+            echo "::error title=Unsupported Release ref::Release only supports refs/heads/trunk; received $rejected_ref. Re-run the workflow from the trunk branch."
+            exit 1
+          fi
+          if [[ ! "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error title=Invalid Release SHA::Release requires the immutable 40-character SHA selected from refs/heads/trunk. Re-run the workflow from the trunk branch."
+            exit 1
+          fi
+          echo "verified_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+
   release:
+    needs: release_ref_guard
+    if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha
     runs-on: ubuntu-latest
     # The publish profile has a 150-minute internal budget; the job leaves
     # 90 minutes for setup, artifact publication, and Changesets.
@@ -29,6 +53,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ needs.release_ref_guard.outputs.verified_sha }}
 
       - name: Select release work and verification profile
         id: release_work
@@ -49,7 +74,7 @@ jobs:
           echo "base=$base" >> "$GITHUB_OUTPUT"
 
       - name: Verify release PR automation credentials
-        if: steps.release_work.outputs.should_run_changesets_action == 'true'
+        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_work.outputs.should_run_changesets_action == 'true'
         shell: bash
         env:
           RELEASE_APP_CLIENT_ID: ${{ vars.RELEASE_APP_CLIENT_ID }}
@@ -117,7 +142,7 @@ jobs:
 
       - name: Mint release PR GitHub App token
         id: release_app_token
-        if: steps.release_work.outputs.should_run_changesets_action == 'true'
+        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_work.outputs.should_run_changesets_action == 'true'
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
@@ -128,7 +153,7 @@ jobs:
           permission-pull-requests: write
 
       - name: Create Release Pull Request or Publish
-        if: steps.release_work.outputs.should_run_changesets_action == 'true'
+        if: github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha && steps.release_work.outputs.should_run_changesets_action == 'true'
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
           publish: pnpm exec changeset publish
