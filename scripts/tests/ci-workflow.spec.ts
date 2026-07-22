@@ -136,7 +136,7 @@ describe("CI verification profile contract", () => {
     expect(initializeSarif).toBeGreaterThan(-1);
     expect(initializeText).toBeLessThan(scanner);
     expect(initializeSarif).toBeLessThan(scanner);
-    expect(SECRET_SCAN).toContain("detect --source /repo --redact --no-banner");
+    expect(SECRET_SCAN).toContain("detect --source /repo --redact --no-banner --log-opts=HEAD");
     expect(SECRET_SCAN).toContain(
       "--report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif",
     );

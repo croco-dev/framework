@@ -13,7 +13,7 @@ export type WorkflowCommandViolation = {
 type RootScripts = Readonly<Record<string, string>>;
 
 const GITLEAKS_PRODUCTION_COMMAND =
-  'docker run --rm -v "$PWD:/repo" "${{ env.GITLEAKS_IMAGE }}" detect --source /repo --redact --no-banner --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1';
+  'docker run --rm -v "$PWD:/repo" "${{ env.GITLEAKS_IMAGE }}" detect --source /repo --redact --no-banner --log-opts=HEAD --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1';
 const GITLEAKS_RENOVATE_DIRECTIVE =
   "# renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks";
 export const TRUSTED_GITLEAKS_IMAGE =

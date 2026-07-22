@@ -27,6 +27,7 @@ export const GITLEAKS_CORE_ARGS = [
   "/repo",
   "--redact",
   "--no-banner",
+  "--log-opts=HEAD",
   "--report-format",
   "sarif",
   "--report-path",
