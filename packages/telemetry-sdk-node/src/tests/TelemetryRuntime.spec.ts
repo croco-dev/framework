@@ -1,4 +1,5 @@
 import type { Instrumentation } from "@opentelemetry/instrumentation";
+import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from "@opentelemetry/semantic-conventions";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TelemetryRuntimeProblem,
@@ -45,6 +46,46 @@ describe("TelemetryRuntime", () => {
 
     expect(runtime.isInitialized()).toBe(false);
     expect(runtime.isEnabled()).toBe(false);
+  });
+
+  it("should apply the top-level environment over conflicting resource attributes", async () => {
+    let capturedAttributes: Record<string, unknown> | undefined;
+
+    vi.doMock("@opentelemetry/resources", () => ({
+      defaultResource: () => ({ merge: vi.fn() }),
+      resourceFromAttributes: (attributes: Record<string, unknown>) => {
+        capturedAttributes = attributes;
+        return attributes;
+      },
+    }));
+    vi.doMock("@opentelemetry/sdk-node", () => ({
+      NodeSDK: class MockNodeSDK {
+        start(): void {}
+        async shutdown(): Promise<void> {}
+      },
+    }));
+    vi.doMock("@opentelemetry/exporter-trace-otlp-http", () => ({
+      OTLPTraceExporter: class MockTraceExporter {},
+    }));
+    vi.doMock("@opentelemetry/sdk-trace-base", () => ({
+      BatchSpanProcessor: class MockBatchSpanProcessor {
+        async forceFlush(): Promise<void> {}
+        async shutdown(): Promise<void> {}
+      },
+    }));
+
+    await runtime.init({
+      serviceName: "environment-test",
+      environment: "production",
+      resourceAttributes: {
+        [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: "staging",
+        "deployment.environment": "legacy",
+      },
+      trace: { exporterUrl: "http://collector:4318/v1/traces" },
+    });
+
+    expect(capturedAttributes?.[ATTR_DEPLOYMENT_ENVIRONMENT_NAME]).toBe("production");
+    expect(capturedAttributes?.["deployment.environment"]).toBe("legacy");
   });
 
   it("should store config after initialization", async () => {

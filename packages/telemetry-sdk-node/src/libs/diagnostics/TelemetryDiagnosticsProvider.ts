@@ -1,5 +1,6 @@
 import type { DiagnosticsProvider, HealthStatus } from "@croco/diagnostics-core";
 import { TelemetryRuntime } from "../../runtime";
+import { resolveDeploymentEnvironment } from "../resources/DeploymentEnvironment";
 import {
   getTelemetrySignalSupport,
   getUnsupportedTelemetrySignals,
@@ -85,6 +86,7 @@ function createSafeTelemetryDetails(
   const enabled = config.enabled !== false;
   return {
     serviceName: config.serviceName,
+    environment: resolveDeploymentEnvironment(config),
     enabled,
     initialized,
     traceEnabled: enabled && config.trace?.enabled !== false,

@@ -46,6 +46,7 @@ describe("TelemetryDiagnosticsProvider", () => {
     );
     expect(health.details).toEqual({
       serviceName: "orders",
+      environment: "development",
       enabled: false,
       initialized: false,
       traceEnabled: false,
@@ -79,6 +80,7 @@ describe("TelemetryDiagnosticsProvider", () => {
     );
     expect(health.details).toEqual({
       serviceName: "orders",
+      environment: "development",
       enabled: true,
       initialized: false,
       traceEnabled: false,
@@ -89,6 +91,30 @@ describe("TelemetryDiagnosticsProvider", () => {
     });
     expect(JSON.stringify(health)).not.toContain("Bearer secret");
     expect(JSON.stringify(health)).not.toContain("collector");
+  });
+
+  it("should report the effective environment without exposing custom resource attributes", async () => {
+    await runtime.init({
+      serviceName: "orders",
+      environment: "production",
+      enabled: false,
+      resourceAttributes: {
+        "deployment.environment.name": "staging",
+        "internal.secret": "resource-secret",
+      },
+      trace: {
+        exporterUrl: "https://collector.example.test/v1/traces",
+        exporterHeaders: { Authorization: "Bearer exporter-secret" },
+      },
+    });
+
+    const health = await diagnostics.getHealth();
+
+    expect(health.details).toMatchObject({ environment: "production" });
+    expect(JSON.stringify(health)).not.toContain("staging");
+    expect(JSON.stringify(health)).not.toContain("resource-secret");
+    expect(JSON.stringify(health)).not.toContain("exporter-secret");
+    expect(JSON.stringify(health)).not.toContain("collector.example.test");
   });
 
   it("should report sampling probability zero as degraded with safe metadata", async () => {
@@ -110,6 +136,7 @@ describe("TelemetryDiagnosticsProvider", () => {
     expect(health.message).toBe("Telemetry sampling disabled (probability=0)");
     expect(health.details).toEqual({
       serviceName: "orders",
+      environment: "development",
       enabled: true,
       initialized: true,
       traceEnabled: true,

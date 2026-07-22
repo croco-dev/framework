@@ -150,7 +150,6 @@ describe("lambdaPreset", () => {
     expect(config.resourceAttributes).toEqual({
       "cloud.provider": "aws",
       "cloud.platform": "aws_lambda",
-      "deployment.environment": "development",
     });
   });
 
