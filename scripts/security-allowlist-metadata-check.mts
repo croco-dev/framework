@@ -943,7 +943,7 @@ function readGitleaksIgnoreFingerprints(path: string): readonly string[] {
 }
 
 function validateNoInlineGitleaksSuppressions(options: Options, violations: Violation[]): void {
-  for (const match of readInlineGitleaksSuppressions(options.rootDir)) {
+  for (const match of readInlineGitleaksSuppressions(options.rootDir, violations)) {
     violations.push({
       message: `${match} uses an inline Gitleaks suppression comment`,
       recovery:
@@ -952,23 +952,38 @@ function validateNoInlineGitleaksSuppressions(options: Options, violations: Viol
   }
 }
 
-function readInlineGitleaksSuppressions(rootDir: string): readonly string[] {
+function readInlineGitleaksSuppressions(
+  rootDir: string,
+  violations: Violation[],
+): readonly string[] {
   return uniqueSorted([
-    ...readCurrentInlineGitleaksSuppressions(rootDir),
-    ...(readHistoricalInlineGitleaksSuppressions(rootDir) ?? []),
+    ...readCurrentInlineGitleaksSuppressions(rootDir, violations),
+    ...readHistoricalInlineGitleaksSuppressions(rootDir, violations),
   ]);
 }
 
-function readCurrentInlineGitleaksSuppressions(rootDir: string): readonly string[] {
-  const files = readGitTrackedFiles(rootDir) ?? readScannableFiles(rootDir);
+function readCurrentInlineGitleaksSuppressions(
+  rootDir: string,
+  violations: Violation[],
+): readonly string[] {
+  const trackedFiles = readGitTrackedFiles(rootDir, violations);
+  const files = trackedFiles ?? readScannableFiles(rootDir);
   const matches: string[] = [];
 
   for (const file of files) {
     const absolutePath = resolve(rootDir, file);
+    if (existsSync(absolutePath) && statSync(absolutePath).isDirectory()) {
+      continue;
+    }
     let content = "";
     try {
       content = readFileSync(absolutePath, "utf-8").replace(/\r\n/g, "\n");
     } catch {
+      violations.push({
+        message: `CURRENT_GITLEAKS_SUPPRESSION_INSPECTION_FAILED: could not inspect ${file}`,
+        recovery:
+          "Restore the tracked file to a readable state and rerun the security allowlist metadata check.",
+      });
       continue;
     }
 
@@ -983,7 +998,14 @@ function readCurrentInlineGitleaksSuppressions(rootDir: string): readonly string
   return matches;
 }
 
-function readHistoricalInlineGitleaksSuppressions(rootDir: string): readonly string[] | null {
+function readHistoricalInlineGitleaksSuppressions(
+  rootDir: string,
+  violations: Violation[],
+): readonly string[] {
+  if (!existsSync(resolve(rootDir, ".git"))) {
+    return [];
+  }
+
   const logResult = spawnSync(
     "git",
     [
@@ -991,9 +1013,10 @@ function readHistoricalInlineGitleaksSuppressions(rootDir: string): readonly str
       rootDir,
       "log",
       "--all",
+      "-z",
       `-G${inlineGitleaksAllowMarker}`,
-      "--format=commit:%H",
-      "--name-only",
+      "--format=%H",
+      "--no-patch",
       "--",
     ],
     {
@@ -1002,74 +1025,42 @@ function readHistoricalInlineGitleaksSuppressions(rootDir: string): readonly str
     },
   );
 
-  if (logResult.status !== 0) {
+  if (logResult.error || logResult.status !== 0) {
+    violations.push({
+      message:
+        "HISTORICAL_GITLEAKS_SUPPRESSION_INSPECTION_FAILED: git log could not inspect reachable history",
+      recovery:
+        "Restore the Git repository and rerun the security allowlist metadata check before merging.",
+    });
+    return [];
+  }
+
+  return logResult.stdout
+    .split(/[\0\r\n]+/)
+    .filter((commit) => /^[a-f0-9]{40}$/.test(commit))
+    .map((commit) => `reachable commit ${commit.slice(0, 12)}`);
+}
+
+function readGitTrackedFiles(rootDir: string, violations: Violation[]): readonly string[] | null {
+  if (!existsSync(resolve(rootDir, ".git"))) {
     return null;
   }
 
-  const matches: string[] = [];
-  for (const candidate of parseGitLogInlineSuppressionCandidates(logResult.stdout)) {
-    const showResult = spawnSync(
-      "git",
-      ["-C", rootDir, "show", `${candidate.commit}:${candidate.path}`],
-      {
-        encoding: "utf-8",
-        maxBuffer: 20 * 1024 * 1024,
-      },
-    );
-
-    if (showResult.status !== 0) {
-      continue;
-    }
-
-    const lines = showResult.stdout.replace(/\r\n/g, "\n").split("\n");
-    for (let index = 0; index < lines.length; index++) {
-      if (lines[index].includes(inlineGitleaksAllowMarker)) {
-        matches.push(`${candidate.commit.slice(0, 12)}:${candidate.path}:${index + 1}`);
-      }
-    }
-  }
-
-  return matches;
-}
-
-function parseGitLogInlineSuppressionCandidates(
-  output: string,
-): readonly { readonly commit: string; readonly path: string }[] {
-  const candidates: { commit: string; path: string }[] = [];
-  let commit = "";
-
-  for (const rawLine of output.split("\n")) {
-    const line = rawLine.trim();
-    if (!line) {
-      continue;
-    }
-
-    if (line.startsWith("commit:")) {
-      commit = line.slice("commit:".length);
-      continue;
-    }
-
-    if (commit) {
-      candidates.push({ commit, path: line });
-    }
-  }
-
-  return candidates;
-}
-
-function readGitTrackedFiles(rootDir: string): readonly string[] | null {
-  const result = spawnSync("git", ["-C", rootDir, "ls-files"], {
+  const result = spawnSync("git", ["-C", rootDir, "ls-files", "-z"], {
     encoding: "utf-8",
   });
 
-  if (result.status !== 0) {
+  if (result.error || result.status !== 0) {
+    violations.push({
+      message:
+        "CURRENT_GITLEAKS_SUPPRESSION_INSPECTION_FAILED: git ls-files could not inspect tracked files",
+      recovery:
+        "Restore the Git index and rerun the security allowlist metadata check before merging.",
+    });
     return null;
   }
 
-  return result.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+  return result.stdout.split("\0").filter((line) => line.length > 0);
 }
 
 function readScannableFiles(rootDir: string): readonly string[] {

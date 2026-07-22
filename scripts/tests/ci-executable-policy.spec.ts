@@ -407,6 +407,25 @@ describe("ci-executable-policy.mts", () => {
     ]);
   });
 
+  it("rejects malformed workflow YAML instead of treating it as command-free", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/release.yml",
+      [
+        "jobs:",
+        "  release:",
+        "    steps: [",
+        "      - run: docker run attacker/scanner:latest",
+        "",
+      ].join("\n"),
+    );
+
+    expect(() =>
+      runCiExecutablePolicy({ checkedPaths: [".github/workflows/release.yml"], rootDir: repo }),
+    ).toThrow(/CROCO_CI_EXECUTABLE_IMMUTABILITY \[invalid-workflow\]/);
+  });
+
   it("resolves a statically pinned workflow environment image", () => {
     const repo = createRepo();
     writeFile(
@@ -418,7 +437,7 @@ describe("ci-executable-policy.mts", () => {
         "    env:",
         `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
         "    steps:",
-        '      - run: docker run "$SECURITY_IMAGE" scan',
+        '      - run: docker run "${{ env.SECURITY_IMAGE }}" scan',
         "",
       ].join("\n"),
     );
@@ -426,6 +445,29 @@ describe("ci-executable-policy.mts", () => {
     expect(
       runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
     ).toEqual([]);
+  });
+
+  it("rejects shell-variable image references even when the workflow environment is pinned", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "jobs:",
+        "  security:",
+        "    env:",
+        `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
+        "    steps:",
+        "      - run: |",
+        "          export SECURITY_IMAGE=attacker/scanner:latest",
+        '          docker run "$SECURITY_IMAGE" scan',
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
+    ).toEqual([expect.objectContaining({ kind: "mutable-container-reference" })]);
   });
 
   it("rejects a mutable workflow environment image after resolving it", () => {
@@ -439,7 +481,7 @@ describe("ci-executable-policy.mts", () => {
         "    env:",
         "      SECURITY_IMAGE: tool:latest",
         "    steps:",
-        '      - run: docker run "$SECURITY_IMAGE" scan',
+        '      - run: docker run "${{ env.SECURITY_IMAGE }}" scan',
         "",
       ].join("\n"),
     );
@@ -462,7 +504,7 @@ describe("ci-executable-policy.mts", () => {
         "    steps: []",
         "  consumer:",
         "    steps:",
-        '      - run: docker run "$SECURITY_IMAGE" scan',
+        '      - run: docker run "${{ env.SECURITY_IMAGE }}" scan',
         "",
       ].join("\n"),
     );
@@ -485,7 +527,30 @@ describe("ci-executable-policy.mts", () => {
         "    steps:",
         "      - env:",
         "          SECURITY_IMAGE: ${{ inputs.security_image }}",
-        '        run: docker run "$SECURITY_IMAGE" scan',
+        '        run: docker run "${{ env.SECURITY_IMAGE }}" scan',
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
+    ).toEqual([expect.objectContaining({ kind: "mutable-container-reference" })]);
+  });
+
+  it("rejects a different digest-pinned image shadowing the job image at step scope", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "jobs:",
+        "  security:",
+        "    env:",
+        `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
+        "    steps:",
+        "      - env:",
+        `          SECURITY_IMAGE: attacker/scanner:v2@sha256:${"b".repeat(64)}`,
+        '        run: docker run "${{ env.SECURITY_IMAGE }}" scan',
         "",
       ].join("\n"),
     );
@@ -508,7 +573,7 @@ describe("ci-executable-policy.mts", () => {
           "    env:",
           `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
           "    steps:",
-          '      - run: docker run "$SECURITY_IMAGE" scan',
+          '      - run: docker run "${{ env.SECURITY_IMAGE }}" scan',
           "        env:",
           `          SECURITY_IMAGE: ${override}`,
           "",
@@ -536,7 +601,7 @@ describe("ci-executable-policy.mts", () => {
           `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
           "    steps:",
           "      -",
-          '        run: docker run "$SECURITY_IMAGE" scan',
+          '        run: docker run "${{ env.SECURITY_IMAGE }}" scan',
           "        env:",
           `          SECURITY_IMAGE: ${override}`,
           "",
@@ -563,7 +628,7 @@ describe("ci-executable-policy.mts", () => {
           "    env:",
           `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
           "    steps:",
-          '      - run: docker run "$SECURITY_IMAGE" scan',
+          '      - run: docker run "${{ env.SECURITY_IMAGE }}" scan',
           `        env: { SECURITY_IMAGE: "${override}" }`,
           "",
         ].join("\n"),
@@ -590,7 +655,7 @@ describe("ci-executable-policy.mts", () => {
           `      SECURITY_IMAGE: tool:v1@sha256:${"a".repeat(64)}`,
           "    steps:",
           '      - { run: "echo harmless" }',
-          '      - run: docker run "$SECURITY_IMAGE" scan',
+          '      - run: docker run "${{ env.SECURITY_IMAGE }}" scan',
           `        env: { SECURITY_IMAGE: "${override}" }`,
           "",
         ].join("\n"),

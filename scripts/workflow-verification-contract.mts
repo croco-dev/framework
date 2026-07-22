@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { parse as parseYaml } from "yaml";
 
 import { createVerificationManifest } from "./verification-manifest.mts";
 
@@ -11,6 +12,13 @@ export type WorkflowCommandViolation = {
 
 type RootScripts = Readonly<Record<string, string>>;
 
+const GITLEAKS_PRODUCTION_COMMAND =
+  'docker run --rm -v "$PWD:/repo" "${{ env.GITLEAKS_IMAGE }}" detect --source /repo --redact --no-banner --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1';
+const GITLEAKS_RENOVATE_DIRECTIVE =
+  "# renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks";
+export const TRUSTED_GITLEAKS_IMAGE =
+  "ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e";
+
 export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   'node -e \'const fs = require("node:fs"); fs.writeFileSync("ci-reports/package-quality/spine-promotion-run.json", JSON.stringify({ commitSha: process.env.SPINE_PROMOTION_COMMIT_SHA, runId: process.env.SPINE_PROMOTION_RUN_ID, runAttempt: process.env.SPINE_PROMOTION_RUN_ATTEMPT, startedAt: new Date().toISOString() }, null, 2) + "\\n")\'',
   "node --experimental-strip-types scripts/verification-change-classifier.mts",
@@ -21,7 +29,7 @@ export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   "pnpm security:gitleaks-smoke",
   "pnpm create-croco-app:smoke -- --tier ecosystem-advisory",
   "pnpm verify:publish",
-  'docker run --rm -v "$PWD:/repo" "$GITLEAKS_IMAGE" detect',
+  GITLEAKS_PRODUCTION_COMMAND,
 ] as const;
 
 function splitShellCommands(command: string): readonly string[] {
@@ -74,7 +82,45 @@ function normalizeInvocation(command: string): string {
 }
 
 function matchesArgvPrefix(command: string, allowed: string): boolean {
+  if (allowed === GITLEAKS_PRODUCTION_COMMAND) {
+    return command === allowed;
+  }
   return command === allowed || command.startsWith(`${allowed} `);
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function findTrustedGitleaksImageViolations(workflowSource: string): readonly string[] {
+  let workflow: unknown;
+  try {
+    workflow = parseYaml(workflowSource);
+  } catch {
+    return ["CI workflow YAML could not be inspected"];
+  }
+
+  if (!isPlainRecord(workflow) || !isPlainRecord(workflow.jobs)) {
+    return ["CI workflow must define jobs"];
+  }
+  const validate = workflow.jobs.validate;
+  const environment = isPlainRecord(validate) && isPlainRecord(validate.env) ? validate.env : null;
+  const image = environment?.GITLEAKS_IMAGE;
+  const violations: string[] = [];
+  if (image !== TRUSTED_GITLEAKS_IMAGE) {
+    violations.push("jobs.validate.env.GITLEAKS_IMAGE must be the digest-pinned trusted image");
+  }
+
+  const declarations = workflowSource
+    .split(/\r?\n/)
+    .map((line, index, lines) => ({ line: line.trim(), previous: lines[index - 1]?.trim() }))
+    .filter(({ line }) => /^GITLEAKS_IMAGE\s*:/.test(line));
+  if (declarations.length !== 1 || declarations[0]?.previous !== GITLEAKS_RENOVATE_DIRECTIVE) {
+    violations.push(
+      "the sole GITLEAKS_IMAGE declaration must be jobs.validate.env with its Renovate directive attached",
+    );
+  }
+  return violations;
 }
 
 function readRootScripts(rootDir: string): RootScripts {

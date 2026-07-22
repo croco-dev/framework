@@ -105,7 +105,7 @@ jobs:
           printf '%s\n' '{"version":"2.1.0","runs":[]}' > ci-reports/security/gitleaks.sarif
           start=$(date +%s)
           set +e
-          docker run --rm -v "$PWD:/repo" "$GITLEAKS_IMAGE" detect --source /repo --redact --no-banner --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
+          docker run --rm -v "$PWD:/repo" "${{ env.GITLEAKS_IMAGE }}" detect --source /repo --redact --no-banner --report-format sarif --report-path /repo/ci-reports/security/gitleaks.sarif > ci-reports/security/gitleaks.txt 2>&1
           exit_code=$?
           set -e
           end=$(date +%s)

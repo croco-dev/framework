@@ -133,8 +133,12 @@ function workflowCommandUnits(file: string, source: string): CommandUnit[] {
   let workflow: unknown;
   try {
     workflow = parseYaml(source);
-  } catch {
-    return units;
+  } catch (error) {
+    const detail =
+      error instanceof Error ? error.message.split("\n", 1)[0] : "unknown YAML parse error";
+    throw new Error(
+      `${CI_EXECUTABLE_POLICY_CODE} [invalid-workflow] ${file}: workflow YAML could not be inspected: ${detail}`,
+    );
   }
   if (!isPlainRecord(workflow) || !isPlainRecord(workflow.jobs)) {
     return units;
@@ -166,7 +170,7 @@ function workflowCommandUnits(file: string, source: string): CommandUnit[] {
         line: location.blockScalar ? location.line + 1 : location.line,
         text: resolveWorkflowEnvironment(
           step.run,
-          applyWorkflowEnvironment(new Map(jobEnvironment), step.env),
+          applyWorkflowEnvironment(new Map(jobEnvironment), step.env, jobEnvironment),
         ),
       });
     }
@@ -219,12 +223,14 @@ function findWorkflowKeyLine(
 function applyWorkflowEnvironment(
   environment: Map<string, string>,
   value: unknown,
+  inheritedEnvironment: ReadonlyMap<string, string> = new Map(),
 ): Map<string, string> {
   if (!isPlainRecord(value)) {
     return environment;
   }
   for (const [name, rawValue] of Object.entries(value)) {
     if (
+      !inheritedEnvironment.has(name) &&
       /^[A-Z][A-Z0-9_]+$/.test(name) &&
       typeof rawValue === "string" &&
       rawValue.length > 0 &&
@@ -248,10 +254,7 @@ function resolveWorkflowEnvironment(
 ): string {
   let resolved = text;
   for (const [name, value] of environment) {
-    resolved = resolved
-      .replaceAll(`"$${name}"`, value)
-      .replaceAll(`\${${name}}`, value)
-      .replaceAll(`$${name}`, value);
+    resolved = resolved.replace(new RegExp(`\\$\\{\\{\\s*env\\.${name}\\s*\\}\\}`, "g"), value);
   }
   return resolved;
 }

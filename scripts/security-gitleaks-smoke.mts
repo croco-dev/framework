@@ -164,7 +164,9 @@ export function main(): number {
       failures.push("clean-history fixture must pass without a github-pat SARIF result");
     }
     if (
+      invalidConfigResult.status === null ||
       invalidConfigResult.status === 0 ||
+      !invalidConfigResult.text.includes("missing-gitleaks.toml") ||
       reportHasRule(invalidConfigResult.report, "github-pat")
     ) {
       failures.push(
@@ -366,18 +368,20 @@ function parseSarif(report: string): SarifReport | null {
         return null;
       }
       const results = (run as { readonly results?: unknown }).results;
-      if (results !== undefined && !Array.isArray(results)) {
-        return null;
-      }
-      if (
-        results?.some(
-          (result) =>
-            !result ||
-            typeof result !== "object" ||
-            ("ruleId" in result && typeof result.ruleId !== "string"),
-        )
-      ) {
-        return null;
+      if (results !== undefined) {
+        if (!Array.isArray(results)) {
+          return null;
+        }
+        if (
+          results.some(
+            (result) =>
+              !result ||
+              typeof result !== "object" ||
+              ("ruleId" in result && typeof result.ruleId !== "string"),
+          )
+        ) {
+          return null;
+        }
       }
     }
     return candidate as SarifReport;

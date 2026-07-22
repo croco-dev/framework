@@ -5,7 +5,11 @@ import { describe, expect, it } from "vitest";
 
 import { getVerificationCommand } from "../verification-manifest.mts";
 import { ensureSarif, GITLEAKS_CORE_ARGS } from "../security-gitleaks-smoke.mts";
-import { findWorkflowVerificationViolations } from "../workflow-verification-contract.mts";
+import {
+  findTrustedGitleaksImageViolations,
+  findWorkflowVerificationViolations,
+  TRUSTED_GITLEAKS_IMAGE,
+} from "../workflow-verification-contract.mts";
 
 const ROOT_DIR = resolve(__dirname, "../..");
 const WORKFLOW = readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8");
@@ -31,12 +35,30 @@ const SECRET_SCAN = WORKFLOW.slice(
 
 describe("CI executable supply chain", () => {
   it("pins Gitleaks to a readable version and immutable OCI digest", () => {
+    expect(findTrustedGitleaksImageViolations(WORKFLOW)).toEqual([]);
     expect(WORKFLOW).toContain(
       "ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e",
     );
     expect(WORKFLOW).toContain("# renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks");
     expect(WORKFLOW).not.toContain("ghcr.io/gitleaks/gitleaks:v8.23.0 detect");
     expect(WORKFLOW.match(/ghcr\.io\/gitleaks\/gitleaks:v8\.23\.0@sha256:/g)).toHaveLength(1);
+  });
+
+  it("rejects moving the trusted image declaration to an inert job", () => {
+    const trustedDeclaration = [
+      "      # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks",
+      `      GITLEAKS_IMAGE: ${TRUSTED_GITLEAKS_IMAGE}`,
+    ].join("\n");
+    const mutant = WORKFLOW.replace(
+      trustedDeclaration,
+      `      "GITLEAKS_IMAGE": ghcr.io/gitleaks/gitleaks:v9@sha256:${"b".repeat(64)}`,
+    ).replace(
+      "  changes:",
+      `  inert:\n    env:\n${trustedDeclaration}\n    steps: []\n\n  changes:`,
+    );
+
+    expect(mutant).not.toBe(WORKFLOW);
+    expect(findTrustedGitleaksImageViolations(mutant)).not.toEqual([]);
   });
 
   it("keeps Madge inside the exact workspace dependency and authoritative manifest", () => {
@@ -104,7 +126,9 @@ describe("CI verification profile contract", () => {
   it("makes the Gitleaks result blocking while preserving redacted evidence", () => {
     const initializeText = SECRET_SCAN.indexOf(": > ci-reports/security/gitleaks.txt");
     const initializeSarif = SECRET_SCAN.indexOf("ci-reports/security/gitleaks.sarif");
-    const scanner = SECRET_SCAN.indexOf('docker run --rm -v "$PWD:/repo" "$GITLEAKS_IMAGE"');
+    const scanner = SECRET_SCAN.indexOf(
+      'docker run --rm -v "$PWD:/repo" "${{ env.GITLEAKS_IMAGE }}"',
+    );
 
     expect(SECRET_SCAN).toContain("if: always()");
     expect(SECRET_SCAN).not.toContain("continue-on-error");
@@ -155,7 +179,7 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("steps.security_gitleaks.outputs.exit_code");
     expect(upload).toBeGreaterThan(summary);
     expect(
-      WORKFLOW.slice(upload, WORKFLOW.indexOf("      - name: Security allowlist metadata check")),
+      WORKFLOW.slice(upload, WORKFLOW.indexOf("      - name: Run selected verification profile")),
     ).toContain("if: always()");
     expect(WORKFLOW).toContain("path: ci-reports/security");
     expect(WORKFLOW).toContain('cat ci-reports/security/summary.md >> "$GITHUB_STEP_SUMMARY"');
@@ -179,6 +203,21 @@ describe("CI verification profile contract", () => {
   it("allows only manifest entrypoints and explicit Actions-owned commands", () => {
     expect(findWorkflowVerificationViolations(VALIDATE_JOB, ROOT_DIR)).toEqual([]);
   });
+
+  it.each(["--log-opts=--max-count=0", "--no-git", "--redact=false"])(
+    "rejects a production Gitleaks argv override: %s",
+    (extraArgument) => {
+      const mutant = VALIDATE_JOB.replace(
+        "--report-path /repo/ci-reports/security/gitleaks.sarif >",
+        `--report-path /repo/ci-reports/security/gitleaks.sarif ${extraArgument} >`,
+      );
+
+      expect(mutant).not.toBe(VALIDATE_JOB);
+      expect(findWorkflowVerificationViolations(mutant, ROOT_DIR)).toEqual([
+        expect.objectContaining({ reason: "command is not in the Actions-only allowlist" }),
+      ]);
+    },
+  );
 
   it("rejects alias, direct-leaf, and unknown verifier mutations", () => {
     for (const mutation of [

@@ -585,9 +585,67 @@ describe("security-allowlist-metadata-check.mts", () => {
     const result = runScript(root);
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain(
-      "packages/app/src/index.ts:1 uses an inline Gitleaks suppression comment",
-    );
+    expect(result.stdout).toContain("reachable commit");
+    expect(result.stdout).toContain("uses an inline Gitleaks suppression comment");
+  });
+
+  it("rejects historical inline suppressions in C-quoted Git paths after deletion", () => {
+    const root = createTempRoot();
+    writeRepo(root);
+    mkdirSync(join(root, "fixtures"), { recursive: true });
+    runGit(root, "init");
+    runGit(root, "config", "user.email", "security@example.com");
+    runGit(root, "config", "user.name", "Security Tests");
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "initial fixture");
+    const suppression = `${"gitleaks"}${":allow"}`;
+    writeFileSync(join(root, "fixtures/évidence.txt"), `dummy # ${suppression}\n`);
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "add quoted-path suppression fixture");
+    rmSync(join(root, "fixtures/évidence.txt"));
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "delete quoted-path suppression fixture");
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("reachable commit");
+    expect(result.stdout).toContain("uses an inline Gitleaks suppression comment");
+  });
+
+  it("rejects historical suppressions when a path resembles a git log record marker", () => {
+    const root = createTempRoot();
+    writeRepo(root);
+    runGit(root, "init");
+    runGit(root, "config", "user.email", "security@example.com");
+    runGit(root, "config", "user.name", "Security Tests");
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "initial fixture");
+    const path = `commit:${"a".repeat(40)}`;
+    const suppression = `${"gitleaks"}${":allow"}`;
+    writeFileSync(join(root, path), `dummy # ${suppression}\n`);
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "add record-like suppression fixture");
+    rmSync(join(root, path));
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "delete record-like suppression fixture");
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("reachable commit");
+    expect(result.stdout).toContain("uses an inline Gitleaks suppression comment");
+  });
+
+  it("fails closed when reachable Git history cannot be inspected", () => {
+    const root = createTempRoot();
+    writeRepo(root);
+    mkdirSync(join(root, ".git"));
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("HISTORICAL_GITLEAKS_SUPPRESSION_INSPECTION_FAILED");
   });
 
   it("fails missing owner, reason, and review dates", () => {
