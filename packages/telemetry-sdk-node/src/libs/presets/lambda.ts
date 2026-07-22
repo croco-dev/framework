@@ -31,7 +31,6 @@ function lambdaPreset(options: LambdaPresetOptions): TelemetryConfig {
     resourceAttributes: {
       "cloud.provider": "aws",
       "cloud.platform": "aws_lambda",
-      "deployment.environment": environment,
     },
     trace: {
       enabled: true,

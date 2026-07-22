@@ -1,6 +1,7 @@
 import type { NodeSDK } from "@opentelemetry/sdk-node";
 import type { BatchSpanProcessor, Sampler } from "@opentelemetry/sdk-trace-base";
 import {
+  ATTR_DEPLOYMENT_ENVIRONMENT_NAME,
   SEMRESATTRS_SERVICE_NAME,
   SEMRESATTRS_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
@@ -12,6 +13,7 @@ import {
   TelemetryRuntimeProblem,
   UnsupportedTelemetrySignalProblem,
 } from "./libs/problems/TelemetryProblems";
+import { resolveDeploymentEnvironment } from "./libs/resources/DeploymentEnvironment";
 import { getUnsupportedTelemetrySignals } from "./libs/signals/TelemetrySignalSupport";
 
 class TelemetryRuntime {
@@ -120,6 +122,7 @@ class TelemetryRuntime {
             [SEMRESATTRS_SERVICE_NAME]: config.serviceName,
             [SEMRESATTRS_SERVICE_VERSION]: config.serviceVersion ?? "0.0.0",
             ...config.resourceAttributes,
+            [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: resolveDeploymentEnvironment(config),
           }),
         );
 

@@ -96,7 +96,7 @@ export type TelemetryConfig = {
   serviceName: string;
   /** Service version. Default: '0.0.0' */
   serviceVersion?: string;
-  /** Deployment environment. Default: 'development' */
+  /** Deployment environment. Overrides deployment.environment.name in resourceAttributes. Default: 'development' */
   environment?: string;
   /** Whether telemetry is globally enabled. Default: true */
   enabled?: boolean;
