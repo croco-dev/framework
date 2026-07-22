@@ -11,6 +11,7 @@
  * - .changeset/README.md is documentation and never counts as a release changeset.
  */
 
+import parseChangesetFile from "@changesets/parse";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
@@ -56,12 +57,19 @@ type NoReleaseJustification = {
   readonly source: string;
 };
 
-type ConsumedChangesetMetadata = {
-  readonly packageNames: ReadonlySet<string>;
+type ChangedChangesetMetadata = {
+  readonly activePackageNames: ReadonlySet<string>;
+  readonly consumedPackageNames: ReadonlySet<string>;
+  readonly referencedPackageNames: ReadonlySet<string>;
+  readonly invalidFiles: readonly InvalidChangesetFile[];
+};
+
+type InvalidChangesetFile = {
+  readonly file: string;
+  readonly state: "active" | "consumed";
 };
 
 type ChangesetCoverage = {
-  readonly validPublishableNames: ReadonlySet<string>;
   readonly privateNames: readonly string[];
   readonly unknownNames: readonly string[];
   readonly uncoveredPackages: ReadonlyMap<string, ReleaseSignificantChange>;
@@ -77,6 +85,12 @@ const dependencyVersionFields = new Set([
   "devDependencies",
   "optionalDependencies",
   "peerDependencies",
+]);
+const supportedChangesetBumpTypes: ReadonlySet<string> = new Set([
+  "major",
+  "minor",
+  "patch",
+  "none",
 ]);
 const semverPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 const internalVersionRangePattern =
@@ -229,57 +243,80 @@ function isRealChangesetPath(file: string): boolean {
   return realChangesetPattern.test(file) && basename(file) !== "README.md";
 }
 
-function parseChangesetPackageNames(content: string): Set<string> {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  if (lines[0] !== "---") {
-    return new Set();
-  }
+type ParsedChangesetPackageNames = {
+  readonly referencedPackageNames: ReadonlySet<string>;
+  readonly releasePackageNames: ReadonlySet<string>;
+};
 
-  const endIndex = lines.indexOf("---", 1);
-  if (endIndex <= 1) {
-    return new Set();
-  }
+function parseChangesetPackageNames(content: string): ParsedChangesetPackageNames {
+  const parsed = parseChangesetFile(content);
+  const referencedPackageNames = new Set<string>();
+  const releasePackageNames = new Set<string>();
 
-  const packageNames = new Set<string>();
-
-  for (const rawLine of lines.slice(1, endIndex)) {
-    const line = rawLine.trim();
-    const match = /^['"]?(@?[\w.-]+(?:\/[\w.-]+)?|[\w.-]+)['"]?: (major|minor|patch)$/.exec(line);
-    if (match?.[1]) {
-      packageNames.add(match[1]);
+  for (const release of parsed.releases) {
+    if (!supportedChangesetBumpTypes.has(release.type)) {
+      throw new Error(`changeset release type '${release.type}' is not supported`);
+    }
+    referencedPackageNames.add(release.name);
+    if (release.type !== "none") {
+      releasePackageNames.add(release.name);
     }
   }
 
-  return packageNames;
+  return {
+    referencedPackageNames,
+    releasePackageNames,
+  };
 }
 
-function getChangedChangesetPackageNames(
+function getChangedChangesetMetadata(
   options: CheckOptions,
   changedFiles: readonly string[],
-): Set<string> {
-  const packageNames = new Set<string>();
+): ChangedChangesetMetadata {
+  const activePackageNames = new Set<string>();
+  const consumedPackageNames = new Set<string>();
+  const referencedPackageNames = new Set<string>();
+  const invalidFiles: InvalidChangesetFile[] = [];
 
   for (const file of changedFiles) {
     if (!isRealChangesetPath(file)) {
       continue;
     }
 
+    let content: string;
+    let state: InvalidChangesetFile["state"];
     try {
-      const content = runGit(options.rootDir, ["show", `${options.headRef}:${file}`]);
-      for (const packageName of parseChangesetPackageNames(content)) {
-        packageNames.add(packageName);
+      content = runGit(options.rootDir, ["show", `${options.headRef}:${file}`]);
+      state = "active";
+    } catch {
+      // Changed changesets absent at HEAD were consumed; the base lookup fails closed if unavailable.
+      content = runGit(options.rootDir, ["show", `${options.baseRef}:${file}`]);
+      state = "consumed";
+    }
+
+    try {
+      const parsed = parseChangesetPackageNames(content);
+      for (const packageName of parsed.referencedPackageNames) {
+        referencedPackageNames.add(packageName);
+      }
+      for (const packageName of parsed.releasePackageNames) {
+        (state === "active" ? activePackageNames : consumedPackageNames).add(packageName);
       }
     } catch {
-      // Deleted changesets are handled by generated Version Packages validation.
+      invalidFiles.push({ file, state });
     }
   }
 
-  return packageNames;
+  return {
+    activePackageNames,
+    consumedPackageNames,
+    referencedPackageNames,
+    invalidFiles,
+  };
 }
 
 function getChangesetCoverage(
-  options: CheckOptions,
-  changedFiles: readonly string[],
+  changesets: ChangedChangesetMetadata,
   packages: readonly PackageInfo[],
   significantChanges: ReadonlyMap<string, ReleaseSignificantChange>,
 ): ChangesetCoverage {
@@ -288,13 +325,13 @@ function getChangesetCoverage(
   const privateNames: string[] = [];
   const unknownNames: string[] = [];
 
-  for (const packageName of [...getChangedChangesetPackageNames(options, changedFiles)].sort()) {
+  for (const packageName of [...changesets.referencedPackageNames].sort()) {
     const pkg = packageByName.get(packageName);
     if (!pkg) {
       unknownNames.push(packageName);
     } else if (pkg.private) {
       privateNames.push(packageName);
-    } else {
+    } else if (changesets.activePackageNames.has(packageName)) {
       validPublishableNames.add(packageName);
     }
   }
@@ -306,43 +343,9 @@ function getChangesetCoverage(
   );
 
   return {
-    validPublishableNames,
     privateNames,
     unknownNames,
     uncoveredPackages,
-  };
-}
-
-function getConsumedChangesetMetadata(
-  options: CheckOptions,
-  changedFiles: readonly string[],
-): ConsumedChangesetMetadata {
-  const packageNames = new Set<string>();
-
-  for (const file of changedFiles) {
-    if (!isRealChangesetPath(file)) {
-      continue;
-    }
-
-    try {
-      runGit(options.rootDir, ["show", `${options.headRef}:${file}`]);
-      continue;
-    } catch {
-      // A generated Changesets version commit consumes pending changesets by deleting them.
-    }
-
-    try {
-      const baseContent = runGit(options.rootDir, ["show", `${options.baseRef}:${file}`]);
-      for (const packageName of parseChangesetPackageNames(baseContent)) {
-        packageNames.add(packageName);
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  return {
-    packageNames,
   };
 }
 
@@ -815,14 +818,14 @@ function isChangesetsVersionMetadataChange(
   significantChanges: ReadonlyMap<string, ReleaseSignificantChange>,
   changedFiles: readonly string[],
   packages: readonly PackageInfo[],
+  consumedPackageNames: ReadonlySet<string>,
 ): boolean {
   const manifestFiles = getReleaseSignificantManifestFiles(significantChanges);
   if (!manifestFiles || manifestFiles.length === 0) {
     return false;
   }
 
-  const consumedChangesets = getConsumedChangesetMetadata(options, changedFiles);
-  if (consumedChangesets.packageNames.size === 0) {
+  if (consumedPackageNames.size === 0) {
     return false;
   }
 
@@ -846,11 +849,11 @@ function isChangesetsVersionMetadataChange(
       !version ||
       !changedDependencyNames ||
       !stableWorkspaceDependencyNames ||
-      (!consumedChangesets.packageNames.has(pkg.name) &&
+      (!consumedPackageNames.has(pkg.name) &&
         !isGeneratedDependentVersionUpdate(
           changedDependencyNames,
           stableWorkspaceDependencyNames,
-          consumedChangesets.packageNames,
+          consumedPackageNames,
           versionedPackageNames,
         )) ||
       !changedFiles.includes(changelogFile) ||
@@ -1185,6 +1188,10 @@ function isSnapshotOnlyReleaseChange(
 }
 
 function logInvalidChangesetPackageNames(coverage: ChangesetCoverage): void {
+  if (coverage.unknownNames.length === 0 && coverage.privateNames.length === 0) {
+    return;
+  }
+
   log("");
   log("Invalid changeset package names:");
   for (const packageName of coverage.unknownNames) {
@@ -1192,6 +1199,20 @@ function logInvalidChangesetPackageNames(coverage: ChangesetCoverage): void {
   }
   for (const packageName of coverage.privateNames) {
     log(`- ${packageName} (private package)`);
+  }
+}
+
+function logInvalidChangesetFiles(changesets: ChangedChangesetMetadata): void {
+  if (changesets.invalidFiles.length === 0) {
+    return;
+  }
+
+  log("");
+  log("Invalid changeset files:");
+  for (const invalid of [...changesets.invalidFiles].sort((left, right) =>
+    left.file.localeCompare(right.file),
+  )) {
+    log(`- ${invalid.file} (${invalid.state} metadata)`);
   }
 }
 
@@ -1223,7 +1244,16 @@ function main(): void {
     const packages = readPackages(options.rootDir);
     const significantChanges = getReleaseSignificantChanges(changedFiles, packages);
     addPublicApiSnapshotChanges(significantChanges, options, changedFiles);
-    const coverage = getChangesetCoverage(options, changedFiles, packages, significantChanges);
+    const changesets = getChangedChangesetMetadata(options, changedFiles);
+    const coverage = getChangesetCoverage(changesets, packages, significantChanges);
+
+    if (changesets.invalidFiles.length > 0) {
+      log("changeset-required: changed changesets contain invalid metadata.");
+      logInvalidChangesetFiles(changesets);
+      logInvalidChangesetPackageNames(coverage);
+      logUncoveredPackages(coverage);
+      exit(1);
+    }
 
     if (coverage.privateNames.length > 0 || coverage.unknownNames.length > 0) {
       log("changeset-required: changed changesets contain invalid package names.");
@@ -1244,7 +1274,15 @@ function main(): void {
       exit(0);
     }
 
-    if (isChangesetsVersionMetadataChange(options, significantChanges, changedFiles, packages)) {
+    if (
+      isChangesetsVersionMetadataChange(
+        options,
+        significantChanges,
+        changedFiles,
+        packages,
+        changesets.consumedPackageNames,
+      )
+    ) {
       log("changeset-required: generated Changesets version metadata found (passing)");
       exit(0);
     }

@@ -68,6 +68,30 @@ describe("changeset-required-check.mts", () => {
     );
   });
 
+  it("passes Changesets-supported quoted bump values and YAML comments", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "feature/quoted-changeset-metadata");
+    commitFile(
+      repo,
+      "packages/public/src/index.ts",
+      "export const value = 2;",
+      "fix: change public package",
+    );
+    commitFile(
+      repo,
+      ".changeset/quoted.md",
+      '---\n"@croco/public": "patch" # release the changed package\n---\n\nFix public behavior.\n',
+      "chore: add quoted changeset",
+    );
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: changed changesets cover all affected publishable packages (passing)",
+    );
+  });
+
   it("fails when a changeset only names an unrelated publishable package", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "fix/unrelated-changeset");
@@ -183,12 +207,46 @@ describe("changeset-required-check.mts", () => {
     const result = runScript(repo);
 
     expect(result.status).toBe(1);
+    expect(result.stdout).toBe(
+      [
+        "changeset-required: changed changesets contain invalid package names.",
+        "",
+        "Invalid changeset package names:",
+        "- @croco/missing (unknown package)",
+        "- @croco/private (private package)",
+        "",
+        "Uncovered release-significant packages:",
+        "- @croco/dependency (package files)",
+        "  - packages/dependency/src/index.ts",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("rejects a Changesets-supported invalid package entry alongside valid coverage", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/quoted-invalid-changeset-package");
+    commitFile(
+      repo,
+      "packages/public/src/index.ts",
+      "export const value = 2;",
+      "fix: change public package",
+    );
+    commitFile(
+      repo,
+      ".changeset/quoted-invalid.md",
+      '---\n"@croco/public": patch\n"@croco/missing": "patch" # invalid package\n---\n\nRelease mixed packages.\n',
+      "chore: add quoted invalid changeset",
+    );
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
     expect(result.stdout).toContain("Invalid changeset package names:");
     expect(result.stdout).toContain("- @croco/missing (unknown package)");
-    expect(result.stdout).toContain("- @croco/private (private package)");
-    expect(result.stdout).toContain("@croco/dependency (package files)");
-    expect(result.stdout).toContain("packages/dependency/src/index.ts");
-    expect(result.stdout).not.toContain("@croco/public (package files)");
+    expect(result.stdout).not.toContain(
+      "changeset-required: changed changesets cover all affected publishable packages (passing)",
+    );
   });
 
   it("fails when a changeset names an invalid package without behavior changes", () => {
@@ -206,6 +264,86 @@ describe("changeset-required-check.mts", () => {
     expect(result.status).toBe(1);
     expect(result.stdout).toContain("Invalid changeset package names:");
     expect(result.stdout).toContain("- @croco/missing (unknown package)");
+  });
+
+  it.each([
+    ["unknown", "@croco/missing", "unknown package"],
+    ["private", "@croco/private", "private package"],
+  ] as const)(
+    "rejects a none changeset that names an %s package",
+    (_kind, packageName, diagnostic) => {
+      const repo = createTempRepo();
+      checkoutBranch(repo, `fix/${_kind}-none-changeset`);
+      commitFile(
+        repo,
+        ".changeset/invalid-none.md",
+        `---\n'${packageName}': none\n---\n\nDo not release an invalid package.\n`,
+        "chore: add invalid none changeset",
+      );
+
+      const result = runScript(repo);
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(`- ${packageName} (${diagnostic})`);
+    },
+  );
+
+  it("accepts an empty changeset when no package behavior changed", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "chore/empty-changeset");
+    commitFile(
+      repo,
+      ".changeset/empty-release.md",
+      "---\n---\n\nRecord a non-package release policy change.\n",
+      "chore: add empty changeset",
+    );
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: no publishable package behavior changes detected (passing)",
+    );
+  });
+
+  it("accepts a none changeset when no package behavior changed", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "chore/none-changeset");
+    commitFile(
+      repo,
+      ".changeset/no-release.md",
+      "---\n'@croco/public': none\n---\n\nRecord a package change without a release.\n",
+      "chore: add none changeset",
+    );
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: no publishable package behavior changes detected (passing)",
+    );
+  });
+
+  it("does not use a none changeset to cover package behavior changes", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "feature/none-changeset-coverage");
+    commitFile(
+      repo,
+      "packages/public/src/index.ts",
+      "export const value = 2;",
+      "fix: change public package",
+    );
+    commitFile(
+      repo,
+      ".changeset/no-release.md",
+      "---\n'@croco/public': none\n---\n\nDo not release public.\n",
+      "chore: add none changeset",
+    );
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("- @croco/public (package files)");
   });
 
   it("fails when public package source changes with an invalid changeset file", () => {
@@ -228,8 +366,9 @@ describe("changeset-required-check.mts", () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout).toContain(
-      "changeset-required: publishable package changes require a non-README changeset.",
+      "changeset-required: changed changesets contain invalid metadata.",
     );
+    expect(result.stdout).toContain("- .changeset/empty.md (active metadata)");
   });
 
   it("does not count .changeset/README.md as a release changeset", () => {
@@ -395,7 +534,7 @@ describe("changeset-required-check.mts", () => {
     commitFile(
       repo,
       ".changeset/public-version.md",
-      "---\n'@croco/public': patch\n---\n\nRelease public package behavior.\n",
+      "---\n'@croco/public': patch\n'@croco/other': none\n---\n\nRelease public package behavior.\n",
       "chore: add pending changeset",
     );
     checkoutBranch(repo, "version-packages");
@@ -422,6 +561,42 @@ describe("changeset-required-check.mts", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(
+      "changeset-required: generated Changesets version metadata found (passing)",
+    );
+  });
+
+  it("does not use a consumed none changeset to authorize generated version metadata", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/public-version.md",
+      "---\n'@croco/public': none\n---\n\nDo not release public package behavior.\n",
+      "chore: add pending none changeset",
+    );
+    checkoutBranch(repo, "version-packages-with-consumed-none");
+    writePackageJson(repo, "public", {
+      name: "@croco/public",
+      version: "0.0.4",
+      publishConfig: {
+        access: "public",
+      },
+      dependencies: {
+        "@croco/dependency": "^0.0.3",
+      },
+    });
+    writeFile(
+      repo,
+      "packages/public/CHANGELOG.md",
+      "# @croco/public\n\n## 0.0.4\n\n### Patch Changes\n\n- Unexpected release.\n",
+    );
+    git(repo, ["rm", ".changeset/public-version.md"]);
+    git(repo, ["add", "packages/public/package.json", "packages/public/CHANGELOG.md"]);
+    git(repo, ["commit", "-m", "chore: version packages from none metadata"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).not.toContain(
       "changeset-required: generated Changesets version metadata found (passing)",
     );
   });
@@ -472,6 +647,51 @@ describe("changeset-required-check.mts", () => {
       "changeset-required: generated Changesets version metadata found (passing)",
     );
   });
+
+  it.each([
+    ["unknown patch", "unknown", "@croco/missing", "unknown package", "patch"],
+    ["private patch", "private", "@croco/private", "private package", "patch"],
+    ["unknown none", "unknown", "@croco/missing", "unknown package", "none"],
+    ["private none", "private", "@croco/private", "private package", "none"],
+  ] as const)(
+    "rejects a consumed changeset containing valid metadata and an invalid %s entry",
+    (_caseName, kind, invalidPackageName, diagnostic, bumpType) => {
+      const repo = createTempRepo();
+      commitFile(
+        repo,
+        ".changeset/public-version.md",
+        `---\n'@croco/public': patch\n'${invalidPackageName}': ${bumpType}\n---\n\nRelease mixed package metadata.\n`,
+        "chore: add pending mixed changeset",
+      );
+      checkoutBranch(repo, `version-packages-with-consumed-${kind}-${bumpType}-package`);
+      writePackageJson(repo, "public", {
+        name: "@croco/public",
+        version: "0.0.4",
+        publishConfig: {
+          access: "public",
+        },
+        dependencies: {
+          "@croco/dependency": "^0.0.3",
+        },
+      });
+      writeFile(
+        repo,
+        "packages/public/CHANGELOG.md",
+        "# @croco/public\n\n## 0.0.4\n\n### Patch Changes\n\n- Release mixed package metadata.\n",
+      );
+      git(repo, ["rm", ".changeset/public-version.md"]);
+      git(repo, ["add", "packages/public/package.json", "packages/public/CHANGELOG.md"]);
+      git(repo, ["commit", "-m", "chore: version packages with consumed invalid metadata"]);
+
+      const result = runScript(repo);
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(`- ${invalidPackageName} (${diagnostic})`);
+      expect(result.stdout).not.toContain(
+        "changeset-required: generated Changesets version metadata found (passing)",
+      );
+    },
+  );
 
   it("passes generated internal dependency metadata for packages versioned together", () => {
     const repo = createTempRepo();
