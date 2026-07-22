@@ -457,6 +457,39 @@ describe("doctor", () => {
 
   it.each([
     {
+      exportStatement: "export const handler = crocoHandler;",
+      label: "direct handler export",
+    },
+    {
+      exportStatement: "export default crocoHandler;",
+      label: "default handler export",
+    },
+  ])("accepts a configured handler exposed through a $label", ({ exportStatement }) => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/lambda.ts",
+      [
+        'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const crocoHandler = createCrocoApp().lambdaHandler({",
+        "  flush: async () => telemetry.forceFlush(),",
+        "});",
+        exportStatement,
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.checks.find((check) => check.id === "lambda-telemetry-flush")?.status).toBe(
+      "pass",
+    );
+  });
+
+  it.each([
+    {
       label: "shorthand property",
       setup: [
         "const flush = async () => {",

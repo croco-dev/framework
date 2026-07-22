@@ -4394,6 +4394,13 @@ function exportedHandlerDelegatesTo(
   const handlerInitializer = handlerVariable?.getVariableStatement()?.isExported()
     ? handlerVariable.getInitializer()
     : undefined;
+  if (
+    handlerInitializer &&
+    Node.isIdentifier(handlerInitializer) &&
+    identifierResolvesTo(handlerInitializer, configuredHandlers)
+  ) {
+    return true;
+  }
   if (handlerInitializer) {
     handlerNodes.push(handlerInitializer);
   }
@@ -4416,7 +4423,7 @@ function exportsConfiguredHandlerAlias(
   sourceFile: Morph.SourceFile,
   configuredHandlers: ReadonlySet<Morph.VariableDeclaration>,
 ): boolean {
-  return sourceFile.getExportDeclarations().some((declaration) =>
+  const exportsNamedHandler = sourceFile.getExportDeclarations().some((declaration) =>
     declaration.getNamedExports().some(
       (namedExport) =>
         namedExport.getAliasNode()?.getText() === "handler" &&
@@ -4429,4 +4436,15 @@ function exportsConfiguredHandlerAlias(
           ),
     ),
   );
+  if (exportsNamedHandler) {
+    return true;
+  }
+
+  return sourceFile.getExportAssignments().some((assignment) => {
+    if (assignment.isExportEquals()) {
+      return false;
+    }
+    const expression = assignment.getExpression();
+    return Node.isIdentifier(expression) && identifierResolvesTo(expression, configuredHandlers);
+  });
 }

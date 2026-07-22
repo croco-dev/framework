@@ -2517,7 +2517,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/addons/lambda/apps/graphql-api/src/telemetryFlush.ts",
-          line: 12,
+          line: 10,
           column: 3,
           kind: "problem-class",
         },
@@ -11517,21 +11517,20 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
     },
     {
       code: "TELEMETRY_FORCE_FLUSH_UNSUPPORTED",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
       cookbookPath: "/reference/problem-recovery-cookbook/#telemetry-force-flush-unsupported",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        cause: "The requested capability is not supported by this runtime or adapter.",
+        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
+          "Check runtime capability declarations and provider maturity documentation.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
         telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
+          eventName: "croco.problem.info",
+          severity: "info",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
@@ -11541,7 +11540,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 59,
+          line: 62,
           column: 3,
           kind: "problem-class",
         },
@@ -11573,7 +11572,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts",
-          line: 72,
+          line: 75,
           column: 3,
           kind: "problem-class",
         },

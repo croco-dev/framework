@@ -108,9 +108,10 @@ describe("TelemetryForceFlushUnsupportedProblem", () => {
 
     expect(problem).toMatchObject({
       code: "TELEMETRY_FORCE_FLUSH_UNSUPPORTED",
-      category: "InternalServerError",
+      category: "NotImplemented",
       detail: "Telemetry forceFlush is unsupported before initialization.",
     });
+    expect(problem.status).toBe(501);
   });
 });
 

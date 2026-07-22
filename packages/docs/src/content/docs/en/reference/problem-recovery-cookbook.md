@@ -381,7 +381,7 @@ This cookbook documents 445 public Croco Problem codes. The deterministic JSON r
 | [`tasks-qstash/invalid-publish-request`](#tasks-qstash-invalid-publish-request)                                                       | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`tasks-qstash/missing-config`](#tasks-qstash-missing-config)                                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG`](#telemetry-auto-instrumentation-invalid-config)                                     | ValidationError       |    422 | not-retryable | public        | active    |       1 |
-| [`TELEMETRY_FORCE_FLUSH_UNSUPPORTED`](#telemetry-force-flush-unsupported)                                                             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`TELEMETRY_FORCE_FLUSH_UNSUPPORTED`](#telemetry-force-flush-unsupported)                                                             | NotImplemented        |    501 | not-retryable | public        | active    |       1 |
 | [`TELEMETRY_RUNTIME_ERROR`](#telemetry-runtime-error)                                                                                 | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`TELEMETRY_SAMPLER_INVALID_CONFIG`](#telemetry-sampler-invalid-config)                                                               | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`TELEMETRY_SIGNAL_UNSUPPORTED`](#telemetry-signal-unsupported)                                                                       | BadRequest            |    400 | not-retryable | public        | active    |       1 |
@@ -1917,7 +1917,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/addons/lambda/apps/graphql-api/src/telemetryFlush.ts:12:3` (problem-class)
+- `packages/create-croco-app/templates/addons/lambda/apps/graphql-api/src/telemetryFlush.ts:10:3` (problem-class)
 
 <a id="create-croco-app-unexpected-failure"></a>
 
@@ -7089,19 +7089,19 @@ Sources:
 
 ## `TELEMETRY_FORCE_FLUSH_UNSUPPORTED`
 
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
+- Category: `NotImplemented`
+- HTTP status: `501` Not Implemented
+- Retryability: `not-retryable`
+- Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+- Cause: The requested capability is not supported by this runtime or adapter.
+- User action: Use a supported capability or choose an adapter/runtime that provides it.
+- Operator action: Check runtime capability declarations and provider maturity documentation.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:59:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:62:3` (problem-class)
 
 <a id="telemetry-runtime-error"></a>
 
@@ -7119,7 +7119,7 @@ Sources:
 
 Sources:
 
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:72:3` (problem-class)
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:75:3` (problem-class)
 
 <a id="telemetry-sampler-invalid-config"></a>
 

@@ -414,6 +414,36 @@ describe("TelemetryRuntime", () => {
     });
   });
 
+  it("should wait for in-flight initialization before forceFlush", async () => {
+    const processor = {
+      forceFlush: vi.fn().mockResolvedValue(undefined),
+    };
+    let releaseInit!: () => void;
+    const pendingInit = new Promise<void>((resolve) => {
+      releaseInit = () => {
+        Object.assign(runtime, { initialized: true, processor });
+        resolve();
+      };
+    });
+    Object.assign(runtime, { initPromise: pendingInit });
+
+    let flushSettled = false;
+    const flushPromise = runtime.forceFlush();
+    flushPromise.then(() => {
+      flushSettled = true;
+    });
+
+    await Promise.resolve();
+    expect(flushSettled).toBe(false);
+
+    releaseInit();
+    await expect(flushPromise).resolves.toEqual({
+      outcome: "completed",
+      flushedSpans: -1,
+    });
+    expect(processor.forceFlush).toHaveBeenCalledTimes(1);
+  });
+
   it("should timeout with default 30000ms when no timeoutMillis arg given", async () => {
     vi.useFakeTimers();
     const processor = {

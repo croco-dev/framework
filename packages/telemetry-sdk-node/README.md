@@ -73,12 +73,14 @@ await telemetry.init(
 ### 종료 전 flush
 
 ```typescript
+import { TelemetryForceFlushUnsupportedProblem } from "@croco/telemetry-sdk-node";
+
 const result = await telemetry.forceFlush(5000);
 if (result.outcome === "failed") {
   throw result.error;
 }
 if (result.outcome === "unsupported") {
-  throw new Error("telemetry flush is unsupported before initialization");
+  throw new TelemetryForceFlushUnsupportedProblem();
 }
 ```
 
@@ -86,6 +88,8 @@ if (result.outcome === "unsupported") {
 flush 실패는 handler 실패로 전파되어 trace export 실패가 성공 응답처럼 숨겨지지 않습니다.
 
 ```typescript
+import { TelemetryForceFlushUnsupportedProblem } from "@croco/telemetry-sdk-node";
+
 export const handler = app.lambdaHandler({
   flush: async () => {
     const result = await telemetry.forceFlush(5000);
@@ -93,7 +97,7 @@ export const handler = app.lambdaHandler({
       throw result.error;
     }
     if (result.outcome === "unsupported") {
-      throw new Error("telemetry flush is unsupported before initialization");
+      throw new TelemetryForceFlushUnsupportedProblem();
     }
   },
 });

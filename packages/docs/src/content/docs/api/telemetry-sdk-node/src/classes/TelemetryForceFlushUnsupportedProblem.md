@@ -5,7 +5,7 @@ prev: false
 title: "TelemetryForceFlushUnsupportedProblem"
 ---
 
-OTLP, 지원되지 않는 신호, 샘플러 설정 오류를 나타내는 Problem 타입입니다.
+초기화 전에 호출된 지원되지 않는 telemetry `forceFlush()`를 나타내는 Problem입니다.
 
 ## Extends
 
@@ -29,7 +29,7 @@ OTLP, 지원되지 않는 신호, 샘플러 설정 오류를 나타내는 Proble
 
 ### category
 
-> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
+> `readonly` **category**: [`NotImplemented`](/api/problems-core/src/enumerations/problemcategory/#notimplemented) = `ProblemCategory.NotImplemented`
 
 #### Overrides
 

@@ -185,6 +185,17 @@ class TelemetryRuntime {
   }
 
   async forceFlush(timeoutMillis?: number): Promise<ForceFlushResult> {
+    const pendingInit = this.initPromise;
+    if (pendingInit) {
+      try {
+        await pendingInit;
+      } catch (error) {
+        this.initialized = false;
+        this.initPromise = null;
+        throw error;
+      }
+    }
+
     if (!this.processor) {
       const reason = this.getDisabledLifecycleReason();
       return reason

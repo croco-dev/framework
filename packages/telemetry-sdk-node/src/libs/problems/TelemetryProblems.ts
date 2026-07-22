@@ -55,14 +55,17 @@ export class UnsupportedTelemetrySignalProblem extends Problem {
   }
 }
 
+/**
+ * 초기화 전에 호출된 지원되지 않는 telemetry `forceFlush()`를 나타내는 Problem입니다.
+ */
 export class TelemetryForceFlushUnsupportedProblem extends Problem {
   readonly code = "TELEMETRY_FORCE_FLUSH_UNSUPPORTED";
-  readonly category = ProblemCategory.InternalServerError;
+  readonly category = ProblemCategory.NotImplemented;
 
   constructor() {
     super(
       "TELEMETRY_FORCE_FLUSH_UNSUPPORTED",
-      ProblemCategory.InternalServerError,
+      ProblemCategory.NotImplemented,
       "Telemetry forceFlush is unsupported before initialization.",
     );
   }

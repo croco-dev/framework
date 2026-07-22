@@ -1,8 +1,6 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import {
-  TelemetryForceFlushUnsupportedProblem,
-  type ForceFlushResult,
-} from "@croco/telemetry-sdk-node";
+import { TelemetryForceFlushUnsupportedProblem } from "@croco/telemetry-sdk-node";
+import type { ForceFlushResult } from "@croco/telemetry-sdk-node";
 
 type OperationOutcome<T> =
   | { readonly completed: true; readonly value: T }

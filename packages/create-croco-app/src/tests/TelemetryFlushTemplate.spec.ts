@@ -1,6 +1,6 @@
 import { TelemetryRuntime } from "@croco/telemetry-sdk-node";
 import type { ForceFlushResult } from "@croco/telemetry-sdk-node";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type RunWithTelemetryFlush = <T>(
   operation: () => Promise<T>,
@@ -17,6 +17,10 @@ async function loadRunWithTelemetryFlush(): Promise<RunWithTelemetryFlush> {
 }
 
 describe("generated Lambda telemetry flush boundary", () => {
+  beforeEach(async () => {
+    await TelemetryRuntime.reset();
+  });
+
   afterEach(async () => {
     await TelemetryRuntime.reset();
   });
