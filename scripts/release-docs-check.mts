@@ -92,6 +92,23 @@ const AUDIT_DISPOSITIONS = new Set<AuditDisposition>([
   "remove-deprecate",
 ]);
 const GITHUB_ISSUE_URL = /^https:\/\/github\.com\/croco-dev\/framework\/issues\/\d+$/;
+const RELEASE_APP_RUNBOOK_MARKERS = [
+  ["name the GitHub App owner", "GitHub App owner"],
+  ["scope the GitHub App installation to the current repository only", "current repository only"],
+  ["grant the GitHub App Contents read/write permission", "`Contents`: Read and write"],
+  ["grant the GitHub App Pull requests read/write permission", "`Pull requests`: Read and write"],
+  ["forbid Actions and Workflows permissions", "Do not grant `Actions` or `Workflows`"],
+  ["document the RELEASE_APP_CLIENT_ID repository variable", "`RELEASE_APP_CLIENT_ID`"],
+  ["document the RELEASE_APP_PRIVATE_KEY repository secret", "`RELEASE_APP_PRIVATE_KEY`"],
+  ["document private-key rotation", "rotate the private key"],
+  ["document old-key revocation", "revoke the previous private key"],
+  ["document GitHub App reinstall recovery", "reinstall the GitHub App"],
+  ["name the missing-credential diagnostic", "Release App credentials missing"],
+  ["compare the Version Packages PR headRefOid", "headRefOid"],
+  ["compare workflow runs by head_sha", "head_sha"],
+  ["reject action_required workflow conclusions", "action_required"],
+  ["check for recursive Release workflow runs", "recursive Release workflow run"],
+] as const;
 
 function log(message: string): void {
   stdout.write(`${message}\n`);
@@ -604,6 +621,12 @@ function collectErrors(
 
   if (!docs.includes("Version field")) {
     errors.push("RELEASING.md must document npmjs.com provenance UI verification.");
+  }
+
+  for (const [requirement, marker] of RELEASE_APP_RUNBOOK_MARKERS) {
+    if (!docs.includes(marker)) {
+      errors.push(`RELEASING.md must ${requirement}.`);
+    }
   }
 
   if (!docs.includes("pnpm alpha-release:smoke")) {

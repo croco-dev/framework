@@ -111,6 +111,61 @@ If an artifact is compromised, revoked, or unexpectedly repointed:
    - "Version Packages" PR을 `trunk`로 머지하면, 배포 파이프라인이 트리거되어 npm에 패키지를 배포합니다.
    - 배포 후 GitHub Release 태그가 자동으로 생성됩니다.
 
+### Version Packages GitHub App runbook
+
+The Changesets action authenticates with a short-lived installation token so that checks run on
+commits it pushes to the Version Packages PR. The GitHub App owner and credential-rotation owner are
+the Croco repository maintainer team. Record the specific on-call maintainer in the App description
+or the repository operations roster.
+
+Create or update the GitHub App with this least-privilege configuration:
+
+- install it on the `croco-dev/framework` current repository only;
+- repository permission **`Contents`: Read and write**;
+- repository permission **`Pull requests`: Read and write**;
+- Do not grant `Actions` or `Workflows` permission, organization permissions, or access to other
+  repositories.
+
+Configure the repository variable **`RELEASE_APP_CLIENT_ID`** with the App client ID and the
+repository secret **`RELEASE_APP_PRIVATE_KEY`** with the complete PEM private key. Confirm the
+metadata exists before merging a release-automation change; these commands reveal names and
+metadata, not secret values:
+
+```bash
+gh api repos/croco-dev/framework/actions/variables/RELEASE_APP_CLIENT_ID --jq '.name'
+gh api repos/croco-dev/framework/actions/secrets --jq '.secrets[].name' | grep -x RELEASE_APP_PRIVATE_KEY
+```
+
+The workflow checks both names before dependency installation. A missing value fails with the
+`Release App credentials missing` annotation and names only the absent setting. A non-empty but
+invalid client ID, private key, installation, or permission fails in the later
+`Mint release PR GitHub App token` step; inspect that step without printing or copying credential
+values. The token is minted immediately before Changesets, is limited to this repository and the two
+declared permissions, and is revoked automatically when the job ends.
+
+For routine rotation, create a new App key, replace `RELEASE_APP_PRIVATE_KEY`, rerun Release, and
+then revoke the previous private key after the token step succeeds. If the key is compromised,
+revoke it first, rotate the private key immediately, and rerun only after the repository secret is
+replaced. If token creation reports that no installation is available, reinstall the GitHub App on
+the current repository only and recheck its two repository permissions. Roll back the workflow
+change through a normal PR if credentials cannot be restored; never substitute a PAT or
+`secrets.GITHUB_TOKEN`.
+
+After Changesets updates the Version Packages PR, verify the exact PR head rather than accepting a
+green run from an older commit:
+
+```bash
+head_sha="$(gh pr view <version-packages-pr-number> --json headRefOid --jq '.headRefOid')"
+gh run list --commit "$head_sha" --json databaseId,workflowName,headSha,status,conclusion,url
+gh run list --workflow release.yml --commit "$head_sha" --json databaseId,headSha,status,conclusion,url
+```
+
+Every required CI and companion workflow row must have `headSha` (the API `head_sha`) equal to the
+PR `headRefOid`, finish successfully, and have no `action_required` conclusion. The second command
+must return no recursive Release workflow run for the Version Packages PR head. A missing run,
+different SHA, pending/failed result, `action_required`, or recursive Release workflow run is
+merge-blocking.
+
 ---
 
 ## 3. Changeset 작성 가이드

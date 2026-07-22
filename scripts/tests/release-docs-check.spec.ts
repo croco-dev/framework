@@ -1,12 +1,29 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
 
 const scriptPath = resolve(__dirname, "../release-docs-check.mts");
 const tempRoots: string[] = [];
 const DEFAULT_SPINE_PACKAGES = ["framework-context", "cli", "create-croco-app"] as const;
+const RELEASE_APP_RUNBOOK_MARKERS = [
+  "GitHub App owner",
+  "current repository only",
+  "`Contents`: Read and write",
+  "`Pull requests`: Read and write",
+  "Do not grant `Actions` or `Workflows`",
+  "`RELEASE_APP_CLIENT_ID`",
+  "`RELEASE_APP_PRIVATE_KEY`",
+  "rotate the private key",
+  "revoke the previous private key",
+  "reinstall the GitHub App",
+  "Release App credentials missing",
+  "headRefOid",
+  "head_sha",
+  "action_required",
+  "recursive Release workflow run",
+] as const;
 
 type ScriptResult = {
   readonly stdout: string;
@@ -42,6 +59,7 @@ describe("release-docs-check.mts", () => {
         "Breaking changes to `croco.doctor.v1` doctor JSON output must either version the report schema or include release notes with a migration path.",
         "RC release notes link docs/release/croco-1.0-spine.md#0x-to-10-migration-matrix.",
         "RC notes list renamed/deprecated/removed public APIs and recovery with croco doctor plus croco upgrade --dry-run.",
+        ...validReleaseAppRunbookLines(),
       ].join("\n"),
     );
 
@@ -96,6 +114,18 @@ describe("release-docs-check.mts", () => {
     expect(result.stdout).toContain("npm provenance publish configuration");
     expect(result.stdout).toContain("npm provenance CLI verification command");
     expect(result.stdout).toContain("npmjs.com provenance UI verification");
+  });
+
+  it.each(RELEASE_APP_RUNBOOK_MARKERS)("fails when the GitHub App runbook omits %s", (marker) => {
+    const root = createFixture(
+      { fixed: [], linked: [] },
+      validReleaseGuide().replace(marker, "omitted-runbook-marker"),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("RELEASING.md must");
   });
 
   it("fails when the guide omits alpha release smoke evidence", () => {
@@ -434,7 +464,9 @@ function validSilentSuccessAudit(spinePackages: readonly string[]) {
 
 function writeAuditFixtureFiles(root: string, spinePackages: readonly string[]): void {
   for (const packageName of spinePackages) {
-    mkdirSync(join(root, `packages/${packageName}/src/tests`), { recursive: true });
+    mkdirSync(join(root, `packages/${packageName}/src/tests`), {
+      recursive: true,
+    });
     writeFileSync(
       join(root, `packages/${packageName}/src/index.ts`),
       "export type PublicOptions = { enabled: boolean };\n",
@@ -462,7 +494,22 @@ function validReleaseGuide(): string {
     "Breaking changes to `croco.doctor.v1` doctor JSON output must either version the report schema or include release notes with a migration path.",
     "RC release notes link docs/release/croco-1.0-spine.md#0x-to-10-migration-matrix.",
     "RC notes list renamed/deprecated/removed public APIs and recovery with croco doctor plus croco upgrade --dry-run.",
+    ...validReleaseAppRunbookLines(),
   ].join("\n");
+}
+
+function validReleaseAppRunbookLines(): string[] {
+  return [
+    "The GitHub App owner installs the App on the current repository only.",
+    "Grant `Contents`: Read and write and `Pull requests`: Read and write.",
+    "Do not grant `Actions` or `Workflows` permissions.",
+    "Configure `RELEASE_APP_CLIENT_ID` and `RELEASE_APP_PRIVATE_KEY`.",
+    "On rotation, rotate the private key and revoke the previous private key.",
+    "If installation is missing, reinstall the GitHub App.",
+    "The Release App credentials missing diagnostic names absent configuration.",
+    "Compare the PR headRefOid with workflow head_sha and reject action_required.",
+    "There must be no recursive Release workflow run.",
+  ];
 }
 
 function validSpineDocs(spinePackages: readonly string[]): string {
