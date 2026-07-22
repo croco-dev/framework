@@ -556,7 +556,7 @@ function checkSaasStructure() {
   expect(rootPackageJson).toMatchObject({
     scripts: expect.objectContaining({
       "contract:check": expect.stringMatching(
-        /^NODE_PATH=\.\/node_modules node \.\/node_modules\/@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--check[\s\S]*--strict-schemas[\s\S]*--fail-on-diagnostics$/,
+        /^croco-rpc-codegen[\s\S]*--check[\s\S]*--strict-schemas[\s\S]*--fail-on-diagnostics$/,
       ),
       "contract:snapshot": expect.stringMatching(
         /^croco contracts check[\s\S]*--strict-schemas[\s\S]*--json --out contract-graph\.snapshot\.json$/,
@@ -591,9 +591,7 @@ function checkSaasStructure() {
         /^pnpm contract:check && croco-openapi-spec[\s\S]*--strict-schemas[\s\S]*--out openapi\.json[\s\S]*--manifest-bundle \.croco\/manifest$/,
       ),
       "contract:openapi:check": expect.stringMatching(/croco-openapi-spec[\s\S]*--output-check$/),
-      "contract:client:check": expect.stringMatching(
-        /@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--output-check$/,
-      ),
+      "contract:client:check": expect.stringMatching(/^croco-rpc-codegen[\s\S]*--output-check$/),
       codegen: "pnpm project-map:write && pnpm contract:openapi && pnpm contract:client",
       "demo:seed": expect.any(String),
       "profile:check": "pnpm --filter {{scope}}/api-server profile:check",
@@ -901,9 +899,7 @@ function checkAiSaasStructure() {
         /--strict-schemas[\s\S]*AI SaaS API[\s\S]*--manifest-bundle \.croco\/manifest$/,
       ),
       "contract:openapi:check": expect.stringMatching(/croco-openapi-spec[\s\S]*--output-check$/),
-      "contract:client:check": expect.stringMatching(
-        /@croco\/rpc-codegen\/dist\/cli\.js[\s\S]*--output-check$/,
-      ),
+      "contract:client:check": expect.stringMatching(/^croco-rpc-codegen[\s\S]*--output-check$/),
       codegen: "pnpm project-map:write && pnpm contract:openapi && pnpm contract:client",
     }),
   });
