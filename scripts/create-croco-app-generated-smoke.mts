@@ -254,6 +254,7 @@ const generatedSmokeReportDir = resolve(
   process.env.CROCO_GENERATED_SMOKE_REPORT_DIR ?? join(rootDir, "ci-reports", "generated-apps"),
 );
 const turboPath = join(rootDir, "node_modules", "turbo", "bin", "turbo");
+const corepackCommand = process.platform === "win32" ? "corepack.cmd" : "corepack";
 let smokeRoot: string | undefined;
 const commandTimeoutMs = 600_000;
 const commandCaptureMaxBytes = 64 * 1024 * 1024;
@@ -527,6 +528,9 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         },
       },
       runtimeCapabilityManifestValidation("node"),
+      { label: "contract snapshot", args: ["contract:snapshot"] },
+      { label: "contract verification", args: ["contract:verify"] },
+      { label: "doctor", args: ["doctor"] },
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       { label: "test", args: ["test"] },
@@ -1523,7 +1527,7 @@ if (isMainModule()) {
           caseResult,
           projectDir,
           "install",
-          "corepack",
+          corepackCommand,
           ["pnpm", "install"],
           projectDir,
         );
@@ -1620,7 +1624,7 @@ function runGate(label: string, args: readonly string[], report: GeneratedSmokeR
   runContinuingGateCommand(
     report,
     label,
-    "corepack",
+    corepackCommand,
     ["pnpm", ...args],
     rootDir,
     "ecosystem-advisory",
@@ -2479,7 +2483,11 @@ function runValidation(
     : projectDir;
   const step = createSmokeStep(validation.label, {
     command: validation.args
-      ? formatCommand("corepack", ["pnpm", "--dir", validationDir, ...validation.args], rootDir)
+      ? formatCommand(
+          corepackCommand,
+          ["pnpm", "--dir", validationDir, ...validation.args],
+          rootDir,
+        )
       : undefined,
     packagePath: validation.packagePath,
     paths: validation.paths,
@@ -2493,7 +2501,7 @@ function runValidation(
     if (validation.args) {
       if (validation.expectFailure) {
         const commandResult = runExpectFailure(
-          "corepack",
+          corepackCommand,
           ["pnpm", "--dir", validationDir, ...validation.args],
           rootDir,
           validation.expectFailure.outputIncludes,
@@ -2515,7 +2523,7 @@ function runValidation(
                   "--recovery",
                   validation.recovery ?? `Run the explicit writer for ${validation.label}`,
                   "--",
-                  "corepack",
+                  corepackCommand,
                   "pnpm",
                   "--dir",
                   validationDir,
@@ -2525,7 +2533,7 @@ function runValidation(
                 validation.env,
               )
             : run(
-                "corepack",
+                corepackCommand,
                 ["pnpm", "--dir", validationDir, ...validation.args],
                 rootDir,
                 validation.env,
@@ -2635,7 +2643,11 @@ function runGraphQLContractDriftCanaries(
   const packageDir = join(projectDir, ...packagePath);
   const snapshotPath = join(packageDir, GRAPHQL_CONTRACT_SNAPSHOT_PATH);
   const step = createSmokeStep("GraphQL contract drift canaries", {
-    command: formatCommand("corepack", ["pnpm", "--dir", packageDir, "contract:check"], rootDir),
+    command: formatCommand(
+      corepackCommand,
+      ["pnpm", "--dir", packageDir, "contract:check"],
+      rootDir,
+    ),
     packagePath,
     paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
     expectFailure: true,
@@ -2703,7 +2715,7 @@ function runGraphQLSnapshotCanary(
 
   try {
     const commandResult = runExpectFailure(
-      "corepack",
+      corepackCommand,
       ["pnpm", "--dir", packageDir, "contract:check"],
       rootDir,
       expectedDiagnosticCodes,
@@ -3089,7 +3101,7 @@ function runSpaBeSplitContractSmoke(
       caseResult,
       projectDir,
       "install",
-      "corepack",
+      corepackCommand,
       ["pnpm", "install"],
       projectDir,
     );
@@ -3103,7 +3115,7 @@ function runSpaBeSplitContractSmoke(
       caseResult,
       projectDir,
       "contract check",
-      "corepack",
+      corepackCommand,
       ["pnpm", "contract:check"],
       projectDir,
     );
@@ -3112,7 +3124,7 @@ function runSpaBeSplitContractSmoke(
       caseResult,
       projectDir,
       "contract snapshot",
-      "corepack",
+      corepackCommand,
       ["pnpm", "contract:snapshot"],
       projectDir,
     );
@@ -3125,7 +3137,7 @@ function runSpaBeSplitContractSmoke(
       caseResult,
       projectDir,
       "contract verify",
-      "corepack",
+      corepackCommand,
       ["pnpm", "contract:verify"],
       projectDir,
     );
@@ -3164,7 +3176,7 @@ function runSpaBeSplitContractSmoke(
       caseResult,
       projectDir,
       "strict Problem declaration canary",
-      "corepack",
+      corepackCommand,
       [
         "pnpm",
         "exec",
@@ -3188,7 +3200,7 @@ function runSpaBeSplitContractSmoke(
       caseResult,
       projectDir,
       "strict OpenAPI schema canary",
-      "corepack",
+      corepackCommand,
       [
         "pnpm",
         "exec",
@@ -3217,7 +3229,7 @@ function runSpaBeSplitContractSmoke(
       caseResult,
       projectDir,
       "strict RPC schema canary",
-      "corepack",
+      corepackCommand,
       [
         "pnpm",
         "exec",
@@ -3348,7 +3360,7 @@ function packWorkspacePackage(
 
   mkdirSync(packDir, { recursive: true });
   const commandResult = run(
-    "corepack",
+    corepackCommand,
     ["pnpm", "--filter", workspacePackage.name, "pack", "--pack-destination", packDir],
     rootDir,
   );
@@ -3641,6 +3653,7 @@ function executeCommand(
       return spawnSync(command, [...args], {
         cwd,
         env: env ? { ...process.env, ...env } : undefined,
+        shell: requiresCommandShell(command),
         stdio: ["ignore", stdoutFileDescriptor, stderrFileDescriptor],
         timeout: commandTimeoutMs,
       });
@@ -3661,6 +3674,13 @@ function executeCommand(
   } finally {
     rmSync(outputDir, { force: true, recursive: true });
   }
+}
+
+export function requiresCommandShell(
+  command: string,
+  platform: NodeJS.Platform = process.platform,
+): boolean {
+  return platform === "win32" && command.toLowerCase().endsWith(".cmd");
 }
 
 function readCappedCommandOutput(path: string): {

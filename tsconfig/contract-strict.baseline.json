@@ -3865,7 +3865,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/cli-result.ts",
-      "line": 135,
+      "line": 151,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'recovery' comes from an index signature, so it must be accessed with ['recovery']."

@@ -46,7 +46,7 @@ export function parseCliOptions(
 ): Partial<GeneratorOptions> {
   const cliOptions: Partial<GeneratorOptions> = {};
 
-  if (directory) cliOptions.projectName = directory.split("/").at(-1) ?? directory;
+  if (directory) cliOptions.projectName = directory.split(/[\\/]/).at(-1) ?? directory;
   if (typeof rawOptions.goal === "string")
     cliOptions.goal = rawOptions.goal as GeneratorOptions["goal"];
   if (typeof rawOptions.preset === "string")

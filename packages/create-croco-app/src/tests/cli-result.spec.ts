@@ -21,16 +21,18 @@ describe("CLI result contract", () => {
       packageManager: "pnpm",
       nodeRequirement: ">=22",
       nodeRecovery: "Run nvm install 22 && nvm use 22.",
-      nextSteps: ["cd /tmp/my-app", "pnpm install", "pnpm dev"],
+      nextSteps: [
+        { command: "pnpm", args: ["install"], cwd: "/tmp/my-app" },
+        { command: "pnpm", args: ["dev"], cwd: "/tmp/my-app" },
+      ],
     });
     expect(formatHumanSuccess(result)).toBe(
       [
         "Project created in /tmp/my-app.",
         "Node.js >=22 is required for install and build. Recovery: Run nvm install 22 && nvm use 22.",
         "Next steps:",
-        "  cd /tmp/my-app",
-        "  pnpm install",
-        "  pnpm dev",
+        "  pnpm --dir /tmp/my-app install",
+        "  pnpm --dir /tmp/my-app dev",
       ].join("\n"),
     );
   });
@@ -38,7 +40,28 @@ describe("CLI result contract", () => {
   it("uses the SaaS API dev command for SaaS template next steps", () => {
     const result = createSuccessResult("/tmp/my-saas", createOptions({ preset: "saas" }));
 
-    expect(result.nextSteps).toEqual(["cd /tmp/my-saas", "pnpm dev:api"]);
+    expect(result.nextSteps).toEqual([{ command: "pnpm", args: ["dev:api"], cwd: "/tmp/my-saas" }]);
+  });
+
+  it("keeps shell quoting out of structured next steps", () => {
+    const targetDir = "/tmp/Owen's Croco App";
+    const result = createSuccessResult(targetDir, createOptions({ installDeps: false }));
+
+    expect(result.nextSteps).toEqual([
+      { command: "pnpm", args: ["install"], cwd: targetDir },
+      { command: "pnpm", args: ["dev"], cwd: targetDir },
+    ]);
+    expect(formatHumanSuccess(result)).toContain("pnpm --dir '/tmp/Owen'\\''s Croco App' install");
+  });
+
+  it("formats Windows human next steps without cmd-specific cd switches", () => {
+    const targetDir = "C:\\Users\\Owen\\Croco App";
+    const result = createSuccessResult(targetDir, createOptions({ installDeps: false }));
+
+    expect(formatHumanSuccess(result, "win32")).toContain(
+      'pnpm --dir "C:\\Users\\Owen\\Croco App" install',
+    );
+    expect(formatHumanSuccess(result, "win32")).not.toContain("cd /d");
   });
 
   it("serializes filesystem Problems with stable code, reason, and recovery", () => {

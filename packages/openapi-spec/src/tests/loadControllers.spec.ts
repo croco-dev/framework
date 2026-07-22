@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { buildContractGraph } from "@croco/protocols-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { emitOpenAPI } from "../libs/emitOpenAPI";
-import { loadControllers } from "../libs/loadControllers";
+import { getCommonSourceDir, isNodeModulesPath, loadControllers } from "../libs/loadControllers";
 
 let tempRoot!: string;
 let sourceDir!: string;
@@ -21,6 +21,31 @@ describe("loadControllers", () => {
 
   afterEach(() => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  it("keeps Windows drive roots when source files use forward slashes", () => {
+    expect(
+      getCommonSourceDir([
+        "C:/workspace/apps/api-server/src/controllers/UsersController.ts",
+        "C:/workspace/apps/api-server/src/controllers/schemas.ts",
+        "C:/workspace/apps/api-server/src/saasDemo.ts",
+      ]),
+    ).toBe("C:/workspace/apps/api-server/src");
+  });
+
+  it("recognizes node_modules paths with either platform separator", () => {
+    expect(isNodeModulesPath("C:\\workspace\\node_modules\\pkg\\index.ts")).toBe(true);
+    expect(isNodeModulesPath("C:/workspace/node_modules/pkg/index.ts")).toBe(true);
+    expect(isNodeModulesPath("C:/workspace/src/index.ts")).toBe(false);
+  });
+
+  it("stops common source directory matching at the first divergent segment", () => {
+    expect(
+      getCommonSourceDir([
+        "C:/workspace/apps/api/src/controllers/UserController.ts",
+        "C:/workspace/packages/shared/src/schemas/user.ts",
+      ]),
+    ).toBe("C:/workspace");
   });
 
   it(

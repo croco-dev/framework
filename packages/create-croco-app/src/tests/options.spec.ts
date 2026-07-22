@@ -24,6 +24,12 @@ describe("noninteractive CLI option validation", () => {
     generateMock.mockClear();
   });
 
+  it("resolves the project name from a Windows drive path", () => {
+    expect(parseCliOptions("C:\\Users\\runner admin\\generated-app", {}).projectName).toBe(
+      "generated-app",
+    );
+  });
+
   it("documents the pnpm-only install contract in CLI help", () => {
     const help = createProgram().helpInformation();
 
@@ -542,7 +548,10 @@ describe("noninteractive CLI option validation", () => {
         packageManager: "pnpm",
         nodeRequirement: ">=22",
         nodeRecovery: "Run nvm install 22 && nvm use 22.",
-        nextSteps: [`cd ${targetDir}`, "pnpm install", "pnpm dev"],
+        nextSteps: [
+          { command: "pnpm", args: ["install"], cwd: targetDir },
+          { command: "pnpm", args: ["dev"], cwd: targetDir },
+        ],
       });
     } finally {
       logSpy.mockRestore();
