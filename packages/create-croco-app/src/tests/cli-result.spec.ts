@@ -31,9 +31,8 @@ describe("CLI result contract", () => {
         "Project created in /tmp/my-app.",
         "Node.js >=22 is required for install and build. Recovery: Run nvm install 22 && nvm use 22.",
         "Next steps:",
-        "  cd /tmp/my-app",
-        "  pnpm install",
-        "  pnpm dev",
+        "  pnpm --dir /tmp/my-app install",
+        "  pnpm --dir /tmp/my-app dev",
       ].join("\n"),
     );
   });
@@ -52,7 +51,17 @@ describe("CLI result contract", () => {
       { command: "pnpm", args: ["install"], cwd: targetDir },
       { command: "pnpm", args: ["dev"], cwd: targetDir },
     ]);
-    expect(formatHumanSuccess(result)).toContain("cd '/tmp/Owen'\\''s Croco App'");
+    expect(formatHumanSuccess(result)).toContain("pnpm --dir '/tmp/Owen'\\''s Croco App' install");
+  });
+
+  it("formats Windows human next steps without cmd-specific cd switches", () => {
+    const targetDir = "C:\\Users\\Owen\\Croco App";
+    const result = createSuccessResult(targetDir, createOptions({ installDeps: false }));
+
+    expect(formatHumanSuccess(result, "win32")).toContain(
+      'pnpm --dir "C:\\Users\\Owen\\Croco App" install',
+    );
+    expect(formatHumanSuccess(result, "win32")).not.toContain("cd /d");
   });
 
   it("serializes filesystem Problems with stable code, reason, and recovery", () => {

@@ -3,8 +3,8 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
-  discoverControllerConstructors,
   type Constructor,
+  discoverControllerConstructors,
   type RouteContractSourceLocation,
 } from "@croco/protocols-core";
 import { type Decorator, type Diagnostic, Node, Project, type SourceFile, ts } from "ts-morph";
@@ -318,9 +318,24 @@ export function getCommonSourceDir(sourceFilePaths: readonly string[]): string {
     return process.cwd();
   }
 
-  const commonParts = firstDir.filter((part, index) =>
-    remainingDirs.every((dir) => dir[index] === part),
-  );
+  const commonParts: string[] = [];
+
+  for (const [index, part] of firstDir.entries()) {
+    if (!remainingDirs.every((dir) => dir[index] === part)) {
+      break;
+    }
+
+    commonParts.push(part);
+  }
+
+  if (commonParts.length === 0) {
+    return process.cwd();
+  }
+
+  if (commonParts.length === 1 && commonParts[0] === "") {
+    return path.sep;
+  }
+
   const commonDir = commonParts.join("/");
 
   if (isWindowsDriveRootedPath(commonParts)) {
@@ -440,8 +455,8 @@ function formatDiagnosticLocation(diagnostic: ControllerTypeScriptDiagnostic): s
   return `${diagnostic.file}:${diagnostic.line}:${diagnostic.column}`;
 }
 
-function isNodeModulesPath(filePath: string): boolean {
-  return filePath.split(path.sep).includes("node_modules");
+export function isNodeModulesPath(filePath: string): boolean {
+  return filePath.split(/[\\/]/).includes("node_modules");
 }
 
 function isEmittableProjectSourcePath(filePath: string): boolean {

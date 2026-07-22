@@ -42,6 +42,15 @@ describe("loadRoutes", () => {
     ).toBe("C:/workspace/apps/api-server/src");
   });
 
+  it("stops common source directory matching at the first divergent segment", () => {
+    expect(
+      getCommonSourceDir([
+        "C:/workspace/apps/api/src/controllers/UserController.ts",
+        "C:/workspace/packages/shared/src/schemas/user.ts",
+      ]),
+    ).toBe("C:/workspace");
+  });
+
   it(
     "extracts exported controllers while ignoring co-located helper classes",
     async () => {
@@ -93,7 +102,9 @@ describe("loadRoutes", () => {
 
       fs.writeFileSync(controllerPath, getWeakSchemaControllerSource());
 
-      const graph = await loadContractGraph(path.join(sourceDir, "*.ts"), { strictSchemas: true });
+      const graph = await loadContractGraph(path.join(sourceDir, "*.ts"), {
+        strictSchemas: true,
+      });
       const paramDiagnostic = graph.diagnostics.find(
         (diagnostic) => diagnostic.code === "contract-route-missing-named-param-schema",
       );

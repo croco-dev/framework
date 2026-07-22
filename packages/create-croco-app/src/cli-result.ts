@@ -75,17 +75,15 @@ export function createFailureResult(error: unknown): CreateCrocoAppFailureResult
   };
 }
 
-export function formatHumanSuccess(result: CreateCrocoAppSuccessResult): string {
-  const commands = [
-    formatChangeDirectoryCommand(result.targetDir),
-    ...result.nextSteps.map(formatNextStepCommand),
-  ];
-
+export function formatHumanSuccess(
+  result: CreateCrocoAppSuccessResult,
+  platform: NodeJS.Platform = process.platform,
+): string {
   return [
     `Project created in ${result.targetDir}.`,
     `Node.js ${result.nodeRequirement} is required for install and build. Recovery: ${result.nodeRecovery}`,
     "Next steps:",
-    ...commands.map((command) => `  ${command}`),
+    ...result.nextSteps.map((step) => `  ${formatNextStepCommand(step, platform)}`),
   ].join("\n");
 }
 
@@ -120,7 +118,11 @@ function createNextStepCommands(
     commands.push({ command: "pnpm", args: ["install"], cwd: targetDir });
   }
 
-  commands.push({ command: "pnpm", args: [resolveRunScript(options)], cwd: targetDir });
+  commands.push({
+    command: "pnpm",
+    args: [resolveRunScript(options)],
+    cwd: targetDir,
+  });
 
   return commands;
 }
@@ -151,19 +153,21 @@ function readRecovery(extensions: Problem["extensions"]): string | undefined {
   return typeof recovery === "string" ? recovery : undefined;
 }
 
-function formatChangeDirectoryCommand(
-  targetDir: string,
-  platform: NodeJS.Platform = process.platform,
-): string {
-  if (platform === "win32") {
-    return `cd /d ${quoteWindowsCommandArg(targetDir)}`;
-  }
-
-  return `cd ${quotePosixShellArg(targetDir)}`;
+function formatNextStepCommand(step: CreateCrocoAppNextStep, platform: NodeJS.Platform): string {
+  return [
+    step.command,
+    "--dir",
+    quoteShellArg(step.cwd, platform),
+    ...step.args.map((arg) => quoteShellArg(arg, platform)),
+  ].join(" ");
 }
 
-function formatNextStepCommand(step: CreateCrocoAppNextStep): string {
-  return [step.command, ...step.args].join(" ");
+function quoteShellArg(value: string, platform: NodeJS.Platform): string {
+  if (platform === "win32") {
+    return quoteWindowsCommandArg(value);
+  }
+
+  return quotePosixShellArg(value);
 }
 
 function quotePosixShellArg(value: string): string {
@@ -175,5 +179,5 @@ function quotePosixShellArg(value: string): string {
 }
 
 function quoteWindowsCommandArg(value: string): string {
-  return /^[A-Za-z0-9_@%+=:,./\\-]+$/.test(value) ? value : `"${value}"`;
+  return /^[A-Za-z0-9_@%+=:,./-]+$/.test(value) ? value : `"${value}"`;
 }

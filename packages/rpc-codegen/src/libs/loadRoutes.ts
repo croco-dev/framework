@@ -1,16 +1,16 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
-  buildContractGraph,
   type BuildContractGraphOptions,
+  buildContractGraph,
   type Constructor,
   type ContractGraph,
   discoverControllerConstructors,
   type RouteContractSourceLocation,
   type RouteIR,
 } from "@croco/protocols-core";
-import { Problem, ProblemCategory } from "@croco/problems-core";
 import { type Decorator, type Diagnostic, Node, Project, type SourceFile, ts } from "ts-morph";
 
 const CONTROLLER_TYPESCRIPT_DIAGNOSTIC_CODE = "CROCO_BUILD_003";
@@ -331,9 +331,24 @@ export function getCommonSourceDir(sourceFilePaths: readonly string[]): string {
     return process.cwd();
   }
 
-  const commonParts = firstDir.filter((part, index) =>
-    remainingDirs.every((dir) => dir[index] === part),
-  );
+  const commonParts: string[] = [];
+
+  for (const [index, part] of firstDir.entries()) {
+    if (!remainingDirs.every((dir) => dir[index] === part)) {
+      break;
+    }
+
+    commonParts.push(part);
+  }
+
+  if (commonParts.length === 0) {
+    return process.cwd();
+  }
+
+  if (commonParts.length === 1 && commonParts[0] === "") {
+    return path.sep;
+  }
+
   const commonDir = commonParts.join("/");
 
   if (isWindowsDriveRootedPath(commonParts)) {
