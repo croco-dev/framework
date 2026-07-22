@@ -36,7 +36,10 @@ describe("ci-executable-policy.mts", () => {
   ])("fails a blocking package script using %s", (_label, command, kind) => {
     const repo = createRepo({ unsafe: command });
 
-    const result = runCiExecutablePolicy({ checkedPaths: ["package.json"], rootDir: repo });
+    const result = runCiExecutablePolicy({
+      checkedPaths: ["package.json"],
+      rootDir: repo,
+    });
 
     expect(result.ok).toBe(false);
     expect(result.findings).toEqual([
@@ -78,7 +81,11 @@ describe("ci-executable-policy.mts", () => {
 
     expect(
       runCiExecutablePolicy({ checkedPaths: ["package.json"], rootDir: repo }).findings,
-    ).toEqual([expect.objectContaining({ evidence: expect.stringContaining("second:latest") })]);
+    ).toEqual([
+      expect.objectContaining({
+        evidence: expect.stringContaining("second:latest"),
+      }),
+    ]);
   });
 
   it("accepts value-taking Docker options before a pinned image", () => {
@@ -198,7 +205,11 @@ describe("ci-executable-policy.mts", () => {
 
     expect(
       runCiExecutablePolicy({ checkedPaths: ["package.json"], rootDir: repo }).findings,
-    ).toEqual([expect.objectContaining({ evidence: expect.stringContaining("attacker") })]);
+    ).toEqual([
+      expect.objectContaining({
+        evidence: expect.stringContaining("attacker"),
+      }),
+    ]);
   });
 
   it("requires lockfile evidence from the root importer", () => {
@@ -252,7 +263,9 @@ describe("ci-executable-policy.mts", () => {
   it.each(["curl -otool", "wget -Otool"])(
     "requires verification for an extensionless target declared with %s",
     (download) => {
-      const repo = createRepo({ unsafe: `${download} https://example.test/api/download` });
+      const repo = createRepo({
+        unsafe: `${download} https://example.test/api/download`,
+      });
 
       expect(
         runCiExecutablePolicy({ checkedPaths: ["package.json"], rootDir: repo }).findings,
@@ -397,7 +410,10 @@ describe("ci-executable-policy.mts", () => {
     );
 
     expect(
-      runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
+      runCiExecutablePolicy({
+        checkedPaths: [".github/workflows/ci.yml"],
+        rootDir: repo,
+      }).findings,
     ).toEqual([
       expect.objectContaining({
         file: ".github/workflows/ci.yml",
@@ -685,7 +701,10 @@ describe("ci-executable-policy.mts", () => {
     );
 
     expect(
-      runCiExecutablePolicy({ checkedPaths: [".github/workflows/ci.yml"], rootDir: repo }).findings,
+      runCiExecutablePolicy({
+        checkedPaths: [".github/workflows/ci.yml"],
+        rootDir: repo,
+      }).findings,
     ).toEqual([expect.objectContaining({ kind: "mutable-container-reference" })]);
   });
 
@@ -704,8 +723,10 @@ describe("ci-executable-policy.mts", () => {
     );
 
     expect(
-      runCiExecutablePolicy({ checkedPaths: [".github/workflows/release.yml"], rootDir: repo })
-        .findings,
+      runCiExecutablePolicy({
+        checkedPaths: [".github/workflows/release.yml"],
+        rootDir: repo,
+      }).findings,
     ).toEqual([
       expect.objectContaining({
         file: ".github/workflows/release.yml",
@@ -823,7 +844,7 @@ describe("ci-executable-policy.mts", () => {
     ).toEqual([]);
   });
 
-  it("does not treat Action uses, runner labels, Git refs, documentation, or ordinary URLs as executable pins", () => {
+  it("rejects a mutable action while ignoring runner labels, Git refs, documentation, and ordinary URLs", () => {
     const repo = createRepo();
     writeFile(
       repo,
@@ -847,7 +868,162 @@ describe("ci-executable-policy.mts", () => {
         checkedPaths: [".github/workflows/ci.yml", "scripts"],
         rootDir: repo,
       }).findings,
+    ).toEqual([
+      expect.objectContaining({
+        file: ".github/workflows/ci.yml",
+        kind: "mutable-action-reference",
+        line: 5,
+      }),
+    ]);
+  });
+
+  it("accepts immutable repository, local, and Docker action references", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "jobs:",
+        "  reusable:",
+        "    uses: ./.github/workflows/reusable.yml",
+        "  test:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        `      - uses: actions/checkout@${"a".repeat(40)} # v7.0.1`,
+        `      - uses: "actions/setup-node@${"b".repeat(40)}" # v7.0.0`,
+        "      - uses: ./actions/build",
+        `      - uses: docker://ghcr.io/acme/tool:v1.2.3@sha256:${"c".repeat(64)}`,
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({
+        checkedPaths: [".github/workflows/ci.yml"],
+        rootDir: repo,
+      }),
+    ).toEqual(expect.objectContaining({ findings: [], ok: true }));
+  });
+
+  it.each([
+    ["tag", "actions/checkout@v7", "# v7.0.1"],
+    ["branch", "actions/checkout@main", "# v7.0.1"],
+    ["short SHA", `actions/checkout@${"a".repeat(7)}`, "# v7.0.1"],
+    ["39-character SHA", `actions/checkout@${"a".repeat(39)}`, "# v7.0.1"],
+    ["41-character SHA", `actions/checkout@${"a".repeat(41)}`, "# v7.0.1"],
+    ["uppercase SHA", `actions/checkout@${"A".repeat(40)}`, "# v7.0.1"],
+    ["missing revision", "actions/checkout@", "# v7.0.1"],
+    ["missing reference", "", "# v7.0.1"],
+    ["missing version comment", `actions/checkout@${"a".repeat(40)}`, ""],
+    ["non-semver comment", `actions/checkout@${"a".repeat(40)}`, "# v7"],
+  ])("rejects a repository action with %s", (_label, reference, comment) => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      `jobs:\n  test:\n    steps:\n      - uses: ${reference}${comment ? ` ${comment}` : ""}\n`,
+    );
+
+    expect(
+      runCiExecutablePolicy({
+        checkedPaths: [".github/workflows/ci.yml"],
+        rootDir: repo,
+      }).findings,
+    ).toEqual([
+      expect.objectContaining({
+        code: CI_EXECUTABLE_POLICY_CODE,
+        kind: "mutable-action-reference",
+        line: 4,
+      }),
+    ]);
+  });
+
+  it.each([
+    "docker://ghcr.io/acme/tool:v1.2.3",
+    `docker://prefix@ghcr.io/acme/tool:v1.2.3@sha256:${"a".repeat(64)}`,
+  ])("rejects a Docker action without an exact readable tag and digest: %s", (reference) => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      `jobs:\n  test:\n    steps:\n      - uses: ${reference}\n`,
+    );
+
+    expect(
+      runCiExecutablePolicy({
+        checkedPaths: [".github/workflows/ci.yml"],
+        rootDir: repo,
+      }).findings,
+    ).toEqual([expect.objectContaining({ kind: "mutable-action-reference", line: 4 })]);
+  });
+
+  it("does not parse comments or uses-like text inside block scalars as action references", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "# uses: actions/checkout@main",
+        "jobs:",
+        "  test:",
+        "    steps:",
+        "      - run: |",
+        "          uses: actions/checkout@main",
+        "          echo done",
+        `      - uses: actions/checkout@${"a".repeat(40)} # v7.0.1`,
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({
+        checkedPaths: [".github/workflows/ci.yml"],
+        rootDir: repo,
+      }).findings,
     ).toEqual([]);
+  });
+
+  it("enforces action pins inside YAML flow maps", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      "jobs:\n  test:\n    steps:\n      - { uses: actions/checkout@main }\n",
+    );
+
+    expect(
+      runCiExecutablePolicy({
+        checkedPaths: [".github/workflows/ci.yml"],
+        rootDir: repo,
+      }).findings,
+    ).toEqual([expect.objectContaining({ kind: "mutable-action-reference", line: 4 })]);
+  });
+
+  it("recursively discovers yml and yaml workflows in deterministic order by default", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/nested/a.yml",
+      "jobs:\n  test:\n    steps:\n      - uses: actions/checkout@main\n",
+    );
+    writeFile(
+      repo,
+      ".github/workflows/z.yaml",
+      `jobs:\n  test:\n    steps:\n      - uses: actions/checkout@${"a".repeat(40)} # v7.0.1\n`,
+    );
+
+    const result = runCiExecutablePolicy({ rootDir: repo });
+
+    expect(result.checkedPaths.slice(0, 2)).toEqual([
+      ".github/workflows/nested/a.yml",
+      ".github/workflows/z.yaml",
+    ]);
+    expect(result.findings).toEqual([
+      expect.objectContaining({
+        file: ".github/workflows/nested/a.yml",
+        kind: "mutable-action-reference",
+      }),
+    ]);
   });
 });
 

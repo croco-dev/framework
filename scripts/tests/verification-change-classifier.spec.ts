@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-
+import { RELEASE_GATE_MAINTENANCE_PATHS } from "../release-gate-maintenance.mts";
 import { classifyVerificationChanges } from "../verification-change-classifier.mts";
 import {
   createVerificationManifest,
   verificationImplementationPaths,
 } from "../verification-manifest.mts";
-import { RELEASE_GATE_MAINTENANCE_PATHS } from "../release-gate-maintenance.mts";
 import { formatVerificationProblem, VerificationProblem } from "../verification-problem.mts";
 
 describe("verification change classifier", () => {
@@ -57,6 +56,26 @@ describe("verification change classifier", () => {
     expect(classifyVerificationChanges("push", ["docs/guide.md"])).toMatchObject({
       profile: null,
       shouldRunVerification: false,
+    });
+  });
+
+  it("keeps the workflow action hardening change set out of Changesets publishing", () => {
+    expect(
+      classifyVerificationChanges("push", [
+        ".github/renovate.json",
+        ".github/workflows/benchmark.yml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/pr-review-companion.yml",
+        ".github/workflows/release.yml",
+        "scripts/ci-executable-policy.mts",
+        "scripts/tests/ci-executable-policy.spec.ts",
+        "scripts/tests/verification-change-classifier.spec.ts",
+      ]),
+    ).toMatchObject({
+      profile: "publish",
+      shouldRunVerification: true,
+      shouldUpdateReleasePr: false,
+      shouldRunChangesetsAction: false,
     });
   });
 
