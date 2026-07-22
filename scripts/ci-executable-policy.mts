@@ -4,7 +4,9 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
-import { isScalar, parse as parseYaml, parseDocument, visit } from "yaml";
+import { isMap, isScalar, isSeq, parse as parseYaml, parseDocument } from "yaml";
+
+import type { Pair } from "yaml";
 
 export const CI_EXECUTABLE_POLICY_RULE_ID = "ci-executable-immutability";
 export const CI_EXECUTABLE_POLICY_CODE = "CROCO_CI_EXECUTABLE_IMMUTABILITY";
@@ -242,7 +244,7 @@ function applyWorkflowEnvironment(
       /^[A-Z][A-Z0-9_]+$/.test(name) &&
       typeof rawValue === "string" &&
       rawValue.length > 0 &&
-      !rawValue.includes("\${{")
+      !rawValue.includes("${{")
     ) {
       environment.set(name, rawValue);
     } else {
@@ -271,24 +273,48 @@ function workflowActionReferenceUnits(file: string, source: string): ActionRefer
   const document = parseDocument(source, { keepSourceTokens: true });
   const units: ActionReferenceUnit[] = [];
 
-  visit(document, {
-    Pair(_, pair) {
-      if (!isScalar(pair.key) || pair.key.value !== "uses") {
-        return;
+  const appendReference = (pair: Pair): void => {
+    const offset = pair.key && isScalar(pair.key) ? (pair.key.range?.[0] ?? 0) : 0;
+    const lineStart = source.lastIndexOf("\n", offset - 1) + 1;
+    const lineEnd = source.indexOf("\n", offset);
+    const value = isScalar(pair.value) ? pair.value : null;
+    units.push({
+      comment: value?.comment ? `#${value.comment}` : "",
+      file,
+      line: lineAt(source, offset),
+      reference: typeof value?.value === "string" ? value.value : "",
+      text: source.slice(lineStart, lineEnd < 0 ? source.length : lineEnd),
+    });
+  };
+  const pairNamed = (pairs: readonly Pair[], name: string): Pair | undefined =>
+    pairs.find((pair) => isScalar(pair.key) && pair.key.value === name);
+  const jobs = document.get("jobs", true);
+  if (!isMap(jobs)) {
+    return units;
+  }
+
+  for (const jobPair of jobs.items) {
+    if (!isMap(jobPair.value)) {
+      continue;
+    }
+    const jobUses = pairNamed(jobPair.value.items, "uses");
+    if (jobUses) {
+      appendReference(jobUses);
+    }
+    const steps = pairNamed(jobPair.value.items, "steps")?.value;
+    if (!isSeq(steps)) {
+      continue;
+    }
+    for (const step of steps.items) {
+      if (!isMap(step)) {
+        continue;
       }
-      const offset = pair.key.range?.[0] ?? 0;
-      const lineStart = source.lastIndexOf("\n", offset - 1) + 1;
-      const lineEnd = source.indexOf("\n", offset);
-      const value = isScalar(pair.value) ? pair.value : null;
-      units.push({
-        comment: value?.comment ? `#${value.comment}` : "",
-        file,
-        line: lineAt(source, offset),
-        reference: typeof value?.value === "string" ? value.value : "",
-        text: source.slice(lineStart, lineEnd < 0 ? source.length : lineEnd),
-      });
-    },
-  });
+      const stepUses = pairNamed(step.items, "uses");
+      if (stepUses) {
+        appendReference(stepUses);
+      }
+    }
+  }
 
   return units;
 }

@@ -983,6 +983,38 @@ describe("ci-executable-policy.mts", () => {
     ).toEqual([]);
   });
 
+  it("ignores uses keys outside reusable jobs and action steps", () => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "env:",
+        "  uses: global-environment-value",
+        "jobs:",
+        "  test:",
+        "    strategy:",
+        "      matrix:",
+        "        include:",
+        "          - uses: matrix-value",
+        "    steps:",
+        `      - uses: actions/checkout@${"a".repeat(40)} # v7.0.1`,
+        "        with:",
+        "          uses: action-input-value",
+        "      - run: echo done",
+        "        env: { uses: step-environment-value }",
+        "",
+      ].join("\n"),
+    );
+
+    expect(
+      runCiExecutablePolicy({
+        checkedPaths: [".github/workflows/ci.yml"],
+        rootDir: repo,
+      }).findings,
+    ).toEqual([]);
+  });
+
   it("enforces action pins inside YAML flow maps", () => {
     const repo = createRepo();
     writeFile(
