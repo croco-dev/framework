@@ -5,7 +5,6 @@ import * as React from "react";
 
 import type { BadgeVariant } from "@astryxdesign/core/Badge";
 import type { ProblemDetails } from "@croco/problems-core";
-import * as React from "react";
 
 import type { AstryxRecoveryAction, AstryxSession, AstryxSessionState } from "./crocoUiTypes";
 

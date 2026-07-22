@@ -55,6 +55,19 @@ export class UnsupportedTelemetrySignalProblem extends Problem {
   }
 }
 
+export class TelemetryForceFlushUnsupportedProblem extends Problem {
+  readonly code = "TELEMETRY_FORCE_FLUSH_UNSUPPORTED";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super(
+      "TELEMETRY_FORCE_FLUSH_UNSUPPORTED",
+      ProblemCategory.InternalServerError,
+      "Telemetry forceFlush is unsupported before initialization.",
+    );
+  }
+}
+
 export class TelemetryRuntimeProblem extends Problem {
   readonly code = "TELEMETRY_RUNTIME_ERROR";
   readonly category = ProblemCategory.InternalServerError;

@@ -1,15 +1,24 @@
-import type { ForceFlushResult } from "@croco/telemetry-sdk-node";
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import {
+  TelemetryForceFlushUnsupportedProblem,
+  type ForceFlushResult,
+} from "@croco/telemetry-sdk-node";
 
 type OperationOutcome<T> =
   | { readonly completed: true; readonly value: T }
   | { readonly completed: false; readonly error: unknown };
 
-class LambdaTelemetryBoundaryError extends Error {
+class LambdaTelemetryBoundaryProblem extends Problem {
+  readonly code = "create-croco-app/lambda-telemetry-boundary";
+  readonly category = ProblemCategory.InternalServerError;
   readonly failures: readonly [request: unknown, flush: unknown];
 
   constructor(requestFailure: unknown, flushFailure: unknown) {
-    super("Lambda request and telemetry flush both failed.");
-    this.name = "LambdaTelemetryBoundaryError";
+    super(
+      "create-croco-app/lambda-telemetry-boundary",
+      ProblemCategory.InternalServerError,
+      "Lambda request and telemetry flush both failed.",
+    );
     this.failures = [requestFailure, flushFailure];
   }
 }
@@ -31,7 +40,7 @@ async function captureFlushFailure(
       return result.error;
     }
     if (result.outcome === "unsupported") {
-      return new Error("Telemetry forceFlush is unsupported before initialization.");
+      return new TelemetryForceFlushUnsupportedProblem();
     }
     return null;
   } catch (error) {
@@ -48,7 +57,7 @@ export async function runWithTelemetryFlush<T>(
 
   if (!operationOutcome.completed) {
     if (flushFailure !== null) {
-      throw new LambdaTelemetryBoundaryError(operationOutcome.error, flushFailure);
+      throw new LambdaTelemetryBoundaryProblem(operationOutcome.error, flushFailure);
     }
     throw operationOutcome.error;
   }

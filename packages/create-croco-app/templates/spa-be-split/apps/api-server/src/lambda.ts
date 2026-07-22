@@ -1,4 +1,4 @@
-import { TelemetryRuntime } from "@croco/telemetry-sdk-node";
+import { TelemetryForceFlushUnsupportedProblem, TelemetryRuntime } from "@croco/telemetry-sdk-node";
 import { createCrocoApp } from "./app";
 import { createTelemetryConfig, readEnv } from "./env";
 
@@ -12,7 +12,7 @@ const crocoHandler = createCrocoApp().lambdaHandler({
       throw flush.error;
     }
     if (flush.outcome === "unsupported") {
-      throw new Error("Telemetry forceFlush is unsupported before initialization.");
+      throw new TelemetryForceFlushUnsupportedProblem();
     }
   },
 });

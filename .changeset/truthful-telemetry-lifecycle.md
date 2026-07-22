@@ -1,7 +1,6 @@
 ---
 "@croco/telemetry-sdk-node": minor
 "@croco/cli": patch
-"@croco/ui-astryx": patch
 "create-croco-app": patch
 ---
 

@@ -60,6 +60,7 @@ describe("generated Lambda telemetry flush boundary", () => {
     );
 
     await expect(result).rejects.toMatchObject({
+      code: "create-croco-app/lambda-telemetry-boundary",
       failures: [requestFailure, flushResult.error],
       message: "Lambda request and telemetry flush both failed.",
     });
@@ -72,7 +73,10 @@ describe("generated Lambda telemetry flush boundary", () => {
         async () => "ok",
         async () => ({ outcome: "unsupported", reason: "not-initialized", flushedSpans: 0 }),
       ),
-    ).rejects.toThrow("Telemetry forceFlush is unsupported before initialization.");
+    ).rejects.toMatchObject({
+      code: "TELEMETRY_FORCE_FLUSH_UNSUPPORTED",
+      message: "Telemetry forceFlush is unsupported before initialization.",
+    });
   });
 
   it("should return the request result after a completed flush", async () => {

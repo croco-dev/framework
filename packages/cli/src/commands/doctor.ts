@@ -4337,7 +4337,7 @@ function nodeCallsTelemetryForceFlush(
   runtimeBindings: ReadonlySet<Morph.VariableDeclaration>,
 ): boolean {
   return node.getDescendantsOfKind(SyntaxKind.CallExpression).some((call) => {
-    if (call.getAncestors().some((ancestor) => ancestor !== node && isFunctionScope(ancestor))) {
+    if (hasNestedFunctionScope(call, node)) {
       return false;
     }
     const expression = call.getExpression();
@@ -4372,6 +4372,18 @@ function isFunctionScope(node: Node): boolean {
   );
 }
 
+function hasNestedFunctionScope(call: Morph.CallExpression, target: Node): boolean {
+  for (const ancestor of call.getAncestors()) {
+    if (ancestor === target) {
+      return false;
+    }
+    if (isFunctionScope(ancestor)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function exportedHandlerDelegatesTo(
   sourceFile: Morph.SourceFile,
   configuredHandlers: ReadonlySet<Morph.VariableDeclaration>,
@@ -4391,11 +4403,7 @@ function exportedHandlerDelegatesTo(
 
   return handlerNodes.some((handlerNode) =>
     handlerNode.getDescendantsOfKind(SyntaxKind.CallExpression).some((call) => {
-      if (
-        call
-          .getAncestors()
-          .some((ancestor) => ancestor !== handlerNode && isFunctionScope(ancestor))
-      ) {
+      if (hasNestedFunctionScope(call, handlerNode)) {
         return false;
       }
       const expression = call.getExpression();

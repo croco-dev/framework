@@ -44,6 +44,7 @@ export { lambdaPreset } from "./libs/presets/lambda";
 export {
   OtlpEndpointRequiredProblem,
   SamplerProblem,
+  TelemetryForceFlushUnsupportedProblem,
   UnsupportedTelemetrySignalProblem,
 } from "./libs/problems/TelemetryProblems";
 export { TelemetryAutoInstrumentationProblem } from "./libs/problems/TelemetryAutoInstrumentationProblem";

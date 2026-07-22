@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "TelemetryAutoInstrumentationProblem"
+title: "TelemetryForceFlushUnsupportedProblem"
 ---
 
-자동 계측 설정을 설치된 OpenTelemetry 런타임이 정확히 실행할 수 없을 때 발생합니다.
+OTLP, 지원되지 않는 신호, 샘플러 설정 오류를 나타내는 Problem 타입입니다.
 
 ## Extends
 
@@ -15,17 +15,11 @@ title: "TelemetryAutoInstrumentationProblem"
 
 ### Constructor
 
-> **new TelemetryAutoInstrumentationProblem**(`detail`): `TelemetryAutoInstrumentationProblem`
-
-#### Parameters
-
-##### detail
-
-`string`
+> **new TelemetryForceFlushUnsupportedProblem**(): `TelemetryForceFlushUnsupportedProblem`
 
 #### Returns
 
-`TelemetryAutoInstrumentationProblem`
+`TelemetryForceFlushUnsupportedProblem`
 
 #### Overrides
 
@@ -35,7 +29,7 @@ title: "TelemetryAutoInstrumentationProblem"
 
 ### category
 
-> `readonly` **category**: [`ValidationError`](/api/problems-core/src/enumerations/problemcategory/#validationerror) = `ProblemCategory.ValidationError`
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
 #### Overrides
 
@@ -55,7 +49,7 @@ title: "TelemetryAutoInstrumentationProblem"
 
 ### code
 
-> `readonly` **code**: `"TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG"` = `"TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG"`
+> `readonly` **code**: `"TELEMETRY_FORCE_FLUSH_UNSUPPORTED"` = `"TELEMETRY_FORCE_FLUSH_UNSUPPORTED"`
 
 #### Overrides
 

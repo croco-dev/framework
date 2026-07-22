@@ -137,7 +137,11 @@ Lambda handler는 요청 실행을 `finally` 경계로 감싸므로 Hono fetch �
 `LambdaFlushBoundaryError`로 실패합니다.
 
 ```typescript
-import { TelemetryRuntime, lambdaPreset } from "@croco/telemetry-sdk-node";
+import {
+  TelemetryForceFlushUnsupportedProblem,
+  TelemetryRuntime,
+  lambdaPreset,
+} from "@croco/telemetry-sdk-node";
 
 const telemetry = TelemetryRuntime.getInstance();
 await telemetry.init(lambdaPreset({ serviceName: "orders" }));
@@ -149,7 +153,7 @@ export const handler = app.lambdaHandler({
       throw result.error;
     }
     if (result.outcome === "unsupported") {
-      throw new Error("telemetry flush is unsupported before initialization");
+      throw new TelemetryForceFlushUnsupportedProblem();
     }
   },
 });

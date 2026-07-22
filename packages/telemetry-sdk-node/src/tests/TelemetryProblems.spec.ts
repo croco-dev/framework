@@ -3,6 +3,7 @@ import { TelemetryAutoInstrumentationProblem } from "../libs/problems/TelemetryA
 import {
   OtlpEndpointRequiredProblem,
   SamplerProblem,
+  TelemetryForceFlushUnsupportedProblem,
   TelemetryRuntimeProblem,
   UnsupportedTelemetrySignalProblem,
 } from "../libs/problems/TelemetryProblems";
@@ -98,6 +99,18 @@ describe("TelemetryRuntimeProblem", () => {
     const cause = new Error("root cause");
     const problem = new TelemetryRuntimeProblem("init", cause);
     expect(problem.cause).toBe(cause);
+  });
+});
+
+describe("TelemetryForceFlushUnsupportedProblem", () => {
+  it("should expose stable unsupported lifecycle evidence", () => {
+    const problem = new TelemetryForceFlushUnsupportedProblem();
+
+    expect(problem).toMatchObject({
+      code: "TELEMETRY_FORCE_FLUSH_UNSUPPORTED",
+      category: "InternalServerError",
+      detail: "Telemetry forceFlush is unsupported before initialization.",
+    });
   });
 });
 

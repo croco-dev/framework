@@ -937,7 +937,7 @@ describe("GraphQL addon templates", () => {
     checkFileContains(
       "addons/lambda",
       ["apps", "graphql-api", "src", "telemetryFlush.ts"],
-      /new LambdaTelemetryBoundaryError\(operationOutcome\.error, flushFailure\)/,
+      /new LambdaTelemetryBoundaryProblem\(operationOutcome\.error, flushFailure\)/,
     );
   });
 

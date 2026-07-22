@@ -3,7 +3,6 @@ import { Button } from "@astryxdesign/core/Button";
 import * as React from "react";
 
 import type { ProblemDetails } from "@croco/problems-core";
-import * as React from "react";
 
 import type { AstryxProblemRecoveryAction } from "./crocoUiTypes";
 

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TelemetryForceFlushUnsupportedProblem } from "../libs/problems/TelemetryProblems";
 import { lambdaPreset } from "../libs/presets/lambda";
 import { TelemetryRuntime } from "../runtime";
 
@@ -237,7 +238,7 @@ describe("lambdaPreset", () => {
             throw result.error;
           }
           if (result.outcome === "unsupported") {
-            throw new Error("telemetry flush is unsupported before initialization");
+            throw new TelemetryForceFlushUnsupportedProblem();
           }
         },
       ),
@@ -267,7 +268,7 @@ describe("lambdaPreset", () => {
             throw result.error;
           }
           if (result.outcome === "unsupported") {
-            throw new Error("telemetry flush is unsupported before initialization");
+            throw new TelemetryForceFlushUnsupportedProblem();
           }
         },
       ),

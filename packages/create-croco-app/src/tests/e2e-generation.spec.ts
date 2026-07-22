@@ -776,9 +776,12 @@ describe("E2E: generate()", () => {
     expect(handlerContent).toContain("await telemetryReady;");
     expect(handlerContent).toContain("const lambdaHandler = await lambdaHandlerPromise;");
     expect(handlerContent).toContain("return runWithTelemetryFlush(");
+    expect(packageJson.dependencies?.["@croco/problems-core"]).toBe(
+      externalCrocoRange("@croco/problems-core"),
+    );
     expect(telemetryFlushContent).toContain('result.outcome === "failed"');
     expect(telemetryFlushContent).toContain('result.outcome === "unsupported"');
-    expect(telemetryFlushContent).toContain("new LambdaTelemetryBoundaryError(");
+    expect(telemetryFlushContent).toContain("new LambdaTelemetryBoundaryProblem(");
     expect(handlerContent).toContain(
       "context: async ({ event }) => createGraphQLContext(event.headers),",
     );

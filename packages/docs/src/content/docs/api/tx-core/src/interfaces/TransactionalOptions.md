@@ -19,25 +19,25 @@ title: "TransactionalOptions"
 
 > `optional` **managerKey?**: [`TxManagerKey`](/api/tx-core/src/type-aliases/txmanagerkey/)
 
----
+***
 
 ### nesting?
 
 > `optional` **nesting?**: [`NestingStrategy`](/api/tx-core/src/type-aliases/nestingstrategy/)
 
----
+***
 
 ### options?
 
 > `optional` **options?**: `TOptions`
 
----
+***
 
 ### propagation?
 
 > `optional` **propagation?**: [`Propagation`](/api/tx-core/src/type-aliases/propagation/)
 
----
+***
 
 ### timeout?
 

@@ -109,8 +109,11 @@ owned by `@croco/telemetry-sdk-node`, so Lambda apps should connect `TelemetryRu
 transport boundary:
 
 ```typescript no-check
-import { ProblemFactory } from "@croco/problems-core";
-import { TelemetryRuntime, lambdaPreset } from "@croco/telemetry-sdk-node";
+import {
+  TelemetryForceFlushUnsupportedProblem,
+  TelemetryRuntime,
+  lambdaPreset,
+} from "@croco/telemetry-sdk-node";
 
 const telemetry = TelemetryRuntime.getInstance();
 await telemetry.init(lambdaPreset({ serviceName: "orders" }));
@@ -122,10 +125,7 @@ export const handler = app.lambdaHandler({
       throw result.error;
     }
     if (result.outcome === "unsupported") {
-      throw ProblemFactory.internalServerError(
-        "telemetry/force-flush-unsupported",
-        "Telemetry forceFlush is unsupported before initialization.",
-      );
+      throw new TelemetryForceFlushUnsupportedProblem();
     }
   },
 });
