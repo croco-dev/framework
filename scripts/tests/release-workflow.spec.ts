@@ -103,6 +103,7 @@ function assertReleasePrAuthenticationContract(source: string): void {
     "permission-contents": "write",
     "permission-pull-requests": "write",
   });
+  expect(changesetsStep.uses).toBe("changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d");
   expect(changesetsStep.env?.GITHUB_TOKEN).toBe("${{ steps.release_app_token.outputs.token }}");
   expect(source).not.toContain("secrets.GITHUB_TOKEN");
   expect(source).not.toMatch(/permission-(?:actions|workflows):/);
@@ -261,7 +262,9 @@ describe("Release verification profile contract", () => {
     expect(workflow).toContain('NPM_CONFIG_PROVENANCE: "true"');
     expect(workflow).toContain('registry-url: "https://registry.npmjs.org"');
     expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}");
-    expect(workflow).toContain("uses: changesets/action@v1");
+    expect(workflow).toContain(
+      "uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0",
+    );
     expect(workflow).toContain(
       "if: steps.release_work.outputs.should_run_changesets_action == 'true'",
     );
