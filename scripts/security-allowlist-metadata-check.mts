@@ -5,6 +5,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { argv, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
+import { parse as parseToml } from "smol-toml";
 import {
   readGeneratedTemplateSecretAllowlistsFromMetadata,
   type GeneratedTemplateSecretAllowlistEntry,
@@ -389,10 +390,10 @@ function readGitleaksAllowlistMetadataEntry(
     return [];
   }
 
-  if (!isGitleaksAllowlistKind(kind) || kind === "fingerprint") {
+  if (kind !== "path") {
     violations.push({
-      message: `${pointer}.kind must be one of path, regex, commit, or stopword`,
-      recovery: `Set ${pointer}.kind to the Gitleaks allowlist bucket that contains this value.`,
+      message: `${pointer}.kind must be path; commit, regex, and stopword recovery is not supported`,
+      recovery: `Use a fully anchored bounded path in ${pointer}, or use secretScan.gitleaks.ignoreFingerprints for an exact fingerprint.`,
     });
     return [];
   }
@@ -785,7 +786,7 @@ function readGitleaksEffectiveAllowlists(
 function readGitleaksConfigAllowlists(
   path: string,
   violations: Violation[],
-  invocationDir: string,
+  resolutionRoot: string,
   pathStack: readonly string[] = [],
 ): GitleaksConfigReadResult {
   const absolutePath = resolve(path);
@@ -802,74 +803,55 @@ function readGitleaksConfigAllowlists(
     return { configExists: false, entries: [], hasEffectiveRules: false };
   }
 
-  const content = readFileSync(absolutePath, "utf-8").replace(/\r\n/g, "\n");
-  const lines = content.split("\n");
+  const content = readFileSync(absolutePath, "utf-8");
   const entries: GitleaksAllowlistEntry[] = [];
   const extendPaths: string[] = [];
-  let extendsDefaultRules = false;
-  let hasDetectionRules = false;
-  let section = "";
+  let config: Record<string, unknown>;
+  try {
+    config = parseToml(content) as Record<string, unknown>;
+  } catch {
+    violations.push({
+      message: `Gitleaks config ${absolutePath} is not valid TOML`,
+      recovery: "Fix the TOML syntax before adding or reviewing secret-scan exceptions.",
+    });
+    return { configExists: true, entries: [], hasEffectiveRules: false };
+  }
 
-  for (let index = 0; index < lines.length; index++) {
-    const line = lines[index];
-    const trimmed = stripTomlComment(line).trim();
-    const sectionMatch = trimmed.match(/^\[+([^\]]+)\]+$/);
-    if (sectionMatch?.[1]) {
-      section = sectionMatch[1].trim();
-      if (section === "rules") {
-        hasDetectionRules = true;
-      }
-      continue;
-    }
+  collectGitleaksAllowlistEntries(config, absolutePath, entries, violations);
 
-    const assignment = trimmed.match(/^([A-Za-z][A-Za-z0-9_-]*)\s*=\s*(.*)$/);
-    if (!assignment?.[1] || assignment[2] === undefined) {
-      continue;
-    }
-
-    if (section === "extend" && assignment[1] === "useDefault") {
-      extendsDefaultRules = assignment[2].trim() === "true";
-      continue;
-    }
-
-    if (section === "extend" && assignment[1] === "path") {
-      const extendPath = parseTomlStringValue(assignment[2]);
-      if (extendPath) {
-        extendPaths.push(resolve(invocationDir, extendPath));
-      } else {
-        violations.push({
-          message: `Gitleaks config ${absolutePath} has an unparsable [extend].path value`,
-          recovery: "Use a TOML string for [extend].path or remove the extended config reference.",
-        });
-      }
-      continue;
-    }
-
-    if (!isGitleaksAllowlistSection(section)) {
-      continue;
-    }
-
-    const kind = gitleaksKeyKinds[assignment[1]];
-    if (!kind) {
-      continue;
-    }
-
-    const { rawArray, nextIndex } = collectTomlArray(lines, index, assignment[2]);
-    index = nextIndex;
-
-    for (const value of parseTomlStringArray(rawArray)) {
-      entries.push({
-        kind,
-        source: absolutePath,
-        value,
+  const extend = isRecord(config.extend) ? config.extend : {};
+  const extendsDefaultRules = extend.useDefault === true;
+  if (Array.isArray(extend.disabledRules) && extend.disabledRules.length > 0) {
+    violations.push({
+      message: `Gitleaks config ${absolutePath} disables default detection rules`,
+      recovery:
+        "Remove [extend].disabledRules; production secret scanning must retain the pinned default rule set.",
+    });
+  }
+  if (extend.path !== undefined) {
+    if (typeof extend.path === "string" && extend.path.length > 0) {
+      extendPaths.push(resolve(resolutionRoot, extend.path));
+    } else {
+      violations.push({
+        message: `Gitleaks config ${absolutePath} has an invalid [extend].path value`,
+        recovery: "Use a non-empty TOML string for [extend].path or remove the reference.",
       });
     }
   }
+  const hasCustomRules = Array.isArray(config.rules) && config.rules.length > 0;
+  if (hasCustomRules) {
+    violations.push({
+      message: `Gitleaks config ${absolutePath} defines custom or overriding detection rules`,
+      recovery:
+        "Remove [[rules]] entries; production secret scanning uses the pinned default rule set and reviewed narrow recovery only.",
+    });
+  }
+  const hasDetectionRules = false;
 
   let hasEffectiveRules = extendsDefaultRules || hasDetectionRules;
 
   for (const extendPath of extendPaths) {
-    const extendedConfig = readGitleaksConfigAllowlists(extendPath, violations, invocationDir, [
+    const extendedConfig = readGitleaksConfigAllowlists(extendPath, violations, resolutionRoot, [
       ...pathStack,
       absolutePath,
     ]);
@@ -894,47 +876,56 @@ function readGitleaksConfigAllowlists(
   };
 }
 
-function collectTomlArray(
-  lines: readonly string[],
-  startIndex: number,
-  initialValue: string,
-): { readonly nextIndex: number; readonly rawArray: string } {
-  let rawArray = stripTomlComment(initialValue).trim();
-  let index = startIndex;
-
-  while (!isBalancedTomlArray(rawArray) && index + 1 < lines.length) {
-    index++;
-    rawArray = `${rawArray}\n${stripTomlComment(lines[index]).trim()}`;
+function collectGitleaksAllowlistEntries(
+  value: unknown,
+  source: string,
+  entries: GitleaksAllowlistEntry[],
+  violations: Violation[],
+): void {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectGitleaksAllowlistEntries(item, source, entries, violations);
+    }
+    return;
+  }
+  if (!isRecord(value)) {
+    return;
   }
 
-  return {
-    nextIndex: index,
-    rawArray,
-  };
-}
+  for (const [key, nested] of Object.entries(value)) {
+    if (key !== "allowlist" && key !== "allowlists") {
+      collectGitleaksAllowlistEntries(nested, source, entries, violations);
+      continue;
+    }
 
-function parseTomlStringArray(rawArray: string): readonly string[] {
-  const values: string[] = [];
-  const pattern = /'''([\s\S]*?)'''|"""([\s\S]*?)"""|'([^']*)'|"((?:\\.|[^"])*)"/g;
+    const allowlists = Array.isArray(nested) ? nested : [nested];
+    for (const allowlist of allowlists) {
+      if (!isRecord(allowlist)) {
+        violations.push({
+          message: `Gitleaks config ${source} has a non-table ${key} value`,
+          recovery: "Use a TOML allowlist table whose exception buckets are string arrays.",
+        });
+        continue;
+      }
 
-  for (const match of rawArray.matchAll(pattern)) {
-    const rawValue = match[1] ?? match[2] ?? match[3] ?? match[4] ?? "";
-    values.push(match[4] !== undefined ? unescapeDoubleQuotedTomlString(rawValue) : rawValue);
+      for (const [bucket, rawValues] of Object.entries(allowlist)) {
+        const kind = gitleaksKeyKinds[bucket];
+        if (!kind) {
+          continue;
+        }
+        if (!Array.isArray(rawValues) || rawValues.some((item) => typeof item !== "string")) {
+          violations.push({
+            message: `Gitleaks config ${source} has a non-string ${key}.${bucket} entry`,
+            recovery: "Use a TOML array containing only string exception values.",
+          });
+          continue;
+        }
+        for (const entry of rawValues) {
+          entries.push({ kind, source, value: entry as string });
+        }
+      }
+    }
   }
-
-  return values;
-}
-
-function parseTomlStringValue(value: string): string | null {
-  const trimmed = stripTomlComment(value).trim();
-  const match = /^(?:'''([\s\S]*?)'''|"""([\s\S]*?)"""|'([^']*)'|"((?:\\.|[^"])*)")$/.exec(trimmed);
-
-  if (!match) {
-    return null;
-  }
-
-  const rawValue = match[1] ?? match[2] ?? match[3] ?? match[4] ?? "";
-  return match[4] !== undefined ? unescapeDoubleQuotedTomlString(rawValue) : rawValue;
 }
 
 function readGitleaksIgnoreFingerprints(path: string): readonly string[] {
@@ -952,7 +943,7 @@ function readGitleaksIgnoreFingerprints(path: string): readonly string[] {
 }
 
 function validateNoInlineGitleaksSuppressions(options: Options, violations: Violation[]): void {
-  for (const match of readInlineGitleaksSuppressions(options.rootDir)) {
+  for (const match of readInlineGitleaksSuppressions(options.rootDir, violations)) {
     violations.push({
       message: `${match} uses an inline Gitleaks suppression comment`,
       recovery:
@@ -961,23 +952,38 @@ function validateNoInlineGitleaksSuppressions(options: Options, violations: Viol
   }
 }
 
-function readInlineGitleaksSuppressions(rootDir: string): readonly string[] {
+function readInlineGitleaksSuppressions(
+  rootDir: string,
+  violations: Violation[],
+): readonly string[] {
   return uniqueSorted([
-    ...readCurrentInlineGitleaksSuppressions(rootDir),
-    ...(readHistoricalInlineGitleaksSuppressions(rootDir) ?? []),
+    ...readCurrentInlineGitleaksSuppressions(rootDir, violations),
+    ...readHistoricalInlineGitleaksSuppressions(rootDir, violations),
   ]);
 }
 
-function readCurrentInlineGitleaksSuppressions(rootDir: string): readonly string[] {
-  const files = readGitTrackedFiles(rootDir) ?? readScannableFiles(rootDir);
+function readCurrentInlineGitleaksSuppressions(
+  rootDir: string,
+  violations: Violation[],
+): readonly string[] {
+  const trackedFiles = readGitTrackedFiles(rootDir, violations);
+  const files = trackedFiles ?? readScannableFiles(rootDir);
   const matches: string[] = [];
 
   for (const file of files) {
     const absolutePath = resolve(rootDir, file);
+    if (existsSync(absolutePath) && statSync(absolutePath).isDirectory()) {
+      continue;
+    }
     let content = "";
     try {
       content = readFileSync(absolutePath, "utf-8").replace(/\r\n/g, "\n");
     } catch {
+      violations.push({
+        message: `CURRENT_GITLEAKS_SUPPRESSION_INSPECTION_FAILED: could not inspect ${file}`,
+        recovery:
+          "Restore the tracked file to a readable state and rerun the security allowlist metadata check.",
+      });
       continue;
     }
 
@@ -992,7 +998,14 @@ function readCurrentInlineGitleaksSuppressions(rootDir: string): readonly string
   return matches;
 }
 
-function readHistoricalInlineGitleaksSuppressions(rootDir: string): readonly string[] | null {
+function readHistoricalInlineGitleaksSuppressions(
+  rootDir: string,
+  violations: Violation[],
+): readonly string[] {
+  if (!existsSync(resolve(rootDir, ".git"))) {
+    return [];
+  }
+
   const logResult = spawnSync(
     "git",
     [
@@ -1000,9 +1013,10 @@ function readHistoricalInlineGitleaksSuppressions(rootDir: string): readonly str
       rootDir,
       "log",
       "--all",
+      "-z",
       `-G${inlineGitleaksAllowMarker}`,
-      "--format=commit:%H",
-      "--name-only",
+      "--format=%H",
+      "--no-patch",
       "--",
     ],
     {
@@ -1011,74 +1025,42 @@ function readHistoricalInlineGitleaksSuppressions(rootDir: string): readonly str
     },
   );
 
-  if (logResult.status !== 0) {
+  if (logResult.error || logResult.status !== 0) {
+    violations.push({
+      message:
+        "HISTORICAL_GITLEAKS_SUPPRESSION_INSPECTION_FAILED: git log could not inspect reachable history",
+      recovery:
+        "Restore the Git repository and rerun the security allowlist metadata check before merging.",
+    });
+    return [];
+  }
+
+  return logResult.stdout
+    .split(/[\0\r\n]+/)
+    .filter((commit) => /^[a-f0-9]{40}$/.test(commit))
+    .map((commit) => `reachable commit ${commit.slice(0, 12)}`);
+}
+
+function readGitTrackedFiles(rootDir: string, violations: Violation[]): readonly string[] | null {
+  if (!existsSync(resolve(rootDir, ".git"))) {
     return null;
   }
 
-  const matches: string[] = [];
-  for (const candidate of parseGitLogInlineSuppressionCandidates(logResult.stdout)) {
-    const showResult = spawnSync(
-      "git",
-      ["-C", rootDir, "show", `${candidate.commit}:${candidate.path}`],
-      {
-        encoding: "utf-8",
-        maxBuffer: 20 * 1024 * 1024,
-      },
-    );
-
-    if (showResult.status !== 0) {
-      continue;
-    }
-
-    const lines = showResult.stdout.replace(/\r\n/g, "\n").split("\n");
-    for (let index = 0; index < lines.length; index++) {
-      if (lines[index].includes(inlineGitleaksAllowMarker)) {
-        matches.push(`${candidate.commit.slice(0, 12)}:${candidate.path}:${index + 1}`);
-      }
-    }
-  }
-
-  return matches;
-}
-
-function parseGitLogInlineSuppressionCandidates(
-  output: string,
-): readonly { readonly commit: string; readonly path: string }[] {
-  const candidates: { commit: string; path: string }[] = [];
-  let commit = "";
-
-  for (const rawLine of output.split("\n")) {
-    const line = rawLine.trim();
-    if (!line) {
-      continue;
-    }
-
-    if (line.startsWith("commit:")) {
-      commit = line.slice("commit:".length);
-      continue;
-    }
-
-    if (commit) {
-      candidates.push({ commit, path: line });
-    }
-  }
-
-  return candidates;
-}
-
-function readGitTrackedFiles(rootDir: string): readonly string[] | null {
-  const result = spawnSync("git", ["-C", rootDir, "ls-files"], {
+  const result = spawnSync("git", ["-C", rootDir, "ls-files", "-z"], {
     encoding: "utf-8",
   });
 
-  if (result.status !== 0) {
+  if (result.error || result.status !== 0) {
+    violations.push({
+      message:
+        "CURRENT_GITLEAKS_SUPPRESSION_INSPECTION_FAILED: git ls-files could not inspect tracked files",
+      recovery:
+        "Restore the Git index and rerun the security allowlist metadata check before merging.",
+    });
     return null;
   }
 
-  return result.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+  return result.stdout.split("\0").filter((line) => line.length > 0);
 }
 
 function readScannableFiles(rootDir: string): readonly string[] {
@@ -1179,6 +1161,26 @@ function validateGitleaksMetadata(
   const metadataKeys = metadata.map((entry) => gitleaksKey(entry.kind, entry.value));
   const metadataSet = new Set(metadataKeys);
 
+  for (const entry of effective.entries) {
+    if (entry.kind !== "path") {
+      violations.push({
+        message: `Gitleaks ${entry.kind} allowlist ${entry.value} uses an unsupported recovery kind`,
+        recovery:
+          "Replace it with an exact .gitleaksignore fingerprint or a fully anchored bounded path with reviewed metadata.",
+      });
+      continue;
+    }
+
+    const pathProblem = gitleaksPathProblem(entry.value);
+    if (pathProblem) {
+      violations.push({
+        message: `Gitleaks path allowlist ${entry.value} is not narrowly bounded: ${pathProblem}`,
+        recovery:
+          "Use ^<regex-escaped-repository-path>$ or a fully anchored path with literal directory scope and a literal basename/suffix.",
+      });
+    }
+  }
+
   for (const duplicateKey of duplicateValues(effectiveKeys)) {
     violations.push({
       message: `Gitleaks allowlist contains duplicate ${duplicateKey}`,
@@ -1212,6 +1214,97 @@ function validateGitleaksMetadata(
       });
     }
   }
+}
+
+const REGEX_META_CHARACTERS = new Set("\\.^$*+?()[]{}|");
+
+function gitleaksPathProblem(value: string): string | null {
+  if (
+    [...value].some((character) => {
+      const code = character.charCodeAt(0);
+      return code < 0x20 || code > 0x7e;
+    })
+  ) {
+    return "only printable ASCII characters are allowed";
+  }
+
+  const prefix = value.startsWith("(^|/)") ? "(^|/)" : value.startsWith("^") ? "^" : null;
+  if (!prefix || !value.endsWith("$")) {
+    return "the expression must start with ^ or (^|/) and end with $";
+  }
+
+  let remaining = value.slice(prefix.length, -1);
+  let directoryCount = 0;
+  while (remaining.length > 0) {
+    if (remaining.startsWith("[^/]+/")) {
+      if (directoryCount === 0) {
+        return "the first directory segment must be literal";
+      }
+      directoryCount++;
+      remaining = remaining.slice("[^/]+/".length);
+      continue;
+    }
+
+    const slash = remaining.indexOf("/");
+    if (slash < 0) {
+      break;
+    }
+
+    const segment = remaining.slice(0, slash);
+    const literalProblem = literalPathPartProblem(segment);
+    if (literalProblem) {
+      return `directory segment ${JSON.stringify(segment)} ${literalProblem}`;
+    }
+    directoryCount++;
+    remaining = remaining.slice(slash + 1);
+  }
+
+  if (directoryCount === 0) {
+    return "at least one literal or [^/]+ directory segment is required";
+  }
+
+  const basename = remaining.startsWith(".*") ? remaining.slice(2) : remaining;
+  const basenameProblem = literalPathPartProblem(basename);
+  if (basenameProblem) {
+    return `basename or suffix ${JSON.stringify(basename)} ${basenameProblem}`;
+  }
+
+  try {
+    const expression = new RegExp(value);
+    if (["", ".", "/"].some((candidate) => expression.test(candidate))) {
+      return "the expression must not match an empty or repository-root path";
+    }
+  } catch {
+    return "the expression must compile as a regular expression";
+  }
+
+  return null;
+}
+
+function literalPathPartProblem(value: string): string | null {
+  if (!value) {
+    return "must be non-empty";
+  }
+
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index] ?? "";
+    if (character === "\\") {
+      const escaped = value[index + 1];
+      if (!escaped || !REGEX_META_CHARACTERS.has(escaped)) {
+        return "contains a malformed or unnecessary escape";
+      }
+      index++;
+      continue;
+    }
+    if (character === "/") {
+      return "must not contain an embedded slash";
+    }
+    if (REGEX_META_CHARACTERS.has(character)) {
+      return `must regex-escape ${JSON.stringify(character)}`;
+    }
+  }
+
+  return null;
 }
 
 function validateGeneratedTemplateMetadata(
@@ -1262,22 +1355,6 @@ function isValidDate(value: string): boolean {
 
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
-}
-
-function isGitleaksAllowlistKind(value: string): value is GitleaksAllowlistKind {
-  return (
-    value === "commit" ||
-    value === "fingerprint" ||
-    value === "path" ||
-    value === "regex" ||
-    value === "stopword"
-  );
-}
-
-function isGitleaksAllowlistSection(section: string): boolean {
-  return (
-    section === "allowlist" || section.endsWith(".allowlist") || section.endsWith(".allowlists")
-  );
 }
 
 function readStringArrayValue(value: unknown): readonly string[] {
@@ -1406,80 +1483,6 @@ function isBalancedFlowArray(value: string): boolean {
   return depth === 0;
 }
 
-function isBalancedTomlArray(value: string): boolean {
-  let depth = 0;
-  let mode: "none" | "single" | "double" | "triple-single" | "triple-double" = "none";
-
-  for (let index = 0; index < value.length; index++) {
-    const char = value[index];
-    const previousChar = value[index - 1];
-    const nextThree = value.slice(index, index + 3);
-
-    if (mode === "triple-single") {
-      if (nextThree === "'''") {
-        mode = "none";
-        index += 2;
-      }
-      continue;
-    }
-
-    if (mode === "triple-double") {
-      if (nextThree === '"""' && previousChar !== "\\") {
-        mode = "none";
-        index += 2;
-      }
-      continue;
-    }
-
-    if (mode === "single") {
-      if (char === "'") {
-        mode = "none";
-      }
-      continue;
-    }
-
-    if (mode === "double") {
-      if (char === '"' && previousChar !== "\\") {
-        mode = "none";
-      }
-      continue;
-    }
-
-    if (nextThree === "'''") {
-      mode = "triple-single";
-      index += 2;
-      continue;
-    }
-
-    if (nextThree === '"""') {
-      mode = "triple-double";
-      index += 2;
-      continue;
-    }
-
-    if (char === "'") {
-      mode = "single";
-      continue;
-    }
-
-    if (char === '"') {
-      mode = "double";
-      continue;
-    }
-
-    if (char === "[") {
-      depth++;
-      continue;
-    }
-
-    if (char === "]") {
-      depth--;
-    }
-  }
-
-  return depth === 0 && mode === "none";
-}
-
 function parseFlowObjectStringList(
   value: string,
   keyName: string,
@@ -1533,10 +1536,6 @@ function stripYamlComment(value: string): string {
   return stripComment(value, "#");
 }
 
-function stripTomlComment(value: string): string {
-  return stripComment(value, "#");
-}
-
 function stripComment(value: string, marker: string): string {
   let inSingleQuote = false;
   let inDoubleQuote = false;
@@ -1566,14 +1565,6 @@ function stripComment(value: string, marker: string): string {
 function leadingSpaces(value: string): number {
   const match = value.match(/^ */);
   return match?.[0].length ?? 0;
-}
-
-function unescapeDoubleQuotedTomlString(value: string): string {
-  try {
-    return JSON.parse(`"${value}"`) as string;
-  } catch {
-    return value.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
-  }
 }
 
 function gitleaksKey(kind: GitleaksAllowlistKind, value: string): string {

@@ -10,6 +10,7 @@
     "audit:prod": "pnpm audit --audit-level high --prod",
     "audit:read-only": "pnpm verify:repo",
     "security:audit-policy": "node --experimental-strip-types scripts/verification-command.mts --id dependency-audit-policy",
+    "security:gitleaks-smoke": "node --experimental-strip-types scripts/security-gitleaks-smoke.mts",
     "check": "pnpm verify:repo",
     "changeset": "changeset",
     "deploy": "turbo deploy",
@@ -84,11 +85,12 @@
     "oxfmt": "*",
     "oxlint": "*",
     "semver": "7.7.4",
+    "smol-toml": "1.7.0",
     "tsup": "8.5.1",
     "turbo": "2.10.2",
     "typescript": "5.9.3",
     "vitest": "4.0.16",
-    "yaml": "2.8.3"
+    "yaml": "2.9.0"
   },
   "engines": {
     "node": ">=22"

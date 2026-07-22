@@ -7,7 +7,7 @@
       "description": "Update the Gitleaks tag and immutable OCI digest together",
       "managerFilePatterns": ["/^\\.github/workflows/ci\\.yml$/"],
       "matchStrings": [
-        "# renovate: datasource=docker depName=ghcr\\.io/gitleaks/gitleaks\\s+docker run[^\\n]*ghcr\\.io/gitleaks/gitleaks:(?<currentValue>v?[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+        "# renovate: datasource=docker depName=ghcr\\.io/gitleaks/gitleaks\\s+GITLEAKS_IMAGE:\\s*ghcr\\.io/gitleaks/gitleaks:(?<currentValue>v?[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],
       "datasourceTemplate": "docker",
       "depNameTemplate": "ghcr.io/gitleaks/gitleaks",
