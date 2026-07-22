@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseDocument } from "yaml";
@@ -21,13 +22,23 @@ type WorkflowStep = {
 
 type ReleaseWorkflow = {
   readonly jobs?: {
+    readonly release_ref_guard?: {
+      readonly outputs?: Record<string, unknown>;
+      readonly permissions?: Record<string, unknown>;
+      readonly steps?: unknown;
+    };
     readonly release?: {
+      readonly if?: unknown;
+      readonly needs?: unknown;
       readonly steps?: unknown;
     };
   };
   readonly on?: unknown;
   readonly permissions?: unknown;
 };
+
+const releaseAuthorityCondition =
+  "github.ref == 'refs/heads/trunk' && needs.release_ref_guard.outputs.verified_sha == github.sha";
 
 function parseWorkflow(source: string): ReleaseWorkflow {
   const document = parseDocument(source, { uniqueKeys: true });
@@ -42,6 +53,15 @@ function releaseSteps(parsedWorkflow: ReleaseWorkflow): WorkflowStep[] {
   const steps = parsedWorkflow.jobs?.release?.steps;
   if (!Array.isArray(steps)) {
     throw new Error("release job must define a steps array");
+  }
+
+  return steps as WorkflowStep[];
+}
+
+function releaseRefGuardSteps(parsedWorkflow: ReleaseWorkflow): WorkflowStep[] {
+  const steps = parsedWorkflow.jobs?.release_ref_guard?.steps;
+  if (!Array.isArray(steps)) {
+    throw new Error("release ref guard job must define a steps array");
   }
 
   return steps as WorkflowStep[];
@@ -67,14 +87,33 @@ function assertReleasePrAuthenticationContract(source: string): void {
     "id-token": "write",
   });
 
+  const guardJob = parsedWorkflow.jobs?.release_ref_guard;
+  expect(guardJob?.permissions).toEqual({ contents: "read" });
+  expect(guardJob?.outputs).toEqual({
+    verified_sha: "${{ steps.verify_ref.outputs.verified_sha }}",
+  });
+  expect(parsedWorkflow.jobs?.release?.needs).toBe("release_ref_guard");
+  expect(parsedWorkflow.jobs?.release?.if).toBe(releaseAuthorityCondition);
+
+  const guardSteps = releaseRefGuardSteps(parsedWorkflow);
+  const guardStep = stepByName(guardSteps, "Verify protected release ref");
+  expect(guardSteps).toHaveLength(1);
+  expect(guardStep.id).toBe("verify_ref");
+  expect(guardStep.run).toContain('if [ "$GITHUB_REF" != "refs/heads/trunk" ]; then');
+  expect(guardStep.run).toContain("Unsupported Release ref");
+  expect(guardStep.run).toContain("Re-run the workflow from the trunk branch");
+  expect(guardStep.run).toContain('echo "verified_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"');
+
   const steps = releaseSteps(parsedWorkflow);
+  const checkoutStep = stepByName(steps, "Checkout");
+  expect(checkoutStep.with?.ref).toBe("${{ needs.release_ref_guard.outputs.verified_sha }}");
   const credentialStep = stepByName(steps, "Verify release PR automation credentials");
   const setupIndex = steps.findIndex((step) => step.name === "Setup pnpm");
   const credentialIndex = steps.indexOf(credentialStep);
   expect(credentialIndex).toBeGreaterThan(-1);
   expect(credentialIndex).toBeLessThan(setupIndex);
   expect(credentialStep.if).toBe(
-    "steps.release_work.outputs.should_run_changesets_action == 'true'",
+    `${releaseAuthorityCondition} && steps.release_work.outputs.should_run_changesets_action == 'true'`,
   );
   expect(credentialStep.env).toEqual({
     RELEASE_APP_CLIENT_ID: "${{ vars.RELEASE_APP_CLIENT_ID }}",
@@ -91,7 +130,9 @@ function assertReleasePrAuthenticationContract(source: string): void {
   expect(tokenIndex).toBeGreaterThan(uploadIndex);
   expect(tokenIndex).toBeLessThan(changesetsIndex);
   expect(tokenStep.id).toBe("release_app_token");
-  expect(tokenStep.if).toBe("steps.release_work.outputs.should_run_changesets_action == 'true'");
+  expect(tokenStep.if).toBe(
+    `${releaseAuthorityCondition} && steps.release_work.outputs.should_run_changesets_action == 'true'`,
+  );
   expect(tokenStep.uses).toBe(
     "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1",
   );
@@ -104,9 +145,27 @@ function assertReleasePrAuthenticationContract(source: string): void {
     "permission-pull-requests": "write",
   });
   expect(changesetsStep.uses).toBe("changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d");
+  expect(changesetsStep.if).toBe(
+    `${releaseAuthorityCondition} && steps.release_work.outputs.should_run_changesets_action == 'true'`,
+  );
   expect(changesetsStep.env?.GITHUB_TOKEN).toBe("${{ steps.release_app_token.outputs.token }}");
   expect(source).not.toContain("secrets.GITHUB_TOKEN");
   expect(source).not.toMatch(/permission-(?:actions|workflows):/);
+}
+
+function runReleaseRefGuard(ref: string | undefined, sha = "a".repeat(40)) {
+  const guardStep = stepByName(
+    releaseRefGuardSteps(parseWorkflow(workflow)),
+    "Verify protected release ref",
+  );
+  const env = { ...process.env, GITHUB_OUTPUT: "/dev/null", GITHUB_SHA: sha };
+  delete env.GITHUB_REF;
+  if (ref !== undefined) env.GITHUB_REF = ref;
+
+  return spawnSync("bash", ["-c", String(guardStep.run)], {
+    encoding: "utf8",
+    env,
+  });
 }
 
 function runCredentialPreflight(clientId?: string, privateKey?: string) {
@@ -137,6 +196,51 @@ describe("Release PR authentication contract", () => {
 
     expect(() => parseWorkflow(malformed)).toThrow();
     expect(() => parseWorkflow(duplicate)).toThrow(/Map keys must be unique/);
+  });
+
+  it("accepts manual dispatch from trunk and exports its immutable SHA", () => {
+    const fixtureDir = mkdtempSync(resolve(tmpdir(), "release-ref-guard-"));
+    const output = resolve(fixtureDir, "github-output");
+    const guardStep = stepByName(
+      releaseRefGuardSteps(parseWorkflow(workflow)),
+      "Verify protected release ref",
+    );
+    try {
+      const result = spawnSync("bash", ["-c", String(guardStep.run)], {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GITHUB_OUTPUT: output,
+          GITHUB_REF: "refs/heads/trunk",
+          GITHUB_SHA: "a".repeat(40),
+        },
+      });
+
+      expect(result.status).toBe(0);
+      expect(readFileSync(output, "utf8")).toBe(`verified_sha=${"a".repeat(40)}\n`);
+    } finally {
+      rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    { name: "feature branch", ref: "refs/heads/feature/release-test" },
+    { name: "tag", ref: "refs/tags/v1.2.3" },
+    { name: "detached ref", ref: undefined },
+  ])("rejects manual dispatch from a $name before checkout", ({ ref }) => {
+    const result = runReleaseRefGuard(ref);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Unsupported Release ref");
+    expect(result.stdout).toContain(ref ?? "<unset>");
+    expect(result.stdout).toContain("Re-run the workflow from the trunk branch");
+  });
+
+  it("rejects trunk when GitHub does not provide an immutable commit SHA", () => {
+    const result = runReleaseRefGuard("refs/heads/trunk", "detached");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Invalid Release SHA");
   });
 
   it.each([
@@ -220,6 +324,19 @@ describe("Release PR authentication contract", () => {
       name: "token minted before verification",
       mutate: moveTokenBeforeVerification,
     },
+    {
+      name: "initial ref guard removed",
+      mutate: (source: string) =>
+        source.replace(/  release_ref_guard:\n[\s\S]*?\n  release:\n/, "  release:\n"),
+    },
+    {
+      name: "Changesets defensive ref guard removed",
+      mutate: (source: string) =>
+        source.replace(
+          `if: ${releaseAuthorityCondition} && steps.release_work.outputs.should_run_changesets_action == 'true'\n        uses: changesets/action`,
+          "if: steps.release_work.outputs.should_run_changesets_action == 'true'\n        uses: changesets/action",
+        ),
+    },
   ])("rejects hostile authentication mutation: $name", ({ mutate }) => {
     expect(() => assertReleasePrAuthenticationContract(mutate(workflow))).toThrow();
   });
@@ -266,7 +383,7 @@ describe("Release verification profile contract", () => {
       "uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0",
     );
     expect(workflow).toContain(
-      "if: steps.release_work.outputs.should_run_changesets_action == 'true'",
+      `if: ${releaseAuthorityCondition} && steps.release_work.outputs.should_run_changesets_action == 'true'`,
     );
   });
 
