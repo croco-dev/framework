@@ -1015,6 +1015,45 @@ describe("ci-executable-policy.mts", () => {
     ).toEqual([]);
   });
 
+  it.each([
+    ["rejects", "actions/checkout@main", 1],
+    ["accepts", `actions/checkout@${"a".repeat(40)} # v7.0.1`, 0],
+  ])("%s an aliased action step", (_label, reference, expectedFindings) => {
+    const repo = createRepo();
+    writeFile(
+      repo,
+      ".github/workflows/ci.yml",
+      [
+        "jobs:",
+        "  source:",
+        "    strategy:",
+        "      matrix:",
+        "        include:",
+        "          - &action-step",
+        `            uses: ${reference}`,
+        "    steps:",
+        "      - run: echo safe",
+        "  test:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - *action-step",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = runCiExecutablePolicy({
+      checkedPaths: [".github/workflows/ci.yml"],
+      rootDir: repo,
+    }).findings;
+
+    expect(findings).toHaveLength(expectedFindings);
+    if (expectedFindings > 0) {
+      expect(findings[0]).toEqual(
+        expect.objectContaining({ kind: "mutable-action-reference", line: 7 }),
+      );
+    }
+  });
+
   it("enforces action pins inside YAML flow maps", () => {
     const repo = createRepo();
     writeFile(

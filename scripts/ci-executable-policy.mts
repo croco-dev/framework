@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
-import { isMap, isScalar, isSeq, parse as parseYaml, parseDocument } from "yaml";
+import { isAlias, isMap, isScalar, isSeq, parse as parseYaml, parseDocument } from "yaml";
 
 import type { Pair } from "yaml";
 
@@ -288,24 +288,38 @@ function workflowActionReferenceUnits(file: string, source: string): ActionRefer
   };
   const pairNamed = (pairs: readonly Pair[], name: string): Pair | undefined =>
     pairs.find((pair) => isScalar(pair.key) && pair.key.value === name);
+  const resolveAlias = (node: unknown): unknown => {
+    const visited = new Set<unknown>();
+    let resolved = node;
+    while (isAlias(resolved)) {
+      if (visited.has(resolved)) {
+        return null;
+      }
+      visited.add(resolved);
+      resolved = resolved.resolve(document);
+    }
+    return resolved;
+  };
   const jobs = document.get("jobs", true);
   if (!isMap(jobs)) {
     return units;
   }
 
   for (const jobPair of jobs.items) {
-    if (!isMap(jobPair.value)) {
+    const job = resolveAlias(jobPair.value);
+    if (!isMap(job)) {
       continue;
     }
-    const jobUses = pairNamed(jobPair.value.items, "uses");
+    const jobUses = pairNamed(job.items, "uses");
     if (jobUses) {
       appendReference(jobUses);
     }
-    const steps = pairNamed(jobPair.value.items, "steps")?.value;
+    const steps = resolveAlias(pairNamed(job.items, "steps")?.value);
     if (!isSeq(steps)) {
       continue;
     }
-    for (const step of steps.items) {
+    for (const unresolvedStep of steps.items) {
+      const step = resolveAlias(unresolvedStep);
       if (!isMap(step)) {
         continue;
       }
