@@ -1,8 +1,10 @@
+import { ProblemCategory } from "@croco/problems-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../libs/Container";
-import { type ILogger, LOGGER_TOKEN } from "../libs/ILogger";
 import { OnShutdown } from "../libs/decorators/OnShutdown";
+import { type ILogger, LOGGER_TOKEN } from "../libs/ILogger";
 import {
+  OnShutdownDecoratorProblem,
   ShutdownConfigurationConflictProblem,
   ShutdownTimeoutProblem,
 } from "../libs/problems/ShutdownProblems";
@@ -366,19 +368,357 @@ describe("OnShutdown decorator", () => {
   });
 
   describe("as method decorator", () => {
-    it("should register method as shutdown hook", async () => {
+    it("should execute the method on the registered instance with the shutdown signal", async () => {
+      class MyService {
+        calls = 0;
+        receivedSignal: AbortSignal | undefined;
+
+        @OnShutdown()
+        async cleanup(signal?: AbortSignal): Promise<void> {
+          this.calls += 1;
+          this.receivedSignal = signal;
+        }
+      }
+
+      const instance = new MyService();
+      Container.set(MyService, instance);
+      await ShutdownManager.getInstance().shutdown();
+
+      expect(instance.calls).toBe(1);
+      expect(instance.receivedSignal).toBeInstanceOf(AbortSignal);
+    });
+
+    it("should prefer the decorated method when the class is also decorated", async () => {
+      @OnShutdown()
+      class MyService implements ShutdownHook {
+        decoratedCalls = 0;
+        conventionalCalls = 0;
+
+        @OnShutdown()
+        async cleanup(): Promise<void> {
+          this.decoratedCalls += 1;
+        }
+
+        async onShutdown(): Promise<void> {
+          this.conventionalCalls += 1;
+        }
+      }
+
+      const instance = new MyService();
+      Container.set(MyService, instance);
+      await ShutdownManager.getInstance().shutdown();
+
+      expect(instance.decoratedCalls).toBe(1);
+      expect(instance.conventionalCalls).toBe(0);
+    });
+
+    it.each(["class-first", "method-first"] as const)(
+      "should make manual %s decorator evaluation order-independent",
+      async (order) => {
+        class MyService implements ShutdownHook {
+          decoratedCalls = 0;
+          conventionalCalls = 0;
+
+          async cleanup(): Promise<void> {
+            this.decoratedCalls += 1;
+          }
+
+          async onShutdown(): Promise<void> {
+            this.conventionalCalls += 1;
+          }
+        }
+
+        const classDecorator = OnShutdown() as ClassDecorator;
+        const methodDecorator = OnShutdown() as MethodDecorator;
+        const descriptor = Object.getOwnPropertyDescriptor(
+          MyService.prototype,
+          "cleanup",
+        ) as PropertyDescriptor;
+
+        if (order === "class-first") {
+          classDecorator(MyService);
+          methodDecorator(MyService.prototype, "cleanup", descriptor);
+        } else {
+          methodDecorator(MyService.prototype, "cleanup", descriptor);
+          classDecorator(MyService);
+        }
+
+        const instance = new MyService();
+        Container.set(MyService, instance);
+        await ShutdownManager.getInstance().shutdown();
+
+        expect(instance.decoratedCalls).toBe(1);
+        expect(instance.conventionalCalls).toBe(0);
+      },
+    );
+
+    it("should make repeated evaluation of the same method idempotent", async () => {
+      class MyService {
+        calls = 0;
+
+        async cleanup(): Promise<void> {
+          this.calls += 1;
+        }
+      }
+
+      const decorator = OnShutdown() as MethodDecorator;
+      const descriptor = Object.getOwnPropertyDescriptor(
+        MyService.prototype,
+        "cleanup",
+      ) as PropertyDescriptor;
+      decorator(MyService.prototype, "cleanup", descriptor);
+      decorator(MyService.prototype, "cleanup", descriptor);
+
+      const instance = new MyService();
+      Container.set(MyService, instance);
+      await ShutdownManager.getInstance().shutdown();
+
+      expect(instance.calls).toBe(1);
+    });
+
+    it("should remain idempotent when the decorator module is evaluated again", async () => {
+      // @ts-expect-error -- Vite query imports intentionally create independent module instances.
+      const moduleA = await import("../libs/decorators/OnShutdown.ts?reload-a");
+      // @ts-expect-error -- Vite query imports intentionally create independent module instances.
+      const moduleB = await import("../libs/decorators/OnShutdown.ts?reload-b");
+
+      expect(moduleA.OnShutdown).not.toBe(moduleB.OnShutdown);
+
+      class MyService implements ShutdownHook {
+        decoratedCalls = 0;
+        conventionalCalls = 0;
+
+        async cleanup(): Promise<void> {
+          this.decoratedCalls += 1;
+        }
+
+        async onShutdown(): Promise<void> {
+          this.conventionalCalls += 1;
+        }
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(
+        MyService.prototype,
+        "cleanup",
+      ) as PropertyDescriptor;
+      (moduleA.OnShutdown() as ClassDecorator)(MyService);
+      (moduleB.OnShutdown() as MethodDecorator)(MyService.prototype, "cleanup", descriptor);
+
+      const instance = new MyService();
+      Container.set(MyService, instance);
+      await ShutdownManager.getInstance().shutdown();
+
+      expect(instance.decoratedCalls).toBe(1);
+      expect(instance.conventionalCalls).toBe(0);
+    });
+
+    it("should register in a fresh manager after reset while retaining method metadata", async () => {
+      class MyService {
+        calls = 0;
+
+        async cleanup(): Promise<void> {
+          this.calls += 1;
+        }
+      }
+
+      const methodDecorator = OnShutdown() as MethodDecorator;
+      const classDecorator = OnShutdown() as ClassDecorator;
+      const descriptor = Object.getOwnPropertyDescriptor(
+        MyService.prototype,
+        "cleanup",
+      ) as PropertyDescriptor;
+      methodDecorator(MyService.prototype, "cleanup", descriptor);
+      classDecorator(MyService);
+
+      const firstInstance = new MyService();
+      Container.set(MyService, firstInstance);
+      await ShutdownManager.getInstance().shutdown();
+      expect(firstInstance.calls).toBe(1);
+
+      ShutdownManager.reset();
+      Container.reset();
+      classDecorator(MyService);
+
+      const secondInstance = new MyService();
+      Container.set(MyService, secondInstance);
+      await ShutdownManager.getInstance().shutdown();
+      expect(secondInstance.calls).toBe(1);
+    });
+
+    it("should invoke the nearest inherited decorated function on the subclass instance", async () => {
+      const mockLogger = { error: vi.fn() } as unknown as ILogger;
+
+      class BaseService {
+        calls: string[] = [];
+
+        @OnShutdown()
+        async cleanup(): Promise<void> {
+          this.calls.push("base");
+        }
+      }
+
+      @OnShutdown()
+      class ChildService extends BaseService {
+        override async cleanup(): Promise<void> {
+          this.calls.push("child");
+        }
+      }
+
+      const base = new BaseService();
+      const child = new ChildService();
+      Container.set(LOGGER_TOKEN, mockLogger);
+      Container.set(BaseService, base);
+      Container.set(ChildService, child);
+      await ShutdownManager.getInstance().shutdown();
+
+      expect(base.calls).toEqual(["base"]);
+      expect(child.calls).toEqual(["base"]);
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it("should prefer an own decorated subclass declaration", async () => {
+      const mockLogger = { error: vi.fn() } as unknown as ILogger;
+
+      class BaseService {
+        calls: string[] = [];
+
+        @OnShutdown()
+        async cleanup(): Promise<void> {
+          this.calls.push("base");
+        }
+      }
+
+      class ChildService extends BaseService {
+        @OnShutdown()
+        override async cleanup(): Promise<void> {
+          this.calls.push("child");
+        }
+      }
+
+      const base = new BaseService();
+      const child = new ChildService();
+      Container.set(LOGGER_TOKEN, mockLogger);
+      Container.set(BaseService, base);
+      Container.set(ChildService, child);
+      await ShutdownManager.getInstance().shutdown();
+
+      expect(base.calls).toEqual(["base"]);
+      expect(child.calls).toEqual(["child"]);
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it("should reject static methods with a stable diagnostic", () => {
+      const manager = ShutdownManager.getInstance();
+      const hooksBefore = (manager as unknown as { hooks: ShutdownHook[] }).hooks.length;
+      let problem: OnShutdownDecoratorProblem | undefined;
+
+      try {
+        class MyService {
+          readonly marker = "instance";
+
+          @OnShutdown()
+          static async cleanup(): Promise<void> {}
+        }
+
+        void MyService;
+      } catch (error) {
+        if (error instanceof OnShutdownDecoratorProblem) {
+          problem = error;
+        }
+      }
+
+      expect(problem).toBeInstanceOf(OnShutdownDecoratorProblem);
+      expect(problem?.code).toBe("framework-context/on-shutdown-decorator-invalid");
+      expect(problem?.category).toBe(ProblemCategory.ValidationError);
+      expect(problem?.reason).toBe("static-method");
+      expect(problem?.detail).toBe(
+        "@OnShutdown() does not support static method 'MyService.cleanup'.",
+      );
+      expect(problem?.toJSON()).toMatchObject({
+        reason: "static-method",
+        targetName: "MyService",
+        propertyKey: "cleanup",
+      });
+      expect((manager as unknown as { hooks: ShutdownHook[] }).hooks).toHaveLength(hooksBefore);
+    });
+
+    it("should reject accessors as non-method targets", () => {
       const manager = ShutdownManager.getInstance();
       const hooksBefore = (manager as unknown as { hooks: ShutdownHook[] }).hooks.length;
 
       class MyService {
-        @OnShutdown()
-        async cleanup(_signal?: AbortSignal): Promise<void> {}
+        get cleanup(): string {
+          return "cleanup";
+        }
       }
 
-      void MyService;
+      const descriptor = Object.getOwnPropertyDescriptor(
+        MyService.prototype,
+        "cleanup",
+      ) as PropertyDescriptor;
+      const decorate = (): void => {
+        (OnShutdown() as MethodDecorator)(MyService.prototype, "cleanup", descriptor);
+      };
 
-      const hooksAfter = (manager as unknown as { hooks: ShutdownHook[] }).hooks.length;
-      expect(hooksAfter).toBe(hooksBefore + 1);
+      expect(decorate).toThrowError(OnShutdownDecoratorProblem);
+
+      try {
+        decorate();
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "framework-context/on-shutdown-decorator-invalid",
+          category: ProblemCategory.ValidationError,
+          reason: "non-method",
+          detail:
+            "@OnShutdown() can decorate only classes or instance methods; received 'MyService.cleanup'.",
+        });
+        expect((error as OnShutdownDecoratorProblem).toJSON()).toMatchObject({
+          reason: "non-method",
+          targetName: "MyService",
+          propertyKey: "cleanup",
+        });
+      }
+
+      expect((manager as unknown as { hooks: ShutdownHook[] }).hooks).toHaveLength(hooksBefore);
+    });
+
+    it("should reject distinct decorated methods on the same class", () => {
+      class MyService {
+        async first(): Promise<void> {}
+        async second(): Promise<void> {}
+      }
+
+      const decorator = OnShutdown() as MethodDecorator;
+      decorator(
+        MyService.prototype,
+        "first",
+        Object.getOwnPropertyDescriptor(MyService.prototype, "first") as PropertyDescriptor,
+      );
+      const manager = ShutdownManager.getInstance();
+      const hooksBefore = (manager as unknown as { hooks: ShutdownHook[] }).hooks.length;
+
+      expect(() =>
+        decorator(
+          MyService.prototype,
+          "second",
+          Object.getOwnPropertyDescriptor(MyService.prototype, "second") as PropertyDescriptor,
+        ),
+      ).toThrowError(
+        expect.objectContaining({
+          code: "framework-context/on-shutdown-decorator-invalid",
+          category: ProblemCategory.ValidationError,
+          reason: "multiple-methods",
+          detail:
+            "@OnShutdown() supports one instance method per class; 'MyService.second' conflicts with 'MyService.first'.",
+          extensions: {
+            reason: "multiple-methods",
+            targetName: "MyService",
+            propertyKey: "second",
+            existingPropertyKey: "first",
+          },
+        }),
+      );
+      expect((manager as unknown as { hooks: ShutdownHook[] }).hooks).toHaveLength(hooksBefore);
     });
   });
 });
