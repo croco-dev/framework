@@ -31,11 +31,24 @@ type PackageInfo = {
 type ReleaseSignificantChange = {
   readonly files: string[];
   readonly surface: string;
+  readonly changedExportPaths?: string[];
 };
 
 type PublicApiSnapshotPackage = {
   readonly packageName: string;
-  readonly contentKey: string;
+  readonly entrypoints: ReadonlyMap<string, string>;
+  readonly metadataKey: string;
+  readonly migrationRootKey: string | null;
+};
+
+type PublicApiSnapshotData = {
+  readonly schemaVersion: number;
+  readonly packages: readonly PublicApiSnapshotPackage[];
+};
+
+type PublicApiSnapshotChange = {
+  readonly packageName: string;
+  readonly changedExportPaths: readonly string[];
 };
 
 type NoReleaseJustification = {
@@ -979,19 +992,30 @@ function addReleaseSignificantChange(
   packageName: string,
   file: string,
   surface: string,
+  changedExportPaths?: readonly string[],
 ): void {
   const packageFiles = changes.get(packageName) ?? {
     files: [],
     surface,
   };
   packageFiles.files.push(file);
-  changes.set(packageName, packageFiles);
+  changes.set(
+    packageName,
+    changedExportPaths
+      ? {
+          ...packageFiles,
+          changedExportPaths: [
+            ...new Set([...(packageFiles.changedExportPaths ?? []), ...changedExportPaths]),
+          ].sort(),
+        }
+      : packageFiles,
+  );
 }
 
 function readPublicApiSnapshotPackages(
   options: CheckOptions,
   ref: string,
-): PublicApiSnapshotPackage[] | null {
+): PublicApiSnapshotData | null {
   let content: string;
   try {
     content = runGit(options.rootDir, ["show", `${ref}:${publicApiSnapshotPath}`]);
@@ -1009,7 +1033,11 @@ function readPublicApiSnapshotPackages(
     throw new Error(`${publicApiSnapshotPath} must contain a packages array`);
   }
 
-  return packagesValue
+  const schemaVersion = (parsed as { readonly schemaVersion?: unknown }).schemaVersion;
+  if (typeof schemaVersion !== "number") {
+    throw new Error(`${publicApiSnapshotPath} must contain a numeric schemaVersion`);
+  }
+  const packages = packagesValue
     .map((pkg) => {
       if (typeof pkg !== "object" || pkg === null || !("packageName" in pkg)) {
         throw new Error(`${publicApiSnapshotPath} contains an invalid package entry`);
@@ -1020,18 +1048,60 @@ function readPublicApiSnapshotPackages(
         throw new Error(`${publicApiSnapshotPath} contains an invalid package name`);
       }
 
+      const packageRecord = pkg as Record<string, unknown>;
+      const entrypoints = new Map<string, string>();
+      const metadataKey = JSON.stringify({
+        compatibilityGroups: packageRecord.compatibilityGroups ?? null,
+        relativeDir: packageRecord.relativeDir ?? null,
+      });
+      let migrationRootKey: string | null = null;
+      if (schemaVersion === 1) {
+        migrationRootKey = JSON.stringify({
+          kind: "code",
+          runtimeExports: packageRecord.runtimeExports ?? null,
+          typeExports: packageRecord.typeExports ?? null,
+        });
+        entrypoints.set(".", JSON.stringify(pkg));
+      } else if (schemaVersion === 2 && Array.isArray(packageRecord.entrypoints)) {
+        for (const entrypoint of packageRecord.entrypoints) {
+          if (
+            typeof entrypoint !== "object" ||
+            entrypoint === null ||
+            typeof (entrypoint as { exportPath?: unknown }).exportPath !== "string"
+          ) {
+            throw new Error(
+              `${publicApiSnapshotPath} contains an invalid entrypoint for ${packageName}`,
+            );
+          }
+          const exportPath = (entrypoint as { exportPath: string }).exportPath;
+          entrypoints.set(exportPath, JSON.stringify(entrypoint));
+          if (exportPath === ".") {
+            const entrypointRecord = entrypoint as Record<string, unknown>;
+            migrationRootKey = JSON.stringify({
+              kind: entrypointRecord.kind ?? null,
+              runtimeExports: entrypointRecord.runtimeExports ?? null,
+              typeExports: entrypointRecord.typeExports ?? null,
+            });
+          }
+        }
+      } else {
+        throw new Error(`${publicApiSnapshotPath} uses unsupported schemaVersion ${schemaVersion}`);
+      }
       return {
         packageName,
-        contentKey: JSON.stringify(pkg),
+        entrypoints,
+        metadataKey,
+        migrationRootKey,
       };
     })
     .sort((left, right) => left.packageName.localeCompare(right.packageName));
+  return { schemaVersion, packages };
 }
 
 function getPublicApiSnapshotChanges(
   options: CheckOptions,
   changedFiles: readonly string[],
-): string[] {
+): PublicApiSnapshotChange[] {
   if (!changedFiles.includes(publicApiSnapshotPath)) {
     return [];
   }
@@ -1041,23 +1111,47 @@ function getPublicApiSnapshotChanges(
     const currentPackages = readPublicApiSnapshotPackages(options, options.headRef);
 
     if (!previousPackages || !currentPackages) {
-      return ["public API snapshot"];
+      return [{ packageName: "public API snapshot", changedExportPaths: [] }];
     }
 
     const previousByPackage = new Map(
-      previousPackages.map((pkg) => [pkg.packageName, pkg.contentKey] as const),
+      previousPackages.packages.map((pkg) => [pkg.packageName, pkg] as const),
     );
     const currentByPackage = new Map(
-      currentPackages.map((pkg) => [pkg.packageName, pkg.contentKey] as const),
+      currentPackages.packages.map((pkg) => [pkg.packageName, pkg] as const),
     );
     const packageNames = [...new Set([...previousByPackage.keys(), ...currentByPackage.keys()])];
-    const changedPackages = packageNames.filter(
-      (packageName) => previousByPackage.get(packageName) !== currentByPackage.get(packageName),
-    );
-
-    return changedPackages.length > 0 ? changedPackages.sort() : ["public API snapshot"];
+    const migration = previousPackages.schemaVersion === 1 && currentPackages.schemaVersion === 2;
+    const changes = packageNames.sort().flatMap((packageName): PublicApiSnapshotChange[] => {
+      const previous = previousByPackage.get(packageName);
+      const current = currentByPackage.get(packageName);
+      const paths = [
+        ...new Set([
+          ...(previous?.entrypoints.keys() ?? []),
+          ...(current?.entrypoints.keys() ?? []),
+        ]),
+      ]
+        .sort()
+        .filter((exportPath) => {
+          if (exportPath === "." && previous && current) {
+            if (previous.metadataKey !== current.metadataKey) {
+              return true;
+            }
+            if (
+              migration &&
+              previous.migrationRootKey !== null &&
+              previous.migrationRootKey === current.migrationRootKey
+            ) {
+              return false;
+            }
+          }
+          return previous?.entrypoints.get(exportPath) !== current?.entrypoints.get(exportPath);
+        });
+      return paths.length > 0 ? [{ packageName, changedExportPaths: paths }] : [];
+    });
+    return changes;
   } catch {
-    return ["public API snapshot"];
+    return [{ packageName: "public API snapshot", changedExportPaths: [] }];
   }
 }
 
@@ -1066,8 +1160,16 @@ function addPublicApiSnapshotChanges(
   options: CheckOptions,
   changedFiles: readonly string[],
 ): void {
-  for (const packageName of getPublicApiSnapshotChanges(options, changedFiles)) {
-    addReleaseSignificantChange(changes, packageName, publicApiSnapshotPath, "public API snapshot");
+  for (const change of getPublicApiSnapshotChanges(options, changedFiles)) {
+    const pathEvidence =
+      change.changedExportPaths.length > 0 ? ` (${change.changedExportPaths.join(", ")})` : "";
+    addReleaseSignificantChange(
+      changes,
+      change.packageName,
+      publicApiSnapshotPath,
+      `public API snapshot${pathEvidence}`,
+      change.changedExportPaths,
+    );
   }
 }
 
@@ -1101,7 +1203,13 @@ function logUncoveredPackages(coverage: ChangesetCoverage): void {
   log("");
   log("Uncovered release-significant packages:");
   for (const [packageName, change] of coverage.uncoveredPackages) {
-    log(`- ${packageName} (${change.surface})`);
+    const snapshotSurface =
+      change.changedExportPaths &&
+      change.changedExportPaths.length > 0 &&
+      !change.surface.startsWith("public API snapshot")
+        ? `; public API snapshot (${change.changedExportPaths.join(", ")})`
+        : "";
+    log(`- ${packageName} (${change.surface}${snapshotSurface})`);
     for (const file of [...change.files].sort()) {
       log(`  - ${file}`);
     }
