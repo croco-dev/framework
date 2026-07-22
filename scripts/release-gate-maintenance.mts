@@ -87,6 +87,7 @@ export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/peer-dependency-range-policy.mjs",
   "scripts/release-gate-maintenance.mts",
   "scripts/release-spine-evidence.mts",
+  "scripts/security-gitleaks-smoke.mts",
   "scripts/verification-change-classifier.mts",
   "scripts/verification-command.mts",
   "scripts/verification-dispatcher.mts",
