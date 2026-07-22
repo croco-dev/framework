@@ -1,7 +1,7 @@
 import { Container, Token } from "typedi";
-import type { ServiceMetadata } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CrocoModule, ModuleDiagnosticsProvider, ModuleLifecycleProblem } from "../index";
+import type { ServiceMetadata } from "typedi";
 import type { ModuleOptions } from "../types";
 
 describe("module initialization rollback", () => {
@@ -321,6 +321,19 @@ describe("module initialization rollback", () => {
     expect(setup).toHaveBeenCalledTimes(1);
     releaseSetup?.();
     await first;
+  });
+
+  it("reuses the active context after initialization completes", async () => {
+    const setup = vi.fn();
+    const start = vi.fn();
+    CrocoModule.use({ name: "app", setup, start });
+
+    const first = await CrocoModule.initialize();
+    const second = await CrocoModule.initialize();
+
+    expect(second).toBe(first);
+    expect(setup).toHaveBeenCalledTimes(1);
+    expect(start).toHaveBeenCalledTimes(1);
   });
 
   it("shares one failed attempt, compensates once, and leaves shutdown inactive", async () => {

@@ -113,6 +113,10 @@ export function registerModule(module: ModuleOptions): void {
 }
 
 export function initializeModules(): Promise<ModuleContext> {
+  if (isInitialized && activeContext) {
+    return Promise.resolve(activeContext);
+  }
+
   if (initializationPromise) {
     return initializationPromise;
   }
@@ -374,14 +378,32 @@ function restoreContainerServices(
 }
 
 function getContainerServices(container: ContainerInstance): ServiceMetadata<unknown>[] {
-  return (container as unknown as ContainerServiceMetadataAccess).services;
+  return getContainerServiceMetadataAccess(container).services;
 }
 
 function destroyContainerService(
   container: ContainerInstance,
   service: ServiceMetadata<unknown>,
 ): void {
-  (container as unknown as ContainerServiceMetadataAccess).destroyServiceInstance(service);
+  getContainerServiceMetadataAccess(container).destroyServiceInstance(service);
+}
+
+function getContainerServiceMetadataAccess(
+  container: ContainerInstance,
+): ContainerServiceMetadataAccess {
+  const candidate = container as unknown as Partial<ContainerServiceMetadataAccess>;
+  if (
+    !Array.isArray(candidate.services) ||
+    typeof candidate.destroyServiceInstance !== "function"
+  ) {
+    throw new ModuleLifecycleProblem(
+      "<registry>",
+      "setup",
+      "TypeDI 0.10.0 container metadata contract is unavailable.",
+    );
+  }
+
+  return candidate as ContainerServiceMetadataAccess;
 }
 
 export function createModuleGraphManifest(
