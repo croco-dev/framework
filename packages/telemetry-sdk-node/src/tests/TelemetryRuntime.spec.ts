@@ -275,8 +275,9 @@ describe("TelemetryRuntime", () => {
     expect(runtime.isEnabled()).toBe(false);
     expect(runtime.getConfig()?.trace?.enabled).toBe(false);
     await expect(runtime.forceFlush()).resolves.toEqual({
-      success: true,
-      flushedSpans: -1,
+      outcome: "skipped",
+      reason: "tracing-disabled",
+      flushedSpans: 0,
     });
   });
 
@@ -384,7 +385,7 @@ describe("TelemetryRuntime", () => {
     expect(shutdownSettled).toBe(false);
 
     releaseInit();
-    await shutdownPromise;
+    await expect(shutdownPromise).resolves.toEqual({ outcome: "completed" });
 
     expect(sdk.shutdown).toHaveBeenCalledTimes(1);
     expect(runtime.isInitialized()).toBe(false);
@@ -405,8 +406,42 @@ describe("TelemetryRuntime", () => {
     });
   });
 
-  it("should handle forceFlush without error", async () => {
-    await runtime.forceFlush();
+  it("should report forceFlush as unsupported before initialization", async () => {
+    await expect(runtime.forceFlush()).resolves.toEqual({
+      outcome: "unsupported",
+      reason: "not-initialized",
+      flushedSpans: 0,
+    });
+  });
+
+  it("should wait for in-flight initialization before forceFlush", async () => {
+    const processor = {
+      forceFlush: vi.fn().mockResolvedValue(undefined),
+    };
+    let releaseInit!: () => void;
+    const pendingInit = new Promise<void>((resolve) => {
+      releaseInit = () => {
+        Object.assign(runtime, { initialized: true, processor });
+        resolve();
+      };
+    });
+    Object.assign(runtime, { initPromise: pendingInit });
+
+    let flushSettled = false;
+    const flushPromise = runtime.forceFlush();
+    flushPromise.then(() => {
+      flushSettled = true;
+    });
+
+    await Promise.resolve();
+    expect(flushSettled).toBe(false);
+
+    releaseInit();
+    await expect(flushPromise).resolves.toEqual({
+      outcome: "completed",
+      flushedSpans: -1,
+    });
+    expect(processor.forceFlush).toHaveBeenCalledTimes(1);
   });
 
   it("should timeout with default 30000ms when no timeoutMillis arg given", async () => {
@@ -421,9 +456,11 @@ describe("TelemetryRuntime", () => {
     await vi.advanceTimersByTimeAsync(30000);
     const result = await resultPromise;
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBeInstanceOf(TelemetryRuntimeProblem);
-    expect(result.error?.message).toContain("timed out after");
+    expect(result.outcome).toBe("failed");
+    if (result.outcome === "failed") {
+      expect(result.error).toBeInstanceOf(TelemetryRuntimeProblem);
+      expect(result.error.message).toContain("timed out after");
+    }
     vi.useRealTimers();
   });
 
@@ -435,11 +472,14 @@ describe("TelemetryRuntime", () => {
     Object.assign(runtime, { processor });
 
     const result = await runtime.forceFlush();
-    expect(result.success).toBe(true);
+    expect(result.outcome).toBe("completed");
   });
 
-  it("should handle shutdown without error", async () => {
-    await runtime.shutdown();
+  it("should report shutdown as unsupported before initialization", async () => {
+    await expect(runtime.shutdown()).resolves.toEqual({
+      outcome: "unsupported",
+      reason: "not-initialized",
+    });
   });
 
   it("should prefer OTEL_EXPORTER_OTLP_TRACES_ENDPOINT over OTEL_EXPORTER_OTLP_ENDPOINT", async () => {
@@ -511,7 +551,11 @@ describe("TelemetryRuntime", () => {
       "Telemetry init failed: exporter bootstrap failed",
     );
     expect(runtime.isInitialized()).toBe(false);
-    await expect(runtime.forceFlush()).resolves.toEqual({ success: true, flushedSpans: -1 });
+    await expect(runtime.forceFlush()).resolves.toEqual({
+      outcome: "unsupported",
+      reason: "not-initialized",
+      flushedSpans: 0,
+    });
 
     vi.doUnmock("@opentelemetry/exporter-trace-otlp-http");
     vi.resetModules();
@@ -560,9 +604,11 @@ describe("TelemetryRuntime", () => {
 
     const result = await runtime.forceFlush();
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBeInstanceOf(TelemetryRuntimeProblem);
-    expect(result.error?.message).toBe("Telemetry forceFlush failed: export failed");
+    expect(result.outcome).toBe("failed");
+    if (result.outcome === "failed") {
+      expect(result.error).toBeInstanceOf(TelemetryRuntimeProblem);
+      expect(result.error.message).toBe("Telemetry forceFlush failed: export failed");
+    }
   });
 
   it("should return Problem details when forceFlush times out", async () => {
@@ -577,9 +623,11 @@ describe("TelemetryRuntime", () => {
     await vi.advanceTimersByTimeAsync(10);
     const result = await resultPromise;
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBeInstanceOf(TelemetryRuntimeProblem);
-    expect(result.error?.message).toBe("Telemetry forceFlush failed: timed out after 10ms");
+    expect(result.outcome).toBe("failed");
+    if (result.outcome === "failed") {
+      expect(result.error).toBeInstanceOf(TelemetryRuntimeProblem);
+      expect(result.error.message).toBe("Telemetry forceFlush failed: timed out after 10ms");
+    }
     vi.useRealTimers();
   });
 
@@ -591,6 +639,7 @@ describe("TelemetryRuntime", () => {
     Object.assign(runtime, { processor });
 
     const result = await runtime.forceFlush();
+    expect(result.outcome).toBe("completed");
     expect(result.flushedSpans).toBe(-1);
   });
 
@@ -602,12 +651,17 @@ describe("TelemetryRuntime", () => {
     Object.assign(runtime, { processor });
 
     const result = await runtime.forceFlush();
+    expect(result.outcome).toBe("failed");
     expect(result.flushedSpans).toBe(-1);
   });
 
-  it("should return flushedSpans: -1 when processor is null", async () => {
+  it("should return zero flushed spans when forceFlush is unsupported", async () => {
     const result = await runtime.forceFlush();
-    expect(result.flushedSpans).toBe(-1);
+    expect(result).toEqual({
+      outcome: "unsupported",
+      reason: "not-initialized",
+      flushedSpans: 0,
+    });
   });
 
   it("should keep disabled telemetry from blocking unrelated request work", async () => {
@@ -624,7 +678,15 @@ describe("TelemetryRuntime", () => {
     const requestWork = vi.fn().mockResolvedValue({ ok: true });
 
     await expect(requestWork()).resolves.toEqual({ ok: true });
-    await expect(runtime.forceFlush()).resolves.toEqual({ success: true, flushedSpans: -1 });
+    await expect(runtime.forceFlush()).resolves.toEqual({
+      outcome: "skipped",
+      reason: "telemetry-disabled",
+      flushedSpans: 0,
+    });
+    await expect(runtime.shutdown()).resolves.toEqual({
+      outcome: "skipped",
+      reason: "telemetry-disabled",
+    });
     expect(runtime.isInitialized()).toBe(false);
     expect(requestWork).toHaveBeenCalledTimes(1);
   });
@@ -638,5 +700,31 @@ describe("TelemetryRuntime", () => {
 
     await expect(runtime.shutdown()).rejects.toThrow("Telemetry shutdown failed: shutdown failed");
     Object.assign(runtime, { sdk: null, processor: null, initialized: false, initPromise: null });
+  });
+
+  it("lifecycle outcomes should preserve an in-flight initialization failure through shutdown", async () => {
+    const initFailure = new TelemetryRuntimeProblem("init", new Error("bootstrap failed"));
+    let rejectInit!: (error: TelemetryRuntimeProblem) => void;
+    const pendingInit = new Promise<void>((_resolve, reject) => {
+      rejectInit = reject;
+    });
+    Object.assign(runtime, { initPromise: pendingInit });
+
+    const shutdownPromise = runtime.shutdown();
+    rejectInit(initFailure);
+
+    await expect(shutdownPromise).rejects.toBe(initFailure);
+    expect(runtime.isInitialized()).toBe(false);
+  });
+
+  it("should report completed shutdown after the SDK performs it", async () => {
+    const sdk = {
+      shutdown: vi.fn().mockResolvedValue(undefined),
+    };
+    Object.assign(runtime, { sdk, initialized: true });
+
+    await expect(runtime.shutdown()).resolves.toEqual({ outcome: "completed" });
+    expect(sdk.shutdown).toHaveBeenCalledTimes(1);
+    expect(runtime.isInitialized()).toBe(false);
   });
 });

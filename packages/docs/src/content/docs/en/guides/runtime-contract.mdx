@@ -109,7 +109,11 @@ owned by `@croco/telemetry-sdk-node`, so Lambda apps should connect `TelemetryRu
 transport boundary:
 
 ```typescript no-check
-import { TelemetryRuntime, lambdaPreset } from "@croco/telemetry-sdk-node";
+import {
+  TelemetryForceFlushUnsupportedProblem,
+  TelemetryRuntime,
+  lambdaPreset,
+} from "@croco/telemetry-sdk-node";
 
 const telemetry = TelemetryRuntime.getInstance();
 await telemetry.init(lambdaPreset({ serviceName: "orders" }));
@@ -117,12 +121,16 @@ await telemetry.init(lambdaPreset({ serviceName: "orders" }));
 export const handler = app.lambdaHandler({
   flush: async () => {
     const result = await telemetry.forceFlush(5000);
-    if (!result.success) {
-      throw result.error ?? new Error("telemetry flush failed");
+    if (result.outcome === "failed") {
+      throw result.error;
+    }
+    if (result.outcome === "unsupported") {
+      throw new TelemetryForceFlushUnsupportedProblem();
     }
   },
 });
 ```
 
 The callback runs after the request and queued runtime work complete. If it rejects, the Lambda handler rejects
-instead of returning a business success without export evidence.
+instead of returning a business success without export evidence. A disabled runtime reports `skipped`, while only
+a processor that performed the flush reports `completed`.

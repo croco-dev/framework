@@ -14,12 +14,6 @@ import {
 } from "./libs/problems/TelemetryProblems";
 import { getUnsupportedTelemetrySignals } from "./libs/signals/TelemetrySignalSupport";
 
-type ForceFlushResult = {
-  success: boolean;
-  flushedSpans: number;
-  error?: TelemetryRuntimeProblem;
-};
-
 class TelemetryRuntime {
   private static instance: TelemetryRuntime | null = null;
   private sdk: NodeSDK | null = null;
@@ -191,8 +185,22 @@ class TelemetryRuntime {
   }
 
   async forceFlush(timeoutMillis?: number): Promise<ForceFlushResult> {
+    const pendingInit = this.initPromise;
+    if (pendingInit) {
+      try {
+        await pendingInit;
+      } catch (error) {
+        this.initialized = false;
+        this.initPromise = null;
+        throw error;
+      }
+    }
+
     if (!this.processor) {
-      return { success: true, flushedSpans: -1 };
+      const reason = this.getDisabledLifecycleReason();
+      return reason
+        ? { outcome: "skipped", reason, flushedSpans: 0 }
+        : { outcome: "unsupported", reason: "not-initialized", flushedSpans: 0 };
     }
 
     const effectiveTimeout = timeoutMillis ?? 30000;
@@ -214,12 +222,12 @@ class TelemetryRuntime {
       await Promise.race([flushPromise, timeoutPromise]);
 
       return {
-        success: true,
+        outcome: "completed",
         flushedSpans: -1,
       };
     } catch (error) {
       return {
-        success: false,
+        outcome: "failed",
         flushedSpans: -1,
         error: this.createRuntimeProblem("forceFlush", error),
       };
@@ -230,22 +238,25 @@ class TelemetryRuntime {
     }
   }
 
-  async shutdown(): Promise<void> {
+  async shutdown(): Promise<ShutdownResult> {
     const pendingInit = this.initPromise;
     if (pendingInit) {
       try {
         await pendingInit;
-      } catch {
+      } catch (error) {
         this.initialized = false;
         this.initPromise = null;
-        return;
+        throw error;
       }
     }
 
     if (!this.sdk) {
       this.initialized = false;
       this.initPromise = null;
-      return;
+      const reason = this.getDisabledLifecycleReason();
+      return reason
+        ? { outcome: "skipped", reason }
+        : { outcome: "unsupported", reason: "not-initialized" };
     }
 
     try {
@@ -255,6 +266,7 @@ class TelemetryRuntime {
       this.enabledAutoInstrumentationModules = [];
       this.initialized = false;
       this.initPromise = null;
+      return { outcome: "completed" };
     } catch (error) {
       throw this.createRuntimeProblem("shutdown", error);
     }
@@ -285,6 +297,16 @@ class TelemetryRuntime {
 
   getEnabledAutoInstrumentationModules(): string[] {
     return [...this.enabledAutoInstrumentationModules];
+  }
+
+  private getDisabledLifecycleReason(): TelemetryLifecycleSkipReason | null {
+    if (this.config?.enabled === false) {
+      return "telemetry-disabled";
+    }
+    if (this.config?.trace?.enabled === false) {
+      return "tracing-disabled";
+    }
+    return null;
   }
 }
 
@@ -320,5 +342,18 @@ function snapshotTelemetryConfig(config: TelemetryConfig): TelemetryConfig {
   };
 }
 
+type TelemetryLifecycleSkipReason = "telemetry-disabled" | "tracing-disabled";
+
+type ForceFlushResult =
+  | { outcome: "completed"; flushedSpans: -1 }
+  | { outcome: "skipped"; reason: TelemetryLifecycleSkipReason; flushedSpans: 0 }
+  | { outcome: "unsupported"; reason: "not-initialized"; flushedSpans: 0 }
+  | { outcome: "failed"; flushedSpans: -1; error: TelemetryRuntimeProblem };
+
+type ShutdownResult =
+  | { outcome: "completed" }
+  | { outcome: "skipped"; reason: TelemetryLifecycleSkipReason }
+  | { outcome: "unsupported"; reason: "not-initialized" };
+
 export { TelemetryRuntime };
-export type { ForceFlushResult };
+export type { ForceFlushResult, ShutdownResult, TelemetryLifecycleSkipReason };

@@ -109,7 +109,11 @@ function checkSpaBeSplitStructure() {
     ["apps", "api-server", "src", "lambda.ts"],
     /export const handler/,
   );
-  checkFileContains("spa-be-split", ["apps", "api-server", "src", "lambda.ts"], /forceFlush/);
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "lambda.ts"],
+    /lambdaHandler\(\{[\s\S]*flush:[\s\S]*flush\.outcome === "failed"[\s\S]*flush\.outcome === "unsupported"/,
+  );
   checkFileContains(
     "spa-be-split",
     ["apps", "api-server", "src", "env.ts"],
@@ -822,6 +826,11 @@ function checkSaasStructure() {
   );
   checkFileContains(
     "saas",
+    ["apps", "api-server", "src", "demo", "operational-failure-drills.ts"],
+    /flush\.outcome !== "failed"/,
+  );
+  checkFileContains(
+    "saas",
     ["apps", "api-server", "src", "demo", "ops-smoke.ts"],
     /@croco\/cli\/ops/,
   );
@@ -919,6 +928,19 @@ function checkAiSaasStructure() {
 }
 
 describe("GraphQL addon templates", () => {
+  it("preserves request and telemetry failures at the Lambda boundary", () => {
+    checkFileContains(
+      "addons/lambda",
+      ["apps", "graphql-api", "src", "handler.ts"],
+      /await telemetryReady;[\s\S]*runWithTelemetryFlush/,
+    );
+    checkFileContains(
+      "addons/lambda",
+      ["apps", "graphql-api", "src", "telemetryFlush.ts"],
+      /new LambdaTelemetryBoundaryProblem\(operationOutcome\.error, flushFailure\)/,
+    );
+  });
+
   it("wires contract snapshot scripts into standalone and Next.js GraphQL apps", () => {
     const standalonePackageJson = readJsonTemplate(
       "addons/graphql-standalone",

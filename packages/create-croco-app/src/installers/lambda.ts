@@ -22,6 +22,7 @@ export function installLambda(
     mergePackageJson(join(targetDir, "apps", "graphql-api"), {
       dependencies: {
         "@as-integrations/aws-lambda": "^3.1.0",
+        "@croco/problems-core": "workspace:*",
       },
       devDependencies: {
         "@types/aws-lambda": "^8.10.146",

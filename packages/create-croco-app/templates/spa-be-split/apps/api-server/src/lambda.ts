@@ -1,20 +1,25 @@
-import { TelemetryRuntime } from "@croco/telemetry-sdk-node";
+import { TelemetryForceFlushUnsupportedProblem, TelemetryRuntime } from "@croco/telemetry-sdk-node";
 import { createCrocoApp } from "./app";
 import { createTelemetryConfig, readEnv } from "./env";
 
 const telemetry = TelemetryRuntime.getInstance();
 const env = readEnv();
 const telemetryReady = telemetry.init(createTelemetryConfig({ ...env, NODE_ENV: "production" }));
-const crocoHandler = createCrocoApp().lambdaHandler();
+const crocoHandler = createCrocoApp().lambdaHandler({
+  flush: async () => {
+    const flush = await telemetry.forceFlush();
+    if (flush.outcome === "failed") {
+      throw flush.error;
+    }
+    if (flush.outcome === "unsupported") {
+      throw new TelemetryForceFlushUnsupportedProblem();
+    }
+  },
+});
 
 export const handler = async (
   ...args: Parameters<typeof crocoHandler>
 ): Promise<Awaited<ReturnType<typeof crocoHandler>>> => {
-  try {
-    await telemetryReady;
-
-    return await crocoHandler(...args);
-  } finally {
-    await telemetry.forceFlush();
-  }
+  await telemetryReady;
+  return crocoHandler(...args);
 };

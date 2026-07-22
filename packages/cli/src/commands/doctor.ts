@@ -2,6 +2,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { defineCommand } from "citty";
+import { Node, Project, SyntaxKind } from "ts-morph";
+import type * as Morph from "ts-morph";
 import { isKnownRuntimePlatform } from "@croco/framework-context";
 import type { KnownRuntimePlatform } from "@croco/framework-context";
 import { PROJECT_MANIFEST_BUNDLE_ARTIFACTS } from "@croco/protocols-core";
@@ -258,7 +260,6 @@ const commandOutputMaxLength = 500;
 export function runDoctor(options: RunDoctorOptions = {}): DoctorReport {
   const startDir = resolve(options.cwd ?? process.cwd());
   const rootDir = findWorkspaceRoot(startDir);
-
   if (!rootDir) {
     const diagnostic: DoctorDiagnostic = {
       code: CLI_DIAGNOSTIC_CODES.doctorWorkspaceNotFound,
@@ -271,7 +272,6 @@ export function runDoctor(options: RunDoctorOptions = {}): DoctorReport {
       action:
         "Run croco doctor from inside a Croco monorepo, or pass --cwd to a directory under the workspace root.",
     };
-
     return {
       version: "croco.doctor.v1",
       rootDir: null,
@@ -3291,7 +3291,7 @@ function hasHandlerForceFlush(source: string): boolean {
   const handlerSource = extractExportedHandlerSource(source);
   const sourceToCheck = handlerSource ?? source;
 
-  return /\.forceFlush\s*\(/.test(sourceToCheck);
+  return /\.forceFlush\s*\(/.test(sourceToCheck) || hasCrocoLambdaFlush(source);
 }
 
 function hasRequiredHttpMiddlewareCall(
@@ -4207,3 +4207,244 @@ export const doctor = defineCommand({
     process.exitCode = getDoctorExitCode(report);
   },
 });
+
+const doctorSourceProject = new Project({
+  skipAddingFilesFromTsConfig: true,
+  useInMemoryFileSystem: true,
+});
+
+function hasCrocoLambdaFlush(source: string): boolean {
+  let sourceFile: Morph.SourceFile | undefined;
+  try {
+    sourceFile = doctorSourceProject.createSourceFile("/doctor/lambda.ts", source, {
+      overwrite: true,
+    });
+    const configuredHandlers = new Set(
+      sourceFile.getVariableDeclarations().filter(isConfiguredCrocoLambdaHandler),
+    );
+
+    return (
+      configuredHandlers.size > 0 &&
+      (exportedHandlerDelegatesTo(sourceFile, configuredHandlers) ||
+        exportsConfiguredHandlerAlias(sourceFile, configuredHandlers))
+    );
+  } catch {
+    return false;
+  } finally {
+    if (sourceFile) {
+      doctorSourceProject.removeSourceFile(sourceFile);
+    }
+  }
+}
+
+function isConfiguredCrocoLambdaHandler(declaration: Morph.VariableDeclaration): boolean {
+  const initializer = declaration.getInitializer();
+  if (!Node.isCallExpression(initializer)) {
+    return false;
+  }
+
+  const lambdaHandlerAccess = initializer.getExpression();
+  if (
+    !Node.isPropertyAccessExpression(lambdaHandlerAccess) ||
+    lambdaHandlerAccess.getName() !== "lambdaHandler"
+  ) {
+    return false;
+  }
+
+  const createAppCall = lambdaHandlerAccess.getExpression();
+  if (
+    !Node.isCallExpression(createAppCall) ||
+    !Node.isIdentifier(createAppCall.getExpression()) ||
+    createAppCall.getExpression().getText() !== "createCrocoApp"
+  ) {
+    return false;
+  }
+
+  const options = initializer.getArguments()[0];
+  return (
+    Node.isObjectLiteralExpression(options) &&
+    flushPropertyCallsForceFlush(options, declaration.getSourceFile())
+  );
+}
+
+function flushPropertyCallsForceFlush(
+  options: Morph.ObjectLiteralExpression,
+  sourceFile: Morph.SourceFile,
+): boolean {
+  const runtimeBindings = getTelemetryRuntimeBindings(sourceFile);
+  const flushProperty = options.getProperty("flush");
+  if (Node.isMethodDeclaration(flushProperty)) {
+    return nodeCallsTelemetryForceFlush(flushProperty, runtimeBindings);
+  }
+  if (Node.isPropertyAssignment(flushProperty)) {
+    const initializer = flushProperty.getInitializer();
+    return Boolean(
+      initializer &&
+      (nodeCallsTelemetryForceFlush(initializer, runtimeBindings) ||
+        (Node.isIdentifier(initializer) &&
+          referencedFunctionCallsTelemetryForceFlush(initializer.getSymbol(), runtimeBindings))),
+    );
+  }
+  if (Node.isShorthandPropertyAssignment(flushProperty)) {
+    return referencedFunctionCallsTelemetryForceFlush(
+      sourceFile.getProject().getTypeChecker().getShorthandAssignmentValueSymbol(flushProperty),
+      runtimeBindings,
+    );
+  }
+  return false;
+}
+
+function referencedFunctionCallsTelemetryForceFlush(
+  symbol: Morph.Symbol | undefined,
+  runtimeBindings: ReadonlySet<Morph.VariableDeclaration>,
+): boolean {
+  return Boolean(
+    symbol?.getDeclarations().some((declaration) => {
+      if (Node.isVariableDeclaration(declaration)) {
+        const initializer = declaration.getInitializer();
+        return Boolean(initializer && nodeCallsTelemetryForceFlush(initializer, runtimeBindings));
+      }
+      return (
+        Node.isFunctionDeclaration(declaration) &&
+        nodeCallsTelemetryForceFlush(declaration, runtimeBindings)
+      );
+    }),
+  );
+}
+
+function getTelemetryRuntimeBindings(
+  sourceFile: Morph.SourceFile,
+): ReadonlySet<Morph.VariableDeclaration> {
+  return new Set(
+    sourceFile.getVariableDeclarations().filter((declaration) => {
+      const initializer = declaration.getInitializer();
+      if (!Node.isCallExpression(initializer)) {
+        return false;
+      }
+      const getInstanceAccess = initializer.getExpression();
+      return (
+        Node.isPropertyAccessExpression(getInstanceAccess) &&
+        getInstanceAccess.getName() === "getInstance" &&
+        Node.isIdentifier(getInstanceAccess.getExpression()) &&
+        getInstanceAccess.getExpression().getText() === "TelemetryRuntime"
+      );
+    }),
+  );
+}
+
+function nodeCallsTelemetryForceFlush(
+  node: Node,
+  runtimeBindings: ReadonlySet<Morph.VariableDeclaration>,
+): boolean {
+  return node.getDescendantsOfKind(SyntaxKind.CallExpression).some((call) => {
+    if (hasNestedFunctionScope(call, node)) {
+      return false;
+    }
+    const expression = call.getExpression();
+    if (!Node.isPropertyAccessExpression(expression) || expression.getName() !== "forceFlush") {
+      return false;
+    }
+    const receiver = expression.getExpression();
+    return Node.isIdentifier(receiver) && identifierResolvesTo(receiver, runtimeBindings);
+  });
+}
+
+function identifierResolvesTo(
+  identifier: Morph.Identifier,
+  declarations: ReadonlySet<Morph.VariableDeclaration>,
+): boolean {
+  return Boolean(
+    identifier
+      .getSymbol()
+      ?.getDeclarations()
+      .some(
+        (declaration) => Node.isVariableDeclaration(declaration) && declarations.has(declaration),
+      ),
+  );
+}
+
+function isFunctionScope(node: Node): boolean {
+  return (
+    Node.isArrowFunction(node) ||
+    Node.isFunctionDeclaration(node) ||
+    Node.isFunctionExpression(node) ||
+    Node.isMethodDeclaration(node)
+  );
+}
+
+function hasNestedFunctionScope(call: Morph.CallExpression, target: Node): boolean {
+  for (const ancestor of call.getAncestors()) {
+    if (ancestor === target) {
+      return false;
+    }
+    if (isFunctionScope(ancestor)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function exportedHandlerDelegatesTo(
+  sourceFile: Morph.SourceFile,
+  configuredHandlers: ReadonlySet<Morph.VariableDeclaration>,
+): boolean {
+  const handlerVariable = sourceFile.getVariableDeclaration("handler");
+  const handlerFunction = sourceFile.getFunction("handler");
+  const handlerNodes: Node[] = [];
+  const handlerInitializer = handlerVariable?.getVariableStatement()?.isExported()
+    ? handlerVariable.getInitializer()
+    : undefined;
+  if (
+    handlerInitializer &&
+    Node.isIdentifier(handlerInitializer) &&
+    identifierResolvesTo(handlerInitializer, configuredHandlers)
+  ) {
+    return true;
+  }
+  if (handlerInitializer) {
+    handlerNodes.push(handlerInitializer);
+  }
+  if (handlerFunction?.isExported()) {
+    handlerNodes.push(handlerFunction);
+  }
+
+  return handlerNodes.some((handlerNode) =>
+    handlerNode.getDescendantsOfKind(SyntaxKind.CallExpression).some((call) => {
+      if (hasNestedFunctionScope(call, handlerNode)) {
+        return false;
+      }
+      const expression = call.getExpression();
+      return Node.isIdentifier(expression) && identifierResolvesTo(expression, configuredHandlers);
+    }),
+  );
+}
+
+function exportsConfiguredHandlerAlias(
+  sourceFile: Morph.SourceFile,
+  configuredHandlers: ReadonlySet<Morph.VariableDeclaration>,
+): boolean {
+  const exportsNamedHandler = sourceFile.getExportDeclarations().some((declaration) =>
+    declaration.getNamedExports().some(
+      (namedExport) =>
+        namedExport.getAliasNode()?.getText() === "handler" &&
+        namedExport
+          .getLocalTargetSymbol()
+          ?.getDeclarations()
+          .some(
+            (declaration) =>
+              Node.isVariableDeclaration(declaration) && configuredHandlers.has(declaration),
+          ),
+    ),
+  );
+  if (exportsNamedHandler) {
+    return true;
+  }
+
+  return sourceFile.getExportAssignments().some((assignment) => {
+    if (assignment.isExportEquals()) {
+      return false;
+    }
+    const expression = assignment.getExpression();
+    return Node.isIdentifier(expression) && identifierResolvesTo(expression, configuredHandlers);
+  });
+}

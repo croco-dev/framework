@@ -21,7 +21,7 @@ title: "TelemetryRuntime"
 
 `Promise`\<[`ForceFlushResult`](/api/telemetry-sdk-node/src/type-aliases/forceflushresult/)\>
 
----
+***
 
 ### getConfig()
 
@@ -31,7 +31,7 @@ title: "TelemetryRuntime"
 
 [`TelemetryConfig`](/api/telemetry-sdk-node/src/type-aliases/telemetryconfig/) \| `null`
 
----
+***
 
 ### getEnabledAutoInstrumentationModules()
 
@@ -41,7 +41,7 @@ title: "TelemetryRuntime"
 
 `string`[]
 
----
+***
 
 ### init()
 
@@ -57,7 +57,7 @@ title: "TelemetryRuntime"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### isEnabled()
 
@@ -67,7 +67,7 @@ title: "TelemetryRuntime"
 
 `boolean`
 
----
+***
 
 ### isInitialized()
 
@@ -77,17 +77,17 @@ title: "TelemetryRuntime"
 
 `boolean`
 
----
+***
 
 ### shutdown()
 
-> **shutdown**(): `Promise`\<`void`\>
+> **shutdown**(): `Promise`\<[`ShutdownResult`](/api/telemetry-sdk-node/src/type-aliases/shutdownresult/)\>
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<[`ShutdownResult`](/api/telemetry-sdk-node/src/type-aliases/shutdownresult/)\>
 
----
+***
 
 ### getInstance()
 
@@ -97,7 +97,7 @@ title: "TelemetryRuntime"
 
 `TelemetryRuntime`
 
----
+***
 
 ### reset()
 

@@ -1242,8 +1242,8 @@
         {
           "id": "telemetry-runtime-lifecycle",
           "category": "lifecycle",
-          "disposition": "unsupported-rejected",
-          "status": "unresolved",
+          "disposition": "implemented-tested",
+          "status": "complete",
           "members": ["init", "forceFlush", "shutdown", "in-flight init failure"],
           "source": {
             "path": "packages/telemetry-sdk-node/src/runtime.ts",
@@ -1251,10 +1251,10 @@
           },
           "test": {
             "path": "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
-            "identifier": "forceFlush"
+            "identifier": "lifecycle outcomes"
           },
           "issue": "https://github.com/croco-dev/framework/issues/1394",
-          "regressionTest": "Distinguish completed, disabled/skipped, unsupported, and failed flush/shutdown outcomes and preserve init rejection."
+          "regressionTest": "Force flush distinguishes completed, disabled/skipped, unsupported, and failed outcomes; shutdown reports completed/skipped/unsupported and preserves an in-flight init rejection."
         },
         {
           "id": "telemetry-disabled",

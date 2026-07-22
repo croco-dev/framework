@@ -13,7 +13,7 @@ Defines which modules should be automatically instrumented.
 ```typescript
 const autoInstrumentConfig: AutoInstrumentationConfig = {
   enabled: true,
-  modules: ["http", "https", "express", "pg"],
+  modules: ['http', 'https', 'express', 'pg'],
 };
 ```
 
@@ -26,7 +26,7 @@ const autoInstrumentConfig: AutoInstrumentationConfig = {
 Custom instrumentation instances to include.
 These are merged with auto-loaded instrumentations.
 
----
+***
 
 ### enabled?
 
@@ -37,10 +37,10 @@ Whether auto-instrumentation is enabled.
 #### Default
 
 ```ts
-true;
+true
 ```
 
----
+***
 
 ### ~~exclude?~~
 
@@ -54,7 +54,7 @@ consistently across modules.
 Use module-specific supported options or custom instrumentation instances.
 :::
 
----
+***
 
 ### excludeModules?
 
@@ -63,7 +63,7 @@ Use module-specific supported options or custom instrumentation instances.
 List of modules to exclude from auto-instrumentation.
 Takes precedence over 'modules'.
 
----
+***
 
 ### ~~include?~~
 
@@ -77,7 +77,7 @@ consistently across modules.
 Use module-specific supported options or custom instrumentation instances.
 :::
 
----
+***
 
 ### moduleOptions?
 
@@ -86,7 +86,7 @@ Use module-specific supported options or custom instrumentation instances.
 Configuration for specific instrumentations.
 Keys are module names, values are module-specific options.
 
----
+***
 
 ### modules?
 

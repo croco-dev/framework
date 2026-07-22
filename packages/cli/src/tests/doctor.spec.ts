@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { renderUsage } from "citty";
-import { afterEach, describe, expect, it } from "vitest";
+import { Project } from "ts-morph";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { doctor, formatDoctorReport, getDoctorExitCode, runDoctor } from "../commands/doctor.js";
 import type { DoctorDiagnostic, DoctorLocation, DoctorReport } from "../commands/doctor.js";
 import { createCrocoCommand } from "../commands/root.js";
@@ -12,6 +13,7 @@ const tempRepos: string[] = [];
 
 describe("doctor", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     for (const repo of tempRepos.splice(0)) {
       rmSync(repo, { force: true, recursive: true });
     }
@@ -385,6 +387,295 @@ describe("doctor", () => {
         legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
       }),
     ]);
+  });
+
+  it("falls back to a missing flush diagnostic when Lambda AST analysis fails", () => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/handler.ts",
+      [
+        'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const telemetryReady = telemetry.init({ serviceName: 'api' });",
+        "const crocoHandler = createCrocoApp().lambdaHandler({ flush: flushTelemetry });",
+        "export const handler = async (...args: Parameters<typeof crocoHandler>) => {",
+        "  await telemetryReady;",
+        "  return crocoHandler(...args);",
+        "};",
+        "",
+      ].join("\n"),
+    );
+    vi.spyOn(Project.prototype, "createSourceFile").mockImplementationOnce(() => {
+      throw new Error("AST analysis failed");
+    });
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
+      }),
+    );
+  });
+
+  it("accepts a delegated Croco Lambda handler configured with a telemetry flush boundary", () => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/lambda.ts",
+      [
+        'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const telemetryReady = telemetry.init({ serviceName: 'api' });",
+        "const crocoHandler = createCrocoApp().lambdaHandler({",
+        "  flush: async () => {",
+        "    await telemetry.forceFlush();",
+        "  },",
+        "});",
+        "export const handler = async (...args: Parameters<typeof crocoHandler>) => {",
+        "  await telemetryReady;",
+        "  return crocoHandler(...args);",
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).not.toContainEqual(
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
+      }),
+    );
+    expect(report.checks.find((check) => check.id === "lambda-telemetry-flush")?.status).toBe(
+      "pass",
+    );
+  });
+
+  it.each([
+    {
+      exportStatement: "export const handler = crocoHandler;",
+      label: "direct handler export",
+    },
+    {
+      exportStatement: "export default crocoHandler;",
+      label: "default handler export",
+    },
+  ])("accepts a configured handler exposed through a $label", ({ exportStatement }) => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/lambda.ts",
+      [
+        'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const crocoHandler = createCrocoApp().lambdaHandler({",
+        "  flush: async () => telemetry.forceFlush(),",
+        "});",
+        exportStatement,
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.checks.find((check) => check.id === "lambda-telemetry-flush")?.status).toBe(
+      "pass",
+    );
+  });
+
+  it.each([
+    {
+      label: "shorthand property",
+      setup: [
+        "const flush = async () => {",
+        "  await telemetry.forceFlush();",
+        "};",
+        "const crocoHandler = createCrocoApp().lambdaHandler({ flush });",
+      ],
+    },
+    {
+      label: "method property",
+      setup: [
+        "const crocoHandler = createCrocoApp().lambdaHandler({",
+        "  async flush() {",
+        "    await telemetry.forceFlush();",
+        "  },",
+        "});",
+      ],
+    },
+  ])("accepts a delegated flush configured with a $label", ({ setup }) => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/lambda.ts",
+      [
+        'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const telemetryReady = telemetry.init({ serviceName: 'api' });",
+        ...setup,
+        "export const handler = async (...args: Parameters<typeof crocoHandler>) => {",
+        "  await telemetryReady;",
+        "  return crocoHandler(...args);",
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.checks.find((check) => check.id === "lambda-telemetry-flush")?.status).toBe(
+      "pass",
+    );
+  });
+
+  it("rejects strings and unrelated properties as delegated flush evidence", () => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/lambda.ts",
+      [
+        'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const telemetryReady = telemetry.init({ serviceName: 'api' });",
+        "const crocoHandler = createCrocoApp().lambdaHandler({",
+        '  flush: async () => "telemetry.forceFlush()",',
+        "  inspect: async () => telemetry.forceFlush(),",
+        "});",
+        "export const handler = async (...args: Parameters<typeof crocoHandler>) => {",
+        "  await telemetryReady;",
+        "  return crocoHandler(...args);",
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
+      }),
+    );
+  });
+
+  it.each([
+    {
+      label: "unrelated receiver",
+      flushBody: ["  await cache.forceFlush();"],
+    },
+    {
+      label: "uninvoked nested function",
+      flushBody: [
+        "  const neverCalled = async () => telemetry.forceFlush();",
+        "  void neverCalled;",
+      ],
+    },
+    {
+      label: "shadowed telemetry runtime binding",
+      flushBody: ["  const telemetry = cache;", "  await telemetry.forceFlush();"],
+    },
+  ])("rejects a $label as delegated telemetry flush evidence", ({ flushBody }) => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/lambda.ts",
+      [
+        'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const telemetryReady = telemetry.init({ serviceName: 'api' });",
+        "const cache = { forceFlush: async () => undefined };",
+        "const crocoHandler = createCrocoApp().lambdaHandler({",
+        "  flush: async () => {",
+        ...flushBody,
+        "  },",
+        "});",
+        "export const handler = async (...args: Parameters<typeof crocoHandler>) => {",
+        "  await telemetryReady;",
+        "  return crocoHandler(...args);",
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
+      }),
+    );
+  });
+
+  it("rejects a shadowed delegated handler binding", () => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/lambda.ts",
+      [
+        'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const telemetryReady = telemetry.init({ serviceName: 'api' });",
+        "const crocoHandler = createCrocoApp().lambdaHandler({",
+        "  flush: async () => telemetry.forceFlush(),",
+        "});",
+        "export const handler = async (...args: Parameters<typeof crocoHandler>) => {",
+        "  await telemetryReady;",
+        "  const crocoHandler = async () => ({ statusCode: 200 });",
+        "  return crocoHandler(...args);",
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
+      }),
+    );
+  });
+
+  it("rejects an uninvoked nested delegated handler call", () => {
+    const repo = createCrocoWorkspace();
+    writePackage(repo, "api", "@croco/api");
+    writeFile(
+      repo,
+      "packages/api/src/lambda.ts",
+      [
+        'import { TelemetryRuntime } from "@croco/telemetry-sdk-node";',
+        "const telemetry = TelemetryRuntime.getInstance();",
+        "const telemetryReady = telemetry.init({ serviceName: 'api' });",
+        "const crocoHandler = createCrocoApp().lambdaHandler({",
+        "  flush: async () => telemetry.forceFlush(),",
+        "});",
+        "const fallbackHandler = async () => ({ statusCode: 200 });",
+        "export const handler = async () => {",
+        "  await telemetryReady;",
+        "  const neverCalled = async () => crocoHandler();",
+        "  void neverCalled;",
+        "  return fallbackHandler();",
+        "};",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: CLI_DIAGNOSTIC_CODES.doctorLambdaTelemetryFlushMissing,
+      }),
+    );
   });
 
   it("passes generated SaaS-style readiness artifacts without live provider credentials", () => {
