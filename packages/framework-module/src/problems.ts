@@ -1,9 +1,15 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { getModuleTokenLabel } from "./moduleTokenLabels";
-import type { ModuleCleanupFailure } from "./types";
 import type { ModuleToken } from "./types/ModuleToken";
 
 type ModuleLifecyclePhase = "setup" | "start" | "shutdown";
+
+type ModuleCleanupFailure = {
+  readonly moduleName: string;
+  readonly phase: "shutdown";
+  readonly code: string;
+  readonly message: string;
+};
 
 export class InvalidModuleDefinitionProblem extends Problem {
   constructor(detail: string, extensions?: Record<string, unknown>) {
