@@ -33,7 +33,7 @@ export class CircuitBreaker {
   private readonly openDuration: number;
   private readonly halfOpenRequests: number;
   private readonly stateStore: CircuitBreakerStateStore;
-  private readonly fallback?: CircuitBreakerFallback;
+  private readonly fallback: CircuitBreakerFallback | undefined;
   private _closedActiveCount = 0;
 
   constructor(options: CircuitBreakerOptions) {

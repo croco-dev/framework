@@ -55,7 +55,7 @@ export function getLambdaContext(): LambdaContext | null {
 export function isLambdaEnvironment(): boolean {
   return (
     readLambdaContext() !== null ||
-    (typeof process !== "undefined" && process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined)
+    (typeof process !== "undefined" && process.env["AWS_LAMBDA_FUNCTION_NAME"] !== undefined)
   );
 }
 
