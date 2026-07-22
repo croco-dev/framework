@@ -529,7 +529,17 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
       },
       runtimeCapabilityManifestValidation("node"),
       { label: "contract snapshot", args: ["contract:snapshot"] },
-      { label: "contract verification", args: ["contract:verify"] },
+      {
+        label: "contract codegen",
+        args: ["codegen"],
+        paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/saas.ts"],
+      },
+      {
+        label: "contract verification",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
       { label: "doctor", args: ["doctor"] },
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
