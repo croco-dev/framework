@@ -563,6 +563,24 @@ describe("security-allowlist-metadata-check.mts", () => {
     );
   });
 
+  it("accepts deleted tracked files while retaining historical suppression checks", () => {
+    const root = createTempRoot();
+    writeRepo(root);
+    mkdirSync(join(root, "packages/app/src"), { recursive: true });
+    writeFileSync(join(root, "packages/app/src/index.ts"), "export const active = true;\n");
+    runGit(root, "init");
+    runGit(root, "config", "user.email", "security@example.com");
+    runGit(root, "config", "user.name", "Security Tests");
+    runGit(root, "add", ".");
+    runGit(root, "commit", "-m", "initial fixture");
+    rmSync(join(root, "packages/app/src/index.ts"));
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("CURRENT_GITLEAKS_SUPPRESSION_INSPECTION_FAILED");
+  });
+
   it("rejects inline Gitleaks suppression comments from git history", () => {
     const root = createTempRoot();
     writeRepo(root);

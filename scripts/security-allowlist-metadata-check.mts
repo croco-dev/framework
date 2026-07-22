@@ -972,7 +972,10 @@ function readCurrentInlineGitleaksSuppressions(
 
   for (const file of files) {
     const absolutePath = resolve(rootDir, file);
-    if (existsSync(absolutePath) && statSync(absolutePath).isDirectory()) {
+    if (!existsSync(absolutePath)) {
+      continue;
+    }
+    if (statSync(absolutePath).isDirectory()) {
       continue;
     }
     let content = "";

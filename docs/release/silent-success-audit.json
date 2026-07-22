@@ -1496,7 +1496,7 @@
       "coverage": {
         "configuration": {
           "status": "reviewed",
-          "surfaceIds": ["event-bus-options", "event-ordering-options", "event-replay-options"],
+          "surfaceIds": ["event-bus-options"],
           "reviewPaths": ["packages/events-core/src"],
           "searchTerms": ["EventBusStartOptions", "resolver", "handlers"]
         },
@@ -1540,42 +1540,6 @@
             "path": "packages/events-core/src/tests/EventBusConfig.spec.ts",
             "identifier": "resolver"
           }
-        },
-        {
-          "id": "event-ordering-options",
-          "category": "configuration",
-          "disposition": "remove-deprecate",
-          "status": "unresolved",
-          "members": [
-            "EventOrderingConfig.strategy/bufferSize/flushTimeoutMs/maxConcurrency/partitionKeyExtractor"
-          ],
-          "source": {
-            "path": "packages/events-core/src/libs/interfaces/EventOrdering.ts",
-            "identifier": "EventOrderingConfig"
-          },
-          "test": {
-            "path": "packages/events-core/src/tests/EventBusConfig.spec.ts",
-            "identifier": "EventBusConfig"
-          },
-          "issue": "https://github.com/croco-dev/framework/issues/1404",
-          "regressionTest": "Implement and behavior-test every ordering field, or remove/deprecate the unused public contract."
-        },
-        {
-          "id": "event-replay-options",
-          "category": "configuration",
-          "disposition": "remove-deprecate",
-          "status": "unresolved",
-          "members": ["ReplayOptions.from/to/eventTypes/partitionKeys/mode/batchSize/onProgress"],
-          "source": {
-            "path": "packages/events-core/src/libs/interfaces/EventReplay.ts",
-            "identifier": "ReplayOptions"
-          },
-          "test": {
-            "path": "packages/events-core/src/tests/EventBusConfig.spec.ts",
-            "identifier": "EventBusConfig"
-          },
-          "issue": "https://github.com/croco-dev/framework/issues/1404",
-          "regressionTest": "Implement and behavior-test every replay field, or remove/deprecate the unused public contract."
         },
         {
           "id": "event-serializer",
