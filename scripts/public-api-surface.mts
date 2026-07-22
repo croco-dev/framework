@@ -488,7 +488,12 @@ const frameworkContextCompatibilityContract = {
         },
         {
           source: "./libs/problems/ShutdownProblems",
-          names: ["ShutdownConfigurationConflictProblem", "ShutdownTimeoutProblem"],
+          names: [
+            "OnShutdownDecoratorFailureReason",
+            "OnShutdownDecoratorProblem",
+            "ShutdownConfigurationConflictProblem",
+            "ShutdownTimeoutProblem",
+          ],
         },
         {
           source: "./libs/ShutdownManager",

@@ -270,9 +270,11 @@ export {
 } from "./libs/problems/RuntimePolicyProblems";
 export { PipelineGraphProblem } from "./libs/problems/PipelineGraphProblems";
 export {
+  OnShutdownDecoratorProblem,
   ShutdownConfigurationConflictProblem,
   ShutdownTimeoutProblem,
 } from "./libs/problems/ShutdownProblems";
+export type { OnShutdownDecoratorFailureReason } from "./libs/problems/ShutdownProblems";
 
 /**
  * 컴포넌트 등록 시 내부적으로 사용하는 메타데이터 타입입니다.

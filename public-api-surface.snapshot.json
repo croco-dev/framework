@@ -6808,6 +6808,13 @@
           "compatibilityGroup": "shutdown"
         },
         {
+          "name": "OnShutdownDecoratorProblem",
+          "exportKind": "named",
+          "source": "./libs/problems/ShutdownProblems",
+          "declarationKind": "class",
+          "compatibilityGroup": "shutdown"
+        },
+        {
           "name": "PipelineGraphProblem",
           "exportKind": "named",
           "source": "./libs/problems/PipelineGraphProblems",
@@ -7151,6 +7158,12 @@
           "exportKind": "named",
           "source": "./libs/types",
           "compatibilityGroup": "middleware"
+        },
+        {
+          "name": "OnShutdownDecoratorFailureReason",
+          "exportKind": "named",
+          "source": "./libs/problems/ShutdownProblems",
+          "compatibilityGroup": "shutdown"
         },
         {
           "name": "PolicyCapabilityDiagnostic",

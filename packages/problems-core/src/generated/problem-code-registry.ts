@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 445,
+  problemCount: 446,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -4471,6 +4471,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "framework-context/on-shutdown-decorator-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-on-shutdown-decorator-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
+          line: 9,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "framework-context/pipeline-graph-invalid",
       category: "Conflict",
       status: 409,
@@ -4651,7 +4682,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 18,
+          line: 84,
           column: 3,
           kind: "problem-class",
         },
@@ -4683,7 +4714,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 7,
+          line: 73,
           column: 3,
           kind: "problem-class",
         },
