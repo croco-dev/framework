@@ -1,5 +1,6 @@
 ---
 "@croco/openapi-spec": patch
+"@croco/problems-core": patch
 "@croco/rpc-codegen": patch
 "create-croco-app": patch
 ---
