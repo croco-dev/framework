@@ -33,7 +33,7 @@ describe("Telemetry provider no-credential conformance", () => {
             });
           } catch (error) {
             if (error instanceof Problem) {
-              const result = {
+              return {
                 diagnostic: {
                   code: error.code,
                   message: error.detail ?? error.message,
@@ -41,13 +41,12 @@ describe("Telemetry provider no-credential conformance", () => {
                 },
                 networkAttempts: fetchSpy.mock.calls.length,
               };
-              fetchSpy.mockRestore();
-              return result;
             }
             throw error;
+          } finally {
+            fetchSpy.mockRestore();
           }
 
-          fetchSpy.mockRestore();
           throw new TypeError("TelemetryRuntime accepted missing OTLP endpoint configuration.");
         },
       },
