@@ -13,7 +13,7 @@ export class CrocoModule {
     registerModule(module);
   }
 
-  static async initialize(): Promise<ModuleContext> {
+  static initialize(): Promise<ModuleContext> {
     return initializeModules();
   }
 
@@ -54,6 +54,7 @@ export {
 } from "./problems";
 export type {
   CrocoModule as CrocoModuleDefinition,
+  ModuleCleanupFailure,
   ModuleDiagnosticsSnapshot,
   ModuleGraphDiagnostic,
   ModuleGraphDiagnosticCode,

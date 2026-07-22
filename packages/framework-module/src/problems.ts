@@ -4,6 +4,13 @@ import type { ModuleToken } from "./types/ModuleToken";
 
 type ModuleLifecyclePhase = "setup" | "start" | "shutdown";
 
+type ModuleCleanupFailure = {
+  readonly moduleName: string;
+  readonly phase: "shutdown";
+  readonly code: string;
+  readonly message: string;
+};
+
 export class InvalidModuleDefinitionProblem extends Problem {
   constructor(detail: string, extensions?: Record<string, unknown>) {
     super("framework-module/invalid-module-definition", ProblemCategory.ValidationError, detail, {
@@ -42,6 +49,18 @@ export class ModuleLifecycleProblem extends Problem {
       },
     );
   }
+}
+
+export function attachModuleCleanupFailures(
+  problem: ModuleLifecycleProblem,
+  cleanupFailures: readonly ModuleCleanupFailure[],
+): void {
+  if (cleanupFailures.length === 0) {
+    return;
+  }
+
+  const extensions = problem.extensions as Record<string, unknown>;
+  extensions.cleanupFailures = cleanupFailures;
 }
 
 export class ModuleProviderVisibilityProblem extends Problem {

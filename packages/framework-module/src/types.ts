@@ -3,6 +3,13 @@ import type { Constructor, ModuleToken } from "./types/ModuleToken";
 
 export type ModuleLifecyclePhase = "setup" | "start" | "shutdown";
 
+export type ModuleCleanupFailure = {
+  readonly moduleName: string;
+  readonly phase: "shutdown";
+  readonly code: string;
+  readonly message: string;
+};
+
 export type ModuleLifecycleHook = (ctx: ModuleContext) => void | Promise<void>;
 
 export type ModuleProviderFactory<T = unknown> = (ctx: ModuleContext) => T | Promise<T>;
@@ -26,6 +33,7 @@ export type ModuleProvider<T = unknown> = ModuleToken<T> | ModuleProviderDefinit
 export type ModuleRuntimePhase =
   | "registered"
   | ModuleLifecyclePhase
+  | "rollback"
   | "started"
   | "stopped"
   | "failed";
@@ -39,6 +47,7 @@ export type ModuleDiagnosticsSnapshot = {
   readonly exports: readonly string[];
   readonly controllers: readonly string[];
   readonly lastError?: string;
+  readonly cleanupFailures?: readonly ModuleCleanupFailure[];
 };
 
 export type ModuleGraphManifestVersion = "croco.module-graph.manifest.v1";

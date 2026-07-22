@@ -4746,7 +4746,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 19,
+          line: 26,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4777,7 +4777,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 9,
+          line: 16,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4809,7 +4809,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 35,
+          line: 42,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4841,7 +4841,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 51,
+          line: 70,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4872,7 +4872,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 73,
+          line: 92,
           column: 5,
           kind: "problem-constructor",
         },
@@ -4903,7 +4903,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-module/src/problems.ts",
-          line: 89,
+          line: 108,
           column: 5,
           kind: "problem-constructor",
         },

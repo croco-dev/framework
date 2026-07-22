@@ -5,4 +5,4 @@ prev: false
 title: "ModuleRuntimePhase"
 ---
 
-> **ModuleRuntimePhase** = `"registered"` \| [`ModuleLifecyclePhase`](/api/framework-module/src/type-aliases/modulelifecyclephase/) \| `"started"` \| `"stopped"` \| `"failed"`
+> **ModuleRuntimePhase** = `"registered"` \| [`ModuleLifecyclePhase`](/api/framework-module/src/type-aliases/modulelifecyclephase/) \| `"rollback"` \| `"started"` \| `"stopped"` \| `"failed"`

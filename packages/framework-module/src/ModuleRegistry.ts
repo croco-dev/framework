@@ -13,6 +13,7 @@ import { ModuleContext } from "./ModuleContext";
 import { getModuleTokenLabel } from "./moduleTokenLabels";
 import { getProviderToken, isConstructorToken, isProviderDefinition } from "./moduleTokens";
 import {
+  attachModuleCleanupFailures,
   InvalidModuleDefinitionProblem,
   formatModuleProviderOwnershipDetail,
   ModuleCircularDependencyProblem,
@@ -22,6 +23,7 @@ import {
   ModuleProviderWriteProblem,
 } from "./problems";
 import type {
+  ModuleCleanupFailure,
   ModuleGraphDiagnostic,
   ModuleGraphManifest,
   ModuleGraphModule,
@@ -42,14 +44,27 @@ type ModuleRuntimeState = {
   phase: ModuleRuntimePhase;
   initialized: boolean;
   lastError?: string;
+  cleanupFailures?: readonly ModuleCleanupFailure[];
   readonly providers: Set<ModuleToken<unknown>>;
   readonly exports: Set<ModuleToken<unknown>>;
   readonly controllers: Set<ModuleToken<unknown>>;
   readonly classProviders: Map<ModuleToken<unknown>, Constructor<unknown>>;
 };
 
+type ContainerServiceMetadataAccess = {
+  readonly services: ServiceMetadata<unknown>[];
+  readonly destroyServiceInstance: (service: ServiceMetadata<unknown>) => void;
+};
+
+type ContainerServiceMetadataRecordSnapshot = {
+  readonly reference: ServiceMetadata<unknown>;
+  readonly values: ServiceMetadata<unknown>;
+};
+
 type ContainerServiceMetadataSnapshot = {
-  readonly services?: readonly ServiceMetadata<unknown>[];
+  readonly originalOrder: readonly ServiceMetadata<unknown>[];
+  readonly affectedIdentifiers: ReadonlySet<ServiceIdentifier<unknown>>;
+  readonly affectedRecords: readonly ContainerServiceMetadataRecordSnapshot[];
 };
 
 type ModuleProviderVisibilityFailure = {
@@ -83,6 +98,8 @@ const IGNORED_CONSTRUCTOR_DEPENDENCIES = new Set<unknown>([
 let isInitialized = false;
 let initializedModules: ModuleOptions[] = [];
 let activeContext: ModuleContext | null = null;
+let initializationPromise: Promise<ModuleContext> | null = null;
+let registryGeneration = 0;
 
 export function registerModule(module: ModuleOptions): void {
   const [snapshot] = collectModules([module]);
@@ -95,7 +112,26 @@ export function registerModule(module: ModuleOptions): void {
   isInitialized = false;
 }
 
-export async function initializeModules(): Promise<ModuleContext> {
+export function initializeModules(): Promise<ModuleContext> {
+  if (isInitialized && activeContext) {
+    return Promise.resolve(activeContext);
+  }
+
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+
+  const attempt = performInitializeModules();
+  initializationPromise = attempt;
+  void attempt.then(
+    () => clearInitializationPromise(attempt),
+    () => clearInitializationPromise(attempt),
+  );
+  return attempt;
+}
+
+async function performInitializeModules(): Promise<ModuleContext> {
+  const attemptGeneration = registryGeneration;
   const modules = collectModules(Array.from(registeredModules.values()));
   detectCircularDependency(modules);
   assertUnambiguousProviderOwnership(modules);
@@ -103,32 +139,55 @@ export async function initializeModules(): Promise<ModuleContext> {
   const sortedModules = sortModules(modules);
   const container = Container.of(undefined);
   const context = createRootContext(container);
+  const containerSnapshot = snapshotContainerServices(container, sortedModules);
+  const compensationStack: ModuleOptions[] = [];
 
   moduleStates.clear();
   for (const module of sortedModules) {
     moduleStates.set(module.name, createModuleState(module));
   }
 
-  for (const module of sortedModules) {
-    const moduleContext = createModuleContext(module.name, container);
-    await runLifecycle(module, "setup", async () => {
-      await registerProviders(module, moduleContext, container);
-      await module.setup?.(moduleContext);
-    });
-  }
-
-  for (const module of sortedModules) {
-    const moduleContext = createModuleContext(module.name, container);
-    await runLifecycle(module, "start", async () => {
-      await module.start?.(moduleContext);
-    });
-
-    const state = moduleStates.get(module.name);
-    if (state) {
-      state.phase = "started";
-      state.initialized = true;
-      state.lastError = undefined;
+  try {
+    for (const module of sortedModules) {
+      compensationStack.push(module);
+      const moduleContext = createModuleContext(module.name, container);
+      await runLifecycle(module, "setup", async () => {
+        await registerProviders(module, moduleContext, container);
+        await module.setup?.(moduleContext);
+      });
     }
+
+    for (const module of sortedModules) {
+      const moduleContext = createModuleContext(module.name, container);
+      await runLifecycle(module, "start", async () => {
+        await module.start?.(moduleContext);
+      });
+
+      const state = moduleStates.get(module.name);
+      if (state) {
+        state.phase = "started";
+        state.initialized = true;
+        state.lastError = undefined;
+        state.cleanupFailures = undefined;
+      }
+    }
+
+    if (registryGeneration !== attemptGeneration) {
+      throw new ModuleLifecycleProblem(
+        "<registry>",
+        "setup",
+        new Error("Module registry was reset during initialization."),
+      );
+    }
+  } catch (error) {
+    const cleanupFailures = await compensateInitialization(compensationStack, container, error);
+    restoreContainerServices(container, containerSnapshot);
+    resetActiveRuntimeState();
+
+    if (error instanceof ModuleLifecycleProblem) {
+      attachModuleCleanupFailures(error, cleanupFailures);
+    }
+    throw error;
   }
 
   isInitialized = true;
@@ -138,6 +197,14 @@ export async function initializeModules(): Promise<ModuleContext> {
 }
 
 export async function shutdownModules(): Promise<void> {
+  if (initializationPromise) {
+    try {
+      await initializationPromise;
+    } catch {
+      return;
+    }
+  }
+
   if (!activeContext) {
     return;
   }
@@ -165,6 +232,7 @@ export async function shutdownModules(): Promise<void> {
 }
 
 export function resetModules(): void {
+  registryGeneration += 1;
   registeredModules.clear();
   moduleStates.clear();
   isInitialized = false;
@@ -186,7 +254,156 @@ export function getRegisteredModules(): readonly ModuleDiagnosticsSnapshot[] {
     exports: Array.from(state.exports).map(getModuleTokenLabel),
     controllers: Array.from(state.controllers).map(getModuleTokenLabel),
     lastError: state.lastError,
+    cleanupFailures: state.cleanupFailures,
   }));
+}
+
+function clearInitializationPromise(attempt: Promise<ModuleContext>): void {
+  if (initializationPromise === attempt) {
+    initializationPromise = null;
+  }
+}
+
+async function compensateInitialization(
+  modules: readonly ModuleOptions[],
+  container: ContainerInstance,
+  primaryError: unknown,
+): Promise<ModuleCleanupFailure[]> {
+  const failures: ModuleCleanupFailure[] = [];
+  const primaryModuleName =
+    primaryError instanceof ModuleLifecycleProblem &&
+    typeof primaryError.extensions?.moduleName === "string"
+      ? primaryError.extensions.moduleName
+      : undefined;
+
+  for (const module of [...modules].reverse()) {
+    const state = moduleStates.get(module.name);
+    if (state) {
+      state.phase = "rollback";
+      state.initialized = false;
+    }
+
+    try {
+      await module.shutdown?.(createModuleContext(module.name, container));
+      if (state) {
+        state.phase = "stopped";
+      }
+    } catch (error) {
+      const problem = new ModuleLifecycleProblem(module.name, "shutdown", error);
+      const failure: ModuleCleanupFailure = {
+        moduleName: module.name,
+        phase: "shutdown",
+        code: problem.code,
+        message: problem.message,
+      };
+      failures.push(failure);
+      if (state) {
+        state.phase = "failed";
+        if (module.name !== primaryModuleName) {
+          state.lastError = problem.message;
+        }
+        state.cleanupFailures = [failure];
+      }
+    }
+  }
+
+  return failures;
+}
+
+function resetActiveRuntimeState(): void {
+  isInitialized = false;
+  initializedModules = [];
+  activeContext = null;
+}
+
+function snapshotContainerServices(
+  container: ContainerInstance,
+  modules: readonly ModuleOptions[],
+): ContainerServiceMetadataSnapshot {
+  const services = getContainerServices(container);
+  const affectedIdentifiers = new Set<ServiceIdentifier<unknown>>();
+  for (const module of modules) {
+    for (const provider of module.providers ?? []) {
+      affectedIdentifiers.add(
+        FrameworkContainer.toTypeDIServiceIdentifier(getProviderToken(provider)),
+      );
+    }
+  }
+
+  return {
+    originalOrder: [...services],
+    affectedIdentifiers,
+    affectedRecords: services
+      .filter((service) => affectedIdentifiers.has(service.id))
+      .map((service) => ({ reference: service, values: { ...service } })),
+  };
+}
+
+function restoreContainerServices(
+  container: ContainerInstance,
+  snapshot: ContainerServiceMetadataSnapshot,
+): void {
+  const services = getContainerServices(container);
+  const originalRecords = new Map(
+    snapshot.affectedRecords.map((record) => [record.reference, record]),
+  );
+  const currentAffectedRecords = services.filter((service) =>
+    snapshot.affectedIdentifiers.has(service.id),
+  );
+
+  for (const service of currentAffectedRecords) {
+    const original = originalRecords.get(service);
+    if (!original || service.value !== original.values.value) {
+      destroyContainerService(container, service);
+    }
+  }
+
+  for (const { reference, values } of snapshot.affectedRecords) {
+    Object.assign(reference, values);
+  }
+
+  const originalServices = new Set(snapshot.originalOrder);
+  const currentUnrelatedRecords = services.filter(
+    (service) => !snapshot.affectedIdentifiers.has(service.id),
+  );
+  const survivingUnrelatedRecords = new Set(currentUnrelatedRecords);
+  const restoredOrder = snapshot.originalOrder.filter(
+    (service) =>
+      snapshot.affectedIdentifiers.has(service.id) || survivingUnrelatedRecords.has(service),
+  );
+  restoredOrder.push(
+    ...currentUnrelatedRecords.filter((service) => !originalServices.has(service)),
+  );
+  services.splice(0, services.length, ...restoredOrder);
+}
+
+function getContainerServices(container: ContainerInstance): ServiceMetadata<unknown>[] {
+  return getContainerServiceMetadataAccess(container).services;
+}
+
+function destroyContainerService(
+  container: ContainerInstance,
+  service: ServiceMetadata<unknown>,
+): void {
+  getContainerServiceMetadataAccess(container).destroyServiceInstance(service);
+}
+
+function getContainerServiceMetadataAccess(
+  container: ContainerInstance,
+): ContainerServiceMetadataAccess {
+  const candidate = container as unknown as Partial<ContainerServiceMetadataAccess>;
+  if (
+    !Array.isArray(candidate.services) ||
+    typeof candidate.destroyServiceInstance !== "function"
+  ) {
+    throw new ModuleLifecycleProblem(
+      "<registry>",
+      "setup",
+      "TypeDI 0.10.0 container metadata contract is unavailable.",
+    );
+  }
+
+  return candidate as ContainerServiceMetadataAccess;
 }
 
 export function createModuleGraphManifest(
@@ -800,7 +1017,7 @@ function getTypediServiceMetadata(
   container: ContainerInstance,
   token: ModuleToken<unknown>,
 ): ServiceMetadata<unknown> | undefined {
-  const services = (container as unknown as ContainerServiceMetadataSnapshot).services ?? [];
+  const services = getContainerServices(container);
 
   const identifier = FrameworkContainer.toTypeDIServiceIdentifier(token);
   return services.find((service) => service.id === identifier);
