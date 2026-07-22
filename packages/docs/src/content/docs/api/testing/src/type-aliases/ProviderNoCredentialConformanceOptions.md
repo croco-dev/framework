@@ -23,4 +23,4 @@ title: "ProviderNoCredentialConformanceOptions"
 
 ### secretSamples
 
-> `readonly` **secretSamples**: readonly [`string`, ...`string`[]]
+> `readonly` **secretSamples**: readonly \[`string`, `...string[]`\]
