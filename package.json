@@ -75,6 +75,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "2.29.8",
+    "@changesets/parse": "0.4.2",
     "@swc/core": "1.15.43",
     "@types/node": "^22",
     "@vitest/coverage-v8": "4.0.16",
