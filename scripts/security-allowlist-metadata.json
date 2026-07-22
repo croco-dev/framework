@@ -1,7 +1,14 @@
 {
   "schemaVersion": 1,
   "audit": {
-    "ignoreGhsas": []
+    "ignoreGhsas": [
+      {
+        "id": "GHSA-f88m-g3jw-g9cj",
+        "owner": "kang-heewon",
+        "reason": "Next.js 15 and 16 constrain their optional sharp dependency to the vulnerable 0.34 line; retain the generated-app compatibility path while upstream adopts sharp 0.35.",
+        "reviewBy": "2026-08-05"
+      }
+    ]
   },
   "secretScan": {
     "gitleaks": {

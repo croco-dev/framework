@@ -1,4 +1,8 @@
 import type { EvidenceCommand } from "./release-spine-evidence.mts";
+import {
+  isReleaseGateMaintenancePath,
+  RELEASE_GATE_TEST_PATHS,
+} from "./release-gate-maintenance.mts";
 import { VerificationProblem } from "./verification-problem.mts";
 
 export type VerificationProfile = "repo" | "spine" | "publish";
@@ -33,7 +37,10 @@ function isApplicableToChangedFiles(
   return context.changedFiles.some(predicate);
 }
 
-const repoOnly = (context: VerificationContext): readonly EvidenceCommand[] => [
+const repoOnly = (
+  context: VerificationContext,
+  suppressVerificationContractTests = false,
+): readonly EvidenceCommand[] => [
   {
     id: "verification-policy",
     label: "Read-only verification policy",
@@ -62,6 +69,7 @@ const repoOnly = (context: VerificationContext): readonly EvidenceCommand[] => [
       "scripts/tests/verification-policy.spec.ts",
     ],
     timeoutMs: minutes(10),
+    applicable: !suppressVerificationContractTests,
   },
   {
     id: "changeset-required",
@@ -536,6 +544,23 @@ const SPINE_ONLY: readonly EvidenceCommand[] = [
 
 const publishOnly = (context: VerificationContext): readonly EvidenceCommand[] => [
   {
+    id: "release-gate-tests",
+    label: "Release-gate maintenance tests",
+    category: "quality",
+    command: [
+      "pnpm",
+      "exec",
+      "vitest",
+      "run",
+      "--no-file-parallelism",
+      ...RELEASE_GATE_TEST_PATHS,
+      "--config",
+      "vitest.config.ts",
+    ],
+    timeoutMs: minutes(30),
+    applicable: isApplicableToChangedFiles(context, isReleaseGateMaintenancePath),
+  },
+  {
     id: "release-metadata",
     label: "Release metadata",
     category: "metadata",
@@ -562,6 +587,9 @@ const publishOnly = (context: VerificationContext): readonly EvidenceCommand[] =
       context,
       (path) =>
         path === "scripts/package-quality-report.mts" ||
+        path === ".changeset/config.json" ||
+        path === "ci-reports/bundle-size/baseline.json" ||
+        path === "docs/package-catalog.json" ||
         /^(?:pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|tsconfig(?:\.[^/]+)?\.json)$/.test(
           path,
         ) ||
@@ -673,7 +701,8 @@ export function createVerificationManifest(
   profile: VerificationProfile,
   context: VerificationContext = {},
 ): readonly EvidenceCommand[] {
-  const repo = repoOnly(context);
+  const releaseGateMaintenance = isApplicableToChangedFiles(context, isReleaseGateMaintenancePath);
+  const repo = repoOnly(context, profile === "publish" && releaseGateMaintenance);
   const commands =
     profile === "repo"
       ? repo

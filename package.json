@@ -27,6 +27,7 @@
     "prepare": "lefthook install",
     "release": "pnpm build && changeset publish",
     "test": "turbo test",
+    "test:release-gates": "node --experimental-strip-types scripts/verification-command.mts --id release-gate-tests",
     "test:coverage:core": "pnpm --filter @croco/problems-core --filter @croco/telemetry-api --filter @croco/tenant-core --filter @croco/dataloader-core --filter @croco/ratelimit-core --filter @croco/llm-core --filter @croco/storage-core --filter @croco/architecture-policy build && node --experimental-strip-types scripts/verification-command.mts --id core-coverage",
     "test:coverage:core:warning": "node --experimental-strip-types scripts/verification-command.mts --id core-coverage-warning",
     "typecheck": "turbo typecheck",

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { classifyVerificationChanges } from "../verification-change-classifier.mts";
-import { verificationImplementationPaths } from "../verification-manifest.mts";
+import {
+  createVerificationManifest,
+  verificationImplementationPaths,
+} from "../verification-manifest.mts";
+import { RELEASE_GATE_MAINTENANCE_PATHS } from "../release-gate-maintenance.mts";
 import { formatVerificationProblem, VerificationProblem } from "../verification-problem.mts";
 
 describe("verification change classifier", () => {
@@ -17,11 +21,11 @@ describe("verification change classifier", () => {
     [[".github/workflows/ci.yml"], "publish"],
     [[".changeset/new.md"], "repo"],
     [["packages/retry-core/package.json"], "publish"],
-    [["turbo.json"], "spine"],
-    [["vitest.config.ts"], "spine"],
-    [["tsconfig.json"], "spine"],
-    [[".nvmrc"], "spine"],
-    [[".gitignore"], "spine"],
+    [["turbo.json"], "publish"],
+    [["vitest.config.ts"], "publish"],
+    [["tsconfig.json"], "publish"],
+    [[".nvmrc"], "publish"],
+    [[".gitignore"], "publish"],
   ] as const)("routes pull request files %j to %s", (files, profile) => {
     expect(classifyVerificationChanges("pull_request", files, "ci")).toMatchObject({
       profile,
@@ -77,6 +81,25 @@ describe("verification change classifier", () => {
           profile: "publish",
           shouldRunVerification: true,
         });
+      }
+    },
+  );
+
+  it.each(RELEASE_GATE_MAINTENANCE_PATHS)(
+    "routes authoritative release-gate maintenance %s through publish verification",
+    (path) => {
+      for (const event of ["pull_request", "push"] as const) {
+        const classification = classifyVerificationChanges(event, [path]);
+        expect(classification).toMatchObject({
+          profile: "publish",
+          shouldRunVerification: true,
+        });
+        const releaseGate = createVerificationManifest("publish", {
+          base: "origin/trunk",
+          changedFiles: [path],
+          head: "HEAD",
+        }).find(({ id }) => id === "release-gate-tests");
+        expect(releaseGate?.applicable).toBe(true);
       }
     },
   );

@@ -3,6 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import {
+  GENERATED_NODE_ENGINE_RANGE,
+  GENERATED_NODE_VERSION,
+} from "../../packages/create-croco-app/src/node-runtime.js";
 import { validateGeneratedSaasDocsContract } from "../first-success-generated-contract.mts";
 
 const scriptPath = resolve(__dirname, "../first-success-verify.mts");
@@ -83,7 +87,7 @@ describe("first-success-verify.mts", () => {
 
     const result = runScript(root);
 
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr || result.stdout).toBe(0);
     expect(result.stdout).toContain("first-success contract verification PASSED");
   });
 
@@ -95,7 +99,7 @@ describe("first-success-verify.mts", () => {
 
     const result = runScript(root);
 
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr || result.stdout).toBe(0);
   });
 
   it("rejects a quick-start smoke dispatcher with the wrong command ID", () => {
@@ -179,7 +183,7 @@ describe("first-success-verify.mts", () => {
 
     const result = runScript(root);
 
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr || result.stdout).toBe(0);
     expect(result.stdout).toContain("first-success contract verification PASSED");
   });
 
@@ -485,6 +489,8 @@ function createFixture(options: FixtureOptions = {}): string {
       "pnpm install",
       "pnpm dev",
       "pnpm quick-start-lambda:smoke",
+      `Node.js ${GENERATED_NODE_ENGINE_RANGE}`,
+      `nvm install ${GENERATED_NODE_VERSION}`,
       "x-api-key: test-key",
       "401",
       "api_user_create",

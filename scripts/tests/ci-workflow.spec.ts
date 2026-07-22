@@ -79,6 +79,7 @@ describe("CI verification profile contract", () => {
       'if [ "${{ github.event_name }}" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata --base "${{ steps.verification.outputs.base }}" --head HEAD)',
     );
     expect(WORKFLOW).toContain('--base "${{ steps.verification.outputs.base }}" --head HEAD');
+    expect(WORKFLOW).not.toContain("test:release-gates");
   });
 
   it("keeps advisory scans and ecosystem smoke outside blocking profiles", () => {
