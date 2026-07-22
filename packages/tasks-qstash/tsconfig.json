@@ -5,7 +5,7 @@
     "paths": {
       "@croco/problems-core": ["../problems-core/src/index.ts"],
       "@croco/ratelimit-core": ["../ratelimit-core/src/index.ts"],
-      "@croco/testing": ["../testing/src/libs/serverless-provider-conformance.ts"]
+      "@croco/testing": ["../testing/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"],

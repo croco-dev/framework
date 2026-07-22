@@ -45,5 +45,7 @@
     "@opentelemetry/semantic-conventions": "^1.41.1",
     "shimmer": "^1.2.1"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@croco/testing": "workspace:*"
+  }
 }

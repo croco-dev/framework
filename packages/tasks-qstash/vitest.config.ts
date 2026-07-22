@@ -9,10 +9,7 @@ export default defineConfig({
     alias: {
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
       "@croco/ratelimit-core": resolve(currentDir, "../ratelimit-core/src/index.ts"),
-      "@croco/testing": resolve(
-        currentDir,
-        "../testing/src/libs/serverless-provider-conformance.ts",
-      ),
+      "@croco/testing": resolve(currentDir, "../testing/src/index.ts"),
     },
   },
   test: {

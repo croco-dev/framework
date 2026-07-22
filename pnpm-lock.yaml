@@ -3086,6 +3086,10 @@ importers:
       shimmer:
         specifier: ^1.2.1
         version: 1.2.1
+    devDependencies:
+      '@croco/testing':
+        specifier: workspace:*
+        version: link:../testing
 
   packages/tenant-core:
     dependencies:

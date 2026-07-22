@@ -47,6 +47,7 @@ export class ClerkAuthDiagnosticsProvider implements DiagnosticsProvider {
           ...baseDetails,
           liveCheck: "not_started",
           missing: ["CLERK_SECRET_KEY"],
+          problemCode: "auth-clerk/missing-config",
         },
         lastChecked: new Date().toISOString(),
       };

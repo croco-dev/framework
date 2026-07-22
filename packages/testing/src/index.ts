@@ -88,6 +88,15 @@ export {
   type ProviderConformanceProfileManifest,
 } from "./libs/provider-conformance-matrix";
 export {
+  createProviderNoCredentialConformanceSuite,
+  type ProviderNoCredentialConformanceCase,
+  type ProviderNoCredentialConformanceOptions,
+  type ProviderNoCredentialConformanceSuite,
+  type ProviderNoCredentialDiagnostic,
+  type ProviderNoCredentialProbeResult,
+  type ProviderNoCredentialScenario,
+} from "./libs/provider-no-credential-conformance";
+export {
   createLlmProviderConformanceSuite,
   type LlmProviderConformanceCase,
   type LlmProviderConformanceOptions,

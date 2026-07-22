@@ -1125,6 +1125,84 @@
     },
     "records": [
       {
+        "package": "@croco/auth-clerk",
+        "contract": "@croco/auth-core/AuthProvider",
+        "adapterCategory": "provider",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.4",
+        "state": "uncertified",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/auth-clerk test",
+            "artifact": "packages/auth-clerk/src/tests/AuthConformance.spec.ts",
+            "description": "Shared auth conformance covers token verification, webhooks, tenant mapping, readiness, and redacted Problems."
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/auth-clerk test",
+            "artifact": "packages/auth-clerk/src/tests/ProviderNoCredentialConformance.spec.ts",
+            "description": "Shared no-credential conformance verifies stable missing-config diagnostics, zero readiness calls, and Clerk secret redaction."
+          },
+          "liveSmoke": {
+            "status": "missing",
+            "reason": "Optional Clerk live smoke is env-gated and no reviewed real-credential run is recorded in release evidence."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/auth-clerk test",
+            "artifact": "packages/auth-clerk/src/tests/ProviderNoCredentialConformance.spec.ts",
+            "description": "Missing Clerk configuration reports a stable code and the required environment name before readiness starts."
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/auth-clerk test",
+            "artifact": "packages/auth-clerk/src/tests/ProviderNoCredentialConformance.spec.ts",
+            "description": "No-credential diagnostics exclude configured Clerk secret samples."
+          }
+        },
+        "knownGaps": ["liveSmoke"]
+      },
+      {
+        "package": "@croco/tasks-qstash",
+        "contract": "@croco/tasks-core/TaskRunner",
+        "adapterCategory": "provider",
+        "runtimes": ["node", "lambda"],
+        "packageVersion": "0.0.4",
+        "state": "uncertified",
+        "evidence": {
+          "conformance": {
+            "status": "present",
+            "command": "pnpm --filter @croco/tasks-qstash test",
+            "artifact": "packages/tasks-qstash/src/tests/QStashTaskRunner.spec.ts",
+            "description": "Shared QStash task conformance covers envelope publication, validation, retryability, redaction, and optional live smoke."
+          },
+          "noCredentialSmoke": {
+            "status": "present",
+            "command": "pnpm --filter @croco/tasks-qstash test",
+            "artifact": "packages/tasks-qstash/src/tests/ProviderNoCredentialConformance.spec.ts",
+            "description": "Shared no-credential conformance verifies stable token diagnostics before QStash publish and secret-bearing header redaction."
+          },
+          "liveSmoke": {
+            "status": "missing",
+            "reason": "Optional QStash live smoke is env-gated and no reviewed real-credential run is recorded in release evidence."
+          },
+          "diagnostics": {
+            "status": "present",
+            "command": "pnpm --filter @croco/tasks-qstash test",
+            "artifact": "packages/tasks-qstash/src/tests/ProviderNoCredentialConformance.spec.ts",
+            "description": "Missing QStash token configuration reports a stable Problem before client publication."
+          },
+          "redactionTests": {
+            "status": "present",
+            "command": "pnpm --filter @croco/tasks-qstash test",
+            "artifact": "packages/tasks-qstash/src/tests/ProviderNoCredentialConformance.spec.ts",
+            "description": "No-credential Problems exclude secret-bearing default header values."
+          }
+        },
+        "knownGaps": ["liveSmoke"]
+      },
+      {
         "package": "@croco/storage-r2",
         "contract": "@croco/storage-core/StorageProvider",
         "adapterCategory": "provider",
@@ -1138,7 +1216,8 @@
           },
           "noCredentialSmoke": {
             "status": "present",
-            "command": "pnpm --filter @croco/storage-r2 test"
+            "command": "pnpm --filter @croco/storage-r2 test",
+            "artifact": "packages/storage-r2/src/tests/ProviderNoCredentialConformance.spec.ts"
           },
           "liveSmoke": {
             "status": "missing",
@@ -1172,7 +1251,8 @@
           },
           "noCredentialSmoke": {
             "status": "present",
-            "command": "pnpm --filter @croco/billing-polar test"
+            "command": "pnpm --filter @croco/billing-polar test",
+            "artifact": "packages/billing-polar/src/tests/ProviderNoCredentialConformance.spec.ts"
           },
           "liveSmoke": {
             "status": "missing",
@@ -1205,7 +1285,8 @@
           },
           "noCredentialSmoke": {
             "status": "present",
-            "command": "pnpm --filter @croco/search-meilisearch test"
+            "command": "pnpm --filter @croco/search-meilisearch test",
+            "artifact": "packages/search-meilisearch/src/tests/MeilisearchDiagnosticsProvider.spec.ts"
           },
           "liveSmoke": {
             "status": "missing",
@@ -1278,7 +1359,7 @@
           "noCredentialSmoke": {
             "status": "present",
             "command": "pnpm --filter @croco/telemetry-sdk-node test",
-            "artifact": "packages/telemetry-sdk-node/src/tests/LambdaPreset.spec.ts"
+            "artifact": "packages/telemetry-sdk-node/src/tests/ProviderNoCredentialConformance.spec.ts"
           },
           "liveSmoke": {
             "status": "present",

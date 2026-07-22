@@ -111,6 +111,26 @@ describe("provider-certification-check.mts", () => {
     );
   });
 
+  it("requires package-scoped no-credential conformance artifacts for every certification record", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "provider");
+    writeCatalogMetadata(repo, ["provider"], {
+      productionPackages: [],
+      certificationRecords: {
+        provider: createCertifiedRecord("provider", {
+          omitEvidence: "noCredentialSmoke",
+          state: "uncertified",
+        }),
+      },
+    });
+
+    const report = createReport(repo);
+    const markdown = buildProviderCertificationMarkdown(report);
+
+    expect(hasProviderCertificationFailures(report)).toBe(true);
+    expect(markdown).toContain("evidence.noCredentialSmoke is missing");
+  });
+
   it("fails candidate records with missing live smoke evidence", () => {
     const repo = createTempRepo();
     writePackage(repo, "provider");
