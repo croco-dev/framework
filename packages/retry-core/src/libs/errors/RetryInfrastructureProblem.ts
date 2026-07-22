@@ -1,5 +1,11 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+export type RetryNumericConstraint =
+  | "finite-positive-number"
+  | "non-negative-timer-integer"
+  | "positive-safe-integer"
+  | "positive-timer-integer";
+
 /**
  * 서킷 상태 저장소 조회나 갱신 중 문제가 발생했을 때 사용하는 Problem입니다.
  */
@@ -42,11 +48,22 @@ export class LambdaTimeoutProblem extends Problem {
 /**
  * 재시도 관련 설정값이 유효하지 않을 때 발생하는 구성 오류입니다.
  */
-export class InvalidRetryConfigurationError extends Problem {
+export class InvalidRetryConfigurationProblem extends Problem {
   readonly code = "INVALID_RETRY_CONFIGURATION";
-  readonly category = ProblemCategory.InternalServerError;
+  readonly category = ProblemCategory.ValidationError;
 
-  constructor(message: string) {
-    super(`Invalid retry configuration: ${message}`);
+  constructor(option: string, constraint: RetryNumericConstraint, received: number) {
+    super(
+      "INVALID_RETRY_CONFIGURATION",
+      ProblemCategory.ValidationError,
+      `Retry option '${option}' must satisfy '${constraint}'`,
+      {
+        extensions: {
+          option,
+          constraint,
+          received: String(received),
+        },
+      },
+    );
   }
 }

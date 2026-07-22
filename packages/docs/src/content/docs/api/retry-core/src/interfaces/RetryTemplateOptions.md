@@ -41,7 +41,7 @@ Retry listeners for lifecycle hooks
 
 > `optional` **maxAttempts?**: `number`
 
-Maximum attempts (default: 3)
+Positive safe-integer maximum attempts (default: 3).
 
 #### Inherited from
 

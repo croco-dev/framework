@@ -29,7 +29,7 @@ Backoff configuration
 
 > `optional` **backoffPolicy?**: [`BackoffPolicy`](/api/retry-core/src/interfaces/backoffpolicy/)\<`unknown`\>
 
-Custom backoff policy
+Custom backoff policy. When provided, it overrides and bypasses validation of `backoff`.
 
 ***
 
@@ -63,7 +63,7 @@ Custom circuit ID resolver
 
 > `optional` **lambdaTimeoutReserveMs?**: `number`
 
-Reserve time for Lambda timeout (ms)
+Non-negative integer Lambda reserve time up to 2,147,483,647ms.
 
 ***
 
@@ -79,7 +79,7 @@ Custom retry listeners
 
 > `optional` **maxAttempts?**: `number`
 
-Maximum attempts (default: 3)
+Positive safe-integer maximum attempts (default: 3).
 
 #### Inherited from
 

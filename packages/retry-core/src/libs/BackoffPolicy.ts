@@ -1,14 +1,16 @@
+import { assertValidRetryNumber } from "./numericValidation";
+
 /**
  * Configuration for backoff behavior.
  */
 export interface BackoffOptions {
-  /** Initial delay in milliseconds (default: 1000) */
+  /** Non-negative integer milliseconds up to 2,147,483,647 (default: 1000). */
   delay?: number;
 
-  /** Multiplier for exponential backoff (default: 2) */
+  /** Positive finite multiplier (default: 2). */
   multiplier?: number;
 
-  /** Maximum delay cap in milliseconds (default: 30000) */
+  /** Positive integer milliseconds up to 2,147,483,647 (default: 30000). */
   maxDelay?: number;
 
   /** Enable Full Jitter randomization (default: true) */
@@ -68,9 +70,17 @@ export class ExponentialBackoff implements BackoffPolicy {
   private readonly computedDelays = new Map<number, number>();
 
   constructor(options: BackoffOptions = {}, deps: BackoffDependencies = {}) {
-    this.delay = options.delay ?? DEFAULT_DELAY;
-    this.multiplier = options.multiplier ?? DEFAULT_MULTIPLIER;
-    this.maxDelay = options.maxDelay ?? DEFAULT_MAX_DELAY;
+    const delay = options.delay ?? DEFAULT_DELAY;
+    const multiplier = options.multiplier ?? DEFAULT_MULTIPLIER;
+    const maxDelay = options.maxDelay ?? DEFAULT_MAX_DELAY;
+
+    assertValidRetryNumber("backoff.delay", delay, "non-negative-timer-integer");
+    assertValidRetryNumber("backoff.multiplier", multiplier, "finite-positive-number");
+    assertValidRetryNumber("backoff.maxDelay", maxDelay, "positive-timer-integer");
+
+    this.delay = delay;
+    this.multiplier = multiplier;
+    this.maxDelay = maxDelay;
     this.jitter = options.jitter ?? true;
 
     // Dependency injection for testing
@@ -120,6 +130,7 @@ export class FixedBackoff implements BackoffPolicy {
   private readonly computedDelays = new Map<number, number>();
 
   constructor(delayMs: number = DEFAULT_DELAY, deps: BackoffDependencies = {}) {
+    assertValidRetryNumber("fixedBackoff.delay", delayMs, "non-negative-timer-integer");
     this.delayMs = delayMs;
     this.sleep = deps.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
   }

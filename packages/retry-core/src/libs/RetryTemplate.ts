@@ -1,5 +1,5 @@
 import type { BackoffOptions, BackoffPolicy } from "./BackoffPolicy";
-import { InvalidRetryConfigurationError } from "./errors/RetryInfrastructureProblem";
+import { assertValidRetryNumber } from "./numericValidation";
 import type { RetryContext } from "./RetryContext";
 import type { RetryListener } from "./RetryListener";
 import { RetryOrchestrator } from "./RetryOrchestrator";
@@ -50,11 +50,7 @@ export type RetryCallback<T> = (context: RetryContext) => T | Promise<T>;
 export class RetryTemplate {
   constructor(private readonly options: RetryTemplateOptions = {}) {
     const maxAttempts = options.maxAttempts ?? 3;
-    if (!Number.isInteger(maxAttempts) || maxAttempts <= 0 || Number.isNaN(maxAttempts)) {
-      throw new InvalidRetryConfigurationError(
-        `maxAttempts must be a positive integer, got ${maxAttempts}`,
-      );
-    }
+    assertValidRetryNumber("maxAttempts", maxAttempts, "positive-safe-integer");
   }
 
   /**

@@ -18763,6 +18763,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidRetryConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/errors",
+              "declarationKind": "class"
+            },
+            {
               "name": "isLambdaEnvironment",
               "exportKind": "named",
               "source": "./libs/LambdaTimeoutGuard",
@@ -18938,6 +18944,11 @@
               "name": "RetryListener",
               "exportKind": "named",
               "source": "./libs/RetryListener"
+            },
+            {
+              "name": "RetryNumericConstraint",
+              "exportKind": "named",
+              "source": "./libs/errors"
             },
             {
               "name": "RetryOrchestratorOptions",

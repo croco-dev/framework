@@ -25,4 +25,4 @@ Custom timeout checker (for testing)
 
 > `optional` **reserveTimeMs?**: `number`
 
-Minimum time to reserve for cleanup (ms). Default: 5000
+Non-negative integer milliseconds up to 2,147,483,647. Default: 5000.

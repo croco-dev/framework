@@ -18,7 +18,7 @@ Options for configuring retry behavior.
 
 > `optional` **maxAttempts?**: `number`
 
-Maximum attempts (default: 3)
+Positive safe-integer maximum attempts (default: 3).
 
 ***
 

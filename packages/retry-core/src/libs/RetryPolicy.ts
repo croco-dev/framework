@@ -27,7 +27,7 @@ export interface RetryPolicyOptions {
   /** ProblemCategory values to retry (croco integration) */
   retryForCategories?: ProblemCategory[];
 
-  /** Maximum attempts (default: 3) */
+  /** Positive safe-integer maximum attempts (default: 3). */
   maxAttempts?: number;
 }
 

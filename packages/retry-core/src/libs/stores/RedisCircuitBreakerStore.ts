@@ -4,6 +4,7 @@ import {
   InMemoryCircuitBreakerStateStore,
 } from "../CircuitBreakerState";
 import { CircuitBreakerLockProblem } from "../errors/RetryInfrastructureProblem";
+import { assertValidRetryNumber } from "../numericValidation";
 
 type UpstashRedisLike = {
   get: (key: string) => Promise<string | null>;
@@ -36,6 +37,7 @@ export type OnStoreError = "throw" | "open" | "fallback-inmemory";
  */
 export type RedisCircuitBreakerStoreOptions = {
   redis: UpstashRedisLike;
+  /** Positive safe-integer expiry in seconds (default: 60). */
   ttlSeconds?: number;
   onStoreError?: OnStoreError;
 };
@@ -53,8 +55,10 @@ export class RedisCircuitBreakerStore extends CircuitBreakerStateStore {
 
   constructor(options: RedisCircuitBreakerStoreOptions) {
     super();
+    const ttlSeconds = options.ttlSeconds ?? 60;
+    assertValidRetryNumber("redisCircuitBreaker.ttlSeconds", ttlSeconds, "positive-safe-integer");
     this.redis = options.redis;
-    this.ttlSeconds = options.ttlSeconds ?? 60;
+    this.ttlSeconds = ttlSeconds;
     this.onStoreError = options.onStoreError ?? "throw";
   }
 

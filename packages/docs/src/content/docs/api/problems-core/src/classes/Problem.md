@@ -269,6 +269,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`BatchLoaderScopeCollisionProblem`](/api/repository-core/src/classes/batchloaderscopecollisionproblem/)
 - [`CircuitBreakerOpenProblem`](/api/retry-core/src/classes/circuitbreakeropenproblem/)
 - [`DuplicateRecoverHandlerProblem`](/api/retry-core/src/classes/duplicaterecoverhandlerproblem/)
+- [`InvalidRetryConfigurationProblem`](/api/retry-core/src/classes/invalidretryconfigurationproblem/)
 - [`LambdaTimeoutProblem`](/api/retry-core/src/classes/lambdatimeoutproblem/)
 - [`RetryAbortedProblem`](/api/retry-core/src/classes/retryabortedproblem/)
 - [`RetryExhaustedProblem`](/api/retry-core/src/classes/retryexhaustedproblem/)
