@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createIdempotencyCoordinator,
   createIdempotentHandler,
@@ -11,10 +11,53 @@ import {
   type IdempotencyFailedRecord,
   InMemoryIdempotencyStore,
   InvalidIdempotencyKeyProblem,
+  InvalidIdempotencyTtlProblem,
   type IdempotencyAuditEvent,
 } from "../index";
 
+const INVALID_TTLS = [
+  -1,
+  0,
+  1.5,
+  Number.NaN,
+  Number.POSITIVE_INFINITY,
+  Number.NEGATIVE_INFINITY,
+  Number.MAX_SAFE_INTEGER + 1,
+  8_640_000_000_000_000,
+] as const;
+
 describe("IdempotencyCoordinator", () => {
+  it.each(INVALID_TTLS)(
+    "rejects hostile ttl %s before handler, audit, or store state changes",
+    async (ttlMs) => {
+      const events: IdempotencyAuditEvent[] = [];
+      const store = new InMemoryIdempotencyStore<string>({
+        now: () => new Date("2026-01-01T00:00:00.000Z"),
+      });
+      const coordinator = createIdempotencyCoordinator({
+        store,
+        auditSink: {
+          recordIdempotency: (event) => {
+            events.push(event);
+          },
+        },
+      });
+      const key = deriveIdempotencyKey({
+        namespace: "invalid-ttl",
+        source: { kind: "explicit", key: `ttl-${String(ttlMs)}`, fingerprint: "payload-a" },
+      });
+      const handler = vi.fn(() => "must-not-run");
+
+      await expect(coordinator.execute({ key, ttlMs }, handler)).rejects.toBeInstanceOf(
+        InvalidIdempotencyTtlProblem,
+      );
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(events).toEqual([]);
+      expect(store.size).toBe(0);
+    },
+  );
+
   it("executes once and replays the stored success result for repeated calls", async () => {
     const store = new InMemoryIdempotencyStore<{ orderId: string }>();
     const coordinator = new IdempotencyCoordinator({ store });

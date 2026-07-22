@@ -10450,6 +10450,12 @@
               "exportKind": "named",
               "source": "./libs/problems/IdempotencyProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "InvalidIdempotencyTtlProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/IdempotencyProblems",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [
@@ -10604,9 +10610,19 @@
               "source": "./libs/types"
             },
             {
+              "name": "IdempotencyTtlConstraint",
+              "exportKind": "named",
+              "source": "./libs/problems/IdempotencyProblems"
+            },
+            {
               "name": "InMemoryIdempotencyStoreOptions",
               "exportKind": "named",
               "source": "./libs/InMemoryIdempotencyStore"
+            },
+            {
+              "name": "InvalidIdempotencyTtlProblemOptions",
+              "exportKind": "named",
+              "source": "./libs/problems/IdempotencyProblems"
             },
             {
               "name": "ProviderEventIdempotencyKeySource",

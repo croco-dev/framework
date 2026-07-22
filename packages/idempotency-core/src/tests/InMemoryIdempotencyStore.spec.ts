@@ -6,7 +6,39 @@ import {
   IdempotencyReservationNotFoundProblem,
   IdempotencyReservationStateProblem,
   InMemoryIdempotencyStore,
+  InvalidIdempotencyTtlProblem,
 } from "../index";
+
+const INVALID_TTL_CASES = [
+  { label: "negative", ttlMs: -1, constraint: "positive-safe-integer", receivedValue: -1 },
+  { label: "zero", ttlMs: 0, constraint: "positive-safe-integer", receivedValue: 0 },
+  { label: "fractional", ttlMs: 1.5, constraint: "positive-safe-integer", receivedValue: 1.5 },
+  { label: "NaN", ttlMs: Number.NaN, constraint: "positive-safe-integer", receivedValue: "NaN" },
+  {
+    label: "positive infinity",
+    ttlMs: Number.POSITIVE_INFINITY,
+    constraint: "positive-safe-integer",
+    receivedValue: "Infinity",
+  },
+  {
+    label: "negative infinity",
+    ttlMs: Number.NEGATIVE_INFINITY,
+    constraint: "positive-safe-integer",
+    receivedValue: "-Infinity",
+  },
+  {
+    label: "unsafe integer",
+    ttlMs: Number.MAX_SAFE_INTEGER + 1,
+    constraint: "positive-safe-integer",
+    receivedValue: Number.MAX_SAFE_INTEGER + 1,
+  },
+  {
+    label: "date overflow",
+    ttlMs: 8_640_000_000_000_000,
+    constraint: "valid-date-range",
+    receivedValue: 8_640_000_000_000_000,
+  },
+] as const;
 
 function createKey(options: {
   readonly key?: string;
@@ -25,6 +57,125 @@ function createKey(options: {
 }
 
 describe("InMemoryIdempotencyStore", () => {
+  it.each(INVALID_TTL_CASES)(
+    "rejects $label ttl before reserving or consuming a reservation id",
+    async ({ ttlMs, constraint, receivedValue }) => {
+      const store = new InMemoryIdempotencyStore({
+        now: () => new Date("2026-01-01T00:00:00.000Z"),
+      });
+      const key = createKey({});
+
+      const error = await store.reserve(key, { ttlMs }).catch((cause: unknown) => cause);
+
+      expect(error).toBeInstanceOf(InvalidIdempotencyTtlProblem);
+      expect(error).toMatchObject({
+        code: "idempotency-core/invalid-ttl",
+        status: 400,
+      });
+      if (error instanceof InvalidIdempotencyTtlProblem) {
+        expect(error.toJSON()).toMatchObject({
+          code: "idempotency-core/invalid-ttl",
+          field: "ttlMs",
+          constraint,
+          receivedValue,
+        });
+        expect(error.toJSON()).not.toHaveProperty("key");
+        expect(error.toJSON()).not.toHaveProperty("storageKey");
+        expect(error.toJSON()).not.toHaveProperty("reservationId");
+      }
+      expect(store.size).toBe(0);
+
+      const valid = await store.reserve(key, { ttlMs: 1 });
+      expect(valid.outcome).toBe("reserved");
+      if (valid.outcome === "reserved") {
+        expect(valid.reservation.reservationId).toBe("reservation-1");
+      }
+    },
+  );
+
+  it("rejects invalid ttl before pruning unrelated expired state", async () => {
+    let now = new Date("2026-01-01T00:00:00.000Z");
+    const store = new InMemoryIdempotencyStore<string>({ now: () => now });
+    const staleKey = createKey({ key: "stale" });
+    const stale = await store.reserve(staleKey, { ttlMs: 1 });
+    expect(stale.outcome).toBe("reserved");
+    if (stale.outcome !== "reserved") {
+      throw new Error("expected a reservation");
+    }
+
+    now = new Date("2026-01-01T00:00:00.001Z");
+    const invalidKey = createKey({ key: "invalid" });
+    await expect(store.reserve(invalidKey, { ttlMs: 0 })).rejects.toBeInstanceOf(
+      InvalidIdempotencyTtlProblem,
+    );
+
+    await expect(
+      store.commit({
+        key: staleKey,
+        reservationId: stale.reservation.reservationId,
+        response: "stale",
+      }),
+    ).rejects.toBeInstanceOf(IdempotencyReservationExpiredProblem);
+  });
+
+  describe.each(["commit", "fail"] as const)("%s ttl validation", (transition) => {
+    it.each(INVALID_TTL_CASES)(
+      "rejects $label ttl without changing the active reservation",
+      async ({ ttlMs }) => {
+        const store = new InMemoryIdempotencyStore<string>({
+          now: () => new Date("2026-01-01T00:00:00.000Z"),
+        });
+        const key = createKey({ key: `${transition}-${String(ttlMs)}` });
+        const reserved = await store.reserve(key);
+        expect(reserved.outcome).toBe("reserved");
+        if (reserved.outcome !== "reserved") {
+          throw new Error("expected a reservation");
+        }
+
+        const operation =
+          transition === "commit"
+            ? store.commit({
+                key,
+                reservationId: reserved.reservation.reservationId,
+                response: "created",
+                ttlMs,
+              })
+            : store.fail({
+                key,
+                reservationId: reserved.reservation.reservationId,
+                problem: { code: "failed" },
+                ttlMs,
+              });
+
+        await expect(operation).rejects.toBeInstanceOf(InvalidIdempotencyTtlProblem);
+
+        const unchanged = await store.reserve(key);
+        expect(unchanged.outcome).toBe("in-flight");
+        if (unchanged.outcome === "in-flight") {
+          expect(unchanged.record.reservationId).toBe(reserved.reservation.reservationId);
+        }
+      },
+    );
+  });
+
+  it("keeps an omitted ttl explicitly non-expiring", async () => {
+    let now = new Date("2026-01-01T00:00:00.000Z");
+    const store = new InMemoryIdempotencyStore({ now: () => now });
+    const key = createKey({ key: "non-expiring" });
+
+    const reserved = await store.reserve(key);
+    expect(reserved.outcome).toBe("reserved");
+    if (reserved.outcome !== "reserved") {
+      throw new Error("expected a reservation");
+    }
+    expect(reserved.record.expiresAt).toBeNull();
+
+    now = new Date("2126-01-01T00:00:00.000Z");
+    const stillActive = await store.reserve(key);
+    expect(stillActive.outcome).toBe("in-flight");
+    expect(store.size).toBe(1);
+  });
+
   it("replays a committed response for the same key and fingerprint", async () => {
     const store = new InMemoryIdempotencyStore<{ ok: true }>();
     const key = createKey({});

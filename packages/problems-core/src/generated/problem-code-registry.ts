@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 446,
+  problemCount: 447,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5285,6 +5285,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "idempotency-core/invalid-ttl",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#idempotency-core-invalid-ttl",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
+          line: 72,
+          column: 11,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
       code: "idempotency-core/key-conflict",
       category: "Conflict",
       status: 409,
@@ -5338,7 +5369,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 78,
+          line: 101,
           column: 11,
           kind: "problem-metadata",
         },
@@ -5368,7 +5399,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 64,
+          line: 87,
           column: 11,
           kind: "problem-metadata",
         },
@@ -5398,7 +5429,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 97,
+          line: 120,
           column: 11,
           kind: "problem-metadata",
         },

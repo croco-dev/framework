@@ -3,6 +3,7 @@ import {
   IdempotencyReservationExpiredProblem,
   IdempotencyReservationNotFoundProblem,
   IdempotencyReservationStateProblem,
+  InvalidIdempotencyTtlProblem,
 } from "./problems/IdempotencyProblems";
 import type {
   DerivedIdempotencyKey,
@@ -37,7 +38,9 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
     key: DerivedIdempotencyKey,
     options: IdempotencyReserveOptions = {},
   ): Promise<IdempotencyReserveResult<TResult>> {
-    this.pruneExpired();
+    const reservedAt = this.now();
+    const recordExpiresAt = expiresAt(reservedAt, options.ttlMs);
+    this.pruneExpired(reservedAt);
 
     const existing = this.records.get(key.storageKey);
     if (existing !== undefined) {
@@ -66,13 +69,12 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
       }
     }
 
-    const reservedAt = this.now();
     const record: IdempotencyInFlightRecord = {
       ...key,
       status: "in-flight",
       createdAt: reservedAt,
       updatedAt: reservedAt,
-      expiresAt: expiresAt(reservedAt, options.ttlMs),
+      expiresAt: recordExpiresAt,
       metadata: options.metadata ?? {},
       reservationId: this.nextReservationId(),
       reservedAt,
@@ -95,6 +97,7 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
     options: IdempotencyCommitOptions<TResult>,
   ): Promise<IdempotencyCompletedRecord<TResult>> {
     const completedAt = this.now();
+    const recordExpiresAt = expiresAt(completedAt, options.ttlMs);
     const existing = this.records.get(options.key.storageKey);
     this.assertActiveReservation(existing, options.key, options.reservationId, completedAt);
 
@@ -103,7 +106,7 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
       status: "completed",
       createdAt: existing.createdAt,
       updatedAt: completedAt,
-      expiresAt: expiresAt(completedAt, options.ttlMs),
+      expiresAt: recordExpiresAt,
       metadata: {
         ...existing.metadata,
         ...options.metadata,
@@ -130,6 +133,7 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
 
   async fail(options: IdempotencyFailOptions): Promise<IdempotencyFailedRecord> {
     const failedAt = this.now();
+    const recordExpiresAt = expiresAt(failedAt, options.ttlMs);
     const existing = this.records.get(options.key.storageKey);
     this.assertActiveReservation(existing, options.key, options.reservationId, failedAt);
 
@@ -138,13 +142,13 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
       status: "failed",
       createdAt: existing.createdAt,
       updatedAt: failedAt,
-      expiresAt: expiresAt(failedAt, options.ttlMs),
+      expiresAt: recordExpiresAt,
       metadata: {
         ...existing.metadata,
         ...options.metadata,
       },
       failedAt,
-      problem: options.problem,
+      ...(options.problem === undefined ? {} : { problem: options.problem }),
       retryable: options.retryable ?? true,
     };
 
@@ -232,8 +236,8 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
     }
   }
 
-  private pruneExpired(): void {
-    const now = this.now().getTime();
+  private pruneExpired(observedAt = this.now()): void {
+    const now = observedAt.getTime();
 
     for (const [storageKey, record] of this.records.entries()) {
       if (record.expiresAt !== null && record.expiresAt.getTime() <= now) {
@@ -244,5 +248,34 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
 }
 
 function expiresAt(from: Date, ttlMs: number | undefined): Date | null {
-  return ttlMs === undefined ? null : new Date(from.getTime() + ttlMs);
+  if (ttlMs === undefined) {
+    return null;
+  }
+
+  if (!Number.isSafeInteger(ttlMs) || ttlMs <= 0) {
+    throw new InvalidIdempotencyTtlProblem({
+      constraint: "positive-safe-integer",
+      receivedValue: toDiagnosticTtl(ttlMs),
+    });
+  }
+
+  const expiration = new Date(from.getTime() + ttlMs);
+  if (!Number.isFinite(expiration.getTime())) {
+    throw new InvalidIdempotencyTtlProblem({
+      constraint: "valid-date-range",
+      receivedValue: ttlMs,
+    });
+  }
+
+  return expiration;
+}
+
+function toDiagnosticTtl(ttlMs: number): number | string {
+  if (Number.isFinite(ttlMs)) {
+    return ttlMs;
+  }
+  if (Number.isNaN(ttlMs)) {
+    return "NaN";
+  }
+  return ttlMs === Number.POSITIVE_INFINITY ? "Infinity" : "-Infinity";
 }
