@@ -3196,7 +3196,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:19:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:20:5` (problem-constructor)
 
 <a id="framework-module-invalid-module-definition"></a>
 
@@ -3214,7 +3214,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:9:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:10:5` (problem-constructor)
 
 <a id="framework-module-lifecycle-failed"></a>
 
@@ -3232,7 +3232,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:35:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:36:5` (problem-constructor)
 
 <a id="framework-module-provider-not-visible"></a>
 
@@ -3250,7 +3250,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:51:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:64:5` (problem-constructor)
 
 <a id="framework-module-provider-ownership-conflict"></a>
 
@@ -3268,7 +3268,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:73:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:86:5` (problem-constructor)
 
 <a id="framework-module-provider-write-not-owned"></a>
 
@@ -3286,7 +3286,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:89:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:102:5` (problem-constructor)
 
 <a id="frontend-problems-fetch-unavailable"></a>
 

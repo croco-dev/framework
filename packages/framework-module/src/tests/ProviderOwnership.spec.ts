@@ -184,7 +184,7 @@ describe("module provider ownership", () => {
         extensions: { moduleName: "consumer", token: "config", declaredOwner: "owner" },
       }),
     });
-    expect(TypeDIContainer.get(token)).toBe("owned");
+    expect(TypeDIContainer.has(token)).toBe(false);
   });
 
   it("allows local token-only writes and rejects undeclared writes before mutation", async () => {

@@ -8647,6 +8647,11 @@
               "localName": "CrocoModule"
             },
             {
+              "name": "ModuleCleanupFailure",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "ModuleDiagnosticsSnapshot",
               "exportKind": "named",
               "source": "./types"

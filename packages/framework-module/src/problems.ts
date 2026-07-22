@@ -1,5 +1,6 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { getModuleTokenLabel } from "./moduleTokenLabels";
+import type { ModuleCleanupFailure } from "./types";
 import type { ModuleToken } from "./types/ModuleToken";
 
 type ModuleLifecyclePhase = "setup" | "start" | "shutdown";
@@ -42,6 +43,18 @@ export class ModuleLifecycleProblem extends Problem {
       },
     );
   }
+}
+
+export function attachModuleCleanupFailures(
+  problem: ModuleLifecycleProblem,
+  cleanupFailures: readonly ModuleCleanupFailure[],
+): void {
+  if (cleanupFailures.length === 0) {
+    return;
+  }
+
+  const extensions = problem.extensions as Record<string, unknown>;
+  extensions.cleanupFailures = cleanupFailures;
 }
 
 export class ModuleProviderVisibilityProblem extends Problem {

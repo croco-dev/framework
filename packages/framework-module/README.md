@@ -102,6 +102,14 @@ Shutdown runs in reverse dependency order. Lifecycle failures are wrapped in
 `ModuleLifecycleProblem` with `moduleName` and `phase` extensions. Circular
 imports throw `ModuleCircularDependencyProblem`.
 
+If `setup` or `start` fails, initialization calls `shutdown` for every module
+whose setup phase was entered, including the failing module, in reverse
+dependency order. Cleanup continues after individual shutdown failures. The
+original `ModuleLifecycleProblem` remains the rejected error and exposes any
+cleanup errors through its ordered `cleanupFailures` extension. Provider
+registrations and overwritten container values are restored to their exact
+pre-attempt state, so callers can retry initialization explicitly.
+
 ## Dynamic Modules And Presets
 
 Dynamic modules should return `ModuleOptions` from a factory and can be wrapped
