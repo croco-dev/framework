@@ -1207,7 +1207,7 @@ describe("changeset-required-check.mts", () => {
     expect(result.stdout).toContain(
       "changeset-required: publishable package changes require a non-README changeset.",
     );
-    expect(result.stdout).toContain("@croco/public (public API snapshot)");
+    expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
     expect(result.stdout).toContain("public-api-surface.snapshot.json");
   });
 
@@ -1248,8 +1248,132 @@ describe("changeset-required-check.mts", () => {
     const result = runScript(repo);
 
     expect(result.status).toBe(1);
-    expect(result.stdout).toContain("@croco/public (public API snapshot)");
+    expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
     expect(result.stdout).toContain("public-api-surface.snapshot.json");
+  });
+
+  it("attributes a newly published subpath to its owning package and exact path", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/public-api-subpath");
+    writePublicApiSnapshot(repo, ["value"], ["job"]);
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "feat: publish jobs subpath"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public (public API snapshot (./jobs))");
+  });
+
+  it("keeps exact subpath evidence when package source and snapshot change together", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/public-source-and-subpath");
+    writeFile(repo, "packages/public/src/index.ts", "export const value = 2;\n");
+    writePublicApiSnapshot(repo, ["value"], ["job"]);
+    git(repo, ["add", "packages/public/src/index.ts", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "feat: publish jobs with source change"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public (package files; public API snapshot (./jobs))");
+  });
+
+  it("attributes snapshot package additions and removals to their exact owners", () => {
+    const addedRepo = createTempRepo();
+    checkoutBranch(addedRepo, "feat/public-api-package-addition");
+    const addedSnapshotPath = join(addedRepo, "public-api-surface.snapshot.json");
+    const addedSnapshot = JSON.parse(readFileSync(addedSnapshotPath, "utf-8")) as {
+      packages: Array<Record<string, unknown>>;
+    };
+    addedSnapshot.packages.push({
+      ...addedSnapshot.packages[0],
+      packageName: "@croco/other",
+      relativeDir: "packages/other",
+    });
+    writeFile(
+      addedRepo,
+      "public-api-surface.snapshot.json",
+      `${JSON.stringify(addedSnapshot, null, 2)}\n`,
+    );
+    git(addedRepo, ["add", "public-api-surface.snapshot.json"]);
+    git(addedRepo, ["commit", "-m", "feat: add package API snapshot"]);
+
+    const addedResult = runScript(addedRepo);
+    expect(addedResult.status).toBe(1);
+    expect(addedResult.stdout).toContain("@croco/other (public API snapshot (.))");
+
+    const removedRepo = createTempRepo();
+    checkoutBranch(removedRepo, "fix/public-api-package-removal");
+    writeFile(
+      removedRepo,
+      "public-api-surface.snapshot.json",
+      `${JSON.stringify({ packages: [], schemaVersion: 2 }, null, 2)}\n`,
+    );
+    git(removedRepo, ["add", "public-api-surface.snapshot.json"]);
+    git(removedRepo, ["commit", "-m", "fix: remove package API snapshot"]);
+
+    const removedResult = runScript(removedRepo);
+    expect(removedResult.status).toBe(1);
+    expect(removedResult.stdout).toContain("@croco/public (public API snapshot (.))");
+  });
+
+  it("treats a root-only schema v1 to v2 conversion as migration metadata", () => {
+    const repo = createTempRepo();
+    writeLegacyPublicApiSnapshot(repo, ["value"]);
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "test: establish legacy snapshot"]);
+    checkoutBranch(repo, "chore/public-api-schema-v2");
+    writePublicApiSnapshot(repo, ["value"]);
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "chore: migrate public api schema"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("no publishable package behavior changes detected");
+  });
+
+  it("does not let schema migration hide root export drift", () => {
+    const repo = createTempRepo();
+    writeLegacyPublicApiSnapshot(repo, ["value"]);
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "test: establish legacy snapshot"]);
+    checkoutBranch(repo, "fix/public-api-schema-v2-with-drift");
+    writePublicApiSnapshot(repo, ["changedValue"]);
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "fix: migrate public api schema with drift"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
+  });
+
+  it("attributes compatibility metadata drift to the owning package root", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "fix/public-api-compatibility-metadata");
+    const snapshotPath = join(repo, "public-api-surface.snapshot.json");
+    const snapshot = JSON.parse(readFileSync(snapshotPath, "utf-8")) as {
+      packages: Array<Record<string, unknown>>;
+    };
+    snapshot.packages[0].compatibilityGroups = [
+      {
+        breakingChangePolicy: "Review all removals.",
+        coverage: ["root exports"],
+        id: "root",
+        owner: "Framework maintainers",
+        title: "Root API",
+      },
+    ];
+    writeFile(repo, "public-api-surface.snapshot.json", `${JSON.stringify(snapshot, null, 2)}\n`);
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "fix: update compatibility metadata"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
   });
 
   it("passes when a snapshot-only correction carries a checked no-release reason", () => {
@@ -1333,7 +1457,7 @@ describe("changeset-required-check.mts", () => {
     expect(result.stdout).toContain(
       "changeset-required: publishable package changes require a non-README changeset.",
     );
-    expect(result.stdout).toContain("@croco/public (public API snapshot)");
+    expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
   });
 
   it("does not let a no-release reason bypass public package source changes", () => {
@@ -1436,7 +1560,63 @@ function writePackageJson(
   writeFile(repo, `packages/${packageDirName}/package.json`, `${JSON.stringify(pkg, null, 2)}\n`);
 }
 
-function writePublicApiSnapshot(repo: string, runtimeExportNames: readonly string[]): void {
+function writePublicApiSnapshot(
+  repo: string,
+  runtimeExportNames: readonly string[],
+  jobsExportNames?: readonly string[],
+): void {
+  writeFile(
+    repo,
+    "public-api-surface.snapshot.json",
+    `${JSON.stringify(
+      {
+        schemaVersion: 2,
+        packages: [
+          {
+            packageName: "@croco/public",
+            relativeDir: "packages/public",
+            entrypoints: [
+              {
+                exportPath: ".",
+                kind: "code",
+                targets: [{ conditions: ["import"], target: "./dist/index.js" }],
+                sourceEntrypoint: "packages/public/src/index.ts",
+                runtimeExports: runtimeExportNames.map((name) => ({
+                  name,
+                  exportKind: "named",
+                  source: "./index.js",
+                  declarationKind: "const",
+                })),
+                typeExports: [],
+              },
+              ...(jobsExportNames
+                ? [
+                    {
+                      exportPath: "./jobs",
+                      kind: "code",
+                      targets: [{ conditions: ["import"], target: "./dist/jobs.js" }],
+                      sourceEntrypoint: "packages/public/src/jobs.ts",
+                      runtimeExports: jobsExportNames.map((name) => ({
+                        name,
+                        exportKind: "named",
+                        source: "./jobs.js",
+                        declarationKind: "const",
+                      })),
+                      typeExports: [],
+                    },
+                  ]
+                : []),
+            ],
+          },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+function writeLegacyPublicApiSnapshot(repo: string, runtimeExportNames: readonly string[]): void {
   writeFile(
     repo,
     "public-api-surface.snapshot.json",

@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { normalizeCatalogSpinePackageName } from "../packages/create-croco-app/src/helpers/catalog-spine.ts";
+import { getGeneratedAppCrocoVersionSet } from "../packages/create-croco-app/src/helpers/croco-ranges.ts";
 import {
   DEPENDENCY_RANGE_POLICY_SECTIONS,
   formatInternalPeerDependencyRangeException,
@@ -10,8 +12,6 @@ import {
   internalPeerDependencyRangeExceptionKey,
   readInternalPeerDependencyRangeExceptions,
 } from "./internal-croco-compatibility-policy.mjs";
-import { normalizeCatalogSpinePackageName } from "../packages/create-croco-app/src/helpers/catalog-spine.ts";
-import { getGeneratedAppCrocoVersionSet } from "../packages/create-croco-app/src/helpers/croco-ranges.ts";
 
 export type QualityTask = "build" | "typecheck" | "test";
 export type QualityStatus = "pass" | "fail" | "not-collected" | "not-configured" | "not-run";
@@ -57,6 +57,10 @@ export type PublicApiGuardResult = {
   readonly status: "pass" | "fail" | "not-collected";
   readonly packageCount: number | null;
   readonly changedPackages: number | null;
+  readonly changedEntrypoints: number | null;
+  readonly entrypointsAdded: number | null;
+  readonly entrypointsRemoved: number | null;
+  readonly targetChanges: number | null;
   readonly runtimeAdded: number | null;
   readonly runtimeRemoved: number | null;
   readonly typeAdded: number | null;
@@ -1149,6 +1153,10 @@ function readPublicApiGuardResult(rootDir: string): PublicApiGuardResult {
       status: "not-collected",
       packageCount: null,
       changedPackages: null,
+      changedEntrypoints: null,
+      entrypointsAdded: null,
+      entrypointsRemoved: null,
+      targetChanges: null,
       runtimeAdded: null,
       runtimeRemoved: null,
       typeAdded: null,
@@ -1170,6 +1178,10 @@ function readPublicApiGuardResult(rootDir: string): PublicApiGuardResult {
     status,
     packageCount: readNumberField(summary, "packageCount"),
     changedPackages: readNumberField(summary, "changedPackages"),
+    changedEntrypoints: readNumberField(summary, "changedEntrypoints"),
+    entrypointsAdded: readNumberField(summary, "entrypointsAdded"),
+    entrypointsRemoved: readNumberField(summary, "entrypointsRemoved"),
+    targetChanges: readNumberField(summary, "targetChanges"),
     runtimeAdded: readNumberField(summary, "runtimeAdded"),
     runtimeRemoved: readNumberField(summary, "runtimeRemoved"),
     typeAdded: readNumberField(summary, "typeAdded"),
@@ -1652,6 +1664,9 @@ function formatPublicApiSection(result: PublicApiGuardResult): string[] {
     `- Status: ${formatPublicApiStatus(result)}`,
     `- Packages scanned: ${formatNullableCount(result.packageCount)}`,
     `- Packages with API drift: ${formatNullableCount(result.changedPackages)}`,
+    `- Entrypoints with API drift: ${formatNullableCount(result.changedEntrypoints)}`,
+    `- Entrypoints added/removed: ${formatNullableCount(result.entrypointsAdded)} / ${formatNullableCount(result.entrypointsRemoved)}`,
+    `- Entrypoint target changes: ${formatNullableCount(result.targetChanges)}`,
     `- Runtime exports added/removed: ${formatNullableCount(result.runtimeAdded)} / ${formatNullableCount(result.runtimeRemoved)}`,
     `- Type exports added/removed: ${formatNullableCount(result.typeAdded)} / ${formatNullableCount(result.typeRemoved)}`,
     `- Snapshot: \`${result.snapshotPath}\``,

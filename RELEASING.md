@@ -142,7 +142,7 @@ If an artifact is compromised, revoked, or unexpectedly repointed:
 - Fixed 또는 linked group을 도입하려면 `.changeset/config.json`에 실제 group을 먼저 표현하고, 이 가이드에 group 영향 범위와 패키지 선택 기준을 함께 갱신해야 합니다.
 - Croco 1.0 spine compatibility train은 fixed/linked group 없이 `package-manifests:check`, `package-quality:report`, `create-croco-app` generated app range checks, smoke evidence로 검증합니다. 내부 peer semver 예외는 owner와 compatibility rationale이 있는 checked metadata 없이는 허용하지 않습니다.
 - 리뷰어는 release-significant package 변경마다 적절한 changeset entry가 있는지 확인합니다. 하나의 패키지를 선택했다는 이유만으로 관련 없는 패키지까지 자동으로 함께 bump된다고 가정하지 않습니다.
-- `pnpm public-api:check`는 publishable package의 `src/index.ts` export surface를 `public-api-surface.snapshot.json`과 비교합니다. 의도된 export 변경이면 `pnpm public-api:write`로 snapshot을 갱신하고, runtime/type export diff가 import surface, 타입, 또는 공개 동작을 바꾸는지 기준으로 changeset 필요 여부를 리뷰합니다.
+- `pnpm public-api:check`는 publishable package의 모든 `publishConfig.exports` subpath를 `public-api-surface.snapshot.json`과 비교합니다. 조건부 target 순서, code entrypoint의 runtime/type export surface, JSON/CSS 같은 asset target도 계약에 포함됩니다. 의도된 변경이면 `pnpm public-api:write`로 snapshot을 갱신하고, package와 정확한 export subpath별 diff를 기준으로 changeset 필요 여부를 리뷰합니다.
 - Breaking changes to `croco.doctor.v1` doctor JSON output must either intentionally version the report schema or include release notes that name the removed/renamed field, check id, diagnostic field, status, severity, or stable diagnostic code and provide the migration path for CI/generated-app consumers.
 
 ---

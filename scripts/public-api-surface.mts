@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, extname, join, relative, resolve } from "node:path";
 import { argv, exit, stdout } from "node:process";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
 import { readPackages } from "./package-quality-report.mts";
@@ -28,14 +29,35 @@ export type PublicApiCompatibilityGroup = {
 export type PublicApiPackage = {
   readonly packageName: string;
   readonly relativeDir: string;
-  readonly entrypoint: string;
   readonly compatibilityGroups?: readonly PublicApiCompatibilityGroup[];
+  readonly entrypoints: readonly PublicApiEntrypoint[];
+};
+
+export type PublicApiTarget = {
+  readonly conditions: readonly string[];
+  readonly target: string;
+};
+
+export type PublicApiCodeEntrypoint = {
+  readonly exportPath: string;
+  readonly kind: "code";
+  readonly targets: readonly PublicApiTarget[];
+  readonly sourceEntrypoint: string;
   readonly runtimeExports: readonly PublicApiExport[];
   readonly typeExports: readonly PublicApiExport[];
 };
 
+export type PublicApiAssetEntrypoint = {
+  readonly exportPath: string;
+  readonly kind: "asset";
+  readonly assetKind: "json" | "css" | "asset";
+  readonly targets: readonly PublicApiTarget[];
+};
+
+export type PublicApiEntrypoint = PublicApiCodeEntrypoint | PublicApiAssetEntrypoint;
+
 export type PublicApiSnapshot = {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly packages: readonly PublicApiPackage[];
 };
 
@@ -49,9 +71,22 @@ export type PackageApiDiff = {
   readonly relativeDir: string;
   readonly runtime: ExportSurfaceDiff;
   readonly type: ExportSurfaceDiff;
+  readonly entrypoints: readonly EntrypointApiDiff[];
   readonly compatibilityGroupMetadata: PublicApiCompatibilityGroupMetadataDiff;
   readonly compatibilityGroupImpacts: readonly PublicApiCompatibilityGroupImpact[];
   readonly packageStatus: "added" | "removed" | "changed";
+};
+
+export type EntrypointApiDiff = {
+  readonly exportPath: string;
+  readonly entrypointStatus: "added" | "removed" | "changed";
+  readonly previous: PublicApiEntrypoint | null;
+  readonly current: PublicApiEntrypoint | null;
+  readonly targetsChanged: boolean;
+  readonly sourceChanged: boolean;
+  readonly kindChanged: boolean;
+  readonly runtime: ExportSurfaceDiff;
+  readonly type: ExportSurfaceDiff;
 };
 
 export type PublicApiDiff = {
@@ -62,6 +97,10 @@ export type PublicApiSummary = {
   readonly status: "pass" | "fail";
   readonly packageCount: number;
   readonly changedPackages: number;
+  readonly changedEntrypoints: number;
+  readonly entrypointsAdded: number;
+  readonly entrypointsRemoved: number;
+  readonly targetChanges: number;
   readonly runtimeAdded: number;
   readonly runtimeRemoved: number;
   readonly typeAdded: number;
@@ -82,7 +121,7 @@ type CheckOptions = {
 
 type ExportSurface = "runtime" | "type";
 
-type FileExportSurface = Pick<PublicApiPackage, "runtimeExports" | "typeExports">;
+type FileExportSurface = Pick<PublicApiCodeEntrypoint, "runtimeExports" | "typeExports">;
 
 type PublicApiCompatibilityGroupImpact = PublicApiCompatibilityGroup & {
   readonly runtimeAdded: number;
@@ -127,6 +166,7 @@ const snapshotFileName = "public-api-surface.snapshot.json";
 const reportDirectory = join("ci-reports", "package-quality");
 const reportFileName = "public-api-diff.md";
 const summaryFileName = "public-api-summary.json";
+const scriptRootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const frameworkContextCompatibilityContract = {
   groups: [
@@ -619,7 +659,10 @@ function findExportByName(
 function inferNamedExportSurface(
   name: string,
   declarations: FileExportSurface,
-): { readonly surface: ExportSurface; readonly declaration: PublicApiExport | null } {
+): {
+  readonly surface: ExportSurface;
+  readonly declaration: PublicApiExport | null;
+} {
   const runtimeDeclaration = findExportByName(declarations.runtimeExports, name);
   if (runtimeDeclaration) {
     return { surface: "runtime", declaration: runtimeDeclaration };
@@ -816,7 +859,7 @@ function addExportedDeclaration(
 function extractEntrypointExports(
   entrypointPath: string,
   context: ExtractContext = { activeFiles: new Set(), cache: new Map() },
-): Pick<PublicApiPackage, "runtimeExports" | "typeExports"> {
+): FileExportSurface {
   const cached = context.cache.get(entrypointPath);
   if (cached) {
     return cached;
@@ -963,35 +1006,239 @@ function withCompatibilityGroups(
   );
 }
 
+function findLegacyRootTarget(manifest: Record<string, unknown>): string | null {
+  if (typeof manifest.main === "string") {
+    return manifest.main;
+  }
+
+  if (typeof manifest.bin === "string") {
+    return manifest.bin;
+  }
+
+  if (isRecord(manifest.bin)) {
+    return (
+      Object.entries(manifest.bin)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([, target]) => target)
+        .find((target): target is string => typeof target === "string") ?? null
+    );
+  }
+
+  return null;
+}
+
 export function createPublicApiSnapshot(rootDir: string): PublicApiSnapshot {
+  const extractionContext: ExtractContext = {
+    activeFiles: new Set(),
+    cache: new Map(),
+  };
   const packages = readPackages(rootDir)
     .filter((pkg) => !pkg.private)
     .flatMap((pkg): PublicApiPackage[] => {
-      const entrypoint = join(rootDir, pkg.relativeDir, "src", "index.ts");
-
-      if (!existsSync(entrypoint)) {
+      const manifestPath = join(rootDir, pkg.relativeDir, "package.json");
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as unknown;
+      if (!isRecord(manifest)) {
         return [];
       }
-
-      const exports = extractEntrypointExports(entrypoint);
+      const publishConfig = isRecord(manifest.publishConfig) ? manifest.publishConfig : null;
+      const hasConfiguredExports =
+        publishConfig !== null && Object.hasOwn(publishConfig, "exports");
+      const configuredExports = hasConfiguredExports ? publishConfig.exports : undefined;
+      const legacyRootTarget = findLegacyRootTarget(manifest);
+      const exportMap = hasConfiguredExports
+        ? configuredExports
+        : legacyRootTarget === null
+          ? undefined
+          : { ".": legacyRootTarget };
+      if (exportMap === undefined) {
+        throw new Error(
+          `${pkg.name}: public package must declare publishConfig.exports or a legacy main/bin root target`,
+        );
+      }
+      if (!isRecord(exportMap) || !Object.hasOwn(exportMap, ".")) {
+        throw new Error(`${pkg.name}: publishConfig.exports must include the root export path "."`);
+      }
       const compatibilityContract = compatibilityContractsByPackage.get(pkg.name);
+      const entrypoints = Object.entries(exportMap)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([exportPath, targetValue]) =>
+          createManifestEntrypoint(
+            rootDir,
+            pkg.name,
+            pkg.relativeDir,
+            exportPath,
+            targetValue,
+            extractionContext,
+          ),
+        );
 
       return [
         {
           packageName: pkg.name,
           relativeDir: pkg.relativeDir,
-          entrypoint: toPosixPath(relative(rootDir, entrypoint)),
           ...(compatibilityContract ? { compatibilityGroups: compatibilityContract.groups } : {}),
-          runtimeExports: withCompatibilityGroups(pkg.name, exports.runtimeExports),
-          typeExports: withCompatibilityGroups(pkg.name, exports.typeExports),
+          entrypoints: entrypoints.map((entrypoint) =>
+            entrypoint.exportPath === "." && entrypoint.kind === "code"
+              ? {
+                  ...entrypoint,
+                  runtimeExports: withCompatibilityGroups(pkg.name, entrypoint.runtimeExports),
+                  typeExports: withCompatibilityGroups(pkg.name, entrypoint.typeExports),
+                }
+              : entrypoint,
+          ),
         },
       ];
     })
     .sort((left, right) => left.packageName.localeCompare(right.packageName));
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     packages,
+  };
+}
+
+const codeTargetPattern = /(?:\.d)?\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
+const sourceExtensions = [".ts", ".tsx", ".mts", ".cts"] as const;
+
+function validateExportPath(packageName: string, exportPath: string): void {
+  if (
+    (exportPath !== "." && !exportPath.startsWith("./")) ||
+    exportPath.includes("\\") ||
+    exportPath.split("/").includes("..")
+  ) {
+    throw new Error(`${packageName}: invalid export path ${JSON.stringify(exportPath)}`);
+  }
+}
+
+function validatePublishedTarget(
+  packageName: string,
+  exportPath: string,
+  conditions: readonly string[],
+  target: string,
+): void {
+  if (
+    !target.startsWith("./") ||
+    target.includes("\0") ||
+    target.includes("\\") ||
+    target.split("/").includes("..")
+  ) {
+    throw new Error(
+      `${packageName} ${exportPath} (${conditions.join(" > ") || "default"}): invalid export target ${JSON.stringify(target)}`,
+    );
+  }
+}
+
+function normalizeTargets(
+  packageName: string,
+  exportPath: string,
+  value: unknown,
+  conditions: readonly string[] = [],
+): PublicApiTarget[] {
+  if (typeof value === "string") {
+    validatePublishedTarget(packageName, exportPath, conditions, value);
+    return [{ conditions, target: value }];
+  }
+  if (!isRecord(value) || Object.keys(value).length === 0) {
+    throw new Error(
+      `${packageName} ${exportPath}: export target must be a string or non-empty condition object`,
+    );
+  }
+  return Object.entries(value).flatMap(([condition, target]) => {
+    if (condition.length === 0) {
+      throw new Error(`${packageName} ${exportPath}: export condition names must not be empty`);
+    }
+    return normalizeTargets(packageName, exportPath, target, [...conditions, condition]);
+  });
+}
+
+function compiledStem(target: string): string {
+  return target
+    .replace(/^\.\/dist\//, "")
+    .replace(/\.d\.(?:ts|mts|cts)$/, "")
+    .replace(/\.(?:js|jsx|mjs|cjs|ts|tsx|mts|cts)$/, "");
+}
+
+function resolveCodeTarget(
+  rootDir: string,
+  packageName: string,
+  relativeDir: string,
+  exportPath: string,
+  target: PublicApiTarget,
+): string {
+  if (!target.target.startsWith("./dist/")) {
+    throw new Error(
+      `${packageName} ${exportPath} (${target.conditions.join(" > ") || "default"}): code target must be under ./dist: ${target.target}`,
+    );
+  }
+  const sourceRoot = join(rootDir, relativeDir, "src");
+  const stem = compiledStem(target.target);
+  const stemCandidates = [
+    ...sourceExtensions.map((extension) => join(sourceRoot, `${stem}${extension}`)),
+    ...sourceExtensions.map((extension) => join(sourceRoot, stem, `index${extension}`)),
+  ].filter((candidate) => existsSync(candidate) && statSync(candidate).isFile());
+  const candidates =
+    stemCandidates.length === 0 && exportPath === "."
+      ? sourceExtensions
+          .map((extension) => join(sourceRoot, `index${extension}`))
+          .filter((candidate) => existsSync(candidate) && statSync(candidate).isFile())
+      : stemCandidates;
+  const uniqueCandidates = [...new Set(candidates.map((candidate) => resolve(candidate)))];
+  if (uniqueCandidates.length !== 1) {
+    throw new Error(
+      `${packageName} ${exportPath} (${target.conditions.join(" > ") || "default"}): expected exactly one source for ${target.target}; found ${uniqueCandidates.length}${uniqueCandidates.length > 0 ? ` (${uniqueCandidates.map((candidate) => toPosixPath(relative(rootDir, candidate))).join(", ")})` : ""}`,
+    );
+  }
+  return uniqueCandidates[0];
+}
+
+function createManifestEntrypoint(
+  rootDir: string,
+  packageName: string,
+  relativeDir: string,
+  exportPath: string,
+  value: unknown,
+  context: ExtractContext,
+): PublicApiEntrypoint {
+  validateExportPath(packageName, exportPath);
+  const targets = normalizeTargets(packageName, exportPath, value);
+  const codeTargets = targets.filter((target) => codeTargetPattern.test(target.target));
+  if (codeTargets.length === 0) {
+    const extensions = new Set(targets.map((target) => extname(target.target).toLowerCase()));
+    const assetKind =
+      extensions.size === 1 && extensions.has(".json")
+        ? "json"
+        : extensions.size === 1 && extensions.has(".css")
+          ? "css"
+          : "asset";
+    return { exportPath, kind: "asset", assetKind, targets };
+  }
+  if (codeTargets.length !== targets.length) {
+    throw new Error(`${packageName} ${exportPath}: code and asset targets cannot be mixed`);
+  }
+  const sources = codeTargets.map((target) =>
+    resolveCodeTarget(rootDir, packageName, relativeDir, exportPath, target),
+  );
+  const distinctSources = [...new Set(sources)];
+  if (distinctSources.length !== 1) {
+    const evidence = codeTargets
+      .map(
+        (target, index) =>
+          `${target.conditions.join(" > ") || "default"}=${toPosixPath(relative(rootDir, sources[index]))}`,
+      )
+      .join(", ");
+    throw new Error(
+      `${packageName} ${exportPath}: conditional code targets resolve to divergent sources (${evidence})`,
+    );
+  }
+  const sourceEntrypoint = distinctSources[0];
+  const exports = extractEntrypointExports(sourceEntrypoint, context);
+  return {
+    exportPath,
+    kind: "code",
+    targets,
+    sourceEntrypoint: toPosixPath(relative(rootDir, sourceEntrypoint)),
+    runtimeExports: exports.runtimeExports,
+    typeExports: exports.typeExports,
   };
 }
 
@@ -1054,14 +1301,85 @@ function parseCompatibilityGroup(value: unknown): PublicApiCompatibilityGroup {
   };
 }
 
+function parseTarget(value: unknown, packageName: string, exportPath: string): PublicApiTarget {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.conditions) ||
+    !value.conditions.every((condition) => typeof condition === "string" && condition.length > 0) ||
+    typeof value.target !== "string"
+  ) {
+    throw new Error(
+      `public API snapshot package ${packageName} export ${exportPath} contains an invalid target`,
+    );
+  }
+  validatePublishedTarget(packageName, exportPath, value.conditions, value.target);
+  return { conditions: value.conditions, target: value.target };
+}
+
+function parseEntrypoint(value: unknown, packageName: string): PublicApiEntrypoint {
+  if (
+    !isRecord(value) ||
+    typeof value.exportPath !== "string" ||
+    (value.kind !== "code" && value.kind !== "asset") ||
+    !Array.isArray(value.targets) ||
+    value.targets.length === 0
+  ) {
+    throw new Error(`public API snapshot package ${packageName} contains an invalid entrypoint`);
+  }
+  validateExportPath(packageName, value.exportPath);
+  const targets = value.targets.map((target) =>
+    parseTarget(target, packageName, value.exportPath as string),
+  );
+  const targetConditionPaths = targets.map((target) => JSON.stringify(target.conditions));
+  if (new Set(targetConditionPaths).size !== targetConditionPaths.length) {
+    throw new Error(
+      `public API snapshot package ${packageName} export ${value.exportPath} contains duplicate condition paths`,
+    );
+  }
+  if (value.kind === "asset") {
+    if (value.assetKind !== "json" && value.assetKind !== "css" && value.assetKind !== "asset") {
+      throw new Error(
+        `public API snapshot package ${packageName} export ${value.exportPath} has invalid assetKind`,
+      );
+    }
+    if ("runtimeExports" in value || "typeExports" in value || "sourceEntrypoint" in value) {
+      throw new Error(
+        `public API snapshot package ${packageName} export ${value.exportPath} asset contains code fields`,
+      );
+    }
+    return {
+      exportPath: value.exportPath,
+      kind: "asset",
+      assetKind: value.assetKind,
+      targets,
+    };
+  }
+  if (
+    typeof value.sourceEntrypoint !== "string" ||
+    !Array.isArray(value.runtimeExports) ||
+    !Array.isArray(value.typeExports) ||
+    "assetKind" in value
+  ) {
+    throw new Error(
+      `public API snapshot package ${packageName} export ${value.exportPath} contains invalid code fields`,
+    );
+  }
+  return {
+    exportPath: value.exportPath,
+    kind: "code",
+    targets,
+    sourceEntrypoint: value.sourceEntrypoint,
+    runtimeExports: sortExports(value.runtimeExports.map(parseExport)),
+    typeExports: sortExports(value.typeExports.map(parseExport)),
+  };
+}
+
 function parsePackage(value: unknown): PublicApiPackage {
   if (
     !isRecord(value) ||
     typeof value.packageName !== "string" ||
     typeof value.relativeDir !== "string" ||
-    typeof value.entrypoint !== "string" ||
-    !Array.isArray(value.runtimeExports) ||
-    !Array.isArray(value.typeExports)
+    !Array.isArray(value.entrypoints)
   ) {
     throw new Error("public API snapshot contains an invalid package entry");
   }
@@ -1069,12 +1387,42 @@ function parsePackage(value: unknown): PublicApiPackage {
   const compatibilityGroups = Array.isArray(value.compatibilityGroups)
     ? value.compatibilityGroups.map(parseCompatibilityGroup)
     : undefined;
+  const packageName = value.packageName;
   const groupIds = new Set(compatibilityGroups?.map((group) => group.id) ?? []);
-  const runtimeExports = sortExports(value.runtimeExports.map(parseExport));
-  const typeExports = sortExports(value.typeExports.map(parseExport));
+  const entrypoints = value.entrypoints.map((entrypoint) =>
+    parseEntrypoint(entrypoint, packageName),
+  );
+  const exportPaths = entrypoints.map((entrypoint) => entrypoint.exportPath);
+  if (new Set(exportPaths).size !== exportPaths.length || !exportPaths.includes(".")) {
+    throw new Error(
+      `public API snapshot package ${value.packageName} must contain unique entrypoints including "."`,
+    );
+  }
+  const rootEntrypoint = entrypoints.find((entrypoint) => entrypoint.exportPath === ".");
+  const rootExports =
+    rootEntrypoint?.kind === "code"
+      ? [...rootEntrypoint.runtimeExports, ...rootEntrypoint.typeExports]
+      : [];
+  const secondaryGroupedExport = entrypoints
+    .filter(
+      (entrypoint): entrypoint is PublicApiCodeEntrypoint =>
+        entrypoint.exportPath !== "." && entrypoint.kind === "code",
+    )
+    .flatMap((entrypoint) => [...entrypoint.runtimeExports, ...entrypoint.typeExports])
+    .find((entry) => entry.compatibilityGroup);
+  if (secondaryGroupedExport) {
+    throw new Error(
+      `public API snapshot package ${value.packageName} may assign compatibilityGroup only on root exports`,
+    );
+  }
 
   if (compatibilityGroups) {
-    for (const entry of [...runtimeExports, ...typeExports]) {
+    if (rootEntrypoint?.kind !== "code") {
+      throw new Error(
+        `public API snapshot package ${value.packageName} compatibilityGroups require a code root entrypoint`,
+      );
+    }
+    for (const entry of rootExports) {
       if (!entry.compatibilityGroup) {
         throw new Error(
           `public API snapshot package ${value.packageName} has grouped exports without compatibilityGroup on ${entry.name}`,
@@ -1091,7 +1439,13 @@ function parsePackage(value: unknown): PublicApiPackage {
 
   if (
     !compatibilityGroups &&
-    [...runtimeExports, ...typeExports].some((entry) => entry.compatibilityGroup)
+    entrypoints.some(
+      (entrypoint) =>
+        entrypoint.kind === "code" &&
+        [...entrypoint.runtimeExports, ...entrypoint.typeExports].some(
+          (entry) => entry.compatibilityGroup,
+        ),
+    )
   ) {
     throw new Error(
       `public API snapshot package ${value.packageName} has compatibilityGroup tags without compatibilityGroups metadata`,
@@ -1099,25 +1453,29 @@ function parsePackage(value: unknown): PublicApiPackage {
   }
 
   return {
-    packageName: value.packageName,
+    packageName,
     relativeDir: value.relativeDir,
-    entrypoint: value.entrypoint,
     ...(compatibilityGroups ? { compatibilityGroups } : {}),
-    runtimeExports,
-    typeExports,
+    entrypoints: [...entrypoints].sort((left, right) =>
+      left.exportPath.localeCompare(right.exportPath),
+    ),
   };
 }
 
 export function parsePublicApiSnapshot(value: unknown): PublicApiSnapshot {
-  if (!isRecord(value) || value.schemaVersion !== 1 || !Array.isArray(value.packages)) {
-    throw new Error("public API snapshot must use schemaVersion 1 and include packages");
+  if (!isRecord(value) || value.schemaVersion !== 2 || !Array.isArray(value.packages)) {
+    throw new Error("public API snapshot must use schemaVersion 2 and include packages");
+  }
+
+  const packages = value.packages.map(parsePackage);
+  const packageNames = packages.map((pkg) => pkg.packageName);
+  if (new Set(packageNames).size !== packageNames.length) {
+    throw new Error("public API snapshot contains duplicate package names");
   }
 
   return {
-    schemaVersion: 1,
-    packages: value.packages
-      .map(parsePackage)
-      .sort((left, right) => left.packageName.localeCompare(right.packageName)),
+    schemaVersion: 2,
+    packages: packages.sort((left, right) => left.packageName.localeCompare(right.packageName)),
   };
 }
 
@@ -1127,6 +1485,17 @@ function readPublicApiSnapshot(snapshotPath: string): PublicApiSnapshot | null {
   }
 
   return parsePublicApiSnapshot(JSON.parse(readFileSync(snapshotPath, "utf-8")) as unknown);
+}
+
+function readPublicApiSnapshotForWrite(snapshotPath: string): PublicApiSnapshot | null {
+  if (!existsSync(snapshotPath)) {
+    return null;
+  }
+  const value = JSON.parse(readFileSync(snapshotPath, "utf-8")) as unknown;
+  if (isRecord(value) && value.schemaVersion === 1) {
+    return null;
+  }
+  return parsePublicApiSnapshot(value);
 }
 
 function diffExportSurface(
@@ -1255,6 +1624,79 @@ function buildCompatibilityGroupImpacts(
   });
 }
 
+function codeSurface(entrypoint: PublicApiEntrypoint | undefined): FileExportSurface {
+  return entrypoint?.kind === "code" ? entrypoint : { runtimeExports: [], typeExports: [] };
+}
+
+function entrypointMetadataKey(entrypoint: PublicApiEntrypoint): string {
+  return JSON.stringify({
+    kind: entrypoint.kind,
+    targets: entrypoint.targets,
+    ...(entrypoint.kind === "code"
+      ? { sourceEntrypoint: entrypoint.sourceEntrypoint }
+      : { assetKind: entrypoint.assetKind }),
+  });
+}
+
+function diffEntrypoints(
+  previousPackage: PublicApiPackage | undefined,
+  currentPackage: PublicApiPackage | undefined,
+): EntrypointApiDiff[] {
+  const previousByPath = new Map(
+    previousPackage?.entrypoints.map((entrypoint) => [entrypoint.exportPath, entrypoint]) ?? [],
+  );
+  const currentByPath = new Map(
+    currentPackage?.entrypoints.map((entrypoint) => [entrypoint.exportPath, entrypoint]) ?? [],
+  );
+  const exportPaths = [...new Set([...previousByPath.keys(), ...currentByPath.keys()])].sort();
+
+  return exportPaths.flatMap((exportPath): EntrypointApiDiff[] => {
+    const previous = previousByPath.get(exportPath);
+    const current = currentByPath.get(exportPath);
+    const previousSurface = codeSurface(previous);
+    const currentSurface = codeSurface(current);
+    const runtime = diffExportSurface(
+      previousSurface.runtimeExports,
+      currentSurface.runtimeExports,
+    );
+    const type = diffExportSurface(previousSurface.typeExports, currentSurface.typeExports);
+    const targetsChanged =
+      JSON.stringify(previous?.targets ?? null) !== JSON.stringify(current?.targets ?? null);
+    const sourceChanged =
+      (previous?.kind === "code" ? previous.sourceEntrypoint : null) !==
+      (current?.kind === "code" ? current.sourceEntrypoint : null);
+    const kindChanged =
+      previous?.kind !== current?.kind ||
+      (previous?.kind === "asset" &&
+        current?.kind === "asset" &&
+        previous.assetKind !== current.assetKind);
+    const metadataChanged =
+      !previous || !current || entrypointMetadataKey(previous) !== entrypointMetadataKey(current);
+    if (
+      !metadataChanged &&
+      runtime.added.length === 0 &&
+      runtime.removed.length === 0 &&
+      type.added.length === 0 &&
+      type.removed.length === 0
+    ) {
+      return [];
+    }
+    return [
+      {
+        exportPath,
+        entrypointStatus: previous ? (current ? "changed" : "removed") : "added",
+        previous: previous ?? null,
+        current: current ?? null,
+        targetsChanged,
+        sourceChanged,
+        kindChanged,
+        runtime,
+        type,
+      },
+    ];
+  });
+}
+
 export function diffPublicApiSnapshots(
   previous: PublicApiSnapshot,
   current: PublicApiSnapshot,
@@ -1269,24 +1711,22 @@ export function diffPublicApiSnapshots(
     const previousPackage = previousByPackage.get(packageName);
     const currentPackage = currentByPackage.get(packageName);
     const relativeDir = currentPackage?.relativeDir ?? previousPackage?.relativeDir ?? "";
-    const runtime = diffExportSurface(
-      previousPackage?.runtimeExports ?? [],
-      currentPackage?.runtimeExports ?? [],
-    );
-    const type = diffExportSurface(
-      previousPackage?.typeExports ?? [],
-      currentPackage?.typeExports ?? [],
-    );
+    const entrypoints = diffEntrypoints(previousPackage, currentPackage);
+    const runtime = {
+      added: sortExports(entrypoints.flatMap((entrypoint) => entrypoint.runtime.added)),
+      removed: sortExports(entrypoints.flatMap((entrypoint) => entrypoint.runtime.removed)),
+    };
+    const type = {
+      added: sortExports(entrypoints.flatMap((entrypoint) => entrypoint.type.added)),
+      removed: sortExports(entrypoints.flatMap((entrypoint) => entrypoint.type.removed)),
+    };
     const compatibilityGroupMetadata = diffCompatibilityGroupMetadata(
       previousPackage?.compatibilityGroups,
       currentPackage?.compatibilityGroups,
     );
 
     if (
-      runtime.added.length === 0 &&
-      runtime.removed.length === 0 &&
-      type.added.length === 0 &&
-      type.removed.length === 0 &&
+      entrypoints.length === 0 &&
       !hasCompatibilityGroupMetadataDiff(compatibilityGroupMetadata)
     ) {
       return [];
@@ -1298,6 +1738,7 @@ export function diffPublicApiSnapshots(
         relativeDir,
         runtime,
         type,
+        entrypoints,
         compatibilityGroupMetadata,
         compatibilityGroupImpacts: buildCompatibilityGroupImpacts(
           previousPackage,
@@ -1333,6 +1774,24 @@ export function summarizePublicApiDiff(
     status: changedPackages === 0 ? "pass" : "fail",
     packageCount: current.packages.length,
     changedPackages,
+    changedEntrypoints: diff.packages.reduce((count, pkg) => count + pkg.entrypoints.length, 0),
+    entrypointsAdded: diff.packages.reduce(
+      (count, pkg) =>
+        count +
+        pkg.entrypoints.filter((entrypoint) => entrypoint.entrypointStatus === "added").length,
+      0,
+    ),
+    entrypointsRemoved: diff.packages.reduce(
+      (count, pkg) =>
+        count +
+        pkg.entrypoints.filter((entrypoint) => entrypoint.entrypointStatus === "removed").length,
+      0,
+    ),
+    targetChanges: diff.packages.reduce(
+      (count, pkg) =>
+        count + pkg.entrypoints.filter((entrypoint) => entrypoint.targetsChanged).length,
+      0,
+    ),
     runtimeAdded: countDiff(diff, "runtime", "added"),
     runtimeRemoved: countDiff(diff, "runtime", "removed"),
     typeAdded: countDiff(diff, "type", "added"),
@@ -1460,6 +1919,7 @@ export function buildPublicApiReportMarkdown(
     `- Status: ${summary.status}`,
     `- Packages scanned: ${summary.packageCount}`,
     `- Packages with API drift: ${summary.changedPackages}`,
+    `- Entrypoints with drift: ${summary.changedEntrypoints}`,
     `- Snapshot: \`${summary.snapshotPath}\``,
     `- Update command: \`${summary.updateCommand}\``,
     "- CI guard: `pnpm public-api:check` runs through `pnpm check`.",
@@ -1470,6 +1930,8 @@ export function buildPublicApiReportMarkdown(
     "| --- | ---: | ---: |",
     `| runtime exports | ${summary.runtimeAdded} | ${summary.runtimeRemoved} |`,
     `| type exports | ${summary.typeAdded} | ${summary.typeRemoved} |`,
+    `| entrypoints | ${summary.entrypointsAdded} | ${summary.entrypointsRemoved} |`,
+    `| target records changed | ${summary.targetChanges} | 0 |`,
     "",
     "## Package Diffs",
   ];
@@ -1487,15 +1949,23 @@ export function buildPublicApiReportMarkdown(
       `- Package status: ${pkg.packageStatus}`,
       ...formatCompatibilityGroupMetadataDiffLines(pkg.compatibilityGroupMetadata),
       ...formatCompatibilityGroupImpactLines(pkg.compatibilityGroupImpacts),
-      "",
-      "Runtime exports:",
-      ...formatExportLines("added", "+", pkg.runtime.added),
-      ...formatExportLines("removed", "-", pkg.runtime.removed),
-      "",
-      "Type exports:",
-      ...formatExportLines("added", "+", pkg.type.added),
-      ...formatExportLines("removed", "-", pkg.type.removed),
     );
+    for (const entrypoint of pkg.entrypoints) {
+      lines.push(
+        "",
+        `#### ${entrypoint.exportPath}`,
+        `- Entrypoint status: ${entrypoint.entrypointStatus}`,
+        `- Kind changed: ${entrypoint.kindChanged ? "yes" : "no"}`,
+        `- Targets changed: ${entrypoint.targetsChanged ? "yes" : "no"}`,
+        `- Source changed: ${entrypoint.sourceChanged ? "yes" : "no"}`,
+        "Runtime exports:",
+        ...formatExportLines("added", "+", entrypoint.runtime.added),
+        ...formatExportLines("removed", "-", entrypoint.runtime.removed),
+        "Type exports:",
+        ...formatExportLines("added", "+", entrypoint.type.added),
+        ...formatExportLines("removed", "-", entrypoint.type.removed),
+      );
+    }
   }
 
   return `${lines.join("\n")}\n`;
@@ -1503,6 +1973,27 @@ export function buildPublicApiReportMarkdown(
 
 function writeJsonFile(path: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, "utf-8");
+}
+
+function writeFormattedSnapshot(path: string, value: PublicApiSnapshot): void {
+  const content = `${JSON.stringify(value, null, 2)}\n`;
+  const localOxfmtPath = join(scriptRootDir, "node_modules", ".bin", "oxfmt");
+  const hasLocalOxfmt = existsSync(localOxfmtPath);
+  const result = spawnSync(
+    hasLocalOxfmt ? localOxfmtPath : "pnpm",
+    hasLocalOxfmt ? ["--stdin-filepath", path] : ["exec", "oxfmt", "--stdin-filepath", path],
+    {
+      cwd: scriptRootDir,
+      encoding: "utf-8",
+      input: content,
+    },
+  );
+
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || result.stdout.trim() || `oxfmt failed for ${path}`);
+  }
+
+  writeFileSync(path, result.stdout, "utf-8");
 }
 
 function writePublicApiReport(
@@ -1592,7 +2083,7 @@ function relativeReportPath(rootDir: string, reportDir: string): string {
 function runCheck(options: CheckOptions): number {
   const previous = readPublicApiSnapshot(options.snapshotPath);
   const current = createPublicApiSnapshot(options.rootDir);
-  const baseline = previous ?? { schemaVersion: 1, packages: [] };
+  const baseline = previous ?? { schemaVersion: 2, packages: [] };
   const diff = diffPublicApiSnapshots(baseline, current);
   const summary = summarizePublicApiDiff(
     current,
@@ -1622,8 +2113,8 @@ function runCheck(options: CheckOptions): number {
 }
 
 function runWrite(options: CheckOptions): number {
-  const previous = readPublicApiSnapshot(options.snapshotPath) ?? {
-    schemaVersion: 1,
+  const previous = readPublicApiSnapshotForWrite(options.snapshotPath) ?? {
+    schemaVersion: 2,
     packages: [],
   };
   const current = createPublicApiSnapshot(options.rootDir);
@@ -1635,7 +2126,7 @@ function runWrite(options: CheckOptions): number {
     relativeReportPath(options.rootDir, options.reportDir),
   );
 
-  writeJsonFile(options.snapshotPath, current);
+  writeFormattedSnapshot(options.snapshotPath, current);
   writePublicApiReport(options.reportDir, summary, diff);
   log(`public-api-surface: wrote ${summary.snapshotPath} for ${summary.packageCount} package(s).`);
   return 0;

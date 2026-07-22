@@ -8,7 +8,10 @@ import {
   buildPublicApiReportMarkdown,
   createPublicApiSnapshot,
   diffPublicApiSnapshots,
+  parsePublicApiSnapshot,
+  type PublicApiCodeEntrypoint,
   type PublicApiCompatibilityGroup,
+  type PublicApiPackage,
   type PublicApiSnapshot,
   summarizePublicApiDiff,
 } from "../public-api-surface.mts";
@@ -49,9 +52,10 @@ describe("public-api-surface.mts", () => {
 
     const snapshot = createPublicApiSnapshot(repo);
     const pkg = snapshot.packages[0];
+    const root = getCodeEntrypoint(pkg);
 
     expect(pkg.packageName).toBe("@croco/alpha");
-    expect(pkg.runtimeExports).toEqual(
+    expect(root.runtimeExports).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ exportKind: "named", name: "RuntimeThing", source: "./runtime" }),
         expect.objectContaining({ exportKind: "star", name: "*", source: "./runtime-star" }),
@@ -64,7 +68,7 @@ describe("public-api-surface.mts", () => {
         expect.objectContaining({ declarationKind: "class", name: "LocalClass", source: null }),
       ]),
     );
-    expect(pkg.typeExports).toEqual(
+    expect(root.typeExports).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           exportKind: "named",
@@ -77,6 +81,68 @@ describe("public-api-surface.mts", () => {
         expect.objectContaining({ declarationKind: "interface", name: "LocalType", source: null }),
       ]),
     );
+  });
+
+  it("preserves a legacy root entrypoint for a published CLI without an exports map", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/package.json",
+      `${JSON.stringify(
+        {
+          bin: { alpha: "./dist/index.js" },
+          name: "@croco/alpha",
+          publishConfig: { access: "public" },
+          version: "0.0.0",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    writeFile(repo, "packages/alpha/src/index.ts", "export const cli = 1;\n");
+
+    const snapshot = createPublicApiSnapshot(repo);
+    const root = getCodeEntrypoint(snapshot.packages[0]);
+
+    expect(root.targets).toEqual([{ conditions: [], target: "./dist/index.js" }]);
+    expect(root.runtimeExports).toEqual([
+      expect.objectContaining({ declarationKind: "const", name: "cli", source: null }),
+    ]);
+  });
+
+  it("fails closed when a public package has no published root mapping", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/package.json",
+      `${JSON.stringify({ name: "@croco/alpha", version: "0.0.0" }, null, 2)}\n`,
+    );
+    writeFile(repo, "packages/alpha/src/index.ts", "export const value = 1;\n");
+
+    expect(() => createPublicApiSnapshot(repo)).toThrow(
+      /must declare publishConfig\.exports or a legacy main\/bin root target/,
+    );
+  });
+
+  it("rejects an explicitly malformed exports map instead of using legacy metadata", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/package.json",
+      `${JSON.stringify(
+        {
+          main: "./dist/index.js",
+          name: "@croco/alpha",
+          publishConfig: { exports: null },
+          version: "0.0.0",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    writeFile(repo, "packages/alpha/src/index.ts", "export const value = 1;\n");
+
+    expect(() => createPublicApiSnapshot(repo)).toThrow(/publishConfig\.exports must include/);
   });
 
   it("expands local star re-exports into runtime and type symbols", () => {
@@ -100,8 +166,9 @@ describe("public-api-surface.mts", () => {
 
     const snapshot = createPublicApiSnapshot(repo);
     const pkg = snapshot.packages[0];
+    const root = getCodeEntrypoint(pkg);
 
-    expect(pkg.runtimeExports).toEqual(
+    expect(root.runtimeExports).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           declarationKind: "const",
@@ -110,10 +177,10 @@ describe("public-api-surface.mts", () => {
         }),
       ]),
     );
-    expect(pkg.runtimeExports).not.toEqual(
+    expect(root.runtimeExports).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "hiddenRuntime" })]),
     );
-    expect(pkg.typeExports).toEqual(
+    expect(root.typeExports).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           declarationKind: "interface",
@@ -173,10 +240,13 @@ describe("public-api-surface.mts", () => {
 
   it("classifies framework-context exports into compatibility groups with coverage metadata", () => {
     const repo = createTempRepo();
-    writePackage(
+    writePackageWithExports(repo, "framework-context", "@croco/framework-context", {
+      ".": "./dist/index.js",
+      "./diagnostics": "./dist/diagnostics.js",
+    });
+    writeFile(
       repo,
-      "framework-context",
-      "@croco/framework-context",
+      "packages/framework-context/src/index.ts",
       [
         'export { Container } from "./libs/Container";',
         'export { Context } from "./libs/Context";',
@@ -188,9 +258,15 @@ describe("public-api-surface.mts", () => {
         'export type { RequestContext, RuntimeContext, RuntimeCapabilities } from "./libs/types";',
       ].join("\n"),
     );
+    writeFile(
+      repo,
+      "packages/framework-context/src/diagnostics.ts",
+      "export const inspectContext = () => undefined;\n",
+    );
 
     const snapshot = createPublicApiSnapshot(repo);
     const pkg = snapshot.packages[0];
+    const root = getCodeEntrypoint(pkg);
 
     expect(pkg.compatibilityGroups?.map((group) => group.id)).toEqual([
       "di",
@@ -201,7 +277,7 @@ describe("public-api-surface.mts", () => {
       "middleware",
       "shutdown",
     ]);
-    expect(pkg.runtimeExports).toEqual(
+    expect(root.runtimeExports).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ compatibilityGroup: "di", name: "Container" }),
         expect.objectContaining({ compatibilityGroup: "context", name: "Context" }),
@@ -218,7 +294,7 @@ describe("public-api-surface.mts", () => {
         expect.objectContaining({ compatibilityGroup: "shutdown", name: "ShutdownManager" }),
       ]),
     );
-    expect(pkg.typeExports).toEqual(
+    expect(root.typeExports).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ compatibilityGroup: "context", name: "RequestContext" }),
         expect.objectContaining({ compatibilityGroup: "context", name: "RuntimeContext" }),
@@ -231,6 +307,9 @@ describe("public-api-surface.mts", () => {
     expect(
       pkg.compatibilityGroups?.find((group) => group.id === "runtime-policy")?.coverage,
     ).toEqual(expect.arrayContaining(["croco runtime-policy check"]));
+    expect(getCodeEntrypoint(pkg, "./diagnostics").runtimeExports).toEqual([
+      expect.not.objectContaining({ compatibilityGroup: expect.any(String) }),
+    ]);
   });
 
   it("fails configured grouped packages when a public export is unclassified", () => {
@@ -289,23 +368,23 @@ describe("public-api-surface.mts", () => {
     const packageBase = {
       packageName: "@croco/framework-context",
       relativeDir: "packages/framework-context",
-      entrypoint: "packages/framework-context/src/index.ts",
-      runtimeExports: [
-        {
-          compatibilityGroup: "di",
-          exportKind: "named",
-          name: "Container",
-          source: "./libs/Container",
-        },
+      entrypoints: [
+        codeEntrypoint([
+          {
+            compatibilityGroup: "di",
+            exportKind: "named",
+            name: "Container",
+            source: "./libs/Container",
+          },
+        ]),
       ],
-      typeExports: [],
     } satisfies Omit<PublicApiSnapshot["packages"][number], "compatibilityGroups">;
     const previous: PublicApiSnapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       packages: [{ ...packageBase, compatibilityGroups: previousGroupMetadata }],
     };
     const current: PublicApiSnapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       packages: [{ ...packageBase, compatibilityGroups: currentGroupMetadata }],
     };
 
@@ -354,34 +433,36 @@ describe("public-api-surface.mts", () => {
     const packageBase: PublicApiSnapshot["packages"][number] = {
       packageName: "@croco/framework-context",
       relativeDir: "packages/framework-context",
-      entrypoint: "packages/framework-context/src/index.ts",
       compatibilityGroups: groupMetadata,
-      runtimeExports: [
-        {
-          compatibilityGroup: "di",
-          exportKind: "named",
-          name: "Container",
-          source: "./libs/Container",
-        },
+      entrypoints: [
+        codeEntrypoint([
+          {
+            compatibilityGroup: "di",
+            exportKind: "named",
+            name: "Container",
+            source: "./libs/Container",
+          },
+        ]),
       ],
-      typeExports: [],
     };
     const previous: PublicApiSnapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       packages: [packageBase],
     };
     const current: PublicApiSnapshot = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       packages: [
         {
           ...packageBase,
-          runtimeExports: [
-            {
-              compatibilityGroup: "context",
-              exportKind: "named",
-              name: "Container",
-              source: "./libs/Container",
-            },
+          entrypoints: [
+            codeEntrypoint([
+              {
+                compatibilityGroup: "context",
+                exportKind: "named",
+                name: "Container",
+                source: "./libs/Container",
+              },
+            ]),
           ],
         },
       ],
@@ -417,6 +498,8 @@ describe("public-api-surface.mts", () => {
     const snapshotPath = join(repo, "public-api-surface.snapshot.json");
     const committedSnapshot = readFileSync(snapshotPath, "utf-8");
 
+    expect(committedSnapshot).toContain('"conditions": ["import"]');
+
     writePackage(repo, "alpha", "@croco/alpha", "export const nextValue = 2;\n");
     const checkResult = runScript(repo, "--check");
     const report = readFileSync(
@@ -430,6 +513,313 @@ describe("public-api-surface.mts", () => {
     expect(readFileSync(snapshotPath, "utf-8")).toBe(committedSnapshot);
     expect(report).toContain("`+ nextValue (const)`");
     expect(report).toContain("`- initialValue (const)`");
+  }, 20000);
+
+  it("captures sorted subpaths while preserving conditional target order", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      "./jobs": { types: "./dist/jobs.d.ts", import: "./dist/jobs.js" },
+      ".": {
+        import: "./dist/index.mjs",
+        require: "./dist/index.js",
+        types: "./dist/index.d.ts",
+      },
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const root = 1;\n");
+    writeFile(repo, "packages/alpha/src/jobs.ts", "export const job = 1;\n");
+
+    const pkg = createPublicApiSnapshot(repo).packages[0];
+
+    expect(pkg.entrypoints.map((entrypoint) => entrypoint.exportPath)).toEqual([".", "./jobs"]);
+    expect(pkg.entrypoints[0].targets).toEqual([
+      { conditions: ["import"], target: "./dist/index.mjs" },
+      { conditions: ["require"], target: "./dist/index.js" },
+      { conditions: ["types"], target: "./dist/index.d.ts" },
+    ]);
+  });
+
+  it("tracks a type-only subpath and focuses type-symbol drift on that subpath", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": "./dist/index.js",
+      "./types": { types: "./dist/types.d.ts" },
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const root = 1;\n");
+    writeFile(repo, "packages/alpha/src/types.ts", "export type Before = string;\n");
+    const previous = createPublicApiSnapshot(repo);
+    const typesEntrypoint = getCodeEntrypoint(previous.packages[0], "./types");
+
+    expect(typesEntrypoint.targets).toEqual([
+      { conditions: ["types"], target: "./dist/types.d.ts" },
+    ]);
+    expect(typesEntrypoint.runtimeExports).toEqual([]);
+    expect(typesEntrypoint.typeExports).toEqual([expect.objectContaining({ name: "Before" })]);
+
+    writeFile(repo, "packages/alpha/src/types.ts", "export type After = number;\n");
+    const diff = diffPublicApiSnapshots(previous, createPublicApiSnapshot(repo));
+
+    expect(diff.packages[0].entrypoints).toEqual([
+      expect.objectContaining({
+        exportPath: "./types",
+        runtime: { added: [], removed: [] },
+        type: {
+          added: [expect.objectContaining({ name: "After" })],
+          removed: [expect.objectContaining({ name: "Before" })],
+        },
+      }),
+    ]);
+  });
+
+  it("represents shared-source subpaths independently", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": "./dist/index.js",
+      "./alias": "./dist/index.mjs",
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const value = 1;\n");
+
+    const entrypoints = createPublicApiSnapshot(repo).packages[0].entrypoints;
+
+    expect(entrypoints).toHaveLength(2);
+    expect(
+      entrypoints.every(
+        (entrypoint) =>
+          entrypoint.kind === "code" &&
+          entrypoint.sourceEntrypoint === "packages/alpha/src/index.ts",
+      ),
+    ).toBe(true);
+  });
+
+  it("tracks JSON and CSS assets without TypeScript extraction", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": "./dist/index.js",
+      "./data.json": "./dist/data.json",
+      "./styles.css": "./dist/styles.css",
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const value = 1;\n");
+
+    const entrypoints = createPublicApiSnapshot(repo).packages[0].entrypoints;
+
+    expect(entrypoints[1]).toMatchObject({ assetKind: "json", kind: "asset" });
+    expect(entrypoints[2]).toMatchObject({ assetKind: "css", kind: "asset" });
+  });
+
+  it("focuses asset target drift on the affected subpath", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": "./dist/index.js",
+      "./data.json": "./dist/data.json",
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const value = 1;\n");
+    const previous = createPublicApiSnapshot(repo);
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": "./dist/index.js",
+      "./data.json": "./dist/data-v2.json",
+    });
+
+    const diff = diffPublicApiSnapshots(previous, createPublicApiSnapshot(repo));
+
+    expect(diff.packages[0].entrypoints).toEqual([
+      expect.objectContaining({ exportPath: "./data.json", targetsChanged: true }),
+    ]);
+  });
+
+  it("fails when conditional code targets resolve to divergent sources", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": { import: "./dist/index.js", types: "./dist/types.d.ts" },
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const value = 1;\n");
+    writeFile(repo, "packages/alpha/src/types.ts", "export type Value = string;\n");
+
+    expect(() => createPublicApiSnapshot(repo)).toThrow(
+      /@croco\/alpha \..*divergent sources.*import=.*index\.ts.*types=.*types\.ts/,
+    );
+  });
+
+  it("fails with package, subpath, and condition evidence for a missing source", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": "./dist/index.js",
+      "./jobs": { import: "./dist/missing.js" },
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const value = 1;\n");
+
+    expect(() => createPublicApiSnapshot(repo)).toThrow(
+      /@croco\/alpha \.\/jobs \(import\).*found 0/,
+    );
+  });
+
+  it("fails when a target maps ambiguously to a source file and directory index", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": "./dist/index.js",
+      "./jobs": "./dist/jobs.js",
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const root = 1;\n");
+    writeFile(repo, "packages/alpha/src/jobs.ts", "export const fileJob = 1;\n");
+    writeFile(repo, "packages/alpha/src/jobs/index.ts", "export const directoryJob = 1;\n");
+
+    expect(() => createPublicApiSnapshot(repo)).toThrow(
+      /@croco\/alpha \.\/jobs \(default\).*found 2.*jobs\.ts.*jobs\/index\.ts/,
+    );
+  });
+
+  it("rejects traversal-like export paths and targets", () => {
+    const targetRepo = createTempRepo();
+    writePackageWithExports(targetRepo, "alpha", "@croco/alpha", {
+      ".": "./dist/../outside.js",
+    });
+    writeFile(targetRepo, "packages/alpha/src/index.ts", "export const value = 1;\n");
+
+    expect(() => createPublicApiSnapshot(targetRepo)).toThrow(/invalid export target/);
+
+    const pathRepo = createTempRepo();
+    writePackageWithExports(pathRepo, "alpha", "@croco/alpha", {
+      ".": "./dist/index.js",
+      "./../outside": "./dist/outside.js",
+    });
+    writeFile(pathRepo, "packages/alpha/src/index.ts", "export const value = 1;\n");
+    writeFile(pathRepo, "packages/alpha/src/outside.ts", "export const outside = 1;\n");
+
+    expect(() => createPublicApiSnapshot(pathRepo)).toThrow(/invalid export path/);
+  });
+
+  it("reports secondary symbol drift and entrypoint removal by exact path", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": "./dist/index.js",
+      "./jobs": "./dist/jobs.js",
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const root = 1;\n");
+    writeFile(repo, "packages/alpha/src/jobs.ts", "export const before = 1;\n");
+    const previous = createPublicApiSnapshot(repo);
+    writeFile(repo, "packages/alpha/src/jobs.ts", "export const after = 1;\n");
+    const symbolDiff = diffPublicApiSnapshots(previous, createPublicApiSnapshot(repo));
+
+    expect(symbolDiff.packages[0].entrypoints[0]).toMatchObject({
+      entrypointStatus: "changed",
+      exportPath: "./jobs",
+    });
+
+    writePackageWithExports(repo, "alpha", "@croco/alpha", { ".": "./dist/index.js" });
+    const current = createPublicApiSnapshot(repo);
+    const removalDiff = diffPublicApiSnapshots(previous, current);
+    const summary = summarizePublicApiDiff(current, removalDiff, "snapshot.json", "diff.md");
+    const markdown = buildPublicApiReportMarkdown(summary, removalDiff);
+
+    expect(markdown).toContain("#### ./jobs");
+    expect(markdown).toContain("Entrypoint status: removed");
+  });
+
+  it("canonicalizes export-path order but treats condition order as drift", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      "./jobs": "./dist/jobs.js",
+      ".": { import: "./dist/index.js", types: "./dist/index.d.ts" },
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const root = 1;\n");
+    writeFile(repo, "packages/alpha/src/jobs.ts", "export const job = 1;\n");
+    const previous = createPublicApiSnapshot(repo);
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": { types: "./dist/index.d.ts", import: "./dist/index.js" },
+      "./jobs": "./dist/jobs.js",
+    });
+    const current = createPublicApiSnapshot(repo);
+    const diff = diffPublicApiSnapshots(previous, current);
+
+    expect(current.packages[0].entrypoints.map((entrypoint) => entrypoint.exportPath)).toEqual([
+      ".",
+      "./jobs",
+    ]);
+    expect(diff.packages[0].entrypoints).toEqual([
+      expect.objectContaining({ exportPath: ".", targetsChanged: true }),
+    ]);
+  });
+
+  it("strictly rejects schema v1 and duplicate entrypoints", () => {
+    expect(() => parsePublicApiSnapshot({ packages: [], schemaVersion: 1 })).toThrow(
+      /schemaVersion 2/,
+    );
+    expect(() =>
+      parsePublicApiSnapshot({
+        packages: [
+          {
+            entrypoints: [assetEntrypoint("."), assetEntrypoint(".")],
+            packageName: "@croco/alpha",
+            relativeDir: "packages/alpha",
+          },
+        ],
+        schemaVersion: 2,
+      }),
+    ).toThrow(/unique entrypoints/);
+
+    const duplicatePackage = {
+      entrypoints: [assetEntrypoint(".")],
+      packageName: "@croco/alpha",
+      relativeDir: "packages/alpha",
+    };
+    expect(() =>
+      parsePublicApiSnapshot({
+        packages: [duplicatePackage, duplicatePackage],
+        schemaVersion: 2,
+      }),
+    ).toThrow(/duplicate package names/);
+
+    expect(() =>
+      parsePublicApiSnapshot({
+        packages: [
+          {
+            ...duplicatePackage,
+            entrypoints: [
+              {
+                ...assetEntrypoint("."),
+                targets: [{ conditions: [], target: "./dist/../secret.json" }],
+              },
+            ],
+          },
+        ],
+        schemaVersion: 2,
+      }),
+    ).toThrow(/invalid export target/);
+
+    expect(() =>
+      parsePublicApiSnapshot({
+        packages: [
+          {
+            ...duplicatePackage,
+            entrypoints: [assetEntrypoint("./../secret")],
+          },
+        ],
+        schemaVersion: 2,
+      }),
+    ).toThrow(/invalid export path/);
+  });
+
+  it("check mode reports removed subpaths without rewriting the snapshot", () => {
+    const repo = createTempRepo();
+    writePackageWithExports(repo, "alpha", "@croco/alpha", {
+      ".": "./dist/index.js",
+      "./jobs": "./dist/jobs.js",
+    });
+    writeFile(repo, "packages/alpha/src/index.ts", "export const root = 1;\n");
+    writeFile(repo, "packages/alpha/src/jobs.ts", "export const job = 1;\n");
+    expect(runScript(repo, "--write").status).toBe(0);
+    const snapshotPath = join(repo, "public-api-surface.snapshot.json");
+    const before = readFileSync(snapshotPath, "utf-8");
+    writePackageWithExports(repo, "alpha", "@croco/alpha", { ".": "./dist/index.js" });
+
+    const result = runScript(repo, "--check");
+    const report = readFileSync(
+      join(repo, "ci-reports", "package-quality", "public-api-diff.md"),
+      "utf-8",
+    );
+
+    expect(result.status).toBe(1);
+    expect(readFileSync(snapshotPath, "utf-8")).toBe(before);
+    expect(report).toContain("#### ./jobs");
+    expect(report).toContain("Entrypoint status: removed");
   }, 20000);
 });
 
@@ -447,6 +837,14 @@ function writePackage(repo: string, dirName: string, packageName: string, source
     `${JSON.stringify(
       {
         name: packageName,
+        publishConfig: {
+          exports: {
+            ".": {
+              import: "./dist/index.js",
+              types: "./dist/index.d.ts",
+            },
+          },
+        },
         version: "0.0.0",
       },
       null,
@@ -454,6 +852,57 @@ function writePackage(repo: string, dirName: string, packageName: string, source
     )}\n`,
   );
   writeFile(repo, `packages/${dirName}/src/index.ts`, source);
+}
+
+function writePackageWithExports(
+  repo: string,
+  dirName: string,
+  packageName: string,
+  exportsMap: Record<string, unknown>,
+): void {
+  writeFile(
+    repo,
+    `packages/${dirName}/package.json`,
+    `${JSON.stringify(
+      {
+        name: packageName,
+        publishConfig: { exports: exportsMap },
+        version: "0.0.0",
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
+function getCodeEntrypoint(pkg: PublicApiPackage, exportPath = "."): PublicApiCodeEntrypoint {
+  const entrypoint = pkg.entrypoints.find((candidate) => candidate.exportPath === exportPath);
+  if (entrypoint?.kind !== "code") {
+    throw new Error(`Expected ${pkg.packageName} ${exportPath} to be a code entrypoint`);
+  }
+  return entrypoint;
+}
+
+function codeEntrypoint(
+  runtimeExports: PublicApiCodeEntrypoint["runtimeExports"],
+): PublicApiCodeEntrypoint {
+  return {
+    exportPath: ".",
+    kind: "code",
+    runtimeExports,
+    sourceEntrypoint: "packages/framework-context/src/index.ts",
+    targets: [{ conditions: ["import"], target: "./dist/index.js" }],
+    typeExports: [],
+  };
+}
+
+function assetEntrypoint(exportPath: string) {
+  return {
+    assetKind: "json",
+    exportPath,
+    kind: "asset",
+    targets: [{ conditions: [], target: "./dist/data.json" }],
+  };
 }
 
 function writeFile(repo: string, relativePath: string, content: string): void {

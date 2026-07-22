@@ -35,6 +35,24 @@ describe("production-ready-check.mts", () => {
     expect(buildProductionReadyMarkdown(report)).toContain("| `@croco/stable` | Core | pass:");
   });
 
+  it("uses the public API snapshot only as package inventory", () => {
+    const repo = createReadyRepo();
+    const before = createReport(repo);
+    const snapshotPath = join(repo, "public-api-surface.snapshot.json");
+    const snapshot = JSON.parse(readFileSync(snapshotPath, "utf-8")) as {
+      packages: Array<{ entrypoints: unknown[] }>;
+    };
+    snapshot.packages[0].entrypoints.push({
+      assetKind: "json",
+      exportPath: "./data.json",
+      kind: "asset",
+      targets: [{ conditions: [], target: "./dist/data-v2.json" }],
+    });
+    writeJson(snapshotPath, snapshot);
+
+    expect(createReport(repo)).toEqual(before);
+  });
+
   it("fails a structural-only production spine package without behavioral evidence", () => {
     const repo = createReadyRepo({ behavioralEvidencePackages: {} });
 
@@ -44,7 +62,10 @@ describe("production-ready-check.mts", () => {
   });
 
   it("does not require behavioral evidence for a production package outside the spine", () => {
-    const repo = createReadyRepo({ behavioralEvidencePackages: {}, spinePackages: [] });
+    const repo = createReadyRepo({
+      behavioralEvidencePackages: {},
+      spinePackages: [],
+    });
 
     const report = createReport(repo);
 
@@ -59,7 +80,10 @@ describe("production-ready-check.mts", () => {
       behavioralEvidencePackages: {
         stable: {
           runtime: "cloudflare-workers",
-          positive: { testFile: "src/tests/Behavior.spec.ts", testName: "proves public success" },
+          positive: {
+            testFile: "src/tests/Behavior.spec.ts",
+            testName: "proves public success",
+          },
         },
       },
     });
@@ -74,7 +98,10 @@ describe("production-ready-check.mts", () => {
     const repo = createReadyRepo({
       behavioralEvidencePackages: {
         stable: behavioralEvidence({
-          negative: { testFile: "src/tests/Missing.spec.ts", testName: "renamed failure" },
+          negative: {
+            testFile: "src/tests/Missing.spec.ts",
+            testName: "renamed failure",
+          },
         }),
       },
     });
@@ -94,7 +121,9 @@ describe("production-ready-check.mts", () => {
   ])("rejects %s behavioral evidence paths", (_label, testFile) => {
     const repo = createReadyRepo({
       behavioralEvidencePackages: {
-        stable: behavioralEvidence({ positive: { testFile, testName: "proves public success" } }),
+        stable: behavioralEvidence({
+          positive: { testFile, testName: "proves public success" },
+        }),
       },
     });
 
@@ -419,7 +448,9 @@ describe("production-ready-check.mts", () => {
     const catalogPath = join(repo, "docs/package-catalog.json");
     const catalog = JSON.parse(readFileSync(catalogPath, "utf-8")) as {
       spine: {
-        behavioralEvidence: { packages: { stable: ReturnType<typeof behavioralEvidence> } };
+        behavioralEvidence: {
+          packages: { stable: ReturnType<typeof behavioralEvidence> };
+        };
       };
     };
     catalog.spine.behavioralEvidence.packages.stable = behavioralEvidence({
@@ -537,7 +568,9 @@ describe("production-ready-check.mts", () => {
     writePackage(repo, "stable");
     writeGeneratedApiDocs(repo, "stable");
     writePackage(repo, "beta", { readme: false, tests: false });
-    writeCatalogMetadata(repo, ["stable", "beta"], { productionPackages: ["stable"] });
+    writeCatalogMetadata(repo, ["stable", "beta"], {
+      productionPackages: ["stable"],
+    });
     writeDocsBaseline(repo);
     writePublicApiSnapshot(repo, ["@croco/stable", "@croco/beta"]);
 
@@ -630,8 +663,14 @@ type BehavioralFixture = {
 function behavioralEvidence(overrides: Partial<BehavioralFixture> = {}): BehavioralFixture {
   return {
     runtime: "node",
-    positive: { testFile: "src/tests/Behavior.spec.ts", testName: "proves public success" },
-    negative: { testFile: "src/tests/Behavior.spec.ts", testName: "proves public failure" },
+    positive: {
+      testFile: "src/tests/Behavior.spec.ts",
+      testName: "proves public success",
+    },
+    negative: {
+      testFile: "src/tests/Behavior.spec.ts",
+      testName: "proves public failure",
+    },
     ...overrides,
   };
 }
@@ -749,8 +788,14 @@ function writeCatalogMetadata(
           packageName,
           {
             runtime: "node",
-            positive: { testFile: "src/tests/Behavior.spec.ts", testName: "proves public success" },
-            negative: { testFile: "src/tests/Behavior.spec.ts", testName: "proves public failure" },
+            positive: {
+              testFile: "src/tests/Behavior.spec.ts",
+              testName: "proves public success",
+            },
+            negative: {
+              testFile: "src/tests/Behavior.spec.ts",
+              testName: "proves public failure",
+            },
           },
         ]),
     );
@@ -796,7 +841,9 @@ function writeCatalogMetadata(
 
 function writeDocsBaseline(
   repo: string,
-  options: { readonly temporaryProductionApiDocExceptions?: Record<string, string> } = {},
+  options: {
+    readonly temporaryProductionApiDocExceptions?: Record<string, string>;
+  } = {},
 ): void {
   writeJson(join(repo, "docs", "package-docs-baseline.json"), {
     schemaVersion: 1,
@@ -809,13 +856,20 @@ function writeDocsBaseline(
 
 function writePublicApiSnapshot(repo: string, packageNames: readonly string[]): void {
   writeJson(join(repo, "public-api-surface.snapshot.json"), {
-    schemaVersion: 1,
+    schemaVersion: 2,
     packages: packageNames.map((packageName) => ({
       packageName,
       relativeDir: `packages/${packageName.replace(/^@croco\//, "")}`,
-      entrypoint: `packages/${packageName.replace(/^@croco\//, "")}/src/index.ts`,
-      runtimeExports: [],
-      typeExports: [],
+      entrypoints: [
+        {
+          exportPath: ".",
+          kind: "code",
+          targets: [{ conditions: ["import"], target: "./dist/index.js" }],
+          sourceEntrypoint: `packages/${packageName.replace(/^@croco\//, "")}/src/index.ts`,
+          runtimeExports: [],
+          typeExports: [],
+        },
+      ],
     })),
   });
 }

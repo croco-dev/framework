@@ -16,9 +16,9 @@ import ts from "typescript";
 
 import {
   createPackageQualityReport,
-  readPackages,
   type PackageQualityRow,
   type QualityTask,
+  readPackages,
 } from "./package-quality-report.mts";
 
 type CheckStatus = "pass" | "fail" | "not-applicable" | "not-collected";
@@ -377,7 +377,11 @@ function parseBehavioralEvidence(
       errors,
     );
     if (positive && negative) {
-      behavioralEvidenceByPackage.set(packageName, { runtime: "node", positive, negative });
+      behavioralEvidenceByPackage.set(packageName, {
+        runtime: "node",
+        positive,
+        negative,
+      });
     }
   }
 
@@ -492,9 +496,9 @@ function loadPublicApiSnapshotEvidence(rootDir: string): PublicApiSnapshotEviden
   }
 
   const snapshot = readJsonFile(snapshotPath);
-  if (!isRecord(snapshot) || !Array.isArray(snapshot.packages)) {
+  if (!isRecord(snapshot) || snapshot.schemaVersion !== 2 || !Array.isArray(snapshot.packages)) {
     return {
-      errors: [`${publicApiSnapshotPath}: packages must be an array`],
+      errors: [`${publicApiSnapshotPath}: schemaVersion must be 2 and packages must be an array`],
       missingSnapshot: false,
       packageNames: new Set(),
     };
