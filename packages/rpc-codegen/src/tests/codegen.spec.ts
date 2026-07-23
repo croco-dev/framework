@@ -287,9 +287,11 @@ describe("generateClientFiles", () => {
     generateClientFiles(routes, TEMP_DIR);
     fs.appendFileSync(path.join(TEMP_DIR, "user.ts"), "// drift\n");
     fs.rmSync(path.join(TEMP_DIR, "rpc.ts"));
+    fs.writeFileSync(path.join(TEMP_DIR, "Zulu.ts"), "export {};\n");
     fs.writeFileSync(path.join(TEMP_DIR, "stale.ts"), "export {};\n");
 
     expect(checkGeneratedClientFiles(routes, TEMP_DIR)).toEqual([
+      { filePath: path.join(TEMP_DIR, "Zulu.ts"), status: "unexpected" },
       { filePath: path.join(TEMP_DIR, "rpc.ts"), status: "missing" },
       { filePath: path.join(TEMP_DIR, "stale.ts"), status: "unexpected" },
       { filePath: path.join(TEMP_DIR, "user.ts"), status: "changed" },

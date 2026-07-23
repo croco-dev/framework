@@ -3521,7 +3521,9 @@ function compareClientFiles(
     }
   }
 
-  return drifts.sort((left, right) => left.filePath.localeCompare(right.filePath));
+  return drifts.sort((left, right) =>
+    left.filePath < right.filePath ? -1 : left.filePath > right.filePath ? 1 : 0,
+  );
 }
 
 function collectOutputFiles(directory: string): string[] {
