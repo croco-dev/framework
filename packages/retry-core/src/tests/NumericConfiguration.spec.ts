@@ -1,5 +1,6 @@
+import { Container } from "@croco/framework-context";
 import { ProblemCategory } from "@croco/problems-core";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CircuitBreaker,
@@ -31,6 +32,10 @@ function createRedisMock() {
 }
 
 describe("NumericConfiguration", () => {
+  beforeEach(() => {
+    Container.reset();
+  });
+
   describe("circuit breaker options", () => {
     it.each([0, -1, ...NON_INTEGER_VALUES, ...NON_FINITE_VALUES, Number.MAX_SAFE_INTEGER + 1])(
       "rejects invalid halfOpenRequests %s before state access",
@@ -214,7 +219,11 @@ describe("NumericConfiguration", () => {
         );
         expect(redis.get).not.toHaveBeenCalled();
         expect(redis.set).not.toHaveBeenCalled();
+        expect(redis.incr).not.toHaveBeenCalled();
+        expect(redis.del).not.toHaveBeenCalled();
         expect(redis.expire).not.toHaveBeenCalled();
+        expect(redis.eval).not.toHaveBeenCalled();
+        expect(redis.scan).not.toHaveBeenCalled();
       },
     );
 

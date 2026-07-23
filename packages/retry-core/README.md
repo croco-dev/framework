@@ -55,8 +55,9 @@ const breaker = new CircuitBreaker({
 ```
 
 숫자형 신뢰성 옵션은 생성 또는 실행 경계에서 검증됩니다. 백오프 `delay`와 Lambda의 reserve/delay는
-0 이상 정수이고, 타이머 기반 값은 최대 2,147,483,647ms입니다. `multiplier`는 양의 유한수이며,
-`maxAttempts`, `halfOpenRequests`, `failureThreshold`, Redis `ttlSeconds`는 양의 안전 정수입니다. 잘못된 값은 상태 접근,
+0 이상 정수이고, `maxDelay`, `openDuration`, circuit breaker `timeout`은 1~2,147,483,647ms 정수입니다.
+`multiplier`는 양의 유한수이며, `maxAttempts`, `halfOpenRequests`, `failureThreshold`, `successThreshold`, Redis
+`ttlSeconds`는 양의 안전 정수입니다. 잘못된 값은 상태 접근,
 사용자 콜백, sleep 또는 Redis I/O 전에 `InvalidRetryConfigurationProblem`으로 거부됩니다. 옵션을 생략하면
 기존 기본값을 사용합니다.
 
