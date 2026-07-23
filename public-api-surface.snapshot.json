@@ -6307,44 +6307,14 @@
               "source": "./libs/EventHandler"
             },
             {
-              "name": "EventOrdering",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventOrdering"
-            },
-            {
-              "name": "EventOrderingConfig",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventOrdering"
-            },
-            {
-              "name": "EventOrderingStrategy",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventOrdering"
-            },
-            {
               "name": "EventPublishing",
               "exportKind": "named",
               "source": "./libs/interfaces/EventPublishing"
             },
             {
-              "name": "EventReplay",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventReplay"
-            },
-            {
               "name": "EventSerializer",
               "exportKind": "named",
               "source": "./libs/EventSerializer"
-            },
-            {
-              "name": "EventSnapshot",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventReplay"
-            },
-            {
-              "name": "EventStore",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventReplay"
             },
             {
               "name": "EventSubscribing",
@@ -6365,51 +6335,6 @@
               "name": "HandlerResolver",
               "exportKind": "named",
               "source": "./libs/HandlerResolver"
-            },
-            {
-              "name": "OrderedEventContext",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventOrdering"
-            },
-            {
-              "name": "OrderedEventHandler",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventOrdering"
-            },
-            {
-              "name": "OrderedEventResult",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventOrdering"
-            },
-            {
-              "name": "OrderingPolicy",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventOrdering"
-            },
-            {
-              "name": "PartitionKeyExtractor",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventOrdering"
-            },
-            {
-              "name": "PartitionStatus",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventOrdering"
-            },
-            {
-              "name": "ReplayMode",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventReplay"
-            },
-            {
-              "name": "ReplayOptions",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventReplay"
-            },
-            {
-              "name": "ReplayResult",
-              "exportKind": "named",
-              "source": "./libs/interfaces/EventReplay"
             },
             {
               "name": "RetryableEventHandler",

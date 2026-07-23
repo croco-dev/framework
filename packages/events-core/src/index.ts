@@ -79,34 +79,9 @@ export type {
 } from "./libs/interfaces/DeadLetterQueue";
 export { DEFAULT_DEAD_LETTER_POLICY } from "./libs/interfaces/DeadLetterQueue";
 /**
- * 이벤트 순서 보장 인터페이스와 타입들입니다.
- */
-export type {
-  EventOrdering,
-  EventOrderingConfig,
-  EventOrderingStrategy,
-  OrderedEventContext,
-  OrderedEventHandler,
-  OrderedEventResult,
-  OrderingPolicy,
-  PartitionKeyExtractor,
-  PartitionStatus,
-} from "./libs/interfaces/EventOrdering";
-/**
  * 이벤트 발행 인터페이스입니다.
  */
 export type { EventPublishing } from "./libs/interfaces/EventPublishing";
-/**
- * 이벤트 리플레이(Replay) 인터페이스와 타입들입니다.
- */
-export type {
-  EventReplay,
-  EventSnapshot,
-  EventStore,
-  ReplayMode,
-  ReplayOptions,
-  ReplayResult,
-} from "./libs/interfaces/EventReplay";
 /**
  * 이벤트 구독 인터페이스입니다.
  */
