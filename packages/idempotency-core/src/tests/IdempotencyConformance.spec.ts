@@ -14,6 +14,10 @@ describe("idempotency store conformance", () => {
       "throws a Problem when the same key has a different fingerprint",
       "isolates the same key across tenant namespaces",
       "expires records by key and allows a fresh reservation",
+      "rejects invalid ttl before reserve state changes",
+      "rejects invalid ttl before commit state changes",
+      "rejects invalid ttl before fail state changes",
+      "keeps expiration absent when ttl is omitted",
     ]);
   });
 
