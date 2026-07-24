@@ -1,8 +1,8 @@
+import { describe, it, vi } from "vitest";
 import { Problem } from "@croco/problems-core";
 import { createProviderNoCredentialConformanceSuite } from "@croco/testing";
-import { describe, it, vi } from "vitest";
 
-const mockPublishJSON = vi.fn();
+const { mockPublishJSON } = vi.hoisted(() => ({ mockPublishJSON: vi.fn() }));
 
 vi.mock("@upstash/qstash", () => ({
   Client: class {

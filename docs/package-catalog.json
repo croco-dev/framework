@@ -1161,7 +1161,7 @@
             "description": "No-credential diagnostics exclude configured Clerk secret samples."
           }
         },
-        "knownGaps": ["liveSmoke"]
+        "knownGaps": ["Recorded real Clerk liveSmoke evidence is required before certified state."]
       },
       {
         "package": "@croco/tasks-qstash",

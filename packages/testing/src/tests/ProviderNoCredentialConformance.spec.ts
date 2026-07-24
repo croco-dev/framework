@@ -43,15 +43,22 @@ function createSuite(
 
 describe("Provider no-credential conformance", () => {
   it("passes stable diagnostics, network isolation, environment restoration, and redaction", async () => {
+    const previousToken = process.env.FIXTURE_API_TOKEN;
     process.env.FIXTURE_API_TOKEN = "ambient-value";
     const suite = createSuite();
 
-    for (const testCase of suite.cases) {
-      await testCase.run();
-      expect(process.env.FIXTURE_API_TOKEN).toBe("ambient-value");
+    try {
+      for (const testCase of suite.cases) {
+        await testCase.run();
+        expect(process.env.FIXTURE_API_TOKEN).toBe("ambient-value");
+      }
+    } finally {
+      if (previousToken === undefined) {
+        delete process.env.FIXTURE_API_TOKEN;
+      } else {
+        process.env.FIXTURE_API_TOKEN = previousToken;
+      }
     }
-
-    delete process.env.FIXTURE_API_TOKEN;
   });
 
   it("rejects diagnostics that omit actionable configuration evidence", async () => {

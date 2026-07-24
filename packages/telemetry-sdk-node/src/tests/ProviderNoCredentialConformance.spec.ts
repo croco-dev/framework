@@ -1,6 +1,7 @@
 import { Problem } from "@croco/problems-core";
 import { createProviderNoCredentialConformanceSuite } from "@croco/testing";
 import { afterEach, describe, it, vi } from "vitest";
+import { TelemetryRuntimeProblem } from "../libs/problems/TelemetryProblems";
 import { TelemetryRuntime } from "../runtime";
 
 const SECRET_SAMPLE = "telemetry-exporter-secret-sample";
@@ -22,7 +23,9 @@ describe("Telemetry provider no-credential conformance", () => {
         missingEnvironment: ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "OTEL_EXPORTER_OTLP_ENDPOINT"],
         run: async () => {
           await TelemetryRuntime.reset();
-          const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
+          const fetchSpy = vi
+            .spyOn(globalThis, "fetch")
+            .mockRejectedValue(new TelemetryRuntimeProblem("init", "network"));
 
           try {
             await TelemetryRuntime.getInstance().init({

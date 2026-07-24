@@ -1,5 +1,5 @@
-import { createProviderNoCredentialConformanceSuite } from "@croco/testing";
 import { describe, it, vi } from "vitest";
+import { createProviderNoCredentialConformanceSuite } from "@croco/testing";
 import { PolarBillingDiagnosticsProvider } from "../libs/PolarBillingDiagnosticsProvider";
 
 const SECRET_SAMPLE = "polar-webhook-secret-sample";
