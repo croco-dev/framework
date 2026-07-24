@@ -44,6 +44,7 @@ overrides:
   form-data: 4.0.6
   linkify-it: 5.0.2
   openai>ws: 8.21.0
+  postcss: 8.5.12
   protobufjs: 7.6.1
   rollup: 4.59.0
   svgo: 4.0.2
@@ -96,7 +97,7 @@ importers:
         version: 1.7.0
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       turbo:
         specifier: 2.10.2
         version: 2.10.2
@@ -207,7 +208,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -247,7 +248,7 @@ importers:
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -356,7 +357,7 @@ importers:
         version: 19.2.5(react@19.2.5)
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -375,7 +376,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -409,7 +410,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -428,7 +429,7 @@ importers:
         version: 22.19.3
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -456,7 +457,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -499,7 +500,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -539,7 +540,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -576,7 +577,7 @@ importers:
         version: link:../testing
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -607,7 +608,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -647,7 +648,7 @@ importers:
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -663,7 +664,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
@@ -688,7 +689,7 @@ importers:
         version: link:../testing
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
@@ -710,7 +711,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -750,7 +751,7 @@ importers:
         version: link:../testing
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -818,7 +819,7 @@ importers:
         version: 22.19.3
       tsup:
         specifier: ^8.3.5
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typedi:
         specifier: 0.10.0
         version: 0.10.0
@@ -864,7 +865,7 @@ importers:
         version: 4.1.0
       tsup:
         specifier: ^8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
@@ -886,7 +887,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -939,7 +940,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
@@ -1343,7 +1344,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1489,7 +1490,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -1514,7 +1515,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -1604,7 +1605,7 @@ importers:
     devDependencies:
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
@@ -1613,7 +1614,7 @@ importers:
     devDependencies:
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
@@ -1635,7 +1636,7 @@ importers:
     devDependencies:
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
@@ -1767,7 +1768,7 @@ importers:
         version: link:../events-inmemory
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -1792,7 +1793,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -1826,7 +1827,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -1863,7 +1864,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -1913,7 +1914,7 @@ importers:
         version: 3.0.26(zod@4.3.6)
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1950,7 +1951,7 @@ importers:
     devDependencies:
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1978,7 +1979,7 @@ importers:
         version: link:../testing
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -2009,7 +2010,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -2046,7 +2047,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -2117,7 +2118,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2163,7 +2164,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -2191,7 +2192,7 @@ importers:
         version: link:../testing
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2219,7 +2220,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -2244,7 +2245,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -2281,7 +2282,7 @@ importers:
         version: 11.10.0
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
@@ -2315,7 +2316,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -2352,7 +2353,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -2377,7 +2378,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -2414,7 +2415,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.4.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -2504,7 +2505,7 @@ importers:
         version: link:../preset-node
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
@@ -2517,7 +2518,7 @@ importers:
     devDependencies:
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
@@ -2536,7 +2537,7 @@ importers:
     devDependencies:
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
@@ -2555,7 +2556,7 @@ importers:
     devDependencies:
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
@@ -2666,7 +2667,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2694,7 +2695,7 @@ importers:
         version: link:../testing
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -2716,7 +2717,7 @@ importers:
         version: 20.19.33
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
@@ -2799,7 +2800,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: ^8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.0.0
         version: 5.9.3
@@ -2827,7 +2828,7 @@ importers:
         version: 0.2.2
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -2861,7 +2862,7 @@ importers:
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.15.6)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.20.0)
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -2895,7 +2896,7 @@ importers:
         version: 22.19.3
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -3157,7 +3158,7 @@ importers:
         version: link:../protocols-rest
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
@@ -3394,7 +3395,7 @@ importers:
         version: 19.2.5(react@19.2.5)
       tsup:
         specifier: ^8.0.0
-        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -7423,7 +7424,7 @@ packages:
     resolution: {integrity: sha512-DZ7M/hWPZyr17ZUdoQ+TVXaPj70mYr4XXrAE+GeJbca44haCvZgb191L/jLJmFYewhxRJuBd4lUtNSu986TXag==}
     engines: {node: '>=18'}
     peerDependencies:
-      postcss: ^8.4.47
+      postcss: 8.5.12
 
   detective-sass@6.0.2:
     resolution: {integrity: sha512-i3xpXHDKS0qI2aFW4asQ7fqlPK00ndOVZELvQapFJCaF0VxYmsNWtd0AmvXbTLMk7bfO5VdIeorhY9KfmHVoVA==}
@@ -8890,11 +8891,6 @@ packages:
   mz@2.7.0:
     resolution: {integrity: sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==}
 
-  nanoid@3.3.11:
-    resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
-    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
-
   nanoid@3.3.16:
     resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -9291,7 +9287,7 @@ packages:
     engines: {node: '>= 18'}
     peerDependencies:
       jiti: '>=1.21.0'
-      postcss: '>=8.0.9'
+      postcss: 8.5.12
       tsx: ^4.8.1
       yaml: ^2.4.2
     peerDependenciesMeta:
@@ -9308,7 +9304,7 @@ packages:
     resolution: {integrity: sha512-HQbt28KulC5AJzG+cZtj9kvKB93CFCdLvog1WFLf1D+xmMvPGlBstkpTEZfK5+AN9hfJocyBFCNiqyS48bpgzQ==}
     engines: {node: '>=12.0'}
     peerDependencies:
-      postcss: ^8.2.14
+      postcss: 8.5.12
 
   postcss-selector-parser@6.1.2:
     resolution: {integrity: sha512-Q8qQfPiZ+THO/3ZrOrO0cJJKfpYCagtMUkXbnEfmgUjwXg6z/WBeOyS9APBBPCTSiDV+s4SwQGu8yFsiMRIudg==}
@@ -9321,18 +9317,10 @@ packages:
     resolution: {integrity: sha512-YLJpK0N1brcNJrs9WatuJFtHaV9q5aAOj+S4DI5S7jgHlRfm0PIbDCAFRYMQD5SHq7Fy6xsDhyutgS0QOAs0qw==}
     engines: {node: '>=10'}
     peerDependencies:
-      postcss: ^8.2.9
+      postcss: 8.5.12
 
-  postcss@8.4.49:
-    resolution: {integrity: sha512-OCVPnIObs4N29kxTjzLfUryOkvZEq+pf8jTF0lg8E7uETuWHA+v7j3c/xJmiqpX450191LlmZfUKkXxkTry7nA==}
-    engines: {node: ^10 || ^12 || >=14}
-
-  postcss@8.5.19:
-    resolution: {integrity: sha512-Mz8SaolMd8nB+G13WkORcxQKHZ/NE4xXevtkJHVuG+guo9/wYKlIMTKAqGdEmYOXR2ijPjTYNHssizdaVSUNdQ==}
-    engines: {node: ^10 || ^12 || >=14}
-
-  postcss@8.5.6:
-    resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
+  postcss@8.5.12:
+    resolution: {integrity: sha512-W62t/Se6rA0Az3DfCL0AqJwXuKwBeYg6nOaIgzP+xZ7N5BFCI7DYi1qs6ygUYT6rvfi6t9k65UMLJC+PHZpDAA==}
     engines: {node: ^10 || ^12 || >=14}
 
   postgres-array@2.0.0:
@@ -10096,7 +10084,7 @@ packages:
     peerDependencies:
       '@microsoft/api-extractor': ^7.36.0
       '@swc/core': ^1
-      postcss: ^8.4.12
+      postcss: 8.5.12
       typescript: '>=4.5.0'
     peerDependenciesMeta:
       '@microsoft/api-extractor':
@@ -11927,8 +11915,8 @@ snapshots:
       hast-util-to-html: 9.0.5
       hast-util-to-text: 4.0.2
       hastscript: 9.0.1
-      postcss: 8.5.6
-      postcss-nested: 6.2.0(postcss@8.5.6)
+      postcss: 8.5.12
+      postcss-nested: 6.2.0(postcss@8.5.12)
       unist-util-visit: 5.1.0
       unist-util-visit-parents: 6.0.2
 
@@ -14148,7 +14136,7 @@ snapshots:
       '@vue/shared': 3.5.39
       estree-walker: 2.0.2
       magic-string: 0.30.21
-      postcss: 8.5.19
+      postcss: 8.5.12
       source-map-js: 1.2.1
 
   '@vue/compiler-ssr@3.5.39':
@@ -14784,11 +14772,11 @@ snapshots:
     dependencies:
       node-source-walk: 7.0.2
 
-  detective-postcss@8.0.4(postcss@8.5.19):
+  detective-postcss@8.0.4(postcss@8.5.12):
     dependencies:
       is-url-superb: 4.0.0
-      postcss: 8.5.19
-      postcss-values-parser: 6.0.2(postcss@8.5.19)
+      postcss: 8.5.12
+      postcss-values-parser: 6.0.2(postcss@8.5.12)
 
   detective-sass@6.0.2:
     dependencies:
@@ -16693,8 +16681,6 @@ snapshots:
       object-assign: 4.1.1
       thenify-all: 1.6.0
 
-  nanoid@3.3.11: {}
-
   nanoid@3.3.16: {}
 
   nanostores@1.4.0: {}
@@ -17155,18 +17141,18 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.28.6
 
-  postcss-load-config@6.0.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(yaml@2.9.0):
+  postcss-load-config@6.0.1(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(yaml@2.9.0):
     dependencies:
       lilconfig: 3.1.3
     optionalDependencies:
       jiti: 2.6.1
-      postcss: 8.5.6
+      postcss: 8.5.12
       tsx: 4.21.0
       yaml: 2.9.0
 
-  postcss-nested@6.2.0(postcss@8.5.6):
+  postcss-nested@6.2.0(postcss@8.5.12):
     dependencies:
-      postcss: 8.5.6
+      postcss: 8.5.12
       postcss-selector-parser: 6.1.2
 
   postcss-selector-parser@6.1.2:
@@ -17176,28 +17162,16 @@ snapshots:
 
   postcss-value-parser@4.2.0: {}
 
-  postcss-values-parser@6.0.2(postcss@8.5.19):
+  postcss-values-parser@6.0.2(postcss@8.5.12):
     dependencies:
       color-name: 1.1.4
       is-url-superb: 4.0.0
-      postcss: 8.5.19
+      postcss: 8.5.12
       quote-unquote: 1.0.0
 
-  postcss@8.4.49:
-    dependencies:
-      nanoid: 3.3.11
-      picocolors: 1.1.1
-      source-map-js: 1.2.1
-
-  postcss@8.5.19:
+  postcss@8.5.12:
     dependencies:
       nanoid: 3.3.16
-      picocolors: 1.1.1
-      source-map-js: 1.2.1
-
-  postcss@8.5.6:
-    dependencies:
-      nanoid: 3.3.11
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -17240,7 +17214,7 @@ snapshots:
       detective-amd: 6.1.0
       detective-cjs: 6.1.1
       detective-es6: 5.0.2
-      detective-postcss: 8.0.4(postcss@8.5.19)
+      detective-postcss: 8.0.4(postcss@8.5.12)
       detective-sass: 6.0.2
       detective-scss: 5.0.2
       detective-stylus: 5.0.1
@@ -17248,7 +17222,7 @@ snapshots:
       detective-vue2: 2.3.0(typescript@5.9.3)
       module-definition: 6.0.2
       node-source-walk: 7.0.2
-      postcss: 8.5.19
+      postcss: 8.5.12
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -17941,7 +17915,7 @@ snapshots:
       '@types/stylis': 4.2.7
       css-to-react-native: 3.2.0
       csstype: 3.2.3
-      postcss: 8.4.49
+      postcss: 8.5.12
       react: 19.2.5
       shallowequal: 1.1.0
       stylis: 4.3.6
@@ -18107,7 +18081,7 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsup@8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0):
+  tsup@8.5.1(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0):
     dependencies:
       bundle-require: 5.1.0(esbuild@0.27.2)
       cac: 6.7.14
@@ -18118,7 +18092,7 @@ snapshots:
       fix-dts-default-cjs-exports: 1.0.1
       joycon: 3.1.1
       picocolors: 1.1.1
-      postcss-load-config: 6.0.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(yaml@2.9.0)
+      postcss-load-config: 6.0.1(jiti@2.6.1)(postcss@8.5.12)(tsx@4.21.0)(yaml@2.9.0)
       resolve-from: 5.0.0
       rollup: 4.59.0
       source-map: 0.7.6
@@ -18128,7 +18102,7 @@ snapshots:
       tree-kill: 1.2.2
     optionalDependencies:
       '@swc/core': 1.15.43
-      postcss: 8.5.6
+      postcss: 8.5.12
       typescript: 5.9.3
     transitivePeerDependencies:
       - jiti
@@ -18344,7 +18318,7 @@ snapshots:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
-      postcss: 8.5.6
+      postcss: 8.5.12
       rollup: 4.59.0
       tinyglobby: 0.2.15
     optionalDependencies:
@@ -18359,7 +18333,7 @@ snapshots:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
-      postcss: 8.5.6
+      postcss: 8.5.12
       rollup: 4.59.0
       tinyglobby: 0.2.15
     optionalDependencies:
@@ -18374,7 +18348,7 @@ snapshots:
       esbuild: 0.27.7
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
-      postcss: 8.5.19
+      postcss: 8.5.12
       rollup: 4.59.0
       tinyglobby: 0.2.15
     optionalDependencies:
@@ -18389,7 +18363,7 @@ snapshots:
       esbuild: 0.27.7
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
-      postcss: 8.5.19
+      postcss: 8.5.12
       rollup: 4.59.0
       tinyglobby: 0.2.15
     optionalDependencies:
@@ -18404,7 +18378,7 @@ snapshots:
       esbuild: 0.27.7
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
-      postcss: 8.5.19
+      postcss: 8.5.12
       rollup: 4.59.0
       tinyglobby: 0.2.15
     optionalDependencies:

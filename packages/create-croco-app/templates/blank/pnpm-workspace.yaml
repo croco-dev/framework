@@ -2,6 +2,9 @@ packages:
   - "apps/**/*"
   - "libs/**/*"
 
+overrides:
+  postcss: 8.5.12
+
 allowBuilds:
   "@apollo/protobufjs": true
   "@clerk/shared": true

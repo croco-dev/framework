@@ -41,6 +41,7 @@ overrides:
   form-data: 4.0.6
   linkify-it: 5.0.2
   openai>ws: 8.21.0
+  postcss: 8.5.12
   protobufjs: 7.6.1
   rollup: 4.59.0
   svgo: 4.0.2
