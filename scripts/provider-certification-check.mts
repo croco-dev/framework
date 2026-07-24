@@ -853,7 +853,7 @@ function createCommandEvidenceCheck(
     return notApplicable(key, key, "no certification record");
   }
 
-  if (!requiresCompleteEvidence) {
+  if (!requiresCompleteEvidence && key !== "noCredentialSmoke") {
     return notApplicable(
       key,
       key,

@@ -21337,6 +21337,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createProviderNoCredentialConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/provider-no-credential-conformance",
+              "declarationKind": "function"
+            },
+            {
               "name": "createQStashBatchConformanceSuite",
               "exportKind": "named",
               "source": "./libs/serverless-provider-conformance",
@@ -21917,6 +21923,36 @@
               "name": "ProviderConformanceProfileManifest",
               "exportKind": "named",
               "source": "./libs/provider-conformance-matrix"
+            },
+            {
+              "name": "ProviderNoCredentialConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/provider-no-credential-conformance"
+            },
+            {
+              "name": "ProviderNoCredentialConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/provider-no-credential-conformance"
+            },
+            {
+              "name": "ProviderNoCredentialConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/provider-no-credential-conformance"
+            },
+            {
+              "name": "ProviderNoCredentialDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/provider-no-credential-conformance"
+            },
+            {
+              "name": "ProviderNoCredentialProbeResult",
+              "exportKind": "named",
+              "source": "./libs/provider-no-credential-conformance"
+            },
+            {
+              "name": "ProviderNoCredentialScenario",
+              "exportKind": "named",
+              "source": "./libs/provider-no-credential-conformance"
             },
             {
               "name": "QStashBatchChunkExecutor",

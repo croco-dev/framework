@@ -5,6 +5,7 @@ import {
   createBillingProviderConformanceSuite,
   createLlmProviderConformanceSuite,
   createProviderConformanceMatrixSuite,
+  createProviderNoCredentialConformanceSuite,
   createQStashBatchConformanceSuite,
   createQStashTaskConformanceSuite,
   createQStashTriggerConformanceSuite,
@@ -70,6 +71,7 @@ const PUBLIC_CONFORMANCE_HELPER_EXPORTS = [
   "createDrizzleProviderConformanceSuite",
   "createLlmProviderConformanceSuite",
   "createProviderConformanceMatrixSuite",
+  "createProviderNoCredentialConformanceSuite",
   "createQStashBatchConformanceSuite",
   "createQStashTaskConformanceSuite",
   "createQStashTriggerConformanceSuite",
@@ -290,6 +292,29 @@ describe("@croco/testing conformance public contract", () => {
         },
       ],
     });
+  });
+
+  it("locks provider no-credential case names", () => {
+    const suite = createProviderNoCredentialConformanceSuite({
+      providerName: "Contract Provider",
+      secretSamples: ["contract-secret"],
+      scenarios: [
+        {
+          name: "missing token",
+          diagnosticTokens: ["PROVIDER_TOKEN"],
+          expectedCode: "provider/missing-config",
+          missingEnvironment: ["PROVIDER_TOKEN"],
+          run: unexecuted,
+        },
+      ],
+    });
+
+    expect(caseNames(suite)).toEqual([
+      "Contract Provider: declares at least one no-credential scenario",
+      "Contract Provider missing token: reports a stable actionable diagnostic",
+      "Contract Provider missing token: makes no live network or API call",
+      "Contract Provider missing token: redacts secret-like configuration values",
+    ]);
   });
 
   it("locks Drizzle provider case names from the public subpath", () => {
