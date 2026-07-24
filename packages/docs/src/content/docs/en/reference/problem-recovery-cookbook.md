@@ -6202,7 +6202,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:105:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:110:5` (problem-constructor)
 
 <a id="rpc-codegen-no-rest-controllers-found"></a>
 
@@ -6238,7 +6238,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:111:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:116:5` (problem-constructor)
 
 <a id="saas-demo-demo-endpoint-disabled"></a>
 

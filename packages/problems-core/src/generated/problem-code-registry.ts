@@ -9974,7 +9974,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 105,
+          line: 110,
           column: 5,
           kind: "problem-constructor",
         },
@@ -10035,7 +10035,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 111,
+          line: 116,
           column: 5,
           kind: "problem-constructor",
         },

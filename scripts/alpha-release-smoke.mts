@@ -83,6 +83,7 @@ export const alphaReleaseEvidenceReportPath = "ci-reports/release/alpha-release-
 
 export const alphaReleaseGeneratedAppValidations = [
   "contract:snapshot",
+  "codegen",
   "contract:verify",
   "typecheck",
   "build",

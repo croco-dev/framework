@@ -61,6 +61,11 @@ type GeneratedClientFile = {
   readonly content: string;
 };
 
+export type GeneratedClientDrift = {
+  readonly filePath: string;
+  readonly status: "changed" | "missing" | "unexpected";
+};
+
 type GeneratedClientRouteWithAccess = GeneratedClientRoute & {
   readonly access?: {
     readonly guards?: readonly FrontendActionMetadataReference[];
@@ -139,6 +144,23 @@ export function generateClientFiles(
   outDir: string,
   options: GenerateClientOptions = {},
 ): string[] {
+  const files = emitClientFiles(routes, outDir, options);
+
+  fs.mkdirSync(outDir, { recursive: true });
+
+  for (const file of files) {
+    fs.mkdirSync(path.dirname(file.filePath), { recursive: true });
+    fs.writeFileSync(file.filePath, file.content);
+  }
+
+  return files.map((file) => file.filePath);
+}
+
+function emitClientFiles(
+  routes: GeneratedClientRoute[],
+  outDir: string,
+  options: GenerateClientOptions,
+): readonly GeneratedClientFile[] {
   assertGeneratedClientRoutes(routes);
 
   const domainRouteGroups = groupRoutesByDomain(routes);
@@ -176,14 +198,7 @@ export function generateClientFiles(
     ...(frontendActionManifestFile ? [frontendActionManifestFile] : []),
   ];
 
-  fs.mkdirSync(outDir, { recursive: true });
-
-  for (const file of files) {
-    fs.mkdirSync(path.dirname(file.filePath), { recursive: true });
-    fs.writeFileSync(file.filePath, file.content);
-  }
-
-  return files.map((file) => file.filePath);
+  return files;
 }
 
 export function createFrontendActionManifestFromContractGraph(
@@ -619,6 +634,7 @@ ${entries}
 
 function collectGeneratedRpcConsumerRoutes(
   files: readonly string[],
+  generatedContents?: ReadonlyMap<string, string>,
 ): ContractGraphObservedConsumerRoute[] {
   const routes: ContractGraphObservedConsumerRoute[] = [];
   const metadataPattern =
@@ -629,7 +645,7 @@ function collectGeneratedRpcConsumerRoutes(
       continue;
     }
 
-    const content = fs.readFileSync(file, "utf-8");
+    const content = generatedContents?.get(file) ?? fs.readFileSync(file, "utf-8");
 
     for (const match of content.matchAll(metadataPattern)) {
       const routeId = match[1];
@@ -3449,4 +3465,79 @@ function toPascalCase(value: string): string {
     .filter((part) => part.length > 0)
     .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
     .join("");
+}
+
+export function checkClientFilesFromContractGraph(
+  graph: ContractGraph,
+  outDir: string,
+  options: GenerateClientOptions = {},
+): readonly GeneratedClientDrift[] {
+  assertContractGraphHasNoErrors(graph);
+
+  const files = emitClientFiles([...graph.routes], outDir, options);
+  const generatedContents = new Map(files.map((file) => [file.filePath, file.content]));
+
+  assertContractGraphConsumerRouteCoverage(
+    graph,
+    "rpc-client",
+    collectGeneratedRpcConsumerRoutes([...generatedContents.keys()], generatedContents),
+  );
+
+  return compareClientFiles(files, outDir);
+}
+
+export function checkGeneratedClientFiles(
+  routes: GeneratedClientRoute[],
+  outDir: string,
+  options: GenerateClientOptions = {},
+): readonly GeneratedClientDrift[] {
+  return compareClientFiles(emitClientFiles(routes, outDir, options), outDir);
+}
+
+function compareClientFiles(
+  expectedFiles: readonly GeneratedClientFile[],
+  outDir: string,
+): readonly GeneratedClientDrift[] {
+  const expectedPaths = new Set(expectedFiles.map((file) => path.resolve(file.filePath)));
+  const drifts: GeneratedClientDrift[] = [];
+
+  for (const file of expectedFiles) {
+    if (!fs.existsSync(file.filePath)) {
+      drifts.push({ filePath: file.filePath, status: "missing" });
+      continue;
+    }
+
+    const actual = normalizeGeneratedContent(fs.readFileSync(file.filePath, "utf8"));
+    const expected = normalizeGeneratedContent(file.content);
+
+    if (actual !== expected) {
+      drifts.push({ filePath: file.filePath, status: "changed" });
+    }
+  }
+
+  for (const filePath of collectOutputFiles(outDir)) {
+    if (!expectedPaths.has(path.resolve(filePath))) {
+      drifts.push({ filePath, status: "unexpected" });
+    }
+  }
+
+  return drifts.sort((left, right) =>
+    left.filePath < right.filePath ? -1 : left.filePath > right.filePath ? 1 : 0,
+  );
+}
+
+function collectOutputFiles(directory: string): string[] {
+  if (!fs.existsSync(directory)) {
+    return [];
+  }
+
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+
+    return entry.isDirectory() ? collectOutputFiles(entryPath) : [entryPath];
+  });
+}
+
+function normalizeGeneratedContent(content: string): string {
+  return content.replace(/\r\n?/g, "\n");
 }
