@@ -19,6 +19,15 @@ export type IdempotencyStoreConformanceSuite = {
   readonly cases: readonly IdempotencyStoreConformanceCase[];
 };
 
+const INVALID_TTL_CASES = [
+  { name: "zero", ttlMs: 0 },
+  { name: "negative", ttlMs: -1 },
+  { name: "NaN", ttlMs: Number.NaN },
+  { name: "infinity", ttlMs: Number.POSITIVE_INFINITY },
+  { name: "fractional", ttlMs: 1.5 },
+  { name: "date range overflow", ttlMs: Number.MAX_VALUE },
+] as const;
+
 export function createIdempotencyStoreConformanceSuite<TResult = string>(
   options: IdempotencyStoreConformanceOptions<TResult>,
 ): IdempotencyStoreConformanceSuite {
@@ -159,69 +168,85 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
         name: "rejects invalid ttl before reserve state changes",
         run: async () => {
           const store = await options.createStore();
-          const key = createConformanceKey("invalid-reserve-ttl");
 
-          await assertRejects(() => store.reserve(key, { ttlMs: 0 }), InvalidIdempotencyTtlProblem);
-          const reserved = await store.reserve(key);
-          assertEqual(reserved.outcome, "reserved", "invalid reserve TTL must not create a record");
+          for (const invalidTtl of INVALID_TTL_CASES) {
+            const key = createConformanceKey(`invalid-reserve-ttl-${invalidTtl.name}`);
+
+            await assertRejects(
+              () => store.reserve(key, { ttlMs: invalidTtl.ttlMs }),
+              InvalidIdempotencyTtlProblem,
+            );
+            const reserved = await store.reserve(key);
+            assertEqual(
+              reserved.outcome,
+              "reserved",
+              `${invalidTtl.name} reserve TTL must not create a record`,
+            );
+          }
         },
       },
       {
         name: "rejects invalid ttl before commit state changes",
         run: async () => {
           const store = await options.createStore();
-          const key = createConformanceKey("invalid-commit-ttl");
-          const reserved = await store.reserve(key);
-          assertEqual(reserved.outcome, "reserved", "commit conformance requires a reservation");
-          if (reserved.outcome !== "reserved") {
-            return;
-          }
 
-          await assertRejects(
-            () =>
-              store.commit({
-                key,
-                reservationId: reserved.reservation.reservationId,
-                response: createResponse(),
-                ttlMs: 0,
-              }),
-            InvalidIdempotencyTtlProblem,
-          );
-          const inFlight = await store.reserve(key);
-          assertEqual(
-            inFlight.outcome,
-            "in-flight",
-            "invalid commit TTL must preserve the reservation",
-          );
+          for (const invalidTtl of INVALID_TTL_CASES) {
+            const key = createConformanceKey(`invalid-commit-ttl-${invalidTtl.name}`);
+            const reserved = await store.reserve(key);
+            assertEqual(reserved.outcome, "reserved", "commit conformance requires a reservation");
+            if (reserved.outcome !== "reserved") {
+              return;
+            }
+
+            await assertRejects(
+              () =>
+                store.commit({
+                  key,
+                  reservationId: reserved.reservation.reservationId,
+                  response: createResponse(),
+                  ttlMs: invalidTtl.ttlMs,
+                }),
+              InvalidIdempotencyTtlProblem,
+            );
+            const inFlight = await store.reserve(key);
+            assertEqual(
+              inFlight.outcome,
+              "in-flight",
+              `${invalidTtl.name} commit TTL must preserve the reservation`,
+            );
+          }
         },
       },
       {
         name: "rejects invalid ttl before fail state changes",
         run: async () => {
           const store = await options.createStore();
-          const key = createConformanceKey("invalid-fail-ttl");
-          const reserved = await store.reserve(key);
-          assertEqual(reserved.outcome, "reserved", "fail conformance requires a reservation");
-          if (reserved.outcome !== "reserved") {
-            return;
-          }
 
-          await assertRejects(
-            () =>
-              store.fail({
-                key,
-                reservationId: reserved.reservation.reservationId,
-                problem: { code: "conformance", status: 503 },
-                ttlMs: 0,
-              }),
-            InvalidIdempotencyTtlProblem,
-          );
-          const inFlight = await store.reserve(key);
-          assertEqual(
-            inFlight.outcome,
-            "in-flight",
-            "invalid fail TTL must preserve the reservation",
-          );
+          for (const invalidTtl of INVALID_TTL_CASES) {
+            const key = createConformanceKey(`invalid-fail-ttl-${invalidTtl.name}`);
+            const reserved = await store.reserve(key);
+            assertEqual(reserved.outcome, "reserved", "fail conformance requires a reservation");
+            if (reserved.outcome !== "reserved") {
+              return;
+            }
+
+            await assertRejects(
+              () =>
+                store.fail({
+                  key,
+                  reservationId: reserved.reservation.reservationId,
+                  problem: { code: "conformance", status: 503 },
+                  ttlMs: invalidTtl.ttlMs,
+                }),
+              InvalidIdempotencyTtlProblem,
+            );
+            const inFlight = await store.reserve(key);
+            assertEqual(
+              inFlight.outcome,
+              "in-flight",
+              `${invalidTtl.name} fail TTL must preserve the reservation`,
+            );
+          }
         },
       },
       {
