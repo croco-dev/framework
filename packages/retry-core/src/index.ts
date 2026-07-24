@@ -47,10 +47,12 @@ export { RedisCircuitBreakerStore } from "./libs/stores/RedisCircuitBreakerStore
 export {
   CircuitBreakerOpenProblem,
   DuplicateRecoverHandlerProblem,
+  InvalidRetryConfigurationProblem,
   LambdaTimeoutProblem,
   RetryAbortedProblem,
   RetryExhaustedProblem,
 } from "./libs/errors";
+export type { RetryNumericConstraint } from "./libs/errors";
 
 /**
  * AWS Lambda 남은 실행 시간을 기준으로 재시도를 제어하는 타입입니다.

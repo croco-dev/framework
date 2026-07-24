@@ -54,6 +54,13 @@ const breaker = new CircuitBreaker({
 });
 ```
 
+숫자형 신뢰성 옵션은 생성 또는 실행 경계에서 검증됩니다. 백오프 `delay`와 Lambda의 reserve/delay는
+0 이상 정수이고, `maxDelay`, `openDuration`, circuit breaker `timeout`은 1~2,147,483,647ms 정수입니다.
+`multiplier`는 양의 유한수이며, `maxAttempts`, `halfOpenRequests`, `failureThreshold`, `successThreshold`, Redis
+`ttlSeconds`는 양의 안전 정수입니다. 잘못된 값은 상태 접근,
+사용자 콜백, sleep 또는 Redis I/O 전에 `InvalidRetryConfigurationProblem`으로 거부됩니다. 옵션을 생략하면
+기존 기본값을 사용합니다.
+
 `@Retryable`에 서킷 브레이커를 설정하면 같은 decorated method의 모든 서비스 인스턴스가 resolved circuit ID별 상태를 현재 프로세스에서 공유합니다. `circuitIdResolver`가 서로 다른 ID를 반환하면 상태도 격리됩니다.
 
 ```typescript
@@ -92,5 +99,5 @@ class PaymentService {
 - 정책과 백오프: `DefaultRetryPolicy`, `ExponentialBackoff`, `FixedBackoff`, `NoBackoff`
 - 서킷 브레이커: `CircuitBreaker`, `CircuitBreakerRetryTemplate`, `CircuitState`, `InMemoryCircuitBreakerStateStore`, `RedisCircuitBreakerStore`
 - Lambda 연동: `LambdaTimeoutGuard`, `setLambdaContext`, `getRemainingTimeInMillis`, `hasTimeForRetry`
-- Problem 타입: `RetryExhaustedProblem`, `RetryAbortedProblem`, `LambdaTimeoutProblem`, `CircuitBreakerOpenProblem`, `CircuitBreakerUnexpectedStateProblem`
+- Problem 타입: `RetryExhaustedProblem`, `RetryAbortedProblem`, `LambdaTimeoutProblem`, `CircuitBreakerOpenProblem`, `CircuitBreakerUnexpectedStateProblem`, `InvalidRetryConfigurationProblem`
 - 타입: `RetryableOptions`, `RetryTemplateOptions`, `BackoffOptions`, `CircuitBreakerConfig`, `CircuitBreakerOptions`, `RetryListener`

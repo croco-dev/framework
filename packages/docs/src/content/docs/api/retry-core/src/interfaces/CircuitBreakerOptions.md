@@ -19,6 +19,8 @@ title: "CircuitBreakerOptions"
 
 > `optional` **failureThreshold?**: `number`
 
+Positive safe integer (default: 5).
+
 ***
 
 ### fallback?
@@ -31,11 +33,15 @@ title: "CircuitBreakerOptions"
 
 > `optional` **halfOpenRequests?**: `number`
 
+Positive safe integer (default: 1).
+
 ***
 
 ### openDuration?
 
 > `optional` **openDuration?**: `number`
+
+Positive integer milliseconds up to 2,147,483,647 (default: 30000).
 
 ***
 

@@ -8,6 +8,7 @@ import {
 } from "@croco/framework-context";
 import { type BackoffOptions, type BackoffPolicy, ExponentialBackoff } from "./BackoffPolicy";
 import { RetryExhaustedProblem } from "./errors/RetryExhaustedProblem";
+import { assertValidRetryNumber } from "./numericValidation";
 import { RetryContext } from "./RetryContext";
 import { executeRetryLoop } from "./RetryEngine";
 import { CompositeRetryListener, type RetryListener } from "./RetryListener";
@@ -41,6 +42,7 @@ export class RetryOrchestrator {
     recovery?: (context: RetryContext) => T | Promise<T>,
   ): Promise<T> {
     const maxAttempts = options.maxAttempts ?? 3;
+    assertValidRetryNumber("maxAttempts", maxAttempts, "positive-safe-integer");
     const retryPolicy = options.retryPolicy ?? new DefaultRetryPolicy({ ...options });
     const backoffPolicy = options.backoffPolicy ?? new ExponentialBackoff(options.backoff);
     const listener =

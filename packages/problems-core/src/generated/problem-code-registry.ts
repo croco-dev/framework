@@ -5685,21 +5685,19 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
     },
     {
       code: "INVALID_RETRY_CONFIGURATION",
-      category: "InternalServerError",
-      status: 500,
-      title: "Internal Server Error",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#invalid-retry-configuration",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
-        operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
-        redactionPolicy: "operator-only",
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
         telemetry: {
-          eventName: "croco.problem.error",
-          severity: "error",
+          eventName: "croco.problem.info",
+          severity: "info",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
@@ -5709,7 +5707,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 46,
+          line: 52,
           column: 3,
           kind: "problem-class",
         },
@@ -5985,7 +5983,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 33,
+          line: 39,
           column: 3,
           kind: "problem-class",
         },
@@ -9817,7 +9815,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 7,
+          line: 13,
           column: 3,
           kind: "problem-class",
         },
@@ -9849,7 +9847,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
-          line: 20,
+          line: 26,
           column: 3,
           kind: "problem-class",
         },

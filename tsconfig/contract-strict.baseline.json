@@ -3224,22 +3224,6 @@
     },
     {
       "packageName": "@croco/retry-core",
-      "file": "packages/retry-core/src/libs/CircuitBreaker.ts",
-      "line": 56,
-      "column": 5,
-      "code": "TS2412",
-      "message": "Type 'CircuitBreakerFallback<unknown> | undefined' is not assignable to type 'CircuitBreakerFallback<unknown>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target."
-    },
-    {
-      "packageName": "@croco/retry-core",
-      "file": "packages/retry-core/src/libs/LambdaTimeoutGuard.ts",
-      "line": 57,
-      "column": 52,
-      "code": "TS4111",
-      "message": "Property 'AWS_LAMBDA_FUNCTION_NAME' comes from an index signature, so it must be accessed with ['AWS_LAMBDA_FUNCTION_NAME']."
-    },
-    {
-      "packageName": "@croco/retry-core",
       "file": "packages/retry-core/src/libs/Recover.ts",
       "line": 53,
       "column": 25,

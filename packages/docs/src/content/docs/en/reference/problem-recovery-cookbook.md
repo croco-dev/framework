@@ -195,7 +195,7 @@ This cookbook documents 447 public Croco Problem codes. The deterministic JSON r
 | [`integrations-posthog/missing-config`](#integrations-posthog-missing-config)                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`INVALID_AUTO_JOIN_ROLE`](#invalid-auto-join-role)                                                                                   | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`INVALID_CURSOR`](#invalid-cursor)                                                                                                   | BadRequest            |    400 | not-retryable | public        | active    |       1 |
-| [`INVALID_RETRY_CONFIGURATION`](#invalid-retry-configuration)                                                                         | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`INVALID_RETRY_CONFIGURATION`](#invalid-retry-configuration)                                                                         | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`INVALID_ROLE`](#invalid-role)                                                                                                       | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`INVITATION_ALREADY_ACCEPTED`](#invitation-already-accepted)                                                                         | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
 | [`INVITATION_EMAIL_MISMATCH`](#invitation-email-mismatch)                                                                             | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
@@ -3743,19 +3743,19 @@ Sources:
 
 ## `INVALID_RETRY_CONFIGURATION`
 
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:46:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:52:3` (problem-class)
 
 <a id="invalid-role"></a>
 
@@ -3917,7 +3917,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:33:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:39:3` (problem-class)
 
 <a id="last-owner"></a>
 
@@ -6113,7 +6113,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:7:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:13:3` (problem-class)
 
 <a id="retry-circuit-breaker-lock-failed"></a>
 
@@ -6131,7 +6131,7 @@ Sources:
 
 Sources:
 
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:20:3` (problem-class)
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:26:3` (problem-class)
 
 <a id="retry-exhausted"></a>
 

@@ -9,6 +9,7 @@ import {
 import { CircuitBreakerOpenProblem } from "./errors/CircuitBreakerOpenProblem";
 import { RetryExhaustedProblem } from "./errors/RetryExhaustedProblem";
 import { LambdaTimeoutGuard } from "./LambdaTimeoutGuard";
+import { assertValidRetryNumber } from "./numericValidation";
 import { findRecoverMethod, getRecoverMethods } from "./Recover";
 import type { RetryContext } from "./RetryContext";
 import type { RetryListener } from "./RetryListener";
@@ -19,13 +20,13 @@ import type { RetryPolicy, RetryPolicyOptions } from "./RetryPolicy";
  * CircuitBreaker 설정 옵션.
  */
 export interface CircuitBreakerConfig {
-  /** 실패 임계값 - 이 횟수 이상 실패하면 OPEN 상태로 전환 */
+  /** 실패 임계값 - 양의 안전 정수이며, 이 횟수 이상 실패하면 OPEN 상태로 전환 */
   failureThreshold: number;
 
-  /** 성공 임계값 (HALF_OPEN 상태에서 이 횟수 성공하면 CLOSED로 복귀) */
+  /** 양의 안전 정수 성공 임계값 (HALF_OPEN 상태에서 이 횟수 성공하면 CLOSED로 복귀) */
   successThreshold?: number;
 
-  /** OPEN 상태 유지 시간 (밀리초) */
+  /** OPEN 상태 유지 시간 (1 이상 2,147,483,647 이하의 정수 밀리초) */
   timeout?: number;
 
   /** 상태 공유 범위를 제어하는 저장소 (기본값: decorated method별 in-memory store) */
@@ -159,7 +160,7 @@ export interface RetryableOptions extends RetryPolicyOptions {
   /** Custom retry policy */
   retryPolicy?: RetryPolicy;
 
-  /** Custom backoff policy */
+  /** Custom backoff policy. When provided, it overrides and bypasses validation of `backoff`. */
   backoffPolicy?: BackoffPolicy;
 
   /** Wrap exhausted error instead of re-throwing last error */
@@ -180,7 +181,7 @@ export interface RetryableOptions extends RetryPolicyOptions {
   /** Custom circuit ID resolver */
   circuitIdResolver?: (context: CircuitIdResolverContext) => string;
 
-  /** Reserve time for Lambda timeout (ms) */
+  /** Non-negative integer Lambda reserve time up to 2,147,483,647ms. */
   lambdaTimeoutReserveMs?: number;
 }
 
@@ -207,6 +208,58 @@ export type CircuitIdResolverContext = {
  */
 export function Retryable(options: RetryableOptions = {}): MethodDecorator {
   const maxAttempts = options.maxAttempts ?? 3;
+  assertValidRetryNumber("maxAttempts", maxAttempts, "positive-safe-integer");
+
+  if (!options.backoffPolicy) {
+    if (options.backoff?.delay !== undefined) {
+      assertValidRetryNumber("backoff.delay", options.backoff.delay, "non-negative-timer-integer");
+    }
+    if (options.backoff?.multiplier !== undefined) {
+      assertValidRetryNumber(
+        "backoff.multiplier",
+        options.backoff.multiplier,
+        "finite-positive-number",
+      );
+    }
+    if (options.backoff?.maxDelay !== undefined) {
+      assertValidRetryNumber(
+        "backoff.maxDelay",
+        options.backoff.maxDelay,
+        "positive-timer-integer",
+      );
+    }
+  }
+
+  if (options.circuitBreaker) {
+    assertValidRetryNumber(
+      "circuitBreaker.failureThreshold",
+      options.circuitBreaker.failureThreshold,
+      "positive-safe-integer",
+    );
+    if (options.circuitBreaker.successThreshold !== undefined) {
+      assertValidRetryNumber(
+        "circuitBreaker.successThreshold",
+        options.circuitBreaker.successThreshold,
+        "positive-safe-integer",
+      );
+    }
+    if (options.circuitBreaker.timeout !== undefined) {
+      assertValidRetryNumber(
+        "circuitBreaker.timeout",
+        options.circuitBreaker.timeout,
+        "positive-timer-integer",
+      );
+    }
+  }
+
+  if (options.lambdaTimeoutReserveMs !== undefined) {
+    assertValidRetryNumber(
+      "lambdaTimeoutReserveMs",
+      options.lambdaTimeoutReserveMs,
+      "non-negative-timer-integer",
+    );
+  }
+
   const wrapExhausted = options.wrapExhausted ?? false;
   const trace = options.trace ?? true;
 

@@ -4,13 +4,16 @@ import {
   InMemoryCircuitBreakerStateStore,
 } from "./CircuitBreakerState";
 import { CircuitBreakerOpenProblem } from "./errors/CircuitBreakerOpenProblem";
-import { InvalidRetryConfigurationError } from "./errors/RetryInfrastructureProblem";
 import { CircuitBreakerUnexpectedStateProblem } from "./problems/CircuitBreakerProblems";
+import { assertValidRetryNumber } from "./numericValidation";
 
 export interface CircuitBreakerOptions {
   circuitId: string;
+  /** Positive safe integer (default: 5). */
   failureThreshold?: number;
+  /** Positive integer milliseconds up to 2,147,483,647 (default: 30000). */
   openDuration?: number;
+  /** Positive safe integer (default: 1). */
   halfOpenRequests?: number;
   stateStore?: CircuitBreakerStateStore;
   fallback?: CircuitBreakerFallback;
@@ -30,28 +33,30 @@ export class CircuitBreaker {
   private readonly openDuration: number;
   private readonly halfOpenRequests: number;
   private readonly stateStore: CircuitBreakerStateStore;
-  private readonly fallback?: CircuitBreakerFallback;
+  private readonly fallback: CircuitBreakerFallback | undefined;
   private _closedActiveCount = 0;
 
   constructor(options: CircuitBreakerOptions) {
     const failureThreshold = options.failureThreshold ?? 5;
     const openDuration = options.openDuration ?? 30000;
+    const halfOpenRequests = options.halfOpenRequests ?? 1;
 
-    if (!Number.isInteger(failureThreshold) || failureThreshold <= 0) {
-      throw new InvalidRetryConfigurationError(
-        `failureThreshold must be a positive integer, got ${failureThreshold}`,
-      );
-    }
-    if (!Number.isFinite(openDuration) || openDuration <= 0) {
-      throw new InvalidRetryConfigurationError(
-        `openDuration must be a positive number, got ${openDuration}`,
-      );
-    }
+    assertValidRetryNumber(
+      "circuitBreaker.failureThreshold",
+      failureThreshold,
+      "positive-safe-integer",
+    );
+    assertValidRetryNumber("circuitBreaker.openDuration", openDuration, "positive-timer-integer");
+    assertValidRetryNumber(
+      "circuitBreaker.halfOpenRequests",
+      halfOpenRequests,
+      "positive-safe-integer",
+    );
 
     this.circuitId = options.circuitId;
     this.failureThreshold = failureThreshold;
     this.openDuration = openDuration;
-    this.halfOpenRequests = options.halfOpenRequests ?? 1;
+    this.halfOpenRequests = halfOpenRequests;
     this.stateStore = options.stateStore ?? new InMemoryCircuitBreakerStateStore();
     this.fallback = options.fallback;
   }

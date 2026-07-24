@@ -13,7 +13,7 @@ Configuration for backoff behavior.
 
 > `optional` **delay?**: `number`
 
-Initial delay in milliseconds (default: 1000)
+Non-negative integer milliseconds up to 2,147,483,647 (default: 1000).
 
 ***
 
@@ -29,7 +29,7 @@ Enable Full Jitter randomization (default: true)
 
 > `optional` **maxDelay?**: `number`
 
-Maximum delay cap in milliseconds (default: 30000)
+Positive integer milliseconds up to 2,147,483,647 (default: 30000).
 
 ***
 
@@ -37,4 +37,4 @@ Maximum delay cap in milliseconds (default: 30000)
 
 > `optional` **multiplier?**: `number`
 
-Multiplier for exponential backoff (default: 2)
+Positive finite multiplier (default: 2).

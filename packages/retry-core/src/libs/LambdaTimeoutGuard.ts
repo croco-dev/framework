@@ -4,6 +4,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
  * AWS Lambda context interface (minimal).
  */
 import { LambdaTimeoutProblem } from "./errors/RetryInfrastructureProblem";
+import { assertValidRetryNumber } from "./numericValidation";
 
 export interface LambdaContext {
   getRemainingTimeInMillis(): number;
@@ -54,7 +55,7 @@ export function getLambdaContext(): LambdaContext | null {
 export function isLambdaEnvironment(): boolean {
   return (
     readLambdaContext() !== null ||
-    (typeof process !== "undefined" && process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined)
+    (typeof process !== "undefined" && process.env["AWS_LAMBDA_FUNCTION_NAME"] !== undefined)
   );
 }
 
@@ -74,7 +75,7 @@ export function getRemainingTimeInMillis(): number {
  * Options for timeout guard.
  */
 export interface TimeoutGuardOptions {
-  /** Minimum time to reserve for cleanup (ms). Default: 5000 */
+  /** Non-negative integer milliseconds up to 2,147,483,647. Default: 5000. */
   reserveTimeMs?: number;
 
   /** Custom timeout checker (for testing) */
@@ -92,6 +93,9 @@ export function hasTimeForRetry(nextDelayMs: number, options: TimeoutGuardOption
   const reserveTimeMs = options.reserveTimeMs ?? 5000;
   const getRemainingTime = options.getRemainingTime ?? getRemainingTimeInMillis;
 
+  assertValidRetryNumber("lambda.nextDelayMs", nextDelayMs, "non-negative-timer-integer");
+  assertValidRetryNumber("lambda.reserveTimeMs", reserveTimeMs, "non-negative-timer-integer");
+
   const remaining = getRemainingTime();
   const required = nextDelayMs + reserveTimeMs;
 
@@ -107,7 +111,9 @@ export class LambdaTimeoutGuard {
   private readonly getRemainingTime: () => number;
 
   constructor(options: TimeoutGuardOptions = {}) {
-    this.reserveTimeMs = options.reserveTimeMs ?? 5000;
+    const reserveTimeMs = options.reserveTimeMs ?? 5000;
+    assertValidRetryNumber("lambda.reserveTimeMs", reserveTimeMs, "non-negative-timer-integer");
+    this.reserveTimeMs = reserveTimeMs;
     this.getRemainingTime = options.getRemainingTime ?? getRemainingTimeInMillis;
   }
 
