@@ -33,8 +33,13 @@ export {
   IdempotencyReservationNotFoundProblem,
   IdempotencyReservationStateProblem,
   InvalidIdempotencyKeyProblem,
+  InvalidIdempotencyTtlProblem,
 } from "./libs/problems/IdempotencyProblems";
-export type { IdempotencyDiagnosticCode } from "./libs/problems/IdempotencyProblems";
+export type {
+  IdempotencyDiagnosticCode,
+  IdempotencyTtlConstraint,
+  InvalidIdempotencyTtlProblemOptions,
+} from "./libs/problems/IdempotencyProblems";
 export type {
   DerivedIdempotencyKey,
   DeriveIdempotencyKeyOptions,

@@ -5,13 +5,17 @@ prev: false
 title: "IDEMPOTENCY_DIAGNOSTIC_CODES"
 ---
 
-> `const` **IDEMPOTENCY\_DIAGNOSTIC\_CODES**: `object`
+> `const` **IDEMPOTENCY_DIAGNOSTIC_CODES**: `object`
 
 ## Type Declaration
 
 ### invalidKey
 
 > `readonly` **invalidKey**: `"idempotency-core/invalid-key"` = `"idempotency-core/invalid-key"`
+
+### invalidTtl
+
+> `readonly` **invalidTtl**: `"idempotency-core/invalid-ttl"` = `"idempotency-core/invalid-ttl"`
 
 ### keyConflict
 

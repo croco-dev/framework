@@ -3,6 +3,7 @@ import { Problem, ProblemCategory, type ProblemOptions } from "@croco/problems-c
 export const IDEMPOTENCY_DIAGNOSTIC_CODES = {
   keyConflict: "idempotency-core/key-conflict",
   invalidKey: "idempotency-core/invalid-key",
+  invalidTtl: "idempotency-core/invalid-ttl",
   reservationExpired: "idempotency-core/reservation-expired",
   reservationNotFound: "idempotency-core/reservation-not-found",
   reservationState: "idempotency-core/reservation-state",
@@ -20,9 +21,8 @@ type IdempotencyProblemOptions = {
 
 class IdempotencyProblem extends Problem {
   constructor(options: IdempotencyProblemOptions) {
-    const problemOptions: ProblemOptions = {
-      extensions: options.extensions,
-    };
+    const problemOptions: ProblemOptions =
+      options.extensions === undefined ? {} : { extensions: options.extensions };
 
     super(options.code, options.category, options.detail, problemOptions);
   }
@@ -55,6 +55,29 @@ export class InvalidIdempotencyKeyProblem extends IdempotencyProblem {
       category: ProblemCategory.BadRequest,
       detail: `Invalid idempotency key: ${reason}`,
       extensions,
+    });
+  }
+}
+
+export type IdempotencyTtlConstraint = "positive-safe-integer" | "valid-date-range";
+
+export type InvalidIdempotencyTtlProblemOptions = {
+  readonly constraint: IdempotencyTtlConstraint;
+  readonly receivedValue: number | string;
+};
+
+/** Raised when an idempotency TTL cannot produce a valid future expiration. */
+export class InvalidIdempotencyTtlProblem extends IdempotencyProblem {
+  constructor(options: InvalidIdempotencyTtlProblemOptions) {
+    super({
+      code: IDEMPOTENCY_DIAGNOSTIC_CODES.invalidTtl,
+      category: ProblemCategory.BadRequest,
+      detail: `Idempotency ttlMs must satisfy ${options.constraint}; received ${String(options.receivedValue)}`,
+      extensions: {
+        field: "ttlMs",
+        constraint: options.constraint,
+        receivedValue: options.receivedValue,
+      },
     });
   }
 }
