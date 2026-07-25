@@ -11,6 +11,18 @@ title: "UsageRecordTable"
 
 ## Properties
 
+### dimensions?
+
+> `optional` **dimensions?**: `SQLiteColumn`
+
+***
+
+### eventId?
+
+> `optional` **eventId?**: `SQLiteColumn`
+
+***
+
 ### id
 
 > **id**: `SQLiteColumn`

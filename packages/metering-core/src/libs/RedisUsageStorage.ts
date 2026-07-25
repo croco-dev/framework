@@ -4,6 +4,28 @@ import type { AggregationPeriod, UsageQueryOptions, UsageRecord } from "./types"
 import type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } from "./UsageStorage";
 
 type ScanDeleteResult = [string | number, number];
+type UsageMemberEnvelope = Partial<
+  Pick<UsageRecord, "idempotencyKey" | "eventId" | "dimensions" | "metadata">
+>;
+
+function stableStringify(value: unknown): string {
+  return JSON.stringify(value, (_key, nestedValue: unknown) => {
+    if (nestedValue === null || typeof nestedValue !== "object" || Array.isArray(nestedValue)) {
+      return nestedValue;
+    }
+
+    const prototype = Object.getPrototypeOf(nestedValue);
+    if (prototype !== Object.prototype && prototype !== null) {
+      return nestedValue;
+    }
+
+    return Object.fromEntries(
+      Object.entries(nestedValue as Record<string, unknown>).sort(([left], [right]) =>
+        left < right ? -1 : left > right ? 1 : 0,
+      ),
+    );
+  });
+}
 
 /**
  * Redis 기반 UsageStorage 구현체
@@ -213,7 +235,9 @@ return { exceeded and 1 or 0, newUsage }
           meterId: options.meterId,
           value: parsed.value,
           timestamp: this.restoreUsageTimestamp(score),
-          idempotencyKey: parsed.id,
+          idempotencyKey: parsed.idempotencyKey ?? parsed.id,
+          eventId: parsed.eventId,
+          dimensions: parsed.dimensions,
           metadata: parsed.metadata,
         };
       });
@@ -352,30 +376,50 @@ return { exceeded and 1 or 0, newUsage }
     }
   }
 
-  private serializeUsageMember(usage: Pick<UsageRecord, "id" | "value" | "metadata">): string {
+  private serializeUsageMember(
+    usage: Pick<
+      UsageRecord,
+      "id" | "value" | "idempotencyKey" | "eventId" | "dimensions" | "metadata"
+    >,
+  ): string {
     const base = `${usage.id}:${usage.value}`;
+    const envelope = {
+      idempotencyKey: usage.idempotencyKey,
+      eventId: usage.eventId,
+      dimensions: usage.dimensions,
+      metadata: usage.metadata,
+    };
 
-    if (usage.metadata === undefined) {
-      return base;
-    }
-
-    return `${base}:${encodeURIComponent(JSON.stringify(usage.metadata))}`;
+    return `${base}:v2.${encodeURIComponent(stableStringify(envelope))}`;
   }
 
-  private parseUsageMember(member: string): {
-    id: string;
-    value: number;
-    metadata?: Record<string, unknown>;
-  } {
+  private serializeLegacyUsageMember(
+    usage: Pick<UsageRecord, "id" | "value" | "metadata">,
+  ): string {
+    const base = `${usage.id}:${usage.value}`;
+    return usage.metadata === undefined
+      ? base
+      : `${base}:${encodeURIComponent(JSON.stringify(usage.metadata))}`;
+  }
+
+  private parseUsageMember(
+    member: string,
+  ): Pick<UsageRecord, "id" | "value"> & UsageMemberEnvelope {
     const parts = member.split(":");
     const id = parts[0] ?? "";
     const value = Number.parseInt(parts[1] ?? "0", 10);
-    const metadataEncoded = parts.length > 2 ? parts.slice(2).join(":") : undefined;
+    const payload = parts.length > 2 ? parts.slice(2).join(":") : undefined;
+    const envelope = payload?.startsWith("v2.")
+      ? this.decodeUsageEnvelope(payload.slice(3))
+      : undefined;
 
     return {
       id,
       value: Number.isNaN(value) ? 0 : value,
-      metadata: metadataEncoded ? this.decodeMetadata(metadataEncoded) : undefined,
+      idempotencyKey: envelope?.idempotencyKey,
+      eventId: envelope?.eventId,
+      dimensions: envelope?.dimensions,
+      metadata: envelope?.metadata ?? (payload ? this.decodeMetadata(payload) : undefined),
     };
   }
 
@@ -423,6 +467,14 @@ return { exceeded and 1 or 0, newUsage }
       const decoded = decodeURIComponent(encodedMetadata);
       const parsed = JSON.parse(decoded) as Record<string, unknown>;
       return parsed;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private decodeUsageEnvelope(encodedEnvelope: string): UsageMemberEnvelope | undefined {
+    try {
+      return JSON.parse(decodeURIComponent(encodedEnvelope)) as UsageMemberEnvelope;
     } catch {
       return undefined;
     }
@@ -534,7 +586,10 @@ return { exceeded and 1 or 0, newUsage }
       return;
     }
 
-    const members = records.map((record) => this.serializeUsageMember(record));
+    const members = records.flatMap((record) => [
+      this.serializeUsageMember(record),
+      this.serializeLegacyUsageMember(record),
+    ]);
     const { min } = this.getTimeRange(options.period, options.startDate, options.endDate);
     const keys = this.getUsageKeyCandidates(
       options.tenantId,

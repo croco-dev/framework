@@ -10,6 +10,41 @@ pnpm add @croco/metering-core
 
 ## 사용법
 
+새 코드에서는 meter 정의와 billable usage envelope를 타입으로 연결합니다.
+
+```ts
+import { defineMeter, dimension, type MeteringService } from "@croco/metering-core";
+
+const aiTokens = defineMeter({
+  key: "ai.tokens",
+  aggregation: "SUM",
+  unit: "token",
+  dimensions: {
+    model: dimension.enum(["gpt-5", "gpt-5-mini"]),
+  },
+  billing: "required",
+});
+
+declare const requestId: string;
+declare const usage: { totalTokens: number };
+declare const model: "gpt-5" | "gpt-5-mini";
+declare const meteringService: MeteringService;
+
+await meteringService.record(aiTokens, {
+  tenantId: "tenant-123",
+  eventId: requestId,
+  value: usage.totalTokens,
+  dimensions: { model },
+  metadata: { route: "/generate" },
+});
+```
+
+`billing: "required"` meter는 비어 있지 않은 `eventId`를 타입과 런타임에서 요구합니다. dimension은 정의된
+key와 enum 값만 허용되며 provider billing dimension과 자유 형식 application `metadata`는 별도 필드로
+유지됩니다. `defineMeter()`가 반환하는 descriptor는 함수 값을 포함하지 않고 결정적으로 직렬화됩니다.
+
+기존 string 기반 API는 호환성 경로로 계속 지원됩니다.
+
 ```ts
 import {
   IdempotencyManager,
@@ -40,11 +75,17 @@ await meteringService.record({
 ```
 
 ```ts
-import { Meter, Metered } from "@croco/metering-core";
+import { defineMeter, Meter, Metered } from "@croco/metering-core";
 
-@Meter({ meterId: "api_calls", type: "COUNT", quota: 10000 })
+const apiCalls = defineMeter({
+  key: "api.calls",
+  aggregation: "COUNT",
+  unit: "request",
+});
+
+@Meter({ meterId: "api.calls", type: "COUNT", quota: 10000 })
 class ApiController {
-  @Metered({ meterId: "api_calls" })
+  @Metered({ meter: apiCalls })
   async listUsers(): Promise<void> {}
 }
 ```
@@ -69,6 +110,8 @@ class ApiController {
 ### 주요 타입
 
 - `RecordOptions`, 사용량 기록 입력입니다.
+- `MeterRef`, definition-first meter descriptor입니다.
+- `MeterRecordInput`, meter별 billable usage envelope 입력입니다.
 - `UsageQueryOptions`, 기간별 사용량 조회 입력입니다.
 - `MeterDefinition`, meter 정의입니다.
 - `UsageRecord`, 기록된 사용량 엔트리입니다.

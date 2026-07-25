@@ -51,28 +51,72 @@ Usage Metering 핵심 서비스
 
 ### record()
 
-> **record**(`options`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
+#### Call Signature
 
-사용량 기록
+> **record**\<`Meter`\>(`meter`, `input`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
 
-#### Parameters
+타입이 지정된 meter 계약에 따라 사용량을 기록합니다.
 
-##### options
+##### Type Parameters
 
-[`RecordOptions`](/api/metering-core/src/type-aliases/recordoptions/)
+###### Meter
 
-#### Returns
+`Meter` *extends* [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
+
+##### Parameters
+
+###### meter
+
+`Meter`
+
+###### input
+
+[`MeterRecordInput`](/api/metering-core/src/type-aliases/meterrecordinput/)\<`Meter`\>
+
+##### Returns
 
 `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
 
-#### Throws
+##### Throws
 
 QuotaExceededProblem quota 초과 시 (allowOverQuota=false)
 
-#### Throws
+##### Throws
 
 DuplicateRecordProblem 중복 idempotencyKey 시
 
-#### Throws
+##### Throws
+
+InvalidMeterProblem meter 없을 시
+
+##### Throws
+
+InvalidUsageEnvelopeProblem typed usage envelope이 meter 계약과 일치하지 않을 시
+
+#### Call Signature
+
+> **record**(`options`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
+
+기존 문자열 meter ID 계약에 따라 사용량을 기록합니다.
+
+##### Parameters
+
+###### options
+
+[`RecordOptions`](/api/metering-core/src/type-aliases/recordoptions/)
+
+##### Returns
+
+`Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
+
+##### Throws
+
+QuotaExceededProblem quota 초과 시 (allowOverQuota=false)
+
+##### Throws
+
+DuplicateRecordProblem 중복 idempotencyKey 시
+
+##### Throws
 
 InvalidMeterProblem meter 없을 시

@@ -45,6 +45,8 @@ const repository = new DrizzleMeterRepository(db, txManager, {
     recordedAt: usageRecordsSqlite.recordedAt,
     metadata: usageRecordsSqlite.metadata,
     idempotencyKey: usageRecordsSqlite.idempotencyKey,
+    eventId: usageRecordsSqlite.eventId,
+    dimensions: usageRecordsSqlite.dimensions,
   },
 });
 
@@ -73,6 +75,20 @@ const found = await repository.findByMeterIdAndTenant("api_calls", "tenant-1");
 const allMeters = await repository.findAll();
 const tenantMeters = await repository.findByTenant("tenant-1");
 ```
+
+기존 테이블을 업그레이드할 때는 사용하는 dialect에 맞는 migration을 실행한 뒤 새 column mapping을
+설정합니다.
+
+```ts
+import { addUsageEnvelopeFieldsSqlite } from "@croco/metering-drizzle";
+
+await addUsageEnvelopeFieldsSqlite(sqliteClient);
+```
+
+PostgreSQL을 사용하는 경우에는 대신 `addUsageEnvelopeFieldsPostgres(postgresClient)`를 실행합니다.
+
+typed usage에 `eventId` 또는 `dimensions`가 있지만 해당 mapping이 없으면
+`UsageEnvelopeConfigurationProblem`으로 기록을 거부하며, billing field를 조용히 버리지 않습니다.
 
 PostgreSQL JSONB를 그대로 쓰고 싶다면 `serializeJson`, `deserializeJson`에 패스스루 함수를 넘기면 됩니다.
 

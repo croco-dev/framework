@@ -7,13 +7,41 @@ title: "MeteredMetadata"
 
 > **MeteredMetadata** = `object`
 
-Metered 메서드 데코레이터의 메타데이터 타입입니다.
-
-## Description
-
-`@Metered` 데코레이터로 메서드에 정의된 자동 기록 옵션의 메타데이터를 나타냅니다.
+`@Metered`가 메서드에 저장하는 정규화된 런타임 메타데이터입니다.
 
 ## Properties
+
+### dimensionsExtractor?
+
+> `optional` **dimensionsExtractor?**: (`args`) => `Record`\<`string`, `string` \| `number` \| `boolean`\>
+
+#### Parameters
+
+##### args
+
+`unknown`[]
+
+#### Returns
+
+`Record`\<`string`, `string` \| `number` \| `boolean`\>
+
+***
+
+### eventIdExtractor?
+
+> `optional` **eventIdExtractor?**: (`args`) => `string` \| `undefined`
+
+#### Parameters
+
+##### args
+
+`unknown`[]
+
+#### Returns
+
+`string` \| `undefined`
+
+***
 
 ### idempotencyKeyExtractor?
 
@@ -48,6 +76,12 @@ Metered 메서드 데코레이터의 메타데이터 타입입니다.
 #### Returns
 
 `Record`\<`string`, `unknown`\> \| `undefined`
+
+***
+
+### meter?
+
+> `optional` **meter?**: [`CountMeterRef`](/api/metering-core/src/type-aliases/countmeterref/)
 
 ***
 

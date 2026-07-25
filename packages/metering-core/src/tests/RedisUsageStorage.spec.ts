@@ -117,8 +117,70 @@ describe("RedisUsageStorage", () => {
       expect(mockRedis.zadd).toHaveBeenCalledWith(
         "usage:tenant-1:api_calls:2024-01",
         usage.timestamp.getTime(),
-        "usage-123:5",
+        expect.stringMatching(/^usage-123:5:v2\./),
       );
+    });
+
+    it("should delete v2 records after nested envelope keys are reordered", async () => {
+      const timestamp = new Date("2024-01-15T10:30:00Z");
+      const recorded: UsageRecord = {
+        id: "usage-stable",
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        value: 5,
+        timestamp,
+        idempotencyKey: "key-stable",
+        dimensions: { model: "gpt-5", cached: false },
+        metadata: { route: "/generate", nested: { beta: 2, alpha: 1 } },
+      };
+
+      await storage.record(recorded);
+      const recordedMember = vi.mocked(mockRedis.zadd).mock.calls[0]?.[2];
+      await storage.deleteUsageRecords(
+        {
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          period: "billing_cycle",
+          startDate: timestamp,
+          endDate: timestamp,
+        },
+        [
+          {
+            ...recorded,
+            dimensions: { cached: false, model: "gpt-5" },
+            metadata: { nested: { alpha: 1, beta: 2 }, route: "/generate" },
+          },
+        ],
+      );
+
+      expect(vi.mocked(mockRedis.eval).mock.calls.at(-1)?.[2]).toContain(recordedMember);
+    });
+
+    it("should preserve native JSON conversion while stabilizing envelope keys", async () => {
+      const selfReturning = {
+        value: "kept",
+        toJSON() {
+          return this;
+        },
+      };
+      const record: UsageRecord = {
+        id: "usage-json",
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        value: 1,
+        timestamp: new Date("2024-01-15T10:30:00Z"),
+        idempotencyKey: "key-json",
+        metadata: { boxed: new Number(7), selfReturning },
+      };
+
+      await storage.record(record);
+
+      const member = String(vi.mocked(mockRedis.zadd).mock.calls[0]?.[2]);
+      const envelope = JSON.parse(decodeURIComponent(member.split(":v2.")[1] ?? ""));
+      expect(envelope.metadata).toEqual({
+        boxed: 7,
+        selfReturning: { value: "kept" },
+      });
     });
 
     it("should skip duplicate records with the same idempotency key", async () => {
@@ -390,6 +452,35 @@ describe("RedisUsageStorage", () => {
       expect(result[0].metadata).toEqual({ source: "api", version: "v2" });
     });
 
+    it("should round-trip typed billing identity and dimensions separately from metadata", async () => {
+      const usage: UsageRecord = {
+        id: "usage-billable",
+        tenantId: "tenant-1",
+        meterId: "ai.tokens",
+        value: 42,
+        timestamp: new Date("2024-01-15T10:30:00Z"),
+        idempotencyKey: "request-1",
+        eventId: "request-1",
+        dimensions: { model: "gpt-5", cached: false },
+        metadata: { route: "/generate" },
+      };
+
+      await storage.record(usage);
+      const member = vi.mocked(mockRedis.zadd).mock.calls[0]?.[2];
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([
+        String(member),
+        String(usage.timestamp.getTime()),
+      ]);
+
+      const [restored] = await storage.fetchUsageRecords({
+        tenantId: usage.tenantId,
+        meterId: usage.meterId,
+        period: "billing_cycle",
+      });
+
+      expect(restored).toEqual(usage);
+    });
+
     it("should return empty array when no records", async () => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([]);
 
@@ -465,7 +556,10 @@ describe("RedisUsageStorage", () => {
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("ZREM"),
         ["usage:tenant-1:api_calls:2024-01"],
-        ["usage-1:5:%7B%22endpoint%22%3A%22%2Fusers%22%7D"],
+        expect.arrayContaining([
+          expect.stringMatching(/^usage-1:5:v2\./),
+          "usage-1:5:%7B%22endpoint%22%3A%22%2Fusers%22%7D",
+        ]),
       );
     });
   });
@@ -496,7 +590,7 @@ describe("RedisUsageStorage", () => {
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("redis.call('ZRANGEBYSCORE'"),
         ["usage:tenant-1:api_calls:2024-01"],
-        [10, 5, usage.timestamp.getTime(), "usage-123:5", 0],
+        [10, 5, usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v2\./), 0],
       );
     });
 
@@ -702,7 +796,45 @@ describe("RedisUsageStorage", () => {
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("ZREM"),
         ["usage:tenant-1:api_calls:2024-01-15"],
-        ["usage-1:5:%7B%22source%22%3A%22api%22%7D", "usage-2:3"],
+        expect.arrayContaining([
+          expect.stringMatching(/^usage-1:5:v2\./),
+          expect.stringMatching(/^usage-2:3:v2\./),
+          "usage-1:5:%7B%22source%22%3A%22api%22%7D",
+          "usage-2:3",
+        ]),
+      );
+    });
+
+    it("should delete records written with the legacy member format", async () => {
+      const timestamp = new Date("2024-01-15T10:30:00Z");
+      const legacyMember = "usage-legacy:5:%7B%22source%22%3A%22api%22%7D";
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([
+        legacyMember,
+        String(timestamp.getTime()),
+      ]);
+
+      const records = await storage.fetchUsageRecords({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+        startDate: timestamp,
+        endDate: timestamp,
+      });
+      await storage.deleteUsageRecords(
+        {
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          period: "billing_cycle",
+          startDate: timestamp,
+          endDate: timestamp,
+        },
+        records,
+      );
+
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("ZREM"),
+        ["usage:tenant-1:api_calls:2024-01"],
+        expect.arrayContaining([legacyMember]),
       );
     });
   });

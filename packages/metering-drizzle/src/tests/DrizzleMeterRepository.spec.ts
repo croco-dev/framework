@@ -1,6 +1,3 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ILogger } from "@croco/framework-context";
 import { MeterRegistry } from "@croco/metering-core";
 import { ProblemFactory } from "@croco/problems-core";
@@ -10,8 +7,23 @@ import {
 } from "@croco/testing/drizzle";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter, DrizzleHealthIndicator } from "@croco/tx-drizzle";
-import { type DrizzleDb, DrizzleMeterRepository } from "../libs/DrizzleMeterRepository";
-import { metersSqlite, usageRecordsSqlite } from "../libs/schema";
+import Database from "better-sqlite3";
+import type { SQL } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { PgDialect } from "drizzle-orm/pg-core";
+import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  type DrizzleDb,
+  DrizzleMeterRepository,
+  type DrizzleMeterRepositoryConfig,
+} from "../libs/DrizzleMeterRepository";
+import { metersPg, metersSqlite, usageRecordsPg, usageRecordsSqlite } from "../libs/schema";
+import {
+  addUsageEnvelopeFieldsPostgres,
+  addUsageEnvelopeFieldsSqlite,
+  removeUsageEnvelopeFieldsSqlite,
+} from "../migrations/addUsageEnvelopeFields";
 
 const createRepositoryConfig = () => ({
   meterTable: metersSqlite,
@@ -27,6 +39,21 @@ const createRepositoryConfig = () => ({
     updatedAt: metersSqlite.updatedAt,
   },
   usageRecordTable: usageRecordsSqlite,
+  usageRecordSchema: {
+    id: usageRecordsSqlite.id,
+    tenantId: usageRecordsSqlite.tenantId,
+    meterId: usageRecordsSqlite.meterId,
+    value: usageRecordsSqlite.value,
+    recordedAt: usageRecordsSqlite.recordedAt,
+    metadata: usageRecordsSqlite.metadata,
+    idempotencyKey: usageRecordsSqlite.idempotencyKey,
+    eventId: usageRecordsSqlite.eventId,
+    dimensions: usageRecordsSqlite.dimensions,
+  },
+});
+
+const createLegacyRepositoryConfig = () => ({
+  ...createRepositoryConfig(),
   usageRecordSchema: {
     id: usageRecordsSqlite.id,
     tenantId: usageRecordsSqlite.tenantId,
@@ -146,7 +173,9 @@ describe("DrizzleMeterRepository", () => {
         value INTEGER NOT NULL DEFAULT 1,
         recorded_at INTEGER NOT NULL,
         metadata TEXT NOT NULL DEFAULT '{}',
-        idempotency_key TEXT
+        idempotency_key TEXT,
+        event_id TEXT,
+        dimensions TEXT
       )
     `);
 
@@ -194,6 +223,8 @@ describe("DrizzleMeterRepository", () => {
                     expect.objectContaining({ name: "tenant_id", notnull: 1 }),
                     expect.objectContaining({ name: "meter_id", notnull: 1 }),
                     expect.objectContaining({ name: "idempotency_key" }),
+                    expect.objectContaining({ name: "event_id" }),
+                    expect.objectContaining({ name: "dimensions" }),
                   ]),
                 );
 
@@ -494,9 +525,21 @@ describe("DrizzleMeterRepository", () => {
 
   describe("findAll", () => {
     beforeEach(async () => {
-      await repository.save({ tenantId: "tenant-1", meterId: "api_calls", type: "COUNT" });
-      await repository.save({ tenantId: "tenant-1", meterId: "storage", type: "COUNT" });
-      await repository.save({ tenantId: "tenant-2", meterId: "api_calls", type: "COUNT" });
+      await repository.save({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        type: "COUNT",
+      });
+      await repository.save({
+        tenantId: "tenant-1",
+        meterId: "storage",
+        type: "COUNT",
+      });
+      await repository.save({
+        tenantId: "tenant-2",
+        meterId: "api_calls",
+        type: "COUNT",
+      });
     });
 
     it("should return all meters", async () => {
@@ -531,9 +574,21 @@ describe("DrizzleMeterRepository", () => {
 
   describe("findByTenant", () => {
     beforeEach(async () => {
-      await repository.save({ tenantId: "tenant-1", meterId: "api_calls", type: "COUNT" });
-      await repository.save({ tenantId: "tenant-1", meterId: "storage", type: "COUNT" });
-      await repository.save({ tenantId: "tenant-2", meterId: "api_calls", type: "COUNT" });
+      await repository.save({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        type: "COUNT",
+      });
+      await repository.save({
+        tenantId: "tenant-1",
+        meterId: "storage",
+        type: "COUNT",
+      });
+      await repository.save({
+        tenantId: "tenant-2",
+        meterId: "api_calls",
+        type: "COUNT",
+      });
     });
 
     it("should return meters for specific tenant", async () => {
@@ -575,6 +630,102 @@ describe("DrizzleMeterRepository", () => {
 
       const result = sqlite.prepare("SELECT * FROM usage_records").all();
       expect(result).toHaveLength(2);
+    });
+
+    it("should preserve billing identity and dimensions separately from metadata", async () => {
+      await repository.saveUsageRecords([
+        {
+          id: "record-billable",
+          tenantId: "tenant-1",
+          meterId: "ai.tokens",
+          value: 42,
+          timestamp: new Date(),
+          idempotencyKey: "request-1",
+          eventId: "request-1",
+          dimensions: { model: "gpt-5" },
+          metadata: { route: "/generate" },
+        },
+      ]);
+
+      const [result] = sqlite
+        .prepare(
+          "SELECT event_id, dimensions, metadata FROM usage_records WHERE idempotency_key = ?",
+        )
+        .all("request-1") as Array<{
+        event_id: string;
+        dimensions: string;
+        metadata: string;
+      }>;
+
+      expect(result.event_id).toBe("request-1");
+      expect(JSON.parse(result.dimensions)).toEqual({ model: "gpt-5" });
+      expect(JSON.parse(result.metadata)).toEqual({ route: "/generate" });
+    });
+
+    it("should preserve PostgreSQL jsonb envelope fields as structured values", async () => {
+      const onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
+      const values = vi.fn().mockReturnValue({ onConflictDoNothing });
+      const pgDb = {
+        insert: vi.fn().mockReturnValue({ values }),
+      } as unknown as DrizzleDb;
+      const pgTxManager = {
+        getClient: () => undefined,
+      } as unknown as TxManager<DrizzleDb>;
+      const pgRepository = new DrizzleMeterRepository(pgDb, pgTxManager, {
+        meterTable: metersPg,
+        meterSchema: metersPg,
+        usageRecordTable: usageRecordsPg,
+        usageRecordSchema: usageRecordsPg,
+      } as unknown as DrizzleMeterRepositoryConfig);
+
+      await pgRepository.saveUsageRecords([
+        {
+          id: "record-billable",
+          tenantId: "tenant-1",
+          meterId: "ai.tokens",
+          value: 42,
+          timestamp: new Date(),
+          idempotencyKey: "request-1",
+          eventId: "request-1",
+          dimensions: { model: "gpt-5" },
+          metadata: { route: "/generate" },
+        },
+      ]);
+
+      expect(values).toHaveBeenCalledWith([
+        expect.objectContaining({
+          dimensions: { model: "gpt-5" },
+          metadata: { route: "/generate" },
+        }),
+      ]);
+    });
+
+    it("should reject typed usage when legacy configuration omits envelope mappings", async () => {
+      const legacyRepository = new DrizzleMeterRepository(
+        db,
+        txManager,
+        createLegacyRepositoryConfig(),
+      );
+
+      await expect(
+        legacyRepository.saveUsageRecords([
+          {
+            id: "record-billable",
+            tenantId: "tenant-1",
+            meterId: "ai.tokens",
+            value: 42,
+            timestamp: new Date(),
+            idempotencyKey: "request-1",
+            eventId: "request-1",
+            dimensions: { model: "gpt-5" },
+          },
+        ]),
+      ).rejects.toMatchObject({
+        code: "metering-drizzle/usage-envelope-not-configured",
+        extensions: { missingMappings: ["eventId", "dimensions"] },
+      });
+
+      expect(sqlite.prepare("SELECT * FROM usage_records").all()).toHaveLength(0);
     });
 
     it("should handle empty array", async () => {
@@ -657,6 +808,146 @@ describe("DrizzleMeterRepository", () => {
         .prepare("SELECT recorded_at, value FROM usage_records WHERE idempotency_key = ?")
         .all("idem-1") as Array<{ recorded_at: number; value: number }>;
       expect(result).toEqual([{ recorded_at: 3000, value: 2 }]);
+    });
+  });
+
+  describe("usage envelope migrations", () => {
+    const createSqliteMigrationClient = (failOnDimensions = false) => {
+      const dialect = new SQLiteSyncDialect();
+      let transactionTail = Promise.resolve();
+      const execute = async (query: unknown): Promise<unknown> => {
+        const rendered = dialect.sqlToQuery(query as SQL);
+        if (failOnDimensions && rendered.sql.includes("ADD COLUMN dimensions")) {
+          throw new Error("simulated migration failure");
+        }
+        if (rendered.sql.trimStart().startsWith("PRAGMA")) {
+          return sqlite.prepare(rendered.sql).all(...rendered.params);
+        }
+        return sqlite.prepare(rendered.sql).run(...rendered.params);
+      };
+
+      return {
+        execute,
+        async transaction<T>(
+          fn: (tx: { execute(query: unknown): Promise<unknown> }) => Promise<T>,
+        ): Promise<T> {
+          const previousTransaction = transactionTail;
+          let releaseTransaction = () => {};
+          transactionTail = new Promise<void>((resolve) => {
+            releaseTransaction = resolve;
+          });
+          await previousTransaction;
+          sqlite.exec("BEGIN IMMEDIATE");
+          try {
+            const result = await fn({ execute });
+            sqlite.exec("COMMIT");
+            return result;
+          } catch (error) {
+            sqlite.exec("ROLLBACK");
+            throw error;
+          } finally {
+            releaseTransaction();
+          }
+        },
+      };
+    };
+
+    it("should upgrade an existing SQLite usage table before typed writes", async () => {
+      sqlite.exec("DROP TABLE usage_records");
+      sqlite.exec(`
+        CREATE TABLE usage_records (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          tenant_id TEXT NOT NULL,
+          meter_id TEXT NOT NULL,
+          value INTEGER NOT NULL DEFAULT 1,
+          recorded_at INTEGER NOT NULL,
+          metadata TEXT NOT NULL DEFAULT '{}',
+          idempotency_key TEXT
+        )
+      `);
+      const migrationClient = createSqliteMigrationClient();
+
+      await Promise.all([
+        addUsageEnvelopeFieldsSqlite(migrationClient),
+        addUsageEnvelopeFieldsSqlite(migrationClient),
+      ]);
+      await repository.saveUsageRecords([
+        {
+          id: "record-billable",
+          tenantId: "tenant-1",
+          meterId: "ai.tokens",
+          value: 42,
+          timestamp: new Date(),
+          idempotencyKey: "request-1",
+          eventId: "request-1",
+          dimensions: { model: "gpt-5" },
+        },
+      ]);
+
+      const columns = sqlite.prepare("PRAGMA table_info('usage_records')").all() as Array<{
+        name: string;
+      }>;
+      const [record] = sqlite
+        .prepare("SELECT event_id, dimensions FROM usage_records")
+        .all() as Array<{ event_id: string; dimensions: string }>;
+
+      expect(columns.map((column) => column.name)).toEqual(
+        expect.arrayContaining(["event_id", "dimensions"]),
+      );
+      expect(record.event_id).toBe("request-1");
+      expect(JSON.parse(record.dimensions)).toEqual({ model: "gpt-5" });
+    });
+
+    it("should rerun SQLite removal safely and roll back partial upgrades", async () => {
+      const migrationClient = createSqliteMigrationClient();
+
+      await removeUsageEnvelopeFieldsSqlite(migrationClient);
+      await removeUsageEnvelopeFieldsSqlite(migrationClient);
+      expect(
+        (
+          sqlite.prepare("PRAGMA table_info('usage_records')").all() as Array<{
+            name: string;
+          }>
+        ).map((column) => column.name),
+      ).not.toEqual(expect.arrayContaining(["event_id", "dimensions"]));
+
+      const failingClient = createSqliteMigrationClient(true);
+
+      await expect(addUsageEnvelopeFieldsSqlite(failingClient)).rejects.toThrow(
+        "simulated migration failure",
+      );
+      expect(
+        (
+          sqlite.prepare("PRAGMA table_info('usage_records')").all() as Array<{
+            name: string;
+          }>
+        ).map((column) => column.name),
+      ).not.toEqual(expect.arrayContaining(["event_id", "dimensions"]));
+
+      await addUsageEnvelopeFieldsSqlite(migrationClient);
+      expect(
+        (
+          sqlite.prepare("PRAGMA table_info('usage_records')").all() as Array<{
+            name: string;
+          }>
+        ).map((column) => column.name),
+      ).toEqual(expect.arrayContaining(["event_id", "dimensions"]));
+    });
+
+    it("should expose PostgreSQL-specific upgrade statements", async () => {
+      const queries: SQL[] = [];
+
+      await addUsageEnvelopeFieldsPostgres({
+        async execute(query) {
+          queries.push(query as SQL);
+        },
+      });
+
+      const sqlStatements = queries.map((query) => new PgDialect().sqlToQuery(query).sql);
+      expect(sqlStatements).toEqual([
+        "ALTER TABLE usage_records ADD COLUMN IF NOT EXISTS event_id TEXT",
+        "ALTER TABLE usage_records ADD COLUMN IF NOT EXISTS dimensions JSONB",
+      ]);
     });
   });
 

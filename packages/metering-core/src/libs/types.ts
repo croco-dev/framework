@@ -36,11 +36,15 @@ export type UsageRecord = {
   value: number;
   timestamp: Date;
   idempotencyKey: string;
+  eventId?: string;
+  dimensions?: Record<string, string | number | boolean>;
   metadata?: Record<string, unknown>;
 };
 
 /**
- * record() 메서드 옵션
+ * record() 메서드의 호환성 옵션
+ *
+ * @description 새 코드에서는 `defineMeter()`와 typed `record(meter, input)` 경로를 권장합니다.
  */
 export type RecordOptions = {
   tenantId: string;

@@ -11,6 +11,18 @@ title: "UsageRecord"
 
 ## Properties
 
+### dimensions?
+
+> `optional` **dimensions?**: `Record`\<`string`, `string` \| `number` \| `boolean`\>
+
+***
+
+### eventId?
+
+> `optional` **eventId?**: `string`
+
+***
+
 ### id
 
 > **id**: `string`

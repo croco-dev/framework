@@ -35,6 +35,8 @@ export const usageRecordsPg = pgTable(
     recordedAt: timestamp("recorded_at").notNull().defaultNow(),
     metadata: jsonb("metadata").notNull().default({}),
     idempotencyKey: text("idempotency_key"),
+    eventId: text("event_id"),
+    dimensions: jsonb("dimensions"),
   },
   (table) => [
     uniqueIndex("usage_records_idempotency_unique")
@@ -71,6 +73,8 @@ export const usageRecordsSqlite = sqliteTable(
     recordedAt: sqliteInteger("recorded_at").notNull(),
     metadata: sqliteText("metadata").notNull().default("{}"),
     idempotencyKey: sqliteText("idempotency_key"),
+    eventId: sqliteText("event_id"),
+    dimensions: sqliteText("dimensions"),
   },
   (table) => [
     sqliteUniqueIndex("usage_records_idempotency_unique")

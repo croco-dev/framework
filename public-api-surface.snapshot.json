@@ -14156,6 +14156,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "defineMeter",
+              "exportKind": "named",
+              "source": "./libs/MeterRef",
+              "declarationKind": "function"
+            },
+            {
+              "name": "dimension",
+              "exportKind": "named",
+              "source": "./libs/MeterRef",
+              "declarationKind": "const"
+            },
+            {
               "name": "DuplicateRecordProblem",
               "exportKind": "named",
               "source": "./libs/problems/DuplicateRecordProblem",
@@ -14192,9 +14204,21 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidMeterDimensionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidMeterDimensionProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidMeterProblem",
               "exportKind": "named",
               "source": "./libs/problems/InvalidMeterProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidUsageEnvelopeProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidUsageEnvelopeProblem",
               "declarationKind": "class"
             },
             {
@@ -14311,14 +14335,49 @@
               "source": "./libs/UsageStorage"
             },
             {
+              "name": "CountMeterRef",
+              "exportKind": "named",
+              "source": "./libs/MeterRef"
+            },
+            {
+              "name": "EnumDimension",
+              "exportKind": "named",
+              "source": "./libs/MeterRef"
+            },
+            {
               "name": "FlushResult",
               "exportKind": "named",
               "source": "./libs/types"
             },
             {
+              "name": "MeterAggregation",
+              "exportKind": "named",
+              "source": "./libs/MeterRef"
+            },
+            {
+              "name": "MeterBillingIntent",
+              "exportKind": "named",
+              "source": "./libs/MeterRef"
+            },
+            {
               "name": "MeterDefinition",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "MeterDefinitionOptions",
+              "exportKind": "named",
+              "source": "./libs/MeterRef"
+            },
+            {
+              "name": "MeterDimensionSchema",
+              "exportKind": "named",
+              "source": "./libs/MeterRef"
+            },
+            {
+              "name": "MeterDimensionValue",
+              "exportKind": "named",
+              "source": "./libs/MeterRef"
             },
             {
               "name": "MeteredMetadata",
@@ -14327,6 +14386,11 @@
             },
             {
               "name": "MeteredOptions",
+              "exportKind": "named",
+              "source": "./libs/decorators/Metered"
+            },
+            {
+              "name": "MeteredRefOptions",
               "exportKind": "named",
               "source": "./libs/decorators/Metered"
             },
@@ -14344,6 +14408,16 @@
               "name": "MeterOptions",
               "exportKind": "named",
               "source": "./libs/decorators/Meter"
+            },
+            {
+              "name": "MeterRecordInput",
+              "exportKind": "named",
+              "source": "./libs/MeterRef"
+            },
+            {
+              "name": "MeterRef",
+              "exportKind": "named",
+              "source": "./libs/MeterRef"
             },
             {
               "name": "MeterRegistrationOptions",
@@ -14428,6 +14502,30 @@
           "sourceEntrypoint": "packages/metering-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "addUsageEnvelopeFieldsPostgres",
+              "exportKind": "declaration",
+              "source": "./migrations/addUsageEnvelopeFields",
+              "declarationKind": "function"
+            },
+            {
+              "name": "addUsageEnvelopeFieldsSqlite",
+              "exportKind": "declaration",
+              "source": "./migrations/addUsageEnvelopeFields",
+              "declarationKind": "function"
+            },
+            {
+              "name": "removeUsageEnvelopeFieldsPostgres",
+              "exportKind": "declaration",
+              "source": "./migrations/addUsageEnvelopeFields",
+              "declarationKind": "function"
+            },
+            {
+              "name": "removeUsageEnvelopeFieldsSqlite",
+              "exportKind": "declaration",
+              "source": "./migrations/addUsageEnvelopeFields",
+              "declarationKind": "function"
+            },
+            {
               "name": "DrizzleMeterRepository",
               "exportKind": "named",
               "source": "./DrizzleMeterRepository",
@@ -14446,6 +14544,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "UsageEnvelopeConfigurationProblem",
+              "exportKind": "named",
+              "source": "./problems/UsageEnvelopeConfigurationProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "usageRecordsPg",
               "exportKind": "named",
               "source": "./schema",
@@ -14459,6 +14563,12 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "MeteringMigrationClient",
+              "exportKind": "declaration",
+              "source": "./migrations/addUsageEnvelopeFields",
+              "declarationKind": "type"
+            },
             {
               "name": "DrizzleDb",
               "exportKind": "named",
