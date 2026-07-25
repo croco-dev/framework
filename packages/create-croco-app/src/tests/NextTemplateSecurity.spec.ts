@@ -20,6 +20,6 @@ describe("Next.js addon templates", () => {
   it.each(WORKSPACE_TEMPLATES)("pins patched PostCSS in the %s workspace", (template) => {
     const workspace = readFileSync(join(TEMPLATES_DIR, template, "pnpm-workspace.yaml"), "utf8");
 
-    expect(workspace).toMatch(/overrides:\n  postcss: 8\.5\.12/);
+    expect(workspace).toMatch(/overrides:\n  postcss: 8\.5\.18/);
   });
 });

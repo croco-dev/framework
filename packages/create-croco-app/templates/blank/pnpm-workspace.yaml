@@ -3,7 +3,7 @@ packages:
   - "libs/**/*"
 
 overrides:
-  postcss: 8.5.12
+  postcss: 8.5.18
 
 allowBuilds:
   "@apollo/protobufjs": true
