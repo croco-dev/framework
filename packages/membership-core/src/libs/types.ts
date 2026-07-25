@@ -31,6 +31,58 @@ export type MembershipUpdateInput = {
   role: MembershipRole;
 };
 
+export type MembershipOwnerMutationInput =
+  | {
+      tenantId: string;
+      userId: string;
+      operation: "remove";
+    }
+  | {
+      tenantId: string;
+      userId: string;
+      operation: "demote";
+      role: Exclude<MembershipRole, "owner">;
+    };
+
+export type MembershipOwnerMutationResult =
+  | {
+      status: "applied";
+      membership: Membership;
+    }
+  | {
+      status: "last_owner";
+    }
+  | {
+      status: "conflict";
+    }
+  | {
+      status: "not_found";
+    };
+
+export type MembershipOwnershipTransferInput = {
+  tenantId: string;
+  fromUserId: string;
+  toUserId: string;
+};
+
+export type MembershipOwnershipTransferResult =
+  | {
+      status: "applied";
+      fromMembership: Membership;
+      toMembership: Membership;
+      previousToRole: MembershipRole;
+    }
+  | {
+      status: "not_found";
+      userId: string;
+    }
+  | {
+      status: "source_not_owner";
+    }
+  | {
+      status: "conflict";
+    };
+
 export const ROLE_HIERARCHY: Record<MembershipRole, number> = {
   owner: 4,
   admin: 3,

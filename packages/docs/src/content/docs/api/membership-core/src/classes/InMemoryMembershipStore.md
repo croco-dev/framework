@@ -16,14 +16,14 @@ title: "InMemoryMembershipStore"
 **저장소 생성 및 사용**
 
 ```typescript
-import { InMemoryMembershipStore } from '@croco/membership-core';
+import { InMemoryMembershipStore } from "@croco/membership-core";
 
 const store = new InMemoryMembershipStore();
 const membership = await store.save({
-  id: 'mem-1',
-  tenantId: 'tenant-1',
-  userId: 'user-1',
-  role: 'admin'
+  id: "mem-1",
+  tenantId: "tenant-1",
+  userId: "user-1",
+  role: "admin",
 });
 ```
 
@@ -65,7 +65,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countAll`](/api/membership-core/src/classes/membershipstore/#countall)
 
-***
+---
 
 ### countByRole()
 
@@ -89,7 +89,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countByRole`](/api/membership-core/src/classes/membershipstore/#countbyrole)
 
-***
+---
 
 ### delete()
 
@@ -113,7 +113,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`delete`](/api/membership-core/src/classes/membershipstore/#delete)
 
-***
+---
 
 ### findAllByTenant()
 
@@ -133,7 +133,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findAllByTenant`](/api/membership-core/src/classes/membershipstore/#findallbytenant)
 
-***
+---
 
 ### findAllByUser()
 
@@ -153,7 +153,7 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findAllByUser`](/api/membership-core/src/classes/membershipstore/#findallbyuser)
 
-***
+---
 
 ### findByTenantAndUser()
 
@@ -177,7 +177,33 @@ const membership = await store.save({
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findByTenantAndUser`](/api/membership-core/src/classes/membershipstore/#findbytenantanduser)
 
-***
+---
+
+### mutateOwner()
+
+> **mutateOwner**(`input`): `Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
+
+Applies an owner removal or demotion as one atomic transition.
+
+Implementations must serialize competing mutations for the same tenant so the final owner
+cannot be removed or demoted between validation and persistence. Serialization failures must
+be returned as `conflict`.
+
+#### Parameters
+
+##### input
+
+[`MembershipOwnerMutationInput`](/api/membership-core/src/type-aliases/membershipownermutationinput/)
+
+#### Returns
+
+`Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`mutateOwner`](/api/membership-core/src/classes/membershipstore/#mutateowner)
+
+---
 
 ### save()
 
@@ -196,3 +222,26 @@ const membership = await store.save({
 #### Overrides
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`save`](/api/membership-core/src/classes/membershipstore/#save)
+
+---
+
+### transferOwnership()
+
+> **transferOwnership**(`input`): `Promise`\<[`MembershipOwnershipTransferResult`](/api/membership-core/src/type-aliases/membershipownershiptransferresult/)\>
+
+Transfers ownership as one atomic transition. Serialization failures must be returned as
+`conflict`.
+
+#### Parameters
+
+##### input
+
+[`MembershipOwnershipTransferInput`](/api/membership-core/src/type-aliases/membershipownershiptransferinput/)
+
+#### Returns
+
+`Promise`\<[`MembershipOwnershipTransferResult`](/api/membership-core/src/type-aliases/membershipownershiptransferresult/)\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`transferOwnership`](/api/membership-core/src/classes/membershipstore/#transferownership)

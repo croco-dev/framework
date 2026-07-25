@@ -55,7 +55,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### countByRole()
 
@@ -75,7 +75,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### delete()
 
@@ -95,7 +95,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### findAllByTenant()
 
@@ -111,7 +111,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
-***
+---
 
 ### findAllByUser()
 
@@ -127,7 +127,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
-***
+---
 
 ### findByTenantAndUser()
 
@@ -147,7 +147,29 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/) \| `null`\>
 
-***
+---
+
+### mutateOwner()
+
+> `abstract` **mutateOwner**(`input`): `Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
+
+Applies an owner removal or demotion as one atomic transition.
+
+Implementations must serialize competing mutations for the same tenant so the final owner
+cannot be removed or demoted between validation and persistence. Serialization failures must
+be returned as `conflict`.
+
+#### Parameters
+
+##### input
+
+[`MembershipOwnerMutationInput`](/api/membership-core/src/type-aliases/membershipownermutationinput/)
+
+#### Returns
+
+`Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
+
+---
 
 ### save()
 
@@ -176,3 +198,22 @@ class PostgresMembershipStore extends MembershipStore {
 #### Returns
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
+
+---
+
+### transferOwnership()
+
+> `abstract` **transferOwnership**(`input`): `Promise`\<[`MembershipOwnershipTransferResult`](/api/membership-core/src/type-aliases/membershipownershiptransferresult/)\>
+
+Transfers ownership as one atomic transition. Serialization failures must be returned as
+`conflict`.
+
+#### Parameters
+
+##### input
+
+[`MembershipOwnershipTransferInput`](/api/membership-core/src/type-aliases/membershipownershiptransferinput/)
+
+#### Returns
+
+`Promise`\<[`MembershipOwnershipTransferResult`](/api/membership-core/src/type-aliases/membershipownershiptransferresult/)\>

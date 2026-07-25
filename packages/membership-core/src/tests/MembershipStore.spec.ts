@@ -139,4 +139,59 @@ describe("InMemoryMembershipStore", () => {
       ).resolves.toMatchObject(second);
     },
   );
+
+  it("should preserve the final owner across atomic removals", async () => {
+    await store.save(createInput({ id: "mem-1", userId: "user-1", role: "owner" }));
+    await store.save(createInput({ id: "mem-2", userId: "user-2", role: "owner" }));
+
+    await expect(
+      store.mutateOwner({ tenantId: "tenant-1", userId: "user-1", operation: "remove" }),
+    ).resolves.toMatchObject({ status: "applied" });
+    await expect(
+      store.mutateOwner({ tenantId: "tenant-1", userId: "user-2", operation: "remove" }),
+    ).resolves.toEqual({ status: "last_owner" });
+
+    expect(await store.countByRole("tenant-1", "owner")).toBe(1);
+  });
+
+  it("should apply owner demotion with the same final-owner invariant", async () => {
+    await store.save(createInput({ id: "mem-1", userId: "user-1", role: "owner" }));
+    await store.save(createInput({ id: "mem-2", userId: "user-2", role: "owner" }));
+
+    await expect(
+      store.mutateOwner({
+        tenantId: "tenant-1",
+        userId: "user-1",
+        operation: "demote",
+        role: "admin",
+      }),
+    ).resolves.toMatchObject({ status: "applied", membership: { role: "admin" } });
+    await expect(
+      store.mutateOwner({
+        tenantId: "tenant-1",
+        userId: "user-2",
+        operation: "demote",
+        role: "member",
+      }),
+    ).resolves.toEqual({ status: "last_owner" });
+  });
+
+  it("should transfer ownership as one invariant-preserving transition", async () => {
+    await store.save(createInput({ id: "mem-1", userId: "user-1", role: "owner" }));
+    await store.save(createInput({ id: "mem-2", userId: "user-2", role: "admin" }));
+
+    await expect(
+      store.transferOwnership({
+        tenantId: "tenant-1",
+        fromUserId: "user-1",
+        toUserId: "user-2",
+      }),
+    ).resolves.toMatchObject({
+      status: "applied",
+      fromMembership: { role: "admin" },
+      toMembership: { role: "owner" },
+      previousToRole: "admin",
+    });
+    expect(await store.countByRole("tenant-1", "owner")).toBe(1);
+  });
 });

@@ -9,7 +9,8 @@ title: "MembershipService"
 
 ## Description
 
-멤버십 라이프사이클을 관리하는 서비스입니다. [MembershipOwnerGuard](/api/membership-core/src/classes/membershipownerguard/)를 사용하여 소유자 제약 조건을 검증합니다.
+멤버십 라이프사이클을 관리하는 서비스입니다. 저장소의 원자적 소유자 변경 계약으로 소유자 제약 조건을 보호합니다.
+
 - 역할 계층 검증
 - 소유권 보호
 - 소유권 이전 지원
@@ -23,16 +24,16 @@ title: "MembershipService"
 const service = new MembershipService(store, eventPublisher, seatLimitChecker);
 
 // 멤버 추가
-await service.addMember('tenant-123', 'user-456', 'admin');
+await service.addMember("tenant-123", "user-456", "admin");
 
 // 역할 변경
-await service.updateRole('tenant-123', 'user-456', 'owner');
+await service.updateRole("tenant-123", "user-456", "owner");
 
 // 소유권 이전
-await service.transferOwnership('tenant-123', 'current-owner', 'new-owner');
+await service.transferOwnership("tenant-123", "current-owner", "new-owner");
 
 // 멤버 제거
-await service.removeMember('tenant-123', 'user-456');
+await service.removeMember("tenant-123", "user-456");
 ```
 
 ## Implements
@@ -91,7 +92,7 @@ await service.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`addMember`](/api/membership-core/src/classes/abstractmembershipmanager/#addmember)
 
-***
+---
 
 ### getMember()
 
@@ -115,7 +116,7 @@ await service.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`getMember`](/api/membership-core/src/classes/abstractmembershipmanager/#getmember)
 
-***
+---
 
 ### listMembers()
 
@@ -135,7 +136,7 @@ await service.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`listMembers`](/api/membership-core/src/classes/abstractmembershipmanager/#listmembers)
 
-***
+---
 
 ### listTenants()
 
@@ -155,7 +156,7 @@ await service.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`listTenants`](/api/membership-core/src/classes/abstractmembershipmanager/#listtenants)
 
-***
+---
 
 ### removeMember()
 
@@ -179,7 +180,7 @@ await service.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`removeMember`](/api/membership-core/src/classes/abstractmembershipmanager/#removemember)
 
-***
+---
 
 ### transferOwnership()
 
@@ -207,7 +208,7 @@ await service.removeMember('tenant-123', 'user-456');
 
 [`AbstractMembershipManager`](/api/membership-core/src/classes/abstractmembershipmanager/).[`transferOwnership`](/api/membership-core/src/classes/abstractmembershipmanager/#transferownership)
 
-***
+---
 
 ### updateRole()
 

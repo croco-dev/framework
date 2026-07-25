@@ -59,7 +59,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countAll`](/api/membership-core/src/classes/membershipstore/#countall)
 
-***
+---
 
 ### countByRole()
 
@@ -85,7 +85,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countByRole`](/api/membership-core/src/classes/membershipstore/#countbyrole)
 
-***
+---
 
 ### delete()
 
@@ -111,7 +111,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`delete`](/api/membership-core/src/classes/membershipstore/#delete)
 
-***
+---
 
 ### findAllByTenant()
 
@@ -133,7 +133,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findAllByTenant`](/api/membership-core/src/classes/membershipstore/#findallbytenant)
 
-***
+---
 
 ### findAllByUser()
 
@@ -155,7 +155,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findAllByUser`](/api/membership-core/src/classes/membershipstore/#findallbyuser)
 
-***
+---
 
 ### findByTenantAndUser()
 
@@ -181,7 +181,29 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findByTenantAndUser`](/api/membership-core/src/classes/membershipstore/#findbytenantanduser)
 
-***
+---
+
+### mutateOwner()
+
+> **mutateOwner**(`input`): `Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
+
+현재 소유자 행을 잠근 뒤 조건부 변경으로 마지막 소유자 제약을 확인하고 제거 또는 강등합니다.
+
+#### Parameters
+
+##### input
+
+[`MembershipOwnerMutationInput`](/api/membership-core/src/type-aliases/membershipownermutationinput/)
+
+#### Returns
+
+`Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`mutateOwner`](/api/membership-core/src/classes/membershipstore/#mutateowner)
+
+---
 
 ### save()
 
@@ -202,3 +224,25 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 #### Overrides
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`save`](/api/membership-core/src/classes/membershipstore/#save)
+
+---
+
+### transferOwnership()
+
+> **transferOwnership**(`input`): `Promise`\<[`MembershipOwnershipTransferResult`](/api/membership-core/src/type-aliases/membershipownershiptransferresult/)\>
+
+두 멤버십의 역할을 하나의 조건부 UPDATE로 변경하여 소유권을 이전합니다.
+
+#### Parameters
+
+##### input
+
+[`MembershipOwnershipTransferInput`](/api/membership-core/src/type-aliases/membershipownershiptransferinput/)
+
+#### Returns
+
+`Promise`\<[`MembershipOwnershipTransferResult`](/api/membership-core/src/type-aliases/membershipownershiptransferresult/)\>
+
+#### Overrides
+
+[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`transferOwnership`](/api/membership-core/src/classes/membershipstore/#transferownership)
