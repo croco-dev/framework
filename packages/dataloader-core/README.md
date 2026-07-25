@@ -142,7 +142,9 @@ Creates a request-scoped batch loader.
 #### Options
 
 - **name** (`string`): Unique name for caching the loader in request context
-- **batchFn** (`BatchFn<K, V>`): Function that loads data for multiple keys
+- **batchFn** (`BatchFn<K, V>`): Function that loads data for multiple keys. It must return a dense array with
+  exactly one result per key; sparse arrays are rejected for the whole batch. An explicitly assigned `undefined`
+  is a present result when `V` includes `undefined`.
 - **maxBatchSize** (`number`, optional): Maximum items per batch (default: Infinity)
 - **cache** (`boolean`, optional): Whether to cache results (default: true)
 - **scope** (`string`, optional): Static scope for cache isolation
