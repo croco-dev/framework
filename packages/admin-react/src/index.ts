@@ -22,6 +22,10 @@ export {
   TenantSwitcher,
   UsageQuotaMeter,
 } from "./libs/components";
+export {
+  createTenantWorkspaceActionRequest,
+  TenantBusinessWorkspace,
+} from "./libs/TenantBusinessWorkspace";
 export { useAdminForm } from "./libs/hooks";
 export { AdminDataTable } from "./libs/DataTable";
 export {
@@ -167,3 +171,8 @@ export type {
   AdminDataTableStateBase,
   AdminDataTableStateInput,
 } from "./libs/dataTableTypes";
+export type {
+  TenantBusinessWorkspaceProps,
+  TenantWorkspaceActionRequest,
+  TenantWorkspaceActionResult,
+} from "./libs/TenantBusinessWorkspace";

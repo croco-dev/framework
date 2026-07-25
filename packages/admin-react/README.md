@@ -4,6 +4,46 @@ Provider-neutral React contracts and primitives for SaaS billing, entitlement,
 tenant switching, impersonation, and permission inspection administration.
 Also includes contract-aware admin resource tables.
 
+## Tenant 360 workspace
+
+`TenantBusinessWorkspace` renders the React-independent snapshot from
+`@croco/admin-core`. Source cards fail independently and distinguish loading,
+empty, stale, permission-denied, unavailable, and domain Problem states. The
+controlled tabs, refresh controls, landmarks, summary links, and action launcher
+remain host-composable.
+
+```tsx
+import { loadTenantWorkspace } from "@croco/admin-core";
+import { TenantBusinessWorkspace } from "@croco/admin-react";
+
+const state = await loadTenantWorkspace({
+  tenantId: "tenant-1",
+  sources: [identitySource, billingSource, usageSource, engagementExtensionSource],
+  grantedPermissions: ["tenant:read", "billing:read", "usage:read"],
+  actions: [refreshEntitlementsAction],
+});
+
+export function Tenant360() {
+  return (
+    <TenantBusinessWorkspace
+      state={state}
+      onRefreshSource={(sourceId) => refreshSource(sourceId)}
+      onAction={(request) => confirmAction(request)}
+      renderExtension={(extension) =>
+        extension.contractId === "engagement/customer-360" ? (
+          <EngagementCustomer360 state={extension.state} />
+        ) : null
+      }
+    />
+  );
+}
+```
+
+Write controls appear only from an explicit `AdminAction` plus an evaluated
+permission result. Action requests preserve required reason/idempotency input,
+possible Problems, and recovery state. Provider state marked read-only is never
+presented as editable.
+
 ## Install
 
 ```bash
