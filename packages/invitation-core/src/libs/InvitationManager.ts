@@ -196,7 +196,7 @@ export class InvitationManager {
   async revokeInvitation(invitationId: string): Promise<Invitation> {
     const invitation = await this.store.findById(invitationId);
     if (!invitation) {
-      throw new InvitationNotFoundProblem(invitationId);
+      throw new InvitationNotFoundProblem("");
     }
 
     if (invitation.status === "accepted") {
@@ -228,7 +228,7 @@ export class InvitationManager {
   async resendInvitation(invitationId: string): Promise<string> {
     const invitation = await this.store.findById(invitationId);
     if (!invitation) {
-      throw new InvitationNotFoundProblem(invitationId);
+      throw new InvitationNotFoundProblem("");
     }
 
     if (invitation.status === "accepted") {
@@ -289,7 +289,7 @@ export class InvitationManager {
     const invitation = await this.store.findByTokenHash(tokenHash);
 
     if (!invitation) {
-      throw new InvitationNotFoundProblem(token);
+      throw new InvitationNotFoundProblem("");
     }
 
     return invitation;

@@ -236,14 +236,43 @@ describe("InvitationManager", () => {
     expect(accepted.status).toBe("accepted");
   });
 
-  it("should throw InvitationNotFoundProblem when token is unknown", async () => {
-    await expect(
-      manager.acceptInvitation({
-        token: "missing-token",
+  it("should not expose an unknown bearer token in the serialized Problem", async () => {
+    const token = "missing-secret-bearer-token";
+
+    const problem = await manager
+      .acceptInvitation({
+        token,
         userId: "user-1",
         email: "user@croco.dev",
-      }),
-    ).rejects.toBeInstanceOf(InvitationNotFoundProblem);
+      })
+      .catch((error: unknown) => error);
+
+    expect(problem).toBeInstanceOf(InvitationNotFoundProblem);
+    if (!(problem instanceof InvitationNotFoundProblem)) {
+      throw problem;
+    }
+
+    expect(problem.message).toBe("Invitation not found");
+    expect(problem.detail).toBe("Invitation not found");
+    expect(problem.extensions).toBeUndefined();
+    expect(problem.toJSON()).toEqual({
+      type: "about:blank",
+      title: "Not Found",
+      status: 404,
+      detail: "Invitation not found",
+      code: "INVITATION_NOT_FOUND",
+    });
+    expect(problem.stack ?? "").not.toContain(token);
+    expect(JSON.stringify(problem)).not.toContain(token);
+  });
+
+  it("should ignore identifiers passed to InvitationNotFoundProblem by legacy callers", () => {
+    const identifier = "legacy-secret-bearer-token";
+    const problem = new InvitationNotFoundProblem(identifier);
+
+    expect(problem.message).toBe("Invitation not found");
+    expect(problem.extensions).toBeUndefined();
+    expect(JSON.stringify(problem)).not.toContain(identifier);
   });
 
   it("should mark invitation expired and throw InvitationExpiredProblem", async () => {
