@@ -54,12 +54,13 @@ export { MetricsEngine } from "./libs/MetricsEngine";
 export { MrrCalculator } from "./libs/MrrCalculator";
 
 /**
- * 운영 capacity 계산 과정에서 발생하는 Problem 하위 타입들입니다.
+ * metrics 계산 과정에서 발생하는 Problem 하위 타입들입니다.
  */
 export {
   CarryingCapacitySimulationProblem,
   CarryingCapacityTenantRequiredProblem,
   GrossMarginRequiredProblem,
+  InvalidRetentionMovementProblem,
   MixedCurrencyMRRProblem,
   RetentionMetricsUnavailableProblem,
 } from "./libs/problems/MetricsProblems";

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { InvalidRetentionMovementProblem } from "../libs/problems/MetricsProblems";
 import { RetentionCalculator } from "../libs/RetentionCalculator";
 import type { MRRMovement } from "../types";
 
@@ -302,6 +303,15 @@ describe("RetentionCalculator", () => {
       expect(result).toBe(100);
     });
 
+    it("should calculate 0% GRR when losses equal starting MRR", async () => {
+      const movement = createMovement({
+        contraction: { amount: 20000, currency: "USD" },
+        churned: { amount: 80000, currency: "USD" },
+      });
+
+      await expect(calculator.calculateGRR(100000, movement)).resolves.toBe(0);
+    });
+
     it("should allow NRR to exceed 100%", async () => {
       const startingMRR = 100000;
       const movement = createMovement({
@@ -318,7 +328,7 @@ describe("RetentionCalculator", () => {
       expect(result).toBe(120);
     });
 
-    it("should handle negative ending MRR", async () => {
+    it("should clamp GRR to 0 when losses exceed starting MRR", async () => {
       const startingMRR = 100000;
       const movement = createMovement({
         new: { amount: 1000, currency: "USD" },
@@ -331,9 +341,59 @@ describe("RetentionCalculator", () => {
 
       const grr = await calculator.calculateGRR(startingMRR, movement);
       const nrr = await calculator.calculateNRR(startingMRR, movement);
-      expect(grr).toBe(-5);
+      expect(grr).toBe(0);
 
       expect(nrr).toBe(-5);
+    });
+
+    it.each([
+      ["churned", -1],
+      ["churned", Number.NaN],
+      ["churned", Number.POSITIVE_INFINITY],
+      ["churned", Number.NEGATIVE_INFINITY],
+      ["contraction", -1],
+      ["contraction", Number.NaN],
+      ["contraction", Number.POSITIVE_INFINITY],
+      ["contraction", Number.NEGATIVE_INFINITY],
+    ] as const)("should reject invalid %s loss amount %s", async (field, amount) => {
+      const movement = createMovement({
+        [field]: { amount, currency: "USD" },
+      });
+
+      await expect(calculator.calculateGRR(100000, movement)).rejects.toThrow(
+        InvalidRetentionMovementProblem,
+      );
+    });
+
+    it("should validate movement losses even when starting MRR is zero", async () => {
+      const movement = createMovement({
+        churned: { amount: Number.NaN, currency: "USD" },
+      });
+
+      await expect(calculator.calculateGRR(0, movement)).rejects.toThrow(
+        InvalidRetentionMovementProblem,
+      );
+    });
+
+    it("should propagate invalid GRR movement through calculateRetention", async () => {
+      const movement = createMovement({
+        contraction: { amount: -1, currency: "USD" },
+      });
+
+      await expect(calculator.calculateRetention(100000, movement)).rejects.toThrow(
+        InvalidRetentionMovementProblem,
+      );
+    });
+
+    it("should clamp over-loss GRR through calculateRetention", async () => {
+      const movement = createMovement({
+        contraction: { amount: 30000, currency: "USD" },
+        churned: { amount: 80000, currency: "USD" },
+      });
+
+      await expect(calculator.calculateRetention(100000, movement)).resolves.toMatchObject({
+        grr: 0,
+      });
     });
   });
 
