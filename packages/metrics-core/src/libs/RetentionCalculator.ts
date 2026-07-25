@@ -1,4 +1,5 @@
 import type { MRRMovement, Percentage } from "../types";
+import { InvalidRetentionMovementProblem } from "./problems/MetricsProblems";
 
 export type LogoChurnInput = {
   startingCustomers: number;
@@ -21,13 +22,17 @@ export class RetentionCalculator {
   /**
    * Calculate Gross Revenue Retention (GRR) for a period.
    *
-   * Formula: (Starting MRR - Churned MRR - Contraction MRR) / Starting MRR
+   * Formula: max(0, min(100, ((Starting MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100))
    *
    * @param startingMRR - MRR at the start of the period
-   * @param movement - MRR movement data for the period
+   * @param movement - MRR movement data with finite, non-negative churn and contraction amounts
    * @returns GRR as percentage (0-100), or null if starting MRR is zero
+   * @throws InvalidRetentionMovementProblem when churn or contraction is negative or non-finite
    */
   async calculateGRR(startingMRR: number, movement: MRRMovement): Promise<Percentage | null> {
+    this.validateGRRLoss("churned", movement.churned.amount);
+    this.validateGRRLoss("contraction", movement.contraction.amount);
+
     if (startingMRR === 0) {
       return null;
     }
@@ -35,7 +40,7 @@ export class RetentionCalculator {
     const retainedMRR = startingMRR - movement.churned.amount - movement.contraction.amount;
     const grr = (retainedMRR / startingMRR) * 100;
 
-    return Math.min(grr, 100);
+    return Math.max(0, Math.min(grr, 100));
   }
 
   /**
@@ -87,10 +92,11 @@ export class RetentionCalculator {
    * Calculate all retention metrics at once.
    *
    * @param startingMRR - MRR at the start of the period
-   * @param movement - MRR movement data for the period
+   * @param movement - MRR movement data with finite, non-negative churn and contraction amounts
    * @param startingCustomers - Number of customers at start (optional, for logo churn)
    * @param endingCustomers - Number of customers at end (optional, for logo churn)
    * @returns Complete retention metrics
+   * @throws InvalidRetentionMovementProblem when churn or contraction is negative or non-finite
    */
   async calculateRetention(
     startingMRR: number,
@@ -120,5 +126,11 @@ export class RetentionCalculator {
       logoChurn,
       revenueChurn,
     };
+  }
+
+  private validateGRRLoss(field: "churned" | "contraction", amount: number): void {
+    if (!Number.isFinite(amount) || amount < 0) {
+      throw new InvalidRetentionMovementProblem(field, amount);
+    }
   }
 }

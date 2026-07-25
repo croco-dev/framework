@@ -13648,6 +13648,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidRetentionMovementProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "LtvCalculator",
               "exportKind": "named",
               "source": "./libs/LtvCalculator",

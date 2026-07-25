@@ -2,7 +2,7 @@
 editUrl: false
 next: false
 prev: false
-title: "CarryingCapacityTenantRequiredProblem"
+title: "InvalidRetentionMovementProblem"
 ---
 
 metrics 계산 과정에서 발생하는 Problem 하위 타입들입니다.
@@ -15,11 +15,21 @@ metrics 계산 과정에서 발생하는 Problem 하위 타입들입니다.
 
 ### Constructor
 
-> **new CarryingCapacityTenantRequiredProblem**(): `CarryingCapacityTenantRequiredProblem`
+> **new InvalidRetentionMovementProblem**(`field`, `amount`): `InvalidRetentionMovementProblem`
+
+#### Parameters
+
+##### field
+
+`"contraction"` \| `"churned"`
+
+##### amount
+
+`number`
 
 #### Returns
 
-`CarryingCapacityTenantRequiredProblem`
+`InvalidRetentionMovementProblem`
 
 #### Overrides
 
@@ -49,7 +59,7 @@ metrics 계산 과정에서 발생하는 Problem 하위 타입들입니다.
 
 ### code
 
-> `readonly` **code**: `"metrics-core/carrying-capacity-tenant-required"` = `"metrics-core/carrying-capacity-tenant-required"`
+> `readonly` **code**: `"metrics-core/invalid-retention-movement"` = `"metrics-core/invalid-retention-movement"`
 
 #### Overrides
 

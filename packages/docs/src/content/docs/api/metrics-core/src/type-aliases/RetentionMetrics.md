@@ -9,21 +9,24 @@ title: "RetentionMetrics"
 
 Retention metrics measuring customer and revenue retention.
 
-## Formula
+## Logo churn formula
 
-Logo Churn Rate = (Churned Customers / Starting Customers) * 100
+Logo Churn Rate = (Churned Customers / Starting Customers) \* 100
 
-## Formula
+## Revenue churn formula
 
-Revenue Churn Rate = (Churned MRR / Starting MRR) * 100
+Revenue Churn Rate = (Churned MRR / Starting MRR) \* 100
 
-## Formula
+## Gross revenue retention formula
 
-GRR = ((Starting MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100
+GRR = max(0, min(100, ((Starting MRR - Churned MRR - Contraction MRR) / Starting MRR) \* 100))
 
-## Formula
+`RetentionCalculator.calculateGRR` returns `null` when Starting MRR is zero.
+`TimescaleMetricsStore.getRetentionMetrics` represents that unavailable GRR as 100.
 
-NRR = ((Starting MRR + Expansion MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100
+## Net revenue retention formula
+
+NRR = ((Starting MRR + Expansion MRR - Churned MRR - Contraction MRR) / Starting MRR) \* 100
 
 ## Properties
 
@@ -31,9 +34,9 @@ NRR = ((Starting MRR + Expansion MRR - Churned MRR - Contraction MRR) / Starting
 
 > **grr**: [`Percentage`](/api/metrics-core/src/type-aliases/percentage/)
 
-Gross Revenue Retention - retention excluding expansion (≤100)
+Gross Revenue Retention - retention excluding expansion (0-100)
 
-***
+---
 
 ### logoChurn
 
@@ -41,7 +44,7 @@ Gross Revenue Retention - retention excluding expansion (≤100)
 
 Customer logo churn rate (0-100)
 
-***
+---
 
 ### nrr
 
@@ -49,10 +52,10 @@ Customer logo churn rate (0-100)
 
 Net Revenue Retention - retention including expansion (>100 possible)
 
-***
+---
 
 ### revenueChurn
 
 > **revenueChurn**: [`Percentage`](/api/metrics-core/src/type-aliases/percentage/)
 
-Revenue churn rate (0-100)
+Revenue churn rate (non-negative; may exceed 100 when churned MRR exceeds starting MRR)

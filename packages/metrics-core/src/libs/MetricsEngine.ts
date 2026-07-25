@@ -96,11 +96,12 @@ export class MetricsEngine {
   /**
    * Calculate Gross Revenue Retention (GRR) for a period.
    *
-   * Formula: (Starting MRR - Churned MRR - Contraction MRR) / Starting MRR
+   * Formula: max(0, min(100, ((Starting MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100))
    *
    * @param startingMRR - MRR at the start of the period
-   * @param movement - MRR movement data for the period
+   * @param movement - MRR movement data with finite, non-negative churn and contraction amounts
    * @returns GRR as percentage (0-100), or null if starting MRR is zero
+   * @throws InvalidRetentionMovementProblem when churn or contraction is negative or non-finite
    */
   async calculateGRR(startingMRR: number, movement: MRRMovement): Promise<Percentage | null> {
     return this.retentionCalculator.calculateGRR(startingMRR, movement);

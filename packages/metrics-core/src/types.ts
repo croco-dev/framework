@@ -62,17 +62,31 @@ export type MRRMovement = {
 /**
  * Retention metrics measuring customer and revenue retention.
  *
- * @formula Logo Churn Rate = (Churned Customers / Starting Customers) * 100
- * @formula Revenue Churn Rate = (Churned MRR / Starting MRR) * 100
- * @formula GRR = ((Starting MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100
- * @formula NRR = ((Starting MRR + Expansion MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100
+ * ## Logo churn formula
+ *
+ * Logo Churn Rate = (Churned Customers / Starting Customers) * 100
+ *
+ * ## Revenue churn formula
+ *
+ * Revenue Churn Rate = (Churned MRR / Starting MRR) * 100
+ *
+ * ## Gross revenue retention formula
+ *
+ * GRR = max(0, min(100, ((Starting MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100))
+ *
+ * `RetentionCalculator.calculateGRR` returns `null` when Starting MRR is zero.
+ * `TimescaleMetricsStore.getRetentionMetrics` represents that unavailable GRR as 100.
+ *
+ * ## Net revenue retention formula
+ *
+ * NRR = ((Starting MRR + Expansion MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100
  */
 export type RetentionMetrics = {
   /** Customer logo churn rate (0-100) */
   logoChurn: Percentage;
-  /** Revenue churn rate (0-100) */
+  /** Revenue churn rate (non-negative; may exceed 100 when churned MRR exceeds starting MRR) */
   revenueChurn: Percentage;
-  /** Gross Revenue Retention - retention excluding expansion (≤100) */
+  /** Gross Revenue Retention - retention excluding expansion (0-100) */
   grr: Percentage;
   /** Net Revenue Retention - retention including expansion (>100 possible) */
   nrr: Percentage;

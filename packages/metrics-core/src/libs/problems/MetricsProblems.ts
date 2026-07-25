@@ -26,6 +26,18 @@ export class RetentionMetricsUnavailableProblem extends Problem {
   }
 }
 
+export class InvalidRetentionMovementProblem extends Problem {
+  readonly code = "metrics-core/invalid-retention-movement";
+  readonly category = ProblemCategory.ValidationError;
+  constructor(field: "churned" | "contraction", amount: number) {
+    super(
+      undefined,
+      undefined,
+      `Retention movement '${field}' amount must be a finite non-negative number: ${String(amount)}`,
+    );
+  }
+}
+
 export class GrossMarginRequiredProblem extends Problem {
   readonly code = "metrics-core/gross-margin-required";
   readonly category = ProblemCategory.ValidationError;
