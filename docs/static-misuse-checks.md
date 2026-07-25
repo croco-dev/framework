@@ -5,6 +5,11 @@ and format pass. Current rules:
 
 - `CROCO_STATIC_REPOSITORY_CORE_IMPLEMENTATION_BOUNDARY`
 - `CROCO_STATIC_REST_GENERATED_CONTRACT_SCHEMA_BOUNDARY`
+- `REST_DECORATOR_CONTRACT_MISMATCH`
+- `REST_CONTRACT_BINDING_WITHOUT_ROUTE`
+- `REST_DUPLICATE_PARAMETER_BINDING`
+- `REST_RESPONSE_SCHEMA_CONFLICT`
+- `REST_MULTIPLE_ROUTE_DECORATORS`
 - `CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY`
 - `CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY`
 
@@ -72,6 +77,26 @@ create(
 Compatibility-mode application code can still use loose decorators outside generated templates. Those
 paths remain covered by ContractGraph, RPC codegen, and OpenAPI diagnostics when generated contracts
 are emitted.
+
+## REST Decorator Contract Graph Rule
+
+Controller methods must use one coherent, statically resolvable route contract across their HTTP
+method, `@Param`, `@Query`, `@Body`, and `@ResponseSchema` decorators. The checker reports stable
+diagnostics when it proves any of the following:
+
+- a parameter decorator references a different contract from the HTTP method decorator;
+- a contract-bound parameter is attached to a loose or missing route decorator;
+- the same request source and key is bound more than once;
+- `@ResponseSchema` conflicts with the route contract response;
+- a method has multiple HTTP method decorators.
+
+Contract identity follows local `const` declarations, relative named imports, import aliases, and
+named or star re-exports, including TypeScript sources referenced through ESM `.js` specifiers.
+Decorator order does not affect the result, and an overriding controller method is checked together
+with matching inherited decorator metadata. Header binding keys are compared case-insensitively. A
+dynamically produced contract or schema that cannot be resolved to an explicit declaration is
+deliberately left unclassified: the checker emits no advisory or error rather than guessing. Use an
+explicit exported route contract to enable deterministic relationship validation.
 
 ## Runtime Failure Evidence Rules
 
