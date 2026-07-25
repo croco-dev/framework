@@ -26,7 +26,10 @@ export class WebhookLifecycleActionAdapter implements LifecycleActionAdapter {
   async execute(
     action: LifecycleAction,
     context: LifecycleContext,
-    run: Pick<LifecycleRun, "id" | "idempotencyKey" | "ruleId" | "tenantId">,
+    run: Pick<
+      LifecycleRun,
+      "id" | "idempotencyKey" | "ruleId" | "ruleVersion" | "ruleFingerprint" | "tenantId"
+    >,
   ): Promise<LifecycleActionResult> {
     const url = typeof action.payload?.url === "string" ? action.payload.url : undefined;
 
@@ -55,6 +58,8 @@ export class WebhookLifecycleActionAdapter implements LifecycleActionAdapter {
           lifecycle: {
             tenantId: context.tenantId,
             ruleId: run.ruleId,
+            ruleVersion: run.ruleVersion,
+            ruleFingerprint: run.ruleFingerprint,
             runId: run.id,
             signalType: context.signal.type,
           },

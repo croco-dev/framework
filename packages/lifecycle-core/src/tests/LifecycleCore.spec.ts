@@ -54,6 +54,20 @@ describe("lifecycle-core", () => {
         },
       ],
     });
+    expect(registry.get("risk-onboarding-follow-up")?.id).toBe("risk-onboarding-follow-up");
+    expect(registry.getAll()).toHaveLength(1);
+    expect(
+      registry.match(
+        createHealthStatusChangedSignal({
+          signalId: "compatibility-contract",
+          tenantId: "tenant-1",
+          oldStatus: "healthy",
+          newStatus: "at_risk",
+          score: 62,
+          occurredAt: now,
+        }),
+      ),
+    ).toHaveLength(1);
     const context = createLifecycleContext({
       now,
       signal: createHealthStatusChangedSignal({
@@ -287,6 +301,8 @@ describe("lifecycle-core", () => {
       {
         id: "run-1",
         ruleId: "webhook-rule",
+        ruleVersion: "1.0.0",
+        ruleFingerprint: "fingerprint",
         tenantId: "tenant-1",
         idempotencyKey: "webhook-rule:tenant-1",
       },

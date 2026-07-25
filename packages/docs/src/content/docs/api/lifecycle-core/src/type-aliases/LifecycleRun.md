@@ -47,9 +47,21 @@ title: "LifecycleRun"
 
 ***
 
+### ruleFingerprint
+
+> `readonly` **ruleFingerprint**: `string`
+
+***
+
 ### ruleId
 
 > `readonly` **ruleId**: `string`
+
+***
+
+### ruleVersion
+
+> `readonly` **ruleVersion**: `string`
 
 ***
 
