@@ -64,6 +64,31 @@ const userQuerySchema = z.object({
   includePosts: z.boolean().optional(),
 });
 
+const contractParameterTypes = defineRouteContract({
+  method: HttpMethod.POST,
+  path: "/typed/:id",
+  params: z.object({
+    id: z.string().brand<"UserId">(),
+  }),
+  query: z.object({
+    anyOutput: z.any(),
+    defaulted: z.string().default("default"),
+    neverOutput: z.never(),
+    nullable: z.string().nullable(),
+    optional: z.string().optional(),
+    page: z.coerce.number().int(),
+    preprocessed: z.preprocess((value) => String(value), z.string()),
+    transformed: z.string().transform((value) => value.length),
+    union: z.union([z.string(), z.number()]),
+    unknownOutput: z.unknown(),
+  }),
+  body: z
+    .object({ name: z.string() })
+    .transform((value) => ({ ...value, normalized: true as const })),
+});
+
+const otherBrand = z.string().brand<"OtherId">();
+
 class UserNotFoundProblem extends Problem {
   constructor(id: string) {
     super("users/not-found", ProblemCategory.NotFound, `User '${id}' was not found.`);
@@ -267,6 +292,188 @@ class InvalidBodyController {
 
 void InvalidMethodController;
 void InvalidBodyController;
+
+class ValidContractParameterController {
+  valid(
+    @Param(contractParameterTypes, "id") id: string,
+    @Query(contractParameterTypes, "page") page: number,
+    @Query(contractParameterTypes, "defaulted") defaulted: string,
+    @Query(contractParameterTypes, "transformed") transformed: number,
+    @Query(contractParameterTypes, "preprocessed") preprocessed: string,
+    @Query(contractParameterTypes, "optional") optional: string | undefined,
+    @Query(contractParameterTypes, "nullable") nullable: string | null,
+    @Query(contractParameterTypes, "union") union: string | number,
+    @Query(contractParameterTypes, "anyOutput") anyOutput: unknown,
+    @Query(contractParameterTypes, "unknownOutput") unknownOutput: unknown,
+    @Body(contractParameterTypes) body: { name: string; normalized: true },
+  ): void {
+    void [
+      id,
+      page,
+      defaulted,
+      transformed,
+      preprocessed,
+      optional,
+      nullable,
+      union,
+      anyOutput,
+      unknownOutput,
+      body,
+    ];
+  }
+
+  acceptsNeverOutput(@Query(contractParameterTypes, "neverOutput") neverOutput: unknown): void {
+    void neverOutput;
+  }
+
+  acceptsSafeWiderAnnotations(
+    @Param(contractParameterTypes, "id") id: string | null,
+    @Query(contractParameterTypes, "page") page: unknown,
+  ): void {
+    void [id, page];
+  }
+
+  legacyLooseOverloads(
+    @Param("id", z.string()) id: number,
+    @Query("page", z.coerce.number()) page: string,
+    @Body(z.object({ name: z.string() })) body: boolean,
+  ): void {
+    void [id, page, body];
+  }
+}
+
+class InvalidContractParameterController {
+  invalidCoercion(
+    // @ts-expect-error parsed number output is not assignable to a string annotation.
+    @Query(contractParameterTypes, "page") page: string,
+  ): void {
+    void page;
+  }
+
+  invalidTransform(
+    // @ts-expect-error transformed number output is not assignable to the pre-transform string.
+    @Query(contractParameterTypes, "transformed") transformed: string,
+  ): void {
+    void transformed;
+  }
+
+  invalidBrand(
+    // @ts-expect-error UserId output is not assignable to an unrelated brand.
+    @Param(contractParameterTypes, "id") id: z.infer<typeof otherBrand>,
+  ): void {
+    void id;
+  }
+
+  invalidOptional(
+    // @ts-expect-error optional output includes undefined.
+    @Query(contractParameterTypes, "optional") optional: string,
+  ): void {
+    void optional;
+  }
+
+  invalidNullable(
+    // @ts-expect-error nullable output includes null.
+    @Query(contractParameterTypes, "nullable") nullable: string,
+  ): void {
+    void nullable;
+  }
+
+  invalidUnion(
+    // @ts-expect-error the complete parsed union must be accepted by the annotation.
+    @Query(contractParameterTypes, "union") union: string,
+  ): void {
+    void union;
+  }
+
+  invalidBody(
+    // @ts-expect-error body parameters receive the transformed output.
+    @Body(contractParameterTypes) body: { name: number; normalized: true },
+  ): void {
+    void body;
+  }
+
+  invalidAny(
+    // @ts-expect-error any cannot bypass strict contract-bound parameter validation.
+    @Query(contractParameterTypes, "page") page: any,
+  ): void {
+    void page;
+  }
+
+  invalidAnyOutput(
+    // @ts-expect-error unconstrained parsed output can only be delivered to unknown.
+    @Query(contractParameterTypes, "anyOutput") value: string,
+  ): void {
+    void value;
+  }
+
+  invalidNever(
+    // @ts-expect-error a parsed number cannot be delivered to never.
+    @Query(contractParameterTypes, "page") page: never,
+  ): void {
+    void page;
+  }
+
+  invalidKey(
+    // @ts-expect-error contract query keys remain validated.
+    @Query(contractParameterTypes, "missing") missing: unknown,
+  ): void {
+    void missing;
+  }
+}
+
+class InvalidGenericContractParameterController {
+  invalidGeneric<Value>(
+    // @ts-expect-error generic method annotations cannot prove a stable contract input slot.
+    @Query(contractParameterTypes, "page") page: Value,
+  ): void {
+    void page;
+  }
+
+  invalidConstrainedGeneric<Value extends number>(
+    // @ts-expect-error constrained generics may still be instantiated with a narrower subtype.
+    @Query(contractParameterTypes, "page") page: Value,
+  ): void {
+    void page;
+  }
+}
+
+class InvalidVisibilityContractParameterController {
+  private invalidPrivate(
+    // @ts-expect-error contract-bound parameters require a public instance method target.
+    @Query(contractParameterTypes, "page") page: number,
+  ): void {
+    void page;
+  }
+
+  protected invalidProtected(
+    // @ts-expect-error contract-bound parameters require a public instance method target.
+    @Query(contractParameterTypes, "page") page: number,
+  ): void {
+    void page;
+  }
+
+  static invalidStatic(
+    // @ts-expect-error static targets do not own controller parameter metadata.
+    @Query(contractParameterTypes, "page") page: number,
+  ): void {
+    void page;
+  }
+}
+
+class InvalidContractParameterConstructor {
+  constructor(
+    // @ts-expect-error contract-bound parameter decorators require a method target.
+    @Body(contractParameterTypes) body: RouteBody<typeof contractParameterTypes>,
+  ) {
+    void body;
+  }
+}
+
+void ValidContractParameterController;
+void InvalidContractParameterController;
+void InvalidGenericContractParameterController;
+void InvalidVisibilityContractParameterController;
+void InvalidContractParameterConstructor;
 
 defineRouteProblem(UserForbiddenProblem, {
   // @ts-expect-error typed Problem helpers preserve the subclass literal code.

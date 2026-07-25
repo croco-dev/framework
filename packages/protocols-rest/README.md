@@ -137,9 +137,7 @@ import {
   HttpMethod,
   Param,
   Post,
-  type RouteBody,
   type RouteMethodReturn,
-  type RouteParam,
 } from "@croco/protocols-rest";
 import { z } from "zod";
 
@@ -163,22 +161,22 @@ const createUser = defineRouteContract({
 @Controller("/users")
 class UserController {
   @Get(getUser)
-  find(
-    @Param(getUser, "id") id: RouteParam<typeof getUser, "id">,
-  ): RouteMethodReturn<typeof getUser> {
+  find(@Param(getUser, "id") id: string): RouteMethodReturn<typeof getUser> {
     return { id, name: "Ada" };
   }
 
   @Post(createUser)
-  create(
-    @Body(createUser) body: RouteBody<typeof createUser>,
-  ): RouteMethodReturn<typeof createUser> {
+  create(@Body(createUser) body: { name: string }): RouteMethodReturn<typeof createUser> {
     return { id: "user-1", name: body.name };
   }
 }
 ```
 
-`defineRouteContract`는 path params, query, body, response, Problem union을 TypeScript 계약으로 연결합니다. `@Get(createUser)`처럼 HTTP 메서드가 맞지 않거나 `@Param(getUser, "userId")`처럼 path에 없는 이름, response schema와 맞지 않는 반환 타입은 typecheck 단계에서 실패합니다. `RouteContract.path`는 `/users/:id` 같은 최종 경로이며, `@Controller("/users")`는 컨트롤러 그룹/런타임 prefix로 유지됩니다. 런타임 값 검증은 기존처럼 Zod schema와 pipe가 담당합니다.
+`defineRouteContract`는 path params, query, body, response, Problem union을 TypeScript 계약으로 연결합니다. 계약을 전달한 `@Param`, `@Query`, `@Body`는 Zod가 파싱한 출력 타입이 컨트롤러 파라미터 타입에 할당 가능한지 검사합니다. 따라서 coercion, default, transform, preprocess 이후의 출력이 기준이며 optional, nullable, union도 전체 출력 범위를 받아야 합니다. branded 출력은 같은 brand뿐 아니라 안전한 wider 타입도 받을 수 있고 `unknown`은 허용되지만, annotation의 `any`와 `never`는 strict 계약을 우회할 수 없습니다. `z.any()`처럼 파싱 결과가 unconstrained인 schema는 `unknown` annotation만 허용합니다. `z.never()`는 값을 전달하지 않으며 안전한 wider annotation으로만 표현합니다.
+
+계약 기반 파라미터 데코레이터는 public instance method 전용입니다. constructor, static, private, protected method는 controller parameter metadata의 안정적인 소유 경계를 제공하지 않으므로 거부합니다. generic method도 concrete annotation을 제공하지 않으므로 typecheck에서 거부합니다. overloaded method는 TypeScript가 decorated implementation annotation을 숨기므로 `static-misuse:check`에서 거부합니다. 이 대상이 필요하면 generic/overload가 아닌 public method를 얇은 controller adapter로 두고 내부 메서드에 위임하세요.
+
+`@Get(createUser)`처럼 HTTP 메서드가 맞지 않거나 `@Param(getUser, "userId")`처럼 path에 없는 이름, response schema와 맞지 않는 반환 타입은 typecheck 단계에서 실패합니다. 기존 `@Query("page", z.coerce.number())` 같은 string/schema 오버로드는 호환성 경로로 유지되어 파라미터 주석을 제한하지 않습니다. `RouteParam`, `RouteQueryParam`, `RouteBody`는 고급 타입 조합과 기존 코드 호환을 위해 계속 제공됩니다. `RouteContract.path`는 `/users/:id` 같은 최종 경로이며, `@Controller("/users")`는 컨트롤러 그룹/런타임 prefix로 유지됩니다. 런타임 값 검증과 metadata 형식은 기존처럼 Zod schema와 pipe가 담당합니다.
 
 ### 기존 라우트 설정 타입에서 마이그레이션
 

@@ -5,9 +5,9 @@ prev: false
 title: "Param"
 ---
 
-## Contract Overload
+## Call Signature
 
-> **Param**\<`TContract`, `Name`\>(`contract`, `name`): `ParameterDecorator`
+> **Param**\<`TContract`, `Name`\>(`contract`, `name`): `ContractParameterDecorator`\<[`RoutePathParams`](/api/protocols-rest/src/type-aliases/routepathparams/)\<`TContract`\>\[`Name`\]\>
 
 경로 파라미터를 메서드 인자에 바인딩합니다.
 
@@ -15,11 +15,11 @@ title: "Param"
 
 #### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly params: AnyZodObject }`
+`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly params: AnyZodObject }`
 
 #### Name
 
-`Name` *extends* [`RoutePathParamName`](/api/protocols-rest/src/type-aliases/routepathparamname/)\<`TContract`\[`"path"`\]\> & keyof [`RoutePathParams`](/api/protocols-rest/src/type-aliases/routepathparams/)\<`TContract`\> & `string`
+`Name` _extends_ [`RoutePathParamName`](/api/protocols-rest/src/type-aliases/routepathparamname/)\<`TContract`\[`"path"`\]\> & keyof [`RoutePathParams`](/api/protocols-rest/src/type-aliases/routepathparams/)\<`TContract`\> & `string`
 
 ### Parameters
 
@@ -33,7 +33,7 @@ title: "Param"
 
 ### Returns
 
-`ParameterDecorator`
+`ContractParameterDecorator`\<[`RoutePathParams`](/api/protocols-rest/src/type-aliases/routepathparams/)\<`TContract`\>\[`Name`\]\>
 
 ## Schema Overload
 

@@ -1,10 +1,12 @@
 import "reflect-metadata";
 import { describe, expect, it } from "vitest";
-import { ParamType } from "../libs/constants";
+import { z } from "zod";
+import { HttpMethod, ParamType } from "../libs/constants";
 import { Controller } from "../libs/decorators/Controller";
-import { Get } from "../libs/decorators/HttpMethod";
+import { Get, Post } from "../libs/decorators/HttpMethod";
 import { Body, Param, Query } from "../libs/decorators/Params";
 import { getParamsMeta } from "../libs/metadata/MetadataReader";
+import { defineRouteContract } from "../libs/types/RouteContract";
 
 describe("Param decorators", () => {
   it("should register param metadata", () => {
@@ -41,5 +43,36 @@ describe("Param decorators", () => {
     expect(params).toHaveLength(1);
     expect(params[0].type).toBe(ParamType.BODY);
     expect(params[0].name).toBeUndefined();
+  });
+
+  it("should preserve metadata and indexes for contract-bound parameters", () => {
+    const updateUser = defineRouteContract({
+      method: HttpMethod.POST,
+      path: "/users/:id",
+      params: z.object({ id: z.string() }),
+      query: z.object({ notify: z.coerce.boolean().optional() }),
+      body: z.object({ name: z.string() }),
+    });
+
+    @Controller("/users")
+    class UserController {
+      @Post(updateUser)
+      update(
+        @Param(updateUser, "id") id: string,
+        @Query(updateUser, "notify") notify: boolean | undefined,
+        @Body(updateUser) body: { name: string },
+      ) {
+        return { body, id, notify };
+      }
+    }
+
+    const params = getParamsMeta(UserController, "update");
+    expect(params).toHaveLength(3);
+    expect(params).toEqual([
+      expect.objectContaining({ index: 2, type: ParamType.BODY }),
+      expect.objectContaining({ index: 1, name: "notify", type: ParamType.QUERY }),
+      expect.objectContaining({ index: 0, name: "id", type: ParamType.PARAM }),
+    ]);
+    expect(params.every((param) => param.pipes?.length === 1)).toBe(true);
   });
 });
