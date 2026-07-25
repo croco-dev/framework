@@ -1,4 +1,5 @@
 import type { ILogger } from "@croco/framework-context";
+import { InvalidCacheTtlProblem } from "./problems/CacheStoreProblems";
 import {
   type CacheGetOrSetOptions,
   type CachePattern,
@@ -34,6 +35,12 @@ function escapePattern(pattern: string): string {
 function createPatternRegex(pattern: CachePattern): RegExp {
   const escapedPattern = escapePattern(pattern).replace(/\\\*/g, ".*");
   return new RegExp(`^${escapedPattern}$`);
+}
+
+function assertValidTtl(ttlMs: number | undefined): void {
+  if (ttlMs !== undefined && (!Number.isFinite(ttlMs) || ttlMs < 0)) {
+    throw new InvalidCacheTtlProblem(ttlMs);
+  }
 }
 
 export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
@@ -85,8 +92,15 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   async set(key: string, value: V, ttlMs?: number): Promise<void> {
+    assertValidTtl(ttlMs);
     this.pruneExpiredSync();
     this.store.delete(key);
+
+    if (ttlMs === 0) {
+      this.invalidateInFlightLoad(key);
+      return;
+    }
+
     this.store.set(key, {
       value,
       expiresAt: ttlMs === undefined ? null : Date.now() + ttlMs,
@@ -163,6 +177,15 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
     loader: () => Promise<V | undefined>,
     options: CacheGetOrSetOptions = {},
   ): Promise<V | undefined> {
+    assertValidTtl(options.ttlMs);
+
+    if (options.ttlMs === 0) {
+      this.pruneExpiredSync();
+      this.store.delete(key);
+      this.invalidateInFlightLoad(key);
+      return loader();
+    }
+
     const cachedValue = await this.get(key);
     if (cachedValue !== undefined) {
       return cachedValue;
@@ -226,6 +249,10 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
 
   async warmup(entries: ReadonlyArray<CacheWarmupEntry<string, V>>): Promise<void> {
     for (const entry of entries) {
+      assertValidTtl(entry.ttlMs);
+    }
+
+    for (const entry of entries) {
       await this.set(entry.key, entry.value, entry.ttlMs);
     }
   }
@@ -238,7 +265,7 @@ export class InMemoryCacheStore<V = unknown> extends CacheStore<string, V> {
   }
 
   private isExpired(entry: CacheEntry<V>): boolean {
-    return entry.expiresAt !== null && Date.now() > entry.expiresAt;
+    return entry.expiresAt !== null && Date.now() >= entry.expiresAt;
   }
 
   private touch(key: string, entry: CacheEntry<V>): void {

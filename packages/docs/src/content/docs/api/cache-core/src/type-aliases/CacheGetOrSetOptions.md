@@ -14,3 +14,5 @@ Options for cache-backed loading.
 ### ttlMs?
 
 > `optional` **ttlMs?**: `number`
+
+Finite, non-negative lifetime in milliseconds. Zero expires immediately.

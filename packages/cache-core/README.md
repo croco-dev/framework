@@ -20,6 +20,9 @@ pnpm add @croco/cache-core
 - **분산 캐시 확장점**: 락 획득과 무효화 전파 인터페이스 제공
 - **Cache Invalidation Graph**: domain event와 cache key/tag 무효화 관계를 manifest와 check로 검증
 
+`InMemoryCacheStore`의 `ttlMs`는 유한한 0 이상의 밀리초 값이어야 합니다. `undefined`는 만료 없음, `0`은 즉시 만료를
+의미하며, 음수·`NaN`·무한대는 저장이나 loader 실행 전에 거부됩니다.
+
 ## 사용법
 
 ### InMemoryCacheStore

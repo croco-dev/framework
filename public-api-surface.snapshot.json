@@ -4063,6 +4063,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "InvalidCacheTtlProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CacheStoreProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "serializeCacheInvalidationManifest",
               "exportKind": "named",
               "source": "./libs/CacheInvalidationGraph",

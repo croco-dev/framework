@@ -55,7 +55,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`clear`](/api/cache-core/src/classes/cachestore/#clear)
 
-***
+---
 
 ### close()
 
@@ -65,7 +65,7 @@ Backward-compatible cache store base class.
 
 `void`
 
-***
+---
 
 ### delete()
 
@@ -85,7 +85,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`delete`](/api/cache-core/src/classes/cachestore/#delete)
 
-***
+---
 
 ### get()
 
@@ -105,7 +105,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`get`](/api/cache-core/src/classes/cachestore/#get)
 
-***
+---
 
 ### getOrSet()
 
@@ -133,7 +133,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`getOrSet`](/api/cache-core/src/classes/cachestore/#getorset)
 
-***
+---
 
 ### getStats()
 
@@ -147,7 +147,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`getStats`](/api/cache-core/src/classes/cachestore/#getstats)
 
-***
+---
 
 ### has()
 
@@ -167,7 +167,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`has`](/api/cache-core/src/classes/cachestore/#has)
 
-***
+---
 
 ### invalidatePattern()
 
@@ -187,7 +187,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`invalidatePattern`](/api/cache-core/src/classes/cachestore/#invalidatepattern)
 
-***
+---
 
 ### pruneExpired()
 
@@ -201,11 +201,14 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`pruneExpired`](/api/cache-core/src/classes/cachestore/#pruneexpired)
 
-***
+---
 
 ### set()
 
 > **set**(`key`, `value`, `ttlMs?`): `Promise`\<`void`\>
+
+Stores a value with an optional finite, non-negative lifetime in milliseconds.
+A zero lifetime expires immediately.
 
 #### Parameters
 
@@ -229,7 +232,7 @@ Backward-compatible cache store base class.
 
 [`CacheStore`](/api/cache-core/src/classes/cachestore/).[`set`](/api/cache-core/src/classes/cachestore/#set)
 
-***
+---
 
 ### warmup()
 

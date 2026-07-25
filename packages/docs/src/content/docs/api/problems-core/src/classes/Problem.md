@@ -105,6 +105,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`CacheInvalidationGraphProblem`](/api/cache-core/src/classes/cacheinvalidationgraphproblem/)
 - [`UnknownCacheInvalidationEventProblem`](/api/cache-core/src/classes/unknowncacheinvalidationeventproblem/)
 - [`UnsupportedCacheInvalidationCapabilityProblem`](/api/cache-core/src/classes/unsupportedcacheinvalidationcapabilityproblem/)
+- [`InvalidCacheTtlProblem`](/api/cache-core/src/classes/invalidcachettlproblem/)
 - [`HealthScoreNotFoundProblem`](/api/customer-health-core/src/classes/healthscorenotfoundproblem/)
 - [`BatchResultLengthMismatchProblem`](/api/dataloader-core/src/classes/batchresultlengthmismatchproblem/)
 - [`DuplicateDiagnosticsProviderProblem`](/api/diagnostics-core/src/classes/duplicatediagnosticsproviderproblem/)

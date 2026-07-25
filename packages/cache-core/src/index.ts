@@ -68,3 +68,4 @@ export {
   UnknownCacheInvalidationEventProblem,
   UnsupportedCacheInvalidationCapabilityProblem,
 } from "./libs/problems/CacheDecoratorProblems";
+export { InvalidCacheTtlProblem } from "./libs/problems/CacheStoreProblems";

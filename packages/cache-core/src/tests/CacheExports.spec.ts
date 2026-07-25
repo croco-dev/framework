@@ -17,6 +17,7 @@ import {
   invalidateCacheKey,
   invalidateCacheTag,
   InMemoryCacheStore,
+  InvalidCacheTtlProblem,
   serializeCacheInvalidationManifest,
 } from "../index";
 import type {
@@ -96,6 +97,7 @@ describe("cache-core public exports", () => {
     expect(cache).toBeInstanceOf(Cache);
     expect(DistributedCacheStore.prototype).toBeInstanceOf(CacheStore);
     expect(new InMemoryCacheStore<string>()).toBeInstanceOf(CacheStore);
+    expect(new InvalidCacheTtlProblem(-1).code).toBe("cache-core/invalid-ttl");
     expect(distributedLock).toBeUndefined();
   });
 

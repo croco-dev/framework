@@ -15,7 +15,7 @@ Generic cache contract.
 
 ### K
 
-`K` *extends* `string` = `string`
+`K` _extends_ `string` = `string`
 
 ### V
 
@@ -41,7 +41,7 @@ Generic cache contract.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### delete()
 
@@ -57,7 +57,7 @@ Generic cache contract.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### get()
 
@@ -73,7 +73,7 @@ Generic cache contract.
 
 `Promise`\<`V` \| `undefined`\>
 
-***
+---
 
 ### getOrSet()
 
@@ -97,7 +97,7 @@ Generic cache contract.
 
 `Promise`\<`V` \| `undefined`\>
 
-***
+---
 
 ### getStats()
 
@@ -107,7 +107,7 @@ Generic cache contract.
 
 [`CacheStats`](/api/cache-core/src/type-aliases/cachestats/)
 
-***
+---
 
 ### has()
 
@@ -123,7 +123,7 @@ Generic cache contract.
 
 `Promise`\<`boolean`\>
 
-***
+---
 
 ### invalidatePattern()
 
@@ -139,7 +139,7 @@ Generic cache contract.
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### pruneExpired()
 
@@ -149,11 +149,14 @@ Generic cache contract.
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### set()
 
 > `abstract` **set**(`key`, `value`, `ttlMs?`): `Promise`\<`void`\>
+
+Stores a value with an optional finite, non-negative lifetime in milliseconds.
+A zero lifetime expires immediately.
 
 #### Parameters
 
@@ -173,7 +176,7 @@ Generic cache contract.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### warmup()
 
