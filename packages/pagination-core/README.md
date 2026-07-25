@@ -274,6 +274,16 @@ decodeCursor("eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9");
 - `cursor`: undefined
 - `mode`: 자동 감지 (`cursor` 또는 `offset` 둘 중 하나만 사용)
 
+**숫자 정규화 정책:**
+
+- 숫자 문자열은 문자열 전체가 유한한 숫자일 때만 허용합니다. 앞뒤 공백과 `+`/`-` 부호는 허용합니다.
+- 소수는 내림합니다.
+- `limit`가 1보다 작거나 값이 비어 있거나 유효하지 않으면 20을 사용하고, 100보다 크면 100으로 제한합니다.
+- `offset`이 음수이거나 값이 비어 있거나 유효하지 않거나 안전한 정수 범위를 벗어나면 0을 사용합니다.
+- 숫자 query 값이 배열이면 값이 하나일 때만 숫자로 처리하고, 반복된 값은 유효하지 않은 값으로 처리합니다.
+- `parsePaginationParams`, `CursorParamsSchema`, `OffsetParamsSchema`, `PaginationParamsSchema`는 같은 정책으로
+  숫자 필드를 정규화합니다. 숫자 형식 오류는 별도로 거부하지 않습니다.
+
 **에러:**
 
 - `cursor`와 `offset`을 동시에 사용하면 `ConflictingPaginationProblem`
