@@ -13,7 +13,7 @@ Preloaded cache entry.
 
 ### K
 
-`K` *extends* `string`
+`K` _extends_ `string`
 
 ### V
 
@@ -25,13 +25,15 @@ Preloaded cache entry.
 
 > **key**: `K`
 
-***
+---
 
 ### ttlMs?
 
 > `optional` **ttlMs?**: `number`
 
-***
+Finite, non-negative lifetime in milliseconds. Zero expires immediately.
+
+---
 
 ### value
 

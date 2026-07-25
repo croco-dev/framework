@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { InMemoryCacheStore } from "../libs/InMemoryCacheStore";
+import { InvalidCacheTtlProblem } from "../libs/problems/CacheStoreProblems";
 
 describe("InMemoryCacheStore", () => {
   let cache!: InMemoryCacheStore<string>;
@@ -34,6 +35,54 @@ describe("InMemoryCacheStore", () => {
   });
 
   describe("TTL expiration", () => {
+    it.each([
+      ["negative", -1],
+      ["NaN", Number.NaN],
+      ["positive infinity", Number.POSITIVE_INFINITY],
+      ["negative infinity", Number.NEGATIVE_INFINITY],
+    ])("rejects %s TTL before replacing an existing value", async (_label, ttlMs) => {
+      await cache.set("key1", "original");
+
+      await expect(cache.set("key1", "replacement", ttlMs)).rejects.toMatchObject({
+        code: "cache-core/invalid-ttl",
+        extensions: { receivedTtl: String(ttlMs) },
+        receivedTtl: String(ttlMs),
+      } satisfies Partial<InvalidCacheTtlProblem>);
+      expect(await cache.get("key1")).toBe("original");
+    });
+
+    it("treats a zero TTL as immediately expired", async () => {
+      vi.useFakeTimers();
+
+      try {
+        await cache.set("key1", "value1", 0);
+
+        expect(await cache.get("key1")).toBeUndefined();
+        expect(cache.getStats().size).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("does not evict an unrelated live entry for a zero TTL write", async () => {
+      const boundedCache = new InMemoryCacheStore<string>({ maxEntries: 1 });
+      await boundedCache.set("live", "value");
+
+      await boundedCache.set("zero", "discarded", 0);
+
+      expect(await boundedCache.get("live")).toBe("value");
+      expect(await boundedCache.get("zero")).toBeUndefined();
+      expect(boundedCache.getStats().evictions).toBe(0);
+    });
+
+    it("removes an existing value when it is replaced with a zero TTL", async () => {
+      await cache.set("key1", "original");
+
+      await cache.set("key1", "replacement", 0);
+
+      expect(await cache.get("key1")).toBeUndefined();
+    });
+
     it("returns undefined after TTL expires", async () => {
       vi.useFakeTimers();
 
@@ -246,6 +295,103 @@ describe("InMemoryCacheStore", () => {
   });
 
   describe("getOrSet", () => {
+    it.each([-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+      "rejects invalid TTL %s before reading cache or calling the loader",
+      async (ttlMs) => {
+        const loader = vi.fn(async () => "replacement");
+        await cache.set("key1", "original");
+
+        await expect(cache.getOrSet("key1", loader, { ttlMs })).rejects.toBeInstanceOf(
+          InvalidCacheTtlProblem,
+        );
+        expect(loader).not.toHaveBeenCalled();
+        expect(cache.getStats()).toMatchObject({ hits: 0, misses: 0 });
+        expect(await cache.get("key1")).toBe("original");
+      },
+    );
+
+    it("bypasses an existing value when the requested TTL is zero", async () => {
+      const loader = vi.fn(async () => "replacement");
+      await cache.set("key1", "original");
+
+      await expect(cache.getOrSet("key1", loader, { ttlMs: 0 })).resolves.toBe("replacement");
+
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(cache.getStats()).toEqual({ hits: 0, misses: 0, evictions: 0, size: 0 });
+      expect(await cache.get("key1")).toBeUndefined();
+    });
+
+    it("invalidates a same-key in-flight load when the requested TTL is zero", async () => {
+      let resolveInFlightLoader!: (value: string) => void;
+      const inFlightLoader = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveInFlightLoader = resolve;
+          }),
+      );
+      const zeroTtlLoader = vi.fn(async () => "zero-ttl-value");
+
+      const inFlightPromise = cache.getOrSet("key1", inFlightLoader, { ttlMs: 1000 });
+      await waitForInFlightLoader();
+
+      await expect(cache.getOrSet("key1", zeroTtlLoader, { ttlMs: 0 })).resolves.toBe(
+        "zero-ttl-value",
+      );
+      resolveInFlightLoader("stale-value");
+
+      await expect(inFlightPromise).resolves.toBeUndefined();
+      expect(zeroTtlLoader).toHaveBeenCalledTimes(1);
+      expect(await cache.get("key1")).toBeUndefined();
+    });
+
+    it("runs concurrent zero-TTL loaders independently", async () => {
+      let resolveFirstLoader!: (value: string) => void;
+      const firstLoader = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveFirstLoader = resolve;
+          }),
+      );
+      const secondLoader = vi.fn(async () => "second-value");
+
+      const firstPromise = cache.getOrSet("key1", firstLoader, { ttlMs: 0 });
+      await waitForInFlightLoader();
+
+      await expect(cache.getOrSet("key1", secondLoader, { ttlMs: 0 })).resolves.toBe(
+        "second-value",
+      );
+      resolveFirstLoader("first-value");
+
+      await expect(firstPromise).resolves.toBe("first-value");
+      expect(firstLoader).toHaveBeenCalledTimes(1);
+      expect(secondLoader).toHaveBeenCalledTimes(1);
+      expect(cache.getStats()).toEqual({ hits: 0, misses: 0, evictions: 0, size: 0 });
+    });
+
+    it("runs and caches a positive-TTL loader independently from a zero-TTL load", async () => {
+      let resolveZeroTtlLoader!: (value: string) => void;
+      const zeroTtlLoader = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveZeroTtlLoader = resolve;
+          }),
+      );
+      const positiveTtlLoader = vi.fn(async () => "cached-value");
+
+      const zeroTtlPromise = cache.getOrSet("key1", zeroTtlLoader, { ttlMs: 0 });
+      await waitForInFlightLoader();
+
+      await expect(cache.getOrSet("key1", positiveTtlLoader, { ttlMs: 1000 })).resolves.toBe(
+        "cached-value",
+      );
+      resolveZeroTtlLoader("zero-ttl-value");
+
+      await expect(zeroTtlPromise).resolves.toBe("zero-ttl-value");
+      expect(zeroTtlLoader).toHaveBeenCalledTimes(1);
+      expect(positiveTtlLoader).toHaveBeenCalledTimes(1);
+      expect(await cache.get("key1")).toBe("cached-value");
+    });
+
     it("returns cached value without calling loader again", async () => {
       const loader = vi.fn(async () => "loaded");
 
@@ -335,6 +481,26 @@ describe("InMemoryCacheStore", () => {
 
       // delete() 가 inFlightLoads 를 정리하지 않으면 value 가 복원됨
       expect(result).toBeUndefined();
+      expect(await cache.get("key1")).toBeUndefined();
+    });
+
+    it("zero TTL set during getOrSet load: loader completes but value not stored", async () => {
+      let resolveLoader!: (value: string) => void;
+      const loader = vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveLoader = resolve;
+          }),
+      );
+
+      const pendingPromise = cache.getOrSet("key1", loader, { ttlMs: 1000 }) as Promise<string>;
+
+      await waitForInFlightLoader();
+
+      await cache.set("key1", "discarded", 0);
+      resolveLoader("loaded-value");
+
+      await expect(pendingPromise).resolves.toBeUndefined();
       expect(await cache.get("key1")).toBeUndefined();
     });
 
@@ -502,6 +668,22 @@ describe("InMemoryCacheStore", () => {
   });
 
   describe("warmup", () => {
+    it.each([-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+      "rejects invalid TTL %s before storing any entries",
+      async (ttlMs) => {
+        await cache.set("existing", "original");
+
+        await expect(
+          cache.warmup([
+            { key: "valid", value: "new" },
+            { key: "existing", value: "replacement", ttlMs },
+          ]),
+        ).rejects.toBeInstanceOf(InvalidCacheTtlProblem);
+        expect(await cache.get("valid")).toBeUndefined();
+        expect(await cache.get("existing")).toBe("original");
+      },
+    );
+
     it("primes multiple entries with ttl metadata", async () => {
       vi.useFakeTimers();
 
