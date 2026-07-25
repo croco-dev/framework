@@ -37,6 +37,25 @@ describe("BatchLoader", () => {
     },
   );
 
+  const settleWithin = async <T>(promise: Promise<T>): Promise<T> => {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        promise,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(
+            () => reject(new Error("batch loader callbacks did not settle")),
+            1_000,
+          );
+        }),
+      ]);
+    } finally {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    }
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -310,6 +329,74 @@ describe("BatchLoader", () => {
 
     expect(results[0]).toBeInstanceOf(BatchResultLengthMismatchProblem);
     expect(results[1]).toBeInstanceOf(BatchResultLengthMismatchProblem);
+  });
+
+  it.each([
+    { name: "leading", populatedIndices: [1, 2] },
+    { name: "middle", populatedIndices: [0, 2] },
+    { name: "trailing", populatedIndices: [0, 1] },
+    { name: "all", populatedIndices: [] },
+  ])(
+    "should reject $name holes without leaving callbacks pending",
+    async ({ name, populatedIndices }) => {
+      const loader = createBatchLoader<number, string>({
+        name: `${name}-sparse-result-loader`,
+        cache: false,
+        batchFn: async (keys) => {
+          const results: Array<string | Error | null> = [];
+          results.length = keys.length;
+          for (const index of populatedIndices) {
+            results[index] = `Value: ${keys[index]}`;
+          }
+          return results;
+        },
+      });
+
+      const results = await settleWithin(loader.loadMany([1, 2, 3]));
+
+      expect(results).toHaveLength(3);
+      expect(results.every((result) => result instanceof BatchResultLengthMismatchProblem)).toBe(
+        true,
+      );
+    },
+  );
+
+  it("should evict cached sparse batches so later loads can retry", async () => {
+    let attempts = 0;
+    const batchFn = vi.fn(async (keys: ReadonlyArray<number>) => {
+      attempts += 1;
+      if (attempts === 1) {
+        const sparseResults: Array<string | Error | null> = [];
+        sparseResults.length = keys.length;
+        sparseResults[0] = `Value: ${keys[0]}`;
+        return sparseResults;
+      }
+      return keys.map((key) => `Value: ${key}`);
+    });
+    await Context.run({ requestId: "sparse-result-retry" }, async () => {
+      const loader = createBatchLoader<number, string>({
+        name: "sparse-result-retry-loader",
+        batchFn,
+      });
+
+      const firstResults = await settleWithin(loader.loadMany([1, 2]));
+      expect(
+        firstResults.every((result) => result instanceof BatchResultLengthMismatchProblem),
+      ).toBe(true);
+
+      await expect(loader.loadMany([1, 2])).resolves.toEqual(["Value: 1", "Value: 2"]);
+    });
+    expect(batchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("should treat explicitly assigned undefined as a present result", async () => {
+    const loader = createBatchLoader<number, string | undefined>({
+      name: "explicit-undefined-loader",
+      cache: false,
+      batchFn: async () => [undefined],
+    });
+
+    await expect(loader.load(1)).resolves.toBeUndefined();
   });
 
   describe("prime", () => {

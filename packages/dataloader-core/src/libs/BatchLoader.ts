@@ -134,7 +134,19 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
           throw new BatchResultLengthMismatchProblem(keys.length, results.length);
         }
 
-        results.forEach((result, index) => {
+        let populatedResultCount = 0;
+        for (let index = 0; index < results.length; index += 1) {
+          if (Object.prototype.hasOwnProperty.call(results, index)) {
+            populatedResultCount += 1;
+          }
+        }
+
+        if (populatedResultCount !== keys.length) {
+          throw new BatchResultLengthMismatchProblem(keys.length, populatedResultCount);
+        }
+
+        for (let index = 0; index < results.length; index += 1) {
+          const result = results[index];
           const callback = callbacks[index];
           if (result instanceof Error) {
             span.recordException(result);
@@ -147,7 +159,7 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
           } else {
             callback.resolve(result);
           }
-        });
+        }
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
         span.recordException(err);

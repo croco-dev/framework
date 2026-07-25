@@ -9,7 +9,9 @@ export type BatchLoaderOptions<K, V> = {
 
   /**
    * The batch function that loads data for a list of keys.
-   * Must return an array of values of the same length as the keys.
+   * Must return a dense array of values of the same length as the keys.
+   * Sparse arrays are rejected. An explicitly assigned `undefined` is a present value
+   * when `V` includes `undefined`.
    */
   batchFn: BatchFn<K, V>;
 
