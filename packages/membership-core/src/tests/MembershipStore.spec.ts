@@ -86,4 +86,57 @@ describe("InMemoryMembershipStore", () => {
 
     expect(membership?.role).toBe("admin");
   });
+
+  it.each([
+    [
+      createInput({
+        id: "mem-delimiter-left",
+        tenantId: "tenant:segment",
+        userId: "user",
+        role: "admin",
+      }),
+      createInput({
+        id: "mem-delimiter-right",
+        tenantId: "tenant",
+        userId: "segment:user",
+        role: "member",
+      }),
+    ],
+    [
+      createInput({
+        id: "mem-delimiter-right",
+        tenantId: "tenant",
+        userId: "segment:user",
+        role: "member",
+      }),
+      createInput({
+        id: "mem-delimiter-left",
+        tenantId: "tenant:segment",
+        userId: "user",
+        role: "admin",
+      }),
+    ],
+  ])(
+    "should keep delimiter-containing tuples distinct regardless of save order",
+    async (first, second) => {
+      await store.save(first);
+      await store.save(second);
+
+      await expect(store.findByTenantAndUser(first.tenantId, first.userId)).resolves.toMatchObject(
+        first,
+      );
+      await expect(
+        store.findByTenantAndUser(second.tenantId, second.userId),
+      ).resolves.toMatchObject(second);
+      await expect(store.countByRole("tenant:segment", "admin")).resolves.toBe(1);
+      await expect(store.countByRole("tenant", "member")).resolves.toBe(1);
+
+      await store.delete(first.tenantId, first.userId);
+
+      await expect(store.findByTenantAndUser(first.tenantId, first.userId)).resolves.toBeNull();
+      await expect(
+        store.findByTenantAndUser(second.tenantId, second.userId),
+      ).resolves.toMatchObject(second);
+    },
+  );
 });

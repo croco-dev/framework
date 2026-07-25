@@ -52,6 +52,6 @@ export class InMemoryMembershipStore extends MembershipStore {
   }
 
   private getKey(tenantId: string, userId: string): string {
-    return `${tenantId}:${userId}`;
+    return JSON.stringify([tenantId, userId]);
   }
 }
