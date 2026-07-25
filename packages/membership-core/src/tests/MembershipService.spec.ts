@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import type { EntitlementQuotaStatus } from "@croco/entitlements-core";
+import { EventAfterCommitRequiresActiveTransactionProblem } from "@croco/events-core";
 import type { EventPublisher } from "@croco/events-core";
 import { Container } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -96,6 +97,9 @@ describe("MembershipService", () => {
     publishNow = vi.fn();
 
     service = new MembershipService(store, {
+      publishAfterCommit: vi.fn(() => {
+        throw new EventAfterCommitRequiresActiveTransactionProblem();
+      }),
       publishNow,
       publishMany: vi.fn(),
     } as unknown as EventPublisher);
@@ -283,6 +287,9 @@ describe("MembershipService", () => {
       const staleStore = new StaleRoleReadStore();
       store = staleStore;
       service = new MembershipService(store, {
+        publishAfterCommit: vi.fn(() => {
+          throw new EventAfterCommitRequiresActiveTransactionProblem();
+        }),
         publishNow,
         publishMany: vi.fn(),
       } as unknown as EventPublisher);
@@ -339,6 +346,30 @@ describe("MembershipService", () => {
 
       expect(publishNow).toHaveBeenCalledTimes(2);
       expect(publishNow).toHaveBeenCalledWith(expect.any(MembershipUpdatedEvent));
+    });
+
+    it("should defer ownership events when after-commit publication is available", async () => {
+      const afterCommitHooks: Array<() => void | Promise<void>> = [];
+      const publishCommittedEvent = vi.fn(async (_event: MembershipUpdatedEvent) => {});
+      service = new MembershipService(store, {
+        publishAfterCommit: (event: MembershipUpdatedEvent) => {
+          afterCommitHooks.push(() => publishCommittedEvent(event));
+        },
+        publishNow: publishCommittedEvent,
+        publishMany: vi.fn(),
+      } as unknown as EventPublisher);
+      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
+      await seedMembership({ id: "mem-2", userId: "user-2", role: "admin" });
+
+      await service.transferOwnership("tenant-1", "user-1", "user-2");
+
+      expect(afterCommitHooks).toHaveLength(2);
+      expect(publishCommittedEvent).not.toHaveBeenCalled();
+
+      for (const hook of afterCommitHooks) {
+        await hook();
+      }
+      expect(publishCommittedEvent).toHaveBeenCalledTimes(2);
     });
   });
 
