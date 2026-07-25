@@ -10951,6 +10951,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvitationCreationFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvitationProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvitationDeclinedEvent",
               "exportKind": "named",
               "source": "./libs/events/InvitationEvents",
@@ -10964,6 +10970,12 @@
             },
             {
               "name": "InvitationExpiredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvitationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvitationIdempotencyConflictProblem",
               "exportKind": "named",
               "source": "./libs/problems/InvitationProblems",
               "declarationKind": "class"
@@ -11060,12 +11072,27 @@
               "source": "./libs/types"
             },
             {
+              "name": "EmailInvitationCreation",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "EmailInvitationCreationInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "Invitation",
               "exportKind": "named",
               "source": "./libs/types"
             },
             {
               "name": "InvitationCreateInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "InvitationCreationPhaseStatus",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -11112,6 +11139,18 @@
           "sourceEntrypoint": "packages/invitation-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "addEmailCreationIntents",
+              "exportKind": "declaration",
+              "source": "./migrations/addEmailCreationIntents",
+              "declarationKind": "function"
+            },
+            {
+              "name": "AesGcmInvitationTokenCipher",
+              "exportKind": "declaration",
+              "source": "./libs/InvitationTokenCipher",
+              "declarationKind": "class"
+            },
+            {
               "name": "domainPolicies",
               "exportKind": "declaration",
               "source": "./libs/schema",
@@ -11142,13 +11181,61 @@
               "declarationKind": "class"
             },
             {
+              "name": "INVITATION_TOKEN_CIPHER",
+              "exportKind": "declaration",
+              "source": "./libs/InvitationTokenCipher",
+              "declarationKind": "const"
+            },
+            {
+              "name": "invitationEmailCreationIntents",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
               "name": "invitations",
               "exportKind": "declaration",
               "source": "./libs/schema",
               "declarationKind": "const"
+            },
+            {
+              "name": "InvitationTokenCipherProblem",
+              "exportKind": "declaration",
+              "source": "./libs/InvitationTokenCipher",
+              "declarationKind": "class"
+            },
+            {
+              "name": "removeEmailCreationIntents",
+              "exportKind": "declaration",
+              "source": "./migrations/addEmailCreationIntents",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
+            {
+              "name": "AesGcmInvitationTokenCipherOptions",
+              "exportKind": "declaration",
+              "source": "./libs/InvitationTokenCipher",
+              "declarationKind": "type"
+            },
+            {
+              "name": "InvitationMigrationClient",
+              "exportKind": "declaration",
+              "source": "./migrations/addEmailCreationIntents",
+              "declarationKind": "type"
+            },
+            {
+              "name": "InvitationTokenCipher",
+              "exportKind": "declaration",
+              "source": "./libs/InvitationTokenCipher",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "InvitationTokenCipherContext",
+              "exportKind": "declaration",
+              "source": "./libs/InvitationTokenCipher",
+              "declarationKind": "type"
+            },
             {
               "name": "DrizzleDomainPolicyClient",
               "exportKind": "named",
@@ -14079,6 +14166,12 @@
             },
             {
               "name": "NotificationProviderChannelMismatchProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/NotificationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "NotificationProviderIdempotencyUnsupportedProblem",
               "exportKind": "declaration",
               "source": "./libs/problems/NotificationProblems",
               "declarationKind": "class"

@@ -131,6 +131,23 @@ export class NotificationProviderNotFoundProblem extends Problem {
   }
 }
 
+export class NotificationProviderIdempotencyUnsupportedProblem extends Problem {
+  constructor(providerName: string, channel: NotificationChannel) {
+    super(
+      "notifications-core/provider-idempotency-unsupported",
+      ProblemCategory.InternalServerError,
+      `Provider ${providerName} cannot guarantee idempotent delivery on channel ${channel}`,
+      {
+        extensions: {
+          providerName,
+          channel,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
 export class NotificationSendMaxAttemptsInvalidProblem extends Problem {
   constructor(value: string) {
     super(

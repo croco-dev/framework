@@ -161,6 +161,7 @@ describe("RateLimitedInvitationService", () => {
   describe("createEmailInvitationWithRateLimit", () => {
     it("should create invitation within rate limits", async () => {
       const token = await service.createEmailInvitationWithRateLimit({
+        idempotencyKey: "rate-limit-create-1",
         tenantId: "tenant-1",
         inviterId: "inviter-1",
         email: "user@example.com",
@@ -185,6 +186,7 @@ describe("RateLimitedInvitationService", () => {
 
       await expect(
         service.createEmailInvitationWithRateLimit({
+          idempotencyKey: "rate-limit-exceeded-1",
           tenantId: "tenant-1",
           inviterId: "inviter-1",
           email: "user@example.com",
@@ -198,6 +200,7 @@ describe("RateLimitedInvitationService", () => {
 
       await expect(
         service.createEmailInvitationWithRateLimit({
+          idempotencyKey: "duplicate-invitation-1",
           tenantId: "tenant-1",
           inviterId: "inviter-1",
           email: "USER@example.com",
@@ -208,6 +211,7 @@ describe("RateLimitedInvitationService", () => {
 
     it("should normalize email addresses", async () => {
       const token = await service.createEmailInvitationWithRateLimit({
+        idempotencyKey: "normalize-email-1",
         tenantId: "tenant-1",
         inviterId: "inviter-1",
         email: "  USER@EXAMPLE.COM  ",
@@ -218,6 +222,23 @@ describe("RateLimitedInvitationService", () => {
       const invitation = allInvitations.find((inv) => inv.tokenHash === hashToken(token));
       expect(invitation).toBeDefined();
       expect(invitation?.email).toBe("user@example.com");
+    });
+
+    it("should replay the same request before duplicate and rate-limit checks", async () => {
+      const input = {
+        idempotencyKey: "rate-limited-replay-1",
+        tenantId: "tenant-1",
+        inviterId: "inviter-1",
+        email: "user@example.com",
+        role: "member" as const,
+      };
+
+      const firstToken = await service.createEmailInvitationWithRateLimit(input);
+      const replayedToken = await service.createEmailInvitationWithRateLimit(input);
+
+      expect(replayedToken).toBe(firstToken);
+      expect(await store.findAllByTenant("tenant-1")).toHaveLength(1);
+      expect(send).toHaveBeenCalledTimes(1);
     });
   });
 

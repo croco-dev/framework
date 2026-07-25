@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { inspect } from "node:util";
 import type { EventPublisher } from "@croco/events-core";
 import type { Membership, MembershipManager } from "@croco/membership-core";
 import {
@@ -18,8 +19,10 @@ import { InMemoryInvitationStore } from "../libs/InMemoryInvitationStore";
 import { InvitationManager } from "../libs/InvitationManager";
 import {
   InvitationAlreadyAcceptedProblem,
+  InvitationCreationFailedProblem,
   InvitationEmailMismatchProblem,
   InvitationExpiredProblem,
+  InvitationIdempotencyConflictProblem,
   InvitationInvalidStatusProblem,
   InvitationNotFoundProblem,
 } from "../libs/problems/InvitationProblems";
@@ -93,6 +96,7 @@ describe("InvitationManager", () => {
 
   it("should create email invitation with hashed token and send notification", async () => {
     const token = await manager.createEmailInvitation({
+      idempotencyKey: "create-member-1",
       tenantId: "tenant-1",
       inviterId: "inviter-1",
       email: "Member@Croco.Dev",
@@ -124,26 +128,258 @@ describe("InvitationManager", () => {
         idempotencyKey: createNotificationIdempotencyKey({
           ...preferenceContext,
           recipient: "member@croco.dev",
-          semanticKey: invitation.id,
+          semanticKey: "create-member-1",
         }),
         preferenceContext,
+        requireProviderIdempotency: true,
       },
     );
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));
   });
 
-  it("should propagate event publication failures when creating email invitation", async () => {
+  it("should retry the durable event intent without sending the notification again", async () => {
     send.mockResolvedValue(undefined);
     publishNow.mockRejectedValueOnce(new Error("publish failed"));
 
+    const input = {
+      idempotencyKey: "event-failure-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      email: "member@croco.dev",
+      role: "member" as const,
+    };
+
+    await expect(manager.createEmailInvitation(input)).rejects.toMatchObject({
+      extensions: { phase: "event", retrySafe: true },
+    });
+    const token = await manager.createEmailInvitation(input);
+
+    const invitation = await store.findByTokenHash(hashToken(token));
+    expect(invitation?.status).toBe("pending");
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(publishNow).toHaveBeenCalledTimes(2);
+    const firstEvent = publishNow.mock.calls[0]?.[0] as InvitationCreatedEvent;
+    const secondEvent = publishNow.mock.calls[1]?.[0] as InvitationCreatedEvent;
+    expect(secondEvent.eventId).toBe(firstEvent.eventId);
+  });
+
+  it("should stop before notification when a stale event owner cannot complete its claim", async () => {
+    vi.spyOn(store, "completeEmailInvitationEvent").mockResolvedValueOnce(null);
+
     await expect(
       manager.createEmailInvitation({
+        idempotencyKey: "stale-event-owner-1",
         tenantId: "tenant-1",
         inviterId: "inviter-1",
         email: "member@croco.dev",
         role: "member",
       }),
-    ).rejects.toThrow("publish failed");
+    ).rejects.toMatchObject({
+      extensions: { phase: "event", retrySafe: true },
+    });
+
+    expect(publishNow).toHaveBeenCalledTimes(1);
+    expect(send).not.toHaveBeenCalled();
+    expect((await store.findAllByTenant("tenant-1"))[0]?.status).toBe("creating");
+  });
+
+  it("should keep a retryable delivery intent without exposing the token in its Problem", async () => {
+    send.mockImplementationOnce(async (_channel, payload) => {
+      throw new Error(`delivery failed for ${payload.content}`);
+    });
+
+    const result = manager.createEmailInvitation({
+      idempotencyKey: "notification-failure-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      email: "member@croco.dev",
+      role: "member",
+    });
+
+    const error = await result.catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(InvitationCreationFailedProblem);
+
+    const invitations = await store.findAllByTenant("tenant-1");
+    expect(invitations).toHaveLength(1);
+    expect(invitations[0]?.status).toBe("creating");
+    expect(JSON.stringify(error)).not.toContain("Use this invitation token");
+    expect(inspect(error)).not.toContain("Use this invitation token");
+    expect(error).toMatchObject({
+      cause: undefined,
+      code: "INVITATION_CREATION_FAILED",
+      extensions: {
+        phase: "notification",
+        retrySafe: true,
+      },
+    });
+  });
+
+  it("should replay the same token and notification key when delivery acknowledgement is lost", async () => {
+    let firstContent = "";
+    send
+      .mockImplementationOnce(async (_channel, payload) => {
+        firstContent = payload.content;
+        const deliveredToken = payload.content.replace("Use this invitation token: ", "");
+        await expect(
+          manager.acceptInvitation({
+            token: deliveredToken,
+            userId: "recipient-1",
+            email: "member@croco.dev",
+          }),
+        ).rejects.toBeInstanceOf(InvitationInvalidStatusProblem);
+        throw new Error("delivery acknowledgement lost");
+      })
+      .mockResolvedValue(undefined);
+
+    const input = {
+      idempotencyKey: "retry-member-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      email: "member@croco.dev",
+      role: "member" as const,
+    };
+
+    await expect(manager.createEmailInvitation(input)).rejects.toBeInstanceOf(
+      InvitationCreationFailedProblem,
+    );
+    const token = await manager.createEmailInvitation(input);
+
+    const invitations = await store.findAllByTenant("tenant-1");
+    expect(invitations).toHaveLength(1);
+    expect(invitations[0]?.tokenHash).toBe(hashToken(token));
+    expect(invitations[0]?.status).toBe("pending");
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(firstContent).toContain(token);
+    expect(send.mock.calls[1]?.[1].content).toBe(firstContent);
+    expect(send.mock.calls[1]?.[2].idempotencyKey).toBe(send.mock.calls[0]?.[2].idempotencyKey);
+    expect(addMember).not.toHaveBeenCalled();
+  });
+
+  it("should replay a completed creation after a successful response is lost", async () => {
+    const input = {
+      idempotencyKey: "successful-response-lost-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      email: "member@croco.dev",
+      role: "member" as const,
+    };
+
+    const firstToken = await manager.createEmailInvitation(input);
+    const replayedToken = await manager.createEmailInvitation(input);
+
+    expect(replayedToken).toBe(firstToken);
+    expect(await store.findAllByTenant("tenant-1")).toHaveLength(1);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(publishNow).toHaveBeenCalledTimes(1);
+  });
+
+  it("should claim concurrent delivery so only one caller executes side effects", async () => {
+    let releaseDelivery!: () => void;
+    const delivery = new Promise<void>((resolve) => {
+      releaseDelivery = resolve;
+    });
+    send.mockImplementation(() => delivery);
+    const input = {
+      idempotencyKey: "concurrent-create-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      email: "member@croco.dev",
+      role: "member" as const,
+    };
+
+    const firstRequest = manager.createEmailInvitation(input);
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    const secondRequest = manager.createEmailInvitation(input);
+    await expect(secondRequest).rejects.toMatchObject({
+      extensions: { phase: "notification", retrySafe: true },
+    });
+    releaseDelivery();
+    const firstToken = await firstRequest;
+
+    expect(firstToken).toBeTypeOf("string");
+    expect(await store.findAllByTenant("tenant-1")).toHaveLength(1);
+    expect(send).toHaveBeenCalledTimes(1);
+    const eventIds = publishNow.mock.calls.map(
+      ([event]) => (event as InvitationCreatedEvent).eventId,
+    );
+    expect(new Set(eventIds)).toEqual(new Set([eventIds[0]]));
+  });
+
+  it("should recover an atomically persisted creation after its acknowledgement is lost", async () => {
+    const create = store.createEmailInvitation.bind(store);
+    vi.spyOn(store, "createEmailInvitation")
+      .mockImplementationOnce(async (input) => {
+        await create(input);
+        throw new Error("commit acknowledgement lost");
+      })
+      .mockImplementation(create);
+    const input = {
+      idempotencyKey: "persistence-ack-lost-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      email: "member@croco.dev",
+      role: "member" as const,
+    };
+
+    await expect(manager.createEmailInvitation(input)).rejects.toMatchObject({
+      cause: undefined,
+      extensions: { phase: "persistence", retrySafe: true },
+    });
+    const token = await manager.createEmailInvitation(input);
+
+    expect(await store.findAllByTenant("tenant-1")).toHaveLength(1);
+    expect(await store.findByTokenHash(hashToken(token))).not.toBeNull();
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("should atomically retire an expired replay even when best-effort cleanup fails", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const input = {
+        idempotencyKey: "expired-replay-1",
+        tenantId: "tenant-1",
+        inviterId: "inviter-1",
+        email: "member@croco.dev",
+        role: "member" as const,
+        expiresInDays: 1,
+      };
+      const firstToken = await manager.createEmailInvitation(input);
+      const firstInvitation = await store.findByTokenHash(hashToken(firstToken));
+
+      vi.setSystemTime(new Date("2026-01-03T00:00:00.000Z"));
+      vi.spyOn(store, "deleteExpiredEmailInvitationCreations").mockRejectedValueOnce(
+        new Error("cleanup unavailable"),
+      );
+      const replacementToken = await manager.createEmailInvitation(input);
+
+      expect(replacementToken).not.toBe(firstToken);
+      expect((await store.findById(firstInvitation?.id ?? ""))?.status).toBe("expired");
+      expect((await store.findByTokenHash(hashToken(replacementToken)))?.status).toBe("pending");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("should reject reuse of an idempotency key for different invitation input", async () => {
+    await manager.createEmailInvitation({
+      idempotencyKey: "conflicting-request-1",
+      tenantId: "tenant-1",
+      inviterId: "inviter-1",
+      email: "first@croco.dev",
+      role: "member",
+    });
+
+    await expect(
+      manager.createEmailInvitation({
+        idempotencyKey: "conflicting-request-1",
+        tenantId: "tenant-1",
+        inviterId: "inviter-1",
+        email: "second@croco.dev",
+        role: "member",
+      }),
+    ).rejects.toBeInstanceOf(InvitationIdempotencyConflictProblem);
+    expect(await store.findAllByTenant("tenant-1")).toHaveLength(1);
   });
 
   it("should create link invitation without sending notification", async () => {
@@ -264,6 +500,7 @@ describe("InvitationManager", () => {
     });
     expect(problem.stack ?? "").not.toContain(token);
     expect(JSON.stringify(problem)).not.toContain(token);
+    expect(inspect(problem)).not.toContain(token);
   });
 
   it("should ignore identifiers passed to InvitationNotFoundProblem by legacy callers", () => {
@@ -422,12 +659,11 @@ describe("InvitationManager", () => {
         to: "member@croco.dev",
       }),
       {
-        idempotencyKey: createNotificationIdempotencyKey({
-          ...preferenceContext,
-          recipient: "member@croco.dev",
-          semanticKey: newInvitation.id,
-        }),
+        idempotencyKey: expect.stringContaining(
+          "notification:tenant-1:member%40croco.dev:EMAIL:invitation.created",
+        ),
         preferenceContext,
+        requireProviderIdempotency: true,
       },
     );
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationRevokedEvent));

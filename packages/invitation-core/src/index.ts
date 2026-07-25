@@ -80,10 +80,12 @@ export {
  */
 export {
   InvitationAlreadyAcceptedProblem,
+  InvitationCreationFailedProblem,
   InvitationEmailMismatchProblem,
   InvitationExpiredProblem,
   InvitationInvalidStatusProblem,
   InvitationNotFoundProblem,
+  InvitationIdempotencyConflictProblem,
 } from "./libs/problems/InvitationProblems";
 
 /**
@@ -112,7 +114,10 @@ export type {
   BatchInviteResult,
   DomainPolicy,
   DomainPolicyCreateInput,
+  EmailInvitationCreation,
+  EmailInvitationCreationInput,
   Invitation,
+  InvitationCreationPhaseStatus,
   InvitationCreateInput,
   InvitationStatus,
   InvitationType,

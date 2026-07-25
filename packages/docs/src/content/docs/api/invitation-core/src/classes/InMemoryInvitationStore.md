@@ -27,6 +27,94 @@ title: "InMemoryInvitationStore"
 
 ## Methods
 
+### activateEmailInvitation()
+
+> **activateEmailInvitation**(`tenantId`, `idempotencyKey`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`activateEmailInvitation`](/api/invitation-core/src/classes/invitationstore/#activateemailinvitation)
+
+***
+
+### claimEmailInvitationEvent()
+
+> **claimEmailInvitationEvent**(`tenantId`, `idempotencyKey`, `claimId`, `claimExpiresAt`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### claimId
+
+`string`
+
+##### claimExpiresAt
+
+`Date`
+
+#### Returns
+
+`Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`claimEmailInvitationEvent`](/api/invitation-core/src/classes/invitationstore/#claimemailinvitationevent)
+
+***
+
+### claimEmailInvitationNotification()
+
+> **claimEmailInvitationNotification**(`tenantId`, `idempotencyKey`, `claimId`, `claimExpiresAt`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### claimId
+
+`string`
+
+##### claimExpiresAt
+
+`Date`
+
+#### Returns
+
+`Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`claimEmailInvitationNotification`](/api/invitation-core/src/classes/invitationstore/#claimemailinvitationnotification)
+
+***
+
 ### compareAndSetStatus()
 
 > **compareAndSetStatus**(`tenantId`, `id`, `expected`, `desired`, `meta?`): `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/) \| `null`\>
@@ -69,6 +157,62 @@ title: "InMemoryInvitationStore"
 
 ***
 
+### completeEmailInvitationEvent()
+
+> **completeEmailInvitationEvent**(`tenantId`, `idempotencyKey`, `claimId`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### claimId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`completeEmailInvitationEvent`](/api/invitation-core/src/classes/invitationstore/#completeemailinvitationevent)
+
+***
+
+### completeEmailInvitationNotification()
+
+> **completeEmailInvitationNotification**(`tenantId`, `idempotencyKey`, `claimId`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### claimId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`completeEmailInvitationNotification`](/api/invitation-core/src/classes/invitationstore/#completeemailinvitationnotification)
+
+***
+
 ### countPendingByTenant()
 
 > **countPendingByTenant**(`tenantId`, `since`): `Promise`\<`number`\>
@@ -90,6 +234,46 @@ title: "InMemoryInvitationStore"
 #### Overrides
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`countPendingByTenant`](/api/invitation-core/src/classes/invitationstore/#countpendingbytenant)
+
+***
+
+### createEmailInvitation()
+
+> **createEmailInvitation**(`input`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/)\>
+
+#### Parameters
+
+##### input
+
+[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/)
+
+#### Returns
+
+`Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/)\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`createEmailInvitation`](/api/invitation-core/src/classes/invitationstore/#createemailinvitation)
+
+***
+
+### deleteExpiredEmailInvitationCreations()
+
+> **deleteExpiredEmailInvitationCreations**(`now`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### now
+
+`Date`
+
+#### Returns
+
+`Promise`\<`number`\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`deleteExpiredEmailInvitationCreations`](/api/invitation-core/src/classes/invitationstore/#deleteexpiredemailinvitationcreations)
 
 ***
 
@@ -174,6 +358,86 @@ title: "InMemoryInvitationStore"
 #### Overrides
 
 [`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findByTokenHash`](/api/invitation-core/src/classes/invitationstore/#findbytokenhash)
+
+***
+
+### findEmailInvitationCreation()
+
+> **findEmailInvitationCreation**(`tenantId`, `idempotencyKey`): `Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<[`EmailInvitationCreation`](/api/invitation-core/src/type-aliases/emailinvitationcreation/) \| `null`\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`findEmailInvitationCreation`](/api/invitation-core/src/classes/invitationstore/#findemailinvitationcreation)
+
+***
+
+### releaseEmailInvitationEvent()
+
+> **releaseEmailInvitationEvent**(`tenantId`, `idempotencyKey`, `claimId`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### claimId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`releaseEmailInvitationEvent`](/api/invitation-core/src/classes/invitationstore/#releaseemailinvitationevent)
+
+***
+
+### releaseEmailInvitationNotification()
+
+> **releaseEmailInvitationNotification**(`tenantId`, `idempotencyKey`, `claimId`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### claimId
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Overrides
+
+[`InvitationStore`](/api/invitation-core/src/classes/invitationstore/).[`releaseEmailInvitationNotification`](/api/invitation-core/src/classes/invitationstore/#releaseemailinvitationnotification)
 
 ***
 

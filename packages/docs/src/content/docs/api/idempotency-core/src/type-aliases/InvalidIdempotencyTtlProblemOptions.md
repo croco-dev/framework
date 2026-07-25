@@ -13,7 +13,7 @@ title: "InvalidIdempotencyTtlProblemOptions"
 
 > `readonly` **constraint**: [`IdempotencyTtlConstraint`](/api/idempotency-core/src/type-aliases/idempotencyttlconstraint/)
 
----
+***
 
 ### receivedValue
 

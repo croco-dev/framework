@@ -13,13 +13,13 @@ title: "ProviderNoCredentialConformanceOptions"
 
 > `readonly` **providerName**: `string`
 
----
+***
 
 ### scenarios
 
 > `readonly` **scenarios**: readonly [`ProviderNoCredentialScenario`](/api/testing/src/type-aliases/providernocredentialscenario/)[]
 
----
+***
 
 ### secretSamples
 

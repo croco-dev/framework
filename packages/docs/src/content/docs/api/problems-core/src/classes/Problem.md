@@ -39,12 +39,14 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ImpersonationReasonRequiredProblem`](/api/impersonation-core/src/classes/impersonationreasonrequiredproblem/)
 - [`BlockedDuringImpersonationProblem`](/api/impersonation-core/src/classes/blockedduringimpersonationproblem/)
 - [`ImpersonationSessionNotFoundProblem`](/api/impersonation-core/src/classes/impersonationsessionnotfoundproblem/)
+- [`InvitationTokenCipherProblem`](/api/invitation-drizzle/src/classes/invitationtokencipherproblem/)
 - [`NotificationProviderNotConfiguredProblem`](/api/notifications-core/src/classes/notificationprovidernotconfiguredproblem/)
 - [`NotificationProviderNotRegisteredProblem`](/api/notifications-core/src/classes/notificationprovidernotregisteredproblem/)
 - [`NotificationProviderAlreadyRegisteredProblem`](/api/notifications-core/src/classes/notificationprovideralreadyregisteredproblem/)
 - [`NotificationDefaultProviderConflictProblem`](/api/notifications-core/src/classes/notificationdefaultproviderconflictproblem/)
 - [`NotificationProviderChannelMismatchProblem`](/api/notifications-core/src/classes/notificationproviderchannelmismatchproblem/)
 - [`NotificationProviderNotFoundProblem`](/api/notifications-core/src/classes/notificationprovidernotfoundproblem/)
+- [`NotificationProviderIdempotencyUnsupportedProblem`](/api/notifications-core/src/classes/notificationprovideridempotencyunsupportedproblem/)
 - [`NotificationSendMaxAttemptsInvalidProblem`](/api/notifications-core/src/classes/notificationsendmaxattemptsinvalidproblem/)
 - [`NotificationDeliveryFailedProblem`](/api/notifications-core/src/classes/notificationdeliveryfailedproblem/)
 - [`NotificationPreferenceDeniedProblem`](/api/notifications-core/src/classes/notificationpreferencedeniedproblem/)
@@ -161,10 +163,12 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidAutoJoinRoleProblem`](/api/invitation-core/src/classes/invalidautojoinroleproblem/)
 - [`PublicEmailDomainNotAllowedProblem`](/api/invitation-core/src/classes/publicemaildomainnotallowedproblem/)
 - [`InvitationAlreadyAcceptedProblem`](/api/invitation-core/src/classes/invitationalreadyacceptedproblem/)
+- [`InvitationCreationFailedProblem`](/api/invitation-core/src/classes/invitationcreationfailedproblem/)
 - [`InvitationEmailMismatchProblem`](/api/invitation-core/src/classes/invitationemailmismatchproblem/)
 - [`InvitationExpiredProblem`](/api/invitation-core/src/classes/invitationexpiredproblem/)
 - [`InvitationInvalidStatusProblem`](/api/invitation-core/src/classes/invitationinvalidstatusproblem/)
 - [`InvitationNotFoundProblem`](/api/invitation-core/src/classes/invitationnotfoundproblem/)
+- [`InvitationIdempotencyConflictProblem`](/api/invitation-core/src/classes/invitationidempotencyconflictproblem/)
 - [`DuplicateInvitationProblem`](/api/invitation-core/src/classes/duplicateinvitationproblem/)
 - [`InvitationRateLimitExceededProblem`](/api/invitation-core/src/classes/invitationratelimitexceededproblem/)
 - [`DuplicateLifecycleRuleProblem`](/api/lifecycle-core/src/classes/duplicatelifecycleruleproblem/)
@@ -351,7 +355,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
----
+***
 
 ### cause?
 
@@ -361,31 +365,31 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.cause`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### detail?
 
 > `readonly` `optional` **detail?**: `string`
 
----
+***
 
 ### extensions?
 
 > `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
----
+***
 
 ### instance?
 
 > `readonly` `optional` **instance?**: `string`
 
----
+***
 
 ### message
 
@@ -395,7 +399,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.message`
 
----
+***
 
 ### name
 
@@ -405,7 +409,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.name`
 
----
+***
 
 ### stack?
 
@@ -415,13 +419,13 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.stack`
 
----
+***
 
 ### type
 
 > `readonly` **type**: `string`
 
----
+***
 
 ### stackTraceLimit
 
@@ -453,7 +457,7 @@ not capture any frames.
 
 `number`
 
----
+***
 
 ### title
 
@@ -475,7 +479,7 @@ not capture any frames.
 
 [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### captureStackTrace()
 
@@ -488,7 +492,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -543,7 +547,7 @@ a();
 
 `Error.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

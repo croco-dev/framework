@@ -13,19 +13,19 @@ title: "ModuleCleanupFailure"
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### message
 
 > `readonly` **message**: `string`
 
----
+***
 
 ### moduleName
 
 > `readonly` **moduleName**: `string`
 
----
+***
 
 ### phase
 
