@@ -269,6 +269,237 @@ describe("static-misuse-check.mts", () => {
     );
   });
 
+  it("rejects inconsistent REST contract graphs with stable recovery diagnostics", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/example/src/contracts.ts",
+      [
+        'import { defineRouteContract, HttpMethod } from "@croco/protocols-rest";',
+        "export const UserSchema = schema();",
+        "export const OrderSchema = schema();",
+        "export const GetUser = defineRouteContract({ method: HttpMethod.GET, path: '/users/:id', params: objectSchema(), response: UserSchema });",
+        "export const GetOrder = defineRouteContract({ method: HttpMethod.GET, path: '/orders/:id', params: objectSchema(), response: OrderSchema });",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/example/src/controller.ts",
+      [
+        'import { Get, Param as RouteParam, ResponseSchema } from "@croco/protocols-rest";',
+        'import { GetOrder, GetUser, OrderSchema } from "./contracts.js";',
+        "class BaseUsersController {",
+        "  @Get(GetUser)",
+        '  inherited(@RouteParam(GetUser, "id") id: string) {',
+        "    return id;",
+        "  }",
+        "}",
+        "class MiddleUsersController extends BaseUsersController {}",
+        "class UsersController extends MiddleUsersController {",
+        "  @Get(GetOrder)",
+        '  inherited(@RouteParam(GetOrder, "id") id: string) {',
+        "    return id;",
+        "  }",
+        "  @Get(GetUser)",
+        "  @ResponseSchema(OrderSchema)",
+        "  @Get(GetOrder)",
+        '  find(@RouteParam(GetOrder, "id") id: string, @RouteParam(GetOrder, "id") duplicate: string) {',
+        "    return { id, duplicate };",
+        "  }",
+        '  loose(@RouteParam(GetUser, "id") id: string) {',
+        "    return id;",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-decorator-contract-graph");
+
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "REST_MULTIPLE_ROUTE_DECORATORS",
+      "REST_DECORATOR_CONTRACT_MISMATCH",
+      "REST_DUPLICATE_PARAMETER_BINDING",
+      "REST_MULTIPLE_ROUTE_DECORATORS",
+      "REST_DECORATOR_CONTRACT_MISMATCH",
+      "REST_DECORATOR_CONTRACT_MISMATCH",
+      "REST_DUPLICATE_PARAMETER_BINDING",
+      "REST_RESPONSE_SCHEMA_CONFLICT",
+      "REST_CONTRACT_BINDING_WITHOUT_ROUTE",
+    ]);
+    expect(result?.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: expect.stringContaining("GetUser"),
+          code: "REST_DECORATOR_CONTRACT_MISMATCH",
+          file: "packages/example/src/controller.ts",
+          line: 18,
+          message: expect.stringContaining("find"),
+        }),
+        expect.objectContaining({
+          code: "REST_DUPLICATE_PARAMETER_BINDING",
+          line: 18,
+        }),
+        expect.objectContaining({
+          code: "REST_RESPONSE_SCHEMA_CONFLICT",
+          line: 16,
+        }),
+        expect.objectContaining({
+          code: "REST_CONTRACT_BINDING_WITHOUT_ROUTE",
+          line: 21,
+        }),
+      ]),
+    );
+  });
+
+  it("accepts the same REST contract through named imports, aliases, and re-exports", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/example/src/contracts/user.ts",
+      [
+        'import { defineRouteContract, HttpMethod } from "@croco/protocols-rest";',
+        "export const UserSchema = schema();",
+        "export const GetUser = defineRouteContract({ method: HttpMethod.GET, path: '/users/:id', params: objectSchema(), response: UserSchema });",
+        "",
+      ].join("\n"),
+    );
+    writeFile(repo, "packages/example/src/contracts/index.ts", 'export * from "./user.js";\n');
+    writeFile(
+      repo,
+      "packages/example/src/contracts/public.ts",
+      'export { GetUser as UserRoute, UserSchema } from "./index.js";\n',
+    );
+    writeFile(
+      repo,
+      "packages/example/src/controller.ts",
+      [
+        'import { defineRouteContract, Get as Read, HttpMethod, Param, ResponseSchema } from "@croco/protocols-rest";',
+        'import { UserRoute as Contract, UserSchema } from "./contracts/public.js";',
+        "const LocalContract = defineRouteContract({ method: HttpMethod.GET, path: '/local/:id', params: objectSchema(), response: UserSchema });",
+        "class BaseUsersController {",
+        "  @Read(Contract)",
+        '  inherited(@Param(Contract, "id") id: string) {',
+        "    return { id };",
+        "  }",
+        "}",
+        "class UsersController extends BaseUsersController {",
+        "  @Read(LocalContract)",
+        '  local(@Param(LocalContract, "id") id: string) {',
+        "    return { id };",
+        "  }",
+        "  @ResponseSchema(Contract.response)",
+        "  @Read(Contract)",
+        '  find(@Param(Contract, "id") id: string) {',
+        "    return { id };",
+        "  }",
+        "  @Read(Contract)",
+        "  @ResponseSchema(UserSchema)",
+        '  reordered(@Param(Contract, "id") id: string) {',
+        "    return { id };",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-decorator-contract-graph");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        diagnostics: [],
+        status: "pass",
+      }),
+    );
+  });
+
+  it("distinguishes dynamic routes from statically loose string routes", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/example/src/contracts.ts",
+      [
+        'import { defineRouteContract, HttpMethod } from "@croco/protocols-rest";',
+        "export const GetUser = defineRouteContract({ method: HttpMethod.GET, path: '/users/:id', params: objectSchema(), response: schema() });",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/example/src/controller.ts",
+      [
+        'import { Get, Param, ResponseSchema } from "@croco/protocols-rest";',
+        'import { GetUser } from "./contracts.js";',
+        "const dynamicRoute = makeRoute();",
+        "const loosePath = '/loose/:id';",
+        "class DynamicController {",
+        "  @Get(dynamicRoute)",
+        "  @ResponseSchema(makeSchema())",
+        '  find(@Param(dynamicRoute, "id") id: string) {',
+        "    return id;",
+        "  }",
+        "  @Get(makeRoute())",
+        '  mixed(@Param(GetUser, "id") id: string) {',
+        "    return id;",
+        "  }",
+        "  @Get(loosePath)",
+        '  localLoose(@Param(GetUser, "id") id: string) {',
+        "    return id;",
+        "  }",
+        '  @Get("/inline/:id")',
+        '  inlineLoose(@Param(GetUser, "id") id: string) {',
+        "    return id;",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-decorator-contract-graph");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "REST_CONTRACT_BINDING_WITHOUT_ROUTE",
+        message: expect.stringContaining("localLoose"),
+      }),
+      expect.objectContaining({
+        code: "REST_CONTRACT_BINDING_WITHOUT_ROUTE",
+        message: expect.stringContaining("inlineLoose"),
+      }),
+    ]);
+    expect(result?.limitation).toContain("Dynamically produced");
+  });
+
+  it("normalizes duplicate HTTP header binding names case-insensitively", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/example/src/controller.ts",
+      [
+        'import { Get, Header } from "@croco/protocols-rest";',
+        "class HeaderController {",
+        '  @Get("/headers")',
+        '  read(@Header("X-Tenant-ID") first: string, @Header("x-tenant-id") second: string) {',
+        "    return { first, second };",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-decorator-contract-graph");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "REST_DUPLICATE_PARAMETER_BINDING",
+        line: 4,
+        message: expect.stringContaining("header:x-tenant-id"),
+      }),
+    ]);
+  });
+
   it("flags raw built-in Error throws in production package source", () => {
     const repo = createTempRepo();
     writeFile(

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
@@ -51,6 +51,7 @@ type LineDetector = {
 
 type SyntaxDetectorContext = {
   readonly rule: StaticMisuseRule;
+  readonly rootDir: string;
   readonly relativeFile: string;
   readonly lines: readonly string[];
   readonly sourceFile: ts.SourceFile;
@@ -207,9 +208,30 @@ const emptyCatchRuntimeBoundaryRule: StaticMisuseRule = {
   allowInlineIgnore: false,
 };
 
+const restDecoratorContractGraphRule: StaticMisuseRule = {
+  id: "rest-decorator-contract-graph",
+  code: "REST_DECORATOR_CONTRACT_MISMATCH",
+  title: "REST decorators on one method must share a coherent contract graph",
+  targetDir: "packages",
+  description:
+    "Contract-bound REST route, parameter, and response decorators must refer to one statically resolvable route contract and must not create duplicate request bindings.",
+  limitation:
+    "The checker follows local const declarations, relative named imports, aliases, and re-exports. Dynamically produced or non-relative imported contracts are intentionally left unclassified to avoid misleading false positives.",
+  recovery:
+    "Use one explicit route contract throughout the method, remove duplicate bindings and route decorators, and derive @ResponseSchema from the route contract response.",
+  detectors: [],
+  includeFile: isRestContractGraphSourceFile,
+  syntaxDetectors: [
+    {
+      detect: detectRestDecoratorContractGraph,
+    },
+  ],
+};
+
 const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
   repositoryBoundaryRule,
   restGeneratedContractRule,
+  restDecoratorContractGraphRule,
   rawErrorRuntimeBoundaryRule,
   emptyCatchRuntimeBoundaryRule,
 ];
@@ -262,6 +284,787 @@ function detectEmptyCatchClauses({
   return diagnostics;
 }
 
+const ROUTE_DECORATORS = new Set([
+  "All",
+  "Delete",
+  "Get",
+  "Head",
+  "Options",
+  "Patch",
+  "Post",
+  "Put",
+]);
+const PARAMETER_DECORATORS = new Set(["Body", "Header", "Param", "Query"]);
+
+type ResolvedDeclaration = {
+  readonly declaration: ts.Declaration;
+  readonly sourceFile: ts.SourceFile;
+};
+
+type ContractReference = ResolvedDeclaration & {
+  readonly identity: string;
+};
+
+type RestDecoratorUse = {
+  readonly call: ts.CallExpression;
+  readonly lines: readonly string[];
+  readonly name: string;
+  readonly relativeFile: string;
+  readonly sourceFile: ts.SourceFile;
+};
+
+function detectRestDecoratorContractGraph({
+  lines,
+  relativeFile,
+  rootDir,
+  rule,
+  sourceFile,
+}: SyntaxDetectorContext): readonly StaticMisuseDiagnostic[] {
+  if (!sourceFile.text.includes("@croco/protocols-rest")) {
+    return [];
+  }
+
+  const diagnostics: StaticMisuseDiagnostic[] = [];
+
+  function visit(node: ts.Node): void {
+    if (ts.isMethodDeclaration(node)) {
+      diagnostics.push(
+        ...inspectRestMethod({
+          lines,
+          method: node,
+          relativeFile,
+          rootDir,
+          rule,
+          sourceFile,
+        }),
+      );
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return diagnostics;
+}
+
+function inspectRestMethod(options: {
+  readonly lines: readonly string[];
+  readonly method: ts.MethodDeclaration;
+  readonly relativeFile: string;
+  readonly rootDir: string;
+  readonly rule: StaticMisuseRule;
+  readonly sourceFile: ts.SourceFile;
+}): readonly StaticMisuseDiagnostic[] {
+  const { lines, method, relativeFile, rootDir, rule, sourceFile } = options;
+  const methodName = method.name.getText(sourceFile);
+  const methodContexts = [
+    ...getInheritedMethodContexts(method, sourceFile, rootDir),
+    { method, sourceFile },
+  ];
+  const methodDecorators = methodContexts.flatMap((context) =>
+    getRestDecorators(context.method, context.sourceFile, rootDir),
+  );
+  const routeDecorators = methodDecorators.filter((decorator) =>
+    ROUTE_DECORATORS.has(decorator.name),
+  );
+  const responseDecorators = methodDecorators.filter(
+    (decorator) => decorator.name === "ResponseSchema",
+  );
+  const parameterDecorators = methodContexts.flatMap((context) =>
+    context.method.parameters.flatMap((parameter) =>
+      getRestDecorators(parameter, context.sourceFile, rootDir).filter((decorator) =>
+        PARAMETER_DECORATORS.has(decorator.name),
+      ),
+    ),
+  );
+  const diagnostics: StaticMisuseDiagnostic[] = [];
+
+  if (routeDecorators.length > 1) {
+    for (const decorator of routeDecorators.slice(1)) {
+      diagnostics.push(
+        createRestDiagnostic({
+          action: `Keep exactly one HTTP method decorator on '${methodName}'.`,
+          code: "REST_MULTIPLE_ROUTE_DECORATORS",
+          decorator,
+          lines,
+          message: `Route method '${methodName}' has multiple HTTP method decorators (${routeDecorators
+            .map((route) => {
+              const contract = resolveDecoratorContract(route, route.sourceFile, rootDir);
+              return contract ? `@${route.name}(${contract.identity})` : `@${route.name}(loose)`;
+            })
+            .join(", ")}).`,
+          relativeFile,
+          rule,
+          sourceFile,
+        }),
+      );
+    }
+  }
+
+  const primaryRoute = routeDecorators[0];
+  const routeContract = primaryRoute
+    ? resolveDecoratorContract(primaryRoute, primaryRoute.sourceFile, rootDir)
+    : null;
+  const hasLooseRoute = primaryRoute !== undefined && isDefinitelyLooseRoute(primaryRoute, rootDir);
+  const hasUnclassifiedRoute = primaryRoute !== undefined && !routeContract && !hasLooseRoute;
+
+  for (const parameterDecorator of parameterDecorators) {
+    const parameterContract = resolveDecoratorContract(
+      parameterDecorator,
+      parameterDecorator.sourceFile,
+      rootDir,
+    );
+    if (!parameterContract) {
+      continue;
+    }
+
+    if (hasUnclassifiedRoute) {
+      continue;
+    }
+
+    if (!primaryRoute || hasLooseRoute) {
+      diagnostics.push(
+        createRestDiagnostic({
+          action: `Bind '${methodName}' to the same explicit route contract, or use the loose parameter decorator form consistently.`,
+          code: "REST_CONTRACT_BINDING_WITHOUT_ROUTE",
+          decorator: parameterDecorator,
+          lines,
+          message: `Route method '${methodName}' binds @${parameterDecorator.name} to contract '${parameterContract.identity}' without a contract-bound route decorator.`,
+          relativeFile,
+          rule,
+          sourceFile,
+        }),
+      );
+      continue;
+    }
+
+    if (routeContract && parameterContract.identity !== routeContract.identity) {
+      diagnostics.push(
+        createRestDiagnostic({
+          action: `Pass contract '${routeContract.identity}' to @${parameterDecorator.name} on '${methodName}'.`,
+          code: "REST_DECORATOR_CONTRACT_MISMATCH",
+          decorator: parameterDecorator,
+          lines,
+          message: `Route method '${methodName}' uses route contract '${routeContract.identity}' but @${parameterDecorator.name} uses '${parameterContract.identity}'.`,
+          relativeFile,
+          rule,
+          sourceFile,
+        }),
+      );
+    }
+  }
+
+  const seenBindings = new Map<string, RestDecoratorUse>();
+  for (const parameterDecorator of parameterDecorators) {
+    const key = getRequestBindingKey(parameterDecorator, parameterDecorator.sourceFile, rootDir);
+    if (!key) {
+      continue;
+    }
+    const existing = seenBindings.get(key);
+    if (!existing) {
+      seenBindings.set(key, parameterDecorator);
+      continue;
+    }
+    diagnostics.push(
+      createRestDiagnostic({
+        action: `Remove one of the duplicate ${key} bindings from '${methodName}'.`,
+        code: "REST_DUPLICATE_PARAMETER_BINDING",
+        decorator: parameterDecorator,
+        lines,
+        message: `Route method '${methodName}' binds request source '${key}' more than once via @${existing.name} and @${parameterDecorator.name}${
+          routeContract ? ` under route contract '${routeContract.identity}'` : ""
+        }.`,
+        relativeFile,
+        rule,
+        sourceFile,
+      }),
+    );
+  }
+
+  if (routeContract) {
+    const routeResponse = resolveContractResponse(routeContract, rootDir);
+    for (const responseDecorator of responseDecorators) {
+      const responseArgument = responseDecorator.call.arguments[0];
+      if (!responseArgument || !routeResponse) {
+        continue;
+      }
+      const responsePropertyContract =
+        ts.isPropertyAccessExpression(responseArgument) && responseArgument.name.text === "response"
+          ? resolveContractReference(
+              responseArgument.expression,
+              responseDecorator.sourceFile,
+              rootDir,
+            )
+          : null;
+      const responseIdentity =
+        resolveDecoratorContract(responseDecorator, responseDecorator.sourceFile, rootDir)
+          ?.identity === routeContract.identity ||
+        responsePropertyContract?.identity === routeContract.identity
+          ? routeResponse
+          : resolveExpressionIdentity(responseArgument, responseDecorator.sourceFile, rootDir);
+      if (responseIdentity && responseIdentity !== routeResponse) {
+        diagnostics.push(
+          createRestDiagnostic({
+            action: `Remove @ResponseSchema from '${methodName}' or pass the response declared by '${routeContract.identity}'.`,
+            code: "REST_RESPONSE_SCHEMA_CONFLICT",
+            decorator: responseDecorator,
+            lines,
+            message: `Route method '${methodName}' declares response '${routeResponse}' in contract '${routeContract.identity}' but @ResponseSchema uses '${responseIdentity}'.`,
+            relativeFile,
+            rule,
+            sourceFile,
+          }),
+        );
+      }
+    }
+  }
+
+  return diagnostics;
+}
+
+function getRestDecorators(
+  node: ts.Node,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+): readonly RestDecoratorUse[] {
+  if (!ts.canHaveDecorators(node)) {
+    return [];
+  }
+  return (ts.getDecorators(node) ?? []).flatMap((decorator) => {
+    const expression = decorator.expression;
+    if (!ts.isCallExpression(expression)) {
+      return [];
+    }
+    const name = resolveRestDecoratorName(expression.expression, sourceFile, rootDir);
+    return name
+      ? [
+          {
+            call: expression,
+            lines: sourceFile.text.split(/\r?\n/),
+            name,
+            relativeFile: getRelativeSourceFile(rootDir, sourceFile),
+            sourceFile,
+          },
+        ]
+      : [];
+  });
+}
+
+function getInheritedMethodContexts(
+  method: ts.MethodDeclaration,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+): readonly { readonly method: ts.MethodDeclaration; readonly sourceFile: ts.SourceFile }[] {
+  const owner = method.parent;
+  if (!ts.isClassDeclaration(owner)) {
+    return [];
+  }
+  return getInheritedMethodContextsForClass(
+    owner,
+    method.name.getText(sourceFile),
+    sourceFile,
+    rootDir,
+    new Set(),
+  );
+}
+
+function getInheritedMethodContextsForClass(
+  owner: ts.ClassDeclaration,
+  methodName: string,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  seen: Set<string>,
+): readonly { readonly method: ts.MethodDeclaration; readonly sourceFile: ts.SourceFile }[] {
+  const ownerIdentity = `${getRelativeSourceFile(rootDir, sourceFile)}#${
+    owner.name?.text ?? "<anonymous>"
+  }.${methodName}`;
+  if (seen.has(ownerIdentity)) {
+    return [];
+  }
+  seen.add(ownerIdentity);
+  const extendsClause = owner.heritageClauses?.find(
+    (clause) => clause.token === ts.SyntaxKind.ExtendsKeyword,
+  );
+  const baseExpression = extendsClause?.types[0]?.expression;
+  if (!baseExpression) {
+    return [];
+  }
+  const resolvedBase = resolveExpressionDeclaration(baseExpression, sourceFile, rootDir);
+  if (!resolvedBase || !ts.isClassDeclaration(resolvedBase.declaration)) {
+    return [];
+  }
+  const baseMethod = resolvedBase.declaration.members.find(
+    (member): member is ts.MethodDeclaration =>
+      ts.isMethodDeclaration(member) && member.name.getText(resolvedBase.sourceFile) === methodName,
+  );
+  return [
+    ...getInheritedMethodContextsForClass(
+      resolvedBase.declaration,
+      methodName,
+      resolvedBase.sourceFile,
+      rootDir,
+      seen,
+    ),
+    ...(baseMethod ? [{ method: baseMethod, sourceFile: resolvedBase.sourceFile }] : []),
+  ];
+}
+
+function resolveRestDecoratorName(
+  expression: ts.LeftHandSideExpression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+): string | null {
+  if (!ts.isIdentifier(expression)) {
+    return null;
+  }
+  const resolved = resolveIdentifierDeclaration(expression.text, sourceFile, rootDir, new Set());
+  if (!resolved || !ts.isImportSpecifier(resolved.declaration)) {
+    return null;
+  }
+  const importDeclaration = resolved.declaration.parent.parent.parent;
+  if (
+    !ts.isImportDeclaration(importDeclaration) ||
+    !ts.isStringLiteral(importDeclaration.moduleSpecifier) ||
+    importDeclaration.moduleSpecifier.text !== "@croco/protocols-rest"
+  ) {
+    return null;
+  }
+  return resolved.declaration.propertyName?.text ?? resolved.declaration.name.text;
+}
+
+function resolveDecoratorContract(
+  decorator: RestDecoratorUse,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+): ContractReference | null {
+  const args = decorator.call.arguments;
+  let candidate: ts.Expression | undefined;
+
+  if (ROUTE_DECORATORS.has(decorator.name)) {
+    candidate = args[0];
+  } else if (decorator.name === "Param" || decorator.name === "Query") {
+    candidate = args.length >= 2 ? args[0] : undefined;
+  } else if (decorator.name === "Body" || decorator.name === "ResponseSchema") {
+    candidate = args[0];
+  }
+
+  if (!candidate || ts.isStringLiteralLike(candidate)) {
+    return null;
+  }
+  return resolveContractReference(candidate, sourceFile, rootDir);
+}
+
+function isDefinitelyLooseRoute(decorator: RestDecoratorUse, rootDir: string): boolean {
+  const argument = decorator.call.arguments[0];
+  return (
+    argument === undefined ||
+    resolveStaticString(argument, decorator.sourceFile, rootDir, new Set())
+  );
+}
+
+function resolveStaticString(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  seen: Set<string>,
+): boolean {
+  const value = unwrapExpression(expression);
+  if (!value) {
+    return false;
+  }
+  if (ts.isStringLiteralLike(value)) {
+    return true;
+  }
+  if (!ts.isIdentifier(value)) {
+    return false;
+  }
+  const resolved = resolveExpressionDeclaration(value, sourceFile, rootDir);
+  if (!resolved || !ts.isVariableDeclaration(resolved.declaration)) {
+    return false;
+  }
+  const identity = `${resolved.sourceFile.fileName}#${resolved.declaration.name.getText(resolved.sourceFile)}`;
+  if (seen.has(identity)) {
+    return false;
+  }
+  seen.add(identity);
+  return resolved.declaration.initializer
+    ? resolveStaticString(resolved.declaration.initializer, resolved.sourceFile, rootDir, seen)
+    : false;
+}
+
+function resolveContractReference(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+): ContractReference | null {
+  const resolved = resolveExpressionDeclaration(expression, sourceFile, rootDir);
+  if (!resolved || !ts.isVariableDeclaration(resolved.declaration)) {
+    return null;
+  }
+  const initializer = unwrapExpression(resolved.declaration.initializer);
+  if (!initializer || !isRouteContractInitializer(initializer)) {
+    return null;
+  }
+  const name = resolved.declaration.name.getText(resolved.sourceFile);
+  return {
+    ...resolved,
+    identity: `${getRelativeSourceFile(rootDir, resolved.sourceFile)}#${name}`,
+  };
+}
+
+function isRouteContractInitializer(expression: ts.Expression): boolean {
+  if (ts.isCallExpression(expression)) {
+    const callee = expression.expression;
+    return ts.isIdentifier(callee) && callee.text === "defineRouteContract";
+  }
+  return (
+    ts.isObjectLiteralExpression(expression) &&
+    expression.properties.some((property) => property.name?.getText() === "method") &&
+    expression.properties.some((property) => property.name?.getText() === "path")
+  );
+}
+
+function resolveContractResponse(contract: ContractReference, rootDir: string): string | null {
+  if (!ts.isVariableDeclaration(contract.declaration)) {
+    return null;
+  }
+  const initializer = unwrapExpression(contract.declaration.initializer);
+  if (!initializer) {
+    return null;
+  }
+  const objectLiteral = ts.isCallExpression(initializer)
+    ? unwrapExpression(initializer.arguments[0])
+    : initializer;
+  if (!objectLiteral || !ts.isObjectLiteralExpression(objectLiteral)) {
+    return null;
+  }
+  const responseProperty = objectLiteral.properties.find(
+    (property) => property.name?.getText(contract.sourceFile) === "response",
+  );
+  if (!responseProperty) {
+    return null;
+  }
+  if (ts.isPropertyAssignment(responseProperty)) {
+    return (
+      resolveExpressionIdentity(responseProperty.initializer, contract.sourceFile, rootDir) ??
+      `${getRelativeSourceFile(rootDir, contract.sourceFile)}@${responseProperty.initializer.getStart(contract.sourceFile)}`
+    );
+  }
+  if (ts.isShorthandPropertyAssignment(responseProperty)) {
+    return resolveExpressionIdentity(responseProperty.name, contract.sourceFile, rootDir);
+  }
+  return null;
+}
+
+function getRequestBindingKey(
+  decorator: RestDecoratorUse,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+): string | null {
+  if (decorator.name === "Body") {
+    return "body";
+  }
+  if (!["Header", "Param", "Query"].includes(decorator.name)) {
+    return null;
+  }
+  const contract = resolveDecoratorContract(decorator, sourceFile, rootDir);
+  const nameArgument = contract ? decorator.call.arguments[1] : decorator.call.arguments[0];
+  const name = nameArgument ? getStaticString(nameArgument) : null;
+  if (name === null) {
+    return null;
+  }
+  const normalizedName = decorator.name === "Header" ? name.toLowerCase() : name;
+  return `${decorator.name.toLowerCase()}:${normalizedName}`;
+}
+
+function getStaticString(expression: ts.Expression): string | null {
+  const value = unwrapExpression(expression);
+  return value && ts.isStringLiteralLike(value) ? value.text : null;
+}
+
+function createRestDiagnostic(options: {
+  readonly action: string;
+  readonly code: string;
+  readonly decorator: RestDecoratorUse;
+  readonly lines?: readonly string[];
+  readonly message: string;
+  readonly relativeFile?: string;
+  readonly rule: StaticMisuseRule;
+  readonly sourceFile?: ts.SourceFile;
+}): StaticMisuseDiagnostic {
+  const { action, code, decorator, message, rule } = options;
+  const start = decorator.sourceFile.getLineAndCharacterOfPosition(
+    decorator.call.getStart(decorator.sourceFile),
+  );
+  return {
+    action,
+    code,
+    column: start.character + 1,
+    excerpt: (decorator.lines[start.line] ?? "").trim(),
+    file: decorator.relativeFile,
+    line: start.line + 1,
+    message,
+    ruleId: rule.id,
+  };
+}
+
+function resolveExpressionIdentity(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+): string | null {
+  const value = unwrapExpression(expression);
+  if (!value) {
+    return null;
+  }
+  if (ts.isPropertyAccessExpression(value)) {
+    const base = resolveExpressionIdentity(value.expression, sourceFile, rootDir);
+    return base ? `${base}.${value.name.text}` : null;
+  }
+  const resolved = resolveExpressionDeclaration(value, sourceFile, rootDir);
+  if (!resolved) {
+    return null;
+  }
+  if (ts.isVariableDeclaration(resolved.declaration)) {
+    const initializer = unwrapExpression(resolved.declaration.initializer);
+    if (initializer && ts.isIdentifier(initializer)) {
+      return resolveExpressionIdentity(initializer, resolved.sourceFile, rootDir);
+    }
+    return `${getRelativeSourceFile(rootDir, resolved.sourceFile)}#${resolved.declaration.name.getText(resolved.sourceFile)}`;
+  }
+  return null;
+}
+
+function resolveExpressionDeclaration(
+  expression: ts.Expression,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+): ResolvedDeclaration | null {
+  const value = unwrapExpression(expression);
+  if (!value || !ts.isIdentifier(value)) {
+    return null;
+  }
+  return resolveIdentifierDeclaration(value.text, sourceFile, rootDir, new Set());
+}
+
+function resolveIdentifierDeclaration(
+  name: string,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  seen: Set<string>,
+): ResolvedDeclaration | null {
+  const key = `${sourceFile.fileName}#${name}`;
+  if (seen.has(key)) {
+    return null;
+  }
+  seen.add(key);
+
+  for (const statement of sourceFile.statements) {
+    if (ts.isVariableStatement(statement)) {
+      const declaration = statement.declarationList.declarations.find(
+        (candidate) => ts.isIdentifier(candidate.name) && candidate.name.text === name,
+      );
+      if (declaration) {
+        const initializer = unwrapExpression(declaration.initializer);
+        if (initializer && ts.isIdentifier(initializer)) {
+          return (
+            resolveIdentifierDeclaration(initializer.text, sourceFile, rootDir, seen) ?? {
+              declaration,
+              sourceFile,
+            }
+          );
+        }
+        return { declaration, sourceFile };
+      }
+    }
+
+    if (ts.isClassDeclaration(statement) && statement.name?.text === name) {
+      return { declaration: statement, sourceFile };
+    }
+
+    if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
+      const bindings = statement.importClause?.namedBindings;
+      if (!bindings || !ts.isNamedImports(bindings)) {
+        continue;
+      }
+      const specifier = bindings.elements.find((candidate) => candidate.name.text === name);
+      if (!specifier) {
+        continue;
+      }
+      const moduleName = statement.moduleSpecifier.text;
+      if (moduleName === "@croco/protocols-rest") {
+        return { declaration: specifier, sourceFile };
+      }
+      const importedFile = resolveRelativeModule(sourceFile.fileName, moduleName, rootDir);
+      if (!importedFile) {
+        return null;
+      }
+      const importedSource = readSourceFile(importedFile);
+      return importedSource
+        ? resolveExportedDeclaration(
+            specifier.propertyName?.text ?? specifier.name.text,
+            importedSource,
+            rootDir,
+            seen,
+          )
+        : null;
+    }
+  }
+
+  return resolveExportedDeclaration(name, sourceFile, rootDir, seen);
+}
+
+function resolveExportedDeclaration(
+  name: string,
+  sourceFile: ts.SourceFile,
+  rootDir: string,
+  seen: Set<string>,
+): ResolvedDeclaration | null {
+  const exportKey = `export:${sourceFile.fileName}#${name}`;
+  if (seen.has(exportKey)) {
+    return null;
+  }
+  seen.add(exportKey);
+
+  for (const statement of sourceFile.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === name &&
+      statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+    ) {
+      return { declaration: statement, sourceFile };
+    }
+    if (
+      ts.isVariableStatement(statement) &&
+      statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+    ) {
+      const declaration = statement.declarationList.declarations.find(
+        (candidate) => ts.isIdentifier(candidate.name) && candidate.name.text === name,
+      );
+      if (declaration) {
+        return { declaration, sourceFile };
+      }
+    }
+    if (!ts.isExportDeclaration(statement)) {
+      continue;
+    }
+    if (!statement.exportClause) {
+      if (!statement.moduleSpecifier || !ts.isStringLiteral(statement.moduleSpecifier)) {
+        continue;
+      }
+      const exportedFile = resolveRelativeModule(
+        sourceFile.fileName,
+        statement.moduleSpecifier.text,
+        rootDir,
+      );
+      if (!exportedFile) {
+        continue;
+      }
+      const exportedSource = readSourceFile(exportedFile);
+      const resolved = exportedSource
+        ? resolveExportedDeclaration(name, exportedSource, rootDir, seen)
+        : null;
+      if (resolved) {
+        return resolved;
+      }
+      continue;
+    }
+    if (!ts.isNamedExports(statement.exportClause)) {
+      continue;
+    }
+    const specifier = statement.exportClause.elements.find(
+      (candidate) => candidate.name.text === name,
+    );
+    if (!specifier) {
+      continue;
+    }
+    const originalName = specifier.propertyName?.text ?? specifier.name.text;
+    if (!statement.moduleSpecifier) {
+      return resolveIdentifierDeclaration(originalName, sourceFile, rootDir, seen);
+    }
+    if (!ts.isStringLiteral(statement.moduleSpecifier)) {
+      return null;
+    }
+    const exportedFile = resolveRelativeModule(
+      sourceFile.fileName,
+      statement.moduleSpecifier.text,
+      rootDir,
+    );
+    if (!exportedFile) {
+      return null;
+    }
+    const exportedSource = readSourceFile(exportedFile);
+    return exportedSource
+      ? resolveExportedDeclaration(originalName, exportedSource, rootDir, seen)
+      : null;
+  }
+  return null;
+}
+
+function resolveRelativeModule(
+  containingFile: string,
+  moduleName: string,
+  rootDir: string,
+): string | null {
+  if (!moduleName.startsWith(".")) {
+    return null;
+  }
+  const absoluteContainingFile = resolve(rootDir, containingFile);
+  const base = resolve(absoluteContainingFile, "..", moduleName);
+  const sourceBase = base.replace(/\.(?:c|m)?jsx?$/, "");
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    `${base}.mts`,
+    `${base}.cts`,
+    `${sourceBase}.ts`,
+    `${sourceBase}.tsx`,
+    `${sourceBase}.mts`,
+    `${sourceBase}.cts`,
+    join(base, "index.ts"),
+    join(base, "index.tsx"),
+    join(sourceBase, "index.ts"),
+    join(sourceBase, "index.tsx"),
+  ];
+  return (
+    candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile()) ?? null
+  );
+}
+
+function readSourceFile(filePath: string): ts.SourceFile | null {
+  if (!existsSync(filePath)) {
+    return null;
+  }
+  return ts.createSourceFile(
+    filePath,
+    readFileSync(filePath, "utf-8"),
+    ts.ScriptTarget.Latest,
+    true,
+    getScriptKind(filePath),
+  );
+}
+
+function getRelativeSourceFile(rootDir: string, sourceFile: ts.SourceFile): string {
+  const absoluteFile = isAbsolute(sourceFile.fileName)
+    ? sourceFile.fileName
+    : resolve(rootDir, sourceFile.fileName);
+  return toPosixPath(relative(rootDir, absoluteFile));
+}
+
+function unwrapExpression(expression: ts.Expression | undefined): ts.Expression | null {
+  let current = expression;
+  while (
+    current &&
+    (ts.isParenthesizedExpression(current) ||
+      ts.isAsExpression(current) ||
+      ts.isSatisfiesExpression(current) ||
+      ts.isNonNullExpression(current))
+  ) {
+    current = current.expression;
+  }
+  return current ?? null;
+}
+
 function isCatchBlockEmpty(block: ts.Block): boolean {
   return block.statements.every((statement) => ts.isEmptyStatement(statement));
 }
@@ -302,6 +1105,24 @@ function isProductionPackageSourceFile(relativeFile: string): boolean {
     !relativeFile.endsWith(".test.ts") &&
     !relativeFile.endsWith(".spec.tsx") &&
     !relativeFile.endsWith(".test.tsx")
+  );
+}
+
+function isRestContractGraphSourceFile(relativeFile: string): boolean {
+  if (isProductionPackageSourceFile(relativeFile)) {
+    return true;
+  }
+
+  const parts = toPosixPath(relativeFile).split("/");
+  return (
+    parts[0] === "packages" &&
+    parts[1] === "create-croco-app" &&
+    parts[2] === "templates" &&
+    parts.includes("src") &&
+    !parts.includes("tests") &&
+    !parts.includes("__tests__") &&
+    !relativeFile.endsWith(".spec.ts") &&
+    !relativeFile.endsWith(".test.ts")
   );
 }
 
@@ -711,6 +1532,7 @@ function scanRule(rootDir: string, rule: StaticMisuseRule): StaticMisuseRuleResu
         return detector.detect({
           lines,
           relativeFile,
+          rootDir,
           rule,
           sourceFile,
         });
