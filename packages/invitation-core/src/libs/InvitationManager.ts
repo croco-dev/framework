@@ -20,6 +20,7 @@ import {
 } from "./events/InvitationEvents";
 import { InvitationStore } from "./InvitationStore";
 import {
+  InvalidInvitationExpiryDurationProblem,
   InvitationAlreadyAcceptedProblem,
   InvitationCreationFailedProblem,
   InvitationEmailMismatchProblem,
@@ -41,6 +42,7 @@ export type CreateEmailInvitationInput = {
   inviterId: string;
   email: string;
   role: MembershipRole;
+  /** Positive integer number of calendar days. Fractional days are not supported. */
   expiresInDays?: number;
 };
 
@@ -48,6 +50,7 @@ export type CreateLinkInvitationInput = {
   tenantId: string;
   inviterId: string;
   role: MembershipRole;
+  /** Positive integer number of calendar days. Fractional days are not supported. */
   expiresInDays?: number;
 };
 
@@ -68,6 +71,7 @@ export class InvitationManager {
   ) {}
 
   async createEmailInvitation(input: CreateEmailInvitationInput): Promise<string> {
+    const expiry = this.resolveExpiry(input.expiresInDays, "email");
     await this.deleteExpiredCreationIntentsSafely();
     const email = this.normalizeEmail(input.email);
     const token = generateToken();
@@ -78,7 +82,7 @@ export class InvitationManager {
       role: input.role,
       type: "email",
       token,
-      expiresInDays: input.expiresInDays,
+      ...expiry,
     });
     const event = this.createInvitationCreatedEvent(invitation);
     const notificationIdempotencyKey = this.createInvitationNotificationIdempotencyKey(
@@ -203,6 +207,7 @@ export class InvitationManager {
   }
 
   async createLinkInvitation(input: CreateLinkInvitationInput): Promise<string> {
+    const expiry = this.resolveExpiry(input.expiresInDays, "link");
     const token = generateToken();
     const invitation = this.buildInvitation({
       tenantId: input.tenantId,
@@ -211,7 +216,7 @@ export class InvitationManager {
       role: input.role,
       type: "link",
       token,
-      expiresInDays: input.expiresInDays,
+      ...expiry,
     });
 
     await this.store.save(invitation);
@@ -372,13 +377,9 @@ export class InvitationManager {
     role: MembershipRole;
     type: InvitationType;
     token: string;
-    expiresInDays?: number;
+    createdAt: Date;
+    expiresAt: Date;
   }): Invitation {
-    const createdAt = new Date();
-    const expiresInDays =
-      input.expiresInDays ??
-      (input.type === "email" ? DEFAULT_EMAIL_EXPIRES_IN_DAYS : DEFAULT_LINK_EXPIRES_IN_DAYS);
-
     return {
       id: randomUUID(),
       tenantId: input.tenantId,
@@ -388,11 +389,32 @@ export class InvitationManager {
       type: input.type,
       role: input.role,
       status: input.type === "email" ? "creating" : "pending",
-      expiresAt: this.addDays(createdAt, expiresInDays),
+      expiresAt: input.expiresAt,
       acceptedAt: null,
       revokedAt: null,
-      createdAt,
+      createdAt: input.createdAt,
     };
+  }
+
+  private resolveExpiry(
+    expiresInDays: number | undefined,
+    type: InvitationType,
+  ): { createdAt: Date; expiresAt: Date } {
+    const duration =
+      expiresInDays ??
+      (type === "email" ? DEFAULT_EMAIL_EXPIRES_IN_DAYS : DEFAULT_LINK_EXPIRES_IN_DAYS);
+
+    if (!Number.isSafeInteger(duration) || duration <= 0) {
+      throw new InvalidInvitationExpiryDurationProblem(duration);
+    }
+
+    const createdAt = new Date();
+    const expiresAt = this.addDays(createdAt, duration);
+    if (!Number.isFinite(expiresAt.getTime())) {
+      throw new InvalidInvitationExpiryDurationProblem(duration);
+    }
+
+    return { createdAt, expiresAt };
   }
 
   private async getByTokenOrThrow(token: string): Promise<Invitation> {

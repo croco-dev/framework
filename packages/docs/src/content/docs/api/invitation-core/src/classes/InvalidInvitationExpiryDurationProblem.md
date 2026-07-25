@@ -2,7 +2,7 @@
 editUrl: false
 next: false
 prev: false
-title: "InvitationNotFoundProblem"
+title: "InvalidInvitationExpiryDurationProblem"
 ---
 
 초대 생성 입력, 상태, 토큰 검증 실패 시 사용하는 Problem 타입입니다.
@@ -15,17 +15,17 @@ title: "InvitationNotFoundProblem"
 
 ### Constructor
 
-> **new InvitationNotFoundProblem**(`tokenOrId`): `InvitationNotFoundProblem`
+> **new InvalidInvitationExpiryDurationProblem**(`received`): `InvalidInvitationExpiryDurationProblem`
 
 #### Parameters
 
-##### tokenOrId
+##### received
 
-`string`
+`number`
 
 #### Returns
 
-`InvitationNotFoundProblem`
+`InvalidInvitationExpiryDurationProblem`
 
 #### Overrides
 
@@ -35,7 +35,7 @@ title: "InvitationNotFoundProblem"
 
 ### category
 
-> `readonly` **category**: [`NotFound`](/api/problems-core/src/enumerations/problemcategory/#notfound) = `ProblemCategory.NotFound`
+> `readonly` **category**: [`ValidationError`](/api/problems-core/src/enumerations/problemcategory/#validationerror) = `ProblemCategory.ValidationError`
 
 #### Overrides
 
@@ -55,7 +55,7 @@ title: "InvitationNotFoundProblem"
 
 ### code
 
-> `readonly` **code**: `"INVITATION_NOT_FOUND"` = `"INVITATION_NOT_FOUND"`
+> `readonly` **code**: `"INVALID_INVITATION_EXPIRY_DURATION"` = `"INVALID_INVITATION_EXPIRY_DURATION"`
 
 #### Overrides
 

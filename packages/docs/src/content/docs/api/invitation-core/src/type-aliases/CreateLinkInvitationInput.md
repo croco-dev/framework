@@ -15,6 +15,8 @@ title: "CreateLinkInvitationInput"
 
 > `optional` **expiresInDays?**: `number`
 
+Positive integer number of calendar days. Fractional days are not supported.
+
 ***
 
 ### inviterId

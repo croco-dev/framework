@@ -10933,6 +10933,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidInvitationExpiryDurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvitationProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvitationAcceptedEvent",
               "exportKind": "named",
               "source": "./libs/events/InvitationEvents",

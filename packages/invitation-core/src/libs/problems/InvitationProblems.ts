@@ -28,6 +28,25 @@ export class InvitationIdempotencyConflictProblem extends Problem {
   }
 }
 
+export class InvalidInvitationExpiryDurationProblem extends Problem {
+  readonly code = "INVALID_INVITATION_EXPIRY_DURATION";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(received: number) {
+    super(
+      "INVALID_INVITATION_EXPIRY_DURATION",
+      ProblemCategory.ValidationError,
+      "Invitation expiry duration must be a positive integer number of days that produces a valid date",
+      {
+        extensions: {
+          constraint: "positive-integer-days-with-valid-date",
+          received: String(received),
+        },
+      },
+    );
+  }
+}
+
 export class InvitationNotFoundProblem extends Problem {
   readonly code = "INVITATION_NOT_FOUND";
   readonly category = ProblemCategory.NotFound;
