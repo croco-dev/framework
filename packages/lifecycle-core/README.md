@@ -80,7 +80,7 @@ const registration = await registry.registerVersion({
   },
   version: "2026-07-26",
   executableRegistrationId: "retention-risk-follow-up:v2",
-  executableFingerprint: process.env.RULE_BUNDLE_SHA256!,
+  executableFingerprint: process.env.RULE_BUNDLE_SHA256 ?? "",
   contextRequirements: ["health.status"],
 });
 

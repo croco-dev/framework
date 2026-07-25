@@ -13,7 +13,13 @@ title: "InMemoryLifecycleRuleStateStore"
 
 ### Constructor
 
-> **new InMemoryLifecycleRuleStateStore**(): `InMemoryLifecycleRuleStateStore`
+> **new InMemoryLifecycleRuleStateStore**(`options?`): `InMemoryLifecycleRuleStateStore`
+
+#### Parameters
+
+##### options?
+
+[`InMemoryLifecycleRuleStateStoreOptions`](/api/lifecycle-core/src/type-aliases/inmemorylifecyclerulestatestoreoptions/) = `{}`
 
 #### Returns
 
@@ -45,7 +51,7 @@ title: "InMemoryLifecycleRuleStateStore"
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`applyCommand`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#applycommand)
 
-***
+---
 
 ### get()
 
@@ -65,7 +71,7 @@ title: "InMemoryLifecycleRuleStateStore"
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`get`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#get)
 
-***
+---
 
 ### list()
 
@@ -79,7 +85,7 @@ readonly [`LifecycleRuleIdentityState`](/api/lifecycle-core/src/type-aliases/lif
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`list`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#list)
 
-***
+---
 
 ### saveRegistration()
 

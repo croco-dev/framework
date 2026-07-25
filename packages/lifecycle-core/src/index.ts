@@ -78,4 +78,5 @@ export type {
   LifecycleDryRunInput,
   LifecycleRuleEvaluatorOptions,
 } from "./libs/LifecycleRuleEvaluator";
+export type { InMemoryLifecycleRuleStateStoreOptions } from "./libs/InMemoryLifecycleRuleStateStore";
 export type { LifecycleRuleRegistryOptions } from "./libs/LifecycleRuleRegistry";

@@ -120,11 +120,11 @@ export class LifecycleDiagnosticsProvider implements DiagnosticsProvider {
               registration.descriptor.fingerprint !== run.ruleFingerprint
             );
           }).length;
-    const recentDryRuns = (
-      this.options.dryRunStore?.list({
+    const dryRunResults =
+      (await this.options.dryRunStore?.list({
         limit: this.options.dryRunLimit ?? DEFAULT_RUN_LIMIT,
-      }) ?? []
-    ).map((result) => ({
+      })) ?? [];
+    const recentDryRuns = dryRunResults.map((result) => ({
       ruleId: result.ruleId,
       ruleVersion: result.ruleVersion,
       state: result.state,
@@ -146,7 +146,7 @@ export class LifecycleDiagnosticsProvider implements DiagnosticsProvider {
       component: "lifecycle",
       ...(status === "degraded"
         ? {
-            message: `${runsByStatus.failed} lifecycle run(s) and ${failedActionCount} action(s) need attention`,
+            message: `${runsByStatus.failed} lifecycle run(s), ${failedActionCount} action(s), ${unavailableRegistrations.length} unavailable registration(s), and ${versionMismatchCount} version mismatch(es) need attention`,
           }
         : {}),
       details: {

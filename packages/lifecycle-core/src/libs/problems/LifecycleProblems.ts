@@ -42,6 +42,7 @@ export class LifecycleActionAdapterProblem extends Problem {
   }
 }
 
+/** Indicates that the requested lifecycle rule version is not registered. */
 export class UnknownLifecycleRuleVersionProblem extends Problem {
   constructor(ruleId: string, version: string) {
     super(
@@ -59,6 +60,7 @@ export class UnknownLifecycleRuleVersionProblem extends Problem {
   }
 }
 
+/** Indicates that a registered lifecycle rule version has no executable registration. */
 export class UnavailableLifecycleRuleVersionProblem extends Problem {
   constructor(ruleId: string, version: string) {
     super(
@@ -76,6 +78,7 @@ export class UnavailableLifecycleRuleVersionProblem extends Problem {
   }
 }
 
+/** Indicates that an optimistic lifecycle rule mutation used a stale revision. */
 export class LifecycleRuleVersionConflictProblem extends Problem {
   constructor(ruleId: string, expectedRevision: number, actualRevision: number) {
     super(
@@ -129,6 +132,7 @@ export class LifecycleRuleTransitionProblem extends Problem {
   }
 }
 
+/** Indicates that an immutable lifecycle rule version definition is invalid or has drifted. */
 export class LifecycleRuleVersionDefinitionProblem extends Problem {
   constructor(ruleId: string, version: string, message: string) {
     super(

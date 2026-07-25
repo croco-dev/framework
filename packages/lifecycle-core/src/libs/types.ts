@@ -329,11 +329,11 @@ export type LifecycleDryRunResult = {
 };
 
 export interface LifecycleDryRunStore {
-  save(result: LifecycleDryRunResult): void;
+  save(result: LifecycleDryRunResult): LifecycleRuleStateStoreResult<void>;
   list(options?: {
     readonly ruleId?: string;
     readonly limit?: number;
-  }): readonly LifecycleDryRunResult[];
+  }): LifecycleRuleStateStoreResult<readonly LifecycleDryRunResult[]>;
 }
 
 export interface LifecycleActionAdapter {

@@ -9,7 +9,7 @@ title: "LifecycleDryRunStore"
 
 ### list()
 
-> **list**(`options?`): readonly [`LifecycleDryRunResult`](/api/lifecycle-core/src/type-aliases/lifecycledryrunresult/)[]
+> **list**(`options?`): [`LifecycleRuleStateStoreResult`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatestoreresult/)\<readonly [`LifecycleDryRunResult`](/api/lifecycle-core/src/type-aliases/lifecycledryrunresult/)[]\>
 
 #### Parameters
 
@@ -25,13 +25,13 @@ title: "LifecycleDryRunStore"
 
 #### Returns
 
-readonly [`LifecycleDryRunResult`](/api/lifecycle-core/src/type-aliases/lifecycledryrunresult/)[]
+[`LifecycleRuleStateStoreResult`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatestoreresult/)\<readonly [`LifecycleDryRunResult`](/api/lifecycle-core/src/type-aliases/lifecycledryrunresult/)[]\>
 
-***
+---
 
 ### save()
 
-> **save**(`result`): `void`
+> **save**(`result`): [`LifecycleRuleStateStoreResult`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatestoreresult/)\<`void`\>
 
 #### Parameters
 
@@ -41,4 +41,4 @@ readonly [`LifecycleDryRunResult`](/api/lifecycle-core/src/type-aliases/lifecycl
 
 #### Returns
 
-`void`
+[`LifecycleRuleStateStoreResult`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatestoreresult/)\<`void`\>

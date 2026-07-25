@@ -272,7 +272,6 @@ export class LifecycleRuleRegistry {
           "an immutable version cannot be registered with a different fingerprint",
         );
       }
-      return existingRegistration;
     }
 
     const current = await this.stateStore.get(input.rule.id);
@@ -307,7 +306,7 @@ export class LifecycleRuleRegistry {
       registeredAt,
       updatedAt: registeredAt,
     });
-    const registration = { descriptor, rule: input.rule };
+    const registration = existingRegistration ?? { descriptor, rule: input.rule };
     this.registrations.set(key, registration);
     if (persistedVersion?.state === "active") {
       this.activeRegistrationKeys.add(key);

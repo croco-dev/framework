@@ -11450,6 +11450,11 @@
           ],
           "typeExports": [
             {
+              "name": "InMemoryLifecycleRuleStateStoreOptions",
+              "exportKind": "named",
+              "source": "./libs/InMemoryLifecycleRuleStateStore"
+            },
+            {
               "name": "LifecycleAction",
               "exportKind": "named",
               "source": "./libs/types"

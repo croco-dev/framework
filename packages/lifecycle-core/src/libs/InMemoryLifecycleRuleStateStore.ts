@@ -18,7 +18,17 @@ import type {
 type StoredCommand = {
   readonly fingerprint: string;
   readonly result: LifecycleRuleIdentityState;
+  readonly expiresAt: Date;
 };
+
+type Clock = () => Date;
+
+export type InMemoryLifecycleRuleStateStoreOptions = {
+  readonly commandTtlMs?: number;
+  readonly now?: Clock;
+};
+
+const DEFAULT_COMMAND_TTL_MS = 24 * 60 * 60 * 1000;
 
 function commandFingerprint(
   command: LifecycleRuleActivationCommandType,
@@ -74,6 +84,13 @@ function nextState(
 export class InMemoryLifecycleRuleStateStore implements LifecycleRuleStateStore {
   private readonly states = new Map<string, LifecycleRuleIdentityState>();
   private readonly commands = new Map<string, StoredCommand>();
+  private readonly commandTtlMs: number;
+  private readonly now: Clock;
+
+  constructor(options: InMemoryLifecycleRuleStateStoreOptions = {}) {
+    this.commandTtlMs = options.commandTtlMs ?? DEFAULT_COMMAND_TTL_MS;
+    this.now = options.now ?? (() => new Date());
+  }
 
   get(ruleId: string): LifecycleRuleIdentityState | undefined {
     return this.states.get(ruleId);
@@ -112,6 +129,8 @@ export class InMemoryLifecycleRuleStateStore implements LifecycleRuleStateStore 
     readonly command: LifecycleRuleActivationCommandType;
     readonly request: LifecycleRuleActivationCommand;
   }): LifecycleRuleStateMutation {
+    const commandRecordedAt = this.now();
+    this.pruneExpiredCommands(commandRecordedAt);
     const fingerprint = commandFingerprint(input.command, input.request);
     const replay = this.commands.get(input.request.commandId);
 
@@ -150,11 +169,15 @@ export class InMemoryLifecycleRuleStateStore implements LifecycleRuleStateStore 
     }
 
     if (state === target.state) {
-      this.commands.set(input.request.commandId, { fingerprint, result: current });
+      this.commands.set(input.request.commandId, {
+        fingerprint,
+        result: current,
+        expiresAt: new Date(commandRecordedAt.getTime() + this.commandTtlMs),
+      });
       return { state: current, replayed: false };
     }
 
-    const occurredAt = input.request.at ?? new Date();
+    const occurredAt = input.request.at ?? commandRecordedAt;
     const revision = current.revision + 1;
     const versions = current.versions.map((version) => {
       if (version.descriptor.version === target.descriptor.version) {
@@ -199,11 +222,23 @@ export class InMemoryLifecycleRuleStateStore implements LifecycleRuleStateStore 
       ],
     };
     this.states.set(input.request.ruleId, result);
-    this.commands.set(input.request.commandId, { fingerprint, result });
+    this.commands.set(input.request.commandId, {
+      fingerprint,
+      result,
+      expiresAt: new Date(commandRecordedAt.getTime() + this.commandTtlMs),
+    });
     return { state: result, replayed: false };
   }
 
   list(): readonly LifecycleRuleIdentityState[] {
     return Array.from(this.states.values());
+  }
+
+  private pruneExpiredCommands(now: Date): void {
+    for (const [commandId, command] of this.commands) {
+      if (command.expiresAt.getTime() <= now.getTime()) {
+        this.commands.delete(commandId);
+      }
+    }
   }
 }

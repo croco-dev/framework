@@ -219,7 +219,7 @@ export class LifecycleRuleEvaluator {
         suppression: { suppressed: true, reason: "rule_unavailable" },
         problems: [dryRunProblem("lifecycle-core/rule-version-unavailable")],
       };
-      this.dryRunStore.save(unavailableResult);
+      await this.dryRunStore.save(unavailableResult);
       return unavailableResult;
     }
 
@@ -243,13 +243,16 @@ export class LifecycleRuleEvaluator {
       (trigger) => trigger.type === "*" || trigger.type === input.context.signal.type,
     );
     const matched = signalMatched && conditionMatched && problems.length === 0;
-    const idempotencyKey = resolveIdempotencyKey(registration, input.context);
-    const suppression = await this.resolveSuppression(
-      registration,
-      record.state,
-      input.context,
-      idempotencyKey,
-    );
+    let idempotencyKey: string | undefined;
+    try {
+      idempotencyKey = resolveIdempotencyKey(registration, input.context);
+    } catch {
+      problems.push(dryRunProblem("lifecycle-core/dry-run-idempotency-key-failed"));
+    }
+    const suppression =
+      idempotencyKey === undefined
+        ? { suppressed: true }
+        : await this.resolveSuppression(registration, record.state, input.context, idempotencyKey);
     let proposedActions: readonly LifecycleRuleActionDescriptor[] = [];
 
     if (matched) {
@@ -286,7 +289,7 @@ export class LifecycleRuleEvaluator {
       suppression,
       problems,
     };
-    this.dryRunStore.save(result);
+    await this.dryRunStore.save(result);
     return result;
   }
 

@@ -228,7 +228,7 @@ describe("LifecycleRuleRegistry versioning", () => {
       expectedRevision: 2,
       at: NOW,
     } as const;
-    const [first, concurrent] = await Promise.allSettled([
+    const results = await Promise.allSettled([
       Promise.resolve().then(() => registry.pause(pause)),
       Promise.resolve().then(() =>
         registry.pause({
@@ -238,11 +238,12 @@ describe("LifecycleRuleRegistry versioning", () => {
       ),
     ]);
 
-    expect(first.status).toBe("fulfilled");
-    expect(concurrent).toMatchObject({
-      status: "rejected",
-      reason: expect.any(LifecycleRuleVersionConflictProblem),
-    });
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toMatchObject([
+      {
+        reason: expect.any(LifecycleRuleVersionConflictProblem),
+      },
+    ]);
     await expect(registry.pause(pause)).resolves.toMatchObject({
       replayed: true,
       state: { revision: 3 },
@@ -373,6 +374,66 @@ describe("LifecycleRuleRegistry versioning", () => {
         contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
       }),
     ).rejects.toThrow(LifecycleRuleVersionDefinitionProblem);
+  });
+
+  it("activates an already registered immutable version when registration is explicitly reused", async () => {
+    const registry = new LifecycleRuleRegistry();
+    const registration = await registerVersion(registry, "1.0.0");
+
+    const activated = await registry.registerVersion({
+      rule: registration.rule,
+      version: registration.descriptor.version,
+      executableRegistrationId: registration.descriptor.executableRegistrationId,
+      executableFingerprint: registration.descriptor.executableFingerprint,
+      contextRequirements: registration.descriptor.contextRequirements,
+      activate: true,
+    });
+
+    expect(activated).toBe(registration);
+    expect(await registry.getIdentityState("retention-risk")).toMatchObject({
+      revision: 1,
+      versions: [{ state: "active" }],
+      history: [{ command: "activate", version: "1.0.0" }],
+    });
+  });
+
+  it("expires in-memory command replay entries after the configured retention window", async () => {
+    let now = new Date("2026-07-26T00:00:00.000Z");
+    const stateStore = new InMemoryLifecycleRuleStateStore({
+      commandTtlMs: 1_000,
+      now: () => now,
+    });
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const command = {
+      commandId: "reusable-command",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    } as const;
+
+    await registry.pause(command);
+    await expect(registry.pause({ ...command, reason: "different input" })).rejects.toThrow(
+      LifecycleRuleCommandConflictProblem,
+    );
+
+    now = new Date(now.getTime() + 1_001);
+    await registry.resume({
+      commandId: "resume-after-command-expiry",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 2,
+    });
+    await expect(
+      registry.pause({
+        ...command,
+        expectedRevision: 3,
+        reason: "different input",
+      }),
+    ).resolves.toMatchObject({
+      replayed: false,
+      state: { revision: 4 },
+    });
   });
 });
 
@@ -536,6 +597,45 @@ describe("LifecycleRuleEvaluator versioned execution", () => {
       reason: "cooldown_active",
     });
     expect(sink.getEmissions()).toHaveLength(1);
+  });
+
+  it("stores a redacted dry-run problem when idempotency-key resolution fails", async () => {
+    const registry = new LifecycleRuleRegistry();
+    await registry.registerVersion({
+      rule: {
+        ...createRule(),
+        idempotencyKey: () => {
+          throw new Error("sensitive-idempotency-key-input");
+        },
+      },
+      version: "1.0.0",
+      executableRegistrationId: "retention-risk:1.0.0",
+      executableFingerprint: "retention-risk-bundle:1.0.0",
+      contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
+      activate: true,
+    });
+    const dryRunStore = new InMemoryLifecycleDryRunStore();
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({
+      registry,
+      runStore: new InMemoryLifecycleRunStore(),
+      dryRunStore,
+      actionAdapter: sink,
+    });
+
+    const result = await evaluator.dryRun({
+      ruleId: "retention-risk",
+      context: createContext(),
+    });
+
+    expect(result).toMatchObject({
+      matched: true,
+      suppression: { suppressed: true },
+      problems: [{ code: "lifecycle-core/dry-run-idempotency-key-failed" }],
+    });
+    expect(JSON.stringify(result)).not.toContain("sensitive-idempotency-key-input");
+    expect(await dryRunStore.list()).toEqual([result]);
+    expect(sink.getEmissions()).toHaveLength(0);
   });
 
   it("keeps the simple registration compatibility path for dynamic action mappings", async () => {
