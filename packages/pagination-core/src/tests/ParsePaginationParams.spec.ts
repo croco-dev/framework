@@ -1,8 +1,8 @@
-import { z } from "zod";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import { DEFAULT_LIMIT, MAX_LIMIT, MIN_OFFSET } from "../libs/constants";
 import { parsePaginationParams } from "../libs/parsePaginationParams";
-import { ConflictingPaginationProblem } from "../libs/problems";
+import { ConflictingPaginationProblem, InvalidPaginationDirectionProblem } from "../libs/problems";
 import { CursorParamsSchema, OffsetParamsSchema, PaginationParamsSchema } from "../libs/schemas";
 
 describe("parsePaginationParams", () => {
@@ -15,12 +15,131 @@ describe("parsePaginationParams", () => {
     }
   });
 
+  it.each(["forward", "backward"] as const)(
+    "should preserve %s direction in cursor mode",
+    (direction) => {
+      const result = parsePaginationParams({
+        cursor: "abc123",
+        limit: "10",
+        direction,
+      });
+
+      expect(result).toEqual({
+        mode: "cursor",
+        cursor: "abc123",
+        limit: 10,
+        direction,
+      });
+    },
+  );
+
+  it.each([
+    { direction: undefined, accepted: true },
+    { direction: "forward", accepted: true },
+    { direction: "backward", accepted: true },
+    { direction: "sideways", accepted: false },
+    { direction: "", accepted: false },
+    { direction: "FORWARD", accepted: false },
+    { direction: [], accepted: false },
+    { direction: ["forward"], accepted: false },
+    { direction: ["forward", "forward"], accepted: false },
+    { direction: ["forward", "backward"], accepted: false },
+    { direction: ["sideways"], accepted: false },
+  ])("should match CursorParamsSchema for direction $direction", ({ direction, accepted }) => {
+    const schemaResult = CursorParamsSchema.safeParse({
+      cursor: "abc123",
+      limit: "10",
+      direction,
+    });
+
+    expect(schemaResult.success).toBe(accepted);
+
+    if (accepted) {
+      expect(() =>
+        parsePaginationParams({ cursor: "abc123", limit: "10", direction }),
+      ).not.toThrow();
+    } else {
+      expect(() => parsePaginationParams({ cursor: "abc123", limit: "10", direction })).toThrow(
+        InvalidPaginationDirectionProblem,
+      );
+    }
+  });
+
+  it("should expose stable evidence for an invalid cursor direction", () => {
+    expect.assertions(5);
+
+    try {
+      parsePaginationParams({ cursor: "abc123", direction: "sideways" });
+    } catch (error) {
+      expect(error).toBeInstanceOf(InvalidPaginationDirectionProblem);
+      expect(error).toMatchObject({
+        code: "INVALID_PAGINATION_DIRECTION",
+        mode: "cursor",
+        reason: "unsupported-value",
+        extensions: {
+          field: "direction",
+          mode: "cursor",
+          reason: "unsupported-value",
+          allowedValues: ["forward", "backward"],
+        },
+      });
+      expect((error as InvalidPaginationDirectionProblem).detail).toBe(
+        "Pagination direction must be either 'forward' or 'backward'",
+      );
+      expect((error as InvalidPaginationDirectionProblem).extensions).not.toHaveProperty(
+        "receivedValue",
+      );
+      expect((error as InvalidPaginationDirectionProblem).category).toBe("BadRequest");
+    }
+  });
+
   it("should parse offset mode params", () => {
     const result = parsePaginationParams({ offset: "20", limit: "10" });
     expect(result.mode).toBe("offset");
     if (result.mode === "offset") {
       expect(result.offset).toBe(20);
       expect(result.limit).toBe(10);
+    }
+  });
+
+  it.each(["forward", "backward", "sideways", [], ["forward"], ["forward", "backward"]])(
+    "should reject direction %s in offset mode in both parser and schema",
+    (direction) => {
+      const schemaResult = PaginationParamsSchema.safeParse({
+        mode: "offset",
+        offset: "20",
+        limit: "10",
+        direction,
+      });
+
+      expect(schemaResult.success).toBe(false);
+      expect(() => parsePaginationParams({ offset: "20", limit: "10", direction })).toThrow(
+        InvalidPaginationDirectionProblem,
+      );
+    },
+  );
+
+  it("should expose stable evidence when direction is used in offset mode", () => {
+    expect(() => parsePaginationParams({ offset: "20", direction: "backward" })).toThrowError(
+      expect.objectContaining({
+        code: "INVALID_PAGINATION_DIRECTION",
+        mode: "offset",
+        reason: "offset-mode",
+        extensions: expect.objectContaining({
+          field: "direction",
+          mode: "offset",
+          reason: "offset-mode",
+          validMode: "cursor",
+        }),
+      }),
+    );
+
+    try {
+      parsePaginationParams({ offset: "20", direction: "backward" });
+    } catch (error) {
+      expect((error as InvalidPaginationDirectionProblem).extensions).not.toHaveProperty(
+        "allowedValues",
+      );
     }
   });
 
@@ -118,7 +237,10 @@ describe("parsePaginationParams", () => {
         }
       }
       expect(OffsetParamsSchema.parse(offsetQuery).offset).toBe(offset);
-      const schemaOffset = PaginationParamsSchema.parse({ mode: "offset", ...offsetQuery });
+      const schemaOffset = PaginationParamsSchema.parse({
+        mode: "offset",
+        ...offsetQuery,
+      });
       expect(schemaOffset.mode).toBe("offset");
       if (schemaOffset.mode === "offset") {
         expect(schemaOffset.offset).toBe(offset);

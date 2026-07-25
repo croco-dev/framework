@@ -15088,6 +15088,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidPaginationDirectionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "MAX_LIMIT",
               "exportKind": "named",
               "source": "./libs/constants",
@@ -15169,6 +15175,11 @@
               "name": "CursorPayloadOutput",
               "exportKind": "named",
               "source": "./libs/schemas"
+            },
+            {
+              "name": "InvalidPaginationDirectionProblemOptions",
+              "exportKind": "named",
+              "source": "./libs/problems"
             },
             {
               "name": "OffsetPage",

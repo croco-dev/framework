@@ -13,7 +13,12 @@ export { decodeCursor, encodeCursor } from "./libs/cursor";
 
 export { parsePaginationParams } from "./libs/parsePaginationParams";
 
-export { ConflictingPaginationProblem, InvalidCursorProblem } from "./libs/problems";
+export {
+  ConflictingPaginationProblem,
+  InvalidCursorProblem,
+  InvalidPaginationDirectionProblem,
+} from "./libs/problems";
+export type { InvalidPaginationDirectionProblemOptions } from "./libs/problems";
 export type {
   CursorParamsInput,
   CursorParamsOutput,
