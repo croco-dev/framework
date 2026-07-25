@@ -24,6 +24,6 @@ export class InMemoryDomainPolicyStore extends DomainPolicyStore {
   }
 
   private getKey(tenantId: string, domain: string): string {
-    return `${tenantId}:${domain}`;
+    return JSON.stringify([tenantId, domain]);
   }
 }
