@@ -5,6 +5,49 @@ Croco admin surfaces. Admin packages can describe resources, list/detail fields,
 permissions, audit evidence, declared Problems, and recovery semantics without
 depending on React or a transport adapter.
 
+## Tenant 360 sources
+
+`TenantBusinessSource<TState>` is a structural, React-independent boundary for
+cross-domain tenant workspaces. A host installs only the sources it has and
+`loadTenantWorkspace()` preserves each source result independently as `ready`,
+`empty`, `stale`, `permission-denied`, `unavailable`, or domain `problem`.
+
+```ts
+import {
+  createInMemoryTenantBusinessSource,
+  loadTenantWorkspace,
+  type TenantUsageSummary,
+} from "@croco/admin-core";
+
+const usage = createInMemoryTenantBusinessSource<TenantUsageSummary>({
+  id: "usage",
+  label: "Usage",
+  section: "usage",
+  requiredPermissions: ["usage:read"],
+  result: {
+    kind: "ready",
+    loadedAt: new Date(),
+    state: {
+      kind: "usage",
+      meters: [],
+      warningCount: 0,
+      overLimitCount: 0,
+    },
+  },
+});
+
+const snapshot = await loadTenantWorkspace({
+  tenantId: "tenant-1",
+  sources: [usage],
+  grantedPermissions: ["usage:read"],
+});
+```
+
+Actions reuse `AdminAction`; availability is derived from its permission
+requirements before React sees it. Sensitive fields use
+`resolveTenantWorkspaceField()` so hosts provide an explicit visible, masked, or
+denied result instead of relying on presentation code to guess.
+
 ## Resource contracts
 
 ```ts

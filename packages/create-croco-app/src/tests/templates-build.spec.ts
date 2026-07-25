@@ -312,6 +312,7 @@ function checkAdminConsoleStructure() {
   checkFileExists("admin-console", "apps", "api-server", "src", "controllers", "adminSchemas.ts");
   checkFileExists("admin-console", "apps", "api-server", "src", "tests", "AdminConsole.spec.ts");
   checkFileExists("admin-console", "apps", "console-web", "src", "App.tsx.hbs");
+  checkFileExists("admin-console", "apps", "console-web", "src", "TenantWorkspaceDemo.tsx");
 
   const rootPackageJson = readJsonTemplate("admin-console", "package.json.hbs");
   expect(rootPackageJson).toMatchObject({
@@ -372,6 +373,26 @@ function checkAdminConsoleStructure() {
     /admin-console\/user-not-found/,
   );
   checkFileContains("admin-console", ["apps", "console-web", "src", "App.tsx.hbs"], /adminClient/);
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "App.tsx.hbs"],
+    /TenantWorkspaceDemo key=\{selectedTenantId\}/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "TenantWorkspaceDemo.tsx"],
+    /createInMemoryTenantBusinessSource/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "TenantWorkspaceDemo.tsx"],
+    /Idempotency key/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "TenantWorkspaceDemo.tsx"],
+    /createTenantWorkspaceSourceLoadingSnapshot/,
+  );
   checkFileContains(
     "admin-console",
     ["apps", "console-web", "src", "App.tsx.hbs"],

@@ -990,6 +990,9 @@ describe("E2E: generate()", () => {
 
       const rootPackageJson = readPackageJson(join(testDir, "package.json"));
       const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
+      const consolePackageJson = readPackageJson(
+        join(testDir, "apps", "console-web", "package.json"),
+      );
       const rpcPackageJson = readPackageJson(
         join(testDir, "libs", "shared", "provider-rpc", "package.json"),
       );
@@ -1032,6 +1035,10 @@ describe("E2E: generate()", () => {
         "admin:smoke": "tsx src/dev-smoke.ts",
       });
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
+      expect(consolePackageJson.dependencies).toMatchObject({
+        "@croco/admin-core": externalCrocoRange("@croco/admin-core"),
+        "@croco/admin-react": externalCrocoRange("@croco/admin-react"),
+      });
       expect(rpcPackageJson.dependencies).toMatchObject({
         "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
         "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
@@ -1054,6 +1061,19 @@ describe("E2E: generate()", () => {
       expect(webSource).toContain("admin-console/invite-failed");
       expect(webSource).toContain("Probe Missing User");
       expect(webSource).toContain("Operations");
+      expect(webSource).toContain("TenantWorkspaceDemo");
+      expect(webSource).toContain("key={selectedTenantId}");
+      const tenantWorkspaceSource = readFileSync(
+        join(testDir, "apps", "console-web", "src", "TenantWorkspaceDemo.tsx"),
+        "utf8",
+      );
+      expect(tenantWorkspaceSource).toContain("createInMemoryTenantBusinessSource");
+      expect(tenantWorkspaceSource).toContain("createTenantWorkspaceSourceLoadingSnapshot");
+      expect(tenantWorkspaceSource).toContain("TenantBusinessWorkspace");
+      expect(tenantWorkspaceSource).toContain("engagement/customer-360");
+      expect(tenantWorkspaceSource).toContain("fake-provider-unavailable");
+      expect(tenantWorkspaceSource).toContain("Run audited action");
+      expect(tenantWorkspaceSource).toContain("lastActionEvidence");
       expect(existsSync(join(testDir, "apps", "api-server", "src", "admin.ts"))).toBe(true);
       expect(
         existsSync(join(testDir, "apps", "api-server", "src", "controllers", "AdminController.ts")),

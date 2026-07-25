@@ -319,9 +319,45 @@
               "declarationKind": "function"
             },
             {
+              "name": "createInMemoryTenantBusinessSource",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createTenantWorkspaceLoadingSnapshot",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createTenantWorkspaceSourceLoadingSnapshot",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace",
+              "declarationKind": "function"
+            },
+            {
               "name": "defineAdminResource",
               "exportKind": "named",
               "source": "./libs/AdminResource",
+              "declarationKind": "function"
+            },
+            {
+              "name": "evaluateTenantWorkspaceAction",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace",
+              "declarationKind": "function"
+            },
+            {
+              "name": "loadTenantWorkspace",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace",
+              "declarationKind": "function"
+            },
+            {
+              "name": "resolveTenantWorkspaceField",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace",
               "declarationKind": "function"
             },
             {
@@ -453,9 +489,129 @@
               "source": "./libs/types"
             },
             {
+              "name": "LoadTenantWorkspaceInput",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
               "name": "NonEmptyArray",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "TenantBusinessSource",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantEntitlementSummary",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantFailedWorkSummary",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantHealthSignal",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantHealthSummary",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantIdentitySummary",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantMembershipSummary",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantOnboardingSummary",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantOperationsSummary",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantOperationsTimelineEntry",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantSourceResult",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantSubscriptionSummary",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantUsageMeterSummary",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantUsageSummary",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantWorkspaceAction",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantWorkspaceActionAvailability",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantWorkspaceActionPermission",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantWorkspaceExtension",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantWorkspaceField",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantWorkspaceSectionId",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantWorkspaceSnapshot",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantWorkspaceSourceData",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TenantWorkspaceSourceState",
+              "exportKind": "named",
+              "source": "./libs/TenantWorkspace"
             }
           ]
         }
@@ -1155,6 +1311,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createTenantWorkspaceActionRequest",
+              "exportKind": "named",
+              "source": "./libs/TenantBusinessWorkspace",
+              "declarationKind": "function"
+            },
+            {
               "name": "EntitlementList",
               "exportKind": "named",
               "source": "./libs/components",
@@ -1200,6 +1362,12 @@
               "name": "submitAdminForm",
               "exportKind": "named",
               "source": "./libs/snapshot",
+              "declarationKind": "function"
+            },
+            {
+              "name": "TenantBusinessWorkspace",
+              "exportKind": "named",
+              "source": "./libs/TenantBusinessWorkspace",
               "declarationKind": "function"
             },
             {
@@ -1760,6 +1928,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "TenantBusinessWorkspaceProps",
+              "exportKind": "named",
+              "source": "./libs/TenantBusinessWorkspace"
+            },
+            {
               "name": "TenantImpersonationConsoleActiveState",
               "exportKind": "named",
               "source": "./libs/types"
@@ -1793,6 +1966,16 @@
               "name": "TenantImpersonationConsoleUnavailableState",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "TenantWorkspaceActionRequest",
+              "exportKind": "named",
+              "source": "./libs/TenantBusinessWorkspace"
+            },
+            {
+              "name": "TenantWorkspaceActionResult",
+              "exportKind": "named",
+              "source": "./libs/TenantBusinessWorkspace"
             }
           ]
         }

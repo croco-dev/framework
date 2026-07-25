@@ -620,7 +620,7 @@
     "packages": {
       "admin-react": {
         "domain": "Admin React",
-        "adapter": "Billing and tenant admin primitives",
+        "adapter": "Tenant and cross-domain business workspace primitives",
         "runtimes": ["browser", "node"],
         "requiredEnv": ["none"],
         "features": [
@@ -633,6 +633,10 @@
           "tenant switcher",
           "impersonation banner",
           "permission inspector",
+          "Tenant 360 source workspace",
+          "partial-source state and refresh",
+          "permission-aware action launcher",
+          "structural extension slots",
           "Problem-preserving console failures"
         ]
       },

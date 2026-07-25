@@ -5,6 +5,14 @@ export {
   defineAdminResource,
   validateAdminResource,
 } from "./libs/AdminResource";
+export {
+  createInMemoryTenantBusinessSource,
+  createTenantWorkspaceLoadingSnapshot,
+  createTenantWorkspaceSourceLoadingSnapshot,
+  evaluateTenantWorkspaceAction,
+  loadTenantWorkspace,
+  resolveTenantWorkspaceField,
+} from "./libs/TenantWorkspace";
 export type {
   AdminResourceDiagnostic,
   AdminResourceDiagnosticCode,
@@ -34,3 +42,29 @@ export type {
   AdminSortDirection,
   NonEmptyArray,
 } from "./libs/types";
+export type {
+  LoadTenantWorkspaceInput,
+  TenantBusinessSource,
+  TenantEntitlementSummary,
+  TenantFailedWorkSummary,
+  TenantHealthSignal,
+  TenantHealthSummary,
+  TenantIdentitySummary,
+  TenantMembershipSummary,
+  TenantOnboardingSummary,
+  TenantOperationsSummary,
+  TenantOperationsTimelineEntry,
+  TenantSourceResult,
+  TenantSubscriptionSummary,
+  TenantUsageMeterSummary,
+  TenantUsageSummary,
+  TenantWorkspaceAction,
+  TenantWorkspaceActionAvailability,
+  TenantWorkspaceActionPermission,
+  TenantWorkspaceExtension,
+  TenantWorkspaceField,
+  TenantWorkspaceSectionId,
+  TenantWorkspaceSnapshot,
+  TenantWorkspaceSourceData,
+  TenantWorkspaceSourceState,
+} from "./libs/TenantWorkspace";

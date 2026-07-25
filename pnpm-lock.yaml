@@ -318,6 +318,9 @@ importers:
 
   packages/admin-react:
     dependencies:
+      '@croco/admin-core':
+        specifier: workspace:*
+        version: link:../admin-core
       '@croco/billing-core':
         specifier: workspace:*
         version: link:../billing-core
