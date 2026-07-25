@@ -13,25 +13,25 @@ title: "TenantFailedWorkSummary"
 
 > `readonly` `optional` **detailHref?**: `string`
 
----
+***
 
 ### failedOperations
 
 > `readonly` **failedOperations**: `number`
 
----
+***
 
 ### kind
 
 > `readonly` **kind**: `"failed-work"`
 
----
+***
 
 ### openProblems
 
 > `readonly` **openProblems**: `number`
 
----
+***
 
 ### retryableOperations
 

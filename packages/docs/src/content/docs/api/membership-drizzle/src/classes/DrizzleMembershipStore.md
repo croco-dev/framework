@@ -59,7 +59,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countAll`](/api/membership-core/src/classes/membershipstore/#countall)
 
----
+***
 
 ### countByRole()
 
@@ -85,7 +85,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countByRole`](/api/membership-core/src/classes/membershipstore/#countbyrole)
 
----
+***
 
 ### delete()
 
@@ -111,7 +111,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`delete`](/api/membership-core/src/classes/membershipstore/#delete)
 
----
+***
 
 ### findAllByTenant()
 
@@ -133,7 +133,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findAllByTenant`](/api/membership-core/src/classes/membershipstore/#findallbytenant)
 
----
+***
 
 ### findAllByUser()
 
@@ -155,7 +155,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findAllByUser`](/api/membership-core/src/classes/membershipstore/#findallbyuser)
 
----
+***
 
 ### findByTenantAndUser()
 
@@ -181,7 +181,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`findByTenantAndUser`](/api/membership-core/src/classes/membershipstore/#findbytenantanduser)
 
----
+***
 
 ### mutateOwner()
 
@@ -203,7 +203,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`mutateOwner`](/api/membership-core/src/classes/membershipstore/#mutateowner)
 
----
+***
 
 ### save()
 
@@ -225,7 +225,7 @@ Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기�
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`save`](/api/membership-core/src/classes/membershipstore/#save)
 
----
+***
 
 ### transferOwnership()
 

@@ -13,13 +13,13 @@ title: "TenantOperationsSummary"
 
 > `readonly` `optional` **detailHref?**: `string`
 
----
+***
 
 ### entries
 
 > `readonly` **entries**: readonly [`TenantOperationsTimelineEntry`](/api/admin-core/src/type-aliases/tenantoperationstimelineentry/)[]
 
----
+***
 
 ### kind
 

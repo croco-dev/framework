@@ -24270,6 +24270,30 @@
           "sourceEntrypoint": "packages/webhooks-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "classifyOutboundWebhookOutcome",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookRuntime",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createOutboundWebhookRuntime",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookRuntime",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createOutboundWebhookStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/outbound/conformance",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createOutboundWebhookUrlPolicy",
+              "exportKind": "named",
+              "source": "./libs/outbound/signing",
+              "declarationKind": "function"
+            },
+            {
               "name": "createWebhookEventRouter",
               "exportKind": "named",
               "source": "./libs/WebhookEventRouter",
@@ -24294,15 +24318,63 @@
               "declarationKind": "function"
             },
             {
+              "name": "defaultOutboundWebhookUrlPolicy",
+              "exportKind": "named",
+              "source": "./libs/outbound/signing",
+              "declarationKind": "const"
+            },
+            {
               "name": "DuplicateWebhookEventProblem",
               "exportKind": "named",
               "source": "./libs/problems/WebhookProblems",
               "declarationKind": "class"
             },
             {
+              "name": "FakeOutboundWebhookTransport",
+              "exportKind": "named",
+              "source": "./libs/outbound/FakeOutboundWebhookTransport",
+              "declarationKind": "class"
+            },
+            {
               "name": "InMemoryIdempotencyStore",
               "exportKind": "named",
               "source": "@croco/idempotency-core"
+            },
+            {
+              "name": "InMemoryOutboundWebhookEndpointStore",
+              "exportKind": "named",
+              "source": "./libs/outbound/InMemoryOutboundWebhookStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryOutboundWebhookSecretStore",
+              "exportKind": "named",
+              "source": "./libs/outbound/InMemoryOutboundWebhookStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryOutboundWebhookStore",
+              "exportKind": "named",
+              "source": "./libs/outbound/InMemoryOutboundWebhookStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidOutboundWebhookEventProblem",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidOutboundWebhookSecretVersionProblem",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidOutboundWebhookUrlProblem",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems",
+              "declarationKind": "class"
             },
             {
               "name": "InvalidWebhookEnvelopeProblem",
@@ -24335,9 +24407,63 @@
               "declarationKind": "function"
             },
             {
+              "name": "OUTBOUND_WEBHOOK_DIAGNOSTIC_CODES",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems",
+              "declarationKind": "const"
+            },
+            {
+              "name": "OutboundWebhookAcceptanceUnknownProblem",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OutboundWebhookConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OutboundWebhookEndpointNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OutboundWebhookPermanentProblem",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OutboundWebhookReplayNotAllowedProblem",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OutboundWebhookRetryableProblem",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OutboundWebhookRuntime",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookRuntime",
+              "declarationKind": "class"
+            },
+            {
               "name": "parseWebhookReplayFixture",
               "exportKind": "named",
               "source": "./libs/fixture",
+              "declarationKind": "function"
+            },
+            {
+              "name": "signOutboundWebhook",
+              "exportKind": "named",
+              "source": "./libs/outbound/signing",
               "declarationKind": "function"
             },
             {
@@ -24345,6 +24471,12 @@
               "exportKind": "named",
               "source": "./libs/problems/WebhookProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "verifyOutboundWebhookSignature",
+              "exportKind": "named",
+              "source": "./libs/outbound/signing",
+              "declarationKind": "function"
             },
             {
               "name": "WEBHOOK_DIAGNOSTIC_CODES",
@@ -24413,6 +24545,151 @@
               "name": "NormalizedWebhookHeaders",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "OutboundWebhookAttempt",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookAttemptOutcome",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookCommitResult",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookDelivery",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookDeliveryStatus",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookDiagnosticCode",
+              "exportKind": "named",
+              "source": "./libs/outbound/OutboundWebhookProblems"
+            },
+            {
+              "name": "OutboundWebhookDiagnostics",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookDispatchIntent",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookEndpoint",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookEndpointStatus",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookEndpointStore",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookEvent",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookEventDescriptor",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookOutcomeClassification",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookPausePolicy",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookRetryPolicy",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookRuntimeOptions",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookSecret",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookSecretStore",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookSigningAlgorithm",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookStore",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookStoreConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/outbound/conformance"
+            },
+            {
+              "name": "OutboundWebhookStoreConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/outbound/conformance"
+            },
+            {
+              "name": "OutboundWebhookStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/outbound/conformance"
+            },
+            {
+              "name": "OutboundWebhookTaskPublisher",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookTransport",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookTransportRequest",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookUrlPolicy",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
+              "name": "OutboundWebhookValidatedTarget",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
             },
             {
               "name": "UnknownEventPolicy",

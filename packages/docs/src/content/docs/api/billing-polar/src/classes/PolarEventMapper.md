@@ -53,7 +53,7 @@ Map a Polar order event to internal domain events.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
 
----
+***
 
 ### mapSubscriptionEvent()
 

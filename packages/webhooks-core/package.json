@@ -32,8 +32,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/execution-core": "workspace:*",
     "@croco/idempotency-core": "workspace:*",
-    "@croco/problems-core": "workspace:*"
+    "@croco/outbox-core": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/retry-core": "workspace:*",
+    "@croco/tasks-core": "workspace:*"
   },
   "devDependencies": {
     "vitest": "4.0.16"
