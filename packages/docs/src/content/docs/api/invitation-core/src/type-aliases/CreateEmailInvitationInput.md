@@ -23,6 +23,12 @@ title: "CreateEmailInvitationInput"
 
 ***
 
+### idempotencyKey
+
+> **idempotencyKey**: `string`
+
+***
+
 ### inviterId
 
 > **inviterId**: `string`

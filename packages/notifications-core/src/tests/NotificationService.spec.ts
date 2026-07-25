@@ -18,6 +18,7 @@ import {
   NotificationPreferenceContextRequiredProblem,
   NotificationPreferenceDeniedProblem,
   NotificationProviderChannelMismatchProblem,
+  NotificationProviderIdempotencyUnsupportedProblem,
   NotificationProviderNotConfiguredProblem,
   NotificationProviderNotRegisteredProblem,
 } from "../libs/problems/NotificationProblems";
@@ -116,6 +117,43 @@ describe("NotificationService", () => {
   });
 
   describe("send()", () => {
+    it("should reject providers that cannot honor a required idempotency key", async () => {
+      service.registerProvider(emailProvider, true);
+
+      await expect(
+        service.send(
+          NotificationChannel.EMAIL,
+          { to: "test@example.com", content: "Test Content" },
+          createSendOptions(NotificationChannel.EMAIL, {
+            requireProviderIdempotency: true,
+          }),
+        ),
+      ).rejects.toBeInstanceOf(NotificationProviderIdempotencyUnsupportedProblem);
+      expect(executeSpy).not.toHaveBeenCalled();
+    });
+
+    it("should dispatch when the provider declares idempotency support", async () => {
+      emailProvider.getCapabilities = vi.fn().mockReturnValue({
+        providerName: "email-provider",
+        channels: [NotificationChannel.EMAIL],
+        supportsIdempotencyKey: true,
+        supportsProviderTemplates: false,
+        supportsRenderedTemplates: true,
+        outboxIntegration: "consumer-managed",
+      });
+      service.registerProvider(emailProvider, true);
+
+      await service.send(
+        NotificationChannel.EMAIL,
+        { to: "test@example.com", content: "Test Content" },
+        createSendOptions(NotificationChannel.EMAIL, {
+          requireProviderIdempotency: true,
+        }),
+      );
+
+      expect(executeSpy).toHaveBeenCalledTimes(1);
+    });
+
     it("should send notification via task execution with default provider", async () => {
       service.registerProvider(emailProvider, true);
 

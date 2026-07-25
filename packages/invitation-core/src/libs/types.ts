@@ -2,7 +2,15 @@ import type { MembershipRole } from "@croco/membership-core";
 
 export type InvitationType = "email" | "link";
 
-export type InvitationStatus = "pending" | "accepted" | "expired" | "revoked" | "declined";
+export type InvitationStatus =
+  | "creating"
+  | "pending"
+  | "accepted"
+  | "expired"
+  | "revoked"
+  | "declined";
+
+export type InvitationCreationPhaseStatus = "pending" | "processing" | "completed";
 
 export type Invitation = {
   id: string;
@@ -19,6 +27,25 @@ export type Invitation = {
   createdAt: Date;
 };
 
+export type EmailInvitationCreation = {
+  invitation: Invitation;
+  token: string;
+  idempotencyKey: string;
+  requestFingerprint: string;
+  notificationIdempotencyKey: string;
+  notificationStatus: InvitationCreationPhaseStatus;
+  notificationClaimId: string | null;
+  notificationClaimExpiresAt: Date | null;
+  eventStatus: InvitationCreationPhaseStatus;
+  eventClaimId: string | null;
+  eventClaimExpiresAt: Date | null;
+  eventId: string;
+  eventOccurredAt: Date;
+  createdAt: Date;
+};
+
+export type EmailInvitationCreationInput = EmailInvitationCreation;
+
 export type InvitationCreateInput = {
   tenantId: string;
   inviterId: string;
@@ -29,6 +56,7 @@ export type InvitationCreateInput = {
 };
 
 export type CreateEmailInvitationInput = {
+  idempotencyKey: string;
   tenantId: string;
   inviterId: string;
   email: string;
@@ -77,6 +105,7 @@ export type BatchInviteResult = {
 
 export type BatchInviteOptions = {
   expiresInDays?: number;
+  idempotencyKey?: string;
   maxBatchSize?: number;
 };
 

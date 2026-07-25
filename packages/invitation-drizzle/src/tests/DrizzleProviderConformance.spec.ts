@@ -1,11 +1,12 @@
 import { getTableColumns } from "drizzle-orm";
+import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 import { ProblemFactory } from "@croco/problems-core";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { DrizzleDomainPolicyStore } from "../libs/DrizzleDomainPolicyStore";
 import { DrizzleInvitationStore } from "../libs/DrizzleInvitationStore";
-import { domainPolicies, invitations } from "../libs/schema";
+import { domainPolicies, invitationEmailCreationIntents, invitations } from "../libs/schema";
 
 type DrizzleInvitationClient = ConstructorParameters<typeof DrizzleInvitationStore>[0];
 type InvitationTxManager = ConstructorParameters<typeof DrizzleInvitationStore>[1];
@@ -79,6 +80,30 @@ describe("invitation-drizzle provider conformance", () => {
               expect(Object.keys(getTableColumns(domainPolicies))).toEqual(
                 expect.arrayContaining(["id", "tenantId", "domain", "role", "enabled"]),
               );
+              expect(Object.keys(getTableColumns(invitationEmailCreationIntents))).toEqual(
+                expect.arrayContaining([
+                  "invitationId",
+                  "tenantId",
+                  "idempotencyKey",
+                  "requestFingerprint",
+                  "tokenCiphertext",
+                  "notificationIdempotencyKey",
+                  "notificationStatus",
+                  "eventStatus",
+                  "eventId",
+                ]),
+              );
+              const creationConfig = getTableConfig(invitationEmailCreationIntents);
+              const idempotencyIndex = creationConfig.indexes.find(
+                (index) =>
+                  index.config.name === "invitation_email_creation_tenant_idempotency_unique",
+              );
+              expect(idempotencyIndex?.config.unique).toBe(true);
+              expect(
+                idempotencyIndex?.config.columns.map((column) =>
+                  "name" in column ? column.name : undefined,
+                ),
+              ).toEqual(["tenant_id", "idempotency_key"]);
             },
           },
         ],

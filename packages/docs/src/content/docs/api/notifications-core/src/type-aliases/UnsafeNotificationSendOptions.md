@@ -27,6 +27,12 @@ title: "UnsafeNotificationSendOptions"
 
 ***
 
+### requireProviderIdempotency?
+
+> `readonly` `optional` **requireProviderIdempotency?**: `true`
+
+***
+
 ### unsafeAllowMissingIdempotencyKey?
 
 > `readonly` `optional` **unsafeAllowMissingIdempotencyKey?**: `true`

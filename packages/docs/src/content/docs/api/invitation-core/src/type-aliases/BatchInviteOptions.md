@@ -17,6 +17,12 @@ title: "BatchInviteOptions"
 
 ***
 
+### idempotencyKey?
+
+> `optional` **idempotencyKey?**: `string`
+
+***
+
 ### maxBatchSize?
 
 > `optional` **maxBatchSize?**: `number`

@@ -10,6 +10,7 @@ import {
   type NotificationPayload,
   NotificationService,
 } from "@croco/notifications-core";
+import { recordError, recordEvent } from "@croco/telemetry-api";
 import { TxManager } from "@croco/tx-core";
 import {
   InvitationAcceptedEvent,
@@ -20,8 +21,10 @@ import {
 import { InvitationStore } from "./InvitationStore";
 import {
   InvitationAlreadyAcceptedProblem,
+  InvitationCreationFailedProblem,
   InvitationEmailMismatchProblem,
   InvitationExpiredProblem,
+  InvitationIdempotencyConflictProblem,
   InvitationInvalidStatusProblem,
   InvitationNotFoundProblem,
 } from "./problems/InvitationProblems";
@@ -30,8 +33,10 @@ import type { Invitation, InvitationStatus, InvitationType } from "./types";
 
 const DEFAULT_EMAIL_EXPIRES_IN_DAYS = 7;
 const DEFAULT_LINK_EXPIRES_IN_DAYS = 30;
+const CREATION_CLAIM_LEASE_MS = 5 * 60 * 1000;
 
 export type CreateEmailInvitationInput = {
+  idempotencyKey: string;
   tenantId: string;
   inviterId: string;
   email: string;
@@ -63,6 +68,7 @@ export class InvitationManager {
   ) {}
 
   async createEmailInvitation(input: CreateEmailInvitationInput): Promise<string> {
+    await this.deleteExpiredCreationIntentsSafely();
     const email = this.normalizeEmail(input.email);
     const token = generateToken();
     const invitation = this.buildInvitation({
@@ -74,22 +80,126 @@ export class InvitationManager {
       token,
       expiresInDays: input.expiresInDays,
     });
-
-    await this.store.save(invitation);
-    await this.sendInvitationNotification(invitation, token);
-    await this.publishSafely(
-      new InvitationCreatedEvent({
-        invitationId: invitation.id,
-        tenantId: invitation.tenantId,
-        inviterId: invitation.inviterId,
-        email: invitation.email,
-        role: invitation.role,
-        type: invitation.type,
-        expiresAt: invitation.expiresAt,
-      }),
+    const event = this.createInvitationCreatedEvent(invitation);
+    const notificationIdempotencyKey = this.createInvitationNotificationIdempotencyKey(
+      invitation,
+      input.idempotencyKey,
     );
+    let creation;
+    try {
+      creation = await this.store.createEmailInvitation({
+        invitation,
+        token,
+        idempotencyKey: input.idempotencyKey,
+        requestFingerprint: hashToken(
+          JSON.stringify([
+            input.tenantId,
+            input.inviterId,
+            email,
+            input.role,
+            input.expiresInDays ?? DEFAULT_EMAIL_EXPIRES_IN_DAYS,
+          ]),
+        ),
+        notificationIdempotencyKey,
+        notificationStatus: "pending",
+        notificationClaimId: null,
+        notificationClaimExpiresAt: null,
+        eventStatus: "pending",
+        eventClaimId: null,
+        eventClaimExpiresAt: null,
+        eventId: event.eventId,
+        eventOccurredAt: event.timestamp,
+        createdAt: invitation.createdAt,
+      });
+    } catch (error) {
+      if (error instanceof InvitationIdempotencyConflictProblem) {
+        throw error;
+      }
+      this.throwCreationPendingProblem(invitation.id, "persistence");
+    }
 
-    return token;
+    if (creation.eventStatus !== "completed") {
+      const claimId = randomUUID();
+      const claimed = await this.store.claimEmailInvitationEvent(
+        creation.invitation.tenantId,
+        creation.idempotencyKey,
+        claimId,
+        new Date(Date.now() + CREATION_CLAIM_LEASE_MS),
+      );
+      if (!claimed) {
+        this.throwCreationPendingProblem(creation.invitation.id, "event");
+      }
+      try {
+        const storedEvent = this.createInvitationCreatedEvent(claimed.invitation);
+        const eventIdentity = storedEvent as unknown as {
+          eventId: string;
+          timestamp: Date;
+        };
+        eventIdentity.eventId = claimed.eventId;
+        eventIdentity.timestamp = new Date(claimed.eventOccurredAt);
+        await this.eventPublisher.publishNow(storedEvent);
+        const completed = await this.store.completeEmailInvitationEvent(
+          claimed.invitation.tenantId,
+          claimed.idempotencyKey,
+          claimId,
+        );
+        if (!completed || completed.eventStatus !== "completed") {
+          this.throwCreationPendingProblem(claimed.invitation.id, "event");
+        }
+        creation = completed;
+      } catch {
+        await this.releaseCreationClaimSafely("event", claimed, claimId);
+        this.throwCreationPendingProblem(claimed.invitation.id, "event");
+      }
+    }
+
+    if (creation.notificationStatus !== "completed") {
+      const claimId = randomUUID();
+      const claimed = await this.store.claimEmailInvitationNotification(
+        creation.invitation.tenantId,
+        creation.idempotencyKey,
+        claimId,
+        new Date(Date.now() + CREATION_CLAIM_LEASE_MS),
+      );
+      if (!claimed) {
+        this.throwCreationPendingProblem(creation.invitation.id, "notification");
+      }
+      try {
+        await this.sendInvitationNotification(
+          claimed.invitation,
+          claimed.token,
+          claimed.notificationIdempotencyKey,
+        );
+        const completed = await this.store.completeEmailInvitationNotification(
+          claimed.invitation.tenantId,
+          claimed.idempotencyKey,
+          claimId,
+        );
+        if (!completed || completed.notificationStatus !== "completed") {
+          this.throwCreationPendingProblem(claimed.invitation.id, "notification");
+        }
+        creation = completed;
+      } catch {
+        await this.releaseCreationClaimSafely("notification", claimed, claimId);
+        this.throwCreationPendingProblem(claimed.invitation.id, "notification");
+      }
+    }
+
+    try {
+      const activated = await this.store.activateEmailInvitation(
+        creation.invitation.tenantId,
+        creation.idempotencyKey,
+      );
+      if (!activated || activated.invitation.status !== "pending") {
+        this.throwCreationPendingProblem(creation.invitation.id, "persistence");
+      }
+      return activated.token;
+    } catch (error) {
+      if (error instanceof InvitationCreationFailedProblem) {
+        throw error;
+      }
+      this.throwCreationPendingProblem(creation.invitation.id, "persistence");
+    }
   }
 
   async createLinkInvitation(input: CreateLinkInvitationInput): Promise<string> {
@@ -239,6 +349,7 @@ export class InvitationManager {
 
     if (invitation.type === "email") {
       const token = await this.createEmailInvitation({
+        idempotencyKey: randomUUID(),
         tenantId: invitation.tenantId,
         inviterId: invitation.inviterId,
         email: invitation.email ?? "",
@@ -276,7 +387,7 @@ export class InvitationManager {
       tokenHash: hashToken(input.token),
       type: input.type,
       role: input.role,
-      status: "pending",
+      status: input.type === "email" ? "creating" : "pending",
       expiresAt: this.addDays(createdAt, expiresInDays),
       acceptedAt: null,
       revokedAt: null,
@@ -300,11 +411,7 @@ export class InvitationManager {
       throw new InvitationAlreadyAcceptedProblem(invitation.id);
     }
 
-    if (
-      invitation.status === "revoked" ||
-      invitation.status === "declined" ||
-      invitation.status === "expired"
-    ) {
+    if (invitation.status !== "pending") {
       throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, operation);
     }
   }
@@ -342,7 +449,11 @@ export class InvitationManager {
     return result;
   }
 
-  private async sendInvitationNotification(invitation: Invitation, token: string): Promise<void> {
+  private async sendInvitationNotification(
+    invitation: Invitation,
+    token: string,
+    idempotencyKey: string,
+  ): Promise<void> {
     if (!invitation.email) {
       return;
     }
@@ -366,12 +477,36 @@ export class InvitationManager {
     };
 
     await this.notificationService.send(NotificationChannel.EMAIL, payload, {
-      idempotencyKey: createNotificationIdempotencyKey({
-        ...preferenceContext,
-        recipient: invitation.email,
-        semanticKey: invitation.id,
-      }),
+      idempotencyKey,
       preferenceContext,
+      requireProviderIdempotency: true,
+    });
+  }
+
+  private createInvitationNotificationIdempotencyKey(
+    invitation: Invitation,
+    semanticKey: string,
+  ): string {
+    const email = invitation.email ?? "";
+    return createNotificationIdempotencyKey({
+      tenantId: invitation.tenantId,
+      userId: email,
+      channel: NotificationChannel.EMAIL,
+      topic: "invitation.created",
+      recipient: email,
+      semanticKey,
+    });
+  }
+
+  private createInvitationCreatedEvent(invitation: Invitation): InvitationCreatedEvent {
+    return new InvitationCreatedEvent({
+      invitationId: invitation.id,
+      tenantId: invitation.tenantId,
+      inviterId: invitation.inviterId,
+      email: invitation.email,
+      role: invitation.role,
+      type: invitation.type,
+      expiresAt: invitation.expiresAt,
     });
   }
 
@@ -402,5 +537,53 @@ export class InvitationManager {
       | InvitationDeclinedEvent,
   ): Promise<void> {
     await this.eventPublisher.publishNow(event);
+  }
+
+  private throwCreationPendingProblem(
+    invitationId: string,
+    phase: "persistence" | "notification" | "event",
+  ): never {
+    const problem = new InvitationCreationFailedProblem(invitationId, phase);
+    recordEvent("invitation.creation.pending", {
+      "invitation.id": invitationId,
+      "invitation.phase": phase,
+    });
+    recordError(problem);
+    throw problem;
+  }
+
+  private async releaseCreationClaimSafely(
+    phase: "notification" | "event",
+    creation: { invitation: Invitation; idempotencyKey: string },
+    claimId: string,
+  ): Promise<void> {
+    try {
+      if (phase === "notification") {
+        await this.store.releaseEmailInvitationNotification(
+          creation.invitation.tenantId,
+          creation.idempotencyKey,
+          claimId,
+        );
+        return;
+      }
+      await this.store.releaseEmailInvitationEvent(
+        creation.invitation.tenantId,
+        creation.idempotencyKey,
+        claimId,
+      );
+    } catch {
+      recordEvent("invitation.creation.claim_release_failed", {
+        "invitation.id": creation.invitation.id,
+        "invitation.phase": phase,
+      });
+    }
+  }
+
+  private async deleteExpiredCreationIntentsSafely(): Promise<void> {
+    try {
+      await this.store.deleteExpiredEmailInvitationCreations(new Date());
+    } catch {
+      recordEvent("invitation.creation.cleanup_failed");
+    }
   }
 }

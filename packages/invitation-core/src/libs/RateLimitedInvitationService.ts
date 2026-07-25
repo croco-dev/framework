@@ -1,5 +1,6 @@
 // Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
 /* oxlint-disable typescript/consistent-type-imports */
+import { randomUUID } from "node:crypto";
 import { Component } from "@croco/framework-context";
 import type { MembershipRole } from "@croco/membership-core";
 import { InvitationManager } from "./InvitationManager";
@@ -12,6 +13,7 @@ import {
 import type { BatchInviteOptions, BatchInviteResult, RateLimitConfig } from "./types";
 
 type CreateEmailInvitationInput = {
+  idempotencyKey: string;
   tenantId: string;
   inviterId: string;
   email: string;
@@ -58,6 +60,14 @@ export class RateLimitedInvitationService {
   }
 
   async createEmailInvitationWithRateLimit(input: CreateEmailInvitationInput): Promise<string> {
+    const replay = await this.store.findEmailInvitationCreation(
+      input.tenantId,
+      input.idempotencyKey,
+    );
+    if (replay) {
+      return this.manager.createEmailInvitation(input);
+    }
+
     await this.checkRateLimit(input.tenantId);
 
     const normalizedEmail = input.email.trim().toLowerCase();
@@ -100,6 +110,20 @@ export class RateLimitedInvitationService {
         await this.checkRateLimit(tenantId);
 
         const normalizedEmail = email.trim().toLowerCase();
+        const idempotencyKey = `${options.idempotencyKey ?? randomUUID()}:${normalizedEmail}`;
+        const replay = await this.store.findEmailInvitationCreation(tenantId, idempotencyKey);
+        if (replay) {
+          const token = await this.manager.createEmailInvitation({
+            idempotencyKey,
+            tenantId,
+            inviterId: "system",
+            email: normalizedEmail,
+            role: "member" as const,
+            expiresInDays: options.expiresInDays,
+          });
+          result.successful.push({ email: normalizedEmail, token });
+          continue;
+        }
         const existing = await this.store.findByTenantAndEmail(tenantId, normalizedEmail);
 
         if (existing && existing.status === "pending") {
@@ -111,6 +135,7 @@ export class RateLimitedInvitationService {
         }
 
         const token = await this.manager.createEmailInvitation({
+          idempotencyKey,
           tenantId,
           inviterId: "system",
           email: normalizedEmail,

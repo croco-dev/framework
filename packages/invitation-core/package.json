@@ -46,6 +46,7 @@
     "@croco/membership-core": "workspace:*",
     "@croco/notifications-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/telemetry-api": "workspace:*",
     "@croco/tx-core": "workspace:*"
   },
   "devDependencies": {

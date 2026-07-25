@@ -1,5 +1,33 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+export class InvitationCreationFailedProblem extends Problem {
+  readonly code = "INVITATION_CREATION_FAILED";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(invitationId: string, phase: "persistence" | "notification" | "event") {
+    super(undefined, undefined, "Invitation creation did not complete; retry with the same key", {
+      extensions: {
+        invitationId,
+        phase,
+        retrySafe: true,
+      },
+    });
+  }
+}
+
+export class InvitationIdempotencyConflictProblem extends Problem {
+  readonly code = "INVITATION_IDEMPOTENCY_CONFLICT";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(idempotencyKey: string) {
+    super(undefined, undefined, "Invitation idempotency key was reused for different input", {
+      extensions: {
+        idempotencyKey,
+      },
+    });
+  }
+}
+
 export class InvitationNotFoundProblem extends Problem {
   readonly code = "INVITATION_NOT_FOUND";
   readonly category = ProblemCategory.NotFound;

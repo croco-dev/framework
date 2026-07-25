@@ -19,9 +19,12 @@ const manager = new InvitationManager(
   membershipManager,
   notificationService,
   eventPublisher,
+  txManager,
 );
 
 const token = await manager.createEmailInvitation({
+  // Reuse this key when retrying the same semantic invitation request.
+  idempotencyKey: "invite:new-user@example.com:member",
   tenantId: "tenant-123",
   inviterId: "user-1",
   email: "new-user@example.com",
@@ -68,7 +71,8 @@ await domainPolicyManager.tryAutoJoin("tenant-123", "user-3", "user@acme.com");
 
 ## 구현 포인트
 
-- 이메일 초대는 토큰을 해시해 저장하고, 링크 초대는 이메일 없이 공유할 수 있습니다.
+- 이메일 초대는 전달이 완료되기 전까지 `creating` 상태이며, 성공한 뒤에만 수락 가능한 `pending` 상태가 됩니다.
+- 같은 이메일 초대 재시도는 같은 `idempotencyKey`를 사용해야 동일 토큰과 전달 의도를 재생합니다.
 - 도메인 정책은 회사 이메일 사용자를 자동으로 멤버십에 연결할 때 유용합니다.
 - 도메인 자동 가입은 정확히 하나의 `@`와 공백 없는 로컬·도메인 구간을 요구합니다. 국제화 도메인은
   punycode로 자동 변환하지 않으므로 정책과 이메일에 같은 유니코드 또는 ASCII 표기를 사용해야 합니다.

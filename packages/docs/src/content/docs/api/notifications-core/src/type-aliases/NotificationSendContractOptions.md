@@ -30,3 +30,9 @@ title: "NotificationSendContractOptions"
 ### providerName?
 
 > `readonly` `optional` **providerName?**: `string`
+
+***
+
+### requireProviderIdempotency?
+
+> `readonly` `optional` **requireProviderIdempotency?**: `true`

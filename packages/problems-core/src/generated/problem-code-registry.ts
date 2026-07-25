@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 447,
+  problemCount: 451,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5768,7 +5768,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 26,
+          line: 54,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_CREATION_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-creation-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
+          line: 4,
           column: 3,
           kind: "problem-class",
         },
@@ -5798,7 +5830,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 37,
+          line: 65,
           column: 3,
           kind: "problem-class",
         },
@@ -5829,7 +5861,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 15,
+          line: 43,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "INVITATION_IDEMPOTENCY_CONFLICT",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-idempotency-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
+          line: 19,
           column: 3,
           kind: "problem-class",
         },
@@ -5859,7 +5921,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 48,
+          line: 76,
           column: 3,
           kind: "problem-class",
         },
@@ -5890,7 +5952,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/invitation-core/src/libs/problems/InvitationProblems.ts",
-          line: 4,
+          line: 32,
           column: 3,
           kind: "problem-class",
         },
@@ -5954,6 +6016,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 4,
           column: 3,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "invitation-drizzle/token-cipher-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#invitation-drizzle-token-cipher-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/invitation-drizzle/src/libs/InvitationTokenCipher.ts",
+          line: 25,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -7761,7 +7855,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 152,
+          line: 169,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7792,7 +7886,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 224,
+          line: 241,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7823,7 +7917,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 240,
+          line: 257,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7854,7 +7948,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 207,
+          line: 224,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7885,7 +7979,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 191,
+          line: 208,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7916,7 +8010,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 169,
+          line: 186,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7983,6 +8077,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
           line: 102,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "notifications-core/provider-idempotency-unsupported",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#notifications-core-provider-idempotency-unsupported",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          line: 136,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8113,7 +8240,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 136,
+          line: 153,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8144,7 +8271,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 256,
+          line: 273,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8175,7 +8302,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 274,
+          line: 291,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8206,7 +8333,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 293,
+          line: 310,
           column: 5,
           kind: "problem-constructor",
         },

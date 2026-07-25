@@ -13,7 +13,7 @@ title: "ProviderNoCredentialProbeResult"
 
 > `readonly` **diagnostic**: [`ProviderNoCredentialDiagnostic`](/api/testing/src/type-aliases/providernocredentialdiagnostic/)
 
----
+***
 
 ### networkAttempts
 

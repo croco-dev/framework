@@ -6,6 +6,10 @@ import {
   type DrizzleInvitationClient,
   DrizzleInvitationStore,
 } from "../libs/DrizzleInvitationStore";
+import {
+  type InvitationTokenCipher,
+  InvitationTokenCipherProblem,
+} from "../libs/InvitationTokenCipher";
 
 const createInvitation = (overrides: Partial<Invitation> = {}): Invitation => {
   return {
@@ -105,7 +109,10 @@ describe("DrizzleInvitationStore", () => {
   });
 
   it("should find invitation by tenant and email", async () => {
-    const invitation = createInvitation({ tenantId: "tenant-1", email: "member@croco.dev" });
+    const invitation = createInvitation({
+      tenantId: "tenant-1",
+      email: "member@croco.dev",
+    });
 
     mockDb.select.mockReturnValue({
       from: vi.fn().mockReturnValue({
@@ -123,7 +130,11 @@ describe("DrizzleInvitationStore", () => {
   it("should return all invitations by tenant", async () => {
     const rows = [
       createInvitation({ id: "inv-1", tenantId: "tenant-1" }),
-      createInvitation({ id: "inv-2", tenantId: "tenant-1", tokenHash: "hash-2" }),
+      createInvitation({
+        id: "inv-2",
+        tenantId: "tenant-1",
+        tokenHash: "hash-2",
+      }),
     ];
 
     mockDb.select.mockReturnValue({
@@ -138,6 +149,113 @@ describe("DrizzleInvitationStore", () => {
     expect(found.map((invitation) => invitation.id).sort()).toEqual(["inv-1", "inv-2"]);
   });
 
+  it("should atomically persist an email invitation and its delivery intent", async () => {
+    const invitation = createInvitation();
+    const creationRow = {
+      invitationId: invitation.id,
+      tenantId: invitation.tenantId,
+      idempotencyKey: "request-1",
+      requestFingerprint: "fingerprint-1",
+      tokenCiphertext: "encrypted-token",
+      notificationIdempotencyKey: "notification-1",
+      notificationStatus: "pending" as const,
+      notificationClaimId: null,
+      notificationClaimExpiresAt: null,
+      eventStatus: "pending" as const,
+      eventClaimId: null,
+      eventClaimExpiresAt: null,
+      eventId: "event-1",
+      eventOccurredAt: new Date("2026-01-01T00:00:00.000Z"),
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    };
+    const select = vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    });
+    const insert = vi
+      .fn()
+      .mockReturnValueOnce({
+        values: vi.fn().mockReturnValue({
+          onConflictDoNothing: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([creationRow]),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        values: vi.fn().mockReturnValue({
+          onConflictDoUpdate: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([invitation]),
+          }),
+        }),
+      });
+    const client = { select, insert };
+    const run = vi.fn(async (fn: () => Promise<unknown>) => fn());
+    const creationStore = new DrizzleInvitationStore(
+      client as unknown as DrizzleInvitationClient,
+      {
+        getClient: vi.fn().mockReturnValue(client),
+        run,
+      } as unknown as TxManager<DrizzleInvitationClient>,
+      {
+        encrypt: vi.fn().mockReturnValue("encrypted-token"),
+        decrypt: vi.fn().mockReturnValue("plaintext-token"),
+      } satisfies InvitationTokenCipher,
+    );
+
+    const creation = await creationStore.createEmailInvitation({
+      invitation,
+      ...creationRow,
+      token: "plaintext-token",
+    });
+
+    expect(creation.token).toBe("plaintext-token");
+    expect(creation.notificationStatus).toBe("pending");
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(insert).toHaveBeenCalledTimes(2);
+  });
+
+  it("should model a missing token cipher as a stable Problem", async () => {
+    mockDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    });
+    mockDb.insert.mockReturnValue({
+      values: vi.fn(),
+    });
+    const storeWithoutCipher = new DrizzleInvitationStore(
+      mockDb as unknown as DrizzleInvitationClient,
+      {
+        getClient: vi.fn().mockReturnValue(mockDb),
+        run: vi.fn(async (fn: () => Promise<unknown>) => fn()),
+      } as unknown as TxManager<DrizzleInvitationClient>,
+    );
+
+    await expect(
+      storeWithoutCipher.createEmailInvitation({
+        invitation: createInvitation({ status: "creating" }),
+        idempotencyKey: "request-1",
+        requestFingerprint: "fingerprint-1",
+        token: "plaintext-token",
+        notificationIdempotencyKey: "notification-1",
+        notificationStatus: "pending",
+        notificationClaimId: null,
+        notificationClaimExpiresAt: null,
+        eventStatus: "pending",
+        eventClaimId: null,
+        eventClaimExpiresAt: null,
+        eventId: "event-1",
+        eventOccurredAt: new Date("2026-01-01T00:00:00.000Z"),
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      }),
+    ).rejects.toThrow(InvitationTokenCipherProblem);
+  });
+
   it("should update status when invitation exists", async () => {
     const accepted = createInvitation({ status: "accepted" });
     mockDb.update.mockReturnValue(createUpdateChain([accepted]));
@@ -146,6 +264,14 @@ describe("DrizzleInvitationStore", () => {
 
     expect(updated?.status).toBe("accepted");
     expect(mockDb.update.mock.results[0].value.where).toHaveBeenCalledTimes(1);
+  });
+
+  it("should reject completion from a stale creation-phase claim", async () => {
+    mockDb.update.mockReturnValue(createUpdateChain([]));
+
+    await expect(
+      store.completeEmailInvitationEvent("tenant-1", "request-1", "stale-claim"),
+    ).resolves.toBeNull();
   });
 
   it("should return null when updating missing invitation", async () => {
@@ -171,7 +297,11 @@ describe("DrizzleInvitationStore", () => {
   });
 
   it("should scope compare-and-set status updates by tenant", async () => {
-    const accepted = createInvitation({ id: "inv-1", tenantId: "tenant-1", status: "accepted" });
+    const accepted = createInvitation({
+      id: "inv-1",
+      tenantId: "tenant-1",
+      status: "accepted",
+    });
     mockDb.update.mockReturnValue(createUpdateChain([accepted]));
 
     const updated = await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "accepted");

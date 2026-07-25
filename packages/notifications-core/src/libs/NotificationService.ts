@@ -32,6 +32,7 @@ import {
   NotificationProviderChannelMismatchProblem,
   NotificationProviderNotConfiguredProblem,
   NotificationProviderNotRegisteredProblem,
+  NotificationProviderIdempotencyUnsupportedProblem,
 } from "./problems/NotificationProblems";
 import type { NotificationChannel, NotificationPayload, NotificationProvider } from "./types";
 
@@ -40,6 +41,7 @@ export type NotificationSendContractOptions = {
   readonly idempotencyKey: string;
   readonly preferenceContext: NotificationPreferenceContext;
   readonly outbox?: NotificationOutboxReference;
+  readonly requireProviderIdempotency?: true;
 };
 
 export type UnsafeNotificationSendOptions = {
@@ -48,6 +50,7 @@ export type UnsafeNotificationSendOptions = {
   readonly outbox?: NotificationOutboxReference;
   readonly unsafeSkipPreferenceEvaluation: true;
   readonly unsafeAllowMissingIdempotencyKey?: true;
+  readonly requireProviderIdempotency?: true;
 };
 
 export type NotificationSendServiceOptions =
@@ -153,11 +156,19 @@ export class NotificationService {
 
     const sendContract = this.evaluateSendContract(channel, normalizedOptions);
     const template = getPayloadTemplateRef(payload);
+    const providerCapabilities = getNotificationProviderCapabilities(provider);
+    if (
+      normalizedOptions?.requireProviderIdempotency === true &&
+      !providerCapabilities.supportsIdempotencyKey
+    ) {
+      throw new NotificationProviderIdempotencyUnsupportedProblem(targetProviderName, channel);
+    }
+
     const dispatchRequest = createNotificationDispatchRequest({
       providerName: targetProviderName,
       channel,
       payload,
-      providerCapabilities: getNotificationProviderCapabilities(provider),
+      providerCapabilities,
       ...(sendContract.idempotencyKey === undefined
         ? {}
         : { idempotencyKey: sendContract.idempotencyKey }),

@@ -104,4 +104,67 @@ describe("InMemoryInvitationStore", () => {
 
     expect(invitation?.status).toBe("revoked");
   });
+
+  it("should replay one durable creation for a tenant-scoped idempotency key", async () => {
+    const invitation = createInvitation({
+      id: "inv-created",
+      expiresAt: new Date("2099-01-10T00:00:00.000Z"),
+    });
+    const input = {
+      invitation,
+      token: "plaintext-token",
+      idempotencyKey: "request-1",
+      requestFingerprint: "fingerprint-1",
+      notificationIdempotencyKey: "notification-1",
+      notificationStatus: "pending" as const,
+      notificationClaimId: null,
+      notificationClaimExpiresAt: null,
+      eventStatus: "pending" as const,
+      eventClaimId: null,
+      eventClaimExpiresAt: null,
+      eventId: "event-1",
+      eventOccurredAt: new Date("2099-01-01T00:00:00.000Z"),
+      createdAt: new Date("2099-01-01T00:00:00.000Z"),
+    };
+
+    const first = await store.createEmailInvitation(input);
+    const replay = await store.createEmailInvitation({
+      ...input,
+      invitation: createInvitation({ id: "ignored-invitation" }),
+      token: "ignored-token",
+    });
+
+    expect(replay).toEqual(first);
+    expect(await store.findAllByTenant("tenant-1")).toHaveLength(1);
+
+    const notificationClaim = await store.claimEmailInvitationNotification(
+      "tenant-1",
+      "request-1",
+      "notification-claim",
+      new Date(Date.now() + 1_000),
+    );
+    const notificationCompleted = await store.completeEmailInvitationNotification(
+      "tenant-1",
+      "request-1",
+      "notification-claim",
+    );
+    const eventClaim = await store.claimEmailInvitationEvent(
+      "tenant-1",
+      "request-1",
+      "event-claim",
+      new Date(Date.now() + 1_000),
+    );
+    const eventCompleted = await store.completeEmailInvitationEvent(
+      "tenant-1",
+      "request-1",
+      "event-claim",
+    );
+    expect(notificationClaim?.notificationStatus).toBe("processing");
+    expect(notificationCompleted?.notificationStatus).toBe("completed");
+    expect(eventClaim?.eventStatus).toBe("processing");
+    expect(eventCompleted?.eventStatus).toBe("completed");
+    expect((await store.activateEmailInvitation("tenant-1", "request-1"))?.invitation.status).toBe(
+      "pending",
+    );
+  });
 });
