@@ -5,9 +5,9 @@ export class InvitationNotFoundProblem extends Problem {
   readonly category = ProblemCategory.NotFound;
 
   constructor(tokenOrId: string) {
-    super(undefined, undefined, `Invitation not found for identifier '${tokenOrId}'`, {
-      extensions: { tokenOrId },
-    });
+    // Preserve the legacy constructor shape while deliberately discarding all identifier input.
+    void tokenOrId;
+    super(undefined, undefined, "Invitation not found");
   }
 }
 
