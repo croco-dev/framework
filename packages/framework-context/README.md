@@ -26,6 +26,22 @@ class UserService {
 const service = Container.get(UserService);
 ```
 
+Independent application runtimes can isolate registrations and singleton instances with
+`Container.createScope()`. Every `Container` operation performed inside `scope.run()` is bound to
+that asynchronous scope, including work after `await`. Resetting one active scope does not reset the
+root container or another scope.
+
+```typescript
+const scope = Container.createScope();
+
+await scope.run(async () => {
+  Container.set(UserService, new UserService());
+  await handleRequest();
+});
+
+scope.dispose();
+```
+
 Provider adapters that write directly to TypeDI can use
 `Container.toTypeDIServiceIdentifier(token)` to share the same identifier as the
 Croco container. Strings, TypeDI tokens, and constructors are returned unchanged;
@@ -63,7 +79,7 @@ ShutdownManager.getInstance().listen();
 
 ## API 레퍼런스
 
-- `Container`: 의존성 등록, 조회, 초기화 및 TypeDI provider 식별자 변환
+- `Container`, `ContainerScope`: 의존성 등록, 조회, 초기화, 비동기 런타임 격리 및 TypeDI provider 식별자 변환
 - `Component`: 클래스를 singleton, request, transient scope로 등록
 - `Context`: AsyncLocalStorage 기반 요청 컨텍스트 실행과 조회
 - `MetadataStorage`: 데코레이터 메타데이터 저장과 조회

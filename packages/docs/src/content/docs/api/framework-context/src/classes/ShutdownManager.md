@@ -71,11 +71,27 @@ manager.listen();
 
 ### shutdown()
 
-> **shutdown**(): `Promise`\<`void`\>
+> **shutdown**(`options?`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### options?
+
+[`ShutdownOptions`](/api/framework-context/src/type-aliases/shutdownoptions/) = `{}`
 
 #### Returns
 
 `Promise`\<`void`\>
+
+***
+
+### disposeCurrentScope()
+
+> `static` **disposeCurrentScope**(): `void`
+
+#### Returns
+
+`void`
 
 ***
 

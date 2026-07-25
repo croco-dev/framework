@@ -1,3 +1,4 @@
+import { Container } from "@croco/framework-context";
 import type { EventBus } from "./EventBus";
 import { type EventHandlerClass, getEventHandlerSubscriptions } from "./EventHandler";
 import type { HandlerResolver } from "./HandlerResolver";
@@ -21,6 +22,8 @@ type StartedSubscription = EventSubscription & {
 export class EventBusConfig {
   private static instance?: EventBusConfig;
   private static stats?: EventBusStats;
+  private static readonly scopedInstances = new Map<string, EventBusConfig>();
+  private static readonly scopedStats = new Map<string, EventBusStats>();
   private static readonly handlerIds = new WeakMap<EventHandlerClass, string>();
   private static handlerIdCounter = 0;
   private readonly subscriptions: Set<EventSubscription> = new Set();
@@ -28,6 +31,18 @@ export class EventBusConfig {
   private eventBus?: EventBus;
 
   public static getInstance(): EventBusConfig {
+    const scopeId = Container.getActiveScopeId();
+    if (scopeId) {
+      const scopedInstance = EventBusConfig.scopedInstances.get(scopeId);
+      if (scopedInstance) {
+        return scopedInstance;
+      }
+
+      const instance = new EventBusConfig();
+      EventBusConfig.scopedInstances.set(scopeId, instance);
+      return instance;
+    }
+
     if (!EventBusConfig.instance) {
       EventBusConfig.instance = new EventBusConfig();
     }
@@ -35,15 +50,43 @@ export class EventBusConfig {
   }
 
   public static setInstance(config: EventBusConfig): void {
+    const scopeId = Container.getActiveScopeId();
+    if (scopeId) {
+      EventBusConfig.scopedInstances.set(scopeId, config);
+      return;
+    }
+
     EventBusConfig.instance = config;
   }
 
   public static getStats(): EventBusStats | undefined {
+    const scopeId = Container.getActiveScopeId();
+    if (scopeId) {
+      return EventBusConfig.scopedStats.get(scopeId);
+    }
+
     return EventBusConfig.stats;
   }
 
   public static setStats(stats: EventBusStats): void {
+    const scopeId = Container.getActiveScopeId();
+    if (scopeId) {
+      EventBusConfig.scopedStats.set(scopeId, stats);
+      return;
+    }
+
     EventBusConfig.stats = stats;
+  }
+
+  public static disposeCurrentScope(): void {
+    const scopeId = Container.getActiveScopeId();
+    if (!scopeId) {
+      return;
+    }
+
+    EventBusConfig.scopedInstances.get(scopeId)?.clear();
+    EventBusConfig.scopedInstances.delete(scopeId);
+    EventBusConfig.scopedStats.delete(scopeId);
   }
 
   public getSubscriptions(): ReadonlySet<EventSubscription> {

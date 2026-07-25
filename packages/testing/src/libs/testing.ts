@@ -59,6 +59,11 @@ type TestingAfterCommitHookFailure = {
 };
 
 export type TestLogger = ILogger;
+export type IsolatedTestingFidelity = {
+  readonly boot: "isolated";
+  readonly runtime: "node";
+  readonly validation: "isolated";
+};
 
 export type TestingProvider<T = unknown> =
   | TestingConstructor<T>
@@ -312,6 +317,12 @@ export class TestingTransactionContext implements TransactionContext {
 }
 
 export class CrocoTestingApp {
+  readonly fidelity: IsolatedTestingFidelity = {
+    boot: "isolated",
+    runtime: "node",
+    validation: "isolated",
+  };
+
   constructor(
     readonly app: CrocoApp,
     readonly baseUrl: string = DEFAULT_BASE_URL,

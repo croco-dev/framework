@@ -188,3 +188,95 @@ describe("Container.toTypeDIServiceIdentifier", () => {
     expect(Container.toTypeDIServiceIdentifier(symbol)).not.toBe(first);
   });
 });
+
+describe("ContainerScope", () => {
+  beforeEach(() => Container.reset());
+
+  it("isolates singleton values across concurrent asynchronous scopes", async () => {
+    class ScopedService {
+      constructor(readonly value: string) {}
+    }
+
+    const first = Container.createScope();
+    const second = Container.createScope();
+    const firstReady = Promise.withResolvers<void>();
+    const secondReady = Promise.withResolvers<void>();
+
+    const [firstValue, secondValue] = await Promise.all([
+      first.run(async () => {
+        Container.set(ScopedService, new ScopedService("first"));
+        firstReady.resolve();
+        await secondReady.promise;
+        return Container.get(ScopedService);
+      }),
+      second.run(async () => {
+        Container.set(ScopedService, new ScopedService("second"));
+        secondReady.resolve();
+        await firstReady.promise;
+        return Container.get(ScopedService);
+      }),
+    ]);
+
+    expect(firstValue.value).toBe("first");
+    expect(secondValue.value).toBe("second");
+    expect(firstValue).not.toBe(secondValue);
+    expect(Container.has(ScopedService)).toBe(false);
+
+    first.dispose();
+    second.dispose();
+  });
+
+  it("keeps reset local to the active scope", () => {
+    const rootToken = new Token<string>("root");
+    const scopedToken = new Token<string>("scoped");
+    Container.set(rootToken, "root");
+    const scope = Container.createScope();
+
+    scope.run(() => {
+      Container.set(scopedToken, "scoped");
+      Container.reset();
+      expect(Container.has(scopedToken)).toBe(false);
+    });
+
+    expect(Container.get(rootToken)).toBe("root");
+    scope.dispose();
+  });
+
+  it("does not inherit root provider instances", () => {
+    class RootService {}
+
+    Container.set(RootService, new RootService());
+    const scope = Container.createScope();
+
+    scope.run(() => {
+      expect(Container.has(RootService)).toBe(false);
+      expect(() => Container.get(RootService)).toThrow("provider is not registered");
+    });
+
+    expect(Container.get(RootService)).toBeInstanceOf(RootService);
+    scope.dispose();
+  });
+
+  it("rejects work after disposal and disposes idempotently", () => {
+    const scope = Container.createScope();
+
+    scope.dispose();
+    scope.dispose();
+
+    expect(() => scope.run(() => undefined)).toThrow("has already been disposed");
+  });
+
+  it("rejects container access from work that resumes after disposal", async () => {
+    const scope = Container.createScope();
+    const resume = Promise.withResolvers<void>();
+    const operation = scope.run(async () => {
+      await resume.promise;
+      return Container.set("late-value", "late");
+    });
+
+    scope.dispose();
+    resume.resolve();
+
+    await expect(operation).rejects.toThrow("has already been disposed");
+  });
+});

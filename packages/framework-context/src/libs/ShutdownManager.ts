@@ -1,15 +1,21 @@
-import { Container } from "typedi";
+import { Container } from "./Container";
 import { type ILogger, LOGGER_TOKEN } from "./ILogger";
 import {
   ShutdownConfigurationConflictProblem,
+  ShutdownHookExecutionProblem,
   ShutdownTimeoutProblem,
 } from "./problems/ShutdownProblems";
 import type { ShutdownHook } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+export type ShutdownOptions = {
+  readonly throwOnHookError?: boolean;
+};
+
 export class ShutdownManager {
   private static instance: ShutdownManager | undefined;
+  private static readonly scopedInstances = new Map<string, ShutdownManager>();
   private hooks: ShutdownHook[] = [];
   private isShuttingDown = false;
   private timeoutMs: number;
@@ -22,6 +28,24 @@ export class ShutdownManager {
   }
 
   static getInstance(timeoutMs?: number): ShutdownManager {
+    const scopeId = Container.getActiveScopeId();
+    if (scopeId) {
+      const existing = ShutdownManager.scopedInstances.get(scopeId);
+      if (existing) {
+        if (timeoutMs !== undefined) {
+          existing.configure(timeoutMs);
+        }
+        return existing;
+      }
+
+      const root = ShutdownManager.instance;
+      const manager = new ShutdownManager(timeoutMs ?? root?.timeoutMs);
+      manager.timeoutConfigured = timeoutMs !== undefined || (root?.timeoutConfigured ?? false);
+      manager.hooks = root ? [...root.hooks] : [];
+      ShutdownManager.scopedInstances.set(scopeId, manager);
+      return manager;
+    }
+
     if (!ShutdownManager.instance) {
       ShutdownManager.instance = new ShutdownManager(timeoutMs);
     } else if (timeoutMs !== undefined) {
@@ -39,13 +63,35 @@ export class ShutdownManager {
   }
 
   static reset(): void {
+    const scopeId = Container.getActiveScopeId();
+    if (scopeId) {
+      const manager = ShutdownManager.scopedInstances.get(scopeId);
+      manager?.removeAllListeners();
+      ShutdownManager.scopedInstances.delete(scopeId);
+      return;
+    }
+
     const manager = ShutdownManager.instance;
     if (manager) {
       manager.removeAllListeners();
       manager.hooks = [];
       manager.isShuttingDown = false;
     }
+    for (const scopedManager of ShutdownManager.scopedInstances.values()) {
+      scopedManager.removeAllListeners();
+    }
+    ShutdownManager.scopedInstances.clear();
     ShutdownManager.instance = undefined;
+  }
+
+  static disposeCurrentScope(): void {
+    const scopeId = Container.getActiveScopeId();
+    if (!scopeId) {
+      return;
+    }
+
+    ShutdownManager.scopedInstances.get(scopeId)?.removeAllListeners();
+    ShutdownManager.scopedInstances.delete(scopeId);
   }
 
   register(hook: ShutdownHook): void {
@@ -68,7 +114,7 @@ export class ShutdownManager {
     await this.shutdown();
   };
 
-  async shutdown(): Promise<void> {
+  async shutdown(options: ShutdownOptions = {}): Promise<void> {
     if (this.isShuttingDown) {
       return;
     }
@@ -76,12 +122,17 @@ export class ShutdownManager {
 
     const reversedHooks = [...this.hooks].reverse();
     const controller = new AbortController();
+    const failures: Error[] = [];
     const hookExecution = (async (): Promise<void> => {
       for (const hook of reversedHooks) {
         try {
           await hook.onShutdown(controller.signal);
         } catch (error) {
           const normalizedError = error instanceof Error ? error : new Error(String(error));
+          failures.push(normalizedError);
+          if (options.throwOnHookError) {
+            continue;
+          }
           if (Container.has(LOGGER_TOKEN)) {
             const logger = Container.get(LOGGER_TOKEN) as ILogger;
             logger.error("[ShutdownManager] Hook execution failed:", normalizedError);
@@ -112,6 +163,9 @@ export class ShutdownManager {
 
     try {
       await Promise.race([hookExecution, timeoutPromise]);
+      if (options.throwOnHookError && failures.length > 0) {
+        throw new ShutdownHookExecutionProblem(failures);
+      }
     } finally {
       if (timeoutId !== undefined) {
         clearTimeout(timeoutId);

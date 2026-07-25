@@ -1,5 +1,7 @@
+import { createTestKernel } from "@croco/testing";
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
+import { createCrocoApp } from "../app";
 import { JobsController } from "../controllers/JobsController";
 import { assertDemoEndpointsEnabled, SaasController } from "../controllers/SaasController";
 import { saasDemoSnapshotSchema } from "../controllers/schemas";
@@ -19,6 +21,26 @@ import {
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
     Container.reset();
+  });
+
+  it("boots application-fidelity tests through the exported production bootstrap", async () => {
+    const kernel = await createTestKernel({
+      bootstrap: createCrocoApp,
+      fidelity: "application",
+      validation: { di: "off" },
+    });
+
+    const response = await kernel.http.get("/health");
+
+    expect(response.status).toBe(200);
+    expect(kernel.app).toBeDefined();
+    expect(kernel.fidelity).toEqual({
+      boot: "application",
+      runtime: "node",
+      validation: "overridden",
+    });
+
+    await kernel.dispose();
   });
 
   it("creates tenant and owner membership", async () => {

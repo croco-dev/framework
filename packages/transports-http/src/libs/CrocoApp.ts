@@ -51,7 +51,14 @@ import {
 } from "./middleware/SecurityMiddlewareMarker";
 import { type CompileOptions, RouteCompiler } from "./RouteCompiler";
 import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
-import type { AppConfig, CompiledRoute, LambdaHandler, ListenOptions } from "./types";
+import type {
+  AppConfig,
+  BootstrapValidationPolicy,
+  CompiledRoute,
+  LambdaHandler,
+  ListenOptions,
+  NodeRequestHandler,
+} from "./types";
 import type { NodeServerHandle } from "./types";
 type SecurityValidationMode = NonNullable<AppConfig["securityValidation"]>;
 type DiValidationMode = NonNullable<AppConfig["diValidation"]>;
@@ -479,6 +486,18 @@ export class CrocoApp {
       .filter((graph): graph is RequestPipelineGraph => graph !== undefined);
   }
 
+  describeBootstrapValidationPolicy(): BootstrapValidationPolicy {
+    return {
+      di: this.getDiValidationMode(),
+      security: this.getSecurityValidationMode(),
+    };
+  }
+
+  nodeHandler(): NodeRequestHandler {
+    this.boot();
+    return (request, env) => this.dispatch(request, undefined, createFetchRuntimeOptions(env));
+  }
+
   async listen(
     port: number,
     options?: ListenOptions | (() => void),
@@ -492,15 +511,12 @@ export class CrocoApp {
     this.registerNodeStaticRoutes(listenOptions);
 
     const { serve } = await import("@hono/node-server");
+    const handler = this.nodeHandler();
 
     return serve(
       {
         fetch: (request: Request, env: NodeServerEnv) =>
-          this.dispatch(
-            request,
-            undefined,
-            createFetchRuntimeOptions(env as Record<string, unknown> | undefined),
-          ),
+          handler(request, env as Record<string, unknown> | undefined),
         port,
       },
       () => {

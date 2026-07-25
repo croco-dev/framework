@@ -353,6 +353,11 @@ describe("@croco/testing", () => {
 
     const response = await app.get("/greetings/Ada");
 
+    expect(app.fidelity).toEqual({
+      boot: "isolated",
+      runtime: "node",
+      validation: "isolated",
+    });
     expect(response.status).toBe(200);
     await expect(readJson(response)).resolves.toEqual({
       message: "Hello, Ada",

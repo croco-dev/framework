@@ -253,7 +253,7 @@ const frameworkContextCompatibilityContract = {
       exports: [
         {
           source: "./libs/Container",
-          names: ["Container", "ContainerValidationOptions", "TokenIdentifier"],
+          names: ["Container", "ContainerScope", "ContainerValidationOptions", "TokenIdentifier"],
         },
         {
           source: "./libs/decorators/Component",
@@ -532,12 +532,13 @@ const frameworkContextCompatibilityContract = {
             "OnShutdownDecoratorFailureReason",
             "OnShutdownDecoratorProblem",
             "ShutdownConfigurationConflictProblem",
+            "ShutdownHookExecutionProblem",
             "ShutdownTimeoutProblem",
           ],
         },
         {
           source: "./libs/ShutdownManager",
-          names: ["ShutdownManager"],
+          names: ["ShutdownManager", "ShutdownOptions"],
         },
         {
           source: "./libs/types",

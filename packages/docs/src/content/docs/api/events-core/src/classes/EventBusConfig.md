@@ -113,6 +113,16 @@ title: "EventBusConfig"
 
 ***
 
+### disposeCurrentScope()
+
+> `static` **disposeCurrentScope**(): `void`
+
+#### Returns
+
+`void`
+
+***
+
 ### getInstance()
 
 > `static` **getInstance**(): `EventBusConfig`

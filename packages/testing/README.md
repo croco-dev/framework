@@ -9,11 +9,31 @@ const app = createTestingApp({ controllers: [UserController] });
 const response = await app.get("/users");
 ```
 
+Production-parity tests pass the same bootstrap export used by the deployed application:
+
+```typescript
+import { createTestKernel } from "@croco/testing";
+import { createCrocoApp } from "../app";
+
+await using test = await createTestKernel({
+  bootstrap: createCrocoApp,
+  fidelity: "application",
+});
+
+const response = await test.http.get("/health");
+expect(test.fidelity).toEqual({
+  boot: "application",
+  runtime: "node",
+  validation: "production",
+});
+```
+
 ## API
 
 | Helper                                                | Purpose                                                                                                                                    |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `createTestingApp(config)`                            | Creates an isolated `CrocoApp` with seeded test defaults and HTTP request helpers.                                                         |
+| `createTestKernel(config)`                            | Boots the real application bootstrap inside an isolated runtime scope and reports application or adapter fidelity as structured evidence.  |
 | `createTestingHarness(app)`                           | Wraps an existing `CrocoApp` with the same request and contract helpers.                                                                   |
 | `createEventTestingHarness(config)`                   | Creates an isolated in-memory event bus and dispatches decorated handlers.                                                                 |
 | `createTestingRequestContext(config)`                 | Builds a deterministic request/runtime context for service tests.                                                                          |
@@ -43,13 +63,30 @@ const response = await app.get("/users");
 
 ## Isolation Contract
 
-`createTestingApp`, `createEventTestingHarness`, and `resetCrocoTestingContext` reset the Croco DI
+`createTestingApp()` is the compatibility harness for explicitly isolated controller/provider
+graphs. Its structured fidelity is always
+`{ boot: "isolated", runtime: "node", validation: "isolated" }`; its results must not be presented
+as production-parity evidence.
+
+`createTestKernel()` is runner-neutral and calls the supplied production bootstrap function exactly
+once inside a scoped runtime. Application fidelity requires the effective DI and security validation
+policies to both be `enforce`. A lower policy must be stated through `validation`, and the resulting
+fidelity is marked `overridden`. Adapter fidelity supports Node and Lambda request lifecycles without
+opening a public network port. Each kernel owns its DI values, component registrations, event
+configuration, request execution, and evidence buffer. Its `transactionContext` is isolated test
+evidence and is not registered under the production transaction token; production bootstrap remains
+responsible for registering its real transaction provider. `dispose()` and `Symbol.asyncDispose` run
+cleanup once; cleanup failures reject with `TestKernelDisposalProblem`. A bootstrap that acquires
+resources before it can return an app can call `context.onCleanup()` so failure-path cleanup is also
+guaranteed.
+
+`createTestingApp`, `createEventTestingHarness`, and `resetCrocoTestingContext` reset the root Croco DI
 container, install a silent logger, replace the health/error defaults, and seed an inactive
 `TestingTransactionContext` unless `transactionContext: false` is passed. Request helpers execute
 through the real HTTP route registrar and `Context.run`, so request-scoped dependencies and
 AsyncLocalStorage cleanup match the runtime path.
 
-The harness intentionally does not start a Node server, Lambda adapter, Cloudflare execution
+The compatibility harness intentionally does not start a Node server, Lambda adapter, Cloudflare execution
 context, OpenTelemetry SDK exporter, real database transaction, or external event broker. Use
 `createTestingRequestContext` to model runtime capabilities explicitly, `TestingTransactionContext`
 to flush after-commit hooks, and `installTestingTelemetryCapture` to assert span names, attributes,

@@ -91,3 +91,28 @@ export class ShutdownConfigurationConflictProblem extends Problem {
     );
   }
 }
+
+/**
+ * shutdown hook failures must be surfaced to lifecycle owners that request strict cleanup evidence.
+ */
+export class ShutdownHookExecutionProblem extends Problem {
+  readonly code = "framework-context/shutdown-hook-execution-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(failures: readonly Error[]) {
+    super(
+      "framework-context/shutdown-hook-execution-failed",
+      ProblemCategory.InternalServerError,
+      `${failures.length} shutdown hook(s) failed.`,
+      {
+        extensions: {
+          failureCount: failures.length,
+          failures: failures.map((failure) => ({
+            message: failure.message,
+            name: failure.name,
+          })),
+        },
+      },
+    );
+  }
+}

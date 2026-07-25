@@ -50,7 +50,7 @@ export { Inject } from "./libs/decorators/Inject";
  * const service = Container.get(UserService);
  * ```
  */
-export { Container } from "./libs/Container";
+export { Container, ContainerScope } from "./libs/Container";
 export type { ContainerValidationOptions, TokenIdentifier } from "./libs/Container";
 
 export { ContainerDiagnosticsProvider } from "./libs/diagnostics/ContainerDiagnosticsProvider";
@@ -256,6 +256,7 @@ export {
  * ```
  */
 export { ShutdownManager } from "./libs/ShutdownManager";
+export type { ShutdownOptions } from "./libs/ShutdownManager";
 export {
   ContainerResolutionProblem,
   ContainerScopeMismatchProblem,
@@ -272,6 +273,7 @@ export { PipelineGraphProblem } from "./libs/problems/PipelineGraphProblems";
 export {
   OnShutdownDecoratorProblem,
   ShutdownConfigurationConflictProblem,
+  ShutdownHookExecutionProblem,
   ShutdownTimeoutProblem,
 } from "./libs/problems/ShutdownProblems";
 export type { OnShutdownDecoratorFailureReason } from "./libs/problems/ShutdownProblems";
