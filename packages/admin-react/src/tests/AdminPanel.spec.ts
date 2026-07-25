@@ -1,4 +1,4 @@
-import type { BillingAccount, Plan, Subscription } from "@croco/billing-core";
+import type { BillingAccount, Plan, PlanVersionRef, Subscription } from "@croco/billing-core";
 import type { EntitlementCheckResult } from "@croco/entitlements-core";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -30,6 +30,7 @@ const subscription: Subscription = {
   id: "sub-local-123",
   lastSyncedAt: generatedAt,
   planId: "pro",
+  planVersionRef: "pro@v1" as PlanVersionRef,
   status: "active",
 };
 

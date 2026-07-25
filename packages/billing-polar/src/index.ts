@@ -96,6 +96,7 @@ export type { WebhookDependencies } from "./libs/PolarWebhookHandler";
  *   webhookSecret: 'whsec_...'
  * }, {
  *   store,
+ *   planRegistry,
  *   eventPublisher
  * });
  *

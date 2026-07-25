@@ -1,24 +1,37 @@
 // Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
 /* oxlint-disable typescript/consistent-type-imports */
 import {
-  BillingStore,
+  type BillingStore,
   OrderPaidEvent,
+  PLAN_REGISTRY_TOKEN,
   PlanChangedEvent,
   type PlanRegistry,
+  type PlanVersionRef,
   SubscriptionCanceledEvent,
 } from "@croco/billing-core";
 import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croco/events-core";
-import { MetricsRepository, type Money, type PlanProvider } from "@croco/metrics-core";
+import { Component, Inject, Token } from "@croco/framework-context";
 import type { MRRMovement } from "@croco/metrics-core";
-import { MrrCalculator } from "@croco/metrics-core";
+import {
+  type MetricsRepository,
+  type Money,
+  MrrCalculator,
+  type PlanProvider,
+} from "@croco/metrics-core";
+import type { BillingMetricDropReason } from "./problems/BillingMetricsProblems";
 import {
   BillingMetricDroppedProblem,
   BillingMetricRecordingProblem,
 } from "./problems/BillingMetricsProblems";
-import type { BillingMetricDropReason } from "./problems/BillingMetricsProblems";
 
 type BillingMetricEvent = OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent;
 
+export const BILLING_STORE_TOKEN = new Token<BillingStore>("metrics-billing/billing-store");
+export const METRICS_REPOSITORY_TOKEN = new Token<MetricsRepository>(
+  "metrics-billing/metrics-repository",
+);
+
+@Component()
 @RegisterEventHandler(OrderPaidEvent)
 @RegisterEventHandler(PlanChangedEvent)
 @RegisterEventHandler(SubscriptionCanceledEvent)
@@ -30,24 +43,29 @@ export class BillingEventHandler
   private readonly calculator = new MrrCalculator();
 
   constructor(
-    private readonly planRegistry: PlanRegistry,
-    private readonly billingStore: BillingStore,
-    private readonly metricsRepository: MetricsRepository,
+    @Inject(PLAN_REGISTRY_TOKEN) private readonly planRegistry: PlanRegistry,
+    @Inject(BILLING_STORE_TOKEN) private readonly billingStore: BillingStore,
+    @Inject(METRICS_REPOSITORY_TOKEN) private readonly metricsRepository: MetricsRepository,
   ) {}
 
   async getPlan(planId: string) {
-    const plan = await this.planRegistry.getPlan(planId);
-    if (plan === null) {
+    const definition = await this.planRegistry.getPlan(planId);
+    if (definition === null) {
       return null;
     }
 
     return {
-      id: plan.id,
-      amount: plan.amount,
-      currency: plan.currency,
-      interval: plan.interval,
-      intervalCount: plan.intervalCount,
+      id: definition.plan.id,
+      amount: definition.plan.amount,
+      currency: definition.plan.currency,
+      interval: definition.plan.interval,
+      intervalCount: definition.plan.intervalCount,
     };
+  }
+
+  private async getPlanVersion(ref: PlanVersionRef) {
+    const definition = await this.planRegistry.getPlanVersion(ref);
+    return definition?.plan ?? null;
   }
 
   async handle(event: DomainEvent): Promise<void> {
@@ -77,7 +95,7 @@ export class BillingEventHandler
       throw this.createDroppedProblem(event, "subscription_not_found", account.id);
     }
 
-    const plan = await this.getPlan(subscription.planId);
+    const plan = await this.getPlanVersion(subscription.planVersionRef);
     if (plan === null) {
       throw this.createDroppedProblem(event, "plan_not_found", subscription.planId);
     }
@@ -106,8 +124,8 @@ export class BillingEventHandler
       );
     }
 
-    const previousPlan = await this.getPlan(event.previousPlanId);
-    const newPlan = await this.getPlan(event.newPlanId);
+    const previousPlan = await this.getPlanVersion(event.previousPlanVersionRef);
+    const newPlan = await this.getPlanVersion(event.newPlanVersionRef);
     if (previousPlan === null || newPlan === null) {
       throw this.createDroppedProblem(
         event,
@@ -152,7 +170,7 @@ export class BillingEventHandler
       );
     }
 
-    const plan = await this.getPlan(subscription.planId);
+    const plan = await this.getPlanVersion(subscription.planVersionRef);
     if (plan === null) {
       throw this.createDroppedProblem(event, "plan_not_found", subscription.planId);
     }

@@ -1,4 +1,5 @@
 import { DomainEvent } from "@croco/events-core";
+import type { PlanVersionRef } from "../../types";
 
 export class PlanChangedEvent extends DomainEvent {
   static readonly eventName = "billing.plan_changed";
@@ -7,6 +8,8 @@ export class PlanChangedEvent extends DomainEvent {
     public readonly previousPlanId: string,
     public readonly newPlanId: string,
     public readonly externalSubscriptionId: string,
+    public readonly previousPlanVersionRef: PlanVersionRef,
+    public readonly newPlanVersionRef: PlanVersionRef,
   ) {
     super();
   }

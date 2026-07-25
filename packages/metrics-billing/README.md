@@ -23,7 +23,12 @@ pnpm add @croco/metrics-billing
 ## 사용법
 
 ```typescript
-import { BillingEventHandler } from "@croco/metrics-billing";
+import {
+  BILLING_STORE_TOKEN,
+  BillingEventHandler,
+  METRICS_REPOSITORY_TOKEN,
+} from "@croco/metrics-billing";
+import { PLAN_REGISTRY_TOKEN } from "@croco/billing-core";
 import { TimescaleMetricsStore } from "@croco/metrics-core";
 import { Container } from "@croco/framework-context";
 
@@ -36,14 +41,10 @@ await eventBus.publish(new OrderPaidEvent("tenant-1", "order-1", 2900, "USD"));
 ### DI 컨테이너 등록
 
 ```typescript
-import { Container } from "@croco/framework-context";
-import { BillingEventHandler } from "@croco/metrics-billing";
-
-Container.register(BillingEventHandler, {
-  planRegistry: Container.resolve(PlanRegistry),
-  billingStore: Container.resolve(BillingStore),
-  metricsRepository: Container.resolve(MetricsRepository),
-});
+Container.set(PLAN_REGISTRY_TOKEN, planRegistry);
+Container.set(BILLING_STORE_TOKEN, billingStore);
+Container.set(METRICS_REPOSITORY_TOKEN, metricsRepository);
+Container.resolve(BillingEventHandler);
 ```
 
 ## MRR 변동 계산

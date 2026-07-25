@@ -12,23 +12,23 @@ Implementations: InMemoryPlanRegistry, DrizzlePlanRegistry
 
 ### getAllPlans()
 
-> **getAllPlans**(): `Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/)[]\>
+> **getAllPlans**(): `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)[]\>
 
 Get all available plans.
 
 #### Returns
 
-`Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/)[]\>
+`Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)[]\>
 
 Array of all plans
 
-***
+---
 
 ### getPlan()
 
-> **getPlan**(`planId`): `Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/) \| `null`\>
+> **getPlan**(`planId`): `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
 
-Get a plan by ID.
+Get the latest effective published version of a plan.
 
 #### Parameters
 
@@ -40,15 +40,15 @@ The plan identifier
 
 #### Returns
 
-`Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/) \| `null`\>
+`Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
 
 The plan or null if not found
 
-***
+---
 
 ### getPlanAtDate()
 
-> **getPlanAtDate**(`planId`, `date`): `Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/) \| `null`\>
+> **getPlanAtDate**(`planId`, `date`): `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
 
 Get a plan as it was configured at a specific point in time.
 Useful for handling historical pricing (e.g., legacy subscriptions).
@@ -69,6 +69,61 @@ The date to query historical pricing for
 
 #### Returns
 
-`Promise`\<[`Plan`](/api/billing-core/src/type-aliases/plan/) \| `null`\>
+`Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
 
 The plan at the given date or null if not found
+
+---
+
+### getPlanVersion()
+
+> **getPlanVersion**(`ref`): `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
+
+Resolve an exact version pinned by a subscription.
+
+#### Parameters
+
+##### ref
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+#### Returns
+
+`Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
+
+---
+
+### publishPlanVersion()
+
+> **publishPlanVersion**(`definition`): `Promise`\<`void`\>
+
+Publish a new immutable version. An existing ref can never be overwritten.
+
+#### Parameters
+
+##### definition
+
+[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### resolveProviderPlanVersion()
+
+> **resolveProviderPlanVersion**(`mapping`): `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)\>
+
+Resolve a provider product/price identity to exactly one published plan version.
+Implementations throw UnknownPlanVersionMappingProblem for missing or ambiguous mappings.
+
+#### Parameters
+
+##### mapping
+
+[`ProviderPlanMapping`](/api/billing-core/src/type-aliases/providerplanmapping/)
+
+#### Returns
+
+`Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)\>

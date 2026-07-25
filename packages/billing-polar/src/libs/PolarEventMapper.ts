@@ -1,6 +1,8 @@
+import type { PlanVersionRef } from "@croco/billing-core";
 import {
   OrderPaidEvent,
   PlanChangedEvent,
+  SubscriptionPlanVersionMigrationRequiredProblem,
   SubscriptionActivatedEvent,
   SubscriptionCanceledEvent,
   SubscriptionPastDueEvent,
@@ -24,8 +26,10 @@ export class PolarEventMapper {
       productId: string;
       status: string;
       cancelAtPeriodEnd?: boolean;
+      planVersionRef: PlanVersionRef;
     },
     previousPlanId?: string,
+    previousPlanVersionRef?: PlanVersionRef,
   ): DomainEvent[] {
     const events: DomainEvent[] = [];
 
@@ -33,14 +37,29 @@ export class PolarEventMapper {
       case "subscription.created":
       case "subscription.active":
         events.push(
-          new SubscriptionActivatedEvent(tenantId, subscription.productId, subscription.id),
+          new SubscriptionActivatedEvent(
+            tenantId,
+            subscription.productId,
+            subscription.id,
+            subscription.planVersionRef,
+          ),
         );
         break;
 
       case "subscription.updated":
         if (previousPlanId && previousPlanId !== subscription.productId) {
+          if (!previousPlanVersionRef) {
+            throw new SubscriptionPlanVersionMigrationRequiredProblem(subscription.id);
+          }
           events.push(
-            new PlanChangedEvent(tenantId, previousPlanId, subscription.productId, subscription.id),
+            new PlanChangedEvent(
+              tenantId,
+              previousPlanId,
+              subscription.productId,
+              subscription.id,
+              previousPlanVersionRef,
+              subscription.planVersionRef,
+            ),
           );
         }
 

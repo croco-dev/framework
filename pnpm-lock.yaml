@@ -2220,6 +2220,9 @@ importers:
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../framework-context
       '@croco/metrics-core':
         specifier: workspace:*
         version: link:../metrics-core
@@ -14076,14 +14079,6 @@ snapshots:
     optionalDependencies:
       vite: 7.3.5(@types/node@22.19.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
 
-  '@vitest/mocker@4.0.16(vite@7.3.5(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))':
-    dependencies:
-      '@vitest/spy': 4.0.16
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 7.3.5(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
-
   '@vitest/mocker@4.1.8(vite@7.3.5(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.8
@@ -18503,7 +18498,7 @@ snapshots:
   vitest@4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0):
     dependencies:
       '@vitest/expect': 4.0.16
-      '@vitest/mocker': 4.0.16(vite@7.3.5(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      '@vitest/mocker': 4.0.16(vite@7.3.5(@types/node@22.19.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
       '@vitest/pretty-format': 4.0.16
       '@vitest/runner': 4.0.16
       '@vitest/snapshot': 4.0.16

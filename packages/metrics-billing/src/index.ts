@@ -1,4 +1,8 @@
-export { BillingEventHandler } from "./libs/BillingEventHandler";
+export {
+  BillingEventHandler,
+  BILLING_STORE_TOKEN,
+  METRICS_REPOSITORY_TOKEN,
+} from "./libs/BillingEventHandler";
 export {
   BillingMetricDroppedProblem,
   BillingMetricRecordingProblem,

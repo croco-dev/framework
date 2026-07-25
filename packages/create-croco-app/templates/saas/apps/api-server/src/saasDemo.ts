@@ -3,6 +3,8 @@ import { type AuthUser, RbacEngine, RoleRegistry } from "@croco/auth-core";
 import {
   BillingService,
   InMemoryBillingStore,
+  InMemoryPlanRegistry,
+  planVersionRef,
   WebhookAlreadyProcessedProblem,
   type BillingGateway,
   type SubscriptionStatus,
@@ -261,6 +263,7 @@ export type SaasRuntime = {
   invitationManager: InvitationManager;
   accessEngine: AccessEngine;
   rbacEngine: RbacEngine;
+  planRegistry: InMemoryPlanRegistry;
   billingStore: InMemoryBillingStore;
   billingService: BillingService;
   meterRegistry: MeterRegistry;
@@ -297,7 +300,26 @@ export function createSaasRuntime(): SaasRuntime {
     permissions: ["tenant:read", "usage:record"],
   });
 
-  const billingStore = new InMemoryBillingStore();
+  const planRegistry = new InMemoryPlanRegistry([
+    {
+      ref: planVersionRef(`${TEAM_PLAN_ID}@v1`),
+      planId: TEAM_PLAN_ID,
+      version: "v1",
+      effectiveAt: "2026-01-01T00:00:00.000Z",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      plan: {
+        id: TEAM_PLAN_ID,
+        name: "Team",
+        amount: 0,
+        currency: "USD",
+        interval: "month",
+        intervalCount: 1,
+      },
+      rating: { mode: "croco-rated" },
+      providerBindings: [],
+    },
+  ]);
+  const billingStore = new InMemoryBillingStore(planRegistry);
   const billingService = new BillingService({
     store: billingStore,
     gateway: new DemoBillingGateway(),
@@ -484,6 +506,7 @@ export function createSaasRuntime(): SaasRuntime {
     invitationManager,
     accessEngine,
     rbacEngine: new RbacEngine(roleRegistry),
+    planRegistry,
     billingStore,
     billingService,
     meterRegistry,
@@ -879,6 +902,7 @@ async function processBillingMockSubscriptionActivatedEvent(
     billingAccountId: tenantId,
     externalSubscriptionId,
     planId: TEAM_PLAN_ID,
+    planVersionRef: planVersionRef("team@v1"),
     status: "active",
     currentPeriodEnd: DEMO_SUBSCRIPTION_CURRENT_PERIOD_END,
     cancelAtPeriodEnd: false,

@@ -3700,6 +3700,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InMemoryPlanRegistry",
+              "exportKind": "named",
+              "source": "./libs/InMemoryPlanRegistry",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidMoneyAmountProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
@@ -3707,6 +3713,12 @@
             },
             {
               "name": "InvalidMoneyCurrencyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidPlanVersionDefinitionProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
               "declarationKind": "class"
@@ -3736,10 +3748,28 @@
               "declarationKind": "class"
             },
             {
+              "name": "PLAN_REGISTRY_TOKEN",
+              "exportKind": "named",
+              "source": "./libs/PlanRegistry",
+              "declarationKind": "const"
+            },
+            {
               "name": "PlanChangedEvent",
               "exportKind": "named",
               "source": "./libs/events/PlanChangedEvent",
               "declarationKind": "class"
+            },
+            {
+              "name": "PlanVersionAlreadyPublishedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "planVersionRef",
+              "exportKind": "named",
+              "source": "./libs/InMemoryPlanRegistry",
+              "declarationKind": "function"
             },
             {
               "name": "SubscriptionActivatedEvent",
@@ -3766,9 +3796,39 @@
               "declarationKind": "class"
             },
             {
+              "name": "SubscriptionPlanVersionImmutableProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionPlanVersionMigrationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionPlanVersionMigrationRequiredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionPlanVersionResolutionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "SubscriptionRevokedEvent",
               "exportKind": "named",
               "source": "./libs/events/SubscriptionRevokedEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "UnknownPlanVersionMappingProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
               "declarationKind": "class"
             },
             {
@@ -3840,6 +3900,11 @@
               "source": "./types"
             },
             {
+              "name": "LegacySubscription",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "MoneyRoundingMode",
               "exportKind": "named",
               "source": "./libs/Money"
@@ -3856,6 +3921,11 @@
             },
             {
               "name": "PlanInterval",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "PlanRatingDefinition",
               "exportKind": "named",
               "source": "./types"
             },
@@ -3880,6 +3950,16 @@
               "source": "./libs/PlanTransitionService"
             },
             {
+              "name": "PlanVersionDefinition",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "PlanVersionRef",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "ProcessedWebhook",
               "exportKind": "named",
               "source": "./types"
@@ -3900,7 +3980,22 @@
               "source": "./libs/ProrationCalculator"
             },
             {
+              "name": "ProviderPlanMapping",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "ProviderPriceBinding",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "Subscription",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "SubscriptionPlanVersionMigration",
               "exportKind": "named",
               "source": "./types"
             },
@@ -13913,6 +14008,12 @@
           "sourceEntrypoint": "packages/metrics-billing/src/index.ts",
           "runtimeExports": [
             {
+              "name": "BILLING_STORE_TOKEN",
+              "exportKind": "named",
+              "source": "./libs/BillingEventHandler",
+              "declarationKind": "const"
+            },
+            {
               "name": "BillingEventHandler",
               "exportKind": "named",
               "source": "./libs/BillingEventHandler",
@@ -13929,6 +14030,12 @@
               "exportKind": "named",
               "source": "./libs/problems/BillingMetricsProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "METRICS_REPOSITORY_TOKEN",
+              "exportKind": "named",
+              "source": "./libs/BillingEventHandler",
+              "declarationKind": "const"
             }
           ],
           "typeExports": [

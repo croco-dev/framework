@@ -1,8 +1,19 @@
-import type { BillingStore, Plan, PlanRegistry } from "@croco/billing-core";
-import { OrderPaidEvent, PlanChangedEvent, SubscriptionCanceledEvent } from "@croco/billing-core";
+import type { BillingStore, Plan, PlanRegistry, PlanVersionDefinition } from "@croco/billing-core";
+import {
+  OrderPaidEvent,
+  PLAN_REGISTRY_TOKEN,
+  PlanChangedEvent,
+  planVersionRef,
+  SubscriptionCanceledEvent,
+} from "@croco/billing-core";
+import { Container } from "@croco/framework-context";
 import type { MetricsRepository, MRRMovement } from "@croco/metrics-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BillingEventHandler } from "../libs/BillingEventHandler";
+import {
+  BillingEventHandler,
+  BILLING_STORE_TOKEN,
+  METRICS_REPOSITORY_TOKEN,
+} from "../libs/BillingEventHandler";
 import {
   BillingMetricDroppedProblem,
   BillingMetricRecordingProblem,
@@ -13,6 +24,15 @@ describe("BillingEventHandler", () => {
   let planRegistry!: PlanRegistry;
   let billingStore!: BillingStore;
   let metricsRepository!: MetricsRepository;
+
+  it("resolves explicit runtime dependency tokens through the Container", () => {
+    Container.set(PLAN_REGISTRY_TOKEN, planRegistry);
+    Container.set(BILLING_STORE_TOKEN, billingStore);
+    Container.set(METRICS_REPOSITORY_TOKEN, metricsRepository);
+
+    expect(Container.get(BillingEventHandler)).toBeInstanceOf(BillingEventHandler);
+    Container.reset();
+  });
 
   const mockPlan: Plan = {
     id: "plan-pro",
@@ -32,6 +52,20 @@ describe("BillingEventHandler", () => {
     intervalCount: 1,
   };
 
+  const definition = (
+    plan: Plan,
+    ref = planVersionRef(`${plan.id}@v1`),
+  ): PlanVersionDefinition => ({
+    ref,
+    planId: plan.id,
+    version: "v1",
+    effectiveAt: "2026-01-01T00:00:00.000Z",
+    publishedAt: "2026-01-01T00:00:00.000Z",
+    plan,
+    rating: { mode: "provider-rated" },
+    providerBindings: [],
+  });
+
   const mockAccount = {
     id: "account-1",
     tenantId: "tenant-1",
@@ -45,6 +79,7 @@ describe("BillingEventHandler", () => {
     billingAccountId: "account-1",
     externalSubscriptionId: "sub-stripe",
     planId: "plan-pro",
+    planVersionRef: planVersionRef("plan-pro@v1"),
     status: "active" as const,
     currentPeriodEnd: new Date(),
     cancelAtPeriodEnd: false,
@@ -90,9 +125,12 @@ describe("BillingEventHandler", () => {
 
   beforeEach(() => {
     planRegistry = {
+      publishPlanVersion: vi.fn(),
+      getPlanVersion: vi.fn(),
       getPlan: vi.fn(),
       getAllPlans: vi.fn(),
       getPlanAtDate: vi.fn(),
+      resolveProviderPlanVersion: vi.fn(),
     } as unknown as PlanRegistry;
 
     billingStore = {
@@ -117,10 +155,12 @@ describe("BillingEventHandler", () => {
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
+      vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(definition(mockPlan));
 
       await handler.handle(event);
 
+      expect(planRegistry.getPlanVersion).toHaveBeenCalledWith(mockSubscription.planVersionRef);
+      expect(planRegistry.getPlan).not.toHaveBeenCalled();
       const expectedMovement: MRRMovement = {
         new: { amount: 2900, currency: "USD" },
         expansion: { amount: 0, currency: "USD" },
@@ -147,7 +187,7 @@ describe("BillingEventHandler", () => {
         ...mockSubscription,
         planId: "plan-pro-yearly",
       });
-      vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlanYearly);
+      vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(definition(mockPlanYearly));
 
       await handler.handle(event);
 
@@ -162,7 +202,7 @@ describe("BillingEventHandler", () => {
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
+      vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(definition(mockPlan));
 
       const firstHandler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
       const secondHandler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
@@ -189,7 +229,7 @@ describe("BillingEventHandler", () => {
 
         vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
         vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
-        vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
+        vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(definition(mockPlan));
 
         await handler.handle(firstEvent);
         await handler.handle(secondEvent);
@@ -249,7 +289,7 @@ describe("BillingEventHandler", () => {
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscription).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
+      vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(definition(mockPlan));
       vi.mocked(metricsRepository.recordMRRMovement).mockRejectedValueOnce(
         new BillingMetricRecordingProblem({
           eventName: "metrics.repository",
@@ -274,7 +314,16 @@ describe("BillingEventHandler", () => {
 
   describe("PlanChangedEvent", () => {
     it("should record expansion MRR when upgrading plan", async () => {
-      const event = new PlanChangedEvent("tenant-1", "plan-basic", "plan-pro", "sub-stripe");
+      const basicRef = planVersionRef("plan-basic@v1");
+      const proRef = planVersionRef("plan-pro@v1");
+      const event = new PlanChangedEvent(
+        "tenant-1",
+        "plan-basic",
+        "plan-pro",
+        "sub-stripe",
+        basicRef,
+        proRef,
+      );
 
       const basicPlan: Plan = {
         id: "plan-basic",
@@ -287,9 +336,9 @@ describe("BillingEventHandler", () => {
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
-        if (id === "plan-basic") return Promise.resolve(basicPlan);
-        if (id === "plan-pro") return Promise.resolve(mockPlan);
+      vi.mocked(planRegistry.getPlanVersion).mockImplementation((ref) => {
+        if (ref === basicRef) return Promise.resolve(definition(basicPlan, basicRef));
+        if (ref === proRef) return Promise.resolve(definition(mockPlan, proRef));
         return Promise.resolve(null);
       });
 
@@ -303,7 +352,16 @@ describe("BillingEventHandler", () => {
     });
 
     it("should record contraction MRR when downgrading plan", async () => {
-      const event = new PlanChangedEvent("tenant-1", "plan-pro", "plan-basic", "sub-stripe");
+      const proRef = planVersionRef("plan-pro@v1");
+      const basicRef = planVersionRef("plan-basic@v1");
+      const event = new PlanChangedEvent(
+        "tenant-1",
+        "plan-pro",
+        "plan-basic",
+        "sub-stripe",
+        proRef,
+        basicRef,
+      );
 
       const basicPlan: Plan = {
         id: "plan-basic",
@@ -316,9 +374,9 @@ describe("BillingEventHandler", () => {
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
-        if (id === "plan-basic") return Promise.resolve(basicPlan);
-        if (id === "plan-pro") return Promise.resolve(mockPlan);
+      vi.mocked(planRegistry.getPlanVersion).mockImplementation((ref) => {
+        if (ref === basicRef) return Promise.resolve(definition(basicPlan, basicRef));
+        if (ref === proRef) return Promise.resolve(definition(mockPlan, proRef));
         return Promise.resolve(null);
       });
 
@@ -332,7 +390,16 @@ describe("BillingEventHandler", () => {
     });
 
     it("should pass event key to repository for plan changes", async () => {
-      const event = new PlanChangedEvent("tenant-1", "plan-basic", "plan-pro", "sub-stripe");
+      const basicRef = planVersionRef("plan-basic@v1");
+      const proRef = planVersionRef("plan-pro@v1");
+      const event = new PlanChangedEvent(
+        "tenant-1",
+        "plan-basic",
+        "plan-pro",
+        "sub-stripe",
+        basicRef,
+        proRef,
+      );
 
       const basicPlan: Plan = {
         id: "plan-basic",
@@ -345,9 +412,9 @@ describe("BillingEventHandler", () => {
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
-        if (id === "plan-basic") return Promise.resolve(basicPlan);
-        if (id === "plan-pro") return Promise.resolve(mockPlan);
+      vi.mocked(planRegistry.getPlanVersion).mockImplementation((ref) => {
+        if (ref === basicRef) return Promise.resolve(definition(basicPlan, basicRef));
+        if (ref === proRef) return Promise.resolve(definition(mockPlan, proRef));
         return Promise.resolve(null);
       });
 
@@ -363,7 +430,16 @@ describe("BillingEventHandler", () => {
     });
 
     it("should record unchanged movement when the normalized MRR delta is zero", async () => {
-      const event = new PlanChangedEvent("tenant-1", "plan-pro", "plan-pro-yearly", "sub-stripe");
+      const proRef = planVersionRef("plan-pro@v1");
+      const yearlyRef = planVersionRef("plan-pro-yearly@v1");
+      const event = new PlanChangedEvent(
+        "tenant-1",
+        "plan-pro",
+        "plan-pro-yearly",
+        "sub-stripe",
+        proRef,
+        yearlyRef,
+      );
 
       const equivalentMonthlyPlan: Plan = {
         id: "plan-pro-yearly",
@@ -376,9 +452,11 @@ describe("BillingEventHandler", () => {
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
-        if (id === "plan-pro") return Promise.resolve(mockPlan);
-        if (id === "plan-pro-yearly") return Promise.resolve(equivalentMonthlyPlan);
+      vi.mocked(planRegistry.getPlanVersion).mockImplementation((ref) => {
+        if (ref === proRef) return Promise.resolve(definition(mockPlan, proRef));
+        if (ref === yearlyRef) {
+          return Promise.resolve(definition(equivalentMonthlyPlan, yearlyRef));
+        }
         return Promise.resolve(null);
       });
 
@@ -398,13 +476,22 @@ describe("BillingEventHandler", () => {
     });
 
     it("should surface missing plan evidence without recording a metric", async () => {
-      const event = new PlanChangedEvent("tenant-1", "plan-basic", "plan-pro", "sub-stripe");
+      const basicRef = planVersionRef("plan-basic@missing");
+      const proRef = planVersionRef("plan-pro@v1");
+      const event = new PlanChangedEvent(
+        "tenant-1",
+        "plan-basic",
+        "plan-pro",
+        "sub-stripe",
+        basicRef,
+        proRef,
+      );
 
       vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockImplementation((id: string) => {
-        if (id === "plan-basic") return Promise.resolve(null);
-        if (id === "plan-pro") return Promise.resolve(mockPlan);
+      vi.mocked(planRegistry.getPlanVersion).mockImplementation((ref) => {
+        if (ref === basicRef) return Promise.resolve(null);
+        if (ref === proRef) return Promise.resolve(definition(mockPlan, proRef));
         return Promise.resolve(null);
       });
 
@@ -426,7 +513,7 @@ describe("BillingEventHandler", () => {
       const event = new SubscriptionCanceledEvent("tenant-1", "sub-stripe", false);
 
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
+      vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(definition(mockPlan));
 
       await handler.handle(event);
 
@@ -452,7 +539,7 @@ describe("BillingEventHandler", () => {
       const event = new SubscriptionCanceledEvent("tenant-1", "sub-stripe", false);
 
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
-      vi.mocked(planRegistry.getPlan).mockResolvedValue(mockPlan);
+      vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(definition(mockPlan));
 
       await handler.handle(event);
 

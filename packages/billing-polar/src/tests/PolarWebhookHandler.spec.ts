@@ -1,5 +1,9 @@
-import type { BillingStore } from "@croco/billing-core";
-import { WebhookAlreadyProcessedProblem } from "@croco/billing-core";
+import type { BillingStore, PlanRegistry, ProviderPlanMapping } from "@croco/billing-core";
+import {
+  planVersionRef,
+  UnknownPlanVersionMappingProblem,
+  WebhookAlreadyProcessedProblem,
+} from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { createBillingProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,12 +22,40 @@ function createMockStore(): BillingStore {
     findSubscriptionByExternalId: vi.fn(),
     saveSubscription: vi.fn(),
     deleteSubscription: vi.fn(),
+    findLegacySubscriptions: vi.fn(),
+    migrateSubscriptionPlanVersion: vi.fn(),
     saveOrder: vi.fn(),
     findOrdersByAccount: vi.fn(),
     reserveWebhook: vi.fn(),
     completeWebhook: vi.fn(),
     failWebhook: vi.fn(),
-  };
+  } as unknown as BillingStore;
+}
+
+function createMockPlanRegistry(): PlanRegistry {
+  return {
+    resolveProviderPlanVersion: vi.fn(async (mapping: ProviderPlanMapping) => ({
+      ref: planVersionRef(`${mapping.productId}@v1`),
+      planId: mapping.productId,
+      version: "v1",
+      effectiveAt: "2026-01-01T00:00:00.000Z",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      plan: {
+        id: mapping.productId,
+        name: mapping.productId,
+        amount: 0,
+        currency: "USD",
+        interval: "month",
+        intervalCount: 1,
+      },
+      rating: { mode: "provider-rated" },
+      providerBindings: mapping.priceIds?.map((priceId) => ({
+        provider: mapping.provider,
+        productId: mapping.productId,
+        priceId,
+      })) ?? [{ provider: mapping.provider, productId: mapping.productId }],
+    })),
+  } as unknown as PlanRegistry;
 }
 
 function createMockEventPublisher(): EventPublisher {
@@ -121,11 +153,13 @@ const webhookValidationFailureCases: readonly {
 describe("PolarWebhookHandler", () => {
   let handler!: PolarWebhookHandler;
   let mockStore!: BillingStore;
+  let mockPlanRegistry!: PlanRegistry;
   let mockEventPublisher!: EventPublisher;
   let config!: PolarConfig;
 
   beforeEach(() => {
     mockStore = createMockStore();
+    mockPlanRegistry = createMockPlanRegistry();
     mockEventPublisher = createMockEventPublisher();
     config = {
       accessToken: "test-token",
@@ -135,6 +169,7 @@ describe("PolarWebhookHandler", () => {
 
     handler = new PolarWebhookHandler(config, {
       store: mockStore,
+      planRegistry: mockPlanRegistry,
       eventPublisher: mockEventPublisher,
     });
 
@@ -262,6 +297,126 @@ describe("PolarWebhookHandler", () => {
     });
   });
 
+  describe("plan version mapping", () => {
+    it("pins the exact version resolved from the provider product and price", async () => {
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockValidateEvent).mockReturnValue({
+        id: "evt-versioned",
+        type: "subscription.created",
+        data: {
+          id: "sub-versioned",
+          customer: { externalId: "tenant-versioned", metadata: {} },
+          product: { id: "polar-pro" },
+          prices: [{ id: "price-pro-v1" }],
+          status: "active",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      } as never);
+
+      await expect(
+        handler.handle("signed-body", { "webhook-id": "evt-versioned" }),
+      ).resolves.toMatchObject({ success: true });
+      expect(mockPlanRegistry.resolveProviderPlanVersion).toHaveBeenCalledWith({
+        provider: "polar",
+        productId: "polar-pro",
+        priceIds: ["price-pro-v1"],
+      });
+      expect(mockStore.saveSubscription).toHaveBeenCalledWith(
+        expect.objectContaining({
+          planId: "polar-pro",
+          planVersionRef: planVersionRef("polar-pro@v1"),
+        }),
+      );
+    });
+
+    it("passes every enabled price when resolving a multi-price subscription", async () => {
+      vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockValidateEvent).mockReturnValue({
+        id: "evt-versioned-multi-price",
+        type: "subscription.created",
+        data: {
+          id: "sub-versioned",
+          customer: { externalId: "tenant-versioned", metadata: {} },
+          product: { id: "polar-pro" },
+          prices: [{ id: "price-pro-base" }, { id: "price-pro-metered" }],
+          status: "active",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      } as never);
+
+      await expect(
+        handler.handle("signed-body", { "webhook-id": "evt-versioned-multi-price" }),
+      ).resolves.toMatchObject({ success: true });
+      expect(mockPlanRegistry.resolveProviderPlanVersion).toHaveBeenCalledWith({
+        provider: "polar",
+        productId: "polar-pro",
+        priceIds: ["price-pro-base", "price-pro-metered"],
+      });
+    });
+
+    it("throws the stable mapping Problem and rolls back an unknown product", async () => {
+      vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.failWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockPlanRegistry.resolveProviderPlanVersion).mockRejectedValue(
+        new UnknownPlanVersionMappingProblem("polar", "unknown-product"),
+      );
+      vi.mocked(mockValidateEvent).mockReturnValue({
+        id: "evt-unknown-product",
+        type: "subscription.created",
+        data: {
+          id: "sub-unknown-product",
+          customer: { externalId: "tenant-unknown-product", metadata: {} },
+          product: { id: "unknown-product" },
+          status: "active",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      } as never);
+
+      await expect(
+        handler.handle("signed-body", { "webhook-id": "evt-unknown-product" }),
+      ).rejects.toMatchObject({
+        code: "billing/unknown-plan-version-mapping",
+      });
+      expect(mockStore.failWebhook).toHaveBeenCalledWith("evt-unknown-product");
+      expect(mockStore.saveSubscription).not.toHaveBeenCalled();
+    });
+
+    it("keeps the stable mapping Problem when reservation rollback also fails", async () => {
+      vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.failWebhook).mockRejectedValue(new Error("store unavailable"));
+      vi.mocked(mockPlanRegistry.resolveProviderPlanVersion).mockRejectedValue(
+        new UnknownPlanVersionMappingProblem("polar", "unknown-product"),
+      );
+      vi.mocked(mockValidateEvent).mockReturnValue({
+        id: "evt-unknown-product-rollback",
+        type: "subscription.created",
+        data: {
+          id: "sub-unknown-product",
+          customer: { externalId: "tenant-unknown-product", metadata: {} },
+          product: { id: "unknown-product" },
+          status: "active",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      } as never);
+
+      await expect(
+        handler.handle("signed-body", { "webhook-id": "evt-unknown-product-rollback" }),
+      ).rejects.toMatchObject({
+        code: "billing/unknown-plan-version-mapping",
+        cause: expect.objectContaining({
+          message: "Webhook rollback failed: store unavailable",
+        }),
+      });
+    });
+  });
+
   describe("이미 처리된 이벤트는 스킵 (멱등성)", () => {
     it("should treat replayed signed deliveries as idempotent successes", async () => {
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
@@ -291,8 +446,14 @@ describe("PolarWebhookHandler", () => {
       const firstResult = await handler.handle(body, headers);
       const replayResult = await handler.handle(body, headers);
 
-      expect(firstResult).toEqual({ success: true, eventId: signedSubscriptionEvent.id });
-      expect(replayResult).toEqual({ success: true, eventId: signedSubscriptionEvent.id });
+      expect(firstResult).toEqual({
+        success: true,
+        eventId: signedSubscriptionEvent.id,
+      });
+      expect(replayResult).toEqual({
+        success: true,
+        eventId: signedSubscriptionEvent.id,
+      });
       expect(mockValidateEvent).toHaveBeenCalledTimes(2);
       expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(2);
       expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
@@ -330,6 +491,7 @@ describe("PolarWebhookHandler", () => {
       const headers = { "webhook-id": "evt-race-1" };
       const secondHandler = new PolarWebhookHandler(config, {
         store: mockStore,
+        planRegistry: mockPlanRegistry,
         eventPublisher: mockEventPublisher,
       });
 
@@ -452,7 +614,10 @@ describe("PolarWebhookHandler", () => {
         type: "subscription.created",
         data: {
           id: "sub-non-error-reservation-failure",
-          customer: { externalId: "tenant-non-error-reservation-failure", metadata: {} },
+          customer: {
+            externalId: "tenant-non-error-reservation-failure",
+            metadata: {},
+          },
           product: { id: "plan-pro" },
           status: "active",
           currentPeriodEnd: "2026-02-01T00:00:00Z",
@@ -461,7 +626,9 @@ describe("PolarWebhookHandler", () => {
       } as never);
 
       await expect(
-        handler.handle("{}", { "webhook-id": "evt-non-error-reservation-failure" }),
+        handler.handle("{}", {
+          "webhook-id": "evt-non-error-reservation-failure",
+        }),
       ).rejects.toSatisfy((problem: unknown) => {
         expect(problem).toBeInstanceOf(WebhookProcessingProblem);
         expect(problem).toMatchObject({
@@ -674,7 +841,10 @@ describe("PolarWebhookHandler", () => {
     it.each(webhookValidationFailureCases)(
       "should surface stable Problem code and status for $name",
       async ({ message, headers, detail }) => {
-        const body = JSON.stringify({ id: headers["webhook-id"], type: "subscription.created" });
+        const body = JSON.stringify({
+          id: headers["webhook-id"],
+          type: "subscription.created",
+        });
 
         vi.mocked(mockValidateEvent).mockImplementation(() => {
           throw new Error(message);
@@ -693,7 +863,10 @@ describe("PolarWebhookHandler", () => {
 
     it("should redact webhook secrets and signature diagnostics from validation Problems", async () => {
       const rawSignature = "v1,leaked-signature";
-      const body = JSON.stringify({ id: "evt-redacted", type: "subscription.created" });
+      const body = JSON.stringify({
+        id: "evt-redacted",
+        type: "subscription.created",
+      });
       const headers = {
         "webhook-id": "evt-redacted",
         "webhook-signature": rawSignature,

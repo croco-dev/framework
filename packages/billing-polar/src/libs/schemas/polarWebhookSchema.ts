@@ -15,12 +15,17 @@ const PolarProductSchema = z.object({
   id: z.string().optional(),
 });
 
+const PolarPriceSchema = z.object({
+  id: z.string(),
+});
+
 export const PolarSubscriptionDataSchema = z
   .object({
     id: z.string(),
     status: z.enum(["active", "past_due", "canceled", "revoked", "trialing"]),
     customer: PolarCustomerSchema.optional(),
     product: PolarProductSchema.optional(),
+    prices: z.array(PolarPriceSchema).optional(),
     currentPeriodEnd: z.union([z.string(), z.date()]).nullable().optional(),
     cancelAtPeriodEnd: z.boolean().nullable().optional(),
   })

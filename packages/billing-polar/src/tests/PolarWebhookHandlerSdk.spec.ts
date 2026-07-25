@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
-import type { BillingStore } from "@croco/billing-core";
-import { WebhookAlreadyProcessedProblem } from "@croco/billing-core";
+import type { BillingStore, PlanRegistry, ProviderPlanMapping } from "@croco/billing-core";
+import { planVersionRef, WebhookAlreadyProcessedProblem } from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
@@ -17,12 +17,40 @@ function createMockStore(): BillingStore {
     findSubscriptionByExternalId: vi.fn(),
     saveSubscription: vi.fn(),
     deleteSubscription: vi.fn(),
+    findLegacySubscriptions: vi.fn(),
+    migrateSubscriptionPlanVersion: vi.fn(),
     saveOrder: vi.fn(),
     findOrdersByAccount: vi.fn(),
     reserveWebhook: vi.fn(),
     completeWebhook: vi.fn(),
     failWebhook: vi.fn(),
-  };
+  } as unknown as BillingStore;
+}
+
+function createMockPlanRegistry(): PlanRegistry {
+  return {
+    resolveProviderPlanVersion: vi.fn(async (mapping: ProviderPlanMapping) => ({
+      ref: planVersionRef(`${mapping.productId}@v1`),
+      planId: mapping.productId,
+      version: "v1",
+      effectiveAt: "2026-01-01T00:00:00.000Z",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      plan: {
+        id: mapping.productId,
+        name: mapping.productId,
+        amount: 0,
+        currency: "USD",
+        interval: "month",
+        intervalCount: 1,
+      },
+      rating: { mode: "provider-rated" },
+      providerBindings: mapping.priceIds?.map((priceId) => ({
+        provider: mapping.provider,
+        productId: mapping.productId,
+        priceId,
+      })) ?? [{ provider: mapping.provider, productId: mapping.productId }],
+    })),
+  } as unknown as PlanRegistry;
 }
 
 function createMockEventPublisher(): EventPublisher {
@@ -138,12 +166,14 @@ describe("PolarWebhookHandler SDK-backed webhook verification", () => {
   const now = new Date("2026-01-31T00:00:00Z");
   let handler!: PolarWebhookHandler;
   let mockStore!: BillingStore;
+  let mockPlanRegistry!: PlanRegistry;
   let mockEventPublisher!: EventPublisher;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(now);
     mockStore = createMockStore();
+    mockPlanRegistry = createMockPlanRegistry();
     mockEventPublisher = createMockEventPublisher();
     const config: PolarConfig = {
       accessToken: "test-token",
@@ -152,6 +182,7 @@ describe("PolarWebhookHandler SDK-backed webhook verification", () => {
     };
     handler = new PolarWebhookHandler(config, {
       store: mockStore,
+      planRegistry: mockPlanRegistry,
       eventPublisher: mockEventPublisher,
     });
   });
@@ -164,7 +195,12 @@ describe("PolarWebhookHandler SDK-backed webhook verification", () => {
     const eventId = "evt-sdk-replay";
     const body = JSON.stringify(createSdkSubscriptionPayload(eventId));
     const timestamp = Math.floor(now.getTime() / 1000);
-    const headers = createSignedHeaders({ body, eventId, secret: webhookSecret, timestamp });
+    const headers = createSignedHeaders({
+      body,
+      eventId,
+      secret: webhookSecret,
+      timestamp,
+    });
 
     vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
     vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
@@ -188,7 +224,12 @@ describe("PolarWebhookHandler SDK-backed webhook verification", () => {
     const eventId = "evt-sdk-stale";
     const body = JSON.stringify(createSdkSubscriptionPayload(eventId));
     const timestamp = Math.floor(now.getTime() / 1000) - 301;
-    const headers = createSignedHeaders({ body, eventId, secret: webhookSecret, timestamp });
+    const headers = createSignedHeaders({
+      body,
+      eventId,
+      secret: webhookSecret,
+      timestamp,
+    });
 
     await expect(handler.handle(body, headers)).rejects.toSatisfy((problem: unknown) => {
       expectWebhookValidationProblem(

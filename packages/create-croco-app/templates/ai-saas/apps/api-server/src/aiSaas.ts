@@ -1,3 +1,4 @@
+import { planVersionRef } from "@croco/billing-core";
 import { InMemoryLlmModel, InMemoryLlmRegistry, LlmService, type LlmUsage } from "@croco/llm-core";
 import {
   COMPLETION_TOKENS,
@@ -520,6 +521,26 @@ export function createAiSaasRuntime(saasRuntime: SaasRuntime = createSaasRuntime
 export const defaultAiSaasRuntime = createAiSaasRuntime(defaultSaasRuntime);
 
 export async function seedAiSaasTenant(runtime: AiSaasRuntime, planId: AiPlanId, slug: string) {
+  const versionRef = planVersionRef(`${planId}@v1`);
+  if (!(await runtime.saasRuntime.planRegistry.getPlanVersion(versionRef))) {
+    await runtime.saasRuntime.planRegistry.publishPlanVersion({
+      ref: versionRef,
+      planId,
+      version: "v1",
+      effectiveAt: "2026-01-01T00:00:00.000Z",
+      publishedAt: "2026-01-01T00:00:00.000Z",
+      plan: {
+        id: planId,
+        name: `${planId} AI`,
+        amount: 0,
+        currency: "USD",
+        interval: "month",
+        intervalCount: 1,
+      },
+      rating: { mode: "croco-rated" },
+      providerBindings: [],
+    });
+  }
   const tenant = await runtime.saasRuntime.tenantStore.create({
     slug,
     name: `${slug} AI SaaS`,
@@ -541,6 +562,7 @@ export async function seedAiSaasTenant(runtime: AiSaasRuntime, planId: AiPlanId,
     billingAccountId: tenant.id,
     externalSubscriptionId: `external_subscription_${tenant.id}`,
     planId,
+    planVersionRef: versionRef,
     status: "active",
     currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     cancelAtPeriodEnd: false,

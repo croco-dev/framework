@@ -12,16 +12,6 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 - [`InMemoryBillingStore`](/api/billing-core/src/classes/inmemorybillingstore/)
 
-## Constructors
-
-### Constructor
-
-> **new BillingStore**(): `BillingStore`
-
-#### Returns
-
-`BillingStore`
-
 ## Methods
 
 ### completeWebhook()
@@ -38,7 +28,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### deleteAccount()
 
@@ -54,7 +44,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### deleteSubscription()
 
@@ -70,7 +60,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### failWebhook()
 
@@ -86,7 +76,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### findAccountByExternalId()
 
@@ -102,7 +92,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
-***
+---
 
 ### findAccountByTenantId()
 
@@ -118,7 +108,19 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
-***
+---
+
+### findLegacySubscriptions()
+
+> `abstract` **findLegacySubscriptions**(): `Promise`\<[`LegacySubscription`](/api/billing-core/src/type-aliases/legacysubscription/)[]\>
+
+Returns only persisted records that predate plan-version pinning.
+
+#### Returns
+
+`Promise`\<[`LegacySubscription`](/api/billing-core/src/type-aliases/legacysubscription/)[]\>
+
+---
 
 ### findOrdersByAccount()
 
@@ -134,7 +136,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<[`Order`](/api/billing-core/src/type-aliases/order/)[]\>
 
-***
+---
 
 ### findSubscription()
 
@@ -150,7 +152,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
-***
+---
 
 ### findSubscriptionByExternalId()
 
@@ -166,7 +168,26 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
-***
+---
+
+### migrateSubscriptionPlanVersion()
+
+> **migrateSubscriptionPlanVersion**(`migration`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+
+Atomically pins one legacy record to the caller-selected version.
+Adapters must not infer the latest version.
+
+#### Parameters
+
+##### migration
+
+[`SubscriptionPlanVersionMigration`](/api/billing-core/src/type-aliases/subscriptionplanversionmigration/)
+
+#### Returns
+
+`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+
+---
 
 ### reserveWebhook()
 
@@ -191,7 +212,7 @@ reservation already exists. Other storage failures must retain their original fa
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveAccount()
 
@@ -207,7 +228,7 @@ reservation already exists. Other storage failures must retain their original fa
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveOrder()
 
@@ -223,11 +244,11 @@ reservation already exists. Other storage failures must retain their original fa
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveSubscription()
 
-> `abstract` **saveSubscription**(`subscription`): `Promise`\<`void`\>
+> **saveSubscription**(`subscription`): `Promise`\<`void`\>
 
 #### Parameters
 

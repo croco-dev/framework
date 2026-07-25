@@ -15,7 +15,7 @@ title: "SubscriptionActivatedEvent"
 
 ### Constructor
 
-> **new SubscriptionActivatedEvent**(`tenantId`, `planId`, `externalSubscriptionId`): `SubscriptionActivatedEvent`
+> **new SubscriptionActivatedEvent**(`tenantId`, `planId`, `externalSubscriptionId`, `planVersionRef`): `SubscriptionActivatedEvent`
 
 #### Parameters
 
@@ -30,6 +30,10 @@ title: "SubscriptionActivatedEvent"
 ##### externalSubscriptionId
 
 `string`
+
+##### planVersionRef
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
 #### Returns
 
@@ -49,7 +53,7 @@ title: "SubscriptionActivatedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -59,13 +63,13 @@ title: "SubscriptionActivatedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### externalSubscriptionId
 
 > `readonly` **externalSubscriptionId**: `string`
 
-***
+---
 
 ### metadata
 
@@ -75,19 +79,25 @@ title: "SubscriptionActivatedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### planId
 
 > `readonly` **planId**: `string`
 
-***
+---
+
+### planVersionRef
+
+> `readonly` **planVersionRef**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -97,7 +107,7 @@ title: "SubscriptionActivatedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

@@ -16,15 +16,21 @@ NOT suitable for production multi-instance deployments.
 
 ### Constructor
 
-> **new InMemoryBillingStore**(): `InMemoryBillingStore`
+> **new InMemoryBillingStore**(`planRegistry`): `InMemoryBillingStore`
+
+#### Parameters
+
+##### planRegistry
+
+[`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/)
 
 #### Returns
 
 `InMemoryBillingStore`
 
-#### Inherited from
+#### Overrides
 
-[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`constructor`](/api/billing-core/src/classes/billingstore/#constructor)
+`BillingStore.constructor`
 
 ## Methods
 
@@ -46,7 +52,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`completeWebhook`](/api/billing-core/src/classes/billingstore/#completewebhook)
 
-***
+---
 
 ### deleteAccount()
 
@@ -66,7 +72,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`deleteAccount`](/api/billing-core/src/classes/billingstore/#deleteaccount)
 
-***
+---
 
 ### deleteSubscription()
 
@@ -86,7 +92,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`deleteSubscription`](/api/billing-core/src/classes/billingstore/#deletesubscription)
 
-***
+---
 
 ### failWebhook()
 
@@ -106,7 +112,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`failWebhook`](/api/billing-core/src/classes/billingstore/#failwebhook)
 
-***
+---
 
 ### findAccountByExternalId()
 
@@ -126,7 +132,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findAccountByExternalId`](/api/billing-core/src/classes/billingstore/#findaccountbyexternalid)
 
-***
+---
 
 ### findAccountByTenantId()
 
@@ -146,7 +152,23 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findAccountByTenantId`](/api/billing-core/src/classes/billingstore/#findaccountbytenantid)
 
-***
+---
+
+### findLegacySubscriptions()
+
+> **findLegacySubscriptions**(): `Promise`\<[`LegacySubscription`](/api/billing-core/src/type-aliases/legacysubscription/)[]\>
+
+Returns only persisted records that predate plan-version pinning.
+
+#### Returns
+
+`Promise`\<[`LegacySubscription`](/api/billing-core/src/type-aliases/legacysubscription/)[]\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findLegacySubscriptions`](/api/billing-core/src/classes/billingstore/#findlegacysubscriptions)
+
+---
 
 ### findOrdersByAccount()
 
@@ -166,7 +188,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findOrdersByAccount`](/api/billing-core/src/classes/billingstore/#findordersbyaccount)
 
-***
+---
 
 ### findSubscription()
 
@@ -186,7 +208,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findSubscription`](/api/billing-core/src/classes/billingstore/#findsubscription)
 
-***
+---
 
 ### findSubscriptionByExternalId()
 
@@ -206,7 +228,49 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findSubscriptionByExternalId`](/api/billing-core/src/classes/billingstore/#findsubscriptionbyexternalid)
 
-***
+---
+
+### importLegacySubscription()
+
+> **importLegacySubscription**(`subscription`): `void`
+
+Loads a pre-plan-version record for migration tests and development fixtures.
+New application writes must use saveSubscription with a pinned Subscription.
+
+#### Parameters
+
+##### subscription
+
+[`LegacySubscription`](/api/billing-core/src/type-aliases/legacysubscription/)
+
+#### Returns
+
+`void`
+
+---
+
+### migrateSubscriptionPlanVersion()
+
+> **migrateSubscriptionPlanVersion**(`migration`): `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+
+Atomically pins one legacy record to the caller-selected version.
+Adapters must not infer the latest version.
+
+#### Parameters
+
+##### migration
+
+[`SubscriptionPlanVersionMigration`](/api/billing-core/src/type-aliases/subscriptionplanversionmigration/)
+
+#### Returns
+
+`Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/)\>
+
+#### Inherited from
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`migrateSubscriptionPlanVersion`](/api/billing-core/src/classes/billingstore/#migratesubscriptionplanversion)
+
+---
 
 ### reserveWebhook()
 
@@ -235,7 +299,7 @@ reservation already exists. Other storage failures must retain their original fa
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`reserveWebhook`](/api/billing-core/src/classes/billingstore/#reservewebhook)
 
-***
+---
 
 ### reset()
 
@@ -247,7 +311,7 @@ Clear all data (for testing)
 
 `void`
 
-***
+---
 
 ### saveAccount()
 
@@ -267,7 +331,7 @@ Clear all data (for testing)
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`saveAccount`](/api/billing-core/src/classes/billingstore/#saveaccount)
 
-***
+---
 
 ### saveOrder()
 
@@ -287,7 +351,7 @@ Clear all data (for testing)
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`saveOrder`](/api/billing-core/src/classes/billingstore/#saveorder)
 
-***
+---
 
 ### saveSubscription()
 
@@ -303,6 +367,6 @@ Clear all data (for testing)
 
 `Promise`\<`void`\>
 
-#### Overrides
+#### Inherited from
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`saveSubscription`](/api/billing-core/src/classes/billingstore/#savesubscription)

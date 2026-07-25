@@ -1,5 +1,8 @@
-import type { BillingStore, Subscription } from "@croco/billing-core";
-import { WebhookAlreadyProcessedProblem } from "@croco/billing-core";
+import type { BillingStore, PlanRegistry, Subscription } from "@croco/billing-core";
+import {
+  UnknownPlanVersionMappingProblem,
+  WebhookAlreadyProcessedProblem,
+} from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { Trace } from "@croco/telemetry-api";
 import { validateEvent } from "@polar-sh/sdk/webhooks";
@@ -19,6 +22,7 @@ import {
 
 export type WebhookDependencies = {
   store: BillingStore;
+  planRegistry: PlanRegistry;
   eventPublisher: EventPublisher;
 };
 
@@ -36,6 +40,7 @@ type ParsedSubscriptionPayload = {
   id: string;
   tenantId: string;
   productId: string;
+  priceIds?: readonly string[];
   rawStatus: PolarSubscriptionData["status"];
   status: Subscription["status"];
   currentPeriodEnd: Date;
@@ -68,6 +73,7 @@ type ParsedWebhookEvent =
 export class PolarWebhookHandler {
   private readonly store: BillingStore;
   private readonly eventPublisher: EventPublisher;
+  private readonly planRegistry: PlanRegistry;
   private readonly eventMapper: PolarEventMapper;
   private readonly webhookSecret: string;
   private static readonly inFlightEvents = new Map<string, Promise<WebhookHandlerResult>>();
@@ -75,6 +81,7 @@ export class PolarWebhookHandler {
   constructor(config: PolarConfig, deps: WebhookDependencies) {
     this.webhookSecret = validatePolarConfig(config).webhookSecret;
     this.store = deps.store;
+    this.planRegistry = deps.planRegistry;
     this.eventPublisher = deps.eventPublisher;
     this.eventMapper = new PolarEventMapper();
   }
@@ -148,6 +155,18 @@ export class PolarWebhookHandler {
       return { success: true, eventId };
     } catch (error) {
       rollbackErrorMessage = await this.tryRollbackWebhook(eventId);
+      if (error instanceof UnknownPlanVersionMappingProblem) {
+        if (rollbackErrorMessage === null) {
+          throw error;
+        }
+        Object.defineProperty(error, "cause", {
+          configurable: true,
+          enumerable: false,
+          value: new Error(`Webhook rollback failed: ${rollbackErrorMessage}`),
+          writable: true,
+        });
+        throw error;
+      }
       const baseErrorMessage = `Event processing failed: ${this.getErrorMessage(error)}`;
 
       return {
@@ -228,6 +247,7 @@ export class PolarWebhookHandler {
       id: subscriptionData.id,
       tenantId: this.extractTenantId(subscriptionData.customer),
       productId: subscriptionData.product?.id ?? "",
+      priceIds: subscriptionData.prices?.map((price) => price.id),
       rawStatus: subscriptionData.status,
       status,
       currentPeriodEnd: this.resolveCurrentPeriodEnd(subscriptionData.currentPeriodEnd),
@@ -307,12 +327,19 @@ export class PolarWebhookHandler {
   ): Promise<void> {
     const previousSubscription = await this.store.findSubscription(payload.tenantId);
     const previousPlanId = previousSubscription?.planId;
+    const previousPlanVersionRef = previousSubscription?.planVersionRef;
+    const planVersion = await this.planRegistry.resolveProviderPlanVersion({
+      provider: "polar",
+      productId: payload.productId,
+      priceIds: payload.priceIds,
+    });
 
     const subscription: Subscription = {
       id: payload.id,
       billingAccountId: payload.tenantId,
       externalSubscriptionId: payload.id,
-      planId: payload.productId,
+      planId: planVersion.planId,
+      planVersionRef: planVersion.ref,
       status: payload.status,
       currentPeriodEnd: payload.currentPeriodEnd,
       cancelAtPeriodEnd: payload.cancelAtPeriodEnd,
@@ -325,11 +352,13 @@ export class PolarWebhookHandler {
       payload.tenantId,
       {
         id: payload.id,
-        productId: payload.productId,
+        productId: planVersion.planId,
         status: payload.rawStatus,
         cancelAtPeriodEnd: payload.cancelAtPeriodEnd,
+        planVersionRef: planVersion.ref,
       },
       previousPlanId,
+      previousPlanVersionRef,
     );
 
     for (const event of domainEvents) {

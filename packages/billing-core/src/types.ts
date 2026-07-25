@@ -14,12 +14,15 @@ export type Subscription = {
   id: string;
   billingAccountId: string;
   externalSubscriptionId: string;
-  planId: string;
+  readonly planId: string;
+  readonly planVersionRef: PlanVersionRef;
   status: SubscriptionStatus;
   currentPeriodEnd: Date;
   cancelAtPeriodEnd: boolean;
   lastSyncedAt: Date;
 };
+
+export type LegacySubscription = Omit<Subscription, "planVersionRef">;
 
 export type Order = {
   id: string;
@@ -46,6 +49,51 @@ export type Plan = {
   currency: string;
   interval: PlanInterval;
   intervalCount: number;
+};
+
+export type PlanVersionRef = string & {
+  readonly __brand: unique symbol;
+};
+
+export type ProviderPriceBinding = {
+  readonly provider: string;
+  readonly productId: string;
+  readonly priceId?: string;
+};
+
+export type PlanRatingDefinition =
+  | {
+      readonly mode: "provider-rated";
+    }
+  | {
+      readonly mode: "croco-rated";
+    };
+
+/**
+ * JSON-serializable, immutable definition of one published plan version.
+ * ISO timestamps are used instead of Date values so definitions can be persisted and generated.
+ */
+export type PlanVersionDefinition = {
+  readonly ref: PlanVersionRef;
+  readonly planId: string;
+  readonly version: string;
+  readonly effectiveAt: string;
+  readonly publishedAt: string;
+  readonly plan: Readonly<Plan>;
+  readonly rating: PlanRatingDefinition;
+  readonly providerBindings: readonly ProviderPriceBinding[];
+};
+
+export type ProviderPlanMapping = {
+  provider: string;
+  productId: string;
+  priceIds?: readonly string[];
+};
+
+export type SubscriptionPlanVersionMigration = {
+  externalSubscriptionId: string;
+  planId: string;
+  planVersionRef: PlanVersionRef;
 };
 
 export type InvoiceLineItemType = "subscription" | "proration" | "credit" | "one_time";

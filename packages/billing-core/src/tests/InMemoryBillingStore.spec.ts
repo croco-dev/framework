@@ -1,13 +1,95 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryBillingStore } from "../libs/InMemoryBillingStore";
-import { WebhookAlreadyProcessedProblem } from "../libs/problems/BillingProblems";
-import type { BillingAccount, Order, Subscription } from "../types";
+import { InMemoryPlanRegistry, planVersionRef } from "../libs/InMemoryPlanRegistry";
+import {
+  SubscriptionPlanVersionMigrationProblem,
+  SubscriptionPlanVersionMigrationRequiredProblem,
+  SubscriptionPlanVersionImmutableProblem,
+  SubscriptionPlanVersionResolutionProblem,
+  WebhookAlreadyProcessedProblem,
+} from "../libs/problems/BillingProblems";
+import type { BillingAccount, LegacySubscription, Order, Subscription } from "../types";
+
+function createPlanRegistry(): InMemoryPlanRegistry {
+  return new InMemoryPlanRegistry([
+    {
+      ref: planVersionRef("plan-pro@2025-01"),
+      planId: "plan-pro",
+      version: "2025-01",
+      effectiveAt: "2025-01-01T00:00:00.000Z",
+      publishedAt: "2024-12-01T00:00:00.000Z",
+      plan: {
+        id: "plan-pro",
+        name: "Pro",
+        amount: 2_900,
+        currency: "USD",
+        interval: "month",
+        intervalCount: 1,
+      },
+      rating: { mode: "croco-rated" },
+      providerBindings: [],
+    },
+    {
+      ref: planVersionRef("plan-pro@v1"),
+      planId: "plan-pro",
+      version: "v1",
+      effectiveAt: "2026-01-01T00:00:00.000Z",
+      publishedAt: "2025-12-01T00:00:00.000Z",
+      plan: {
+        id: "plan-pro",
+        name: "Pro",
+        amount: 3_900,
+        currency: "USD",
+        interval: "month",
+        intervalCount: 1,
+      },
+      rating: { mode: "croco-rated" },
+      providerBindings: [],
+    },
+    {
+      ref: planVersionRef("plan-enterprise@v1"),
+      planId: "plan-enterprise",
+      version: "v1",
+      effectiveAt: "2026-01-01T00:00:00.000Z",
+      publishedAt: "2025-12-01T00:00:00.000Z",
+      plan: {
+        id: "plan-enterprise",
+        name: "Enterprise",
+        amount: 9_900,
+        currency: "USD",
+        interval: "month",
+        intervalCount: 1,
+      },
+      rating: { mode: "croco-rated" },
+      providerBindings: [],
+    },
+    {
+      ref: planVersionRef("plan-pro@v2"),
+      planId: "plan-pro",
+      version: "v2",
+      effectiveAt: "2027-01-01T00:00:00.000Z",
+      publishedAt: "2026-12-01T00:00:00.000Z",
+      plan: {
+        id: "plan-pro",
+        name: "Pro",
+        amount: 4_900,
+        currency: "USD",
+        interval: "month",
+        intervalCount: 1,
+      },
+      rating: { mode: "croco-rated" },
+      providerBindings: [],
+    },
+  ]);
+}
 
 describe("InMemoryBillingStore", () => {
   let store!: InMemoryBillingStore;
+  let planRegistry!: InMemoryPlanRegistry;
 
   beforeEach(() => {
-    store = new InMemoryBillingStore();
+    planRegistry = createPlanRegistry();
+    store = new InMemoryBillingStore(planRegistry);
   });
 
   describe("findAccountByTenantId", () => {
@@ -102,6 +184,7 @@ describe("InMemoryBillingStore", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -121,6 +204,7 @@ describe("InMemoryBillingStore", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -143,6 +227,7 @@ describe("InMemoryBillingStore", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -156,6 +241,203 @@ describe("InMemoryBillingStore", () => {
       expect(
         await store.findSubscriptionByExternalId(subscription.externalSubscriptionId),
       ).toBeNull();
+    });
+
+    it("rejects changing a pinned version through the ordinary save path", async () => {
+      const subscription: Subscription = {
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
+        status: "active",
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date(),
+      };
+      await store.saveSubscription(subscription);
+
+      await expect(
+        store.saveSubscription({
+          ...subscription,
+          planVersionRef: planVersionRef("plan-pro@v2"),
+        }),
+      ).rejects.toBeInstanceOf(SubscriptionPlanVersionImmutableProblem);
+      await expect(
+        store.saveSubscription({
+          ...subscription,
+          planId: "plan-enterprise",
+          planVersionRef: planVersionRef("plan-enterprise@v1"),
+        }),
+      ).rejects.toBeInstanceOf(SubscriptionPlanVersionImmutableProblem);
+      await expect(store.findSubscription(subscription.billingAccountId)).resolves.toMatchObject({
+        planVersionRef: planVersionRef("plan-pro@v1"),
+      });
+    });
+
+    it("protects the stored pin from caller and returned-object mutation", async () => {
+      const source = {
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
+        status: "active" as const,
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date(),
+      };
+      await store.saveSubscription(source);
+      source.planVersionRef = planVersionRef("plan-pro@v2");
+
+      const returned = await store.findSubscription(source.billingAccountId);
+      expect(returned).not.toBeNull();
+      (returned as { planVersionRef: ReturnType<typeof planVersionRef> }).planVersionRef =
+        planVersionRef("plan-pro@v3");
+
+      await expect(store.findSubscription(source.billingAccountId)).resolves.toMatchObject({
+        planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
+      });
+    });
+
+    it("rejects unpublished and cross-family refs on the initial save", async () => {
+      const subscription: Subscription = {
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@missing"),
+        status: "active",
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date(),
+      };
+
+      await expect(store.saveSubscription(subscription)).rejects.toBeInstanceOf(
+        SubscriptionPlanVersionResolutionProblem,
+      );
+      await expect(
+        store.saveSubscription({
+          ...subscription,
+          planVersionRef: planVersionRef("plan-enterprise@v1"),
+        }),
+      ).rejects.toBeInstanceOf(SubscriptionPlanVersionResolutionProblem);
+      await expect(store.findSubscription(subscription.billingAccountId)).resolves.toBeNull();
+    });
+  });
+
+  describe("legacy subscription migration", () => {
+    const legacySubscription: LegacySubscription = {
+      id: "sub-legacy",
+      billingAccountId: "tenant-legacy",
+      externalSubscriptionId: "ext-sub-legacy",
+      planId: "plan-pro",
+      status: "active",
+      currentPeriodEnd: new Date("2026-08-01T00:00:00.000Z"),
+      cancelAtPeriodEnd: false,
+      lastSyncedAt: new Date("2026-07-01T00:00:00.000Z"),
+    };
+    it("requires an explicit version instead of silently selecting the latest", async () => {
+      store.importLegacySubscription(legacySubscription);
+
+      await expect(store.findSubscription("tenant-legacy")).rejects.toBeInstanceOf(
+        SubscriptionPlanVersionMigrationRequiredProblem,
+      );
+      await expect(store.findLegacySubscriptions()).resolves.toEqual([legacySubscription]);
+      await expect(
+        store.saveSubscription({
+          ...legacySubscription,
+          planVersionRef: planVersionRef("plan-pro@v1"),
+        }),
+      ).rejects.toBeInstanceOf(SubscriptionPlanVersionMigrationRequiredProblem);
+    });
+
+    it("pins the caller-selected version and preserves the legacy plan family", async () => {
+      store.importLegacySubscription(legacySubscription);
+      const grandfatheredRef = planVersionRef("plan-pro@2025-01");
+
+      await expect(
+        store.migrateSubscriptionPlanVersion({
+          externalSubscriptionId: legacySubscription.externalSubscriptionId,
+          planId: legacySubscription.planId,
+          planVersionRef: grandfatheredRef,
+        }),
+      ).resolves.toMatchObject({
+        planId: "plan-pro",
+        planVersionRef: grandfatheredRef,
+      });
+      await expect(store.findLegacySubscriptions()).resolves.toEqual([]);
+      await expect(store.findSubscription("tenant-legacy")).resolves.toMatchObject({
+        planVersionRef: grandfatheredRef,
+      });
+    });
+
+    it("rejects a mismatched family and a second migration", async () => {
+      store.importLegacySubscription(legacySubscription);
+
+      await expect(
+        store.migrateSubscriptionPlanVersion({
+          externalSubscriptionId: legacySubscription.externalSubscriptionId,
+          planId: "plan-enterprise",
+          planVersionRef: planVersionRef("plan-enterprise@v1"),
+        }),
+      ).rejects.toBeInstanceOf(SubscriptionPlanVersionMigrationProblem);
+
+      await store.migrateSubscriptionPlanVersion({
+        externalSubscriptionId: legacySubscription.externalSubscriptionId,
+        planId: legacySubscription.planId,
+        planVersionRef: planVersionRef("plan-pro@v1"),
+      });
+      await expect(
+        store.migrateSubscriptionPlanVersion({
+          externalSubscriptionId: legacySubscription.externalSubscriptionId,
+          planId: legacySubscription.planId,
+          planVersionRef: planVersionRef("plan-pro@v2"),
+        }),
+      ).rejects.toBeInstanceOf(SubscriptionPlanVersionMigrationProblem);
+    });
+
+    it("rejects unpublished versions and versions from another plan family", async () => {
+      store.importLegacySubscription(legacySubscription);
+
+      await expect(
+        store.migrateSubscriptionPlanVersion({
+          externalSubscriptionId: legacySubscription.externalSubscriptionId,
+          planId: legacySubscription.planId,
+          planVersionRef: planVersionRef("plan-pro@missing"),
+        }),
+      ).rejects.toBeInstanceOf(SubscriptionPlanVersionMigrationProblem);
+      await expect(
+        store.migrateSubscriptionPlanVersion({
+          externalSubscriptionId: legacySubscription.externalSubscriptionId,
+          planId: legacySubscription.planId,
+          planVersionRef: planVersionRef("plan-enterprise@v1"),
+        }),
+      ).rejects.toBeInstanceOf(SubscriptionPlanVersionMigrationProblem);
+    });
+
+    it("uses compare-and-set semantics when migrations race", async () => {
+      store.importLegacySubscription(legacySubscription);
+
+      const results = await Promise.allSettled([
+        store.migrateSubscriptionPlanVersion({
+          externalSubscriptionId: legacySubscription.externalSubscriptionId,
+          planId: legacySubscription.planId,
+          planVersionRef: planVersionRef("plan-pro@2025-01"),
+        }),
+        store.migrateSubscriptionPlanVersion({
+          externalSubscriptionId: legacySubscription.externalSubscriptionId,
+          planId: legacySubscription.planId,
+          planVersionRef: planVersionRef("plan-pro@v1"),
+        }),
+      ]);
+
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+      expect(results.find((result) => result.status === "rejected")).toMatchObject({
+        reason: expect.any(SubscriptionPlanVersionMigrationProblem),
+      });
     });
   });
 
@@ -288,6 +570,7 @@ describe("InMemoryBillingStore", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
