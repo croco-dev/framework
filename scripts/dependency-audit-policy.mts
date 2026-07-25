@@ -925,7 +925,7 @@ function runGeneratedTemplateAudit(
 
     writeFileSync(
       join(tempRoot, "pnpm-workspace.yaml"),
-      "packages:\n  - packages/create-croco-app/templates/**\noverrides:\n  postcss: 8.5.12\n",
+      "packages:\n  - packages/create-croco-app/templates/**\noverrides:\n  postcss: 8.5.18\n",
     );
     const installResult = spawnSync("pnpm", ["install", "--lockfile-only", "--ignore-scripts"], {
       cwd: tempRoot,
