@@ -30,11 +30,13 @@ export {
 export {
   createTestKernel,
   TestKernel,
+  TestKernelDisposedProblem,
   TestKernelDisposalProblem,
   TestKernelHttp,
   TestKernelValidationProblem,
   type TestKernelBootFidelity,
   type TestKernelBootstrapContext,
+  type TestKernelBootstrapResult,
   type TestKernelEvidence,
   type TestKernelFidelity,
   type TestKernelOptions,

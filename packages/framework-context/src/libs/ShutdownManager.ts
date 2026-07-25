@@ -157,7 +157,9 @@ export class ShutdownManager {
           // eslint-disable-next-line no-console
           console.error("[ShutdownManager] Shutdown timeout exceeded.");
         }
-        reject(new ShutdownTimeoutProblem(this.timeoutMs));
+        reject(
+          new ShutdownTimeoutProblem(this.timeoutMs, options.throwOnHookError ? failures : []),
+        );
       }, this.timeoutMs);
     });
 

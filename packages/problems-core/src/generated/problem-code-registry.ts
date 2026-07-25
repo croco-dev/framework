@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 500,
+  problemCount: 501,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5077,7 +5077,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 59,
+          line: 65,
           column: 10,
           kind: "problem-factory",
         },
@@ -5361,7 +5361,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 1635,
+          line: 1704,
           column: 13,
           kind: "problem-factory",
         },
@@ -5392,7 +5392,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 84,
+          line: 97,
           column: 3,
           kind: "problem-class",
         },
@@ -5425,7 +5425,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ShutdownProblems.ts",
-          line: 99,
+          line: 112,
           column: 3,
           kind: "problem-class",
         },
@@ -13376,7 +13376,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 79,
+          line: 92,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "testing/test-kernel-disposed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#testing-test-kernel-disposed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/testing/src/libs/TestKernel.ts",
+          line: 112,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13408,7 +13440,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/TestKernel.ts",
-          line: 66,
+          line: 79,
           column: 5,
           kind: "problem-constructor",
         },

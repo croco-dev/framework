@@ -329,7 +329,7 @@ export class CrocoTestingApp {
   ) {}
 
   request(path: string | URL | Request, options: TestingRequestOptions = {}): Promise<Response> {
-    return this.app.fetch(toRequest(path, options, this.baseUrl));
+    return this.app.fetch(createTestingRequest(path, options, this.baseUrl));
   }
 
   get(path: string | URL, options: Omit<TestingRequestOptions, "method"> = {}): Promise<Response> {
@@ -624,8 +624,8 @@ export function createRpcTestFetch(
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const request =
       input instanceof Request
-        ? toRequest(input, init ?? {}, baseUrl)
-        : toRequest(String(input), init ?? {}, baseUrl);
+        ? createTestingRequest(input, init ?? {}, baseUrl)
+        : createTestingRequest(String(input), init ?? {}, baseUrl);
 
     return targetApp.fetch(request);
   };
@@ -731,20 +731,18 @@ function getConstructorParamTypes<T>(constructor: TestingConstructor<T>): Testin
   );
 }
 
-function toRequest(
+export function createTestingRequest(
   input: string | URL | Request,
   options: TestingRequestOptions | RequestInit,
   baseUrl: string,
 ): Request {
-  if (input instanceof Request) {
-    const url = toAbsoluteUrl(input.url, baseUrl);
-    const request = new Request(url.toString(), input);
-    return new Request(request, options);
-  }
-
-  const url = toAbsoluteUrl(String(input), baseUrl);
+  const inputRequest =
+    input instanceof Request
+      ? new Request(toAbsoluteUrl(input.url, baseUrl).toString(), input)
+      : undefined;
+  const url = toAbsoluteUrl(inputRequest?.url ?? String(input), baseUrl);
   appendQuery(url, "query" in options ? options.query : undefined);
-  const headers = new Headers(options.headers);
+  const headers = new Headers(options.headers ?? inputRequest?.headers);
   const body =
     "json" in options && options.json !== undefined
       ? JSON.stringify(options.json)
@@ -756,11 +754,20 @@ function toRequest(
     headers.set("content-type", "application/json");
   }
 
-  return new Request(url.toString(), {
-    ...options,
-    body,
+  const { body: _body, ...requestOptions } = options;
+  const filteredOptions =
+    "json" in requestOptions
+      ? (({ json: _json, query: _query, ...standardOptions }) => standardOptions)(requestOptions)
+      : requestOptions;
+  const requestInit: RequestInit = {
+    ...filteredOptions,
+    ...(body !== undefined ? { body } : {}),
     headers,
-  });
+  };
+
+  return inputRequest
+    ? new Request(new Request(url.toString(), inputRequest), requestInit)
+    : new Request(url.toString(), requestInit);
 }
 
 function toAbsoluteUrl(input: string, baseUrl: string): URL {

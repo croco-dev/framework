@@ -8,7 +8,14 @@ import {
   type MiddlewareFunction,
 } from "@croco/transports-http";
 import { beforeEach, describe, expect, it } from "vitest";
-import { createTestKernel, TestKernelDisposalProblem, TestKernelValidationProblem } from "../index";
+import {
+  createTestKernel,
+  type TestKernel,
+  TestKernelDisposedProblem,
+  TestKernelDisposalProblem,
+  type TestKernelOptions,
+  TestKernelValidationProblem,
+} from "../index";
 
 class KernelValueService {
   constructor(readonly value: string) {}
@@ -62,6 +69,23 @@ describe("TestKernel", () => {
     Container.reset();
     ShutdownManager.reset();
     EventBusConfig.setInstance(new EventBusConfig());
+  });
+
+  it("makes application and adapter fidelity options mutually exclusive", () => {
+    const bootstrap = () => bootstrapProductionApp("typed-options");
+    const applicationOptions: TestKernelOptions = {
+      bootstrap,
+      fidelity: "application",
+    };
+    // @ts-expect-error Application fidelity exercises the production app path, not an adapter.
+    const invalidOptions: TestKernelOptions = {
+      adapter: "lambda",
+      bootstrap,
+      fidelity: "application",
+    };
+
+    expect(applicationOptions.fidelity).toBe("application");
+    expect(invalidOptions.adapter).toBe("lambda");
   });
 
   it("boots the supplied production bootstrap and exposes structured fidelity evidence", async () => {
@@ -348,6 +372,23 @@ describe("TestKernel", () => {
     await expect(secondDisposal).rejects.toBeInstanceOf(TestKernelDisposalProblem);
     expect(cleanupCalls).toBe(1);
     expect(fallbackCleanupCalls).toBe(1);
+  });
+
+  it("disposes through await using and rejects access after disposal starts", async () => {
+    let kernelRef!: TestKernel;
+
+    {
+      await using kernel = await createTestKernel({
+        bootstrap: () => bootstrapProductionApp("async-dispose"),
+        fidelity: "application",
+      });
+      kernelRef = kernel;
+      expect(kernel.get(KernelValueService).value).toBe("async-dispose");
+    }
+
+    expect(() => kernelRef.get(KernelValueService)).toThrow(TestKernelDisposedProblem);
+    expect(() => kernelRef.http.get("/kernel/value")).toThrow(TestKernelDisposedProblem);
+    expect(() => kernelRef.run(() => undefined)).toThrow(TestKernelDisposedProblem);
   });
 
   it("waits for in-flight kernel work before cleanup", async () => {

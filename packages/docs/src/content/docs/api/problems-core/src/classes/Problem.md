@@ -340,6 +340,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`TelemetryForceFlushUnsupportedProblem`](/api/telemetry-sdk-node/src/classes/telemetryforceflushunsupportedproblem/)
 - [`UnsupportedTelemetrySignalProblem`](/api/telemetry-sdk-node/src/classes/unsupportedtelemetrysignalproblem/)
 - [`TelemetryAutoInstrumentationProblem`](/api/telemetry-sdk-node/src/classes/telemetryautoinstrumentationproblem/)
+- [`TestKernelDisposedProblem`](/api/testing/src/classes/testkerneldisposedproblem/)
 - [`TestKernelDisposalProblem`](/api/testing/src/classes/testkerneldisposalproblem/)
 - [`TestKernelValidationProblem`](/api/testing/src/classes/testkernelvalidationproblem/)
 - [`DuplicateTaskRegistrationProblem`](/api/tasks-core/src/classes/duplicatetaskregistrationproblem/)

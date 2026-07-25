@@ -2561,7 +2561,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/Container.ts",
-      "line": 390,
+      "line": 426,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'CROCO_DI_VALIDATE' comes from an index signature, so it must be accessed with ['CROCO_DI_VALIDATE']."
@@ -2569,7 +2569,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/Container.ts",
-      "line": 395,
+      "line": 431,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -3481,15 +3481,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 759,
-      "column": 38,
-      "code": "TS2345",
-      "message": "Argument of type '{ body: BodyInit | null | undefined; headers: Headers; cache?: RequestCache; credentials?: RequestCredentials; integrity?: string; ... 8 more ...; window?: null; } | { ...; }' is not assignable to parameter of type 'RequestInit | undefined'."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 792,
+      "line": 799,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'type' comes from an index signature, so it must be accessed with ['type']."
@@ -3497,7 +3489,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 793,
+      "line": 800,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'title' comes from an index signature, so it must be accessed with ['title']."
@@ -3505,7 +3497,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 794,
+      "line": 801,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -3513,7 +3505,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 795,
+      "line": 802,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'code' comes from an index signature, so it must be accessed with ['code']."
@@ -3521,7 +3513,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 796,
+      "line": 803,
       "column": 12,
       "code": "TS4111",
       "message": "Property 'detail' comes from an index signature, so it must be accessed with ['detail']."
@@ -3529,7 +3521,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 796,
+      "line": 803,
       "column": 49,
       "code": "TS4111",
       "message": "Property 'detail' comes from an index signature, so it must be accessed with ['detail']."
@@ -3537,7 +3529,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 797,
+      "line": 804,
       "column": 12,
       "code": "TS4111",
       "message": "Property 'instance' comes from an index signature, so it must be accessed with ['instance']."
@@ -3545,7 +3537,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 797,
+      "line": 804,
       "column": 51,
       "code": "TS4111",
       "message": "Property 'instance' comes from an index signature, so it must be accessed with ['instance']."
@@ -3553,7 +3545,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 858,
+      "line": 865,
       "column": 42,
       "code": "TS4111",
       "message": "Property 'requestId' comes from an index signature, so it must be accessed with ['requestId']."

@@ -47,7 +47,7 @@ title: "TestKernel"
 
 ##### cleanupOperations
 
-readonly () => `void` \| `Promise`\<`void`\>[]
+readonly `TestKernelCleanupOperation`[]
 
 #### Returns
 

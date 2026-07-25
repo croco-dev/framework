@@ -54,6 +54,7 @@ import {
   type TestLogger,
   type UpstashRedisRateLimitConformanceScenario,
 } from "../index";
+import { createTestingRequest } from "../libs/testing";
 
 class GreetingService {
   constructor(private readonly prefix: string = "Hello") {}
@@ -1728,5 +1729,30 @@ describe("@croco/testing", () => {
     )("QStash task: $name", async ({ run }) => {
       await run();
     });
+  });
+});
+
+describe("createTestingRequest", () => {
+  it("applies query, JSON body, and headers to Request inputs", async () => {
+    const input = new Request("http://example.test/original?existing=1", {
+      headers: { "x-original": "preserved" },
+    });
+
+    const request = createTestingRequest(
+      input,
+      {
+        headers: { "x-request": "override" },
+        json: { value: 1 },
+        method: "POST",
+        query: { q: ["first", "second"] },
+      },
+      "http://localhost",
+    );
+
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).searchParams.getAll("q")).toEqual(["first", "second"]);
+    expect(request.headers.get("content-type")).toBe("application/json");
+    expect(request.headers.get("x-request")).toBe("override");
+    await expect(request.json()).resolves.toEqual({ value: 1 });
   });
 });

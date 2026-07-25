@@ -23314,6 +23314,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "TestKernelDisposedProblem",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
+              "declarationKind": "class"
+            },
+            {
               "name": "TestKernelHttp",
               "exportKind": "named",
               "source": "./libs/TestKernel",
@@ -23949,6 +23955,11 @@
             },
             {
               "name": "TestKernelBootstrapContext",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestKernelBootstrapResult",
               "exportKind": "named",
               "source": "./libs/TestKernel"
             },

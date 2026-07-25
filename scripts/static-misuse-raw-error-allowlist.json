@@ -541,7 +541,7 @@
     {
       "package": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 807,
+      "line": 814,
       "excerpt": "throw new Error(`${label} expected ${String(expected)}, received ${String(actual)}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling"

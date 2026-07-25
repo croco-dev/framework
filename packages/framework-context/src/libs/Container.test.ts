@@ -226,6 +226,60 @@ describe("ContainerScope", () => {
     second.dispose();
   });
 
+  it("isolates diagnostic identities and source locations across concurrent scopes", async () => {
+    const createNamedService = () => class SharedService {};
+    const firstServices = [createNamedService(), createNamedService()] as const;
+    const secondServices = [createNamedService(), createNamedService()] as const;
+    const firstReady = Promise.withResolvers<void>();
+    const secondReady = Promise.withResolvers<void>();
+    const first = Container.createScope();
+    const second = Container.createScope();
+
+    const [firstManifest, secondManifest] = await Promise.all([
+      first.run(async () => {
+        firstServices.forEach((service, index) => {
+          Container.setComponentSourceLocation(service, {
+            file: `first-${index + 1}.ts`,
+            line: index + 1,
+          });
+          Component()(service);
+        });
+        firstReady.resolve();
+        await secondReady.promise;
+        return Container.createDependencyGraphManifest({ roots: firstServices });
+      }),
+      second.run(async () => {
+        secondServices.forEach((service, index) => {
+          Container.setComponentSourceLocation(service, {
+            file: `second-${index + 1}.ts`,
+            line: index + 1,
+          });
+          Component()(service);
+        });
+        secondReady.resolve();
+        await firstReady.promise;
+        return Container.createDependencyGraphManifest({ roots: secondServices });
+      }),
+    ]);
+
+    expect(firstManifest.rootIds).toEqual([
+      "constructor:SharedService",
+      "constructor:SharedService#2",
+    ]);
+    expect(secondManifest.rootIds).toEqual(firstManifest.rootIds);
+    expect(firstManifest.providers.map((provider) => provider.sourceLocation?.file)).toEqual([
+      "first-1.ts",
+      "first-2.ts",
+    ]);
+    expect(secondManifest.providers.map((provider) => provider.sourceLocation?.file)).toEqual([
+      "second-1.ts",
+      "second-2.ts",
+    ]);
+
+    first.dispose();
+    second.dispose();
+  });
+
   it("keeps reset local to the active scope", () => {
     const rootToken = new Token<string>("root");
     const scopedToken = new Token<string>("scoped");

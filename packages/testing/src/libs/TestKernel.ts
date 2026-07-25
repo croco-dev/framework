@@ -15,12 +15,13 @@ import type {
   NodeRequestHandler,
 } from "@croco/transports-http";
 import {
+  createTestingRequest,
   createTestingTransactionContext,
   type TestingRequestOptions,
   type TestingTransactionContext,
 } from "./testing";
 
-type TestKernelBootstrapResult =
+export type TestKernelBootstrapResult =
   | CrocoApp
   | {
       readonly app: CrocoApp;
@@ -50,16 +51,28 @@ export type TestKernelBootstrapContext = {
   readonly runtime: TestKernelRuntime;
 };
 
-export type TestKernelOptions = {
-  readonly adapter?: TestKernelRuntime;
+type TestKernelCommonOptions = {
   readonly baseUrl?: string;
   readonly bootstrap: (
     context: TestKernelBootstrapContext,
   ) => Promise<TestKernelBootstrapResult> | TestKernelBootstrapResult;
   readonly dispose?: (app: CrocoApp) => Promise<void> | void;
-  readonly fidelity: TestKernelBootFidelity;
   readonly validation?: Partial<BootstrapValidationPolicy>;
 };
+
+type TestKernelCleanupOperation = () => Promise<void> | void;
+
+export type TestKernelOptions = TestKernelCommonOptions &
+  (
+    | {
+        readonly adapter?: never;
+        readonly fidelity: "application";
+      }
+    | {
+        readonly adapter?: TestKernelRuntime;
+        readonly fidelity: "adapter";
+      }
+  );
 
 export class TestKernelValidationProblem extends Problem {
   constructor(actual: BootstrapValidationPolicy, expected: BootstrapValidationPolicy) {
@@ -90,6 +103,16 @@ export class TestKernelDisposalProblem extends Problem {
         },
         ...(cause === undefined ? {} : { cause: toError(cause) }),
       },
+    );
+  }
+}
+
+export class TestKernelDisposedProblem extends Problem {
+  constructor() {
+    super(
+      "testing/test-kernel-disposed",
+      ProblemCategory.InternalServerError,
+      "TestKernel cannot be used after disposal has started.",
     );
   }
 }
@@ -144,7 +167,7 @@ export class TestKernel implements AsyncDisposable {
     private readonly baseUrl: string,
     private readonly lambdaHandler: LambdaHandler | undefined,
     private readonly nodeHandler: NodeRequestHandler | undefined,
-    private readonly cleanupOperations: readonly (() => Promise<void> | void)[],
+    private readonly cleanupOperations: readonly TestKernelCleanupOperation[],
   ) {
     this.http = new TestKernelHttp(this);
     this.transactionContext = transactionContext;
@@ -206,43 +229,8 @@ export class TestKernel implements AsyncDisposable {
   }
 
   private async disposeOnce(): Promise<void> {
-    const failures: Error[] = [];
-
     await Promise.allSettled(this.inFlight);
-
-    try {
-      await this.scope.run(() =>
-        ShutdownManager.getInstance().shutdown({ throwOnHookError: true }),
-      );
-    } catch (error) {
-      failures.push(toError(error));
-    }
-
-    for (const cleanup of this.cleanupOperations) {
-      try {
-        await this.scope.run(cleanup);
-      } catch (error) {
-        failures.push(toError(error));
-      }
-    }
-
-    try {
-      this.scope.run(() => EventBusConfig.disposeCurrentScope());
-    } catch (error) {
-      failures.push(toError(error));
-    }
-
-    try {
-      this.scope.run(() => ShutdownManager.disposeCurrentScope());
-    } catch (error) {
-      failures.push(toError(error));
-    }
-
-    try {
-      this.scope.dispose();
-    } catch (error) {
-      failures.push(toError(error));
-    }
+    const failures = await runCleanupSequence(this.scope, this.cleanupOperations);
 
     if (failures.length > 0) {
       throw new TestKernelDisposalProblem(failures);
@@ -255,7 +243,7 @@ export class TestKernel implements AsyncDisposable {
 
   private assertActive(): void {
     if (this.disposed) {
-      throw new TestKernelDisposalProblem([new Error("TestKernel has already been disposed.")]);
+      throw new TestKernelDisposedProblem();
     }
   }
 
@@ -338,44 +326,12 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
       );
     });
   } catch (error) {
-    const failures: Error[] = [];
-
-    try {
-      await scope.run(() => ShutdownManager.getInstance().shutdown({ throwOnHookError: true }));
-    } catch (cleanupError) {
-      failures.push(toError(cleanupError));
-    }
-
     const cleanupOperations = [
       ...(bootstrapCleanup ? [bootstrapCleanup] : []),
       ...[...registeredCleanups].reverse(),
       ...(app && options.dispose ? [() => options.dispose?.(app as CrocoApp)] : []),
     ];
-    for (const cleanup of cleanupOperations) {
-      try {
-        await scope.run(cleanup);
-      } catch (cleanupError) {
-        failures.push(toError(cleanupError));
-      }
-    }
-
-    try {
-      scope.run(() => EventBusConfig.disposeCurrentScope());
-    } catch (cleanupError) {
-      failures.push(toError(cleanupError));
-    }
-
-    try {
-      scope.run(() => ShutdownManager.disposeCurrentScope());
-    } catch (cleanupError) {
-      failures.push(toError(cleanupError));
-    }
-
-    try {
-      scope.dispose();
-    } catch (cleanupError) {
-      failures.push(toError(cleanupError));
-    }
+    const failures = await runCleanupSequence(scope, cleanupOperations);
 
     if (failures.length > 0) {
       throw new TestKernelDisposalProblem(failures, error);
@@ -396,41 +352,48 @@ function toRequest(
   options: TestingRequestOptions,
   baseUrl: string,
 ): Request {
-  if (input instanceof Request) {
-    return new Request(input, options);
+  return createTestingRequest(input, options, baseUrl);
+}
+
+async function runCleanupSequence(
+  scope: ContainerScope,
+  cleanupOperations: readonly TestKernelCleanupOperation[],
+): Promise<Error[]> {
+  const failures: Error[] = [];
+
+  try {
+    await scope.run(() => ShutdownManager.getInstance().shutdown({ throwOnHookError: true }));
+  } catch (error) {
+    failures.push(toError(error));
   }
 
-  const url = new URL(String(input), baseUrl);
-  if (options.query) {
-    for (const [key, rawValue] of Object.entries(options.query)) {
-      const values = Array.isArray(rawValue) ? rawValue : [rawValue];
-      for (const value of values) {
-        if (value !== null && value !== undefined) {
-          url.searchParams.append(key, String(value));
-        }
-      }
+  for (const cleanup of cleanupOperations) {
+    try {
+      await scope.run(cleanup);
+    } catch (error) {
+      failures.push(toError(error));
     }
   }
 
-  const headers = new Headers(options.headers);
-  const body =
-    options.json !== undefined
-      ? JSON.stringify(options.json)
-      : options.body === null
-        ? null
-        : options.body;
-  if (options.json !== undefined && !headers.has("content-type")) {
-    headers.set("content-type", "application/json");
+  try {
+    scope.run(() => EventBusConfig.disposeCurrentScope());
+  } catch (error) {
+    failures.push(toError(error));
   }
 
-  const { body: _body, json: _json, query: _query, ...requestOptions } = options;
-  const requestInit: RequestInit = {
-    ...requestOptions,
-    headers,
-    ...(body === undefined ? {} : { body }),
-  };
+  try {
+    scope.run(() => ShutdownManager.disposeCurrentScope());
+  } catch (error) {
+    failures.push(toError(error));
+  }
 
-  return new Request(url, requestInit);
+  try {
+    scope.dispose();
+  } catch (error) {
+    failures.push(toError(error));
+  }
+
+  return failures;
 }
 
 async function dispatchLambdaRequest(handler: LambdaHandler, request: Request): Promise<Response> {

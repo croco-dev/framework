@@ -43,13 +43,19 @@ const COMPONENT_METADATA_KEY = Symbol("component:metadata");
 let containerScopeCounter = 0;
 
 type ContainerScopeState = {
+  readonly componentRegistrationOrder: Map<Constructor, number>;
+  readonly componentSourceLocations: Map<Constructor, DependencySourceLocation>;
   readonly components: Map<Constructor, ComponentMetadata>;
+  readonly explicitComponentSourceLocations: Map<Constructor, DependencySourceLocation>;
   readonly id: string;
   readonly instance: TypeDIContainerInstance;
   readonly lazyProviders: Map<TokenIdentifier<unknown>, () => unknown>;
+  readonly tokenIdentityIds: Map<TokenIdentifier<unknown>, string>;
+  readonly tokenIdentityOwners: Map<string, TokenIdentifier<unknown>>;
   readonly tokens: Set<TokenIdentifier<unknown>>;
   disposed: boolean;
   lastResolutionTrace?: DependencyResolutionTrace;
+  nextComponentRegistrationOrder: number;
   validated: boolean;
 };
 
@@ -72,12 +78,18 @@ export class ContainerScope implements AsyncDisposable {
   constructor() {
     this.id = `croco-container-scope-${++containerScopeCounter}`;
     this.state = {
+      componentRegistrationOrder: new Map(),
+      componentSourceLocations: new Map(),
       components: new Map(),
+      explicitComponentSourceLocations: new Map(),
       id: this.id,
       instance: TypeDIContainer.of(this.id),
       lazyProviders: new Map(),
+      tokenIdentityIds: new Map(),
+      tokenIdentityOwners: new Map(),
       tokens: new Set(),
       disposed: false,
+      nextComponentRegistrationOrder: 1,
       validated: false,
     };
   }
@@ -98,8 +110,13 @@ export class ContainerScope implements AsyncDisposable {
     }
 
     this.state.disposed = true;
+    this.state.componentRegistrationOrder.clear();
+    this.state.componentSourceLocations.clear();
     this.state.components.clear();
+    this.state.explicitComponentSourceLocations.clear();
     this.state.lazyProviders.clear();
+    this.state.tokenIdentityIds.clear();
+    this.state.tokenIdentityOwners.clear();
     this.state.tokens.clear();
     delete this.state.lastResolutionTrace;
     this.state.instance.reset({ strategy: "resetServices" });
@@ -247,6 +264,10 @@ export class Container {
       const scope = Container.getScopeState();
       if (scope) {
         scope.components.delete(token);
+        scope.componentSourceLocations.delete(token);
+        scope.explicitComponentSourceLocations.delete(token);
+        scope.componentRegistrationOrder.delete(token);
+        Container.clearConstructorLabelTokenIdentities(label);
       } else {
         MetadataStorage.delete(COMPONENT_METADATA_KEY, token);
         Container.componentSourceLocations.delete(token);
@@ -255,9 +276,7 @@ export class Container {
         Container.clearConstructorLabelTokenIdentities(label);
       }
     }
-    if (!Container.getScopeState()) {
-      Container.clearTokenIdentity(token);
-    }
+    Container.clearTokenIdentity(token);
     Container.setValidated(false);
   }
 
@@ -265,10 +284,16 @@ export class Container {
     const scope = Container.getScopeState();
     if (scope) {
       scope.instance.reset({ strategy: "resetServices" });
+      scope.componentRegistrationOrder.clear();
+      scope.componentSourceLocations.clear();
       scope.components.clear();
+      scope.explicitComponentSourceLocations.clear();
       scope.lazyProviders.clear();
+      scope.tokenIdentityIds.clear();
+      scope.tokenIdentityOwners.clear();
       scope.tokens.clear();
       delete scope.lastResolutionTrace;
+      scope.nextComponentRegistrationOrder = 1;
       scope.validated = false;
       return;
     }
@@ -333,9 +358,17 @@ export class Container {
 
   static register<T>(token: Constructor<T>, scope: Scope): void {
     const label = Container.getConstructorTokenLabel(token);
-    if (!Container.componentRegistrationOrder.has(token)) {
-      Container.componentRegistrationOrder.set(token, Container.nextComponentRegistrationOrder);
-      Container.nextComponentRegistrationOrder += 1;
+    const registrationOrder = Container.getComponentRegistrationOrder();
+    if (!registrationOrder.has(token)) {
+      const activeScope = Container.getScopeState();
+      const nextRegistrationOrder =
+        activeScope?.nextComponentRegistrationOrder ?? Container.nextComponentRegistrationOrder;
+      registrationOrder.set(token, nextRegistrationOrder);
+      if (activeScope) {
+        activeScope.nextComponentRegistrationOrder += 1;
+      } else {
+        Container.nextComponentRegistrationOrder += 1;
+      }
     }
     Container.clearConstructorLabelTokenIdentities(label);
 
@@ -349,12 +382,13 @@ export class Container {
     } else {
       MetadataStorage.define(COMPONENT_METADATA_KEY, token, metadata);
     }
-    const sourceLocation =
-      Container.explicitComponentSourceLocations.get(token) ?? Container.captureSourceLocation();
+    const explicitSourceLocations = Container.getExplicitComponentSourceLocations();
+    const sourceLocations = Container.getComponentSourceLocations();
+    const sourceLocation = explicitSourceLocations.get(token) ?? Container.captureSourceLocation();
     if (sourceLocation) {
-      Container.componentSourceLocations.set(token, sourceLocation);
+      sourceLocations.set(token, sourceLocation);
     } else {
-      Container.componentSourceLocations.delete(token);
+      sourceLocations.delete(token);
     }
     Container.setValidated(false);
   }
@@ -363,16 +397,18 @@ export class Container {
     token: Constructor<T>,
     sourceLocation?: DependencySourceLocation,
   ): void {
+    const explicitSourceLocations = Container.getExplicitComponentSourceLocations();
+    const sourceLocations = Container.getComponentSourceLocations();
     if (!sourceLocation) {
-      Container.explicitComponentSourceLocations.delete(token);
-      Container.componentSourceLocations.delete(token);
+      explicitSourceLocations.delete(token);
+      sourceLocations.delete(token);
       Container.setValidated(false);
       return;
     }
 
     const normalizedSourceLocation = Container.normalizeSourceLocation(sourceLocation);
-    Container.explicitComponentSourceLocations.set(token, normalizedSourceLocation);
-    Container.componentSourceLocations.set(token, normalizedSourceLocation);
+    explicitSourceLocations.set(token, normalizedSourceLocation);
+    sourceLocations.set(token, normalizedSourceLocation);
     Container.setValidated(false);
   }
 
@@ -689,10 +725,10 @@ export class Container {
   private static getSourceLocationForTokenId(tokenId: string): {
     readonly sourceLocation?: DependencySourceLocation;
   } {
-    const token = Container.tokenIdentityOwners.get(tokenId);
+    const token = Container.getTokenIdentityOwners().get(tokenId);
     const sourceLocation =
       token && Container.isConstructorToken(token)
-        ? Container.componentSourceLocations.get(token)
+        ? Container.getComponentSourceLocations().get(token)
         : undefined;
 
     return sourceLocation ? { sourceLocation } : {};
@@ -824,6 +860,33 @@ export class Container {
       throw createContainerScopeDisposedProblem(scope.id);
     }
     return scope;
+  }
+
+  private static getComponentRegistrationOrder(): Map<Constructor, number> {
+    return (
+      Container.getScopeState()?.componentRegistrationOrder ?? Container.componentRegistrationOrder
+    );
+  }
+
+  private static getComponentSourceLocations(): Map<Constructor, DependencySourceLocation> {
+    return (
+      Container.getScopeState()?.componentSourceLocations ?? Container.componentSourceLocations
+    );
+  }
+
+  private static getExplicitComponentSourceLocations(): Map<Constructor, DependencySourceLocation> {
+    return (
+      Container.getScopeState()?.explicitComponentSourceLocations ??
+      Container.explicitComponentSourceLocations
+    );
+  }
+
+  private static getTokenIdentityIds(): Map<TokenIdentifier<unknown>, string> {
+    return Container.getScopeState()?.tokenIdentityIds ?? Container.tokenIdentityIds;
+  }
+
+  private static getTokenIdentityOwners(): Map<string, TokenIdentifier<unknown>> {
+    return Container.getScopeState()?.tokenIdentityOwners ?? Container.tokenIdentityOwners;
   }
 
   private static getLazyProviders(): Map<TokenIdentifier<unknown>, () => unknown> {
@@ -1512,7 +1575,9 @@ export class Container {
     kind: DependencyTokenKind,
     label: string,
   ): string {
-    const existing = Container.tokenIdentityIds.get(token);
+    const tokenIdentityIds = Container.getTokenIdentityIds();
+    const tokenIdentityOwners = Container.getTokenIdentityOwners();
+    const existing = tokenIdentityIds.get(token);
     if (existing) {
       return existing;
     }
@@ -1521,10 +1586,10 @@ export class Container {
     let id = baseId;
     let suffix = 2;
     while (true) {
-      const owner = Container.tokenIdentityOwners.get(id);
+      const owner = tokenIdentityOwners.get(id);
       if (!owner || Container.isSameToken(owner, token)) {
-        Container.tokenIdentityIds.set(token, id);
-        Container.tokenIdentityOwners.set(id, token);
+        tokenIdentityIds.set(token, id);
+        tokenIdentityOwners.set(id, token);
         return id;
       }
 
@@ -1558,12 +1623,13 @@ export class Container {
     label: string,
   ): string {
     const labelPart = Container.formatTokenIdPart(label);
-    const registrationOrder = Container.componentRegistrationOrder.get(token);
+    const componentRegistrationOrder = Container.getComponentRegistrationOrder();
+    const registrationOrder = componentRegistrationOrder.get(token);
     if (!registrationOrder) {
       return `${kind}:${labelPart}`;
     }
 
-    const sameLabelComponents = [...Container.componentRegistrationOrder.entries()]
+    const sameLabelComponents = [...componentRegistrationOrder.entries()]
       .filter(([candidate]) => Container.getConstructorTokenLabel(candidate) === label)
       .sort(([, leftOrder], [, rightOrder]) => leftOrder - rightOrder);
     const rank =
@@ -1581,17 +1647,20 @@ export class Container {
   }
 
   private static clearTokenIdentity<T>(token: TokenIdentifier<T>): void {
-    const tokenId = Container.tokenIdentityIds.get(token);
+    const tokenIdentityIds = Container.getTokenIdentityIds();
+    const tokenIdentityOwners = Container.getTokenIdentityOwners();
+    const tokenId = tokenIdentityIds.get(token);
     if (tokenId) {
-      Container.tokenIdentityOwners.delete(tokenId);
+      tokenIdentityOwners.delete(tokenId);
     }
-    Container.tokenIdentityIds.delete(token);
+    tokenIdentityIds.delete(token);
   }
 
   private static clearConstructorLabelTokenIdentities(label: string): void {
+    const tokenIdentityIds = Container.getTokenIdentityIds();
     const tokensToClear: TokenIdentifier<unknown>[] = [];
 
-    for (const token of Container.tokenIdentityIds.keys()) {
+    for (const token of tokenIdentityIds.keys()) {
       if (
         Container.isConstructorToken(token) &&
         Container.getConstructorTokenLabel(token) === label

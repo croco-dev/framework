@@ -24,9 +24,10 @@ describe("SaaS golden path demo", () => {
   });
 
   it("boots application-fidelity tests through the exported production bootstrap", async () => {
-    const kernel = await createTestKernel({
+    await using kernel = await createTestKernel({
       bootstrap: createCrocoApp,
       fidelity: "application",
+      // The template production bootstrap intentionally configures diValidation: "off".
       validation: { di: "off" },
     });
 
@@ -39,8 +40,6 @@ describe("SaaS golden path demo", () => {
       runtime: "node",
       validation: "overridden",
     });
-
-    await kernel.dispose();
   });
 
   it("creates tenant and owner membership", async () => {
