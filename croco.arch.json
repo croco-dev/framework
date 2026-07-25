@@ -27,6 +27,7 @@
         "@croco/batch-core",
         "@croco/billing-core",
         "@croco/cache-core",
+        "@croco/credits-core",
         "@croco/customer-health-core",
         "@croco/dataloader-core",
         "@croco/diagnostics-core",

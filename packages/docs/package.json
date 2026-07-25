@@ -44,6 +44,7 @@
     "@croco/billing-polar": "workspace:*",
     "@croco/cache-core": "workspace:*",
     "@croco/cli": "workspace:*",
+    "@croco/credits-core": "workspace:*",
     "@croco/customer-health-core": "workspace:*",
     "@croco/customer-health-drizzle": "workspace:*",
     "@croco/dataloader-core": "workspace:*",

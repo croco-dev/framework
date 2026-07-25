@@ -5417,6 +5417,401 @@
       ]
     },
     {
+      "packageName": "@croco/credits-core",
+      "relativeDir": "packages/credits-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/credits-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "addCreditAmounts",
+              "exportKind": "named",
+              "source": "./libs/amount",
+              "declarationKind": "function"
+            },
+            {
+              "name": "compareCreditAmounts",
+              "exportKind": "named",
+              "source": "./libs/amount",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createCreditLedgerStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance",
+              "declarationKind": "function"
+            },
+            {
+              "name": "creditAccountId",
+              "exportKind": "named",
+              "source": "./libs/identifiers",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CreditAccountMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CreditAccountNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "creditAmount",
+              "exportKind": "named",
+              "source": "./libs/amount",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CreditDuplicateConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CreditEventPublicationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CreditLedgerCommittedEvent",
+              "exportKind": "named",
+              "source": "./libs/events/CreditLedgerCommittedEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CreditLedgerService",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CreditLedgerStore",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CreditRefundMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "creditReservationId",
+              "exportKind": "named",
+              "source": "./libs/identifiers",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CreditReservationMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "creditTransactionId",
+              "exportKind": "named",
+              "source": "./libs/identifiers",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CreditTransactionNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExpiredGrantProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryCreditLedgerStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryCreditLedgerStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InsufficientCreditsProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidCreditAmountProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidCreditCommandProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "StaleLedgerPositionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "subtractCreditAmounts",
+              "exportKind": "named",
+              "source": "./libs/amount",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ZERO_CREDIT_AMOUNT",
+              "exportKind": "named",
+              "source": "./libs/amount",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ZERO_CREDIT_SIGNED_AMOUNT",
+              "exportKind": "named",
+              "source": "./libs/amount",
+              "declarationKind": "const"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AdjustCreditsCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AdjustCreditsInput",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            },
+            {
+              "name": "CommitCreditsCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CommitCreditsInput",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            },
+            {
+              "name": "ConsumeCreditsCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ConsumeCreditsInput",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            },
+            {
+              "name": "CreditAccount",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditAccountId",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditAllocation",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditAmount",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditBalance",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditCommandBase",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditCommandResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditExpiryCursor",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditGrantTerms",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditHistoryPage",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditLedgerCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditLedgerCommittedEventData",
+              "exportKind": "named",
+              "source": "./libs/events/CreditLedgerCommittedEvent"
+            },
+            {
+              "name": "CreditLedgerEventPublisher",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            },
+            {
+              "name": "CreditLedgerServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            },
+            {
+              "name": "CreditLedgerStoreConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "CreditLedgerStoreConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "CreditLedgerStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "CreditReservation",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditReservationId",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditSemanticReference",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditSignedAmount",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditTransaction",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditTransactionId",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreditTransactionKind",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ExpireCreditsCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ExpireCreditsInput",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            },
+            {
+              "name": "GrantCreditsCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "GrantCreditsInput",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            },
+            {
+              "name": "OpenCreditAccountCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OpenCreditAccountInput",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            },
+            {
+              "name": "RefundCreditsCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RefundCreditsInput",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            },
+            {
+              "name": "ReleaseCreditsCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReleaseCreditsInput",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            },
+            {
+              "name": "ReserveCreditsCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReserveCreditsInput",
+              "exportKind": "named",
+              "source": "./libs/CreditLedgerService"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/customer-health-core",
       "relativeDir": "packages/customer-health-core",
       "entrypoints": [

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 478,
+  problemCount: 490,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -2894,6 +2894,374 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 11,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "credits-core/account-mismatch",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-account-mismatch",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 74,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/account-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-account-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 13,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/duplicate-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-duplicate-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 61,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/event-publication-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-event-publication-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 131,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/expired-grant",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-expired-grant",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 35,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/insufficient-credits",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-insufficient-credits",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 22,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/invalid-amount",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-invalid-amount",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 4,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/invalid-command",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-invalid-command",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 100,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/refund-mismatch",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-refund-mismatch",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 118,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/reservation-mismatch",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-reservation-mismatch",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 48,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/stale-ledger-position",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-stale-ledger-position",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 87,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "credits-core/transaction-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#credits-core-transaction-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/credits-core/src/libs/problems.ts",
+          line: 109,
+          column: 3,
+          kind: "problem-class",
         },
       ],
     },
