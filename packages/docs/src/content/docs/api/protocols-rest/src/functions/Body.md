@@ -5,9 +5,9 @@ prev: false
 title: "Body"
 ---
 
-## Contract Overload
+## Call Signature
 
-> **Body**\<`TContract`\>(`contract`): `ParameterDecorator`
+> **Body**\<`TContract`\>(`contract`): `ContractParameterDecorator`\<`output`\<`TContract`\[`"body"`\]\>\>
 
 요청 본문 전체를 메서드 인자에 바인딩합니다.
 
@@ -15,7 +15,7 @@ title: "Body"
 
 #### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly body: z.ZodType }`
+`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly body: z.ZodType }`
 
 ### Parameters
 
@@ -25,7 +25,7 @@ title: "Body"
 
 ### Returns
 
-`ParameterDecorator`
+`ContractParameterDecorator`\<`output`\<`TContract`\[`"body"`\]\>\>
 
 ## Schema Overload
 

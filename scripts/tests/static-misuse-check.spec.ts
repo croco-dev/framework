@@ -500,6 +500,163 @@ describe("static-misuse-check.mts", () => {
     ]);
   });
 
+  it("flags REST parameter decorators on overloaded method implementations", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/UsersController.ts",
+      [
+        'import { Query } from "@croco/protocols-rest";',
+        "declare const listUsers: object;",
+        "export class UsersController {",
+        "  list(page: number): void;",
+        '  list(@Query(listUsers, "page") page: any): void {',
+        "    void page;",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-parameter-decorator-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        code: "CROCO_STATIC_REST_OVERLOADED_PARAMETER_DECORATOR_BOUNDARY",
+        status: "fail",
+      }),
+    );
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        file: "packages/protocols-rest/src/controllers/UsersController.ts",
+        line: 5,
+        message: expect.stringContaining("hides the decorated implementation annotation"),
+      }),
+    ]);
+  });
+
+  it("resolves aliased and namespace REST decorators on overloaded methods", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/AliasedUsersController.ts",
+      [
+        'import { Query as RestQuery } from "@croco/protocols-rest";',
+        'import * as rest from "@croco/protocols-rest";',
+        "declare const listUsers: object;",
+        "export class UsersController {",
+        "  list(page: number): void;",
+        '  list(@RestQuery(listUsers, "page") page: any): void { void page; }',
+        "  search(page: number): void;",
+        '  search(@rest.Query(listUsers, "page") page: any): void { void page; }',
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-parameter-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({ line: 6 }),
+      expect.objectContaining({ line: 8 }),
+    ]);
+  });
+
+  it("flags Body with a local route contract on overloaded methods", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/CreateUserController.ts",
+      [
+        'import { Body, defineRouteContract } from "@croco/protocols-rest";',
+        "const createUser = defineRouteContract({});",
+        "export class UsersController {",
+        "  create(body: { name: string }): void;",
+        "  create(@Body(createUser) body: any): void { void body; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-parameter-decorator-boundary");
+
+    expect(result?.diagnostics).toEqual([
+      expect.objectContaining({
+        line: 5,
+        message: expect.stringContaining("hides the decorated implementation annotation"),
+      }),
+    ]);
+  });
+
+  it("allows loose schema overloads and unrelated same-name decorators", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/LooseUsersController.ts",
+      [
+        'import { Body, Query } from "@croco/protocols-rest";',
+        'import { z } from "zod";',
+        "export class UsersController {",
+        "  list(page: number): void;",
+        '  list(@Query("page", z.coerce.number()) page: number): void { void page; }',
+        "  create(body: { name: string }): void;",
+        "  create(@Body(z.object({ name: z.string() })) body: { name: string }): void { void body; }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/UnrelatedController.ts",
+      [
+        "function Query(_contract: object, _key: string): ParameterDecorator {",
+        "  return () => undefined;",
+        "}",
+        "export class UnrelatedController {",
+        "  list(page: number): void;",
+        '  list(@Query({}, "page") page: any): void { void page; }',
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-parameter-decorator-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        diagnostics: [],
+        status: "pass",
+      }),
+    );
+  });
+
+  it("allows REST parameter decorators on non-overloaded public methods", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/protocols-rest/src/controllers/UsersController.ts",
+      [
+        'import { Query } from "@croco/protocols-rest";',
+        "declare const listUsers: object;",
+        "export class UsersController {",
+        '  list(@Query(listUsers, "page") page: number): void {',
+        "    void page;",
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "rest-overloaded-parameter-decorator-boundary");
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        diagnostics: [],
+        status: "pass",
+      }),
+    );
+  });
+
   it("flags raw built-in Error throws in production package source", () => {
     const repo = createTempRepo();
     writeFile(

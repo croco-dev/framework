@@ -84,6 +84,14 @@ type CheckOptions = {
   readonly rootDir: string;
 };
 
+type RestDecoratorName = "Body" | "Param" | "Query";
+
+type RestImportBindings = {
+  readonly defineRouteContractAliases: ReadonlySet<string>;
+  readonly decoratorAliases: ReadonlyMap<string, RestDecoratorName>;
+  readonly namespaces: ReadonlySet<string>;
+};
+
 const sourceFilePattern = /\.[cm]?[jt]sx?$/;
 const ignoreLinePrefix = "croco-static-misuse-ignore-line";
 const ignoreNextLinePrefix = "croco-static-misuse-ignore-next-line";
@@ -228,10 +236,31 @@ const restDecoratorContractGraphRule: StaticMisuseRule = {
   ],
 };
 
+const restOverloadedParameterDecoratorRule: StaticMisuseRule = {
+  id: "rest-overloaded-parameter-decorator-boundary",
+  code: "CROCO_STATIC_REST_OVERLOADED_PARAMETER_DECORATOR_BOUNDARY",
+  title: "Overloaded REST methods cannot use parameter decorators",
+  targetDir: "packages",
+  description:
+    "TypeScript hides an overloaded method implementation signature from legacy parameter decorator types. Param, Query, and Body on an overloaded implementation could therefore validate a public overload instead of the decorated annotation.",
+  limitation:
+    "This syntax-aware rule is scoped to production packages/*/src files. It resolves direct, aliased, and namespace imports from @croco/protocols-rest. Param and Query are recognized by their literal contract-key argument; Body is recognized when its argument is a local defineRouteContract result. Imported Body contracts and computed Param or Query keys require the documented non-overloaded adapter policy.",
+  recovery:
+    "Move Param, Query, or Body to a non-overloaded public instance controller method and delegate to the overloaded implementation.",
+  detectors: [],
+  syntaxDetectors: [
+    {
+      detect: detectOverloadedRestParameterDecorators,
+    },
+  ],
+  includeFile: isProductionPackageSourceFile,
+};
+
 const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
   repositoryBoundaryRule,
   restGeneratedContractRule,
   restDecoratorContractGraphRule,
+  restOverloadedParameterDecoratorRule,
   rawErrorRuntimeBoundaryRule,
   emptyCatchRuntimeBoundaryRule,
 ];
@@ -282,6 +311,216 @@ function detectEmptyCatchClauses({
   visit(sourceFile);
 
   return diagnostics;
+}
+
+function detectOverloadedRestParameterDecorators({
+  lines,
+  relativeFile,
+  rule,
+  sourceFile,
+}: SyntaxDetectorContext): readonly StaticMisuseDiagnostic[] {
+  const diagnostics: StaticMisuseDiagnostic[] = [];
+  const bindings = collectRestImportBindings(sourceFile);
+  const localRouteContracts = collectLocalRouteContracts(sourceFile, bindings);
+
+  function visit(node: ts.Node): void {
+    if (ts.isClassLike(node)) {
+      const overloadNames = new Set(
+        node.members
+          .filter(
+            (member): member is ts.MethodDeclaration =>
+              ts.isMethodDeclaration(member) && member.body === undefined,
+          )
+          .map((member) => member.name.getText(sourceFile)),
+      );
+
+      for (const member of node.members) {
+        if (
+          !ts.isMethodDeclaration(member) ||
+          member.body === undefined ||
+          !overloadNames.has(member.name.getText(sourceFile))
+        ) {
+          continue;
+        }
+
+        for (const parameter of member.parameters) {
+          for (const decorator of ts.getDecorators(parameter) ?? []) {
+            if (!isContractBoundRestParameterDecorator(decorator, bindings, localRouteContracts)) {
+              continue;
+            }
+
+            const start = sourceFile.getLineAndCharacterOfPosition(decorator.getStart(sourceFile));
+
+            diagnostics.push({
+              code: rule.code,
+              ruleId: rule.id,
+              file: relativeFile,
+              line: start.line + 1,
+              column: start.character + 1,
+              message:
+                "Overloaded REST method implementations cannot use Param, Query, or Body because TypeScript hides the decorated implementation annotation.",
+              excerpt: (lines[start.line] ?? "").trim(),
+              action:
+                "Expose a non-overloaded public instance controller method with the parameter decorator and delegate to the overloaded method.",
+            });
+          }
+        }
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+
+  return diagnostics;
+}
+
+function isContractBoundRestParameterDecorator(
+  decorator: ts.Decorator,
+  bindings: RestImportBindings,
+  localRouteContracts: ReadonlySet<string>,
+): boolean {
+  if (!ts.isCallExpression(decorator.expression)) {
+    return false;
+  }
+
+  const decoratorName = resolveRestImportName(decorator.expression.expression, bindings);
+  if (decoratorName !== "Param" && decoratorName !== "Query" && decoratorName !== "Body") {
+    return false;
+  }
+
+  if (decoratorName === "Param" || decoratorName === "Query") {
+    const contractKey = decorator.expression.arguments[1];
+    return (
+      contractKey !== undefined &&
+      (ts.isStringLiteral(contractKey) || ts.isNoSubstitutionTemplateLiteral(contractKey))
+    );
+  }
+
+  const bodySource = decorator.expression.arguments[0];
+  return (
+    bodySource !== undefined &&
+    isKnownRouteContractExpression(bodySource, bindings, localRouteContracts)
+  );
+}
+
+function collectRestImportBindings(sourceFile: ts.SourceFile): RestImportBindings {
+  const defineRouteContractAliases = new Set<string>();
+  const decoratorAliases = new Map<string, RestDecoratorName>();
+  const namespaces = new Set<string>();
+
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== "@croco/protocols-rest"
+    ) {
+      continue;
+    }
+
+    const namedBindings = statement.importClause?.namedBindings;
+    if (namedBindings && ts.isNamespaceImport(namedBindings)) {
+      namespaces.add(namedBindings.name.text);
+      continue;
+    }
+
+    if (!namedBindings || !ts.isNamedImports(namedBindings)) {
+      continue;
+    }
+
+    for (const element of namedBindings.elements) {
+      const importedName = (element.propertyName ?? element.name).text;
+      const localName = element.name.text;
+
+      if (importedName === "Param" || importedName === "Query" || importedName === "Body") {
+        decoratorAliases.set(localName, importedName);
+      } else if (importedName === "defineRouteContract") {
+        defineRouteContractAliases.add(localName);
+      }
+    }
+  }
+
+  return {
+    defineRouteContractAliases,
+    decoratorAliases,
+    namespaces,
+  };
+}
+
+function collectLocalRouteContracts(
+  sourceFile: ts.SourceFile,
+  bindings: RestImportBindings,
+): ReadonlySet<string> {
+  const routeContracts = new Set<string>();
+
+  function visit(node: ts.Node): void {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      isDefineRouteContractCall(node.initializer, bindings)
+    ) {
+      routeContracts.add(node.name.text);
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return routeContracts;
+}
+
+function isKnownRouteContractExpression(
+  expression: ts.Expression,
+  bindings: RestImportBindings,
+  localRouteContracts: ReadonlySet<string>,
+): boolean {
+  if (ts.isIdentifier(expression)) {
+    return localRouteContracts.has(expression.text);
+  }
+
+  return isDefineRouteContractCall(expression, bindings);
+}
+
+function isDefineRouteContractCall(
+  expression: ts.Expression,
+  bindings: RestImportBindings,
+): boolean {
+  return (
+    ts.isCallExpression(expression) &&
+    resolveRestImportName(expression.expression, bindings) === "defineRouteContract"
+  );
+}
+
+function resolveRestImportName(
+  expression: ts.LeftHandSideExpression,
+  bindings: RestImportBindings,
+): RestDecoratorName | "defineRouteContract" | undefined {
+  if (ts.isIdentifier(expression)) {
+    if (bindings.defineRouteContractAliases.has(expression.text)) {
+      return "defineRouteContract";
+    }
+    return bindings.decoratorAliases.get(expression.text);
+  }
+
+  if (
+    ts.isPropertyAccessExpression(expression) &&
+    ts.isIdentifier(expression.expression) &&
+    bindings.namespaces.has(expression.expression.text)
+  ) {
+    const importedName = expression.name.text;
+    if (
+      importedName === "Param" ||
+      importedName === "Query" ||
+      importedName === "Body" ||
+      importedName === "defineRouteContract"
+    ) {
+      return importedName;
+    }
+  }
+
+  return undefined;
 }
 
 const ROUTE_DECORATORS = new Set([

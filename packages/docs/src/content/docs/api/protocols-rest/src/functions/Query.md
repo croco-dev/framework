@@ -5,9 +5,9 @@ prev: false
 title: "Query"
 ---
 
-## Contract Overload
+## Call Signature
 
-> **Query**\<`TContract`, `Name`\>(`contract`, `name`): `ParameterDecorator`
+> **Query**\<`TContract`, `Name`\>(`contract`, `name`): `ContractParameterDecorator`\<[`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\>\[`Name`\]\>
 
 쿼리스트링 값을 메서드 인자에 바인딩합니다.
 
@@ -15,11 +15,11 @@ title: "Query"
 
 #### TContract
 
-`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly query: AnyZodObject }`
+`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly query: AnyZodObject }`
 
 #### Name
 
-`Name` *extends* keyof [`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\> & `string`
+`Name` _extends_ keyof [`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\> & `string`
 
 ### Parameters
 
@@ -33,7 +33,7 @@ title: "Query"
 
 ### Returns
 
-`ParameterDecorator`
+`ContractParameterDecorator`\<[`RouteQuery`](/api/protocols-rest/src/type-aliases/routequery/)\<`TContract`\>\[`Name`\]\>
 
 ## Schema Overload
 
