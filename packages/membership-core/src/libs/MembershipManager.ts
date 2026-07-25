@@ -1,7 +1,10 @@
 // Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
 /* oxlint-disable typescript/consistent-type-imports */
 import { randomUUID } from "node:crypto";
-import { EventPublisher } from "@croco/events-core";
+import {
+  EventAfterCommitRequiresActiveTransactionProblem,
+  EventPublisher,
+} from "@croco/events-core";
 import { Component } from "@croco/framework-context";
 import { MembershipCreatedEvent } from "./events/MembershipCreatedEvent";
 import { MembershipRemovedEvent } from "./events/MembershipRemovedEvent";
@@ -139,7 +142,7 @@ export class MembershipManager implements AbstractMembershipManager {
       return;
     }
 
-    await this.publishSafely(
+    await this.publishAfterCommitOrNow(
       new MembershipUpdatedEvent({
         tenantId,
         userId: fromUserId,
@@ -148,7 +151,7 @@ export class MembershipManager implements AbstractMembershipManager {
       }),
     );
 
-    await this.publishSafely(
+    await this.publishAfterCommitOrNow(
       new MembershipUpdatedEvent({
         tenantId,
         userId: toUserId,
@@ -198,5 +201,17 @@ export class MembershipManager implements AbstractMembershipManager {
     event: MembershipCreatedEvent | MembershipUpdatedEvent | MembershipRemovedEvent,
   ): Promise<void> {
     await this.eventPublisher.publishNow(event);
+  }
+
+  private async publishAfterCommitOrNow(event: MembershipUpdatedEvent): Promise<void> {
+    try {
+      this.eventPublisher.publishAfterCommit(event);
+    } catch (error) {
+      if (!(error instanceof EventAfterCommitRequiresActiveTransactionProblem)) {
+        throw error;
+      }
+
+      await this.publishSafely(event);
+    }
   }
 }
