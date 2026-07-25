@@ -361,6 +361,19 @@ function checkAdminConsoleStructure() {
       "cross-env": "^10.1.0",
     }),
   });
+  const consolePackageJson = readJsonTemplate(
+    "admin-console",
+    "apps",
+    "console-web",
+    "package.json.hbs",
+  );
+  expect(consolePackageJson).toMatchObject({
+    dependencies: expect.objectContaining({
+      "@croco/admin-core": "workspace:*",
+      "@croco/admin-react": "workspace:*",
+      "@croco/events-core": "workspace:*",
+    }),
+  });
 
   checkFileContains(
     "admin-console",

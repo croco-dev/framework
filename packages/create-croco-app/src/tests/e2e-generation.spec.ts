@@ -1038,6 +1038,7 @@ describe("E2E: generate()", () => {
       expect(consolePackageJson.dependencies).toMatchObject({
         "@croco/admin-core": externalCrocoRange("@croco/admin-core"),
         "@croco/admin-react": externalCrocoRange("@croco/admin-react"),
+        "@croco/events-core": externalCrocoRange("@croco/events-core"),
       });
       expect(rpcPackageJson.dependencies).toMatchObject({
         "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
