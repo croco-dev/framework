@@ -9,12 +9,67 @@ import { MembershipService } from "../libs/MembershipService";
 import { LastOwnerCannotBeRemovedProblem } from "../libs/problems/LastOwnerCannotBeRemovedProblem";
 import {
   InvalidRoleProblem,
+  LastOwnerProblem,
   MembershipNotFoundProblem,
   OwnershipTransferRequiredProblem,
   SeatLimitExceededProblem,
 } from "../libs/problems/MembershipProblems";
 import type { SeatLimitChecker } from "../libs/SeatLimitChecker";
-import type { MembershipCreateInput } from "../libs/types";
+import type {
+  Membership,
+  MembershipCreateInput,
+  MembershipOwnerMutationInput,
+  MembershipOwnerMutationResult,
+} from "../libs/types";
+
+class BarrierMembershipStore extends InMemoryMembershipStore {
+  private arrivals = 0;
+  private release: (() => void) | undefined;
+  private readonly barrier = new Promise<void>((resolve) => {
+    this.release = resolve;
+  });
+
+  override async mutateOwner(
+    input: MembershipOwnerMutationInput,
+  ): Promise<MembershipOwnerMutationResult> {
+    this.arrivals += 1;
+    if (this.arrivals === 2) {
+      this.release?.();
+    }
+    await this.barrier;
+    return super.mutateOwner(input);
+  }
+}
+
+class StaleRoleReadStore extends InMemoryMembershipStore {
+  private pauseNextRoleRead = true;
+  private release: (() => void) | undefined;
+  private readonly barrier = new Promise<void>((resolve) => {
+    this.release = resolve;
+  });
+  private signalRead: (() => void) | undefined;
+  private readonly readReached = new Promise<void>((resolve) => {
+    this.signalRead = resolve;
+  });
+
+  override async findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null> {
+    const membership = await super.findByTenantAndUser(tenantId, userId);
+    if (userId === "user-2" && this.pauseNextRoleRead) {
+      this.pauseNextRoleRead = false;
+      this.signalRead?.();
+      await this.barrier;
+    }
+    return membership;
+  }
+
+  waitForRoleRead(): Promise<void> {
+    return this.readReached;
+  }
+
+  releaseRoleRead(): void {
+    this.release?.();
+  }
+}
 
 describe("MembershipService", () => {
   let service!: MembershipService;
@@ -140,6 +195,29 @@ describe("MembershipService", () => {
       const membership = await store.findByTenantAndUser("tenant-1", "user-1");
       expect(membership).toBeNull();
     });
+
+    it("allows only one concurrent owner removal after both mutations reach the barrier", async () => {
+      store = new BarrierMembershipStore();
+      service = new MembershipService(store, {
+        publishNow,
+        publishMany: vi.fn(),
+      } as unknown as EventPublisher);
+      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
+      await seedMembership({ id: "mem-2", userId: "user-2", role: "owner" });
+
+      const results = await Promise.allSettled([
+        service.removeMember("tenant-1", "user-1"),
+        service.removeMember("tenant-1", "user-2"),
+      ]);
+
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      const rejected = results.find((result) => result.status === "rejected");
+      expect(rejected).toMatchObject({
+        status: "rejected",
+        reason: expect.any(LastOwnerCannotBeRemovedProblem),
+      });
+      expect(await store.countByRole("tenant-1", "owner")).toBe(1);
+    });
   });
 
   describe("updateRole", () => {
@@ -152,7 +230,7 @@ describe("MembershipService", () => {
       });
 
       await expect(service.updateRole("tenant-1", "user-owner", "member")).rejects.toBeInstanceOf(
-        OwnershipTransferRequiredProblem,
+        LastOwnerProblem,
       );
     });
 
@@ -169,12 +247,56 @@ describe("MembershipService", () => {
       ).rejects.toBeInstanceOf(InvalidRoleProblem);
     });
 
-    it("should require ownership transfer when demoting owner", async () => {
+    it("should reject demoting the last owner", async () => {
       await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
 
       await expect(service.updateRole("tenant-1", "user-1", "admin")).rejects.toBeInstanceOf(
-        OwnershipTransferRequiredProblem,
+        LastOwnerProblem,
       );
+    });
+
+    it("allows only one concurrent owner demotion after both mutations reach the barrier", async () => {
+      store = new BarrierMembershipStore();
+      service = new MembershipService(store, {
+        publishNow,
+        publishMany: vi.fn(),
+      } as unknown as EventPublisher);
+      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
+      await seedMembership({ id: "mem-2", userId: "user-2", role: "owner" });
+
+      const results = await Promise.allSettled([
+        service.updateRole("tenant-1", "user-1", "admin"),
+        service.updateRole("tenant-1", "user-2", "admin"),
+      ]);
+
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      const rejected = results.find((result) => result.status === "rejected");
+      expect(rejected).toMatchObject({
+        status: "rejected",
+        reason: expect.any(LastOwnerProblem),
+      });
+      expect(await store.countByRole("tenant-1", "owner")).toBe(1);
+      expect(await store.countByRole("tenant-1", "admin")).toBe(1);
+    });
+
+    it("rejects a stale non-owner update after ownership transfers to that member", async () => {
+      const staleStore = new StaleRoleReadStore();
+      store = staleStore;
+      service = new MembershipService(store, {
+        publishNow,
+        publishMany: vi.fn(),
+      } as unknown as EventPublisher);
+      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
+      await seedMembership({ id: "mem-2", userId: "user-2", role: "admin" });
+
+      const staleUpdate = service.updateRole("tenant-1", "user-2", "member");
+      await staleStore.waitForRoleRead();
+      await service.transferOwnership("tenant-1", "user-1", "user-2");
+      staleStore.releaseRoleRead();
+
+      await expect(staleUpdate).rejects.toBeInstanceOf(LastOwnerProblem);
+      expect(await store.countByRole("tenant-1", "owner")).toBe(1);
+      expect((await store.findByTenantAndUser("tenant-1", "user-2"))?.role).toBe("owner");
     });
   });
 

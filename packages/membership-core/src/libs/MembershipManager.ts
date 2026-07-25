@@ -7,16 +7,17 @@ import { MembershipCreatedEvent } from "./events/MembershipCreatedEvent";
 import { MembershipRemovedEvent } from "./events/MembershipRemovedEvent";
 import { MembershipUpdatedEvent } from "./events/MembershipUpdatedEvent";
 import type { MembershipManager as AbstractMembershipManager } from "./interfaces/AbstractMembershipManager";
-import { MembershipOwnerGuard } from "./MembershipOwnerGuard";
 import { MembershipStore } from "./MembershipStore";
 import {
   AlreadyMemberProblem,
   InvalidRoleProblem,
+  LastOwnerProblem,
   MembershipNotFoundProblem,
   OwnershipTransferRequiredProblem,
   RoleHierarchyViolationProblem,
   SeatLimitExceededProblem,
 } from "./problems/MembershipProblems";
+import { LastOwnerCannotBeRemovedProblem } from "./problems/LastOwnerCannotBeRemovedProblem";
 import { SeatLimitChecker } from "./SeatLimitChecker";
 import {
   canDemote,
@@ -29,15 +30,11 @@ import {
 
 @Component()
 export class MembershipManager implements AbstractMembershipManager {
-  private ownerGuard: MembershipOwnerGuard;
-
   constructor(
     private readonly store: MembershipStore,
     private readonly eventPublisher: EventPublisher,
     private readonly seatLimitChecker: SeatLimitChecker | undefined = undefined,
-  ) {
-    this.ownerGuard = new MembershipOwnerGuard(store);
-  }
+  ) {}
 
   async addMember(tenantId: string, userId: string, role: MembershipRole): Promise<Membership> {
     this.ensureValidRole(role);
@@ -61,12 +58,20 @@ export class MembershipManager implements AbstractMembershipManager {
   }
 
   async removeMember(tenantId: string, userId: string): Promise<void> {
-    const membership = await this.getMembershipOrThrow(tenantId, userId);
-    await this.ownerGuard.validateLastOwner(tenantId, userId, membership.role);
+    const result = await this.store.mutateOwner({
+      tenantId,
+      userId,
+      operation: "remove",
+    });
+    if (result.status === "not_found") {
+      throw new MembershipNotFoundProblem(tenantId, userId);
+    }
+    if (result.status === "last_owner" || result.status === "conflict") {
+      throw new LastOwnerCannotBeRemovedProblem(tenantId, userId);
+    }
 
-    await this.store.delete(tenantId, userId);
     await this.publishSafely(
-      new MembershipRemovedEvent({ tenantId, userId, role: membership.role }),
+      new MembershipRemovedEvent({ tenantId, userId, role: result.membership.role }),
     );
   }
 
@@ -78,10 +83,6 @@ export class MembershipManager implements AbstractMembershipManager {
       return membership;
     }
 
-    if (membership.role === "owner" && newRole !== "owner") {
-      throw new OwnershipTransferRequiredProblem(tenantId, userId);
-    }
-
     if (isHigherRole(newRole, membership.role) && !canPromote(membership.role, newRole)) {
       throw new RoleHierarchyViolationProblem(membership.role, newRole, "promote");
     }
@@ -90,12 +91,29 @@ export class MembershipManager implements AbstractMembershipManager {
       throw new RoleHierarchyViolationProblem(membership.role, newRole, "demote");
     }
 
-    const updated = await this.store.save({
-      id: membership.id,
-      tenantId,
-      userId,
-      role: newRole,
-    });
+    let updated: Membership;
+    if (newRole !== "owner") {
+      const result = await this.store.mutateOwner({
+        tenantId,
+        userId,
+        operation: "demote",
+        role: newRole,
+      });
+      if (result.status === "not_found") {
+        throw new MembershipNotFoundProblem(tenantId, userId);
+      }
+      if (result.status === "last_owner" || result.status === "conflict") {
+        throw new LastOwnerProblem(tenantId, userId, "demote");
+      }
+      updated = result.membership;
+    } else {
+      updated = await this.store.save({
+        id: membership.id,
+        tenantId,
+        userId,
+        role: newRole,
+      });
+    }
 
     await this.publishSafely(
       new MembershipUpdatedEvent({
@@ -110,36 +128,23 @@ export class MembershipManager implements AbstractMembershipManager {
   }
 
   async transferOwnership(tenantId: string, fromUserId: string, toUserId: string): Promise<void> {
-    const fromMembership = await this.getMembershipOrThrow(tenantId, fromUserId);
-    if (fromMembership.role !== "owner") {
+    const result = await this.store.transferOwnership({ tenantId, fromUserId, toUserId });
+    if (result.status === "not_found") {
+      throw new MembershipNotFoundProblem(tenantId, result.userId);
+    }
+    if (result.status === "source_not_owner" || result.status === "conflict") {
       throw new OwnershipTransferRequiredProblem(tenantId, fromUserId);
     }
-
-    const toMembership = await this.store.findByTenantAndUser(tenantId, toUserId);
-    if (!toMembership) {
-      throw new MembershipNotFoundProblem(tenantId, toUserId);
+    if (fromUserId === toUserId) {
+      return;
     }
-
-    await this.store.save({
-      id: fromMembership.id,
-      tenantId,
-      userId: fromUserId,
-      role: "admin",
-    });
-
-    await this.store.save({
-      id: toMembership.id,
-      tenantId,
-      userId: toUserId,
-      role: "owner",
-    });
 
     await this.publishSafely(
       new MembershipUpdatedEvent({
         tenantId,
         userId: fromUserId,
         oldRole: "owner",
-        newRole: "admin",
+        newRole: result.fromMembership.role,
       }),
     );
 
@@ -147,8 +152,8 @@ export class MembershipManager implements AbstractMembershipManager {
       new MembershipUpdatedEvent({
         tenantId,
         userId: toUserId,
-        oldRole: toMembership.role,
-        newRole: "owner",
+        oldRole: result.previousToRole,
+        newRole: result.toMembership.role,
       }),
     );
   }

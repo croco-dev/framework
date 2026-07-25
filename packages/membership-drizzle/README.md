@@ -37,8 +37,16 @@ const adminCount = await store.countByRole("tenant-1", "admin");
 - `findAllByUser(userId)`, 사용자의 모든 멤버십을 반환합니다.
 - `save(input)`, 멤버십을 upsert로 저장합니다.
 - `delete(tenantId, userId)`, 멤버십을 삭제합니다.
+- `mutateOwner(input)`, 현재 owner 행을 잠그고 제거 또는 강등을 조건부로 적용합니다.
+- `transferOwnership(input)`, 두 역할을 하나의 조건부 업데이트로 변경합니다.
 - `countByRole(tenantId, role)`, 역할별 멤버 수를 반환합니다.
 - `countAll(tenantId)`, 전체 멤버 수를 반환합니다.
+
+owner 변경은 `READ COMMITTED`와 `REPEATABLE READ`에서 같은 테넌트의 현재 owner 행을 공통 충돌점으로 사용합니다.
+직렬화 실패는 서비스 계층이 안정적인 last-owner 또는 ownership-transfer Problem으로 변환할 수 있는 `conflict`
+결과로 정규화됩니다.
+
+실제 PostgreSQL 동시성 검증은 `MEMBERSHIP_POSTGRES_URL`을 지정하면 패키지 테스트에 포함됩니다.
 
 ### 스키마와 토큰
 

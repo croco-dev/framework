@@ -148,7 +148,8 @@ export { MembershipManager } from "./libs/MembershipManager";
 /**
  * 멤버십 소유자 변경 가드
  *
- * @description 소유자 역할 변경/제거 시 제약 조건을 검증하는 가드 클래스입니다. 마지막 소유자가 제거되거나 강등되지 않도록 보호합니다.
+ * @deprecated 검증과 저장 사이의 동시성 경쟁을 막을 수 없습니다. 소유자 변경에는
+ * {@link MembershipStore.mutateOwner} 또는 {@link MembershipStore.transferOwnership}을 사용하세요.
  *
  * @example 가드 사용
  * ```typescript
@@ -166,7 +167,7 @@ export { MembershipOwnerGuard } from "./libs/MembershipOwnerGuard";
 /**
  * 멤버십 서비스
  *
- * @description 멤버십 라이프사이클을 관리하는 서비스입니다. {@link MembershipOwnerGuard}를 사용하여 소유자 제약 조건을 검증합니다.
+ * @description 멤버십 라이프사이클을 관리하는 서비스입니다. 저장소의 원자적 소유자 변경 계약으로 소유자 제약 조건을 보호합니다.
  * - 역할 계층 검증
  * - 소유권 보호
  * - 소유권 이전 지원

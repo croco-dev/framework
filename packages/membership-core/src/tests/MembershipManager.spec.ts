@@ -12,12 +12,43 @@ import { LastOwnerCannotBeRemovedProblem } from "../libs/problems/LastOwnerCanno
 import {
   AlreadyMemberProblem,
   InvalidRoleProblem,
+  LastOwnerProblem,
   MembershipNotFoundProblem,
   OwnershipTransferRequiredProblem,
   SeatLimitExceededProblem,
 } from "../libs/problems/MembershipProblems";
 import type { SeatLimitChecker } from "../libs/SeatLimitChecker";
-import type { MembershipCreateInput, MembershipRole } from "../libs/types";
+import type { Membership, MembershipCreateInput, MembershipRole } from "../libs/types";
+
+class StaleRoleReadStore extends InMemoryMembershipStore {
+  private pauseNextRoleRead = true;
+  private release: (() => void) | undefined;
+  private readonly barrier = new Promise<void>((resolve) => {
+    this.release = resolve;
+  });
+  private signalRead: (() => void) | undefined;
+  private readonly readReached = new Promise<void>((resolve) => {
+    this.signalRead = resolve;
+  });
+
+  override async findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null> {
+    const membership = await super.findByTenantAndUser(tenantId, userId);
+    if (userId === "user-2" && this.pauseNextRoleRead) {
+      this.pauseNextRoleRead = false;
+      this.signalRead?.();
+      await this.barrier;
+    }
+    return membership;
+  }
+
+  waitForRoleRead(): Promise<void> {
+    return this.readReached;
+  }
+
+  releaseRoleRead(): void {
+    this.release?.();
+  }
+}
 
 describe("MembershipManager", () => {
   let manager!: MembershipManager;
@@ -196,8 +227,28 @@ describe("MembershipManager", () => {
       await seedMembership({ role: "owner" });
 
       await expect(manager.updateRole("tenant-1", "user-1", "member")).rejects.toBeInstanceOf(
-        OwnershipTransferRequiredProblem,
+        LastOwnerProblem,
       );
+    });
+
+    it("should reject a stale non-owner update after ownership transfers to that member", async () => {
+      const staleStore = new StaleRoleReadStore();
+      store = staleStore;
+      manager = new MembershipManager(store, {
+        publishNow,
+        publishMany: vi.fn(),
+      } as unknown as EventPublisher);
+      await seedMembership({ id: "mem-1", userId: "user-1", role: "owner" });
+      await seedMembership({ id: "mem-2", userId: "user-2", role: "admin" });
+
+      const staleUpdate = manager.updateRole("tenant-1", "user-2", "member");
+      await staleStore.waitForRoleRead();
+      await manager.transferOwnership("tenant-1", "user-1", "user-2");
+      staleStore.releaseRoleRead();
+
+      await expect(staleUpdate).rejects.toBeInstanceOf(LastOwnerProblem);
+      expect(await store.countByRole("tenant-1", "owner")).toBe(1);
+      expect((await store.findByTenantAndUser("tenant-1", "user-2"))?.role).toBe("owner");
     });
 
     it("should throw MembershipNotFoundProblem when update target is missing", async () => {

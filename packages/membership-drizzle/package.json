@@ -50,6 +50,8 @@
   "devDependencies": {
     "@croco/problems-core": "workspace:*",
     "@croco/testing": "workspace:*",
+    "@types/pg": "^8.15.6",
+    "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",

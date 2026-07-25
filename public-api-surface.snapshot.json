@@ -12388,6 +12388,30 @@
               "declarationKind": "type"
             },
             {
+              "name": "MembershipOwnerMutationInput",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "MembershipOwnerMutationResult",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "MembershipOwnershipTransferInput",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "MembershipOwnershipTransferResult",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
               "name": "MembershipRole",
               "exportKind": "declaration",
               "source": "./libs/types",

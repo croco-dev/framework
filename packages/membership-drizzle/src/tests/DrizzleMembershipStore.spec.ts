@@ -37,7 +37,12 @@ describe("DrizzleMembershipStore", () => {
     select: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
     transaction?: ReturnType<typeof vi.fn>;
+  };
+  let mockTxManager!: {
+    getClient: ReturnType<typeof vi.fn>;
+    run: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -45,11 +50,13 @@ describe("DrizzleMembershipStore", () => {
       select: vi.fn(),
       insert: vi.fn(),
       delete: vi.fn(),
+      update: vi.fn(),
       transaction: vi.fn(),
     };
 
-    const mockTxManager = {
+    mockTxManager = {
       getClient: vi.fn().mockReturnValue(null),
+      run: vi.fn(async (operation: () => Promise<unknown>) => operation()),
     };
 
     store = new DrizzleMembershipStore(
@@ -141,6 +148,219 @@ describe("DrizzleMembershipStore", () => {
     const count = await store.countByRole("tenant-1", "admin");
 
     expect(count).toBe(2);
+  });
+
+  it("should serialize owner removal in a transaction before applying it", async () => {
+    const owner = createMembership(createInput({ role: "owner" }));
+    mockDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          for: vi.fn().mockResolvedValue([{ userId: "user-1" }]),
+        }),
+      }),
+    });
+    mockDb.delete.mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([owner]),
+      }),
+    });
+
+    const result = await store.mutateOwner({
+      tenantId: "tenant-1",
+      userId: "user-1",
+      operation: "remove",
+    });
+
+    expect(result).toMatchObject({ status: "applied", membership: { role: "owner" } });
+    expect(mockTxManager.run).toHaveBeenCalledTimes(1);
+    expect(mockDb.select.mock.invocationCallOrder[0]).toBeLessThan(
+      mockDb.delete.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("should keep the last owner when the conditional delete rejects the transition", async () => {
+    const owner = createMembership(createInput({ role: "owner" }));
+    mockDb.delete.mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        returning: vi.fn().mockResolvedValue([]),
+      }),
+    });
+    mockDb.select
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            for: vi.fn().mockResolvedValue([{ userId: "user-1" }]),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([owner]),
+          }),
+        }),
+      });
+
+    await expect(
+      store.mutateOwner({
+        tenantId: "tenant-1",
+        userId: "user-1",
+        operation: "remove",
+      }),
+    ).resolves.toEqual({ status: "last_owner" });
+    expect(mockDb.delete).toHaveBeenCalledTimes(1);
+    expect(mockDb.update).not.toHaveBeenCalled();
+  });
+
+  it("should demote an owner with one conditional update", async () => {
+    const admin = createMembership(createInput({ role: "admin" }));
+    mockDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          for: vi.fn().mockResolvedValue([{ userId: "user-1" }]),
+        }),
+      }),
+    });
+    mockDb.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([admin]),
+        }),
+      }),
+    });
+
+    await expect(
+      store.mutateOwner({
+        tenantId: "tenant-1",
+        userId: "user-1",
+        operation: "demote",
+        role: "admin",
+      }),
+    ).resolves.toMatchObject({ status: "applied", membership: { role: "admin" } });
+    expect(mockTxManager.run).toHaveBeenCalledTimes(1);
+  });
+
+  it("should preserve one owner when row locks are reentrant in a shared transaction", async () => {
+    const owner = createMembership(createInput({ role: "owner" }));
+    let arrived = 0;
+    let releaseBarrier!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseBarrier = resolve;
+    });
+    let selectCalls = 0;
+    mockDb.select.mockImplementation(() => {
+      selectCalls += 1;
+      return {
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue(
+            selectCalls <= 2
+              ? {
+                  for: vi.fn().mockImplementation(async () => {
+                    arrived += 1;
+                    if (arrived === 2) {
+                      releaseBarrier();
+                    }
+                    await barrier;
+                    return [{ userId: "user-1" }, { userId: "user-2" }];
+                  }),
+                }
+              : {
+                  limit: vi.fn().mockResolvedValue([owner]),
+                },
+          ),
+        }),
+      };
+    });
+
+    let mutation = 0;
+    mockDb.delete.mockImplementation(() => ({
+      where: vi.fn().mockReturnValue({
+        returning: vi.fn().mockImplementation(async () => {
+          mutation += 1;
+          return mutation === 1 ? [owner] : [];
+        }),
+      }),
+    }));
+    const results = await Promise.allSettled([
+      store.mutateOwner({ tenantId: "tenant-1", userId: "user-1", operation: "remove" }),
+      store.mutateOwner({ tenantId: "tenant-1", userId: "user-2", operation: "remove" }),
+    ]);
+
+    expect(results).toEqual([
+      expect.objectContaining({ status: "fulfilled" }),
+      expect.objectContaining({ status: "fulfilled" }),
+    ]);
+    expect(
+      results
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value.status)
+        .sort(),
+    ).toEqual(["applied", "last_owner"]);
+    expect(mockDb.delete).toHaveBeenCalledTimes(2);
+  });
+
+  it("should expose repeatable-read serialization failures as a stable conflict result", async () => {
+    mockDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          for: vi.fn().mockRejectedValue({ code: "40001" }),
+        }),
+      }),
+    });
+
+    await expect(
+      store.mutateOwner({
+        tenantId: "tenant-1",
+        userId: "user-1",
+        operation: "remove",
+      }),
+    ).resolves.toEqual({ status: "conflict" });
+    expect(mockDb.delete).not.toHaveBeenCalled();
+  });
+
+  it("should transfer ownership with one update statement", async () => {
+    const fromOwner = createMembership(
+      createInput({ id: "mem-1", userId: "user-1", role: "owner" }),
+    );
+    const toAdmin = createMembership(createInput({ id: "mem-2", userId: "user-2", role: "admin" }));
+    const updatedFrom = { ...fromOwner, role: "admin" as const };
+    const updatedTo = { ...toAdmin, role: "owner" as const };
+    mockDb.select
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            for: vi.fn().mockResolvedValue([{ userId: "user-1" }]),
+          }),
+        }),
+      })
+      .mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([fromOwner, toAdmin]),
+        }),
+      });
+    mockDb.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          returning: vi.fn().mockResolvedValue([updatedFrom, updatedTo]),
+        }),
+      }),
+    });
+
+    await expect(
+      store.transferOwnership({
+        tenantId: "tenant-1",
+        fromUserId: "user-1",
+        toUserId: "user-2",
+      }),
+    ).resolves.toMatchObject({
+      status: "applied",
+      fromMembership: { role: "admin" },
+      toMembership: { role: "owner" },
+      previousToRole: "admin",
+    });
+    expect(mockDb.update).toHaveBeenCalledTimes(1);
+    expect(mockDb.insert).not.toHaveBeenCalled();
+    expect(mockDb.delete).not.toHaveBeenCalled();
   });
 
   it("should update membership when saving same tenant and user", async () => {

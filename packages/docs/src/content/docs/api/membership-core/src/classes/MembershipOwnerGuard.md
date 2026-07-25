@@ -5,26 +5,10 @@ prev: false
 title: "MembershipOwnerGuard"
 ---
 
-멤버십 소유자 변경 가드
-
-## Description
-
-소유자 역할 변경/제거 시 제약 조건을 검증하는 가드 클래스입니다. 마지막 소유자가 제거되거나 강등되지 않도록 보호합니다.
-
-## Example
-
-**가드 사용**
-
-```typescript
-const guard = new MembershipOwnerGuard(store);
-
-await guard.validateOwnerMutation({
-  tenantId: 'tenant-1',
-  userId: 'user-1',
-  currentRole: 'owner',
-  operation: 'remove'
-});
-```
+:::caution[Deprecated]
+Validation-only owner checks cannot enforce invariants under concurrency. Use
+[MembershipStore.mutateOwner](/api/membership-core/src/classes/membershipstore/#mutateowner) or [MembershipStore.transferOwnership](/api/membership-core/src/classes/membershipstore/#transferownership) for writes.
+:::
 
 ## Constructors
 
@@ -44,7 +28,7 @@ await guard.validateOwnerMutation({
 
 ## Methods
 
-### findOwners()
+### ~~findOwners()~~
 
 > **findOwners**(`tenantId`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
@@ -58,9 +42,9 @@ await guard.validateOwnerMutation({
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
-***
+---
 
-### isLastOwner()
+### ~~isLastOwner()~~
 
 > **isLastOwner**(`tenantId`, `userId`, `currentRole`): `Promise`\<`boolean`\>
 
@@ -82,9 +66,9 @@ await guard.validateOwnerMutation({
 
 `Promise`\<`boolean`\>
 
-***
+---
 
-### validateLastOwner()
+### ~~validateLastOwner()~~
 
 > **validateLastOwner**(`tenantId`, `userId`, `currentRole`): `Promise`\<`void`\>
 
@@ -106,9 +90,9 @@ await guard.validateOwnerMutation({
 
 `Promise`\<`void`\>
 
-***
+---
 
-### validateOwnerMutation()
+### ~~validateOwnerMutation()~~
 
 > **validateOwnerMutation**(`input`): `Promise`\<`void`\>
 

@@ -17,6 +17,20 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    services:
+      membership-postgres:
+        image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
+        env:
+          POSTGRES_DB: croco_membership
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d croco_membership"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
       GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e
@@ -69,6 +83,13 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify membership owner concurrency against PostgreSQL
+        env:
+          MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+        run: |
+          pnpm build --filter=@croco/membership-drizzle...
+          pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
 
       - name: Production dependency audit report
         id: security_audit_advisory
