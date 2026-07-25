@@ -15,6 +15,22 @@ title: "LifecycleRule"
 
 ***
 
+### conditionEvidence?
+
+> `readonly` `optional` **conditionEvidence?**: (`context`) => [`LifecycleConditionEvidence`](/api/lifecycle-core/src/type-aliases/lifecycleconditionevidence/) \| `Promise`\<[`LifecycleConditionEvidence`](/api/lifecycle-core/src/type-aliases/lifecycleconditionevidence/)\>
+
+#### Parameters
+
+##### context
+
+[`LifecycleContext`](/api/lifecycle-core/src/type-aliases/lifecyclecontext/)
+
+#### Returns
+
+[`LifecycleConditionEvidence`](/api/lifecycle-core/src/type-aliases/lifecycleconditionevidence/) \| `Promise`\<[`LifecycleConditionEvidence`](/api/lifecycle-core/src/type-aliases/lifecycleconditionevidence/)\>
+
+***
+
 ### cooldown?
 
 > `readonly` `optional` **cooldown?**: `object`

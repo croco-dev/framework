@@ -43,7 +43,7 @@ title: "InMemoryLifecycleActionSink"
 
 ##### run
 
-`Pick`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/), `"id"` \| `"ruleId"`\>
+`Pick`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/), `"id"` \| `"ruleId"` \| `"ruleVersion"` \| `"ruleFingerprint"`\>
 
 #### Returns
 

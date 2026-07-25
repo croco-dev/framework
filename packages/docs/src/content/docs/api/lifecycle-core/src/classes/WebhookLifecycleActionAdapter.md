@@ -43,7 +43,7 @@ title: "WebhookLifecycleActionAdapter"
 
 ##### run
 
-`Pick`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/), `"id"` \| `"idempotencyKey"` \| `"ruleId"` \| `"tenantId"`\>
+`Pick`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/), `"id"` \| `"idempotencyKey"` \| `"ruleId"` \| `"ruleVersion"` \| `"ruleFingerprint"` \| `"tenantId"`\>
 
 #### Returns
 

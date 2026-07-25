@@ -116,11 +116,16 @@ export type LifecycleSkipReason =
   | "condition_not_met"
   | "cooldown_active"
   | "idempotency_key_reused"
+  | "rule_not_active"
+  | "rule_paused"
+  | "rule_unavailable"
   | "no_actions";
 
 export type LifecycleRun = {
   readonly id: string;
   readonly ruleId: string;
+  readonly ruleVersion: string;
+  readonly ruleFingerprint: string;
   readonly tenantId: string;
   readonly signalType: LifecycleSignalType;
   readonly signalId?: string;
@@ -155,6 +160,8 @@ export type LifecycleIdempotencyResolver = (input: {
   readonly context: LifecycleContext;
 }) => string;
 
+export type LifecycleConditionEvidence = Readonly<Record<string, boolean>>;
+
 export type LifecycleRule = {
   readonly id: string;
   readonly description: string;
@@ -165,6 +172,9 @@ export type LifecycleRule = {
   };
   readonly idempotencyKey?: LifecycleIdempotencyResolver;
   readonly when?: (context: LifecycleContext) => boolean | Promise<boolean>;
+  readonly conditionEvidence?: (
+    context: LifecycleContext,
+  ) => LifecycleConditionEvidence | Promise<LifecycleConditionEvidence>;
   readonly actions:
     | readonly LifecycleAction[]
     | ((
@@ -172,11 +182,168 @@ export type LifecycleRule = {
       ) => readonly LifecycleAction[] | Promise<readonly LifecycleAction[]>);
 };
 
+export type LifecycleRuleState =
+  | "registered"
+  | "inactive"
+  | "active"
+  | "paused"
+  | "superseded"
+  | "unavailable";
+
+export type LifecycleRuleActionDescriptor = {
+  readonly id: string;
+  readonly type: string;
+  readonly title?: string;
+  readonly description?: string;
+  readonly configurationFingerprint?: string;
+};
+
+export type LifecycleRuleVersionDescriptor = {
+  readonly ruleId: string;
+  readonly version: string;
+  readonly fingerprint: string;
+  readonly executableRegistrationId: string;
+  readonly executableFingerprint: string;
+  readonly description: string;
+  readonly triggers: readonly LifecycleTrigger[];
+  readonly contextRequirements: readonly string[];
+  readonly severity: LifecycleSeverity;
+  readonly cooldownDurationMs?: number;
+  readonly actions: readonly LifecycleRuleActionDescriptor[];
+};
+
+export type LifecycleRuleRegistration = {
+  readonly descriptor: LifecycleRuleVersionDescriptor;
+  readonly rule: LifecycleRule;
+};
+
+export type LifecycleRuleVersionRecord = {
+  readonly descriptor: LifecycleRuleVersionDescriptor;
+  readonly state: Exclude<LifecycleRuleState, "unavailable">;
+  readonly registeredAt: Date;
+  readonly updatedAt: Date;
+};
+
+export type LifecycleRuleActivationCommandType = "activate" | "pause" | "resume" | "supersede";
+
+export type LifecycleRuleActivationCommand = {
+  readonly commandId: string;
+  readonly ruleId: string;
+  readonly version: string;
+  readonly expectedRevision: number;
+  readonly actor?: string;
+  readonly reason?: string;
+  readonly at?: Date;
+};
+
+export type LifecycleRuleActivationEvent = {
+  readonly commandId: string;
+  readonly command: LifecycleRuleActivationCommandType;
+  readonly ruleId: string;
+  readonly version: string;
+  readonly previousState: LifecycleRuleState;
+  readonly state: LifecycleRuleState;
+  readonly revision: number;
+  readonly actor?: string;
+  readonly reason?: string;
+  readonly occurredAt: Date;
+};
+
+export type LifecycleRuleIdentityState = {
+  readonly ruleId: string;
+  readonly revision: number;
+  readonly versions: readonly LifecycleRuleVersionRecord[];
+  readonly history: readonly LifecycleRuleActivationEvent[];
+};
+
+export type LifecycleRuleStateMutation = {
+  readonly state: LifecycleRuleIdentityState;
+  readonly replayed: boolean;
+};
+
+export type LifecycleRuleStateStoreResult<T> = T | Promise<T>;
+
+export interface LifecycleRuleStateStore {
+  get(ruleId: string): LifecycleRuleStateStoreResult<LifecycleRuleIdentityState | undefined>;
+  saveRegistration(
+    record: LifecycleRuleVersionRecord,
+  ): LifecycleRuleStateStoreResult<LifecycleRuleIdentityState>;
+  applyCommand(input: {
+    readonly command: LifecycleRuleActivationCommandType;
+    readonly request: LifecycleRuleActivationCommand;
+  }): LifecycleRuleStateStoreResult<LifecycleRuleStateMutation>;
+  list(): LifecycleRuleStateStoreResult<readonly LifecycleRuleIdentityState[]>;
+}
+
+export type LifecycleRuleRegistrationInput = {
+  readonly rule: LifecycleRule;
+  readonly version: string;
+  readonly executableRegistrationId: string;
+  /**
+   * Stable fingerprint of the generated/bundled executable artifact and its captured configuration.
+   * This value must change whenever executable rule behavior changes.
+   */
+  readonly executableFingerprint: string;
+  readonly contextRequirements?: readonly string[];
+  readonly actionDescriptors?: readonly LifecycleRuleActionDescriptor[];
+  readonly activate?: boolean;
+  readonly registeredAt?: Date;
+};
+
+export type LifecycleRuleInspection = LifecycleRuleVersionDescriptor & {
+  readonly state: LifecycleRuleState;
+  readonly revision: number;
+  readonly registeredAt: Date;
+  readonly updatedAt: Date;
+};
+
+export type LifecycleDryRunSuppression = {
+  readonly suppressed: boolean;
+  readonly reason?: LifecycleSkipReason;
+};
+
+export type LifecycleDryRunProblem = {
+  readonly code: string;
+  readonly message: string;
+};
+
+export type LifecycleDryRunSignalEvidence = {
+  readonly id?: string;
+  readonly type: LifecycleSignalType;
+  readonly occurredAt: Date;
+};
+
+export type LifecycleDryRunResult = {
+  readonly tenantId: string;
+  readonly signal: LifecycleDryRunSignalEvidence;
+  readonly evaluatedAt: Date;
+  readonly ruleId: string;
+  readonly ruleVersion: string;
+  readonly ruleFingerprint: string;
+  readonly state: LifecycleRuleState;
+  readonly matched: boolean;
+  readonly conditionEvidence: LifecycleConditionEvidence;
+  readonly proposedActions: readonly LifecycleRuleActionDescriptor[];
+  readonly suppression: LifecycleDryRunSuppression;
+  readonly problems: readonly LifecycleDryRunProblem[];
+};
+
+export interface LifecycleDryRunStore {
+  save(result: LifecycleDryRunResult): void;
+  list(options?: {
+    readonly ruleId?: string;
+    readonly limit?: number;
+  }): readonly LifecycleDryRunResult[];
+}
+
 export interface LifecycleActionAdapter {
   execute(
     action: LifecycleAction,
     context: LifecycleContext,
-    run: Pick<LifecycleRun, "id" | "idempotencyKey" | "ruleId" | "tenantId">,
+    run: Pick<
+      LifecycleRun,
+      "id" | "idempotencyKey" | "ruleId" | "ruleVersion" | "ruleFingerprint" | "tenantId"
+    >,
   ): Promise<LifecycleActionResult>;
 }
 

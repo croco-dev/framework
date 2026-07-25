@@ -1,0 +1,667 @@
+import { describe, expect, it } from "vitest";
+import {
+  InMemoryLifecycleActionSink,
+  InMemoryLifecycleDryRunStore,
+  InMemoryLifecycleRuleStateStore,
+  InMemoryLifecycleRunStore,
+  LifecycleDiagnosticsProvider,
+  LifecycleRuleCommandConflictProblem,
+  LifecycleRuleEvaluator,
+  LifecycleRuleRegistry,
+  LifecycleRuleTransitionProblem,
+  LifecycleRuleVersionConflictProblem,
+  LifecycleRuleVersionDefinitionProblem,
+  UnavailableLifecycleRuleVersionProblem,
+  createLifecycleContext,
+  createScheduledLifecycleSignal,
+} from "../index";
+import type {
+  LifecycleRule,
+  LifecycleRuleStateStore,
+  LifecycleRuleVersionDescriptor,
+  LifecycleRuleVersionRecord,
+  LifecycleRun,
+} from "../index";
+
+const NOW = new Date("2026-07-26T00:00:00.000Z");
+
+function createRule(versionLabel = "v1"): LifecycleRule {
+  return {
+    id: "retention-risk",
+    description: `Retention risk ${versionLabel}`,
+    triggers: [{ type: "scheduled.reevaluation" }],
+    severity: "high",
+    cooldown: { durationMs: 60_000 },
+    when: (context) => context.metadata?.atRisk === true,
+    conditionEvidence: (context) => ({
+      atRisk: context.metadata?.atRisk === true,
+      onboardingIncomplete: context.onboarding?.isCompleted !== true,
+    }),
+    actions: [
+      {
+        id: "create-follow-up",
+        type: "cs.follow_up",
+        title: "Create follow-up",
+        payload: { secret: "must-not-leak" },
+      },
+    ],
+  };
+}
+
+function createContext(signalId = "signal-1", now = NOW) {
+  return createLifecycleContext({
+    now,
+    signal: {
+      ...createScheduledLifecycleSignal({
+        signalId,
+        tenantId: "tenant-1",
+        reason: "retention-risk",
+        occurredAt: now,
+      }),
+      data: {
+        secretSignalValue: "sensitive-signal-value",
+      },
+    },
+    onboarding: { status: "in_progress", isCompleted: false },
+    metadata: {
+      atRisk: true,
+      secretToken: "sensitive-context-value",
+    },
+  });
+}
+
+function registerVersion(
+  registry: LifecycleRuleRegistry,
+  version: string,
+  options: { readonly activate?: boolean; readonly executableRegistrationId?: string } = {},
+) {
+  return registry.registerVersion({
+    rule: createRule(version),
+    version,
+    executableRegistrationId: options.executableRegistrationId ?? `retention-risk:${version}`,
+    executableFingerprint: `retention-risk-bundle:${version}`,
+    contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
+    activate: options.activate,
+  });
+}
+
+class AsyncLifecycleRuleStateStore implements LifecycleRuleStateStore {
+  constructor(private readonly delegate = new InMemoryLifecycleRuleStateStore()) {}
+
+  async get(ruleId: string) {
+    await Promise.resolve();
+    return this.delegate.get(ruleId);
+  }
+
+  async saveRegistration(record: LifecycleRuleVersionRecord) {
+    await Promise.resolve();
+    return this.delegate.saveRegistration(record);
+  }
+
+  async applyCommand(input: Parameters<LifecycleRuleStateStore["applyCommand"]>[0]) {
+    await Promise.resolve();
+    return this.delegate.applyCommand(input);
+  }
+
+  async list() {
+    await Promise.resolve();
+    return this.delegate.list();
+  }
+}
+
+describe("LifecycleRuleRegistry versioning", () => {
+  it("creates a deterministic rule fingerprint from declared executable inputs", async () => {
+    const registry = new LifecycleRuleRegistry();
+
+    const registration = await registerVersion(registry, "1.0.0", { activate: true });
+
+    expect(registration.descriptor).toMatchObject({
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      executableRegistrationId: "retention-risk:1.0.0",
+      contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
+      actions: [{ id: "create-follow-up", type: "cs.follow_up" }],
+    });
+    expect(registration.descriptor.fingerprint).toBe(
+      "1c4137f6897fdf4b3e14d6731e00246b0c34a6223931adce9eaa322d20d92e39",
+    );
+  });
+
+  it("keeps a changed registration inactive until an explicit activation supersedes the active version", async () => {
+    const registry = new LifecycleRuleRegistry();
+    const first = await registerVersion(registry, "1.0.0", { activate: true });
+    const second = await registerVersion(registry, "2.0.0");
+
+    expect(await registry.inspect()).toMatchObject([
+      { version: "1.0.0", state: "active", revision: 1 },
+      { version: "2.0.0", state: "inactive", revision: 1 },
+    ]);
+
+    await registry.activate({
+      commandId: "activate-v2",
+      ruleId: "retention-risk",
+      version: "2.0.0",
+      expectedRevision: 1,
+      actor: "operator-1",
+      reason: "reviewed rollout",
+      at: NOW,
+    });
+
+    expect(await registry.inspect()).toMatchObject([
+      {
+        version: "1.0.0",
+        fingerprint: first.descriptor.fingerprint,
+        state: "superseded",
+        revision: 2,
+      },
+      {
+        version: "2.0.0",
+        fingerprint: second.descriptor.fingerprint,
+        state: "active",
+        revision: 2,
+      },
+    ]);
+    expect((await registry.getIdentityState("retention-risk"))?.history).toMatchObject([
+      { command: "activate", version: "1.0.0", revision: 1 },
+      {
+        command: "activate",
+        version: "2.0.0",
+        revision: 2,
+        actor: "operator-1",
+        reason: "reviewed rollout",
+      },
+    ]);
+  });
+
+  it("rejects immutable version drift and silent replacement during registration", async () => {
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+
+    await expect(
+      registry.registerVersion({
+        rule: { ...createRule("changed"), severity: "critical" },
+        version: "1.0.0",
+        executableRegistrationId: "retention-risk:1.0.0",
+        executableFingerprint: "retention-risk-bundle:1.0.0",
+        contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
+      }),
+    ).rejects.toThrow(LifecycleRuleVersionDefinitionProblem);
+    await expect(
+      registry.registerVersion({
+        rule: {
+          ...createRule("changed-payload"),
+          actions: [
+            {
+              id: "create-follow-up",
+              type: "cs.follow_up",
+              title: "Create follow-up",
+              payload: { secret: "changed-configuration" },
+            },
+          ],
+        },
+        version: "1.0.0",
+        executableRegistrationId: "retention-risk:1.0.0",
+        executableFingerprint: "retention-risk-bundle:1.0.0",
+        contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
+      }),
+    ).rejects.toThrow(LifecycleRuleVersionDefinitionProblem);
+    await expect(registerVersion(registry, "2.0.0", { activate: true })).rejects.toThrow(
+      LifecycleRuleVersionDefinitionProblem,
+    );
+  });
+
+  it("uses optimistic concurrency and command idempotency for activation transitions", async () => {
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    await registerVersion(registry, "2.0.0");
+    await registry.activate({
+      commandId: "activate-v2",
+      ruleId: "retention-risk",
+      version: "2.0.0",
+      expectedRevision: 1,
+    });
+
+    const pause = {
+      commandId: "pause-v2",
+      ruleId: "retention-risk",
+      version: "2.0.0",
+      expectedRevision: 2,
+      at: NOW,
+    } as const;
+    const [first, concurrent] = await Promise.allSettled([
+      Promise.resolve().then(() => registry.pause(pause)),
+      Promise.resolve().then(() =>
+        registry.pause({
+          ...pause,
+          commandId: "concurrent-pause-v2",
+        }),
+      ),
+    ]);
+
+    expect(first.status).toBe("fulfilled");
+    expect(concurrent).toMatchObject({
+      status: "rejected",
+      reason: expect.any(LifecycleRuleVersionConflictProblem),
+    });
+    await expect(registry.pause(pause)).resolves.toMatchObject({
+      replayed: true,
+      state: { revision: 3 },
+    });
+    await expect(registry.pause({ ...pause, reason: "different input" })).rejects.toThrow(
+      LifecycleRuleCommandConflictProblem,
+    );
+
+    await registry.resume({
+      commandId: "resume-v2",
+      ruleId: "retention-risk",
+      version: "2.0.0",
+      expectedRevision: 3,
+    });
+    const idempotentResume = await registry.resume({
+      commandId: "resume-v2-again",
+      ruleId: "retention-risk",
+      version: "2.0.0",
+      expectedRevision: 4,
+    });
+
+    expect(idempotentResume.state.revision).toBe(4);
+    expect((await registry.inspect()).find((rule) => rule.version === "2.0.0")?.state).toBe(
+      "active",
+    );
+    await expect(
+      registry.activate({
+        commandId: "reactivate-v1",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expectedRevision: 4,
+      }),
+    ).rejects.toThrow(LifecycleRuleTransitionProblem);
+  });
+
+  it("supports atomic activation commands through a shared asynchronous durable-store contract", async () => {
+    const stateStore = new AsyncLifecycleRuleStateStore();
+    const firstRegistry = new LifecycleRuleRegistry({ stateStore });
+    const secondRegistry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(firstRegistry, "1.0.0", { activate: true });
+    await registerVersion(secondRegistry, "1.0.0", { activate: true });
+
+    const results = await Promise.allSettled([
+      firstRegistry.pause({
+        commandId: "first-process-pause",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expectedRevision: 1,
+      }),
+      secondRegistry.pause({
+        commandId: "second-process-pause",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expectedRevision: 1,
+      }),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toMatchObject([
+      { reason: expect.any(LifecycleRuleVersionConflictProblem) },
+    ]);
+    expect((await firstRegistry.getIdentityState("retention-risk"))?.history).toHaveLength(2);
+  });
+
+  it("fails activation when persisted state has no executable registration", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const descriptor: LifecycleRuleVersionDescriptor = {
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      fingerprint: "persisted-fingerprint",
+      executableRegistrationId: "retention-risk:1.0.0",
+      executableFingerprint: "persisted-executable-fingerprint",
+      description: "Persisted rule",
+      triggers: [{ type: "scheduled.reevaluation" }],
+      contextRequirements: [],
+      severity: "high",
+      actions: [{ id: "create-follow-up", type: "cs.follow_up" }],
+    };
+    stateStore.saveRegistration({
+      descriptor,
+      state: "registered",
+      registeredAt: NOW,
+      updatedAt: NOW,
+    });
+    const registry = new LifecycleRuleRegistry({ stateStore });
+
+    await expect(
+      registry.activate({
+        commandId: "activate-unavailable",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expectedRevision: 0,
+      }),
+    ).rejects.toThrow(UnavailableLifecycleRuleVersionProblem);
+    expect(await registry.inspect()).toMatchObject([{ version: "1.0.0", state: "unavailable" }]);
+  });
+
+  it("reattaches the same active executable version after a process restart", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const firstRegistry = new LifecycleRuleRegistry({ stateStore });
+    const first = await registerVersion(firstRegistry, "1.0.0", { activate: true });
+    const restartedRegistry = new LifecycleRuleRegistry({ stateStore });
+
+    const restarted = await registerVersion(restartedRegistry, "1.0.0", { activate: true });
+
+    expect(restarted.descriptor).toEqual(first.descriptor);
+    expect(await restartedRegistry.inspect()).toMatchObject([
+      { version: "1.0.0", state: "active", revision: 1 },
+    ]);
+    expect((await restartedRegistry.getIdentityState("retention-risk"))?.history).toHaveLength(1);
+  });
+
+  it("rejects a changed executable artifact reattaching to a persisted active version", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const firstRegistry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(firstRegistry, "1.0.0", { activate: true });
+    const restartedRegistry = new LifecycleRuleRegistry({ stateStore });
+
+    await expect(
+      restartedRegistry.registerVersion({
+        rule: {
+          ...createRule("changed-executable"),
+          when: () => false,
+        },
+        version: "1.0.0",
+        executableRegistrationId: "retention-risk:1.0.0",
+        executableFingerprint: "changed-retention-risk-bundle:1.0.0",
+        contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
+      }),
+    ).rejects.toThrow(LifecycleRuleVersionDefinitionProblem);
+  });
+});
+
+describe("LifecycleRuleEvaluator versioned execution", () => {
+  it("records the immutable rule version and fingerprint on production runs and emissions", async () => {
+    const registry = new LifecycleRuleRegistry();
+    const registration = await registerVersion(registry, "1.0.0", { activate: true });
+    const runStore = new InMemoryLifecycleRunStore();
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({ registry, runStore, actionAdapter: sink });
+
+    const result = await evaluator.evaluate(createContext());
+
+    expect(result.runs).toMatchObject([
+      {
+        ruleId: "retention-risk",
+        ruleVersion: "1.0.0",
+        ruleFingerprint: registration.descriptor.fingerprint,
+        status: "succeeded",
+      },
+    ]);
+    expect(sink.getEmissions()).toMatchObject([
+      {
+        ruleId: "retention-risk",
+        ruleVersion: "1.0.0",
+        ruleFingerprint: registration.descriptor.fingerprint,
+      },
+    ]);
+  });
+
+  it("records paused signal evidence without dispatching and resume does not replay it", async () => {
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    await registry.pause({
+      commandId: "pause-v1",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+    const runStore = new InMemoryLifecycleRunStore();
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({ registry, runStore, actionAdapter: sink });
+
+    const paused = await evaluator.evaluate(createContext());
+    await registry.resume({
+      commandId: "resume-v1",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 2,
+    });
+
+    expect(paused.runs).toMatchObject([
+      {
+        ruleVersion: "1.0.0",
+        status: "skipped",
+        skipReason: "rule_paused",
+      },
+    ]);
+    expect(await runStore.list()).toHaveLength(1);
+    expect(sink.getEmissions()).toHaveLength(0);
+  });
+
+  it("rechecks activation state after awaited evaluation work before dispatching", async () => {
+    let markLookupStarted: (() => void) | undefined;
+    let releaseLookup: (() => void) | undefined;
+    const lookupStarted = new Promise<void>((resolve) => {
+      markLookupStarted = resolve;
+    });
+    const lookupGate = new Promise<void>((resolve) => {
+      releaseLookup = resolve;
+    });
+    class BlockingRunStore extends InMemoryLifecycleRunStore {
+      override async findByIdempotencyKey(idempotencyKey: string): Promise<LifecycleRun | null> {
+        markLookupStarted?.();
+        await lookupGate;
+        return super.findByIdempotencyKey(idempotencyKey);
+      }
+    }
+
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({
+      registry,
+      runStore: new BlockingRunStore(),
+      actionAdapter: sink,
+    });
+
+    const evaluation = evaluator.evaluate(createContext());
+    await lookupStarted;
+    await registry.pause({
+      commandId: "pause-during-evaluation",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+    releaseLookup?.();
+    const result = await evaluation;
+
+    expect(result.runs).toMatchObject([
+      {
+        status: "skipped",
+        skipReason: "rule_paused",
+      },
+    ]);
+    expect(sink.getEmissions()).toHaveLength(0);
+  });
+
+  it("dry-runs without dispatching, saving a production run, or consuming cooldown", async () => {
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const runStore = new InMemoryLifecycleRunStore();
+    const dryRunStore = new InMemoryLifecycleDryRunStore();
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({
+      registry,
+      runStore,
+      dryRunStore,
+      actionAdapter: sink,
+    });
+
+    const first = await evaluator.dryRun({
+      ruleId: "retention-risk",
+      context: createContext(),
+    });
+    const second = await evaluator.dryRun({
+      ruleId: "retention-risk",
+      context: createContext("signal-2", new Date(NOW.getTime() + 1_000)),
+    });
+
+    expect(first).toMatchObject({
+      ruleVersion: "1.0.0",
+      state: "active",
+      matched: true,
+      conditionEvidence: {
+        atRisk: true,
+        onboardingIncomplete: true,
+      },
+      proposedActions: [{ id: "create-follow-up", type: "cs.follow_up" }],
+      suppression: { suppressed: false },
+      problems: [],
+    });
+    expect(JSON.stringify(first)).not.toContain("must-not-leak");
+    expect(JSON.stringify(first)).not.toContain("sensitive-context-value");
+    expect(JSON.stringify(first)).not.toContain("sensitive-signal-value");
+    expect(second.suppression).toEqual({ suppressed: false });
+    expect(await runStore.list()).toHaveLength(0);
+    expect(sink.getEmissions()).toHaveLength(0);
+    expect(dryRunStore.list()).toHaveLength(2);
+
+    const production = await evaluator.evaluate(
+      createContext("signal-3", new Date(NOW.getTime() + 2_000)),
+    );
+    const cooldownPreview = await evaluator.dryRun({
+      ruleId: "retention-risk",
+      context: createContext("signal-4", new Date(NOW.getTime() + 3_000)),
+    });
+    expect(production.runs[0]).toMatchObject({ status: "succeeded" });
+    expect(cooldownPreview.suppression).toEqual({
+      suppressed: true,
+      reason: "cooldown_active",
+    });
+    expect(sink.getEmissions()).toHaveLength(1);
+  });
+
+  it("keeps the simple registration compatibility path for dynamic action mappings", async () => {
+    const registry = new LifecycleRuleRegistry();
+    registry.register({
+      ...createRule("legacy"),
+      actions: (context) => [
+        {
+          id: "legacy-action",
+          type: "cs.follow_up",
+          payload: { tenantId: context.tenantId },
+        },
+      ],
+    });
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({
+      registry,
+      runStore: new InMemoryLifecycleRunStore(),
+      actionAdapter: sink,
+    });
+
+    const result = await evaluator.evaluate(createContext());
+
+    expect(result.runs[0]).toMatchObject({
+      ruleId: "retention-risk",
+      ruleVersion: expect.stringMatching(/^legacy-/),
+      status: "succeeded",
+    });
+    expect(sink.getEmissions()).toHaveLength(1);
+  });
+
+  it("records an explicit failed run when dynamic code produces an undeclared action", async () => {
+    const registry = new LifecycleRuleRegistry();
+    await registry.registerVersion({
+      rule: {
+        ...createRule("dynamic"),
+        actions: () => [{ id: "undeclared-action", type: "billing.refund" }],
+      },
+      version: "1.0.0",
+      executableRegistrationId: "retention-risk:dynamic-v1",
+      executableFingerprint: "retention-risk-dynamic-bundle:1.0.0",
+      actionDescriptors: [{ id: "create-follow-up", type: "cs.follow_up" }],
+      activate: true,
+    });
+    const runStore = new InMemoryLifecycleRunStore();
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({ registry, runStore, actionAdapter: sink });
+
+    const dryRun = await evaluator.dryRun({
+      ruleId: "retention-risk",
+      context: createContext(),
+    });
+    const production = await evaluator.evaluate(createContext());
+
+    expect(dryRun).toMatchObject({
+      proposedActions: [],
+      problems: [{ code: "lifecycle-core/rule-action-contract-mismatch" }],
+    });
+    expect(production.runs).toMatchObject([
+      {
+        ruleVersion: "1.0.0",
+        status: "failed",
+        error: { code: "lifecycle-core/rule-action-contract-mismatch" },
+      },
+    ]);
+    expect(sink.getEmissions()).toHaveLength(0);
+    expect(await runStore.list()).toHaveLength(1);
+  });
+
+  it("reports operational version state, recent dry runs, and run fingerprint mismatches", async () => {
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    await registry.pause({
+      commandId: "pause-v1",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+    const runStore = new InMemoryLifecycleRunStore();
+    const dryRunStore = new InMemoryLifecycleDryRunStore();
+    const evaluator = new LifecycleRuleEvaluator({
+      registry,
+      runStore,
+      dryRunStore,
+      actionAdapter: new InMemoryLifecycleActionSink(),
+    });
+    await evaluator.dryRun({ ruleId: "retention-risk", context: createContext() });
+    const mismatchedRun: LifecycleRun = {
+      id: "mismatched-run",
+      ruleId: "retention-risk",
+      ruleVersion: "1.0.0",
+      ruleFingerprint: "unexpected-fingerprint",
+      tenantId: "tenant-1",
+      signalType: "scheduled.reevaluation",
+      signalId: "signal-1",
+      severity: "high",
+      status: "skipped",
+      idempotencyKey: "mismatched-run",
+      skipReason: "rule_paused",
+      actionResults: [],
+      startedAt: NOW,
+      completedAt: NOW,
+    };
+    await runStore.save(mismatchedRun);
+
+    const health = await new LifecycleDiagnosticsProvider(runStore, {
+      registry,
+      dryRunStore,
+    }).getHealth();
+
+    expect(health).toMatchObject({
+      status: "degraded",
+      details: {
+        activeVersions: [],
+        pausedRules: [{ version: "1.0.0", state: "paused" }],
+        unavailableRegistrations: [],
+        versionMismatchCount: 1,
+        recentDryRuns: [
+          {
+            ruleVersion: "1.0.0",
+            state: "paused",
+            matched: true,
+            suppressed: true,
+          },
+        ],
+      },
+    });
+  });
+});

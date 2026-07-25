@@ -11,6 +11,8 @@ export type LifecycleActionEmission = {
   readonly action: LifecycleAction;
   readonly tenantId: string;
   readonly ruleId: string;
+  readonly ruleVersion: string;
+  readonly ruleFingerprint: string;
   readonly runId: string;
   readonly emittedAt: Date;
 };
@@ -34,7 +36,7 @@ export class InMemoryLifecycleActionSink implements LifecycleActionAdapter {
   async execute(
     action: LifecycleAction,
     context: LifecycleContext,
-    run: Pick<LifecycleRun, "id" | "ruleId">,
+    run: Pick<LifecycleRun, "id" | "ruleId" | "ruleVersion" | "ruleFingerprint">,
   ): Promise<LifecycleActionResult> {
     if (this.skipActionIds.has(action.id)) {
       return {
@@ -62,6 +64,8 @@ export class InMemoryLifecycleActionSink implements LifecycleActionAdapter {
       action,
       tenantId: context.tenantId,
       ruleId: run.ruleId,
+      ruleVersion: run.ruleVersion,
+      ruleFingerprint: run.ruleFingerprint,
       runId: run.id,
       emittedAt: context.now,
     };

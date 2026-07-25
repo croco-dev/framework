@@ -11352,6 +11352,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "InMemoryLifecycleDryRunStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryLifecycleDryRunStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryLifecycleRuleStateStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryLifecycleRuleStateStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "InMemoryLifecycleRunStore",
               "exportKind": "named",
               "source": "./libs/InMemoryLifecycleRunStore",
@@ -11370,6 +11382,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "LifecycleRuleActionContractProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "LifecycleRuleCommandConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "LifecycleRuleDefinitionProblem",
               "exportKind": "named",
               "source": "./libs/problems/LifecycleProblems",
@@ -11385,6 +11409,36 @@
               "name": "LifecycleRuleRegistry",
               "exportKind": "named",
               "source": "./libs/LifecycleRuleRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "LifecycleRuleTransitionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "LifecycleRuleVersionConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "LifecycleRuleVersionDefinitionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "UnavailableLifecycleRuleVersionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "UnknownLifecycleRuleVersionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
               "declarationKind": "class"
             },
             {
@@ -11421,12 +11475,47 @@
               "source": "./libs/types"
             },
             {
+              "name": "LifecycleConditionEvidence",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "LifecycleContext",
               "exportKind": "named",
               "source": "./libs/types"
             },
             {
               "name": "LifecycleContextInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleDryRunInput",
+              "exportKind": "named",
+              "source": "./libs/LifecycleRuleEvaluator"
+            },
+            {
+              "name": "LifecycleDryRunProblem",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleDryRunResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleDryRunSignalEvidence",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleDryRunStore",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleDryRunSuppression",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -11452,6 +11541,86 @@
             },
             {
               "name": "LifecycleRule",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleActionDescriptor",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleActivationCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleActivationCommandType",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleActivationEvent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleEvaluatorOptions",
+              "exportKind": "named",
+              "source": "./libs/LifecycleRuleEvaluator"
+            },
+            {
+              "name": "LifecycleRuleIdentityState",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleInspection",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleRegistration",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleRegistrationInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleRegistryOptions",
+              "exportKind": "named",
+              "source": "./libs/LifecycleRuleRegistry"
+            },
+            {
+              "name": "LifecycleRuleState",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleStateMutation",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleStateStore",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleStateStoreResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleVersionDescriptor",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleVersionRecord",
               "exportKind": "named",
               "source": "./libs/types"
             },

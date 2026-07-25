@@ -1,5 +1,7 @@
 export { LifecycleDiagnosticsProvider } from "./libs/diagnostics/LifecycleDiagnosticsProvider";
 export { InMemoryLifecycleActionSink } from "./libs/InMemoryLifecycleActionSink";
+export { InMemoryLifecycleDryRunStore } from "./libs/InMemoryLifecycleDryRunStore";
+export { InMemoryLifecycleRuleStateStore } from "./libs/InMemoryLifecycleRuleStateStore";
 export { InMemoryLifecycleRunStore } from "./libs/InMemoryLifecycleRunStore";
 export { LifecycleRuleEvaluator } from "./libs/LifecycleRuleEvaluator";
 export { LifecycleRuleRegistry } from "./libs/LifecycleRuleRegistry";
@@ -18,7 +20,14 @@ export { WebhookLifecycleActionAdapter } from "./libs/WebhookLifecycleActionAdap
 export {
   DuplicateLifecycleRuleProblem,
   LifecycleActionAdapterProblem,
+  LifecycleRuleActionContractProblem,
+  LifecycleRuleCommandConflictProblem,
   LifecycleRuleDefinitionProblem,
+  LifecycleRuleTransitionProblem,
+  LifecycleRuleVersionConflictProblem,
+  LifecycleRuleVersionDefinitionProblem,
+  UnavailableLifecycleRuleVersionProblem,
+  UnknownLifecycleRuleVersionProblem,
 } from "./libs/problems/LifecycleProblems";
 export type {
   LifecycleAction,
@@ -28,6 +37,12 @@ export type {
   LifecycleBillingSummary,
   LifecycleContext,
   LifecycleContextInput,
+  LifecycleConditionEvidence,
+  LifecycleDryRunProblem,
+  LifecycleDryRunResult,
+  LifecycleDryRunSignalEvidence,
+  LifecycleDryRunStore,
+  LifecycleDryRunSuppression,
   LifecycleEvaluationResult,
   LifecycleHealthSummary,
   LifecycleIdempotencyResolver,
@@ -44,4 +59,23 @@ export type {
   LifecycleTrigger,
   LifecycleUsageSummary,
   LifecycleRule,
+  LifecycleRuleActionDescriptor,
+  LifecycleRuleActivationCommand,
+  LifecycleRuleActivationCommandType,
+  LifecycleRuleActivationEvent,
+  LifecycleRuleIdentityState,
+  LifecycleRuleInspection,
+  LifecycleRuleRegistration,
+  LifecycleRuleRegistrationInput,
+  LifecycleRuleState,
+  LifecycleRuleStateMutation,
+  LifecycleRuleStateStore,
+  LifecycleRuleStateStoreResult,
+  LifecycleRuleVersionDescriptor,
+  LifecycleRuleVersionRecord,
 } from "./libs/types";
+export type {
+  LifecycleDryRunInput,
+  LifecycleRuleEvaluatorOptions,
+} from "./libs/LifecycleRuleEvaluator";
+export type { LifecycleRuleRegistryOptions } from "./libs/LifecycleRuleRegistry";

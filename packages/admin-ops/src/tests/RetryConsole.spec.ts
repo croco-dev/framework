@@ -463,6 +463,8 @@ describe("RetryConsole", () => {
     const lifecycleRun: LifecycleRun = {
       id: "lifecycle-1",
       ruleId: "past-due-recovery",
+      ruleVersion: "1.0.0",
+      ruleFingerprint: "past-due-recovery-v1",
       tenantId: "tenant-1",
       signalType: "billing.subscription.updated",
       signalId: "signal-1",
@@ -529,6 +531,8 @@ describe("RetryConsole", () => {
     const lifecycleRun: LifecycleRun = {
       id: "lifecycle-1",
       ruleId: "past-due-recovery",
+      ruleVersion: "1.0.0",
+      ruleFingerprint: "past-due-recovery-v1",
       tenantId: "tenant-1",
       signalType: "billing.subscription.updated",
       signalId: "signal-1",
