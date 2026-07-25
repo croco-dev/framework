@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { AtomicQuotaNotSupportedProblem } from "../../libs/problems/AtomicQuotaNotSupportedProblem";
 import { DuplicateRecordProblem } from "../../libs/problems/DuplicateRecordProblem";
+import { InvalidMeterDefinitionProblem } from "../../libs/problems/InvalidMeterDefinitionProblem";
 import { InvalidMeterProblem } from "../../libs/problems/InvalidMeterProblem";
+import { InvalidUsageEnvelopeProblem } from "../../libs/problems/InvalidUsageEnvelopeProblem";
 import { QuotaExceededProblem } from "../../libs/problems/QuotaExceededProblem";
 import { RedisProblem } from "../../libs/problems/RedisProblem";
 
@@ -57,6 +59,35 @@ describe("Problems", () => {
 
       const json = problem.toJSON();
       expect(json.idempotencyKey).toBe("idem-key-123");
+    });
+  });
+
+  describe("typed meter validation Problems", () => {
+    it("describes invalid definitions without exposing the definition value", () => {
+      const problem = new InvalidMeterDefinitionProblem("dimensions.model", "must be non-empty");
+
+      expect(problem.code).toBe("metering/invalid-meter-definition");
+      expect(problem.status).toBe(422);
+      expect(problem.toJSON()).toMatchObject({
+        field: "dimensions.model",
+        constraint: "must be non-empty",
+      });
+    });
+
+    it("describes invalid usage fields without exposing metadata or values", () => {
+      const problem = new InvalidUsageEnvelopeProblem(
+        "ai.tokens",
+        "dimensions.model",
+        "must be one of: gpt-5",
+      );
+
+      expect(problem.code).toBe("metering/invalid-usage-envelope");
+      expect(problem.status).toBe(422);
+      expect(problem.toJSON()).toMatchObject({
+        meterKey: "ai.tokens",
+        field: "dimensions.model",
+        constraint: "must be one of: gpt-5",
+      });
     });
   });
 

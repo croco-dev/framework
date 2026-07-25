@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "MeteredMetadata"
+title: "LegacyMeteredOptions"
 ---
 
-> **MeteredMetadata** = `object`
+> **LegacyMeteredOptions** = `object`
 
 Metered 메서드 데코레이터의 메타데이터 타입입니다.
 
@@ -51,21 +51,15 @@ Metered 메서드 데코레이터의 메타데이터 타입입니다.
 
 ---
 
-### meter?
-
-> `optional` **meter?**: [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
-
----
-
 ### meterId
 
 > **meterId**: `string`
 
 ---
 
-### valueExtractor
+### valueExtractor?
 
-> **valueExtractor**: (`args`, `result`) => `number`
+> `optional` **valueExtractor?**: (`args`, `result`) => `number`
 
 #### Parameters
 

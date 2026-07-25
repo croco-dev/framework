@@ -13135,6 +13135,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "defineMeter",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition",
+              "declarationKind": "function"
+            },
+            {
+              "name": "dimension",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition",
+              "declarationKind": "const"
+            },
+            {
               "name": "DuplicateRecordProblem",
               "exportKind": "named",
               "source": "./libs/problems/DuplicateRecordProblem",
@@ -13171,10 +13183,28 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidMeterDefinitionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidMeterDefinitionProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidMeterProblem",
               "exportKind": "named",
               "source": "./libs/problems/InvalidMeterProblem",
               "declarationKind": "class"
+            },
+            {
+              "name": "InvalidUsageEnvelopeProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidUsageEnvelopeProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "isMeterRef",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition",
+              "declarationKind": "function"
             },
             {
               "name": "METER_METADATA_KEY",
@@ -13290,14 +13320,79 @@
               "source": "./libs/UsageStorage"
             },
             {
+              "name": "EnumDimension",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
               "name": "FlushResult",
               "exportKind": "named",
               "source": "./libs/types"
             },
             {
+              "name": "LegacyMeteredOptions",
+              "exportKind": "named",
+              "source": "./libs/decorators/Metered"
+            },
+            {
+              "name": "MeterAggregation",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
+              "name": "MeterAggregationOf",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
+              "name": "MeterBillingIntent",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
+              "name": "MeterBillingOf",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
               "name": "MeterDefinition",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "MeterDefinitionInput",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
+              "name": "MeterDescriptor",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
+              "name": "MeterDimension",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
+              "name": "MeterDimensionSchema",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
+              "name": "MeterDimensionsOf",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
+              "name": "MeterDimensionValue",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
+              "name": "MeterDimensionValues",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
             },
             {
               "name": "MeteredMetadata",
@@ -13323,6 +13418,16 @@
               "name": "MeterOptions",
               "exportKind": "named",
               "source": "./libs/decorators/Meter"
+            },
+            {
+              "name": "MeterRecordInput",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
+            },
+            {
+              "name": "MeterRef",
+              "exportKind": "named",
+              "source": "./libs/MeterDefinition"
             },
             {
               "name": "MeterRegistrationOptions",
@@ -13358,6 +13463,11 @@
               "name": "RedisClient",
               "exportKind": "named",
               "source": "./libs/RedisClient"
+            },
+            {
+              "name": "TypedMeteredOptions",
+              "exportKind": "named",
+              "source": "./libs/decorators/Metered"
             },
             {
               "name": "UsageAggregatorOptions",

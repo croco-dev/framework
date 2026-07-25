@@ -47,32 +47,76 @@ Usage Metering 핵심 서비스
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### record()
+
+#### Call Signature
+
+> **record**\<`TMeter`, `TInput`\>(`meter`, `input`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
+
+사용량 기록
+
+##### Type Parameters
+
+###### TMeter
+
+`TMeter` _extends_ [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
+
+###### TInput
+
+`TInput`
+
+##### Parameters
+
+###### meter
+
+`TMeter`
+
+###### input
+
+`TInput` & `StrictMeterInput`\<`TMeter`, `TInput`\>
+
+##### Returns
+
+`Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
+
+##### Throws
+
+QuotaExceededProblem quota 초과 시 (allowOverQuota=false)
+
+##### Throws
+
+DuplicateRecordProblem 중복 idempotencyKey 시
+
+##### Throws
+
+InvalidMeterProblem meter 없을 시
+
+#### Call Signature
 
 > **record**(`options`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
 
 사용량 기록
 
-#### Parameters
+##### Parameters
 
-##### options
+###### options
 
 [`RecordOptions`](/api/metering-core/src/type-aliases/recordoptions/)
 
-#### Returns
+##### Returns
 
 `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
 
-#### Throws
+##### Throws
 
 QuotaExceededProblem quota 초과 시 (allowOverQuota=false)
 
-#### Throws
+##### Throws
 
 DuplicateRecordProblem 중복 idempotencyKey 시
 
-#### Throws
+##### Throws
 
 InvalidMeterProblem meter 없을 시

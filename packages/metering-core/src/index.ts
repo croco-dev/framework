@@ -89,7 +89,12 @@ export {
  *
  * @description `@Metered` 데코레이터로 메서드에 정의된 자동 기록 옵션의 메타데이터를 나타냅니다.
  */
-export type { MeteredMetadata, MeteredOptions } from "./libs/decorators/Metered";
+export type {
+  LegacyMeteredOptions,
+  MeteredMetadata,
+  MeteredOptions,
+  TypedMeteredOptions,
+} from "./libs/decorators/Metered";
 
 /**
  * Metered 메서드 데코레이터와 서비스 바인딩 헬퍼입니다.
@@ -190,14 +195,36 @@ export { UsageRecordedEvent } from "./libs/events/UsageRecordedEvent";
  * ```
  */
 export { IdempotencyManager } from "./libs/IdempotencyManager";
-
+export type {
+  EnumDimension,
+  MeterAggregation,
+  MeterAggregationOf,
+  MeterBillingIntent,
+  MeterBillingOf,
+  MeterDefinitionInput,
+  MeterDescriptor,
+  MeterDimension,
+  MeterDimensionSchema,
+  MeterDimensionsOf,
+  MeterDimensionValue,
+  MeterDimensionValues,
+  MeterRecordInput,
+  MeterRef,
+} from "./libs/MeterDefinition";
+/**
+ * Definition-first meter helpers and deterministic meter descriptors.
+ *
+ * @description
+ * `defineMeter` preserves literal meter keys, aggregations, billing intent, and declared dimension domains.
+ * The returned branded `MeterRef` can be passed to `MeteringService.record`.
+ */
+export { defineMeter, dimension, isMeterRef } from "./libs/MeterDefinition";
 /**
  * MeteringService 생성 옵션 타입입니다.
  *
  * @description MeteringService 인스턴스 생성 시 필요한 의존성들을 정의합니다.
  */
 export type { MeteringServiceOptions } from "./libs/MeteringService";
-
 /**
  * 사용량 기록과 조회를 담당하는 핵심 서비스입니다.
  *
@@ -307,7 +334,7 @@ export { AtomicQuotaNotSupportedProblem } from "./libs/problems/AtomicQuotaNotSu
  * ```
  */
 export { DuplicateRecordProblem } from "./libs/problems/DuplicateRecordProblem";
-
+export { InvalidMeterDefinitionProblem } from "./libs/problems/InvalidMeterDefinitionProblem";
 /**
  * 등록되지 않은 Meter를 사용할 때 발생하는 문제 타입입니다.
  *
@@ -319,6 +346,7 @@ export { DuplicateRecordProblem } from "./libs/problems/DuplicateRecordProblem";
  * ```
  */
 export { InvalidMeterProblem } from "./libs/problems/InvalidMeterProblem";
+export { InvalidUsageEnvelopeProblem } from "./libs/problems/InvalidUsageEnvelopeProblem";
 
 /**
  * quota 초과 시 발생하는 문제 타입입니다.

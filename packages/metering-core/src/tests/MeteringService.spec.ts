@@ -3,10 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QuotaExceededEvent } from "../libs/events/QuotaExceededEvent";
 import { UsageRecordedEvent } from "../libs/events/UsageRecordedEvent";
 import type { IdempotencyManager } from "../libs/IdempotencyManager";
+import { defineMeter, dimension } from "../libs/MeterDefinition";
 import { MeteringService } from "../libs/MeteringService";
 import type { MeterRegistry } from "../libs/MeterRegistry";
 import { DuplicateRecordProblem } from "../libs/problems/DuplicateRecordProblem";
+import { InvalidMeterDefinitionProblem } from "../libs/problems/InvalidMeterDefinitionProblem";
 import { InvalidMeterProblem } from "../libs/problems/InvalidMeterProblem";
+import { InvalidUsageEnvelopeProblem } from "../libs/problems/InvalidUsageEnvelopeProblem";
 import { QuotaExceededProblem } from "../libs/problems/QuotaExceededProblem";
 import type { MeterDefinition } from "../libs/types";
 import type { UsageStorage } from "../libs/UsageStorage";
@@ -111,6 +114,198 @@ describe("MeteringService", () => {
       expect(result.value).toBe(1);
     });
 
+    it("records a typed billable SUM meter with its exact event identity", async () => {
+      const typedMeter = defineMeter({
+        key: "ai.tokens",
+        aggregation: "SUM",
+        unit: "token",
+        dimensions: {
+          model: dimension.enum(["gpt-5", "gpt-5-mini"]),
+        },
+        billing: "required",
+      });
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(createMeter({ meterId: "ai.tokens" }));
+      vi.mocked(mockIdempotency.ensureIdempotencyKey).mockImplementation(
+        (key?: string) => key ?? "generated-key",
+      );
+
+      const result = await service.record(typedMeter, {
+        tenantId: "tenant-1",
+        eventId: "request-123",
+        value: 42,
+        dimensions: { model: "gpt-5" },
+        metadata: { route: "/chat" },
+      });
+
+      expect(result).toMatchObject({
+        tenantId: "tenant-1",
+        meterId: "ai.tokens",
+        value: 42,
+        idempotencyKey: "request-123",
+        metadata: { route: "/chat" },
+      });
+      expect(mockIdempotency.ensureIdempotencyKey).toHaveBeenCalledWith("request-123");
+      expect(result.metadata).not.toHaveProperty("model");
+    });
+
+    it("preserves generated identity and default value for typed local COUNT meters", async () => {
+      const typedMeter = defineMeter({
+        key: "api.requests",
+        aggregation: "COUNT",
+        unit: "request",
+        dimensions: {},
+        billing: "local",
+      });
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({ meterId: "api.requests" }),
+      );
+
+      const result = await service.record(typedMeter, {
+        tenantId: "tenant-1",
+      });
+
+      expect(result.value).toBe(1);
+      expect(result.idempotencyKey).toBe("generated-key");
+      expect(mockIdempotency.ensureIdempotencyKey).toHaveBeenCalledWith(undefined);
+    });
+
+    it.each([
+      {
+        name: "non-object input",
+        input: null,
+      },
+      {
+        name: "blank tenantId",
+        input: {
+          tenantId: " ",
+          eventId: "event-1",
+          value: 1,
+          dimensions: { model: "gpt-5" },
+        },
+      },
+      {
+        name: "missing eventId",
+        input: {
+          tenantId: "tenant-1",
+          value: 1,
+          dimensions: { model: "gpt-5" },
+        },
+      },
+      {
+        name: "blank eventId",
+        input: {
+          tenantId: "tenant-1",
+          eventId: " ",
+          value: 1,
+          dimensions: { model: "gpt-5" },
+        },
+      },
+      {
+        name: "non-string eventId",
+        input: {
+          tenantId: "tenant-1",
+          eventId: 42,
+          value: 1,
+          dimensions: { model: "gpt-5" },
+        },
+      },
+      {
+        name: "non-object dimensions",
+        input: {
+          tenantId: "tenant-1",
+          eventId: "event-1",
+          value: 1,
+          dimensions: null,
+        },
+      },
+      {
+        name: "missing dimension",
+        input: {
+          tenantId: "tenant-1",
+          eventId: "event-1",
+          value: 1,
+          dimensions: {},
+        },
+      },
+      {
+        name: "extra dimension",
+        input: {
+          tenantId: "tenant-1",
+          eventId: "event-1",
+          value: 1,
+          dimensions: { model: "gpt-5", region: "us-east-1" },
+        },
+      },
+      {
+        name: "invalid dimension",
+        input: {
+          tenantId: "tenant-1",
+          eventId: "event-1",
+          value: 1,
+          dimensions: { model: "gpt-4" },
+        },
+      },
+      {
+        name: "NaN value",
+        input: {
+          tenantId: "tenant-1",
+          eventId: "event-1",
+          value: Number.NaN,
+          dimensions: { model: "gpt-5" },
+        },
+      },
+      {
+        name: "infinite value",
+        input: {
+          tenantId: "tenant-1",
+          eventId: "event-1",
+          value: Number.POSITIVE_INFINITY,
+          dimensions: { model: "gpt-5" },
+        },
+      },
+    ])("rejects typed usage with $name before side effects", async ({ input }) => {
+      const typedMeter = defineMeter({
+        key: "ai.tokens",
+        aggregation: "SUM",
+        unit: "token",
+        dimensions: {
+          model: dimension.enum(["gpt-5"]),
+        },
+        billing: "required",
+      });
+      const recordUnsafe = service.record.bind(service) as unknown as (
+        meter: unknown,
+        usage: unknown,
+      ) => Promise<unknown>;
+
+      await expect(recordUnsafe(typedMeter, input)).rejects.toThrow(InvalidUsageEnvelopeProblem);
+      expect(mockRegistry.getOrThrow).not.toHaveBeenCalled();
+      expect(mockIdempotency.ensureIdempotencyKey).not.toHaveBeenCalled();
+    });
+
+    it("rejects forged meter refs before side effects", async () => {
+      const recordUnsafe = service.record.bind(service) as unknown as (
+        meter: unknown,
+        usage: unknown,
+      ) => Promise<unknown>;
+
+      await expect(
+        recordUnsafe(
+          {
+            descriptor: {
+              key: "ai.tokens",
+              aggregation: "SUM",
+              unit: "token",
+              dimensions: {},
+              billing: "required",
+            },
+          },
+          { tenantId: "tenant-1", eventId: "event-1", value: 1 },
+        ),
+      ).rejects.toThrow(InvalidMeterDefinitionProblem);
+      expect(mockRegistry.getOrThrow).not.toHaveBeenCalled();
+    });
+
     it("should use provided idempotency key", async () => {
       const meter = createMeter();
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
@@ -156,10 +351,17 @@ describe("MeteringService", () => {
       }
 
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 104 });
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({
+        exceeded: true,
+        newUsage: 104,
+      });
 
       await expect(
-        service.record({ tenantId: "tenant-1", meterId: "api_calls", value: 5 }),
+        service.record({
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 5,
+        }),
       ).rejects.toThrow(QuotaExceededProblem);
 
       expect(mockIdempotency.completeProcessing).toHaveBeenCalledWith(
@@ -235,7 +437,10 @@ describe("MeteringService", () => {
       }
 
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 104 });
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({
+        exceeded: true,
+        newUsage: 104,
+      });
 
       const result = await service.record({
         tenantId: "tenant-1",
@@ -306,7 +511,10 @@ describe("MeteringService", () => {
       }
 
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 104 });
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({
+        exceeded: true,
+        newUsage: 104,
+      });
 
       await service.record({
         tenantId: "tenant-1",
@@ -357,7 +565,10 @@ describe("MeteringService", () => {
       }
 
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 50 });
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({
+        exceeded: true,
+        newUsage: 50,
+      });
       vi.mocked(mockIdempotency.ensureIdempotencyKey).mockImplementation(
         (key?: string) => key ?? "generated-key",
       );

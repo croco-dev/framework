@@ -2,19 +2,51 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import "reflect-metadata";
 import type { ILogger } from "@croco/framework-context";
 import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import type {
+  MeterAggregationOf,
+  MeterBillingOf,
+  MeterDimensionsOf,
+  MeterRef,
+} from "../MeterDefinition";
+import { isMeterRef } from "../MeterDefinition";
 import type { MeteringService } from "../MeteringService";
+import { InvalidMeterDefinitionProblem } from "../problems/InvalidMeterDefinitionProblem";
 
 export const METERED_METADATA_KEY = Symbol("meter:metered");
 
-export type MeteredOptions = {
+export type LegacyMeteredOptions = {
   meterId: string;
   valueExtractor?: (args: unknown[], result: unknown) => number;
   idempotencyKeyExtractor?: (args: unknown[]) => string | undefined;
   metadataExtractor?: (args: unknown[], result: unknown) => Record<string, unknown> | undefined;
 };
 
+type TypedMeteredValidity<TMeter extends MeterRef> = TMeter extends unknown
+  ? MeterAggregationOf<TMeter> extends "COUNT"
+    ? MeterBillingOf<TMeter> extends "local"
+      ? keyof MeterDimensionsOf<TMeter> extends never
+        ? true
+        : false
+      : false
+    : false
+  : never;
+
+export type TypedMeteredOptions<TMeter extends MeterRef> =
+  false extends TypedMeteredValidity<TMeter>
+    ? never
+    : {
+        readonly meter: TMeter;
+        readonly metadataExtractor?: (
+          args: unknown[],
+          result: unknown,
+        ) => Record<string, unknown> | undefined;
+      };
+
+export type MeteredOptions = LegacyMeteredOptions;
+
 export type MeteredMetadata = {
   meterId: string;
+  meter?: MeterRef;
   valueExtractor: (args: unknown[], result: unknown) => number;
   idempotencyKeyExtractor?: (args: unknown[]) => string | undefined;
   metadataExtractor?: (args: unknown[], result: unknown) => Record<string, unknown> | undefined;
@@ -75,7 +107,33 @@ function resolveMeteringService(): MeteringService | null {
  * }
  * ```
  */
-export function Metered(options: MeteredOptions): MethodDecorator {
+export function Metered<const TMeter extends MeterRef>(
+  options: TypedMeteredOptions<TMeter>,
+): MethodDecorator;
+export function Metered(options: LegacyMeteredOptions): MethodDecorator;
+export function Metered(
+  options: LegacyMeteredOptions | { readonly meter: MeterRef },
+): MethodDecorator {
+  const meter = "meter" in options ? options.meter : undefined;
+  if (meter !== undefined) {
+    if (!isMeterRef(meter)) {
+      throw new InvalidMeterDefinitionProblem(
+        "meter",
+        "must be a MeterRef returned by defineMeter()",
+      );
+    }
+    if (
+      meter.descriptor.aggregation !== "COUNT" ||
+      meter.descriptor.billing !== "local" ||
+      Object.keys(meter.descriptor.dimensions).length > 0
+    ) {
+      throw new InvalidMeterDefinitionProblem(
+        "meter",
+        "must be a dimensionless local COUNT meter when used with @Metered",
+      );
+    }
+  }
+
   return (
     _target: object,
     propertyKey: string | symbol,
@@ -84,10 +142,18 @@ export function Metered(options: MeteredOptions): MethodDecorator {
     const originalMethod = descriptor.value;
 
     const metadata: MeteredMetadata = {
-      meterId: options.meterId,
-      valueExtractor: options.valueExtractor ?? (() => 1),
-      idempotencyKeyExtractor: options.idempotencyKeyExtractor,
-      metadataExtractor: options.metadataExtractor,
+      meterId: meter?.descriptor.key ?? (options as LegacyMeteredOptions).meterId,
+      meter,
+      valueExtractor: (options as LegacyMeteredOptions).valueExtractor ?? (() => 1),
+      idempotencyKeyExtractor: (options as LegacyMeteredOptions).idempotencyKeyExtractor,
+      metadataExtractor: (
+        options as {
+          readonly metadataExtractor?: (
+            args: unknown[],
+            result: unknown,
+          ) => Record<string, unknown> | undefined;
+        }
+      ).metadataExtractor,
     };
 
     // 메타데이터 저장 (선택적 조회용)
@@ -103,13 +169,24 @@ export function Metered(options: MeteredOptions): MethodDecorator {
         const tenantId = (this as { tenantId?: string }).tenantId ?? "default";
 
         try {
-          await service.record({
-            tenantId,
-            meterId: metadata.meterId,
-            value: metadata.valueExtractor(args, result),
-            idempotencyKey: metadata.idempotencyKeyExtractor?.(args),
-            metadata: metadata.metadataExtractor?.(args, result),
-          });
+          if (metadata.meter) {
+            const recordTyped = service.record as unknown as (
+              meterRef: MeterRef,
+              input: unknown,
+            ) => Promise<unknown>;
+            await recordTyped(metadata.meter, {
+              tenantId,
+              metadata: metadata.metadataExtractor?.(args, result),
+            });
+          } else {
+            await service.record({
+              tenantId,
+              meterId: metadata.meterId,
+              value: metadata.valueExtractor(args, result),
+              idempotencyKey: metadata.idempotencyKeyExtractor?.(args),
+              metadata: metadata.metadataExtractor?.(args, result),
+            });
+          }
         } catch (error) {
           // 계량 실패해도 원본 결과는 반환 (fail-safe)
           try {

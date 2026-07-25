@@ -12,6 +12,8 @@ pnpm add @croco/metering-core
 
 ```ts
 import {
+  defineMeter,
+  dimension,
   IdempotencyManager,
   MeterRegistry,
   MeteringService,
@@ -32,18 +34,62 @@ const meteringService = new MeteringService({
 
 setMeteringService(meteringService);
 
+const aiTokens = defineMeter({
+  key: "ai.tokens",
+  aggregation: "SUM",
+  unit: "token",
+  dimensions: {
+    model: dimension.enum(["gpt-5", "gpt-5-mini"]),
+  },
+  billing: "required",
+});
+
+await meteringService.record(aiTokens, {
+  tenantId: "tenant-123",
+  eventId: requestId,
+  value: usage.totalTokens,
+  dimensions: { model },
+  metadata: { route: "/chat" },
+});
+```
+
+`billing: "required"` meter는 재시도 사이에서 동일하게 유지되는 비어 있지 않은 `eventId`가 필수입니다.
+`dimensions`는 선언한 key와 enum 값만 허용되며 application `metadata`와 합쳐지지 않습니다. `SUM` meter는
+유한한 `value`가 필수이고 `COUNT` meter는 `value`를 생략해 1을 기록합니다. descriptor는 함수 없이
+결정적으로 직렬화됩니다.
+
+```ts
+const apiRequests = defineMeter({
+  key: "api.requests",
+  aggregation: "COUNT",
+  unit: "request",
+  dimensions: {},
+  billing: "local",
+});
+
+class ApiController {
+  @Metered({ meter: apiRequests })
+  async listUsers(): Promise<void> {}
+}
+```
+
+`@Metered({ meter })`는 별도 추출기 없이 안전하게 기록할 수 있는 dimensionless local `COUNT` meter만
+허용합니다.
+
+### 호환성 API
+
+기존 string 기반 `record(RecordOptions)`와 `{ meterId }` decorator는 source-compatible 호환 경로로
+유지됩니다. 이 경로는 `idempotencyKey`가 없으면 기존처럼 ID를 생성하며 billing dimension 계약을
+제공하지 않습니다.
+
+```ts
 await meteringService.record({
   tenantId: "tenant-123",
   meterId: "api_calls",
   value: 1,
 });
-```
 
-```ts
-import { Meter, Metered } from "@croco/metering-core";
-
-@Meter({ meterId: "api_calls", type: "COUNT", quota: 10000 })
-class ApiController {
+class LegacyApiController {
   @Metered({ meterId: "api_calls" })
   async listUsers(): Promise<void> {}
 }
@@ -69,6 +115,9 @@ class ApiController {
 ### 주요 타입
 
 - `RecordOptions`, 사용량 기록 입력입니다.
+- `MeterRef`, definition-first meter 참조입니다.
+- `MeterDescriptor`, 직렬화 가능한 meter 계약입니다.
+- `MeterRecordInput`, meter 참조에서 추론되는 typed usage 입력입니다.
 - `UsageQueryOptions`, 기간별 사용량 조회 입력입니다.
 - `MeterDefinition`, meter 정의입니다.
 - `UsageRecord`, 기록된 사용량 엔트리입니다.
@@ -77,7 +126,8 @@ class ApiController {
 ### 이벤트와 문제 타입
 
 - 이벤트: `UsageRecordedEvent`, `QuotaExceededEvent`
-- 문제 타입: `DuplicateRecordProblem`, `InvalidMeterProblem`, `QuotaExceededProblem`, `RedisProblem`
+- 문제 타입: `DuplicateRecordProblem`, `InvalidMeterDefinitionProblem`, `InvalidMeterProblem`,
+  `InvalidUsageEnvelopeProblem`, `QuotaExceededProblem`, `RedisProblem`
 
 ## 구현 포인트
 

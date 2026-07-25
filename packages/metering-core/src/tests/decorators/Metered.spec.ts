@@ -1,7 +1,7 @@
 import "reflect-metadata";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Container, LOGGER_TOKEN } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearMeteringService,
   getMeteredMetadata,
@@ -10,7 +10,9 @@ import {
   runWithMeteringService,
   setMeteringService,
 } from "../../libs/decorators/Metered";
+import { defineMeter, dimension } from "../../libs/MeterDefinition";
 import type { MeteringService } from "../../libs/MeteringService";
+import { InvalidMeterDefinitionProblem } from "../../libs/problems/InvalidMeterDefinitionProblem";
 
 describe("@Metered decorator", () => {
   let mockService!: MeteringService;
@@ -74,6 +76,44 @@ describe("@Metered decorator", () => {
       await service.doSomething();
 
       expect(mockService.record).toHaveBeenCalledWith(expect.objectContaining({ value: 1 }));
+    });
+
+    it("should record a dimensionless local COUNT MeterRef", async () => {
+      const requestMeter = defineMeter({
+        key: "api.requests",
+        aggregation: "COUNT",
+        unit: "request",
+        dimensions: {},
+        billing: "local",
+      });
+
+      class TestService {
+        tenantId = "tenant-1";
+
+        @Metered({ meter: requestMeter })
+        async doSomething(): Promise<void> {}
+      }
+
+      await new TestService().doSomething();
+
+      expect(mockService.record).toHaveBeenCalledWith(requestMeter, {
+        tenantId: "tenant-1",
+        metadata: undefined,
+      });
+    });
+
+    it("should reject unsafe MeterRefs even when the type contract is bypassed", () => {
+      const sumMeter = defineMeter({
+        key: "ai.tokens",
+        aggregation: "SUM",
+        unit: "token",
+        dimensions: {
+          model: dimension.enum(["gpt-5"]),
+        },
+        billing: "required",
+      });
+
+      expect(() => Metered({ meter: sumMeter } as never)).toThrow(InvalidMeterDefinitionProblem);
     });
   });
 
@@ -143,7 +183,9 @@ describe("@Metered decorator", () => {
 
         @Metered({
           meterId: "api_calls",
-          metadataExtractor: (args) => ({ userId: (args[0] as { userId: string }).userId }),
+          metadataExtractor: (args) => ({
+            userId: (args[0] as { userId: string }).userId,
+          }),
         })
         async handleRequest(_req: { userId: string }): Promise<void> {}
       }
