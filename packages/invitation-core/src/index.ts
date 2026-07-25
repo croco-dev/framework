@@ -76,9 +76,10 @@ export {
 } from "./libs/problems/DomainPolicyProblems";
 
 /**
- * 초대 상태와 토큰 검증 실패 시 사용하는 Problem 타입입니다.
+ * 초대 생성 입력, 상태, 토큰 검증 실패 시 사용하는 Problem 타입입니다.
  */
 export {
+  InvalidInvitationExpiryDurationProblem,
   InvitationAlreadyAcceptedProblem,
   InvitationCreationFailedProblem,
   InvitationEmailMismatchProblem,

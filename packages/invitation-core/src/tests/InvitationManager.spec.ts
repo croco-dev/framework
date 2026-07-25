@@ -18,6 +18,7 @@ import {
 import { InMemoryInvitationStore } from "../libs/InMemoryInvitationStore";
 import { InvitationManager } from "../libs/InvitationManager";
 import {
+  InvalidInvitationExpiryDurationProblem,
   InvitationAlreadyAcceptedProblem,
   InvitationCreationFailedProblem,
   InvitationEmailMismatchProblem,
@@ -30,6 +31,16 @@ import { hashToken } from "../libs/token";
 import type { Invitation } from "../libs/types";
 
 describe("InvitationManager", () => {
+  const invalidExpiryDurations = [
+    ["NaN", Number.NaN],
+    ["positive infinity", Number.POSITIVE_INFINITY],
+    ["negative infinity", Number.NEGATIVE_INFINITY],
+    ["negative", -1],
+    ["zero", 0],
+    ["fractional", 0.5],
+    ["date-overflowing", Number.MAX_SAFE_INTEGER],
+  ] as const;
+
   let manager!: InvitationManager;
   let store!: InMemoryInvitationStore;
   let publishNow!: ReturnType<typeof vi.fn>;
@@ -396,6 +407,83 @@ describe("InvitationManager", () => {
     expect(invitation?.email).toBeNull();
     expect(send).not.toHaveBeenCalled();
   });
+
+  it.each(invalidExpiryDurations)(
+    "should reject %s email expiry without persistence, notification, or event side effects",
+    async (_label, expiresInDays) => {
+      const save = vi.spyOn(store, "save");
+      const deleteExpiredCreations = vi.spyOn(store, "deleteExpiredEmailInvitationCreations");
+
+      await expect(
+        manager.createEmailInvitation({
+          idempotencyKey: `invalid-expiry-${_label}`,
+          tenantId: "tenant-1",
+          inviterId: "inviter-1",
+          email: "member@croco.dev",
+          role: "member",
+          expiresInDays,
+        }),
+      ).rejects.toBeInstanceOf(InvalidInvitationExpiryDurationProblem);
+
+      expect(save).not.toHaveBeenCalled();
+      expect(deleteExpiredCreations).not.toHaveBeenCalled();
+      expect(send).not.toHaveBeenCalled();
+      expect(publishNow).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(invalidExpiryDurations)(
+    "should reject %s link expiry without persistence or event side effects",
+    async (_label, expiresInDays) => {
+      const save = vi.spyOn(store, "save");
+
+      await expect(
+        manager.createLinkInvitation({
+          tenantId: "tenant-1",
+          inviterId: "inviter-1",
+          role: "member",
+          expiresInDays,
+        }),
+      ).rejects.toBeInstanceOf(InvalidInvitationExpiryDurationProblem);
+
+      expect(save).not.toHaveBeenCalled();
+      expect(send).not.toHaveBeenCalled();
+      expect(publishNow).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["email", 1],
+    ["link", 1],
+  ] as const)(
+    "should persist a serializable finite expiry for a valid %s duration",
+    async (type, expiresInDays) => {
+      const token =
+        type === "email"
+          ? await manager.createEmailInvitation({
+              idempotencyKey: "finite-expiry-email",
+              tenantId: "tenant-1",
+              inviterId: "inviter-1",
+              email: "member@croco.dev",
+              role: "member",
+              expiresInDays,
+            })
+          : await manager.createLinkInvitation({
+              tenantId: "tenant-1",
+              inviterId: "inviter-1",
+              role: "member",
+              expiresInDays,
+            });
+
+      const invitation = await store.findByTokenHash(hashToken(token));
+
+      expect(invitation).not.toBeNull();
+      expect(Number.isFinite(invitation?.expiresAt.getTime())).toBe(true);
+      expect(JSON.stringify({ expiresAt: invitation?.expiresAt })).toMatch(
+        /^\{"expiresAt":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z"\}$/,
+      );
+    },
+  );
 
   it("should accept email invitation and create membership", async () => {
     await store.save(createInvitation("accept-email-token"));

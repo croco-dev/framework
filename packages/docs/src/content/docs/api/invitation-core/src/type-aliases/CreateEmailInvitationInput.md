@@ -21,6 +21,8 @@ title: "CreateEmailInvitationInput"
 
 > `optional` **expiresInDays?**: `number`
 
+Positive integer number of calendar days. Fractional days are not supported.
+
 ***
 
 ### idempotencyKey

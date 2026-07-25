@@ -162,6 +162,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`BatchSizeExceededProblem`](/api/invitation-core/src/classes/batchsizeexceededproblem/)
 - [`InvalidAutoJoinRoleProblem`](/api/invitation-core/src/classes/invalidautojoinroleproblem/)
 - [`PublicEmailDomainNotAllowedProblem`](/api/invitation-core/src/classes/publicemaildomainnotallowedproblem/)
+- [`InvalidInvitationExpiryDurationProblem`](/api/invitation-core/src/classes/invalidinvitationexpirydurationproblem/)
 - [`InvitationAlreadyAcceptedProblem`](/api/invitation-core/src/classes/invitationalreadyacceptedproblem/)
 - [`InvitationCreationFailedProblem`](/api/invitation-core/src/classes/invitationcreationfailedproblem/)
 - [`InvitationEmailMismatchProblem`](/api/invitation-core/src/classes/invitationemailmismatchproblem/)
