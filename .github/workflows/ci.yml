@@ -87,7 +87,9 @@ jobs:
       - name: Verify membership owner concurrency against PostgreSQL
         env:
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
-        run: pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
+        run: |
+          pnpm build --filter=@croco/membership-drizzle...
+          pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
 
       - name: Production dependency audit report
         id: security_audit_advisory
