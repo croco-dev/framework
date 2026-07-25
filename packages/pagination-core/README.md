@@ -272,6 +272,7 @@ decodeCursor("eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9");
 - `limit`: 20 (최소 1, 최대 100)
 - `offset`: 0
 - `cursor`: undefined
+- `direction`: undefined (`forward` 또는 `backward`, cursor 모드에서만 사용)
 - `mode`: 자동 감지 (`cursor` 또는 `offset` 둘 중 하나만 사용)
 
 **숫자 정규화 정책:**
@@ -287,6 +288,7 @@ decodeCursor("eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9");
 **에러:**
 
 - `cursor`와 `offset`을 동시에 사용하면 `ConflictingPaginationProblem`
+- `direction` 값이 유효하지 않거나 offset 모드에서 사용되면 `InvalidPaginationDirectionProblem`
 
 ## Zod 스키마
 

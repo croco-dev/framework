@@ -28,6 +28,7 @@ export const CursorParamsSchema = z.object({
 export const OffsetParamsSchema = z.object({
   offset: PaginationOffsetSchema,
   limit: PaginationLimitSchema,
+  direction: z.never().optional(),
 });
 
 export const PaginationParamsSchema = z.discriminatedUnion("mode", [

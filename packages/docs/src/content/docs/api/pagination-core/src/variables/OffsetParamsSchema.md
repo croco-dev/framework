@@ -5,4 +5,4 @@ prev: false
 title: "OffsetParamsSchema"
 ---
 
-> `const` **OffsetParamsSchema**: `ZodObject`\<\{ `limit`: `ZodDefault`\<`ZodCatch`\<`ZodCoercedNumber`\<`unknown`\>\>\>; `offset`: `ZodDefault`\<`ZodCatch`\<`ZodCoercedNumber`\<`unknown`\>\>\>; \}, `$strip`\>
+> `const` **OffsetParamsSchema**: `ZodObject`\<\{ `direction`: `ZodOptional`\<`ZodNever`\>; `limit`: `ZodDefault`\<`ZodCatch`\<`ZodCoercedNumber`\<`unknown`\>\>\>; `offset`: `ZodDefault`\<`ZodCatch`\<`ZodCoercedNumber`\<`unknown`\>\>\>; \}, `$strip`\>

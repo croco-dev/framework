@@ -25,3 +25,40 @@ export class ConflictingPaginationProblem extends Problem {
     );
   }
 }
+
+export type InvalidPaginationDirectionProblemOptions =
+  | {
+      mode: "cursor";
+      reason: "unsupported-value";
+    }
+  | {
+      mode: "offset";
+      reason: "offset-mode";
+    };
+
+export class InvalidPaginationDirectionProblem extends Problem {
+  readonly code = "INVALID_PAGINATION_DIRECTION";
+  readonly category = ProblemCategory.BadRequest;
+  readonly mode: "cursor" | "offset";
+  readonly reason: "offset-mode" | "unsupported-value";
+
+  constructor(options: InvalidPaginationDirectionProblemOptions) {
+    const detail =
+      options.reason === "offset-mode"
+        ? "Pagination direction is only supported in cursor mode"
+        : "Pagination direction must be either 'forward' or 'backward'";
+
+    super("INVALID_PAGINATION_DIRECTION", ProblemCategory.BadRequest, detail, {
+      extensions: {
+        field: "direction",
+        mode: options.mode,
+        reason: options.reason,
+        ...(options.reason === "unsupported-value"
+          ? { allowedValues: ["forward", "backward"] }
+          : { validMode: "cursor" }),
+      },
+    });
+    this.mode = options.mode;
+    this.reason = options.reason;
+  }
+}

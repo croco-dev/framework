@@ -1,5 +1,6 @@
 import { normalizePaginationLimit, normalizePaginationOffset } from "./normalizePaginationNumber";
-import { ConflictingPaginationProblem } from "./problems";
+import { ConflictingPaginationProblem, InvalidPaginationDirectionProblem } from "./problems";
+import { CursorParamsSchema } from "./schemas";
 import type { PaginationParams } from "./types";
 
 export function parsePaginationParams(
@@ -8,6 +9,7 @@ export function parsePaginationParams(
   const cursor = getStringValue(query.cursor);
   const offsetValue = query.offset;
   const limitValue = query.limit;
+  const direction = query.direction;
 
   if (cursor !== undefined && offsetValue !== undefined) {
     throw new ConflictingPaginationProblem();
@@ -17,6 +19,13 @@ export function parsePaginationParams(
   const offset = normalizePaginationOffset(offsetValue);
 
   if (offsetValue !== undefined) {
+    if (direction !== undefined) {
+      throw new InvalidPaginationDirectionProblem({
+        mode: "offset",
+        reason: "offset-mode",
+      });
+    }
+
     return {
       mode: "offset",
       offset,
@@ -24,10 +33,19 @@ export function parsePaginationParams(
     };
   }
 
+  const parsedDirection = CursorParamsSchema.shape.direction.safeParse(direction);
+  if (!parsedDirection.success) {
+    throw new InvalidPaginationDirectionProblem({
+      mode: "cursor",
+      reason: "unsupported-value",
+    });
+  }
+
   return {
     mode: "cursor",
     cursor: cursor,
     limit,
+    ...(parsedDirection.data !== undefined ? { direction: parsedDirection.data } : {}),
   };
 }
 
