@@ -5,4 +5,4 @@ prev: false
 title: "PaginationParamsSchema"
 ---
 
-> `const` **PaginationParamsSchema**: `ZodDiscriminatedUnion`\<\[`ZodObject`\<\{ `cursor`: `ZodOptional`\<`ZodString`\>; `direction`: `ZodOptional`\<`ZodEnum`\<\{ `backward`: `"backward"`; `forward`: `"forward"`; \}\>\>; `limit`: `ZodDefault`\<`ZodCoercedNumber`\<`unknown`\>\>; `mode`: `ZodLiteral`\<`"cursor"`\>; \}, `$strip`\>, `ZodObject`\<\{ `limit`: `ZodDefault`\<`ZodCoercedNumber`\<`unknown`\>\>; `mode`: `ZodLiteral`\<`"offset"`\>; `offset`: `ZodDefault`\<`ZodCoercedNumber`\<`unknown`\>\>; \}, `$strip`\>\], `"mode"`\>
+> `const` **PaginationParamsSchema**: `ZodDiscriminatedUnion`\<\[`ZodObject`\<\{ `cursor`: `ZodOptional`\<`ZodString`\>; `direction`: `ZodOptional`\<`ZodEnum`\<\{ `backward`: `"backward"`; `forward`: `"forward"`; \}\>\>; `limit`: `ZodDefault`\<`ZodCatch`\<`ZodCoercedNumber`\<`unknown`\>\>\>; `mode`: `ZodLiteral`\<`"cursor"`\>; \}, `$strip`\>, `ZodObject`\<\{ `limit`: `ZodDefault`\<`ZodCatch`\<`ZodCoercedNumber`\<`unknown`\>\>\>; `mode`: `ZodLiteral`\<`"offset"`\>; `offset`: `ZodDefault`\<`ZodCatch`\<`ZodCoercedNumber`\<`unknown`\>\>\>; \}, `$strip`\>\], `"mode"`\>

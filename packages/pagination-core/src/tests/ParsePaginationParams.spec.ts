@@ -1,7 +1,9 @@
+import { z } from "zod";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_LIMIT } from "../libs/constants";
+import { DEFAULT_LIMIT, MAX_LIMIT, MIN_OFFSET } from "../libs/constants";
 import { parsePaginationParams } from "../libs/parsePaginationParams";
 import { ConflictingPaginationProblem } from "../libs/problems";
+import { CursorParamsSchema, OffsetParamsSchema, PaginationParamsSchema } from "../libs/schemas";
 
 describe("parsePaginationParams", () => {
   it("should parse cursor mode params", () => {
@@ -31,9 +33,9 @@ describe("parsePaginationParams", () => {
     }
   });
 
-  it("should clamp limit to MAX_LIMIT (100)", () => {
+  it("should clamp limit to MAX_LIMIT", () => {
     const result = parsePaginationParams({ limit: "200" });
-    expect(result.limit).toBe(100);
+    expect(result.limit).toBe(MAX_LIMIT);
   });
 
   it("should use DEFAULT_LIMIT when limit is 0", () => {
@@ -80,5 +82,64 @@ describe("parsePaginationParams", () => {
     expect(() => parsePaginationParams({ cursor: "abc", offset: "10", limit: "5" })).toThrow(
       ConflictingPaginationProblem,
     );
+  });
+
+  it.each([
+    { input: undefined, limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
+    { input: "", limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
+    { input: "10", limit: 10, offset: 10 },
+    { input: "10garbage", limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
+    { input: "10.7", limit: 10, offset: 10 },
+    { input: "+10", limit: 10, offset: 10 },
+    { input: "-5", limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
+    { input: " 10 ", limit: 10, offset: 10 },
+    { input: "200", limit: MAX_LIMIT, offset: 200 },
+    { input: "1e309", limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
+    { input: "9007199254740992", limit: MAX_LIMIT, offset: MIN_OFFSET },
+    { input: "invalid", limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
+    { input: ["10"], limit: 10, offset: 10 },
+    { input: ["10", "20"], limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
+    { input: [], limit: DEFAULT_LIMIT, offset: MIN_OFFSET },
+  ])(
+    "should normalize '$input' consistently across the parser and schemas",
+    ({ input, limit, offset }) => {
+      const cursorQuery = input === undefined ? {} : { limit: input };
+      const offsetQuery = input === undefined ? { offset: undefined } : { offset: input };
+
+      expect(parsePaginationParams(cursorQuery).limit).toBe(limit);
+      expect(CursorParamsSchema.parse(cursorQuery).limit).toBe(limit);
+      expect(PaginationParamsSchema.parse({ mode: "cursor", ...cursorQuery }).limit).toBe(limit);
+
+      if (input !== undefined) {
+        const parsedOffset = parsePaginationParams(offsetQuery);
+        expect(parsedOffset.mode).toBe("offset");
+        if (parsedOffset.mode === "offset") {
+          expect(parsedOffset.offset).toBe(offset);
+        }
+      }
+      expect(OffsetParamsSchema.parse(offsetQuery).offset).toBe(offset);
+      const schemaOffset = PaginationParamsSchema.parse({ mode: "offset", ...offsetQuery });
+      expect(schemaOffset.mode).toBe("offset");
+      if (schemaOffset.mode === "offset") {
+        expect(schemaOffset.offset).toBe(offset);
+      }
+    },
+  );
+
+  it("should preserve numeric constraints in exported schema metadata", () => {
+    const cursorSchema = z.toJSONSchema(CursorParamsSchema);
+    const offsetSchema = z.toJSONSchema(OffsetParamsSchema);
+
+    expect(cursorSchema.properties?.limit).toMatchObject({
+      default: DEFAULT_LIMIT,
+      type: "integer",
+      minimum: 1,
+      maximum: MAX_LIMIT,
+    });
+    expect(offsetSchema.properties?.offset).toMatchObject({
+      default: MIN_OFFSET,
+      type: "integer",
+      minimum: MIN_OFFSET,
+    });
   });
 });

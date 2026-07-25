@@ -1,15 +1,33 @@
 import { z } from "zod";
 import { DEFAULT_LIMIT, MAX_LIMIT, MIN_LIMIT, MIN_OFFSET } from "./constants";
+import { normalizePaginationLimit, normalizePaginationOffset } from "./normalizePaginationNumber";
+
+const PaginationLimitSchema = z.coerce
+  .number()
+  .overwrite(normalizePaginationLimit)
+  .int()
+  .min(MIN_LIMIT)
+  .max(MAX_LIMIT)
+  .catch(DEFAULT_LIMIT)
+  .default(DEFAULT_LIMIT);
+
+const PaginationOffsetSchema = z.coerce
+  .number()
+  .overwrite(normalizePaginationOffset)
+  .int()
+  .min(MIN_OFFSET)
+  .catch(MIN_OFFSET)
+  .default(MIN_OFFSET);
 
 export const CursorParamsSchema = z.object({
   cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  limit: PaginationLimitSchema,
   direction: z.enum(["forward", "backward"]).optional(),
 });
 
 export const OffsetParamsSchema = z.object({
-  offset: z.coerce.number().int().min(MIN_OFFSET).default(MIN_OFFSET),
-  limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  offset: PaginationOffsetSchema,
+  limit: PaginationLimitSchema,
 });
 
 export const PaginationParamsSchema = z.discriminatedUnion("mode", [
