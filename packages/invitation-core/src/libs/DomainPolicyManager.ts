@@ -104,7 +104,12 @@ export class DomainPolicyManager {
 
   private extractEmailDomain(email: string): string | null {
     const normalizedEmail = email.trim().toLowerCase();
-    const [, domain = ""] = normalizedEmail.split("@");
+    const match = /^[^@\s]+@([^@\s]+)$/u.exec(normalizedEmail);
+    if (!match) {
+      return null;
+    }
+
+    const [, domain] = match;
     const normalizedDomain = this.normalizeDomain(domain);
     return normalizedDomain ? normalizedDomain : null;
   }
