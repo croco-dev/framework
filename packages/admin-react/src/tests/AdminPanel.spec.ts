@@ -30,6 +30,7 @@ const subscription: Subscription = {
   id: "sub-local-123",
   lastSyncedAt: generatedAt,
   planId: "pro",
+  planVersionRef: "pro@v1" as Subscription["planVersionRef"],
   status: "active",
 };
 

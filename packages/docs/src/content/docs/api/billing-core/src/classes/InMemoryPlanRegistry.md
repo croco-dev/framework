@@ -2,10 +2,24 @@
 editUrl: false
 next: false
 prev: false
-title: "PlanRegistry"
+title: "InMemoryPlanRegistry"
 ---
 
-Registry interface for publishing and resolving immutable billing plan versions.
+테스트와 로컬 개발에 사용할 수 있는 불변 플랜 버전 레지스트리입니다.
+
+## Implements
+
+- [`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/)
+
+## Constructors
+
+### Constructor
+
+> **new InMemoryPlanRegistry**(): `InMemoryPlanRegistry`
+
+#### Returns
+
+`InMemoryPlanRegistry`
 
 ## Methods
 
@@ -18,6 +32,10 @@ Get all currently effective plan versions, one per plan family.
 #### Returns
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)[]\>
+
+#### Implementation of
+
+[`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`getAllPlans`](/api/billing-core/src/interfaces/planregistry/#getallplans)
 
 ---
 
@@ -37,6 +55,10 @@ Get every published version, including future-effective versions.
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)[]\>
 
+#### Implementation of
+
+[`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`getAllPlanVersions`](/api/billing-core/src/interfaces/planregistry/#getallplanversions)
+
 ---
 
 ### getPlan()
@@ -54,6 +76,10 @@ Get the currently effective version for a plan family.
 #### Returns
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
+
+#### Implementation of
+
+[`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`getPlan`](/api/billing-core/src/interfaces/planregistry/#getplan)
 
 ---
 
@@ -77,6 +103,10 @@ Get the identified plan version effective at a historical instant.
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
 
+#### Implementation of
+
+[`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`getPlanAtDate`](/api/billing-core/src/interfaces/planregistry/#getplanatdate)
+
 ---
 
 ### getPlanVersion()
@@ -94,6 +124,10 @@ Get an immutable plan version by its pinned reference.
 #### Returns
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/) \| `null`\>
+
+#### Implementation of
+
+[`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`getPlanVersion`](/api/billing-core/src/interfaces/planregistry/#getplanversion)
 
 ---
 
@@ -113,6 +147,10 @@ Publish a plan version exactly once.
 
 `Promise`\<`void`\>
 
+#### Implementation of
+
+[`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`publishPlanVersion`](/api/billing-core/src/interfaces/planregistry/#publishplanversion)
+
 ---
 
 ### resolveProviderPlanVersion()
@@ -130,3 +168,7 @@ Resolve provider subscription state to exactly one published plan version.
 #### Returns
 
 `Promise`\<[`PlanVersionDefinition`](/api/billing-core/src/type-aliases/planversiondefinition/)\>
+
+#### Implementation of
+
+[`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/).[`resolveProviderPlanVersion`](/api/billing-core/src/interfaces/planregistry/#resolveproviderplanversion)

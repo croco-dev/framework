@@ -15,11 +15,14 @@ export type Subscription = {
   billingAccountId: string;
   externalSubscriptionId: string;
   planId: string;
+  readonly planVersionRef: PlanVersionRef;
   status: SubscriptionStatus;
   currentPeriodEnd: Date;
   cancelAtPeriodEnd: boolean;
   lastSyncedAt: Date;
 };
+
+export type LegacySubscription = Omit<Subscription, "planVersionRef">;
 
 export type Order = {
   id: string;
@@ -46,6 +49,45 @@ export type Plan = {
   currency: string;
   interval: PlanInterval;
   intervalCount: number;
+};
+
+export type PlanVersionRef = string & {
+  readonly __brand: unique symbol;
+};
+
+export type ProviderPlanBinding = {
+  readonly provider: string;
+  readonly productId: string;
+  readonly priceIds: readonly string[];
+};
+
+export type PlanRatingDefinition =
+  | {
+      readonly mode: "provider";
+      readonly provider: string;
+    }
+  | {
+      readonly mode: "croco";
+    };
+
+export type PlanVersionDefinition = {
+  readonly ref: PlanVersionRef;
+  readonly planId: string;
+  readonly versionId: string;
+  readonly effectiveAt: string;
+  readonly name: string;
+  readonly amount: number;
+  readonly currency: string;
+  readonly interval: PlanInterval;
+  readonly intervalCount: number;
+  readonly rating: PlanRatingDefinition;
+  readonly providerBindings: readonly ProviderPlanBinding[];
+};
+
+export type ProviderPlanLookup = {
+  readonly provider: string;
+  readonly productId: string;
+  readonly priceIds: readonly string[];
 };
 
 export type InvoiceLineItemType = "subscription" | "proration" | "credit" | "one_time";

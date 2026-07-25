@@ -123,6 +123,7 @@ export const saasDemoSnapshotSchema = z.object({
       eventId: z.string(),
       eventType: z.string(),
       externalSubscriptionId: z.string(),
+      planVersionRef: z.string(),
       processedStatus: z.literal("completed"),
       duplicateFailureCode: z.string(),
     }),

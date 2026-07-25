@@ -86,6 +86,7 @@ import { PolarWebhookHandler } from "@croco/billing-polar";
 const handler = new PolarWebhookHandler(config, {
   store: billingStore,
   eventPublisher: eventPublisher,
+  planRegistry,
 });
 
 const result = await handler.handle(requestBody, requestHeaders);
@@ -96,6 +97,8 @@ const result = await handler.handle(requestBody, requestHeaders);
 `WebhookValidationProblem`으로 실패합니다. Polar SDK가 replay-style signature, 오래된 timestamp,
 또는 clock-skew를 거부하면 Croco는 안정적인 `WEBHOOK_VALIDATION_FAILED` Problem code와 HTTP
 400 status로 정규화하고, webhook secret/signature 값은 응답 detail에 노출하지 않습니다.
+구독 이벤트의 Polar product/price 조합은 `PlanRegistry`의 게시된 버전과 정확히 일치해야 하며,
+알 수 없는 조합은 `billing/unknown-provider-plan-mapping` Problem으로 실패합니다.
 
 ## 웹훅 이벤트 타입
 

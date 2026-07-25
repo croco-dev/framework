@@ -1,29 +1,41 @@
-import type { Plan } from "../types";
+import type { PlanVersionDefinition, PlanVersionRef, ProviderPlanLookup } from "../types";
 
 /**
- * Registry interface for managing billing plans.
- * Implementations: InMemoryPlanRegistry, DrizzlePlanRegistry
+ * Registry interface for publishing and resolving immutable billing plan versions.
  */
 export interface PlanRegistry {
   /**
-   * Get a plan by ID.
-   * @param planId - The plan identifier
-   * @returns The plan or null if not found
+   * Publish a plan version exactly once.
    */
-  getPlan(planId: string): Promise<Plan | null>;
+  publishPlanVersion(planVersion: PlanVersionDefinition): Promise<void>;
 
   /**
-   * Get all available plans.
-   * @returns Array of all plans
+   * Get the currently effective version for a plan family.
    */
-  getAllPlans(): Promise<Plan[]>;
+  getPlan(planId: string): Promise<PlanVersionDefinition | null>;
 
   /**
-   * Get a plan as it was configured at a specific point in time.
-   * Useful for handling historical pricing (e.g., legacy subscriptions).
-   * @param planId - The plan identifier
-   * @param date - The date to query historical pricing for
-   * @returns The plan at the given date or null if not found
+   * Get all currently effective plan versions, one per plan family.
    */
-  getPlanAtDate(planId: string, date: Date): Promise<Plan | null>;
+  getAllPlans(): Promise<PlanVersionDefinition[]>;
+
+  /**
+   * Get an immutable plan version by its pinned reference.
+   */
+  getPlanVersion(ref: PlanVersionRef): Promise<PlanVersionDefinition | null>;
+
+  /**
+   * Get every published version, including future-effective versions.
+   */
+  getAllPlanVersions(planId?: string): Promise<PlanVersionDefinition[]>;
+
+  /**
+   * Get the identified plan version effective at a historical instant.
+   */
+  getPlanAtDate(planId: string, date: Date): Promise<PlanVersionDefinition | null>;
+
+  /**
+   * Resolve provider subscription state to exactly one published plan version.
+   */
+  resolveProviderPlanVersion(lookup: ProviderPlanLookup): Promise<PlanVersionDefinition>;
 }

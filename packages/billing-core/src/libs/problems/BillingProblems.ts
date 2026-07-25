@@ -67,3 +67,69 @@ export class MoneyDivisionByZeroProblem extends Problem {
     super(undefined, undefined, "Money division requires a non-zero divisor");
   }
 }
+
+export class InvalidPlanVersionRefProblem extends Problem {
+  readonly code = "billing/invalid-plan-version-ref";
+  readonly category = ProblemCategory.BadRequest;
+  constructor() {
+    super(undefined, undefined, "Plan version reference must not be empty");
+  }
+}
+
+export class InvalidPlanVersionDefinitionProblem extends Problem {
+  readonly code = "billing/invalid-plan-version-definition";
+  readonly category = ProblemCategory.BadRequest;
+  constructor(reason: string) {
+    super(undefined, undefined, `Plan version definition is invalid: ${reason}`);
+  }
+}
+
+export class PlanVersionAlreadyPublishedProblem extends Problem {
+  readonly code = "billing/plan-version-already-published";
+  readonly category = ProblemCategory.Conflict;
+  constructor(ref: string) {
+    super(undefined, undefined, `Plan version '${ref}' has already been published`);
+  }
+}
+
+export class PlanVersionConflictProblem extends Problem {
+  readonly code = "billing/plan-version-conflict";
+  readonly category = ProblemCategory.Conflict;
+  constructor(ref: string, reason: string) {
+    super(undefined, undefined, `Plan version '${ref}' conflicts with published state: ${reason}`);
+  }
+}
+
+export class UnknownPlanVersionProblem extends Problem {
+  readonly code = "billing/unknown-plan-version";
+  readonly category = ProblemCategory.NotFound;
+  constructor(ref: string) {
+    super(undefined, undefined, `Plan version '${ref}' is not registered`);
+  }
+}
+
+export class UnknownProviderPlanMappingProblem extends Problem {
+  readonly code = "billing/unknown-provider-plan-mapping";
+  readonly category = ProblemCategory.NotFound;
+  constructor(provider: string, productId: string, priceIds: readonly string[]) {
+    const priceEvidence =
+      priceIds.length === 0 ? "no price IDs" : `price IDs '${priceIds.join(",")}'`;
+    super(
+      undefined,
+      undefined,
+      `No plan version maps provider '${provider}' product '${productId}' with ${priceEvidence}`,
+    );
+  }
+}
+
+export class SubscriptionPlanVersionMismatchProblem extends Problem {
+  readonly code = "billing/subscription-plan-version-mismatch";
+  readonly category = ProblemCategory.BusinessRuleViolation;
+  constructor(subscriptionId: string, subscriptionPlanId: string, versionPlanId: string) {
+    super(
+      undefined,
+      undefined,
+      `Subscription '${subscriptionId}' plan '${subscriptionPlanId}' cannot be pinned to plan '${versionPlanId}'`,
+    );
+  }
+}

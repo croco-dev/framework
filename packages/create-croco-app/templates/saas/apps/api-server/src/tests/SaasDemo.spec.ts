@@ -109,6 +109,7 @@ describe("SaaS golden path demo", () => {
       eventId: "billing.subscription_activated:tenant_acme:team",
       eventType: "billing.subscription_activated",
       externalSubscriptionId: "external_subscription_tenant_acme",
+      planVersionRef: "team@v1",
       processedStatus: "completed",
       duplicateFailureCode: "billing/webhook-already-processed",
     });

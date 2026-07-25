@@ -50,11 +50,13 @@ export class InMemoryBillingStore extends BillingStore {
   }
 
   async findSubscription(billingAccountId: string): Promise<Subscription | null> {
-    return this.subscriptions.get(billingAccountId) ?? null;
+    const subscription = this.subscriptions.get(billingAccountId);
+    return subscription ? cloneSubscription(subscription) : null;
   }
 
   async findSubscriptionByExternalId(externalSubscriptionId: string): Promise<Subscription | null> {
-    return this.subscriptionsByExternalId.get(externalSubscriptionId) ?? null;
+    const subscription = this.subscriptionsByExternalId.get(externalSubscriptionId);
+    return subscription ? cloneSubscription(subscription) : null;
   }
 
   async saveSubscription(subscription: Subscription): Promise<void> {
@@ -67,8 +69,9 @@ export class InMemoryBillingStore extends BillingStore {
       this.subscriptionsByExternalId.delete(existingSubscription.externalSubscriptionId);
     }
 
-    this.subscriptions.set(subscription.billingAccountId, subscription);
-    this.subscriptionsByExternalId.set(subscription.externalSubscriptionId, subscription);
+    const storedSubscription = Object.freeze(cloneSubscription(subscription));
+    this.subscriptions.set(subscription.billingAccountId, storedSubscription);
+    this.subscriptionsByExternalId.set(subscription.externalSubscriptionId, storedSubscription);
   }
 
   async deleteSubscription(billingAccountId: string): Promise<void> {
@@ -124,4 +127,12 @@ export class InMemoryBillingStore extends BillingStore {
     this.orders.clear();
     this.processedWebhooks.clear();
   }
+}
+
+function cloneSubscription(subscription: Subscription): Subscription {
+  return {
+    ...subscription,
+    currentPeriodEnd: new Date(subscription.currentPeriodEnd),
+    lastSyncedAt: new Date(subscription.lastSyncedAt),
+  };
 }

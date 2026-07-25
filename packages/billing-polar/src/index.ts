@@ -96,7 +96,8 @@ export type { WebhookDependencies } from "./libs/PolarWebhookHandler";
  *   webhookSecret: 'whsec_...'
  * }, {
  *   store,
- *   eventPublisher
+ *   eventPublisher,
+ *   planRegistry
  * });
  *
  * const result = await handler.handle(rawPayload, requestHeaders);

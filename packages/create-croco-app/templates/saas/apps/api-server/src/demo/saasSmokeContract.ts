@@ -57,6 +57,7 @@ export type SaasDemoSnapshot = {
       eventId: string;
       eventType: string;
       externalSubscriptionId: string;
+      planVersionRef: string;
       processedStatus: "completed";
       duplicateFailureCode: string;
     };

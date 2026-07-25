@@ -3,6 +3,7 @@ import { type AuthUser, RbacEngine, RoleRegistry } from "@croco/auth-core";
 import {
   BillingService,
   InMemoryBillingStore,
+  planVersionRef,
   WebhookAlreadyProcessedProblem,
   type BillingGateway,
   type SubscriptionStatus,
@@ -872,6 +873,7 @@ async function processBillingMockSubscriptionActivatedEvent(
   const eventType = "billing.subscription_activated";
   const eventId = `${eventType}:${tenantId}:team`;
   const externalSubscriptionId = `external_subscription_${tenantId}`;
+  const pinnedPlanVersionRef = planVersionRef(`${TEAM_PLAN_ID}@v1`);
 
   await runtime.billingStore.reserveWebhook(eventId, eventType);
   await runtime.billingStore.saveSubscription({
@@ -879,6 +881,7 @@ async function processBillingMockSubscriptionActivatedEvent(
     billingAccountId: tenantId,
     externalSubscriptionId,
     planId: TEAM_PLAN_ID,
+    planVersionRef: pinnedPlanVersionRef,
     status: "active",
     currentPeriodEnd: DEMO_SUBSCRIPTION_CURRENT_PERIOD_END,
     cancelAtPeriodEnd: false,
@@ -900,6 +903,7 @@ async function processBillingMockSubscriptionActivatedEvent(
     eventId,
     eventType,
     externalSubscriptionId,
+    planVersionRef: pinnedPlanVersionRef,
     processedStatus: "completed",
     duplicateFailureCode,
   };
