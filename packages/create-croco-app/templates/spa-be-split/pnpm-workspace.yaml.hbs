@@ -1,0 +1,25 @@
+packages:
+  - "apps/**/*"
+  - "libs/**/*"
+
+overrides:
+  postcss: 8.5.18
+
+patchedDependencies:
+  tsup@8.5.1: patches/tsup@8.5.1.patch
+
+allowBuilds:
+  "@apollo/protobufjs": true
+  esbuild: true
+  lefthook: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true
+
+onlyBuiltDependencies:
+  - "@apollo/protobufjs"
+  - esbuild
+  - lefthook
+  - protobufjs
+  - sharp
+  - unrs-resolver

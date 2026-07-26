@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "outDir": "./dist",
     "paths": {
       "@croco/execution-core": ["../execution-core/src/index.ts"],

@@ -224,6 +224,16 @@ const repoOnly = (
     timeoutMs: minutes(5),
   },
   {
+    id: "compiler-baseline",
+    label: "TypeScript compiler baseline",
+    category: "typecheck",
+    command: guardedNodeScript(
+      "Restore the documented TypeScript compiler and tsconfig contract",
+      "scripts/compiler-baseline-check.mts",
+    ),
+    timeoutMs: minutes(5),
+  },
+  {
     id: "strict-contract-typecheck",
     label: "Strict contract typecheck",
     category: "typecheck",

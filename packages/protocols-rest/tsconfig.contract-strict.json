@@ -1,11 +1,10 @@
 {
   "compilerOptions": {
-    "baseUrl": "../..",
     "exactOptionalPropertyTypes": true,
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
     "paths": {
-      "@croco/*": ["packages/*/src/index.ts"]
+      "@croco/*": ["../../packages/*/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "src/**/*.spec.ts", "src/**/*.test.ts", "src/tests/**"],

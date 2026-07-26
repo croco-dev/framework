@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "outDir": "dist",
     "paths": {
       "@croco/batch-core": ["../batch-core/src/index.ts"],

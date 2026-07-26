@@ -70,6 +70,7 @@ const repoIds = [
   "dependency-boundaries",
   "security-allowlists",
   "generated-secret-placeholders",
+  "compiler-baseline",
   "strict-contract-typecheck",
   "static-misuse",
   "lint",
@@ -171,7 +172,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(39);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(40);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_SUPPORT_PATHS).toEqual([...RELEASE_GATE_SUPPORT_PATHS].sort());
@@ -374,6 +375,7 @@ describe("verification manifest", () => {
       "dependency-boundaries",
       "security-allowlists",
       "generated-secret-placeholders",
+      "compiler-baseline",
       "strict-contract-typecheck",
       "static-misuse",
       "architecture-circular",

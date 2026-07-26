@@ -84,6 +84,7 @@ describe("published telemetry SDK types", () => {
                 noEmit: true,
                 strict: true,
                 target: "ES2022",
+                types: ["node"],
               },
               include: ["index.ts"],
             },

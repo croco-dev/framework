@@ -38,6 +38,7 @@ const ROOT_SCRIPT_RECOVERY = {
   "changeset-required:check": "pnpm changeset or revert the publishable change",
   check: "Use the failing check output to run its explicit writer or fix command",
   "ci-executables:check": "Pin the reported executable to an immutable reviewed source",
+  "compiler-baseline:check": "Restore the documented TypeScript compiler and tsconfig contract",
   "dependency-boundaries:check": "Fix the reported package boundary",
   "docs:api-triggers:check": "pnpm docs:api-triggers:write",
   "docs:api:check": "pnpm docs:build, format the generated API docs, and commit them",

@@ -410,8 +410,6 @@ function createCompilerOptions(rootDir: string): ts.CompilerOptions {
   ].filter(existsSync);
   const options: ts.CompilerOptions = {
     allowSyntheticDefaultImports: true,
-    baseUrl: rootDir,
-    downlevelIteration: true,
     emitDecoratorMetadata: true,
     esModuleInterop: true,
     experimentalDecorators: true,
@@ -467,7 +465,7 @@ function createPackagePaths(rootDir: string): ts.MapLike<string[]> {
       continue;
     }
 
-    paths[packageJson.name] = [normalizePath(relative(rootDir, sourceIndexPath))];
+    paths[packageJson.name] = [normalizePath(sourceIndexPath)];
   }
 
   return paths;

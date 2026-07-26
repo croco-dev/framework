@@ -1,12 +1,11 @@
 {
   "compilerOptions": {
-    "baseUrl": "../..",
     "exactOptionalPropertyTypes": true,
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
     "paths": {
-      "@croco/tenant-core/tenant-model": ["packages/tenant-core/src/tenant-model.ts"],
-      "@croco/*": ["packages/*/src/index.ts"]
+      "@croco/tenant-core/tenant-model": ["../../packages/tenant-core/src/tenant-model.ts"],
+      "@croco/*": ["../../packages/*/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "src/**/*.spec.ts", "src/**/*.test.ts", "src/tests/**"],

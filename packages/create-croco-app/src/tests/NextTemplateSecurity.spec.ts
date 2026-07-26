@@ -17,8 +17,22 @@ describe("Next.js addon templates", () => {
     expect(manifest.dependencies?.next).toMatch(/^\^?15\.5\.21$/);
   });
 
+  it.each(["graphql-nextjs", "trpc-nextjs"] as const)(
+    "uses the TypeScript 6-compatible bundler resolver for %s",
+    (addon) => {
+      const tsconfigPath = join(TEMPLATES_DIR, "addons", addon, "apps", "web", "tsconfig.json.hbs");
+      const tsconfig = JSON.parse(readFileSync(tsconfigPath, "utf8")) as {
+        compilerOptions?: Record<string, unknown>;
+      };
+
+      expect(tsconfig.compilerOptions?.moduleResolution).toBe("bundler");
+    },
+  );
+
   it.each(WORKSPACE_TEMPLATES)("pins patched PostCSS in the %s workspace", (template) => {
-    const workspace = readFileSync(join(TEMPLATES_DIR, template, "pnpm-workspace.yaml"), "utf8");
+    const workspaceName =
+      template === "spa-be-split" ? "pnpm-workspace.yaml.hbs" : "pnpm-workspace.yaml";
+    const workspace = readFileSync(join(TEMPLATES_DIR, template, workspaceName), "utf8");
 
     expect(workspace).toMatch(/overrides:\n  postcss: 8\.5\.18/);
   });

@@ -2926,15 +2926,15 @@ function assertVirtualTypeScriptSourcesTypecheck(
 ): void {
   const virtualSources = new Map(sources);
   virtualSources.set(VIRTUAL_PROBLEMS_CORE_MODULE, VIRTUAL_PROBLEMS_CORE_SOURCE);
+  const packagesDir = path.resolve(__dirname, "../../..");
   const compilerOptions: ts.CompilerOptions = {
-    baseUrl: path.resolve(__dirname, "../../.."),
     lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     noEmit: true,
     paths: {
-      "@croco/frontend-problems": ["frontend-problems/src/index.ts"],
-      "@croco/problems-core": ["problems-core/src/index.ts"],
+      "@croco/frontend-problems": [path.join(packagesDir, "frontend-problems/src/index.ts")],
+      "@croco/problems-core": [path.join(packagesDir, "problems-core/src/index.ts")],
     },
     skipLibCheck: true,
     strict: true,

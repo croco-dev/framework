@@ -62,7 +62,6 @@ describe("generateRepository", () => {
       JSON.stringify(
         {
           compilerOptions: {
-            baseUrl: ".",
             module: "ESNext",
             moduleResolution: "Bundler",
             noEmit: true,

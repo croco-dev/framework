@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@croco/auth-core": ["../auth-core/src/index.ts"],
       "@croco/billing-core": ["../billing-core/src/index.ts"],

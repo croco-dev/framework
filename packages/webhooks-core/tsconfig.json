@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@croco/idempotency-core": ["../idempotency-core/src/index.ts"],
       "@croco/problems-core": ["../problems-core/src/index.ts"]

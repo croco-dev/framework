@@ -289,7 +289,7 @@ function checkSpaBeSplitStructure() {
     ["apps", "api-server", "src", "controllers", "userSchemas.ts"],
     /defineRouteContract/,
   );
-  checkFileExists("spa-be-split", "pnpm-workspace.yaml");
+  checkFileExists("spa-be-split", "pnpm-workspace.yaml.hbs");
   checkFileContains("spa-be-split", ["README.md.hbs"], /운영형 앱 스타터/);
   checkFileContains("spa-be-split", ["README.md.hbs"], /비범위/);
   checkFileContains("spa-be-split", ["README.md.hbs"], /HttpExceptionFilter/);

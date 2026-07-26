@@ -5,8 +5,12 @@ packages:
 overrides:
   postcss: 8.5.18
 
+patchedDependencies:
+  tsup@8.5.1: patches/tsup@8.5.1.patch
+
 allowBuilds:
   "@apollo/protobufjs": true
+  "@clerk/shared": true
   esbuild: true
   lefthook: true
   protobufjs: true
@@ -15,6 +19,7 @@ allowBuilds:
 
 onlyBuiltDependencies:
   - "@apollo/protobufjs"
+  - "@clerk/shared"
   - esbuild
   - lefthook
   - protobufjs
