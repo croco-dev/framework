@@ -22,8 +22,10 @@ import { metersPg, metersSqlite, usageRecordsPg, usageRecordsSqlite } from "../l
 import {
   addUsageEnvelopeFieldsPostgres,
   addUsageEnvelopeFieldsSqlite,
+  removeUsageEnvelopeFieldsPostgres,
   removeUsageEnvelopeFieldsSqlite,
 } from "../migrations/addUsageEnvelopeFields";
+import type { MeteringMigrationClient } from "../migrations/addUsageEnvelopeFields";
 
 const createRepositoryConfig = () => ({
   meterTable: metersSqlite,
@@ -184,6 +186,11 @@ describe("DrizzleMeterRepository", () => {
         ON usage_records (tenant_id, meter_id, idempotency_key)
         WHERE idempotency_key IS NOT NULL
     `);
+    sqlite.exec(`
+      CREATE INDEX usage_records_event_id_idx
+        ON usage_records (tenant_id, event_id)
+        WHERE event_id IS NOT NULL
+    `);
 
     const adapter = createDrizzleTxAdapter(
       db as unknown as Parameters<typeof createDrizzleTxAdapter>[0],
@@ -239,6 +246,10 @@ describe("DrizzleMeterRepository", () => {
                     expect.objectContaining({
                       name: "usage_records_idempotency_unique",
                       unique: 1,
+                    }),
+                    expect.objectContaining({
+                      name: "usage_records_event_id_idx",
+                      unique: 0,
                     }),
                   ]),
                 );
@@ -662,7 +673,15 @@ describe("DrizzleMeterRepository", () => {
       expect(JSON.parse(result.metadata)).toEqual({ route: "/generate" });
     });
 
-    it("should preserve PostgreSQL jsonb envelope fields as structured values", async () => {
+    it.each([
+      "GelJson",
+      "MySqlJson",
+      "PgJson",
+      "PgJsonb",
+      "SingleStoreJson",
+      "SQLiteBlobJson",
+      "SQLiteTextJson",
+    ])("should preserve %s envelope fields as structured values", async (columnType) => {
       const onConflictDoNothing = vi.fn().mockResolvedValue(undefined);
       const values = vi.fn().mockReturnValue({ onConflictDoNothing });
       const pgDb = {
@@ -671,11 +690,16 @@ describe("DrizzleMeterRepository", () => {
       const pgTxManager = {
         getClient: () => undefined,
       } as unknown as TxManager<DrizzleDb>;
+      const usageRecordSchema = {
+        ...usageRecordsPg,
+        metadata: { columnType },
+        dimensions: { columnType },
+      };
       const pgRepository = new DrizzleMeterRepository(pgDb, pgTxManager, {
         meterTable: metersPg,
         meterSchema: metersPg,
         usageRecordTable: usageRecordsPg,
-        usageRecordSchema: usageRecordsPg,
+        usageRecordSchema,
       } as unknown as DrizzleMeterRepositoryConfig);
 
       await pgRepository.saveUsageRecords([
@@ -894,6 +918,13 @@ describe("DrizzleMeterRepository", () => {
       expect(columns.map((column) => column.name)).toEqual(
         expect.arrayContaining(["event_id", "dimensions"]),
       );
+      expect(
+        (
+          sqlite.prepare("PRAGMA index_list('usage_records')").all() as Array<{
+            name: string;
+          }>
+        ).map((index) => index.name),
+      ).toContain("usage_records_event_id_idx");
       expect(record.event_id).toBe("request-1");
       expect(JSON.parse(record.dimensions)).toEqual({ model: "gpt-5" });
     });
@@ -947,7 +978,28 @@ describe("DrizzleMeterRepository", () => {
       expect(sqlStatements).toEqual([
         "ALTER TABLE usage_records ADD COLUMN IF NOT EXISTS event_id TEXT",
         "ALTER TABLE usage_records ADD COLUMN IF NOT EXISTS dimensions JSONB",
+        "CREATE INDEX IF NOT EXISTS usage_records_event_id_idx\n          ON usage_records (tenant_id, event_id)\n          WHERE event_id IS NOT NULL",
       ]);
+    });
+
+    it("should run PostgreSQL envelope changes through the provided transaction", async () => {
+      const execute = vi.fn().mockResolvedValue(undefined);
+      const fallbackExecute = vi.fn().mockResolvedValue(undefined);
+      const transaction = vi.fn();
+      const migrationClient: MeteringMigrationClient = {
+        execute: fallbackExecute,
+        async transaction<T>(migrate: (tx: MeteringMigrationClient) => Promise<T>): Promise<T> {
+          transaction();
+          return migrate({ execute });
+        },
+      };
+
+      await addUsageEnvelopeFieldsPostgres(migrationClient);
+      await removeUsageEnvelopeFieldsPostgres(migrationClient);
+
+      expect(transaction).toHaveBeenCalledTimes(2);
+      expect(execute).toHaveBeenCalledTimes(6);
+      expect(fallbackExecute).not.toHaveBeenCalled();
     });
   });
 

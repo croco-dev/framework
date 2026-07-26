@@ -5,7 +5,7 @@ prev: false
 title: "UsageEnvelopeConfigurationProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Typed usage cannot be stored because required usage-envelope column mappings are missing.
 
 ## Extends
 

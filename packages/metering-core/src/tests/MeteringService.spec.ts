@@ -4,9 +4,9 @@ import { QuotaExceededEvent } from "../libs/events/QuotaExceededEvent";
 import { UsageRecordedEvent } from "../libs/events/UsageRecordedEvent";
 import type { IdempotencyManager } from "../libs/IdempotencyManager";
 import { MeteringService } from "../libs/MeteringService";
-import type { MeterRegistry } from "../libs/MeterRegistry";
-import { defineMeter, dimension } from "../libs/MeterRef";
 import type { MeterRecordInput } from "../libs/MeterRef";
+import { defineMeter, dimension } from "../libs/MeterRef";
+import type { MeterRegistry } from "../libs/MeterRegistry";
 import { DuplicateRecordProblem } from "../libs/problems/DuplicateRecordProblem";
 import { InvalidMeterProblem } from "../libs/problems/InvalidMeterProblem";
 import { InvalidUsageEnvelopeProblem } from "../libs/problems/InvalidUsageEnvelopeProblem";
@@ -355,10 +355,17 @@ describe("MeteringService", () => {
       }
 
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 104 });
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({
+        exceeded: true,
+        newUsage: 104,
+      });
 
       await expect(
-        service.record({ tenantId: "tenant-1", meterId: "api_calls", value: 5 }),
+        service.record({
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 5,
+        }),
       ).rejects.toThrow(QuotaExceededProblem);
 
       expect(mockIdempotency.completeProcessing).toHaveBeenCalledWith(
@@ -434,7 +441,10 @@ describe("MeteringService", () => {
       }
 
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 104 });
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({
+        exceeded: true,
+        newUsage: 104,
+      });
 
       const result = await service.record({
         tenantId: "tenant-1",
@@ -505,7 +515,10 @@ describe("MeteringService", () => {
       }
 
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 104 });
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({
+        exceeded: true,
+        newUsage: 104,
+      });
 
       await service.record({
         tenantId: "tenant-1",
@@ -556,7 +569,10 @@ describe("MeteringService", () => {
       }
 
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({ exceeded: true, newUsage: 50 });
+      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({
+        exceeded: true,
+        newUsage: 50,
+      });
       vi.mocked(mockIdempotency.ensureIdempotencyKey).mockImplementation(
         (key?: string) => key ?? "generated-key",
       );

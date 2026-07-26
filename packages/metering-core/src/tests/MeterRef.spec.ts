@@ -72,4 +72,37 @@ describe("defineMeter", () => {
       }),
     ).toThrow(InvalidMeterDimensionProblem);
   });
+
+  it.each([
+    { label: "empty array", values: [] },
+    { label: "undefined", values: [undefined] },
+    { label: "object", values: [{}] },
+    { label: "bigint", values: [BigInt(1)] },
+    { label: "function", values: [() => "value"] },
+  ])("rejects invalid enum values from dimension.enum: $label", ({ values }) => {
+    expect(() =>
+      dimension.enum(
+        values as unknown as readonly [string | number | boolean, ...(string | number | boolean)[]],
+      ),
+    ).toThrow(InvalidMeterDimensionProblem);
+  });
+
+  it.each([
+    { kind: "other", values: ["value"] },
+    { kind: "enum", values: [] },
+    { kind: "enum", values: [undefined] },
+    { kind: "enum", values: [{}] },
+    { kind: "enum", values: [BigInt(1)] },
+  ])("rejects invalid direct dimension descriptors: %s", (descriptor) => {
+    expect(() =>
+      defineMeter({
+        key: "direct.dimension",
+        aggregation: "COUNT",
+        unit: "request",
+        dimensions: {
+          invalid: descriptor,
+        } as never,
+      }),
+    ).toThrow(InvalidMeterDimensionProblem);
+  });
 });

@@ -1,12 +1,22 @@
+import type { ILogger } from "@croco/framework-context";
 import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from "@croco/metering-core";
 import { MeterRepository } from "@croco/metering-core";
 import { ProblemFactory } from "@croco/problems-core";
-import type { ILogger } from "@croco/framework-context";
 import type { TxManager } from "@croco/tx-core";
 import { and, eq, getTableColumns } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import { UsageEnvelopeConfigurationProblem } from "./problems/UsageEnvelopeConfigurationProblem";
+
+const DRIZZLE_JSON_COLUMN_TYPES = new Set([
+  "GelJson",
+  "MySqlJson",
+  "PgJson",
+  "PgJsonb",
+  "SingleStoreJson",
+  "SQLiteBlobJson",
+  "SQLiteTextJson",
+]);
 
 /**
  * 미터 저장소에서 사용하는 기본 Drizzle SQLite 클라이언트 타입입니다.
@@ -223,7 +233,7 @@ export class DrizzleMeterRepository extends MeterRepository {
   }
 
   private encodeJsonColumn(value: unknown, column: unknown): unknown {
-    return (column as { columnType?: string }).columnType === "PgJsonb"
+    return DRIZZLE_JSON_COLUMN_TYPES.has((column as { columnType?: string }).columnType ?? "")
       ? value
       : this.serializeJson(value);
   }

@@ -98,11 +98,21 @@ function resolveMeteringService(): MeteringService | null {
  *   key: 'api.calls',
  *   aggregation: 'COUNT',
  *   unit: 'request',
+ *   dimensions: {
+ *     region: dimension.enum(['us', 'eu']),
+ *   },
+ *   billing: 'required',
  * });
  *
  * class ApiService {
- *   @Metered({ meter: apiCalls })
- *   async listUsers(): Promise<void> {
+ *   @Metered({
+ *     meter: apiCalls,
+ *     eventIdExtractor: ([request]) => (request as { eventId: string }).eventId,
+ *     dimensionsExtractor: ([request]) => ({
+ *       region: (request as { region: 'us' | 'eu' }).region,
+ *     }),
+ *   })
+ *   async listUsers(request: { eventId: string; region: 'us' | 'eu' }): Promise<void> {
  *     // ...
  *   }
  *

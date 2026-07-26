@@ -461,10 +461,6 @@ export type { RedisClient } from "./libs/RedisClient";
  */
 export { RedisUsageStorage } from "./libs/RedisUsageStorage";
 
-// ==================== Domain Types ====================
-
-export type { MeteredMetadata, MeteredOptions, MeteredRefOptions } from "./libs/decorators/Metered";
-
 /**
  * metering-core 전반에서 사용하는 기본 도메인 타입입니다.
  *
@@ -483,13 +479,23 @@ export type {
 
 // ==================== Aggregation ====================
 
+export type {
+  CountMeterRef,
+  EnumDimension,
+  MeterAggregation,
+  MeterBillingIntent,
+  MeterDefinitionOptions,
+  MeterDimensionSchema,
+  MeterDimensionValue,
+  MeterRecordInput,
+  MeterRef,
+} from "./libs/MeterRef";
 /**
  * UsageAggregator 생성 옵션 타입입니다.
  *
  * @description UsageAggregator 인스턴스 생성 시 필요한 설정을 정의합니다.
  */
 export type { UsageAggregatorOptions } from "./libs/UsageAggregator";
-
 /**
  * 사용량 집계와 배치 플러시를 담당하는 집계기입니다.
  *
@@ -507,7 +513,6 @@ export type { UsageAggregatorOptions } from "./libs/UsageAggregator";
  * ```
  */
 export { UsageAggregator } from "./libs/UsageAggregator";
-
 /**
  * 사용량 저장소의 원자적 quota 체크 계약과 저장소 인터페이스입니다.
  *
@@ -518,14 +523,4 @@ export type {
   AtomicQuotaCheckResult,
   UsageStorage,
 } from "./libs/UsageStorage";
-export type {
-  CountMeterRef,
-  EnumDimension,
-  MeterAggregation,
-  MeterBillingIntent,
-  MeterDefinitionOptions,
-  MeterDimensionSchema,
-  MeterDimensionValue,
-  MeterRecordInput,
-  MeterRef,
-} from "./libs/MeterRef";
+export type { MeteredMetadata, MeteredOptions, MeteredRefOptions } from "./libs/decorators/Metered";

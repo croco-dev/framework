@@ -1,9 +1,9 @@
 import { describe, expectTypeOf, it } from "vitest";
 import { Metered } from "../libs/decorators/Metered";
-import { defineMeter, dimension } from "../libs/MeterRef";
 import type { MeterRecordInput } from "../libs/MeterRef";
+import { defineMeter, dimension } from "../libs/MeterRef";
 
-const aiTokens = defineMeter({
+const AI_TOKENS = defineMeter({
   key: "ai.tokens",
   aggregation: "SUM",
   unit: "token",
@@ -13,20 +13,20 @@ const aiTokens = defineMeter({
   billing: "required",
 });
 
-const localCalls = defineMeter({
+const LOCAL_CALLS = defineMeter({
   key: "api.calls",
   aggregation: "COUNT",
   unit: "request",
 });
 
-const billableCalls = defineMeter({
+const BILLABLE_CALLS = defineMeter({
   key: "billable.calls",
   aggregation: "COUNT",
   unit: "request",
   billing: "required",
 });
 
-const regionalCalls = defineMeter({
+const REGIONAL_CALLS = defineMeter({
   key: "regional.calls",
   aggregation: "COUNT",
   unit: "request",
@@ -37,14 +37,14 @@ const regionalCalls = defineMeter({
 
 describe("MeterRef types", () => {
   it("preserves literal keys and dimension domains", () => {
-    expectTypeOf(aiTokens.key).toEqualTypeOf<"ai.tokens">();
-    expectTypeOf<MeterRecordInput<typeof aiTokens>["dimensions"]["model"]>().toEqualTypeOf<
+    expectTypeOf(AI_TOKENS.key).toEqualTypeOf<"ai.tokens">();
+    expectTypeOf<MeterRecordInput<typeof AI_TOKENS>["dimensions"]["model"]>().toEqualTypeOf<
       "gpt-5" | "gpt-5-mini"
     >();
   });
 
   it("accepts valid usage envelopes and COUNT decorators", () => {
-    const valid: MeterRecordInput<typeof aiTokens> = {
+    const valid: MeterRecordInput<typeof AI_TOKENS> = {
       tenantId: "tenant-1",
       eventId: "request-1",
       value: 42,
@@ -52,25 +52,25 @@ describe("MeterRef types", () => {
     };
 
     class Example {
-      @Metered({ meter: localCalls })
+      @Metered({ meter: LOCAL_CALLS })
       local(): void {}
 
-      @Metered({ meter: billableCalls, eventIdExtractor: () => "request-1" })
+      @Metered({ meter: BILLABLE_CALLS, eventIdExtractor: () => "request-1" })
       billable(): void {}
 
       @Metered({
-        meter: regionalCalls,
+        meter: REGIONAL_CALLS,
         dimensionsExtractor: () => ({ region: "apac" as const }),
       })
       regional(): void {}
     }
 
-    expectTypeOf(valid).toMatchTypeOf<MeterRecordInput<typeof aiTokens>>();
+    expectTypeOf(valid).toMatchTypeOf<MeterRecordInput<typeof AI_TOKENS>>();
     void Example;
   });
 });
 
-const missingEventId: MeterRecordInput<typeof aiTokens> = {
+const missingEventId: MeterRecordInput<typeof AI_TOKENS> = {
   tenantId: "tenant-1",
   value: 42,
   dimensions: { model: "gpt-5" },
@@ -78,7 +78,7 @@ const missingEventId: MeterRecordInput<typeof aiTokens> = {
   eventId: undefined,
 };
 
-const missingDimensions: MeterRecordInput<typeof aiTokens> = {
+const missingDimensions: MeterRecordInput<typeof AI_TOKENS> = {
   tenantId: "tenant-1",
   eventId: "request-1",
   value: 42,
@@ -86,7 +86,7 @@ const missingDimensions: MeterRecordInput<typeof aiTokens> = {
   dimensions: undefined,
 };
 
-const invalidDimension: MeterRecordInput<typeof aiTokens> = {
+const invalidDimension: MeterRecordInput<typeof AI_TOKENS> = {
   tenantId: "tenant-1",
   eventId: "request-1",
   value: 42,
@@ -96,7 +96,7 @@ const invalidDimension: MeterRecordInput<typeof aiTokens> = {
   },
 };
 
-const extraDimension: MeterRecordInput<typeof aiTokens> = {
+const extraDimension: MeterRecordInput<typeof AI_TOKENS> = {
   tenantId: "tenant-1",
   eventId: "request-1",
   value: 42,
@@ -110,18 +110,18 @@ const extraDimension: MeterRecordInput<typeof aiTokens> = {
 class InvalidDecorators {
   @Metered({
     // @ts-expect-error SUM meters cannot use the default-value decorator path
-    meter: aiTokens,
+    meter: AI_TOKENS,
     eventIdExtractor: () => "request-1",
     dimensionsExtractor: () => ({ model: "gpt-5" }),
   })
   sum(): void {}
 
   // @ts-expect-error billing-required COUNT meters require an eventId extractor
-  @Metered({ meter: billableCalls })
+  @Metered({ meter: BILLABLE_CALLS })
   missingEvent(): void {}
 
   // @ts-expect-error dimensioned COUNT meters require a dimensions extractor
-  @Metered({ meter: regionalCalls })
+  @Metered({ meter: REGIONAL_CALLS })
   missingDimensions(): void {}
 }
 

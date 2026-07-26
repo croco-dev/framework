@@ -83,14 +83,38 @@ export type CountMeterRef = MeterRef<
   MeterBillingIntent
 >;
 
-function validateDimensionValues(values: readonly MeterDimensionValue[]): void {
+function validateDimensionValues(
+  values: unknown,
+): asserts values is readonly [MeterDimensionValue, ...MeterDimensionValue[]] {
+  if (!Array.isArray(values) || values.length === 0) {
+    throw new InvalidMeterDimensionProblem("Enum dimensions require at least one value");
+  }
+
   for (const value of values) {
-    if (typeof value === "number" && !Number.isFinite(value)) {
+    if (
+      (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") ||
+      (typeof value === "number" && !Number.isFinite(value))
+    ) {
       throw new InvalidMeterDimensionProblem(
-        `Numeric enum values must be finite; received '${String(value)}'`,
+        `Enum dimension values must be strings, finite numbers, or booleans; received '${String(value)}'`,
       );
     }
   }
+}
+
+function validateDimensionDescriptor(descriptor: unknown): asserts descriptor is EnumDimension {
+  if (
+    typeof descriptor !== "object" ||
+    descriptor === null ||
+    Array.isArray(descriptor) ||
+    !("kind" in descriptor) ||
+    descriptor.kind !== "enum" ||
+    !("values" in descriptor)
+  ) {
+    throw new InvalidMeterDimensionProblem("Dimension descriptors must use kind 'enum'");
+  }
+
+  validateDimensionValues(descriptor.values);
 }
 
 export const dimension = Object.freeze({
@@ -113,11 +137,11 @@ function normalizeDimensions<Dimensions extends MeterDimensionSchema>(
     Object.entries(dimensions ?? {})
       .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
       .map(([key, descriptor]) => {
-        validateDimensionValues(descriptor.values);
+        validateDimensionDescriptor(descriptor);
         return [
           key,
           Object.freeze({
-            kind: descriptor.kind,
+            kind: "enum" as const,
             values: Object.freeze([...descriptor.values]),
           }),
         ];

@@ -80,9 +80,25 @@ const tenantMeters = await repository.findByTenant("tenant-1");
 설정합니다.
 
 ```ts
-import { addUsageEnvelopeFieldsSqlite } from "@croco/metering-drizzle";
+import type { SQL } from "drizzle-orm";
+import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
+import {
+  addUsageEnvelopeFieldsSqlite,
+  type MeteringMigrationClient,
+} from "@croco/metering-drizzle";
 
-await addUsageEnvelopeFieldsSqlite(sqliteClient);
+const migrationDialect = new SQLiteSyncDialect();
+const migrationClient = {
+  async execute(query: unknown) {
+    const rendered = migrationDialect.sqlToQuery(query as SQL);
+    if (rendered.sql.trimStart().startsWith("PRAGMA")) {
+      return sqlite.prepare(rendered.sql).all(...rendered.params);
+    }
+    return sqlite.prepare(rendered.sql).run(...rendered.params);
+  },
+} satisfies MeteringMigrationClient;
+
+await addUsageEnvelopeFieldsSqlite(migrationClient);
 ```
 
 PostgreSQL을 사용하는 경우에는 대신 `addUsageEnvelopeFieldsPostgres(postgresClient)`를 실행합니다.
