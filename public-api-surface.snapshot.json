@@ -319,6 +319,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertWebhookOperationsActionRequest",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "createInMemoryTenantBusinessSource",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
@@ -337,6 +343,24 @@
               "declarationKind": "function"
             },
             {
+              "name": "createWebhookDeliveryAction",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createWebhookEndpointActions",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createWebhookEndpointCreationAction",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "defineAdminResource",
               "exportKind": "named",
               "source": "./libs/AdminResource",
@@ -349,9 +373,33 @@
               "declarationKind": "function"
             },
             {
+              "name": "executeWebhookOperationsAction",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "filterWebhookDeliveries",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "loadTenantWorkspace",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
+              "declarationKind": "function"
+            },
+            {
+              "name": "maskWebhookEndpointUrl",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "redactWebhookOperationsText",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations",
               "declarationKind": "function"
             },
             {
@@ -365,6 +413,12 @@
               "exportKind": "named",
               "source": "./libs/AdminResource",
               "declarationKind": "function"
+            },
+            {
+              "name": "WebhookOperationsActionValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [
@@ -612,6 +666,91 @@
               "name": "TenantWorkspaceSourceState",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "WebhookAttemptOperationsRow",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookAttemptRetryClassification",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookDeliveryOperationsFilter",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookDeliveryOperationsRow",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookDeliveryOperationsStatus",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookEndpointOperationalStatus",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookEndpointOperationsRow",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookEventSubscription",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookLogicalEventOperationsRow",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookOperationsAction",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookOperationsActionKind",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookOperationsActionRequest",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookOperationsMutationExecutor",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookOperationsReadyState",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookOperationsState",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookOperationsWriteEvidence",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
+            },
+            {
+              "name": "WebhookSecretVersionMetadata",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations"
             }
           ]
         }
@@ -873,6 +1012,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "operationsTimelineEventFromWebhookDelivery",
+              "exportKind": "named",
+              "source": "./libs/webhookAdapters",
+              "declarationKind": "function"
+            },
+            {
               "name": "RetryConsoleAuditConfirmation",
               "exportKind": "named",
               "source": "./libs/react",
@@ -900,6 +1045,12 @@
               "name": "retryConsoleItemFromLifecycleRun",
               "exportKind": "named",
               "source": "./libs/sourceAdapters",
+              "declarationKind": "function"
+            },
+            {
+              "name": "retryConsoleItemFromWebhookDelivery",
+              "exportKind": "named",
+              "source": "./libs/webhookAdapters",
               "declarationKind": "function"
             },
             {
@@ -1110,6 +1261,11 @@
               "name": "TimelineOrder",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "WebhookOperationsFailureEvidence",
+              "exportKind": "named",
+              "source": "./libs/webhookAdapters"
             },
             {
               "name": "WorkflowExecutionTimelineExtension",
@@ -1398,6 +1554,12 @@
               "name": "useAdminForm",
               "exportKind": "named",
               "source": "./libs/hooks",
+              "declarationKind": "function"
+            },
+            {
+              "name": "WebhookReliabilityConsole",
+              "exportKind": "named",
+              "source": "./libs/WebhookReliabilityConsole",
               "declarationKind": "function"
             }
           ],
@@ -1976,6 +2138,11 @@
               "name": "TenantWorkspaceActionResult",
               "exportKind": "named",
               "source": "./libs/TenantBusinessWorkspace"
+            },
+            {
+              "name": "WebhookReliabilityConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/WebhookReliabilityConsole"
             }
           ]
         }

@@ -313,6 +313,8 @@ function checkAdminConsoleStructure() {
   checkFileExists("admin-console", "apps", "api-server", "src", "tests", "AdminConsole.spec.ts");
   checkFileExists("admin-console", "apps", "console-web", "src", "App.tsx.hbs");
   checkFileExists("admin-console", "apps", "console-web", "src", "TenantWorkspaceDemo.tsx");
+  checkFileExists("admin-console", "apps", "console-web", "src", "WebhookReliabilityDemo.tsx");
+  checkFileExists("admin-console", "apps", "api-server", "src", "webhook-smoke.ts");
 
   const rootPackageJson = readJsonTemplate("admin-console", "package.json.hbs");
   expect(rootPackageJson).toMatchObject({
@@ -353,9 +355,13 @@ function checkAdminConsoleStructure() {
     "package.json.hbs",
   );
   expect(apiPackageJson).toMatchObject({
+    dependencies: expect.objectContaining({
+      "@croco/admin-core": "workspace:*",
+      "@croco/webhooks-core": "workspace:*",
+    }),
     scripts: expect.objectContaining({
       "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
-      "admin:smoke": "tsx src/dev-smoke.ts",
+      "admin:smoke": "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts",
     }),
     devDependencies: expect.objectContaining({
       "cross-env": "^10.1.0",
@@ -423,6 +429,17 @@ function checkAdminConsoleStructure() {
   );
   checkFileContains("admin-console", ["apps", "console-web", "src", "App.tsx.hbs"], /Operations/);
   checkFileContains("admin-console", ["README.md.hbs"], /operations timeline/);
+  checkFileContains("admin-console", ["README.md.hbs"], /fake endpoint transport/);
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "webhook-smoke.ts"],
+    /FakeOutboundWebhookTransport/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "WebhookReliabilityDemo.tsx"],
+    /WebhookReliabilityConsole/,
+  );
   checkFileContains("admin-console", ["README.md.hbs"], /not a marketing landing page/);
 }
 

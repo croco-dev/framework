@@ -61,6 +61,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/)
 - [`ForbiddenProblem`](/api/access-core/src/classes/forbiddenproblem/)
 - [`AdminResourceValidationProblem`](/api/admin-core/src/classes/adminresourcevalidationproblem/)
+- [`WebhookOperationsActionValidationProblem`](/api/admin-core/src/classes/webhookoperationsactionvalidationproblem/)
 - [`AdminGeneratedContractProblem`](/api/admin-generated/src/classes/admingeneratedcontractproblem/)
 - [`PostHogAnalyticsCaptureProblem`](/api/analytics-posthog/src/classes/posthoganalyticscaptureproblem/)
 - [`PostHogAnalyticsFlushProblem`](/api/analytics-posthog/src/classes/posthoganalyticsflushproblem/)
