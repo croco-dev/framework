@@ -10,7 +10,7 @@ import {
   runWithMeteringService,
   setMeteringService,
 } from "../../libs/decorators/Metered";
-import { defineMeter } from "../../libs/MeterRef";
+import { defineMeter, dimension } from "../../libs/MeterRef";
 import type { MeteringService } from "../../libs/MeteringService";
 
 describe("@Metered decorator", () => {
@@ -128,6 +128,36 @@ describe("@Metered decorator", () => {
         expect.objectContaining({ eventId: "request-1" }),
       );
     });
+
+    it("should pass extracted dimensions through the typed service path", async () => {
+      const meter = defineMeter({
+        key: "ai.tokens",
+        aggregation: "COUNT",
+        unit: "token",
+        dimensions: {
+          model: dimension.enum(["gpt-5", "gpt-5-mini"]),
+        },
+      });
+
+      class TestService {
+        tenantId = "tenant-1";
+
+        @Metered({
+          meter,
+          dimensionsExtractor: (args) => ({
+            model: (args[0] as { model: "gpt-5" | "gpt-5-mini" }).model,
+          }),
+        })
+        async doSomething(_request: { model: "gpt-5" | "gpt-5-mini" }): Promise<void> {}
+      }
+
+      await new TestService().doSomething({ model: "gpt-5" });
+
+      expect(mockService.record).toHaveBeenCalledWith(
+        meter,
+        expect.objectContaining({ dimensions: { model: "gpt-5" } }),
+      );
+    });
   });
 
   describe("valueExtractor", () => {
@@ -241,6 +271,35 @@ describe("@Metered decorator", () => {
       const result = await service.doSomething();
 
       expect(result).toBe("success");
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it("should return the original result when a local dimensions extractor fails", async () => {
+      const originalMethod = vi.fn().mockResolvedValue("success");
+      const meter = defineMeter({
+        key: "ai.tokens",
+        aggregation: "COUNT",
+        unit: "token",
+        dimensions: {
+          model: dimension.enum(["gpt-5"]),
+        },
+      });
+
+      class TestService {
+        @Metered({
+          meter,
+          dimensionsExtractor: () => {
+            throw new Error("Dimension extraction failed");
+          },
+        })
+        async doSomething(): Promise<string> {
+          return originalMethod();
+        }
+      }
+
+      await expect(new TestService().doSomething()).resolves.toBe("success");
+      expect(originalMethod).toHaveBeenCalledTimes(1);
+      expect(mockService.record).not.toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalled();
     });
 

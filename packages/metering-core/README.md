@@ -120,7 +120,9 @@ class ApiController {
 ### 이벤트와 문제 타입
 
 - 이벤트: `UsageRecordedEvent`, `QuotaExceededEvent`
-- 문제 타입: `DuplicateRecordProblem`, `InvalidMeterProblem`, `QuotaExceededProblem`, `RedisProblem`
+- core 문제 타입: `DuplicateRecordProblem`, `InvalidMeterDimensionProblem`, `InvalidMeterProblem`,
+  `InvalidUsageEnvelopeProblem`, `QuotaExceededProblem`, `RedisProblem`
+- Drizzle adapter 문제 타입: `UsageEnvelopeConfigurationProblem`
 
 ## 구현 포인트
 

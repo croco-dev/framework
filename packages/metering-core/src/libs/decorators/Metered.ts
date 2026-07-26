@@ -181,8 +181,6 @@ export function Metered(
           "billing-required meters require a non-empty eventId",
         );
       }
-      const dimensions = metadata.dimensionsExtractor?.(args);
-
       // 원본 메서드 실행
       const result = await originalMethod.apply(this, args);
 
@@ -196,7 +194,7 @@ export function Metered(
               tenantId,
               value: 1,
               eventId,
-              dimensions,
+              dimensions: metadata.dimensionsExtractor?.(args),
               metadata: metadata.metadataExtractor?.(args, result),
             } as unknown as MeterRecordInput<typeof metadata.meter>;
             await service.record(metadata.meter, input);

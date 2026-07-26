@@ -479,17 +479,6 @@ export type {
 
 // ==================== Aggregation ====================
 
-export type {
-  CountMeterRef,
-  EnumDimension,
-  MeterAggregation,
-  MeterBillingIntent,
-  MeterDefinitionOptions,
-  MeterDimensionSchema,
-  MeterDimensionValue,
-  MeterRecordInput,
-  MeterRef,
-} from "./libs/MeterRef";
 /**
  * UsageAggregator 생성 옵션 타입입니다.
  *
@@ -524,3 +513,15 @@ export type {
   UsageStorage,
 } from "./libs/UsageStorage";
 export type { MeteredMetadata, MeteredOptions, MeteredRefOptions } from "./libs/decorators/Metered";
+export type {
+  CountMeterRef,
+  EnumDimension,
+  MeterAggregation,
+  MeterBillingIntent,
+  MeterDefinitionOptions,
+  MeterDimensionSchema,
+  MeterDimensionValue,
+  MeterRecordInput,
+  MeterRef,
+  NonEmptyMeterDimensionValues,
+} from "./libs/MeterRef";

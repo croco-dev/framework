@@ -3,14 +3,12 @@ import { InvalidMeterDimensionProblem } from "./problems/InvalidMeterDimensionPr
 export type MeterAggregation = "COUNT" | "SUM";
 export type MeterBillingIntent = "local" | "required";
 export type MeterDimensionValue = string | number | boolean;
+export type NonEmptyMeterDimensionValues = readonly [MeterDimensionValue, ...MeterDimensionValue[]];
 
 declare const METER_REF_BRAND: unique symbol;
 
 export type EnumDimension<
-  Values extends readonly [MeterDimensionValue, ...MeterDimensionValue[]] = readonly [
-    MeterDimensionValue,
-    ...MeterDimensionValue[],
-  ],
+  Values extends NonEmptyMeterDimensionValues = NonEmptyMeterDimensionValues,
 > = {
   readonly kind: "enum";
   readonly values: Values;
@@ -83,9 +81,7 @@ export type CountMeterRef = MeterRef<
   MeterBillingIntent
 >;
 
-function validateDimensionValues(
-  values: unknown,
-): asserts values is readonly [MeterDimensionValue, ...MeterDimensionValue[]] {
+function validateDimensionValues(values: unknown): asserts values is NonEmptyMeterDimensionValues {
   if (!Array.isArray(values) || values.length === 0) {
     throw new InvalidMeterDimensionProblem("Enum dimensions require at least one value");
   }
@@ -118,9 +114,7 @@ function validateDimensionDescriptor(descriptor: unknown): asserts descriptor is
 }
 
 export const dimension = Object.freeze({
-  enum<const Values extends readonly [MeterDimensionValue, ...MeterDimensionValue[]]>(
-    values: Values,
-  ): EnumDimension<Values> {
+  enum<const Values extends NonEmptyMeterDimensionValues>(values: Values): EnumDimension<Values> {
     validateDimensionValues(values);
 
     return Object.freeze({

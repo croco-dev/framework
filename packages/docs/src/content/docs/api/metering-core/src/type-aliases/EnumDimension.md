@@ -11,7 +11,7 @@ title: "EnumDimension"
 
 ### Values
 
-`Values` *extends* readonly \[[`MeterDimensionValue`](/api/metering-core/src/type-aliases/meterdimensionvalue/), `...MeterDimensionValue[]`\] = readonly \[[`MeterDimensionValue`](/api/metering-core/src/type-aliases/meterdimensionvalue/), `...MeterDimensionValue[]`\]
+`Values` *extends* [`NonEmptyMeterDimensionValues`](/api/metering-core/src/type-aliases/nonemptymeterdimensionvalues/) = [`NonEmptyMeterDimensionValues`](/api/metering-core/src/type-aliases/nonemptymeterdimensionvalues/)
 
 ## Properties
 

@@ -25,7 +25,7 @@ Defines an inspectable, serializable usage meter while retaining literal keys an
 
 ### Dimensions
 
-`Dimensions` *extends* `Readonly`\<`Record`\<`string`, [`EnumDimension`](/api/metering-core/src/type-aliases/enumdimension/)\<readonly \[[`MeterDimensionValue`](/api/metering-core/src/type-aliases/meterdimensionvalue/), [`MeterDimensionValue`](/api/metering-core/src/type-aliases/meterdimensionvalue/)\]\>\>\> = `Record`\<`never`, `never`\>
+`Dimensions` *extends* `Readonly`\<`Record`\<`string`, [`EnumDimension`](/api/metering-core/src/type-aliases/enumdimension/)\<[`NonEmptyMeterDimensionValues`](/api/metering-core/src/type-aliases/nonemptymeterdimensionvalues/)\>\>\> = `Record`\<`never`, `never`\>
 
 ### Billing
 

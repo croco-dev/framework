@@ -14430,6 +14430,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "NonEmptyMeterDimensionValues",
+              "exportKind": "named",
+              "source": "./libs/MeterRef"
+            },
+            {
               "name": "QuotaCheckAndRecordOptions",
               "exportKind": "named",
               "source": "./libs/QuotaManager"
