@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
-import type { BillingStore } from "@croco/billing-core";
-import { WebhookAlreadyProcessedProblem } from "@croco/billing-core";
+import type { BillingStore, PlanRegistry, PlanVersionDefinition } from "@croco/billing-core";
+import { planVersionRef, WebhookAlreadyProcessedProblem } from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
@@ -31,6 +31,38 @@ function createMockEventPublisher(): EventPublisher {
     publishNow: vi.fn(),
     publishMany: vi.fn(),
   } as unknown as EventPublisher;
+}
+
+const POLAR_PLAN_VERSION = {
+  ref: planVersionRef("plan-pro@v1"),
+  planId: "plan-pro",
+  versionId: "v1",
+  effectiveAt: "2026-01-01T00:00:00.000Z",
+  name: "Pro",
+  amount: 2900,
+  currency: "USD",
+  interval: "month",
+  intervalCount: 1,
+  rating: { mode: "provider", provider: "polar" },
+  providerBindings: [
+    {
+      provider: "polar",
+      productId: "plan-pro",
+      priceIds: [],
+    },
+  ],
+} satisfies PlanVersionDefinition;
+
+function createMockPlanRegistry(): PlanRegistry {
+  return {
+    publishPlanVersion: vi.fn(),
+    getPlan: vi.fn(),
+    getAllPlans: vi.fn(),
+    getPlanVersion: vi.fn(),
+    getAllPlanVersions: vi.fn(),
+    getPlanAtDate: vi.fn(),
+    resolveProviderPlanVersion: vi.fn().mockResolvedValue(POLAR_PLAN_VERSION),
+  };
 }
 
 function createSdkSubscriptionPayload(eventId: string) {
@@ -139,12 +171,14 @@ describe("PolarWebhookHandler SDK-backed webhook verification", () => {
   let handler!: PolarWebhookHandler;
   let mockStore!: BillingStore;
   let mockEventPublisher!: EventPublisher;
+  let mockPlanRegistry!: PlanRegistry;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(now);
     mockStore = createMockStore();
     mockEventPublisher = createMockEventPublisher();
+    mockPlanRegistry = createMockPlanRegistry();
     const config: PolarConfig = {
       accessToken: "test-token",
       environment: "sandbox",
@@ -153,6 +187,7 @@ describe("PolarWebhookHandler SDK-backed webhook verification", () => {
     handler = new PolarWebhookHandler(config, {
       store: mockStore,
       eventPublisher: mockEventPublisher,
+      planRegistry: mockPlanRegistry,
     });
   });
 

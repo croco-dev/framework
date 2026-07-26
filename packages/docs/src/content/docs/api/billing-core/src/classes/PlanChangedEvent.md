@@ -15,7 +15,7 @@ title: "PlanChangedEvent"
 
 ### Constructor
 
-> **new PlanChangedEvent**(`tenantId`, `previousPlanId`, `newPlanId`, `externalSubscriptionId`): `PlanChangedEvent`
+> **new PlanChangedEvent**(`tenantId`, `previousPlanId`, `newPlanId`, `externalSubscriptionId`, `previousPlanVersionRef`, `newPlanVersionRef`): `PlanChangedEvent`
 
 #### Parameters
 
@@ -35,6 +35,14 @@ title: "PlanChangedEvent"
 
 `string`
 
+##### previousPlanVersionRef
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+##### newPlanVersionRef
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
 #### Returns
 
 `PlanChangedEvent`
@@ -53,7 +61,7 @@ title: "PlanChangedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -63,13 +71,13 @@ title: "PlanChangedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### externalSubscriptionId
 
 > `readonly` **externalSubscriptionId**: `string`
 
-***
+---
 
 ### metadata
 
@@ -79,25 +87,37 @@ title: "PlanChangedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### newPlanId
 
 > `readonly` **newPlanId**: `string`
 
-***
+---
+
+### newPlanVersionRef
+
+> `readonly` **newPlanVersionRef**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+---
 
 ### previousPlanId
 
 > `readonly` **previousPlanId**: `string`
 
-***
+---
+
+### previousPlanVersionRef
+
+> `readonly` **previousPlanVersionRef**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -107,7 +127,7 @@ title: "PlanChangedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### eventName
 

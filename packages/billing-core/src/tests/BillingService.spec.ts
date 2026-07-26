@@ -6,6 +6,8 @@ import { InMemoryBillingStore } from "../libs/InMemoryBillingStore";
 import { BillingCheckoutCreationProblem } from "../libs/problems/BillingProblems";
 import type { BillingAccount, Subscription } from "../types";
 
+const PLAN_VERSION_REF = "plan-pro@v1" as Subscription["planVersionRef"];
+
 describe("BillingService", () => {
   let store!: InMemoryBillingStore;
   let mockGateway!: BillingGateway;
@@ -57,6 +59,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -76,6 +79,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "trialing",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -95,6 +99,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "canceled",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -114,6 +119,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "past_due",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -133,6 +139,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "revoked",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -159,6 +166,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -185,6 +193,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -317,6 +326,7 @@ describe("BillingService", () => {
         billingAccountId: "account-2",
         externalSubscriptionId: "ext-sub-2",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -340,6 +350,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -365,6 +376,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -387,6 +399,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -437,6 +450,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -465,6 +479,7 @@ describe("BillingService", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: true,

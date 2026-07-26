@@ -3,6 +3,8 @@ import { InMemoryBillingStore } from "../libs/InMemoryBillingStore";
 import { WebhookAlreadyProcessedProblem } from "../libs/problems/BillingProblems";
 import type { BillingAccount, Order, Subscription } from "../types";
 
+const PLAN_VERSION_REF = "plan-pro@v1" as Subscription["planVersionRef"];
+
 describe("InMemoryBillingStore", () => {
   let store!: InMemoryBillingStore;
 
@@ -102,6 +104,7 @@ describe("InMemoryBillingStore", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -121,6 +124,7 @@ describe("InMemoryBillingStore", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -130,6 +134,29 @@ describe("InMemoryBillingStore", () => {
 
       const result = await store.findSubscriptionByExternalId("ext-sub-1");
       expect(result).toEqual(subscription);
+    });
+
+    it("keeps the stored plan version pin isolated from caller mutation", async () => {
+      const subscription: Subscription = {
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date(),
+      };
+      await store.saveSubscription(subscription);
+
+      Object.assign(subscription, { planVersionRef: "plan-pro@mutated" });
+      const firstRead = await store.findSubscription(subscription.billingAccountId);
+      Object.assign(firstRead ?? {}, { planVersionRef: "plan-pro@read-mutated" });
+
+      await expect(store.findSubscription(subscription.billingAccountId)).resolves.toMatchObject({
+        planVersionRef: PLAN_VERSION_REF,
+      });
     });
 
     it("should return null when finding by non-existent external subscription ID", async () => {
@@ -143,6 +170,7 @@ describe("InMemoryBillingStore", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,
@@ -288,6 +316,7 @@ describe("InMemoryBillingStore", () => {
         billingAccountId: "tenant-1",
         externalSubscriptionId: "ext-sub-1",
         planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
         status: "active",
         currentPeriodEnd: new Date(),
         cancelAtPeriodEnd: false,

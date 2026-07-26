@@ -53,11 +53,11 @@ Map a Polar order event to internal domain events.
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
 
-***
+---
 
 ### mapSubscriptionEvent()
 
-> **mapSubscriptionEvent**(`eventType`, `tenantId`, `subscription`, `previousPlanId?`): [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
+> **mapSubscriptionEvent**(`eventType`, `tenantId`, `subscription`, `previousPlanId?`, `previousPlanVersionRef?`): [`DomainEvent`](/api/events-core/src/classes/domainevent/)[]
 
 Map a Polar subscription event to internal domain events.
 Returns array because one webhook can produce multiple internal events.
@@ -82,6 +82,10 @@ Returns array because one webhook can produce multiple internal events.
 
 `string`
 
+###### planVersionRef
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
 ###### productId
 
 `string`
@@ -93,6 +97,10 @@ Returns array because one webhook can produce multiple internal events.
 ##### previousPlanId?
 
 `string`
+
+##### previousPlanVersionRef?
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
 
 #### Returns
 

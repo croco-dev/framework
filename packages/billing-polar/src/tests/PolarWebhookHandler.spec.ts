@@ -1,5 +1,9 @@
-import type { BillingStore } from "@croco/billing-core";
-import { WebhookAlreadyProcessedProblem } from "@croco/billing-core";
+import type { BillingStore, PlanRegistry, PlanVersionDefinition } from "@croco/billing-core";
+import {
+  planVersionRef,
+  UnknownProviderPlanMappingProblem,
+  WebhookAlreadyProcessedProblem,
+} from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { createBillingProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,6 +37,38 @@ function createMockEventPublisher(): EventPublisher {
     publishMany: vi.fn(),
   } as unknown as EventPublisher;
   return mockPublisher;
+}
+
+const POLAR_PLAN_VERSION = {
+  ref: planVersionRef("plan-pro@v1"),
+  planId: "plan-pro",
+  versionId: "v1",
+  effectiveAt: "2026-01-01T00:00:00.000Z",
+  name: "Pro",
+  amount: 9900,
+  currency: "USD",
+  interval: "month",
+  intervalCount: 1,
+  rating: { mode: "provider", provider: "polar" },
+  providerBindings: [
+    {
+      provider: "polar",
+      productId: "plan-pro",
+      priceIds: [],
+    },
+  ],
+} satisfies PlanVersionDefinition;
+
+function createMockPlanRegistry(): PlanRegistry {
+  return {
+    publishPlanVersion: vi.fn(),
+    getPlan: vi.fn(),
+    getAllPlans: vi.fn(),
+    getPlanVersion: vi.fn(),
+    getAllPlanVersions: vi.fn(),
+    getPlanAtDate: vi.fn(),
+    resolveProviderPlanVersion: vi.fn().mockResolvedValue(POLAR_PLAN_VERSION),
+  };
 }
 
 const mockValidateEvent = vi.fn();
@@ -122,11 +158,13 @@ describe("PolarWebhookHandler", () => {
   let handler!: PolarWebhookHandler;
   let mockStore!: BillingStore;
   let mockEventPublisher!: EventPublisher;
+  let mockPlanRegistry!: PlanRegistry;
   let config!: PolarConfig;
 
   beforeEach(() => {
     mockStore = createMockStore();
     mockEventPublisher = createMockEventPublisher();
+    mockPlanRegistry = createMockPlanRegistry();
     config = {
       accessToken: "test-token",
       environment: "sandbox",
@@ -136,6 +174,7 @@ describe("PolarWebhookHandler", () => {
     handler = new PolarWebhookHandler(config, {
       store: mockStore,
       eventPublisher: mockEventPublisher,
+      planRegistry: mockPlanRegistry,
     });
 
     vi.clearAllMocks();
@@ -331,6 +370,7 @@ describe("PolarWebhookHandler", () => {
       const secondHandler = new PolarWebhookHandler(config, {
         store: mockStore,
         eventPublisher: mockEventPublisher,
+        planRegistry: mockPlanRegistry,
       });
 
       const [firstResult, secondResult] = await Promise.all([
@@ -766,6 +806,41 @@ describe("PolarWebhookHandler", () => {
       expect(mockStore.reserveWebhook).toHaveBeenCalledWith("evt-999", "subscription.canceled");
       expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
       expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-999");
+    });
+  });
+
+  describe("plan version mapping", () => {
+    it("fails explicitly before persistence when provider mapping is unknown", async () => {
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.failWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockPlanRegistry.resolveProviderPlanVersion).mockRejectedValue(
+        new UnknownProviderPlanMappingProblem("polar", "unknown-product", ["unknown-price"]),
+      );
+      vi.mocked(mockValidateEvent).mockReturnValue({
+        id: "evt-unknown-plan",
+        type: "subscription.created",
+        data: {
+          id: "sub-unknown-plan",
+          customer: { externalId: "tenant-unknown-plan", metadata: {} },
+          product: { id: "unknown-product" },
+          prices: [{ id: "unknown-price" }],
+          status: "active",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      } as never);
+
+      const result = await handler.handle("{}", { "webhook-id": "evt-unknown-plan" });
+
+      expect(result).toMatchObject({
+        success: false,
+        eventId: "evt-unknown-plan",
+        error: expect.stringContaining("billing/unknown-provider-plan-mapping"),
+      });
+      expect(mockStore.saveSubscription).not.toHaveBeenCalled();
+      expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
+      expect(mockStore.failWebhook).toHaveBeenCalledWith("evt-unknown-plan");
     });
   });
 });

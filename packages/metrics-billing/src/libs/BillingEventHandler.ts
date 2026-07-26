@@ -5,6 +5,7 @@ import {
   OrderPaidEvent,
   PlanChangedEvent,
   type PlanRegistry,
+  type PlanVersionRef,
   SubscriptionCanceledEvent,
 } from "@croco/billing-core";
 import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croco/events-core";
@@ -42,7 +43,22 @@ export class BillingEventHandler
     }
 
     return {
-      id: plan.id,
+      id: plan.planId,
+      amount: plan.amount,
+      currency: plan.currency,
+      interval: plan.interval,
+      intervalCount: plan.intervalCount,
+    };
+  }
+
+  private async getPinnedPlan(planVersionRef: PlanVersionRef) {
+    const plan = await this.planRegistry.getPlanVersion(planVersionRef);
+    if (plan === null) {
+      return null;
+    }
+
+    return {
+      id: plan.planId,
       amount: plan.amount,
       currency: plan.currency,
       interval: plan.interval,
@@ -77,7 +93,7 @@ export class BillingEventHandler
       throw this.createDroppedProblem(event, "subscription_not_found", account.id);
     }
 
-    const plan = await this.getPlan(subscription.planId);
+    const plan = await this.getPinnedPlan(subscription.planVersionRef);
     if (plan === null) {
       throw this.createDroppedProblem(event, "plan_not_found", subscription.planId);
     }
@@ -106,8 +122,8 @@ export class BillingEventHandler
       );
     }
 
-    const previousPlan = await this.getPlan(event.previousPlanId);
-    const newPlan = await this.getPlan(event.newPlanId);
+    const previousPlan = await this.getPinnedPlan(event.previousPlanVersionRef);
+    const newPlan = await this.getPinnedPlan(event.newPlanVersionRef);
     if (previousPlan === null || newPlan === null) {
       throw this.createDroppedProblem(
         event,
@@ -152,7 +168,7 @@ export class BillingEventHandler
       );
     }
 
-    const plan = await this.getPlan(subscription.planId);
+    const plan = await this.getPinnedPlan(subscription.planVersionRef);
     if (plan === null) {
       throw this.createDroppedProblem(event, "plan_not_found", subscription.planId);
     }

@@ -63,6 +63,11 @@ export { SubscriptionRevokedEvent } from "./libs/events/SubscriptionRevokedEvent
 export { InMemoryBillingStore } from "./libs/InMemoryBillingStore";
 
 /**
+ * 테스트와 로컬 개발에 사용할 수 있는 불변 플랜 버전 레지스트리입니다.
+ */
+export { InMemoryPlanRegistry } from "./libs/InMemoryPlanRegistry";
+
+/**
  * 인보이스 생성 계약과 입력 타입입니다.
  */
 export type { GenerateInvoiceParams, InvoiceGenerator } from "./libs/InvoiceGenerator";
@@ -81,6 +86,16 @@ export { Money } from "./libs/Money";
  * 사용 가능한 플랜 정의 조회 계약입니다.
  */
 export type { PlanRegistry } from "./libs/PlanRegistry";
+
+/**
+ * 레거시 구독에 검증된 플랜 버전을 명시적으로 고정합니다.
+ */
+export { migrateSubscriptionPlanVersion } from "./libs/migrateSubscriptionPlanVersion";
+
+/**
+ * 직렬화 가능한 플랜 버전 참조를 생성합니다.
+ */
+export { planVersionRef } from "./libs/planVersionRef";
 
 /**
  * 플랜 전환 미리보기와 적용 계약입니다.
@@ -108,9 +123,16 @@ export {
   BillingCheckoutCreationProblem,
   InvalidMoneyAmountProblem,
   InvalidMoneyCurrencyProblem,
+  InvalidPlanVersionDefinitionProblem,
+  InvalidPlanVersionRefProblem,
   MoneyCurrencyMismatchProblem,
   MoneyDivisionByZeroProblem,
+  PlanVersionAlreadyPublishedProblem,
+  PlanVersionConflictProblem,
+  SubscriptionPlanVersionMismatchProblem,
   SubscriptionNotFoundProblem,
+  UnknownPlanVersionProblem,
+  UnknownProviderPlanMappingProblem,
   WebhookAlreadyProcessedProblem,
 } from "./libs/problems/BillingProblems";
 
@@ -123,10 +145,16 @@ export type {
   InvoiceLineItem,
   InvoiceLineItemType,
   InvoiceStatus,
+  LegacySubscription,
   Order,
   Plan,
   PlanInterval,
+  PlanRatingDefinition,
+  PlanVersionDefinition,
+  PlanVersionRef,
   ProcessedWebhook,
+  ProviderPlanBinding,
+  ProviderPlanLookup,
   Subscription,
   SubscriptionStatus,
 } from "./types";

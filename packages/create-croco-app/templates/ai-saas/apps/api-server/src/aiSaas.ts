@@ -1,3 +1,4 @@
+import { planVersionRef } from "@croco/billing-core";
 import { InMemoryLlmModel, InMemoryLlmRegistry, LlmService, type LlmUsage } from "@croco/llm-core";
 import {
   COMPLETION_TOKENS,
@@ -541,6 +542,7 @@ export async function seedAiSaasTenant(runtime: AiSaasRuntime, planId: AiPlanId,
     billingAccountId: tenant.id,
     externalSubscriptionId: `external_subscription_${tenant.id}`,
     planId,
+    planVersionRef: planVersionRef(`${planId}@v1`),
     status: "active",
     currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     cancelAtPeriodEnd: false,

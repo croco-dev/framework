@@ -3700,6 +3700,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InMemoryPlanRegistry",
+              "exportKind": "named",
+              "source": "./libs/InMemoryPlanRegistry",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidMoneyAmountProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
@@ -3710,6 +3716,24 @@
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "InvalidPlanVersionDefinitionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidPlanVersionRefProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "migrateSubscriptionPlanVersion",
+              "exportKind": "named",
+              "source": "./libs/migrateSubscriptionPlanVersion",
+              "declarationKind": "function"
             },
             {
               "name": "Money",
@@ -3742,6 +3766,24 @@
               "declarationKind": "class"
             },
             {
+              "name": "PlanVersionAlreadyPublishedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PlanVersionConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "planVersionRef",
+              "exportKind": "named",
+              "source": "./libs/planVersionRef",
+              "declarationKind": "function"
+            },
+            {
               "name": "SubscriptionActivatedEvent",
               "exportKind": "named",
               "source": "./libs/events/SubscriptionActivatedEvent",
@@ -3766,9 +3808,27 @@
               "declarationKind": "class"
             },
             {
+              "name": "SubscriptionPlanVersionMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "SubscriptionRevokedEvent",
               "exportKind": "named",
               "source": "./libs/events/SubscriptionRevokedEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "UnknownPlanVersionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "UnknownProviderPlanMappingProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
               "declarationKind": "class"
             },
             {
@@ -3840,6 +3900,11 @@
               "source": "./types"
             },
             {
+              "name": "LegacySubscription",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "MoneyRoundingMode",
               "exportKind": "named",
               "source": "./libs/Money"
@@ -3856,6 +3921,11 @@
             },
             {
               "name": "PlanInterval",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "PlanRatingDefinition",
               "exportKind": "named",
               "source": "./types"
             },
@@ -3880,6 +3950,16 @@
               "source": "./libs/PlanTransitionService"
             },
             {
+              "name": "PlanVersionDefinition",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "PlanVersionRef",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "ProcessedWebhook",
               "exportKind": "named",
               "source": "./types"
@@ -3898,6 +3978,16 @@
               "name": "ProrationCalculator",
               "exportKind": "named",
               "source": "./libs/ProrationCalculator"
+            },
+            {
+              "name": "ProviderPlanBinding",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "ProviderPlanLookup",
+              "exportKind": "named",
+              "source": "./types"
             },
             {
               "name": "Subscription",

@@ -1,5 +1,6 @@
 import {
   OrderPaidEvent,
+  planVersionRef,
   PlanChangedEvent,
   SubscriptionActivatedEvent,
   SubscriptionCanceledEvent,
@@ -21,6 +22,7 @@ describe("PolarEventMapper", () => {
       const events = mapper.mapSubscriptionEvent("subscription.created", "tenant-123", {
         id: "sub-123",
         productId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
         status: "active",
       });
 
@@ -36,6 +38,7 @@ describe("PolarEventMapper", () => {
       const events = mapper.mapSubscriptionEvent("subscription.active", "tenant-123", {
         id: "sub-123",
         productId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
         status: "active",
       });
 
@@ -54,9 +57,11 @@ describe("PolarEventMapper", () => {
         {
           id: "sub-123",
           productId: "plan-enterprise",
+          planVersionRef: planVersionRef("plan-enterprise@v1"),
           status: "active",
         },
         "plan-pro",
+        planVersionRef("plan-pro@v1"),
       );
 
       expect(events).toHaveLength(1);
@@ -68,6 +73,29 @@ describe("PolarEventMapper", () => {
       expect(event.externalSubscriptionId).toBe("sub-123");
     });
 
+    it("subscription.updated emits version migration evidence within the same plan family", () => {
+      const events = mapper.mapSubscriptionEvent(
+        "subscription.updated",
+        "tenant-123",
+        {
+          id: "sub-123",
+          productId: "plan-pro",
+          planVersionRef: planVersionRef("plan-pro@v2"),
+          status: "active",
+        },
+        "plan-pro",
+        planVersionRef("plan-pro@v1"),
+      );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        previousPlanId: "plan-pro",
+        newPlanId: "plan-pro",
+        previousPlanVersionRef: "plan-pro@v1",
+        newPlanVersionRef: "plan-pro@v2",
+      });
+    });
+
     it("subscription.updated (상태만 변경 - past_due) → SubscriptionPastDueEvent", () => {
       const events = mapper.mapSubscriptionEvent(
         "subscription.updated",
@@ -75,9 +103,11 @@ describe("PolarEventMapper", () => {
         {
           id: "sub-123",
           productId: "plan-pro",
+          planVersionRef: planVersionRef("plan-pro@v1"),
           status: "past_due",
         },
         "plan-pro",
+        planVersionRef("plan-pro@v1"),
       );
 
       expect(events).toHaveLength(1);
@@ -94,9 +124,11 @@ describe("PolarEventMapper", () => {
         {
           id: "sub-123",
           productId: "plan-enterprise",
+          planVersionRef: planVersionRef("plan-enterprise@v1"),
           status: "past_due",
         },
         "plan-pro",
+        planVersionRef("plan-pro@v1"),
       );
 
       expect(events).toHaveLength(2);
@@ -111,9 +143,11 @@ describe("PolarEventMapper", () => {
         {
           id: "sub-123",
           productId: "plan-pro",
+          planVersionRef: planVersionRef("plan-pro@v1"),
           status: "active",
         },
         "plan-pro",
+        planVersionRef("plan-pro@v1"),
       );
 
       expect(events).toHaveLength(0);
@@ -123,6 +157,7 @@ describe("PolarEventMapper", () => {
       const events = mapper.mapSubscriptionEvent("subscription.canceled", "tenant-123", {
         id: "sub-123",
         productId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
         status: "canceled",
         cancelAtPeriodEnd: true,
       });
@@ -139,6 +174,7 @@ describe("PolarEventMapper", () => {
       const events = mapper.mapSubscriptionEvent("subscription.revoked", "tenant-123", {
         id: "sub-123",
         productId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
         status: "revoked",
       });
 
@@ -153,6 +189,7 @@ describe("PolarEventMapper", () => {
       const events = mapper.mapSubscriptionEvent("subscription.canceled", "tenant-123", {
         id: "sub-123",
         productId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
         status: "canceled",
       });
 
