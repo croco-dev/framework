@@ -364,6 +364,34 @@ describe("LifecycleAutomationConsole", () => {
     expect(html).toContain("admin-react/lifecycle-dry-run-fixture-not-found");
   });
 
+  it("distinguishes invalid pasted context from evaluator availability failures", async () => {
+    const { evaluator, registry, runStore } = await createRuntime();
+    const source = createLifecycleAutomationSource({
+      registry,
+      evaluator,
+      runStore,
+      parsePastedContext: () => {
+        throw new TypeError("schema mismatch with private input");
+      },
+    });
+
+    const dryRun = await source.dryRun(
+      { ruleId: "customer-risk", pastedContext: { privateEmail: "secret@example.com" } },
+      ["lifecycle:dry-run"],
+    );
+
+    expect(dryRun).toEqual({
+      kind: "invalid",
+      problem: {
+        code: "admin-react/lifecycle-pasted-context-invalid",
+        message: "The pasted context did not satisfy the configured schema.",
+        source: "dry-run",
+      },
+    });
+    expect(JSON.stringify(dryRun)).not.toContain("secret@example.com");
+    expect(JSON.stringify(dryRun)).not.toContain("schema mismatch with private input");
+  });
+
   it("explains production match, cooldown suppression, failed action, and safe recovery", async () => {
     const { context, evaluator, registry, runStore, source } = await createRuntime({
       failAction: true,

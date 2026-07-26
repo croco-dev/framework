@@ -226,7 +226,7 @@ export function LifecycleRunHistory({
                   operation.run.skipReason === "cooldown_active"
                     ? "suppressed"
                     : operation.run.status === "skipped"
-                      ? "not the suppression reason"
+                      ? "skipped — cooldown not active"
                       : "passed",
                 ),
                 createElement("td", null, operation.outcome),

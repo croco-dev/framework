@@ -412,7 +412,12 @@ function checkAdminConsoleStructure() {
   checkFileContains(
     "admin-console",
     ["apps", "console-web", "src", "LifecycleAutomationDemo.tsx"],
-    /DryRunFixture/,
+    /at-risk-tenant/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "LifecycleAutomationDemo.tsx"],
+    /paused-signal/,
   );
   checkFileContains(
     "admin-console",

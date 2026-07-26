@@ -91,7 +91,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/admin-console/apps/console-web/src/LifecycleAutomationDemo.tsx",
-          line: 61,
+          line: 66,
           column: 5,
           kind: "problem-constructor",
         },

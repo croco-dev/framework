@@ -417,22 +417,10 @@ export function classifyLifecycleRun(run: LifecycleRun): LifecycleRunOutcome {
   return "suppressed";
 }
 
-function findRecovery(
-  run: LifecycleRun,
-  items: readonly RetryConsoleItem[],
-): RetryConsoleRecoveryAction | undefined {
-  return items
-    .find((item) => item.correlationIds.lifecycleRunId === run.id)
-    ?.recoveryActions.find(
-      (action) => action.allowed && (action.kind === "retry" || action.kind === "replay"),
-    );
-}
-
-function findRecoveryItem(
-  run: LifecycleRun,
-  items: readonly RetryConsoleItem[],
-): RetryConsoleItem | undefined {
-  return items.find((item) => item.correlationIds.lifecycleRunId === run.id);
+function findRecovery(item: RetryConsoleItem | undefined): RetryConsoleRecoveryAction | undefined {
+  return item?.recoveryActions.find(
+    (action) => action.allowed && (action.kind === "retry" || action.kind === "replay"),
+  );
 }
 
 function buildRunOperation(
@@ -441,7 +429,7 @@ function buildRunOperation(
   links?: LifecycleRunOperation["links"],
 ): LifecycleRunOperation {
   const failure = run.error ?? run.actionResults.find((result) => result.error)?.error;
-  const recoveryItem = findRecoveryItem(run, recoveryItems);
+  const recoveryItem = recoveryItems.find((item) => item.correlationIds.lifecycleRunId === run.id);
   const safeRun: LifecycleRunEvidence = {
     id: run.id,
     ruleId: run.ruleId,
@@ -471,7 +459,7 @@ function buildRunOperation(
           "runs",
         )
       : undefined,
-    recovery: findRecovery(run, recoveryItems),
+    recovery: findRecovery(recoveryItem),
     correlationIds: recoveryItem?.correlationIds ?? {
       lifecycleRunId: run.id,
       lifecycleRuleId: run.ruleId,
@@ -654,7 +642,18 @@ export function createLifecycleAutomationSource(
               ),
             };
           }
-          context = await options.parsePastedContext(request.pastedContext);
+          try {
+            context = await options.parsePastedContext(request.pastedContext);
+          } catch {
+            return {
+              kind: "invalid",
+              problem: problem(
+                "admin-react/lifecycle-pasted-context-invalid",
+                "The pasted context did not satisfy the configured schema.",
+                "dry-run",
+              ),
+            };
+          }
         }
         const result = await options.evaluator.dryRun({
           context,

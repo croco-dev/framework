@@ -7,6 +7,7 @@ const currentDir = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
+      "@croco/lifecycle-core": resolve(currentDir, "../lifecycle-core/src/index.ts"),
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
     },
   },

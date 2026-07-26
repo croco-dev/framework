@@ -53,7 +53,7 @@ export function LifecycleOperations() {
 ```
 
 Dry-run fixtures expose only labels to the browser. The source resolves stored
-contexts server-side and returns `LifecycleDryRunResult`, which contains safe
+contexts server-side and returns `LifecycleDryRunEvidence`, which contains safe
 signal identity, boolean condition evidence, declared actions, suppression, and
 Problem codes rather than arbitrary context values. Pasted contexts remain
 disabled unless a server-side `parsePastedContext` schema validator is supplied.

@@ -11,7 +11,7 @@ import {
 } from "@croco/admin-react";
 import type { RetryConsoleItem } from "@croco/admin-ops";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const demoAt = new Date("2026-07-26T00:00:00.000Z");
 const permissions = ["lifecycle:read", "lifecycle:write", "lifecycle:dry-run"] as const;
@@ -52,8 +52,13 @@ type GeneratedLifecycleSource = LifecycleAutomationSource & {
 
 type DemoRuntime = {
   readonly source: LifecycleAutomationSource;
-  readonly auditEvidence: readonly string[];
+  readonly auditEvidence: readonly DemoAuditEvidence[];
   readonly dryRun: LifecycleDryRunEvidence;
+};
+
+type DemoAuditEvidence = {
+  readonly id: string;
+  readonly text: string;
 };
 
 class LifecycleAutomationDemoProblem extends Problem {
@@ -78,7 +83,7 @@ function classifyDemoRun(run: DemoRun): LifecycleRunOutcome {
   return "suppressed";
 }
 
-function createGeneratedLifecycleSource(): GeneratedLifecycleSource {
+function createGeneratedLifecycleSource(tenantId: string): GeneratedLifecycleSource {
   let customerState: RuleState = "registered";
   let revision = 0;
   let lastSuccessfulAt: Date | undefined;
@@ -112,7 +117,7 @@ function createGeneratedLifecycleSource(): GeneratedLifecycleSource {
     updatedAt: new Date(demoAt.getTime() + revision),
   });
 
-  const source: LifecycleAutomationSource = {
+  const source = {
     inspectRules: async () => [
       customerInspection(),
       {
@@ -197,7 +202,7 @@ function createGeneratedLifecycleSource(): GeneratedLifecycleSource {
         id: "at-risk-tenant",
         label: "Stored redacted at-risk tenant",
         description: "Only safe condition evidence and signal identity reach the browser.",
-        tenantId: "tenant_acme",
+        tenantId,
       },
     ],
     executeRuleAction: async (input) => {
@@ -290,7 +295,7 @@ function createGeneratedLifecycleSource(): GeneratedLifecycleSource {
         evidence: {
           kind: "dry-run",
           result: {
-            tenantId: "tenant_acme",
+            tenantId,
             signal: {
               id: "fixture-risk",
               type: "health.score.dropped",
@@ -310,9 +315,9 @@ function createGeneratedLifecycleSource(): GeneratedLifecycleSource {
         },
       };
     },
-  };
+  } satisfies LifecycleAutomationSource;
 
-  Object.assign(source, {
+  return Object.assign(source, {
     evaluateCustomerSignal(input: {
       readonly signalId: string;
       readonly at: Date;
@@ -337,7 +342,7 @@ function createGeneratedLifecycleSource(): GeneratedLifecycleSource {
         ruleId: "customer-risk",
         ruleVersion: "2026-07-26",
         ruleFingerprint: customerInspection().fingerprint,
-        tenantId: "tenant_acme",
+        tenantId,
         signalType: "health.score.dropped",
         signalId: input.signalId,
         severity: "high",
@@ -364,7 +369,7 @@ function createGeneratedLifecycleSource(): GeneratedLifecycleSource {
         ruleId: "renewal-risk",
         ruleVersion: "2026-07-26",
         ruleFingerprint: "descriptor-renewal-risk-v1",
-        tenantId: "tenant_acme",
+        tenantId,
         signalType: "health.score.dropped",
         signalId: "renewal-action-failure",
         severity: "critical",
@@ -390,8 +395,6 @@ function createGeneratedLifecycleSource(): GeneratedLifecycleSource {
       });
     },
   });
-
-  return source as GeneratedLifecycleSource;
 }
 
 async function requireRuleAction(
@@ -421,7 +424,7 @@ async function executeAuditedAction(
   command: LifecycleRuleAdminAction["command"],
   idempotencyKey: string,
   reason: string,
-): Promise<string> {
+): Promise<DemoAuditEvidence> {
   const action = await requireRuleAction(source, command);
   const result = await source.executeRuleAction({
     action,
@@ -433,11 +436,14 @@ async function executeAuditedAction(
   if (result.kind !== "succeeded") {
     throw new LifecycleAutomationDemoProblem(result.problem.code);
   }
-  return `${command} · revision ${result.revision} · ${idempotencyKey}`;
+  return {
+    id: idempotencyKey,
+    text: `${command} · revision ${result.revision} · ${idempotencyKey}`,
+  };
 }
 
-async function createDemoRuntime(): Promise<DemoRuntime> {
-  const source = createGeneratedLifecycleSource();
+async function createDemoRuntime(tenantId: string): Promise<DemoRuntime> {
+  const source = createGeneratedLifecycleSource(tenantId);
   const auditEvidence = [
     await executeAuditedAction(
       source,
@@ -504,59 +510,86 @@ async function loadState(
   });
 }
 
-export function LifecycleAutomationDemo() {
+export function LifecycleAutomationDemo({ tenantId }: { readonly tenantId: string }) {
   const [runtime, setRuntime] = useState<DemoRuntime>();
   const [state, setState] = useState<LifecycleAutomationConsoleState>(() =>
     createLifecycleAutomationLoadingState(),
   );
-  const [auditEvidence, setAuditEvidence] = useState<readonly string[]>([]);
+  const [auditEvidence, setAuditEvidence] = useState<readonly DemoAuditEvidence[]>([]);
+  const [failure, setFailure] = useState<string>();
+  const evidenceSequence = useRef(0);
 
   useEffect(() => {
     let active = true;
-    void createDemoRuntime().then(async (created) => {
-      const loaded = await loadState(created);
-      if (active) {
-        setRuntime(created);
-        setAuditEvidence(created.auditEvidence);
-        setState(loaded);
-      }
-    });
+    void createDemoRuntime(tenantId)
+      .then(async (created) => {
+        const loaded = await loadState(created);
+        if (active) {
+          setRuntime(created);
+          setAuditEvidence(created.auditEvidence);
+          setState(loaded);
+        }
+      })
+      .catch((caught: unknown) => {
+        if (active) {
+          setFailure(caught instanceof Problem ? caught.code : "ADMIN_LIFECYCLE_DEMO_INVARIANT");
+        }
+      });
     return () => {
       active = false;
     };
-  }, []);
+  }, [tenantId]);
 
   async function runAction(action: LifecycleRuleAdminAction) {
     if (!runtime) {
       return;
     }
     const idempotencyKey = `demo-${action.command}-${action.expectedRevision}`;
-    const result = await runtime.source.executeRuleAction({
-      action,
-      actor: "demo-operator",
-      reason: `Run ${action.command} from the generated lifecycle console.`,
-      idempotencyKey,
-      grantedPermissions: permissions,
-    });
-    setAuditEvidence((current) => [
-      ...current,
-      result.kind === "succeeded"
-        ? `${action.command} · revision ${result.revision} · ${idempotencyKey}`
-        : `${action.command} · ${result.problem.code}`,
-    ]);
-    setState(await loadState(runtime));
+    try {
+      const result = await runtime.source.executeRuleAction({
+        action,
+        actor: "demo-operator",
+        reason: `Run ${action.command} from the generated lifecycle console.`,
+        idempotencyKey,
+        grantedPermissions: permissions,
+      });
+      evidenceSequence.current += 1;
+      setAuditEvidence((current) => [
+        ...current,
+        {
+          id: `${idempotencyKey}:${evidenceSequence.current}`,
+          text:
+            result.kind === "succeeded"
+              ? `${action.command} · revision ${result.revision} · ${idempotencyKey}`
+              : `${action.command} · ${result.problem.code}`,
+        },
+      ]);
+      setState(await loadState(runtime));
+      setFailure(undefined);
+    } catch (caught: unknown) {
+      setFailure(caught instanceof Problem ? caught.code : "ADMIN_LIFECYCLE_DEMO_INVARIANT");
+    }
   }
 
   async function runDryRun(fixtureId: string) {
     if (!runtime) {
       return;
     }
-    const result = await runtime.source.dryRun({ ruleId: "customer-risk", fixtureId }, permissions);
-    setState(await loadState(runtime, result));
+    try {
+      const result = await runtime.source.dryRun(
+        { ruleId: "customer-risk", fixtureId },
+        permissions,
+      );
+      setState(await loadState(runtime, result));
+      setFailure(undefined);
+    } catch (caught: unknown) {
+      setFailure(caught instanceof Problem ? caught.code : "ADMIN_LIFECYCLE_DEMO_INVARIANT");
+    }
   }
 
   return (
     <section aria-label="Generated lifecycle automation demo">
+      {failure ? <p role="alert">Lifecycle demo failed: {failure}</p> : null}
       <LifecycleAutomationConsole
         state={state}
         onDryRunFixture={(fixtureId) => void runDryRun(fixtureId)}
@@ -566,7 +599,7 @@ export function LifecycleAutomationDemo() {
         <h2 id="lifecycle-demo-audit-heading">Demo audit evidence</h2>
         <ul>
           {auditEvidence.map((evidence) => (
-            <li key={evidence}>{evidence}</li>
+            <li key={evidence.id}>{evidence.text}</li>
           ))}
         </ul>
       </section>

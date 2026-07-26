@@ -564,7 +564,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/admin-console/apps/console-web/src/LifecycleAutomationDemo.tsx:61:5` (problem-constructor)
+- `packages/create-croco-app/templates/admin-console/apps/console-web/src/LifecycleAutomationDemo.tsx:66:5` (problem-constructor)
 
 <a id="admin-console-user-not-found"></a>
 

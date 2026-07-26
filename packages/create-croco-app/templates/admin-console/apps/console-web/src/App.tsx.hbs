@@ -319,7 +319,7 @@ export default function App() {
 
         <TenantWorkspaceDemo key={selectedTenantId} tenantId={selectedTenantId} />
         <WebhookReliabilityDemo key={`webhooks:${selectedTenantId}`} tenantId={selectedTenantId} />
-        <LifecycleAutomationDemo />
+        <LifecycleAutomationDemo key={selectedTenantId} tenantId={selectedTenantId} />
 
         {problem ? (
           <section style={alertStyle} role="alert">
