@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Task } from "../libs/decorators/Task";
 import {
   TaskExecutionTimeoutProblem,
+  TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,
 } from "../libs/problems/TasksProblems";
 import { TaskRegistry } from "../libs/TaskRegistry";
@@ -222,6 +223,152 @@ describe("TaskRunner", () => {
     );
   });
 
+  it("should preserve the task failure when failure recording also fails", async () => {
+    const taskFailure = new Error("Task failed");
+    const recordingFailure = new Error("Execution persistence failed");
+    const mockLogger: ILogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      child: vi.fn().mockReturnThis(),
+    };
+
+    @Component()
+    class DoublyFailingTaskHandler {
+      @Task({ name: "doubly-failing-task" })
+      async handle(): Promise<never> {
+        throw taskFailure;
+      }
+    }
+
+    Container.set(DoublyFailingTaskHandler, new DoublyFailingTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.fail = vi.fn().mockRejectedValue(recordingFailure);
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+    const runner = new TaskRunner(mockExecutionManager, registry, mockLogger);
+
+    await expect(runner.execute("doubly-failing-task", {})).rejects.toBe(taskFailure);
+
+    expect((taskFailure as Error & { cause?: unknown }).cause).toBe(recordingFailure);
+    expect(mockLogger.error).toHaveBeenCalledWith("Failed to record task execution failure", {
+      executionId: "exec-123",
+      taskError: taskFailure,
+      recordingError: recordingFailure,
+    });
+    expect(recordErrorSpy).toHaveBeenCalledWith(recordingFailure);
+  });
+
+  it("should attach failure-recording evidence to a Croco Problem with an undefined cause", async () => {
+    const taskFailure = new TaskNotFoundProblem("nested-task");
+    const recordingFailure = new Error("Execution persistence failed");
+
+    @Component()
+    class ProblemFailingTaskHandler {
+      @Task({ name: "problem-failing-task" })
+      async handle(): Promise<never> {
+        throw taskFailure;
+      }
+    }
+
+    Container.set(ProblemFailingTaskHandler, new ProblemFailingTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.fail = vi.fn().mockRejectedValue(recordingFailure);
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("problem-failing-task", {})).rejects.toBe(taskFailure);
+
+    expect(taskFailure.cause).toBe(recordingFailure);
+  });
+
+  it("should preserve an existing task error cause with failure-recording evidence", async () => {
+    const domainCause = new Error("Domain dependency failed");
+    const recordingFailure = new Error("Execution persistence failed");
+    const taskFailure = new Error("Task failed") as Error & { cause?: unknown };
+    taskFailure.cause = domainCause;
+
+    @Component()
+    class CausedFailureTaskHandler {
+      @Task({ name: "caused-failure-task" })
+      async handle(): Promise<never> {
+        throw taskFailure;
+      }
+    }
+
+    Container.set(CausedFailureTaskHandler, new CausedFailureTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.fail = vi.fn().mockRejectedValue(recordingFailure);
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("caused-failure-task", {})).rejects.toBe(taskFailure);
+
+    expect(taskFailure.cause).toMatchObject({
+      name: "TaskFailureRecordingAggregateError",
+      message: "Task failure includes execution failure-recording evidence",
+    });
+    expect((taskFailure.cause as Error & { errors: readonly unknown[] }).errors).toEqual([
+      domainCause,
+      recordingFailure,
+    ]);
+  });
+
+  it("should preserve the task failure when secondary failure logging also fails", async () => {
+    const taskFailure = new Error("Task failed");
+    const recordingFailure = new Error("Execution persistence failed");
+    const loggingFailure = new Error("Failure logging failed");
+    const mockLogger: ILogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(() => {
+        throw loggingFailure;
+      }),
+      child: vi.fn().mockReturnThis(),
+    };
+
+    @Component()
+    class LoggingFailureTaskHandler {
+      @Task({ name: "logging-failure-task" })
+      async handle(): Promise<never> {
+        throw taskFailure;
+      }
+    }
+
+    Container.set(LoggingFailureTaskHandler, new LoggingFailureTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.fail = vi.fn().mockRejectedValue(recordingFailure);
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+    const runner = new TaskRunner(mockExecutionManager, registry, mockLogger);
+
+    await expect(runner.execute("logging-failure-task", {})).rejects.toBe(taskFailure);
+
+    expect(recordErrorSpy).toHaveBeenCalledWith(loggingFailure);
+    expect(recordErrorSpy).toHaveBeenCalledWith(recordingFailure);
+  });
+
+  it("should retain timeout ownership when failure recording loses a timeout race", async () => {
+    const recordingFailure = new Error("Execution persistence failed");
+    const runningExecution = execution({
+      type: "failing-task",
+      status: "running",
+      attempts: 1,
+      startedAt: new Date(),
+      timeout: 100,
+    });
+    mockExecutionManager.start = vi.fn().mockResolvedValue(runningExecution);
+    mockExecutionManager.fail = vi.fn().mockRejectedValue(recordingFailure);
+    mockExecutionManager.get = vi.fn().mockResolvedValue({
+      ...runningExecution,
+      status: "timed_out",
+      completedAt: new Date(),
+    });
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("failing-task", {})).rejects.toBeInstanceOf(
+      TaskExecutionTimeoutProblem,
+    );
+  });
+
   it("should extract retryable flag from error", async () => {
     @Component()
     class RetryableTaskHandler {
@@ -342,7 +489,7 @@ describe("TaskRunner", () => {
 
     const runner = new TaskRunner(mockExecutionManager, registry);
 
-    await expect(runner.execute("non-error-task", {})).rejects.toThrow("String error");
+    await expect(runner.execute("non-error-task", {})).rejects.toEqual(new Error("String error"));
 
     expect(mockExecutionManager.fail).toHaveBeenCalledWith(
       "exec-123",

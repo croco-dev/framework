@@ -37,6 +37,44 @@ function resolveExecutionIdempotencyKey(
   return `${executionIdempotencyKey}:task:${taskIdempotencyKey}`;
 }
 
+function normalizeThrownError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+class TaskFailureRecordingAggregateError extends Error {
+  readonly errors: readonly unknown[];
+
+  constructor(errors: readonly unknown[]) {
+    super("Task failure includes execution failure-recording evidence");
+    this.name = "TaskFailureRecordingAggregateError";
+    this.errors = errors;
+  }
+}
+
+function attachFailureRecordingCause(taskError: Error, recordingError: unknown): void {
+  try {
+    const existingCause = (taskError as Error & { cause?: unknown }).cause;
+    const diagnosticCause =
+      existingCause === undefined
+        ? normalizeThrownError(recordingError)
+        : new TaskFailureRecordingAggregateError([existingCause, recordingError]);
+    Object.defineProperty(taskError, "cause", {
+      value: diagnosticCause,
+      configurable: true,
+    });
+  } catch {
+    return;
+  }
+}
+
+function recordDiagnosticError(error: unknown): void {
+  try {
+    recordError(error);
+  } catch {
+    return;
+  }
+}
+
 export class TaskRunner {
   constructor(
     private executionManager: ExecutionManager,
@@ -185,24 +223,61 @@ export class TaskRunner {
         return await timeoutPromise;
       }
 
+      const taskError = normalizeThrownError(error);
       const executionError = {
-        message: error instanceof Error ? error.message : String(error),
-        retryable:
-          error instanceof Error && "retryable" in error ? Boolean(error.retryable) : false,
-        code: error instanceof Error && "code" in error ? String(error.code) : undefined,
-        stack: error instanceof Error ? error.stack : undefined,
+        message: taskError.message,
+        retryable: "retryable" in taskError ? Boolean(taskError.retryable) : false,
+        code: "code" in taskError ? String(taskError.code) : undefined,
+        stack: taskError.stack,
       };
 
       try {
         await this.executionManager.fail(startedExecution.id, executionError);
       } catch (transitionError) {
-        const current = await this.executionManager.get(startedExecution.id);
+        let current: Execution;
+        try {
+          current = await this.executionManager.get(startedExecution.id);
+        } catch (reconciliationError) {
+          this.reportFailureRecordingError(
+            startedExecution.id,
+            taskError,
+            transitionError,
+            reconciliationError,
+          );
+          throw taskError;
+        }
         if (current.status === "timed_out" && timeoutProblem !== undefined) {
           throw timeoutProblem;
         }
-        throw transitionError;
+        this.reportFailureRecordingError(startedExecution.id, taskError, transitionError);
+        throw taskError;
       }
-      throw error;
+      throw taskError;
+    }
+  }
+
+  private reportFailureRecordingError(
+    executionId: string,
+    taskError: Error,
+    recordingError: unknown,
+    reconciliationError?: unknown,
+  ): void {
+    attachFailureRecordingCause(taskError, recordingError);
+
+    try {
+      this.logger.error("Failed to record task execution failure", {
+        executionId,
+        taskError,
+        recordingError,
+        ...(reconciliationError === undefined ? {} : { reconciliationError }),
+      });
+    } catch (loggingError) {
+      recordDiagnosticError(loggingError);
+    }
+
+    for (const diagnosticError of [recordingError, reconciliationError]) {
+      if (diagnosticError === undefined) continue;
+      recordDiagnosticError(diagnosticError);
     }
   }
 
