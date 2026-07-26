@@ -312,6 +312,7 @@ function checkAdminConsoleStructure() {
   checkFileExists("admin-console", "apps", "api-server", "src", "controllers", "adminSchemas.ts");
   checkFileExists("admin-console", "apps", "api-server", "src", "tests", "AdminConsole.spec.ts");
   checkFileExists("admin-console", "apps", "console-web", "src", "App.tsx.hbs");
+  checkFileExists("admin-console", "apps", "console-web", "src", "LifecycleAutomationDemo.tsx");
   checkFileExists("admin-console", "apps", "console-web", "src", "TenantWorkspaceDemo.tsx");
   checkFileExists("admin-console", "apps", "console-web", "src", "WebhookReliabilityDemo.tsx");
   checkFileExists("admin-console", "apps", "api-server", "src", "webhook-smoke.ts");
@@ -376,6 +377,7 @@ function checkAdminConsoleStructure() {
   expect(consolePackageJson).toMatchObject({
     dependencies: expect.objectContaining({
       "@croco/admin-core": "workspace:*",
+      "@croco/admin-ops": "workspace:*",
       "@croco/admin-react": "workspace:*",
       "@croco/events-core": "workspace:*",
     }),
@@ -396,6 +398,26 @@ function checkAdminConsoleStructure() {
     "admin-console",
     ["apps", "console-web", "src", "App.tsx.hbs"],
     /TenantWorkspaceDemo key=\{selectedTenantId\}/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "LifecycleAutomationDemo.tsx"],
+    /demo-activate-customer-risk/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "LifecycleAutomationDemo.tsx"],
+    /cooldown-suppression/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "LifecycleAutomationDemo.tsx"],
+    /at-risk-tenant/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "LifecycleAutomationDemo.tsx"],
+    /paused-signal/,
   );
   checkFileContains(
     "admin-console",

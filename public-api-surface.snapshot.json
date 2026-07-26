@@ -1353,6 +1353,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "classifyLifecycleRun",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation",
+              "declarationKind": "function"
+            },
+            {
               "name": "createAdminDataTableInvalidRowIdProblemDetails",
               "exportKind": "named",
               "source": "./libs/dataTableSnapshot",
@@ -1437,6 +1443,18 @@
               "declarationKind": "const"
             },
             {
+              "name": "createLifecycleAutomationLoadingState",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createLifecycleAutomationSource",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation",
+              "declarationKind": "function"
+            },
+            {
               "name": "createPermissionDeniedProblemDetails",
               "exportKind": "named",
               "source": "./libs/snapshot",
@@ -1473,6 +1491,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "diffLifecycleRuleDescriptors",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation",
+              "declarationKind": "function"
+            },
+            {
               "name": "EntitlementList",
               "exportKind": "named",
               "source": "./libs/components",
@@ -1488,6 +1512,36 @@
               "name": "ImpersonationBanner",
               "exportKind": "named",
               "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "LifecycleAutomationConsole",
+              "exportKind": "named",
+              "source": "./libs/LifecycleAutomationConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "LifecycleDryRunPanel",
+              "exportKind": "named",
+              "source": "./libs/LifecycleAutomationConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "LifecycleRuleOperations",
+              "exportKind": "named",
+              "source": "./libs/LifecycleAutomationConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "LifecycleRunHistory",
+              "exportKind": "named",
+              "source": "./libs/LifecycleAutomationConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "loadLifecycleAutomationConsole",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation",
               "declarationKind": "function"
             },
             {
@@ -2078,6 +2132,131 @@
               "name": "BillingProviderStatus",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleAutomationConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/LifecycleAutomationConsole"
+            },
+            {
+              "name": "LifecycleAutomationConsoleState",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleAutomationEmptyState",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleAutomationLoadingState",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleAutomationPermissionDeniedState",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleAutomationReadyState",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleAutomationSource",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleAutomationSourceOptions",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleDescriptorDiff",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleDryRunEvidence",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleDryRunFixture",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleDryRunFixtureDescriptor",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleDryRunRequest",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleDryRunResponse",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleOperationsProblem",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleRuleActionInput",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleRuleActionResult",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleRuleAdminAction",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleRuleOperation",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleRunActionEvidence",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleRunEvidence",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleRunFilters",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleRunOperation",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LifecycleRunOutcome",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "LoadLifecycleAutomationOptions",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation"
             },
             {
               "name": "NonEmptyArray",

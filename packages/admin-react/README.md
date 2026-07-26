@@ -4,6 +4,63 @@ Provider-neutral React contracts and primitives for SaaS billing, entitlement,
 tenant switching, impersonation, and permission inspection administration.
 Also includes contract-aware admin resource tables.
 
+## Lifecycle automation operations
+
+`LifecycleAutomationConsole` renders React-independent operation state derived
+from `@croco/lifecycle-core` and recovery evidence from `@croco/admin-ops`.
+Rules expose exact versions, executable and descriptor fingerprints, semantic
+descriptor diffs, unavailable code registrations, and audited
+activate/pause/resume/supersede controls. Every write requires permission,
+actor, reason, idempotency key, optimistic revision, and the reviewed descriptor
+fingerprint; stale intent fails before mutation.
+
+```tsx
+import {
+  createLifecycleAutomationSource,
+  LifecycleAutomationConsole,
+  loadLifecycleAutomationConsole,
+} from "@croco/admin-react";
+
+const source = createLifecycleAutomationSource({
+  registry,
+  evaluator,
+  runStore,
+  fixtures: [
+    {
+      id: "at-risk-tenant",
+      label: "Stored redacted at-risk tenant",
+      resolve: () => loadServerValidatedContextFixture(),
+    },
+  ],
+  listRecoveryItems: () => retryConsole.list({ includeSucceeded: true }),
+});
+
+const state = await loadLifecycleAutomationConsole({
+  source,
+  grantedPermissions: ["lifecycle:read", "lifecycle:write", "lifecycle:dry-run"],
+});
+
+export function LifecycleOperations() {
+  return (
+    <LifecycleAutomationConsole
+      state={state}
+      onRuleAction={(action) => openAuditedConfirmation(action)}
+      onDryRunFixture={(fixtureId) => requestDryRun(fixtureId)}
+      onRecoverRun={(run) => openAdminOpsRecovery(run)}
+    />
+  );
+}
+```
+
+Dry-run fixtures expose only labels to the browser. The source resolves stored
+contexts server-side and returns `LifecycleDryRunEvidence`, which contains safe
+signal identity, boolean condition evidence, declared actions, suppression, and
+Problem codes rather than arbitrary context values. Pasted contexts remain
+disabled unless a server-side `parsePastedContext` schema validator is supplied.
+Run history distinguishes completed, failed action, not matched, cooldown
+suppression, and other suppressed outcomes. Recovery buttons appear only when
+an `admin-ops` recovery action explicitly declares retry or replay safe.
+
 ## Tenant 360 workspace
 
 `TenantBusinessWorkspace` renders the React-independent snapshot from

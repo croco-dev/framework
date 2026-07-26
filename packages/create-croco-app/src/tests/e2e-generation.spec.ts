@@ -1043,6 +1043,7 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(consolePackageJson.dependencies).toMatchObject({
         "@croco/admin-core": externalCrocoRange("@croco/admin-core"),
+        "@croco/admin-ops": externalCrocoRange("@croco/admin-ops"),
         "@croco/admin-react": externalCrocoRange("@croco/admin-react"),
         "@croco/events-core": externalCrocoRange("@croco/events-core"),
       });
@@ -1073,7 +1074,17 @@ describe("E2E: generate()", () => {
       expect(webSource).toContain("Probe Missing User");
       expect(webSource).toContain("Operations");
       expect(webSource).toContain("TenantWorkspaceDemo");
+      expect(webSource).toContain("LifecycleAutomationDemo");
       expect(webSource).toContain("key={selectedTenantId}");
+      const lifecycleAutomationSource = readFileSync(
+        join(testDir, "apps", "console-web", "src", "LifecycleAutomationDemo.tsx"),
+        "utf8",
+      );
+      expect(lifecycleAutomationSource).toContain("demo-activate-customer-risk");
+      expect(lifecycleAutomationSource).toContain("cooldown-suppression");
+      expect(lifecycleAutomationSource).toContain("demo-pause-customer-risk");
+      expect(lifecycleAutomationSource).toContain("demo-resume-customer-risk");
+      expect(lifecycleAutomationSource).toContain("Only safe condition evidence");
       const tenantWorkspaceSource = readFileSync(
         join(testDir, "apps", "console-web", "src", "TenantWorkspaceDemo.tsx"),
         "utf8",

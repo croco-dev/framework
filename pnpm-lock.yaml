@@ -325,6 +325,9 @@ importers:
       '@croco/admin-core':
         specifier: workspace:*
         version: link:../admin-core
+      '@croco/admin-ops':
+        specifier: workspace:*
+        version: link:../admin-ops
       '@croco/billing-core':
         specifier: workspace:*
         version: link:../billing-core
@@ -334,6 +337,9 @@ importers:
       '@croco/impersonation-core':
         specifier: workspace:*
         version: link:../impersonation-core
+      '@croco/lifecycle-core':
+        specifier: workspace:*
+        version: link:../lifecycle-core
       '@croco/metering-core':
         specifier: workspace:*
         version: link:../metering-core

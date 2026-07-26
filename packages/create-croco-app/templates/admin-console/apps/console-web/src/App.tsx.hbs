@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { adminClient, type adminRpc } from '{{scope}}/provider-rpc';
+import { LifecycleAutomationDemo } from './LifecycleAutomationDemo';
 import { TenantWorkspaceDemo } from './TenantWorkspaceDemo';
 import { WebhookReliabilityDemo } from './WebhookReliabilityDemo';
 
@@ -318,6 +319,7 @@ export default function App() {
 
         <TenantWorkspaceDemo key={selectedTenantId} tenantId={selectedTenantId} />
         <WebhookReliabilityDemo key={`webhooks:${selectedTenantId}`} tenantId={selectedTenantId} />
+        <LifecycleAutomationDemo key={selectedTenantId} tenantId={selectedTenantId} />
 
         {problem ? (
           <section style={alertStyle} role="alert">

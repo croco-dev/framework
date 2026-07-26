@@ -1,6 +1,7 @@
 const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/access-core": "^0.0.4",
   "@croco/admin-core": "^0.0.1",
+  "@croco/admin-ops": "^0.1.0",
   "@croco/admin-react": "^0.1.0",
   "@croco/auth-better-auth": "^0.0.4",
   "@croco/auth-clerk": "^0.0.4",
