@@ -1,5 +1,6 @@
 ---
 "@croco/admin-react": minor
+"@croco/problems-core": patch
 "create-croco-app": minor
 ---
 
