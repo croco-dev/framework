@@ -21,6 +21,56 @@ title: "InMemoryLifecycleRunStore"
 
 ## Methods
 
+### abortClaim()
+
+> **abortClaim**(`runId`, `idempotencyKey`): `Promise`\<`void`\>
+
+Releases an unfinished claim without removing a completed run.
+Implementations must make this operation idempotent.
+
+#### Parameters
+
+##### runId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Implementation of
+
+[`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`abortClaim`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#abortclaim)
+
+---
+
+### claim()
+
+> **claim**(`claim`): `Promise`\<[`LifecycleRunClaimResult`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaimresult/)\>
+
+Atomically reserves an idempotency key and optional cooldown window before dispatch.
+Distributed adapters must enforce both constraints in one shared transaction.
+
+#### Parameters
+
+##### claim
+
+[`LifecycleRunClaim`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaim/)
+
+#### Returns
+
+`Promise`\<[`LifecycleRunClaimResult`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaimresult/)\>
+
+#### Implementation of
+
+[`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`claim`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#claim)
+
+---
+
 ### findByIdempotencyKey()
 
 > **findByIdempotencyKey**(`idempotencyKey`): `Promise`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/) \| `null`\>
@@ -39,7 +89,7 @@ title: "InMemoryLifecycleRunStore"
 
 [`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`findByIdempotencyKey`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#findbyidempotencykey)
 
-***
+---
 
 ### findLatestForRule()
 
@@ -67,7 +117,7 @@ title: "InMemoryLifecycleRunStore"
 
 [`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`findLatestForRule`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#findlatestforrule)
 
-***
+---
 
 ### list()
 
@@ -87,7 +137,7 @@ title: "InMemoryLifecycleRunStore"
 
 [`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`list`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#list)
 
-***
+---
 
 ### save()
 

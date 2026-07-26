@@ -16,6 +16,7 @@ import type {
   LifecycleDryRunStore,
   LifecycleEvaluationResult,
   LifecycleRuleActionDescriptor,
+  LifecycleRuleExecutionResult,
   LifecycleRuleRegistration,
   LifecycleRun,
   LifecycleRunStore,
@@ -35,11 +36,8 @@ export type LifecycleDryRunInput = {
   readonly context: LifecycleContext;
 };
 
-let runSequence = 0;
-
 function createRunId(): string {
-  runSequence += 1;
-  return `lifecycle_run_${runSequence}`;
+  return `lifecycle_run_${globalThis.crypto.randomUUID()}`;
 }
 
 function defaultIdempotencyKey(
@@ -95,11 +93,12 @@ function createSkippedRun(input: {
   readonly context: LifecycleContext;
   readonly idempotencyKey: string;
   readonly reason: LifecycleSkipReason;
+  readonly runId?: string;
 }): LifecycleRun {
   const completedAt = new Date(input.context.now);
 
   return {
-    id: createRunId(),
+    id: input.runId ?? createRunId(),
     ruleId: input.registration.rule.id,
     ruleVersion: input.registration.descriptor.version,
     ruleFingerprint: input.registration.descriptor.fingerprint,
@@ -180,7 +179,12 @@ export class LifecycleRuleEvaluator {
 
     for (const registration of await this.registry.matchRegistrations(context.signal)) {
       const run = await this.evaluateRule(registration, context);
-      await this.runStore.save(run);
+      try {
+        await this.runStore.save(run);
+      } catch (error) {
+        await this.runStore.abortClaim(run.id, run.idempotencyKey);
+        throw error;
+      }
       runs.push(run);
     }
 
@@ -308,21 +312,6 @@ export class LifecycleRuleEvaluator {
       });
     }
 
-    const suppression = await this.resolveSuppression(
-      registration,
-      registration.state,
-      context,
-      idempotencyKey,
-    );
-    if (suppression.reason) {
-      return createSkippedRun({
-        registration,
-        context,
-        idempotencyKey,
-        reason: suppression.reason,
-      });
-    }
-
     if (registration.rule.when && !(await registration.rule.when(context))) {
       return createSkippedRun({
         registration,
@@ -374,19 +363,6 @@ export class LifecycleRuleEvaluator {
       };
     }
 
-    const currentState = await this.registry.getRegistrationState(
-      registration.rule.id,
-      registration.descriptor.version,
-    );
-    if (currentState !== "active") {
-      return createSkippedRun({
-        registration,
-        context,
-        idempotencyKey,
-        reason: currentState === "paused" ? "rule_paused" : "rule_not_active",
-      });
-    }
-
     if (actions.length === 0) {
       return createSkippedRun({
         registration,
@@ -406,20 +382,59 @@ export class LifecycleRuleEvaluator {
       idempotencyKey,
     };
 
-    const actionResults = await Promise.all(
-      actions.map(async (action) => {
-        try {
-          return await this.actionAdapter.execute(action, context, runBase);
-        } catch (error) {
-          return summarizeAdapterError(
-            action,
-            new LifecycleActionAdapterProblem(
-              error instanceof Error ? error.message : String(error),
-            ),
-          );
-        }
-      }),
-    );
+    const runClaim = await this.runStore.claim({
+      runId: runBase.id,
+      idempotencyKey,
+      tenantId: context.tenantId,
+      ruleId: registration.rule.id,
+      claimedAt: startedAt,
+      cooldownSince: registration.rule.cooldown
+        ? new Date(context.now.getTime() - registration.rule.cooldown.durationMs)
+        : undefined,
+    });
+    if (!runClaim.claimed) {
+      return createSkippedRun({
+        registration,
+        context,
+        idempotencyKey,
+        reason: runClaim.reason,
+      });
+    }
+
+    let execution: LifecycleRuleExecutionResult<readonly Promise<LifecycleActionResult>[]>;
+    try {
+      execution = await this.registry.executeIfActive(
+        registration.rule.id,
+        registration.descriptor.version,
+        `lifecycle_execution_${globalThis.crypto.randomUUID()}`,
+        () =>
+          actions.map(async (action) => {
+            try {
+              return await this.actionAdapter.execute(action, context, runBase);
+            } catch (error) {
+              return summarizeAdapterError(
+                action,
+                new LifecycleActionAdapterProblem(
+                  error instanceof Error ? error.message : String(error),
+                ),
+              );
+            }
+          }),
+      );
+    } catch (error) {
+      await this.runStore.abortClaim(runBase.id, idempotencyKey);
+      throw error;
+    }
+    if (!execution.executed) {
+      return createSkippedRun({
+        registration,
+        context,
+        idempotencyKey,
+        runId: runBase.id,
+        reason: execution.state === "paused" ? "rule_paused" : "rule_not_active",
+      });
+    }
+    const actionResults = await Promise.all(execution.value);
     const status = deriveRunStatus(actionResults);
     const firstFailure = actionResults.find((result) => result.status === "failure");
 

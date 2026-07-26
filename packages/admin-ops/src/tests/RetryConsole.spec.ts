@@ -1,5 +1,4 @@
 import type {
-  AddExecutionLogParams,
   CreateExecutionParams,
   Execution,
   ExecutionInspectionManager,
@@ -7,11 +6,12 @@ import type {
   ExecutionLogStore,
   ExecutionReplayManager,
   ListExecutionsOptions,
-  ReplayExecutionParams,
 } from "@croco/execution-core";
 import { ExecutionManagerImpl, ExecutionStore } from "@croco/execution-core";
 import type {
   LifecycleRun,
+  LifecycleRunClaim,
+  LifecycleRunClaimResult,
   LifecycleRunListOptions,
   LifecycleRunStore,
 } from "@croco/lifecycle-core";
@@ -143,6 +143,16 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
 
 class MemoryLifecycleRunStore implements LifecycleRunStore {
   constructor(private readonly runs: readonly LifecycleRun[]) {}
+
+  async claim(claim: LifecycleRunClaim): Promise<LifecycleRunClaimResult> {
+    void claim;
+    return { claimed: true };
+  }
+
+  async abortClaim(runId: string, idempotencyKey: string): Promise<void> {
+    void runId;
+    void idempotencyKey;
+  }
 
   async save(run: LifecycleRun): Promise<void> {
     void run;

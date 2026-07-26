@@ -148,7 +148,33 @@ export type LifecycleRunListOptions = {
   readonly limit?: number;
 };
 
+export type LifecycleRunClaim = {
+  readonly runId: string;
+  readonly idempotencyKey: string;
+  readonly tenantId: string;
+  readonly ruleId: string;
+  readonly claimedAt: Date;
+  readonly cooldownSince?: Date;
+};
+
+export type LifecycleRunClaimResult =
+  | { readonly claimed: true }
+  | {
+      readonly claimed: false;
+      readonly reason: "cooldown_active" | "idempotency_key_reused";
+    };
+
 export interface LifecycleRunStore {
+  /**
+   * Atomically reserves an idempotency key and optional cooldown window before dispatch.
+   * Distributed adapters must enforce both constraints in one shared transaction.
+   */
+  claim(claim: LifecycleRunClaim): Promise<LifecycleRunClaimResult>;
+  /**
+   * Releases an unfinished claim without removing a completed run.
+   * Implementations must make this operation idempotent.
+   */
+  abortClaim(runId: string, idempotencyKey: string): Promise<void>;
   save(run: LifecycleRun): Promise<void>;
   findByIdempotencyKey(idempotencyKey: string): Promise<LifecycleRun | null>;
   findLatestForRule(tenantId: string, ruleId: string, since?: Date): Promise<LifecycleRun | null>;
@@ -263,6 +289,27 @@ export type LifecycleRuleStateMutation = {
 
 export type LifecycleRuleStateStoreResult<T> = T | Promise<T>;
 
+export type LifecycleRuleExecutionClaim = {
+  readonly claimId: string;
+  readonly ruleId: string;
+  readonly version: string;
+  readonly expiresAt: Date;
+};
+
+export type LifecycleRuleExecutionClaimResult =
+  | { readonly claimed: true }
+  | {
+      readonly claimed: false;
+      readonly state: LifecycleRuleState | undefined;
+    };
+
+export type LifecycleRuleExecutionResult<T> =
+  | { readonly executed: true; readonly value: T }
+  | {
+      readonly executed: false;
+      readonly state: LifecycleRuleState | undefined;
+    };
+
 export interface LifecycleRuleStateStore {
   get(ruleId: string): LifecycleRuleStateStoreResult<LifecycleRuleIdentityState | undefined>;
   saveRegistration(
@@ -272,6 +319,16 @@ export interface LifecycleRuleStateStore {
     readonly command: LifecycleRuleActivationCommandType;
     readonly request: LifecycleRuleActivationCommand;
   }): LifecycleRuleStateStoreResult<LifecycleRuleStateMutation>;
+  /**
+   * Atomically acquires an execution lease only while the requested version is active.
+   * A command that deactivates the version must not complete until its leases are released
+   * or expire, and must wake or retry when expiry arrives. Duplicate claim identifiers must
+   * be rejected rather than shared.
+   */
+  claimExecution(
+    claim: LifecycleRuleExecutionClaim,
+  ): LifecycleRuleStateStoreResult<LifecycleRuleExecutionClaimResult>;
+  releaseExecution(claimId: string): LifecycleRuleStateStoreResult<void>;
   list(): LifecycleRuleStateStoreResult<readonly LifecycleRuleIdentityState[]>;
 }
 

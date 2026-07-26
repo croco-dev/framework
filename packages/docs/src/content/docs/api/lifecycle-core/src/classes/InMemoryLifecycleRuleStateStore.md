@@ -29,7 +29,7 @@ title: "InMemoryLifecycleRuleStateStore"
 
 ### applyCommand()
 
-> **applyCommand**(`input`): [`LifecycleRuleStateMutation`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatemutation/)
+> **applyCommand**(`input`): [`LifecycleRuleStateMutation`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatemutation/) \| `Promise`\<[`LifecycleRuleStateMutation`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatemutation/)\>
 
 #### Parameters
 
@@ -45,13 +45,38 @@ title: "InMemoryLifecycleRuleStateStore"
 
 #### Returns
 
-[`LifecycleRuleStateMutation`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatemutation/)
+[`LifecycleRuleStateMutation`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatemutation/) \| `Promise`\<[`LifecycleRuleStateMutation`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatemutation/)\>
 
 #### Implementation of
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`applyCommand`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#applycommand)
 
-***
+---
+
+### claimExecution()
+
+> **claimExecution**(`claim`): [`LifecycleRuleExecutionClaimResult`](/api/lifecycle-core/src/type-aliases/lifecycleruleexecutionclaimresult/)
+
+Atomically acquires an execution lease only while the requested version is active.
+A command that deactivates the version must not complete until its leases are released
+or expire, and must wake or retry when expiry arrives. Duplicate claim identifiers must
+be rejected rather than shared.
+
+#### Parameters
+
+##### claim
+
+[`LifecycleRuleExecutionClaim`](/api/lifecycle-core/src/type-aliases/lifecycleruleexecutionclaim/)
+
+#### Returns
+
+[`LifecycleRuleExecutionClaimResult`](/api/lifecycle-core/src/type-aliases/lifecycleruleexecutionclaimresult/)
+
+#### Implementation of
+
+[`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`claimExecution`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#claimexecution)
+
+---
 
 ### get()
 
@@ -71,7 +96,7 @@ title: "InMemoryLifecycleRuleStateStore"
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`get`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#get)
 
-***
+---
 
 ### list()
 
@@ -85,7 +110,27 @@ readonly [`LifecycleRuleIdentityState`](/api/lifecycle-core/src/type-aliases/lif
 
 [`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`list`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#list)
 
-***
+---
+
+### releaseExecution()
+
+> **releaseExecution**(`claimId`): `void`
+
+#### Parameters
+
+##### claimId
+
+`string`
+
+#### Returns
+
+`void`
+
+#### Implementation of
+
+[`LifecycleRuleStateStore`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/).[`releaseExecution`](/api/lifecycle-core/src/interfaces/lifecyclerulestatestore/#releaseexecution)
+
+---
 
 ### saveRegistration()
 

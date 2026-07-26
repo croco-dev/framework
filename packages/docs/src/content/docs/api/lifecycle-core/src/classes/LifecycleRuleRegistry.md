@@ -37,7 +37,45 @@ title: "LifecycleRuleRegistry"
 
 `Promise`\<[`LifecycleRuleStateMutation`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatemutation/)\>
 
-***
+---
+
+### executeIfActive()
+
+> **executeIfActive**\<`T`\>(`ruleId`, `version`, `claimId`, `execute`, `expiresAt?`): `Promise`\<[`LifecycleRuleExecutionResult`](/api/lifecycle-core/src/type-aliases/lifecycleruleexecutionresult/)\<`T`\>\>
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### ruleId
+
+`string`
+
+##### version
+
+`string`
+
+##### claimId
+
+`string`
+
+##### execute
+
+() => `T`
+
+##### expiresAt?
+
+`Date` = `...`
+
+#### Returns
+
+`Promise`\<[`LifecycleRuleExecutionResult`](/api/lifecycle-core/src/type-aliases/lifecycleruleexecutionresult/)\<`T`\>\>
+
+---
 
 ### get()
 
@@ -56,7 +94,7 @@ Do not use this view as authoritative state for a shared durable store.
 
 [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/) \| `undefined`
 
-***
+---
 
 ### getAll()
 
@@ -69,7 +107,7 @@ Await inspect(), getIdentityState(), or matchRegistrations() for versioned opera
 
 readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[]
 
-***
+---
 
 ### getIdentityState()
 
@@ -85,7 +123,7 @@ readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[
 
 `Promise`\<[`LifecycleRuleIdentityState`](/api/lifecycle-core/src/type-aliases/lifecycleruleidentitystate/) \| `undefined`\>
 
-***
+---
 
 ### getRegistration()
 
@@ -105,7 +143,7 @@ readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[
 
 [`LifecycleRuleRegistration`](/api/lifecycle-core/src/type-aliases/lifecycleruleregistration/) \| `undefined`
 
-***
+---
 
 ### getRegistrationState()
 
@@ -125,7 +163,7 @@ readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[
 
 `Promise`\<[`LifecycleRuleState`](/api/lifecycle-core/src/type-aliases/lifecyclerulestate/) \| `undefined`\>
 
-***
+---
 
 ### inspect()
 
@@ -135,7 +173,7 @@ readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[
 
 `Promise`\<readonly [`LifecycleRuleInspection`](/api/lifecycle-core/src/type-aliases/lifecycleruleinspection/)[]\>
 
-***
+---
 
 ### match()
 
@@ -154,7 +192,7 @@ Production dispatch uses the authoritative asynchronous matchRegistrations() pat
 
 readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[]
 
-***
+---
 
 ### matchRegistrations()
 
@@ -170,7 +208,7 @@ readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[
 
 `Promise`\<readonly [`LifecycleRuleRegistration`](/api/lifecycle-core/src/type-aliases/lifecycleruleregistration/) & `object`[]\>
 
-***
+---
 
 ### pause()
 
@@ -186,7 +224,7 @@ readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[
 
 `Promise`\<[`LifecycleRuleStateMutation`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatemutation/)\>
 
-***
+---
 
 ### register()
 
@@ -202,7 +240,7 @@ readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[
 
 `void`
 
-***
+---
 
 ### registerVersion()
 
@@ -218,7 +256,7 @@ readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[
 
 `Promise`\<[`LifecycleRuleRegistration`](/api/lifecycle-core/src/type-aliases/lifecycleruleregistration/)\>
 
-***
+---
 
 ### resume()
 
@@ -234,7 +272,7 @@ readonly [`LifecycleRule`](/api/lifecycle-core/src/type-aliases/lifecyclerule/)[
 
 `Promise`\<[`LifecycleRuleStateMutation`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatemutation/)\>
 
-***
+---
 
 ### supersede()
 

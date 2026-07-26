@@ -21,6 +21,7 @@ import type {
   LifecycleRuleVersionDescriptor,
   LifecycleRuleVersionRecord,
   LifecycleRun,
+  LifecycleRunClaim,
 } from "../index";
 
 const NOW = new Date("2026-07-26T00:00:00.000Z");
@@ -101,6 +102,16 @@ class AsyncLifecycleRuleStateStore implements LifecycleRuleStateStore {
   async applyCommand(input: Parameters<LifecycleRuleStateStore["applyCommand"]>[0]) {
     await Promise.resolve();
     return this.delegate.applyCommand(input);
+  }
+
+  async claimExecution(input: Parameters<LifecycleRuleStateStore["claimExecution"]>[0]) {
+    await Promise.resolve();
+    return this.delegate.claimExecution(input);
+  }
+
+  async releaseExecution(claimId: string) {
+    await Promise.resolve();
+    return this.delegate.releaseExecution(claimId);
   }
 
   async list() {
@@ -389,7 +400,7 @@ describe("LifecycleRuleRegistry versioning", () => {
       activate: true,
     });
 
-    expect(activated).toBe(registration);
+    expect(activated).toStrictEqual(registration);
     expect(await registry.getIdentityState("retention-risk")).toMatchObject({
       revision: 1,
       versions: [{ state: "active" }],
@@ -434,6 +445,81 @@ describe("LifecycleRuleRegistry versioning", () => {
       replayed: false,
       state: { revision: 4 },
     });
+  });
+
+  it("rejects duplicate execution lease identifiers instead of sharing ownership", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const claim = {
+      claimId: "duplicate-lease",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expiresAt: new Date(Date.now() + 30_000),
+    };
+
+    expect(stateStore.claimExecution(claim)).toEqual({ claimed: true });
+    expect(stateStore.claimExecution(claim)).toEqual({ claimed: false, state: undefined });
+
+    stateStore.releaseExecution(claim.claimId);
+  });
+
+  it("automatically resumes a blocked transition when an abandoned execution lease expires", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    expect(
+      stateStore.claimExecution({
+        claimId: "abandoned-lease",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expiresAt: new Date(Date.now() + 10),
+      }),
+    ).toEqual({ claimed: true });
+
+    await expect(
+      registry.pause({
+        commandId: "pause-after-lease-expiry",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expectedRevision: 1,
+      }),
+    ).resolves.toMatchObject({ state: { revision: 2 } });
+    expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("paused");
+  });
+
+  it("uses the configured logical scheduler when an execution lease expires", async () => {
+    let now = new Date("2026-07-26T00:00:00.000Z");
+    const stateStore = new InMemoryLifecycleRuleStateStore({
+      now: () => now,
+      scheduleExecutionClaimWake: (wake, delayMs) => {
+        const timer = setTimeout(() => {
+          now = new Date(now.getTime() + delayMs);
+          wake();
+        }, 0);
+        return () => clearTimeout(timer);
+      },
+    });
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    expect(
+      stateStore.claimExecution({
+        claimId: "logical-clock-lease",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expiresAt: new Date(now.getTime() + 1_000),
+      }),
+    ).toEqual({ claimed: true });
+
+    await expect(
+      registry.pause({
+        commandId: "pause-after-logical-lease-expiry",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expectedRevision: 1,
+      }),
+    ).resolves.toMatchObject({ state: { revision: 2 } });
+    expect(now).toEqual(new Date("2026-07-26T00:00:01.000Z"));
   });
 });
 
@@ -506,10 +592,10 @@ describe("LifecycleRuleEvaluator versioned execution", () => {
       releaseLookup = resolve;
     });
     class BlockingRunStore extends InMemoryLifecycleRunStore {
-      override async findByIdempotencyKey(idempotencyKey: string): Promise<LifecycleRun | null> {
+      override async claim(claim: LifecycleRunClaim) {
         markLookupStarted?.();
         await lookupGate;
-        return super.findByIdempotencyKey(idempotencyKey);
+        return super.claim(claim);
       }
     }
 
@@ -540,6 +626,263 @@ describe("LifecycleRuleEvaluator versioned execution", () => {
       },
     ]);
     expect(sink.getEmissions()).toHaveLength(0);
+  });
+
+  it("does not let pause complete between the active check and action dispatch", async () => {
+    let markClaimed: (() => void) | undefined;
+    let releaseClaim: (() => void) | undefined;
+    const claimed = new Promise<void>((resolve) => {
+      markClaimed = resolve;
+    });
+    const claimGate = new Promise<void>((resolve) => {
+      releaseClaim = resolve;
+    });
+    const delegate = new InMemoryLifecycleRuleStateStore();
+    const stateStore: LifecycleRuleStateStore = {
+      get: (ruleId) => delegate.get(ruleId),
+      saveRegistration: (record) => delegate.saveRegistration(record),
+      applyCommand: (input) => delegate.applyCommand(input),
+      list: () => delegate.list(),
+      releaseExecution: (claimId) => delegate.releaseExecution(claimId),
+      claimExecution: async (claim) => {
+        const result = delegate.claimExecution(claim);
+        markClaimed?.();
+        await claimGate;
+        return result;
+      },
+    };
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({
+      registry,
+      runStore: new InMemoryLifecycleRunStore(),
+      actionAdapter: sink,
+    });
+
+    const evaluation = evaluator.evaluate(createContext());
+    await claimed;
+    let pauseCompleted = false;
+    const pause = registry
+      .pause({
+        commandId: "pause-at-dispatch-boundary",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expectedRevision: 1,
+      })
+      .then(() => {
+        pauseCompleted = true;
+      });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(pauseCompleted).toBe(false);
+    releaseClaim?.();
+    await evaluation;
+    await pause;
+
+    expect(sink.getEmissions()).toHaveLength(1);
+    expect(pauseCompleted).toBe(true);
+    expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("paused");
+  });
+
+  it("aborts a production claim when execution lease acquisition fails", async () => {
+    const delegate = new InMemoryLifecycleRuleStateStore();
+    let failClaim = true;
+    const stateStore: LifecycleRuleStateStore = {
+      get: (ruleId) => delegate.get(ruleId),
+      saveRegistration: (record) => delegate.saveRegistration(record),
+      applyCommand: (input) => delegate.applyCommand(input),
+      list: () => delegate.list(),
+      releaseExecution: (claimId) => delegate.releaseExecution(claimId),
+      claimExecution: (claim) => {
+        if (failClaim) {
+          failClaim = false;
+          throw new Error("temporary state store outage");
+        }
+        return delegate.claimExecution(claim);
+      },
+    };
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const runStore = new InMemoryLifecycleRunStore();
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({ registry, runStore, actionAdapter: sink });
+
+    await expect(evaluator.evaluate(createContext("retryable-signal"))).rejects.toThrow(
+      "temporary state store outage",
+    );
+    const retried = await evaluator.evaluate(createContext("retryable-signal"));
+
+    expect(retried.runs).toMatchObject([{ status: "succeeded" }]);
+    expect(sink.getEmissions()).toHaveLength(1);
+  });
+
+  it("allows an action adapter to pause its rule without waiting on its own dispatch lease", async () => {
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const evaluator = new LifecycleRuleEvaluator({
+      registry,
+      runStore: new InMemoryLifecycleRunStore(),
+      actionAdapter: {
+        execute: async (action) => {
+          await registry.pause({
+            commandId: "pause-from-action-adapter",
+            ruleId: "retention-risk",
+            version: "1.0.0",
+            expectedRevision: 1,
+          });
+          return {
+            actionId: action.id,
+            type: action.type,
+            status: "success",
+          };
+        },
+      },
+    });
+
+    const result = await evaluator.evaluate(createContext("reentrant-pause"));
+
+    expect(result.runs).toMatchObject([{ status: "succeeded" }]);
+    expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("paused");
+  });
+
+  it("claims production idempotency and cooldown atomically before dispatch", async () => {
+    const registry = new LifecycleRuleRegistry();
+    await registerVersion(registry, "1.0.0", { activate: true });
+    const runStore = new InMemoryLifecycleRunStore();
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({ registry, runStore, actionAdapter: sink });
+
+    const identical = await Promise.all([
+      evaluator.evaluate(createContext("same-signal")),
+      evaluator.evaluate(createContext("same-signal")),
+    ]);
+
+    expect(
+      identical
+        .flatMap((result) => result.runs)
+        .map((run) => run.status)
+        .sort(),
+    ).toEqual(["skipped", "succeeded"]);
+    expect(identical.flatMap((result) => result.runs)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ skipReason: "idempotency_key_reused" })]),
+    );
+    expect(sink.getEmissions()).toHaveLength(1);
+
+    const cooldownRegistry = new LifecycleRuleRegistry();
+    await registerVersion(cooldownRegistry, "1.0.0", { activate: true });
+    const cooldownSink = new InMemoryLifecycleActionSink();
+    const cooldownEvaluator = new LifecycleRuleEvaluator({
+      registry: cooldownRegistry,
+      runStore: new InMemoryLifecycleRunStore(),
+      actionAdapter: cooldownSink,
+    });
+    const differentSignals = await Promise.all([
+      cooldownEvaluator.evaluate(createContext("cooldown-a")),
+      cooldownEvaluator.evaluate(createContext("cooldown-b")),
+    ]);
+
+    expect(
+      differentSignals
+        .flatMap((result) => result.runs)
+        .map((run) => run.status)
+        .sort(),
+    ).toEqual(["skipped", "succeeded"]);
+    expect(differentSignals.flatMap((result) => result.runs)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ skipReason: "cooldown_active" })]),
+    );
+    expect(cooldownSink.getEmissions()).toHaveLength(1);
+  });
+
+  it("keeps registered static action payloads immutable after caller mutation", async () => {
+    const registry = new LifecycleRuleRegistry();
+    const rule = createRule("immutable");
+    await registry.registerVersion({
+      rule,
+      version: "1.0.0",
+      executableRegistrationId: "retention-risk:1.0.0",
+      executableFingerprint: "retention-risk-bundle:1.0.0",
+      contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
+      activate: true,
+    });
+    if (!Array.isArray(rule.actions)) {
+      return;
+    }
+    const payload = rule.actions[0]?.payload as { secret: string };
+    payload.secret = "mutated-after-registration";
+    const returned = registry.getRegistration("retention-risk", "1.0.0");
+    if (returned && Array.isArray(returned.rule.actions)) {
+      (returned.rule.actions[0]?.payload as { secret: string }).secret = "mutated-through-read";
+    }
+    const identity = await registry.getIdentityState("retention-risk");
+    const stateAction = (
+      identity?.versions[0]?.descriptor.actions as unknown as { id: string }[] | undefined
+    )?.[0];
+    if (stateAction) {
+      stateAction.id = "mutated-state-read";
+    }
+    const sink = new InMemoryLifecycleActionSink();
+    const evaluator = new LifecycleRuleEvaluator({
+      registry,
+      runStore: new InMemoryLifecycleRunStore(),
+      actionAdapter: sink,
+    });
+
+    await evaluator.evaluate(createContext());
+
+    expect(sink.getEmissions()[0]?.action.payload).toEqual({ secret: "must-not-leak" });
+    expect((await registry.inspect())[0]?.actions[0]?.id).toBe("create-follow-up");
+  });
+
+  it("preserves structured payload values and custom prototypes across registry reads", async () => {
+    class CustomPayload {
+      constructor(readonly value: string) {}
+    }
+
+    const map = new Map([["tier", "gold"]]);
+    const set = new Set(["retention"]);
+    const pattern = /at-risk/gi;
+    pattern.lastIndex = 2;
+    const custom = new CustomPayload("original");
+    const baseRule = createRule("structured-payload");
+    if (!Array.isArray(baseRule.actions) || !baseRule.actions[0]) {
+      return;
+    }
+    const registry = new LifecycleRuleRegistry();
+    await registry.registerVersion({
+      rule: {
+        ...baseRule,
+        actions: [
+          {
+            ...baseRule.actions[0],
+            payload: { map, set, pattern, custom },
+          },
+        ],
+      },
+      version: "1.0.0",
+      executableRegistrationId: "retention-risk:1.0.0",
+      executableFingerprint: "retention-risk-bundle:1.0.0",
+      contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
+      activate: true,
+    });
+    map.set("tier", "mutated");
+    set.add("mutated");
+    pattern.lastIndex = 0;
+
+    const first = registry.getRegistration("retention-risk", "1.0.0");
+    const payload = Array.isArray(first?.rule.actions) ? first.rule.actions[0]?.payload : undefined;
+    expect(payload?.map).toEqual(new Map([["tier", "gold"]]));
+    expect(payload?.set).toEqual(new Set(["retention"]));
+    expect(payload?.pattern).toEqual(/at-risk/gi);
+    expect((payload?.pattern as RegExp).lastIndex).toBe(2);
+    expect(payload?.custom).toBeInstanceOf(CustomPayload);
+
+    (payload?.map as Map<string, string>).set("tier", "read-mutation");
+    const second = registry.getRegistration("retention-risk", "1.0.0");
+    const secondPayload = Array.isArray(second?.rule.actions)
+      ? second.rule.actions[0]?.payload
+      : undefined;
+    expect(secondPayload?.map).toEqual(new Map([["tier", "gold"]]));
   });
 
   it("dry-runs without dispatching, saving a production run, or consuming cooldown", async () => {

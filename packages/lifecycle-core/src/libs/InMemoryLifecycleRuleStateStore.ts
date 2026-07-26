@@ -8,6 +8,8 @@ import {
 import type {
   LifecycleRuleActivationCommand,
   LifecycleRuleActivationCommandType,
+  LifecycleRuleExecutionClaim,
+  LifecycleRuleExecutionClaimResult,
   LifecycleRuleIdentityState,
   LifecycleRuleState,
   LifecycleRuleStateMutation,
@@ -21,11 +23,27 @@ type StoredCommand = {
   readonly expiresAt: Date;
 };
 
+type StoredExecutionClaim = LifecycleRuleExecutionClaim & {
+  readonly released: Promise<void>;
+  readonly release: () => void;
+};
+
 type Clock = () => Date;
+type ExecutionClaimWakeScheduler = (wake: () => void, delayMs: number) => () => void;
 
 export type InMemoryLifecycleRuleStateStoreOptions = {
   readonly commandTtlMs?: number;
+  /**
+   * Supplies the logical clock used for command retention and execution lease expiry.
+   * When this clock does not advance with wall time, provide scheduleExecutionClaimWake
+   * on the same logical timeline.
+   */
   readonly now?: Clock;
+  /**
+   * Schedules an execution-lease expiry wakeup and returns a cancellation callback.
+   * The default scheduler uses wall-clock timers.
+   */
+  readonly scheduleExecutionClaimWake?: ExecutionClaimWakeScheduler;
 };
 
 const DEFAULT_COMMAND_TTL_MS = 24 * 60 * 60 * 1000;
@@ -81,19 +99,44 @@ function nextState(
     : undefined;
 }
 
+function cloneIdentityState(state: LifecycleRuleIdentityState): LifecycleRuleIdentityState {
+  return {
+    ...state,
+    versions: state.versions.map((version) => ({
+      ...version,
+      descriptor: structuredClone(version.descriptor),
+      registeredAt: new Date(version.registeredAt),
+      updatedAt: new Date(version.updatedAt),
+    })),
+    history: state.history.map((event) => ({
+      ...event,
+      occurredAt: new Date(event.occurredAt),
+    })),
+  };
+}
+
 export class InMemoryLifecycleRuleStateStore implements LifecycleRuleStateStore {
   private readonly states = new Map<string, LifecycleRuleIdentityState>();
   private readonly commands = new Map<string, StoredCommand>();
+  private readonly executionClaims = new Map<string, StoredExecutionClaim>();
   private readonly commandTtlMs: number;
   private readonly now: Clock;
+  private readonly scheduleExecutionClaimWake: ExecutionClaimWakeScheduler;
 
   constructor(options: InMemoryLifecycleRuleStateStoreOptions = {}) {
     this.commandTtlMs = options.commandTtlMs ?? DEFAULT_COMMAND_TTL_MS;
     this.now = options.now ?? (() => new Date());
+    this.scheduleExecutionClaimWake =
+      options.scheduleExecutionClaimWake ??
+      ((wake, delayMs) => {
+        const timer = setTimeout(wake, delayMs);
+        return () => clearTimeout(timer);
+      });
   }
 
   get(ruleId: string): LifecycleRuleIdentityState | undefined {
-    return this.states.get(ruleId);
+    const state = this.states.get(ruleId);
+    return state ? cloneIdentityState(state) : undefined;
   }
 
   saveRegistration(record: LifecycleRuleVersionRecord): LifecycleRuleIdentityState {
@@ -111,21 +154,78 @@ export class InMemoryLifecycleRuleStateStore implements LifecycleRuleStateStore 
         );
       }
       if (current) {
-        return current;
+        return cloneIdentityState(current);
       }
     }
 
     const state: LifecycleRuleIdentityState = {
       ruleId: record.descriptor.ruleId,
       revision: current?.revision ?? 0,
-      versions: [...(current?.versions ?? []), record],
+      versions: [
+        ...(current?.versions ?? []),
+        {
+          ...record,
+          descriptor: structuredClone(record.descriptor),
+          registeredAt: new Date(record.registeredAt),
+          updatedAt: new Date(record.updatedAt),
+        },
+      ],
       history: current?.history ?? [],
     };
     this.states.set(record.descriptor.ruleId, state);
-    return state;
+    return cloneIdentityState(state);
   }
 
   applyCommand(input: {
+    readonly command: LifecycleRuleActivationCommandType;
+    readonly request: LifecycleRuleActivationCommand;
+  }): LifecycleRuleStateMutation | Promise<LifecycleRuleStateMutation> {
+    this.pruneExpiredExecutionClaims(this.now());
+    const blockingClaims = this.getBlockingClaims(input);
+    if (blockingClaims.length > 0) {
+      return this.waitForExecutionClaimChange(blockingClaims).then(() => this.applyCommand(input));
+    }
+    return this.applyCommandNow(input);
+  }
+
+  claimExecution(claim: LifecycleRuleExecutionClaim): LifecycleRuleExecutionClaimResult {
+    const now = this.now();
+    this.pruneExpiredExecutionClaims(now);
+    const existing = this.executionClaims.get(claim.claimId);
+    if (existing) {
+      return { claimed: false, state: undefined };
+    }
+
+    const state = this.states
+      .get(claim.ruleId)
+      ?.versions.find((version) => version.descriptor.version === claim.version)?.state;
+    if (state !== "active" || claim.expiresAt.getTime() <= now.getTime()) {
+      return { claimed: false, state };
+    }
+
+    let release: (() => void) | undefined;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.executionClaims.set(claim.claimId, {
+      ...claim,
+      expiresAt: new Date(claim.expiresAt),
+      released,
+      release: () => release?.(),
+    });
+    return { claimed: true };
+  }
+
+  releaseExecution(claimId: string): void {
+    const claim = this.executionClaims.get(claimId);
+    if (!claim) {
+      return;
+    }
+    this.executionClaims.delete(claimId);
+    claim.release();
+  }
+
+  private applyCommandNow(input: {
     readonly command: LifecycleRuleActivationCommandType;
     readonly request: LifecycleRuleActivationCommand;
   }): LifecycleRuleStateMutation {
@@ -138,7 +238,7 @@ export class InMemoryLifecycleRuleStateStore implements LifecycleRuleStateStore 
       if (replay.fingerprint !== fingerprint) {
         throw new LifecycleRuleCommandConflictProblem(input.request.commandId);
       }
-      return { state: replay.result, replayed: true };
+      return { state: cloneIdentityState(replay.result), replayed: true };
     }
 
     const current = this.states.get(input.request.ruleId);
@@ -174,7 +274,7 @@ export class InMemoryLifecycleRuleStateStore implements LifecycleRuleStateStore 
         result: current,
         expiresAt: new Date(commandRecordedAt.getTime() + this.commandTtlMs),
       });
-      return { state: current, replayed: false };
+      return { state: cloneIdentityState(current), replayed: false };
     }
 
     const occurredAt = input.request.at ?? commandRecordedAt;
@@ -227,11 +327,11 @@ export class InMemoryLifecycleRuleStateStore implements LifecycleRuleStateStore 
       result,
       expiresAt: new Date(commandRecordedAt.getTime() + this.commandTtlMs),
     });
-    return { state: result, replayed: false };
+    return { state: cloneIdentityState(result), replayed: false };
   }
 
   list(): readonly LifecycleRuleIdentityState[] {
-    return Array.from(this.states.values());
+    return Array.from(this.states.values()).map(cloneIdentityState);
   }
 
   private pruneExpiredCommands(now: Date): void {
@@ -240,5 +340,65 @@ export class InMemoryLifecycleRuleStateStore implements LifecycleRuleStateStore 
         this.commands.delete(commandId);
       }
     }
+  }
+
+  private pruneExpiredExecutionClaims(now: Date): void {
+    for (const [claimId, claim] of this.executionClaims) {
+      if (claim.expiresAt.getTime() <= now.getTime()) {
+        this.executionClaims.delete(claimId);
+        claim.release();
+      }
+    }
+  }
+
+  private waitForExecutionClaimChange(claims: readonly StoredExecutionClaim[]): Promise<void> {
+    const nearestExpiry = Math.min(...claims.map((claim) => claim.expiresAt.getTime()));
+    const delayMs = Math.max(0, nearestExpiry - this.now().getTime());
+
+    return new Promise<void>((resolve) => {
+      let settled = false;
+      let cancelWake: (() => void) | undefined;
+      const finish = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cancelWake?.();
+        resolve();
+      };
+      cancelWake = this.scheduleExecutionClaimWake(finish, delayMs);
+      if (settled) {
+        cancelWake();
+      }
+      void Promise.all(claims.map((claim) => claim.released)).then(finish);
+    });
+  }
+
+  private getBlockingClaims(input: {
+    readonly command: LifecycleRuleActivationCommandType;
+    readonly request: LifecycleRuleActivationCommand;
+  }): readonly StoredExecutionClaim[] {
+    const current = this.states.get(input.request.ruleId);
+    if (!current) {
+      return [];
+    }
+    const activeVersions = new Set(
+      current.versions
+        .filter((version) => version.state === "active")
+        .map((version) => version.descriptor.version),
+    );
+
+    return Array.from(this.executionClaims.values()).filter((claim) => {
+      if (claim.ruleId !== input.request.ruleId || !activeVersions.has(claim.version)) {
+        return false;
+      }
+      if (input.command === "pause" || input.command === "supersede") {
+        return claim.version === input.request.version;
+      }
+      if (input.command === "activate") {
+        return claim.version !== input.request.version;
+      }
+      return false;
+    });
   }
 }

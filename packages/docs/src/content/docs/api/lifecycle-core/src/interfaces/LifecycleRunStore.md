@@ -7,6 +7,48 @@ title: "LifecycleRunStore"
 
 ## Methods
 
+### abortClaim()
+
+> **abortClaim**(`runId`, `idempotencyKey`): `Promise`\<`void`\>
+
+Releases an unfinished claim without removing a completed run.
+Implementations must make this operation idempotent.
+
+#### Parameters
+
+##### runId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### claim()
+
+> **claim**(`claim`): `Promise`\<[`LifecycleRunClaimResult`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaimresult/)\>
+
+Atomically reserves an idempotency key and optional cooldown window before dispatch.
+Distributed adapters must enforce both constraints in one shared transaction.
+
+#### Parameters
+
+##### claim
+
+[`LifecycleRunClaim`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaim/)
+
+#### Returns
+
+`Promise`\<[`LifecycleRunClaimResult`](/api/lifecycle-core/src/type-aliases/lifecyclerunclaimresult/)\>
+
+---
+
 ### findByIdempotencyKey()
 
 > **findByIdempotencyKey**(`idempotencyKey`): `Promise`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/) \| `null`\>
@@ -21,7 +63,7 @@ title: "LifecycleRunStore"
 
 `Promise`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/) \| `null`\>
 
-***
+---
 
 ### findLatestForRule()
 
@@ -45,7 +87,7 @@ title: "LifecycleRunStore"
 
 `Promise`\<[`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/) \| `null`\>
 
-***
+---
 
 ### list()
 
@@ -61,7 +103,7 @@ title: "LifecycleRunStore"
 
 `Promise`\<readonly [`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/)[]\>
 
-***
+---
 
 ### save()
 

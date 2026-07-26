@@ -12,6 +12,7 @@ import type {
   LifecycleRule,
   LifecycleRuleActionDescriptor,
   LifecycleRuleActivationCommand,
+  LifecycleRuleExecutionResult,
   LifecycleRuleIdentityState,
   LifecycleRuleInspection,
   LifecycleRuleRegistration,
@@ -23,6 +24,80 @@ import type {
   LifecycleRuleVersionDescriptor,
   LifecycleSignal,
 } from "./types";
+
+function cloneValue(value: unknown, seen = new WeakMap<object, unknown>()): unknown {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  const existing = seen.get(value);
+  if (existing !== undefined) {
+    return existing;
+  }
+  if (value instanceof Date) {
+    return new Date(value);
+  }
+  if (value instanceof RegExp) {
+    const clone = new RegExp(value.source, value.flags);
+    clone.lastIndex = value.lastIndex;
+    return clone;
+  }
+  if (value instanceof Map) {
+    const clone = new Map<unknown, unknown>();
+    seen.set(value, clone);
+    for (const [key, entry] of value) {
+      clone.set(cloneValue(key, seen), cloneValue(entry, seen));
+    }
+    return clone;
+  }
+  if (value instanceof Set) {
+    const clone = new Set<unknown>();
+    seen.set(value, clone);
+    for (const entry of value) {
+      clone.add(cloneValue(entry, seen));
+    }
+    return clone;
+  }
+  if (Array.isArray(value)) {
+    const clone: unknown[] = [];
+    seen.set(value, clone);
+    for (const entry of value) {
+      clone.push(cloneValue(entry, seen));
+    }
+    return clone;
+  }
+
+  const clone = Object.create(Object.getPrototypeOf(value)) as object;
+  seen.set(value, clone);
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor) {
+      continue;
+    }
+    if ("value" in descriptor) {
+      descriptor.value = cloneValue(descriptor.value, seen);
+    }
+    Object.defineProperty(clone, key, descriptor);
+  }
+  return clone;
+}
+
+function cloneRule(rule: LifecycleRule): LifecycleRule {
+  return {
+    ...rule,
+    triggers: cloneValue(rule.triggers) as LifecycleRule["triggers"],
+    cooldown: rule.cooldown ? { ...rule.cooldown } : undefined,
+    actions: Array.isArray(rule.actions)
+      ? (cloneValue(rule.actions) as readonly LifecycleAction[])
+      : rule.actions,
+  };
+}
+
+function cloneRegistration(registration: LifecycleRuleRegistration): LifecycleRuleRegistration {
+  return {
+    descriptor: cloneValue(registration.descriptor) as LifecycleRuleVersionDescriptor,
+    rule: cloneRule(registration.rule),
+  };
+}
 
 function validateRule(rule: LifecycleRule): void {
   if (rule.id.trim().length === 0) {
@@ -188,7 +263,10 @@ export class LifecycleRuleRegistry {
         updatedAt: registeredAt,
       }),
     );
-    this.registrations.set(registrationKey(rule.id, descriptor.version), { descriptor, rule });
+    this.registrations.set(
+      registrationKey(rule.id, descriptor.version),
+      cloneRegistration({ descriptor, rule }),
+    );
     const identity = requireSynchronousResult(this.stateStore.get(rule.id));
     const activated = requireSynchronousResult(
       this.stateStore.applyCommand({
@@ -306,7 +384,8 @@ export class LifecycleRuleRegistry {
       registeredAt,
       updatedAt: registeredAt,
     });
-    const registration = existingRegistration ?? { descriptor, rule: input.rule };
+    const registration =
+      existingRegistration ?? cloneRegistration({ descriptor, rule: input.rule });
     this.registrations.set(key, registration);
     if (persistedVersion?.state === "active") {
       this.activeRegistrationKeys.add(key);
@@ -327,7 +406,7 @@ export class LifecycleRuleRegistry {
       this.synchronizeActiveRegistrations(activated.state);
     }
 
-    return registration;
+    return cloneRegistration(registration);
   }
 
   async activate(request: LifecycleRuleActivationCommand): Promise<LifecycleRuleStateMutation> {
@@ -361,7 +440,13 @@ export class LifecycleRuleRegistry {
    * Do not use this view as authoritative state for a shared durable store.
    */
   get(ruleId: string): LifecycleRule | undefined {
-    return this.getAll().find((rule) => rule.id === ruleId);
+    for (const key of this.activeRegistrationKeys) {
+      const registration = this.registrations.get(key);
+      if (registration?.rule.id === ruleId) {
+        return cloneRule(registration.rule);
+      }
+    }
+    return undefined;
   }
 
   /**
@@ -371,12 +456,34 @@ export class LifecycleRuleRegistry {
   getAll(): readonly LifecycleRule[] {
     return Array.from(this.activeRegistrationKeys).flatMap((key) => {
       const registration = this.registrations.get(key);
-      return registration ? [registration.rule] : [];
+      return registration ? [cloneRule(registration.rule)] : [];
     });
   }
 
   getRegistration(ruleId: string, version: string): LifecycleRuleRegistration | undefined {
-    return this.registrations.get(registrationKey(ruleId, version));
+    const registration = this.registrations.get(registrationKey(ruleId, version));
+    return registration ? cloneRegistration(registration) : undefined;
+  }
+
+  async executeIfActive<T>(
+    ruleId: string,
+    version: string,
+    claimId: string,
+    execute: () => T,
+    expiresAt = new Date(Date.now() + 30_000),
+  ): Promise<LifecycleRuleExecutionResult<T>> {
+    const claim = await this.stateStore.claimExecution({ claimId, ruleId, version, expiresAt });
+    if (!claim.claimed) {
+      return { executed: false, state: claim.state };
+    }
+
+    let value: T;
+    try {
+      value = execute();
+    } finally {
+      await this.stateStore.releaseExecution(claimId);
+    }
+    return { executed: true, value };
   }
 
   async getIdentityState(ruleId: string): Promise<LifecycleRuleIdentityState | undefined> {
@@ -459,7 +566,9 @@ export class LifecycleRuleRegistry {
         const registration = this.registrations.get(
           registrationKey(version.descriptor.ruleId, version.descriptor.version),
         );
-        return registration ? [{ registration, state: version.state }] : [];
+        return registration
+          ? [{ registration: cloneRegistration(registration), state: version.state }]
+          : [];
       }),
     );
   }

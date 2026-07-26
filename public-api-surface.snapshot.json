@@ -12621,6 +12621,21 @@
               "source": "./libs/LifecycleRuleEvaluator"
             },
             {
+              "name": "LifecycleRuleExecutionClaim",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleExecutionClaimResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRuleExecutionResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "LifecycleRuleIdentityState",
               "exportKind": "named",
               "source": "./libs/types"
@@ -12677,6 +12692,16 @@
             },
             {
               "name": "LifecycleRun",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRunClaim",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleRunClaimResult",
               "exportKind": "named",
               "source": "./libs/types"
             },
