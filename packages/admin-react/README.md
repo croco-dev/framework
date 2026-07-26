@@ -44,6 +44,33 @@ permission result. Action requests preserve required reason/idempotency input,
 possible Problems, and recovery state. Provider state marked read-only is never
 presented as editable.
 
+## Outbound webhook reliability
+
+`WebhookReliabilityConsole` renders `WebhookOperationsState` from `@croco/admin-core`. It distinguishes
+loading, empty, permission-denied, store/transport Problem, one-time secret creation, and ready
+states. Ready views separate endpoints, logical events, endpoint deliveries, and partial attempt
+history, including response status, duration, retry classification, next retry, correlation id, and
+redacted response excerpts.
+
+Replay controls are rendered from core-derived action eligibility and remain disabled for pending,
+retrying, or accepted deliveries. Pausing explicitly says that already accepted work is not canceled.
+Secret rotation shows active/previous version and grace expiry without rendering secret values in
+tables or diagnostics.
+
+```tsx
+import { WebhookReliabilityConsole } from "@croco/admin-react";
+
+export function WebhookOperations() {
+  return (
+    <WebhookReliabilityConsole
+      state={state}
+      filter={{ tenantId: state.tenantId, states: ["dead", "acceptance-unknown"] }}
+      onAction={(action) => openAuditedConfirmation(action)}
+    />
+  );
+}
+```
+
 ## Install
 
 ```bash

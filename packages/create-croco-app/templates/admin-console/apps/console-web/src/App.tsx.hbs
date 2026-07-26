@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { adminClient, type adminRpc } from '{{scope}}/provider-rpc';
 import { TenantWorkspaceDemo } from './TenantWorkspaceDemo';
+import { WebhookReliabilityDemo } from './WebhookReliabilityDemo';
 
 type AdminUser = adminRpc.ListUsersOutput[number];
 type AdminOperation = adminRpc.ListOperationsOutput[number];
@@ -316,6 +317,7 @@ export default function App() {
         </header>
 
         <TenantWorkspaceDemo key={selectedTenantId} tenantId={selectedTenantId} />
+        <WebhookReliabilityDemo key={`webhooks:${selectedTenantId}`} tenantId={selectedTenantId} />
 
         {problem ? (
           <section style={alertStyle} role="alert">

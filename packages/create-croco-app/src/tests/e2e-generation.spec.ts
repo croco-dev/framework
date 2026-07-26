@@ -1038,13 +1038,17 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(apiPackageJson.scripts).toMatchObject({
         "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
-        "admin:smoke": "tsx src/dev-smoke.ts",
+        "admin:smoke": "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts",
       });
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(consolePackageJson.dependencies).toMatchObject({
         "@croco/admin-core": externalCrocoRange("@croco/admin-core"),
         "@croco/admin-react": externalCrocoRange("@croco/admin-react"),
         "@croco/events-core": externalCrocoRange("@croco/events-core"),
+      });
+      expect(apiPackageJson.dependencies).toMatchObject({
+        "@croco/admin-core": externalCrocoRange("@croco/admin-core"),
+        "@croco/webhooks-core": externalCrocoRange("@croco/webhooks-core"),
       });
       expect(rpcPackageJson.dependencies).toMatchObject({
         "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
@@ -1074,6 +1078,14 @@ describe("E2E: generate()", () => {
         join(testDir, "apps", "console-web", "src", "TenantWorkspaceDemo.tsx"),
         "utf8",
       );
+      const webhookReliabilitySource = readFileSync(
+        join(testDir, "apps", "console-web", "src", "WebhookReliabilityDemo.tsx"),
+        "utf8",
+      );
+      const webhookSmokeSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "webhook-smoke.ts"),
+        "utf8",
+      );
       expect(tenantWorkspaceSource).toContain("createInMemoryTenantBusinessSource");
       expect(tenantWorkspaceSource).toContain("createTenantWorkspaceSourceLoadingSnapshot");
       expect(tenantWorkspaceSource).toContain("TenantBusinessWorkspace");
@@ -1081,6 +1093,10 @@ describe("E2E: generate()", () => {
       expect(tenantWorkspaceSource).toContain("fake-provider-unavailable");
       expect(tenantWorkspaceSource).toContain("Run audited action");
       expect(tenantWorkspaceSource).toContain("lastActionEvidence");
+      expect(webhookReliabilitySource).toContain("WebhookReliabilityConsole");
+      expect(webhookReliabilitySource).toContain("acceptance-unknown");
+      expect(webhookSmokeSource).toContain("FakeOutboundWebhookTransport");
+      expect(webhookSmokeSource).toContain("permanent 4xx");
       expect(existsSync(join(testDir, "apps", "api-server", "src", "admin.ts"))).toBe(true);
       expect(
         existsSync(join(testDir, "apps", "api-server", "src", "controllers", "AdminController.ts")),

@@ -13,6 +13,17 @@ export {
   loadTenantWorkspace,
   resolveTenantWorkspaceField,
 } from "./libs/TenantWorkspace";
+export {
+  assertWebhookOperationsActionRequest,
+  createWebhookDeliveryAction,
+  createWebhookEndpointCreationAction,
+  createWebhookEndpointActions,
+  executeWebhookOperationsAction,
+  filterWebhookDeliveries,
+  maskWebhookEndpointUrl,
+  redactWebhookOperationsText,
+  WebhookOperationsActionValidationProblem,
+} from "./libs/WebhookOperations";
 export type {
   AdminResourceDiagnostic,
   AdminResourceDiagnosticCode,
@@ -68,3 +79,22 @@ export type {
   TenantWorkspaceSourceData,
   TenantWorkspaceSourceState,
 } from "./libs/TenantWorkspace";
+export type {
+  WebhookAttemptOperationsRow,
+  WebhookAttemptRetryClassification,
+  WebhookDeliveryOperationsFilter,
+  WebhookDeliveryOperationsRow,
+  WebhookDeliveryOperationsStatus,
+  WebhookEndpointOperationalStatus,
+  WebhookEndpointOperationsRow,
+  WebhookEventSubscription,
+  WebhookLogicalEventOperationsRow,
+  WebhookOperationsAction,
+  WebhookOperationsActionKind,
+  WebhookOperationsActionRequest,
+  WebhookOperationsMutationExecutor,
+  WebhookOperationsReadyState,
+  WebhookOperationsState,
+  WebhookOperationsWriteEvidence,
+  WebhookSecretVersionMetadata,
+} from "./libs/WebhookOperations";

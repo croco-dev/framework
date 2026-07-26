@@ -48,6 +48,45 @@ requirements before React sees it. Sensitive fields use
 `resolveTenantWorkspaceField()` so hosts provide an explicit visible, masked, or
 denied result instead of relying on presentation code to guess.
 
+## Outbound webhook operations
+
+Webhook operations contracts keep endpoint, logical event, delivery, and attempt evidence separate.
+Endpoint rows expose only a masked URL and secret version metadata; secret material, signatures,
+payloads, and raw headers are not part of the ready-state contract. A newly created or rotated
+secret uses the explicit `secret-created` state for one-time presentation.
+
+`createWebhookDeliveryAction()` mirrors the core replay contract: only `delivered`, `dead`,
+`canceled`, and `acceptance-unknown` deliveries on an active endpoint can expose replay.
+`assertWebhookOperationsActionRequest()` requires actor, reason, and idempotency evidence for every
+write. `redactWebhookOperationsText()` is the final display boundary for hostile Problem or response
+excerpts.
+
+```ts
+import { createWebhookDeliveryAction, executeWebhookOperationsAction } from "@croco/admin-core";
+
+const replay = createWebhookDeliveryAction(delivery, endpoint, ["webhooks:replay"]);
+if (replay.allowed) {
+  await executeWebhookOperationsAction({
+    action: replay,
+    expectedTenantId: endpoint.tenantId,
+    grantedPermissions: ["webhooks:replay"],
+    request: {
+      action: replay.kind,
+      actorId: operator.id,
+      idempotencyKey: commandId,
+      reason,
+      targetId: replay.targetId,
+      tenantId: endpoint.tenantId,
+    },
+    executor: webhookMutationExecutor,
+  });
+}
+```
+
+`WebhookOperationsMutationExecutor` is the server-side mutation boundary. Implementations must apply
+the idempotency claim, mutation, and audit append atomically after the helper has bound tenant,
+target, action eligibility, and permission evidence.
+
 ## Resource contracts
 
 ```ts

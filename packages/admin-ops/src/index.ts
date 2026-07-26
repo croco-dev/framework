@@ -23,6 +23,10 @@ export {
   retryConsoleItemFromLifecycleRun,
 } from "./libs/sourceAdapters";
 export {
+  operationsTimelineEventFromWebhookDelivery,
+  retryConsoleItemFromWebhookDelivery,
+} from "./libs/webhookAdapters";
+export {
   RetryConsoleAuditConfirmation,
   RetryConsoleDetailPanel,
   RetryConsoleFailedWorkList,
@@ -72,3 +76,4 @@ export type {
   RetryConsoleSourceRecoveryResult,
   RetryConsoleTimestamps,
 } from "./libs/types";
+export type { WebhookOperationsFailureEvidence } from "./libs/webhookAdapters";

@@ -65,6 +65,19 @@ await retryConsole.recover({
 
 Recovery requests require permission and audit descriptors. Execution retries require an audit log sink so the operator action is not silently lost.
 
+## Outbound webhook adapters
+
+`operationsTimelineEventFromWebhookDelivery()` and `retryConsoleItemFromWebhookDelivery()` accept a
+structural failed-delivery evidence contract, so `admin-ops` does not depend on a webhook storage
+implementation. Both adapters preserve the tenant, logical event, endpoint delivery, correlation,
+Problem, attempts, and next-retry evidence without copying payloads, headers, signatures, or secret
+material.
+
+The retry console combines replay eligibility supplied by the core webhook contract with its own
+terminal-status and active-endpoint checks. It never infers that a delivery is safe to replay merely
+because it failed; non-eligible and acceptance-unknown deliveries remain inspect-only until the host
+supplies consistent safe-replay evidence.
+
 ## React Primitives
 
 The package exports small React primitives for building an admin retry console:
