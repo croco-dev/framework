@@ -5,4 +5,4 @@ prev: false
 title: "ReservedDesktopKey"
 ---
 
-> **ReservedDesktopKey** = `"__proto__"` \| `"constructor"` \| `"prototype"` \| `"contracts"` \| `"windows"` \| `"commands"` \| `"events"` \| `"metadata"` \| `"implement"`
+> **ReservedDesktopKey** = *typeof* `RESERVED_DESKTOP_KEYS`\[`number`\]

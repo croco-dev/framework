@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { DesktopDefinitionProblem } from "../libs/DesktopDefinitionProblem";
 import { desktop } from "../libs/desktop";
-import type { DesktopRemoteWindowDefinition } from "../libs/types";
+import type { DesktopLocalWindowDefinition, DesktopRemoteWindowDefinition } from "../libs/types";
 
 describe("desktop contract DSL", () => {
   it("derives stable command and event IDs from app object keys", () => {
@@ -124,6 +124,36 @@ describe("desktop contract DSL", () => {
     });
   });
 
+  it("orders metadata by code units across mixed-case and non-ASCII keys", () => {
+    const definition = desktop.contract({
+      commands: {
+        한글: desktop.query({ input: z.string(), output: z.string() }),
+        open: desktop.query({ input: z.string(), output: z.string() }),
+        Open: desktop.query({ input: z.string(), output: z.string() }),
+      },
+    });
+
+    const app = desktop.app({
+      contracts: {
+        프로젝트: definition,
+        project: definition,
+        Project: definition,
+      },
+      windows: {},
+    });
+
+    expect(app.metadata.contracts.map((contract) => contract.key)).toEqual([
+      "Project",
+      "project",
+      "프로젝트",
+    ]);
+    expect(app.metadata.contracts[0]?.members.map((member) => member.key)).toEqual([
+      "Open",
+      "open",
+      "한글",
+    ]);
+  });
+
   it("does not mutate reusable contract or window definitions", () => {
     const project = desktop.contract({
       commands: {
@@ -217,15 +247,71 @@ describe("desktop contract DSL", () => {
       initialUrl: "https://example.com",
       allowedOrigins: ["https://example.com"],
     });
+    expect(definition.metadata.windows).toEqual([
+      {
+        key: "forgedRemote",
+        trust: "remote",
+        initialUrl: "https://example.com",
+        allowedOrigins: ["https://example.com"],
+      },
+    ]);
   });
 
-  it("rejects dotted keys before they can collide in the derived ID namespace", () => {
+  it("strips remote-only fields from structurally forged local windows", () => {
+    const project = desktop.contract({
+      commands: {
+        read: desktop.query({ input: z.string(), output: z.string() }),
+      },
+    });
+    const forgedLocal = {
+      definitionType: "window",
+      trust: "local",
+      expose: [project.commands.read],
+      receive: [],
+      initialUrl: "https://example.com",
+      allowedOrigins: ["https://example.com"],
+    } as unknown as DesktopLocalWindowDefinition<
+      readonly [typeof project.commands.read],
+      readonly []
+    >;
+
+    const definition = desktop.app({
+      contracts: { project },
+      windows: { forgedLocal },
+    });
+
+    expect(definition.windows.forgedLocal).toEqual({
+      definitionType: "window",
+      trust: "local",
+      expose: [expect.objectContaining({ id: "project.read" })],
+      receive: [],
+    });
+  });
+
+  it.each(["read.file", "metadata", ""])("rejects invalid key %j at runtime", (key) => {
     expect(() =>
       desktop.contract({
         commands: {
-          "read.file": desktop.query({ input: z.string(), output: z.string() }),
+          [key]: desktop.query({ input: z.string(), output: z.string() }),
         },
       } as never),
     ).toThrowError(DesktopDefinitionProblem);
+  });
+
+  it("rejects duplicate command and event keys at runtime", () => {
+    expect(() =>
+      desktop.contract({
+        commands: {
+          duplicate: desktop.query({ input: z.string(), output: z.string() }),
+        },
+        events: {
+          duplicate: desktop.event({ payload: z.string() }),
+        },
+      } as never),
+    ).toThrowError(
+      expect.objectContaining({
+        code: "DESKTOP_DUPLICATE_MEMBER_KEY",
+      }),
+    );
   });
 });

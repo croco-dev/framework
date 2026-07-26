@@ -1,4 +1,5 @@
 import { DesktopDefinitionProblem } from "./DesktopDefinitionProblem";
+import { RESERVED_DESKTOP_KEYS } from "./reservedDesktopKeys";
 import type {
   AnyDesktopCommand,
   AnyDesktopContract,
@@ -110,6 +111,7 @@ function contract<
 ): DesktopContractDefinition<TCommands, TEvents> {
   assertValidKeys(options.commands ?? {});
   assertValidKeys(options.events ?? {});
+  assertNoDuplicateMembers(options.commands ?? {}, options.events ?? {});
   const commands = mapMembers(options.commands ?? {}, "command");
   const events = mapMembers(options.events ?? {}, "event");
   const members = [
@@ -221,25 +223,39 @@ function assertValidKeys(record: Readonly<Record<string, unknown>>): void {
   }
 }
 
+function assertNoDuplicateMembers(
+  commands: Readonly<Record<string, unknown>>,
+  events: Readonly<Record<string, unknown>>,
+): void {
+  for (const key of Object.keys(commands)) {
+    if (Object.prototype.hasOwnProperty.call(events, key)) {
+      throw new DesktopDefinitionProblem(
+        "DESKTOP_DUPLICATE_MEMBER_KEY",
+        `Desktop member key "${key}" cannot be both a command and an event.`,
+      );
+    }
+  }
+}
+
 function isReservedDesktopKey(key: string): key is ReservedDesktopKey {
-  return [
-    "__proto__",
-    "constructor",
-    "prototype",
-    "contracts",
-    "windows",
-    "commands",
-    "events",
-    "metadata",
-    "implement",
-  ].includes(key as ReservedDesktopKey);
+  return RESERVED_DESKTOP_KEYS.includes(key as ReservedDesktopKey);
+}
+
+function compareCodeUnits(left: string, right: string): number {
+  if (left < right) {
+    return -1;
+  }
+  if (left > right) {
+    return 1;
+  }
+  return 0;
 }
 
 function compareMemberMetadata(
   left: { readonly key: string; readonly kind: string },
   right: { readonly key: string; readonly kind: string },
 ): number {
-  return left.key.localeCompare(right.key) || left.kind.localeCompare(right.kind);
+  return compareCodeUnits(left.key, right.key) || compareCodeUnits(left.kind, right.kind);
 }
 
 function bindContract(
@@ -295,7 +311,8 @@ function bindWindow(
   }
 
   return {
-    ...windowDefinition,
+    definitionType: "window",
+    trust: "local",
     expose: windowDefinition.expose.map((definition) =>
       resolveBinding(commandBindings, definition),
     ),
@@ -341,10 +358,10 @@ function createAppMetadata(
     schema: "croco.desktop-app-definition.v1",
     contracts: Object.entries(contracts)
       .map(([contractKey, definition]) => createContractMetadata(contractKey, definition))
-      .sort((left, right) => left.key.localeCompare(right.key)),
+      .sort((left, right) => compareCodeUnits(left.key, right.key)),
     windows: Object.entries(windows)
       .map(([windowKey, definition]) => createWindowMetadata(windowKey, definition))
-      .sort((left, right) => left.key.localeCompare(right.key)),
+      .sort((left, right) => compareCodeUnits(left.key, right.key)),
   };
 }
 
@@ -394,8 +411,14 @@ function createMemberReference(
   definition: KeyedDesktopCommand | KeyedDesktopEvent,
   kind: "command" | "event",
 ): DesktopMemberReferenceMetadata {
+  if (!("id" in definition) || typeof definition.id !== "string") {
+    throw new DesktopDefinitionProblem(
+      "DESKTOP_UNMOUNTED_MEMBER_REFERENCE",
+      `Desktop member "${definition.memberKey}" is not bound to an app contract.`,
+    );
+  }
   return {
-    id: "id" in definition && typeof definition.id === "string" ? definition.id : null,
+    id: definition.id,
     key: definition.memberKey,
     kind,
   };

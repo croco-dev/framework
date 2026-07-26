@@ -11,7 +11,7 @@ title: "DesktopAppOptions"
 
 ### TContracts
 
-`TContracts` *extends* `DesktopContractRecord`
+`TContracts` *extends* [`DesktopContractRecord`](/api/protocols-desktop/src/type-aliases/desktopcontractrecord/)
 
 ### TWindows
 

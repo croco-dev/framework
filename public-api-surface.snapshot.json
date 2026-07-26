@@ -17557,6 +17557,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "DesktopContractRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DesktopDefinitionProblemCode",
               "exportKind": "named",
               "source": "./libs/DesktopDefinitionProblem"

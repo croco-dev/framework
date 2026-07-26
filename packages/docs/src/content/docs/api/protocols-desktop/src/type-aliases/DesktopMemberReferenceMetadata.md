@@ -11,7 +11,7 @@ title: "DesktopMemberReferenceMetadata"
 
 ### id
 
-> `readonly` **id**: `string` \| `null`
+> `readonly` **id**: `string`
 
 ***
 

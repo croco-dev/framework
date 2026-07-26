@@ -1,6 +1,6 @@
-export type { DesktopDefinitionProblemCode } from "./libs/DesktopDefinitionProblem";
 export { DesktopDefinitionProblem } from "./libs/DesktopDefinitionProblem";
 export { desktop } from "./libs/desktop";
+export type { DesktopDefinitionProblemCode } from "./libs/DesktopDefinitionProblem";
 export type {
   AnyDesktopCommand,
   AnyDesktopContract,
@@ -19,6 +19,7 @@ export type {
   DesktopCommandKind,
   DesktopCommandRecord,
   DesktopContractDefinition,
+  DesktopContractRecord,
   DesktopContractMemberMetadata,
   DesktopContractMetadata,
   DesktopContractOptions,

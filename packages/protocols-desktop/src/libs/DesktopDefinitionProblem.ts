@@ -2,6 +2,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export type DesktopDefinitionProblemCode =
   | "DESKTOP_AMBIGUOUS_MEMBER_REFERENCE"
+  | "DESKTOP_DUPLICATE_MEMBER_KEY"
   | "DESKTOP_INVALID_KEY"
   | "DESKTOP_UNMOUNTED_MEMBER_REFERENCE";
 

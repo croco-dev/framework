@@ -81,7 +81,7 @@ export type AnyDesktopWindow = DesktopLocalWindowDefinition | DesktopRemoteWindo
 export type DesktopWindowRecord = Readonly<Record<string, AnyDesktopWindow>>;
 
 export type DesktopMemberReferenceMetadata = {
-  readonly id: string | null;
+  readonly id: string;
   readonly key: string;
   readonly kind: "command" | "event";
 };
@@ -125,16 +125,7 @@ export type DesktopAppDefinition<
   readonly metadata: DesktopAppMetadata;
 };
 
-export type ReservedDesktopKey =
-  | "__proto__"
-  | "constructor"
-  | "prototype"
-  | "contracts"
-  | "windows"
-  | "commands"
-  | "events"
-  | "metadata"
-  | "implement";
+export type { ReservedDesktopKey } from "./reservedDesktopKeys";
 
 export type InferDesktopSchema<TSchema> = TSchema extends {
   readonly "~standard": {

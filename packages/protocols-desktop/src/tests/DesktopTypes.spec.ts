@@ -74,13 +74,16 @@ describe("desktop public types", () => {
     expectTypeOf(
       definition.contracts.project.events.fileChanged.id,
     ).toEqualTypeOf<"project.fileChanged">();
-    expectTypeOf(definition.windows.main).toMatchTypeOf<DesktopLocalWindowDefinition>();
-    expectTypeOf(definition.windows.login).toMatchTypeOf<DesktopRemoteWindowDefinition>();
+    expectTypeOf(definition.windows.main).toExtend<DesktopLocalWindowDefinition>();
+    expectTypeOf(definition.windows.login).toExtend<DesktopRemoteWindowDefinition>();
   });
 
   it("keeps privileged local-window fields absent from remote-window types", () => {
     expectTypeOf(definition.windows.login.expose).toEqualTypeOf<undefined>();
     expectTypeOf(definition.windows.login.receive).toEqualTypeOf<undefined>();
+  });
+
+  it("compiles the negative type fixtures", () => {
     expectTypeOf(negativeTypeFixtures).toBeFunction();
   });
 });
@@ -100,6 +103,69 @@ function negativeTypeFixtures(): void {
   desktop.contract({
     commands: {
       metadata: desktop.query({ input: z.string(), output: z.string() }),
+    },
+  });
+
+  // @ts-expect-error __proto__ is a reserved member key
+  desktop.contract({
+    commands: {
+      __proto__: desktop.query({ input: z.string(), output: z.string() }),
+    },
+  });
+
+  // @ts-expect-error constructor is a reserved member key
+  desktop.contract({
+    commands: {
+      constructor: desktop.query({ input: z.string(), output: z.string() }),
+    },
+  });
+
+  // @ts-expect-error prototype is a reserved member key
+  desktop.contract({
+    commands: {
+      prototype: desktop.query({ input: z.string(), output: z.string() }),
+    },
+  });
+
+  // @ts-expect-error contracts is a reserved member key
+  desktop.contract({
+    commands: {
+      contracts: desktop.query({ input: z.string(), output: z.string() }),
+    },
+  });
+
+  // @ts-expect-error windows is a reserved member key
+  desktop.contract({
+    commands: {
+      windows: desktop.query({ input: z.string(), output: z.string() }),
+    },
+  });
+
+  // @ts-expect-error commands is a reserved member key
+  desktop.contract({
+    commands: {
+      commands: desktop.query({ input: z.string(), output: z.string() }),
+    },
+  });
+
+  // @ts-expect-error events is a reserved member key
+  desktop.contract({
+    commands: {
+      events: desktop.query({ input: z.string(), output: z.string() }),
+    },
+  });
+
+  // @ts-expect-error implement is a reserved member key
+  desktop.contract({
+    commands: {
+      implement: desktop.query({ input: z.string(), output: z.string() }),
+    },
+  });
+
+  // @ts-expect-error empty member keys are rejected
+  desktop.contract({
+    commands: {
+      "": desktop.query({ input: z.string(), output: z.string() }),
     },
   });
 
