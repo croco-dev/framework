@@ -17827,6 +17827,287 @@
       ]
     },
     {
+      "packageName": "@croco/protocols-desktop",
+      "relativeDir": "packages/protocols-desktop",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/protocols-desktop/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "desktop",
+              "exportKind": "named",
+              "source": "./libs/desktop",
+              "declarationKind": "const"
+            },
+            {
+              "name": "DesktopDefinitionProblem",
+              "exportKind": "named",
+              "source": "./libs/DesktopDefinitionProblem",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AnyDesktopCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AnyDesktopContract",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AnyDesktopEvent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AnyDesktopWindow",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "BoundDesktopCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "BoundDesktopContract",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "BoundDesktopContracts",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "BoundDesktopEvent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "BoundDesktopWindows",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopAppContractMetadata",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopAppDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopAppMetadata",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopAppOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopCommandDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopCommandKind",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopCommandRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopContractDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopContractMemberMetadata",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopContractMetadata",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopContractOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopContractRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopDefinitionProblemCode",
+              "exportKind": "named",
+              "source": "./libs/DesktopDefinitionProblem"
+            },
+            {
+              "name": "DesktopEventDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopEventOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopEventRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopLocalWindowDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopLocalWindowMetadata",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopLocalWindowOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopMemberReferenceMetadata",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopMutationDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopMutationOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopQueryDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopQueryOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopRemoteWindowDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopRemoteWindowMetadata",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopRemoteWindowOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DesktopWindowRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "InferDesktopAppContracts",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "InferDesktopAppWindows",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "InferDesktopCommandInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "InferDesktopCommandOutput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "InferDesktopContractCommands",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "InferDesktopContractEvents",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "InferDesktopEventPayload",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "InferDesktopSchema",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "KeyedDesktopCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "KeyedDesktopEvent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReservedDesktopKey",
+              "exportKind": "named",
+              "source": "./libs/types"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/protocols-graphql",
       "relativeDir": "packages/protocols-graphql",
       "entrypoints": [

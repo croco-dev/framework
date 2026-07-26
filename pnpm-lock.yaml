@@ -1244,6 +1244,9 @@ importers:
       '@croco/protocols-core':
         specifier: workspace:*
         version: link:../protocols-core
+      '@croco/protocols-desktop':
+        specifier: workspace:*
+        version: link:../protocols-desktop
       '@croco/protocols-graphql':
         specifier: workspace:*
         version: link:../protocols-graphql
@@ -2619,6 +2622,19 @@ importers:
       vitest:
         specifier: 4.0.16
         version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
+
+  packages/protocols-desktop:
+    dependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
+      vitest:
+        specifier: 4.0.16
+        version: 4.0.16(@opentelemetry/api@1.9.0)(@types/node@25.2.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
 
   packages/protocols-graphql:
     dependencies:

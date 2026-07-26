@@ -430,7 +430,7 @@ Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alph
 | Domain       | Business-domain APIs and package-level abstractions                                        |        30 |
 | Provider     | Concrete datastore, SaaS provider, and external service adapters                           |        26 |
 | Integration  | Analytics, feature-flag, and observability integrations                                    |         5 |
-| Protocol     | API protocol definitions and code generation                                               |         7 |
+| Protocol     | API protocol definitions and code generation                                               |         8 |
 | Transport    | Runtime adapters that execute protocol routes                                              |         3 |
 | Presentation | Frontend, SSR, and presentation-layer adapters                                             |         8 |
 | Tooling      | CLIs, scaffolds, presets, migration tools, and build-time helpers                          |         9 |
@@ -635,6 +635,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/admin-react`          | Presentation | `packages/admin-react`          | README, API, tests |
 | `@croco/frontend-problems`    | Presentation | `packages/frontend-problems`    | README, API, tests |
 | `@croco/admin-generated`      | Protocol     | `packages/admin-generated`      | README, API, tests |
+| `@croco/protocols-desktop`    | Protocol     | `packages/protocols-desktop`    | README, API, tests |
 | `@croco/auth-better-auth`     | Provider     | `packages/auth-better-auth`     | README, API, tests |
 | `@croco/auth-clerk`           | Provider     | `packages/auth-clerk`           | README, API, tests |
 | `@croco/batch-qstash`         | Provider     | `packages/batch-qstash`         | README, API, tests |

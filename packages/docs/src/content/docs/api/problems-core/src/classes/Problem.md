@@ -281,6 +281,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidPaginationDirectionProblem`](/api/pagination-core/src/classes/invalidpaginationdirectionproblem/)
 - [`ProblemRegistryValidationProblem`](/api/problems-core/src/classes/problemregistryvalidationproblem/)
 - [`ContractGraphDiagnosticError`](/api/protocols-core/src/classes/contractgraphdiagnosticerror/)
+- [`DesktopDefinitionProblem`](/api/protocols-desktop/src/classes/desktopdefinitionproblem/)
 - [`GraphQLAuthenticationProblem`](/api/protocols-graphql/src/classes/graphqlauthenticationproblem/)
 - [`GraphQLAuthorizationProblem`](/api/protocols-graphql/src/classes/graphqlauthorizationproblem/)
 - [`GraphQLInternalError`](/api/protocols-graphql/src/classes/graphqlinternalerror/)

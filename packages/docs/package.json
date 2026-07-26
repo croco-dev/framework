@@ -103,6 +103,7 @@
     "@croco/preset-node": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*",
+    "@croco/protocols-desktop": "workspace:*",
     "@croco/protocols-graphql": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
     "@croco/protocols-trpc": "workspace:*",

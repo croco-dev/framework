@@ -141,6 +141,7 @@ export default defineConfig({
             "../preset-node/src/index.ts",
             "../problems-core/src/index.ts",
             "../protocols-core/src/index.ts",
+            "../protocols-desktop/src/index.ts",
             "../protocols-graphql/src/index.ts",
             "../protocols-rest/src/index.ts",
             "../protocols-trpc/src/index.ts",

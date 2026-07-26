@@ -401,6 +401,7 @@ jobs:
               - 'packages/preset-node/src/**'
               - 'packages/problems-core/src/**'
               - 'packages/protocols-core/src/**'
+              - 'packages/protocols-desktop/src/**'
               - 'packages/protocols-graphql/src/**'
               - 'packages/protocols-rest/src/**'
               - 'packages/protocols-trpc/src/**'
