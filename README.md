@@ -382,7 +382,7 @@ Follow-up work is tracked in GitHub Issues and in [Croco 1.0 Spine](docs/release
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **111개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **112개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Croco 1.0 Spine
 
@@ -427,7 +427,7 @@ Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alph
 | 그룹         | 역할                                                                                       | 패키지 수 |
 | ------------ | ------------------------------------------------------------------------------------------ | --------: |
 | Core         | Framework primitives, context, reliability, transactions, and cross-cutting core utilities |        24 |
-| Domain       | Business-domain APIs and package-level abstractions                                        |        29 |
+| Domain       | Business-domain APIs and package-level abstractions                                        |        30 |
 | Provider     | Concrete datastore, SaaS provider, and external service adapters                           |        26 |
 | Integration  | Analytics, feature-flag, and observability integrations                                    |         5 |
 | Protocol     | API protocol definitions and code generation                                               |         7 |
@@ -443,7 +443,7 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | ------------------- | ----------------------------------- | --------------------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |                    24 |
 | 🟡 beta             | 기능 완성, 실사용 검증 중           |                    75 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    12 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    13 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |                     0 |
 
 ### Extension & Adapter Matrix
@@ -631,6 +631,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 
 | 패키지                        | 그룹         | 디렉터리                        | 문서               |
 | ----------------------------- | ------------ | ------------------------------- | ------------------ |
+| `@croco/credits-core`         | Domain       | `packages/credits-core`         | README, API, tests |
 | `@croco/admin-react`          | Presentation | `packages/admin-react`          | README, API, tests |
 | `@croco/frontend-problems`    | Presentation | `packages/frontend-problems`    | README, API, tests |
 | `@croco/admin-generated`      | Protocol     | `packages/admin-generated`      | README, API, tests |

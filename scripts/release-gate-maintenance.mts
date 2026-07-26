@@ -87,6 +87,7 @@ export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/internal-croco-compatibility-policy.mjs",
   "scripts/package-manifest-contracts.mjs",
   "scripts/peer-dependency-range-policy.mjs",
+  "scripts/pnpm-audit-gzip-recovery.cjs",
   "scripts/release-gate-maintenance.mts",
   "scripts/release-spine-evidence.mts",
   "scripts/security-gitleaks-smoke.mts",

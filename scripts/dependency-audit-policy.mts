@@ -13,7 +13,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
-import { argv, exit, stdout } from "node:process";
+import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
 type DependencyField =
@@ -126,9 +126,30 @@ type PolicyResult = {
   readonly violations: readonly string[];
 };
 
+type PnpmAuditCommandResult = {
+  readonly error?: Error;
+  readonly stderr: string;
+  readonly stdout: string;
+};
+
+type PnpmAuditRunner = (
+  command: string,
+  args: string[],
+  options: {
+    readonly cwd: string;
+    readonly encoding: "utf-8";
+    readonly env?: NodeJS.ProcessEnv;
+    readonly timeout: number;
+  },
+) => PnpmAuditCommandResult;
+
 const defaultRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const defaultMetadataPath = "scripts/security-allowlist-metadata.json";
 const defaultReportPath = "ci-reports/security/dependency-audit-policy.md";
+const pnpmAuditGzipRecoveryPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "pnpm-audit-gzip-recovery.cjs",
+);
 const pnpmAuditTimeoutMs = 120_000;
 const unclassifiedDiagnosticCode = "DEPENDENCY_AUDIT_EVIDENCE_UNCLASSIFIED";
 const unclassifiedPath = "<unclassified>";
@@ -293,12 +314,33 @@ function readAuditJsonFile(rootDir: string, auditJsonPath: string, label: string
   );
 }
 
-function runPnpmAudit(rootDir: string, extraArgs: readonly string[], label: string): AuditJson {
-  const result = spawnSync("pnpm", ["audit", "--audit-level", "high", ...extraArgs, "--json"], {
+export function runPnpmAudit(
+  rootDir: string,
+  extraArgs: readonly string[],
+  label: string,
+  runner: PnpmAuditRunner = spawnSync,
+): AuditJson {
+  const args = ["audit", "--audit-level", "high", ...extraArgs, "--json"];
+  const result = runner("pnpm", args, {
     cwd: rootDir,
     encoding: "utf-8",
     timeout: pnpmAuditTimeoutMs,
   });
+  const stdoutText = readPnpmAuditOutput(label, result);
+  if (!isMissingGzipContentEncodingError(stdoutText)) {
+    return parseAuditJson(stdoutText, label);
+  }
+
+  const recoveryResult = runner("pnpm", args, {
+    cwd: rootDir,
+    encoding: "utf-8",
+    env: pnpmAuditGzipRecoveryEnv(),
+    timeout: pnpmAuditTimeoutMs,
+  });
+  return parseAuditJson(readPnpmAuditOutput(`${label} gzip recovery`, recoveryResult), label);
+}
+
+function readPnpmAuditOutput(label: string, result: PnpmAuditCommandResult): string {
   if (result.error) {
     throw new DependencyAuditPolicyProblem(
       processFailureMessage(label, result),
@@ -312,7 +354,36 @@ function runPnpmAudit(rootDir: string, extraArgs: readonly string[], label: stri
       `${label} produced no JSON output: ${result.stderr.trim()}`,
     );
   }
-  return parseAuditJson(stdoutText, label);
+  return stdoutText;
+}
+
+function isMissingGzipContentEncodingError(source: string): boolean {
+  try {
+    const parsed = JSON.parse(source) as unknown;
+    if (!isRecord(parsed) || !isRecord(parsed.error)) {
+      return false;
+    }
+    const code = stringValue(parsed.error.code);
+    const message = stringValue(parsed.error.message);
+    const includesGzipMagic = message.includes("\u001f") || message.includes("\\u001f");
+    return (
+      (code === "ERR_PNPM_AUDIT_BAD_RESPONSE" || code === "pnpm") &&
+      message.includes("Unexpected token") &&
+      includesGzipMagic &&
+      message.includes("not valid JSON")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function pnpmAuditGzipRecoveryEnv(): NodeJS.ProcessEnv {
+  const requireOption = `--require=${JSON.stringify(pnpmAuditGzipRecoveryPath)}`;
+  const nodeOptions = env.NODE_OPTIONS?.trim();
+  return {
+    ...env,
+    NODE_OPTIONS: nodeOptions ? `${nodeOptions} ${requireOption}` : requireOption,
+  };
 }
 
 function parseAuditJson(source: string, label: string): AuditJson {
@@ -924,6 +995,19 @@ function runGeneratedTemplateAudit(
     }
 
     writeFileSync(
+      join(tempRoot, "package.json"),
+      `${JSON.stringify(
+        {
+          name: "@croco/generated-template-audit",
+          packageManager: readRootPackageManager(rootDir),
+          private: true,
+          version: "0.0.0",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    writeFileSync(
       join(tempRoot, "pnpm-workspace.yaml"),
       "packages:\n  - packages/create-croco-app/templates/**\noverrides:\n  postcss: 8.5.18\n",
     );
@@ -949,6 +1033,22 @@ function runGeneratedTemplateAudit(
   } finally {
     rmSync(tempRoot, { force: true, recursive: true });
   }
+}
+
+function readRootPackageManager(rootDir: string): string {
+  const rootPackageJson = JSON.parse(
+    readFileSync(join(rootDir, "package.json"), "utf-8"),
+  ) as unknown;
+  if (!isRecord(rootPackageJson)) {
+    throw new DependencyAuditPolicyProblem("Root package.json did not return a JSON object");
+  }
+  const packageManager = stringValue(rootPackageJson.packageManager);
+  if (!packageManager.startsWith("pnpm@")) {
+    throw new DependencyAuditPolicyProblem(
+      "Root package.json must pin pnpm through packageManager for generated template audits",
+    );
+  }
+  return packageManager;
 }
 
 function generatedTemplateRuntimeDependencies(manifest: Manifest): Record<string, string> {

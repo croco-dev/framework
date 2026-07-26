@@ -342,6 +342,7 @@ jobs:
               - 'packages/cache-core/src/**'
               - 'packages/cli/src/**'
               - 'packages/create-croco-app/src/**'
+              - 'packages/credits-core/src/**'
               - 'packages/customer-health-core/src/**'
               - 'packages/customer-health-drizzle/src/**'
               - 'packages/dataloader-core/src/**'

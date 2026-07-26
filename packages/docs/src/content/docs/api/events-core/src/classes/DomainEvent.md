@@ -18,6 +18,7 @@ title: "DomainEvent"
 - [`SubscriptionCanceledEvent`](/api/billing-core/src/classes/subscriptioncanceledevent/)
 - [`SubscriptionPastDueEvent`](/api/billing-core/src/classes/subscriptionpastdueevent/)
 - [`SubscriptionRevokedEvent`](/api/billing-core/src/classes/subscriptionrevokedevent/)
+- [`CreditLedgerCommittedEvent`](/api/credits-core/src/classes/creditledgercommittedevent/)
 - [`HealthScoreDroppedEvent`](/api/customer-health-core/src/classes/healthscoredroppedevent/)
 - [`HealthStatusChangedEvent`](/api/customer-health-core/src/classes/healthstatuschangedevent/)
 - [`EntitlementDeniedEvent`](/api/entitlements-core/src/classes/entitlementdeniedevent/)

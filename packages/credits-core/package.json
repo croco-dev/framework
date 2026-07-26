@@ -1,0 +1,50 @@
+{
+  "name": "@croco/credits-core",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/credits-core"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint ."
+  },
+  "dependencies": {
+    "@croco/events-core": "workspace:*",
+    "@croco/problems-core": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.2",
+    "vitest": "4.0.16"
+  }
+}

@@ -201,6 +201,44 @@ describe("EventPublisher", () => {
       expect(mockEventBus.publishedEvents).toHaveLength(1);
       expect(mockEventBus.publishedEvents[0]).toBe(event);
     });
+
+    it("should acknowledge only after the committed event publishes successfully", async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      let acknowledged = false;
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+
+      publisher.publishAfterCommit(new TestEvent("acknowledged"), () => {
+        acknowledged = true;
+      });
+
+      expect(acknowledged).toBe(false);
+      await registeredHook?.();
+      expect(acknowledged).toBe(true);
+
+      const errorEventBus = {
+        async publish(): Promise<void> {
+          throw new Error("Event bus error");
+        },
+        subscribe(): void {},
+        unsubscribe(): void {},
+        clear(): void {},
+      } satisfies EventBus;
+      config.setEventBus(errorEventBus);
+      let failedAcknowledged = false;
+      publisher.publishAfterCommit(new TestEvent("not-acknowledged"), () => {
+        failedAcknowledged = true;
+      });
+
+      await expect(registeredHook?.()).rejects.toThrow("Event bus error");
+      expect(failedAcknowledged).toBe(false);
+    });
   });
 
   describe("publishMany", () => {
