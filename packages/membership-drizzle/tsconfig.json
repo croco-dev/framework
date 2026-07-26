@@ -2,7 +2,6 @@
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "baseUrl": ".",
     "paths": {
       "@croco/framework-context": ["../framework-context/src/index.ts"],
       "@croco/membership-core": ["../membership-core/src/index.ts"],

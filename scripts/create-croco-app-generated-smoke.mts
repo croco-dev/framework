@@ -3380,7 +3380,7 @@ function buildWorkspacePackages(
 
   const commandResult = run(
     process.execPath,
-    [turboPath, "build", ...packageNamesToBuild.map((packageName) => `--filter=${packageName}...`)],
+    [turboPath, ...turboBuildArguments(packageNamesToBuild)],
     rootDir,
   );
   onCommandResult?.("build local dependencies", commandResult);
@@ -3388,6 +3388,19 @@ function buildWorkspacePackages(
   for (const packageName of packageNamesToBuild) {
     builtWorkspacePackageNames.add(packageName);
   }
+}
+
+export function turboBuildArguments(
+  packageNames: readonly string[],
+  platform: NodeJS.Platform = process.platform,
+): string[] {
+  return [
+    "build",
+    // TypeScript 6 declaration bundling is substantially more memory-intensive on the hosted Windows runner.
+    // Bound parallelism there so a large generated-app dependency graph cannot terminate Turbo without diagnostics.
+    ...(platform === "win32" ? ["--concurrency=4"] : []),
+    ...packageNames.map((packageName) => `--filter=${packageName}...`),
+  ];
 }
 
 function packWorkspacePackage(

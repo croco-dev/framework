@@ -5,7 +5,6 @@
     "composite": false,
     "declaration": true,
     "declarationMap": true,
-    "downlevelIteration": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
@@ -13,16 +12,18 @@
     "importHelpers": false,
     "inlineSources": false,
     "isolatedModules": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "noEmit": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "preserveWatchOutput": true,
+    "rootDir": "..",
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "strictPropertyInitialization": false
+    "strictPropertyInitialization": false,
+    "types": ["node"]
   },
   "display": "Base",
   "exclude": ["node_modules", "tmp", "template"]

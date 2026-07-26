@@ -2,7 +2,6 @@
   "exclude": ["node_modules"],
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@croco/diagnostics-core": ["../diagnostics-core/src/index.ts"],
       "@croco/framework-context": ["../framework-context/src/index.ts"],

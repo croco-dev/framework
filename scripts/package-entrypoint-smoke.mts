@@ -78,8 +78,13 @@ type PackageSmokeResult = {
 
 type DecoratorMetadataSmokeContract = {
   readonly defaults?: Readonly<Record<string, boolean | number | string>>;
-  readonly injections: Readonly<Record<string, number>>;
-  readonly metadataTypes: readonly {
+  readonly injections?: Readonly<Record<string, number>>;
+  readonly memberTypes?: readonly {
+    readonly className: string;
+    readonly memberName: string;
+    readonly packageName?: string;
+  }[];
+  readonly metadataTypes?: readonly {
     readonly className: string;
     readonly packageName?: string;
   }[];
@@ -1245,6 +1250,14 @@ function decoratorMetadataContractFor(
     };
   }
 
+  if (packageName === "@croco/llm-core") {
+    return {
+      memberTypes: [{ className: "Function", memberName: "generate" }],
+      serviceClass: "LlmService",
+      servicePackage: "@croco/llm-core",
+    };
+  }
+
   return undefined;
 }
 
@@ -1257,7 +1270,7 @@ function runDecoratorMetadataSmoke(
     .filter(
       (packageInfo) =>
         packageInfo.packageName === "@croco/framework-context" ||
-        contract.metadataTypes.some(
+        [...(contract.metadataTypes ?? []), ...(contract.memberTypes ?? [])].some(
           (metadataType) => metadataType.packageName === packageInfo.packageName,
         ),
     )
@@ -1276,7 +1289,7 @@ function runDecoratorMetadataSmoke(
       `const contract = ${contractJson};`,
       'const { Container } = require("@croco/framework-context");',
       "const serviceModule = require(contract.servicePackage);",
-      "const metadataModules = Object.fromEntries(contract.metadataTypes.filter((type) => type.packageName).map((type) => [type.packageName, require(type.packageName)]));",
+      "const metadataModules = Object.fromEntries([...(contract.metadataTypes ?? []), ...(contract.memberTypes ?? [])].filter((type) => type.packageName).map((type) => [type.packageName, require(type.packageName)]));",
       'verifyDecoratorMetadata("cjs", Container, serviceModule, metadataModules, contract);',
       decoratorMetadataVerificationSource(),
       "",
@@ -1288,7 +1301,7 @@ function runDecoratorMetadataSmoke(
       `const contract = ${contractJson};`,
       'const { Container } = await import("@croco/framework-context");',
       "const serviceModule = await import(contract.servicePackage);",
-      "const metadataModules = Object.fromEntries(await Promise.all(contract.metadataTypes.filter((type) => type.packageName).map(async (type) => [type.packageName, await import(type.packageName)])));",
+      "const metadataModules = Object.fromEntries(await Promise.all([...(contract.metadataTypes ?? []), ...(contract.memberTypes ?? [])].filter((type) => type.packageName).map(async (type) => [type.packageName, await import(type.packageName)])));",
       'verifyDecoratorMetadata("esm", Container, serviceModule, metadataModules, contract);',
       decoratorMetadataVerificationSource(),
       "",
@@ -1309,14 +1322,27 @@ function decoratorMetadataVerificationSource(): string {
   return [
     "function verifyDecoratorMetadata(format, Container, serviceModule, metadataModules, contract) {",
     "  const Service = serviceModule[contract.serviceClass];",
-    "  const expectedParamTypes = contract.metadataTypes.map((type) => type.packageName ? metadataModules[type.packageName][type.className] : globalThis[type.className]);",
-    '  const paramTypes = Reflect.getMetadata?.("design:paramtypes", Service);',
-    "  if (!Array.isArray(paramTypes) || paramTypes.length !== expectedParamTypes.length || paramTypes.some((value, index) => value !== expectedParamTypes[index])) {",
-    '    const actual = Array.isArray(paramTypes) ? paramTypes.map((value) => value?.name ?? typeof value).join(", ") : "missing";',
-    '    const expected = contract.metadataTypes.map((type) => type.className).join(", ");',
-    "    throw new Error(`[${format}] ${contract.serviceClass} design:paramtypes expected [${expected}], received [${actual}]`);",
+    "  const resolveType = (type) => type.packageName ? metadataModules[type.packageName][type.className] : globalThis[type.className];",
+    "  const expectedParamTypes = contract.metadataTypes?.map(resolveType);",
+    "  if (expectedParamTypes) {",
+    '    const paramTypes = Reflect.getMetadata?.("design:paramtypes", Service);',
+    "    if (!Array.isArray(paramTypes) || paramTypes.length !== expectedParamTypes.length || paramTypes.some((value, index) => value !== expectedParamTypes[index])) {",
+    '      const actual = Array.isArray(paramTypes) ? paramTypes.map((value) => value?.name ?? typeof value).join(", ") : "missing";',
+    '      const expected = contract.metadataTypes.map((type) => type.className).join(", ");',
+    "      throw new Error(`[${format}] ${contract.serviceClass} design:paramtypes expected [${expected}], received [${actual}]`);",
+    "    }",
     "  }",
-    "  const injectedValues = Object.fromEntries(Object.entries(contract.injections).map(([field, metadataIndex]) => {",
+    "  for (const memberType of contract.memberTypes ?? []) {",
+    '    const designType = Reflect.getMetadata?.("design:type", Service.prototype, memberType.memberName);',
+    "    const expectedType = resolveType(memberType);",
+    "    if (designType !== expectedType) {",
+    '      throw new Error(`[${format}] ${contract.serviceClass}.${memberType.memberName} design:type expected ${memberType.className}, received ${designType?.name ?? "missing"}`);',
+    "    }",
+    "  }",
+    "  if (!expectedParamTypes) {",
+    "    return;",
+    "  }",
+    "  const injectedValues = Object.fromEntries(Object.entries(contract.injections ?? {}).map(([field, metadataIndex]) => {",
     "    const Dependency = expectedParamTypes[metadataIndex];",
     "    const dependency = Object.create(Dependency.prototype);",
     "    Container.set(Dependency, dependency);",

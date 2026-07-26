@@ -595,6 +595,12 @@ describe("E2E: generate()", () => {
 
     // tRPC nextjs: Next.js 앱에 tRPC 내장
     expect(existsSync(join(testDir, "apps", "web"))).toBe(true);
+    const webTsconfig = JSON.parse(
+      readFileSync(join(testDir, "apps", "web", "tsconfig.json"), "utf8"),
+    ) as {
+      compilerOptions?: Record<string, unknown>;
+    };
+    expect(webTsconfig.compilerOptions?.moduleResolution).toBe("bundler");
     // Vercel config
     expect(existsSync(join(testDir, "apps", "web", "vercel.json"))).toBe(true);
   });

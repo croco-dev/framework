@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@croco/problems-core": ["../problems-core/src/index.ts"]
     }
