@@ -5446,6 +5446,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "addSignedCreditAmounts",
+              "exportKind": "named",
+              "source": "./libs/amount",
+              "declarationKind": "function"
+            },
+            {
               "name": "compareCreditAmounts",
               "exportKind": "named",
               "source": "./libs/amount",
@@ -5579,6 +5585,12 @@
             },
             {
               "name": "subtractCreditAmounts",
+              "exportKind": "named",
+              "source": "./libs/amount",
+              "declarationKind": "function"
+            },
+            {
+              "name": "toSignedCreditAmount",
               "exportKind": "named",
               "source": "./libs/amount",
               "declarationKind": "function"

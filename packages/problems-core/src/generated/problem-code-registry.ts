@@ -2921,7 +2921,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 74,
+          line: 81,
           column: 3,
           kind: "problem-class",
         },
@@ -2952,7 +2952,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 13,
+          line: 15,
           column: 3,
           kind: "problem-class",
         },
@@ -2982,7 +2982,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 61,
+          line: 67,
           column: 3,
           kind: "problem-class",
         },
@@ -3014,7 +3014,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 131,
+          line: 143,
           column: 3,
           kind: "problem-class",
         },
@@ -3045,7 +3045,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 35,
+          line: 39,
           column: 3,
           kind: "problem-class",
         },
@@ -3076,7 +3076,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 22,
+          line: 25,
           column: 3,
           kind: "problem-class",
         },
@@ -3106,7 +3106,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 4,
+          line: 5,
           column: 3,
           kind: "problem-class",
         },
@@ -3136,7 +3136,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 100,
+          line: 109,
           column: 3,
           kind: "problem-class",
         },
@@ -3167,7 +3167,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 118,
+          line: 129,
           column: 3,
           kind: "problem-class",
         },
@@ -3198,7 +3198,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 48,
+          line: 53,
           column: 3,
           kind: "problem-class",
         },
@@ -3228,7 +3228,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 87,
+          line: 95,
           column: 3,
           kind: "problem-class",
         },
@@ -3259,7 +3259,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/credits-core/src/libs/problems.ts",
-          line: 109,
+          line: 119,
           column: 3,
           kind: "problem-class",
         },

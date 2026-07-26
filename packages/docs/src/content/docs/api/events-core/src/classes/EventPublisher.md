@@ -27,13 +27,17 @@ title: "EventPublisher"
 
 ### publishAfterCommit()
 
-> **publishAfterCommit**(`event`): `void`
+> **publishAfterCommit**(`event`, `onPublished?`): `void`
 
 #### Parameters
 
 ##### event
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+
+##### onPublished?
+
+() => `void`
 
 #### Returns
 

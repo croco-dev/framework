@@ -13,25 +13,25 @@ title: "CreditAccount"
 
 > `readonly` **id**: [`CreditAccountId`](/api/credits-core/src/type-aliases/creditaccountid/)
 
----
+***
 
 ### openedAt
 
 > `readonly` **openedAt**: `Date`
 
----
+***
 
 ### position
 
 > `readonly` **position**: `number`
 
----
+***
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
----
+***
 
 ### walletKey?
 

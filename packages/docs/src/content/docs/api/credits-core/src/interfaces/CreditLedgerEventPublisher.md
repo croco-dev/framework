@@ -9,7 +9,7 @@ title: "CreditLedgerEventPublisher"
 
 ### publishAfterCommit()
 
-> **publishAfterCommit**(`event`): `void`
+> **publishAfterCommit**(`event`, `onPublished?`): `void`
 
 #### Parameters
 
@@ -17,11 +17,15 @@ title: "CreditLedgerEventPublisher"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
+##### onPublished?
+
+() => `void`
+
 #### Returns
 
 `void`
 
----
+***
 
 ### publishNow()
 

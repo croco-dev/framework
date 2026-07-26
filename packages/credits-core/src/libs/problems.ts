@@ -1,5 +1,6 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+/** Reports a non-canonical, non-positive, or otherwise invalid credit amount. */
 export class InvalidCreditAmountProblem extends Problem {
   readonly code = "credits-core/invalid-amount";
   readonly category = ProblemCategory.ValidationError;
@@ -9,6 +10,7 @@ export class InvalidCreditAmountProblem extends Problem {
   }
 }
 
+/** Reports that a requested credit account does not exist. */
 export class CreditAccountNotFoundProblem extends Problem {
   readonly code = "credits-core/account-not-found";
   readonly category = ProblemCategory.NotFound;
@@ -18,6 +20,7 @@ export class CreditAccountNotFoundProblem extends Problem {
   }
 }
 
+/** Reports that eligible available credits cannot fund the requested operation. */
 export class InsufficientCreditsProblem extends Problem {
   readonly code = "credits-core/insufficient-credits";
   readonly category = ProblemCategory.BusinessRuleViolation;
@@ -31,6 +34,7 @@ export class InsufficientCreditsProblem extends Problem {
   }
 }
 
+/** Reports that expired grant lots would otherwise have funded the requested operation. */
 export class ExpiredGrantProblem extends Problem {
   readonly code = "credits-core/expired-grant";
   readonly category = ProblemCategory.BusinessRuleViolation;
@@ -44,6 +48,7 @@ export class ExpiredGrantProblem extends Problem {
   }
 }
 
+/** Reports that a reservation cannot be settled using the requested intent. */
 export class CreditReservationMismatchProblem extends Problem {
   readonly code = "credits-core/reservation-mismatch";
   readonly category = ProblemCategory.BusinessRuleViolation;
@@ -57,6 +62,7 @@ export class CreditReservationMismatchProblem extends Problem {
   }
 }
 
+/** Reports reuse of an idempotency key for a different semantic command. */
 export class CreditDuplicateConflictProblem extends Problem {
   readonly code = "credits-core/duplicate-conflict";
   readonly category = ProblemCategory.Conflict;
@@ -70,6 +76,7 @@ export class CreditDuplicateConflictProblem extends Problem {
   }
 }
 
+/** Reports that a referenced credit resource belongs to another account. */
 export class CreditAccountMismatchProblem extends Problem {
   readonly code = "credits-core/account-mismatch";
   readonly category = ProblemCategory.Conflict;
@@ -83,6 +90,7 @@ export class CreditAccountMismatchProblem extends Problem {
   }
 }
 
+/** Reports an optimistic-concurrency mismatch at the credit ledger head. */
 export class StaleLedgerPositionProblem extends Problem {
   readonly code = "credits-core/stale-ledger-position";
   readonly category = ProblemCategory.Conflict;
@@ -96,6 +104,7 @@ export class StaleLedgerPositionProblem extends Problem {
   }
 }
 
+/** Reports an invalid credit ledger command or malformed command metadata. */
 export class InvalidCreditCommandProblem extends Problem {
   readonly code = "credits-core/invalid-command";
   readonly category = ProblemCategory.ValidationError;
@@ -105,6 +114,7 @@ export class InvalidCreditCommandProblem extends Problem {
   }
 }
 
+/** Reports that a referenced credit transaction does not exist. */
 export class CreditTransactionNotFoundProblem extends Problem {
   readonly code = "credits-core/transaction-not-found";
   readonly category = ProblemCategory.NotFound;
@@ -114,6 +124,7 @@ export class CreditTransactionNotFoundProblem extends Problem {
   }
 }
 
+/** Reports a refund that does not match the referenced consumption transaction. */
 export class CreditRefundMismatchProblem extends Problem {
   readonly code = "credits-core/refund-mismatch";
   readonly category = ProblemCategory.BusinessRuleViolation;
@@ -127,6 +138,7 @@ export class CreditRefundMismatchProblem extends Problem {
   }
 }
 
+/** Reports a committed credit command whose domain event could not be published. */
 export class CreditEventPublicationProblem extends Problem {
   readonly code = "credits-core/event-publication-failed";
   readonly category = ProblemCategory.InternalServerError;

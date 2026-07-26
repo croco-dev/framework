@@ -9,6 +9,6 @@ title: "CreditAmount"
 
 ## Type Declaration
 
-### \[CREDIT_AMOUNT\]
+### \[CREDIT\_AMOUNT\]
 
-> `readonly` **\[CREDIT_AMOUNT\]**: `true`
+> `readonly` **\[CREDIT\_AMOUNT\]**: `true`

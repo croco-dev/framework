@@ -2196,7 +2196,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:74:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:81:3` (problem-class)
 
 <a id="credits-core-account-not-found"></a>
 
@@ -2214,7 +2214,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:13:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:15:3` (problem-class)
 
 <a id="credits-core-duplicate-conflict"></a>
 
@@ -2232,7 +2232,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:61:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:67:3` (problem-class)
 
 <a id="credits-core-event-publication-failed"></a>
 
@@ -2250,7 +2250,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:131:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:143:3` (problem-class)
 
 <a id="credits-core-expired-grant"></a>
 
@@ -2268,7 +2268,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:35:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:39:3` (problem-class)
 
 <a id="credits-core-insufficient-credits"></a>
 
@@ -2286,7 +2286,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:22:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:25:3` (problem-class)
 
 <a id="credits-core-invalid-amount"></a>
 
@@ -2304,7 +2304,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:4:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:5:3` (problem-class)
 
 <a id="credits-core-invalid-command"></a>
 
@@ -2322,7 +2322,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:100:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:109:3` (problem-class)
 
 <a id="credits-core-refund-mismatch"></a>
 
@@ -2340,7 +2340,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:118:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:129:3` (problem-class)
 
 <a id="credits-core-reservation-mismatch"></a>
 
@@ -2358,7 +2358,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:48:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:53:3` (problem-class)
 
 <a id="credits-core-stale-ledger-position"></a>
 
@@ -2376,7 +2376,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:87:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:95:3` (problem-class)
 
 <a id="credits-core-transaction-not-found"></a>
 
@@ -2394,7 +2394,7 @@ Sources:
 
 Sources:
 
-- `packages/credits-core/src/libs/problems.ts:109:3` (problem-class)
+- `packages/credits-core/src/libs/problems.ts:119:3` (problem-class)
 
 <a id="croco-cli-jobs-001"></a>
 

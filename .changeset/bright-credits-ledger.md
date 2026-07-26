@@ -1,5 +1,6 @@
 ---
 "@croco/credits-core": minor
+"@croco/events-core": patch
 "@croco/problems-core": patch
 ---
 

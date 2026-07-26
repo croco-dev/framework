@@ -124,6 +124,9 @@ through `publishAfterCommit()`. When no transaction context exists, it publishes
 the in-memory command has committed. If immediate publication fails,
 `CreditEventPublicationProblem` reports that the ledger command already committed; retrying the same
 command on the same service instance republishes the pending event without moving the balance again.
+The in-process retry buffer is bounded by `pendingEventLimit` (default `1000`) and reports evictions
+through `onPendingEventEvicted` or a default warning. This buffer is a process-local recovery aid, not
+a durable delivery mechanism.
 Persistent adapters should execute `CreditLedgerStore.execute()` inside the application transaction
 or a durable outbox boundary so pending delivery survives process restarts.
 
@@ -145,6 +148,11 @@ for (const testCase of suite.cases) {
 The suite covers a semantic idempotency conflict matrix, concurrent overdraw and competing settlement
 prevention, atomic partial settlement and failure paths, restricted allocation, historical
 projections, deterministic bounded expiry, linked expiry-preserving refunds, and projection evidence.
+
+`InMemoryCreditLedgerStore` is a deterministic reference adapter: historical balance projection and
+linked refund lookup scan account history. Production adapters should persist periodic balance
+checkpoints and index `relatedTransactionId`, while preserving the same append-only transaction and
+conformance contracts.
 
 ## Verification
 

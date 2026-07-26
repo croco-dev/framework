@@ -1,25 +1,26 @@
 import {
-  EventAfterCommitRequiresActiveTransactionProblem,
   type DomainEvent,
+  EventAfterCommitRequiresActiveTransactionProblem,
 } from "@croco/events-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  addCreditAmounts,
   CreditAccountMismatchProblem,
   CreditDuplicateConflictProblem,
   CreditEventPublicationProblem,
+  type CreditLedgerCommand,
   CreditLedgerCommittedEvent,
   CreditLedgerService,
-  ExpiredGrantProblem,
-  InMemoryCreditLedgerStore,
-  InvalidCreditAmountProblem,
-  InvalidCreditCommandProblem,
-  StaleLedgerPositionProblem,
-  addCreditAmounts,
   compareCreditAmounts,
   createCreditLedgerStoreConformanceSuite,
   creditAmount,
+  ExpiredGrantProblem,
+  InMemoryCreditLedgerStore,
+  InsufficientCreditsProblem,
+  InvalidCreditAmountProblem,
+  InvalidCreditCommandProblem,
+  StaleLedgerPositionProblem,
   subtractCreditAmounts,
-  type CreditLedgerCommand,
 } from "../index";
 
 describe("InMemoryCreditLedgerStore conformance", () => {
@@ -97,9 +98,10 @@ describe("CreditLedgerService", () => {
       clock: () => new Date("2026-07-26T12:00:00.000Z"),
       idGenerator: () => `event-id-${++sequence}`,
       eventPublisher: {
-        publishAfterCommit(event) {
+        publishAfterCommit(event, onPublished) {
           expect(commandCommitted).toBe(true);
           events.push(event);
+          onPublished?.();
         },
         async publishNow() {
           throw new InvalidCreditAmountProblem("unexpected immediate publication");
@@ -223,6 +225,85 @@ describe("CreditLedgerService", () => {
     });
   });
 
+  it("keeps a scheduled event pending until post-commit publication is acknowledged", async () => {
+    const acknowledgements: Array<() => void> = [];
+    service = new CreditLedgerService({
+      store,
+      clock: () => new Date("2026-07-26T12:00:00.000Z"),
+      idGenerator: () => `scheduled-event-id-${++sequence}`,
+      eventPublisher: {
+        publishAfterCommit(_event, onPublished) {
+          if (onPublished) acknowledgements.push(onPublished);
+        },
+        async publishNow() {
+          throw new InvalidCreditAmountProblem("unexpected immediate publication");
+        },
+      },
+    });
+    const opened = await service.openAccount({
+      tenantId: "tenant-scheduled-event",
+      idempotencyKey: "scheduled-event-open",
+      reference: ref("scheduled-event-open"),
+    });
+    const input = {
+      accountId: opened.account.id,
+      amount: creditAmount("2"),
+      idempotencyKey: "scheduled-event-grant",
+      reference: ref("scheduled-event-grant"),
+    };
+
+    await service.grantCredits(input);
+    await service.grantCredits(input);
+    expect(acknowledgements).toHaveLength(2);
+
+    acknowledgements[1]?.();
+    await service.grantCredits(input);
+    expect(acknowledgements).toHaveLength(2);
+    expect(await service.getBalance(opened.account.id)).toMatchObject({
+      position: 1,
+      available: "2",
+    });
+  });
+
+  it("bounds pending event retries and reports eviction", async () => {
+    const evicted: string[] = [];
+    service = new CreditLedgerService({
+      store,
+      clock: () => new Date("2026-07-26T12:00:00.000Z"),
+      idGenerator: () => `bounded-event-id-${++sequence}`,
+      pendingEventLimit: 1,
+      onPendingEventEvicted: (idempotencyKey) => evicted.push(idempotencyKey),
+      eventPublisher: {
+        publishAfterCommit() {
+          throw new InvalidCreditAmountProblem("simulated scheduling failure");
+        },
+        async publishNow() {},
+      },
+    });
+    const opened = await service.openAccount({
+      tenantId: "tenant-bounded-event",
+      idempotencyKey: "bounded-event-open",
+      reference: ref("bounded-event-open"),
+    });
+
+    for (const id of ["first", "second"]) {
+      await expect(
+        service.grantCredits({
+          accountId: opened.account.id,
+          amount: creditAmount("1"),
+          idempotencyKey: `bounded-event-${id}`,
+          reference: ref(`bounded-event-${id}`),
+        }),
+      ).rejects.toThrow(CreditEventPublicationProblem);
+    }
+
+    expect(evicted).toEqual(["bounded-event-first"]);
+    expect(await service.getBalance(opened.account.id)).toMatchObject({
+      position: 2,
+      available: "2",
+    });
+  });
+
   it("rejects expired and meter-restricted grants before balance movement", async () => {
     const opened = await service.openAccount({
       tenantId: "tenant-restricted",
@@ -251,6 +332,67 @@ describe("CreditLedgerService", () => {
       position: 1,
       available: "10",
       consumed: "0",
+    });
+  });
+
+  it("reports insufficient credits when expired lots still cannot fund the request", async () => {
+    const opened = await service.openAccount({
+      tenantId: "tenant-expired-shortfall",
+      idempotencyKey: "expired-shortfall-open",
+      reference: ref("expired-shortfall-open"),
+    });
+    await service.grantCredits({
+      accountId: opened.account.id,
+      amount: creditAmount("1"),
+      expiresAt: new Date("2026-07-25T00:00:00.000Z"),
+      idempotencyKey: "expired-shortfall-grant",
+      reference: ref("expired-shortfall-grant"),
+    });
+
+    await expect(
+      service.consumeCredits({
+        accountId: opened.account.id,
+        amount: creditAmount("1000"),
+        idempotencyKey: "expired-shortfall-consume",
+        reference: ref("expired-shortfall-consume"),
+      }),
+    ).rejects.toThrow(InsufficientCreditsProblem);
+  });
+
+  it("enforces expected position when reopening an existing tenant wallet", async () => {
+    const opened = await service.openAccount({
+      tenantId: "tenant-reopen",
+      walletKey: "primary",
+      idempotencyKey: "reopen-first",
+      reference: ref("reopen-first"),
+    });
+    await service.grantCredits({
+      accountId: opened.account.id,
+      amount: creditAmount("1"),
+      idempotencyKey: "reopen-grant",
+      reference: ref("reopen-grant"),
+    });
+
+    await expect(
+      service.openAccount({
+        tenantId: "tenant-reopen",
+        walletKey: "primary",
+        expectedPosition: 0,
+        idempotencyKey: "reopen-stale",
+        reference: ref("reopen-stale"),
+      }),
+    ).rejects.toThrow(StaleLedgerPositionProblem);
+    await expect(
+      service.openAccount({
+        tenantId: "tenant-reopen",
+        walletKey: "primary",
+        expectedPosition: 1,
+        idempotencyKey: "reopen-current",
+        reference: ref("reopen-current"),
+      }),
+    ).resolves.toMatchObject({
+      account: { id: opened.account.id, position: 1 },
+      replayed: true,
     });
   });
 
@@ -462,7 +604,9 @@ describe("CreditLedgerService", () => {
     await service.grantCredits(input);
     now = new Date("2026-07-27T00:00:00.000Z");
 
-    await expect(service.grantCredits(input)).resolves.toMatchObject({ replayed: true });
+    await expect(service.grantCredits(input)).resolves.toMatchObject({
+      replayed: true,
+    });
     await expect(service.grantCredits({ ...input, amount: creditAmount("2") })).rejects.toThrow(
       CreditDuplicateConflictProblem,
     );

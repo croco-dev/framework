@@ -13,13 +13,13 @@ title: "CreditGrantTerms"
 
 > `readonly` `optional` **expiresAt?**: `Date`
 
----
+***
 
 ### meterKeys?
 
 > `readonly` `optional` **meterKeys?**: readonly `string`[]
 
----
+***
 
 ### source?
 

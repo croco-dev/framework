@@ -43,7 +43,7 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`execute`](/api/credits-core/src/classes/creditledgerstore/#execute)
 
----
+***
 
 ### getAccount()
 
@@ -63,7 +63,7 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getAccount`](/api/credits-core/src/classes/creditledgerstore/#getaccount)
 
----
+***
 
 ### getBalance()
 
@@ -87,7 +87,7 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getBalance`](/api/credits-core/src/classes/creditledgerstore/#getbalance)
 
----
+***
 
 ### getHistory()
 
@@ -121,7 +121,7 @@ title: "InMemoryCreditLedgerStore"
 
 [`CreditLedgerStore`](/api/credits-core/src/classes/creditledgerstore/).[`getHistory`](/api/credits-core/src/classes/creditledgerstore/#gethistory)
 
----
+***
 
 ### getReservation()
 

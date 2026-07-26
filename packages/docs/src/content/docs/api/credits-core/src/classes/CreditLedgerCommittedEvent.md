@@ -37,7 +37,7 @@ title: "CreditLedgerCommittedEvent"
 
 > `readonly` **data**: [`CreditLedgerCommittedEventData`](/api/credits-core/src/type-aliases/creditledgercommittedeventdata/)
 
----
+***
 
 ### eventId
 
@@ -47,7 +47,7 @@ title: "CreditLedgerCommittedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
----
+***
 
 ### eventName
 
@@ -57,7 +57,7 @@ title: "CreditLedgerCommittedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
----
+***
 
 ### metadata
 
@@ -67,7 +67,7 @@ title: "CreditLedgerCommittedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
----
+***
 
 ### timestamp
 
@@ -77,11 +77,11 @@ title: "CreditLedgerCommittedEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
----
+***
 
 ### eventName
 
-> `static` **eventName**: `string` = `"credits.ledger_committed"`
+> `readonly` `static` **eventName**: `"credits.ledger_committed"` = `"credits.ledger_committed"`
 
 #### Overrides
 

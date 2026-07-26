@@ -6,19 +6,21 @@
  */
 
 export {
-  ZERO_CREDIT_AMOUNT,
-  ZERO_CREDIT_SIGNED_AMOUNT,
   addCreditAmounts,
+  addSignedCreditAmounts,
   compareCreditAmounts,
   creditAmount,
   subtractCreditAmounts,
+  toSignedCreditAmount,
+  ZERO_CREDIT_AMOUNT,
+  ZERO_CREDIT_SIGNED_AMOUNT,
 } from "./libs/amount";
 export {
-  CreditLedgerService,
   type AdjustCreditsInput,
   type CommitCreditsInput,
   type ConsumeCreditsInput,
   type CreditLedgerEventPublisher,
+  CreditLedgerService,
   type CreditLedgerServiceOptions,
   type ExpireCreditsInput,
   type GrantCreditsInput,
@@ -29,17 +31,17 @@ export {
 } from "./libs/CreditLedgerService";
 export { CreditLedgerStore } from "./libs/CreditLedgerStore";
 export {
-  createCreditLedgerStoreConformanceSuite,
   type CreditLedgerStoreConformanceCase,
   type CreditLedgerStoreConformanceOptions,
   type CreditLedgerStoreConformanceSuite,
+  createCreditLedgerStoreConformanceSuite,
 } from "./libs/conformance";
 export {
   CreditLedgerCommittedEvent,
   type CreditLedgerCommittedEventData,
 } from "./libs/events/CreditLedgerCommittedEvent";
-export { creditAccountId, creditReservationId, creditTransactionId } from "./libs/identifiers";
 export { InMemoryCreditLedgerStore } from "./libs/InMemoryCreditLedgerStore";
+export { creditAccountId, creditReservationId, creditTransactionId } from "./libs/identifiers";
 export {
   CreditAccountMismatchProblem,
   CreditAccountNotFoundProblem,

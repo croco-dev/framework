@@ -13,7 +13,7 @@ title: "CreditSemanticReference"
 
 > `readonly` **id**: `string`
 
----
+***
 
 ### type
 

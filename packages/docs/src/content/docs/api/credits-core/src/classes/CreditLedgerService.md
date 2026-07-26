@@ -37,7 +37,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
----
+***
 
 ### commitCredits()
 
@@ -53,7 +53,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
----
+***
 
 ### consumeCredits()
 
@@ -69,7 +69,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
----
+***
 
 ### expireCredits()
 
@@ -85,7 +85,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
----
+***
 
 ### getAccount()
 
@@ -101,7 +101,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditAccount`](/api/credits-core/src/type-aliases/creditaccount/) \| `null`\>
 
----
+***
 
 ### getBalance()
 
@@ -121,7 +121,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditBalance`](/api/credits-core/src/type-aliases/creditbalance/)\>
 
----
+***
 
 ### getHistory()
 
@@ -151,7 +151,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditHistoryPage`](/api/credits-core/src/type-aliases/credithistorypage/)\>
 
----
+***
 
 ### getReservation()
 
@@ -171,7 +171,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditReservation`](/api/credits-core/src/type-aliases/creditreservation/) \| `null`\>
 
----
+***
 
 ### grantCredits()
 
@@ -187,7 +187,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
----
+***
 
 ### openAccount()
 
@@ -203,7 +203,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
----
+***
 
 ### refundCredits()
 
@@ -219,7 +219,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
----
+***
 
 ### releaseCredits()
 
@@ -235,7 +235,7 @@ title: "CreditLedgerService"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
----
+***
 
 ### reserveCredits()
 

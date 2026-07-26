@@ -47,13 +47,16 @@ export class EventPublisher {
     await this.eventBus.publish(event);
   }
 
-  publishAfterCommit(event: DomainEvent): void {
+  publishAfterCommit(event: DomainEvent, onPublished?: () => void): void {
     const txContext = this.tryGetTransactionContext();
     if (!txContext?.isInTransaction()) {
       throw new EventAfterCommitRequiresActiveTransactionProblem();
     }
 
-    txContext.onAfterCommit(() => this.eventBus.publish(event));
+    txContext.onAfterCommit(async () => {
+      await this.eventBus.publish(event);
+      onPublished?.();
+    });
   }
 
   async publishMany(events: DomainEvent[]): Promise<PublishResult<DomainEvent>[]> {

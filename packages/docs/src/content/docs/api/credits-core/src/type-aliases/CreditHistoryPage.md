@@ -13,13 +13,13 @@ title: "CreditHistoryPage"
 
 > `readonly` **accountId**: [`CreditAccountId`](/api/credits-core/src/type-aliases/creditaccountid/)
 
----
+***
 
 ### position
 
 > `readonly` **position**: `number`
 
----
+***
 
 ### transactions
 

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
-  EventAfterCommitRequiresActiveTransactionProblem,
   type DomainEvent,
+  EventAfterCommitRequiresActiveTransactionProblem,
 } from "@croco/events-core";
 import type { CreditLedgerStore } from "./CreditLedgerStore";
 import { CreditLedgerCommittedEvent } from "./events/CreditLedgerCommittedEvent";
@@ -24,7 +24,7 @@ import type {
 
 export interface CreditLedgerEventPublisher {
   publishNow(event: DomainEvent): Promise<void>;
-  publishAfterCommit(event: DomainEvent): void;
+  publishAfterCommit(event: DomainEvent, onPublished?: () => void): void;
 }
 
 export type CreditLedgerServiceOptions = {
@@ -32,6 +32,8 @@ export type CreditLedgerServiceOptions = {
   readonly eventPublisher?: CreditLedgerEventPublisher;
   readonly clock?: () => Date;
   readonly idGenerator?: () => string;
+  readonly pendingEventLimit?: number;
+  readonly onPendingEventEvicted?: (idempotencyKey: string) => void;
 };
 
 type CommandMetadata = {
@@ -103,6 +105,8 @@ export class CreditLedgerService {
   private readonly eventPublisher?: CreditLedgerEventPublisher;
   private readonly clock: () => Date;
   private readonly idGenerator: () => string;
+  private readonly pendingEventLimit: number;
+  private readonly onPendingEventEvicted: (idempotencyKey: string) => void;
   private readonly pendingEvents = new Map<string, CreditLedgerCommittedEvent>();
 
   constructor(options: CreditLedgerServiceOptions) {
@@ -110,6 +114,17 @@ export class CreditLedgerService {
     this.eventPublisher = options.eventPublisher;
     this.clock = options.clock ?? (() => new Date());
     this.idGenerator = options.idGenerator ?? randomUUID;
+    this.pendingEventLimit = options.pendingEventLimit ?? 1_000;
+    if (!Number.isInteger(this.pendingEventLimit) || this.pendingEventLimit < 1) {
+      throw new InvalidCreditCommandProblem("pendingEventLimit must be a positive integer");
+    }
+    this.onPendingEventEvicted =
+      options.onPendingEventEvicted ??
+      ((idempotencyKey) => {
+        console.warn(
+          `[credits-core] evicted pending ledger event for idempotency key '${idempotencyKey}'`,
+        );
+      });
   }
 
   async openAccount(input: OpenCreditAccountInput): Promise<CreditCommandResult> {
@@ -304,17 +319,28 @@ export class CreditLedgerService {
     event: CreditLedgerCommittedEvent,
   ): Promise<void> {
     if (!this.eventPublisher) return;
+    this.rememberPendingEvent(idempotencyKey, event);
     try {
-      this.eventPublisher.publishAfterCommit(event);
-      this.pendingEvents.delete(idempotencyKey);
+      this.eventPublisher.publishAfterCommit(event, () => {
+        this.pendingEvents.delete(idempotencyKey);
+      });
     } catch (error) {
       if (!(error instanceof EventAfterCommitRequiresActiveTransactionProblem)) {
-        this.pendingEvents.set(idempotencyKey, event);
         const cause = error instanceof Error ? error : new Error(String(error));
         throw new CreditEventPublicationProblem(idempotencyKey, cause);
       }
-      this.pendingEvents.set(idempotencyKey, event);
       await this.publishPendingImmediate(idempotencyKey, event);
+    }
+  }
+
+  private rememberPendingEvent(idempotencyKey: string, event: CreditLedgerCommittedEvent): void {
+    this.pendingEvents.delete(idempotencyKey);
+    this.pendingEvents.set(idempotencyKey, event);
+    while (this.pendingEvents.size > this.pendingEventLimit) {
+      const oldestIdempotencyKey = this.pendingEvents.keys().next().value;
+      if (oldestIdempotencyKey === undefined) return;
+      this.pendingEvents.delete(oldestIdempotencyKey);
+      this.onPendingEventEvicted(oldestIdempotencyKey);
     }
   }
 

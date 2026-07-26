@@ -35,7 +35,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
----
+***
 
 ### getAccount()
 
@@ -51,7 +51,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditAccount`](/api/credits-core/src/type-aliases/creditaccount/) \| `null`\>
 
----
+***
 
 ### getBalance()
 
@@ -71,7 +71,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditBalance`](/api/credits-core/src/type-aliases/creditbalance/)\>
 
----
+***
 
 ### getHistory()
 
@@ -101,7 +101,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditHistoryPage`](/api/credits-core/src/type-aliases/credithistorypage/)\>
 
----
+***
 
 ### getReservation()
 

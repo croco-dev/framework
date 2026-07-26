@@ -1,12 +1,12 @@
 import {
-  ZERO_CREDIT_AMOUNT,
-  ZERO_CREDIT_SIGNED_AMOUNT,
   addCreditAmounts,
   addSignedCreditAmounts,
   assertPositiveCreditAmount,
   compareCreditAmounts,
   subtractCreditAmounts,
   toSignedCreditAmount,
+  ZERO_CREDIT_AMOUNT,
+  ZERO_CREDIT_SIGNED_AMOUNT,
 } from "./amount";
 import { CreditLedgerStore } from "./CreditLedgerStore";
 import {
@@ -119,6 +119,29 @@ function cloneReservation(
   };
 }
 
+function cloneAccountState(state: AccountState): AccountState {
+  return {
+    account: cloneAccount(state.account),
+    transactions: state.transactions.map(cloneTransaction),
+    reservations: new Map(
+      [...state.reservations].map(([id, reservation]) => [
+        id,
+        cloneReservation(reservation) as CreditReservation,
+      ]),
+    ),
+    lots: new Map(
+      [...state.lots].map(([id, lot]) => [
+        id,
+        {
+          ...lot,
+          createdAt: new Date(lot.createdAt),
+          grant: cloneGrant(lot.grant) ?? {},
+        },
+      ]),
+    ),
+  };
+}
+
 function cloneResult(result: CreditCommandResult, replayed = result.replayed): CreditCommandResult {
   return {
     ...result,
@@ -172,6 +195,11 @@ function semanticCommand(command: CreditLedgerCommand): unknown {
       return semantic;
     }
   }
+  return assertNever(command);
+}
+
+function assertNever(value: never): never {
+  throw new InvalidCreditCommandProblem(`unsupported credit ledger operation '${String(value)}'`);
 }
 
 function isExpired(lot: LotState, asOf: Date): boolean {
@@ -249,7 +277,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
     const result =
       command.operation === "open"
         ? this.openAccount(command)
-        : this.executeOnAccount(this.requireAccount(command.accountId), command);
+        : this.executeOnAccountAtomically(this.requireAccount(command.accountId), command);
     this.idempotency.set(command.idempotencyKey, {
       fingerprint,
       result: cloneResult(result),
@@ -373,19 +401,16 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
 
   private openAccount(command: OpenCreditAccountCommand): CreditCommandResult {
     const walletKey = command.walletKey ?? "";
-    let tenantAccounts = this.accountsByTenant.get(command.tenantId);
-    if (!tenantAccounts) {
-      tenantAccounts = new Map();
-      this.accountsByTenant.set(command.tenantId, tenantAccounts);
-    }
-    const existingAccountId = tenantAccounts.get(walletKey);
+    const tenantAccounts = this.accountsByTenant.get(command.tenantId);
+    const existingAccountId = tenantAccounts?.get(walletKey);
     if (existingAccountId) {
       const existing = this.requireAccount(existingAccountId);
+      this.assertExpectedPosition(existing, command.expectedPosition);
       return {
         operation: "open",
         account: existing.account,
         transactions: [],
-        replayed: false,
+        replayed: true,
       };
     }
     if (this.accounts.has(command.accountId)) {
@@ -395,6 +420,10 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       throw new StaleLedgerPositionProblem(command.accountId, command.expectedPosition, 0);
     }
 
+    const writableTenantAccounts = tenantAccounts ?? new Map<string, CreditAccountId>();
+    if (!tenantAccounts) {
+      this.accountsByTenant.set(command.tenantId, writableTenantAccounts);
+    }
     const account: CreditAccount = {
       id: command.accountId,
       tenantId: command.tenantId,
@@ -408,8 +437,25 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       reservations: new Map(),
       lots: new Map(),
     });
-    tenantAccounts.set(walletKey, command.accountId);
+    writableTenantAccounts.set(walletKey, command.accountId);
     return { operation: "open", account, transactions: [], replayed: false };
+  }
+
+  private executeOnAccountAtomically(
+    account: AccountState,
+    command: Exclude<CreditLedgerCommand, OpenCreditAccountCommand>,
+  ): CreditCommandResult {
+    const accountSnapshot = cloneAccountState(account);
+    const transactionAccountsSnapshot = new Map(this.transactionAccounts);
+    const reservationAccountsSnapshot = new Map(this.reservationAccounts);
+    try {
+      return this.executeOnAccount(account, command);
+    } catch (error) {
+      this.accounts.set(account.account.id, accountSnapshot);
+      this.replaceMap(this.transactionAccounts, transactionAccountsSnapshot);
+      this.replaceMap(this.reservationAccounts, reservationAccountsSnapshot);
+      throw error;
+    }
   }
 
   private executeOnAccount(
@@ -727,13 +773,17 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       ZERO_CREDIT_AMOUNT,
     );
     if (compareCreditAmounts(available, options.amount) < 0) {
-      const hasExpiredEligibleLot = [...options.account.lots.values()].some(
-        (lot) =>
-          isExpired(lot, options.asOf) &&
-          isMeterEligible(lot, options.meterKey) &&
-          compareCreditAmounts(lot.available, ZERO_CREDIT_AMOUNT) > 0,
-      );
-      if (hasExpiredEligibleLot) {
+      const expiredAvailable = [...options.account.lots.values()]
+        .filter(
+          (lot) =>
+            isExpired(lot, options.asOf) &&
+            isMeterEligible(lot, options.meterKey) &&
+            compareCreditAmounts(lot.available, ZERO_CREDIT_AMOUNT) > 0,
+        )
+        .reduce((total, lot) => addCreditAmounts(total, lot.available), ZERO_CREDIT_AMOUNT);
+      if (
+        compareCreditAmounts(addCreditAmounts(available, expiredAvailable), options.amount) >= 0
+      ) {
         throw new ExpiredGrantProblem(options.account.account.id);
       }
       throw new InsufficientCreditsProblem(options.account.account.id, options.amount, available);
@@ -762,7 +812,10 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       if (compareCreditAmounts(remaining, ZERO_CREDIT_AMOUNT) === 0) break;
       const amount =
         compareCreditAmounts(allocation.amount, remaining) <= 0 ? allocation.amount : remaining;
-      result.push({ grantTransactionId: allocation.grantTransactionId, amount });
+      result.push({
+        grantTransactionId: allocation.grantTransactionId,
+        amount,
+      });
       remaining = subtractCreditAmounts(remaining, amount);
     }
     return result;
@@ -788,7 +841,12 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
         deductedByLot.get(allocation.grantTransactionId) ?? ZERO_CREDIT_AMOUNT,
       );
       return compareCreditAmounts(remaining, ZERO_CREDIT_AMOUNT) > 0
-        ? [{ grantTransactionId: allocation.grantTransactionId, amount: remaining }]
+        ? [
+            {
+              grantTransactionId: allocation.grantTransactionId,
+              amount: remaining,
+            },
+          ]
         : [];
     });
   }
@@ -1006,5 +1064,12 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       );
     }
     return reservation;
+  }
+
+  private replaceMap<Key, Value>(target: Map<Key, Value>, source: Map<Key, Value>): void {
+    target.clear();
+    for (const [key, value] of source) {
+      target.set(key, value);
+    }
   }
 }

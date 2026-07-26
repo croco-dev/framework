@@ -323,6 +323,16 @@ export function createCreditLedgerStoreConformanceSuite(
               }),
             InsufficientCreditsProblem,
           );
+          assert.deepEqual(await service.getBalance(opened.account.id), {
+            accountId: opened.account.id,
+            position: 1,
+            available: "9",
+            reserved: "0",
+            consumed: "0",
+            expired: "0",
+            lifetimeGranted: "9",
+            netAdjusted: "0",
+          });
           assert.deepEqual(await service.getBalance(opened.account.id, 1), {
             accountId: opened.account.id,
             position: 1,
@@ -337,6 +347,50 @@ export function createCreditLedgerStoreConformanceSuite(
             (await service.getHistory(opened.account.id, { atPosition: 1 })).transactions.length,
             1,
           );
+        },
+      },
+      {
+        name: "applies compensating adjustments exactly once in both directions",
+        run: async () => {
+          const service = await createService();
+          const opened = await service.openAccount({
+            tenantId: "tenant-adjustments",
+            idempotencyKey: "open-adjustments",
+            reference: reference("open-adjustments"),
+          });
+          const creditInput = {
+            accountId: opened.account.id,
+            amount: creditAmount("8"),
+            direction: "credit" as const,
+            idempotencyKey: "adjust-credit",
+            reference: reference("adjust-credit"),
+          };
+          const credited = await service.adjustCredits(creditInput);
+          const replayedCredit = await service.adjustCredits(creditInput);
+          assert.equal(replayedCredit.replayed, true);
+          assert.equal(replayedCredit.transactions[0]?.id, credited.transactions[0]?.id);
+
+          const debitInput = {
+            accountId: opened.account.id,
+            amount: creditAmount("3"),
+            direction: "debit" as const,
+            idempotencyKey: "adjust-debit",
+            reference: reference("adjust-debit"),
+          };
+          const debited = await service.adjustCredits(debitInput);
+          const replayedDebit = await service.adjustCredits(debitInput);
+          assert.equal(replayedDebit.replayed, true);
+          assert.equal(replayedDebit.transactions[0]?.id, debited.transactions[0]?.id);
+          assert.deepEqual(await service.getBalance(opened.account.id), {
+            accountId: opened.account.id,
+            position: 2,
+            available: "5",
+            reserved: "0",
+            consumed: "0",
+            expired: "0",
+            lifetimeGranted: "0",
+            netAdjusted: "5",
+          });
         },
       },
       {
