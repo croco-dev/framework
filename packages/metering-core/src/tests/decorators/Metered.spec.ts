@@ -10,6 +10,7 @@ import {
   runWithMeteringService,
   setMeteringService,
 } from "../../libs/decorators/Metered";
+import { defineMeter, dimension } from "../../libs/MeterRef";
 import type { MeteringService } from "../../libs/MeteringService";
 
 describe("@Metered decorator", () => {
@@ -74,6 +75,88 @@ describe("@Metered decorator", () => {
       await service.doSomething();
 
       expect(mockService.record).toHaveBeenCalledWith(expect.objectContaining({ value: 1 }));
+    });
+
+    it("should record COUNT meter refs through the typed service path", async () => {
+      const meter = defineMeter({
+        key: "api.calls",
+        aggregation: "COUNT",
+        unit: "request",
+      });
+
+      class TestService {
+        tenantId = "tenant-1";
+
+        @Metered({ meter })
+        async doSomething(): Promise<void> {}
+      }
+
+      await new TestService().doSomething();
+
+      expect(mockService.record).toHaveBeenCalledWith(meter, {
+        tenantId: "tenant-1",
+        value: 1,
+        eventId: undefined,
+        dimensions: undefined,
+        metadata: undefined,
+      });
+      expect(getMeteredMetadata(TestService.prototype, "doSomething")?.meter).toBe(meter);
+    });
+
+    it("should extract event identity for billing-required COUNT meter refs", async () => {
+      const meter = defineMeter({
+        key: "api.calls",
+        aggregation: "COUNT",
+        unit: "request",
+        billing: "required",
+      });
+
+      class TestService {
+        tenantId = "tenant-1";
+
+        @Metered({
+          meter,
+          eventIdExtractor: (args) => (args[0] as { requestId: string }).requestId,
+        })
+        async doSomething(_request: { requestId: string }): Promise<void> {}
+      }
+
+      await new TestService().doSomething({ requestId: "request-1" });
+
+      expect(mockService.record).toHaveBeenCalledWith(
+        meter,
+        expect.objectContaining({ eventId: "request-1" }),
+      );
+    });
+
+    it("should pass extracted dimensions through the typed service path", async () => {
+      const meter = defineMeter({
+        key: "ai.tokens",
+        aggregation: "COUNT",
+        unit: "token",
+        dimensions: {
+          model: dimension.enum(["gpt-5", "gpt-5-mini"]),
+        },
+      });
+
+      class TestService {
+        tenantId = "tenant-1";
+
+        @Metered({
+          meter,
+          dimensionsExtractor: (args) => ({
+            model: (args[0] as { model: "gpt-5" | "gpt-5-mini" }).model,
+          }),
+        })
+        async doSomething(_request: { model: "gpt-5" | "gpt-5-mini" }): Promise<void> {}
+      }
+
+      await new TestService().doSomething({ model: "gpt-5" });
+
+      expect(mockService.record).toHaveBeenCalledWith(
+        meter,
+        expect.objectContaining({ dimensions: { model: "gpt-5" } }),
+      );
     });
   });
 
@@ -191,6 +274,61 @@ describe("@Metered decorator", () => {
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
+    it("should return the original result when a local dimensions extractor fails", async () => {
+      const originalMethod = vi.fn().mockResolvedValue("success");
+      const meter = defineMeter({
+        key: "ai.tokens",
+        aggregation: "COUNT",
+        unit: "token",
+        dimensions: {
+          model: dimension.enum(["gpt-5"]),
+        },
+      });
+
+      class TestService {
+        @Metered({
+          meter,
+          dimensionsExtractor: () => {
+            throw new Error("Dimension extraction failed");
+          },
+        })
+        async doSomething(): Promise<string> {
+          return originalMethod();
+        }
+      }
+
+      await expect(new TestService().doSomething()).resolves.toBe("success");
+      expect(originalMethod).toHaveBeenCalledTimes(1);
+      expect(mockService.record).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it("should return the original result when a local event ID extractor fails", async () => {
+      const originalMethod = vi.fn().mockResolvedValue("success");
+      const meter = defineMeter({
+        key: "api.calls",
+        aggregation: "COUNT",
+        unit: "request",
+      });
+
+      class TestService {
+        @Metered({
+          meter,
+          eventIdExtractor: () => {
+            throw new Error("Event ID extraction failed");
+          },
+        })
+        async doSomething(): Promise<string> {
+          return originalMethod();
+        }
+      }
+
+      await expect(new TestService().doSomething()).resolves.toBe("success");
+      expect(originalMethod).toHaveBeenCalledTimes(1);
+      expect(mockService.record).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
     it("should fallback to console.error if DI logger fails", async () => {
       vi.spyOn(Container, "get").mockImplementationOnce((token) => {
         if (token === LOGGER_TOKEN) {
@@ -218,6 +356,48 @@ describe("@Metered decorator", () => {
 
       consoleSpy.mockRestore();
     });
+
+    it("should fail closed when a billing-required meter rejects the record", async () => {
+      vi.mocked(mockService.record).mockRejectedValue(new Error("Billing write failed"));
+      const meter = defineMeter({
+        key: "api.calls",
+        aggregation: "COUNT",
+        unit: "request",
+        billing: "required",
+      });
+
+      class TestService {
+        @Metered({ meter, eventIdExtractor: () => "request-1" })
+        async doSomething(): Promise<string> {
+          return "success";
+        }
+      }
+
+      await expect(new TestService().doSomething()).rejects.toThrow("Billing write failed");
+    });
+
+    it("should fail closed when a billing-required event ID is blank", async () => {
+      const originalMethod = vi.fn().mockResolvedValue("success");
+      const meter = defineMeter({
+        key: "api.calls",
+        aggregation: "COUNT",
+        unit: "request",
+        billing: "required",
+      });
+
+      class TestService {
+        @Metered({ meter, eventIdExtractor: () => " " })
+        async doSomething(): Promise<string> {
+          return originalMethod();
+        }
+      }
+
+      await expect(new TestService().doSomething()).rejects.toMatchObject({
+        code: "metering/invalid-usage-envelope",
+      });
+      expect(originalMethod).not.toHaveBeenCalled();
+      expect(mockService.record).not.toHaveBeenCalled();
+    });
   });
 
   describe("without MeteringService", () => {
@@ -235,6 +415,29 @@ describe("@Metered decorator", () => {
       const result = await service.doSomething();
 
       expect(result).toBe("result");
+    });
+
+    it("should fail closed for billing-required meters", async () => {
+      clearMeteringService();
+      const originalMethod = vi.fn().mockResolvedValue("result");
+      const meter = defineMeter({
+        key: "api.calls",
+        aggregation: "COUNT",
+        unit: "request",
+        billing: "required",
+      });
+
+      class TestService {
+        @Metered({ meter, eventIdExtractor: () => "request-1" })
+        async doSomething(): Promise<string> {
+          return originalMethod();
+        }
+      }
+
+      await expect(new TestService().doSomething()).rejects.toMatchObject({
+        code: "metering/invalid-usage-envelope",
+      });
+      expect(originalMethod).not.toHaveBeenCalled();
     });
   });
 

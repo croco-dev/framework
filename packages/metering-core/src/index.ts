@@ -17,6 +17,8 @@
  * @example
  * ```typescript
  * import {
+ *   defineMeter,
+ *   dimension,
  *   MeteringService,
  *   MeterRegistry,
  *   IdempotencyManager,
@@ -83,13 +85,6 @@ export {
   METER_METADATA_KEY,
   Meter,
 } from "./libs/decorators/Meter";
-
-/**
- * Metered 메서드 데코레이터의 메타데이터 타입입니다.
- *
- * @description `@Metered` 데코레이터로 메서드에 정의된 자동 기록 옵션의 메타데이터를 나타냅니다.
- */
-export type { MeteredMetadata, MeteredOptions } from "./libs/decorators/Metered";
 
 /**
  * Metered 메서드 데코레이터와 서비스 바인딩 헬퍼입니다.
@@ -213,6 +208,21 @@ export type { MeteringServiceOptions } from "./libs/MeteringService";
  * });
  *
  * // 사용량 기록
+ * const aiTokens = defineMeter({
+ *   key: 'ai.tokens',
+ *   aggregation: 'SUM',
+ *   unit: 'token',
+ *   dimensions: { model: dimension.enum(['gpt-5', 'gpt-5-mini']) },
+ *   billing: 'required',
+ * });
+ * const typedRecord = await service.record(aiTokens, {
+ *   tenantId: 'tenant-123',
+ *   eventId: requestId,
+ *   value: usage.totalTokens,
+ *   dimensions: { model },
+ * });
+ *
+ * // string 기반 호환성 경로
  * const record = await service.record({
  *   tenantId: 'tenant-123',
  *   meterId: 'api_calls',
@@ -229,6 +239,23 @@ export type { MeteringServiceOptions } from "./libs/MeteringService";
  * ```
  */
 export { MeteringService } from "./libs/MeteringService";
+
+/**
+ * Definition-first meter helpers and deterministic meter descriptors.
+ *
+ * @example
+ * ```typescript
+ * const requests = defineMeter({
+ *   key: 'api.requests',
+ *   aggregation: 'COUNT',
+ *   unit: 'request',
+ *   dimensions: {
+ *     region: dimension.enum(['apac', 'emea']),
+ *   },
+ * });
+ * ```
+ */
+export { defineMeter, dimension } from "./libs/MeterRef";
 
 /**
  * Meter 정의를 조회하고 등록하는 레지스트리입니다.
@@ -307,6 +334,7 @@ export { AtomicQuotaNotSupportedProblem } from "./libs/problems/AtomicQuotaNotSu
  * ```
  */
 export { DuplicateRecordProblem } from "./libs/problems/DuplicateRecordProblem";
+export { InvalidMeterDimensionProblem } from "./libs/problems/InvalidMeterDimensionProblem";
 
 /**
  * 등록되지 않은 Meter를 사용할 때 발생하는 문제 타입입니다.
@@ -319,6 +347,7 @@ export { DuplicateRecordProblem } from "./libs/problems/DuplicateRecordProblem";
  * ```
  */
 export { InvalidMeterProblem } from "./libs/problems/InvalidMeterProblem";
+export { InvalidUsageEnvelopeProblem } from "./libs/problems/InvalidUsageEnvelopeProblem";
 
 /**
  * quota 초과 시 발생하는 문제 타입입니다.
@@ -435,8 +464,6 @@ export type { RedisClient } from "./libs/RedisClient";
  */
 export { RedisUsageStorage } from "./libs/RedisUsageStorage";
 
-// ==================== Domain Types ====================
-
 /**
  * metering-core 전반에서 사용하는 기본 도메인 타입입니다.
  *
@@ -454,14 +481,12 @@ export type {
 } from "./libs/types";
 
 // ==================== Aggregation ====================
-
 /**
  * UsageAggregator 생성 옵션 타입입니다.
  *
  * @description UsageAggregator 인스턴스 생성 시 필요한 설정을 정의합니다.
  */
 export type { UsageAggregatorOptions } from "./libs/UsageAggregator";
-
 /**
  * 사용량 집계와 배치 플러시를 담당하는 집계기입니다.
  *
@@ -479,7 +504,6 @@ export type { UsageAggregatorOptions } from "./libs/UsageAggregator";
  * ```
  */
 export { UsageAggregator } from "./libs/UsageAggregator";
-
 /**
  * 사용량 저장소의 원자적 quota 체크 계약과 저장소 인터페이스입니다.
  *
@@ -490,3 +514,16 @@ export type {
   AtomicQuotaCheckResult,
   UsageStorage,
 } from "./libs/UsageStorage";
+export type { MeteredMetadata, MeteredOptions, MeteredRefOptions } from "./libs/decorators/Metered";
+export type {
+  CountMeterRef,
+  EnumDimension,
+  MeterAggregation,
+  MeterBillingIntent,
+  MeterDefinitionOptions,
+  MeterDimensionSchema,
+  MeterDimensionValue,
+  MeterRecordInput,
+  MeterRef,
+  NonEmptyMeterDimensionValues,
+} from "./libs/MeterRef";

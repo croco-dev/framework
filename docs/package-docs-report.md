@@ -6,7 +6,7 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   112 |
+| Public packages                |   113 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
@@ -120,7 +120,7 @@ None.
 | ------------------- | -------: |
 | 🟢 production-ready |       24 |
 | 🟡 beta             |       75 |
-| 🔴 alpha/WIP        |       13 |
+| 🔴 alpha/WIP        |       14 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix

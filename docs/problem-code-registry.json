@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 491,
+  "problemCount": 495,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -7616,9 +7616,69 @@
       "sources": [
         {
           "file": "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          "line": 131,
+          "line": 146,
           "column": 13,
           "kind": "problem-factory"
+        }
+      ]
+    },
+    {
+      "code": "metering-drizzle/migration-query-result-unsupported",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metering-drizzle-migration-query-result-unsupported",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metering-drizzle/src/migrations/addUsageEnvelopeFields.ts",
+          "line": 125,
+          "column": 9,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
+      "code": "metering-drizzle/usage-envelope-not-configured",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metering-drizzle-usage-envelope-not-configured",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metering-drizzle/src/libs/problems/UsageEnvelopeConfigurationProblem.ts",
+          "line": 6,
+          "column": 5,
+          "kind": "problem-constructor"
         }
       ]
     },
@@ -7737,6 +7797,66 @@
         {
           "file": "packages/metering-core/src/libs/problems/InvalidMeterProblem.ts",
           "line": 5,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "metering/invalid-meter-dimension",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metering-invalid-meter-dimension",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metering-core/src/libs/problems/InvalidMeterDimensionProblem.ts",
+          "line": 6,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "metering/invalid-usage-envelope",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metering-invalid-usage-envelope",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metering-core/src/libs/problems/InvalidUsageEnvelopeProblem.ts",
+          "line": 6,
           "column": 5,
           "kind": "problem-constructor"
         }

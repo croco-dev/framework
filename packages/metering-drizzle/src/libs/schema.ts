@@ -1,6 +1,16 @@
 import { sql } from "drizzle-orm";
-import { integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import {
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
+import {
+  index as sqliteIndex,
   integer as sqliteInteger,
   sqliteTable,
   text as sqliteText,
@@ -35,11 +45,16 @@ export const usageRecordsPg = pgTable(
     recordedAt: timestamp("recorded_at").notNull().defaultNow(),
     metadata: jsonb("metadata").notNull().default({}),
     idempotencyKey: text("idempotency_key"),
+    eventId: text("event_id"),
+    dimensions: jsonb("dimensions"),
   },
   (table) => [
     uniqueIndex("usage_records_idempotency_unique")
       .on(table.tenantId, table.meterId, table.idempotencyKey)
       .where(sql`idempotency_key IS NOT NULL`),
+    index("usage_records_event_id_idx")
+      .on(table.tenantId, table.eventId)
+      .where(sql`event_id IS NOT NULL`),
   ],
 );
 
@@ -71,10 +86,15 @@ export const usageRecordsSqlite = sqliteTable(
     recordedAt: sqliteInteger("recorded_at").notNull(),
     metadata: sqliteText("metadata").notNull().default("{}"),
     idempotencyKey: sqliteText("idempotency_key"),
+    eventId: sqliteText("event_id"),
+    dimensions: sqliteText("dimensions"),
   },
   (table) => [
     sqliteUniqueIndex("usage_records_idempotency_unique")
       .on(table.tenantId, table.meterId, table.idempotencyKey)
       .where(sql`idempotency_key IS NOT NULL`),
+    sqliteIndex("usage_records_event_id_idx")
+      .on(table.tenantId, table.eventId)
+      .where(sql`event_id IS NOT NULL`),
   ],
 );

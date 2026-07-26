@@ -7,7 +7,11 @@ title: "RecordOptions"
 
 > **RecordOptions** = `object`
 
-record() 메서드 옵션
+record() 메서드의 호환성 옵션
+
+## Description
+
+새 코드에서는 `defineMeter()`와 typed `record(meter, input)` 경로를 권장합니다.
 
 ## Properties
 

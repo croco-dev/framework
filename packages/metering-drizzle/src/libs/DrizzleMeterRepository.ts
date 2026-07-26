@@ -1,11 +1,24 @@
-import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from "@croco/metering-core";
+import { and, eq, getTableColumns } from "drizzle-orm";
 import { MeterRepository } from "@croco/metering-core";
 import { ProblemFactory } from "@croco/problems-core";
-import type { ILogger } from "@croco/framework-context";
-import type { TxManager } from "@croco/tx-core";
-import { and, eq, getTableColumns } from "drizzle-orm";
+
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { ILogger } from "@croco/framework-context";
+import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from "@croco/metering-core";
+import type { TxManager } from "@croco/tx-core";
+
+import { UsageEnvelopeConfigurationProblem } from "./problems/UsageEnvelopeConfigurationProblem";
+
+const DRIZZLE_JSON_COLUMN_TYPES = new Set([
+  "GelJson",
+  "MySqlJson",
+  "PgJson",
+  "PgJsonb",
+  "SingleStoreJson",
+  "SQLiteBlobJson",
+  "SQLiteTextJson",
+]);
 
 /**
  * 미터 저장소에서 사용하는 기본 Drizzle SQLite 클라이언트 타입입니다.
@@ -38,6 +51,8 @@ export type UsageRecordTable = {
   recordedAt: SQLiteColumn;
   metadata: SQLiteColumn;
   idempotencyKey: SQLiteColumn;
+  eventId?: SQLiteColumn;
+  dimensions?: SQLiteColumn;
 };
 
 /**
@@ -117,7 +132,7 @@ export class DrizzleMeterRepository extends MeterRepository {
       type: meter.type,
       quota: meter.quota ?? null,
       allowOverQuota: meter.allowOverQuota ? 1 : 0,
-      metadata: this.serializeJson(meter.metadata ?? {}),
+      metadata: this.encodeJsonColumn(meter.metadata ?? {}, this.meterSchema.metadata),
       createdAt: now.getTime(),
       updatedAt: now.getTime(),
     };
@@ -171,17 +186,47 @@ export class DrizzleMeterRepository extends MeterRepository {
     }
 
     const client = this.getClient();
+    const missingMappings = [
+      records.some((record) => record.eventId !== undefined) &&
+      this.usageRecordSchema.eventId === undefined
+        ? "eventId"
+        : undefined,
+      records.some((record) => record.dimensions !== undefined) &&
+      this.usageRecordSchema.dimensions === undefined
+        ? "dimensions"
+        : undefined,
+    ].filter((mapping): mapping is string => mapping !== undefined);
+    if (missingMappings.length > 0) {
+      throw new UsageEnvelopeConfigurationProblem(missingMappings);
+    }
 
     const columns = getTableColumns(this.usageRecordTable as SQLiteTable);
     const columnKeys = this.getUsageRecordColumnKeys(columns);
-    const values = records.map((record) => ({
-      [columnKeys.tenantId]: record.tenantId,
-      [columnKeys.meterId]: record.meterId,
-      [columnKeys.value]: record.value,
-      [columnKeys.recordedAt]: record.timestamp.getTime(),
-      [columnKeys.metadata]: this.serializeJson(record.metadata ?? {}),
-      [columnKeys.idempotencyKey]: record.idempotencyKey,
-    }));
+    const values = records.map((record) => {
+      const value: Record<string, unknown> = {
+        [columnKeys.tenantId]: record.tenantId,
+        [columnKeys.meterId]: record.meterId,
+        [columnKeys.value]: record.value,
+        [columnKeys.recordedAt]: record.timestamp.getTime(),
+        [columnKeys.metadata]: this.encodeJsonColumn(
+          record.metadata ?? {},
+          this.usageRecordSchema.metadata,
+        ),
+        [columnKeys.idempotencyKey]: record.idempotencyKey,
+      };
+
+      if (columnKeys.eventId) {
+        value[columnKeys.eventId] = record.eventId ?? null;
+      }
+      if (columnKeys.dimensions) {
+        value[columnKeys.dimensions] =
+          record.dimensions === undefined
+            ? null
+            : this.encodeJsonColumn(record.dimensions, this.usageRecordSchema.dimensions);
+      }
+
+      return value;
+    });
 
     await (client as DrizzleDb)
       .insert(this.usageRecordTable as SQLiteTable)
@@ -189,17 +234,33 @@ export class DrizzleMeterRepository extends MeterRepository {
       .onConflictDoNothing();
   }
 
+  private encodeJsonColumn(value: unknown, column: unknown): unknown {
+    return DRIZZLE_JSON_COLUMN_TYPES.has((column as { columnType?: string }).columnType ?? "")
+      ? value
+      : this.serializeJson(value);
+  }
+
   private getUsageRecordColumnKeys(
     columns: Record<string, SQLiteColumn>,
-  ): Record<keyof UsageRecordTable, string> {
+  ): Partial<Record<keyof UsageRecordTable, string>> &
+    Record<
+      "tenantId" | "meterId" | "value" | "recordedAt" | "metadata" | "idempotencyKey",
+      string
+    > {
     return Object.fromEntries(
-      Object.entries(this.usageRecordSchema).map(([schemaKey, schemaColumn]) => {
-        const columnKey =
-          Object.entries(columns).find(([, tableColumn]) => tableColumn === schemaColumn)?.[0] ??
-          schemaKey;
-        return [schemaKey, columnKey];
-      }),
-    ) as Record<keyof UsageRecordTable, string>;
+      Object.entries(this.usageRecordSchema)
+        .filter((entry): entry is [string, SQLiteColumn] => entry[1] !== undefined)
+        .map(([schemaKey, schemaColumn]) => {
+          const columnKey =
+            Object.entries(columns).find(([, tableColumn]) => tableColumn === schemaColumn)?.[0] ??
+            schemaKey;
+          return [schemaKey, columnKey];
+        }),
+    ) as Partial<Record<keyof UsageRecordTable, string>> &
+      Record<
+        "tenantId" | "meterId" | "value" | "recordedAt" | "metadata" | "idempotencyKey",
+        string
+      >;
   }
 
   private mapToMeterDefinition(raw: Record<string, unknown>): MeterDefinition {
