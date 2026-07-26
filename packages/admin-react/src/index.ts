@@ -27,6 +27,19 @@ export {
   TenantBusinessWorkspace,
 } from "./libs/TenantBusinessWorkspace";
 export { WebhookReliabilityConsole } from "./libs/WebhookReliabilityConsole";
+export {
+  LifecycleAutomationConsole,
+  LifecycleDryRunPanel,
+  LifecycleRuleOperations,
+  LifecycleRunHistory,
+} from "./libs/LifecycleAutomationConsole";
+export {
+  classifyLifecycleRun,
+  createLifecycleAutomationLoadingState,
+  createLifecycleAutomationSource,
+  diffLifecycleRuleDescriptors,
+  loadLifecycleAutomationConsole,
+} from "./libs/lifecycleAutomation";
 export { useAdminForm } from "./libs/hooks";
 export { AdminDataTable } from "./libs/DataTable";
 export {
@@ -178,3 +191,30 @@ export type {
   TenantWorkspaceActionResult,
 } from "./libs/TenantBusinessWorkspace";
 export type { WebhookReliabilityConsoleProps } from "./libs/WebhookReliabilityConsole";
+export type { LifecycleAutomationConsoleProps } from "./libs/LifecycleAutomationConsole";
+export type {
+  LifecycleAutomationConsoleState,
+  LifecycleAutomationEmptyState,
+  LifecycleAutomationLoadingState,
+  LifecycleAutomationPermissionDeniedState,
+  LifecycleAutomationReadyState,
+  LifecycleAutomationSource,
+  LifecycleAutomationSourceOptions,
+  LifecycleDescriptorDiff,
+  LifecycleDryRunEvidence,
+  LifecycleDryRunFixture,
+  LifecycleDryRunFixtureDescriptor,
+  LifecycleDryRunRequest,
+  LifecycleDryRunResponse,
+  LifecycleOperationsProblem,
+  LifecycleRuleActionInput,
+  LifecycleRuleActionResult,
+  LifecycleRuleAdminAction,
+  LifecycleRuleOperation,
+  LifecycleRunActionEvidence,
+  LifecycleRunEvidence,
+  LifecycleRunFilters,
+  LifecycleRunOperation,
+  LifecycleRunOutcome,
+  LoadLifecycleAutomationOptions,
+} from "./libs/lifecycleAutomation";
