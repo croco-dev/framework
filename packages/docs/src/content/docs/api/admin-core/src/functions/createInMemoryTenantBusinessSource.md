@@ -11,7 +11,7 @@ title: "createInMemoryTenantBusinessSource"
 
 ### TState
 
-`TState` _extends_ [`TenantWorkspaceSourceData`](/api/admin-core/src/type-aliases/tenantworkspacesourcedata/)
+`TState` *extends* [`TenantWorkspaceSourceData`](/api/admin-core/src/type-aliases/tenantworkspacesourcedata/)
 
 ## Parameters
 

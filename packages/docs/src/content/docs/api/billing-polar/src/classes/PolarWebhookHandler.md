@@ -12,20 +12,17 @@ Validates webhook signatures and delegates to event handlers.
 ## Example
 
 ```typescript
-import { PolarWebhookHandler, PolarEventMapper } from "@croco/billing-polar";
+import { PolarWebhookHandler, PolarEventMapper } from '@croco/billing-polar';
 
-const handler = new PolarWebhookHandler(
-  {
-    accessToken: "polar_access_token",
-    environment: "sandbox",
-    webhookSecret: "whsec_...",
-  },
-  {
-    store,
-    eventPublisher,
-    planRegistry,
-  },
-);
+const handler = new PolarWebhookHandler({
+  accessToken: 'polar_access_token',
+  environment: 'sandbox',
+  webhookSecret: 'whsec_...'
+}, {
+  store,
+  eventPublisher,
+  planRegistry
+});
 
 const result = await handler.handle(rawPayload, requestHeaders);
 ```

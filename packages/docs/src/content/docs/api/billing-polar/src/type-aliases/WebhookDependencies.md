@@ -15,13 +15,13 @@ Dependencies for Polar webhook handler.
 
 > **eventPublisher**: [`EventPublisher`](/api/events-core/src/classes/eventpublisher/)
 
----
+***
 
 ### planRegistry
 
 > **planRegistry**: [`PlanRegistry`](/api/billing-core/src/interfaces/planregistry/)
 
----
+***
 
 ### store
 

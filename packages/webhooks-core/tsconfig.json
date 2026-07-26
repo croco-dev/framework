@@ -1,8 +1,13 @@
 {
   "compilerOptions": {
     "paths": {
+      "@croco/execution-core": ["../execution-core/src/index.ts"],
       "@croco/idempotency-core": ["../idempotency-core/src/index.ts"],
-      "@croco/problems-core": ["../problems-core/src/index.ts"]
+      "@croco/outbox-core": ["../outbox-core/src/index.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/retry-core": ["../retry-core/src/index.ts"],
+      "@croco/tasks-core": ["../tasks-core/src/index.ts"],
+      "@croco/telemetry-api": ["../telemetry-api/src/index.ts"]
     }
   },
   "exclude": ["node_modules"],

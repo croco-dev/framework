@@ -55,7 +55,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`number`\>
 
----
+***
 
 ### countByRole()
 
@@ -75,7 +75,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`number`\>
 
----
+***
 
 ### delete()
 
@@ -95,7 +95,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<`void`\>
 
----
+***
 
 ### findAllByTenant()
 
@@ -111,7 +111,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
----
+***
 
 ### findAllByUser()
 
@@ -127,7 +127,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)[]\>
 
----
+***
 
 ### findByTenantAndUser()
 
@@ -147,7 +147,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/) \| `null`\>
 
----
+***
 
 ### mutateOwner()
 
@@ -169,7 +169,7 @@ be returned as `conflict`.
 
 `Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
 
----
+***
 
 ### save()
 
@@ -199,7 +199,7 @@ be returned as `conflict`.
 
 `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
 
----
+***
 
 ### transferOwnership()
 

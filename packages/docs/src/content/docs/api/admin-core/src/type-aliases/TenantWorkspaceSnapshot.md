@@ -13,25 +13,25 @@ title: "TenantWorkspaceSnapshot"
 
 > `readonly` **actions**: readonly [`TenantWorkspaceAction`](/api/admin-core/src/type-aliases/tenantworkspaceaction/)[]
 
----
+***
 
 ### generatedAt
 
 > `readonly` **generatedAt**: `Date`
 
----
+***
 
 ### grantedPermissions
 
 > `readonly` **grantedPermissions**: readonly `string`[]
 
----
+***
 
 ### sources
 
 > `readonly` **sources**: readonly [`TenantWorkspaceSourceState`](/api/admin-core/src/type-aliases/tenantworkspacesourcestate/)[]
 
----
+***
 
 ### tenantId
 

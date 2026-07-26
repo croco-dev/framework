@@ -27,7 +27,7 @@ title: "LifecycleDryRunStore"
 
 [`LifecycleRuleStateStoreResult`](/api/lifecycle-core/src/type-aliases/lifecyclerulestatestoreresult/)\<readonly [`LifecycleDryRunResult`](/api/lifecycle-core/src/type-aliases/lifecycledryrunresult/)[]\>
 
----
+***
 
 ### save()
 

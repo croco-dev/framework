@@ -111,3 +111,95 @@ await gateway.replay(fixture);
 `loadWebhookReplayFixture()` is the only Node file-system helper in this package. Runtime handlers can
 use `parseWebhookReplayFixture()` or `createWebhookReplayFixture()` when fixtures are loaded by another
 environment.
+
+## Outbound tenant delivery
+
+Outbound webhooks are a separate reliability boundary from the inbound `WebhookGateway`. An outbound
+event is serialized once and committed with one idempotent delivery per subscribed tenant endpoint.
+The same committed bytes and event id are reused for every attempt.
+
+```ts
+import {
+  FakeOutboundWebhookTransport,
+  InMemoryOutboundWebhookEndpointStore,
+  InMemoryOutboundWebhookSecretStore,
+  InMemoryOutboundWebhookStore,
+  OutboundWebhookRuntime,
+} from "@croco/webhooks-core";
+
+const runtime = new OutboundWebhookRuntime({
+  store: new InMemoryOutboundWebhookStore(),
+  endpointStore: new InMemoryOutboundWebhookEndpointStore([
+    {
+      id: "endpoint_1",
+      tenantId: "tenant_1",
+      url: "https://hooks.customer.example/croco",
+      subscribedEventNames: ["invoice.paid"],
+      status: "active",
+      signingAlgorithm: "hmac-sha256",
+      activeSecretVersion: "v2",
+    },
+  ]),
+  secretStore: new InMemoryOutboundWebhookSecretStore([
+    {
+      tenantId: "tenant_1",
+      endpointId: "endpoint_1",
+      version: "v2",
+      material: new TextEncoder().encode(process.env.WEBHOOK_SECRET ?? ""),
+    },
+  ]),
+  taskPublisher: {
+    publish: async (input) => {
+      // Adapt this explicit task/execution/idempotency contract to tasks-core.
+      // The durable dispatch intent is the outbox boundary and can be resumed.
+      await taskQueue.publish(input);
+    },
+  },
+  transport: new FakeOutboundWebhookTransport([{ kind: "http", status: 204 }]),
+});
+
+await runtime.publish({
+  id: "event_1",
+  name: "invoice.paid",
+  schemaVersion: "2026-07-01",
+  subject: "invoice/inv_1",
+  tenantId: "tenant_1",
+  occurredAt: new Date(),
+  payload: { invoiceId: "inv_1" },
+});
+```
+
+`commitEvent()` is the transaction boundary: the immutable event, endpoint deliveries, and dispatch
+intents are stored together before a task is published. If publication fails after commit,
+`publishUnpublishedIntents()` resumes the stored intent without creating another logical event.
+Persistent adapters can use `createOutboundWebhookStoreConformanceSuite()` (including its optional
+reopen hook) to verify durability and concurrent-claim behavior.
+
+Each attempt includes `webhook-id`, `webhook-delivery-id`, `webhook-timestamp`,
+`webhook-signature-version`, and `webhook-signature`. HMAC-SHA256 signs
+`<timestamp>.<exact payload bytes>`. Previous secret versions verify only during their configured
+grace period; secret material is never included in Problems or diagnostics.
+
+### Delivery policies
+
+| Outcome                                 | Policy                                          |
+| --------------------------------------- | ----------------------------------------------- |
+| 200-201, 203-299                        | delivered                                       |
+| 202                                     | accepted                                        |
+| 400-428, 430-499                        | permanent (`dead`)                              |
+| 429, 500-599                            | bounded retry                                   |
+| redirect                                | permanent; redirects are never followed         |
+| timeout, connection reset               | bounded retry                                   |
+| request acceptance cannot be determined | `acceptance-unknown`; operator-safe replay only |
+
+Replay schedules a new attempt on the existing endpoint delivery and is allowed only from
+`delivered`, `dead`, `canceled`, or `acceptance-unknown`; it never creates a second logical delivery.
+Paused endpoints retain a pending delivery without a dispatch intent, and `resume(tenantId,
+deliveryId)` schedules that evidence after activation. Disabled endpoints retain canceled evidence.
+`dispatch`, `replay`, `resume`, diagnostics, and all store lookups require tenant context.
+
+The default URL policy requires HTTPS, resolves DNS, and rejects embedded credentials, localhost,
+private, reserved, loopback, link-local, multicast, mapped IPv6, and metadata targets. The validated
+addresses are passed to `OutboundWebhookTransport`; production transports must connect only to one
+of those addresses, retain the original hostname for TLS/SNI, and never auto-follow redirects. This
+pins validation to the connection boundary and prevents DNS rebinding or redirect-based SSRF.

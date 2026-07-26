@@ -15,7 +15,7 @@ title: "Body"
 
 #### TContract
 
-`TContract` _extends_ [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly body: z.ZodType }`
+`TContract` *extends* [`RouteContractSpec`](/api/protocols-rest/src/type-aliases/routecontractspec/) & `{ readonly body: z.ZodType }`
 
 ### Parameters
 

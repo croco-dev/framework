@@ -3425,12 +3425,24 @@ importers:
 
   packages/webhooks-core:
     dependencies:
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
       '@croco/idempotency-core':
         specifier: workspace:*
         version: link:../idempotency-core
+      '@croco/outbox-core':
+        specifier: workspace:*
+        version: link:../outbox-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/retry-core':
+        specifier: workspace:*
+        version: link:../retry-core
+      '@croco/tasks-core':
+        specifier: workspace:*
+        version: link:../tasks-core
     devDependencies:
       vitest:
         specifier: 4.0.16

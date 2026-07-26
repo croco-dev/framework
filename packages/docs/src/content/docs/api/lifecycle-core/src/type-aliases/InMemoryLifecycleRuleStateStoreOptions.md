@@ -13,7 +13,7 @@ title: "InMemoryLifecycleRuleStateStoreOptions"
 
 > `readonly` `optional` **commandTtlMs?**: `number`
 
----
+***
 
 ### now?
 

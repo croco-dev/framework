@@ -15,7 +15,7 @@ Generic cache contract.
 
 ### K
 
-`K` _extends_ `string` = `string`
+`K` *extends* `string` = `string`
 
 ### V
 
@@ -41,7 +41,7 @@ Generic cache contract.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### delete()
 
@@ -57,7 +57,7 @@ Generic cache contract.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### get()
 
@@ -73,7 +73,7 @@ Generic cache contract.
 
 `Promise`\<`V` \| `undefined`\>
 
----
+***
 
 ### getOrSet()
 
@@ -97,7 +97,7 @@ Generic cache contract.
 
 `Promise`\<`V` \| `undefined`\>
 
----
+***
 
 ### getStats()
 
@@ -107,7 +107,7 @@ Generic cache contract.
 
 [`CacheStats`](/api/cache-core/src/type-aliases/cachestats/)
 
----
+***
 
 ### has()
 
@@ -123,7 +123,7 @@ Generic cache contract.
 
 `Promise`\<`boolean`\>
 
----
+***
 
 ### invalidatePattern()
 
@@ -139,7 +139,7 @@ Generic cache contract.
 
 `Promise`\<`number`\>
 
----
+***
 
 ### pruneExpired()
 
@@ -149,7 +149,7 @@ Generic cache contract.
 
 `Promise`\<`number`\>
 
----
+***
 
 ### set()
 
@@ -176,7 +176,7 @@ A zero lifetime expires immediately.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### warmup()
 
