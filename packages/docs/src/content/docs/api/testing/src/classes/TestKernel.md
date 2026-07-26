@@ -13,7 +13,7 @@ title: "TestKernel"
 
 ### Constructor
 
-> **new TestKernel**(`app`, `fidelity`, `scope`, `transactionContext`, `baseUrl`, `lambdaHandler`, `nodeHandler`, `cleanupOperations`): `TestKernel`
+> **new TestKernel**(`app`, `fidelity`, `scope`, `transactionContext`, `baseUrl`, `lambdaHandler`, `nodeHandler`, `cleanupOperations`, `resourceConnections`, `resourceEvidenceBuffer`): `TestKernel`
 
 #### Parameters
 
@@ -48,6 +48,14 @@ title: "TestKernel"
 ##### cleanupOperations
 
 readonly `TestKernelCleanupOperation`[]
+
+##### resourceConnections
+
+`ReadonlyMap`\<[`TestResource`](/api/testing/src/type-aliases/testresource/)\<`unknown`\>, `unknown`\>
+
+##### resourceEvidenceBuffer
+
+readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernelresourceevidence/)[]
 
 #### Returns
 
@@ -88,6 +96,18 @@ readonly `TestKernelCleanupOperation`[]
 ##### Returns
 
 readonly [`TestKernelEvidence`](/api/testing/src/type-aliases/testkernelevidence/)[]
+
+***
+
+### resourceEvidence
+
+#### Get Signature
+
+> **get** **resourceEvidence**(): readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernelresourceevidence/)[]
+
+##### Returns
+
+readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernelresourceevidence/)[]
 
 ## Methods
 
@@ -154,6 +174,28 @@ readonly [`TestKernelEvidence`](/api/testing/src/type-aliases/testkernelevidence
 #### Returns
 
 `Promise`\<`Response`\>
+
+***
+
+### resource()
+
+> **resource**\<`TConnection`\>(`resource`): `TConnection`
+
+#### Type Parameters
+
+##### TConnection
+
+`TConnection`
+
+#### Parameters
+
+##### resource
+
+[`TestResource`](/api/testing/src/type-aliases/testresource/)\<`TConnection`\>
+
+#### Returns
+
+`TConnection`
 
 ***
 

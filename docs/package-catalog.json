@@ -481,7 +481,8 @@
         "preset-cloudflare",
         "preset-lambda",
         "preset-node",
-        "testing"
+        "testing",
+        "testing-resources"
       ]
     }
   },
@@ -588,6 +589,7 @@
         "tasks-core",
         "tenant-core",
         "testing",
+        "testing-resources",
         "transports-cloudflare-workers",
         "transports-graphql",
         "triggers-core",

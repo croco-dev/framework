@@ -160,6 +160,7 @@ export default defineConfig({
             "../telemetry-api/src/index.ts",
             "../telemetry-sdk-node/src/index.ts",
             "../testing/src/index.ts",
+            "../testing-resources/src/index.ts",
             "../tasks-core/src/index.ts",
             "../tasks-qstash/src/index.ts",
             "../tenant-core/src/index.ts",

@@ -1,0 +1,54 @@
+{
+  "name": "@croco/testing-resources",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/testing-resources"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "deploy": "pnpm run build && pnpm publish --no-git-checks",
+    "lint": "oxlint .",
+    "test": "vitest run",
+    "test:real": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/RealResources.spec.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/testing": "workspace:*",
+    "ioredis": "5.11.1",
+    "pg": "8.22.0",
+    "testcontainers": "12.0.4"
+  },
+  "devDependencies": {
+    "@croco/events-core": "workspace:*",
+    "@croco/events-tx": "workspace:*",
+    "@croco/transports-http": "workspace:*",
+    "@croco/tx-core": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*",
+    "@types/pg": "8.20.0",
+    "drizzle-orm": "catalog:",
+    "tsup": "8.5.1",
+    "vitest": "4.0.16"
+  }
+}

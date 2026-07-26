@@ -1,10 +1,10 @@
+import { EventBusConfig } from "@croco/events-core";
 import {
   Container,
   type ContainerScope,
   ShutdownManager,
   type TokenIdentifier,
 } from "@croco/framework-context";
-import { EventBusConfig } from "@croco/events-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type {
   BootstrapValidationPolicy,
@@ -51,13 +51,64 @@ export type TestKernelBootstrapContext = {
   readonly runtime: TestKernelRuntime;
 };
 
+export type TestResourceMode = "rollback" | "commit" | "migration";
+export type TestResourceIsolation = "database-per-worker" | "prefix-per-test";
+export type TestResourceDiagnosticStage = "startup" | "migration" | "health-check" | "cleanup";
+
+export type TestResourceFidelity = {
+  readonly id: string;
+  readonly image: string;
+  readonly isolation: TestResourceIsolation;
+  readonly kind: string;
+  readonly mode: TestResourceMode;
+};
+
+export type TestResourceDiagnostic = {
+  readonly logs: readonly string[];
+  readonly message: string;
+  readonly stage: TestResourceDiagnosticStage;
+  readonly status: "passed" | "failed";
+};
+
+export type StartedTestResource<TConnection> = {
+  readonly connection: TConnection;
+  readonly diagnostics: readonly TestResourceDiagnostic[];
+  readonly dispose: () => Promise<void> | void;
+  readonly fidelity: TestResourceFidelity;
+};
+
+export type TestResourceStartContext = {
+  readonly register: <T>(token: TokenIdentifier<T>, value: T) => void;
+  readonly testId: string;
+  readonly workerId: string;
+};
+
+export type TestResource<TConnection> = {
+  readonly id: string;
+  readonly start: (context: TestResourceStartContext) => Promise<StartedTestResource<TConnection>>;
+};
+
+export type TestKernelResourceEvidence = {
+  readonly diagnostics: readonly TestResourceDiagnostic[];
+  readonly fidelity: TestResourceFidelity;
+};
+
+export type TestKernelResourceObligation = {
+  readonly kind: "after-commit" | "deferred-constraint" | "outbox" | "serialization";
+  readonly resource: TestResource<unknown>;
+};
+
 type TestKernelCommonOptions = {
   readonly baseUrl?: string;
   readonly bootstrap: (
     context: TestKernelBootstrapContext,
   ) => Promise<TestKernelBootstrapResult> | TestKernelBootstrapResult;
   readonly dispose?: (app: CrocoApp) => Promise<void> | void;
+  readonly obligations?: readonly TestKernelResourceObligation[];
+  readonly resources?: readonly TestResource<unknown>[];
+  readonly testId?: string;
   readonly validation?: Partial<BootstrapValidationPolicy>;
+  readonly workerId?: string;
 };
 
 type TestKernelCleanupOperation = () => Promise<void> | void;
@@ -96,10 +147,18 @@ export class TestKernelDisposalProblem extends Problem {
       {
         extensions: {
           failureCount: failures.length,
-          failures: failures.map((failure) => ({
-            message: failure.message,
-            name: failure.name,
-          })),
+          failures: failures.map((failure) =>
+            failure instanceof Problem
+              ? {
+                  ...failure.toJSON(),
+                  message: failure.message,
+                  name: failure.name,
+                }
+              : {
+                  message: failure.message,
+                  name: failure.name,
+                },
+          ),
         },
         ...(cause === undefined ? {} : { cause: toError(cause) }),
       },
@@ -113,6 +172,48 @@ export class TestKernelDisposedProblem extends Problem {
       "testing/test-kernel-disposed",
       ProblemCategory.InternalServerError,
       "TestKernel cannot be used after disposal has started.",
+    );
+  }
+}
+
+export class TestKernelResourceFidelityProblem extends Problem {
+  constructor(obligation: TestKernelResourceObligation, fidelity: TestResourceFidelity) {
+    super(
+      "testing/test-kernel-resource-fidelity",
+      ProblemCategory.InternalServerError,
+      `Test resource '${fidelity.id}' cannot satisfy '${obligation.kind}' evidence in '${fidelity.mode}' mode. Use commit or migration mode for commit-semantic obligations.`,
+      {
+        extensions: {
+          fidelity,
+          obligation: obligation.kind,
+        },
+      },
+    );
+  }
+}
+
+export class TestKernelResourceNotFoundProblem extends Problem {
+  constructor(resourceId: string) {
+    super(
+      "testing/test-kernel-resource-not-found",
+      ProblemCategory.InternalServerError,
+      `Test resource '${resourceId}' is not part of this TestKernel.`,
+      {
+        extensions: { resourceId },
+      },
+    );
+  }
+}
+
+export class TestKernelResourceRegistrationProblem extends Problem {
+  constructor(resourceId: string) {
+    super(
+      "testing/test-kernel-resource-registration",
+      ProblemCategory.InternalServerError,
+      `Test resource id '${resourceId}' is registered more than once.`,
+      {
+        extensions: { resourceId },
+      },
     );
   }
 }
@@ -168,6 +269,8 @@ export class TestKernel implements AsyncDisposable {
     private readonly lambdaHandler: LambdaHandler | undefined,
     private readonly nodeHandler: NodeRequestHandler | undefined,
     private readonly cleanupOperations: readonly TestKernelCleanupOperation[],
+    private readonly resourceConnections: ReadonlyMap<TestResource<unknown>, unknown>,
+    private readonly resourceEvidenceBuffer: readonly TestKernelResourceEvidence[],
   ) {
     this.http = new TestKernelHttp(this);
     this.transactionContext = transactionContext;
@@ -175,6 +278,10 @@ export class TestKernel implements AsyncDisposable {
 
   get evidence(): readonly TestKernelEvidence[] {
     return [...this.evidenceBuffer];
+  }
+
+  get resourceEvidence(): readonly TestKernelResourceEvidence[] {
+    return [...this.resourceEvidenceBuffer];
   }
 
   run<T>(fn: () => Promise<T>): Promise<T>;
@@ -188,6 +295,14 @@ export class TestKernel implements AsyncDisposable {
   get<T>(token: TokenIdentifier<T>): T {
     this.assertActive();
     return this.scope.run(() => Container.get(token)) as T;
+  }
+
+  resource<TConnection>(resource: TestResource<TConnection>): TConnection {
+    this.assertActive();
+    if (!this.resourceConnections.has(resource)) {
+      throw new TestKernelResourceNotFoundProblem(resource.id);
+    }
+    return this.resourceConnections.get(resource) as TConnection;
   }
 
   request(path: string | URL | Request, options: TestingRequestOptions = {}): Promise<Response> {
@@ -261,6 +376,13 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
   const scope = Container.createScope();
   const runtime = options.fidelity === "adapter" ? (options.adapter ?? "node") : "node";
   const registeredCleanups: Array<() => Promise<void> | void> = [];
+  const resourceCleanups: Array<() => Promise<void> | void> = [];
+  const testId = options.testId ?? `test-${crypto.randomUUID()}`;
+  const workerId =
+    options.workerId ??
+    process.env["VITEST_POOL_ID"] ??
+    process.env["CI_NODE_INDEX"] ??
+    `process-${process.pid}`;
   const fidelityContext: TestKernelBootstrapContext = {
     fidelity: options.fidelity,
     onCleanup(cleanup) {
@@ -270,12 +392,54 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
   };
   let app: CrocoApp | undefined;
   let bootstrapCleanup: (() => Promise<void> | void) | undefined;
+  const resourceConnections = new Map<TestResource<unknown>, unknown>();
+  const resourceEvidence: TestKernelResourceEvidence[] = [];
 
   try {
     return await scope.run(async () => {
       EventBusConfig.setInstance(new EventBusConfig());
       ShutdownManager.getInstance();
       const transactionContext = createTestingTransactionContext();
+      const resources = options.resources ?? [];
+      const resourceIds = new Set<string>();
+
+      for (const resource of resources) {
+        if (resourceIds.has(resource.id)) {
+          throw new TestKernelResourceRegistrationProblem(resource.id);
+        }
+        resourceIds.add(resource.id);
+      }
+      for (const obligation of options.obligations ?? []) {
+        if (!resources.includes(obligation.resource)) {
+          throw new TestKernelResourceNotFoundProblem(obligation.resource.id);
+        }
+      }
+
+      for (const resource of resources) {
+        const started = await resource.start({
+          register: <T>(token: TokenIdentifier<T>, value: T) => {
+            Container.set(token, value);
+          },
+          testId,
+          workerId,
+        });
+        resourceConnections.set(resource, started.connection);
+        resourceEvidence.push(
+          Object.freeze({
+            diagnostics: started.diagnostics,
+            fidelity: Object.freeze({ ...started.fidelity }),
+          }),
+        );
+        resourceCleanups.push(started.dispose);
+      }
+
+      for (const obligation of options.obligations ?? []) {
+        const index = resources.indexOf(obligation.resource);
+        const evidence = resourceEvidence[index] as TestKernelResourceEvidence;
+        if (evidence.fidelity.mode === "rollback") {
+          throw new TestKernelResourceFidelityProblem(obligation, evidence.fidelity);
+        }
+      }
 
       const result = await options.bootstrap(fidelityContext);
       app = isBootstrapApplication(result) ? result.app : result;
@@ -312,6 +476,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
         ...(bootstrapCleanup ? [bootstrapCleanup] : []),
         ...[...registeredCleanups].reverse(),
         ...(options.dispose ? [() => options.dispose?.(app as CrocoApp)] : []),
+        ...[...resourceCleanups].reverse(),
       ];
 
       return new TestKernel(
@@ -323,6 +488,8 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
         lambdaHandler,
         nodeHandler,
         cleanupOperations,
+        resourceConnections,
+        resourceEvidence,
       );
     });
   } catch (error) {
@@ -330,6 +497,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
       ...(bootstrapCleanup ? [bootstrapCleanup] : []),
       ...[...registeredCleanups].reverse(),
       ...(app && options.dispose ? [() => options.dispose?.(app as CrocoApp)] : []),
+      ...[...resourceCleanups].reverse(),
     ];
     const failures = await runCleanupSequence(scope, cleanupOperations);
 

@@ -125,6 +125,7 @@
     "@croco/telemetry-sdk-node": "workspace:*",
     "@croco/tenant-core": "workspace:*",
     "@croco/testing": "workspace:*",
+    "@croco/testing-resources": "workspace:*",
     "@croco/transports-cloudflare-workers": "workspace:*",
     "@croco/transports-graphql": "workspace:*",
     "@croco/transports-http": "workspace:*",

@@ -129,6 +129,7 @@
         "@croco/oxlint-rules",
         "@croco/preset-*",
         "@croco/testing",
+        "@croco/testing-resources",
         "create-croco-app"
       ]
     }

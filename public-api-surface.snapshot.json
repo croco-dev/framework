@@ -23326,6 +23326,24 @@
               "declarationKind": "class"
             },
             {
+              "name": "TestKernelResourceFidelityProblem",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestKernelResourceNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestKernelResourceRegistrationProblem",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
+              "declarationKind": "class"
+            },
+            {
               "name": "TestKernelValidationProblem",
               "exportKind": "named",
               "source": "./libs/TestKernel",
@@ -23894,6 +23912,11 @@
               "source": "./libs/serverless-provider-conformance"
             },
             {
+              "name": "StartedTestResource",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
               "name": "StorageProviderConformanceCase",
               "exportKind": "named",
               "source": "./libs/provider-conformance"
@@ -23979,6 +24002,16 @@
               "source": "./libs/TestKernel"
             },
             {
+              "name": "TestKernelResourceEvidence",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestKernelResourceObligation",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
               "name": "TestKernelRuntime",
               "exportKind": "named",
               "source": "./libs/TestKernel"
@@ -23992,6 +24025,41 @@
               "name": "TestLogger",
               "exportKind": "named",
               "source": "./libs/testing"
+            },
+            {
+              "name": "TestResource",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestResourceDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestResourceDiagnosticStage",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestResourceFidelity",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestResourceIsolation",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestResourceMode",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestResourceStartContext",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
             },
             {
               "name": "UpstashRedisMeteringClient",
@@ -24092,6 +24160,107 @@
               "name": "DrizzleProviderTransactionConformance",
               "exportKind": "named",
               "source": "./libs/drizzle-provider-conformance"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/testing-resources",
+      "relativeDir": "packages/testing-resources",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/testing-resources/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "DEFAULT_POSTGRES_IMAGE",
+              "exportKind": "named",
+              "source": "./libs/shared",
+              "declarationKind": "const"
+            },
+            {
+              "name": "DEFAULT_REDIS_IMAGE",
+              "exportKind": "named",
+              "source": "./libs/shared",
+              "declarationKind": "const"
+            },
+            {
+              "name": "postgresResource",
+              "exportKind": "named",
+              "source": "./libs/PostgresResource",
+              "declarationKind": "function"
+            },
+            {
+              "name": "redisResource",
+              "exportKind": "named",
+              "source": "./libs/RedisResource",
+              "declarationKind": "function"
+            },
+            {
+              "name": "TestResourceConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestResourceLifecycleProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "testResourceProvider",
+              "exportKind": "named",
+              "source": "./libs/providers",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "PostgresResourceOptions",
+              "exportKind": "named",
+              "source": "./libs/PostgresResource"
+            },
+            {
+              "name": "PostgresTestConnection",
+              "exportKind": "named",
+              "source": "./libs/PostgresResource"
+            },
+            {
+              "name": "RedisResourceOptions",
+              "exportKind": "named",
+              "source": "./libs/RedisResource"
+            },
+            {
+              "name": "RedisTestConnection",
+              "exportKind": "named",
+              "source": "./libs/RedisResource"
+            },
+            {
+              "name": "ResourceImageOptions",
+              "exportKind": "named",
+              "source": "./libs/shared"
+            },
+            {
+              "name": "TestResourceProvider",
+              "exportKind": "named",
+              "source": "./libs/providers"
             }
           ]
         }
