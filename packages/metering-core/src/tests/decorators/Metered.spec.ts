@@ -303,6 +303,32 @@ describe("@Metered decorator", () => {
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
+    it("should return the original result when a local event ID extractor fails", async () => {
+      const originalMethod = vi.fn().mockResolvedValue("success");
+      const meter = defineMeter({
+        key: "api.calls",
+        aggregation: "COUNT",
+        unit: "request",
+      });
+
+      class TestService {
+        @Metered({
+          meter,
+          eventIdExtractor: () => {
+            throw new Error("Event ID extraction failed");
+          },
+        })
+        async doSomething(): Promise<string> {
+          return originalMethod();
+        }
+      }
+
+      await expect(new TestService().doSomething()).resolves.toBe("success");
+      expect(originalMethod).toHaveBeenCalledTimes(1);
+      expect(mockService.record).not.toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
     it("should fallback to console.error if DI logger fails", async () => {
       vi.spyOn(Container, "get").mockImplementationOnce((token) => {
         if (token === LOGGER_TOKEN) {

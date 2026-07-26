@@ -16,5 +16,8 @@ const requests = defineMeter({
   key: 'api.requests',
   aggregation: 'COUNT',
   unit: 'request',
+  dimensions: {
+    region: dimension.enum(['apac', 'emea']),
+  },
 });
 ```

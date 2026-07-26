@@ -974,11 +974,14 @@ describe("DrizzleMeterRepository", () => {
         },
       });
 
-      const sqlStatements = queries.map((query) => new PgDialect().sqlToQuery(query).sql);
+      const normalize = (statement: string) => statement.replace(/\s+/g, " ").trim();
+      const sqlStatements = queries.map((query) =>
+        normalize(new PgDialect().sqlToQuery(query).sql),
+      );
       expect(sqlStatements).toEqual([
         "ALTER TABLE usage_records ADD COLUMN IF NOT EXISTS event_id TEXT",
         "ALTER TABLE usage_records ADD COLUMN IF NOT EXISTS dimensions JSONB",
-        "CREATE INDEX IF NOT EXISTS usage_records_event_id_idx\n          ON usage_records (tenant_id, event_id)\n          WHERE event_id IS NOT NULL",
+        "CREATE INDEX IF NOT EXISTS usage_records_event_id_idx ON usage_records (tenant_id, event_id) WHERE event_id IS NOT NULL",
       ]);
     });
 

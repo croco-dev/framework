@@ -249,6 +249,9 @@ export { MeteringService } from "./libs/MeteringService";
  *   key: 'api.requests',
  *   aggregation: 'COUNT',
  *   unit: 'request',
+ *   dimensions: {
+ *     region: dimension.enum(['apac', 'emea']),
+ *   },
  * });
  * ```
  */
@@ -478,7 +481,6 @@ export type {
 } from "./libs/types";
 
 // ==================== Aggregation ====================
-
 /**
  * UsageAggregator 생성 옵션 타입입니다.
  *

@@ -174,12 +174,15 @@ export function Metered(
           "MeteringService is required for billable meters",
         );
       }
-      const eventId = metadata.eventIdExtractor?.(args);
-      if (metadata.meter?.billing === "required" && !eventId?.trim()) {
-        throw new InvalidUsageEnvelopeProblem(
-          metadata.meter.key,
-          "billing-required meters require a non-empty eventId",
-        );
+      let eventId: string | undefined;
+      if (metadata.meter?.billing === "required") {
+        eventId = metadata.eventIdExtractor?.(args);
+        if (!eventId?.trim()) {
+          throw new InvalidUsageEnvelopeProblem(
+            metadata.meter.key,
+            "billing-required meters require a non-empty eventId",
+          );
+        }
       }
       // 원본 메서드 실행
       const result = await originalMethod.apply(this, args);
@@ -193,7 +196,7 @@ export function Metered(
             const input = {
               tenantId,
               value: 1,
-              eventId,
+              eventId: eventId ?? metadata.eventIdExtractor?.(args),
               dimensions: metadata.dimensionsExtractor?.(args),
               metadata: metadata.metadataExtractor?.(args, result),
             } as unknown as MeterRecordInput<typeof metadata.meter>;
