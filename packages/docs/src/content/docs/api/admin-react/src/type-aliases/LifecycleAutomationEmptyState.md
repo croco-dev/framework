@@ -9,6 +9,12 @@ title: "LifecycleAutomationEmptyState"
 
 ## Properties
 
+### dryRun?
+
+> `readonly` `optional` **dryRun?**: [`LifecycleDryRunResponse`](/api/admin-react/src/type-aliases/lifecycledryrunresponse/)
+
+***
+
 ### fixtures
 
 > `readonly` **fixtures**: readonly [`LifecycleDryRunFixtureDescriptor`](/api/admin-react/src/type-aliases/lifecycledryrunfixturedescriptor/)[]

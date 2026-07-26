@@ -185,8 +185,8 @@ export function LifecycleRunHistory({
                   "data-run-outcome": operation.outcome,
                 },
                 createElement(
-                  "td",
-                  null,
+                  "th",
+                  { scope: "row" },
                   operation.links?.operationsHref
                     ? createElement("a", { href: operation.links.operationsHref }, operation.run.id)
                     : operation.run.id,
@@ -375,24 +375,20 @@ export function LifecycleAutomationConsole({
             ),
           ),
     ),
+    state.dryRun?.kind === "succeeded"
+      ? createElement(LifecycleDryRunPanel, { evidence: state.dryRun.evidence })
+      : state.dryRun
+        ? createElement(
+            "p",
+            { role: "alert", "data-evidence-kind": "dry-run-problem" },
+            `${state.dryRun.problem.code}: ${state.dryRun.problem.message}`,
+          )
+        : null,
     state.kind === "ready"
-      ? createElement(
-          "div",
-          null,
-          state.dryRun?.kind === "succeeded"
-            ? createElement(LifecycleDryRunPanel, { evidence: state.dryRun.evidence })
-            : state.dryRun
-              ? createElement(
-                  "p",
-                  { role: "alert", "data-evidence-kind": "dry-run-problem" },
-                  `${state.dryRun.problem.code}: ${state.dryRun.problem.message}`,
-                )
-              : null,
-          createElement(LifecycleRunHistory, {
-            runs: state.runs,
-            onRecoverRun,
-          }),
-        )
+      ? createElement(LifecycleRunHistory, {
+          runs: state.runs,
+          onRecoverRun,
+        })
       : null,
   );
 }

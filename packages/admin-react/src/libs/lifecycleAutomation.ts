@@ -124,6 +124,7 @@ export type LifecycleAutomationEmptyState = {
   readonly generatedAt: Date;
   readonly grantedPermissions: readonly string[];
   readonly fixtures: readonly LifecycleDryRunFixtureDescriptor[];
+  readonly dryRun?: LifecycleDryRunResponse;
   readonly problems: readonly LifecycleOperationsProblem[];
 };
 
@@ -556,7 +557,6 @@ export function createLifecycleAutomationSource(
       try {
         const command = {
           actor: input.actor,
-          at: new Date(),
           commandId: input.idempotencyKey,
           expectedRevision: input.action.expectedRevision,
           reason: input.reason,
@@ -722,6 +722,7 @@ export async function loadLifecycleAutomationConsole(
       generatedAt,
       grantedPermissions: options.grantedPermissions,
       fixtures,
+      dryRun: options.dryRun,
       problems,
     };
   }

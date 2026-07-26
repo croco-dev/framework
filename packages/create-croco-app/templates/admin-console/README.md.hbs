@@ -37,7 +37,7 @@ pnpm dev:web
 - Lifecycle stale descriptor: fingerprint나 revision 변경은 `admin-react/lifecycle-action-intent-stale`을 반환합니다. 콘솔을 새로고침해 현재 descriptor를 다시 검토한 뒤 실행합니다.
 - Lifecycle permission denied: `lifecycle:read`, `lifecycle:write`, `lifecycle:dry-run` 권한이 없으면 필요한 권한과 stable Problem code를 표시하고 해당 컨트롤을 비활성화합니다.
 - Lifecycle cooldown suppression: cooldown 구간의 signal은 `suppressed-cooldown` outcome으로 남고 action은 dispatch되지 않습니다.
-- Lifecycle dry-run failure: 잘못된 fixture나 pasted context는 `admin-react/lifecycle-dry-run-fixture-not-found` 또는 `admin-react/lifecycle-pasted-context-invalid`로 구분하며 production action이나 cooldown을 소비하지 않습니다.
+- Lifecycle dry-run failure: 생성 demo의 잘못된 fixture는 `admin-react/lifecycle-dry-run-fixture-not-found`로 표시되며 production action이나 cooldown을 소비하지 않습니다. `admin-react/lifecycle-pasted-context-invalid`는 서버 측 pasted-context validator를 구성한 애플리케이션을 위한 framework-level contract입니다.
 - Lifecycle retryable failure: admin-ops recovery 계약이 retry/replay를 안전하다고 선언한 run에만 복구 컨트롤을 표시합니다.
 - Contract drift: `pnpm contract:verify`가 snapshot diff, canonical graph, Project Map manifest bundle, OpenAPI/client output drift, generated client typecheck를 쓰기 없이 검사합니다. 의도한 출력 변경은 `pnpm codegen`으로 반영합니다.
 - DI graph drift: 의도적으로 갱신할 때 `pnpm di:graph`를 실행합니다. `pnpm di:verify`는 기존 `.croco/build/di-graph.manifest.json`과 Project Map 산출물을 변경하지 않은 채 검사하고 `croco doctor --json`을 실행합니다.

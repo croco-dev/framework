@@ -9,7 +9,7 @@ import {
 import type { LifecycleRun } from "@croco/lifecycle-core";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { LifecycleAutomationSource, LifecycleRuleAdminAction } from "../index";
 import {
   createLifecycleAutomationLoadingState,
@@ -124,10 +124,20 @@ describe("LifecycleAutomationConsole", () => {
     const empty = await loadLifecycleAutomationConsole({
       source,
       grantedPermissions: ["lifecycle:read"],
+      dryRun: {
+        kind: "invalid",
+        problem: {
+          code: "admin-react/lifecycle-dry-run-fixture-not-found",
+          message: "The selected dry-run fixture is unavailable.",
+          source: "dry-run",
+        },
+      },
       generatedAt: instant,
     });
     expect(empty.kind).toBe("empty");
-    expect(render(empty)).toContain("No lifecycle rules or runs are available.");
+    const emptyHtml = render(empty);
+    expect(emptyHtml).toContain("No lifecycle rules or runs are available.");
+    expect(emptyHtml).toContain("admin-react/lifecycle-dry-run-fixture-not-found");
   });
 
   it("keeps partial provider failures as explicit Problems", async () => {
@@ -365,7 +375,7 @@ describe("LifecycleAutomationConsole", () => {
   });
 
   it("distinguishes invalid pasted context from evaluator availability failures", async () => {
-    const { evaluator, registry, runStore } = await createRuntime();
+    const { context, evaluator, registry, runStore } = await createRuntime();
     const source = createLifecycleAutomationSource({
       registry,
       evaluator,
@@ -390,6 +400,27 @@ describe("LifecycleAutomationConsole", () => {
     });
     expect(JSON.stringify(dryRun)).not.toContain("secret@example.com");
     expect(JSON.stringify(dryRun)).not.toContain("schema mismatch with private input");
+
+    vi.spyOn(evaluator, "dryRun").mockRejectedValueOnce(new TypeError("evaluator internal detail"));
+    const unavailableSource = createLifecycleAutomationSource({
+      registry,
+      evaluator,
+      runStore,
+      parsePastedContext: async () => context,
+    });
+    const unavailable = await unavailableSource.dryRun(
+      { ruleId: "customer-risk", pastedContext: { privateEmail: "secret@example.com" } },
+      ["lifecycle:dry-run"],
+    );
+    expect(unavailable).toEqual({
+      kind: "problem",
+      problem: {
+        code: "admin-react/lifecycle-dry-run-unavailable",
+        message: "Lifecycle dry-run could not be loaded. Inspect the server-side Problem evidence.",
+        source: "dry-run",
+      },
+    });
+    expect(JSON.stringify(unavailable)).not.toContain("evaluator internal detail");
   });
 
   it("explains production match, cooldown suppression, failed action, and safe recovery", async () => {
@@ -466,7 +497,17 @@ describe("LifecycleAutomationConsole", () => {
     expect(html).toContain("Replay safely");
     expect(html).toContain("lifecycle-core/in-memory-action-failed");
     expect(html).toContain("/admin/tenants/tenant-1");
+    expect(html).toContain('<th scope="row"><a href="/admin/operations/lifecycle/');
     expect(await sourceWithRecovery.listRuns({ actionState: "failure" })).toHaveLength(1);
+
+    const unsafeState = await loadLifecycleAutomationConsole({
+      source,
+      grantedPermissions: ["lifecycle:read"],
+      generatedAt: instant,
+    });
+    const unsafeHtml = render(unsafeState);
+    expect(unsafeHtml).toContain("Not declared safe");
+    expect(unsafeHtml).not.toContain(">Replay safely</button>");
   });
 
   it("applies limits after secondary filters", async () => {
