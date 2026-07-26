@@ -52,12 +52,20 @@ function renderTextTemplateIfNeeded(
   context: Record<string, unknown>,
 ): string | null {
   const template = readFileSync(templatePath, "utf-8");
+  const githubExpressions: string[] = [];
+  const protectedTemplate = template.replace(/\$\{\{[\s\S]*?\}\}/g, (expression) => {
+    const index = githubExpressions.push(expression) - 1;
+    return `__CROCO_GITHUB_EXPRESSION_${index}__`;
+  });
 
-  if (!template.includes("{{") || !template.includes("}}")) {
+  if (!protectedTemplate.includes("{{") || !protectedTemplate.includes("}}")) {
     return null;
   }
 
-  return Handlebars.compile(template)(context);
+  return Handlebars.compile(protectedTemplate)(context).replace(
+    /__CROCO_GITHUB_EXPRESSION_(\d+)__/g,
+    (_match, index: string) => githubExpressions[Number(index)] ?? "",
+  );
 }
 
 export function mergeInto(src: string, dest: string, context: Record<string, unknown>): void {

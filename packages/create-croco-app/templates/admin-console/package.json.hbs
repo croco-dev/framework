@@ -29,6 +29,10 @@
     "build": "pnpm contract:client && turbo build",
     "lint": "biome lint .",
     "test": "turbo test",
+    "test:browser:install": "pnpm --filter {{scope}}/console-web test:browser:install",
+    "test:component": "pnpm --filter {{scope}}/console-web test:component",
+    "test:journey": "playwright test",
+    "test:ci": "pnpm contract:client && pnpm test:component && pnpm test:journey",
     "typecheck": "pnpm contract:client && turbo typecheck"
   },
   "devDependencies": {
@@ -36,6 +40,7 @@
     "@croco/cli": "workspace:*",
     "@croco/openapi-spec": "workspace:*",
     "@croco/rpc-codegen": "workspace:*",
+    "@playwright/test": "1.62.0",
     "@types/node": "^22",
     "turbo": "latest",
     "typescript": "^6.0.3"
