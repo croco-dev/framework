@@ -7903,7 +7903,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          line: 134,
+          line: 144,
           column: 13,
           kind: "problem-factory",
         },
@@ -7936,7 +7936,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metering-drizzle/src/migrations/addUsageEnvelopeFields.ts",
-          line: 86,
+          line: 115,
           column: 9,
           kind: "problem-factory",
         },
@@ -7969,7 +7969,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metering-drizzle/src/libs/problems/UsageEnvelopeConfigurationProblem.ts",
-          line: 5,
+          line: 6,
           column: 5,
           kind: "problem-constructor",
         },
