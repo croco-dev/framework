@@ -1,10 +1,13 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { gzipSync } from "node:zlib";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { runDependencyAuditPolicy } from "../dependency-audit-policy.mts";
+import { runDependencyAuditPolicy, runPnpmAudit } from "../dependency-audit-policy.mts";
 
 const tempRepos: string[] = [];
 let advisoryId = 0;
@@ -64,6 +67,101 @@ describe("dependency-audit-policy.mts", () => {
         rootDir: repo,
       }),
     ).toThrow("ERR_PNPM_AUDIT_BAD_RESPONSE");
+  });
+
+  it.each([
+    [
+      "ERR_PNPM_AUDIT_BAD_RESPONSE",
+      "The audit endpoint returned invalid JSON: Unexpected token '\u001f', gzip bytes are not valid JSON",
+    ],
+    ["pnpm", "Unexpected token '\\u001f', gzip bytes are not valid JSON"],
+  ])("recovers when the npm audit endpoint omits gzip content encoding (%s)", (code, message) => {
+    const calls: Array<{ readonly env?: NodeJS.ProcessEnv }> = [];
+    const outputs = [
+      JSON.stringify({
+        error: {
+          code,
+          message,
+        },
+      }),
+      JSON.stringify({ advisories: {} }),
+    ];
+
+    const result = runPnpmAudit(
+      process.cwd(),
+      [],
+      "pnpm audit --json",
+      (_command, _args, options) => {
+        calls.push({ env: options.env });
+        return { stderr: "", stdout: outputs.shift() ?? "" };
+      },
+    );
+
+    expect(result).toEqual({ advisories: {} });
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.env).toBeUndefined();
+    expect(calls[1]?.env?.NODE_OPTIONS).toContain("--require=");
+    expect(calls[1]?.env?.NODE_OPTIONS).toContain("pnpm-audit-gzip-recovery.cjs");
+  });
+
+  it("decompresses an audit response whose gzip content encoding header is missing", async () => {
+    const shimDir = mkdtempSync(join(tmpdir(), "croco audit gzip recovery "));
+    tempRepos.push(shimDir);
+    const shimPath = join(shimDir, "pnpm-audit-gzip-recovery.cjs");
+    copyFileSync(
+      join(dirname(import.meta.filename), "..", "pnpm-audit-gzip-recovery.cjs"),
+      shimPath,
+    );
+    const responseBody = JSON.stringify({ advisories: {} });
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(gzipSync(responseBody));
+    });
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      throw new Error("Expected the audit fixture server to listen on a TCP port");
+    }
+
+    try {
+      const result = await runNode(
+        `http://127.0.0.1:${address.port}/-/npm/v1/security/advisories/bulk`,
+        `--require=${JSON.stringify(shimPath)}`,
+      );
+
+      expect(result).toEqual({ exitCode: 0, stderr: "", stdout: `${responseBody}\n` });
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+  });
+
+  it("fails closed when gzip recovery still returns an audit error", () => {
+    const outputs = [
+      JSON.stringify({
+        error: {
+          code: "ERR_PNPM_AUDIT_BAD_RESPONSE",
+          message: "Unexpected token '\u001f', gzip bytes are not valid JSON",
+        },
+      }),
+      JSON.stringify({
+        error: {
+          code: "ERR_PNPM_AUDIT_BAD_RESPONSE",
+          message: "registry remained unavailable",
+        },
+      }),
+    ];
+
+    expect(() =>
+      runPnpmAudit(process.cwd(), [], "pnpm audit --json", () => ({
+        stderr: "",
+        stdout: outputs.shift() ?? "",
+      })),
+    ).toThrow("registry remained unavailable");
   });
 
   it.each([
@@ -1214,4 +1312,41 @@ function writeFile(repo: string, path: string, contents: string): void {
   const fullPath = join(repo, path);
   mkdirSync(dirname(fullPath), { recursive: true });
   writeFileSync(fullPath, contents);
+}
+
+function runNode(
+  url: string,
+  nodeOptions: string,
+): Promise<{ readonly exitCode: number | null; readonly stderr: string; readonly stdout: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      process.execPath,
+      [
+        "--eval",
+        "fetch(process.argv[1]).then(async (response) => process.stdout.write(`${await response.text()}\\n`)).catch((error) => { process.stderr.write(`${error instanceof Error ? error.message : String(error)}\\n`); process.exitCode = 1; });",
+        url,
+      ],
+      {
+        env: {
+          ...process.env,
+          NODE_OPTIONS: nodeOptions,
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
+    let stderr = "";
+    let stdout = "";
+    child.stderr.setEncoding("utf-8");
+    child.stdout.setEncoding("utf-8");
+    child.stderr.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    child.stdout.on("data", (chunk: string) => {
+      stdout += chunk;
+    });
+    child.once("error", reject);
+    child.once("close", (exitCode) => {
+      resolve({ exitCode, stderr, stdout });
+    });
+  });
 }
