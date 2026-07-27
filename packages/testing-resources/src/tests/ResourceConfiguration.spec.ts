@@ -1,6 +1,6 @@
 import { PassThrough } from "node:stream";
-import { Container, Token } from "@croco/framework-context";
 import { beforeEach, describe, expect, it } from "vitest";
+import { Container, Token } from "@croco/framework-context";
 import {
   DEFAULT_POSTGRES_IMAGE,
   DEFAULT_REDIS_IMAGE,
@@ -98,10 +98,12 @@ describe("testing resource configuration", () => {
     expect(logs.at(-1)).toBe("log-204");
   });
 
-  it("preserves every cleanup failure as structured evidence", () => {
+  it("preserves every cleanup failure as structured evidence", async () => {
     const failures = [new Error("transaction rollback failed"), new Error("pool closure failed")];
 
-    expect(() => throwCleanupFailures("postgres", failures, ["container log"])).toThrow(
+    await expect(
+      Promise.resolve().then(() => throwCleanupFailures("postgres", failures, ["container log"])),
+    ).rejects.toThrow(
       expect.objectContaining({
         code: "testing-resources/cleanup-failed",
         extensions: expect.objectContaining({
