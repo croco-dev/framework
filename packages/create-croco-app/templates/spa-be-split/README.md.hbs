@@ -24,6 +24,10 @@ pnpm dev:web
 - RPC 클라이언트 생성: `pnpm contract:client` 또는 `pnpm codegen`
 - DI graph 검증: `pnpm di:verify`
 - 테스트: `pnpm test`
+- Chromium 설치: `pnpm test:browser:install`
+- React component test: `pnpm test:component`
+- 실제 API browser journey: `pnpm test:journey`
+- browser CI aggregate: `pnpm test:ci`
 - 타입 검사: `pnpm typecheck`
 - lint: `pnpm lint`
 
@@ -90,9 +94,27 @@ function readProblemCode(error: unknown): string | null {
 ```text
 apps/api-server        Croco transports-http + protocols-rest Node 서버
 apps/console-web       Vite + React SPA
+tests/journeys         Playwright full-stack 성공/Problem 여정
 libs/sample-domain     service/domain/datasource/feature/page/ui 예시 경계
 libs/shared/provider-rpc  rpc-codegen 산출물 위치
 ```
+
+## 브라우저 테스트
+
+`apps/console-web/src/**/*.component.spec.tsx`는 jsdom 대신 Vitest Browser Mode의 실제
+Chromium에서 실행됩니다. `src/test/server.ts`의 MSW worker는 등록되지 않은 API 요청을
+오류로 처리하므로 fixture에서 빠진 URL과 contract 경계가 조용히 실제 네트워크로
+빠져나가지 않습니다.
+
+Playwright는 생성된 API와 Vite 서버를 함께 시작해 사용자 생성 성공 흐름과 RFC 7807
+Problem 표시 흐름을 검증합니다. 실패 시 trace, screenshot, browser console error,
+실패한 network request가 `test-results/`에 보존됩니다. 생성된
+`.github/workflows/browser-tests.yml`은 두 journey shard의 blob report를 하나의 HTML
+report로 병합합니다.
+
+다른 도구를 선호하면 `test:component`, `test:journey`, `test:ci` 스크립트와 해당 설정을
+교체하거나 제거할 수 있습니다. 이 baseline은 `@croco/testing` 공개 API에 의존하지
+않습니다.
 
 ## 빌드
 

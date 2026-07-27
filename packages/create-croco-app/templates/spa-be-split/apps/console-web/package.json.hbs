@@ -7,6 +7,9 @@
     "dev:smoke": "node --input-type=module --eval \"import { loadConfigFromFile } from 'vite'; const result = await loadConfigFromFile({ command: 'serve', mode: 'development' }, './vite.config.ts'); if (!result) throw new Error('vite.config.ts did not load');\"",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "pnpm test:component",
+    "test:browser:install": "playwright install chromium",
+    "test:component": "vitest run --config vitest.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,11 +20,17 @@
   },
   "devDependencies": {
     "@croco/frontend-vite": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@types/node": "^22",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitest/browser-playwright": "4.0.16",
     "@vitejs/plugin-react": "^4.3.0",
+    "msw": "2.15.0",
+    "playwright": "1.62.0",
     "typescript": "^6.0.3",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "vitest": "4.0.16",
+    "vitest-browser-react": "2.2.0"
   }
 }

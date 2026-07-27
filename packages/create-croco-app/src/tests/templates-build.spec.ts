@@ -132,6 +132,15 @@ function checkSpaBeSplitStructure() {
   checkConsoleWebManifestDependency("spa-be-split", "@croco/frontend-vite");
   checkFileExists("spa-be-split", "apps", "console-web", "src", "main.tsx");
   checkFileExists("spa-be-split", "apps", "console-web", "vite.config.ts.hbs");
+  checkFileExists("spa-be-split", "apps", "console-web", "vitest.config.ts");
+  checkFileExists("spa-be-split", "apps", "console-web", "public", "mockServiceWorker.js");
+  checkFileExists("spa-be-split", "apps", "console-web", "src", "tests", "ProblemNotice.spec.tsx");
+  checkFileExists("spa-be-split", "apps", "console-web", "src", "test", "browser.ts");
+  checkFileExists("spa-be-split", "apps", "console-web", "src", "test", "server.ts");
+  checkFileExists("spa-be-split", "playwright.config.ts");
+  checkFileExists("spa-be-split", "tests", "journeys", "create-user.spec.ts");
+  checkFileExists("spa-be-split", "tests", "journeys", "problem-rendering.spec.ts");
+  checkFileExists("spa-be-split", ".github", "workflows", "browser-tests.yml");
   checkFileContains(
     "spa-be-split",
     ["apps", "console-web", "src", "api", "client.ts"],
@@ -188,6 +197,10 @@ function checkSpaBeSplitStructure() {
         /^pnpm contract:check &&[\s\S]*croco-rpc-codegen[\s\S]*--strict-schemas[\s\S]*--problem-runtime frontend-problems --manifest-bundle \.croco\/manifest[\s\S]*provider-rpc typecheck$/,
       ),
       "contract:openapi:check": expect.stringMatching(/croco-openapi-spec[\s\S]*--output-check$/),
+      "test:browser:install": expect.stringContaining("console-web test:browser:install"),
+      "test:component": expect.stringContaining("console-web test:component"),
+      "test:journey": "playwright test",
+      "test:ci": "pnpm test:component && pnpm test:journey",
       "contract:client:check": expect.stringMatching(
         /croco-rpc-codegen[\s\S]*--output-check[\s\S]*provider-rpc typecheck$/,
       ),

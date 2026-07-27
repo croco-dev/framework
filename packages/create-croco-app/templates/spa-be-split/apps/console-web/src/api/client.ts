@@ -1,6 +1,6 @@
 import { handleJsonResponse } from "@croco/frontend-problems";
 
-const DEFAULT_API_BASE_PATH = "http://localhost:3000";
+const DEFAULT_API_BASE_PATH = "/api/";
 
 type ViteImportMeta = ImportMeta & {
   env?: {
@@ -12,10 +12,13 @@ function ensureTrailingSlash(value: string): string {
   return value.endsWith("/") ? value : `${value}/`;
 }
 
-function resolveApiBaseUrl(): string {
+function resolveApiBaseUrl(): URL {
   const configuredUrl = (import.meta as ViteImportMeta).env?.VITE_API_URL?.trim();
 
-  return ensureTrailingSlash(configuredUrl || DEFAULT_API_BASE_PATH);
+  return new URL(
+    ensureTrailingSlash(configuredUrl || DEFAULT_API_BASE_PATH),
+    window.location.origin,
+  );
 }
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {

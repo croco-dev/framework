@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ProblemClientError } from "@croco/frontend-problems";
+import type { FrontendProblem } from "../ProblemNotice";
 import { request } from "./client";
 
 export type User = {
@@ -11,7 +12,7 @@ export type User = {
 type UseUsersResult = {
   readonly users: readonly User[];
   readonly loading: boolean;
-  readonly error: string | null;
+  readonly problem: FrontendProblem | null;
   readonly createUser: (input: Omit<User, "id">) => Promise<void>;
   readonly refresh: () => Promise<void>;
 };
@@ -19,16 +20,16 @@ type UseUsersResult = {
 export function useUsers(): UseUsersResult {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [problem, setProblem] = useState<FrontendProblem | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setProblem(null);
 
     try {
       setUsers(await request<User[]>("/users"));
     } catch (caught) {
-      setError(toErrorMessage(caught, "Failed to load users"));
+      setProblem(toFrontendProblem(caught, "Failed to load users"));
     } finally {
       setLoading(false);
     }
@@ -36,7 +37,7 @@ export function useUsers(): UseUsersResult {
 
   const createUser = useCallback(
     async (input: Omit<User, "id">) => {
-      setError(null);
+      setProblem(null);
 
       try {
         await request<User>("/users", {
@@ -46,7 +47,7 @@ export function useUsers(): UseUsersResult {
         });
         await refresh();
       } catch (caught) {
-        setError(toErrorMessage(caught, "Failed to create user"));
+        setProblem(toFrontendProblem(caught, "Failed to create user"));
       }
     },
     [refresh],
@@ -56,13 +57,26 @@ export function useUsers(): UseUsersResult {
     void refresh();
   }, [refresh]);
 
-  return { users, loading, error, createUser, refresh };
+  return { users, loading, problem, createUser, refresh };
 }
 
-function toErrorMessage(caught: unknown, fallback: string): string {
+export function toFrontendProblem(caught: unknown, fallback: string): FrontendProblem {
   if (caught instanceof ProblemClientError) {
-    return caught.problem.detail ?? `${caught.problem.code}: ${caught.problem.title}`;
+    return {
+      code: caught.problem.code,
+      status: caught.problem.status,
+      detail: caught.problem.detail ?? caught.problem.title,
+      recovery:
+        typeof caught.problem.recovery === "string"
+          ? caught.problem.recovery
+          : "Retry the request or inspect the API Problem evidence.",
+    };
   }
 
-  return caught instanceof Error ? caught.message : fallback;
+  return {
+    code: "frontend/unexpected-api-failure",
+    status: 0,
+    detail: caught instanceof Error ? caught.message : fallback,
+    recovery: "Check the API connection and retry the request.",
+  };
 }

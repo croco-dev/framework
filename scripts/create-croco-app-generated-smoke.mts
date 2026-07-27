@@ -959,9 +959,28 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
     validations: [
       { label: "dev smoke", args: ["dev:smoke"] },
       { label: "lint", args: ["lint"] },
+      {
+        label: "browser testing contract",
+        paths: [
+          "apps/console-web/vitest.config.ts",
+          "apps/console-web/public/mockServiceWorker.js",
+          "apps/console-web/src/tests/ProblemNotice.spec.tsx",
+          "apps/console-web/src/test/browser.ts",
+          "apps/console-web/src/test/server.ts",
+          "playwright.config.ts",
+          "tests/journeys/create-user.spec.ts",
+          "tests/journeys/problem-rendering.spec.ts",
+          ".github/workflows/browser-tests.yml",
+        ],
+      },
+      { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
+      {
+        label: "browser journeys",
+        args: ["test:journey"],
+      },
       {
         label: "Contract snapshot",
         args: ["contract:snapshot"],
@@ -1019,9 +1038,28 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
     validations: [
       { label: "admin smoke", args: ["admin:smoke"] },
       { label: "lint", args: ["lint"] },
+      {
+        label: "browser testing contract",
+        paths: [
+          "apps/console-web/vitest.config.ts",
+          "apps/console-web/public/mockServiceWorker.js",
+          "apps/console-web/src/tests/ProblemNotice.spec.tsx",
+          "apps/console-web/src/test/browser.ts",
+          "apps/console-web/src/test/server.ts",
+          "playwright.config.ts",
+          "tests/journeys/create-user.spec.ts",
+          "tests/journeys/problem-rendering.spec.ts",
+          ".github/workflows/browser-tests.yml",
+        ],
+      },
+      { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
+      {
+        label: "browser journeys",
+        args: ["test:journey"],
+      },
       {
         label: "Contract snapshot",
         args: ["contract:snapshot"],

@@ -5,6 +5,7 @@ import { preProcessFile } from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
 import { getExternalCrocoPackageRange } from "../helpers/croco-ranges.js";
+import { mergeInto, replaceGithubExpressions } from "../helpers/fs.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
 import { normalizeNonInteractiveOptions, parseCliOptions } from "../options.js";
 import type { GeneratorOptions } from "../types.js";
@@ -78,8 +79,12 @@ function assertNoHandlebarsPlaceholders(projectDir: string): void {
     .filter(isTextFile)
     .filter((filePath) => {
       const content = readFileSync(filePath, "utf8");
+      const contentWithoutGithubExpressions = replaceGithubExpressions(content, () => "");
 
-      return content.includes("{{") || content.includes("}}");
+      return (
+        contentWithoutGithubExpressions.includes("{{") ||
+        contentWithoutGithubExpressions.includes("}}")
+      );
     })
     .map((filePath) => relative(projectDir, filePath));
 
@@ -327,6 +332,26 @@ function assertSourceBareImportsDeclared(packageDir: string): void {
   expect(missingDependencies).toEqual([]);
 }
 
+function assertBrowserWorkflowUsesImmutableActions(workflow: string): void {
+  const remoteActions = workflow
+    .split("\n")
+    .flatMap((line) => line.match(/^\s*(?:-\s+)?uses:\s*([^\s#]+)/)?.[1] ?? [])
+    .filter((reference) => !reference.startsWith("./") && !reference.startsWith("docker://"));
+
+  expect(new Set(remoteActions)).toEqual(
+    new Set([
+      "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271",
+      "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+      "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+      "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+    ]),
+  );
+  for (const reference of remoteActions) {
+    expect(reference).toMatch(/^[^@\s]+@[0-9a-f]{40}$/i);
+  }
+}
+
 function assertAllSourceBareImportsDeclared(projectDir: string): void {
   const packageDirs = collectFiles(projectDir)
     .filter((filePath) => filePath.endsWith("package.json"))
@@ -414,6 +439,25 @@ function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
 }
 
 describe("E2E: generate()", () => {
+  it("preserves GitHub expressions containing closing braces inside quoted strings", () => {
+    const sourceDir = join(testDir, "github-expression-source");
+    const outputDir = join(testDir, "github-expression-output");
+    const expression = '${{ contains("}}", matrix.value) }}';
+    mkdirSync(sourceDir, { recursive: true });
+    writeFileSync(
+      join(sourceDir, "workflow.yml"),
+      `name: {{projectName}}\ncondition: ${expression}\n`,
+    );
+
+    mergeInto(sourceDir, outputDir, { projectName: "generated" });
+
+    expect(readFileSync(join(outputDir, "workflow.yml"), "utf8")).toBe(
+      `name: generated\ncondition: ${expression}\n`,
+    );
+    assertNoHandlebarsPlaceholders(outputDir);
+    expect(replaceGithubExpressions(expression, () => "__EXPRESSION__")).toBe("__EXPRESSION__");
+  });
+
   let testDir: string;
 
   beforeEach(() => {
@@ -884,6 +928,7 @@ describe("E2E: generate()", () => {
         join(testDir, "libs", "shared", "provider-rpc", "package.json"),
       );
       const readme = readFileSync(join(testDir, "README.md"), "utf8");
+      const workspaceConfig = readFileSync(join(testDir, "pnpm-workspace.yaml"), "utf8");
       const apiUsersSource = readFileSync(
         join(testDir, "apps", "api-server", "src", "users.ts"),
         "utf8",
@@ -896,6 +941,14 @@ describe("E2E: generate()", () => {
         join(testDir, "apps", "console-web", "src", "api", "client.ts"),
         "utf8",
       );
+      const viteConfig = readFileSync(
+        join(testDir, "apps", "console-web", "vite.config.ts"),
+        "utf8",
+      );
+      const browserWorkflow = readFileSync(
+        join(testDir, ".github", "workflows", "browser-tests.yml"),
+        "utf8",
+      );
 
       expect(rootPackageJson.scripts).toMatchObject({
         dev: "turbo dev",
@@ -903,6 +956,10 @@ describe("E2E: generate()", () => {
           "pnpm --filter @test/api-server dev:smoke && pnpm --filter @test/console-web dev:smoke",
         lint: "biome lint .",
         test: "turbo test",
+        "test:browser:install": "pnpm --filter @test/console-web test:browser:install",
+        "test:component": "pnpm --filter @test/console-web test:component",
+        "test:journey": "playwright test",
+        "test:ci": "pnpm test:component && pnpm test:journey",
         typecheck: "turbo typecheck",
         "di:graph": "pnpm --filter @test/api-server di:graph",
         "di:check": "croco di check .croco/build/di-graph.manifest.json",
@@ -949,6 +1006,18 @@ describe("E2E: generate()", () => {
       expect(consolePackageJson.dependencies).toMatchObject({
         "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
       });
+      expect(consolePackageJson.scripts).toMatchObject({
+        test: "pnpm test:component",
+        "test:browser:install": "playwright install chromium",
+        "test:component": "vitest run --config vitest.config.ts",
+      });
+      expect(consolePackageJson.devDependencies).toMatchObject({
+        "@vitest/browser-playwright": "4.0.16",
+        msw: "2.15.0",
+        playwright: "1.62.0",
+        vitest: "4.0.16",
+        "vitest-browser-react": "2.2.0",
+      });
       expect(rpcPackageJson.dependencies).toMatchObject({
         "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
         "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
@@ -966,6 +1035,26 @@ describe("E2E: generate()", () => {
       expect(apiAppSource).toContain("HttpExceptionFilter");
       expect(apiAppSource).toContain("globalFilters: [HttpExceptionFilter]");
       expect(clientSource).toContain("handleJsonResponse");
+      expect(clientSource).toContain('const DEFAULT_API_BASE_PATH = "/api/"');
+      expect(viteConfig).toContain("path.replace(/^\\/api/, '')");
+      expect(browserWorkflow).toContain("shard=${{ matrix.shard }}/2");
+      expect(browserWorkflow).toContain("playwright merge-reports");
+      assertBrowserWorkflowUsesImmutableActions(browserWorkflow);
+      expect(workspaceConfig).toContain("msw: true");
+      expect(workspaceConfig).toMatch(/onlyBuiltDependencies:[\s\S]*- msw/);
+      for (const relativePath of [
+        "apps/console-web/vitest.config.ts",
+        "apps/console-web/public/mockServiceWorker.js",
+        "apps/console-web/src/tests/ProblemNotice.spec.tsx",
+        "apps/console-web/src/test/browser.ts",
+        "apps/console-web/src/test/server.ts",
+        "playwright.config.ts",
+        "tests/journeys/create-user.spec.ts",
+        "tests/journeys/problem-rendering.spec.ts",
+        ".github/workflows/browser-tests.yml",
+      ]) {
+        expect(existsSync(join(testDir, relativePath))).toBe(true);
+      }
       expect(readme).toContain("운영형 앱 스타터");
       expect(readme).toContain("비범위");
       expect(readme).toContain("HttpExceptionFilter");
@@ -1012,12 +1101,20 @@ describe("E2E: generate()", () => {
         join(testDir, "apps", "console-web", "vite.config.ts"),
         "utf8",
       );
+      const browserWorkflow = readFileSync(
+        join(testDir, ".github", "workflows", "browser-tests.yml"),
+        "utf8",
+      );
 
       expect(rootPackageJson.scripts).toMatchObject({
         "admin:smoke":
           "pnpm contract:client && pnpm --filter @test/api-server admin:smoke && pnpm --filter @test/console-web admin:smoke",
         typecheck: "pnpm contract:client && turbo typecheck",
         build: "pnpm contract:client && turbo build",
+        "test:browser:install": "pnpm --filter @test/console-web test:browser:install",
+        "test:component": "pnpm --filter @test/console-web test:component",
+        "test:journey": "playwright test",
+        "test:ci": "pnpm contract:client && pnpm test:component && pnpm test:journey",
         "contract:client": expect.stringContaining(
           "apps/api-server/src/{controllers/**/*.ts,admin.ts,users.ts,problems.ts}",
         ),
@@ -1051,6 +1148,24 @@ describe("E2E: generate()", () => {
         "@croco/admin-core": externalCrocoRange("@croco/admin-core"),
         "@croco/webhooks-core": externalCrocoRange("@croco/webhooks-core"),
       });
+      expect(consolePackageJson.scripts).toMatchObject({
+        test: "pnpm test:component",
+        "test:browser:install": "playwright install chromium",
+        "test:component": "vitest run --config vitest.config.ts",
+      });
+      for (const relativePath of [
+        "apps/console-web/vitest.config.ts",
+        "apps/console-web/public/mockServiceWorker.js",
+        "apps/console-web/src/tests/ProblemNotice.spec.tsx",
+        "apps/console-web/src/test/browser.ts",
+        "apps/console-web/src/test/server.ts",
+        "playwright.config.ts",
+        "tests/journeys/create-user.spec.ts",
+        "tests/journeys/problem-rendering.spec.ts",
+        ".github/workflows/browser-tests.yml",
+      ]) {
+        expect(existsSync(join(testDir, relativePath))).toBe(true);
+      }
       expect(rpcPackageJson.dependencies).toMatchObject({
         "@croco/frontend-problems": externalCrocoRange("@croco/frontend-problems"),
         "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
@@ -1066,6 +1181,9 @@ describe("E2E: generate()", () => {
       expect(appSource).toContain("return createControllerList(options);");
       expect(appSource).toContain("const appControllers = createControllerList(options);");
       expect(viteConfig).toContain("'/admin': 'http://localhost:3000'");
+      expect(browserWorkflow).toContain("shard=${{ matrix.shard }}/2");
+      expect(browserWorkflow).toContain("playwright merge-reports");
+      assertBrowserWorkflowUsesImmutableActions(browserWorkflow);
       expect(webSource).toContain("import { adminClient, type adminRpc }");
       expect(webSource).toContain("adminClient");
       expect(webSource).toContain("adminRpc.ListUsersOutput");

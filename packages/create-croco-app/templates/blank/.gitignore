@@ -1,6 +1,9 @@
 node_modules
 dist
 .turbo
+blob-report
+playwright-report
+test-results
 .env
 .env.local
 .env.*.local
