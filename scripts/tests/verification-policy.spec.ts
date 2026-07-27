@@ -138,7 +138,7 @@ describe("workflow read-only contracts", () => {
 
   it("routes authoritative CI verification through the guarded shared manifest", () => {
     expect(ci).toContain("scripts/release-spine-evidence.mts");
-    expect(ci).toContain('--profile "${{ needs.changes.outputs.profile }}"');
+    expect(ci).toContain('args=(--profile "$VERIFICATION_PROFILE")');
     expect(ci).not.toContain("pnpm audit:read-only");
 
     const manifest = readFileSync(

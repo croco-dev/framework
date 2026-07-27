@@ -108,11 +108,12 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("- name: Run selected verification profile");
     expect(WORKFLOW.match(/scripts\/release-spine-evidence\.mts/g)).toHaveLength(1);
     expect(WORKFLOW).toContain("validate:\n    needs: changes");
-    expect(WORKFLOW).toContain('--profile "${{ needs.changes.outputs.profile }}"');
+    expect(WORKFLOW).toContain("VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}");
+    expect(WORKFLOW).toContain('args=(--profile "$VERIFICATION_PROFILE")');
     expect(WORKFLOW).toContain(
-      'if [ "${{ github.event_name }}" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata --base "${{ needs.changes.outputs.base }}" --head HEAD)',
+      'if [ "${{ github.event_name }}" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata --base "$VERIFICATION_BASE" --head HEAD)',
     );
-    expect(WORKFLOW).toContain('--base "${{ needs.changes.outputs.base }}" --head HEAD');
+    expect(WORKFLOW).toContain("VERIFICATION_BASE: ${{ needs.changes.outputs.base }}");
     expect(WORKFLOW).not.toContain("test:release-gates");
   });
 
@@ -124,6 +125,15 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).not.toContain("pnpm create-croco-app:smoke -- --tier spine-blocking");
     expect(VALIDATE_JOB).not.toContain("--tier ecosystem-advisory");
     expect(WORKFLOW).toContain("ecosystem-advisory:\n    needs: changes");
+    expect(WORKFLOW).toContain(
+      "ecosystem-advisory:\n    needs: changes\n    if: needs.changes.outputs.profile != 'repo'\n    continue-on-error: true\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    permissions:\n      actions: read\n      contents: read",
+    );
+    const ecosystemAdvisoryStart = WORKFLOW.indexOf("  ecosystem-advisory:");
+    const ecosystemAdvisory = WORKFLOW.slice(
+      ecosystemAdvisoryStart,
+      WORKFLOW.indexOf("  windows-scaffold:", ecosystemAdvisoryStart),
+    );
+    expect(ecosystemAdvisory).toContain("persist-credentials: false");
   });
 
   it("makes the Gitleaks result blocking while preserving redacted evidence", () => {
@@ -267,7 +277,7 @@ describe("CI verification profile contract", () => {
   it("reports whether the publish-only audit policy was selected", () => {
     expect(WORKFLOW).toContain('audit_policy_result="selected by the shared publish profile"');
     expect(WORKFLOW).toContain(
-      'audit_policy_result="not selected by the ${{ needs.changes.outputs.profile }} profile"',
+      'audit_policy_result="not selected by the $VERIFICATION_PROFILE profile"',
     );
   });
 

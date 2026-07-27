@@ -135,12 +135,14 @@ jobs:
       - name: Assemble security policy summary
         if: always()
         shell: bash
+        env:
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
           mkdir -p ci-reports/security
-          if [ "${{ needs.changes.outputs.profile }}" = "publish" ]; then
+          if [ "$VERIFICATION_PROFILE" = "publish" ]; then
             audit_policy_result="selected by the shared publish profile"
           else
-            audit_policy_result="not selected by the ${{ needs.changes.outputs.profile }} profile"
+            audit_policy_result="not selected by the $VERIFICATION_PROFILE profile"
           fi
           {
             echo "# Security policy summary"
@@ -186,19 +188,24 @@ jobs:
       - name: Run selected verification profile
         id: verification_profile
         shell: bash
+        env:
+          VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
-          args=(--profile "${{ needs.changes.outputs.profile }}")
+          args=(--profile "$VERIFICATION_PROFILE")
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            args+=(--allow-pending-release-metadata --base "${{ needs.changes.outputs.base }}" --head HEAD)
+            args+=(--allow-pending-release-metadata --base "$VERIFICATION_BASE" --head HEAD)
           fi
           node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"
 
       - name: Publish verification summary
         if: always()
         shell: bash
+        env:
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
-          report="ci-reports/verification/${{ needs.changes.outputs.profile }}/spine-evidence.md"
-          if [ "${{ needs.changes.outputs.profile }}" = "spine" ]; then
+          report="ci-reports/verification/${VERIFICATION_PROFILE}/spine-evidence.md"
+          if [ "$VERIFICATION_PROFILE" = "spine" ]; then
             report="ci-reports/release/spine-evidence.md"
           fi
           if [ -f "$report" ]; then
@@ -453,9 +460,14 @@ jobs:
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
