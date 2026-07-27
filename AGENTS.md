@@ -7,22 +7,25 @@ AI 코딩 에이전트용 프로젝트 가이드 - TypeScript 모노레포
 ```bash
 # Build
 pnpm build              # 전체 패키지 빌드
-pnpm build --filter=@croco/framework-context  # 단일 패키지 빌드
+pnpm --filter @croco/framework-context build  # 단일 패키지 빌드
 
 # Test
 pnpm test               # 전체 테스트
-pnpm test --filter=@croco/retry-core  # 단일 패키지 테스트
-cd packages/retry-core && pnpm vitest run src/tests/Retryable.spec.ts  # 단일 테스트 파일
-cd packages/retry-core && pnpm vitest run -t "should retry"  # 테스트 이름으로 실행
+pnpm --filter @croco/retry-core test  # 단일 패키지 테스트
+pnpm --dir packages/retry-core vitest run src/tests/Retryable.spec.ts  # 단일 테스트 파일
+pnpm --dir packages/retry-core vitest run -t "should retry"  # 테스트 이름으로 실행
 
 # Lint & Format
-pnpm check              # Biome 검사
-pnpm check --write      # Biome 자동 수정
-biome check --write packages/retry-core  # 단일 패키지
+pnpm lint               # 전체 lint (read-only)
+pnpm --filter @croco/retry-core lint  # 단일 패키지 lint (read-only)
+pnpm format             # 전체 formatter 적용 (파일 변경)
+
+# Repository Verification
+pnpm check              # 전체 저장소 verification gate (read-only)
 
 # Type Check
 pnpm typecheck          # 전체 패키지
-pnpm typecheck --filter=@croco/events-core  # 단일 패키지
+pnpm --filter @croco/events-core typecheck  # 단일 패키지
 ```
 
 ## Croco Design Principles
@@ -42,20 +45,21 @@ Croco는 런타임에서 추측하게 하지 않고, 빌드타임에 의도를 �
 
 ## Code Style
 
-Biome 설정 기준:
+formatter는 Oxfmt, linter는 Oxlint를 사용한다. 아래 요약보다 `.oxfmtrc.json`과 `.oxlintrc.json`이 source of truth다.
 
 - Indent: 2 spaces
 - Line width: 120 characters
 - Quote style: single quotes
 - Trailing commas: ES5 style
-- Type imports 필수 (`import type { X }` 사용)
-- 미사용 imports/variables 금지 (error)
-- `any` 명시적 사용 금지 (warning)
-- Non-null assertion 금지 (error)
+- Type imports 필수 (`import type { X }` 사용, Oxlint error)
+- 미사용 imports/variables 금지 (Oxlint error)
+- `any` 명시적 사용 금지 (Oxlint error)
+- Non-null assertion 금지 (Oxlint error)
+- test file에는 `.oxlintrc.json`의 override가 적용되어 일부 규칙이 완화된다.
 
 ## Import Order
 
-Biome 자동 정렬 순서:
+다음은 project convention이며 현재 formatter/linter가 자동 정렬을 보장하지 않는다.
 
 1. 외부 패키지 (reflect-metadata, typedi 등)
 2. 내부 @croco/\* 패키지
@@ -180,9 +184,11 @@ packages/[name]/
 
 ## Git Hooks (Lefthook)
 
-- pre-commit: `biome check --write` (자동 포맷)
-- pre-push: `pnpm test && pnpm typecheck`
+- pre-commit: staged TypeScript/JavaScript 파일에 Oxlint fix를 적용하고, 지원되는 staged 파일에 Oxfmt를 적용한 뒤 다시 stage한다.
+- pre-push: auto-changeset, 전체 test, tracked-file mutation guard로 감싼 전체 typecheck를 순서대로 실행한다.
 - post-merge: `pnpm install`
+
+정확한 hook command와 대상 glob은 `lefthook.yaml`이 source of truth다.
 
 이 저장소의 기본 브랜치는 main이 아니라 trunk다. 브랜치 관련 예시와 기준은 trunk를 기준으로 해석한다.
 

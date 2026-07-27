@@ -188,6 +188,61 @@ describe("workflow read-only contracts", () => {
   });
 });
 
+describe("agent guide verification contract", () => {
+  const agentGuide = readFileSync(resolve(repositoryRoot, "AGENTS.md"), "utf-8");
+  const packageJson = JSON.parse(
+    readFileSync(resolve(repositoryRoot, "package.json"), "utf-8"),
+  ) as { readonly scripts: Readonly<Record<string, string>> };
+  const lefthook = readFileSync(resolve(repositoryRoot, "lefthook.yaml"), "utf-8");
+  const commandsBlock = agentGuide.match(/## Commands\s+```bash\n(?<commands>[\s\S]*?)```/)?.groups
+    ?.commands;
+
+  it("documents every canonical root command in the command block", () => {
+    expect(commandsBlock, "AGENTS.md must contain a bash code block under Commands").toBeDefined();
+
+    for (const command of ["build", "test", "lint", "format", "typecheck", "check"]) {
+      expect(
+        packageJson.scripts[command],
+        `package.json must define the pnpm ${command} script`,
+      ).toBeTruthy();
+      expect(
+        commandsBlock,
+        `AGENTS.md Commands must document the canonical root command: pnpm ${command}`,
+      ).toMatch(new RegExp(`^pnpm ${command}(?:\\s|$)`, "m"));
+    }
+  });
+
+  it("rejects legacy formatter commands and keeps check read-only", () => {
+    expect(agentGuide, "AGENTS.md must not mention the retired formatter").not.toMatch(/biome/i);
+    expect(
+      agentGuide,
+      "AGENTS.md must not document the nonexistent pnpm check writer",
+    ).not.toContain("pnpm check --write");
+    expect(
+      commandsBlock,
+      "AGENTS.md must describe pnpm check as the read-only repository verification gate",
+    ).toMatch(/^pnpm check\s+# 전체 저장소 verification gate \(read-only\)$/m);
+  });
+
+  it("names the current formatter, linter, and hook sources of truth", () => {
+    for (const path of [".oxlintrc.json", ".oxfmtrc.json", "lefthook.yaml"]) {
+      expect(agentGuide, `AGENTS.md must name the current source of truth: ${path}`).toContain(
+        path,
+      );
+    }
+
+    const preCommit = lefthook.match(/pre-commit:\n(?<body>[\s\S]*?)\n\npre-push:/)?.groups?.body;
+    expect(preCommit, "lefthook.yaml must define a pre-commit section").toBeDefined();
+    for (const tool of ["oxlint", "oxfmt"]) {
+      expect(preCommit, `lefthook pre-commit must invoke ${tool}`).toContain(tool);
+      expect(
+        agentGuide.toLowerCase(),
+        `AGENTS.md must describe the pre-commit ${tool} tool`,
+      ).toContain(tool);
+    }
+  });
+});
+
 function rootScripts(): Readonly<Record<string, string>> {
   return Object.fromEntries(Object.keys(ROOT_VERIFICATION_POLICY).map((name) => [name, "true"]));
 }
