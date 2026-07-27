@@ -18,6 +18,7 @@ export { startServer } from "./libs/adapters/NodeAdapter";
 
 export type {
   AppConfig,
+  BootstrapValidationPolicy,
   CompiledRoute,
   CompiledRoutePipelineGraphConfig,
   CrocoHttpContext,
@@ -34,6 +35,7 @@ export type {
   LambdaRequestContextWithAuthorizer,
   LambdaResponse,
   ListenOptions,
+  NodeRequestHandler,
   MiddlewareFunction,
   NodeServerHandle,
   PipeProvider,

@@ -33,6 +33,16 @@ export interface AppConfig {
   devInspector?: DevInspectorEndpointOptions;
 }
 
+export type BootstrapValidationPolicy = {
+  readonly di: NonNullable<AppConfig["diValidation"]>;
+  readonly security: NonNullable<AppConfig["securityValidation"]>;
+};
+
+export type NodeRequestHandler = (
+  request: Request,
+  env?: Record<string, unknown>,
+) => Promise<Response>;
+
 export interface ListenOptions {
   staticDir?: string;
   spaFallback?: boolean;

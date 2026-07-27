@@ -37,6 +37,16 @@ title: "CrocoApp"
 
 ## Methods
 
+### describeBootstrapValidationPolicy()
+
+> **describeBootstrapValidationPolicy**(): [`BootstrapValidationPolicy`](/api/transports-http/src/type-aliases/bootstrapvalidationpolicy/)
+
+#### Returns
+
+[`BootstrapValidationPolicy`](/api/transports-http/src/type-aliases/bootstrapvalidationpolicy/)
+
+***
+
 ### describeRequestPipelineGraphs()
 
 > **describeRequestPipelineGraphs**(): readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/requestpipelinegraph/)[]
@@ -118,3 +128,13 @@ readonly [`RequestPipelineGraph`](/api/framework-context/src/type-aliases/reques
 #### Returns
 
 `Promise`\<[`NodeServerHandle`](/api/transports-http/src/type-aliases/nodeserverhandle/)\>
+
+***
+
+### nodeHandler()
+
+> **nodeHandler**(): [`NodeRequestHandler`](/api/transports-http/src/type-aliases/noderequesthandler/)
+
+#### Returns
+
+[`NodeRequestHandler`](/api/transports-http/src/type-aliases/noderequesthandler/)

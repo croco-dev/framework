@@ -8524,6 +8524,13 @@
               "compatibilityGroup": "di"
             },
             {
+              "name": "ContainerScope",
+              "exportKind": "named",
+              "source": "./libs/Container",
+              "declarationKind": "class",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "ContainerScopeMismatchProblem",
               "exportKind": "named",
               "source": "./libs/problems/ContainerResolutionProblem",
@@ -8833,6 +8840,13 @@
             },
             {
               "name": "ShutdownConfigurationConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/ShutdownProblems",
+              "declarationKind": "class",
+              "compatibilityGroup": "shutdown"
+            },
+            {
+              "name": "ShutdownHookExecutionProblem",
               "exportKind": "named",
               "source": "./libs/problems/ShutdownProblems",
               "declarationKind": "class",
@@ -9395,6 +9409,12 @@
               "name": "ShutdownHook",
               "exportKind": "named",
               "source": "./libs/types",
+              "compatibilityGroup": "shutdown"
+            },
+            {
+              "name": "ShutdownOptions",
+              "exportKind": "named",
+              "source": "./libs/ShutdownManager",
               "compatibilityGroup": "shutdown"
             },
             {
@@ -23150,6 +23170,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createTestKernel",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
+              "declarationKind": "function"
+            },
+            {
               "name": "createUpstashRedisMeteringConformanceSuite",
               "exportKind": "named",
               "source": "./libs/serverless-provider-conformance",
@@ -23273,6 +23299,36 @@
               "name": "TestingTransactionContext",
               "exportKind": "named",
               "source": "./libs/testing",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestKernel",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestKernelDisposalProblem",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestKernelDisposedProblem",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestKernelHttp",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestKernelValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/TestKernel",
               "declarationKind": "class"
             }
           ],
@@ -23516,6 +23572,11 @@
               "name": "FailureDrillScenarioOverride",
               "exportKind": "named",
               "source": "./libs/failure-drill"
+            },
+            {
+              "name": "IsolatedTestingFidelity",
+              "exportKind": "named",
+              "source": "./libs/testing"
             },
             {
               "name": "LlmProviderConformanceCase",
@@ -23886,6 +23947,46 @@
               "name": "TestingTransactionContextOptions",
               "exportKind": "named",
               "source": "./libs/testing"
+            },
+            {
+              "name": "TestKernelBootFidelity",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestKernelBootstrapContext",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestKernelBootstrapResult",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestKernelEvidence",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestKernelFidelity",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestKernelOptions",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestKernelRuntime",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestKernelValidationFidelity",
+              "exportKind": "named",
+              "source": "./libs/TestKernel"
             },
             {
               "name": "TestLogger",
@@ -24453,6 +24554,11 @@
               "source": "./libs/middleware/BodyLimitMiddleware"
             },
             {
+              "name": "BootstrapValidationPolicy",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "CompiledRoute",
               "exportKind": "named",
               "source": "./libs/types"
@@ -24681,6 +24787,11 @@
               "name": "MiddlewareShortCircuitReason",
               "exportKind": "named",
               "source": "./libs/middleware/MiddlewareShortCircuit"
+            },
+            {
+              "name": "NodeRequestHandler",
+              "exportKind": "named",
+              "source": "./libs/types"
             },
             {
               "name": "NodeServerHandle",

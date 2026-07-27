@@ -37,6 +37,16 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 ***
 
+### createScope()
+
+> `static` **createScope**(): [`ContainerScope`](/api/framework-context/src/classes/containerscope/)
+
+#### Returns
+
+[`ContainerScope`](/api/framework-context/src/classes/containerscope/)
+
+***
+
 ### get()
 
 > `static` **get**\<`T`\>(`token`): `T`
@@ -56,6 +66,16 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 #### Returns
 
 `T`
+
+***
+
+### getActiveScopeId()
+
+> `static` **getActiveScopeId**(): `string` \| `undefined`
+
+#### Returns
+
+`string` \| `undefined`
 
 ***
 

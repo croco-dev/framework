@@ -1,8 +1,10 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import {
   type Service,
   type ServiceIdentifier,
   Container as TypeDIContainer,
   ContainerInstance as TypeDIContainerInstance,
+  ServiceNotFoundError,
   Token as TypeDIToken,
 } from "typedi";
 import type { Constructable as TypeDIConstructable } from "typedi/types/types/constructable.type";
@@ -38,6 +40,97 @@ export type ContainerValidationOptions = {
 };
 
 const COMPONENT_METADATA_KEY = Symbol("component:metadata");
+let containerScopeCounter = 0;
+
+type ContainerScopeState = {
+  readonly componentRegistrationOrder: Map<Constructor, number>;
+  readonly componentSourceLocations: Map<Constructor, DependencySourceLocation>;
+  readonly components: Map<Constructor, ComponentMetadata>;
+  readonly explicitComponentSourceLocations: Map<Constructor, DependencySourceLocation>;
+  readonly id: string;
+  readonly instance: TypeDIContainerInstance;
+  readonly lazyProviders: Map<TokenIdentifier<unknown>, () => unknown>;
+  readonly tokenIdentityIds: Map<TokenIdentifier<unknown>, string>;
+  readonly tokenIdentityOwners: Map<string, TokenIdentifier<unknown>>;
+  readonly tokens: Set<TokenIdentifier<unknown>>;
+  disposed: boolean;
+  lastResolutionTrace?: DependencyResolutionTrace;
+  nextComponentRegistrationOrder: number;
+  validated: boolean;
+};
+
+const containerScopeStorage = new AsyncLocalStorage<ContainerScopeState>();
+
+function createContainerScopeDisposedProblem(scopeId: string): Problem {
+  return ProblemFactory.internalServerError(
+    "framework-context/container-scope-disposed",
+    `Container scope '${scopeId}' has already been disposed.`,
+  );
+}
+
+/**
+ * Owns an isolated DI runtime that can be entered across asynchronous bootstrap and request work.
+ */
+export class ContainerScope implements AsyncDisposable {
+  readonly id: string;
+  private readonly state: ContainerScopeState;
+
+  constructor() {
+    this.id = `croco-container-scope-${++containerScopeCounter}`;
+    this.state = {
+      componentRegistrationOrder: new Map(),
+      componentSourceLocations: new Map(),
+      components: new Map(),
+      explicitComponentSourceLocations: new Map(),
+      id: this.id,
+      instance: TypeDIContainer.of(this.id),
+      lazyProviders: new Map(),
+      tokenIdentityIds: new Map(),
+      tokenIdentityOwners: new Map(),
+      tokens: new Set(),
+      disposed: false,
+      nextComponentRegistrationOrder: 1,
+      validated: false,
+    };
+  }
+
+  run<T>(fn: () => Promise<T>): Promise<T>;
+  run<T>(fn: () => T): T;
+  run<T>(fn: () => Promise<T> | T): Promise<T> | T {
+    if (this.state.disposed) {
+      throw createContainerScopeDisposedProblem(this.id);
+    }
+
+    return containerScopeStorage.run(this.state, fn);
+  }
+
+  dispose(): void {
+    if (this.state.disposed) {
+      return;
+    }
+
+    this.state.disposed = true;
+    this.state.componentRegistrationOrder.clear();
+    this.state.componentSourceLocations.clear();
+    this.state.components.clear();
+    this.state.explicitComponentSourceLocations.clear();
+    this.state.lazyProviders.clear();
+    this.state.tokenIdentityIds.clear();
+    this.state.tokenIdentityOwners.clear();
+    this.state.tokens.clear();
+    delete this.state.lastResolutionTrace;
+    this.state.instance.reset({ strategy: "resetServices" });
+    TypeDIContainer.reset(this.id);
+  }
+
+  [Symbol.dispose](): void {
+    this.dispose();
+  }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    this.dispose();
+  }
+}
 
 type HandlerDependencyResolver = <T>(id: Constructor<T> | TypeDIToken<T> | string) => T;
 
@@ -95,16 +188,17 @@ export class Container {
 
     try {
       const result = Container.resolveWithTrace(token, trace, []);
-      Container.lastResolutionTrace = Container.withTraceStatus(trace, "resolved");
+      Container.setLastResolutionTrace(Container.withTraceStatus(trace, "resolved"));
       return result;
     } catch (error) {
-      Container.lastResolutionTrace = Container.normalizeFailureTrace(trace, error);
+      const failureTrace = Container.normalizeFailureTrace(trace, error);
+      Container.setLastResolutionTrace(failureTrace);
 
       if (error instanceof Problem) {
         throw error;
       }
 
-      throw Container.toContainerResolutionProblem(token, error, Container.lastResolutionTrace);
+      throw Container.toContainerResolutionProblem(token, error, failureTrace);
     }
   }
 
@@ -126,41 +220,84 @@ export class Container {
 
   static getResolutionTrace<T>(token: TokenIdentifier<T>): DependencyResolutionTrace {
     const trace = Container.buildResolutionTrace(token);
-    Container.lastResolutionTrace = trace;
+    Container.setLastResolutionTrace(trace);
     return trace;
   }
 
   static getLastResolutionTrace(): DependencyResolutionTrace | undefined {
-    return Container.lastResolutionTrace;
+    return Container.getScopeState()?.lastResolutionTrace ?? Container.lastResolutionTrace;
   }
 
   static set<T>(token: TokenIdentifier<T>, instance: T): T {
-    TypeDIContainer.set({ id: Container.toTypeDIServiceIdentifier(token), value: instance });
-    Container.lazyProviders.delete(token);
-    Container.validated = false;
+    const scope = Container.getScopeState();
+    if (scope) {
+      Container.setScopedValue(scope.instance, token, instance);
+      scope.tokens.add(token);
+    } else {
+      TypeDIContainer.set({
+        id: Container.toTypeDIServiceIdentifier(token),
+        value: instance,
+      });
+    }
+    Container.getLazyProviders().delete(token);
+    Container.setValidated(false);
     return instance;
   }
 
   static has<T>(token: TokenIdentifier<T>): boolean {
-    return Container.lazyProviders.has(token) || Container.hasRegisteredValue(token);
+    return Container.getLazyProviders().has(token) || Container.hasRegisteredValue(token);
+  }
+
+  static createScope(): ContainerScope {
+    return new ContainerScope();
+  }
+
+  static getActiveScopeId(): string | undefined {
+    return Container.getScopeState()?.id;
   }
 
   static remove<T>(token: TokenIdentifier<T>): void {
     Container.removeRegisteredValue(token);
-    Container.lazyProviders.delete(token);
+    Container.getLazyProviders().delete(token);
     if (Container.isConstructorToken(token)) {
       const label = Container.getConstructorTokenLabel(token);
-      MetadataStorage.delete(COMPONENT_METADATA_KEY, token);
-      Container.componentSourceLocations.delete(token);
-      Container.explicitComponentSourceLocations.delete(token);
-      Container.componentRegistrationOrder.delete(token);
-      Container.clearConstructorLabelTokenIdentities(label);
+      const scope = Container.getScopeState();
+      if (scope) {
+        scope.components.delete(token);
+        scope.componentSourceLocations.delete(token);
+        scope.explicitComponentSourceLocations.delete(token);
+        scope.componentRegistrationOrder.delete(token);
+        Container.clearConstructorLabelTokenIdentities(label);
+      } else {
+        MetadataStorage.delete(COMPONENT_METADATA_KEY, token);
+        Container.componentSourceLocations.delete(token);
+        Container.explicitComponentSourceLocations.delete(token);
+        Container.componentRegistrationOrder.delete(token);
+        Container.clearConstructorLabelTokenIdentities(label);
+      }
     }
     Container.clearTokenIdentity(token);
-    Container.validated = false;
+    Container.setValidated(false);
   }
 
   static reset(): void {
+    const scope = Container.getScopeState();
+    if (scope) {
+      scope.instance.reset({ strategy: "resetServices" });
+      scope.componentRegistrationOrder.clear();
+      scope.componentSourceLocations.clear();
+      scope.components.clear();
+      scope.explicitComponentSourceLocations.clear();
+      scope.lazyProviders.clear();
+      scope.tokenIdentityIds.clear();
+      scope.tokenIdentityOwners.clear();
+      scope.tokens.clear();
+      delete scope.lastResolutionTrace;
+      scope.nextComponentRegistrationOrder = 1;
+      scope.validated = false;
+      return;
+    }
+
     TypeDIContainer.reset();
     // reset은 요청 처리가 없는 idle 시점에만 호출한다.
     MetadataStorage.clear();
@@ -177,7 +314,7 @@ export class Container {
   }
 
   static validate(options: ContainerValidationOptions = {}): void {
-    if (Container.validated) {
+    if (Container.isValidated()) {
       return;
     }
 
@@ -187,7 +324,7 @@ export class Container {
 
     const nodes = Container.getRegisteredComponents();
     if (nodes.length === 0) {
-      Container.validated = true;
+      Container.setValidated(true);
       return;
     }
 
@@ -195,7 +332,7 @@ export class Container {
     Container.assertNoCircularDependency(nodes, graph);
     Container.assertNoDependencyGraphDiagnostics(nodes);
 
-    Container.validated = true;
+    Container.setValidated(true);
   }
 
   static createDependencyGraphManifest(
@@ -221,41 +358,58 @@ export class Container {
 
   static register<T>(token: Constructor<T>, scope: Scope): void {
     const label = Container.getConstructorTokenLabel(token);
-    if (!Container.componentRegistrationOrder.has(token)) {
-      Container.componentRegistrationOrder.set(token, Container.nextComponentRegistrationOrder);
-      Container.nextComponentRegistrationOrder += 1;
+    const registrationOrder = Container.getComponentRegistrationOrder();
+    if (!registrationOrder.has(token)) {
+      const activeScope = Container.getScopeState();
+      const nextRegistrationOrder =
+        activeScope?.nextComponentRegistrationOrder ?? Container.nextComponentRegistrationOrder;
+      registrationOrder.set(token, nextRegistrationOrder);
+      if (activeScope) {
+        activeScope.nextComponentRegistrationOrder += 1;
+      } else {
+        Container.nextComponentRegistrationOrder += 1;
+      }
     }
     Container.clearConstructorLabelTokenIdentities(label);
 
-    MetadataStorage.define(COMPONENT_METADATA_KEY, token, {
+    const metadata = {
       scope,
       target: token,
-    });
-    const sourceLocation =
-      Container.explicitComponentSourceLocations.get(token) ?? Container.captureSourceLocation();
-    if (sourceLocation) {
-      Container.componentSourceLocations.set(token, sourceLocation);
+    };
+    const activeScope = Container.getScopeState();
+    if (activeScope) {
+      activeScope.components.set(token, metadata);
     } else {
-      Container.componentSourceLocations.delete(token);
+      MetadataStorage.define(COMPONENT_METADATA_KEY, token, metadata);
     }
-    Container.validated = false;
+    const explicitSourceLocations = Container.getExplicitComponentSourceLocations();
+    const sourceLocations = Container.getComponentSourceLocations();
+    const sourceLocation = explicitSourceLocations.get(token) ?? Container.captureSourceLocation();
+    if (sourceLocation) {
+      sourceLocations.set(token, sourceLocation);
+    } else {
+      sourceLocations.delete(token);
+    }
+    Container.setValidated(false);
   }
 
   static setComponentSourceLocation<T>(
     token: Constructor<T>,
     sourceLocation?: DependencySourceLocation,
   ): void {
+    const explicitSourceLocations = Container.getExplicitComponentSourceLocations();
+    const sourceLocations = Container.getComponentSourceLocations();
     if (!sourceLocation) {
-      Container.explicitComponentSourceLocations.delete(token);
-      Container.componentSourceLocations.delete(token);
-      Container.validated = false;
+      explicitSourceLocations.delete(token);
+      sourceLocations.delete(token);
+      Container.setValidated(false);
       return;
     }
 
     const normalizedSourceLocation = Container.normalizeSourceLocation(sourceLocation);
-    Container.explicitComponentSourceLocations.set(token, normalizedSourceLocation);
-    Container.componentSourceLocations.set(token, normalizedSourceLocation);
-    Container.validated = false;
+    explicitSourceLocations.set(token, normalizedSourceLocation);
+    sourceLocations.set(token, normalizedSourceLocation);
+    Container.setValidated(false);
   }
 
   static async registerAsync<T>(token: TokenIdentifier<T>, factory: () => Promise<T>): Promise<T> {
@@ -264,8 +418,8 @@ export class Container {
   }
 
   static registerLazy<T>(token: TokenIdentifier<T>, factory: () => T): void {
-    Container.lazyProviders.set(token, factory);
-    Container.validated = false;
+    Container.getLazyProviders().set(token, factory);
+    Container.setValidated(false);
   }
 
   private static isValidationEnabled(): boolean {
@@ -278,9 +432,11 @@ export class Container {
   }
 
   private static getRegisteredComponents(): Constructor[] {
-    return MetadataStorage.getAll<{ scope: Scope; target: Constructor }>(
+    const registered = MetadataStorage.getAll<{ scope: Scope; target: Constructor }>(
       COMPONENT_METADATA_KEY,
     ).map((entry) => entry.target as Constructor);
+    const scoped = Container.getScopeState()?.components.keys() ?? [];
+    return Array.from(new Set([...registered, ...scoped]));
   }
 
   private static buildDependencyGraph(nodes: Constructor[]): Map<Constructor, Constructor[]> {
@@ -569,10 +725,10 @@ export class Container {
   private static getSourceLocationForTokenId(tokenId: string): {
     readonly sourceLocation?: DependencySourceLocation;
   } {
-    const token = Container.tokenIdentityOwners.get(tokenId);
+    const token = Container.getTokenIdentityOwners().get(tokenId);
     const sourceLocation =
       token && Container.isConstructorToken(token)
-        ? Container.componentSourceLocations.get(token)
+        ? Container.getComponentSourceLocations().get(token)
         : undefined;
 
     return sourceLocation ? { sourceLocation } : {};
@@ -669,7 +825,10 @@ export class Container {
   }
 
   static getComponentMetadata(target: Constructor): ComponentMetadata | undefined {
-    return MetadataStorage.get(COMPONENT_METADATA_KEY, target);
+    return (
+      Container.getScopeState()?.components.get(target) ??
+      MetadataStorage.get(COMPONENT_METADATA_KEY, target)
+    );
   }
 
   static getDiagnosticsSnapshot(): {
@@ -686,22 +845,88 @@ export class Container {
         scopes.add(meta.scope);
       }
     }
+    const lastResolutionTrace = Container.getLastResolutionTrace();
     return {
-      isInitialized: Container.validated,
+      isInitialized: Container.isValidated(),
       registeredServiceCount: components.length,
       scopes: Array.from(scopes),
-      ...(Container.lastResolutionTrace
-        ? { lastResolutionTrace: Container.lastResolutionTrace }
-        : {}),
+      ...(lastResolutionTrace ? { lastResolutionTrace } : {}),
     };
   }
 
+  private static getScopeState(): ContainerScopeState | undefined {
+    const scope = containerScopeStorage.getStore();
+    if (scope?.disposed) {
+      throw createContainerScopeDisposedProblem(scope.id);
+    }
+    return scope;
+  }
+
+  private static getComponentRegistrationOrder(): Map<Constructor, number> {
+    return (
+      Container.getScopeState()?.componentRegistrationOrder ?? Container.componentRegistrationOrder
+    );
+  }
+
+  private static getComponentSourceLocations(): Map<Constructor, DependencySourceLocation> {
+    return (
+      Container.getScopeState()?.componentSourceLocations ?? Container.componentSourceLocations
+    );
+  }
+
+  private static getExplicitComponentSourceLocations(): Map<Constructor, DependencySourceLocation> {
+    return (
+      Container.getScopeState()?.explicitComponentSourceLocations ??
+      Container.explicitComponentSourceLocations
+    );
+  }
+
+  private static getTokenIdentityIds(): Map<TokenIdentifier<unknown>, string> {
+    return Container.getScopeState()?.tokenIdentityIds ?? Container.tokenIdentityIds;
+  }
+
+  private static getTokenIdentityOwners(): Map<string, TokenIdentifier<unknown>> {
+    return Container.getScopeState()?.tokenIdentityOwners ?? Container.tokenIdentityOwners;
+  }
+
+  private static getLazyProviders(): Map<TokenIdentifier<unknown>, () => unknown> {
+    return Container.getScopeState()?.lazyProviders ?? Container.lazyProviders;
+  }
+
+  private static isValidated(): boolean {
+    return Container.getScopeState()?.validated ?? Container.validated;
+  }
+
+  private static setValidated(validated: boolean): void {
+    const scope = Container.getScopeState();
+    if (scope) {
+      scope.validated = validated;
+      return;
+    }
+
+    Container.validated = validated;
+  }
+
+  private static setLastResolutionTrace(trace: DependencyResolutionTrace | undefined): void {
+    const scope = Container.getScopeState();
+    if (scope) {
+      if (trace === undefined) {
+        delete scope.lastResolutionTrace;
+      } else {
+        scope.lastResolutionTrace = trace;
+      }
+      return;
+    }
+
+    Container.lastResolutionTrace = trace;
+  }
+
   private static shouldResolveLazy<T>(token: TokenIdentifier<T>): boolean {
-    return Container.lazyProviders.has(token) && !Container.hasRegisteredValue(token);
+    return Container.getLazyProviders().has(token) && !Container.hasRegisteredValue(token);
   }
 
   private static resolveLazy<T>(token: TokenIdentifier<T>): T {
-    const factory = Container.lazyProviders.get(token);
+    const factory = Container.getLazyProviders().get(token);
     if (!factory) {
       return Container.getRegisteredValue(token);
     }
@@ -739,54 +964,119 @@ export class Container {
   }
 
   private static getRegisteredValue<T>(token: TokenIdentifier<T>): T {
+    const scope = Container.getScopeState();
+    if (scope && !scope.tokens.has(token)) {
+      throw new ServiceNotFoundError(Container.toTypeDIServiceIdentifier(token));
+    }
+
+    const target = scope?.instance ?? TypeDIContainer;
     if (typeof token === "symbol") {
-      return TypeDIContainer.get(Container.getOrCreateSymbolToken(token) as TypeDIToken<T>);
+      return target.get(Container.getOrCreateSymbolToken(token) as TypeDIToken<T>);
     }
 
     if (typeof token === "string") {
-      return TypeDIContainer.get(token);
+      return target.get(token);
     }
 
     if (token instanceof TypeDIToken) {
-      return TypeDIContainer.get(token);
+      return target.get(token);
     }
 
-    return TypeDIContainer.get(Container.toTypeDIConstructable(token));
+    return target.get(Container.toTypeDIConstructable(token));
+  }
+
+  private static setScopedValue<T>(
+    container: TypeDIContainerInstance,
+    token: TokenIdentifier<T>,
+    instance: T,
+  ): void {
+    if (typeof token === "symbol") {
+      container.set(Container.getOrCreateSymbolToken(token) as TypeDIToken<T>, instance);
+      return;
+    }
+
+    if (typeof token === "string") {
+      container.set(token, instance);
+      return;
+    }
+
+    if (token instanceof TypeDIToken) {
+      container.set(token, instance);
+      return;
+    }
+
+    container.set(Container.toTypeDIConstructable(token), instance);
   }
 
   private static hasRegisteredValue<T>(token: TokenIdentifier<T>): boolean {
+    const scope = Container.getScopeState();
+    if (scope) {
+      return scope.tokens.has(token);
+    }
+
+    const target = TypeDIContainer;
     if (typeof token === "symbol") {
-      return TypeDIContainer.has(Container.getOrCreateSymbolToken(token));
+      return target.has(Container.getOrCreateSymbolToken(token));
     }
 
     if (typeof token === "string") {
-      return TypeDIContainer.has(token);
+      return target.has(token);
     }
 
     if (token instanceof TypeDIToken) {
-      return TypeDIContainer.has(token);
+      return target.has(token);
     }
 
-    return TypeDIContainer.has(Container.toTypeDIConstructable(token));
+    return target.has(Container.toTypeDIConstructable(token));
   }
 
   private static removeRegisteredValue<T>(token: TokenIdentifier<T>): void {
+    const scope = Container.getScopeState();
+    if (scope) {
+      Container.removeScopedValue(scope.instance, token);
+      scope.tokens.delete(token);
+      return;
+    }
+
+    const target = TypeDIContainer;
     if (typeof token === "symbol") {
-      TypeDIContainer.remove(Container.getOrCreateSymbolToken(token));
+      target.remove(Container.getOrCreateSymbolToken(token));
       return;
     }
 
     if (typeof token === "string") {
-      TypeDIContainer.remove(token);
+      target.remove(token);
       return;
     }
 
     if (token instanceof TypeDIToken) {
-      TypeDIContainer.remove(token);
+      target.remove(token);
       return;
     }
 
-    TypeDIContainer.remove(Container.toTypeDIConstructable(token));
+    target.remove(Container.toTypeDIConstructable(token));
+  }
+
+  private static removeScopedValue<T>(
+    container: TypeDIContainerInstance,
+    token: TokenIdentifier<T>,
+  ): void {
+    if (typeof token === "symbol") {
+      container.remove(Container.getOrCreateSymbolToken(token));
+      return;
+    }
+
+    if (typeof token === "string") {
+      container.remove(token);
+      return;
+    }
+
+    if (token instanceof TypeDIToken) {
+      container.remove(token);
+      return;
+    }
+
+    container.remove(Container.toTypeDIConstructable(token));
   }
 
   private static toTypeDIConstructable<T>(token: Constructor<T>): TypeDIConstructable<T> {
@@ -820,7 +1110,7 @@ export class Container {
     const metadata = Container.getComponentMetadata(constructorToken);
 
     if (!metadata) {
-      return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
+      return Container.getRegisteredValue(constructorToken);
     }
 
     Container.assertScopeCompatibility(constructorToken, stack, trace);
@@ -838,7 +1128,7 @@ export class Container {
         return Container.getRequestScoped(constructorToken, trace, nextStack);
 
       default:
-        return TypeDIContainer.get(Container.toTypeDIConstructable(constructorToken));
+        return Container.getRegisteredValue(constructorToken);
     }
   }
 
@@ -1285,7 +1575,9 @@ export class Container {
     kind: DependencyTokenKind,
     label: string,
   ): string {
-    const existing = Container.tokenIdentityIds.get(token);
+    const tokenIdentityIds = Container.getTokenIdentityIds();
+    const tokenIdentityOwners = Container.getTokenIdentityOwners();
+    const existing = tokenIdentityIds.get(token);
     if (existing) {
       return existing;
     }
@@ -1294,10 +1586,10 @@ export class Container {
     let id = baseId;
     let suffix = 2;
     while (true) {
-      const owner = Container.tokenIdentityOwners.get(id);
+      const owner = tokenIdentityOwners.get(id);
       if (!owner || Container.isSameToken(owner, token)) {
-        Container.tokenIdentityIds.set(token, id);
-        Container.tokenIdentityOwners.set(id, token);
+        tokenIdentityIds.set(token, id);
+        tokenIdentityOwners.set(id, token);
         return id;
       }
 
@@ -1331,12 +1623,13 @@ export class Container {
     label: string,
   ): string {
     const labelPart = Container.formatTokenIdPart(label);
-    const registrationOrder = Container.componentRegistrationOrder.get(token);
+    const componentRegistrationOrder = Container.getComponentRegistrationOrder();
+    const registrationOrder = componentRegistrationOrder.get(token);
     if (!registrationOrder) {
       return `${kind}:${labelPart}`;
     }
 
-    const sameLabelComponents = [...Container.componentRegistrationOrder.entries()]
+    const sameLabelComponents = [...componentRegistrationOrder.entries()]
       .filter(([candidate]) => Container.getConstructorTokenLabel(candidate) === label)
       .sort(([, leftOrder], [, rightOrder]) => leftOrder - rightOrder);
     const rank =
@@ -1354,17 +1647,20 @@ export class Container {
   }
 
   private static clearTokenIdentity<T>(token: TokenIdentifier<T>): void {
-    const tokenId = Container.tokenIdentityIds.get(token);
+    const tokenIdentityIds = Container.getTokenIdentityIds();
+    const tokenIdentityOwners = Container.getTokenIdentityOwners();
+    const tokenId = tokenIdentityIds.get(token);
     if (tokenId) {
-      Container.tokenIdentityOwners.delete(tokenId);
+      tokenIdentityOwners.delete(tokenId);
     }
-    Container.tokenIdentityIds.delete(token);
+    tokenIdentityIds.delete(token);
   }
 
   private static clearConstructorLabelTokenIdentities(label: string): void {
+    const tokenIdentityIds = Container.getTokenIdentityIds();
     const tokensToClear: TokenIdentifier<unknown>[] = [];
 
-    for (const token of Container.tokenIdentityIds.keys()) {
+    for (const token of tokenIdentityIds.keys()) {
       if (
         Container.isConstructorToken(token) &&
         Container.getConstructorTokenLabel(token) === label

@@ -2561,7 +2561,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/Container.ts",
-      "line": 272,
+      "line": 426,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'CROCO_DI_VALIDATE' comes from an index signature, so it must be accessed with ['CROCO_DI_VALIDATE']."
@@ -2569,7 +2569,7 @@
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/Container.ts",
-      "line": 277,
+      "line": 431,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -3465,7 +3465,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 382,
+      "line": 393,
       "column": 30,
       "code": "TS2379",
       "message": "Argument of type '{ logger: ILogger | undefined; providers: readonly TestingProvider<unknown>[]; transactionContext: false | TestingTransactionContextOptions | TestingTransactionContext | undefined; }' is not assignable to parameter of type 'ResetCrocoTestingContextOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3473,7 +3473,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 501,
+      "line": 512,
       "column": 30,
       "code": "TS2379",
       "message": "Argument of type '{ logger: ILogger | undefined; providers: readonly TestingProvider<unknown>[]; transactionContext: false | TestingTransactionContext; }' is not assignable to parameter of type 'ResetCrocoTestingContextOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3481,15 +3481,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 748,
-      "column": 38,
-      "code": "TS2345",
-      "message": "Argument of type '{ body: BodyInit | null | undefined; headers: Headers; cache?: RequestCache; credentials?: RequestCredentials; integrity?: string; ... 8 more ...; window?: null; } | { ...; }' is not assignable to parameter of type 'RequestInit | undefined'."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 781,
+      "line": 799,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'type' comes from an index signature, so it must be accessed with ['type']."
@@ -3497,7 +3489,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 782,
+      "line": 800,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'title' comes from an index signature, so it must be accessed with ['title']."
@@ -3505,7 +3497,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 783,
+      "line": 801,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -3513,7 +3505,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 784,
+      "line": 802,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'code' comes from an index signature, so it must be accessed with ['code']."
@@ -3521,7 +3513,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 785,
+      "line": 803,
       "column": 12,
       "code": "TS4111",
       "message": "Property 'detail' comes from an index signature, so it must be accessed with ['detail']."
@@ -3529,7 +3521,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 785,
+      "line": 803,
       "column": 49,
       "code": "TS4111",
       "message": "Property 'detail' comes from an index signature, so it must be accessed with ['detail']."
@@ -3537,7 +3529,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 786,
+      "line": 804,
       "column": 12,
       "code": "TS4111",
       "message": "Property 'instance' comes from an index signature, so it must be accessed with ['instance']."
@@ -3545,7 +3537,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 786,
+      "line": 804,
       "column": 51,
       "code": "TS4111",
       "message": "Property 'instance' comes from an index signature, so it must be accessed with ['instance']."
@@ -3553,7 +3545,7 @@
     {
       "packageName": "@croco/testing",
       "file": "packages/testing/src/libs/testing.ts",
-      "line": 847,
+      "line": 865,
       "column": 42,
       "code": "TS4111",
       "message": "Property 'requestId' comes from an index signature, so it must be accessed with ['requestId']."
@@ -3561,7 +3553,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 187,
+      "line": 194,
       "column": 61,
       "code": "TS2379",
       "message": "Argument of type '{ container: { get<T>(type: Constructor<T>): T; }; globalGuards: unknown[] | undefined; globalInterceptors: unknown[] | undefined; globalFilters: unknown[] | undefined; globalPipes: unknown[] | undefined; }' is not assignable to parameter of type 'CompileOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3569,7 +3561,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 299,
+      "line": 306,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'CROCO_HTTP_DI_VALIDATION' comes from an index signature, so it must be accessed with ['CROCO_HTTP_DI_VALIDATION']."
@@ -3577,7 +3569,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 305,
+      "line": 312,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -3585,7 +3577,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 305,
+      "line": 312,
       "column": 66,
       "code": "TS4111",
       "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
@@ -3593,7 +3585,7 @@
     {
       "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 396,
+      "line": 403,
       "column": 33,
       "code": "TS4111",
       "message": "Property 'CROCO_HTTP_SECURITY_VALIDATION' comes from an index signature, so it must be accessed with ['CROCO_HTTP_SECURITY_VALIDATION']."

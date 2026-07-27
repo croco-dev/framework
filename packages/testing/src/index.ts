@@ -19,6 +19,7 @@ export {
   type ProblemResponseExpectation,
   type ResetCrocoTestingContextOptions,
   type TestLogger,
+  type IsolatedTestingFidelity,
   type TestingAppOptions,
   type TestingHarnessOptions,
   type TestingProvider,
@@ -26,6 +27,22 @@ export {
   type TestingRequestOptions,
   type TestingTransactionContextOptions,
 } from "./libs/testing";
+export {
+  createTestKernel,
+  TestKernel,
+  TestKernelDisposedProblem,
+  TestKernelDisposalProblem,
+  TestKernelHttp,
+  TestKernelValidationProblem,
+  type TestKernelBootFidelity,
+  type TestKernelBootstrapContext,
+  type TestKernelBootstrapResult,
+  type TestKernelEvidence,
+  type TestKernelFidelity,
+  type TestKernelOptions,
+  type TestKernelRuntime,
+  type TestKernelValidationFidelity,
+} from "./libs/TestKernel";
 export {
   installTestingTelemetryCapture,
   TestingTelemetryCapture,

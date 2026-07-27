@@ -72,8 +72,21 @@ function assertNever(value: never): never {
 export class ShutdownTimeoutProblem extends Problem {
   readonly code = "framework-context/shutdown-timeout";
   readonly category = ProblemCategory.InternalServerError;
-  constructor(timeoutMs: number) {
-    super(undefined, undefined, `Shutdown timeout exceeded after ${timeoutMs}ms`);
+  constructor(timeoutMs: number, failures: readonly Error[] = []) {
+    super(undefined, undefined, `Shutdown timeout exceeded after ${timeoutMs}ms`, {
+      extensions: {
+        timeoutMs,
+        ...(failures.length === 0
+          ? {}
+          : {
+              hookFailureCount: failures.length,
+              hookFailures: failures.map((failure) => ({
+                message: failure.message,
+                name: failure.name,
+              })),
+            }),
+      },
+    });
   }
 }
 
@@ -88,6 +101,31 @@ export class ShutdownConfigurationConflictProblem extends Problem {
       undefined,
       undefined,
       `ShutdownManager is already configured with timeout ${currentTimeoutMs}ms; received conflicting timeout ${requestedTimeoutMs}ms`,
+    );
+  }
+}
+
+/**
+ * shutdown hook failures must be surfaced to lifecycle owners that request strict cleanup evidence.
+ */
+export class ShutdownHookExecutionProblem extends Problem {
+  readonly code = "framework-context/shutdown-hook-execution-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(failures: readonly Error[]) {
+    super(
+      "framework-context/shutdown-hook-execution-failed",
+      ProblemCategory.InternalServerError,
+      `${failures.length} shutdown hook(s) failed.`,
+      {
+        extensions: {
+          failureCount: failures.length,
+          failures: failures.map((failure) => ({
+            message: failure.message,
+            name: failure.name,
+          })),
+        },
+      },
     );
   }
 }

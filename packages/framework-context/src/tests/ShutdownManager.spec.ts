@@ -328,6 +328,37 @@ describe("ShutdownManager", () => {
 
       vi.useRealTimers();
     });
+
+    it("should preserve strict hook failures when a later hook times out", async () => {
+      vi.useFakeTimers();
+
+      const manager = ShutdownManager.getInstance(100);
+      manager.register({
+        onShutdown: async () => {
+          await new Promise(() => {});
+        },
+      });
+      manager.register({
+        onShutdown: () => {
+          throw new Error("hook failed before timeout");
+        },
+      });
+
+      const shutdownResult = manager
+        .shutdown({ throwOnHookError: true })
+        .catch((error: unknown) => error);
+      await vi.advanceTimersByTimeAsync(100);
+      const problem = await shutdownResult;
+
+      expect(problem).toBeInstanceOf(ShutdownTimeoutProblem);
+      expect((problem as ShutdownTimeoutProblem).extensions).toMatchObject({
+        hookFailureCount: 1,
+        hookFailures: [{ message: "hook failed before timeout", name: "Error" }],
+        timeoutMs: 100,
+      });
+
+      vi.useRealTimers();
+    });
   });
 });
 

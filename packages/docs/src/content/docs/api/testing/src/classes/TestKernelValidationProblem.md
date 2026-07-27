@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "ShutdownTimeoutProblem"
+title: "TestKernelValidationProblem"
 ---
 
-graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니다.
+RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
 
 ## Extends
 
@@ -15,21 +15,21 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 ### Constructor
 
-> **new ShutdownTimeoutProblem**(`timeoutMs`, `failures?`): `ShutdownTimeoutProblem`
+> **new TestKernelValidationProblem**(`actual`, `expected`): `TestKernelValidationProblem`
 
 #### Parameters
 
-##### timeoutMs
+##### actual
 
-`number`
+[`BootstrapValidationPolicy`](/api/transports-http/src/type-aliases/bootstrapvalidationpolicy/)
 
-##### failures?
+##### expected
 
-readonly `Error`[] = `[]`
+[`BootstrapValidationPolicy`](/api/transports-http/src/type-aliases/bootstrapvalidationpolicy/)
 
 #### Returns
 
-`ShutdownTimeoutProblem`
+`TestKernelValidationProblem`
 
 #### Overrides
 
@@ -39,9 +39,9 @@ readonly `Error`[] = `[]`
 
 ### category
 
-> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
+> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
@@ -59,9 +59,9 @@ readonly `Error`[] = `[]`
 
 ### code
 
-> `readonly` **code**: `"framework-context/shutdown-timeout"` = `"framework-context/shutdown-timeout"`
+> `readonly` **code**: `string`
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 

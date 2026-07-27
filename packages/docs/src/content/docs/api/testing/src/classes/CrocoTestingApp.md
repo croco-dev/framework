@@ -37,6 +37,12 @@ title: "CrocoTestingApp"
 
 > `readonly` **baseUrl**: `string` = `DEFAULT_BASE_URL`
 
+***
+
+### fidelity
+
+> `readonly` **fidelity**: [`IsolatedTestingFidelity`](/api/testing/src/type-aliases/isolatedtestingfidelity/)
+
 ## Methods
 
 ### assertProblem()

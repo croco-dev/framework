@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "ShutdownTimeoutProblem"
+title: "ShutdownHookExecutionProblem"
 ---
 
-graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니다.
+shutdown hook failures must be surfaced to lifecycle owners that request strict cleanup evidence.
 
 ## Extends
 
@@ -15,21 +15,17 @@ graceful shutdown이 제한 시간을 넘겼을 때 발생하는 Problem입니�
 
 ### Constructor
 
-> **new ShutdownTimeoutProblem**(`timeoutMs`, `failures?`): `ShutdownTimeoutProblem`
+> **new ShutdownHookExecutionProblem**(`failures`): `ShutdownHookExecutionProblem`
 
 #### Parameters
 
-##### timeoutMs
+##### failures
 
-`number`
-
-##### failures?
-
-readonly `Error`[] = `[]`
+readonly `Error`[]
 
 #### Returns
 
-`ShutdownTimeoutProblem`
+`ShutdownHookExecutionProblem`
 
 #### Overrides
 
@@ -59,7 +55,7 @@ readonly `Error`[] = `[]`
 
 ### code
 
-> `readonly` **code**: `"framework-context/shutdown-timeout"` = `"framework-context/shutdown-timeout"`
+> `readonly` **code**: `"framework-context/shutdown-hook-execution-failed"` = `"framework-context/shutdown-hook-execution-failed"`
 
 #### Overrides
 
