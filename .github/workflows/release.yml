@@ -104,6 +104,17 @@ jobs:
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Restore Turbo cache
+        if: steps.release_work.outputs.should_run_verification == 'true' || steps.release_work.outputs.should_run_changesets_action == 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+            turbo-${{ runner.os }}-
+
       - name: Install dependencies
         if: steps.release_work.outputs.should_run_verification == 'true' || steps.release_work.outputs.should_run_changesets_action == 'true'
         run: pnpm install --frozen-lockfile
