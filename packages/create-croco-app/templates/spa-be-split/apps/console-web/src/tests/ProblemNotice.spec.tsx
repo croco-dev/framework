@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { expect, test, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { ProblemNotice, type FrontendProblem } from "./ProblemNotice";
-import { request } from "./api/client";
-import { toFrontendProblem } from "./api/useUsers";
-import { problemFixture } from "./test/server";
+import { ProblemNotice } from "../ProblemNotice";
+import { request } from "../api/client";
+import { toFrontendProblem } from "../api/useUsers";
+import { PROBLEM_FIXTURE } from "../test/server";
+import type { FrontendProblem } from "../ProblemNotice";
 
 function ProblemProbe() {
   const [problem, setProblem] = useState<FrontendProblem>();
@@ -22,19 +23,19 @@ test("renders Problem code, status, detail, and recovery from the MSW API bounda
   const screen = await render(<ProblemProbe />);
 
   await expect.element(screen.getByRole("alert")).toBeVisible();
-  await expect.element(screen.getByText(problemFixture.code)).toBeVisible();
-  await expect.element(screen.getByText(String(problemFixture.status))).toBeVisible();
-  await expect.element(screen.getByText(problemFixture.detail)).toBeVisible();
-  await expect.element(screen.getByText(problemFixture.recovery)).toBeVisible();
+  await expect.element(screen.getByText(PROBLEM_FIXTURE.code)).toBeVisible();
+  await expect.element(screen.getByText(String(PROBLEM_FIXTURE.status))).toBeVisible();
+  await expect.element(screen.getByText(PROBLEM_FIXTURE.detail)).toBeVisible();
+  await expect.element(screen.getByText(PROBLEM_FIXTURE.recovery)).toBeVisible();
 });
 
 test("exposes a user interaction helper for recovery", async () => {
   const onRetry = vi.fn();
   const problem = {
-    code: problemFixture.code,
-    status: problemFixture.status,
-    detail: problemFixture.detail,
-    recovery: problemFixture.recovery,
+    code: PROBLEM_FIXTURE.code,
+    status: PROBLEM_FIXTURE.status,
+    detail: PROBLEM_FIXTURE.detail,
+    recovery: PROBLEM_FIXTURE.recovery,
   };
   const screen = await render(<ProblemNotice problem={problem} onRetry={onRetry} />);
 

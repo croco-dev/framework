@@ -5,6 +5,7 @@ import { preProcessFile } from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
 import { getExternalCrocoPackageRange } from "../helpers/croco-ranges.js";
+import { mergeInto, replaceGithubExpressions } from "../helpers/fs.js";
 import { InvalidGoalOptionProblem } from "../libs/problems/InvalidGoalOptionProblem.js";
 import { normalizeNonInteractiveOptions, parseCliOptions } from "../options.js";
 import type { GeneratorOptions } from "../types.js";
@@ -78,7 +79,7 @@ function assertNoHandlebarsPlaceholders(projectDir: string): void {
     .filter(isTextFile)
     .filter((filePath) => {
       const content = readFileSync(filePath, "utf8");
-      const contentWithoutGithubExpressions = content.replace(/\$\{\{[\s\S]*?\}\}/g, "");
+      const contentWithoutGithubExpressions = replaceGithubExpressions(content, () => "");
 
       return (
         contentWithoutGithubExpressions.includes("{{") ||
@@ -332,12 +333,23 @@ function assertSourceBareImportsDeclared(packageDir: string): void {
 }
 
 function assertBrowserWorkflowUsesImmutableActions(workflow: string): void {
-  expect(workflow).toContain("actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1");
-  expect(workflow).toContain("pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271");
-  expect(workflow).toContain("actions/setup-node@820762786026740c76f36085b0efc47a31fe5020");
-  expect(workflow).toContain("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a");
-  expect(workflow).toContain("actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c");
-  expect(workflow).not.toMatch(/uses:\s+\S+@v\d/);
+  const remoteActions = workflow
+    .split("\n")
+    .flatMap((line) => line.match(/^\s*(?:-\s+)?uses:\s*([^\s#]+)/)?.[1] ?? [])
+    .filter((reference) => !reference.startsWith("./") && !reference.startsWith("docker://"));
+
+  expect(new Set(remoteActions)).toEqual(
+    new Set([
+      "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271",
+      "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+      "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+      "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c",
+    ]),
+  );
+  for (const reference of remoteActions) {
+    expect(reference).toMatch(/^[^@\s]+@[0-9a-f]{40}$/i);
+  }
 }
 
 function assertAllSourceBareImportsDeclared(projectDir: string): void {
@@ -427,6 +439,25 @@ function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
 }
 
 describe("E2E: generate()", () => {
+  it("preserves GitHub expressions containing closing braces inside quoted strings", () => {
+    const sourceDir = join(testDir, "github-expression-source");
+    const outputDir = join(testDir, "github-expression-output");
+    const expression = '${{ contains("}}", matrix.value) }}';
+    mkdirSync(sourceDir, { recursive: true });
+    writeFileSync(
+      join(sourceDir, "workflow.yml"),
+      `name: {{projectName}}\ncondition: ${expression}\n`,
+    );
+
+    mergeInto(sourceDir, outputDir, { projectName: "generated" });
+
+    expect(readFileSync(join(outputDir, "workflow.yml"), "utf8")).toBe(
+      `name: generated\ncondition: ${expression}\n`,
+    );
+    assertNoHandlebarsPlaceholders(outputDir);
+    expect(replaceGithubExpressions(expression, () => "__EXPRESSION__")).toBe("__EXPRESSION__");
+  });
+
   let testDir: string;
 
   beforeEach(() => {
@@ -1014,7 +1045,7 @@ describe("E2E: generate()", () => {
       for (const relativePath of [
         "apps/console-web/vitest.config.ts",
         "apps/console-web/public/mockServiceWorker.js",
-        "apps/console-web/src/ProblemNotice.component.spec.tsx",
+        "apps/console-web/src/tests/ProblemNotice.spec.tsx",
         "apps/console-web/src/test/browser.ts",
         "apps/console-web/src/test/server.ts",
         "playwright.config.ts",
@@ -1125,7 +1156,7 @@ describe("E2E: generate()", () => {
       for (const relativePath of [
         "apps/console-web/vitest.config.ts",
         "apps/console-web/public/mockServiceWorker.js",
-        "apps/console-web/src/ProblemNotice.component.spec.tsx",
+        "apps/console-web/src/tests/ProblemNotice.spec.tsx",
         "apps/console-web/src/test/browser.ts",
         "apps/console-web/src/test/server.ts",
         "playwright.config.ts",

@@ -1,6 +1,6 @@
 import { expect, test } from "./browser-evidence";
 
-const problem = {
+const PROBLEM = {
   type: "https://example.test/problems/journey-unavailable",
   title: "Journey API unavailable",
   status: 503,
@@ -14,9 +14,9 @@ test("keeps an API Problem visible to the user", async ({ page }, testInfo) => {
     (url) => url.pathname === "/api/users",
     async (route) => {
       await route.fulfill({
-        status: problem.status,
+        status: PROBLEM.status,
         contentType: "application/problem+json",
-        body: JSON.stringify(problem),
+        body: JSON.stringify(PROBLEM),
       });
     },
   );
@@ -29,17 +29,17 @@ test("keeps an API Problem visible to the user", async ({ page }, testInfo) => {
     await expect(page.getByRole("alert")).toContainText("admin-console/user-not-found");
   } else {
     const alert = page.getByRole("alert");
-    await expect(alert).toContainText(problem.code);
-    await expect(alert).toContainText(String(problem.status));
-    await expect(alert).toContainText(problem.detail);
-    await expect(alert).toContainText(problem.recovery);
+    await expect(alert).toContainText(PROBLEM.code);
+    await expect(alert).toContainText(String(PROBLEM.status));
+    await expect(alert).toContainText(PROBLEM.detail);
+    await expect(alert).toContainText(PROBLEM.recovery);
   }
 
   await testInfo.attach("api-problem-evidence.json", {
     body: Buffer.from(
       JSON.stringify(
         {
-          expectedProblemCode: isAdminConsole ? "admin-console/user-not-found" : problem.code,
+          expectedProblemCode: isAdminConsole ? "admin-console/user-not-found" : PROBLEM.code,
           transport: "browser-to-generated-croco-api",
         },
         null,

@@ -134,7 +134,7 @@ function checkSpaBeSplitStructure() {
   checkFileExists("spa-be-split", "apps", "console-web", "vite.config.ts.hbs");
   checkFileExists("spa-be-split", "apps", "console-web", "vitest.config.ts");
   checkFileExists("spa-be-split", "apps", "console-web", "public", "mockServiceWorker.js");
-  checkFileExists("spa-be-split", "apps", "console-web", "src", "ProblemNotice.component.spec.tsx");
+  checkFileExists("spa-be-split", "apps", "console-web", "src", "tests", "ProblemNotice.spec.tsx");
   checkFileExists("spa-be-split", "apps", "console-web", "src", "test", "browser.ts");
   checkFileExists("spa-be-split", "apps", "console-web", "src", "test", "server.ts");
   checkFileExists("spa-be-split", "playwright.config.ts");

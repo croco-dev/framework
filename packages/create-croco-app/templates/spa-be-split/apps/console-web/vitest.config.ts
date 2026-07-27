@@ -5,7 +5,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react()],
   test: {
-    include: ["src/**/*.component.spec.tsx"],
+    include: ["src/tests/**/*.spec.tsx"],
     setupFiles: ["./src/test/browser.ts"],
     browser: {
       enabled: true,

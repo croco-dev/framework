@@ -964,7 +964,7 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         paths: [
           "apps/console-web/vitest.config.ts",
           "apps/console-web/public/mockServiceWorker.js",
-          "apps/console-web/src/ProblemNotice.component.spec.tsx",
+          "apps/console-web/src/tests/ProblemNotice.spec.tsx",
           "apps/console-web/src/test/browser.ts",
           "apps/console-web/src/test/server.ts",
           "playwright.config.ts",
@@ -1043,7 +1043,7 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
         paths: [
           "apps/console-web/vitest.config.ts",
           "apps/console-web/public/mockServiceWorker.js",
-          "apps/console-web/src/ProblemNotice.component.spec.tsx",
+          "apps/console-web/src/tests/ProblemNotice.spec.tsx",
           "apps/console-web/src/test/browser.ts",
           "apps/console-web/src/test/server.ts",
           "playwright.config.ts",
