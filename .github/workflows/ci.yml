@@ -91,6 +91,11 @@ jobs:
           pnpm build --filter=@croco/membership-drizzle...
           pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
 
+      - name: Verify typed TestKernel resources against real PostgreSQL and Redis
+        run: |
+          pnpm build --filter=@croco/testing-resources...
+          pnpm --filter @croco/testing-resources test:real
+
       - name: Production dependency audit report
         id: security_audit_advisory
         shell: bash
@@ -423,6 +428,7 @@ jobs:
               - 'packages/telemetry-sdk-node/src/**'
               - 'packages/tenant-core/src/**'
               - 'packages/testing/src/**'
+              - 'packages/testing-resources/src/**'
               - 'packages/transports-cloudflare-workers/src/**'
               - 'packages/transports-graphql/src/**'
               - 'packages/transports-http/src/**'

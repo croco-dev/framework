@@ -217,6 +217,11 @@ describe("CI verification profile contract", () => {
     );
   });
 
+  it("runs typed TestKernel resources against real PostgreSQL and Redis", () => {
+    expect(VALIDATE_JOB).toContain("pnpm build --filter=@croco/testing-resources...");
+    expect(VALIDATE_JOB).toContain("pnpm --filter @croco/testing-resources test:real");
+  });
+
   it.each(["--log-opts=--max-count=0", "--no-git", "--redact=false"])(
     "rejects a production Gitleaks argv override: %s",
     (extraArgument) => {

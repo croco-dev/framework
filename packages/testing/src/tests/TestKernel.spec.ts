@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { EventBusConfig } from "@croco/events-core";
-import { Component, Container, Context, ShutdownManager } from "@croco/framework-context";
+import { Component, Container, Context, ShutdownManager, Token } from "@croco/framework-context";
 import { Controller, Get } from "@croco/protocols-rest";
 import {
   createApp,
@@ -11,14 +11,64 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   createTestKernel,
   type TestKernel,
-  TestKernelDisposedProblem,
   TestKernelDisposalProblem,
+  TestKernelDisposedProblem,
   type TestKernelOptions,
+  TestKernelResourceFidelityProblem,
+  TestKernelResourceNotFoundProblem,
   TestKernelValidationProblem,
+  type TestResource,
 } from "../index";
 
 class KernelValueService {
   constructor(readonly value: string) {}
+}
+
+type FakeResourceConnection = {
+  readonly identity: string;
+};
+
+const FAKE_RESOURCE_CONNECTION = new Token<FakeResourceConnection>(
+  "testing.fake-resource-connection",
+);
+
+function fakeResource(
+  id: string,
+  mode: "rollback" | "commit" | "migration",
+  lifecycle: string[] = [],
+): TestResource<FakeResourceConnection> {
+  const fidelity = {
+    id,
+    image: "example.invalid/resource@sha256:abc",
+    isolation: "database-per-worker",
+    kind: "fake",
+    mode,
+  } as const;
+
+  return {
+    fidelityHint: fidelity,
+    id,
+    async start(context) {
+      lifecycle.push(`resource:${id}:start`);
+      const connection = { identity: `${context.workerId}:${context.testId}` };
+      context.register(FAKE_RESOURCE_CONNECTION, connection);
+      return {
+        connection,
+        diagnostics: [
+          {
+            logs: [`started ${id}`],
+            message: "resource is healthy",
+            stage: "health-check",
+            status: "passed",
+          },
+        ],
+        dispose: () => {
+          lifecycle.push(`resource:${id}:dispose`);
+        },
+        fidelity,
+      };
+    },
+  };
 }
 
 class DecoratedKernelService {
@@ -106,7 +156,9 @@ describe("TestKernel", () => {
       runtime: "node",
       validation: "production",
     });
-    await expect(response.json()).resolves.toMatchObject({ value: "production" });
+    await expect(response.json()).resolves.toMatchObject({
+      value: "production",
+    });
     expect(kernel.evidence).toEqual([
       {
         fidelity: kernel.fidelity,
@@ -116,6 +168,104 @@ describe("TestKernel", () => {
       },
     ]);
 
+    await kernel.dispose();
+  });
+
+  it("starts typed resources before bootstrap and disposes them after application shutdown once", async () => {
+    const lifecycle: string[] = [];
+    const resource = fakeResource("database", "commit", lifecycle);
+    const kernel = await createTestKernel({
+      bootstrap: () => {
+        lifecycle.push(`bootstrap:${Container.get(FAKE_RESOURCE_CONNECTION).identity}`);
+        ShutdownManager.getInstance().register({
+          onShutdown: async () => {
+            lifecycle.push("application:shutdown");
+          },
+        });
+        return bootstrapProductionApp("resources");
+      },
+      dispose: () => {
+        lifecycle.push("application:dispose");
+      },
+      fidelity: "application",
+      resources: [resource],
+      testId: "test-a",
+      workerId: "worker-a",
+    });
+
+    expect(kernel.resource(resource)).toEqual({ identity: "worker-a:test-a" });
+    expect(kernel.resourceEvidence).toEqual([
+      {
+        diagnostics: [
+          {
+            logs: ["started database"],
+            message: "resource is healthy",
+            stage: "health-check",
+            status: "passed",
+          },
+        ],
+        fidelity: {
+          id: "database",
+          image: "example.invalid/resource@sha256:abc",
+          isolation: "database-per-worker",
+          kind: "fake",
+          mode: "commit",
+        },
+      },
+    ]);
+
+    const firstDisposal = kernel.dispose();
+    const secondDisposal = kernel.dispose();
+    expect(firstDisposal).toBe(secondDisposal);
+    await firstDisposal;
+    expect(lifecycle).toEqual([
+      "resource:database:start",
+      "bootstrap:worker-a:test-a",
+      "application:shutdown",
+      "application:dispose",
+      "resource:database:dispose",
+    ]);
+  });
+
+  it("rejects commit-semantic obligations in rollback mode before application bootstrap", async () => {
+    const lifecycle: string[] = [];
+    const resource = fakeResource("database", "rollback", lifecycle);
+    let bootstrapCalls = 0;
+
+    await expect(
+      createTestKernel({
+        bootstrap: () => {
+          bootstrapCalls += 1;
+          return bootstrapProductionApp("not-reached");
+        },
+        fidelity: "application",
+        obligations: [{ kind: "outbox", resource }],
+        resources: [resource],
+      }),
+    ).rejects.toBeInstanceOf(TestKernelResourceFidelityProblem);
+    expect(bootstrapCalls).toBe(0);
+    expect(lifecycle).toEqual([]);
+  });
+
+  it("requires resource obligations and lookups to reference this kernel", async () => {
+    const configured = fakeResource("configured", "commit");
+    const missing = fakeResource("missing", "commit");
+
+    await expect(
+      createTestKernel({
+        bootstrap: () => bootstrapProductionApp("missing-obligation"),
+        fidelity: "application",
+        obligations: [{ kind: "after-commit", resource: missing }],
+        resources: [configured],
+      }),
+    ).rejects.toBeInstanceOf(TestKernelResourceNotFoundProblem);
+
+    const kernel = await createTestKernel({
+      bootstrap: () => bootstrapProductionApp("missing-lookup"),
+      fidelity: "application",
+      resources: [configured],
+    });
+    expect(() => kernel.resource(missing)).toThrow(TestKernelResourceNotFoundProblem);
     await kernel.dispose();
   });
 
@@ -345,6 +495,73 @@ describe("TestKernel", () => {
       }),
     ).rejects.toThrow("bootstrap failed");
     expect(cleanupCalls).toBe(1);
+  });
+
+  it("preserves structured resource cleanup evidence when bootstrap also fails", async () => {
+    let cleanupFailure!: TestKernelResourceFidelityProblem;
+    const resource: TestResource<FakeResourceConnection> = {
+      id: "cleanup-evidence",
+      async start() {
+        return {
+          connection: { identity: "cleanup-evidence" },
+          diagnostics: [],
+          dispose: () => {
+            throw cleanupFailure;
+          },
+          fidelity: {
+            id: "cleanup-evidence",
+            image: "example.invalid/resource@sha256:abc",
+            isolation: "database-per-worker",
+            kind: "fake",
+            mode: "commit",
+          },
+        };
+      },
+    };
+    cleanupFailure = new TestKernelResourceFidelityProblem(
+      { kind: "outbox", resource },
+      {
+        id: resource.id,
+        image: "example.invalid/resource@sha256:abc",
+        isolation: "database-per-worker",
+        kind: "fake",
+        mode: "rollback",
+      },
+    );
+    Object.assign(cleanupFailure.extensions ?? {}, {
+      logs: ["container cleanup failed"],
+      recovery: "stop the retained container",
+      stage: "cleanup",
+    });
+
+    let thrown: unknown;
+    try {
+      await createTestKernel({
+        bootstrap: () => {
+          throw new Error("bootstrap failed");
+        },
+        fidelity: "application",
+        resources: [resource],
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(TestKernelDisposalProblem);
+    expect(thrown).toMatchObject({
+      cause: { message: "bootstrap failed" },
+      extensions: {
+        failureCount: 1,
+        failures: [
+          expect.objectContaining({
+            code: "testing/test-kernel-resource-fidelity",
+            logs: ["container cleanup failed"],
+            recovery: "stop the retained container",
+            stage: "cleanup",
+          }),
+        ],
+      },
+    });
   });
 
   it("runs cleanup exactly once and surfaces cleanup failures", async () => {
