@@ -84,6 +84,7 @@ export type TestResourceStartContext = {
 };
 
 export type TestResource<TConnection> = {
+  readonly fidelityHint?: TestResourceFidelity;
   readonly id: string;
   readonly start: (context: TestResourceStartContext) => Promise<StartedTestResource<TConnection>>;
 };
@@ -412,6 +413,9 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
       for (const obligation of options.obligations ?? []) {
         if (!resources.includes(obligation.resource)) {
           throw new TestKernelResourceNotFoundProblem(obligation.resource.id);
+        }
+        if (obligation.resource.fidelityHint?.mode === "rollback") {
+          throw new TestKernelResourceFidelityProblem(obligation, obligation.resource.fidelityHint);
         }
       }
 

@@ -39,6 +39,9 @@ export function appendContainerLogs(target: string[]): (stream: NodeJS.ReadableS
         const trimmed = line.trim();
         if (trimmed.length > 0) {
           target.push(trimmed);
+          if (target.length > 200) {
+            target.splice(0, target.length - 200);
+          }
         }
       }
     });
@@ -84,6 +87,28 @@ export async function stopContainer(
     diagnostics.push(failedDiagnostic("cleanup", error, logs));
     throw new TestResourceLifecycleProblem(resourceId, "cleanup", errorMessage(error), logs, error);
   }
+}
+
+export function throwCleanupFailures(
+  resourceId: string,
+  failures: readonly unknown[],
+  logs: readonly string[],
+): void {
+  if (failures.length === 0) {
+    return;
+  }
+  if (failures.length === 1 && failures[0] instanceof TestResourceLifecycleProblem) {
+    throw failures[0];
+  }
+
+  throw new TestResourceLifecycleProblem(
+    resourceId,
+    "cleanup",
+    failures.map(errorMessage).join("; "),
+    logs,
+    failures[0],
+    failures,
+  );
 }
 
 export function errorMessage(error: unknown): string {

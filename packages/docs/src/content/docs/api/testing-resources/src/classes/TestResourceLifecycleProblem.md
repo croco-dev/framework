@@ -15,7 +15,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new TestResourceLifecycleProblem**(`resourceId`, `stage`, `message`, `logs`, `cause?`): `TestResourceLifecycleProblem`
+> **new TestResourceLifecycleProblem**(`resourceId`, `stage`, `message`, `logs`, `cause?`, `failures?`): `TestResourceLifecycleProblem`
 
 #### Parameters
 
@@ -38,6 +38,10 @@ readonly `string`[]
 ##### cause?
 
 `unknown`
+
+##### failures?
+
+readonly `unknown`[]
 
 #### Returns
 

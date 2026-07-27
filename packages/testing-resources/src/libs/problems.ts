@@ -35,6 +35,7 @@ export class TestResourceLifecycleProblem extends Problem {
     message: string,
     logs: readonly string[],
     cause?: unknown,
+    failures?: readonly unknown[],
   ) {
     super(
       codeFor(stage),
@@ -46,11 +47,33 @@ export class TestResourceLifecycleProblem extends Problem {
           recovery: recoveryFor(stage),
           resourceId,
           stage,
+          ...(failures
+            ? {
+                failureCount: failures.length,
+                failures: failures.map(failureEvidence),
+              }
+            : {}),
         },
         ...(cause === undefined ? {} : { cause: toError(cause) }),
       },
     );
   }
+}
+
+function failureEvidence(error: unknown): Record<string, unknown> {
+  if (error instanceof Problem) {
+    return {
+      ...error.toJSON(),
+      message: error.message,
+      name: error.name,
+    };
+  }
+
+  const failure = toError(error);
+  return {
+    message: failure.message,
+    name: failure.name,
+  };
 }
 
 function codeFor(stage: TestResourceDiagnosticStage): string {

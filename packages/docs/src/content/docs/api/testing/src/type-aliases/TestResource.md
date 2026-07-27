@@ -15,6 +15,12 @@ title: "TestResource"
 
 ## Properties
 
+### fidelityHint?
+
+> `readonly` `optional` **fidelityHint?**: [`TestResourceFidelity`](/api/testing/src/type-aliases/testresourcefidelity/)
+
+***
+
 ### id
 
 > `readonly` **id**: `string`

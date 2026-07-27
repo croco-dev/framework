@@ -37,7 +37,16 @@ function fakeResource(
   mode: "rollback" | "commit" | "migration",
   lifecycle: string[] = [],
 ): TestResource<FakeResourceConnection> {
+  const fidelity = {
+    id,
+    image: "example.invalid/resource@sha256:abc",
+    isolation: "database-per-worker",
+    kind: "fake",
+    mode,
+  } as const;
+
   return {
+    fidelityHint: fidelity,
     id,
     async start(context) {
       lifecycle.push(`resource:${id}:start`);
@@ -56,13 +65,7 @@ function fakeResource(
         dispose: () => {
           lifecycle.push(`resource:${id}:dispose`);
         },
-        fidelity: {
-          id,
-          image: "example.invalid/resource@sha256:abc",
-          isolation: "database-per-worker",
-          kind: "fake",
-          mode,
-        },
+        fidelity,
       };
     },
   };
@@ -241,7 +244,7 @@ describe("TestKernel", () => {
       }),
     ).rejects.toBeInstanceOf(TestKernelResourceFidelityProblem);
     expect(bootstrapCalls).toBe(0);
-    expect(lifecycle).toEqual(["resource:database:start", "resource:database:dispose"]);
+    expect(lifecycle).toEqual([]);
   });
 
   it("requires resource obligations and lookups to reference this kernel", async () => {

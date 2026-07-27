@@ -127,6 +127,8 @@ describe.skipIf(!realResourcesEnabled)("real TestKernel resources", () => {
     });
     const connection = kernel.resource(postgres);
     const db = drizzle(connection.pool);
+    // Drizzle's concrete fluent builders are narrower than the structural ports exposed by
+    // events-tx and tx-drizzle, even though this node-postgres database implements both at runtime.
     const eventDb = db as unknown as DrizzleTransactionalEventStoreDb;
     const txManager = new TxManager<DrizzleTransactionalEventStoreDb>(
       createDrizzleTxAdapter(db as never) as unknown as TxAdapter<DrizzleTransactionalEventStoreDb>,

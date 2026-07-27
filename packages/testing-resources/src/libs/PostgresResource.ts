@@ -22,6 +22,7 @@ import {
   type ResourceImageOptions,
   resolveImage,
   stopContainer,
+  throwCleanupFailures,
 } from "./shared";
 
 export type PostgresTestConnection = {
@@ -55,6 +56,13 @@ export function postgresResource(
 ): TestResource<PostgresTestConnection> {
   const id = options.id ?? "postgres";
   const image = resolveImage(id, DEFAULT_POSTGRES_IMAGE, options);
+  const fidelity = {
+    id,
+    image,
+    isolation: "database-per-worker",
+    kind: "postgresql",
+    mode: options.mode,
+  } as const;
   if (options.mode === "migration" && !options.migrations) {
     throw new TestResourceConfigurationProblem(
       `PostgreSQL test resource '${id}' uses migration mode but has no migrations directory.`,
@@ -63,6 +71,7 @@ export function postgresResource(
   }
 
   return {
+    fidelityHint: fidelity,
     id,
     async start(context): Promise<StartedTestResource<PostgresTestConnection>> {
       const logs: string[] = [];
@@ -178,6 +187,7 @@ export function postgresResource(
               await activeClient.query("rollback");
             } catch (error) {
               discardClient = true;
+              diagnostics.push(failedDiagnostic("cleanup", error, logs));
               failures.push(error);
             } finally {
               activeClient.release(discardClient);
@@ -186,6 +196,7 @@ export function postgresResource(
           try {
             await activePool.end();
           } catch (error) {
+            diagnostics.push(failedDiagnostic("cleanup", error, logs));
             failures.push(error);
           }
           try {
@@ -193,25 +204,9 @@ export function postgresResource(
           } catch (error) {
             failures.push(error);
           }
-          if (failures.length > 0) {
-            const failure = failures[0];
-            diagnostics.push(failedDiagnostic("cleanup", failure, logs));
-            throw new TestResourceLifecycleProblem(
-              id,
-              "cleanup",
-              errorMessage(failure),
-              logs,
-              failure,
-            );
-          }
+          throwCleanupFailures(id, failures, logs);
         },
-        fidelity: {
-          id,
-          image,
-          isolation: "database-per-worker",
-          kind: "postgresql",
-          mode: options.mode,
-        },
+        fidelity,
       };
     },
   };

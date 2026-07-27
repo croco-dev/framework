@@ -14,6 +14,7 @@ import {
   type ResourceImageOptions,
   resolveImage,
   stopContainer,
+  throwCleanupFailures,
 } from "./shared";
 
 export type RedisTestConnection = {
@@ -36,8 +37,16 @@ export function redisResource(
 ): TestResource<RedisTestConnection> {
   const id = options.id ?? "redis";
   const image = resolveImage(id, DEFAULT_REDIS_IMAGE, options);
+  const fidelity = {
+    id,
+    image,
+    isolation: "prefix-per-test",
+    kind: "redis",
+    mode: "commit",
+  } as const;
 
   return {
+    fidelityHint: fidelity,
     id,
     async start(context): Promise<StartedTestResource<RedisTestConnection>> {
       const logs: string[] = [];
@@ -63,20 +72,20 @@ export function redisResource(
       const url = `redis://${host}:${port}`;
       const keyPrefix = `croco:${isolationSuffix(context.workerId, context.testId)}:`;
 
-      try {
-        client = await connectRedis(url, keyPrefix, logs);
-        diagnostics.push(passedDiagnostic("health-check", "Redis responded to PING", logs));
-      } catch (error) {
-        diagnostics.push(failedDiagnostic("health-check", error, logs));
+      const connectionResult = await connectRedis(url, keyPrefix, logs);
+      if (!connectionResult.ok) {
+        diagnostics.push(failedDiagnostic("health-check", connectionResult.error, logs));
         await cleanupFailedStart(client, container, logs);
         throw new TestResourceLifecycleProblem(
           id,
           "health-check",
-          errorMessage(error),
+          errorMessage(connectionResult.error),
           logs,
-          error,
+          connectionResult.error,
         );
       }
+      client = connectionResult.client;
+      diagnostics.push(passedDiagnostic("health-check", "Redis responded to PING", logs));
 
       const activeClient = client;
       const connection: RedisTestConnection = {
@@ -107,6 +116,7 @@ export function redisResource(
           try {
             await activeClient.quit();
           } catch (error) {
+            diagnostics.push(failedDiagnostic("cleanup", error, logs));
             failures.push(error);
           }
           try {
@@ -114,32 +124,24 @@ export function redisResource(
           } catch (error) {
             failures.push(error);
           }
-          if (failures.length > 0) {
-            const failure = failures[0];
-            diagnostics.push(failedDiagnostic("cleanup", failure, logs));
-            throw new TestResourceLifecycleProblem(
-              id,
-              "cleanup",
-              errorMessage(failure),
-              logs,
-              failure,
-            );
-          }
+          throwCleanupFailures(id, failures, logs);
         },
-        fidelity: {
-          id,
-          image,
-          isolation: "prefix-per-test",
-          kind: "redis",
-          mode: "commit",
-        },
+        fidelity,
       };
     },
   };
 }
 
-async function connectRedis(url: string, keyPrefix: string, logs: string[]): Promise<Redis> {
-  let lastError: unknown;
+type RedisConnectionResult =
+  | { readonly client: Redis; readonly ok: true }
+  | { readonly error: Error; readonly ok: false };
+
+async function connectRedis(
+  url: string,
+  keyPrefix: string,
+  logs: string[],
+): Promise<RedisConnectionResult> {
+  let lastError = new Error("Redis health-check failed without a reported cause.");
 
   for (let attempt = 1; attempt <= 5; attempt += 1) {
     const candidate = new Redis(url, {
@@ -155,9 +157,9 @@ async function connectRedis(url: string, keyPrefix: string, logs: string[]): Pro
     try {
       await candidate.connect();
       await candidate.ping();
-      return candidate;
+      return { client: candidate, ok: true };
     } catch (error) {
-      lastError = error;
+      lastError = error instanceof Error ? error : new Error(String(error));
       candidate.disconnect();
       logs.push(`Redis health-check attempt ${attempt} failed: ${errorMessage(error)}`);
       if (attempt < 5) {
@@ -166,7 +168,7 @@ async function connectRedis(url: string, keyPrefix: string, logs: string[]): Pro
     }
   }
 
-  throw lastError;
+  return { error: lastError, ok: false };
 }
 
 function delay(milliseconds: number): Promise<void> {
