@@ -58,6 +58,7 @@ const repoIds = [
   "verification-contract-tests",
   "changeset-required",
   "package-manifests",
+  "release-version-sync",
   "docs-catalog",
   "docs-api-triggers",
   "problem-registry",
@@ -172,7 +173,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(40);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(41);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_SUPPORT_PATHS).toEqual([...RELEASE_GATE_SUPPORT_PATHS].sort());

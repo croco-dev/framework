@@ -52,6 +52,7 @@ const ROOT_SCRIPT_RECOVERY = {
   "provider-certification:check": "Fix the reported provider certification metadata",
   "public-api:check": "pnpm public-api:write",
   "release-docs:check": "Fix the reported release documentation contract",
+  "release-version-sync:check": "pnpm release-version-sync:write && pnpm docs:catalog:write",
   "security-allowlists:check": "Fix the reported security allowlist metadata",
   "spine-promotion:check": "Fix the reported beta spine promotion violations",
   "static-misuse:check": "Fix the reported source misuse",
