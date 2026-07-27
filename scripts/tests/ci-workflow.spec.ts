@@ -107,11 +107,12 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("--workflow ci");
     expect(WORKFLOW).toContain("- name: Run selected verification profile");
     expect(WORKFLOW.match(/scripts\/release-spine-evidence\.mts/g)).toHaveLength(1);
-    expect(WORKFLOW).toContain('--profile "${{ steps.verification.outputs.profile }}"');
+    expect(WORKFLOW).toContain("validate:\n    needs: changes");
+    expect(WORKFLOW).toContain('--profile "${{ needs.changes.outputs.profile }}"');
     expect(WORKFLOW).toContain(
-      'if [ "${{ github.event_name }}" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata --base "${{ steps.verification.outputs.base }}" --head HEAD)',
+      'if [ "${{ github.event_name }}" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata --base "${{ needs.changes.outputs.base }}" --head HEAD)',
     );
-    expect(WORKFLOW).toContain('--base "${{ steps.verification.outputs.base }}" --head HEAD');
+    expect(WORKFLOW).toContain('--base "${{ needs.changes.outputs.base }}" --head HEAD');
     expect(WORKFLOW).not.toContain("test:release-gates");
   });
 
@@ -121,6 +122,8 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("ghcr.io/gitleaks/gitleaks:v8.23.0");
     expect(WORKFLOW).toContain("pnpm create-croco-app:smoke -- --tier ecosystem-advisory");
     expect(WORKFLOW).not.toContain("pnpm create-croco-app:smoke -- --tier spine-blocking");
+    expect(VALIDATE_JOB).not.toContain("--tier ecosystem-advisory");
+    expect(WORKFLOW).toContain("ecosystem-advisory:\n    needs: changes");
   });
 
   it("makes the Gitleaks result blocking while preserving redacted evidence", () => {
@@ -255,7 +258,7 @@ describe("CI verification profile contract", () => {
   });
 
   it("publishes profile, package quality, generated-app, and coverage evidence", () => {
-    expect(WORKFLOW).toContain("name: verification-${{ steps.verification.outputs.profile }}");
+    expect(WORKFLOW).toContain("name: verification-${{ needs.changes.outputs.profile }}");
     expect(WORKFLOW).toContain("name: package-quality-dashboard");
     expect(WORKFLOW).toContain("name: generated-app-smoke-ecosystem-advisory");
     expect(WORKFLOW).toContain("name: core-coverage-warning-report");
@@ -264,7 +267,7 @@ describe("CI verification profile contract", () => {
   it("reports whether the publish-only audit policy was selected", () => {
     expect(WORKFLOW).toContain('audit_policy_result="selected by the shared publish profile"');
     expect(WORKFLOW).toContain(
-      'audit_policy_result="not selected by the ${{ steps.verification.outputs.profile }} profile"',
+      'audit_policy_result="not selected by the ${{ needs.changes.outputs.profile }} profile"',
     );
   });
 
@@ -272,5 +275,16 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("- 'packages/*/README.md'");
     expect(WORKFLOW).toContain("run: pnpm docs:api:check");
     expect(WORKFLOW).toContain("--exclude-path '(^|/)packages/docs/README\\.md$'");
+  });
+
+  it("runs independent CI surfaces in parallel and restores content-addressed Turbo state", () => {
+    expect(WORKFLOW).toContain("docs-sync-check:\n    needs: changes");
+    expect(WORKFLOW).not.toContain("docs-sync-check:\n    needs: [validate, changes]");
+    expect(WORKFLOW).toContain(
+      "windows-scaffold:\n    needs: changes\n    if: github.event_name != 'pull_request' || needs.changes.outputs.windows-scaffold == 'true'",
+    );
+    expect(WORKFLOW).toContain("actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9");
+    expect(WORKFLOW).toContain("path: .turbo");
+    expect(WORKFLOW).not.toContain("pnpm turbo run build --filter=create-croco-app... --force");
   });
 });

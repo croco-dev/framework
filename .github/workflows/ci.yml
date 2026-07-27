@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   validate:
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 60
     services:
@@ -43,26 +44,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Select verification profile
-        id: verification
-        shell: bash
-        env:
-          BASE_REF: ${{ github.base_ref }}
-          EVENT_BEFORE: ${{ github.event.before }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            base="origin/$BASE_REF"
-          else
-            base="$EVENT_BEFORE"
-            if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-              base="HEAD^"
-            fi
-          fi
-          node --experimental-strip-types scripts/verification-change-classifier.mts \
-            --event "$GITHUB_EVENT_NAME" --workflow ci --base "$base" --head HEAD --github-output "$GITHUB_OUTPUT"
-          echo "base=$base" >> "$GITHUB_OUTPUT"
-
       - name: Initialize beta spine promotion evidence
         env:
           SPINE_PROMOTION_COMMIT_SHA: ${{ github.sha }}
@@ -80,6 +61,16 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "pnpm"
+
+      - name: Restore Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+            turbo-${{ runner.os }}-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -146,10 +137,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p ci-reports/security
-          if [ "${{ steps.verification.outputs.profile }}" = "publish" ]; then
+          if [ "${{ needs.changes.outputs.profile }}" = "publish" ]; then
             audit_policy_result="selected by the shared publish profile"
           else
-            audit_policy_result="not selected by the ${{ steps.verification.outputs.profile }} profile"
+            audit_policy_result="not selected by the ${{ needs.changes.outputs.profile }} profile"
           fi
           {
             echo "# Security policy summary"
@@ -196,9 +187,9 @@ jobs:
         id: verification_profile
         shell: bash
         run: |
-          args=(--profile "${{ steps.verification.outputs.profile }}")
+          args=(--profile "${{ needs.changes.outputs.profile }}")
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            args+=(--allow-pending-release-metadata --base "${{ steps.verification.outputs.base }}" --head HEAD)
+            args+=(--allow-pending-release-metadata --base "${{ needs.changes.outputs.base }}" --head HEAD)
           fi
           node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"
 
@@ -206,8 +197,8 @@ jobs:
         if: always()
         shell: bash
         run: |
-          report="ci-reports/verification/${{ steps.verification.outputs.profile }}/spine-evidence.md"
-          if [ "${{ steps.verification.outputs.profile }}" = "spine" ]; then
+          report="ci-reports/verification/${{ needs.changes.outputs.profile }}/spine-evidence.md"
+          if [ "${{ needs.changes.outputs.profile }}" = "spine" ]; then
             report="ci-reports/release/spine-evidence.md"
           fi
           if [ -f "$report" ]; then
@@ -220,24 +211,18 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: verification-${{ steps.verification.outputs.profile }}
+          name: verification-${{ needs.changes.outputs.profile }}
           path: |
             ci-reports/verification
             ci-reports/release
           include-hidden-files: true
           if-no-files-found: warn
 
-      - name: create-croco-app ecosystem-advisory generated app smoke
-        if: steps.verification.outputs.profile != 'repo'
-        id: generated_app_smoke_advisory
-        continue-on-error: true
-        run: pnpm create-croco-app:smoke -- --tier ecosystem-advisory
-
-      - name: Publish generated app smoke summary
+      - name: Publish spine-blocking generated app smoke summary
         if: always()
         shell: bash
         run: |
-          for report in spine-blocking-matrix.md ecosystem-advisory-matrix.md spine-blocking-journeys/report.md; do
+          for report in spine-blocking-matrix.md spine-blocking-journeys/report.md; do
             if [ -f "ci-reports/generated-apps/${report}" ]; then
               cat "ci-reports/generated-apps/${report}" >> "$GITHUB_STEP_SUMMARY"
             else
@@ -257,21 +242,11 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
 
-      - name: Upload ecosystem-advisory generated app smoke report
+      - name: Upload spine-blocking generated app smoke failure artifacts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: generated-app-smoke-ecosystem-advisory
-          path: |
-            ci-reports/generated-apps/ecosystem-advisory-matrix.md
-            ci-reports/generated-apps/ecosystem-advisory-matrix.json
-          if-no-files-found: warn
-
-      - name: Upload generated app smoke failure artifacts
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: generated-app-smoke-failure-artifacts
+          name: generated-app-smoke-spine-blocking-failure-artifacts
           path: ci-reports/generated-apps/cases
           include-hidden-files: true
           if-no-files-found: ignore
@@ -308,8 +283,33 @@ jobs:
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
       api-source: ${{ steps.filter.outputs.api-source }}
+      windows-scaffold: ${{ steps.filter.outputs.windows_scaffold }}
+      profile: ${{ steps.verification.outputs.profile }}
+      base: ${{ steps.verification.outputs.base }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select verification profile
+        id: verification
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="origin/$BASE_REF"
+          else
+            base="$EVENT_BEFORE"
+            if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+              base="HEAD^"
+            fi
+          fi
+          node --experimental-strip-types scripts/verification-change-classifier.mts \
+            --event "$GITHUB_EVENT_NAME" --workflow ci --base "$base" --head HEAD --github-output "$GITHUB_OUTPUT"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
       - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: filter
         with:
@@ -319,6 +319,17 @@ jobs:
               - 'docs/**/*.md'
               - 'packages/*/README.md'
               - 'packages/docs/**'
+            windows_scaffold:
+              - '.github/workflows/ci.yml'
+              - '.nvmrc'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'turbo.json'
+              - 'packages/**'
+              - 'scripts/alpha-release-smoke.mts'
+              - 'scripts/create-croco-app-*.mts'
+              - 'scripts/first-success-verify.mts'
             api-source:
               - 'packages/access-core/src/**'
               - 'packages/access-drizzle/src/**'
@@ -436,7 +447,75 @@ jobs:
               - 'packages/docs/astro.config.mjs'
               - 'packages/docs/tsconfig.typedoc.json'
 
+  ecosystem-advisory:
+    needs: changes
+    if: needs.changes.outputs.profile != 'repo'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+
+      - name: Restore Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run create-croco-app ecosystem-advisory generated app smoke
+        id: generated_app_smoke_advisory
+        continue-on-error: true
+        run: pnpm create-croco-app:smoke -- --tier ecosystem-advisory
+
+      - name: Publish ecosystem-advisory generated app smoke summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f ci-reports/generated-apps/ecosystem-advisory-matrix.md ]; then
+            cat ci-reports/generated-apps/ecosystem-advisory-matrix.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Ecosystem-advisory generated app smoke report was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload ecosystem-advisory generated app smoke report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: generated-app-smoke-ecosystem-advisory
+          path: |
+            ci-reports/generated-apps/ecosystem-advisory-matrix.md
+            ci-reports/generated-apps/ecosystem-advisory-matrix.json
+          if-no-files-found: warn
+
+      - name: Upload ecosystem-advisory generated app smoke failure artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: generated-app-smoke-ecosystem-advisory-failure-artifacts
+          path: ci-reports/generated-apps/cases
+          include-hidden-files: true
+          if-no-files-found: ignore
+
   windows-scaffold:
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.windows-scaffold == 'true'
     runs-on: windows-latest
     timeout-minutes: 60
 
@@ -453,11 +532,21 @@ jobs:
           node-version-file: ".nvmrc"
           cache: pnpm
 
+      - name: Restore Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+            turbo-${{ runner.os }}-
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build packaged CLI
-        run: pnpm turbo run build --filter=create-croco-app... --force
+        run: pnpm turbo run build --filter=create-croco-app...
 
       - name: Run packed CLI from a path containing spaces
         shell: pwsh
@@ -497,7 +586,7 @@ jobs:
         run: pnpm create-croco-app:smoke
 
   docs-sync-check:
-    needs: [validate, changes]
+    needs: changes
     if: github.event_name == 'pull_request' && needs.changes.outputs.api-source == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -511,6 +600,15 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: pnpm
+      - name: Restore Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+            turbo-${{ runner.os }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build docs and check for drift
@@ -533,6 +631,16 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: pnpm
+
+      - name: Restore Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+            turbo-${{ runner.os }}-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
