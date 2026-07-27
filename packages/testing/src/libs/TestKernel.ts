@@ -395,6 +395,14 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
   let bootstrapCleanup: (() => Promise<void> | void) | undefined;
   const resourceConnections = new Map<TestResource<unknown>, unknown>();
   const resourceEvidence: TestKernelResourceEvidence[] = [];
+  const buildCleanupOperations = (
+    disposeApp: CrocoApp | undefined,
+  ): TestKernelCleanupOperation[] => [
+    ...(bootstrapCleanup ? [bootstrapCleanup] : []),
+    ...[...registeredCleanups].reverse(),
+    ...(disposeApp && options.dispose ? [() => options.dispose?.(disposeApp)] : []),
+    ...[...resourceCleanups].reverse(),
+  ];
 
   try {
     return await scope.run(async () => {
@@ -476,12 +484,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
             ? "production"
             : "overridden",
       });
-      const cleanupOperations = [
-        ...(bootstrapCleanup ? [bootstrapCleanup] : []),
-        ...[...registeredCleanups].reverse(),
-        ...(options.dispose ? [() => options.dispose?.(app as CrocoApp)] : []),
-        ...[...resourceCleanups].reverse(),
-      ];
+      const cleanupOperations = buildCleanupOperations(app);
 
       return new TestKernel(
         app,
@@ -497,12 +500,7 @@ export async function createTestKernel(options: TestKernelOptions): Promise<Test
       );
     });
   } catch (error) {
-    const cleanupOperations = [
-      ...(bootstrapCleanup ? [bootstrapCleanup] : []),
-      ...[...registeredCleanups].reverse(),
-      ...(app && options.dispose ? [() => options.dispose?.(app as CrocoApp)] : []),
-      ...[...resourceCleanups].reverse(),
-    ];
+    const cleanupOperations = buildCleanupOperations(app);
     const failures = await runCleanupSequence(scope, cleanupOperations);
 
     if (failures.length > 0) {
