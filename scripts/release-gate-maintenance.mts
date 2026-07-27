@@ -123,6 +123,7 @@ export const RELEASE_GATE_POLICY_INPUT_PATHS = [
   ".oxfmtrc.json",
   ".oxlintrc.json",
   ".prettierignore",
+  "AGENTS.md",
   "RELEASING.md",
   "benchmarks/baseline.json",
   "benchmarks/thresholds.json",
