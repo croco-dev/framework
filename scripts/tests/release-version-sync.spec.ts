@@ -149,6 +149,75 @@ describe("release-version-sync.mts", () => {
     );
   });
 
+  it("rejects an option token used as the --root value", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--experimental-strip-types", scriptPath, "--root", "--write"],
+      {
+        encoding: "utf-8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "[MISSING_RELEASE_VERSION_SYNC_ROOT/input] --root requires a path",
+    );
+  });
+
+  it("leaves Croco range-shaped entries outside the managed declaration unchanged", () => {
+    const root = createFixture();
+    const rangesPath = join(
+      root,
+      "packages",
+      "create-croco-app",
+      "src",
+      "helpers",
+      "croco-ranges.ts",
+    );
+    writeFileSync(
+      rangesPath,
+      `${readFileSync(rangesPath, "utf-8")}\nconst UNMANAGED_RANGES = {\n  "@croco/alpha": "^9.9.9",\n};\n`,
+      "utf-8",
+    );
+
+    const result = runScript(root, "--write");
+    const ranges = readFileSync(rangesPath, "utf-8");
+
+    expect(result.status).toBe(0);
+    expect(ranges).toContain('"@croco/alpha": "^0.0.2"');
+    expect(ranges).toContain('"@croco/alpha": "^9.9.9"');
+  });
+
+  it("does not count Croco range-shaped entries outside an empty managed declaration", () => {
+    const root = createFixture();
+    const rangesPath = join(
+      root,
+      "packages",
+      "create-croco-app",
+      "src",
+      "helpers",
+      "croco-ranges.ts",
+    );
+    writeFileSync(
+      rangesPath,
+      [
+        "const EXTERNAL_CROCO_PACKAGE_RANGES = {",
+        "} as const;",
+        "",
+        "const UNMANAGED_RANGES = {",
+        '  "@croco/alpha": "^9.9.9",',
+        "};",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("[CROCO_RANGE_DECLARATIONS_MISSING/contract]");
+  });
+
   it("keeps the Changesets action entrypoint wired to ordered release synchronization", () => {
     const packageJson = JSON.parse(readFileSync(rootPackageJsonPath, "utf-8")) as {
       readonly scripts?: Readonly<Record<string, string>>;

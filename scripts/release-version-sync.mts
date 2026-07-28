@@ -86,7 +86,7 @@ function parseArgs(args: readonly string[]): Options {
 
     if (arg === "--root") {
       const value = args[index + 1];
-      if (!value) {
+      if (!value || value.startsWith("-")) {
         throw new VerificationProblem(
           "MISSING_RELEASE_VERSION_SYNC_ROOT",
           "input",
@@ -177,9 +177,13 @@ function synchronizeCrocoRanges(
         return line;
       }
 
+      if (!insideRangeDeclaration) {
+        return line;
+      }
+
       const match = line.match(crocoRangeLinePattern);
       if (!match) {
-        if (insideRangeDeclaration && line.includes("@croco/")) {
+        if (line.includes("@croco/")) {
           unmatchedRangeLines.push(index + 1);
         }
         return line;
