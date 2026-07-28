@@ -5,6 +5,8 @@ import { dirname, join, resolve } from "node:path";
 import { exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
+
 type Mode = "check" | "write";
 
 type Options = {
@@ -60,8 +62,7 @@ function main(): void {
       `release-version-sync: ${options.mode === "write" ? "synchronized" : "verified"} ${results.length} version-derived metadata files.\n`,
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    stdout.write(`release-version-sync: ${message}\n`);
+    stdout.write(`release-version-sync: ${formatVerificationProblem(error)}\n`);
     exit(1);
   }
 }
@@ -86,14 +87,22 @@ function parseArgs(args: readonly string[]): Options {
     if (arg === "--root") {
       const value = args[index + 1];
       if (!value) {
-        throw new Error("--root requires a path");
+        throw new VerificationProblem(
+          "MISSING_RELEASE_VERSION_SYNC_ROOT",
+          "input",
+          "--root requires a path",
+        );
       }
       rootDir = resolve(value);
       index++;
       continue;
     }
 
-    throw new Error(`Unknown option: ${arg}`);
+    throw new VerificationProblem(
+      "UNKNOWN_RELEASE_VERSION_SYNC_OPTION",
+      "input",
+      `Unknown option: ${arg}`,
+    );
   }
 
   return { mode, rootDir };
@@ -102,7 +111,11 @@ function parseArgs(args: readonly string[]): Options {
 function readWorkspacePackageVersions(rootDir: string): ReadonlyMap<string, string> {
   const packagesDir = join(rootDir, "packages");
   if (!existsSync(packagesDir)) {
-    throw new Error(`packages directory does not exist: ${packagesDir}`);
+    throw new VerificationProblem(
+      "RELEASE_PACKAGES_DIRECTORY_MISSING",
+      "configuration",
+      `packages directory does not exist: ${packagesDir}`,
+    );
   }
 
   const versions = new Map<string, string>();
@@ -118,10 +131,18 @@ function readWorkspacePackageVersions(rootDir: string): ReadonlyMap<string, stri
 
     const manifest = readJsonFile<PackageJson>(manifestPath);
     if (typeof manifest.name !== "string" || typeof manifest.version !== "string") {
-      throw new Error(`${manifestPath} must declare string name and version fields`);
+      throw new VerificationProblem(
+        "INVALID_WORKSPACE_PACKAGE_MANIFEST",
+        "contract",
+        `${manifestPath} must declare string name and version fields`,
+      );
     }
     if (versions.has(manifest.name)) {
-      throw new Error(`duplicate workspace package name: ${manifest.name}`);
+      throw new VerificationProblem(
+        "DUPLICATE_WORKSPACE_PACKAGE_NAME",
+        "contract",
+        `duplicate workspace package name: ${manifest.name}`,
+      );
     }
     versions.set(manifest.name, manifest.version);
   }
@@ -136,13 +157,31 @@ function synchronizeCrocoRanges(
   const filePath = join(rootDir, crocoRangesPath);
   const source = readRequiredFile(filePath);
   const drift: string[] = [];
+  const unmatchedRangeLines: number[] = [];
+  let insideRangeDeclaration = false;
   let rangeCount = 0;
 
   const content = source
     .split("\n")
-    .map((line) => {
+    .map((line, index) => {
+      if (/^\s*const EXTERNAL_CROCO_PACKAGE_RANGES\s*=\s*{\s*$/.test(line)) {
+        insideRangeDeclaration = true;
+        return line;
+      }
+
+      if (
+        insideRangeDeclaration &&
+        /^\s*}\s+as const(?:\s+satisfies\s+Record<string,\s*string>)?;\s*$/.test(line)
+      ) {
+        insideRangeDeclaration = false;
+        return line;
+      }
+
       const match = line.match(crocoRangeLinePattern);
       if (!match) {
+        if (insideRangeDeclaration && line.includes("@croco/")) {
+          unmatchedRangeLines.push(index + 1);
+        }
         return line;
       }
 
@@ -155,12 +194,20 @@ function synchronizeCrocoRanges(
         currentRange === undefined ||
         comma === undefined
       ) {
-        throw new Error(`${crocoRangesPath} contains an unreadable Croco range entry`);
+        throw new VerificationProblem(
+          "UNREADABLE_CROCO_RANGE_ENTRY",
+          "contract",
+          `${crocoRangesPath} contains an unreadable Croco range entry`,
+        );
       }
 
       const version = packageVersions.get(packageName);
       if (!version) {
-        throw new Error(`${crocoRangesPath} references missing workspace package ${packageName}`);
+        throw new VerificationProblem(
+          "CROCO_RANGE_PACKAGE_MISSING",
+          "contract",
+          `${crocoRangesPath} references missing workspace package ${packageName}`,
+        );
       }
 
       rangeCount++;
@@ -175,8 +222,20 @@ function synchronizeCrocoRanges(
     })
     .join("\n");
 
+  if (unmatchedRangeLines.length > 0) {
+    throw new VerificationProblem(
+      "UNMATCHED_CROCO_RANGE_ENTRY",
+      "contract",
+      `${crocoRangesPath} contains Croco package references that do not match the required range declaration format on lines ${unmatchedRangeLines.join(", ")}`,
+    );
+  }
+
   if (rangeCount === 0) {
-    throw new Error(`${crocoRangesPath} does not declare any Croco package ranges`);
+    throw new VerificationProblem(
+      "CROCO_RANGE_DECLARATIONS_MISSING",
+      "contract",
+      `${crocoRangesPath} does not declare any Croco package ranges`,
+    );
   }
 
   return { content, drift, path: crocoRangesPath };
@@ -192,7 +251,11 @@ function synchronizeCertificationVersions(
   const certification = requireObject(catalog.certification, `${packageCatalogPath}.certification`);
   const records = certification.records;
   if (!Array.isArray(records)) {
-    throw new Error(`${packageCatalogPath}.certification.records must be an array`);
+    throw new VerificationProblem(
+      "INVALID_CERTIFICATION_RECORDS",
+      "contract",
+      `${packageCatalogPath}.certification.records must be an array`,
+    );
   }
 
   const drift: string[] = [];
@@ -200,14 +263,18 @@ function synchronizeCertificationVersions(
     const record = requireObject(value, `${packageCatalogPath}.certification.records[${index}]`);
     const packageName = record.package;
     if (typeof packageName !== "string" || packageName.length === 0) {
-      throw new Error(
+      throw new VerificationProblem(
+        "INVALID_CERTIFICATION_PACKAGE",
+        "contract",
         `${packageCatalogPath}.certification.records[${index}].package must be a non-empty string`,
       );
     }
 
     const version = packageVersions.get(packageName);
     if (!version) {
-      throw new Error(
+      throw new VerificationProblem(
+        "CERTIFICATION_PACKAGE_MISSING",
+        "contract",
         `${packageCatalogPath}.certification.records[${index}] references missing workspace package ${packageName}`,
       );
     }
@@ -233,7 +300,11 @@ function synchronizeCertificationVersions(
   const content = `${JSON.stringify(synchronizedCatalog, null, 2)}\n`;
 
   if (source === content && drift.length > 0) {
-    throw new Error(`${packageCatalogPath} drift diagnostics do not match generated content`);
+    throw new VerificationProblem(
+      "CERTIFICATION_DRIFT_INVARIANT_VIOLATION",
+      "contract",
+      `${packageCatalogPath} drift diagnostics do not match generated content`,
+    );
   }
 
   return { content, drift, path: packageCatalogPath };
@@ -241,23 +312,46 @@ function synchronizeCertificationVersions(
 
 function readRequiredFile(path: string): string {
   if (!existsSync(path)) {
-    throw new Error(`required file does not exist: ${path}`);
+    throw new VerificationProblem(
+      "RELEASE_VERSION_SYNC_FILE_MISSING",
+      "configuration",
+      `required file does not exist: ${path}`,
+    );
   }
-  return readFileSync(path, "utf-8");
+
+  try {
+    return readFileSync(path, "utf-8");
+  } catch (error) {
+    throw new VerificationProblem(
+      "RELEASE_VERSION_SYNC_FILE_UNREADABLE",
+      "configuration",
+      `required file could not be read: ${path}: ${formatVerificationProblem(error)}`,
+    );
+  }
 }
 
 function readJsonFile<T>(path: string): T {
   try {
     return JSON.parse(readRequiredFile(path)) as T;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`${path} must contain valid JSON: ${message}`);
+    if (error instanceof VerificationProblem) {
+      throw error;
+    }
+    throw new VerificationProblem(
+      "INVALID_RELEASE_VERSION_SYNC_JSON",
+      "contract",
+      `${path} must contain valid JSON: ${formatVerificationProblem(error)}`,
+    );
   }
 }
 
 function requireObject(value: unknown, label: string): JsonObject {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`${label} must be an object`);
+    throw new VerificationProblem(
+      "INVALID_RELEASE_VERSION_SYNC_OBJECT",
+      "contract",
+      `${label} must be an object`,
+    );
   }
   return value as JsonObject;
 }

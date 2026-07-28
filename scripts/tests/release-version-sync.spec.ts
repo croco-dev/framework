@@ -102,8 +102,50 @@ describe("release-version-sync.mts", () => {
     const result = runScript(root, "--write");
 
     expect(result.status).toBe(1);
+    expect(result.stdout).toContain("[CROCO_RANGE_PACKAGE_MISSING/contract]");
     expect(result.stdout).toContain(
       "croco-ranges.ts references missing workspace package @croco/missing",
+    );
+  });
+
+  it("rejects Croco package references that do not match the range declaration format", () => {
+    const root = createFixture();
+    const rangesPath = join(
+      root,
+      "packages",
+      "create-croco-app",
+      "src",
+      "helpers",
+      "croco-ranges.ts",
+    );
+    writeFileSync(
+      rangesPath,
+      readFileSync(rangesPath, "utf-8").replace(
+        '  "@croco/alpha": "^0.0.1",',
+        '  "@croco/alpha": "^0.0.1", // unmanaged',
+      ),
+      "utf-8",
+    );
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("[UNMATCHED_CROCO_RANGE_ENTRY/contract]");
+    expect(result.stdout).toContain("required range declaration format on lines 2");
+  });
+
+  it("reports invalid CLI arguments as structured verification problems", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--experimental-strip-types", scriptPath, "--unknown"],
+      {
+        encoding: "utf-8",
+      },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "[UNKNOWN_RELEASE_VERSION_SYNC_OPTION/input] Unknown option: --unknown",
     );
   });
 
@@ -114,7 +156,7 @@ describe("release-version-sync.mts", () => {
     const source = readFileSync(versionPackagesScriptPath, "utf-8");
     const changesetIndex = source.indexOf('"changeset", "version"');
     const manifestsIndex = source.indexOf('"package-manifests:write"');
-    const metadataIndex = source.indexOf('"release-version-sync.mts"');
+    const metadataIndex = source.indexOf('"release-version-sync:write"');
     const docsIndex = source.indexOf('"docs:catalog:write"');
 
     expect(packageJson.scripts?.["version-packages"]).toBe(

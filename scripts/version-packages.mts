@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
@@ -13,7 +13,6 @@ type Command = {
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const pnpmExecutable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-const nodeExecutable = process.execPath;
 const commands: readonly Command[] = [
   {
     executable: pnpmExecutable,
@@ -26,14 +25,8 @@ const commands: readonly Command[] = [
     label: "normalize package manifests",
   },
   {
-    executable: nodeExecutable,
-    args: [
-      "--experimental-strip-types",
-      join(rootDir, "scripts", "release-version-sync.mts"),
-      "--write",
-      "--root",
-      rootDir,
-    ],
+    executable: pnpmExecutable,
+    args: ["release-version-sync:write"],
     label: "synchronize version-derived release metadata",
   },
   {
