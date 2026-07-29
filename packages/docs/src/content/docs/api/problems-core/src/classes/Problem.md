@@ -320,6 +320,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`LambdaTimeoutProblem`](/api/retry-core/src/classes/lambdatimeoutproblem/)
 - [`RetryAbortedProblem`](/api/retry-core/src/classes/retryabortedproblem/)
 - [`RetryExhaustedProblem`](/api/retry-core/src/classes/retryexhaustedproblem/)
+- [`RetrySuccessHookProblem`](/api/retry-core/src/classes/retrysuccesshookproblem/)
 - [`CircuitBreakerUnexpectedStateProblem`](/api/retry-core/src/classes/circuitbreakerunexpectedstateproblem/)
 - [`IndexNotFoundProblem`](/api/search-core/src/classes/indexnotfoundproblem/)
 - [`MissingTenantProblem`](/api/search-core/src/classes/missingtenantproblem/)

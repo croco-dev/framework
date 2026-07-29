@@ -1892,6 +1892,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "error",
   }),
+  "retry-core/success-hook-failed": recovery({
+    cause:
+      "The business callback completed successfully, but its onSuccess observation hook failed afterward.",
+    userAction:
+      "Do not repeat the business operation from this failure; report the hook failure while preserving the successful callback outcome.",
+    operatorAction:
+      "Inspect the original cause and repair the named onSuccess listener or telemetry path without replaying the completed callback.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "migration-runner/history-drift": recovery({
     cause:
       "Recorded migration history no longer matches the available migration files by stable id and name.",

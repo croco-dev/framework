@@ -41,7 +41,7 @@ title: "executeRetryLoop"
 
 ### hooks?
 
-`RetryHooks`
+[`RetryHooks`](/api/retry-core/src/interfaces/retryhooks/)
 
 ## Returns
 
