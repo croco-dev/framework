@@ -538,13 +538,14 @@ describe("TransactionalOutbox", () => {
 
   it("appends only one outbox message for the same idempotency key in a transaction", async () => {
     const fixture = createOutboxFixture();
+    const event = new AccountCreditedEvent("acct-1", 100);
 
     const [first, second] = await fixture.txManager.run(async () => {
-      const appended = await fixture.outbox.append(new AccountCreditedEvent("acct-1", 100), {
+      const appended = await fixture.outbox.append(event, {
         aggregateId: "acct-1",
         idempotencyKey: "credit-acct-1",
       });
-      const duplicate = await fixture.outbox.append(new AccountCreditedEvent("acct-1", 100), {
+      const duplicate = await fixture.outbox.append(event, {
         aggregateId: "acct-1",
         idempotencyKey: "credit-acct-1",
       });
@@ -556,6 +557,29 @@ describe("TransactionalOutbox", () => {
     expect(messages).toHaveLength(1);
     expect(messages[0].aggregateId).toBe("acct-1");
     expect(messages[0].payload).toEqual({ accountId: "acct-1", amount: 100 });
+  });
+
+  it("replays the same event after attempt-specific defaults advance", async () => {
+    const fixture = createOutboxFixture();
+    const event = new AccountCreditedEvent("acct-1", 100);
+
+    const first = await fixture.txManager.run(() =>
+      fixture.outbox.append(event, {
+        aggregateId: "acct-1",
+        idempotencyKey: "credit-acct-1",
+      }),
+    );
+    fixture.clock.advance(1_000);
+    const replay = await fixture.txManager.run(() =>
+      fixture.outbox.append(event, {
+        aggregateId: "acct-1",
+        idempotencyKey: "credit-acct-1",
+        maxAttempts: 9,
+      }),
+    );
+
+    expect(replay.id).toBe(first.id);
+    await expect(fixture.store.listOutboxMessages()).resolves.toHaveLength(1);
   });
 });
 

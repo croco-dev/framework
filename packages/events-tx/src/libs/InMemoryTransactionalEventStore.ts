@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { isDeepStrictEqual } from "node:util";
 import type { TxAdapter } from "@croco/tx-core";
 import {
@@ -20,7 +21,12 @@ import {
   type TransactionalInboxRecord,
   type TransactionalOutboxMessage,
 } from "./TransactionalEvents";
-import { InboxClaimConflictProblem, OutboxStorageProblem } from "./problems/EventsTxProblems";
+import { findOutboxIdempotencyConflicts } from "./OutboxIdempotency";
+import {
+  InboxClaimConflictProblem,
+  OutboxIdempotencyConflictProblem,
+  OutboxStorageProblem,
+} from "./problems/EventsTxProblems";
 
 export type InMemoryTransactionalEventStoreState = {
   outbox: Map<string, TransactionalOutboxMessage>;
@@ -30,6 +36,12 @@ export type InMemoryTransactionalEventStoreState = {
 
 export type InMemoryTransactionalEventStoreClient = {
   state: InMemoryTransactionalEventStoreState;
+};
+
+type OutboxAppendReservation = {
+  owner: InMemoryTransactionalEventStoreClient;
+  released: Promise<void>;
+  release: () => void;
 };
 
 function createEmptyState(): InMemoryTransactionalEventStoreState {
@@ -145,6 +157,21 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
   private rootState = createEmptyState();
   private commitTail: Promise<void> = Promise.resolve();
   private clearGeneration = 0;
+  private readonly outboxReservations = new Map<string, OutboxAppendReservation>();
+  private readonly transactionOwnerByClient = new WeakMap<
+    InMemoryTransactionalEventStoreClient,
+    InMemoryTransactionalEventStoreClient
+  >();
+  private readonly transactionBaseByOwner = new WeakMap<
+    InMemoryTransactionalEventStoreClient,
+    InMemoryTransactionalEventStoreState
+  >();
+  private readonly transactionParentByOwner = new WeakMap<
+    InMemoryTransactionalEventStoreClient,
+    InMemoryTransactionalEventStoreClient
+  >();
+  private readonly transactionOwnerContext =
+    new AsyncLocalStorage<InMemoryTransactionalEventStoreClient>();
 
   createTxAdapter(): TxAdapter<InMemoryTransactionalEventStoreClient> {
     return {
@@ -155,16 +182,28 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         const client: InMemoryTransactionalEventStoreClient = {
           state: cloneState(baseState),
         };
-        const result = await fn(client);
-        assertNotAborted(signal);
-        await this.commitTransaction(baseState, client.state, clearGeneration);
-        return result;
+        const parent = this.transactionOwnerContext.getStore();
+        if (parent) {
+          this.transactionParentByOwner.set(client, parent);
+        }
+        this.transactionOwnerByClient.set(client, client);
+        this.transactionBaseByOwner.set(client, baseState);
+        try {
+          const result = await this.transactionOwnerContext.run(client, () => fn(client));
+          assertNotAborted(signal);
+          await this.commitTransaction(baseState, client.state, clearGeneration);
+          return result;
+        } finally {
+          this.releaseOutboxReservations(client);
+        }
       },
       savepoint: async (client, fn, _options, signal) => {
         assertNotAborted(signal);
         const nestedClient: InMemoryTransactionalEventStoreClient = {
           state: cloneState(client.state),
         };
+        const owner = this.transactionOwnerByClient.get(client) ?? client;
+        this.transactionOwnerByClient.set(nestedClient, owner);
         const result = await fn(nestedClient);
         assertNotAborted(signal);
         client.state = cloneState(nestedClient.state);
@@ -183,38 +222,46 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     input: AppendOutboxMessageInput,
     context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
   ): Promise<TransactionalOutboxMessage> {
-    const state = this.resolveState(context);
-    const existingId = state.outboxIdByIdempotencyKey.get(input.idempotencyKey);
-    if (existingId) {
-      const existing = state.outbox.get(existingId);
-      if (existing) {
-        return cloneOutboxMessage(existing);
+    const directOwner = await this.acquireOutboxReservation(input.idempotencyKey, context?.client);
+    try {
+      const state = this.resolveState(context);
+      const existingId = state.outboxIdByIdempotencyKey.get(input.idempotencyKey);
+      if (existingId) {
+        const existing = state.outbox.get(existingId);
+        if (existing) {
+          this.assertIdempotentReplay(input, existing);
+          return cloneOutboxMessage(existing);
+        }
+      }
+
+      const now = input.diagnostics?.[0]?.at ?? new Date();
+      const message: TransactionalOutboxMessage = {
+        id: input.id,
+        eventId: input.eventId,
+        eventType: input.eventType,
+        ...(input.aggregateId ? { aggregateId: input.aggregateId } : {}),
+        idempotencyKey: input.idempotencyKey,
+        payload: cloneRecord(input.payload),
+        metadata: cloneRecord(input.metadata ?? {}),
+        ...(input.traceContext ? { traceContext: { ...input.traceContext } } : {}),
+        attempts: 0,
+        maxAttempts: input.maxAttempts,
+        status: "pending",
+        visibleAt: new Date(input.visibleAt.getTime()),
+        occurredAt: new Date(input.occurredAt.getTime()),
+        createdAt: new Date(now.getTime()),
+        updatedAt: new Date(now.getTime()),
+        diagnostics: (input.diagnostics ?? []).map(cloneDiagnostic),
+      };
+
+      state.outbox.set(message.id, cloneOutboxMessage(message));
+      state.outboxIdByIdempotencyKey.set(message.idempotencyKey, message.id);
+      return cloneOutboxMessage(message);
+    } finally {
+      if (directOwner) {
+        this.releaseOutboxReservations(directOwner);
       }
     }
-
-    const now = input.diagnostics?.[0]?.at ?? new Date();
-    const message: TransactionalOutboxMessage = {
-      id: input.id,
-      eventId: input.eventId,
-      eventType: input.eventType,
-      ...(input.aggregateId ? { aggregateId: input.aggregateId } : {}),
-      idempotencyKey: input.idempotencyKey,
-      payload: cloneRecord(input.payload),
-      metadata: cloneRecord(input.metadata ?? {}),
-      ...(input.traceContext ? { traceContext: { ...input.traceContext } } : {}),
-      attempts: 0,
-      maxAttempts: input.maxAttempts,
-      status: "pending",
-      visibleAt: new Date(input.visibleAt.getTime()),
-      occurredAt: new Date(input.occurredAt.getTime()),
-      createdAt: new Date(now.getTime()),
-      updatedAt: new Date(now.getTime()),
-      diagnostics: (input.diagnostics ?? []).map(cloneDiagnostic),
-    };
-
-    state.outbox.set(message.id, cloneOutboxMessage(message));
-    state.outboxIdByIdempotencyKey.set(message.idempotencyKey, message.id);
-    return cloneOutboxMessage(message);
   }
 
   async findOutboxById(
@@ -627,6 +674,91 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         target.set(key, clone(stagedValue));
       }
     }
+  }
+
+  private assertIdempotentReplay(
+    input: AppendOutboxMessageInput,
+    existing: TransactionalOutboxMessage,
+  ): void {
+    const conflictingFields = findOutboxIdempotencyConflicts(input, existing);
+    if (conflictingFields.length > 0) {
+      throw new OutboxIdempotencyConflictProblem(input.idempotencyKey, conflictingFields);
+    }
+  }
+
+  private async acquireOutboxReservation(
+    idempotencyKey: string,
+    client: InMemoryTransactionalEventStoreClient | undefined,
+  ): Promise<InMemoryTransactionalEventStoreClient | undefined> {
+    const owner = client
+      ? (this.transactionOwnerByClient.get(client) ?? client)
+      : { state: this.rootState };
+    while (true) {
+      const reservation = this.outboxReservations.get(idempotencyKey);
+      if (!reservation) {
+        if (client) {
+          this.adoptCommittedOutbox(idempotencyKey, client, owner);
+        }
+        let release = (): void => {};
+        const released = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        this.outboxReservations.set(idempotencyKey, { owner, released, release });
+        return client ? undefined : owner;
+      }
+      if (reservation.owner === owner) {
+        return undefined;
+      }
+      if (client && this.isNestedTransaction(owner, reservation.owner)) {
+        throw new OutboxStorageProblem(
+          `Nested transaction cannot append reserved outbox idempotency key '${idempotencyKey}'.`,
+        );
+      }
+      await reservation.released;
+      if (client) {
+        this.adoptCommittedOutbox(idempotencyKey, client, owner);
+      }
+    }
+  }
+
+  private adoptCommittedOutbox(
+    idempotencyKey: string,
+    client: InMemoryTransactionalEventStoreClient,
+    owner: InMemoryTransactionalEventStoreClient,
+  ): void {
+    const id = this.rootState.outboxIdByIdempotencyKey.get(idempotencyKey);
+    const message = id ? this.rootState.outbox.get(id) : undefined;
+    const baseState = this.transactionBaseByOwner.get(owner);
+    if (!id || !message || !baseState) {
+      return;
+    }
+    for (const state of [baseState, client.state]) {
+      state.outbox.set(id, cloneOutboxMessage(message));
+      state.outboxIdByIdempotencyKey.set(idempotencyKey, id);
+    }
+  }
+
+  private releaseOutboxReservations(owner: InMemoryTransactionalEventStoreClient): void {
+    for (const [idempotencyKey, reservation] of this.outboxReservations) {
+      if (reservation.owner === owner) {
+        this.outboxReservations.delete(idempotencyKey);
+        reservation.release();
+      }
+    }
+  }
+
+  private isNestedTransaction(
+    owner: InMemoryTransactionalEventStoreClient,
+    possibleAncestor: InMemoryTransactionalEventStoreClient,
+  ): boolean {
+    let current = this.transactionParentByOwner.get(owner);
+    while (current) {
+      if (current === possibleAncestor) {
+        return true;
+      }
+      current = this.transactionParentByOwner.get(current);
+    }
+    return false;
   }
 
   private isClaimable(message: TransactionalOutboxMessage, now: Date): boolean {

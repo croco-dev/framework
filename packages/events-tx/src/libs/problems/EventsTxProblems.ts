@@ -1,6 +1,14 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { InboxMessageStatus } from "../TransactionalEventTypes";
 
+export type OutboxIdempotencyField =
+  | "eventId"
+  | "eventType"
+  | "aggregateId"
+  | "payload"
+  | "metadata"
+  | "occurredAt";
+
 export type TransactionalEventConfigurationField =
   | "batchSize"
   | "consumerId"
@@ -67,6 +75,29 @@ export class OutboxStorageProblem extends Problem {
 
   constructor(detail: string, cause?: Error) {
     super(undefined, undefined, detail, cause ? { cause } : undefined);
+  }
+}
+
+/** Raised when an outbox idempotency key is reused for a different canonical request. */
+export class OutboxIdempotencyConflictProblem extends Problem {
+  readonly code = "events-tx/outbox-idempotency-conflict";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(
+    readonly idempotencyKey: string,
+    readonly conflictingFields: readonly OutboxIdempotencyField[],
+  ) {
+    super(
+      undefined,
+      undefined,
+      `Outbox idempotency key '${idempotencyKey}' was reused with different canonical request fields: ${conflictingFields.join(", ")}.`,
+      {
+        extensions: {
+          idempotencyKey,
+          conflictingFields,
+        },
+      },
+    );
   }
 }
 

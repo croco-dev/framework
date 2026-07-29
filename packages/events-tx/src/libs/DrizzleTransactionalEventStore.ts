@@ -21,7 +21,12 @@ import {
   type TransactionalInboxRecord,
   type TransactionalOutboxMessage,
 } from "./TransactionalEvents";
-import { InboxClaimConflictProblem, OutboxStorageProblem } from "./problems/EventsTxProblems";
+import { findOutboxIdempotencyConflicts } from "./OutboxIdempotency";
+import {
+  InboxClaimConflictProblem,
+  OutboxIdempotencyConflictProblem,
+  OutboxStorageProblem,
+} from "./problems/EventsTxProblems";
 import { transactionalInboxRecords, transactionalOutboxMessages } from "./schema";
 
 type AwaitableRows = PromiseLike<unknown[]>;
@@ -352,6 +357,7 @@ export class DrizzleTransactionalEventStore<
   ): Promise<TransactionalOutboxMessage> {
     const existing = await this.findOutboxByIdempotencyKey(input.idempotencyKey, context);
     if (existing) {
+      this.assertIdempotentReplay(input, existing);
       return existing;
     }
 
@@ -389,10 +395,21 @@ export class DrizzleTransactionalEventStore<
 
     const duplicated = await this.findOutboxByIdempotencyKey(input.idempotencyKey, context);
     if (duplicated) {
+      this.assertIdempotentReplay(input, duplicated);
       return duplicated;
     }
 
     throw new OutboxStorageProblem("Failed to insert or resolve outbox message conflict.");
+  }
+
+  private assertIdempotentReplay(
+    input: AppendOutboxMessageInput,
+    existing: TransactionalOutboxMessage,
+  ): void {
+    const conflictingFields = findOutboxIdempotencyConflicts(input, existing);
+    if (conflictingFields.length > 0) {
+      throw new OutboxIdempotencyConflictProblem(input.idempotencyKey, conflictingFields);
+    }
   }
 
   async findOutboxById(

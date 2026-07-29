@@ -7522,6 +7522,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "OutboxIdempotencyConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsTxProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "OutboxPublishExhaustedProblem",
               "exportKind": "named",
               "source": "./libs/problems/EventsTxProblems",
@@ -7686,6 +7692,11 @@
               "name": "OutboxFailureInput",
               "exportKind": "named",
               "source": "./libs/TransactionalEvents"
+            },
+            {
+              "name": "OutboxIdempotencyField",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsTxProblems"
             },
             {
               "name": "OutboxMessageStatus",
