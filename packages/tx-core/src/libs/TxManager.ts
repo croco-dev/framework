@@ -11,6 +11,8 @@ import {
   MAX_TRANSACTION_TIMEOUT_MS,
   TransactionContextProblem,
   TransactionOutcomeContextProblem,
+  TransactionOutcomeUnknownProblem,
+  TransactionRollbackConfirmedProblem,
   TransactionTimeoutProblem,
 } from "./problems/TransactionProblems";
 import type { TxAdapter } from "./TxAdapter";
@@ -78,16 +80,16 @@ async function executeWithTimeout<T>(
   }, timeout);
 
   try {
-    const result = await operation();
-
-    if (controller.signal.aborted) {
-      throw getAbortReason(controller.signal);
-    }
-
-    return result;
+    return await operation();
   } catch (error) {
     if (controller.signal.aborted) {
-      throw getAbortReason(controller.signal);
+      const abortReason = getAbortReason(controller.signal);
+      if (error instanceof TransactionRollbackConfirmedProblem && error.cause === abortReason) {
+        throw abortReason;
+      }
+
+      const cause = error instanceof Error ? error : new Error(String(error));
+      throw new TransactionOutcomeUnknownProblem(timeout, cause);
     }
 
     throw error;
@@ -173,7 +175,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       registrationOpen: true,
     };
 
-    const executeTransaction = async (): Promise<T> => {
+    const executeTransaction = (): Promise<T> => {
       return this.adapter.transaction(
         async (client) => {
           const context: TxContext<TClient> = {

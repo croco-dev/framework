@@ -19,6 +19,8 @@ export {
   TransactionContextProblem,
   TransactionDecoratorProblem,
   TransactionOutcomeContextProblem,
+  TransactionOutcomeUnknownProblem,
+  TransactionRollbackConfirmedProblem,
   TransactionTimeoutProblem,
 } from "./libs/problems/TransactionProblems";
 

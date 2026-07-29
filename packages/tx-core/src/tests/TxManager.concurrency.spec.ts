@@ -1,26 +1,40 @@
 import { Container } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  AfterCommitHooksProblem,
   InvalidTransactionTimeoutProblem,
   Transactional,
+  TransactionOutcomeUnknownProblem,
+  TransactionRollbackConfirmedProblem,
   TransactionTimeoutProblem,
   type TxAdapter,
   TxManager,
   TxManagerRegistry,
 } from "../index";
 
+function throwIfAbortedWithRollback(signal?: AbortSignal): void {
+  if (!signal?.aborted) {
+    return;
+  }
+
+  const cause = signal.reason instanceof Error ? signal.reason : new Error("Transaction aborted");
+  throw new TransactionRollbackConfirmedProblem(cause);
+}
+
 function createMockAdapter(
   options: { supportsSavepoint?: boolean; delay?: number } = {},
 ): TxAdapter<{ id: string }> {
   const delay = options.delay ?? 0;
   return {
-    transaction: vi.fn(async (fn) => {
+    transaction: vi.fn(async (fn, _options, signal) => {
       if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+      throwIfAbortedWithRollback(signal);
       const client = { id: "tx-client" };
       return fn(client);
     }),
-    savepoint: vi.fn(async (client, fn) => {
+    savepoint: vi.fn(async (client, fn, _options, signal) => {
       if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+      throwIfAbortedWithRollback(signal);
       return fn(client);
     }),
     supportsSavepoint: () => options.supportsSavepoint ?? true,
@@ -369,9 +383,15 @@ describe("TxManager Transaction Timeout", () => {
         transactionSignal = signal;
 
         return await new Promise<T>((_resolve, reject) => {
-          signal.addEventListener("abort", () => reject(new TransactionTimeoutProblem(50)), {
-            once: true,
-          });
+          signal.addEventListener(
+            "abort",
+            () => {
+              const cause =
+                signal.reason instanceof Error ? signal.reason : new Error("Transaction aborted");
+              reject(new TransactionRollbackConfirmedProblem(cause));
+            },
+            { once: true },
+          );
         });
       };
       const abortableAdapter: TxAdapter<{ id: string }> = {
@@ -411,7 +431,8 @@ describe("TxManager Transaction Timeout", () => {
           events.push("rollback:start");
           await new Promise((resolve) => setTimeout(resolve, 40));
           events.push("rollback:end");
-          throw error;
+          const cause = error instanceof Error ? error : new Error(String(error));
+          throw new TransactionRollbackConfirmedProblem(cause);
         }
       };
       const cleanupAdapter: TxAdapter<{ id: string }> = {
@@ -440,6 +461,146 @@ describe("TxManager Transaction Timeout", () => {
 
       await expect(runPromise).rejects.toThrow(TransactionTimeoutProblem);
       expect(events).toEqual(["transaction:start", "rollback:start", "rollback:end"]);
+    });
+
+    it("should return a committed result when the adapter responds after the deadline", async () => {
+      const transaction = async <T>(
+        fn: (client: { id: string }) => Promise<T>,
+        _options?: unknown,
+        signal?: AbortSignal,
+      ): Promise<T> => {
+        const result = await fn({ id: "tx-client" });
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        expect(signal?.aborted).toBe(true);
+        return result;
+      };
+      const commitAwareAdapter: TxAdapter<{ id: string }> = {
+        transaction: vi.fn(transaction) as typeof transaction,
+        savepoint: vi.fn(async (client, fn) => fn(client)),
+        supportsSavepoint: () => true,
+      };
+      txManager = new TxManager(commitAwareAdapter);
+
+      await expect(txManager.run(async () => "committed", { timeout: 10 })).resolves.toBe(
+        "committed",
+      );
+    });
+
+    it("should classify a non-cancellation adapter failure after the deadline as outcome unknown", async () => {
+      const adapterFailure = new TransactionTimeoutProblem(10);
+      const transaction = async <T>(
+        fn: (client: { id: string }) => Promise<T>,
+        _options?: unknown,
+        signal?: AbortSignal,
+      ): Promise<T> => {
+        await fn({ id: "tx-client" });
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        expect(signal?.aborted).toBe(true);
+        throw adapterFailure;
+      };
+      const ambiguousAdapter: TxAdapter<{ id: string }> = {
+        transaction: vi.fn(transaction) as typeof transaction,
+        savepoint: vi.fn(async (client, fn) => fn(client)),
+        supportsSavepoint: () => true,
+      };
+      txManager = new TxManager(ambiguousAdapter);
+
+      await expect(txManager.run(async () => "result", { timeout: 10 })).rejects.toMatchObject({
+        name: TransactionOutcomeUnknownProblem.name,
+        cause: adapterFailure,
+        extensions: {
+          committed: "unknown",
+          timedOut: true,
+          timeoutMs: 10,
+        },
+      });
+    });
+
+    it("should not treat signal.reason thrown after commit as confirmed rollback", async () => {
+      const transaction = async <T>(
+        fn: (client: { id: string }) => Promise<T>,
+        _options?: unknown,
+        signal?: AbortSignal,
+      ): Promise<T> => {
+        await fn({ id: "tx-client" });
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        if (!signal?.aborted) throw new Error("Expected the transaction deadline to expire");
+        throw signal.reason;
+      };
+      const unsafeAdapter: TxAdapter<{ id: string }> = {
+        transaction: vi.fn(transaction) as typeof transaction,
+        savepoint: vi.fn(async (client, fn) => fn(client)),
+        supportsSavepoint: () => true,
+      };
+      txManager = new TxManager(unsafeAdapter);
+
+      await expect(txManager.run(async () => "committed", { timeout: 10 })).rejects.toMatchObject({
+        name: TransactionOutcomeUnknownProblem.name,
+        cause: {
+          code: "tx-core/transaction-timeout",
+        },
+        extensions: {
+          committed: "unknown",
+          timedOut: true,
+          timeoutMs: 10,
+        },
+      });
+    });
+
+    it("should not include afterCommit delivery in the transaction timeout", async () => {
+      const hook = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 40));
+      });
+      txManager = new TxManager(createMockAdapter());
+
+      const outcome = await txManager.runWithOutcome(
+        async () => {
+          txManager.onAfterCommit(hook);
+          return "committed";
+        },
+        { timeout: 10 },
+      );
+
+      expect(outcome).toEqual({
+        status: "committed",
+        value: "committed",
+        afterCommit: {
+          status: "succeeded",
+          hookCount: 1,
+        },
+      });
+      expect(hook).toHaveBeenCalledTimes(1);
+    });
+
+    it("should report slow afterCommit failures as committed post-processing failures", async () => {
+      txManager = new TxManager(createMockAdapter());
+
+      const outcome = await txManager.runWithOutcome(
+        async () => {
+          txManager.onAfterCommit(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 40));
+            throw new Error("post-commit delivery failed");
+          });
+          return "committed";
+        },
+        { timeout: 10 },
+      );
+
+      expect(outcome).toMatchObject({
+        status: "committed",
+        value: "committed",
+        afterCommit: {
+          status: "failed",
+          hookCount: 1,
+          problem: {
+            name: AfterCommitHooksProblem.name,
+            extensions: {
+              committed: true,
+              failureCount: 1,
+            },
+          },
+        },
+      });
     });
 
     it("should complete successfully when transaction is within timeout", async () => {
@@ -504,8 +665,9 @@ describe("TxManager Transaction Timeout", () => {
           const client = { id: "tx-client" };
           return fn(client);
         }),
-        savepoint: vi.fn(async (_client, fn) => {
+        savepoint: vi.fn(async (_client, fn, _options, signal) => {
           await new Promise((r) => setTimeout(r, 200));
+          throwIfAbortedWithRollback(signal);
           return fn({ id: "nested-client" });
         }),
         supportsSavepoint: () => true,

@@ -1,4 +1,4 @@
-import type { TxAdapter } from "@croco/tx-core";
+import { TransactionRollbackConfirmedProblem, type TxAdapter } from "@croco/tx-core";
 import { SavepointUnsupportedProblem } from "./problems/TxDrizzleProblems";
 import type { DrizzleDb, DrizzleTx, InferTxClient, InferTxOptions } from "./types";
 
@@ -82,6 +82,14 @@ function createAbortableCallback<TClient, T>(
   };
 }
 
+function classifyAdapterFailure(error: unknown, signal?: AbortSignal): never {
+  if (signal?.aborted && error === signal.reason) {
+    throw new TransactionRollbackConfirmedProblem(getAbortReason(signal));
+  }
+
+  throw error;
+}
+
 export function createDrizzleTxAdapter<TDb extends DrizzleDb>(
   db: TDb,
 ): TxAdapter<InferTxClient<TDb>, InferTxOptions<TDb>> {
@@ -96,14 +104,14 @@ export function createDrizzleTxAdapter<TDb extends DrizzleDb>(
     ): Promise<T> {
       throwIfAborted(signal);
 
-      const result = (await db.transaction(
-        createAbortableCallback(fn, signal) as (tx: unknown) => Promise<T>,
-        options,
-      )) as T;
-
-      throwIfAborted(signal);
-
-      return result;
+      try {
+        return (await db.transaction(
+          createAbortableCallback(fn, signal) as (tx: unknown) => Promise<T>,
+          options,
+        )) as T;
+      } catch (error) {
+        classifyAdapterFailure(error, signal);
+      }
     },
 
     async savepoint<T>(
@@ -120,14 +128,14 @@ export function createDrizzleTxAdapter<TDb extends DrizzleDb>(
 
       throwIfAborted(signal);
 
-      const result = (await txClient.transaction(
-        createAbortableCallback(fn, signal) as (tx: unknown) => Promise<T>,
-        options,
-      )) as T;
-
-      throwIfAborted(signal);
-
-      return result;
+      try {
+        return (await txClient.transaction(
+          createAbortableCallback(fn, signal) as (tx: unknown) => Promise<T>,
+          options,
+        )) as T;
+      } catch (error) {
+        classifyAdapterFailure(error, signal);
+      }
     },
 
     supportsSavepoint(): boolean {
