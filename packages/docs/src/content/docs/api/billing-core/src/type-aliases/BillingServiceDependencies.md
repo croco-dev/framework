@@ -11,17 +11,27 @@ BillingService 생성에 필요한 의존성과 체크아웃 입력 타입입니
 
 ## Properties
 
+### clock?
+
+> `optional` **clock?**: () => `Date`
+
+#### Returns
+
+`Date`
+
+---
+
 ### eventPublisher?
 
-> `optional` **eventPublisher?**: [`EventPublisher`](/api/events-core/src/classes/eventpublisher/)
+> `optional` **eventPublisher?**: [`BillingLifecycleEventPublisher`](/api/billing-core/src/interfaces/billinglifecycleeventpublisher/)
 
-***
+---
 
 ### gateway
 
 > **gateway**: [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
 
-***
+---
 
 ### store
 

@@ -21,8 +21,21 @@ export class BillingStoreSubscriptionProvider extends SubscriptionProvider {
 
   /**
    * 테넌트의 현재 구독 플랜 ID를 반환합니다.
+   *
+   * Provider mutation이 적용되고 local reconciliation이 남은 동안에는 lifecycle command의
+   * target state를 사용합니다. 즉시 취소는 entitlement를 즉시 제거하고, 기간 말 취소와
+   * resume은 같은 external subscription의 최신 plan을 유지합니다.
    */
   async getCurrentPlanId(tenantId: string): Promise<string | null> {
+    const pendingCommand = await this.billingStore.findPendingLifecycleCommandByTenantId(tenantId);
+    if (pendingCommand?.state === "pending_local" || pendingCommand?.state === "pending_event") {
+      const resolution = await this.billingStore.resolveLifecycleSubscription(pendingCommand);
+      if (resolution.kind === "projection_base") {
+        return pendingCommand.kind === "cancel_immediately" ? null : resolution.subscription.planId;
+      }
+      return activePlanId(resolution.subscription);
+    }
+
     const billingAccount = await this.billingStore.findAccountByTenantId(tenantId);
     if (!billingAccount) {
       return null;
@@ -33,6 +46,15 @@ export class BillingStoreSubscriptionProvider extends SubscriptionProvider {
       return null;
     }
 
-    return subscription.planId;
+    return activePlanId(subscription);
   }
+}
+
+function activePlanId(
+  subscription: Awaited<ReturnType<BillingStore["findSubscription"]>>,
+): string | null {
+  if (!subscription) return null;
+  return subscription.status === "active" || subscription.status === "trialing"
+    ? subscription.planId
+    : null;
 }

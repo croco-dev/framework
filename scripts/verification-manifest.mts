@@ -445,7 +445,10 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
       id: "package-entrypoints-smoke",
       label: "Package entrypoint smoke",
       category: "package-smoke",
-      command: nodeScript("scripts/package-entrypoint-smoke.mts"),
+      command: nodeScript(
+        "scripts/package-entrypoint-smoke.mts",
+        ...(changeScoped ? ["--build-missing"] : []),
+      ),
       timeoutMs: minutes(10),
       applicable: entrypointsApplicable,
     },

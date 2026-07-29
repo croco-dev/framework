@@ -1,4 +1,9 @@
-import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from "@croco/billing-core";
+import type {
+  BillingGateway,
+  BillingLifecycleGatewayOptions,
+  CheckoutResult,
+  CreateCheckoutParams,
+} from "@croco/billing-core";
 import type { ILogger } from "@croco/framework-context";
 import { Component, Inject, LOGGER_TOKEN } from "@croco/framework-context";
 import { Polar } from "@polar-sh/sdk";
@@ -110,33 +115,64 @@ export class PolarBillingGateway implements BillingGateway {
     };
   }
 
-  async cancelSubscription(externalSubscriptionId: string, immediate = false): Promise<void> {
+  async cancelSubscription(
+    externalSubscriptionId: string,
+    immediate: boolean,
+    options: BillingLifecycleGatewayOptions,
+  ): Promise<void> {
+    const requestOptions = {
+      headers: {
+        "Idempotency-Key": options.idempotencyKey,
+      },
+    };
     try {
       if (immediate) {
-        await this.client.subscriptions.revoke({
-          id: externalSubscriptionId,
-        });
-      } else {
-        await this.client.subscriptions.update({
-          id: externalSubscriptionId,
-          subscriptionUpdate: {
-            cancelAtPeriodEnd: true,
+        await this.client.subscriptions.revoke(
+          {
+            id: externalSubscriptionId,
           },
-        });
+          requestOptions,
+        );
+      } else {
+        await this.client.subscriptions.update(
+          {
+            id: externalSubscriptionId,
+            subscriptionUpdate: {
+              cancelAtPeriodEnd: true,
+            },
+          },
+          requestOptions,
+        );
       }
     } catch (error) {
+      if (
+        this.isAlreadyCanceledSubscriptionError(error) &&
+        (await this.isCancellationTargetApplied(externalSubscriptionId, immediate))
+      ) {
+        return;
+      }
       throw normalizePolarBillingError(error, "cancelSubscription");
     }
   }
 
-  async resumeSubscription(externalSubscriptionId: string): Promise<void> {
+  async resumeSubscription(
+    externalSubscriptionId: string,
+    options: BillingLifecycleGatewayOptions,
+  ): Promise<void> {
     try {
-      await this.client.subscriptions.update({
-        id: externalSubscriptionId,
-        subscriptionUpdate: {
-          cancelAtPeriodEnd: false,
+      await this.client.subscriptions.update(
+        {
+          id: externalSubscriptionId,
+          subscriptionUpdate: {
+            cancelAtPeriodEnd: false,
+          },
         },
-      });
+        {
+          headers: {
+            "Idempotency-Key": options.idempotencyKey,
+          },
+        },
+      );
     } catch (error) {
       throw normalizePolarBillingError(error, "resumeSubscription");
     }
@@ -153,5 +189,35 @@ export class PolarBillingGateway implements BillingGateway {
     }
 
     return session.customerPortalUrl;
+  }
+
+  private isAlreadyCanceledSubscriptionError(error: unknown): boolean {
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const record = error as Error & { error?: unknown };
+    return (
+      record.name === "AlreadyCanceledSubscription" ||
+      record.error === "AlreadyCanceledSubscription"
+    );
+  }
+
+  private async isCancellationTargetApplied(
+    externalSubscriptionId: string,
+    immediate: boolean,
+  ): Promise<boolean> {
+    try {
+      const subscription = await this.client.subscriptions.get({
+        id: externalSubscriptionId,
+      });
+      if (immediate) {
+        return subscription.status === "canceled";
+      }
+
+      return subscription.cancelAtPeriodEnd;
+    } catch {
+      return false;
+    }
   }
 }

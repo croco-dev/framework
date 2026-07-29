@@ -158,6 +158,10 @@ function main(): void {
       return;
     }
 
+    if (mode.buildMissing) {
+      buildMissingPackages(rootDir, packageInfos);
+    }
+
     const buildPrerequisiteDiagnostics = buildPrerequisiteDiagnosticsFor(rootDir, packageInfos);
     if (buildPrerequisiteDiagnostics.length > 0) {
       printBuildPrerequisiteFailure(buildPrerequisiteDiagnostics);
@@ -252,11 +256,20 @@ function packedPeerMetadataDiagnostics(packageInfo: PackedPackageInfo): string[]
   return diagnostics;
 }
 
-function parseArgs(args: readonly string[]): { readonly rootDir: string } {
+function parseArgs(args: readonly string[]): {
+  readonly buildMissing: boolean;
+  readonly rootDir: string;
+} {
+  let buildMissing = false;
   let rootDir = defaultRootDir;
 
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
+
+    if (arg === "--build-missing") {
+      buildMissing = true;
+      continue;
+    }
 
     if (arg === "--root") {
       const value = args[index + 1];
@@ -271,7 +284,33 @@ function parseArgs(args: readonly string[]): { readonly rootDir: string } {
     throw new Error(`Unknown option: ${arg}`);
   }
 
-  return { rootDir };
+  return { buildMissing, rootDir };
+}
+
+function buildMissingPackages(rootDir: string, packageInfos: readonly PackageInfo[]): void {
+  const missingPackageNames = packageInfos
+    .filter((packageInfo) => !packageHasBuildArtifacts(packageInfo.packageDir))
+    .map((packageInfo) => packageInfo.packageName);
+  if (missingPackageNames.length === 0) {
+    return;
+  }
+
+  run(
+    "pnpm",
+    [
+      "turbo",
+      "run",
+      "build",
+      ...missingPackageNames.map((packageName) => `--filter=${packageName}...`),
+      "--output-logs=errors-only",
+      "--ui=stream",
+    ],
+    rootDir,
+    {
+      label: `build ${missingPackageNames.length} missing package entrypoint prerequisite(s)`,
+      timeoutMs: 600_000,
+    },
+  );
 }
 
 function buildPrerequisiteDiagnosticsFor(
@@ -1512,7 +1551,11 @@ function run(
   command: string,
   args: readonly string[],
   cwd: string,
-  options: { readonly expectedExitCode?: number; readonly label: string },
+  options: {
+    readonly expectedExitCode?: number;
+    readonly label: string;
+    readonly timeoutMs?: number;
+  },
 ): RunResult {
   const expectedExitCode = options.expectedExitCode ?? 0;
   const result = spawnSync(command, [...args], {
@@ -1520,7 +1563,7 @@ function run(
     encoding: "utf-8",
     env: { ...process.env, DATABASE_URL: "" },
     stdio: "pipe",
-    timeout: spawnTimeoutMs,
+    timeout: options.timeoutMs ?? spawnTimeoutMs,
   });
 
   if (result.error || result.status !== expectedExitCode) {

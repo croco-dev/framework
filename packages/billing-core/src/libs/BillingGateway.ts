@@ -11,6 +11,10 @@ export type CheckoutResult = {
   checkoutId: string;
 };
 
+export type BillingLifecycleGatewayOptions = {
+  readonly idempotencyKey: string;
+};
+
 /**
  * Abstract interface for billing provider operations.
  * Implementations: PolarBillingGateway
@@ -23,8 +27,15 @@ export interface BillingGateway {
   createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult>;
 
   // Subscription
-  cancelSubscription(externalSubscriptionId: string, immediate?: boolean): Promise<void>;
-  resumeSubscription(externalSubscriptionId: string): Promise<void>;
+  cancelSubscription(
+    externalSubscriptionId: string,
+    immediate: boolean,
+    options: BillingLifecycleGatewayOptions,
+  ): Promise<void>;
+  resumeSubscription(
+    externalSubscriptionId: string,
+    options: BillingLifecycleGatewayOptions,
+  ): Promise<void>;
 
   // Portal
   getCustomerPortalUrl(externalCustomerId: string): Promise<string>;

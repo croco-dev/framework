@@ -1,7 +1,6 @@
-import type { EventPublisher } from "@croco/events-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BillingGateway, CheckoutResult } from "../libs/BillingGateway";
-import { BillingService } from "../libs/BillingService";
+import { BillingService, type BillingLifecycleEventPublisher } from "../libs/BillingService";
 import { InMemoryBillingStore } from "../libs/InMemoryBillingStore";
 import { BillingCheckoutCreationProblem } from "../libs/problems/BillingProblems";
 import type { BillingAccount, Subscription } from "../types";
@@ -358,9 +357,15 @@ describe("BillingService", () => {
       };
       await store.saveSubscription(subscription);
 
-      await service.cancelSubscription("tenant-1", false);
+      const command = await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-period-end-1",
+      });
 
-      expect(mockGateway.cancelSubscription).toHaveBeenCalledWith("ext-sub-1", false);
+      expect(mockGateway.cancelSubscription).toHaveBeenCalledWith("ext-sub-1", false, {
+        idempotencyKey: "cancel-period-end-1",
+      });
+      expect(command.state).toBe("completed");
 
       const updatedSubscription = await store.findSubscription("tenant-1");
       expect(updatedSubscription?.cancelAtPeriodEnd).toBe(true);
@@ -384,9 +389,16 @@ describe("BillingService", () => {
       };
       await store.saveSubscription(subscription);
 
-      await service.cancelSubscription("tenant-1", true);
+      const command = await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-immediate-1",
+        immediate: true,
+      });
 
-      expect(mockGateway.cancelSubscription).toHaveBeenCalledWith("ext-sub-1", true);
+      expect(mockGateway.cancelSubscription).toHaveBeenCalledWith("ext-sub-1", true, {
+        idempotencyKey: "cancel-immediate-1",
+      });
+      expect(command.state).toBe("completed");
       expect(await store.findSubscription("tenant-1")).toBeNull();
       expect(await store.findAccountByTenantId("tenant-1")).toBeNull();
     });
@@ -416,7 +428,11 @@ describe("BillingService", () => {
         paidAt: new Date(),
       });
 
-      await service.cancelSubscription("tenant-1", true);
+      await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-immediate-history-1",
+        immediate: true,
+      });
 
       const updatedSubscription = await store.findSubscription("tenant-1");
       expect(updatedSubscription?.cancelAtPeriodEnd).toBe(false);
@@ -426,21 +442,23 @@ describe("BillingService", () => {
     });
 
     it("should throw error when no subscription exists", async () => {
-      await expect(service.cancelSubscription("tenant-1")).rejects.toThrow(
-        "No subscription found for tenant 'tenant-1'",
-      );
+      await expect(
+        service.cancelSubscription({
+          tenantId: "tenant-1",
+          idempotencyKey: "cancel-missing-1",
+        }),
+      ).rejects.toThrow("No subscription found for tenant 'tenant-1'");
     });
 
     it("should publish SubscriptionCanceledEvent when eventPublisher is provided", async () => {
       const mockEventPublisher = {
-        publishNow: vi.fn(),
-        publishMany: vi.fn(),
+        publishIdempotently: vi.fn(),
       };
 
       const serviceWithPublisher = new BillingService({
         store,
         gateway: mockGateway,
-        eventPublisher: mockEventPublisher as unknown as EventPublisher,
+        eventPublisher: mockEventPublisher as BillingLifecycleEventPublisher,
       });
 
       await saveBillingAccount("tenant-1");
@@ -458,15 +476,593 @@ describe("BillingService", () => {
       };
       await store.saveSubscription(subscription);
 
-      await serviceWithPublisher.cancelSubscription("tenant-1", false);
+      await serviceWithPublisher.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-event-1",
+      });
 
-      expect(mockEventPublisher.publishNow).toHaveBeenCalledWith(
+      expect(mockEventPublisher.publishIdempotently).toHaveBeenCalledWith(
         expect.objectContaining({
           tenantId: "tenant-1",
           externalSubscriptionId: "ext-sub-1",
           cancelAtPeriodEnd: true,
         }),
       );
+    });
+
+    it("should retry ambiguous event delivery through an idempotent publisher", async () => {
+      const deliveredEventIds = new Set<string>();
+      let deliveredSideEffects = 0;
+      let rejectAfterFirstDelivery = true;
+      const mockEventPublisher = {
+        publishIdempotently: vi.fn(async (event: { eventId: string }) => {
+          if (!deliveredEventIds.has(event.eventId)) {
+            deliveredEventIds.add(event.eventId);
+            deliveredSideEffects += 1;
+          }
+          if (rejectAfterFirstDelivery) {
+            rejectAfterFirstDelivery = false;
+            throw new Error("ambiguous event bus result");
+          }
+        }),
+      };
+      const serviceWithPublisher = new BillingService({
+        store,
+        gateway: mockGateway,
+        eventPublisher: mockEventPublisher as BillingLifecycleEventPublisher,
+      });
+      await saveBillingAccount("tenant-1");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date(),
+      });
+
+      const pending = await serviceWithPublisher.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-event-retry-1",
+      });
+      const completed =
+        await serviceWithPublisher.reconcileLifecycleCommand("cancel-event-retry-1");
+
+      expect(pending).toMatchObject({
+        state: "pending_event",
+        lastFailure: {
+          stage: "event",
+          code: "billing/lifecycle-event-failed",
+          attempt: 1,
+        },
+      });
+      expect(completed.state).toBe("completed");
+      expect(mockGateway.cancelSubscription).toHaveBeenCalledTimes(1);
+      expect(mockEventPublisher.publishIdempotently).toHaveBeenCalledTimes(2);
+      expect(mockEventPublisher.publishIdempotently.mock.calls[0]?.[0].eventId).toBe(
+        "billing-lifecycle:cancel-event-retry-1",
+      );
+      expect(mockEventPublisher.publishIdempotently.mock.calls[1]?.[0].eventId).toBe(
+        "billing-lifecycle:cancel-event-retry-1",
+      );
+      expect(deliveredSideEffects).toBe(1);
+    });
+
+    it("should lease event delivery so concurrent reconcilers publish only once", async () => {
+      let releaseDelivery!: () => void;
+      let signalDeliveryStarted!: () => void;
+      const deliveryStarted = new Promise<void>((resolve) => {
+        signalDeliveryStarted = resolve;
+      });
+      const deliveryBlocked = new Promise<void>((resolve) => {
+        releaseDelivery = resolve;
+      });
+      const mockEventPublisher = {
+        publishIdempotently: vi
+          .fn()
+          .mockRejectedValueOnce(new Error("event bus unavailable"))
+          .mockImplementationOnce(async () => {
+            signalDeliveryStarted();
+            await deliveryBlocked;
+          }),
+      };
+      const serviceWithPublisher = new BillingService({
+        store,
+        gateway: mockGateway,
+        eventPublisher: mockEventPublisher as BillingLifecycleEventPublisher,
+      });
+      await saveBillingAccount("tenant-1");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date(),
+      });
+      await serviceWithPublisher.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-event-lease-1",
+      });
+
+      const firstReconciliation =
+        serviceWithPublisher.reconcileLifecycleCommand("cancel-event-lease-1");
+      await deliveryStarted;
+      const competingResult =
+        await serviceWithPublisher.reconcileLifecycleCommand("cancel-event-lease-1");
+
+      expect(competingResult.state).toBe("pending_event");
+      expect(mockEventPublisher.publishIdempotently).toHaveBeenCalledTimes(2);
+
+      releaseDelivery();
+      await expect(firstReconciliation).resolves.toMatchObject({ state: "completed" });
+      expect(mockEventPublisher.publishIdempotently).toHaveBeenCalledTimes(2);
+    });
+
+    it.each([
+      { immediate: false, idempotencyKey: "superseded-period-end-1" },
+      { immediate: true, idempotencyKey: "superseded-immediate-1" },
+    ])(
+      "should not mutate a replacement subscription during stale reconciliation",
+      async ({ immediate, idempotencyKey }) => {
+        await saveBillingAccount("tenant-1");
+        await store.saveSubscription({
+          id: "sub-old",
+          billingAccountId: "tenant-1",
+          externalSubscriptionId: "ext-sub-old",
+          planId: "plan-old",
+          planVersionRef: PLAN_VERSION_REF,
+          status: "active",
+          currentPeriodEnd: new Date(),
+          cancelAtPeriodEnd: false,
+          lastSyncedAt: new Date(),
+        });
+        vi.mocked(mockGateway.cancelSubscription).mockImplementationOnce(async () => {
+          await store.saveSubscription({
+            id: "sub-new",
+            billingAccountId: "tenant-1",
+            externalSubscriptionId: "ext-sub-new",
+            planId: "plan-new",
+            planVersionRef: PLAN_VERSION_REF,
+            status: "active",
+            currentPeriodEnd: new Date("2031-01-01T00:00:00.000Z"),
+            cancelAtPeriodEnd: false,
+            lastSyncedAt: new Date(),
+          });
+        });
+
+        const command = await service.cancelSubscription({
+          tenantId: "tenant-1",
+          idempotencyKey,
+          immediate,
+        });
+
+        expect(command).toMatchObject({ state: "completed", localResult: "superseded" });
+        expect(await store.findSubscription("tenant-1")).toMatchObject({
+          id: "sub-new",
+          externalSubscriptionId: "ext-sub-new",
+          planId: "plan-new",
+          status: "active",
+          cancelAtPeriodEnd: false,
+        });
+        expect(await store.findAccountByTenantId("tenant-1")).not.toBeNull();
+      },
+    );
+
+    it("should not overwrite a newer version of the same external subscription", async () => {
+      await saveBillingAccount("tenant-1");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-old",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+      });
+      vi.mocked(mockGateway.cancelSubscription).mockImplementationOnce(async () => {
+        await store.saveSubscription({
+          id: "sub-1",
+          billingAccountId: "tenant-1",
+          externalSubscriptionId: "ext-sub-1",
+          planId: "plan-new",
+          planVersionRef: PLAN_VERSION_REF,
+          status: "active",
+          currentPeriodEnd: new Date("2031-01-01T00:00:00.000Z"),
+          cancelAtPeriodEnd: false,
+          lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+        });
+      });
+
+      const command = await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "superseded-version-1",
+      });
+
+      expect(command).toMatchObject({ state: "completed", localResult: "applied" });
+      expect(await store.findSubscription("tenant-1")).toMatchObject({
+        planId: "plan-new",
+        currentPeriodEnd: new Date("2031-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: true,
+      });
+    });
+
+    it("should rebase immediate cancellation onto newer retained subscription history", async () => {
+      await saveBillingAccount("tenant-1");
+      const lastSyncedAt = new Date("2026-01-01T00:00:00.000Z");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-old",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt,
+      });
+      await store.saveOrder({
+        id: "order-1",
+        billingAccountId: "tenant-1",
+        externalOrderId: "ext-order-1",
+        amount: 1000,
+        currency: "USD",
+        reason: "subscription_cycle",
+        paidAt: new Date("2026-01-01T00:00:00.000Z"),
+      });
+      vi.mocked(mockGateway.cancelSubscription).mockImplementationOnce(async () => {
+        await store.saveSubscription({
+          id: "sub-1",
+          billingAccountId: "tenant-1",
+          externalSubscriptionId: "ext-sub-1",
+          planId: "plan-new",
+          planVersionRef: PLAN_VERSION_REF,
+          status: "active",
+          currentPeriodEnd: new Date("2031-01-01T00:00:00.000Z"),
+          cancelAtPeriodEnd: false,
+          lastSyncedAt,
+        });
+      });
+
+      const command = await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "rebase-immediate-1",
+        immediate: true,
+      });
+
+      expect(command).toMatchObject({ state: "completed", localResult: "applied" });
+      expect(await store.findSubscription("tenant-1")).toMatchObject({
+        planId: "plan-new",
+        currentPeriodEnd: new Date("2031-01-01T00:00:00.000Z"),
+        status: "canceled",
+        cancelAtPeriodEnd: false,
+      });
+      await expect(service.hasActiveSubscription("tenant-1")).resolves.toBe(false);
+    });
+
+    it("should rebase a pending immediate cancellation onto a newer snapshot of the same subscription", async () => {
+      await saveBillingAccount("tenant-1");
+      const lastSyncedAt = new Date("2026-01-01T00:00:00.000Z");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-old",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt,
+      });
+      vi.spyOn(store, "reconcileLifecycleSubscription").mockRejectedValueOnce(
+        new Error("local save failed"),
+      );
+      await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "stale-projection-1",
+        immediate: true,
+      });
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-new",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2031-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt,
+      });
+
+      await expect(service.getSubscription("tenant-1")).resolves.toMatchObject({
+        planId: "plan-new",
+        currentPeriodEnd: new Date("2031-01-01T00:00:00.000Z"),
+        status: "canceled",
+      });
+      await expect(service.hasActiveSubscription("tenant-1")).resolves.toBe(false);
+    });
+
+    it("should not project a pending command over a replacement subscription", async () => {
+      await saveBillingAccount("tenant-1");
+      const lastSyncedAt = new Date("2026-01-01T00:00:00.000Z");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-old",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt,
+      });
+      vi.spyOn(store, "reconcileLifecycleSubscription").mockRejectedValueOnce(
+        new Error("local save failed"),
+      );
+      await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "replacement-projection-1",
+        immediate: true,
+      });
+      await store.saveSubscription({
+        id: "sub-2",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-2",
+        planId: "plan-new",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2031-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt,
+      });
+
+      await expect(service.getSubscription("tenant-1")).resolves.toMatchObject({
+        externalSubscriptionId: "ext-sub-2",
+        planId: "plan-new",
+        status: "active",
+      });
+      await expect(service.hasActiveSubscription("tenant-1")).resolves.toBe(true);
+    });
+
+    it("should not re-read an active subscription restored after an absent projection resolution", async () => {
+      await saveBillingAccount("tenant-1");
+      const subscription: Subscription = {
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+      };
+      await store.saveSubscription(subscription);
+      vi.spyOn(store, "reconcileLifecycleSubscription").mockRejectedValueOnce(
+        new Error("local save failed"),
+      );
+      await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "projection-race-1",
+        immediate: true,
+      });
+      await store.deleteSubscription("tenant-1");
+
+      const resolveLifecycleSubscription = store.resolveLifecycleSubscription.bind(store);
+      vi.spyOn(store, "resolveLifecycleSubscription").mockImplementationOnce(async (command) => {
+        const resolution = await resolveLifecycleSubscription(command);
+        await store.saveSubscription(subscription);
+        return resolution;
+      });
+
+      await expect(service.getSubscription("tenant-1")).resolves.toBeNull();
+      await expect(store.findSubscription("tenant-1")).resolves.toMatchObject({
+        externalSubscriptionId: "ext-sub-1",
+        status: "active",
+      });
+    });
+
+    it("should persist and reconcile period-end cancellation after local save failure", async () => {
+      await saveBillingAccount("tenant-1");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+      });
+      vi.spyOn(store, "reconcileLifecycleSubscription").mockRejectedValueOnce(
+        new Error("local save failed"),
+      );
+
+      const pending = await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-period-end-retry-1",
+      });
+
+      expect(pending).toMatchObject({
+        state: "pending_local",
+        lastFailure: { stage: "local", detail: "Local lifecycle reconciliation failed" },
+      });
+      expect(await service.getSubscription("tenant-1")).toMatchObject({
+        status: "active",
+        cancelAtPeriodEnd: true,
+      });
+      expect(await service.hasActiveSubscription("tenant-1")).toBe(true);
+
+      const completed = await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-period-end-retry-1",
+      });
+
+      expect(completed.state).toBe("completed");
+      expect(mockGateway.cancelSubscription).toHaveBeenNthCalledWith(1, "ext-sub-1", false, {
+        idempotencyKey: "cancel-period-end-retry-1",
+      });
+      expect(mockGateway.cancelSubscription).toHaveBeenCalledTimes(1);
+      expect(await store.findSubscription("tenant-1")).toMatchObject({
+        cancelAtPeriodEnd: true,
+      });
+    });
+
+    it("should persist immediate cancellation when atomic local cleanup fails", async () => {
+      await saveBillingAccount("tenant-1");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+      });
+      vi.spyOn(store, "reconcileLifecycleSubscription").mockRejectedValueOnce(
+        new Error("account delete failed"),
+      );
+
+      const pending = await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-immediate-retry-1",
+        immediate: true,
+      });
+
+      expect(pending).toMatchObject({
+        state: "pending_local",
+        lastFailure: { stage: "local", detail: "Local lifecycle reconciliation failed" },
+      });
+      expect(await store.findSubscription("tenant-1")).toMatchObject({ status: "active" });
+      expect(await service.getSubscriptionStatus("tenant-1")).toBe("canceled");
+      expect(await service.hasActiveSubscription("tenant-1")).toBe(false);
+
+      const completed = await service.reconcileLifecycleCommand("cancel-immediate-retry-1");
+
+      expect(completed.state).toBe("completed");
+      expect(mockGateway.cancelSubscription).toHaveBeenCalledTimes(1);
+      expect(await store.findAccountByTenantId("tenant-1")).toBeNull();
+      expect(await service.getSubscriptionStatus("tenant-1")).toBeNull();
+    });
+
+    it("should retry immediate cancellation when subscription deletion fails", async () => {
+      await saveBillingAccount("tenant-1");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+      });
+      vi.spyOn(store, "reconcileLifecycleSubscription").mockRejectedValueOnce(
+        new Error("subscription delete failed"),
+      );
+
+      const pending = await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-delete-subscription-1",
+        immediate: true,
+      });
+      const completed = await service.reconcileLifecycleCommand("cancel-delete-subscription-1");
+
+      expect(pending).toMatchObject({
+        state: "pending_local",
+        lastFailure: { stage: "local", detail: "Local lifecycle reconciliation failed" },
+      });
+      expect(completed.state).toBe("completed");
+      expect(mockGateway.cancelSubscription).toHaveBeenCalledTimes(1);
+      expect(await store.findAccountByTenantId("tenant-1")).toBeNull();
+    });
+
+    it("should keep provider retries idempotent when provider application fails", async () => {
+      await saveBillingAccount("tenant-1");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+      });
+      vi.mocked(mockGateway.cancelSubscription).mockRejectedValueOnce(
+        new Error("provider unavailable"),
+      );
+
+      const pending = await service.cancelSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "cancel-provider-retry-1",
+      });
+
+      expect(pending).toMatchObject({
+        state: "pending_provider",
+        lastFailure: { stage: "provider", detail: "Provider lifecycle command failed" },
+      });
+      expect(await service.getSubscription("tenant-1")).toMatchObject({
+        cancelAtPeriodEnd: false,
+      });
+
+      const completed = await service.reconcileLifecycleCommand("cancel-provider-retry-1");
+
+      expect(completed.state).toBe("completed");
+      expect(mockGateway.cancelSubscription).toHaveBeenNthCalledWith(1, "ext-sub-1", false, {
+        idempotencyKey: "cancel-provider-retry-1",
+      });
+      expect(mockGateway.cancelSubscription).toHaveBeenNthCalledWith(2, "ext-sub-1", false, {
+        idempotencyKey: "cancel-provider-retry-1",
+      });
+    });
+
+    it("should reuse the provider key when provider-state persistence fails", async () => {
+      await saveBillingAccount("tenant-1");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+      });
+      vi.spyOn(store, "saveLifecycleCommand").mockRejectedValueOnce(
+        new Error("command transition failed"),
+      );
+
+      await expect(
+        service.cancelSubscription({
+          tenantId: "tenant-1",
+          idempotencyKey: "cancel-transition-retry-1",
+        }),
+      ).rejects.toThrow("command transition failed");
+
+      await expect(
+        service.reconcileLifecycleCommand("cancel-transition-retry-1"),
+      ).resolves.toMatchObject({ state: "completed" });
+      expect(mockGateway.cancelSubscription).toHaveBeenNthCalledWith(1, "ext-sub-1", false, {
+        idempotencyKey: "cancel-transition-retry-1",
+      });
+      expect(mockGateway.cancelSubscription).toHaveBeenNthCalledWith(2, "ext-sub-1", false, {
+        idempotencyKey: "cancel-transition-retry-1",
+      });
     });
   });
 
@@ -487,9 +1083,15 @@ describe("BillingService", () => {
       };
       await store.saveSubscription(subscription);
 
-      await service.resumeSubscription("tenant-1");
+      const command = await service.resumeSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "resume-1",
+      });
 
-      expect(mockGateway.resumeSubscription).toHaveBeenCalledWith("ext-sub-1");
+      expect(mockGateway.resumeSubscription).toHaveBeenCalledWith("ext-sub-1", {
+        idempotencyKey: "resume-1",
+      });
+      expect(command.state).toBe("completed");
 
       const updatedSubscription = await store.findSubscription("tenant-1");
       expect(updatedSubscription?.cancelAtPeriodEnd).toBe(false);
@@ -497,9 +1099,57 @@ describe("BillingService", () => {
     });
 
     it("should throw error when no subscription exists", async () => {
-      await expect(service.resumeSubscription("tenant-1")).rejects.toThrow(
-        "No subscription found for tenant 'tenant-1'",
+      await expect(
+        service.resumeSubscription({
+          tenantId: "tenant-1",
+          idempotencyKey: "resume-missing-1",
+        }),
+      ).rejects.toThrow("No subscription found for tenant 'tenant-1'");
+    });
+
+    it("should persist and reconcile resume after local save failure", async () => {
+      await saveBillingAccount("tenant-1");
+      await store.saveSubscription({
+        id: "sub-1",
+        billingAccountId: "tenant-1",
+        externalSubscriptionId: "ext-sub-1",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: true,
+        lastSyncedAt: new Date("2026-01-01T00:00:00.000Z"),
+      });
+      vi.spyOn(store, "reconcileLifecycleSubscription").mockRejectedValueOnce(
+        new Error("resume save failed"),
       );
+
+      const pending = await service.resumeSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "resume-retry-1",
+      });
+
+      expect(pending).toMatchObject({
+        state: "pending_local",
+        lastFailure: { stage: "local", detail: "Local lifecycle reconciliation failed" },
+      });
+      expect(await service.getSubscription("tenant-1")).toMatchObject({
+        cancelAtPeriodEnd: false,
+      });
+
+      const completed = await service.resumeSubscription({
+        tenantId: "tenant-1",
+        idempotencyKey: "resume-retry-1",
+      });
+
+      expect(completed.state).toBe("completed");
+      expect(mockGateway.resumeSubscription).toHaveBeenCalledTimes(1);
+      expect(mockGateway.resumeSubscription).toHaveBeenCalledWith("ext-sub-1", {
+        idempotencyKey: "resume-retry-1",
+      });
+      expect(await store.findSubscription("tenant-1")).toMatchObject({
+        cancelAtPeriodEnd: false,
+      });
     });
   });
 

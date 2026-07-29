@@ -13,20 +13,20 @@ and payment processing.
 ## Example
 
 ```typescript
-import { PolarBillingGateway, PolarConfig } from '@croco/billing-polar';
+import { PolarBillingGateway, PolarConfig } from "@croco/billing-polar";
 
 const config: PolarConfig = {
-  accessToken: 'polar_access_token',
-  environment: 'sandbox',
-  webhookSecret: 'whsec_...',
+  accessToken: "polar_access_token",
+  environment: "sandbox",
+  webhookSecret: "whsec_...",
 };
 
 const gateway = new PolarBillingGateway(config, logger);
 const checkout = await gateway.createCheckout({
-  billingAccountId: 'tenant_123',
-  email: 'buyer@example.com',
-  productId: 'prod_123',
-  successUrl: 'https://example.com/success'
+  billingAccountId: "tenant_123",
+  email: "buyer@example.com",
+  productId: "prod_123",
+  successUrl: "https://example.com/success",
 });
 ```
 
@@ -58,7 +58,7 @@ const checkout = await gateway.createCheckout({
 
 ### cancelSubscription()
 
-> **cancelSubscription**(`externalSubscriptionId`, `immediate?`): `Promise`\<`void`\>
+> **cancelSubscription**(`externalSubscriptionId`, `immediate`, `options`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -66,9 +66,13 @@ const checkout = await gateway.createCheckout({
 
 `string`
 
-##### immediate?
+##### immediate
 
-`boolean` = `false`
+`boolean`
+
+##### options
+
+[`BillingLifecycleGatewayOptions`](/api/billing-core/src/type-aliases/billinglifecyclegatewayoptions/)
 
 #### Returns
 
@@ -78,7 +82,7 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`cancelSubscription`](/api/billing-core/src/interfaces/billinggateway/#cancelsubscription)
 
-***
+---
 
 ### createCheckout()
 
@@ -98,7 +102,7 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`createCheckout`](/api/billing-core/src/interfaces/billinggateway/#createcheckout)
 
-***
+---
 
 ### ensureCustomer()
 
@@ -122,7 +126,7 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`ensureCustomer`](/api/billing-core/src/interfaces/billinggateway/#ensurecustomer)
 
-***
+---
 
 ### getCustomerPortalUrl()
 
@@ -142,17 +146,21 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`getCustomerPortalUrl`](/api/billing-core/src/interfaces/billinggateway/#getcustomerportalurl)
 
-***
+---
 
 ### resumeSubscription()
 
-> **resumeSubscription**(`externalSubscriptionId`): `Promise`\<`void`\>
+> **resumeSubscription**(`externalSubscriptionId`, `options`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### externalSubscriptionId
 
 `string`
+
+##### options
+
+[`BillingLifecycleGatewayOptions`](/api/billing-core/src/type-aliases/billinglifecyclegatewayoptions/)
 
 #### Returns
 

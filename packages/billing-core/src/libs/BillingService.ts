@@ -1,24 +1,70 @@
-import type { EventPublisher } from "@croco/events-core";
+import { Problem } from "@croco/problems-core";
 import { Trace } from "@croco/telemetry-api";
-import type { Subscription, SubscriptionStatus } from "../types";
+import type {
+  BillingLifecycleCommand,
+  BillingLifecycleCommandKind,
+  BillingLifecycleLocalResult,
+  Subscription,
+  SubscriptionStatus,
+} from "../types";
 import type { BillingGateway, CreateCheckoutParams } from "./BillingGateway";
 import type { BillingStore } from "./BillingStore";
 import { SubscriptionCanceledEvent } from "./events/SubscriptionCanceledEvent";
 import {
   BillingAccountNotFoundProblem,
   BillingCheckoutCreationProblem,
+  BillingLifecycleCommandConflictProblem,
+  BillingLifecycleCommandNotFoundProblem,
+  InvalidBillingLifecycleIdempotencyKeyProblem,
   SubscriptionNotFoundProblem,
 } from "./problems/BillingProblems";
+
+/**
+ * Publishes billing lifecycle events with durable event-ID deduplication.
+ *
+ * Implementations must treat repeated calls with the same `event.eventId` as one logical delivery,
+ * including retries after an ambiguous result where the first call may already have produced the
+ * side effect.
+ */
+export interface BillingLifecycleEventPublisher {
+  publishIdempotently(event: SubscriptionCanceledEvent): Promise<void>;
+}
 
 export type BillingServiceDependencies = {
   store: BillingStore;
   gateway: BillingGateway;
-  eventPublisher?: EventPublisher;
+  eventPublisher?: BillingLifecycleEventPublisher;
+  clock?: () => Date;
 };
 
 export type CreateBillingCheckoutParams = Omit<CreateCheckoutParams, "billingAccountId"> & {
   tenantId: string;
 };
+
+export type CancelSubscriptionParams = {
+  readonly tenantId: string;
+  readonly idempotencyKey: string;
+  readonly immediate?: boolean;
+};
+
+export type ResumeSubscriptionParams = {
+  readonly tenantId: string;
+  readonly idempotencyKey: string;
+};
+
+export type ReconcileBillingLifecycleCommandsResult = {
+  readonly commands: readonly BillingLifecycleCommand[];
+  readonly completed: number;
+  readonly pendingProvider: number;
+  readonly pendingLocal: number;
+  readonly pendingEvent: number;
+};
+
+const DEFAULT_RECONCILIATION_LIMIT = 100;
+const EVENT_DELIVERY_LEASE_MS = 30_000;
+const PROVIDER_FAILURE_DETAIL = "Provider lifecycle command failed";
+const LOCAL_FAILURE_DETAIL = "Local lifecycle reconciliation failed";
+const EVENT_FAILURE_DETAIL = "Lifecycle event delivery failed";
 
 /**
  * Billing service for subscription management.
@@ -27,19 +73,21 @@ export type CreateBillingCheckoutParams = Omit<CreateCheckoutParams, "billingAcc
 export class BillingService {
   private readonly store: BillingStore;
   private readonly gateway: BillingGateway;
-  private readonly eventPublisher?: EventPublisher;
+  private readonly eventPublisher?: BillingLifecycleEventPublisher;
+  private readonly clock: () => Date;
 
   constructor(deps: BillingServiceDependencies) {
     this.store = deps.store;
     this.gateway = deps.gateway;
     this.eventPublisher = deps.eventPublisher;
+    this.clock = deps.clock ?? (() => new Date());
   }
 
   /**
    * Check if a tenant has an active subscription.
    */
   async hasActiveSubscription(tenantId: string): Promise<boolean> {
-    const subscription = await this.findSubscriptionByTenantId(tenantId);
+    const subscription = await this.findEffectiveSubscriptionByTenantId(tenantId);
     if (!subscription) return false;
     return subscription.status === "active" || subscription.status === "trialing";
   }
@@ -48,7 +96,7 @@ export class BillingService {
    * Get subscription status for a tenant.
    */
   async getSubscriptionStatus(tenantId: string): Promise<SubscriptionStatus | null> {
-    const subscription = await this.findSubscriptionByTenantId(tenantId);
+    const subscription = await this.findEffectiveSubscriptionByTenantId(tenantId);
     return subscription?.status ?? null;
   }
 
@@ -56,7 +104,7 @@ export class BillingService {
    * Get full subscription details.
    */
   async getSubscription(tenantId: string): Promise<Subscription | null> {
-    return this.findSubscriptionByTenantId(tenantId);
+    return this.findEffectiveSubscriptionByTenantId(tenantId);
   }
 
   /**
@@ -128,52 +176,68 @@ export class BillingService {
   }
 
   /**
-   * Cancel a subscription (at period end by default).
+   * Persist and execute a provider-idempotent cancellation command.
+   *
+   * The returned command may remain `pending_provider` or `pending_local` when reconciliation is
+   * required. Callers must not interpret promise fulfillment as an atomic cross-system commit.
    */
   @Trace({ name: "billing.subscription.cancel" })
-  async cancelSubscription(tenantId: string, immediate = false): Promise<void> {
-    const subscription = await this.findSubscriptionByTenantId(tenantId);
-    if (!subscription) {
-      throw new SubscriptionNotFoundProblem(tenantId);
-    }
-
-    await this.gateway.cancelSubscription(subscription.externalSubscriptionId, immediate);
-
-    if (immediate) {
-      await this.cleanupCanceledSubscription(subscription);
-    } else {
-      await this.store.saveSubscription({
-        ...subscription,
-        cancelAtPeriodEnd: true,
-        status: subscription.status,
-        lastSyncedAt: new Date(),
-      });
-    }
-
-    if (this.eventPublisher) {
-      await this.eventPublisher.publishNow(
-        new SubscriptionCanceledEvent(tenantId, subscription.externalSubscriptionId, !immediate),
-      );
-    }
+  async cancelSubscription(params: CancelSubscriptionParams): Promise<BillingLifecycleCommand> {
+    const kind = params.immediate ? "cancel_immediately" : "cancel_at_period_end";
+    const command = await this.getOrCreateLifecycleCommand(
+      params.tenantId,
+      params.idempotencyKey,
+      kind,
+    );
+    return this.executeLifecycleCommand(command);
   }
 
   /**
-   * Resume a canceled subscription.
+   * Persist and execute a provider-idempotent resume command.
    */
   @Trace({ name: "billing.subscription.resume" })
-  async resumeSubscription(tenantId: string): Promise<void> {
-    const subscription = await this.findSubscriptionByTenantId(tenantId);
-    if (!subscription) {
-      throw new SubscriptionNotFoundProblem(tenantId);
+  async resumeSubscription(params: ResumeSubscriptionParams): Promise<BillingLifecycleCommand> {
+    const command = await this.getOrCreateLifecycleCommand(
+      params.tenantId,
+      params.idempotencyKey,
+      "resume",
+    );
+    return this.executeLifecycleCommand(command);
+  }
+
+  /**
+   * Retry one durable lifecycle command from its persisted reconciliation state.
+   */
+  async reconcileLifecycleCommand(idempotencyKey: string): Promise<BillingLifecycleCommand> {
+    this.assertIdempotencyKey(idempotencyKey);
+    const command = await this.store.findLifecycleCommand(idempotencyKey);
+    if (!command) {
+      throw new BillingLifecycleCommandNotFoundProblem(idempotencyKey);
     }
 
-    await this.gateway.resumeSubscription(subscription.externalSubscriptionId);
+    return this.executeLifecycleCommand(command);
+  }
 
-    await this.store.saveSubscription({
-      ...subscription,
-      cancelAtPeriodEnd: false,
-      lastSyncedAt: new Date(),
-    });
+  /**
+   * Retry a bounded, deterministic batch of incomplete lifecycle commands.
+   */
+  async reconcilePendingLifecycleCommands(
+    limit = DEFAULT_RECONCILIATION_LIMIT,
+  ): Promise<ReconcileBillingLifecycleCommandsResult> {
+    const commands = await this.store.listPendingLifecycleCommands(limit);
+    const reconciled: BillingLifecycleCommand[] = [];
+
+    for (const command of commands) {
+      reconciled.push(await this.executeLifecycleCommand(command));
+    }
+
+    return {
+      commands: reconciled,
+      completed: reconciled.filter((command) => command.state === "completed").length,
+      pendingProvider: reconciled.filter((command) => command.state === "pending_provider").length,
+      pendingLocal: reconciled.filter((command) => command.state === "pending_local").length,
+      pendingEvent: reconciled.filter((command) => command.state === "pending_event").length,
+    };
   }
 
   /**
@@ -198,20 +262,239 @@ export class BillingService {
     return this.store.findSubscription(account.id);
   }
 
-  private async cleanupCanceledSubscription(subscription: Subscription): Promise<void> {
-    const orders = await this.store.findOrdersByAccount(subscription.billingAccountId);
+  private async findEffectiveSubscriptionByTenantId(
+    tenantId: string,
+  ): Promise<Subscription | null> {
+    const pendingCommand = await this.store.findPendingLifecycleCommandByTenantId(tenantId);
+    if (pendingCommand?.state === "pending_local" || pendingCommand?.state === "pending_event") {
+      const resolution = await this.store.resolveLifecycleSubscription(pendingCommand);
+      if (resolution.kind === "projection_base") {
+        return this.projectSubscription(pendingCommand, resolution.subscription);
+      }
+      return resolution.subscription;
+    }
 
-    if (orders.length > 0) {
-      await this.store.saveSubscription({
-        ...subscription,
-        cancelAtPeriodEnd: false,
+    return this.findSubscriptionByTenantId(tenantId);
+  }
+
+  private projectSubscription(command: BillingLifecycleCommand, base: Subscription): Subscription {
+    if (command.kind === "cancel_immediately") {
+      return {
+        ...base,
         status: "canceled",
-        lastSyncedAt: new Date(),
-      });
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date(command.updatedAt),
+      };
+    }
+
+    return {
+      ...base,
+      cancelAtPeriodEnd: command.kind === "cancel_at_period_end",
+      lastSyncedAt: new Date(command.updatedAt),
+    };
+  }
+
+  private async getOrCreateLifecycleCommand(
+    tenantId: string,
+    idempotencyKey: string,
+    kind: BillingLifecycleCommandKind,
+  ): Promise<BillingLifecycleCommand> {
+    this.assertIdempotencyKey(idempotencyKey);
+    const existing = await this.store.findLifecycleCommand(idempotencyKey);
+    if (existing) {
+      if (existing.tenantId !== tenantId || existing.kind !== kind) {
+        throw new BillingLifecycleCommandConflictProblem(idempotencyKey);
+      }
+      return existing;
+    }
+
+    const subscription = await this.findSubscriptionByTenantId(tenantId);
+    if (!subscription) {
+      throw new SubscriptionNotFoundProblem(tenantId);
+    }
+
+    const now = this.clock();
+    return this.store.createLifecycleCommand({
+      idempotencyKey,
+      tenantId,
+      kind,
+      subscription,
+      state: "pending_provider",
+      revision: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  private async executeLifecycleCommand(
+    initialCommand: BillingLifecycleCommand,
+  ): Promise<BillingLifecycleCommand> {
+    if (initialCommand.state === "completed") {
+      return initialCommand;
+    }
+
+    let command = initialCommand;
+    if (command.state === "pending_provider") {
+      try {
+        await this.applyProviderLifecycleCommand(command);
+      } catch (error) {
+        return this.persistLifecycleFailure(command, "provider", error);
+      }
+
+      command = await this.persistLifecycleState(command, "pending_local");
+    }
+
+    if (command.state === "pending_local") {
+      try {
+        const localResult = await this.applyLocalLifecycleCommand(command);
+        command = {
+          ...command,
+          localResult,
+        };
+      } catch (error) {
+        return this.persistLifecycleFailure(command, "local", error);
+      }
+
+      if (this.requiresCancellationEvent(command)) {
+        command = await this.persistLifecycleState(command, "pending_event");
+      } else {
+        return this.persistLifecycleState(command, "completed");
+      }
+    }
+
+    const claimed = await this.store.claimLifecycleEventDelivery(command, EVENT_DELIVERY_LEASE_MS);
+    if (!claimed) {
+      return (await this.store.findLifecycleCommand(command.idempotencyKey)) ?? command;
+    }
+    command = claimed;
+
+    try {
+      await this.publishCancellation(command);
+    } catch (error) {
+      return this.persistLifecycleFailure(command, "event", error);
+    }
+
+    return this.persistLifecycleState(command, "completed");
+  }
+
+  private async applyProviderLifecycleCommand(command: BillingLifecycleCommand): Promise<void> {
+    const options = { idempotencyKey: command.idempotencyKey };
+    if (command.kind === "resume") {
+      await this.gateway.resumeSubscription(command.subscription.externalSubscriptionId, options);
       return;
     }
 
-    await this.store.deleteSubscription(subscription.billingAccountId);
-    await this.store.deleteAccount(subscription.billingAccountId);
+    await this.gateway.cancelSubscription(
+      command.subscription.externalSubscriptionId,
+      command.kind === "cancel_immediately",
+      options,
+    );
+  }
+
+  private async applyLocalLifecycleCommand(
+    command: BillingLifecycleCommand,
+  ): Promise<BillingLifecycleLocalResult> {
+    const target = await this.createLocalLifecycleTarget(command);
+    return this.store.reconcileLifecycleSubscription(command, target);
+  }
+
+  private async persistLifecycleState(
+    command: BillingLifecycleCommand,
+    state: BillingLifecycleCommand["state"],
+  ): Promise<BillingLifecycleCommand> {
+    const updated: BillingLifecycleCommand = {
+      ...command,
+      state,
+      updatedAt: this.clock(),
+      lastFailure: undefined,
+      eventDeliveryLeaseUntil: undefined,
+    };
+    return this.store.saveLifecycleCommand(updated);
+  }
+
+  private async persistLifecycleFailure(
+    command: BillingLifecycleCommand,
+    stage: "provider" | "local" | "event",
+    error: unknown,
+  ): Promise<BillingLifecycleCommand> {
+    const now = this.clock();
+    const updated: BillingLifecycleCommand = {
+      ...command,
+      updatedAt: now,
+      eventDeliveryLeaseUntil: undefined,
+      lastFailure: {
+        stage,
+        code: this.failureCode(stage, error),
+        detail: this.failureDetail(stage),
+        attempt: (command.lastFailure?.attempt ?? 0) + 1,
+        occurredAt: now,
+      },
+    };
+    return this.store.saveLifecycleCommand(updated);
+  }
+
+  private failureCode(stage: "provider" | "local" | "event", error: unknown): string {
+    if (error instanceof Problem) {
+      return error.code;
+    }
+
+    return `billing/lifecycle-${stage}-failed`;
+  }
+
+  private failureDetail(stage: "provider" | "local" | "event"): string {
+    if (stage === "provider") return PROVIDER_FAILURE_DETAIL;
+    if (stage === "local") return LOCAL_FAILURE_DETAIL;
+    return EVENT_FAILURE_DETAIL;
+  }
+
+  private assertIdempotencyKey(idempotencyKey: string): void {
+    if (
+      idempotencyKey.length === 0 ||
+      idempotencyKey.length > 200 ||
+      !/^[\x20-\x7E]+$/.test(idempotencyKey)
+    ) {
+      throw new InvalidBillingLifecycleIdempotencyKeyProblem();
+    }
+  }
+
+  private async publishCancellation(command: BillingLifecycleCommand): Promise<void> {
+    if (!this.eventPublisher) return;
+    await this.eventPublisher.publishIdempotently(
+      new SubscriptionCanceledEvent(
+        command.tenantId,
+        command.subscription.externalSubscriptionId,
+        command.kind === "cancel_at_period_end",
+        `billing-lifecycle:${command.idempotencyKey}`,
+      ),
+    );
+  }
+
+  private requiresCancellationEvent(command: BillingLifecycleCommand): boolean {
+    return command.kind !== "resume" && this.eventPublisher !== undefined;
+  }
+
+  private async createLocalLifecycleTarget(
+    command: BillingLifecycleCommand,
+  ): Promise<Subscription | null> {
+    if (command.kind !== "cancel_immediately") {
+      return {
+        ...command.subscription,
+        cancelAtPeriodEnd: command.kind === "cancel_at_period_end",
+        lastSyncedAt: this.clock(),
+      };
+    }
+
+    const orders = await this.store.findOrdersByAccount(command.subscription.billingAccountId);
+
+    if (orders.length > 0) {
+      return {
+        ...command.subscription,
+        cancelAtPeriodEnd: false,
+        status: "canceled",
+        lastSyncedAt: this.clock(),
+      };
+    }
+
+    return null;
   }
 }

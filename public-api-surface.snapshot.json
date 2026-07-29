@@ -4028,6 +4028,24 @@
               "declarationKind": "class"
             },
             {
+              "name": "BillingLifecycleCommandConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "BillingLifecycleCommandInProgressProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "BillingLifecycleCommandNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "BillingService",
               "exportKind": "named",
               "source": "./libs/BillingService",
@@ -4049,6 +4067,12 @@
               "name": "InMemoryPlanRegistry",
               "exportKind": "named",
               "source": "./libs/InMemoryPlanRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidBillingLifecycleIdempotencyKeyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
               "declarationKind": "class"
             },
             {
@@ -4196,7 +4220,52 @@
               "source": "./libs/BillingGateway"
             },
             {
+              "name": "BillingLifecycleCommand",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "BillingLifecycleCommandFailure",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "BillingLifecycleCommandKind",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "BillingLifecycleCommandState",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "BillingLifecycleEventPublisher",
+              "exportKind": "named",
+              "source": "./libs/BillingService"
+            },
+            {
+              "name": "BillingLifecycleGatewayOptions",
+              "exportKind": "named",
+              "source": "./libs/BillingGateway"
+            },
+            {
+              "name": "BillingLifecycleLocalResult",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "BillingLifecycleSubscriptionResolution",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "BillingServiceDependencies",
+              "exportKind": "named",
+              "source": "./libs/BillingService"
+            },
+            {
+              "name": "CancelSubscriptionParams",
               "exportKind": "named",
               "source": "./libs/BillingService"
             },
@@ -4334,6 +4403,16 @@
               "name": "ProviderPlanLookup",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "ReconcileBillingLifecycleCommandsResult",
+              "exportKind": "named",
+              "source": "./libs/BillingService"
+            },
+            {
+              "name": "ResumeSubscriptionParams",
+              "exportKind": "named",
+              "source": "./libs/BillingService"
             },
             {
               "name": "Subscription",

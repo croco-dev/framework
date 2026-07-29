@@ -51,6 +51,10 @@ title: "BillingStoreSubscriptionProvider"
 
 테넌트의 현재 구독 플랜 ID를 반환합니다.
 
+Provider mutation이 적용되고 local reconciliation이 남은 동안에는 lifecycle command의
+target state를 사용합니다. 즉시 취소는 entitlement를 즉시 제거하고, 기간 말 취소와
+resume은 같은 external subscription의 최신 plan을 유지합니다.
+
 #### Parameters
 
 ##### tenantId

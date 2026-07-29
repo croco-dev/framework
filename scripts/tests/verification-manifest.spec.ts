@@ -190,6 +190,7 @@ describe("verification manifest", () => {
     expect(byId.get("typecheck")?.command).toContain("--filter=!@croco/docs");
     expect(byId.get("test")?.command).toContain("--filter=...[origin/trunk]");
     expect(byId.get("test")?.command).toContain("--filter=!@croco/docs");
+    expect(byId.get("package-entrypoints-smoke")?.command).toContain("--build-missing");
     for (const id of [
       "alpha-release-smoke",
       "cli-e2e",
