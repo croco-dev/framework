@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 511,
+  problemCount: 512,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -4545,7 +4545,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 28,
+          line: 36,
           column: 3,
           kind: "problem-class",
         },
@@ -4577,7 +4577,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 89,
+          line: 120,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-tx/outbox-idempotency-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#events-tx-outbox-idempotency-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
+          line: 83,
           column: 3,
           kind: "problem-class",
         },
@@ -4609,7 +4639,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 74,
+          line: 105,
           column: 3,
           kind: "problem-class",
         },
@@ -4641,7 +4671,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 56,
+          line: 64,
           column: 3,
           kind: "problem-class",
         },
@@ -4673,7 +4703,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 65,
+          line: 73,
           column: 3,
           kind: "problem-class",
         },
@@ -4705,7 +4735,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
-          line: 48,
+          line: 56,
           column: 3,
           kind: "problem-class",
         },

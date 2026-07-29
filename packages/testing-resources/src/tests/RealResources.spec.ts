@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { DomainEvent } from "@croco/events-core";
 import {
   DrizzleTransactionalEventStore,
+  OutboxIdempotencyConflictProblem,
   type DrizzleTransactionalEventStoreDb,
   TransactionalOutbox,
 } from "@croco/events-tx";
@@ -155,6 +156,68 @@ describe.skipIf(!realResourcesEnabled)("real TestKernel resources", () => {
       "select id, idempotency_key from croco_outbox_messages",
     );
     expect(result.rows).toEqual([{ id: "message-1", idempotency_key: "resource-commit" }]);
+
+    const occurredAt = new Date("2026-01-01T00:00:00.000Z");
+    const jsonReplayInput = {
+      id: "message-json-1",
+      eventId: "event-json-1",
+      eventType: "resource.json-stored",
+      aggregateId: "resource-json",
+      idempotencyKey: "resource-json",
+      payload: { observedAt: occurredAt, omitted: undefined },
+      metadata: { producer: "resource-test", omitted: undefined },
+      maxAttempts: 3,
+      visibleAt: occurredAt,
+      occurredAt,
+    };
+    const jsonStored = await store.appendOutbox(jsonReplayInput);
+    await expect(
+      store.appendOutbox({
+        ...jsonReplayInput,
+        id: "message-json-replay",
+        maxAttempts: 9,
+        visibleAt: new Date("2026-01-01T00:01:00.000Z"),
+      }),
+    ).resolves.toMatchObject({ id: jsonStored.id });
+
+    const concurrent = await Promise.allSettled([
+      store.appendOutbox({
+        id: "message-concurrent-1",
+        eventId: "event-concurrent-1",
+        eventType: "resource.created",
+        aggregateId: "resource-concurrent",
+        idempotencyKey: "resource-concurrent",
+        payload: { observedAt: occurredAt, omitted: undefined },
+        metadata: { producer: "resource-test", omitted: undefined },
+        maxAttempts: 3,
+        visibleAt: occurredAt,
+        occurredAt,
+      }),
+      store.appendOutbox({
+        id: "message-concurrent-2",
+        eventId: "event-concurrent-2",
+        eventType: "resource.replaced",
+        aggregateId: "resource-concurrent",
+        idempotencyKey: "resource-concurrent",
+        payload: { observedAt: occurredAt, omitted: undefined },
+        metadata: { producer: "resource-test", omitted: undefined },
+        maxAttempts: 3,
+        visibleAt: occurredAt,
+        occurredAt,
+      }),
+    ]);
+
+    expect(concurrent.filter(({ status }) => status === "fulfilled")).toHaveLength(1);
+    expect(concurrent.filter(({ status }) => status === "rejected")).toMatchObject([
+      {
+        reason: {
+          code: "events-tx/outbox-idempotency-conflict",
+        },
+      },
+    ]);
+    expect(concurrent.find(({ status }) => status === "rejected")).toMatchObject({
+      reason: expect.any(OutboxIdempotencyConflictProblem),
+    });
     expect(kernel.resourceEvidence[0]?.diagnostics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ stage: "migration", status: "passed" }),

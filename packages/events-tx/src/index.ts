@@ -4,6 +4,7 @@
 export {
   InboxClaimConflictProblem,
   InvalidTransactionalEventConfigurationProblem,
+  OutboxIdempotencyConflictProblem,
   OutboxPublishExhaustedProblem,
   OutboxStorageProblem,
   OutboxTransactionRequiredProblem,
@@ -12,6 +13,7 @@ export {
 
 export type {
   InvalidTransactionalEventConfigurationProblemOptions,
+  OutboxIdempotencyField,
   TransactionalEventConfigurationConstraint,
   TransactionalEventConfigurationField,
 } from "./libs/problems/EventsTxProblems";

@@ -2,6 +2,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
   InboxClaimConflictProblem,
+  OutboxIdempotencyConflictProblem,
   OutboxPublishExhaustedProblem,
   OutboxStorageProblem,
   OutboxTransactionRequiredProblem,
@@ -49,5 +50,20 @@ describe("EventsTxProblems", () => {
       actualAttempts: 2,
       actualStatus: "processed",
     });
+  });
+
+  it("should expose outbox idempotency conflict evidence without request values", () => {
+    const problem = new OutboxIdempotencyConflictProblem("orders:create:order-1", [
+      "eventType",
+      "payload",
+    ]);
+
+    expect(problem.code).toBe("events-tx/outbox-idempotency-conflict");
+    expect(problem.category).toBe(ProblemCategory.Conflict);
+    expect(problem.extensions).toEqual({
+      idempotencyKey: "orders:create:order-1",
+      conflictingFields: ["eventType", "payload"],
+    });
+    expect(problem.toJSON()).not.toHaveProperty("payload");
   });
 });
