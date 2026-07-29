@@ -151,7 +151,7 @@ describe("RateLimitKeyBuilder", () => {
       );
     });
 
-    it("should use empty string for missing segments", () => {
+    it("should use null for missing segments", () => {
       const builder = new RateLimitKeyBuilder(["tenant", "user"]);
       const context = createContext({ tenant: { id: "tenant_123" } });
 
