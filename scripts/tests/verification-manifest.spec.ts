@@ -198,7 +198,9 @@ describe("verification manifest", () => {
       "generated-app-smoke",
       "package-bins-smoke",
       "package-entrypoints-smoke",
+      "production-ready",
       "quick-start-lambda-smoke",
+      "spine-promotion",
     ]) {
       expect(byId.get(id)?.applicable, id).toBe(false);
     }
@@ -219,6 +221,8 @@ describe("verification manifest", () => {
     expect(pullRequestById.get("alpha-release-smoke")?.applicable).toBe(false);
     expect(fullById.get("generated-app-smoke")?.applicable).toBe(true);
     expect(fullById.get("alpha-release-smoke")?.applicable).toBe(true);
+    expect(fullById.get("production-ready")?.applicable).toBe(true);
+    expect(fullById.get("spine-promotion")?.applicable).toBe(true);
   });
 
   it("does not require package build artifacts for repository-only CI maintenance", () => {
@@ -247,18 +251,6 @@ describe("verification manifest", () => {
       expect(byId.get(id)?.applicable, id).toBe(false);
     }
     expect(byId.get("release-gate-tests")?.applicable).toBe(true);
-  });
-
-  it("keeps package-summary accountability on affected package changes", () => {
-    const packageChange = createVerificationManifest("spine", {
-      base: "origin/trunk",
-      changedFiles: ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"],
-      head: "HEAD",
-    });
-    const byId = new Map(packageChange.map((command) => [command.id, command]));
-
-    expect(byId.get("production-ready")?.applicable).toBe(true);
-    expect(byId.get("spine-promotion")?.applicable).toBe(true);
   });
 
   it("keeps the release-gate inventory complete, sorted, and executable from one root alias", () => {
@@ -413,7 +405,7 @@ describe("verification manifest", () => {
     ]);
   });
 
-  it("builds the architecture policy runtime prerequisite through the mutation guard", () => {
+  it("builds verification runtime prerequisites through the mutation guard", () => {
     const command = createVerificationManifest("repo").find(
       ({ id }) => id === "architecture-policy-runtime",
     );
@@ -423,11 +415,13 @@ describe("verification manifest", () => {
       "--experimental-strip-types",
       "scripts/tracked-file-mutation-guard.mts",
       "--recovery",
-      "Fix the @croco/problems-core build prerequisite",
+      "Fix the verification runtime build prerequisites",
       "--",
       "pnpm",
       "--filter",
-      "@croco/problems-core",
+      "@croco/architecture-policy...",
+      "--filter",
+      "@croco/tenant-core...",
       "build",
     ]);
   });
