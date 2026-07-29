@@ -47,7 +47,7 @@ describe("TxManager characterization", () => {
     const events: string[] = [];
     const txManager = new TxManager(createObservedAdapter(events), { defaultNesting: "savepoint" });
 
-    await txManager.run(async () => {
+    await txManager.runWithOutcome(async () => {
       events.push(`outer:${txManager.getClient()?.id}`);
 
       await txManager.run(async () => {
@@ -72,7 +72,7 @@ describe("TxManager characterization", () => {
     const events: string[] = [];
     const txManager = new TxManager(createObservedAdapter(events));
 
-    await txManager.run(async () => {
+    await txManager.runWithOutcome(async () => {
       events.push("fn");
       txManager.onAfterCommit(() => {
         events.push(`hook:${txManager.getClient()}`);

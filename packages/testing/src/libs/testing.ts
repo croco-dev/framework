@@ -51,6 +51,7 @@ type TestingToken<T = unknown> = TestingConstructor<T> | Token<T> | string | sym
 type AfterCommitHook = () => void | Promise<void>;
 type TestingTransactionFrame = {
   readonly afterCommitHooks: AfterCommitHook[];
+  registrationOpen: boolean;
 };
 type TestingAfterCommitHookFailure = {
   readonly error: Error;
@@ -212,7 +213,7 @@ class SilentTestLogger implements TestLogger {
 }
 
 function createTestingTransactionFrame(): TestingTransactionFrame {
-  return { afterCommitHooks: [] };
+  return { afterCommitHooks: [], registrationOpen: true };
 }
 
 function normalizeTestingError(error: unknown): Error {
@@ -246,10 +247,14 @@ export class TestingTransactionContext implements TransactionContext {
     return this.getCurrentFrame() !== null;
   }
 
+  canRegisterAfterCommit(): boolean {
+    return this.getCurrentFrame()?.registrationOpen ?? false;
+  }
+
   onAfterCommit(hook: AfterCommitHook): void {
     const frame = this.getCurrentFrame();
 
-    if (!frame) {
+    if (!frame?.registrationOpen) {
       throw new TestingTransactionContextNotActiveProblem();
     }
 
@@ -264,7 +269,12 @@ export class TestingTransactionContext implements TransactionContext {
     }
 
     const frame = createTestingTransactionFrame();
-    const result = await this.storage.run(frame, async () => await fn());
+    let result: T;
+    try {
+      result = await this.storage.run(frame, async () => await fn());
+    } finally {
+      frame.registrationOpen = false;
+    }
     await this.executeAfterCommitHooks(frame);
 
     return result;
@@ -281,6 +291,7 @@ export class TestingTransactionContext implements TransactionContext {
       this.manualFrame = null;
     }
 
+    frame.registrationOpen = false;
     await this.executeAfterCommitHooks(frame);
   }
 

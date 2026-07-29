@@ -30,27 +30,41 @@ describe("SaaS billing golden path", () => {
 
     expect(response.status).toBe(200);
     const body = await testing.readJson<{
-      order: {
-        amountCents: number;
-        customerId: string;
-        id: string;
-        paymentId: string;
-        planId: string;
-        seats: number;
-        status: string;
+      transaction: {
+        status: "committed";
+        value: {
+          amountCents: number;
+          customerId: string;
+          id: string;
+          paymentId: string;
+          planId: string;
+          seats: number;
+          status: string;
+        };
+        afterCommit: {
+          status: "succeeded";
+          hookCount: number;
+        };
       };
       paymentAttempts: number;
     }>(response);
 
     expect(body).toMatchObject({
-      order: {
-        amountCents: 23700,
-        customerId: "cus_acme",
-        id: "ord_0001",
-        paymentId: "pay_ord_0001_2",
-        planId: "growth",
-        seats: 3,
-        status: "paid",
+      transaction: {
+        status: "committed",
+        value: {
+          amountCents: 23700,
+          customerId: "cus_acme",
+          id: "ord_0001",
+          paymentId: "pay_ord_0001_2",
+          planId: "growth",
+          seats: 3,
+          status: "paid",
+        },
+        afterCommit: {
+          status: "succeeded",
+          hookCount: 1,
+        },
       },
       paymentAttempts: 2,
     });

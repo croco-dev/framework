@@ -1,6 +1,7 @@
 import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
+  EventAfterCommitOutcomeRequiredProblem,
   EventBusNotSetProblem,
   EventDefinitionProblem,
   EventDeserializationError,
@@ -8,6 +9,16 @@ import {
 } from "../libs/problems/EventsProblems";
 
 describe("EventsProblems", () => {
+  it("should describe the missing after-commit outcome capability", () => {
+    const problem = new EventAfterCommitOutcomeRequiredProblem();
+
+    expect(problem.code).toBe("events-core/after-commit-outcome-required");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.detail).toBe(
+      "publishAfterCommit requires a transaction that can return after-commit delivery evidence.",
+    );
+  });
+
   it("should create EventBusNotSetProblem with expected metadata", () => {
     const problem = new EventBusNotSetProblem();
 

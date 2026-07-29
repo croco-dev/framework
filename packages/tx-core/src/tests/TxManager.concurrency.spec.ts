@@ -114,7 +114,7 @@ describe("TxManager Concurrent Tests", () => {
     it("should execute afterCommit hooks sequentially in each transaction", async () => {
       const executionOrder: string[] = [];
 
-      await txManager.run(async () => {
+      await txManager.runWithOutcome(async () => {
         txManager.onAfterCommit(async () => {
           executionOrder.push("hook1-start");
           await new Promise((r) => setTimeout(r, 30));
@@ -134,7 +134,7 @@ describe("TxManager Concurrent Tests", () => {
       const hooks1: string[] = [];
       const hooks2: string[] = [];
 
-      const promise1 = txManager.run(async () => {
+      const promise1 = txManager.runWithOutcome(async () => {
         txManager.onAfterCommit(() => {
           hooks1.push("t1-hook1");
         });
@@ -143,7 +143,7 @@ describe("TxManager Concurrent Tests", () => {
         });
       });
 
-      const promise2 = txManager.run(async () => {
+      const promise2 = txManager.runWithOutcome(async () => {
         txManager.onAfterCommit(() => {
           hooks2.push("t2-hook1");
         });

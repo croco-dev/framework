@@ -1,3 +1,5 @@
+import type { TxRunOutcome } from "@croco/tx-core";
+
 export type PlanId = "starter" | "growth";
 
 export type CheckoutRequest = {
@@ -22,8 +24,8 @@ export type Order = {
 };
 
 export type CheckoutResponse = {
-  readonly order: Order;
   readonly paymentAttempts: number;
+  readonly transaction: TxRunOutcome<Order>;
 };
 
 export type AuditEntry = {

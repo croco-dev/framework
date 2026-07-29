@@ -6,10 +6,14 @@ import {
   TxPropagationError,
 } from "../libs/errors";
 import {
+  AfterCommitOutcomeRequiredProblem,
+  AfterCommitRegistrationClosedProblem,
   AfterCommitHooksProblem,
+  DetachedTransactionOperationProblem,
   InvalidTransactionTimeoutProblem,
   TransactionContextProblem,
   TransactionDecoratorProblem,
+  TransactionOutcomeContextProblem,
 } from "../libs/problems/TransactionProblems";
 
 describe("TransactionProblems", () => {
@@ -29,6 +33,42 @@ describe("TransactionProblems", () => {
     expect(problem.detail).toBe("onAfterCommit must be called within a transaction");
   });
 
+  it("should create TransactionOutcomeContextProblem with expected metadata", () => {
+    const problem = new TransactionOutcomeContextProblem();
+
+    expect(problem.code).toBe("tx-core/outcome-requires-root");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.detail).toBe("runWithOutcome must start outside an active transaction");
+  });
+
+  it("should create AfterCommitOutcomeRequiredProblem with expected metadata", () => {
+    const problem = new AfterCommitOutcomeRequiredProblem();
+
+    expect(problem.code).toBe("tx-core/after-commit-outcome-required");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.detail).toBe(
+      "onAfterCommit requires runWithOutcome so post-commit failures cannot be discarded",
+    );
+  });
+
+  it("should create AfterCommitRegistrationClosedProblem with expected metadata", () => {
+    const problem = new AfterCommitRegistrationClosedProblem();
+
+    expect(problem.code).toBe("tx-core/after-commit-registration-closed");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.detail).toBe("onAfterCommit registration is closed for this transaction");
+  });
+
+  it("should create DetachedTransactionOperationProblem with expected metadata", () => {
+    const problem = new DetachedTransactionOperationProblem(2);
+
+    expect(problem.code).toBe("tx-core/detached-transaction-operation");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.detail).toBe(
+      "Transaction callback completed with 2 detached nested operation(s)",
+    );
+  });
+
   it("should create InvalidTransactionTimeoutProblem with expected metadata", () => {
     const problem = new InvalidTransactionTimeoutProblem("run", Number.NaN);
 
@@ -43,8 +83,14 @@ describe("TransactionProblems", () => {
     const cause = new Error("event publish failed");
     const problem = new AfterCommitHooksProblem(
       [
-        { name: cause.name, message: cause.message },
-        { name: "CacheError", message: "cache refresh failed" },
+        { phase: "hook", hookIndex: 0, name: cause.name, message: cause.message },
+        {
+          phase: "hook",
+          hookIndex: 1,
+          name: "CacheError",
+          message: "cache refresh failed",
+          code: "CACHE_REFRESH_FAILED",
+        },
       ],
       cause,
     );
@@ -56,9 +102,21 @@ describe("TransactionProblems", () => {
     expect(problem.extensions).toEqual({
       committed: true,
       failureCount: 2,
+      reportingFailureCount: 0,
       failures: [
-        { name: "Error", message: "event publish failed" },
-        { name: "CacheError", message: "cache refresh failed" },
+        {
+          phase: "hook",
+          hookIndex: 0,
+          name: "Error",
+          message: "event publish failed",
+        },
+        {
+          phase: "hook",
+          hookIndex: 1,
+          name: "CacheError",
+          message: "cache refresh failed",
+          code: "CACHE_REFRESH_FAILED",
+        },
       ],
     });
   });

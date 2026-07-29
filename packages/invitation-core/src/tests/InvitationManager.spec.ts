@@ -7,7 +7,7 @@ import {
   NotificationChannel,
   type NotificationService,
 } from "@croco/notifications-core";
-import type { TxManager } from "@croco/tx-core";
+import { TxManager, type TxAdapter } from "@croco/tx-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   InvitationAcceptedEvent,
@@ -46,8 +46,7 @@ describe("InvitationManager", () => {
   let publishNow!: ReturnType<typeof vi.fn>;
   let addMember!: ReturnType<typeof vi.fn>;
   let send!: ReturnType<typeof vi.fn>;
-  let txManager!: Pick<TxManager<unknown>, "run" | "onAfterCommit">;
-  let afterCommitHooks!: Array<() => void | Promise<void>>;
+  let txManager!: TxManager<unknown>;
   let sequence = 0;
 
   const createInvitation = (token: string, overrides: Partial<Invitation> = {}): Invitation => {
@@ -77,20 +76,16 @@ describe("InvitationManager", () => {
     publishNow = vi.fn();
     addMember = vi.fn();
     send = vi.fn();
-    afterCommitHooks = [];
-    txManager = {
-      async run<T>(fn: () => Promise<T>): Promise<T> {
-        afterCommitHooks = [];
-        const result = await fn();
-        for (const hook of afterCommitHooks) {
-          await hook();
-        }
-        return result;
+    const txAdapter: TxAdapter<unknown> = {
+      async transaction<T>(fn: (client: unknown) => Promise<T>): Promise<T> {
+        return fn({});
       },
-      onAfterCommit: vi.fn((hook: () => void | Promise<void>) => {
-        afterCommitHooks.push(hook);
-      }),
+      async savepoint<T>(_client: unknown, fn: (client: unknown) => Promise<T>): Promise<T> {
+        return fn({});
+      },
+      supportsSavepoint: () => false,
     };
+    txManager = new TxManager(txAdapter);
     sequence = 0;
 
     manager = new InvitationManager(
@@ -101,7 +96,7 @@ describe("InvitationManager", () => {
         publishNow,
         publishMany: vi.fn(),
       } as unknown as EventPublisher,
-      txManager as TxManager<unknown>,
+      txManager,
     );
   });
 
@@ -505,12 +500,14 @@ describe("InvitationManager", () => {
     });
 
     expect(addMember).toHaveBeenCalledWith("tenant-1", "user-1", "member");
-    expect(accepted.status).toBe("accepted");
-    expect(accepted.acceptedAt).not.toBeNull();
+    expect(accepted.status).toBe("committed");
+    expect(accepted.value.status).toBe("accepted");
+    expect(accepted.value.acceptedAt).not.toBeNull();
+    expect(accepted.afterCommit).toEqual({ status: "succeeded", hookCount: 1 });
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationAcceptedEvent));
   });
 
-  it("should propagate event publication failures when accepting invitation", async () => {
+  it("should return committed degraded evidence when invitation event publication fails", async () => {
     await store.save(createInvitation("accept-fail-token"));
 
     const membership: Membership = {
@@ -525,13 +522,26 @@ describe("InvitationManager", () => {
     addMember.mockResolvedValue(membership);
     publishNow.mockRejectedValueOnce(new Error("accept publish failed"));
 
-    await expect(
-      manager.acceptInvitation({
-        token: "accept-fail-token",
-        userId: "user-1",
-        email: "member@croco.dev",
-      }),
-    ).rejects.toThrow("accept publish failed");
+    const outcome = await manager.acceptInvitation({
+      token: "accept-fail-token",
+      userId: "user-1",
+      email: "member@croco.dev",
+    });
+
+    expect(outcome.status).toBe("committed");
+    expect(outcome.value.status).toBe("accepted");
+    expect(outcome.afterCommit).toMatchObject({
+      status: "failed",
+      hookCount: 1,
+      failures: [{ phase: "hook", message: "accept publish failed" }],
+      problem: {
+        extensions: {
+          committed: true,
+          failureCount: 1,
+        },
+      },
+    });
+    await expect(store.findById(outcome.value.id)).resolves.toMatchObject({ status: "accepted" });
   });
 
   it("should accept link invitation without email match check", async () => {
@@ -557,7 +567,8 @@ describe("InvitationManager", () => {
     });
 
     expect(addMember).toHaveBeenCalledWith("tenant-1", "user-2", "member");
-    expect(accepted.status).toBe("accepted");
+    expect(accepted.status).toBe("committed");
+    expect(accepted.value.status).toBe("accepted");
   });
 
   it("should not expose an unknown bearer token in the serialized Problem", async () => {
@@ -665,7 +676,7 @@ describe("InvitationManager", () => {
 
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
-    expect(accepted?.status === "fulfilled" ? accepted.value.status : null).toBe("accepted");
+    expect(accepted?.status === "fulfilled" ? accepted.value.value.status : null).toBe("accepted");
     expect(rejected?.status === "rejected" ? rejected.reason : null).toBeInstanceOf(
       InvitationAlreadyAcceptedProblem,
     );

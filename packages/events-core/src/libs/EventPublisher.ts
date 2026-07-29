@@ -6,6 +6,7 @@ import {
 import type { DomainEvent } from "./DomainEvent";
 import type { EventBusConfig } from "./EventBusConfig";
 import {
+  EventAfterCommitOutcomeRequiredProblem,
   EventAfterCommitRequiresActiveTransactionProblem,
   EventTransactionContextUnavailableProblem,
 } from "./problems/EventsProblems";
@@ -51,6 +52,9 @@ export class EventPublisher {
     const txContext = this.tryGetTransactionContext();
     if (!txContext?.isInTransaction()) {
       throw new EventAfterCommitRequiresActiveTransactionProblem();
+    }
+    if (!txContext.canRegisterAfterCommit()) {
+      throw new EventAfterCommitOutcomeRequiredProblem();
     }
 
     txContext.onAfterCommit(async () => {

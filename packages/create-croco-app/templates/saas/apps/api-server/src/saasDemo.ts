@@ -579,10 +579,11 @@ export async function runSaasDemoFlow(
       inviterId: ownerUserId,
       role: "member",
     });
-    const invitation = await runtime.invitationManager.acceptInvitation({
+    const invitationOutcome = await runtime.invitationManager.acceptInvitation({
       token: invitationToken,
       userId: invitedUserId,
     });
+    const invitation = invitationOutcome.value;
     let seatLimitFailureCode = "none";
     try {
       await runtime.membershipManager.addMember(tenant.id, rejectedUserId, "member");

@@ -99,3 +99,18 @@ export class EventAfterCommitRequiresActiveTransactionProblem extends Problem {
     super(undefined, undefined, "publishAfterCommit requires an active transaction.");
   }
 }
+
+/**
+ * after-commit 결과를 반환하지 않는 트랜잭션에서 이벤트 발행을 예약하면 발생하는 Problem입니다.
+ */
+export class EventAfterCommitOutcomeRequiredProblem extends Problem {
+  readonly code = "events-core/after-commit-outcome-required";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor() {
+    super(
+      undefined,
+      undefined,
+      "publishAfterCommit requires a transaction that can return after-commit delivery evidence.",
+    );
+  }
+}

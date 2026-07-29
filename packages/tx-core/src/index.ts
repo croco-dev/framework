@@ -11,10 +11,14 @@ export {
  * 트랜잭션 데코레이터 오용, 컨텍스트 누락, 타임아웃 상황을 나타내는 Problem 타입입니다.
  */
 export {
+  AfterCommitOutcomeRequiredProblem,
+  AfterCommitRegistrationClosedProblem,
   AfterCommitHooksProblem,
+  DetachedTransactionOperationProblem,
   InvalidTransactionTimeoutProblem,
   TransactionContextProblem,
   TransactionDecoratorProblem,
+  TransactionOutcomeContextProblem,
   TransactionTimeoutProblem,
 } from "./libs/problems/TransactionProblems";
 
@@ -42,12 +46,15 @@ export { TxManagerRegistry } from "./libs/TxManagerRegistry";
  * 트랜잭션 훅과 실행 옵션, 전파 규칙을 설명하는 공개 타입 모음입니다.
  */
 export type {
+  AfterCommitFailure,
   AfterCommitHook,
+  AfterCommitOutcome,
   NestingStrategy,
   Propagation,
   TransactionalOptions,
   TxManagerConfig,
   TxManagerKey,
+  TxRunOutcome,
   TxRunOptions,
 } from "./libs/types";
 

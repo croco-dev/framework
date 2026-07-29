@@ -5,5 +5,7 @@ export const TRANSACTION_CONTEXT_TOKEN = Symbol("TransactionContext");
 
 export interface TransactionContext {
   isInTransaction(): boolean;
+  /** Whether the active callback still accepts hooks and preserves their delivery evidence. */
+  canRegisterAfterCommit(): boolean;
   onAfterCommit(hook: () => void | Promise<void>): void;
 }

@@ -50,7 +50,7 @@ export class CheckoutService {
           });
         });
 
-        const order = await this.txManager.run(async () => {
+        const transaction = await this.txManager.runWithOutcome(async () => {
           const paidOrder = this.orders.save({
             amountCents,
             createdAt: new Date().toISOString(),
@@ -82,8 +82,8 @@ export class CheckoutService {
         });
 
         return {
-          order,
           paymentAttempts: payment.attemptCount,
+          transaction,
         };
       },
       {

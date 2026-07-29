@@ -3,30 +3,58 @@ import type { TransactionContext } from "@croco/framework-context";
 import type { Logger } from "@croco/framework-logger";
 import type { TransactionTimeoutSource } from "./problems/TransactionProblems";
 import {
+  AfterCommitOutcomeRequiredProblem,
+  AfterCommitRegistrationClosedProblem,
   AfterCommitHooksProblem,
+  DetachedTransactionOperationProblem,
   InvalidTransactionTimeoutProblem,
   MAX_TRANSACTION_TIMEOUT_MS,
   TransactionContextProblem,
+  TransactionOutcomeContextProblem,
   TransactionTimeoutProblem,
 } from "./problems/TransactionProblems";
 import type { TxAdapter } from "./TxAdapter";
-import type { AfterCommitHook, NestingStrategy, TxManagerConfig, TxRunOptions } from "./types";
+import type {
+  AfterCommitFailure,
+  AfterCommitHook,
+  AfterCommitOutcome,
+  NestingStrategy,
+  TxManagerConfig,
+  TxRunOptions,
+  TxRunOutcome,
+} from "./types";
 
 interface TxContext<TClient> {
+  activeChildOperationCount: number;
   client: TClient;
   afterCommitHooks: AfterCommitHook[];
+  afterCommitRegistrationOpen: boolean;
+  capturesAfterCommitOutcome: boolean;
   isRoot: boolean;
+  rootGate: RootTransactionGate;
+}
+
+interface RootTransactionGate {
+  activeNestedOperationCount: number;
+  detachedOperationProblem: DetachedTransactionOperationProblem | null;
+  registrationOpen: boolean;
 }
 
 type NullableTxContext<TClient> = TxContext<TClient> | null;
 
 type TxManagerLogger = Pick<Logger, "error" | "warn">;
 
-type AfterCommitHookFailure = {
+type AfterCommitHookFailure = AfterCommitFailure & {
   error: Error;
-  name: string;
-  message: string;
 };
+
+class AfterCommitFailureAggregateError extends Error {
+  readonly name = "AfterCommitFailureAggregateError";
+
+  constructor(readonly errors: readonly Error[]) {
+    super("Multiple afterCommit hook or reporting failures");
+  }
+}
 
 const DEFAULT_LOGGER: TxManagerLogger = console;
 
@@ -103,51 +131,86 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     const currentContext = this.als.getStore();
 
     if (!currentContext) {
-      return this.executeRoot(fn, options, timeout);
+      const outcome = await this.executeRootWithOutcome(fn, options, timeout, false);
+      return outcome.value;
     }
 
-    if (nesting === "join") {
-      return fn();
-    }
-
-    return this.executeNested(currentContext, fn, options, timeout);
+    return this.executeTrackedNestedOperation(currentContext, () =>
+      nesting === "join"
+        ? this.executeJoined(currentContext, fn)
+        : this.executeNested(currentContext, fn, options, timeout),
+    );
   }
 
-  private async executeRoot<T>(
+  async runWithOutcome<T>(
+    fn: () => Promise<T>,
+    runOptions?: TxRunOptions<TOptions>,
+  ): Promise<TxRunOutcome<T>> {
+    if (runOptions?.timeout !== undefined) {
+      assertValidTimeout(runOptions.timeout, "run");
+    }
+
+    if (this.als.getStore()) {
+      throw new TransactionOutcomeContextProblem();
+    }
+
+    const options = runOptions?.options;
+    const timeout = runOptions?.timeout ?? this.defaultTimeout;
+    return this.executeRootWithOutcome(fn, options, timeout, true);
+  }
+
+  private async executeRootWithOutcome<T>(
     fn: () => Promise<T>,
     options?: TOptions,
     timeout?: number,
-  ): Promise<T> {
+    capturesAfterCommitOutcome = true,
+  ): Promise<TxRunOutcome<T>> {
     const afterCommitHooks: AfterCommitHook[] = [];
     const controller = new AbortController();
+    const rootGate: RootTransactionGate = {
+      activeNestedOperationCount: 0,
+      detachedOperationProblem: null,
+      registrationOpen: true,
+    };
 
     const executeTransaction = async (): Promise<T> => {
-      const result = await this.adapter.transaction(
+      return this.adapter.transaction(
         async (client) => {
           const context: TxContext<TClient> = {
+            activeChildOperationCount: 0,
             client,
             afterCommitHooks,
+            afterCommitRegistrationOpen: true,
+            capturesAfterCommitOutcome,
             isRoot: true,
+            rootGate,
           };
 
-          return this.setupContext(context, fn);
+          try {
+            const result = await this.setupContext(context, fn);
+            this.assertNoDetachedOperations(context, true);
+            return result;
+          } finally {
+            context.afterCommitRegistrationOpen = false;
+            rootGate.registrationOpen = false;
+          }
         },
         options,
         controller.signal,
       );
-
-      if (afterCommitHooks.length > 0) {
-        await this.setupContext(null, () => this.executeAfterCommitHooks(afterCommitHooks));
-      }
-
-      return result;
     };
 
-    if (timeout !== undefined) {
-      return executeWithTimeout(executeTransaction, timeout, controller);
-    }
+    const value =
+      timeout === undefined
+        ? await executeTransaction()
+        : await executeWithTimeout(executeTransaction, timeout, controller);
 
-    return executeTransaction();
+    const afterCommit =
+      afterCommitHooks.length === 0
+        ? ({ status: "succeeded", hookCount: 0 } as const)
+        : await this.setupContext(null, () => this.executeAfterCommitHooks(afterCommitHooks));
+
+    return { status: "committed", value, afterCommit };
   }
 
   private async executeNested<T>(
@@ -158,7 +221,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
   ): Promise<T> {
     if (!this.adapter.supportsSavepoint()) {
       this.warnSavepointNotSupported();
-      return fn();
+      return this.executeJoined(currentContext, fn);
     }
 
     const nestedHooks: AfterCommitHook[] = [];
@@ -170,21 +233,34 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
         currentContext.client,
         async (nestedClient) => {
           const nestedContext: TxContext<TClient> = {
+            activeChildOperationCount: 0,
             client: nestedClient,
             afterCommitHooks: nestedHooks,
+            afterCommitRegistrationOpen: true,
+            capturesAfterCommitOutcome: currentContext.capturesAfterCommitOutcome,
             isRoot: false,
+            rootGate: currentContext.rootGate,
           };
 
-          const nestedResult = await this.setupContext(nestedContext, fn);
-          shouldMergeNestedHooks = true;
-
-          return nestedResult;
+          try {
+            const nestedResult = await this.setupContext(nestedContext, fn);
+            this.assertNoDetachedOperations(nestedContext);
+            shouldMergeNestedHooks = true;
+            return nestedResult;
+          } finally {
+            nestedContext.afterCommitRegistrationOpen = false;
+          }
         },
         options,
         controller.signal,
       );
 
-      if (shouldMergeNestedHooks) {
+      if (
+        shouldMergeNestedHooks &&
+        currentContext.rootGate.registrationOpen &&
+        currentContext.afterCommitRegistrationOpen &&
+        currentContext.rootGate.detachedOperationProblem === null
+      ) {
         currentContext.afterCommitHooks.push(...nestedHooks);
       }
 
@@ -198,6 +274,68 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     return executeSavepoint();
   }
 
+  private async executeJoined<T>(
+    currentContext: TxContext<TClient>,
+    fn: () => Promise<T>,
+  ): Promise<T> {
+    const joinedContext: TxContext<TClient> = {
+      activeChildOperationCount: 0,
+      client: currentContext.client,
+      afterCommitHooks: currentContext.afterCommitHooks,
+      afterCommitRegistrationOpen: true,
+      capturesAfterCommitOutcome: currentContext.capturesAfterCommitOutcome,
+      isRoot: false,
+      rootGate: currentContext.rootGate,
+    };
+
+    try {
+      const result = await this.setupContext(joinedContext, fn);
+      this.assertNoDetachedOperations(joinedContext);
+      return result;
+    } finally {
+      joinedContext.afterCommitRegistrationOpen = false;
+    }
+  }
+
+  private async executeTrackedNestedOperation<T>(
+    parentContext: TxContext<TClient>,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    if (!parentContext.afterCommitRegistrationOpen || !parentContext.rootGate.registrationOpen) {
+      const problem =
+        parentContext.rootGate.detachedOperationProblem ??
+        new DetachedTransactionOperationProblem(1);
+      parentContext.rootGate.detachedOperationProblem = problem;
+      throw problem;
+    }
+
+    parentContext.activeChildOperationCount += 1;
+    parentContext.rootGate.activeNestedOperationCount += 1;
+    try {
+      return await operation();
+    } finally {
+      parentContext.activeChildOperationCount -= 1;
+      parentContext.rootGate.activeNestedOperationCount -= 1;
+    }
+  }
+
+  private assertNoDetachedOperations(context: TxContext<TClient>, includeRootGate = false): void {
+    if (context.rootGate.detachedOperationProblem) {
+      throw context.rootGate.detachedOperationProblem;
+    }
+
+    const activeOperationCount = includeRootGate
+      ? context.rootGate.activeNestedOperationCount
+      : context.activeChildOperationCount;
+    if (activeOperationCount === 0) {
+      return;
+    }
+
+    const problem = new DetachedTransactionOperationProblem(activeOperationCount);
+    context.rootGate.detachedOperationProblem = problem;
+    throw problem;
+  }
+
   private async setupContext<T>(
     context: NullableTxContext<TClient>,
     fn: () => Promise<T>,
@@ -207,11 +345,24 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
 
   getClient(): TClient | null {
     const context = this.als.getStore();
-    return context?.client ?? null;
+    if (!context?.afterCommitRegistrationOpen || !context.rootGate.registrationOpen) {
+      return null;
+    }
+    return context.client;
   }
 
   isInTransaction(): boolean {
-    return this.als.getStore() != null;
+    const context = this.als.getStore();
+    return Boolean(context?.afterCommitRegistrationOpen && context.rootGate.registrationOpen);
+  }
+
+  canRegisterAfterCommit(): boolean {
+    const context = this.als.getStore();
+    return Boolean(
+      context?.capturesAfterCommitOutcome &&
+      context.afterCommitRegistrationOpen &&
+      context.rootGate.registrationOpen,
+    );
   }
 
   onAfterCommit(hook: AfterCommitHook): void {
@@ -219,40 +370,104 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     if (!context) {
       throw new TransactionContextProblem();
     }
+    if (!context.capturesAfterCommitOutcome) {
+      throw new AfterCommitOutcomeRequiredProblem();
+    }
+    if (!context.afterCommitRegistrationOpen || !context.rootGate.registrationOpen) {
+      throw new AfterCommitRegistrationClosedProblem();
+    }
     context.afterCommitHooks.push(hook);
   }
 
-  private async executeAfterCommitHooks(hooks: AfterCommitHook[]): Promise<void> {
+  private async executeAfterCommitHooks(hooks: AfterCommitHook[]): Promise<AfterCommitOutcome> {
     const failures: AfterCommitHookFailure[] = [];
+    const errors: Error[] = [];
 
-    for (const hook of hooks) {
+    for (const [hookIndex, hook] of hooks.entries()) {
       try {
         await hook();
       } catch (error) {
         const normalizedError = this.normalizeError(error);
+        errors.push(normalizedError);
         failures.push({
           error: normalizedError,
-          name: normalizedError.name,
-          message: normalizedError.message,
+          ...this.describeFailure(normalizedError, "hook", hookIndex),
         });
-        this.safeLog("error", "AfterCommit hook failed:", { error: normalizedError });
+        try {
+          this.safeLog("error", "AfterCommit hook failed:", { error: normalizedError });
+        } catch (reportingError) {
+          const normalizedReportingError = this.normalizeError(reportingError);
+          errors.push(normalizedReportingError);
+          failures.push({
+            error: normalizedReportingError,
+            ...this.describeFailure(normalizedReportingError, "reporting", hookIndex),
+          });
+        }
       }
     }
 
     if (failures.length > 0) {
-      throw new AfterCommitHooksProblem(
-        failures.map(({ name, message }) => ({ name, message })),
-        failures[0].error,
-      );
+      const diagnostics = failures.map(({ error: _error, ...failure }) => failure);
+      const [firstError] = errors;
+      if (!firstError) {
+        return { status: "succeeded", hookCount: hooks.length };
+      }
+      const cause = errors.length === 1 ? firstError : new AfterCommitFailureAggregateError(errors);
+      return {
+        status: "failed",
+        hookCount: hooks.length,
+        failures: diagnostics,
+        problem: new AfterCommitHooksProblem(diagnostics, cause),
+      };
     }
+
+    return { status: "succeeded", hookCount: hooks.length };
   }
 
   private normalizeError(error: unknown): Error {
-    if (error instanceof Error) {
-      return error;
+    try {
+      if (error instanceof Error) {
+        return error;
+      }
+    } catch {
+      return new Error("Unknown afterCommit failure");
     }
 
-    return new Error(String(error));
+    try {
+      return new Error(String(error));
+    } catch {
+      return new Error("Unknown afterCommit failure");
+    }
+  }
+
+  private describeFailure(
+    error: Error,
+    phase: AfterCommitFailure["phase"],
+    hookIndex: number,
+  ): AfterCommitFailure {
+    const name = this.readErrorString(error, "name") ?? "Error";
+    const message = this.readErrorString(error, "message") ?? "Unknown afterCommit failure";
+    const code = this.readErrorString(error, "code");
+    return {
+      phase,
+      hookIndex,
+      name,
+      message,
+      ...(code === undefined ? {} : { code }),
+    };
+  }
+
+  private readErrorString(
+    error: Error,
+    property: "code" | "message" | "name",
+    fallback?: string,
+  ): string | undefined {
+    try {
+      const value = (error as unknown as Record<string, unknown>)[property];
+      return typeof value === "string" ? value : fallback;
+    } catch {
+      return fallback;
+    }
   }
 
   /**

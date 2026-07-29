@@ -43,6 +43,22 @@ AsyncLocalStorage 기반으로 현재 트랜잭션 컨텍스트를 관리하는 
 
 ## Methods
 
+### canRegisterAfterCommit()
+
+> **canRegisterAfterCommit**(): `boolean`
+
+Whether the active callback still accepts hooks and preserves their delivery evidence.
+
+#### Returns
+
+`boolean`
+
+#### Implementation of
+
+[`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`canRegisterAfterCommit`](/api/framework-context/src/interfaces/transactioncontext/#canregisteraftercommit)
+
+---
+
 ### getClient()
 
 > **getClient**(): `TClient` \| `null`
@@ -51,7 +67,7 @@ AsyncLocalStorage 기반으로 현재 트랜잭션 컨텍스트를 관리하는 
 
 `TClient` \| `null`
 
-***
+---
 
 ### isInTransaction()
 
@@ -65,7 +81,7 @@ AsyncLocalStorage 기반으로 현재 트랜잭션 컨텍스트를 관리하는 
 
 [`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`isInTransaction`](/api/framework-context/src/interfaces/transactioncontext/#isintransaction)
 
-***
+---
 
 ### onAfterCommit()
 
@@ -85,7 +101,7 @@ AsyncLocalStorage 기반으로 현재 트랜잭션 컨텍스트를 관리하는 
 
 [`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`onAfterCommit`](/api/framework-context/src/interfaces/transactioncontext/#onaftercommit)
 
-***
+---
 
 ### run()
 
@@ -111,7 +127,33 @@ AsyncLocalStorage 기반으로 현재 트랜잭션 컨텍스트를 관리하는 
 
 `Promise`\<`T`\>
 
-***
+---
+
+### runWithOutcome()
+
+> **runWithOutcome**\<`T`\>(`fn`, `runOptions?`): `Promise`\<[`TxRunOutcome`](/api/tx-core/src/type-aliases/txrunoutcome/)\<`T`\>\>
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### fn
+
+() => `Promise`\<`T`\>
+
+##### runOptions?
+
+[`TxRunOptions`](/api/tx-core/src/interfaces/txrunoptions/)\<`TOptions`\>
+
+#### Returns
+
+`Promise`\<[`TxRunOutcome`](/api/tx-core/src/type-aliases/txrunoutcome/)\<`T`\>\>
+
+---
 
 ### suspend()
 

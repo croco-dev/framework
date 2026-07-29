@@ -7,6 +7,18 @@ title: "TransactionContext"
 
 ## Methods
 
+### canRegisterAfterCommit()
+
+> **canRegisterAfterCommit**(): `boolean`
+
+Whether the active callback still accepts hooks and preserves their delivery evidence.
+
+#### Returns
+
+`boolean`
+
+---
+
 ### isInTransaction()
 
 > **isInTransaction**(): `boolean`
@@ -15,7 +27,7 @@ title: "TransactionContext"
 
 `boolean`
 
-***
+---
 
 ### onAfterCommit()
 
