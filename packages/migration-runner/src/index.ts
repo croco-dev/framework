@@ -4,6 +4,7 @@ export { MigrationScanner } from "./libs/MigrationScanner";
 export { MigrationStore } from "./libs/MigrationStore";
 export { DatabaseUrlRequiredProblem } from "./libs/problems/DatabaseUrlRequiredProblem";
 export { InvalidMigrationCountProblem } from "./libs/problems/InvalidMigrationCountProblem";
+export { MigrationFileLoadProblem } from "./libs/problems/MigrationFileLoadProblem";
 export {
   MigrationHistoryDriftProblem,
   type MigrationHistoryDrift,

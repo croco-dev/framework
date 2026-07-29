@@ -1,5 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
-import { join, parse } from "node:path";
+import { parse, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { MigrationFileLoadProblem } from "./problems/MigrationFileLoadProblem";
 import type { MigrationFile } from "./types";
 
 export class MigrationScanner {
@@ -14,7 +16,7 @@ export class MigrationScanner {
     const files: MigrationFile[] = [];
 
     for (const entry of entries.sort()) {
-      const fullPath = join(this.migrationsDir, entry);
+      const fullPath = resolve(this.migrationsDir, entry);
       const stats = await stat(fullPath);
 
       if (!stats.isFile()) continue;
@@ -28,7 +30,13 @@ export class MigrationScanner {
       const [, timestamp, migrationName] = match;
       const id = timestamp;
 
-      const module = await import(fullPath);
+      const moduleUrl = pathToFileURL(fullPath).href;
+      let module: Pick<MigrationFile, "up" | "down">;
+      try {
+        module = (await import(moduleUrl)) as Pick<MigrationFile, "up" | "down">;
+      } catch (error) {
+        throw new MigrationFileLoadProblem(moduleUrl, error);
+      }
 
       files.push({
         id,

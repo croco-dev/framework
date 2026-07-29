@@ -15374,6 +15374,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "MigrationFileLoadProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MigrationFileLoadProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "MigrationHistoryDriftProblem",
               "exportKind": "named",
               "source": "./libs/problems/MigrationHistoryDriftProblem",
