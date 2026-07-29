@@ -1,5 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -69,6 +77,10 @@ describe("published migrate CLI", () => {
         const packageVersion = readPackageVersion();
         const installedVersion = run("pnpm", ["exec", "migrate", "--version"], consumerRoot);
         expect(installedVersion.stdout.trim()).toBe(packageVersion);
+
+        writePackedCliMigrationSmoke(consumerRoot);
+        const migrationSmoke = run("node", ["packed-cli-migration-smoke.cjs"], consumerRoot);
+        expect(migrationSmoke.stdout).toContain("migration body executed");
       } finally {
         rmSync(packRoot, { force: true, recursive: true });
         rmSync(consumerRoot, { force: true, recursive: true });
@@ -88,6 +100,60 @@ function ensureBuilt(): void {
   if (!hasBuiltFiles(packageDir, ["cli.js", "cli.d.ts", "index.js", "index.d.ts"])) {
     run("pnpm", ["--filter", "@croco/migration-runner", "build"], rootDir);
   }
+}
+
+function writePackedCliMigrationSmoke(consumerRoot: string): void {
+  const migrationsDir = join(consumerRoot, "migrations");
+  mkdirSync(migrationsDir);
+  writeFileSync(
+    join(migrationsDir, "20260728000000_initialize.js"),
+    [
+      "exports.up = async function up(db) {",
+      "  await db.execute({ kind: 'migration-body' });",
+      "};",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(consumerRoot, "packed-cli-migration-smoke.cjs"),
+    [
+      "const { createProgram } = require('@croco/migration-runner/cli');",
+      "",
+      "let executeCall = 0;",
+      "let migrationBodyExecuted = false;",
+      "const db = {",
+      "  async execute(query) {",
+      "    executeCall += 1;",
+      "    if (query?.kind === 'migration-body') {",
+      "      migrationBodyExecuted = true;",
+      "      return [];",
+      "    }",
+      "    if (executeCall === 3) return { rows: [{ id: '20260728000000' }] };",
+      "    return [];",
+      "  },",
+      "  async transaction(work) {",
+      "    return work(db);",
+      "  },",
+      "};",
+      "",
+      "let exitCode;",
+      "const runtime = {",
+      "    async createDbClient() {",
+      "      return { db, pool: { async end() {} } };",
+      "    },",
+      "    writeOutput() {},",
+      "    writeError(message) { throw new Error(message); },",
+      "    exit(code) { exitCode = code; },",
+      "};",
+      "createProgram(runtime).parseAsync(['node', 'migrate', 'up']).then(() => {",
+      "  if (exitCode !== 0 || !migrationBodyExecuted) {",
+      "    throw new Error(`packed migration smoke failed: exit=${exitCode}, executed=${migrationBodyExecuted}`);",
+      "  }",
+      "  console.log('migration body executed');",
+      "});",
+      "",
+    ].join("\n"),
+  );
 }
 
 function hasBuiltFiles(packageRoot: string, files: readonly string[]): boolean {
