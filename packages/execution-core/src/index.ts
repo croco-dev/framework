@@ -5,6 +5,14 @@ export {
   MIN_CONTINUATION_LEASE_DURATION_MS,
 } from "./libs/ExecutionManagerImpl";
 export type { ExecutionManagerOptions } from "./libs/ExecutionManagerImpl";
+export { createExecutionCheckpointStoreConformanceSuite } from "./libs/conformance";
+export type {
+  ExecutionCheckpointConcurrencyResult,
+  ExecutionCheckpointStoreConformanceCase,
+  ExecutionCheckpointStoreConformanceOptions,
+  ExecutionCheckpointStoreConformanceSuite,
+  ExecutionCheckpointWrite,
+} from "./libs/conformance";
 export type {
   ExecutionContinuationConflictEvidence,
   ExecutionProblemCode,

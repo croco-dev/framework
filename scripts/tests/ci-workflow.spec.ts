@@ -222,16 +222,23 @@ describe("CI verification profile contract", () => {
   });
 
   it("allows only manifest entrypoints and explicit Actions-owned commands", () => {
-    expect(findWorkflowVerificationViolations(VALIDATE_JOB, ROOT_DIR)).toEqual([]);
+    expect(
+      findWorkflowVerificationViolations(`${VALIDATE_JOB}\n${REAL_RESOURCE_JOB}`, ROOT_DIR),
+    ).toEqual([]);
   });
 
-  it("runs membership concurrency against a digest-pinned PostgreSQL service", () => {
+  it("runs persistence concurrency against a digest-pinned PostgreSQL service", () => {
     expect(REAL_RESOURCE_JOB).toContain(
       "postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
     );
     expect(REAL_RESOURCE_JOB).toContain(
+      "EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain(
       "MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/execution-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/execution-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/membership-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain(
       "pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts",

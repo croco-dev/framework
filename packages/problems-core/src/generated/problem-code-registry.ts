@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 530,
+  problemCount: 531,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5086,6 +5086,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "execution/checkpoint-store-conformance",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#execution-checkpoint-store-conformance",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/execution-core/src/libs/ExecutionProblem.ts",
+          line: 138,
+          column: 12,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "execution/conflict",
       category: "Conflict",
       status: 409,
@@ -5109,7 +5141,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 89,
+          line: 90,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5139,7 +5171,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 128,
+          line: 129,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5171,7 +5203,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 117,
+          line: 118,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5201,7 +5233,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 93,
+          line: 94,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5232,7 +5264,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 28,
+          line: 29,
           column: 3,
           kind: "problem-class",
         },
@@ -5262,7 +5294,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 109,
+          line: 110,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5292,7 +5324,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 101,
+          line: 102,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5323,7 +5355,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 85,
+          line: 86,
           column: 12,
           kind: "problem-constructor",
         },

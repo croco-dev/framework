@@ -19,6 +19,22 @@ Factory methods for creating ExecutionProblem instances.
 
 ## Methods
 
+### checkpointStoreConformance()
+
+> `static` **checkpointStoreConformance**(`detail`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+#### Parameters
+
+##### detail
+
+`string`
+
+#### Returns
+
+[`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+---
+
 ### conflict()
 
 > `static` **conflict**(`detail`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)

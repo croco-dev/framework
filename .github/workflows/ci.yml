@@ -331,6 +331,8 @@ jobs:
               - 'packages/auth-drizzle/**'
               - 'packages/events-core/**'
               - 'packages/events-tx/**'
+              - 'packages/execution-core/**'
+              - 'packages/execution-drizzle/**'
               - 'packages/framework-context/**'
               - 'packages/membership-core/**'
               - 'packages/membership-drizzle/**'
@@ -579,12 +581,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify membership owner concurrency against PostgreSQL
+      - name: Verify persistence concurrency against PostgreSQL
         env:
+          EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
         run: |
           pnpm build --filter=@croco/membership-drizzle...
           pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
+          pnpm build --filter=@croco/execution-drizzle...
+          pnpm --filter @croco/execution-drizzle test:postgres
 
       - name: Verify fresh migration status against PostgreSQL
         env:

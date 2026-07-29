@@ -51,6 +51,17 @@ class InMemoryExecutionStore implements ExecutionStore, ExecutionContinuationSto
     return this.execution;
   }
 
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    if (this.execution?.id !== id) {
+      throw new Error(`Execution '${id}' not found`);
+    }
+    this.execution = {
+      ...this.execution,
+      checkpoints: { ...this.execution.checkpoints, [key]: value },
+    };
+    return this.execution;
+  }
+
   async updateIfStatus(
     id: string,
     expectedStatus: ExecutionStatus,
@@ -635,6 +646,9 @@ describe("ExecutionManagerImpl continuation claims", () => {
       findById: async () => null,
       findByIdempotencyKey: async () => null,
       update: async () => {
+        throw new Error("unused");
+      },
+      mergeCheckpoint: async () => {
         throw new Error("unused");
       },
       updateIfStatus: async () => null,

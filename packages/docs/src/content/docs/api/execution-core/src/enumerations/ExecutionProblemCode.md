@@ -7,6 +7,12 @@ title: "ExecutionProblemCode"
 
 ## Enumeration Members
 
+### CHECKPOINT_STORE_CONFORMANCE
+
+> **CHECKPOINT_STORE_CONFORMANCE**: `"execution/checkpoint-store-conformance"`
+
+---
+
 ### CONFLICT
 
 > **CONFLICT**: `"execution/conflict"`

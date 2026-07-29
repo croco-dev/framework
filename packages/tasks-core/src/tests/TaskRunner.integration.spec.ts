@@ -57,6 +57,14 @@ class MemoryExecutionStore extends ExecutionStore {
     return updated;
   }
 
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    const current = this.executions.get(id);
+    if (!current) throw ExecutionProblems.notFound(`Missing execution ${id}`);
+    return this.update(id, {
+      checkpoints: { ...current.checkpoints, [key]: value },
+    });
+  }
+
   async updateIfStatus(
     id: string,
     expectedStatus: ExecutionStatus,

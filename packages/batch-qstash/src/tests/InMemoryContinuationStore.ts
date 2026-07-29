@@ -46,6 +46,13 @@ export class InMemoryContinuationStore implements ExecutionStore, ExecutionConti
     return updated;
   }
 
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    const execution = this.required(id);
+    return this.update(id, {
+      checkpoints: { ...execution.checkpoints, [key]: value },
+    });
+  }
+
   async updateIfStatus(
     id: string,
     expectedStatus: ExecutionStatus,

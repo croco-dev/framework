@@ -73,6 +73,16 @@ class TestExecutionStore implements ExecutionStore, ExecutionLogStore {
     return updated;
   }
 
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    const execution = this.executions.get(id);
+    if (!execution) {
+      throw new Error(`Execution with id '${id}' not found`);
+    }
+    return this.update(id, {
+      checkpoints: { ...execution.checkpoints, [key]: value },
+    });
+  }
+
   async updateIfStatus(
     id: string,
     expectedStatus: Execution["status"],

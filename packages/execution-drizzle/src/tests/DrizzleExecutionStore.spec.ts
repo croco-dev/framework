@@ -726,6 +726,73 @@ describe("DrizzleExecutionStore", () => {
     });
   });
 
+  describe("mergeCheckpoint", () => {
+    it("merges one checkpoint key through a single atomic update", async () => {
+      const execution = createMockExecution({
+        checkpoints: { existing: "preserved", page: 10 },
+      });
+      let written: Record<string, unknown> = {};
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn((values: Record<string, unknown>) => {
+          written = values;
+          return {
+            where: vi.fn(() => ({
+              returning: vi.fn(() => Promise.resolve([execution])),
+            })),
+          };
+        }),
+      }));
+
+      const result = await store.mergeCheckpoint(execution.id, "page", 10);
+      const expression = written.checkpoints;
+      if (!expression) throw new Error("expected an atomic checkpoints expression");
+      const query = new PgDialect().sqlToQuery(expression as SQL);
+
+      expect(query.sql).toContain(
+        `coalesce("executions"."checkpoints"::jsonb, '{}'::jsonb) || $1::jsonb`,
+      );
+      expect(query.params).toEqual([JSON.stringify({ page: 10 })]);
+      expect(result.checkpoints).toEqual({ existing: "preserved", page: 10 });
+    });
+
+    it("uses the same atomic replacement expression for repeated writes to one key", async () => {
+      const execution = createMockExecution({ checkpoints: { cursor: "second" } });
+      const expressions: SQL[] = [];
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn((values: Record<string, unknown>) => {
+          expressions.push(values.checkpoints as SQL);
+          return {
+            where: vi.fn(() => ({
+              returning: vi.fn(() => Promise.resolve([execution])),
+            })),
+          };
+        }),
+      }));
+
+      await store.mergeCheckpoint(execution.id, "cursor", "first");
+      const updated = await store.mergeCheckpoint(execution.id, "cursor", "second");
+
+      expect(
+        expressions.map((expression) => new PgDialect().sqlToQuery(expression).params),
+      ).toEqual([[JSON.stringify({ cursor: "first" })], [JSON.stringify({ cursor: "second" })]]);
+      expect(updated.checkpoints?.cursor).toBe("second");
+    });
+
+    it("throws when merging a checkpoint into a missing execution", async () => {
+      mockDb.update = vi.fn(() => ({
+        set: vi.fn(() => ({
+          where: vi.fn(() => ({
+            returning: vi.fn(() => Promise.resolve([])),
+          })),
+        })),
+      }));
+
+      await expect(store.mergeCheckpoint("missing-execution", "cursor", "abc")).rejects.toThrow(
+        ExecutionProblem,
+      );
+    });
+  });
+
   describe("updateIfStatus", () => {
     it("uses both execution ID and expected status predicates", async () => {
       const execution = createMockExecution({ status: "completed" });

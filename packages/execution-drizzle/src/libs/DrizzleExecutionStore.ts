@@ -275,6 +275,26 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
   }
 
   /**
+   * 체크포인트 키 하나를 원자적으로 병합합니다.
+   */
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    const checkpoint = JSON.stringify({ [key]: value });
+    const result = (await this.dbOp
+      .update(executions)
+      .set({
+        checkpoints: sql`(coalesce(${executions.checkpoints}::jsonb, '{}'::jsonb) || ${checkpoint}::jsonb)::json`,
+      })
+      .where(eq(executions.id, id))
+      .returning()) as ExecutionRow[];
+
+    if (result.length === 0) {
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+    }
+
+    return this.mapToExecution(result[0]);
+  }
+
+  /**
    * 전달 토큰과 현재 continuation 상태를 비교해 실행 소유권을 원자적으로 획득합니다.
    */
   async acquireContinuation(

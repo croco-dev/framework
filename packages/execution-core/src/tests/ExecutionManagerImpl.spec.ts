@@ -10,7 +10,12 @@ import type {
   ListExecutionsOptions,
   ListRunningExecutionsOptions,
 } from "../index";
-import { createExecutionJobsOperations, ExecutionManagerImpl, ExecutionProblem } from "../index";
+import {
+  createExecutionCheckpointStoreConformanceSuite,
+  createExecutionJobsOperations,
+  ExecutionManagerImpl,
+  ExecutionProblem,
+} from "../index";
 
 class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
   private executions: Map<string, Execution> = new Map();
@@ -101,6 +106,20 @@ class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
     });
   }
 
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    const existing = this.executions.get(id);
+    if (!existing) {
+      throw new Error(`Execution with id '${id}' not found`);
+    }
+
+    return this.update(id, {
+      checkpoints: {
+        ...existing.checkpoints,
+        [key]: value,
+      },
+    });
+  }
+
   async list(options: ListExecutionsOptions = {}): Promise<Execution[]> {
     let executions = Array.from(this.executions.values());
 
@@ -128,6 +147,23 @@ class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
     this.executions.delete(id);
   }
 }
+
+describe("MockExecutionStore checkpoint conformance", () => {
+  const suite = createExecutionCheckpointStoreConformanceSuite({
+    createStore: () => new MockExecutionStore(),
+    runConcurrentWrites: async (store, executionId, writes) => {
+      await Promise.all(
+        writes.map((write) => store.mergeCheckpoint(executionId, write.key, write.value)),
+      );
+      return { lastAppliedWrite: writes.length - 1 };
+    },
+  });
+
+  for (const testCase of suite.cases) {
+    // oxlint-disable-next-line jest/valid-title -- exported conformance cases own stable names
+    it(testCase.name, testCase.run);
+  }
+});
 
 describe("ExecutionManagerImpl", () => {
   let store!: MockExecutionStore;
@@ -815,6 +851,31 @@ describe("ExecutionManagerImpl", () => {
 
       expect(updated.checkpoints?.first).toBe("value1");
       expect(updated.checkpoints?.second).toBe("value2");
+    });
+
+    it("preserves concurrent writes to different checkpoint keys", async () => {
+      const execution = await manager.create({ type: "batch" });
+
+      await Promise.all([
+        manager.checkpoint(execution.id, "page", 10),
+        manager.checkpoint(execution.id, "cursor", "abc"),
+      ]);
+
+      await expect(store.findById(execution.id)).resolves.toMatchObject({
+        checkpoints: {
+          page: 10,
+          cursor: "abc",
+        },
+      });
+    });
+
+    it("uses last-applied-writer-wins semantics for the same checkpoint key", async () => {
+      const execution = await manager.create({ type: "batch" });
+
+      await manager.checkpoint(execution.id, "cursor", "first");
+      const updated = await manager.checkpoint(execution.id, "cursor", "second");
+
+      expect(updated.checkpoints?.cursor).toBe("second");
     });
   });
 

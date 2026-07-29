@@ -56,6 +56,16 @@ export abstract class ExecutionStore {
   abstract update(id: string, data: Partial<Execution>): Promise<Execution>;
 
   /**
+   * Merge one checkpoint key atomically inside the persistence operation.
+   *
+   * Writes to different keys must not overwrite one another. Concurrent writes to the same key
+   * have no invocation-order or Promise-order guarantee: the store serializes the mutations and
+   * the mutation applied last wins. Callers that require deterministic same-key ordering or
+   * conflict detection must use a separate compare-and-set contract.
+   */
+  abstract mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution>;
+
+  /**
    * Update an execution only when its persisted status still matches the expected status.
    *
    * This is the required atomic boundary for lifecycle transitions that may race across workers.

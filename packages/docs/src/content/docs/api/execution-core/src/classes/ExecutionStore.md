@@ -153,6 +153,37 @@ List running executions in stable ID order using keyset pagination.
 
 ---
 
+### mergeCheckpoint()
+
+> `abstract` **mergeCheckpoint**(`id`, `key`, `value`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+Merge one checkpoint key atomically inside the persistence operation.
+
+Writes to different keys must not overwrite one another. Concurrent writes to the same key
+have no invocation-order or Promise-order guarantee: the store serializes the mutations and
+the mutation applied last wins. Callers that require deterministic same-key ordering or
+conflict detection must use a separate compare-and-set contract.
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### key
+
+`string`
+
+##### value
+
+`unknown`
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+---
+
 ### update()
 
 > `abstract` **update**(`id`, `data`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
