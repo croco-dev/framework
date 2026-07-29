@@ -32,7 +32,7 @@ type PolarSubscriptionEventType =
   | "subscription.revoked"
   | "subscription.past_due";
 
-type PolarOrderEventType = "order.paid" | "order.created" | "order.updated";
+type PolarOrderEventType = "order.paid";
 
 type ParsedSubscriptionPayload = {
   id: string;
@@ -202,10 +202,10 @@ export class PolarWebhookHandler {
       };
     }
 
-    if (eventType.startsWith("order.")) {
+    if (eventType === "order.paid") {
       return {
         kind: "order",
-        eventType: eventType as PolarOrderEventType,
+        eventType,
         payload: this.parseOrderPayload(data),
       };
     }

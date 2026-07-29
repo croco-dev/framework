@@ -115,11 +115,20 @@ const result = await handler.handle(requestBody, requestHeaders);
 
 ### 주문 이벤트
 
-| 이벤트 타입     | 설명           |
-| --------------- | -------------- |
-| `order.paid`    | 주문 결제 완료 |
-| `order.created` | 주문 생성      |
-| `order.updated` | 주문 업데이트  |
+| 이벤트 타입     | 설명                                                   |
+| --------------- | ------------------------------------------------------ |
+| `order.paid`    | 결제된 주문을 저장하고 `OrderPaidEvent` 발행           |
+| `order.created` | delivery를 멱등 처리하지만 결제 주문으로 저장하지 않음 |
+| `order.updated` | delivery를 멱등 처리하지만 결제 주문으로 저장하지 않음 |
+
+### 기존 오분류 주문 복구
+
+`@croco/billing-polar` 0.0.4 이하에서 `order.created` 또는 `order.updated` webhook을 처리했다면 결제
+증거가 없는 주문이 저장되었을 수 있습니다. 기존 주문 레코드만으로는 어떤 Polar 이벤트가 저장을
+만들었는지 판별할 수 없으므로, 배포 전에 `externalOrderId`를 Polar의 결제 완료 주문 또는 보존된
+webhook 기록의 `order.paid` 이벤트와 대조해야 합니다. `order.paid` 증거가 없는 레코드는 매출,
+invoice, LTV, entitlement 계산에서 제외하고 사용하는 `BillingStore` 백엔드에서 제거하거나
+비결제 상태를 표현하는 별도 레코드로 이관하세요.
 
 ## 멱등성
 
