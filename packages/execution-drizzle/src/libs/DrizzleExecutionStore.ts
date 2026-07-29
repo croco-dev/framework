@@ -1,7 +1,7 @@
 import {
   type AcquireExecutionContinuationInput,
   type AcquireExecutionContinuationResult,
-  type CreateExecutionParams,
+  type CreateExecutionRecordParams,
   type Execution,
   type ExecutionContinuationClaim,
   type ExecutionContinuationState,
@@ -115,7 +115,7 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
   /**
    * 새 실행을 생성합니다. idempotencyKey가 있으면 중복 생성을 방지합니다.
    */
-  async create(params: CreateExecutionParams): Promise<Execution> {
+  async create(params: CreateExecutionRecordParams): Promise<Execution> {
     const existing = params.idempotencyKey
       ? await this.findByIdempotencyKey(params.idempotencyKey)
       : null;
@@ -138,6 +138,7 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
       timeout: params.timeout ?? null,
       scheduledFor: params.scheduledFor ?? null,
       idempotencyKey: params.idempotencyKey ?? null,
+      requestFingerprint: params.requestFingerprint,
       replayOf: params.replayOf ?? null,
       logs: params.logs ?? null,
       parentId: params.parentId ?? null,
@@ -576,6 +577,7 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
       scheduledFor: row.scheduledFor ?? undefined,
       timeout: row.timeout ?? undefined,
       idempotencyKey: row.idempotencyKey ?? undefined,
+      requestFingerprint: row.requestFingerprint ?? undefined,
       replayOf: row.replayOf ?? undefined,
       logs: (row.logs as Execution["logs"]) ?? undefined,
       parentId: row.parentId ?? undefined,

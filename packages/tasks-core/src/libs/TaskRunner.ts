@@ -22,19 +22,34 @@ const noopLogger: ILogger = {
   child: () => noopLogger,
 };
 
-function resolveExecutionIdempotencyKey(
+async function resolveExecutionIdempotency(
+  taskId: string,
   taskIdempotencyKey?: string,
   executionIdempotencyKey?: string,
-): string | undefined {
-  if (executionIdempotencyKey === undefined) {
-    return taskIdempotencyKey;
-  }
+): Promise<{ idempotencyKey?: string; legacyIdempotencyKeys?: readonly string[] }> {
+  const legacyKey =
+    executionIdempotencyKey === undefined
+      ? taskIdempotencyKey
+      : taskIdempotencyKey === undefined
+        ? executionIdempotencyKey
+        : `${executionIdempotencyKey}:task:${taskIdempotencyKey}`;
+  if (legacyKey === undefined) return {};
 
-  if (taskIdempotencyKey === undefined) {
-    return executionIdempotencyKey;
-  }
+  const scope = JSON.stringify({
+    configuredKey: taskIdempotencyKey ?? null,
+    executionKey: executionIdempotencyKey ?? null,
+    taskId,
+    version: 2,
+  });
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(scope));
+  const fingerprint = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 
-  return `${executionIdempotencyKey}:task:${taskIdempotencyKey}`;
+  return {
+    idempotencyKey: `task:v2:${fingerprint}`,
+    legacyIdempotencyKeys: [legacyKey],
+  };
 }
 
 function normalizeThrownError(error: unknown): Error {
@@ -93,15 +108,20 @@ export class TaskRunner {
     }
 
     const taskOptions = task.metadata.options ?? {};
+    const idempotency = await resolveExecutionIdempotency(
+      taskId,
+      taskOptions.idempotencyKey,
+      options.idempotencyKey,
+    );
     const execution = await this.executionManager.create({
       type: taskId,
       payload,
       maxAttempts: taskOptions.maxAttempts,
       timeout: taskOptions.timeout,
-      idempotencyKey: resolveExecutionIdempotencyKey(
-        taskOptions.idempotencyKey,
-        options.idempotencyKey,
-      ),
+      idempotencyKey: idempotency.idempotencyKey,
+      ...(idempotency.legacyIdempotencyKeys === undefined
+        ? {}
+        : { legacyIdempotencyKeys: idempotency.legacyIdempotencyKeys }),
       ...(options.parentId !== undefined ? { parentId: options.parentId } : {}),
       ...(options.metadata !== undefined ? { metadata: options.metadata } : {}),
     });

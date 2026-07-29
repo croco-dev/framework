@@ -35,6 +35,7 @@ export const executions = pgTable(
     scheduledFor: timestamp("scheduled_for"),
     timeout: integer("timeout"),
     idempotencyKey: varchar("idempotency_key", { length: 255 }),
+    requestFingerprint: varchar("request_fingerprint", { length: 64 }),
     replayOf: varchar("replay_of", { length: 26 }),
     logs: jsonb("logs"),
     parentId: varchar("parent_id", { length: 26 }),

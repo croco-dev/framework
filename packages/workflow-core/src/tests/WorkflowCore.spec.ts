@@ -155,7 +155,7 @@ function getSubscriptionId(payload: unknown): string {
 async function waitForWorkflowExecution(manager: ExecutionManagerImpl): Promise<Execution> {
   for (let attempt = 0; attempt < 20; attempt++) {
     const [execution] = await manager.list({ type: "workflow" });
-    if (execution) {
+    if (execution?.status === "running") {
       return execution;
     }
 
@@ -362,13 +362,13 @@ describe("workflow-core", () => {
         status: "completed",
         maxAttempts: 2,
         timeout: 10_000,
-        idempotencyKey: `workflow-step:${result.executionId}:0:billing.fetch-subscription`,
+        idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
       }),
       expect.objectContaining({
         type: "billing.sync-entitlements",
         parentId: result.executionId,
         status: "completed",
-        idempotencyKey: `workflow-step:${result.executionId}:1:sync-entitlements`,
+        idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
         metadata: expect.objectContaining({
           workflowName: "billing-sync",
           workflowExecutionId: result.executionId,
@@ -425,14 +425,15 @@ describe("workflow-core", () => {
       expect.objectContaining({
         type: "billing.repeat-step",
         status: "completed",
-        idempotencyKey: `workflow-step:${result.executionId}:0:billing.repeat-step`,
+        idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
       }),
       expect.objectContaining({
         type: "billing.repeat-step",
         status: "completed",
-        idempotencyKey: `workflow-step:${result.executionId}:1:billing.repeat-step`,
+        idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
       }),
     ]);
+    expect(childExecutions[0].idempotencyKey).not.toBe(childExecutions[1].idempotencyKey);
   });
 
   it("deduplicates idempotent webhook workflows without re-running child tasks", async () => {
@@ -667,7 +668,7 @@ describe("workflow-core", () => {
         status: "retrying",
         parentId: retryingWorkflow.id,
         attempts: 1,
-        idempotencyKey: `workflow-step:${retryingWorkflow.id}:0:billing.retry-webhook`,
+        idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
       }),
     ]);
 
@@ -701,7 +702,7 @@ describe("workflow-core", () => {
         parentId: retryingWorkflow.id,
         attempts: 2,
         error: undefined,
-        idempotencyKey: `workflow-step:${retryingWorkflow.id}:0:billing.retry-webhook`,
+        idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
       }),
     ]);
     expect(childJobs).toEqual(
@@ -848,14 +849,14 @@ describe("workflow-core", () => {
         type: "billing.retry-fetch-subscription",
         status: "completed",
         attempts: 1,
-        idempotencyKey: `workflow-step:${retryingWorkflow.id}:0:billing.retry-fetch-subscription`,
+        idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
       }),
       expect.objectContaining({
         type: "billing.retry-sync-entitlements",
         status: "completed",
         attempts: 2,
         error: undefined,
-        idempotencyKey: `workflow-step:${retryingWorkflow.id}:1:sync-entitlements`,
+        idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
       }),
     ]);
     expect(childJobs).toEqual(

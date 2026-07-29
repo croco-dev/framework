@@ -143,6 +143,17 @@ export interface CreateExecutionParams {
   scheduledFor?: Date;
   /** Optional idempotency key for deduplication */
   idempotencyKey?: string;
+  /**
+   * Optional legacy keys checked only for a matching execution request.
+   *
+   * This supports bounded idempotency-key migrations without allowing a legacy collision
+   * from another execution type to block the new key. A matching execution type with a
+   * different durably persisted payload is an explicit idempotency conflict.
+   *
+   * Legacy and replacement writers must not run concurrently because lookup and creation
+   * across two different keys cannot be made atomic by the ExecutionStore contract.
+   */
+  legacyIdempotencyKeys?: readonly string[];
   /** Optional original execution ID when this execution is a replay */
   replayOf?: string;
   /** Initial log entries */
@@ -233,6 +244,8 @@ export interface Execution {
   timeout?: number;
   /** Optional idempotency key for deduplication */
   idempotencyKey?: string;
+  /** Canonical fingerprint of the execution type and payload used for idempotency validation. */
+  requestFingerprint?: string;
   /** Original execution ID when this execution was created by replay */
   replayOf?: string;
   /** Append-only inspection log */
@@ -247,4 +260,15 @@ export interface Execution {
   progress?: ProgressInfo;
   /** Optional atomic continuation state for chunked deliveries */
   continuation?: ExecutionContinuationState;
+}
+
+/**
+ * Store input produced by ExecutionManager after request fingerprinting and legacy-key lookup.
+ */
+export interface CreateExecutionRecordParams extends Omit<
+  CreateExecutionParams,
+  "legacyIdempotencyKeys"
+> {
+  /** Required and persisted when idempotencyKey is present. */
+  requestFingerprint?: string;
 }

@@ -151,7 +151,8 @@ describe("TaskRunner", () => {
       payload: { data: "test" },
       maxAttempts: undefined,
       timeout: undefined,
-      idempotencyKey: "workflow-1:sync",
+      idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
+      legacyIdempotencyKeys: ["workflow-1:sync"],
     });
   });
 
@@ -179,8 +180,48 @@ describe("TaskRunner", () => {
       payload: { data: "test" },
       maxAttempts: undefined,
       timeout: undefined,
-      idempotencyKey: "workflow-1:configured:task:configured-key",
+      idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
+      legacyIdempotencyKeys: ["workflow-1:configured:task:configured-key"],
     });
+  });
+
+  it("should keep long unicode runtime keys within the persisted key limit", async () => {
+    const runner = new TaskRunner(mockExecutionManager, registry);
+    const runtimeKey = "한".repeat(255);
+
+    await runner.execute("test-task", { data: "test" }, { idempotencyKey: runtimeKey });
+
+    expect(mockExecutionManager.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
+        legacyIdempotencyKeys: [runtimeKey],
+      }),
+    );
+    const params = vi.mocked(mockExecutionManager.create).mock.calls[0][0];
+    expect(params.idempotencyKey).toHaveLength(72);
+  });
+
+  it("should namespace configured-only keys away from runtime key text", async () => {
+    @Component()
+    class ConfiguredTaskHandler {
+      @Task({ name: "configured-only-task", idempotencyKey: "task:v2:caller-text" })
+      process(): string {
+        return "processed";
+      }
+    }
+
+    Container.set(ConfiguredTaskHandler, new ConfiguredTaskHandler());
+    registry.collectFromMetadata();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await runner.execute("configured-only-task", {});
+
+    expect(mockExecutionManager.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        idempotencyKey: expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
+        legacyIdempotencyKeys: ["task:v2:caller-text"],
+      }),
+    );
   });
 
   it("should return completed idempotent execution result without restarting it", async () => {

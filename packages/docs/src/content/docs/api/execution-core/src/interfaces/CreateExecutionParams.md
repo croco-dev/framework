@@ -15,7 +15,22 @@ Parameters for creating a new execution.
 
 Optional idempotency key for deduplication
 
-***
+---
+
+### legacyIdempotencyKeys?
+
+> `optional` **legacyIdempotencyKeys?**: readonly `string`[]
+
+Optional legacy keys checked only for a matching execution request.
+
+This supports bounded idempotency-key migrations without allowing a legacy collision
+from another execution type to block the new key. A matching execution type with a
+different durably persisted payload is an explicit idempotency conflict.
+
+Legacy and replacement writers must not run concurrently because lookup and creation
+across two different keys cannot be made atomic by the ExecutionStore contract.
+
+---
 
 ### logs?
 
@@ -23,7 +38,7 @@ Optional idempotency key for deduplication
 
 Initial log entries
 
-***
+---
 
 ### maxAttempts?
 
@@ -31,7 +46,7 @@ Initial log entries
 
 Maximum retry attempts (default: 1)
 
-***
+---
 
 ### metadata?
 
@@ -39,7 +54,7 @@ Maximum retry attempts (default: 1)
 
 Optional metadata
 
-***
+---
 
 ### parentId?
 
@@ -47,7 +62,7 @@ Optional metadata
 
 Optional parent execution ID for nested executions
 
-***
+---
 
 ### payload?
 
@@ -55,7 +70,7 @@ Optional parent execution ID for nested executions
 
 Optional payload data
 
-***
+---
 
 ### replayOf?
 
@@ -63,7 +78,7 @@ Optional payload data
 
 Optional original execution ID when this execution is a replay
 
-***
+---
 
 ### scheduledFor?
 
@@ -71,7 +86,7 @@ Optional original execution ID when this execution is a replay
 
 Optional scheduled start time
 
-***
+---
 
 ### timeout?
 
@@ -79,7 +94,7 @@ Optional scheduled start time
 
 Timeout in milliseconds (default: no timeout)
 
-***
+---
 
 ### type
 

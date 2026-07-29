@@ -68,9 +68,17 @@ const runningBatch = await store.listRunning({ afterId: undefined, limit: 100 })
 
 실행 영속화에 사용하는 PostgreSQL 스키마입니다. `idempotency_key`, `parent_id`, `replay_of`, `status`, `type` 인덱스를 포함합니다.
 
-`continuation`은 nullable JSONB 컬럼입니다. 이 버전을 배포하기 전에 애플리케이션이 사용하는 migration 도구로
-`executions.continuation jsonb null` 컬럼을 먼저 추가해야 합니다. 스키마 migration보다 새 애플리케이션 코드를 먼저
-배포하면 continuation claim 쿼리가 실패하므로, migration 완료를 확인한 뒤 순차적으로 배포하세요.
+`continuation`은 nullable JSONB 컬럼이고, `request_fingerprint`는 nullable `varchar(64)` 컬럼입니다. 이 버전을
+배포하기 전에 애플리케이션이 사용하는 migration 도구로 다음 컬럼을 먼저 추가해야 합니다.
+
+```sql
+ALTER TABLE executions ADD COLUMN IF NOT EXISTS continuation jsonb;
+ALTER TABLE executions ADD COLUMN IF NOT EXISTS request_fingerprint varchar(64);
+```
+
+스키마 migration보다 새 애플리케이션 코드를 먼저 배포하면 execution 쿼리가 실패합니다. migration 완료 후 기존
+task writer를 모두 drain하고 새 버전을 배포하세요. 구버전 writer와 새 버전 writer가 동시에 실행되면 legacy key 조회와
+scoped key 생성 사이에 두 실행이 만들어질 수 있으므로 혼합 버전 배포는 지원하지 않습니다.
 
 ### 타입
 

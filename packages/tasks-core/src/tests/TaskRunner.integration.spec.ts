@@ -1,5 +1,5 @@
 import {
-  type CreateExecutionParams,
+  type CreateExecutionRecordParams,
   type Execution,
   ExecutionManagerImpl,
   ExecutionProblems,
@@ -20,7 +20,7 @@ class MemoryExecutionStore extends ExecutionStore {
   private readonly executions = new Map<string, Execution>();
   private sequence = 0;
 
-  async create(params: CreateExecutionParams): Promise<Execution> {
+  async create(params: CreateExecutionRecordParams): Promise<Execution> {
     const execution: Execution = {
       id: `exec-${String(++this.sequence).padStart(4, "0")}`,
       type: params.type,
@@ -31,6 +31,7 @@ class MemoryExecutionStore extends ExecutionStore {
       ...(params.payload !== undefined ? { payload: params.payload } : {}),
       ...(params.timeout !== undefined ? { timeout: params.timeout } : {}),
       ...(params.idempotencyKey !== undefined ? { idempotencyKey: params.idempotencyKey } : {}),
+      requestFingerprint: params.requestFingerprint,
       ...(params.parentId !== undefined ? { parentId: params.parentId } : {}),
       ...(params.metadata !== undefined ? { metadata: params.metadata } : {}),
     };
@@ -161,5 +162,110 @@ describe("TaskRunner integration", () => {
       attempts: 1,
       completedAt: new Date(),
     });
+  });
+
+  it("should scope the same runtime idempotency key to each task contract", async () => {
+    @Component()
+    class FirstTask {
+      @Task({ name: "first-task" })
+      handle(payload: { value: string }): string {
+        return `first: ${payload.value}`;
+      }
+    }
+
+    @Component()
+    class SecondTask {
+      @Task({ name: "second-task" })
+      handle(payload: { value: string }): string {
+        return `second: ${payload.value}`;
+      }
+    }
+
+    Container.set(FirstTask, new FirstTask());
+    Container.set(SecondTask, new SecondTask());
+    const manager = new ExecutionManagerImpl(new MemoryExecutionStore());
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+
+    await expect(
+      runner.execute("first-task", { value: "one" }, { idempotencyKey: "same" }),
+    ).resolves.toBe("first: one");
+    await expect(
+      runner.execute("second-task", { value: "two" }, { idempotencyKey: "same" }),
+    ).resolves.toBe("second: two");
+
+    const executions = await manager.list();
+    expect(executions).toHaveLength(2);
+    expect(executions.map((execution) => execution.idempotencyKey)).toEqual([
+      expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
+      expect.stringMatching(/^task:v2:[a-f0-9]{64}$/),
+    ]);
+    expect(executions[0].idempotencyKey).not.toBe(executions[1].idempotencyKey);
+  });
+
+  it("should reuse only an identical task request for the same runtime key", async () => {
+    let invocationCount = 0;
+
+    @Component()
+    class IdempotentTask {
+      @Task({ name: "idempotent-task" })
+      handle(payload: { value: string }): string {
+        invocationCount += 1;
+        return `processed: ${payload.value}`;
+      }
+    }
+
+    Container.set(IdempotentTask, new IdempotentTask());
+    const manager = new ExecutionManagerImpl(new MemoryExecutionStore());
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+
+    await expect(
+      runner.execute("idempotent-task", { value: "one" }, { idempotencyKey: "same" }),
+    ).resolves.toBe("processed: one");
+    await expect(
+      runner.execute("idempotent-task", { value: "one" }, { idempotencyKey: "same" }),
+    ).resolves.toBe("processed: one");
+    await expect(
+      runner.execute("idempotent-task", { value: "two" }, { idempotencyKey: "same" }),
+    ).rejects.toMatchObject({
+      code: "execution/idempotency-conflict",
+    });
+    expect(invocationCount).toBe(1);
+  });
+
+  it("should reuse only a matching legacy runtime key during scoped-key rollout", async () => {
+    let invocationCount = 0;
+
+    @Component()
+    class MigratedTask {
+      @Task({ name: "migrated-task" })
+      handle(): string {
+        invocationCount += 1;
+        return "new-result";
+      }
+    }
+
+    Container.set(MigratedTask, new MigratedTask());
+    const manager = new ExecutionManagerImpl(new MemoryExecutionStore());
+    const matchingLegacy = await manager.create({
+      type: "migrated-task",
+      payload: { value: "same" },
+      idempotencyKey: "matching-legacy",
+    });
+    await manager.start(matchingLegacy.id);
+    await manager.complete(matchingLegacy.id, "legacy-result");
+    await manager.create({
+      type: "other-task",
+      payload: { value: "other" },
+      idempotencyKey: "conflicting-legacy",
+    });
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+
+    await expect(
+      runner.execute("migrated-task", { value: "same" }, { idempotencyKey: "matching-legacy" }),
+    ).resolves.toBe("legacy-result");
+    await expect(
+      runner.execute("migrated-task", { value: "new" }, { idempotencyKey: "conflicting-legacy" }),
+    ).resolves.toBe("new-result");
+    expect(invocationCount).toBe(1);
   });
 });

@@ -25,6 +25,12 @@ title: "ExecutionProblemCode"
 
 ---
 
+### IDEMPOTENCY_CONFLICT
+
+> **IDEMPOTENCY_CONFLICT**: `"execution/idempotency-conflict"`
+
+---
+
 ### INVALID_CONTINUATION_LEASE_DURATION
 
 > **INVALID_CONTINUATION_LEASE_DURATION**: `"execution/invalid-continuation-lease-duration"`

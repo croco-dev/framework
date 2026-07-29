@@ -55,6 +55,7 @@ export type {
 } from "./libs/interfaces/ExecutionStore";
 export type {
   AddExecutionLogParams,
+  CreateExecutionRecordParams,
   CreateExecutionParams,
   Execution,
   ExecutionError,

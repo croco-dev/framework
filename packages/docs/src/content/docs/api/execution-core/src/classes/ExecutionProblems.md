@@ -71,6 +71,22 @@ Factory methods for creating ExecutionProblem instances.
 
 ---
 
+### idempotencyConflict()
+
+> `static` **idempotencyConflict**(`detail`): [`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+#### Parameters
+
+##### detail
+
+`string`
+
+#### Returns
+
+[`ExecutionProblem`](/api/execution-core/src/classes/executionproblem/)
+
+---
+
 ### invalidContinuationLeaseDuration()
 
 > `static` **invalidContinuationLeaseDuration**(`options`): [`InvalidContinuationLeaseDurationProblem`](/api/execution-core/src/classes/invalidcontinuationleasedurationproblem/)
