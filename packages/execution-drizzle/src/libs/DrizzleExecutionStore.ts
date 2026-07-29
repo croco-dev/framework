@@ -22,6 +22,25 @@ import { executions } from "./schema";
 
 type AwaitableQueryResult = PromiseLike<unknown>;
 
+function serializeCheckpoint(key: string, value: unknown): string {
+  let checkpoint: string;
+  try {
+    checkpoint = JSON.stringify({ [key]: value });
+  } catch {
+    throw ExecutionProblems.checkpointStoreConformance(
+      `Checkpoint '${key}' must contain a JSON-serializable value`,
+    );
+  }
+
+  const serialized = JSON.parse(checkpoint) as Record<string, unknown>;
+  if (!Object.prototype.hasOwnProperty.call(serialized, key)) {
+    throw ExecutionProblems.checkpointStoreConformance(
+      `Checkpoint '${key}' must contain a JSON-serializable value`,
+    );
+  }
+  return checkpoint;
+}
+
 type InsertQuery = {
   values(values: unknown): {
     onConflictDoNothing(config: { target: unknown }): {
@@ -278,7 +297,7 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
    * 체크포인트 키 하나를 원자적으로 병합합니다.
    */
   async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
-    const checkpoint = JSON.stringify({ [key]: value });
+    const checkpoint = serializeCheckpoint(key, value);
     const result = (await this.dbOp
       .update(executions)
       .set({

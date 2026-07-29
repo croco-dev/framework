@@ -15,6 +15,7 @@ import {
   createExecutionJobsOperations,
   ExecutionManagerImpl,
   ExecutionProblem,
+  ExecutionProblems,
 } from "../index";
 
 class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
@@ -109,7 +110,7 @@ class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
   async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
     const existing = this.executions.get(id);
     if (!existing) {
-      throw new Error(`Execution with id '${id}' not found`);
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
     }
 
     return this.update(id, {

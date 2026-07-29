@@ -791,6 +791,19 @@ describe("DrizzleExecutionStore", () => {
         ExecutionProblem,
       );
     });
+
+    it("rejects checkpoint values that cannot be represented as JSON", async () => {
+      const cyclic: Record<string, unknown> = {};
+      cyclic.self = cyclic;
+      mockDb.update = vi.fn();
+
+      for (const value of [undefined, BigInt(1), cyclic]) {
+        await expect(store.mergeCheckpoint("execution-1", "cursor", value)).rejects.toMatchObject({
+          code: "execution/checkpoint-store-conformance",
+        });
+      }
+      expect(mockDb.update).not.toHaveBeenCalled();
+    });
   });
 
   describe("updateIfStatus", () => {

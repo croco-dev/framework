@@ -17,6 +17,7 @@ import type {
 import {
   ExecutionManagerImpl,
   ExecutionProblem,
+  ExecutionProblems,
   InvalidContinuationLeaseDurationProblem,
   MAX_CONTINUATION_LEASE_DURATION_MS,
   MIN_CONTINUATION_LEASE_DURATION_MS,
@@ -53,7 +54,7 @@ class InMemoryExecutionStore implements ExecutionStore, ExecutionContinuationSto
 
   async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
     if (this.execution?.id !== id) {
-      throw new Error(`Execution '${id}' not found`);
+      throw ExecutionProblems.notFound(`Execution '${id}' not found`);
     }
     this.execution = {
       ...this.execution,
@@ -649,7 +650,9 @@ describe("ExecutionManagerImpl continuation claims", () => {
         throw new Error("unused");
       },
       mergeCheckpoint: async () => {
-        throw new Error("unused");
+        throw ExecutionProblems.checkpointStoreConformance(
+          "Unexpected checkpoint merge without atomic continuation support",
+        );
       },
       updateIfStatus: async () => null,
       listRunning: async () => [],

@@ -1,11 +1,10 @@
-import {
-  createExecutionCheckpointStoreConformanceSuite,
-  type Execution,
-} from "@croco/execution-core";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool, type PoolClient } from "pg";
+import { Pool } from "pg";
 import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { createExecutionCheckpointStoreConformanceSuite } from "@croco/execution-core";
 import { DrizzleExecutionStore } from "../libs/DrizzleExecutionStore";
+import type { PoolClient } from "pg";
+import type { Execution } from "@croco/execution-core";
 
 const connectionString = process.env.EXECUTION_POSTGRES_URL ?? "";
 
@@ -26,7 +25,7 @@ async function waitUntilCheckpointWriterBlocks(pool: Pool, applicationName: stri
     }
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
-  throw new Error(`Checkpoint writer '${applicationName}' did not block on the row lock`);
+  assert.fail(`Checkpoint writer '${applicationName}' did not block on the row lock`);
 }
 
 async function identify(client: PoolClient, applicationName: string): Promise<void> {
