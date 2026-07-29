@@ -10,11 +10,11 @@ export enum ExecutionProblemCode {
   CONTINUATION_CONFLICT = "execution/continuation-conflict",
 }
 
-export interface InvalidContinuationLeaseDurationProblemOptions {
+export type InvalidContinuationLeaseDurationProblemOptions = {
   receivedValue: number;
   minimumMs: number;
   maximumMs: number;
-}
+};
 
 export interface ExecutionContinuationConflictEvidence {
   currentWorkerId?: string;

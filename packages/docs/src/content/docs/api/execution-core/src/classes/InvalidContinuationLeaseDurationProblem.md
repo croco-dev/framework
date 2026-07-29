@@ -21,7 +21,7 @@ Raised when a continuation lease cannot be represented safely by timers and stor
 
 ##### options
 
-[`InvalidContinuationLeaseDurationProblemOptions`](/api/execution-core/src/interfaces/invalidcontinuationleasedurationproblemoptions/)
+[`InvalidContinuationLeaseDurationProblemOptions`](/api/execution-core/src/type-aliases/invalidcontinuationleasedurationproblemoptions/)
 
 #### Returns
 

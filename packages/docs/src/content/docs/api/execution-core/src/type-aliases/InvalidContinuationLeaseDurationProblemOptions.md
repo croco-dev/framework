@@ -5,6 +5,8 @@ prev: false
 title: "InvalidContinuationLeaseDurationProblemOptions"
 ---
 
+> **InvalidContinuationLeaseDurationProblemOptions** = `object`
+
 ## Properties
 
 ### maximumMs

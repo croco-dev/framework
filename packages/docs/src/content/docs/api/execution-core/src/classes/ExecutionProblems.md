@@ -79,7 +79,7 @@ Factory methods for creating ExecutionProblem instances.
 
 ##### options
 
-[`InvalidContinuationLeaseDurationProblemOptions`](/api/execution-core/src/interfaces/invalidcontinuationleasedurationproblemoptions/)
+[`InvalidContinuationLeaseDurationProblemOptions`](/api/execution-core/src/type-aliases/invalidcontinuationleasedurationproblemoptions/)
 
 #### Returns
 
