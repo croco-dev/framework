@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 526,
+  problemCount: 527,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -615,7 +615,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 35,
+          line: 48,
           column: 3,
           kind: "problem-class",
         },
@@ -676,7 +676,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 43,
+          line: 56,
           column: 3,
           kind: "problem-class",
         },
@@ -1394,7 +1394,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 67,
+          line: 80,
           column: 3,
           kind: "problem-class",
         },
@@ -1424,7 +1424,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 75,
+          line: 88,
           column: 3,
           kind: "problem-class",
         },
@@ -1520,7 +1520,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 83,
+          line: 96,
           column: 3,
           kind: "problem-class",
         },
@@ -1550,7 +1550,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 59,
+          line: 72,
           column: 3,
           kind: "problem-class",
         },
@@ -1580,7 +1580,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
-          line: 51,
+          line: 64,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "auth-core/invalid-route-metadata-target",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#auth-core-invalid-route-metadata-target",
+      recovery: {
+        cause:
+          "An authentication guard received a route metadata target that was neither an object nor a function.",
+        userAction:
+          "Do not retry the unchanged request; ask the service operator to correct the route metadata configuration.",
+        operatorAction:
+          "Inspect the route adapter metadata target and ensure it returns the controller object or constructor before handling requests.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/auth-core/src/libs/problems/AuthProblems.ts",
+          line: 35,
           column: 3,
           kind: "problem-class",
         },

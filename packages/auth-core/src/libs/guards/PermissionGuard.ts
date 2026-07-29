@@ -7,23 +7,16 @@ import type { UserPrincipal } from "../interfaces/Principal";
 import { ForbiddenProblem } from "../problems/AuthProblems";
 import { hasPermission } from "../rbac/Permission";
 import type { RbacEngine } from "../rbac/RbacEngine";
+import { requireRouteMetadataTarget } from "./requireRouteMetadataTarget";
 
 type PrincipalWithRoles = UserPrincipal | AuthUser;
-
-function isMetadataTarget(value: unknown): value is object {
-  return (typeof value === "object" && value !== null) || typeof value === "function";
-}
 
 export class PermissionGuard implements Guard<RouteExecutionContext> {
   constructor(private rbacEngine: RbacEngine) {}
 
   canActivate(context: RouteExecutionContext): boolean {
-    const target = context.getClass();
+    const target = requireRouteMetadataTarget(context.getClass());
     const handler = context.getHandler();
-
-    if (!isMetadataTarget(target)) {
-      return true;
-    }
 
     const requiredPermissions = Reflect.getMetadata(AUTH_PERMISSIONS_KEY, target, handler) as
       | string[]

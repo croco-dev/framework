@@ -3558,6 +3558,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidRouteMetadataTargetProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/AuthProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "parsePermission",
               "exportKind": "named",
               "source": "./libs/rbac/Permission",

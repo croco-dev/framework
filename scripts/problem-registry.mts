@@ -1884,6 +1884,17 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "auth-core/invalid-route-metadata-target": recovery({
+    cause:
+      "An authentication guard received a route metadata target that was neither an object nor a function.",
+    userAction:
+      "Do not retry the unchanged request; ask the service operator to correct the route metadata configuration.",
+    operatorAction:
+      "Inspect the route adapter metadata target and ensure it returns the controller object or constructor before handling requests.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "create-croco-app/unsupported-node-version": recovery({
     cause: "The detected Node.js version is outside the supported generated-app toolchain train.",
     userAction: `Install and activate Node.js ${VERSIONS.node} with \`nvm install ${VERSIONS.node} && nvm use ${VERSIONS.node}\`, then rerun the command.`,

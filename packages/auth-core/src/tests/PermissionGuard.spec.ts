@@ -1,12 +1,16 @@
 import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  authGuardConformance,
+  createRouteMetadataAdapterFixtures,
+} from "../../../../test-support/authGuardConformance";
 import { AUTH_PERMISSIONS_KEY } from "../libs/constants";
 import { PermissionGuard } from "../libs/guards/PermissionGuard";
 import type { AuthRequest } from "../libs/interfaces/AuthRequest";
 import type { AuthUser } from "../libs/interfaces/AuthUser";
 import type { RouteExecutionContext } from "../libs/interfaces/Guard";
 import type { ApiKeyPrincipal, UserPrincipal } from "../libs/interfaces/Principal";
-import { ForbiddenProblem } from "../libs/problems/AuthProblems";
+import { ForbiddenProblem, InvalidRouteMetadataTargetProblem } from "../libs/problems/AuthProblems";
 import type { RbacEngine } from "../libs/rbac/RbacEngine";
 
 describe("PermissionGuard", () => {
@@ -49,6 +53,21 @@ describe("PermissionGuard", () => {
 
     permissionGuard = new PermissionGuard(mockRbacEngine);
   });
+
+  describe.each(authGuardConformance.invalidRouteMetadataTargets)(
+    "with a $name route metadata target",
+    ({ value }) => {
+      it.each(createRouteMetadataAdapterFixtures(value, { headers: new Headers() }))(
+        "should reject the malformed $adapter adapter context",
+        ({ context }) => {
+          expect(() => permissionGuard.canActivate(context as RouteExecutionContext)).toThrow(
+            InvalidRouteMetadataTargetProblem,
+          );
+          expect(mockRbacEngine.hasPermission).not.toHaveBeenCalled();
+        },
+      );
+    },
+  );
 
   it("should return true when no permissions are required", () => {
     class TestController {

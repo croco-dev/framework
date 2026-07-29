@@ -5,6 +5,7 @@ import { ProblemFactory } from "@croco/problems-core";
 import {
   authGuardConformance,
   createConformanceAuthCoreUser,
+  createRouteMetadataAdapterFixtures,
 } from "../../../../test-support/authGuardConformance";
 import { AUTH_PUBLIC_KEY } from "../libs/constants";
 import { AUTH_PROVIDER_TOKEN, AuthGuard } from "../libs/guards/AuthGuard";
@@ -12,7 +13,11 @@ import type { AuthProvider } from "../libs/interfaces/AuthProvider";
 import type { AuthRequest } from "../libs/interfaces/AuthRequest";
 import type { AuthUser } from "../libs/interfaces/AuthUser";
 import type { RouteExecutionContext } from "../libs/interfaces/Guard";
-import { AuthProviderUnavailableProblem, UnauthorizedProblem } from "../libs/problems/AuthProblems";
+import {
+  AuthProviderUnavailableProblem,
+  InvalidRouteMetadataTargetProblem,
+  UnauthorizedProblem,
+} from "../libs/problems/AuthProblems";
 
 describe("AuthGuard", () => {
   let authGuard!: AuthGuard;
@@ -40,6 +45,27 @@ describe("AuthGuard", () => {
     Container.set(AUTH_PROVIDER_TOKEN, mockAuthProvider);
     authGuard = new AuthGuard();
   });
+
+  describe.each(authGuardConformance.invalidRouteMetadataTargets)(
+    "with a $name route metadata target",
+    ({ value }) => {
+      it.each(createRouteMetadataAdapterFixtures(value, { headers: new Headers() }))(
+        "should reject the malformed $adapter adapter context",
+        async ({ context }) => {
+          await expect(authGuard.canActivate(context as RouteExecutionContext)).rejects.toThrow(
+            InvalidRouteMetadataTargetProblem,
+          );
+          await expect(
+            authGuard.canActivate(context as RouteExecutionContext),
+          ).rejects.toMatchObject({
+            code: "auth-core/invalid-route-metadata-target",
+            status: 500,
+          });
+          expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+        },
+      );
+    },
+  );
 
   it("should return true when route is public", async () => {
     class TestController {

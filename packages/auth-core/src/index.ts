@@ -178,6 +178,7 @@ export {
   ForbiddenProblem,
   InvalidPermissionActionProblem,
   InvalidPermissionFormatProblem,
+  InvalidRouteMetadataTargetProblem,
   UnauthorizedProblem,
 } from "./libs/problems/AuthProblems";
 

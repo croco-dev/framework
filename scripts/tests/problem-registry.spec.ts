@@ -183,6 +183,45 @@ describe("problem-registry.mts", () => {
     expect(problem?.recovery.telemetry.attributes).not.toContain("receivedValue");
   });
 
+  it("publishes non-retryable recovery metadata for invalid auth route targets", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/auth-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class InvalidRouteMetadataTargetProblem extends Problem {",
+        "  constructor() {",
+        '    super("auth-core/invalid-route-metadata-target", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+    const registry = readRegistry(repo);
+    const problem = registry.problems.find(
+      ({ code }) => code === "auth-core/invalid-route-metadata-target",
+    );
+
+    expect(problem?.recovery).toEqual({
+      cause:
+        "An authentication guard received a route metadata target that was neither an object nor a function.",
+      userAction:
+        "Do not retry the unchanged request; ask the service operator to correct the route metadata configuration.",
+      operatorAction:
+        "Inspect the route adapter metadata target and ensure it returns the controller object or constructor before handling requests.",
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+      telemetry: {
+        eventName: "croco.problem.error",
+        severity: "error",
+        attributes: ["problem.code", "problem.category", "problem.status"],
+      },
+    });
+  });
+
   it("publishes deterministic recovery metadata for graceful shutdown timeout", () => {
     const repo = createTempRepo();
     writeFile(

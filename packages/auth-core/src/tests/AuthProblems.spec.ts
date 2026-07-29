@@ -4,6 +4,7 @@ import {
   AuthProviderUnavailableProblem,
   InvalidPermissionActionProblem,
   InvalidPermissionFormatProblem,
+  InvalidRouteMetadataTargetProblem,
 } from "../libs/problems/AuthProblems";
 
 describe("AuthProblems", () => {
@@ -31,6 +32,16 @@ describe("AuthProblems", () => {
 
       expect(problem.code).toBe("auth-core/auth-provider-unavailable");
       expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    });
+  });
+
+  describe("InvalidRouteMetadataTargetProblem", () => {
+    it("has a stable code and reports the invalid target type", () => {
+      const problem = new InvalidRouteMetadataTargetProblem(null);
+
+      expect(problem.code).toBe("auth-core/invalid-route-metadata-target");
+      expect(problem.category).toBe(ProblemCategory.InternalServerError);
+      expect(problem.message).toContain("received null");
     });
   });
 });

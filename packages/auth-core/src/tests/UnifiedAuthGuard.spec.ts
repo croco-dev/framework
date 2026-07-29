@@ -5,6 +5,7 @@ import {
   authGuardConformance,
   createConformanceApiKeyPrincipal,
   createConformanceAuthCoreUser,
+  createRouteMetadataAdapterFixtures,
 } from "../../../../test-support/authGuardConformance";
 import { AUTH_PUBLIC_KEY } from "../libs/constants";
 import { UnifiedAuthGuard } from "../libs/guards/UnifiedAuthGuard";
@@ -14,7 +15,11 @@ import type { AuthRequest } from "../libs/interfaces/AuthRequest";
 import type { AuthUser } from "../libs/interfaces/AuthUser";
 import type { RouteExecutionContext } from "../libs/interfaces/Guard";
 import type { ApiKeyPrincipal } from "../libs/interfaces/Principal";
-import { AuthProviderUnavailableProblem, UnauthorizedProblem } from "../libs/problems/AuthProblems";
+import {
+  AuthProviderUnavailableProblem,
+  InvalidRouteMetadataTargetProblem,
+  UnauthorizedProblem,
+} from "../libs/problems/AuthProblems";
 
 describe("UnifiedAuthGuard", () => {
   let guard!: UnifiedAuthGuard;
@@ -67,6 +72,26 @@ describe("UnifiedAuthGuard", () => {
     };
     guard = new UnifiedAuthGuard(mockAuthProvider, mockApiKeyProvider);
   });
+
+  describe.each(authGuardConformance.invalidRouteMetadataTargets)(
+    "with a $name route metadata target",
+    ({ value }) => {
+      it.each(createRouteMetadataAdapterFixtures(value, { headers: {} }))(
+        "should reject the malformed $adapter adapter context",
+        async ({ context }) => {
+          await expect(guard.canActivate(context as RouteExecutionContext)).rejects.toThrow(
+            InvalidRouteMetadataTargetProblem,
+          );
+          await expect(guard.canActivate(context as RouteExecutionContext)).rejects.toMatchObject({
+            code: "auth-core/invalid-route-metadata-target",
+            status: 500,
+          });
+          expect(mockAuthProvider.authenticate).not.toHaveBeenCalled();
+          expect(mockApiKeyProvider.authenticate).not.toHaveBeenCalled();
+        },
+      );
+    },
+  );
 
   it("should return true when route is public", async () => {
     class TestController {

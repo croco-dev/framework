@@ -6,6 +6,7 @@ import type { AuthRequest } from "../interfaces/AuthRequest";
 import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
 import { UnauthorizedProblem } from "../problems/AuthProblems";
 import { authenticateWithProvider } from "./authenticateWithProvider";
+import { requireRouteMetadataTarget } from "./requireRouteMetadataTarget";
 
 export const AUTH_PROVIDER_TOKEN = new Token<AuthProvider>("AuthProvider");
 
@@ -22,18 +23,10 @@ function isPublicRoute(controllerTarget: object, handler: string | symbol): bool
   );
 }
 
-function isMetadataTarget(value: unknown): value is object {
-  return (typeof value === "object" && value !== null) || typeof value === "function";
-}
-
 export class AuthGuard implements Guard<RouteExecutionContext> {
   async canActivate(context: RouteExecutionContext): Promise<boolean> {
-    const target = context.getClass();
+    const target = requireRouteMetadataTarget(context.getClass());
     const handler = context.getHandler();
-
-    if (!isMetadataTarget(target)) {
-      return true;
-    }
 
     const isPublic = isPublicRoute(target, handler);
 
