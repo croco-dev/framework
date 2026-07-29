@@ -103,7 +103,10 @@ describe("createRateLimitMiddleware", () => {
 
     await middleware(ctx, next);
 
-    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith("rl:sliding:unknown", policy);
+    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
+      'rl2:[["policy","test-global"],["ip","unknown"]]',
+      policy,
+    );
     expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toEqual({
       value: "unknown",
       source: "unknown",
@@ -123,7 +126,7 @@ describe("createRateLimitMiddleware", () => {
 
     await middleware(ctx, next);
 
-    expect(ctx.get("rateLimitKey")).toBe("rl:sliding:203.0.113.9");
+    expect(ctx.get("rateLimitKey")).toBe('rl2:[["policy","test-global"],["ip","203.0.113.9"]]');
     expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toEqual({
       value: "203.0.113.9",
       source: "context.clientIp",
@@ -149,7 +152,10 @@ describe("createRateLimitMiddleware", () => {
 
     await middleware(ctx, next);
 
-    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith("rl:sliding:203.0.113.7", policy);
+    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
+      'rl2:[["policy","test-global"],["ip","203.0.113.7"]]',
+      policy,
+    );
     expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toEqual(metadata);
   });
 
@@ -164,7 +170,32 @@ describe("createRateLimitMiddleware", () => {
 
     await middleware(ctx, next);
 
-    expect(ctx.get("rateLimitKey")).toBe("rl:sliding:unknown");
+    expect(ctx.get("rateLimitKey")).toBe('rl2:[["policy","test-global"],["ip","unknown"]]');
+  });
+
+  it("should keep named policies using the same algorithm in distinct buckets", async () => {
+    const firstPolicy = { ...policy, name: "login-per-ip" };
+    const secondPolicy = { ...policy, name: "signup-per-ip" };
+    const firstContext = createContext();
+    const secondContext = createContext();
+
+    await createRateLimitMiddleware({
+      rateLimiter: mockRateLimiter,
+      policy: firstPolicy,
+      keySegments: ["ip"],
+    })(firstContext, vi.fn().mockResolvedValue(undefined));
+    await createRateLimitMiddleware({
+      rateLimiter: mockRateLimiter,
+      policy: secondPolicy,
+      keySegments: ["ip"],
+    })(secondContext, vi.fn().mockResolvedValue(undefined));
+
+    expect(firstContext.get("rateLimitKey")).toBe(
+      'rl2:[["policy","login-per-ip"],["ip","unknown"]]',
+    );
+    expect(secondContext.get("rateLimitKey")).toBe(
+      'rl2:[["policy","signup-per-ip"],["ip","unknown"]]',
+    );
   });
 
   it("should store rate limit headers in context", async () => {
@@ -246,7 +277,7 @@ describe("createRateLimitMiddleware", () => {
     await middleware(ctx, next);
 
     expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith(
-      expect.stringContaining("POST:/api/orders"),
+      'rl2:[["policy","test-global"],["ip","unknown"],["route",[["method","POST"],["path","/api/orders"]]]]',
       policy,
     );
   });

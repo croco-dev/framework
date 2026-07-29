@@ -41,6 +41,24 @@ class ApiController {
 - `RateLimitGuard`, 라우트 메타데이터를 읽어 요청을 차단합니다.
 - `RateLimitKeyBuilder`, tenant, user, ip, route 조합으로 키를 생성합니다.
 
+`RateLimitKeyBuilder`는 정책과 각 세그먼트의 이름/값을 구조화한 `rl2:` 키를 생성합니다. 구분자를 포함한
+정책명, route, IPv6, Unicode 식별자도 서로 다른 bucket을 유지하며, 빈 문자열과 누락 값도 구분합니다.
+
+### 저장된 rate-limit 키 마이그레이션
+
+이전 `rl:<policy>:<value...>` 키는 세그먼트 경계가 모호하고 `rl2:` namespace를 생성할 수 없으므로 새 코드에서
+읽거나 변환하지 않습니다. quota 중복 소비 없이 전환하려면 먼저 구버전으로 향하는 rate-limited 트래픽을
+drain하고 모든 구버전 인스턴스를 중지한 뒤, 가장 긴 configured window와 store TTL 중 더 긴 기간 동안
+rate-limited 트래픽을 중단하세요. 그 기간이 지나 기존 limiter state가 만료된 것을 확인한 후 `rl2:` 버전을
+배포하고 트래픽을 재개합니다. 기존 키는 만료시키거나 운영 정책에 따라 제거할 수 있습니다.
+
+구버전과 신버전 인스턴스를 함께 운영하거나 만료 대기 없이 전환하면 두 namespace가 각각 quota를 부여합니다.
+가용성을 위해 이 방식을 선택할 경우 일시적인 quota 증가를 명시적으로 승인하고 모니터링해야 하며, 보안 보존
+마이그레이션으로 간주해서는 안 됩니다.
+
+사용자 정의 key builder는 이 변경의 영향을 받지 않습니다. 사용자 정의 키도 자체 version namespace와
+충돌 없는 구조화 인코딩을 사용해야 합니다.
+
 ### 저장소 구현체
 
 - `FixedWindowInMemoryStore`, `SlidingWindowInMemoryStore`, `TokenBucketInMemoryStore`

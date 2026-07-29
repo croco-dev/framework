@@ -60,7 +60,7 @@ export function createRateLimitMiddleware(options: CreateMiddlewareOptions): Mid
     ctx.set("ip", clientIdentity.value);
 
     const keyContext = createKeyContextAdapter(ctx, clientIdentity);
-    const key = keyBuilder.build(keyContext, policy.algorithm ?? "sliding");
+    const key = keyBuilder.build(keyContext, policy.name);
 
     ctx.set("rateLimitKey", key);
 

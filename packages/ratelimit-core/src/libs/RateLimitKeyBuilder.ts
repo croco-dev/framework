@@ -6,6 +6,8 @@ export type KeyContext = {
 
 export type KeySegment = "tenant" | "user" | "ip" | "apiKey" | "route" | "custom";
 
+type KeyFieldValue = string | null | Array<[string, string | null]>;
+
 export class RateLimitKeyBuilder {
   private readonly segments: KeySegment[];
 
@@ -17,17 +19,15 @@ export class RateLimitKeyBuilder {
   }
 
   build(context: KeyContext, policyName: string): string {
-    const parts: string[] = ["rl", policyName];
-
+    const fields: Array<[string, KeyFieldValue]> = [["policy", policyName]];
     for (const segment of this.segments) {
-      const value = this.extractSegment(context, segment);
-      parts.push(value ?? "");
+      fields.push([segment, this.extractSegment(context, segment) ?? null]);
     }
 
-    return parts.join(":");
+    return `rl2:${JSON.stringify(fields)}`;
   }
 
-  private extractSegment(context: KeyContext, segment: KeySegment): string | undefined {
+  private extractSegment(context: KeyContext, segment: KeySegment): KeyFieldValue | undefined {
     switch (segment) {
       case "tenant":
         return context.get<{ id: string }>("tenant")?.id ?? context.get<string>("tenantId");
@@ -40,19 +40,19 @@ export class RateLimitKeyBuilder {
       case "route":
         return this.buildRouteKey(context);
       case "custom":
-        return undefined;
+        return context.get<string>("custom");
       default:
         return undefined;
     }
   }
 
-  private buildRouteKey(context: KeyContext): string | undefined {
+  private buildRouteKey(context: KeyContext): Array<[string, string | null]> {
     const method = context.get<string>("method");
     const path = context.get<string>("path");
 
-    if (method && path) {
-      return `${method}:${path}`;
-    }
-    return undefined;
+    return [
+      ["method", method ?? null],
+      ["path", path ?? null],
+    ];
   }
 }
