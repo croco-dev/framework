@@ -65,6 +65,7 @@ const repoIds = [
   "docs-examples",
   "release-docs",
   "ci-executables",
+  "ci-performance-budget",
   "architecture-policy-runtime",
   "architecture-policy",
   "architecture-circular-allowlist",
@@ -165,6 +166,100 @@ describe("verification manifest", () => {
     ).toBe(true);
   });
 
+  it("uses the affected package graph and skips unrelated heavyweight PR checks", () => {
+    const manifest = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"],
+      head: "HEAD",
+    });
+    const byId = new Map(manifest.map((command) => [command.id, command]));
+
+    expect(byId.get("build")?.command).toEqual([
+      "pnpm",
+      "turbo",
+      "run",
+      "build",
+      "typecheck",
+      "test",
+      "--filter=...[origin/trunk]",
+      "--filter=!@croco/docs",
+      "--summarize",
+      "--continue=always",
+    ]);
+    expect(byId.get("typecheck")?.command).toContain("--filter=...[origin/trunk]");
+    expect(byId.get("typecheck")?.command).toContain("--filter=!@croco/docs");
+    expect(byId.get("test")?.command).toContain("--filter=...[origin/trunk]");
+    expect(byId.get("test")?.command).toContain("--filter=!@croco/docs");
+    for (const id of [
+      "alpha-release-smoke",
+      "cli-e2e",
+      "core-coverage",
+      "generated-app-smoke",
+      "package-bins-smoke",
+      "package-entrypoints-smoke",
+      "quick-start-lambda-smoke",
+    ]) {
+      expect(byId.get(id)?.applicable, id).toBe(false);
+    }
+  });
+
+  it("keeps targeted scaffold PR smoke and full non-PR spine coverage", () => {
+    const scaffoldPullRequest = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/create-croco-app/src/index.ts"],
+      head: "HEAD",
+    });
+    const pullRequestById = new Map(scaffoldPullRequest.map((command) => [command.id, command]));
+    const fullById = new Map(
+      createVerificationManifest("spine").map((command) => [command.id, command]),
+    );
+
+    expect(pullRequestById.get("generated-app-smoke")?.applicable).toBe(true);
+    expect(pullRequestById.get("alpha-release-smoke")?.applicable).toBe(false);
+    expect(fullById.get("generated-app-smoke")?.applicable).toBe(true);
+    expect(fullById.get("alpha-release-smoke")?.applicable).toBe(true);
+  });
+
+  it("does not require package build artifacts for repository-only CI maintenance", () => {
+    const maintenance = createVerificationManifest("publish", {
+      base: "origin/trunk",
+      changedFiles: [
+        ".github/workflows/ci.yml",
+        "scripts/ci-performance-budget.mts",
+        "scripts/tests/ci-workflow.spec.ts",
+        "scripts/verification-manifest.mts",
+      ],
+      head: "HEAD",
+    });
+    const byId = new Map(maintenance.map((command) => [command.id, command]));
+
+    for (const id of [
+      "cli-e2e",
+      "first-success",
+      "generated-app-smoke",
+      "package-bins-smoke",
+      "package-entrypoints-smoke",
+      "production-ready",
+      "quick-start-lambda-smoke",
+      "spine-promotion",
+    ]) {
+      expect(byId.get(id)?.applicable, id).toBe(false);
+    }
+    expect(byId.get("release-gate-tests")?.applicable).toBe(true);
+  });
+
+  it("keeps package-summary accountability on affected package changes", () => {
+    const packageChange = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"],
+      head: "HEAD",
+    });
+    const byId = new Map(packageChange.map((command) => [command.id, command]));
+
+    expect(byId.get("production-ready")?.applicable).toBe(true);
+    expect(byId.get("spine-promotion")?.applicable).toBe(true);
+  });
+
   it("keeps the release-gate inventory complete, sorted, and executable from one root alias", () => {
     const command = createVerificationManifest("publish").find(
       ({ id }) => id === "release-gate-tests",
@@ -173,7 +268,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(41);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(42);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_SUPPORT_PATHS).toEqual([...RELEASE_GATE_SUPPORT_PATHS].sort());
@@ -311,6 +406,7 @@ describe("verification manifest", () => {
       "scripts/tests/verification-manifest.spec.ts",
       "scripts/tests/release-spine-evidence.spec.ts",
       "scripts/tests/ci-workflow.spec.ts",
+      "scripts/tests/ci-performance-budget.spec.ts",
       "scripts/tests/release-workflow.spec.ts",
       "scripts/tests/verification-policy.spec.ts",
     ]);

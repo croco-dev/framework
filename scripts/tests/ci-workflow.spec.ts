@@ -28,6 +28,11 @@ const VALIDATE_JOB = WORKFLOW.slice(
   WORKFLOW.indexOf("  validate:"),
   WORKFLOW.indexOf("  changes:"),
 );
+const REAL_RESOURCE_JOB_START = WORKFLOW.indexOf("  real-resource-tests:");
+const REAL_RESOURCE_JOB = WORKFLOW.slice(
+  REAL_RESOURCE_JOB_START,
+  WORKFLOW.indexOf("  windows-scaffold:", REAL_RESOURCE_JOB_START),
+);
 const SECRET_SCAN = WORKFLOW.slice(
   WORKFLOW.indexOf("      - name: Secret scan blocking report"),
   WORKFLOW.indexOf("      - name: Assemble security policy summary"),
@@ -111,7 +116,10 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}");
     expect(WORKFLOW).toContain('args=(--profile "$VERIFICATION_PROFILE")');
     expect(WORKFLOW).toContain(
-      'if [ "${{ github.event_name }}" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata --base "$VERIFICATION_BASE" --head HEAD)',
+      'if [ "${{ github.event_name }}" = "pull_request" ]; then\n            args+=(--allow-pending-release-metadata)',
+    );
+    expect(WORKFLOW).toContain(
+      'if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then\n            args+=(--base "$VERIFICATION_BASE" --head HEAD)',
     );
     expect(WORKFLOW).toContain("VERIFICATION_BASE: ${{ needs.changes.outputs.base }}");
     expect(WORKFLOW).not.toContain("test:release-gates");
@@ -126,7 +134,7 @@ describe("CI verification profile contract", () => {
     expect(VALIDATE_JOB).not.toContain("--tier ecosystem-advisory");
     expect(WORKFLOW).toContain("ecosystem-advisory:\n    needs: changes");
     expect(WORKFLOW).toContain(
-      "ecosystem-advisory:\n    needs: changes\n    if: needs.changes.outputs.profile != 'repo'\n    continue-on-error: true\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    permissions:\n      actions: read\n      contents: read",
+      "ecosystem-advisory:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' && needs.changes.outputs.profile != 'repo'\n    continue-on-error: true\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    permissions:\n      actions: read\n      contents: read",
     );
     const ecosystemAdvisoryStart = WORKFLOW.indexOf("  ecosystem-advisory:");
     const ecosystemAdvisory = WORKFLOW.slice(
@@ -218,21 +226,21 @@ describe("CI verification profile contract", () => {
   });
 
   it("runs membership concurrency against a digest-pinned PostgreSQL service", () => {
-    expect(VALIDATE_JOB).toContain(
+    expect(REAL_RESOURCE_JOB).toContain(
       "postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
     );
-    expect(VALIDATE_JOB).toContain(
+    expect(REAL_RESOURCE_JOB).toContain(
       "MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
-    expect(VALIDATE_JOB).toContain("pnpm build --filter=@croco/membership-drizzle...");
-    expect(VALIDATE_JOB).toContain(
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/membership-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain(
       "pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts",
     );
   });
 
   it("runs typed TestKernel resources against real PostgreSQL and Redis", () => {
-    expect(VALIDATE_JOB).toContain("pnpm build --filter=@croco/testing-resources...");
-    expect(VALIDATE_JOB).toContain("pnpm --filter @croco/testing-resources test:real");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/testing-resources...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/testing-resources test:real");
   });
 
   it.each(["--log-opts=--max-count=0", "--no-git", "--redact=false"])(
@@ -296,10 +304,25 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("docs-sync-check:\n    needs: changes");
     expect(WORKFLOW).not.toContain("docs-sync-check:\n    needs: [validate, changes]");
     expect(WORKFLOW).toContain(
-      "windows-scaffold:\n    needs: changes\n    if: github.event_name != 'pull_request' || needs.changes.outputs.windows-scaffold == 'true'",
+      "windows-scaffold:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.windows-scaffold == 'true'",
     );
     expect(WORKFLOW).toContain("actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9");
     expect(WORKFLOW).toContain("path: .turbo");
     expect(WORKFLOW).not.toContain("pnpm turbo run build --filter=create-croco-app... --force");
+  });
+
+  it("keeps heavyweight platform and real-resource suites off unrelated pull requests", () => {
+    expect(WORKFLOW).not.toContain("              - 'packages/**'");
+    expect(WORKFLOW).toContain("              - 'packages/create-croco-app/**'");
+    expect(WORKFLOW).toContain("real-resource-tests:\n    needs: changes");
+    expect(WORKFLOW).toContain(
+      "real-resource-tests:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.real-resources == 'true'",
+    );
+    expect(REAL_RESOURCE_JOB).toContain("permissions:\n      contents: read");
+    expect(VALIDATE_JOB).not.toContain("membership-postgres:");
+    expect(VALIDATE_JOB).not.toContain("Verify typed TestKernel resources");
+    expect(WORKFLOW).toContain(
+      "docs-sync-check:\n    needs: changes\n    if: github.event_name != 'pull_request' && needs.changes.outputs.api-source == 'true'",
+    );
   });
 });

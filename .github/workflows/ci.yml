@@ -18,20 +18,6 @@ jobs:
     needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    services:
-      membership-postgres:
-        image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
-        env:
-          POSTGRES_DB: croco_membership
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d croco_membership"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
       # renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks
       GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e
@@ -74,18 +60,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Verify membership owner concurrency against PostgreSQL
-        env:
-          MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
-        run: |
-          pnpm build --filter=@croco/membership-drizzle...
-          pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
-
-      - name: Verify typed TestKernel resources against real PostgreSQL and Redis
-        run: |
-          pnpm build --filter=@croco/testing-resources...
-          pnpm --filter @croco/testing-resources test:real
 
       - name: Production dependency audit report
         id: security_audit_advisory
@@ -199,7 +173,10 @@ jobs:
         run: |
           args=(--profile "$VERIFICATION_PROFILE")
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            args+=(--allow-pending-release-metadata --base "$VERIFICATION_BASE" --head HEAD)
+            args+=(--allow-pending-release-metadata)
+          fi
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            args+=(--base "$VERIFICATION_BASE" --head HEAD)
           fi
           node --experimental-strip-types scripts/release-spine-evidence.mts "${args[@]}"
 
@@ -295,6 +272,7 @@ jobs:
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
       api-source: ${{ steps.filter.outputs.api-source }}
+      real-resources: ${{ steps.filter.outputs.real_resources }}
       windows-scaffold: ${{ steps.filter.outputs.windows_scaffold }}
       profile: ${{ steps.verification.outputs.profile }}
       base: ${{ steps.verification.outputs.base }}
@@ -338,10 +316,28 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'turbo.json'
-              - 'packages/**'
+              - 'packages/create-croco-app/**'
               - 'scripts/alpha-release-smoke.mts'
               - 'scripts/create-croco-app-*.mts'
               - 'scripts/first-success-verify.mts'
+            real_resources:
+              - '.github/workflows/ci.yml'
+              - '.nvmrc'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'turbo.json'
+              - 'packages/events-core/**'
+              - 'packages/events-tx/**'
+              - 'packages/framework-context/**'
+              - 'packages/membership-core/**'
+              - 'packages/membership-drizzle/**'
+              - 'packages/problems-core/**'
+              - 'packages/testing/**'
+              - 'packages/testing-resources/**'
+              - 'packages/transports-http/**'
+              - 'packages/tx-core/**'
+              - 'packages/tx-drizzle/**'
             api-source:
               - 'packages/access-core/src/**'
               - 'packages/access-drizzle/src/**'
@@ -462,7 +458,7 @@ jobs:
 
   ecosystem-advisory:
     needs: changes
-    if: needs.changes.outputs.profile != 'repo'
+    if: github.event_name == 'workflow_dispatch' && needs.changes.outputs.profile != 'repo'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -531,9 +527,70 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
+  real-resource-tests:
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.real-resources == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    services:
+      membership-postgres:
+        image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
+        env:
+          POSTGRES_DB: croco_membership
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d croco_membership"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: pnpm
+
+      - name: Restore Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify membership owner concurrency against PostgreSQL
+        env:
+          MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+        run: |
+          pnpm build --filter=@croco/membership-drizzle...
+          pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
+
+      - name: Verify typed TestKernel resources against real PostgreSQL and Redis
+        run: |
+          pnpm build --filter=@croco/testing-resources...
+          pnpm --filter @croco/testing-resources test:real
+
   windows-scaffold:
     needs: changes
-    if: github.event_name != 'pull_request' || needs.changes.outputs.windows-scaffold == 'true'
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.windows-scaffold == 'true'
     runs-on: windows-latest
     timeout-minutes: 60
 
@@ -605,7 +662,7 @@ jobs:
 
   docs-sync-check:
     needs: changes
-    if: github.event_name == 'pull_request' && needs.changes.outputs.api-source == 'true'
+    if: github.event_name != 'pull_request' && needs.changes.outputs.api-source == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -634,7 +691,7 @@ jobs:
 
   docs-build:
     needs: changes
-    if: ${{ needs.changes.outputs.docs == 'true' || needs.changes.outputs.api-source == 'true' }}
+    if: ${{ needs.changes.outputs.docs == 'true' || (github.event_name != 'pull_request' && needs.changes.outputs.api-source == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -674,7 +731,7 @@ jobs:
 
   docs-links:
     needs: [changes, docs-build]
-    if: ${{ needs.changes.outputs.docs == 'true' || needs.changes.outputs.api-source == 'true' }}
+    if: ${{ needs.changes.outputs.docs == 'true' || (github.event_name != 'pull_request' && needs.changes.outputs.api-source == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

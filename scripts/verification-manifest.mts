@@ -29,12 +29,91 @@ const guardedNodeScript = (
   ...args: string[]
 ): readonly string[] => guarded(recovery, nodeScript(script, ...args));
 
+const CORE_COVERAGE_PACKAGES = [
+  "@croco/framework-context",
+  "@croco/problems-core",
+  "@croco/protocols-core",
+  "@croco/protocols-rest",
+  "@croco/openapi-spec",
+  "@croco/rpc-codegen",
+  "@croco/transports-http",
+  "@croco/telemetry-api",
+  "@croco/telemetry-sdk-node",
+  "@croco/tx-core",
+  "@croco/tx-drizzle",
+  "@croco/events-core",
+  "@croco/events-tx",
+  "@croco/retry-core",
+  "@croco/idempotency-core",
+  "@croco/testing",
+  "create-croco-app",
+  "@croco/cli",
+  "@croco/auth-core",
+] as const;
+
+const CORE_COVERAGE_PACKAGE_DIRECTORIES = CORE_COVERAGE_PACKAGES.map((packageName) =>
+  packageName.startsWith("@croco/") ? packageName.slice("@croco/".length) : packageName,
+);
+
 function isApplicableToChangedFiles(
   context: VerificationContext,
   predicate: (path: string) => boolean,
 ): boolean {
   if (!context.base || !context.head || !context.changedFiles) return true;
   return context.changedFiles.some(predicate);
+}
+
+function isChangeScopedVerification(context: VerificationContext): boolean {
+  return Boolean(context.base && context.head && context.changedFiles);
+}
+
+function affectsScaffold(path: string): boolean {
+  return (
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    path.startsWith("packages/create-croco-app/") ||
+    /^scripts\/(?:alpha-release-smoke|create-croco-app-[^/]+|first-success-verify|quick-start-lambda-smoke)\.mts$/.test(
+      path,
+    )
+  );
+}
+
+function affectsPackageEntrypoints(path: string): boolean {
+  return (
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    /^packages\/(?!create-croco-app\/)[^/]+\/(?:package\.json|src\/index\.ts)$/.test(path) ||
+    path === "scripts/package-entrypoint-smoke.mts"
+  );
+}
+
+function affectsPackageBins(path: string): boolean {
+  return (
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    /^packages\/(?:cli|create-croco-app)\/(?:package\.json|src\/)/.test(path) ||
+    path === "scripts/package-bin-smoke.mts"
+  );
+}
+
+function affectsCli(path: string): boolean {
+  return path.startsWith("packages/cli/");
+}
+
+function affectsPackageGraph(path: string): boolean {
+  return (
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    /^(?:apps|examples|packages)\//.test(path)
+  );
+}
+
+function affectsCoreCoverage(path: string): boolean {
+  return CORE_COVERAGE_PACKAGE_DIRECTORIES.some((directory) =>
+    path.startsWith(`packages/${directory}/`),
+  );
+}
+
+function affectedTurboArguments(context: VerificationContext): readonly string[] {
+  return isChangeScopedVerification(context) && context.base
+    ? [`--filter=...[${context.base}]`, "--filter=!@croco/docs"]
+    : [];
 }
 
 const repoOnly = (
@@ -65,6 +144,7 @@ const repoOnly = (
       "scripts/tests/verification-manifest.spec.ts",
       "scripts/tests/release-spine-evidence.spec.ts",
       "scripts/tests/ci-workflow.spec.ts",
+      "scripts/tests/ci-performance-budget.spec.ts",
       "scripts/tests/release-workflow.spec.ts",
       "scripts/tests/verification-policy.spec.ts",
     ],
@@ -167,6 +247,13 @@ const repoOnly = (
       "Pin the reported CI executable to an immutable source",
       "scripts/ci-executable-policy.mts",
     ),
+    timeoutMs: minutes(5),
+  },
+  {
+    id: "ci-performance-budget",
+    label: "Pull-request CI performance budget",
+    category: "quality",
+    command: nodeScript("scripts/ci-performance-budget.mts"),
     timeoutMs: minutes(5),
   },
   {
@@ -308,260 +395,266 @@ const repoOnly = (
   },
 ];
 
-const SPINE_ONLY: readonly EvidenceCommand[] = [
-  {
-    id: "build",
-    label: "Summarized build",
-    category: "build",
-    command: ["pnpm", "turbo", "run", "build", "--summarize", "--continue=always"],
-    timeoutMs: minutes(30),
-  },
-  {
-    id: "quick-start-lambda-smoke",
-    label: "Quick-start Lambda smoke",
-    category: "runtime-smoke",
-    command: nodeScript("scripts/quick-start-lambda-smoke.mts"),
-    timeoutMs: minutes(10),
-  },
-  {
-    id: "first-success",
-    label: "First-success contract",
-    category: "generated-app",
-    command: guardedNodeScript(
-      "Follow the reported scaffold or documentation recovery command",
-      "scripts/first-success-verify.mts",
-    ),
-    timeoutMs: minutes(10),
-  },
-  {
-    id: "package-entrypoints-smoke",
-    label: "Package entrypoint smoke",
-    category: "package-smoke",
-    command: nodeScript("scripts/package-entrypoint-smoke.mts"),
-    timeoutMs: minutes(10),
-  },
-  {
-    id: "package-bins-smoke",
-    label: "Package binary smoke",
-    category: "package-smoke",
-    command: nodeScript("scripts/package-bin-smoke.mts"),
-    timeoutMs: minutes(20),
-  },
-  {
-    id: "generated-app-smoke",
-    label: "create-croco-app spine smoke",
-    category: "generated-app",
-    command: nodeScript("scripts/create-croco-app-generated-smoke.mts", "--tier", "spine-blocking"),
-    timeoutMs: minutes(45),
-    artifacts: [
-      {
-        label: "Spine-blocking generated app smoke matrix markdown",
-        path: "ci-reports/generated-apps/spine-blocking-matrix.md",
-        required: true,
-      },
-      {
-        label: "Spine-blocking generated app smoke matrix JSON",
-        path: "ci-reports/generated-apps/spine-blocking-matrix.json",
-        required: true,
-      },
-      {
-        label: "Generated app smoke journey bundle",
-        path: "ci-reports/generated-apps/spine-blocking-journeys",
-        required: true,
-        copyRelativePath: "spine-blocking-journeys",
-      },
-    ],
-  },
-  {
-    id: "alpha-release-smoke",
-    label: "Packed generated app release smoke",
-    category: "generated-app",
-    command: nodeScript("scripts/alpha-release-smoke.mts"),
-    timeoutMs: minutes(45),
-    artifacts: [
-      {
-        label: "Packed generated app smoke report",
-        path: "ci-reports/release/alpha-release-smoke.md",
-        required: true,
-      },
-    ],
-  },
-  {
-    id: "typecheck",
-    label: "Summarized TypeScript check",
-    category: "typecheck",
-    command: guarded("Fix the reported TypeScript diagnostics", [
-      "pnpm",
-      "turbo",
-      "run",
-      "typecheck",
-      "--summarize",
-      "--continue=always",
-    ]),
-    timeoutMs: minutes(30),
-  },
-  {
-    id: "test",
-    label: "Summarized tests",
-    category: "quality",
-    command: ["pnpm", "turbo", "run", "test", "--summarize", "--continue=always"],
-    timeoutMs: minutes(45),
-  },
-  {
-    id: "cli-e2e",
-    label: "CLI integration tests",
-    category: "quality",
-    command: ["pnpm", "--filter", "@croco/cli", "test:e2e"],
-    timeoutMs: minutes(15),
-  },
-  {
-    id: "provider-certification",
-    label: "Provider certification",
-    category: "quality",
-    command: guardedNodeScript(
-      "Fix the reported provider certification metadata",
-      "scripts/provider-certification-check.mts",
-    ),
-    timeoutMs: minutes(10),
-    artifacts: [
-      {
-        label: "Provider certification markdown",
-        path: "ci-reports/package-quality/provider-certification.md",
-        required: true,
-      },
-      {
-        label: "Provider certification JSON",
-        path: "ci-reports/package-quality/provider-certification.json",
-        required: true,
-      },
-    ],
-  },
-  {
-    id: "production-ready",
-    label: "Production-ready package evidence",
-    category: "quality",
-    command: guardedNodeScript(
-      "Fix the reported production-ready package violations",
-      "scripts/production-ready-check.mts",
-      "--require-task-summaries",
-    ),
-    timeoutMs: minutes(10),
-    artifacts: [
-      {
-        label: "Production-ready package markdown",
-        path: "ci-reports/package-quality/production-ready.md",
-        required: true,
-      },
-    ],
-  },
-  {
-    id: "spine-promotion",
-    label: "Beta spine promotion accountability",
-    category: "quality",
-    command: guardedNodeScript(
-      "Fix the reported beta spine promotion violations",
-      "scripts/spine-promotion-check.mts",
-    ),
-    timeoutMs: minutes(10),
-    artifacts: [
-      {
-        label: "Beta spine promotion markdown",
-        path: "ci-reports/package-quality/spine-promotion.md",
-        required: true,
-      },
-    ],
-  },
-  {
-    id: "core-coverage",
-    label: "Core coverage gate",
-    category: "coverage",
-    command: [
-      "pnpm",
-      "--filter",
-      "@croco/framework-context",
-      "--filter",
-      "@croco/problems-core",
-      "--filter",
-      "@croco/protocols-core",
-      "--filter",
-      "@croco/protocols-rest",
-      "--filter",
-      "@croco/openapi-spec",
-      "--filter",
-      "@croco/rpc-codegen",
-      "--filter",
-      "@croco/transports-http",
-      "--filter",
-      "@croco/telemetry-api",
-      "--filter",
-      "@croco/telemetry-sdk-node",
-      "--filter",
-      "@croco/tx-core",
-      "--filter",
-      "@croco/tx-drizzle",
-      "--filter",
-      "@croco/events-core",
-      "--filter",
-      "@croco/events-tx",
-      "--filter",
-      "@croco/retry-core",
-      "--filter",
-      "@croco/idempotency-core",
-      "--filter",
-      "@croco/testing",
-      "--filter",
-      "create-croco-app",
-      "--filter",
-      "@croco/cli",
-      "--filter",
-      "@croco/auth-core",
-      "exec",
-      "vitest",
-      "run",
-      "--coverage",
-      "--config",
-      "../../vitest.config.ts",
-    ],
-    timeoutMs: minutes(45),
-  },
-  {
-    id: "core-coverage-warning",
-    label: "Core coverage warning report",
-    category: "coverage",
-    command: nodeScript("scripts/core-coverage-warning-check.mts"),
-    timeoutMs: minutes(10),
-    artifacts: [
-      {
-        label: "Core coverage warning markdown",
-        path: "ci-reports/coverage/core-warning/report.md",
-        required: true,
-      },
-    ],
-  },
-  {
-    id: "public-api",
-    label: "Public API snapshot",
-    category: "public-api",
-    command: guardedNodeScript(
-      "pnpm public-api:write",
-      "scripts/public-api-surface.mts",
-      "--check",
-    ),
-    timeoutMs: minutes(10),
-    artifacts: [
-      {
-        label: "Public API diff markdown",
-        path: "ci-reports/package-quality/public-api-diff.md",
-        required: true,
-      },
-      {
-        label: "Public API summary JSON",
-        path: "ci-reports/package-quality/public-api-summary.json",
-        required: true,
-      },
-    ],
-  },
-];
+const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => {
+  const changeScoped = isChangeScopedVerification(context);
+  const affectedArguments = affectedTurboArguments(context);
+  const scaffoldApplicable = isApplicableToChangedFiles(context, affectsScaffold);
+  const entrypointsApplicable = isApplicableToChangedFiles(context, affectsPackageEntrypoints);
+  const binsApplicable = isApplicableToChangedFiles(context, affectsPackageBins);
+  const cliApplicable = isApplicableToChangedFiles(context, affectsCli);
+  const coreCoverageApplicable = isApplicableToChangedFiles(context, affectsCoreCoverage);
+  const packageGraphApplicable = isApplicableToChangedFiles(context, affectsPackageGraph);
+
+  return [
+    {
+      id: "build",
+      label: changeScoped ? "Affected build, typecheck, and tests" : "Summarized build",
+      category: "build",
+      command: [
+        "pnpm",
+        "turbo",
+        "run",
+        "build",
+        ...(changeScoped ? ["typecheck", "test"] : []),
+        ...affectedArguments,
+        "--summarize",
+        "--continue=always",
+      ],
+      timeoutMs: minutes(30),
+    },
+    {
+      id: "quick-start-lambda-smoke",
+      label: "Quick-start Lambda smoke",
+      category: "runtime-smoke",
+      command: nodeScript("scripts/quick-start-lambda-smoke.mts"),
+      timeoutMs: minutes(10),
+      applicable: scaffoldApplicable,
+    },
+    {
+      id: "first-success",
+      label: "First-success contract",
+      category: "generated-app",
+      command: guardedNodeScript(
+        "Follow the reported scaffold or documentation recovery command",
+        "scripts/first-success-verify.mts",
+      ),
+      timeoutMs: minutes(10),
+      applicable: scaffoldApplicable,
+    },
+    {
+      id: "package-entrypoints-smoke",
+      label: "Package entrypoint smoke",
+      category: "package-smoke",
+      command: nodeScript("scripts/package-entrypoint-smoke.mts"),
+      timeoutMs: minutes(10),
+      applicable: entrypointsApplicable,
+    },
+    {
+      id: "package-bins-smoke",
+      label: "Package binary smoke",
+      category: "package-smoke",
+      command: nodeScript("scripts/package-bin-smoke.mts"),
+      timeoutMs: minutes(20),
+      applicable: binsApplicable,
+    },
+    {
+      id: "generated-app-smoke",
+      label: "create-croco-app spine smoke",
+      category: "generated-app",
+      command: nodeScript(
+        "scripts/create-croco-app-generated-smoke.mts",
+        "--tier",
+        "spine-blocking",
+      ),
+      timeoutMs: minutes(45),
+      applicable: scaffoldApplicable,
+      artifacts: [
+        {
+          label: "Spine-blocking generated app smoke matrix markdown",
+          path: "ci-reports/generated-apps/spine-blocking-matrix.md",
+          required: true,
+        },
+        {
+          label: "Spine-blocking generated app smoke matrix JSON",
+          path: "ci-reports/generated-apps/spine-blocking-matrix.json",
+          required: true,
+        },
+        {
+          label: "Generated app smoke journey bundle",
+          path: "ci-reports/generated-apps/spine-blocking-journeys",
+          required: true,
+          copyRelativePath: "spine-blocking-journeys",
+        },
+      ],
+    },
+    {
+      id: "alpha-release-smoke",
+      label: "Packed generated app release smoke",
+      category: "generated-app",
+      command: nodeScript("scripts/alpha-release-smoke.mts"),
+      timeoutMs: minutes(45),
+      applicable: !changeScoped,
+      artifacts: [
+        {
+          label: "Packed generated app smoke report",
+          path: "ci-reports/release/alpha-release-smoke.md",
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "typecheck",
+      label: "Summarized TypeScript check",
+      category: "typecheck",
+      command: guarded("Fix the reported TypeScript diagnostics", [
+        "pnpm",
+        "turbo",
+        "run",
+        "typecheck",
+        ...affectedArguments,
+        "--summarize",
+        "--continue=always",
+      ]),
+      timeoutMs: minutes(30),
+    },
+    {
+      id: "test",
+      label: "Summarized tests",
+      category: "quality",
+      command: [
+        "pnpm",
+        "turbo",
+        "run",
+        "test",
+        ...affectedArguments,
+        "--summarize",
+        "--continue=always",
+      ],
+      timeoutMs: minutes(45),
+    },
+    {
+      id: "cli-e2e",
+      label: "CLI integration tests",
+      category: "quality",
+      command: ["pnpm", "--filter", "@croco/cli", "test:e2e"],
+      timeoutMs: minutes(15),
+      applicable: cliApplicable,
+    },
+    {
+      id: "provider-certification",
+      label: "Provider certification",
+      category: "quality",
+      command: guardedNodeScript(
+        "Fix the reported provider certification metadata",
+        "scripts/provider-certification-check.mts",
+      ),
+      timeoutMs: minutes(10),
+      artifacts: [
+        {
+          label: "Provider certification markdown",
+          path: "ci-reports/package-quality/provider-certification.md",
+          required: true,
+        },
+        {
+          label: "Provider certification JSON",
+          path: "ci-reports/package-quality/provider-certification.json",
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "production-ready",
+      label: "Production-ready package evidence",
+      category: "quality",
+      command: guardedNodeScript(
+        "Fix the reported production-ready package violations",
+        "scripts/production-ready-check.mts",
+        "--require-task-summaries",
+      ),
+      timeoutMs: minutes(10),
+      applicable: packageGraphApplicable,
+      artifacts: [
+        {
+          label: "Production-ready package markdown",
+          path: "ci-reports/package-quality/production-ready.md",
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "spine-promotion",
+      label: "Beta spine promotion accountability",
+      category: "quality",
+      command: guardedNodeScript(
+        "Fix the reported beta spine promotion violations",
+        "scripts/spine-promotion-check.mts",
+      ),
+      timeoutMs: minutes(10),
+      applicable: packageGraphApplicable,
+      artifacts: [
+        {
+          label: "Beta spine promotion markdown",
+          path: "ci-reports/package-quality/spine-promotion.md",
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "core-coverage",
+      label: "Core coverage gate",
+      category: "coverage",
+      command: [
+        "pnpm",
+        ...CORE_COVERAGE_PACKAGES.flatMap((packageName) => ["--filter", packageName]),
+        "exec",
+        "vitest",
+        "run",
+        "--coverage",
+        "--config",
+        "../../vitest.config.ts",
+      ],
+      timeoutMs: minutes(45),
+      applicable: coreCoverageApplicable,
+    },
+    {
+      id: "core-coverage-warning",
+      label: "Core coverage warning report",
+      category: "coverage",
+      command: nodeScript("scripts/core-coverage-warning-check.mts"),
+      timeoutMs: minutes(10),
+      artifacts: [
+        {
+          label: "Core coverage warning markdown",
+          path: "ci-reports/coverage/core-warning/report.md",
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "public-api",
+      label: "Public API snapshot",
+      category: "public-api",
+      command: guardedNodeScript(
+        "pnpm public-api:write",
+        "scripts/public-api-surface.mts",
+        "--check",
+      ),
+      timeoutMs: minutes(10),
+      artifacts: [
+        {
+          label: "Public API diff markdown",
+          path: "ci-reports/package-quality/public-api-diff.md",
+          required: true,
+        },
+        {
+          label: "Public API summary JSON",
+          path: "ci-reports/package-quality/public-api-summary.json",
+          required: true,
+        },
+      ],
+    },
+  ];
+};
 
 const publishOnly = (context: VerificationContext): readonly EvidenceCommand[] => [
   {
@@ -724,12 +817,13 @@ export function createVerificationManifest(
 ): readonly EvidenceCommand[] {
   const releaseGateMaintenance = isApplicableToChangedFiles(context, isReleaseGateMaintenancePath);
   const repo = repoOnly(context, profile === "publish" && releaseGateMaintenance);
+  const spine = spineOnly(context);
   const commands =
     profile === "repo"
       ? repo
       : profile === "spine"
-        ? [...repo, ...SPINE_ONLY]
-        : [...repo, ...SPINE_ONLY, ...publishOnly(context)];
+        ? [...repo, ...spine]
+        : [...repo, ...spine, ...publishOnly(context)];
   assertVerificationManifest(commands);
   return commands;
 }
