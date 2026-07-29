@@ -16,12 +16,23 @@ const ORDINARY_PR_MANIFEST = createVerificationManifest("spine", {
   changedFiles: ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"],
   head: "HEAD",
 });
+const MAINTENANCE_PR_MANIFEST = createVerificationManifest("publish", {
+  base: "origin/trunk",
+  changedFiles: [
+    ".github/workflows/ci.yml",
+    "scripts/ci-performance-budget.mts",
+    "scripts/tests/ci-workflow.spec.ts",
+    "scripts/verification-manifest.mts",
+  ],
+  head: "HEAD",
+});
 
 describe("pull-request CI performance budget", () => {
   it("keeps the ordinary PR critical path within the design budget", () => {
     expect(pullRequestCiDesignBudgetMinutes()).toBeLessThanOrEqual(PR_CI_TARGET_MINUTES);
     expect(
       findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
         ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
         workflow: WORKFLOW,
       }),
@@ -34,6 +45,7 @@ describe("pull-request CI performance budget", () => {
       "if: needs.changes.outputs.profile != 'repo'",
     ).replace("              - 'packages/create-croco-app/**'", "              - 'packages/**'");
     const violations = findCiPerformanceBudgetViolations({
+      maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
       ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
       workflow: mutant,
     });
@@ -54,6 +66,7 @@ describe("pull-request CI performance budget", () => {
 
     expect(
       findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
         ordinaryPullRequestManifest: manifest,
         workflow: WORKFLOW,
       }),
@@ -68,9 +81,24 @@ describe("pull-request CI performance budget", () => {
 
     expect(
       findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
         ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
         workflow: mutant,
       }),
     ).toContain("pull-request and trunk validation must both use the changed-file scope");
+  });
+
+  it("rejects package build artifact gates on CI-only maintenance", () => {
+    const manifest = MAINTENANCE_PR_MANIFEST.map((command) =>
+      command.id === "first-success" ? { ...command, applicable: true } : command,
+    );
+
+    expect(
+      findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: manifest,
+        ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
+        workflow: WORKFLOW,
+      }),
+    ).toContain("first-success must not require package build artifacts for CI maintenance");
   });
 });

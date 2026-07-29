@@ -20,13 +20,26 @@ const HEAVY_ORDINARY_PR_CHECKS = [
   "alpha-release-smoke",
   "cli-e2e",
   "core-coverage",
+  "first-success",
   "generated-app-smoke",
   "package-bins-smoke",
   "package-entrypoints-smoke",
   "quick-start-lambda-smoke",
 ] as const;
 
+const BUILD_ARTIFACT_MAINTENANCE_CHECKS = [
+  "cli-e2e",
+  "first-success",
+  "generated-app-smoke",
+  "package-bins-smoke",
+  "package-entrypoints-smoke",
+  "production-ready",
+  "quick-start-lambda-smoke",
+  "spine-promotion",
+] as const;
+
 export type CiPerformanceBudgetInput = {
+  readonly maintenancePullRequestManifest: readonly EvidenceCommand[];
   readonly ordinaryPullRequestManifest: readonly EvidenceCommand[];
   readonly workflow: string;
 };
@@ -51,6 +64,9 @@ export function findCiPerformanceBudgetViolations(
   const windowsScaffold = jobSection(input.workflow, "windows-scaffold", "docs-sync-check");
   const docsSync = jobSection(input.workflow, "docs-sync-check", "docs-build");
   const byId = new Map(input.ordinaryPullRequestManifest.map((command) => [command.id, command]));
+  const maintenanceById = new Map(
+    input.maintenancePullRequestManifest.map((command) => [command.id, command]),
+  );
   const affectedFilter = "--filter=...[origin/trunk]";
   const docsExclusion = "--filter=!@croco/docs";
 
@@ -123,6 +139,11 @@ export function findCiPerformanceBudgetViolations(
       violations.push(`${id} must be skipped for an unrelated package implementation change`);
     }
   }
+  for (const id of BUILD_ARTIFACT_MAINTENANCE_CHECKS) {
+    if (maintenanceById.get(id)?.applicable !== false) {
+      violations.push(`${id} must not require package build artifacts for CI maintenance`);
+    }
+  }
 
   const designBudget = pullRequestCiDesignBudgetMinutes();
   if (designBudget > PR_CI_TARGET_MINUTES) {
@@ -142,7 +163,18 @@ function main(): void {
     changedFiles: ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"],
     head: "HEAD",
   });
+  const maintenancePullRequestManifest = createVerificationManifest("publish", {
+    base: "origin/trunk",
+    changedFiles: [
+      ".github/workflows/ci.yml",
+      "scripts/ci-performance-budget.mts",
+      "scripts/tests/ci-workflow.spec.ts",
+      "scripts/verification-manifest.mts",
+    ],
+    head: "HEAD",
+  });
   const violations = findCiPerformanceBudgetViolations({
+    maintenancePullRequestManifest,
     ordinaryPullRequestManifest,
     workflow,
   });

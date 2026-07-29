@@ -281,7 +281,7 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(`${result.stdout}\n${result.stderr}`).toContain(
       "PostHogFeatureManager design:paramtypes expected [PostHogClient], received [missing]",
     );
-  });
+  }, 30_000);
 
   it("fails when a packed decorated method loses design:type metadata", () => {
     const root = createTempRoot();

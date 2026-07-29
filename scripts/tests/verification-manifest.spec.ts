@@ -220,6 +220,46 @@ describe("verification manifest", () => {
     expect(fullById.get("alpha-release-smoke")?.applicable).toBe(true);
   });
 
+  it("does not require package build artifacts for repository-only CI maintenance", () => {
+    const maintenance = createVerificationManifest("publish", {
+      base: "origin/trunk",
+      changedFiles: [
+        ".github/workflows/ci.yml",
+        "scripts/ci-performance-budget.mts",
+        "scripts/tests/ci-workflow.spec.ts",
+        "scripts/verification-manifest.mts",
+      ],
+      head: "HEAD",
+    });
+    const byId = new Map(maintenance.map((command) => [command.id, command]));
+
+    for (const id of [
+      "cli-e2e",
+      "first-success",
+      "generated-app-smoke",
+      "package-bins-smoke",
+      "package-entrypoints-smoke",
+      "production-ready",
+      "quick-start-lambda-smoke",
+      "spine-promotion",
+    ]) {
+      expect(byId.get(id)?.applicable, id).toBe(false);
+    }
+    expect(byId.get("release-gate-tests")?.applicable).toBe(true);
+  });
+
+  it("keeps package-summary accountability on affected package changes", () => {
+    const packageChange = createVerificationManifest("spine", {
+      base: "origin/trunk",
+      changedFiles: ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"],
+      head: "HEAD",
+    });
+    const byId = new Map(packageChange.map((command) => [command.id, command]));
+
+    expect(byId.get("production-ready")?.applicable).toBe(true);
+    expect(byId.get("spine-promotion")?.applicable).toBe(true);
+  });
+
   it("keeps the release-gate inventory complete, sorted, and executable from one root alias", () => {
     const command = createVerificationManifest("publish").find(
       ({ id }) => id === "release-gate-tests",

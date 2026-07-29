@@ -68,7 +68,14 @@ function affectsPackageBins(path: string): boolean {
 }
 
 function affectsCli(path: string): boolean {
-  return path.startsWith("packages/cli/") || path === "scripts/tests/ci-workflow.spec.ts";
+  return path.startsWith("packages/cli/");
+}
+
+function affectsPackageGraph(path: string): boolean {
+  return (
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    /^(?:apps|examples|packages)\//.test(path)
+  );
 }
 
 function affectsCoreCoverage(path: string): boolean {
@@ -370,6 +377,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
   const binsApplicable = isApplicableToChangedFiles(context, affectsPackageBins);
   const cliApplicable = isApplicableToChangedFiles(context, affectsCli);
   const coreCoverageApplicable = isApplicableToChangedFiles(context, affectsCoreCoverage);
+  const packageGraphApplicable = isApplicableToChangedFiles(context, affectsPackageGraph);
 
   return [
     {
@@ -405,6 +413,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "scripts/first-success-verify.mts",
       ),
       timeoutMs: minutes(10),
+      applicable: scaffoldApplicable,
     },
     {
       id: "package-entrypoints-smoke",
@@ -537,6 +546,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "--require-task-summaries",
       ),
       timeoutMs: minutes(10),
+      applicable: packageGraphApplicable,
       artifacts: [
         {
           label: "Production-ready package markdown",
@@ -554,6 +564,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "scripts/spine-promotion-check.mts",
       ),
       timeoutMs: minutes(10),
+      applicable: packageGraphApplicable,
       artifacts: [
         {
           label: "Beta spine promotion markdown",
