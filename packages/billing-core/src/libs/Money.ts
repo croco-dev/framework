@@ -5,6 +5,13 @@ import {
   MoneyDivisionByZeroProblem,
 } from "./problems/BillingProblems";
 
+/**
+ * Controls how fractional minor units are rounded.
+ *
+ * - `half_up`: rounds to the nearest minor unit, with exact halves away from zero.
+ * - `down`: rounds toward zero.
+ * - `up`: rounds away from zero.
+ */
 export type MoneyRoundingMode = "half_up" | "down" | "up";
 
 type DecimalRatio = {
@@ -197,11 +204,14 @@ export class Money {
   }
 
   private static simplifyRatio(ratio: DecimalRatio): DecimalRatio {
-    const divisor = Money.gcd(Money.absInteger(ratio.numerator), ratio.denominator);
+    const denominatorSign = ratio.denominator < 0 ? -1 : 1;
+    const numerator = ratio.numerator * denominatorSign;
+    const denominator = ratio.denominator * denominatorSign;
+    const divisor = Money.gcd(Money.absInteger(numerator), denominator);
 
     return {
-      numerator: ratio.numerator / divisor,
-      denominator: ratio.denominator / divisor,
+      numerator: numerator / divisor,
+      denominator: denominator / divisor,
     };
   }
 
@@ -210,8 +220,9 @@ export class Money {
     ratio: DecimalRatio,
     roundingMode: MoneyRoundingMode,
   ): number {
-    const numerator = Money.toSafeInteger(amount * ratio.numerator);
-    const denominator = ratio.denominator;
+    const normalizedRatio = Money.simplifyRatio(ratio);
+    const numerator = Money.toSafeInteger(amount * normalizedRatio.numerator);
+    const denominator = normalizedRatio.denominator;
     const quotient = Math.trunc(numerator / denominator);
     const remainder = numerator % denominator;
     const rounded = Money.roundQuotient(quotient, remainder, denominator, roundingMode);

@@ -37,6 +37,18 @@ monthly.toFormattedString("ko-KR");
 annual.toString();
 ```
 
+### Money 반올림
+
+`Money.fromDecimal()`, `multiply()`, `divide()`는 소수 minor unit을 반올림할 때
+`MoneyRoundingMode`를 받습니다. 양수와 음수에 같은 방향 규칙을 적용합니다.
+
+- `half_up`: 가장 가까운 minor unit으로 반올림하고, 정확히 절반이면 0에서 멀어지는 방향으로 반올림합니다.
+- `down`: 0을 향해 버립니다.
+- `up`: 0에서 멀어지는 방향으로 올립니다.
+
+예를 들어 `new Money(1, "USD").divide(-2)`는 기본 `half_up`에서 `-1`이고,
+`down`에서는 `0`, `up`에서는 `-1`입니다.
+
 ## API 레퍼런스
 
 ### 핵심 클래스와 인터페이스
