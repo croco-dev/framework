@@ -327,6 +327,8 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - 'turbo.json'
+              - 'packages/auth-core/**'
+              - 'packages/auth-drizzle/**'
               - 'packages/events-core/**'
               - 'packages/events-tx/**'
               - 'packages/framework-context/**'
@@ -588,6 +590,13 @@ jobs:
         env:
           MIGRATION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
         run: pnpm --filter @croco/migration-runner exec vitest run src/tests/MigrationStatusPostgres.spec.ts
+
+      - name: Verify API key rotation atomicity against PostgreSQL
+        env:
+          AUTH_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+        run: |
+          pnpm build --filter=@croco/auth-drizzle...
+          pnpm --filter @croco/auth-drizzle exec vitest run src/tests/DrizzleApiKeyStore.postgres.spec.ts
 
       - name: Verify typed TestKernel resources against real PostgreSQL and Redis
         run: |

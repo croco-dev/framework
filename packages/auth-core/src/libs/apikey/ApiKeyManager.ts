@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { EventBus } from "@croco/events-core";
 import type { Logger } from "@croco/framework-logger";
 import { recordError } from "@croco/telemetry-api";
@@ -12,14 +13,24 @@ import type {
   CreateApiKeyOptions,
   CreateApiKeyResult,
   RevokeApiKeyResult,
+  RotateApiKeyOptions,
   RotateApiKeyResult,
 } from "../interfaces/ApiKey";
 import type { ApiKeyPrincipal } from "../interfaces/Principal";
-import { ForbiddenProblem } from "../problems/AuthProblems";
+import {
+  ForbiddenProblem,
+  InvalidApiKeyRotationIdempotencyKeyProblem,
+} from "../problems/AuthProblems";
 import { ApiKeyGenerator } from "./ApiKeyGenerator";
 import { ApiKeyHasher } from "./ApiKeyHasher";
+import {
+  ApiKeyRotationProtectionProblem,
+  type ApiKeyRotationProtector,
+} from "./ApiKeyRotationProtector";
 import type { ApiKeyStore } from "./ApiKeyStore";
 import { ApiKeyNotFoundProblem } from "./problems/ApiKeyNotFoundProblem";
+
+const ROTATION_EVENT_CLAIM_LEASE_MS = 5 * 60 * 1000;
 
 export class ApiKeyManager {
   constructor(
@@ -28,6 +39,7 @@ export class ApiKeyManager {
     private readonly hasher: ApiKeyHasher = new ApiKeyHasher(),
     private readonly eventBus?: EventBus,
     private readonly logger?: Logger,
+    private readonly rotationProtector?: ApiKeyRotationProtector,
   ) {}
 
   private async runSideEffect(effectName: string, effect: Promise<void>): Promise<boolean> {
@@ -156,10 +168,17 @@ export class ApiKeyManager {
     return degraded ? { degraded: true } : {};
   }
 
-  async rotate(id: string): Promise<RotateApiKeyResult> {
+  async rotate(id: string, options: RotateApiKeyOptions): Promise<RotateApiKeyResult> {
+    if (options.idempotencyKey.trim().length === 0 || options.idempotencyKey.length > 255) {
+      throw new InvalidApiKeyRotationIdempotencyKeyProblem();
+    }
+
     const existingKey = await this.store.findById(id);
     if (!existingKey) {
       throw new ApiKeyNotFoundProblem(id);
+    }
+    if (!this.rotationProtector) {
+      throw new ApiKeyRotationProtectionProblem("configure", "missing");
     }
 
     const {
@@ -169,43 +188,105 @@ export class ApiKeyManager {
       fullKey,
     } = this.generator.generate(existingKey.prefix);
     const hash = this.hasher.hash(longToken);
-
-    const newKey = await this.store.save({
-      prefix,
-      shortToken,
-      hash,
-      name: existingKey.name,
+    const newKeyId = randomUUID();
+    const protectionContext = {
+      oldKeyId: id,
+      newKeyId,
       tenantId: existingKey.tenantId,
-      permissions: existingKey.permissions,
-      createdBy: existingKey.createdBy,
-      expiresAt: existingKey.expiresAt,
-      revokedAt: null,
-      lastUsedAt: null,
-      rateLimit: existingKey.rateLimit,
-      allowedIps: existingKey.allowedIps,
+      idempotencyKey: options.idempotencyKey,
+    };
+    const event = new ApiKeyRotatedEvent({
+      oldKeyId: id,
+      newKeyId,
+      tenantId: existingKey.tenantId,
+    });
+    const rotation = await this.store.rotate({
+      oldKeyId: id,
+      replacement: {
+        id: newKeyId,
+        prefix,
+        shortToken,
+        hash,
+      },
+      tenantId: existingKey.tenantId,
+      idempotencyKey: options.idempotencyKey,
+      recoveryCiphertext: this.rotationProtector.encrypt(fullKey, protectionContext),
+      eventStatus: this.eventBus ? "pending" : "completed",
+      eventClaimId: null,
+      eventClaimExpiresAt: null,
+      eventId: event.eventId,
+      eventOccurredAt: event.timestamp,
     });
 
-    await this.store.revoke(id);
+    const recoveredKey = this.rotationProtector.decrypt(rotation.recoveryCiphertext, {
+      oldKeyId: rotation.oldKeyId,
+      newKeyId: rotation.replacement.id,
+      tenantId: rotation.tenantId,
+      idempotencyKey: rotation.idempotencyKey,
+    });
 
-    const degraded = this.eventBus
-      ? await this.runSideEffect(
-          "ApiKeyRotatedEvent publish failed",
-          this.eventBus.publish(
-            new ApiKeyRotatedEvent({
-              oldKeyId: id,
-              newKeyId: newKey.id,
-              tenantId: existingKey.tenantId,
-            }),
-          ),
-        )
-      : false;
+    const degraded = this.eventBus ? await this.publishRotationEvent(rotation) : false;
 
     return {
-      key: fullKey,
-      id: newKey.id,
-      keyStart: `${prefix}_${shortToken.slice(0, 8)}...`,
+      key: recoveredKey,
+      id: rotation.replacement.id,
+      keyStart: `${rotation.replacement.prefix}_${rotation.replacement.shortToken.slice(0, 8)}...`,
       degraded: degraded || undefined,
     };
+  }
+
+  private async publishRotationEvent(
+    rotation: Awaited<ReturnType<ApiKeyStore["rotate"]>>,
+  ): Promise<boolean> {
+    if (!this.eventBus || rotation.eventStatus === "completed") {
+      return false;
+    }
+
+    const claimId = randomUUID();
+    const claimed = await this.store.claimRotationEvent(
+      rotation.oldKeyId,
+      rotation.idempotencyKey,
+      claimId,
+      new Date(Date.now() + ROTATION_EVENT_CLAIM_LEASE_MS),
+    );
+    if (!claimed) {
+      return true;
+    }
+
+    try {
+      const event = new ApiKeyRotatedEvent({
+        oldKeyId: claimed.oldKeyId,
+        newKeyId: claimed.replacement.id,
+        tenantId: claimed.tenantId,
+      });
+      const eventIdentity = event as unknown as {
+        eventId: string;
+        timestamp: Date;
+      };
+      eventIdentity.eventId = claimed.eventId;
+      eventIdentity.timestamp = new Date(claimed.eventOccurredAt);
+      await this.eventBus.publish(event);
+      const completed = await this.store.completeRotationEvent(
+        claimed.oldKeyId,
+        claimed.idempotencyKey,
+        claimId,
+      );
+      return completed?.eventStatus !== "completed";
+    } catch (error: unknown) {
+      recordError(error);
+      this.logger?.warn("ApiKeyRotatedEvent publish failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      try {
+        await this.store.releaseRotationEvent(claimed.oldKeyId, claimed.idempotencyKey, claimId);
+      } catch (releaseError: unknown) {
+        recordError(releaseError);
+        this.logger?.warn("ApiKeyRotatedEvent claim release failed", {
+          error: releaseError instanceof Error ? releaseError.message : String(releaseError),
+        });
+      }
+      return true;
+    }
   }
 
   async list(tenantId: string): Promise<Omit<ApiKey, "hash">[]> {

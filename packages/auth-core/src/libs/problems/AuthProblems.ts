@@ -70,3 +70,19 @@ export class ApiKeyCreationFailedProblem extends Problem {
     super(detail);
   }
 }
+
+export class ApiKeyRotationConflictProblem extends Problem {
+  readonly code = "auth-core/api-key-rotation-conflict";
+  readonly category = ProblemCategory.Conflict;
+  constructor(detail = "API key rotation conflicts with an existing rotation") {
+    super(detail);
+  }
+}
+
+export class InvalidApiKeyRotationIdempotencyKeyProblem extends Problem {
+  readonly code = "auth-core/invalid-api-key-rotation-idempotency-key";
+  readonly category = ProblemCategory.ValidationError;
+  constructor() {
+    super("API key rotation idempotency key must contain between 1 and 255 characters");
+  }
+}

@@ -47,8 +47,10 @@
     "@croco/tx-drizzle": "workspace:*",
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "^22",
+    "@types/pg": "^8.15.6",
     "better-sqlite3": "^11.0.0",
     "drizzle-orm": "catalog:",
+    "pg": "^8.20.0",
     "tsup": "8.5.1",
     "typescript": "5.9.3",
     "vitest": "4.0.16"

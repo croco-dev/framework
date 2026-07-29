@@ -149,7 +149,7 @@ describe("auth-drizzle provider conformance", () => {
                       findMany,
                     },
                   },
-                } as DrizzleApiKeyDb,
+                } as unknown as DrizzleApiKeyDb,
                 { apiKeys },
               );
 
@@ -184,7 +184,7 @@ describe("auth-drizzle provider conformance", () => {
                         findMany: vi.fn(),
                       },
                     },
-                  } as DrizzleApiKeyDb,
+                  } as unknown as DrizzleApiKeyDb,
                   { apiKeys },
                 );
 
@@ -214,7 +214,7 @@ describe("auth-drizzle provider conformance", () => {
                         findMany: vi.fn(),
                       },
                     },
-                  } as DrizzleApiKeyDb,
+                  } as unknown as DrizzleApiKeyDb,
                   { apiKeys },
                 );
 

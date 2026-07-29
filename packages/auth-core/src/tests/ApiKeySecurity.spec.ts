@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyGenerator } from "../libs/apikey/ApiKeyGenerator";
 import { ApiKeyHasher } from "../libs/apikey/ApiKeyHasher";
 import { ApiKeyManager } from "../libs/apikey/ApiKeyManager";
-import type { ApiKey, CreateApiKeyOptions } from "../libs/interfaces/ApiKey";
+import type { ApiKey, ApiKeyRotationInput, CreateApiKeyOptions } from "../libs/interfaces/ApiKey";
+import { ApiKeyRotationConflictProblem } from "../libs/problems/AuthProblems";
 import type { EventBus } from "@croco/events-core";
 
 describe("ApiKey Security", () => {
@@ -35,6 +36,12 @@ describe("ApiKey Security", () => {
         keys.set(id, key);
         return key;
       }),
+      rotate: vi.fn(async (_input: ApiKeyRotationInput) => {
+        throw new ApiKeyRotationConflictProblem();
+      }),
+      claimRotationEvent: vi.fn(async () => null),
+      completeRotationEvent: vi.fn(async () => null),
+      releaseRotationEvent: vi.fn(async () => {}),
       updateLastUsed: vi.fn(async (id: string) => {
         const key = keys.get(id);
         if (key) {
@@ -185,7 +192,7 @@ describe("ApiKey Security", () => {
 
     it("rotate 실패 시 에러 메시지에 키 정보 포함하지 않음", async () => {
       try {
-        await manager.rotate("nonexistent_key_id");
+        await manager.rotate("nonexistent_key_id", { idempotencyKey: "missing-rotation" });
         expect.fail("에러가 발생해야 함");
       } catch (error) {
         expect(error).toBeInstanceOf(Error);

@@ -4,14 +4,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyGenerator } from "../libs/apikey/ApiKeyGenerator";
 import { ApiKeyHasher } from "../libs/apikey/ApiKeyHasher";
 import { ApiKeyManager } from "../libs/apikey/ApiKeyManager";
+import { AesGcmApiKeyRotationProtector } from "../libs/apikey/ApiKeyRotationProtector";
 import {
   ApiKeyCreatedEvent,
   ApiKeyRevokedEvent,
   ApiKeyRotatedEvent,
   ApiKeyUsedEvent,
 } from "../libs/events/ApiKeyEvents";
-import type { ApiKey, CreateApiKeyOptions } from "../libs/interfaces/ApiKey";
-import { ForbiddenProblem } from "../libs/problems/AuthProblems";
+import type {
+  ApiKey,
+  ApiKeyRotation,
+  ApiKeyRotationInput,
+  CreateApiKeyOptions,
+} from "../libs/interfaces/ApiKey";
+import { ApiKeyRotationConflictProblem, ForbiddenProblem } from "../libs/problems/AuthProblems";
 
 type MockEventBus = {
   publish: ReturnType<typeof vi.fn>;
@@ -26,9 +32,11 @@ describe("ApiKeyManager", () => {
   let mockEventBus!: MockEventBus;
   let generator!: ApiKeyGenerator;
   let hasher!: ApiKeyHasher;
+  let rotationProtector!: AesGcmApiKeyRotationProtector;
 
   function createMockStore() {
     const keys = new Map<string, ApiKey>();
+    const rotations = new Map<string, ApiKeyRotation>();
     let idCounter = 1;
 
     return {
@@ -51,6 +59,88 @@ describe("ApiKeyManager", () => {
         keys.set(id, key);
         return key;
       }),
+      rotate: vi.fn(async (input: ApiKeyRotationInput) => {
+        const existingRotation = rotations.get(input.oldKeyId);
+        if (existingRotation) {
+          if (
+            existingRotation.tenantId !== input.tenantId ||
+            existingRotation.idempotencyKey !== input.idempotencyKey
+          ) {
+            throw new ApiKeyRotationConflictProblem();
+          }
+          return existingRotation;
+        }
+
+        const oldKey = keys.get(input.oldKeyId);
+        if (!oldKey || oldKey.revokedAt) {
+          throw new ApiKeyRotationConflictProblem();
+        }
+        const replacement: ApiKey = {
+          ...oldKey,
+          ...input.replacement,
+          createdAt: new Date(),
+          revokedAt: null,
+          lastUsedAt: null,
+        };
+        oldKey.revokedAt = new Date();
+        keys.set(replacement.id, replacement);
+        const rotation: ApiKeyRotation = {
+          ...input,
+          replacement,
+          createdAt: new Date(),
+        };
+        rotations.set(input.oldKeyId, rotation);
+        return rotation;
+      }),
+      claimRotationEvent: vi.fn(
+        async (oldKeyId: string, idempotencyKey: string, claimId: string, claimExpiresAt: Date) => {
+          const rotation = rotations.get(oldKeyId);
+          if (
+            !rotation ||
+            rotation.idempotencyKey !== idempotencyKey ||
+            rotation.eventStatus === "completed" ||
+            (rotation.eventStatus === "processing" &&
+              rotation.eventClaimExpiresAt &&
+              rotation.eventClaimExpiresAt > new Date())
+          ) {
+            return null;
+          }
+          rotation.eventStatus = "processing";
+          rotation.eventClaimId = claimId;
+          rotation.eventClaimExpiresAt = claimExpiresAt;
+          return rotation;
+        },
+      ),
+      completeRotationEvent: vi.fn(
+        async (oldKeyId: string, idempotencyKey: string, claimId: string) => {
+          const rotation = rotations.get(oldKeyId);
+          if (
+            !rotation ||
+            rotation.idempotencyKey !== idempotencyKey ||
+            rotation.eventClaimId !== claimId
+          ) {
+            return null;
+          }
+          rotation.eventStatus = "completed";
+          rotation.eventClaimId = null;
+          rotation.eventClaimExpiresAt = null;
+          return rotation;
+        },
+      ),
+      releaseRotationEvent: vi.fn(
+        async (oldKeyId: string, idempotencyKey: string, claimId: string) => {
+          const rotation = rotations.get(oldKeyId);
+          if (
+            rotation &&
+            rotation.idempotencyKey === idempotencyKey &&
+            rotation.eventClaimId === claimId
+          ) {
+            rotation.eventStatus = "pending";
+            rotation.eventClaimId = null;
+            rotation.eventClaimExpiresAt = null;
+          }
+        },
+      ),
       updateLastUsed: vi.fn(async (id: string) => {
         const key = keys.get(id);
         if (key) {
@@ -87,7 +177,18 @@ describe("ApiKeyManager", () => {
     mockEventBus = createMockEventBus();
     generator = new ApiKeyGenerator();
     hasher = new ApiKeyHasher();
-    manager = new ApiKeyManager(mockStore, generator, hasher, mockEventBus as unknown as EventBus);
+    rotationProtector = new AesGcmApiKeyRotationProtector({
+      activeKeyId: "test",
+      keys: { test: new Uint8Array(32).fill(7) },
+    });
+    manager = new ApiKeyManager(
+      mockStore,
+      generator,
+      hasher,
+      mockEventBus as unknown as EventBus,
+      undefined,
+      rotationProtector,
+    );
   });
 
   describe("create", () => {
@@ -422,35 +523,35 @@ describe("ApiKeyManager", () => {
     });
 
     it("should create a new key and revoke the old one", async () => {
-      const result = await manager.rotate(originalKey.id);
+      const result = await manager.rotate(originalKey.id, { idempotencyKey: "rotation-1" });
 
       expect(result.key).not.toBe(originalKey.key);
       expect(result.id).not.toBe(originalKey.id);
       expect(result.keyStart).toMatch(/^pk_[a-zA-Z0-9_~-]{8}\.\.\.$/);
 
-      expect(mockStore.save).toHaveBeenCalled();
-      expect(mockStore.revoke).toHaveBeenCalledWith(originalKey.id);
+      expect(mockStore.rotate).toHaveBeenCalled();
     });
 
     it("should preserve original key properties", async () => {
-      await manager.rotate(originalKey.id);
+      await manager.rotate(originalKey.id, { idempotencyKey: "rotation-1" });
 
-      const savedCall = mockStore.save.mock.calls[mockStore.save.mock.calls.length - 1][0];
-      expect(savedCall.name).toBe("Production Key");
-      expect(savedCall.tenantId).toBe("tenant_123");
-      expect(savedCall.permissions).toEqual(["read:users", "write:users"]);
-      expect(savedCall.prefix).toBe("pk");
-      expect(savedCall.rateLimit).toEqual({ limit: 1000, duration: 60 });
+      const rotationCall = mockStore.rotate.mock.calls[0][0];
+      const replacement = await mockStore.findById(rotationCall.replacement.id);
+      expect(replacement?.name).toBe("Production Key");
+      expect(replacement?.tenantId).toBe("tenant_123");
+      expect(replacement?.permissions).toEqual(["read:users", "write:users"]);
+      expect(replacement?.prefix).toBe("pk");
+      expect(replacement?.rateLimit).toEqual({ limit: 1000, duration: 60 });
     });
 
     it("should throw error for non-existent key", async () => {
-      await expect(manager.rotate("nonexistent_id")).rejects.toThrow(
-        "API Key with id 'nonexistent_id' not found",
-      );
+      await expect(
+        manager.rotate("nonexistent_id", { idempotencyKey: "rotation-missing" }),
+      ).rejects.toThrow("API Key with id 'nonexistent_id' not found");
     });
 
     it("should publish ApiKeyRotatedEvent on success", async () => {
-      const result = await manager.rotate(originalKey.id);
+      const result = await manager.rotate(originalKey.id, { idempotencyKey: "rotation-event" });
 
       expect(mockEventBus.publish).toHaveBeenCalled();
       const publishedEvent = mockEventBus.publish.mock.calls[1][0];
@@ -461,7 +562,14 @@ describe("ApiKeyManager", () => {
     });
 
     it("should work without EventBus", async () => {
-      const managerWithoutBus = new ApiKeyManager(mockStore, generator, hasher);
+      const managerWithoutBus = new ApiKeyManager(
+        mockStore,
+        generator,
+        hasher,
+        undefined,
+        undefined,
+        rotationProtector,
+      );
       const options: CreateApiKeyOptions = {
         name: "Production Key",
         tenantId: "tenant_123",
@@ -470,7 +578,9 @@ describe("ApiKeyManager", () => {
       };
       const createdKey = await managerWithoutBus.create(options);
 
-      const result = await managerWithoutBus.rotate(createdKey.id);
+      const result = await managerWithoutBus.rotate(createdKey.id, {
+        idempotencyKey: "rotation-no-bus",
+      });
 
       expect(result.key).not.toBe(createdKey.key);
       expect(result.id).not.toBe(createdKey.id);
@@ -482,7 +592,9 @@ describe("ApiKeyManager", () => {
       mockEventBus.publish.mockReset();
       mockEventBus.publish.mockRejectedValueOnce(new Error("publish failed"));
 
-      const result = await manager.rotate(originalKey.id);
+      const result = await manager.rotate(originalKey.id, {
+        idempotencyKey: "rotation-publish-failure",
+      });
 
       await Promise.resolve();
 
@@ -492,6 +604,100 @@ describe("ApiKeyManager", () => {
 
       recordErrorSpy.mockRestore();
     });
+
+    it("should return the same replacement for an idempotent retry", async () => {
+      const first = await manager.rotate(originalKey.id, {
+        idempotencyKey: "rotation-replay",
+      });
+      const second = await manager.rotate(originalKey.id, {
+        idempotencyKey: "rotation-replay",
+      });
+
+      expect(second).toEqual(first);
+      expect(mockStore._getKeys().size).toBe(2);
+      expect(
+        Array.from(mockStore._getKeys().values()).filter((key) => !key.revokedAt),
+      ).toHaveLength(1);
+    });
+
+    it("should recover a pending rotation event with its stable identity", async () => {
+      const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+      mockEventBus.publish.mockReset();
+      mockEventBus.publish
+        .mockRejectedValueOnce(new Error("publish failed"))
+        .mockResolvedValueOnce(undefined);
+
+      const first = await manager.rotate(originalKey.id, {
+        idempotencyKey: "rotation-event-recovery",
+      });
+      const firstEvent = mockEventBus.publish.mock.calls[0][0] as ApiKeyRotatedEvent;
+      const second = await manager.rotate(originalKey.id, {
+        idempotencyKey: "rotation-event-recovery",
+      });
+      const secondEvent = mockEventBus.publish.mock.calls[1][0] as ApiKeyRotatedEvent;
+
+      expect(first.degraded).toBe(true);
+      expect(second.degraded).toBeUndefined();
+      expect(second.key).toBe(first.key);
+      expect(second.id).toBe(first.id);
+      expect(secondEvent.eventId).toBe(firstEvent.eventId);
+      expect(secondEvent.timestamp).toEqual(firstEvent.timestamp);
+      expect(mockStore.releaseRotationEvent).toHaveBeenCalledTimes(1);
+      expect(mockStore.completeRotationEvent).toHaveBeenCalledTimes(1);
+
+      recordErrorSpy.mockRestore();
+    });
+
+    it("should reject a second logical rotation without creating another active key", async () => {
+      await manager.rotate(originalKey.id, { idempotencyKey: "rotation-winner" });
+
+      await expect(
+        manager.rotate(originalKey.id, { idempotencyKey: "rotation-loser" }),
+      ).rejects.toThrow(ApiKeyRotationConflictProblem);
+      expect(mockStore._getKeys().size).toBe(2);
+      expect(
+        Array.from(mockStore._getKeys().values()).filter((key) => !key.revokedAt),
+      ).toHaveLength(1);
+    });
+
+    it("should persist only protected recovery material", async () => {
+      const result = await manager.rotate(originalKey.id, {
+        idempotencyKey: "rotation-protected",
+      });
+      const input = mockStore.rotate.mock.calls[0][0];
+      const parsed = generator.parse(result.key);
+
+      expect(input.recoveryCiphertext).not.toContain(result.key);
+      expect(input.recoveryCiphertext).not.toContain(parsed?.longToken);
+      expect(JSON.stringify(input.replacement)).not.toContain(result.key);
+      expect(input.replacement.hash).toHaveLength(64);
+    });
+
+    it("should fail closed when rotation protection is not configured", async () => {
+      const managerWithoutProtector = new ApiKeyManager(
+        mockStore,
+        generator,
+        hasher,
+        mockEventBus as unknown as EventBus,
+      );
+
+      await expect(
+        managerWithoutProtector.rotate(originalKey.id, {
+          idempotencyKey: "rotation-without-protector",
+        }),
+      ).rejects.toThrow("API key rotation recovery material could not be protected");
+      expect(mockStore.rotate).not.toHaveBeenCalled();
+    });
+
+    it.each(["", "   ", "x".repeat(256)])(
+      "should reject invalid rotation idempotency key %j",
+      async (idempotencyKey) => {
+        await expect(manager.rotate(originalKey.id, { idempotencyKey })).rejects.toThrow(
+          "API key rotation idempotency key must contain between 1 and 255 characters",
+        );
+        expect(mockStore.rotate).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("list", () => {
