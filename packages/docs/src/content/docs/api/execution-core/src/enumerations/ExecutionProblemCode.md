@@ -11,32 +11,38 @@ title: "ExecutionProblemCode"
 
 > **CONFLICT**: `"execution/conflict"`
 
-***
+---
 
-### CONTINUATION\_CONFLICT
+### CONTINUATION_CONFLICT
 
-> **CONTINUATION\_CONFLICT**: `"execution/continuation-conflict"`
+> **CONTINUATION_CONFLICT**: `"execution/continuation-conflict"`
 
-***
+---
 
-### CONTINUATION\_UNSUPPORTED
+### CONTINUATION_UNSUPPORTED
 
-> **CONTINUATION\_UNSUPPORTED**: `"execution/continuation-unsupported"`
+> **CONTINUATION_UNSUPPORTED**: `"execution/continuation-unsupported"`
 
-***
+---
 
-### INVALID\_STATE\_TRANSITION
+### INVALID_CONTINUATION_LEASE_DURATION
 
-> **INVALID\_STATE\_TRANSITION**: `"execution/invalid-state-transition"`
+> **INVALID_CONTINUATION_LEASE_DURATION**: `"execution/invalid-continuation-lease-duration"`
 
-***
+---
 
-### MAX\_RETRIES\_EXCEEDED
+### INVALID_STATE_TRANSITION
 
-> **MAX\_RETRIES\_EXCEEDED**: `"execution/max-retries-exceeded"`
+> **INVALID_STATE_TRANSITION**: `"execution/invalid-state-transition"`
 
-***
+---
 
-### NOT\_FOUND
+### MAX_RETRIES_EXCEEDED
 
-> **NOT\_FOUND**: `"execution/not-found"`
+> **MAX_RETRIES_EXCEEDED**: `"execution/max-retries-exceeded"`
+
+---
+
+### NOT_FOUND
+
+> **NOT_FOUND**: `"execution/not-found"`

@@ -1,13 +1,20 @@
 export {
   ExecutionManagerImpl,
   INITIAL_EXECUTION_CONTINUATION_TOKEN,
+  MAX_CONTINUATION_LEASE_DURATION_MS,
+  MIN_CONTINUATION_LEASE_DURATION_MS,
 } from "./libs/ExecutionManagerImpl";
 export type { ExecutionManagerOptions } from "./libs/ExecutionManagerImpl";
 export type {
   ExecutionContinuationConflictEvidence,
   ExecutionProblemCode,
+  InvalidContinuationLeaseDurationProblemOptions,
 } from "./libs/ExecutionProblem";
-export { ExecutionProblem, ExecutionProblems } from "./libs/ExecutionProblem";
+export {
+  ExecutionProblem,
+  ExecutionProblems,
+  InvalidContinuationLeaseDurationProblem,
+} from "./libs/ExecutionProblem";
 export type {
   CancelJobParams,
   ExecutionJobsManager,

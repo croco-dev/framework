@@ -7848,6 +7848,24 @@
               "declarationKind": "const"
             },
             {
+              "name": "InvalidContinuationLeaseDurationProblem",
+              "exportKind": "named",
+              "source": "./libs/ExecutionProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MAX_CONTINUATION_LEASE_DURATION_MS",
+              "exportKind": "named",
+              "source": "./libs/ExecutionManagerImpl",
+              "declarationKind": "const"
+            },
+            {
+              "name": "MIN_CONTINUATION_LEASE_DURATION_MS",
+              "exportKind": "named",
+              "source": "./libs/ExecutionManagerImpl",
+              "declarationKind": "const"
+            },
+            {
               "name": "summarizeJob",
               "exportKind": "named",
               "source": "./libs/JobsOperations",
@@ -7989,6 +8007,11 @@
               "name": "ExecutionStatus",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "InvalidContinuationLeaseDurationProblemOptions",
+              "exportKind": "named",
+              "source": "./libs/ExecutionProblem"
             },
             {
               "name": "JobDetails",
