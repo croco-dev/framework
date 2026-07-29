@@ -271,6 +271,17 @@ describe("InMemoryBillingStore", () => {
       ).resolves.toBeUndefined();
     });
 
+    it("should idempotently remove completed and missing webhook reservations", async () => {
+      await store.reserveWebhook("event-1", "subscription.created");
+      await store.completeWebhook("event-1");
+
+      await expect(store.failWebhook("event-1")).resolves.toBeUndefined();
+      await expect(store.failWebhook("event-1")).resolves.toBeUndefined();
+      await expect(
+        store.reserveWebhook("event-1", "subscription.created"),
+      ).resolves.toBeUndefined();
+    });
+
     it("should reject completion when the webhook was not reserved", async () => {
       await expect(store.completeWebhook("event-1")).rejects.toBeInstanceOf(
         WebhookAlreadyProcessedProblem,

@@ -153,6 +153,28 @@ describe("PolarEventMapper", () => {
       expect(events).toHaveLength(0);
     });
 
+    it("subscription.past_due → SubscriptionPastDueEvent", () => {
+      const events = mapper.mapSubscriptionEvent(
+        "subscription.past_due",
+        "tenant-123",
+        {
+          id: "sub-123",
+          productId: "plan-pro",
+          planVersionRef: planVersionRef("plan-pro@v1"),
+          status: "past_due",
+        },
+        "plan-pro",
+        planVersionRef("plan-pro@v1"),
+      );
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toBeInstanceOf(SubscriptionPastDueEvent);
+      expect(events[0]).toMatchObject({
+        tenantId: "tenant-123",
+        externalSubscriptionId: "sub-123",
+      });
+    });
+
     it("subscription.canceled → SubscriptionCanceledEvent", () => {
       const events = mapper.mapSubscriptionEvent("subscription.canceled", "tenant-123", {
         id: "sub-123",

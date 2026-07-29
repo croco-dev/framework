@@ -1,6 +1,12 @@
-import type { BillingStore, PlanRegistry, PlanVersionDefinition } from "@croco/billing-core";
+import type {
+  BillingStore,
+  PlanRegistry,
+  PlanVersionDefinition,
+  Subscription,
+} from "@croco/billing-core";
 import {
   planVersionRef,
+  SubscriptionPastDueEvent,
   UnknownProviderPlanMappingProblem,
   WebhookAlreadyProcessedProblem,
 } from "@croco/billing-core";
@@ -71,17 +77,11 @@ function createMockPlanRegistry(): PlanRegistry {
   };
 }
 
-const mockValidateEvent = vi.fn();
+const mockVerifyPolarWebhook = vi.fn();
 
-vi.mock("@polar-sh/sdk/webhooks", () => ({
-  get validateEvent() {
-    return mockValidateEvent;
-  },
-  WebhookVerificationError: class extends Error {
-    constructor(message: string) {
-      super(message);
-      this.name = "WebhookVerificationError";
-    }
+vi.mock("../libs/verifyPolarWebhook", () => ({
+  get verifyPolarWebhook() {
+    return mockVerifyPolarWebhook;
   },
 }));
 
@@ -213,7 +213,7 @@ describe("PolarWebhookHandler", () => {
       vi.mocked(mockStore.reserveWebhook)
         .mockResolvedValueOnce(undefined)
         .mockRejectedValue(new WebhookAlreadyProcessedProblem(subscriptionEvent.id));
-      vi.mocked(mockValidateEvent).mockImplementation(
+      vi.mocked(mockVerifyPolarWebhook).mockImplementation(
         (body: Buffer | string, headers: Record<string, string>) => {
           if (headers["webhook-signature"] !== "valid") {
             throw new Error("Invalid signature");
@@ -308,7 +308,7 @@ describe("PolarWebhookHandler", () => {
       vi.mocked(mockStore.reserveWebhook)
         .mockResolvedValueOnce(undefined)
         .mockRejectedValueOnce(new WebhookAlreadyProcessedProblem(signedSubscriptionEvent.id));
-      vi.mocked(mockValidateEvent).mockImplementation(
+      vi.mocked(mockVerifyPolarWebhook).mockImplementation(
         (body: Buffer | string, headers: Record<string, string>) => {
           expect(headers).toMatchObject({
             "webhook-id": signedSubscriptionEvent.id,
@@ -332,12 +332,14 @@ describe("PolarWebhookHandler", () => {
 
       expect(firstResult).toEqual({ success: true, eventId: signedSubscriptionEvent.id });
       expect(replayResult).toEqual({ success: true, eventId: signedSubscriptionEvent.id });
-      expect(mockValidateEvent).toHaveBeenCalledTimes(2);
+      expect(mockVerifyPolarWebhook).toHaveBeenCalledTimes(2);
       expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(2);
       expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
       expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
       expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
-      expect(mockStore.failWebhook).not.toHaveBeenCalled();
+      expect(mockStore.failWebhook).toHaveBeenCalledWith(
+        "croco:billing:polar:subscription:sub-signed-replay:past_due",
+      );
     });
 
     it("should process webhook only once for concurrent requests", async () => {
@@ -363,7 +365,7 @@ describe("PolarWebhookHandler", () => {
         },
       };
 
-      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
 
       const body = JSON.stringify(eventData);
       const headers = { "webhook-id": "evt-race-1" };
@@ -407,7 +409,7 @@ describe("PolarWebhookHandler", () => {
         },
       };
 
-      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
 
       const result = await handler.handle(JSON.stringify(eventData), {
         "webhook-id": "evt-dup-conflict",
@@ -449,7 +451,7 @@ describe("PolarWebhookHandler", () => {
       },
     ])("should preserve $name as a retriable reservation failure", async ({ error }) => {
       vi.mocked(mockStore.reserveWebhook).mockRejectedValue(error);
-      vi.mocked(mockValidateEvent).mockReturnValue({
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue({
         id: "evt-reservation-failure",
         type: "subscription.created",
         data: {
@@ -487,7 +489,7 @@ describe("PolarWebhookHandler", () => {
     it("should preserve a non-Error reservation rejection without exposing it", async () => {
       const rejection = { constraint: "billing_accounts_email_key" };
       vi.mocked(mockStore.reserveWebhook).mockRejectedValue(rejection);
-      vi.mocked(mockValidateEvent).mockReturnValue({
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue({
         id: "evt-non-error-reservation-failure",
         type: "subscription.created",
         data: {
@@ -546,7 +548,7 @@ describe("PolarWebhookHandler", () => {
         },
       };
 
-      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
 
       const body = JSON.stringify(eventData);
       const headers = { "webhook-id": "evt-123" };
@@ -558,6 +560,351 @@ describe("PolarWebhookHandler", () => {
       expect(mockEventPublisher.publishNow).toHaveBeenCalled();
       expect(mockStore.reserveWebhook).toHaveBeenCalledWith("evt-123", "subscription.created");
       expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-123");
+    });
+
+    it("publishes one past-due transition for concurrent updated and past_due events", async () => {
+      const reservations = new Set<string>();
+      let storedSubscription: Subscription = {
+        id: "sub-past-due",
+        billingAccountId: "tenant-123",
+        externalSubscriptionId: "sub-past-due",
+        planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
+        status: "active",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00Z"),
+      };
+      let readCount = 0;
+      let releaseReads: (() => void) | undefined;
+      const bothHandlersRead = new Promise<void>((resolve) => {
+        releaseReads = resolve;
+      });
+
+      vi.mocked(mockStore.findSubscription).mockImplementation(async () => {
+        const snapshot = { ...storedSubscription };
+        readCount += 1;
+        if (readCount === 2) {
+          releaseReads?.();
+        }
+        await bothHandlersRead;
+        return snapshot;
+      });
+      vi.mocked(mockStore.saveSubscription).mockImplementation(async (subscription) => {
+        storedSubscription = subscription;
+      });
+      vi.mocked(mockStore.reserveWebhook).mockImplementation(async (eventId) => {
+        if (reservations.has(eventId)) {
+          throw new WebhookAlreadyProcessedProblem(eventId);
+        }
+        reservations.add(eventId);
+      });
+      vi.mocked(mockStore.failWebhook).mockImplementation(async (eventId) => {
+        reservations.delete(eventId);
+      });
+      vi.mocked(mockVerifyPolarWebhook).mockImplementation((body: Buffer | string) =>
+        JSON.parse(body.toString()),
+      );
+      const otherHandler = new PolarWebhookHandler(config, {
+        store: mockStore,
+        eventPublisher: mockEventPublisher,
+        planRegistry: mockPlanRegistry,
+      });
+
+      const createEvent = (id: string, type: string) => ({
+        id,
+        type,
+        data: {
+          id: "sub-past-due",
+          customer: { externalId: "tenant-123", metadata: {} },
+          product: { id: "plan-pro" },
+          status: "past_due",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      });
+      const updatedEvent = createEvent("evt-past-due-updated", "subscription.updated");
+      const directEvent = createEvent("evt-past-due-direct", "subscription.past_due");
+
+      const results = await Promise.all([
+        handler.handle(JSON.stringify(updatedEvent), { "webhook-id": updatedEvent.id }),
+        otherHandler.handle(JSON.stringify(directEvent), { "webhook-id": directEvent.id }),
+      ]);
+
+      expect(results).toEqual([
+        { success: true, eventId: updatedEvent.id },
+        { success: true, eventId: directEvent.id },
+      ]);
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
+      expect(mockStore.reserveWebhook).toHaveBeenCalledWith(
+        "croco:billing:polar:subscription:sub-past-due:past_due",
+        "billing.subscription_past_due",
+      );
+      expect(mockStore.saveSubscription).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries a past-due publication after persistence without losing the transition", async () => {
+      const reservations = new Set<string>();
+      let storedSubscription: Subscription = {
+        id: "sub-past-due-retry",
+        billingAccountId: "tenant-retry",
+        externalSubscriptionId: "sub-past-due-retry",
+        planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
+        status: "active",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00Z"),
+      };
+
+      vi.mocked(mockStore.findSubscription).mockImplementation(async () => storedSubscription);
+      vi.mocked(mockStore.saveSubscription).mockImplementation(async (subscription) => {
+        storedSubscription = subscription;
+      });
+      vi.mocked(mockStore.reserveWebhook).mockImplementation(async (eventId) => {
+        if (reservations.has(eventId)) {
+          throw new WebhookAlreadyProcessedProblem(eventId);
+        }
+        reservations.add(eventId);
+      });
+      vi.mocked(mockStore.failWebhook).mockImplementation(async (eventId) => {
+        reservations.delete(eventId);
+      });
+      vi.mocked(mockEventPublisher.publishNow).mockRejectedValueOnce(
+        new Error("subscriber unavailable"),
+      );
+
+      const eventData = {
+        id: "evt-past-due-retry",
+        type: "subscription.past_due",
+        data: {
+          id: "sub-past-due-retry",
+          customer: { externalId: "tenant-retry", metadata: {} },
+          product: { id: "plan-pro" },
+          status: "past_due",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      };
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
+
+      const firstResult = await handler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+      const retryResult = await handler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+
+      expect(firstResult).toMatchObject({
+        success: false,
+        eventId: eventData.id,
+        error: expect.stringContaining("subscriber unavailable"),
+      });
+      expect(retryResult).toEqual({ success: true, eventId: eventData.id });
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(mockEventPublisher.publishNow).mock.calls[1]?.[0]).toBeInstanceOf(
+        SubscriptionPastDueEvent,
+      );
+    });
+
+    it("keeps one past-due episode across unrelated updates and opens a new one after recovery", async () => {
+      const reservations = new Set<string>();
+      let storedSubscription: Subscription = {
+        id: "sub-past-due-episodes",
+        billingAccountId: "tenant-episodes",
+        externalSubscriptionId: "sub-past-due-episodes",
+        planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
+        status: "active",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00Z"),
+      };
+
+      vi.mocked(mockStore.findSubscription).mockImplementation(async () => storedSubscription);
+      vi.mocked(mockStore.saveSubscription).mockImplementation(async (subscription) => {
+        storedSubscription = subscription;
+      });
+      vi.mocked(mockStore.reserveWebhook).mockImplementation(async (eventId) => {
+        if (reservations.has(eventId)) {
+          throw new WebhookAlreadyProcessedProblem(eventId);
+        }
+        reservations.add(eventId);
+      });
+      vi.mocked(mockStore.failWebhook).mockImplementation(async (eventId) => {
+        reservations.delete(eventId);
+      });
+      vi.mocked(mockVerifyPolarWebhook).mockImplementation((body: Buffer | string) =>
+        JSON.parse(body.toString()),
+      );
+
+      const createEvent = (id: string, status: "active" | "past_due") => ({
+        id,
+        type: status === "past_due" ? "subscription.past_due" : "subscription.updated",
+        data: {
+          id: "sub-past-due-episodes",
+          customer: { externalId: "tenant-episodes", metadata: {} },
+          product: { id: "plan-pro" },
+          status,
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      });
+      const events = [
+        createEvent("evt-past-due-t1", "past_due"),
+        { ...createEvent("evt-unrelated-t2", "past_due"), type: "subscription.updated" },
+        createEvent("evt-recovered-t3", "active"),
+        createEvent("evt-past-due-t4", "past_due"),
+      ];
+
+      for (const event of events) {
+        await handler.handle(JSON.stringify(event), { "webhook-id": event.id });
+      }
+
+      const pastDuePublications = vi
+        .mocked(mockEventPublisher.publishNow)
+        .mock.calls.filter(([event]) => event instanceof SubscriptionPastDueEvent);
+      expect(pastDuePublications).toHaveLength(2);
+      expect(mockStore.reserveWebhook).toHaveBeenCalledWith(
+        "croco:billing:polar:subscription:sub-past-due-episodes:past_due",
+        "billing.subscription_past_due",
+      );
+    });
+
+    it("retries a failed recovery reset before publishing the next past-due episode", async () => {
+      const transitionReservationId = "croco:billing:polar:subscription:sub-reset-retry:past_due";
+      const reservations = new Set<string>();
+      let storedSubscription: Subscription = {
+        id: "sub-reset-retry",
+        billingAccountId: "tenant-reset-retry",
+        externalSubscriptionId: "sub-reset-retry",
+        planId: "plan-pro",
+        planVersionRef: planVersionRef("plan-pro@v1"),
+        status: "active",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00Z"),
+        cancelAtPeriodEnd: false,
+        lastSyncedAt: new Date("2026-01-01T00:00:00Z"),
+      };
+      let failedRecoveryReset = false;
+
+      vi.mocked(mockStore.findSubscription).mockImplementation(async () => storedSubscription);
+      vi.mocked(mockStore.saveSubscription).mockImplementation(async (subscription) => {
+        storedSubscription = subscription;
+      });
+      vi.mocked(mockStore.reserveWebhook).mockImplementation(async (eventId) => {
+        if (reservations.has(eventId)) {
+          throw new WebhookAlreadyProcessedProblem(eventId);
+        }
+        reservations.add(eventId);
+      });
+      vi.mocked(mockStore.failWebhook).mockImplementation(async (eventId) => {
+        if (
+          eventId === transitionReservationId &&
+          storedSubscription.status === "active" &&
+          !failedRecoveryReset
+        ) {
+          failedRecoveryReset = true;
+          throw new Error("reset unavailable");
+        }
+        reservations.delete(eventId);
+      });
+      vi.mocked(mockVerifyPolarWebhook).mockImplementation((body: Buffer | string) =>
+        JSON.parse(body.toString()),
+      );
+
+      const createEvent = (id: string, status: "active" | "past_due") => ({
+        id,
+        type: status === "past_due" ? "subscription.past_due" : "subscription.updated",
+        data: {
+          id: "sub-reset-retry",
+          customer: { externalId: "tenant-reset-retry", metadata: {} },
+          product: { id: "plan-pro" },
+          status,
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      });
+      const firstPastDue = createEvent("evt-reset-past-due-t1", "past_due");
+      const recovery = createEvent("evt-reset-active-t2", "active");
+      const nextPastDue = createEvent("evt-reset-past-due-t3", "past_due");
+
+      await handler.handle(JSON.stringify(firstPastDue), { "webhook-id": firstPastDue.id });
+      const failedRecovery = await handler.handle(JSON.stringify(recovery), {
+        "webhook-id": recovery.id,
+      });
+      const retriedRecovery = await handler.handle(JSON.stringify(recovery), {
+        "webhook-id": recovery.id,
+      });
+      const nextPastDueResult = await handler.handle(JSON.stringify(nextPastDue), {
+        "webhook-id": nextPastDue.id,
+      });
+
+      expect(failedRecovery).toMatchObject({
+        success: false,
+        error: expect.stringContaining("reset unavailable"),
+      });
+      expect(retriedRecovery).toEqual({ success: true, eventId: recovery.id });
+      expect(nextPastDueResult).toEqual({ success: true, eventId: nextPastDue.id });
+      expect(
+        vi
+          .mocked(mockEventPublisher.publishNow)
+          .mock.calls.filter(([event]) => event instanceof SubscriptionPastDueEvent),
+      ).toHaveLength(2);
+    });
+
+    it("does not reopen a published transition when reservation completion fails", async () => {
+      const transitionReservationId =
+        "croco:billing:polar:subscription:sub-completion-failure:past_due";
+      const reservations = new Set<string>();
+      let failedTransitionCompletion = false;
+
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockStore.reserveWebhook).mockImplementation(async (eventId) => {
+        if (reservations.has(eventId)) {
+          throw new WebhookAlreadyProcessedProblem(eventId);
+        }
+        reservations.add(eventId);
+      });
+      vi.mocked(mockStore.completeWebhook).mockImplementation(async (eventId) => {
+        if (eventId === transitionReservationId && !failedTransitionCompletion) {
+          failedTransitionCompletion = true;
+          throw new Error("completion unavailable");
+        }
+      });
+      vi.mocked(mockStore.failWebhook).mockImplementation(async (eventId) => {
+        reservations.delete(eventId);
+      });
+
+      const eventData = {
+        id: "evt-completion-failure",
+        type: "subscription.past_due",
+        data: {
+          id: "sub-completion-failure",
+          customer: { externalId: "tenant-completion-failure", metadata: {} },
+          product: { id: "plan-pro" },
+          status: "past_due",
+          currentPeriodEnd: "2026-02-01T00:00:00Z",
+          cancelAtPeriodEnd: false,
+        },
+      };
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
+
+      const firstResult = await handler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+      const retryResult = await handler.handle(JSON.stringify(eventData), {
+        "webhook-id": eventData.id,
+      });
+
+      expect(firstResult).toMatchObject({
+        success: false,
+        eventId: eventData.id,
+        error: expect.stringContaining("completion unavailable"),
+      });
+      expect(retryResult).toEqual({ success: true, eventId: eventData.id });
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
+      expect(mockStore.failWebhook).toHaveBeenCalledWith(eventData.id);
+      expect(mockStore.failWebhook).not.toHaveBeenCalledWith(transitionReservationId);
     });
 
     it("subscription.canceled에서 currentPeriodEnd가 null이면 실패 처리", async () => {
@@ -576,7 +923,7 @@ describe("PolarWebhookHandler", () => {
         },
       };
 
-      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
 
       await expect(
         handler.handle(JSON.stringify(eventData), {
@@ -612,7 +959,7 @@ describe("PolarWebhookHandler", () => {
         },
       };
 
-      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
 
       await expect(
         handler.handle(JSON.stringify(eventData), {
@@ -651,7 +998,7 @@ describe("PolarWebhookHandler", () => {
         },
       };
 
-      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
 
       const result = await handler.handle(JSON.stringify(eventData), {
         "webhook-id": "evt-retryable-failure",
@@ -687,7 +1034,7 @@ describe("PolarWebhookHandler", () => {
         },
       };
 
-      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
 
       const body = JSON.stringify(eventData);
       const headers = { "webhook-id": "evt-456" };
@@ -724,7 +1071,7 @@ describe("PolarWebhookHandler", () => {
         { id: "evt-order-paid", type: "order.paid", data: orderData },
       ];
 
-      vi.mocked(mockValidateEvent).mockImplementation((body: Buffer | string) => {
+      vi.mocked(mockVerifyPolarWebhook).mockImplementation((body: Buffer | string) => {
         return JSON.parse(Buffer.isBuffer(body) ? body.toString("utf8") : body) as never;
       });
       vi.mocked(mockStore.reserveWebhook)
@@ -782,7 +1129,7 @@ describe("PolarWebhookHandler", () => {
       async ({ message, headers, detail }) => {
         const body = JSON.stringify({ id: headers["webhook-id"], type: "subscription.created" });
 
-        vi.mocked(mockValidateEvent).mockImplementation(() => {
+        vi.mocked(mockVerifyPolarWebhook).mockImplementation(() => {
           throw new Error(message);
         });
 
@@ -805,7 +1152,7 @@ describe("PolarWebhookHandler", () => {
         "webhook-signature": rawSignature,
       };
 
-      vi.mocked(mockValidateEvent).mockImplementation(() => {
+      vi.mocked(mockVerifyPolarWebhook).mockImplementation(() => {
         throw new Error(
           "Invalid signature: webhookSecret=test-secret webhook-signature=v1,leaked-signature signature=leaked-signature",
         );
@@ -827,7 +1174,7 @@ describe("PolarWebhookHandler", () => {
       const body = JSON.stringify({});
       const headers = { "webhook-id": "evt-999" };
 
-      vi.mocked(mockValidateEvent).mockReturnValue({
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue({
         id: null,
         type: null,
       } as never);
@@ -859,7 +1206,7 @@ describe("PolarWebhookHandler", () => {
         },
       };
 
-      vi.mocked(mockValidateEvent).mockReturnValue(eventData as never);
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(eventData);
 
       const body = JSON.stringify(eventData);
       const headers = { "webhook-id": "evt-999" };
@@ -883,7 +1230,7 @@ describe("PolarWebhookHandler", () => {
       vi.mocked(mockPlanRegistry.resolveProviderPlanVersion).mockRejectedValue(
         new UnknownProviderPlanMappingProblem("polar", "unknown-product", ["unknown-price"]),
       );
-      vi.mocked(mockValidateEvent).mockReturnValue({
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue({
         id: "evt-unknown-plan",
         type: "subscription.created",
         data: {

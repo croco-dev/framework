@@ -32,5 +32,11 @@ export abstract class BillingStore {
    */
   abstract reserveWebhook(eventId: string, eventType: string): Promise<void>;
   abstract completeWebhook(eventId: string): Promise<void>;
+  /**
+   * Idempotently removes a webhook reservation in either reserved or completed state.
+   *
+   * This operation must also succeed when no reservation exists so recovery work can be retried
+   * independently of domain-state persistence.
+   */
   abstract failWebhook(eventId: string): Promise<void>;
 }

@@ -38,7 +38,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### deleteAccount()
 
@@ -54,7 +54,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### deleteSubscription()
 
@@ -70,11 +70,16 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### failWebhook()
 
 > `abstract` **failWebhook**(`eventId`): `Promise`\<`void`\>
+
+Idempotently removes a webhook reservation in either reserved or completed state.
+
+This operation must also succeed when no reservation exists so recovery work can be retried
+independently of domain-state persistence.
 
 #### Parameters
 
@@ -86,7 +91,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### findAccountByExternalId()
 
@@ -102,7 +107,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
-***
+---
 
 ### findAccountByTenantId()
 
@@ -118,7 +123,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
-***
+---
 
 ### findOrdersByAccount()
 
@@ -134,7 +139,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<[`Order`](/api/billing-core/src/type-aliases/order/)[]\>
 
-***
+---
 
 ### findSubscription()
 
@@ -150,7 +155,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
-***
+---
 
 ### findSubscriptionByExternalId()
 
@@ -166,7 +171,7 @@ The framework provides `InMemoryBillingStore`; applications may supply persisten
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
-***
+---
 
 ### reserveWebhook()
 
@@ -191,7 +196,7 @@ reservation already exists. Other storage failures must retain their original fa
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveAccount()
 
@@ -207,7 +212,7 @@ reservation already exists. Other storage failures must retain their original fa
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveOrder()
 
@@ -223,7 +228,7 @@ reservation already exists. Other storage failures must retain their original fa
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### saveSubscription()
 
