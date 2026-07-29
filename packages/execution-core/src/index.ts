@@ -5,6 +5,11 @@ export {
   MIN_CONTINUATION_LEASE_DURATION_MS,
 } from "./libs/ExecutionManagerImpl";
 export type { ExecutionManagerOptions } from "./libs/ExecutionManagerImpl";
+export { prepareExecutionCheckpoint } from "./libs/ExecutionCheckpoint";
+export type {
+  ExecutionCheckpointValue,
+  PreparedExecutionCheckpoint,
+} from "./libs/ExecutionCheckpoint";
 export { createExecutionCheckpointStoreConformanceSuite } from "./libs/conformance";
 export type {
   ExecutionCheckpointConcurrencyResult,

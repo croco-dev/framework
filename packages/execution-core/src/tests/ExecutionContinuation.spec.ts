@@ -21,6 +21,7 @@ import {
   InvalidContinuationLeaseDurationProblem,
   MAX_CONTINUATION_LEASE_DURATION_MS,
   MIN_CONTINUATION_LEASE_DURATION_MS,
+  prepareExecutionCheckpoint,
 } from "../index";
 
 class InMemoryExecutionStore implements ExecutionStore, ExecutionContinuationStore {
@@ -56,9 +57,10 @@ class InMemoryExecutionStore implements ExecutionStore, ExecutionContinuationSto
     if (this.execution?.id !== id) {
       throw ExecutionProblems.notFound(`Execution '${id}' not found`);
     }
+    const checkpoint = prepareExecutionCheckpoint(key, value);
     this.execution = {
       ...this.execution,
-      checkpoints: { ...this.execution.checkpoints, [key]: value },
+      checkpoints: { ...this.execution.checkpoints, [key]: checkpoint.value },
     };
     return this.execution;
   }

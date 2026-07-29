@@ -16,7 +16,7 @@ import type {
   ExecutionStore,
   ListExecutionsOptions,
 } from "@croco/execution-core";
-import { ExecutionProblems } from "@croco/execution-core";
+import { ExecutionProblems, prepareExecutionCheckpoint } from "@croco/execution-core";
 import {
   type AtomicQuotaCheckOptions,
   type AtomicQuotaCheckResult,
@@ -407,9 +407,10 @@ export class InMemoryExecutionStore implements ExecutionStore, ExecutionLogStore
     if (!execution) {
       throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
     }
+    const checkpoint = prepareExecutionCheckpoint(key, value);
     const updated = {
       ...execution,
-      checkpoints: { ...execution.checkpoints, [key]: value },
+      checkpoints: { ...execution.checkpoints, [key]: checkpoint.value },
     };
     this.executions.set(id, updated);
     return updated;

@@ -16,6 +16,7 @@ import {
   ExecutionManagerImpl,
   ExecutionProblem,
   ExecutionProblems,
+  prepareExecutionCheckpoint,
 } from "../index";
 
 class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
@@ -112,11 +113,12 @@ class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
     if (!existing) {
       throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
     }
+    const checkpoint = prepareExecutionCheckpoint(key, value);
 
     return this.update(id, {
       checkpoints: {
         ...existing.checkpoints,
-        [key]: value,
+        [key]: checkpoint.value,
       },
     });
   }

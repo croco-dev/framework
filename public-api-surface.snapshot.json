@@ -8092,6 +8092,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "prepareExecutionCheckpoint",
+              "exportKind": "named",
+              "source": "./libs/ExecutionCheckpoint",
+              "declarationKind": "function"
+            },
+            {
               "name": "summarizeJob",
               "exportKind": "named",
               "source": "./libs/JobsOperations",
@@ -8168,6 +8174,11 @@
               "name": "ExecutionCheckpointStoreConformanceSuite",
               "exportKind": "named",
               "source": "./libs/conformance"
+            },
+            {
+              "name": "ExecutionCheckpointValue",
+              "exportKind": "named",
+              "source": "./libs/ExecutionCheckpoint"
             },
             {
               "name": "ExecutionCheckpointWrite",
@@ -8318,6 +8329,11 @@
               "name": "ListRunningExecutionsOptions",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "PreparedExecutionCheckpoint",
+              "exportKind": "named",
+              "source": "./libs/ExecutionCheckpoint"
             },
             {
               "name": "ProgressInfo",

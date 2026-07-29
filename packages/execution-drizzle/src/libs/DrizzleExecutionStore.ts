@@ -13,6 +13,7 @@ import {
   ExecutionStore,
   type ListExecutionsOptions,
   type ListRunningExecutionsOptions,
+  prepareExecutionCheckpoint,
   type UpdateClaimedExecutionContinuationInput,
 } from "@croco/execution-core";
 import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
@@ -21,25 +22,6 @@ import type { ExecutionRow, NewExecutionRow } from "./schema";
 import { executions } from "./schema";
 
 type AwaitableQueryResult = PromiseLike<unknown>;
-
-function serializeCheckpoint(key: string, value: unknown): string {
-  let checkpoint: string;
-  try {
-    checkpoint = JSON.stringify({ [key]: value });
-  } catch {
-    throw ExecutionProblems.checkpointStoreConformance(
-      `Checkpoint '${key}' must contain a JSON-serializable value`,
-    );
-  }
-
-  const serialized = JSON.parse(checkpoint) as Record<string, unknown>;
-  if (!Object.prototype.hasOwnProperty.call(serialized, key)) {
-    throw ExecutionProblems.checkpointStoreConformance(
-      `Checkpoint '${key}' must contain a JSON-serializable value`,
-    );
-  }
-  return checkpoint;
-}
 
 type InsertQuery = {
   values(values: unknown): {
@@ -297,7 +279,7 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
    * 체크포인트 키 하나를 원자적으로 병합합니다.
    */
   async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
-    const checkpoint = serializeCheckpoint(key, value);
+    const checkpoint = prepareExecutionCheckpoint(key, value).serialized;
     const result = (await this.dbOp
       .update(executions)
       .set({

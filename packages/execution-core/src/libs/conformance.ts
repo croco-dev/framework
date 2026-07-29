@@ -1,4 +1,4 @@
-import { ExecutionProblems } from "./ExecutionProblem";
+import { ExecutionProblem, ExecutionProblemCode, ExecutionProblems } from "./ExecutionProblem";
 import type { ExecutionStore } from "./interfaces/ExecutionStore";
 
 export type ExecutionCheckpointWrite = {
@@ -102,6 +102,53 @@ export function createExecutionCheckpointStoreConformanceSuite<TStore extends Ex
             assertConformance(
               (await store.findById(execution.id))?.checkpoints?.cursor === lastApplied.value,
               "same-key checkpoint does not contain the last applied write",
+            );
+          }),
+      },
+      {
+        name: "rejects checkpoint values that JSON cannot persist",
+        run: () =>
+          withStore(options, async (store) => {
+            const execution = await store.create({ type: "checkpoint-conformance-json-values" });
+            const cyclic: Record<string, unknown> = {};
+            cyclic.self = cyclic;
+
+            for (const value of [undefined, BigInt(1), cyclic]) {
+              let failure: unknown;
+              try {
+                await store.mergeCheckpoint(execution.id, "cursor", value);
+              } catch (error) {
+                failure = error;
+              }
+              assertConformance(
+                failure instanceof ExecutionProblem &&
+                  failure.code === ExecutionProblemCode.CHECKPOINT_STORE_CONFORMANCE,
+                "invalid checkpoint value did not fail with the checkpoint conformance Problem",
+              );
+            }
+          }),
+      },
+      {
+        name: "normalizes checkpoint values to their persisted JSON representation",
+        run: () =>
+          withStore(options, async (store) => {
+            const execution = await store.create({
+              type: "checkpoint-conformance-json-normalization",
+            });
+            await store.mergeCheckpoint(execution.id, "cursor", {
+              items: [undefined],
+              omitted: undefined,
+              recordedAt: new Date("2026-01-01T00:00:00.000Z"),
+            });
+
+            const checkpoint = (await store.findById(execution.id))?.checkpoints?.cursor;
+            assertConformance(
+              JSON.stringify(checkpoint) ===
+                JSON.stringify({
+                  items: [null],
+                  recordedAt: "2026-01-01T00:00:00.000Z",
+                }),
+              "checkpoint value does not match its persisted JSON representation",
             );
           }),
       },
