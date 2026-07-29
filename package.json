@@ -39,6 +39,7 @@
     "alpha-release:smoke": "node --experimental-strip-types scripts/verification-command.mts --id alpha-release-smoke",
     "changeset-required:check": "node --experimental-strip-types scripts/verification-command.mts --id changeset-required",
     "ci-executables:check": "node --experimental-strip-types scripts/verification-command.mts --id ci-executables",
+    "ci:performance-budget": "node --experimental-strip-types scripts/verification-command.mts --id ci-performance-budget",
     "compiler-baseline:check": "node --experimental-strip-types scripts/verification-command.mts --id compiler-baseline",
     "create-croco-app:smoke": "node --experimental-strip-types scripts/create-croco-app-generated-smoke.mts",
     "generated-secret-placeholders:check": "node --experimental-strip-types scripts/verification-command.mts --id generated-secret-placeholders",
