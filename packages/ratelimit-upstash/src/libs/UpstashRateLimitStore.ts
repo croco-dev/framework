@@ -167,28 +167,21 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
   }
 
   async increment(key: string, amount = 1): Promise<number> {
-    const redisKey = `${this.prefix}:${key}:increment`;
-    const current = await runUpstashRateLimitOperation("sliding.increment.get", () =>
-      this.redis.get(redisKey),
-    );
-    const newValue = (Number(current) || 0) + amount;
-    await runUpstashRateLimitOperation("sliding.increment.set", () =>
-      this.redis.set(redisKey, String(newValue)),
-    );
-    return newValue;
+    return incrementCounter(this.redis, this.prefix, "sliding", key, amount);
   }
 
-  async getCount(): Promise<number> {
-    return 0;
+  async getCount(key: string): Promise<number> {
+    return getCounter(this.redis, this.prefix, "sliding", key);
   }
 
   async reset(key: string): Promise<void> {
     const redisKey = `${this.prefix}:${key}`;
     await runUpstashRateLimitOperation("sliding.reset", () => this.redis.del(redisKey));
+    await resetCounter(this.redis, this.prefix, "sliding", key);
   }
 
-  async expire(): Promise<void> {
-    return;
+  async expire(key: string, ttlMs: number): Promise<void> {
+    await expireCounter(this.redis, this.prefix, "sliding", key, ttlMs);
   }
 
   async getStats(): Promise<RateLimitStats> {
@@ -329,19 +322,11 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
   }
 
   async increment(key: string, amount = 1): Promise<number> {
-    const redisKey = `${this.prefix}:${key}:increment`;
-    const current = await runUpstashRateLimitOperation("token-bucket.increment.get", () =>
-      this.redis.get(redisKey),
-    );
-    const newValue = (Number(current) || 0) + amount;
-    await runUpstashRateLimitOperation("token-bucket.increment.set", () =>
-      this.redis.set(redisKey, String(newValue)),
-    );
-    return newValue;
+    return incrementCounter(this.redis, this.prefix, "token-bucket", key, amount);
   }
 
-  async getCount(): Promise<number> {
-    return 0;
+  async getCount(key: string): Promise<number> {
+    return getCounter(this.redis, this.prefix, "token-bucket", key);
   }
 
   async reset(key: string): Promise<void> {
@@ -350,10 +335,11 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
     await runUpstashRateLimitOperation("token-bucket.reset-receipts", () =>
       this.redis.del(`${redisKey}:receipts`),
     );
+    await resetCounter(this.redis, this.prefix, "token-bucket", key);
   }
 
-  async expire(): Promise<void> {
-    return;
+  async expire(key: string, ttlMs: number): Promise<void> {
+    await expireCounter(this.redis, this.prefix, "token-bucket", key, ttlMs);
   }
 
   async getStats(): Promise<RateLimitStats> {
@@ -477,23 +463,11 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
   }
 
   async increment(key: string, amount = 1): Promise<number> {
-    const redisKey = `${this.prefix}:${key}:increment`;
-    const current = await runUpstashRateLimitOperation("fixed.increment.get", () =>
-      this.redis.get(redisKey),
-    );
-    const newValue = (Number(current) || 0) + amount;
-    await runUpstashRateLimitOperation("fixed.increment.set", () =>
-      this.redis.set(redisKey, String(newValue)),
-    );
-    return newValue;
+    return incrementCounter(this.redis, this.prefix, "fixed", key, amount);
   }
 
   async getCount(key: string): Promise<number> {
-    const redisKey = `${this.prefix}:${key}:increment`;
-    const value = await runUpstashRateLimitOperation("fixed.get-count", () =>
-      this.redis.get(redisKey),
-    );
-    return Number(value) || 0;
+    return getCounter(this.redis, this.prefix, "fixed", key);
   }
 
   async reset(key: string): Promise<void> {
@@ -502,13 +476,11 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
     await runUpstashRateLimitOperation("fixed.reset-receipts", () =>
       this.redis.del(`${redisKey}:receipts`),
     );
+    await resetCounter(this.redis, this.prefix, "fixed", key);
   }
 
   async expire(key: string, ttlMs: number): Promise<void> {
-    const redisKey = `${this.prefix}:${key}:expire`;
-    await runUpstashRateLimitOperation("fixed.expire", () =>
-      this.redis.expire(redisKey, Math.ceil(ttlMs / 1000)),
-    );
+    await expireCounter(this.redis, this.prefix, "fixed", key, ttlMs);
   }
 
   async getStats(): Promise<RateLimitStats> {
@@ -535,6 +507,57 @@ function requireRedisClient(redis: Redis): Redis {
   }
 
   return redis;
+}
+
+function counterKey(prefix: string, key: string): string {
+  return `${prefix}:${key}:increment`;
+}
+
+async function incrementCounter(
+  redis: Redis,
+  prefix: string,
+  algorithm: string,
+  key: string,
+  amount: number,
+): Promise<number> {
+  return runUpstashRateLimitOperation(`${algorithm}.increment`, () =>
+    redis.incrbyfloat(counterKey(prefix, key), amount),
+  );
+}
+
+async function getCounter(
+  redis: Redis,
+  prefix: string,
+  algorithm: string,
+  key: string,
+): Promise<number> {
+  const value = await runUpstashRateLimitOperation(`${algorithm}.get-count`, () =>
+    redis.get(counterKey(prefix, key)),
+  );
+  return Number(value) || 0;
+}
+
+async function resetCounter(
+  redis: Redis,
+  prefix: string,
+  algorithm: string,
+  key: string,
+): Promise<void> {
+  await runUpstashRateLimitOperation(`${algorithm}.reset-counter`, () =>
+    redis.del(counterKey(prefix, key)),
+  );
+}
+
+async function expireCounter(
+  redis: Redis,
+  prefix: string,
+  algorithm: string,
+  key: string,
+  ttlMs: number,
+): Promise<void> {
+  await runUpstashRateLimitOperation(`${algorithm}.expire`, () =>
+    redis.expire(counterKey(prefix, key), Math.ceil(ttlMs / 1000)),
+  );
 }
 
 async function runUpstashRateLimitOperation<T>(

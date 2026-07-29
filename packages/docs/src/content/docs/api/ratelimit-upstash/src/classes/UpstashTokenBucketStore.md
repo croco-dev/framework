@@ -55,7 +55,7 @@ Upstash Redis와 Lua 스크립트로 토큰 버킷 제한을 수행하는 저장
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`check`](/api/ratelimit-core/src/classes/tokenbucketstore/#check)
 
-***
+---
 
 ### checkTokenBucket()
 
@@ -79,11 +79,21 @@ Upstash Redis와 Lua 스크립트로 토큰 버킷 제한을 수행하는 저장
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`checkTokenBucket`](/api/ratelimit-core/src/classes/tokenbucketstore/#checktokenbucket)
 
-***
+---
 
 ### expire()
 
-> **expire**(): `Promise`\<`void`\>
+> **expire**(`key`, `ttlMs`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### ttlMs
+
+`number`
 
 #### Returns
 
@@ -93,11 +103,17 @@ Upstash Redis와 Lua 스크립트로 토큰 버킷 제한을 수행하는 저장
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`expire`](/api/ratelimit-core/src/classes/tokenbucketstore/#expire)
 
-***
+---
 
 ### getCount()
 
-> **getCount**(): `Promise`\<`number`\>
+> **getCount**(`key`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### key
+
+`string`
 
 #### Returns
 
@@ -107,7 +123,7 @@ Upstash Redis와 Lua 스크립트로 토큰 버킷 제한을 수행하는 저장
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`getCount`](/api/ratelimit-core/src/classes/tokenbucketstore/#getcount)
 
-***
+---
 
 ### getStats()
 
@@ -121,7 +137,7 @@ Upstash Redis와 Lua 스크립트로 토큰 버킷 제한을 수행하는 저장
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`getStats`](/api/ratelimit-core/src/classes/tokenbucketstore/#getstats)
 
-***
+---
 
 ### increment()
 
@@ -145,7 +161,7 @@ Upstash Redis와 Lua 스크립트로 토큰 버킷 제한을 수행하는 저장
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`increment`](/api/ratelimit-core/src/classes/tokenbucketstore/#increment)
 
-***
+---
 
 ### pruneExpired()
 
@@ -159,7 +175,7 @@ Upstash Redis와 Lua 스크립트로 토큰 버킷 제한을 수행하는 저장
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/tokenbucketstore/#pruneexpired)
 
-***
+---
 
 ### refund()
 
@@ -187,7 +203,7 @@ Upstash Redis와 Lua 스크립트로 토큰 버킷 제한을 수행하는 저장
 
 [`TokenBucketStore`](/api/ratelimit-core/src/classes/tokenbucketstore/).[`refund`](/api/ratelimit-core/src/classes/tokenbucketstore/#refund)
 
-***
+---
 
 ### reset()
 
