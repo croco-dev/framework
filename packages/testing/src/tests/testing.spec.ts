@@ -1,5 +1,10 @@
 import "reflect-metadata";
-import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from "@croco/billing-core";
+import type {
+  BillingGateway,
+  BillingLifecycleGatewayOptions,
+  CheckoutResult,
+  CreateCheckoutParams,
+} from "@croco/billing-core";
 import type { EventHandler } from "@croco/events-core";
 import { DomainEvent, EventBusConfig, RegisterEventHandler } from "@croco/events-core";
 import type { InMemoryEventBus } from "@croco/events-inmemory";
@@ -93,14 +98,21 @@ class InMemoryBillingGateway implements BillingGateway {
     };
   }
 
-  async cancelSubscription(externalSubscriptionId: string, immediate = false): Promise<void> {
+  async cancelSubscription(
+    externalSubscriptionId: string,
+    immediate: boolean,
+    options: BillingLifecycleGatewayOptions,
+  ): Promise<void> {
     this.subscriptionOperations.push(
-      immediate ? `revoke:${externalSubscriptionId}` : `cancel:${externalSubscriptionId}`,
+      `${immediate ? "revoke" : "cancel"}:${externalSubscriptionId}:${options.idempotencyKey}`,
     );
   }
 
-  async resumeSubscription(externalSubscriptionId: string): Promise<void> {
-    this.subscriptionOperations.push(`resume:${externalSubscriptionId}`);
+  async resumeSubscription(
+    externalSubscriptionId: string,
+    options: BillingLifecycleGatewayOptions,
+  ): Promise<void> {
+    this.subscriptionOperations.push(`resume:${externalSubscriptionId}:${options.idempotencyKey}`);
   }
 
   async getCustomerPortalUrl(externalCustomerId: string): Promise<string> {
@@ -1612,9 +1624,9 @@ describe("@croco/testing", () => {
           assertions: {
             subscriptionLifecycle: ({ gateway }) => {
               expect(gateway.subscriptionOperations).toEqual([
-                "cancel:sub-conformance",
-                "resume:sub-conformance",
-                "revoke:sub-conformance",
+                "cancel:sub-conformance:in-memory-billing:conformance:cancel-period-end",
+                "resume:sub-conformance:in-memory-billing:conformance:resume",
+                "revoke:sub-conformance:in-memory-billing:conformance:cancel-immediate",
               ]);
             },
           },

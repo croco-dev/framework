@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryBillingStore } from "../libs/InMemoryBillingStore";
 import { WebhookAlreadyProcessedProblem } from "../libs/problems/BillingProblems";
-import type { BillingAccount, Order, Subscription } from "../types";
+import type { BillingAccount, BillingLifecycleCommand, Order, Subscription } from "../types";
 
 const PLAN_VERSION_REF = "plan-pro@v1" as Subscription["planVersionRef"];
 
@@ -249,6 +249,182 @@ describe("InMemoryBillingStore", () => {
 
       expect(result1).toEqual([order1]);
       expect(result2).toEqual([order2]);
+    });
+  });
+
+  describe("subscription lifecycle commands", () => {
+    function createLifecycleCommand(
+      overrides: Partial<BillingLifecycleCommand> = {},
+    ): BillingLifecycleCommand {
+      const now = new Date("2026-01-01T00:00:00.000Z");
+      return {
+        idempotencyKey: "cancel-1",
+        tenantId: "tenant-1",
+        kind: "cancel_at_period_end",
+        state: "pending_provider",
+        revision: 0,
+        subscription: {
+          id: "sub-1",
+          billingAccountId: "account-1",
+          externalSubscriptionId: "ext-sub-1",
+          planId: "plan-pro",
+          planVersionRef: PLAN_VERSION_REF,
+          status: "active",
+          currentPeriodEnd: new Date("2030-01-01T00:00:00.000Z"),
+          cancelAtPeriodEnd: false,
+          lastSyncedAt: now,
+        },
+        createdAt: now,
+        updatedAt: now,
+        ...overrides,
+      };
+    }
+
+    it("should deduplicate the same semantic command and reject conflicting key reuse", async () => {
+      const command = createLifecycleCommand();
+
+      const first = await store.createLifecycleCommand(command);
+      const duplicate = await store.createLifecycleCommand({
+        ...command,
+        updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+      });
+
+      expect(duplicate).toEqual(first);
+      await expect(
+        store.createLifecycleCommand({
+          ...command,
+          kind: "resume",
+        }),
+      ).rejects.toThrow("already bound to another command");
+    });
+
+    it("should keep one incomplete command per tenant and release it on completion", async () => {
+      const first = await store.createLifecycleCommand(createLifecycleCommand());
+
+      await expect(
+        store.createLifecycleCommand(
+          createLifecycleCommand({
+            idempotencyKey: "resume-1",
+            kind: "resume",
+          }),
+        ),
+      ).rejects.toThrow("already has incomplete billing lifecycle command");
+
+      const pendingLocal = await store.saveLifecycleCommand({
+        ...first,
+        state: "pending_local",
+        updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+      });
+      await store.saveLifecycleCommand({
+        ...pendingLocal,
+        state: "completed",
+        updatedAt: new Date("2026-01-03T00:00:00.000Z"),
+      });
+      await store.createLifecycleCommand(
+        createLifecycleCommand({
+          idempotencyKey: "resume-1",
+          kind: "resume",
+        }),
+      );
+
+      await expect(store.listPendingLifecycleCommands(10)).resolves.toMatchObject([
+        { idempotencyKey: "resume-1", state: "pending_provider" },
+      ]);
+    });
+
+    it("should reject skipped, backward, and reopened lifecycle transitions", async () => {
+      const pendingProvider = await store.createLifecycleCommand(createLifecycleCommand());
+
+      await expect(
+        store.saveLifecycleCommand({
+          ...pendingProvider,
+          state: "completed",
+        }),
+      ).rejects.toThrow("already bound to another command");
+
+      const pendingLocal = await store.saveLifecycleCommand({
+        ...pendingProvider,
+        state: "pending_local",
+      });
+
+      await expect(
+        store.saveLifecycleCommand({
+          ...pendingLocal,
+          state: "pending_provider",
+        }),
+      ).rejects.toThrow("already bound to another command");
+
+      const completed = await store.saveLifecycleCommand({
+        ...pendingLocal,
+        state: "completed",
+      });
+
+      await expect(
+        store.saveLifecycleCommand({
+          ...completed,
+          state: "pending_local",
+        }),
+      ).rejects.toThrow("already bound to another command");
+    });
+
+    it("should reject a stale completion without clearing a newer pending command", async () => {
+      const pendingProvider = await store.createLifecycleCommand(createLifecycleCommand());
+      const pendingLocal = await store.saveLifecycleCommand({
+        ...pendingProvider,
+        state: "pending_local",
+      });
+      await store.saveLifecycleCommand({
+        ...pendingLocal,
+        state: "completed",
+      });
+      await store.createLifecycleCommand(
+        createLifecycleCommand({
+          idempotencyKey: "resume-new",
+          kind: "resume",
+        }),
+      );
+
+      await expect(
+        store.saveLifecycleCommand({
+          ...pendingLocal,
+          state: "completed",
+        }),
+      ).rejects.toThrow("already bound to another command");
+      await expect(store.findPendingLifecycleCommandByTenantId("tenant-1")).resolves.toMatchObject({
+        idempotencyKey: "resume-new",
+        state: "pending_provider",
+      });
+    });
+
+    it("should reclaim event delivery only after the datastore lease expires", async () => {
+      let now = new Date("2026-01-01T00:00:00.000Z");
+      store = new InMemoryBillingStore(() => now);
+      const pendingProvider = await store.createLifecycleCommand(createLifecycleCommand());
+      const pendingLocal = await store.saveLifecycleCommand({
+        ...pendingProvider,
+        state: "pending_local",
+      });
+      const pendingEvent = await store.saveLifecycleCommand({
+        ...pendingLocal,
+        state: "pending_event",
+      });
+
+      const firstClaim = await store.claimLifecycleEventDelivery(pendingEvent, 30_000);
+      expect(firstClaim).toMatchObject({
+        revision: pendingEvent.revision + 1,
+        eventDeliveryLeaseUntil: new Date("2026-01-01T00:00:30.000Z"),
+      });
+      await expect(
+        store.claimLifecycleEventDelivery(firstClaim ?? pendingEvent, 30_000),
+      ).resolves.toBeNull();
+
+      now = new Date("2026-01-01T00:00:31.000Z");
+      await expect(
+        store.claimLifecycleEventDelivery(firstClaim ?? pendingEvent, 30_000),
+      ).resolves.toMatchObject({
+        revision: pendingEvent.revision + 2,
+        eventDeliveryLeaseUntil: new Date("2026-01-01T00:01:01.000Z"),
+      });
     });
   });
 

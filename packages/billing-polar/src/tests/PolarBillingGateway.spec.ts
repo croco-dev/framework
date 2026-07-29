@@ -16,6 +16,7 @@ const mockCreateCustomer = vi.fn();
 const mockCreateCheckout = vi.fn();
 const mockRevokeSubscription = vi.fn();
 const mockUpdateSubscription = vi.fn();
+const mockGetSubscription = vi.fn();
 const mockCreateCustomerSession = vi.fn();
 
 const mockLogger = {
@@ -38,6 +39,7 @@ vi.mock("@polar-sh/sdk", () => {
     };
 
     readonly subscriptions = {
+      get: mockGetSubscription,
       revoke: mockRevokeSubscription,
       update: mockUpdateSubscription,
     };
@@ -117,6 +119,10 @@ function setupSuccessfulGatewayBackend(): void {
   });
   mockRevokeSubscription.mockResolvedValue(undefined);
   mockUpdateSubscription.mockResolvedValue(undefined);
+  mockGetSubscription.mockResolvedValue({
+    status: "active",
+    cancelAtPeriodEnd: false,
+  });
 }
 
 describe("PolarBillingGateway", () => {
@@ -151,19 +157,42 @@ describe("PolarBillingGateway", () => {
           },
           assertions: {
             subscriptionLifecycle: () => {
-              expect(mockUpdateSubscription).toHaveBeenNthCalledWith(1, {
-                id: "sub-conformance",
-                subscriptionUpdate: {
-                  cancelAtPeriodEnd: true,
+              expect(mockUpdateSubscription).toHaveBeenNthCalledWith(
+                1,
+                {
+                  id: "sub-conformance",
+                  subscriptionUpdate: {
+                    cancelAtPeriodEnd: true,
+                  },
                 },
-              });
-              expect(mockUpdateSubscription).toHaveBeenNthCalledWith(2, {
-                id: "sub-conformance",
-                subscriptionUpdate: {
-                  cancelAtPeriodEnd: false,
+                {
+                  headers: {
+                    "Idempotency-Key": "billing-polar:conformance:cancel-period-end",
+                  },
                 },
-              });
-              expect(mockRevokeSubscription).toHaveBeenCalledWith({ id: "sub-conformance" });
+              );
+              expect(mockUpdateSubscription).toHaveBeenNthCalledWith(
+                2,
+                {
+                  id: "sub-conformance",
+                  subscriptionUpdate: {
+                    cancelAtPeriodEnd: false,
+                  },
+                },
+                {
+                  headers: {
+                    "Idempotency-Key": "billing-polar:conformance:resume",
+                  },
+                },
+              );
+              expect(mockRevokeSubscription).toHaveBeenCalledWith(
+                { id: "sub-conformance" },
+                {
+                  headers: {
+                    "Idempotency-Key": "billing-polar:conformance:cancel-immediate",
+                  },
+                },
+              );
             },
           },
           failureScenarios: [
@@ -330,23 +359,29 @@ describe("PolarBillingGateway", () => {
     it("should revoke immediately when immediate is true", async () => {
       const gateway = createGateway();
 
-      await gateway.cancelSubscription("sub-1", true);
+      await gateway.cancelSubscription("sub-1", true, { idempotencyKey: "cancel-immediate-1" });
 
-      expect(mockRevokeSubscription).toHaveBeenCalledWith({ id: "sub-1" });
+      expect(mockRevokeSubscription).toHaveBeenCalledWith(
+        { id: "sub-1" },
+        { headers: { "Idempotency-Key": "cancel-immediate-1" } },
+      );
       expect(mockUpdateSubscription).not.toHaveBeenCalled();
     });
 
     it("should mark cancelAtPeriodEnd when immediate is false", async () => {
       const gateway = createGateway();
 
-      await gateway.cancelSubscription("sub-1", false);
+      await gateway.cancelSubscription("sub-1", false, { idempotencyKey: "cancel-period-end-1" });
 
-      expect(mockUpdateSubscription).toHaveBeenCalledWith({
-        id: "sub-1",
-        subscriptionUpdate: {
-          cancelAtPeriodEnd: true,
+      expect(mockUpdateSubscription).toHaveBeenCalledWith(
+        {
+          id: "sub-1",
+          subscriptionUpdate: {
+            cancelAtPeriodEnd: true,
+          },
         },
-      });
+        { headers: { "Idempotency-Key": "cancel-period-end-1" } },
+      );
       expect(mockRevokeSubscription).not.toHaveBeenCalled();
     });
 
@@ -355,9 +390,54 @@ describe("PolarBillingGateway", () => {
 
       mockRevokeSubscription.mockRejectedValue(createNotFoundError());
 
-      await expect(gateway.cancelSubscription("sub-missing", true)).rejects.toBeInstanceOf(
-        PolarSubscriptionNotFoundProblem,
+      await expect(
+        gateway.cancelSubscription("sub-missing", true, {
+          idempotencyKey: "cancel-missing-1",
+        }),
+      ).rejects.toBeInstanceOf(PolarSubscriptionNotFoundProblem);
+    });
+
+    it("should treat an already-applied immediate cancellation retry as success", async () => {
+      const gateway = createGateway();
+      mockRevokeSubscription.mockRejectedValueOnce(
+        Object.assign(new Error("already canceled"), {
+          name: "AlreadyCanceledSubscription",
+          error: "AlreadyCanceledSubscription",
+        }),
       );
+      mockGetSubscription.mockResolvedValue({
+        status: "canceled",
+        cancelAtPeriodEnd: false,
+      });
+
+      await expect(
+        gateway.cancelSubscription("sub-1", true, {
+          idempotencyKey: "cancel-immediate-retry-1",
+        }),
+      ).resolves.toBeUndefined();
+      expect(mockGetSubscription).toHaveBeenCalledWith({ id: "sub-1" });
+    });
+
+    it("should not hide an already-canceled response when the requested target is absent", async () => {
+      const gateway = createGateway();
+      mockUpdateSubscription.mockRejectedValueOnce(
+        Object.assign(new Error("already canceled"), {
+          name: "AlreadyCanceledSubscription",
+          error: "AlreadyCanceledSubscription",
+        }),
+      );
+      mockGetSubscription.mockResolvedValue({
+        status: "canceled",
+        cancelAtPeriodEnd: false,
+      });
+
+      await expect(
+        gateway.cancelSubscription("sub-1", false, {
+          idempotencyKey: "cancel-period-end-mismatch-1",
+        }),
+      ).rejects.toMatchObject({
+        code: "billing-polar/terminal-upstream",
+      });
     });
   });
 
@@ -365,14 +445,17 @@ describe("PolarBillingGateway", () => {
     it("should resume a subscription by clearing cancelAtPeriodEnd", async () => {
       const gateway = createGateway();
 
-      await gateway.resumeSubscription("sub-1");
+      await gateway.resumeSubscription("sub-1", { idempotencyKey: "resume-1" });
 
-      expect(mockUpdateSubscription).toHaveBeenCalledWith({
-        id: "sub-1",
-        subscriptionUpdate: {
-          cancelAtPeriodEnd: false,
+      expect(mockUpdateSubscription).toHaveBeenCalledWith(
+        {
+          id: "sub-1",
+          subscriptionUpdate: {
+            cancelAtPeriodEnd: false,
+          },
         },
-      });
+        { headers: { "Idempotency-Key": "resume-1" } },
+      );
     });
   });
 

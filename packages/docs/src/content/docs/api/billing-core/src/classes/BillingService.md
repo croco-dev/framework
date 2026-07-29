@@ -28,25 +28,24 @@ Orchestrates store and gateway operations.
 
 ### cancelSubscription()
 
-> **cancelSubscription**(`tenantId`, `immediate?`): `Promise`\<`void`\>
+> **cancelSubscription**(`params`): `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
 
-Cancel a subscription (at period end by default).
+Persist and execute a provider-idempotent cancellation command.
+
+The returned command may remain `pending_provider` or `pending_local` when reconciliation is
+required. Callers must not interpret promise fulfillment as an atomic cross-system commit.
 
 #### Parameters
 
-##### tenantId
+##### params
 
-`string`
-
-##### immediate?
-
-`boolean` = `false`
+[`CancelSubscriptionParams`](/api/billing-core/src/type-aliases/cancelsubscriptionparams/)
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
 
-***
+---
 
 ### createCheckout()
 
@@ -64,7 +63,7 @@ Create a checkout session for a tenant.
 
 `Promise`\<\{ `checkoutUrl`: `string`; \}\>
 
-***
+---
 
 ### getCustomerPortalUrl()
 
@@ -82,7 +81,7 @@ Get customer portal URL.
 
 `Promise`\<`string`\>
 
-***
+---
 
 ### getSubscription()
 
@@ -100,7 +99,7 @@ Get full subscription details.
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
-***
+---
 
 ### getSubscriptionStatus()
 
@@ -118,7 +117,7 @@ Get subscription status for a tenant.
 
 `Promise`\<[`SubscriptionStatus`](/api/billing-core/src/type-aliases/subscriptionstatus/) \| `null`\>
 
-***
+---
 
 ### hasActiveSubscription()
 
@@ -136,20 +135,56 @@ Check if a tenant has an active subscription.
 
 `Promise`\<`boolean`\>
 
-***
+---
 
-### resumeSubscription()
+### reconcileLifecycleCommand()
 
-> **resumeSubscription**(`tenantId`): `Promise`\<`void`\>
+> **reconcileLifecycleCommand**(`idempotencyKey`): `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
 
-Resume a canceled subscription.
+Retry one durable lifecycle command from its persisted reconciliation state.
 
 #### Parameters
 
-##### tenantId
+##### idempotencyKey
 
 `string`
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
+
+---
+
+### reconcilePendingLifecycleCommands()
+
+> **reconcilePendingLifecycleCommands**(`limit?`): `Promise`\<[`ReconcileBillingLifecycleCommandsResult`](/api/billing-core/src/type-aliases/reconcilebillinglifecyclecommandsresult/)\>
+
+Retry a bounded, deterministic batch of incomplete lifecycle commands.
+
+#### Parameters
+
+##### limit?
+
+`number` = `DEFAULT_RECONCILIATION_LIMIT`
+
+#### Returns
+
+`Promise`\<[`ReconcileBillingLifecycleCommandsResult`](/api/billing-core/src/type-aliases/reconcilebillinglifecyclecommandsresult/)\>
+
+---
+
+### resumeSubscription()
+
+> **resumeSubscription**(`params`): `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
+
+Persist and execute a provider-idempotent resume command.
+
+#### Parameters
+
+##### params
+
+[`ResumeSubscriptionParams`](/api/billing-core/src/type-aliases/resumesubscriptionparams/)
+
+#### Returns
+
+`Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>

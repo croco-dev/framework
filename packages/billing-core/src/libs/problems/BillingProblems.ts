@@ -24,6 +24,50 @@ export class WebhookAlreadyProcessedProblem extends Problem {
   }
 }
 
+export class BillingLifecycleCommandConflictProblem extends Problem {
+  readonly code = "billing/lifecycle-command-conflict";
+  readonly category = ProblemCategory.Conflict;
+  constructor(idempotencyKey: string) {
+    super(
+      undefined,
+      undefined,
+      `Billing lifecycle idempotency key '${idempotencyKey}' is already bound to another command`,
+    );
+  }
+}
+
+export class BillingLifecycleCommandInProgressProblem extends Problem {
+  readonly code = "billing/lifecycle-command-in-progress";
+  readonly category = ProblemCategory.Conflict;
+  constructor(tenantId: string, idempotencyKey: string) {
+    super(
+      undefined,
+      undefined,
+      `Tenant '${tenantId}' already has incomplete billing lifecycle command '${idempotencyKey}'`,
+    );
+  }
+}
+
+export class BillingLifecycleCommandNotFoundProblem extends Problem {
+  readonly code = "billing/lifecycle-command-not-found";
+  readonly category = ProblemCategory.NotFound;
+  constructor(idempotencyKey: string) {
+    super(undefined, undefined, `Billing lifecycle command '${idempotencyKey}' was not found`);
+  }
+}
+
+export class InvalidBillingLifecycleIdempotencyKeyProblem extends Problem {
+  readonly code = "billing/invalid-lifecycle-idempotency-key";
+  readonly category = ProblemCategory.BadRequest;
+  constructor() {
+    super(
+      undefined,
+      undefined,
+      "Billing lifecycle idempotency key must contain 1-200 printable ASCII characters",
+    );
+  }
+}
+
 export class BillingCheckoutCreationProblem extends Problem {
   readonly code = "billing/checkout-creation-failed";
   readonly category = ProblemCategory.InternalServerError;

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 517,
+  problemCount: 521,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -1863,7 +1863,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 28,
+          line: 72,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/invalid-lifecycle-idempotency-key",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#billing-invalid-lifecycle-idempotency-key",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
+          line: 60,
           column: 3,
           kind: "problem-class",
         },
@@ -1894,7 +1926,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 36,
+          line: 80,
           column: 3,
           kind: "problem-class",
         },
@@ -1925,7 +1957,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 44,
+          line: 88,
           column: 3,
           kind: "problem-class",
         },
@@ -1956,7 +1988,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 80,
+          line: 124,
           column: 3,
           kind: "problem-class",
         },
@@ -1987,7 +2019,98 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 72,
+          line: 116,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/lifecycle-command-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-lifecycle-command-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
+          line: 28,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/lifecycle-command-in-progress",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-lifecycle-command-in-progress",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
+          line: 40,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/lifecycle-command-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-lifecycle-command-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
+          line: 52,
           column: 3,
           kind: "problem-class",
         },
@@ -2018,7 +2141,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 52,
+          line: 96,
           column: 3,
           kind: "problem-class",
         },
@@ -2049,7 +2172,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 64,
+          line: 108,
           column: 3,
           kind: "problem-class",
         },
@@ -2079,7 +2202,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 88,
+          line: 132,
           column: 3,
           kind: "problem-class",
         },
@@ -2109,7 +2232,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 96,
+          line: 140,
           column: 3,
           kind: "problem-class",
         },
@@ -2172,7 +2295,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 126,
+          line: 170,
           column: 3,
           kind: "problem-class",
         },
@@ -2203,7 +2326,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 104,
+          line: 148,
           column: 3,
           kind: "problem-class",
         },
@@ -2234,7 +2357,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 112,
+          line: 156,
           column: 3,
           kind: "problem-class",
         },

@@ -7,14 +7,23 @@
 /**
  * 외부 결제 제공자 연동 계약과 체크아웃 관련 타입입니다.
  */
-export type { BillingGateway, CheckoutResult, CreateCheckoutParams } from "./libs/BillingGateway";
+export type {
+  BillingGateway,
+  BillingLifecycleGatewayOptions,
+  CheckoutResult,
+  CreateCheckoutParams,
+} from "./libs/BillingGateway";
 
 /**
  * BillingService 생성에 필요한 의존성과 체크아웃 입력 타입입니다.
  */
 export type {
+  BillingLifecycleEventPublisher,
   BillingServiceDependencies,
+  CancelSubscriptionParams,
   CreateBillingCheckoutParams,
+  ReconcileBillingLifecycleCommandsResult,
+  ResumeSubscriptionParams,
 } from "./libs/BillingService";
 
 /**
@@ -121,6 +130,10 @@ export type {
 export {
   BillingAccountNotFoundProblem,
   BillingCheckoutCreationProblem,
+  BillingLifecycleCommandConflictProblem,
+  BillingLifecycleCommandInProgressProblem,
+  BillingLifecycleCommandNotFoundProblem,
+  InvalidBillingLifecycleIdempotencyKeyProblem,
   InvalidMoneyAmountProblem,
   InvalidMoneyCurrencyProblem,
   InvalidPlanVersionDefinitionProblem,
@@ -141,6 +154,12 @@ export {
  */
 export type {
   BillingAccount,
+  BillingLifecycleCommand,
+  BillingLifecycleCommandFailure,
+  BillingLifecycleCommandKind,
+  BillingLifecycleCommandState,
+  BillingLifecycleLocalResult,
+  BillingLifecycleSubscriptionResolution,
   Invoice,
   InvoiceLineItem,
   InvoiceLineItemType,

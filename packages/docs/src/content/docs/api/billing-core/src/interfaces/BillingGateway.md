@@ -12,7 +12,7 @@ Implementations: PolarBillingGateway
 
 ### cancelSubscription()
 
-> **cancelSubscription**(`externalSubscriptionId`, `immediate?`): `Promise`\<`void`\>
+> **cancelSubscription**(`externalSubscriptionId`, `immediate`, `options`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -20,15 +20,19 @@ Implementations: PolarBillingGateway
 
 `string`
 
-##### immediate?
+##### immediate
 
 `boolean`
+
+##### options
+
+[`BillingLifecycleGatewayOptions`](/api/billing-core/src/type-aliases/billinglifecyclegatewayoptions/)
 
 #### Returns
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### createCheckout()
 
@@ -44,7 +48,7 @@ Implementations: PolarBillingGateway
 
 `Promise`\<[`CheckoutResult`](/api/billing-core/src/type-aliases/checkoutresult/)\>
 
-***
+---
 
 ### ensureCustomer()
 
@@ -64,7 +68,7 @@ Implementations: PolarBillingGateway
 
 `Promise`\<`string`\>
 
-***
+---
 
 ### getCustomerPortalUrl()
 
@@ -80,17 +84,21 @@ Implementations: PolarBillingGateway
 
 `Promise`\<`string`\>
 
-***
+---
 
 ### resumeSubscription()
 
-> **resumeSubscription**(`externalSubscriptionId`): `Promise`\<`void`\>
+> **resumeSubscription**(`externalSubscriptionId`, `options`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### externalSubscriptionId
 
 `string`
+
+##### options
+
+[`BillingLifecycleGatewayOptions`](/api/billing-core/src/type-aliases/billinglifecyclegatewayoptions/)
 
 #### Returns
 

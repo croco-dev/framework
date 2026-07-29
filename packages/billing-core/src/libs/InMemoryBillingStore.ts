@@ -1,6 +1,17 @@
-import type { BillingAccount, Order, Subscription } from "../types";
+import type {
+  BillingAccount,
+  BillingLifecycleCommand,
+  BillingLifecycleLocalResult,
+  BillingLifecycleSubscriptionResolution,
+  Order,
+  Subscription,
+} from "../types";
 import { BillingStore } from "./BillingStore";
-import { WebhookAlreadyProcessedProblem } from "./problems/BillingProblems";
+import {
+  BillingLifecycleCommandConflictProblem,
+  BillingLifecycleCommandInProgressProblem,
+  WebhookAlreadyProcessedProblem,
+} from "./problems/BillingProblems";
 
 type WebhookState = "RESERVED" | "COMPLETED";
 
@@ -14,8 +25,14 @@ export class InMemoryBillingStore extends BillingStore {
   private readonly accountsByExternalId = new Map<string, BillingAccount>();
   private readonly subscriptions = new Map<string, Subscription>();
   private readonly subscriptionsByExternalId = new Map<string, Subscription>();
+  private readonly lifecycleCommands = new Map<string, BillingLifecycleCommand>();
+  private readonly pendingLifecycleCommandKeysByTenantId = new Map<string, string>();
   private readonly orders = new Map<string, Order[]>();
   private readonly processedWebhooks = new Map<string, WebhookState>();
+
+  constructor(private readonly clock: () => Date = () => new Date()) {
+    super();
+  }
 
   async findAccountByTenantId(tenantId: string): Promise<BillingAccount | null> {
     return this.accountsByTenantId.get(tenantId) ?? null;
@@ -85,6 +102,179 @@ export class InMemoryBillingStore extends BillingStore {
     this.subscriptionsByExternalId.delete(subscription.externalSubscriptionId);
   }
 
+  async reconcileLifecycleSubscription(
+    command: BillingLifecycleCommand,
+    target: Subscription | null,
+  ): Promise<BillingLifecycleLocalResult> {
+    const current = this.subscriptions.get(command.subscription.billingAccountId);
+    if (current && current.externalSubscriptionId !== command.subscription.externalSubscriptionId) {
+      return "superseded";
+    }
+
+    if (target) {
+      if (!current) {
+        return "superseded";
+      }
+
+      await this.saveSubscription(rebaseLifecycleTarget(current, target, command.kind));
+      return "applied";
+    }
+
+    if (!current) {
+      return "applied";
+    }
+
+    this.subscriptions.delete(current.billingAccountId);
+    this.subscriptionsByExternalId.delete(current.externalSubscriptionId);
+
+    const account = this.accounts.get(command.subscription.billingAccountId);
+    if (account) {
+      this.accounts.delete(account.id);
+      this.accountsByTenantId.delete(account.tenantId);
+      this.accountsByExternalId.delete(account.externalCustomerId);
+    }
+    return "applied";
+  }
+
+  async resolveLifecycleSubscription(
+    command: BillingLifecycleCommand,
+  ): Promise<BillingLifecycleSubscriptionResolution> {
+    const storedCommand = this.lifecycleCommands.get(command.idempotencyKey);
+    const current = this.subscriptions.get(command.subscription.billingAccountId);
+    if (
+      !storedCommand ||
+      storedCommand.revision !== command.revision ||
+      (storedCommand.state !== "pending_local" && storedCommand.state !== "pending_event") ||
+      !current ||
+      current.externalSubscriptionId !== command.subscription.externalSubscriptionId
+    ) {
+      return {
+        kind: "current",
+        subscription: current ? cloneSubscription(current) : null,
+      };
+    }
+
+    return {
+      kind: "projection_base",
+      subscription: cloneSubscription(current),
+    };
+  }
+
+  async createLifecycleCommand(command: BillingLifecycleCommand): Promise<BillingLifecycleCommand> {
+    if (command.state !== "pending_provider" || command.revision !== 0) {
+      throw new BillingLifecycleCommandConflictProblem(command.idempotencyKey);
+    }
+
+    const existing = this.lifecycleCommands.get(command.idempotencyKey);
+    if (existing) {
+      if (!sameLifecycleIntent(existing, command)) {
+        throw new BillingLifecycleCommandConflictProblem(command.idempotencyKey);
+      }
+
+      return cloneLifecycleCommand(existing);
+    }
+
+    const pendingKey = this.pendingLifecycleCommandKeysByTenantId.get(command.tenantId);
+    if (pendingKey) {
+      throw new BillingLifecycleCommandInProgressProblem(command.tenantId, pendingKey);
+    }
+
+    const storedCommand = Object.freeze(cloneLifecycleCommand(command));
+    this.lifecycleCommands.set(command.idempotencyKey, storedCommand);
+    this.pendingLifecycleCommandKeysByTenantId.set(command.tenantId, command.idempotencyKey);
+    return cloneLifecycleCommand(storedCommand);
+  }
+
+  async findLifecycleCommand(idempotencyKey: string): Promise<BillingLifecycleCommand | null> {
+    const command = this.lifecycleCommands.get(idempotencyKey);
+    return command ? cloneLifecycleCommand(command) : null;
+  }
+
+  async findPendingLifecycleCommandByTenantId(
+    tenantId: string,
+  ): Promise<BillingLifecycleCommand | null> {
+    const idempotencyKey = this.pendingLifecycleCommandKeysByTenantId.get(tenantId);
+    if (!idempotencyKey) {
+      return null;
+    }
+
+    const command = this.lifecycleCommands.get(idempotencyKey);
+    return command ? cloneLifecycleCommand(command) : null;
+  }
+
+  async saveLifecycleCommand(command: BillingLifecycleCommand): Promise<BillingLifecycleCommand> {
+    const existing = this.lifecycleCommands.get(command.idempotencyKey);
+    if (
+      !existing ||
+      !sameLifecycleIntent(existing, command) ||
+      existing.revision !== command.revision ||
+      !isLifecycleTransitionAllowed(existing.state, command.state)
+    ) {
+      throw new BillingLifecycleCommandConflictProblem(command.idempotencyKey);
+    }
+
+    const storedCommand = Object.freeze(
+      cloneLifecycleCommand({
+        ...command,
+        revision: command.revision + 1,
+      }),
+    );
+    this.lifecycleCommands.set(command.idempotencyKey, storedCommand);
+    if (command.state === "completed") {
+      if (
+        this.pendingLifecycleCommandKeysByTenantId.get(command.tenantId) === command.idempotencyKey
+      ) {
+        this.pendingLifecycleCommandKeysByTenantId.delete(command.tenantId);
+      }
+    } else {
+      this.pendingLifecycleCommandKeysByTenantId.set(command.tenantId, command.idempotencyKey);
+    }
+    return cloneLifecycleCommand(storedCommand);
+  }
+
+  async claimLifecycleEventDelivery(
+    command: BillingLifecycleCommand,
+    leaseDurationMs: number,
+  ): Promise<BillingLifecycleCommand | null> {
+    const now = this.clock();
+    const existing = this.lifecycleCommands.get(command.idempotencyKey);
+    if (
+      !existing ||
+      existing.state !== "pending_event" ||
+      existing.revision !== command.revision ||
+      (existing.eventDeliveryLeaseUntil &&
+        existing.eventDeliveryLeaseUntil.getTime() > now.getTime())
+    ) {
+      return null;
+    }
+
+    const claimed = Object.freeze(
+      cloneLifecycleCommand({
+        ...existing,
+        revision: existing.revision + 1,
+        eventDeliveryLeaseUntil: new Date(now.getTime() + leaseDurationMs),
+        updatedAt: now,
+      }),
+    );
+    this.lifecycleCommands.set(command.idempotencyKey, claimed);
+    return cloneLifecycleCommand(claimed);
+  }
+
+  async listPendingLifecycleCommands(limit: number): Promise<BillingLifecycleCommand[]> {
+    if (!Number.isInteger(limit) || limit <= 0) {
+      return [];
+    }
+
+    return [...this.lifecycleCommands.values()]
+      .filter((command) => command.state !== "completed")
+      .sort((left, right) => {
+        const createdAtOrder = left.createdAt.getTime() - right.createdAt.getTime();
+        return createdAtOrder || left.idempotencyKey.localeCompare(right.idempotencyKey);
+      })
+      .slice(0, limit)
+      .map(cloneLifecycleCommand);
+  }
+
   async saveOrder(order: Order): Promise<void> {
     const existing = this.orders.get(order.billingAccountId) ?? [];
     existing.push(order);
@@ -124,6 +314,8 @@ export class InMemoryBillingStore extends BillingStore {
     this.accountsByExternalId.clear();
     this.subscriptions.clear();
     this.subscriptionsByExternalId.clear();
+    this.lifecycleCommands.clear();
+    this.pendingLifecycleCommandKeysByTenantId.clear();
     this.orders.clear();
     this.processedWebhooks.clear();
   }
@@ -135,4 +327,68 @@ function cloneSubscription(subscription: Subscription): Subscription {
     currentPeriodEnd: new Date(subscription.currentPeriodEnd),
     lastSyncedAt: new Date(subscription.lastSyncedAt),
   };
+}
+
+function cloneLifecycleCommand(command: BillingLifecycleCommand): BillingLifecycleCommand {
+  return {
+    ...command,
+    subscription: cloneSubscription(command.subscription),
+    createdAt: new Date(command.createdAt),
+    updatedAt: new Date(command.updatedAt),
+    ...(command.eventDeliveryLeaseUntil
+      ? { eventDeliveryLeaseUntil: new Date(command.eventDeliveryLeaseUntil) }
+      : {}),
+    ...(command.lastFailure
+      ? {
+          lastFailure: {
+            ...command.lastFailure,
+            occurredAt: new Date(command.lastFailure.occurredAt),
+          },
+        }
+      : {}),
+  };
+}
+
+function rebaseLifecycleTarget(
+  current: Subscription,
+  target: Subscription,
+  kind: BillingLifecycleCommand["kind"],
+): Subscription {
+  return {
+    ...current,
+    status: kind === "cancel_immediately" ? "canceled" : current.status,
+    cancelAtPeriodEnd: target.cancelAtPeriodEnd,
+    lastSyncedAt: new Date(Math.max(current.lastSyncedAt.getTime(), target.lastSyncedAt.getTime())),
+  };
+}
+
+function sameLifecycleIntent(
+  left: BillingLifecycleCommand,
+  right: BillingLifecycleCommand,
+): boolean {
+  return (
+    left.tenantId === right.tenantId &&
+    left.kind === right.kind &&
+    left.subscription.billingAccountId === right.subscription.billingAccountId &&
+    left.subscription.externalSubscriptionId === right.subscription.externalSubscriptionId
+  );
+}
+
+function isLifecycleTransitionAllowed(
+  from: BillingLifecycleCommand["state"],
+  to: BillingLifecycleCommand["state"],
+): boolean {
+  if (from === "pending_provider") {
+    return to === "pending_provider" || to === "pending_local";
+  }
+
+  if (from === "pending_local") {
+    return to === "pending_local" || to === "pending_event" || to === "completed";
+  }
+
+  if (from === "pending_event") {
+    return to === "pending_event" || to === "completed";
+  }
+
+  return false;
 }

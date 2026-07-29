@@ -6,6 +6,7 @@ import {
   planVersionRef,
   WebhookAlreadyProcessedProblem,
   type BillingGateway,
+  type BillingLifecycleGatewayOptions,
   type SubscriptionStatus,
 } from "@croco/billing-core";
 import { DiagnosticsCollector } from "@croco/diagnostics-core";
@@ -109,9 +110,16 @@ class DemoBillingGateway implements BillingGateway {
     };
   }
 
-  async cancelSubscription(): Promise<void> {}
+  async cancelSubscription(
+    _externalSubscriptionId: string,
+    _immediate: boolean,
+    _options: BillingLifecycleGatewayOptions,
+  ): Promise<void> {}
 
-  async resumeSubscription(): Promise<void> {}
+  async resumeSubscription(
+    _externalSubscriptionId: string,
+    _options: BillingLifecycleGatewayOptions,
+  ): Promise<void> {}
 
   async getCustomerPortalUrl(externalCustomerId: string): Promise<string> {
     return `https://billing.example.test/portal/${externalCustomerId}`;
@@ -302,7 +310,6 @@ export function createSaasRuntime(): SaasRuntime {
   const billingService = new BillingService({
     store: billingStore,
     gateway: new DemoBillingGateway(),
-    eventPublisher,
   });
   const meterRepository = new InMemoryMeterRepository();
   const usageStorage = new InMemoryUsageStorage();

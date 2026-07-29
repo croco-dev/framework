@@ -209,9 +209,15 @@ function createBillingGatewayConformanceCases<TGateway extends BillingGateway>(
         const gateway = await createGateway();
         const { externalSubscriptionId } = options.fixtures.subscription;
 
-        await gateway.cancelSubscription(externalSubscriptionId, false);
-        await gateway.resumeSubscription(externalSubscriptionId);
-        await gateway.cancelSubscription(externalSubscriptionId, true);
+        await gateway.cancelSubscription(externalSubscriptionId, false, {
+          idempotencyKey: `${providerName}:conformance:cancel-period-end`,
+        });
+        await gateway.resumeSubscription(externalSubscriptionId, {
+          idempotencyKey: `${providerName}:conformance:resume`,
+        });
+        await gateway.cancelSubscription(externalSubscriptionId, true, {
+          idempotencyKey: `${providerName}:conformance:cancel-immediate`,
+        });
         await options.assertions?.subscriptionLifecycle?.({
           gateway,
           externalSubscriptionId,

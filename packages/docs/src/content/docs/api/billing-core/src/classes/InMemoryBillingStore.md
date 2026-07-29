@@ -16,17 +16,53 @@ NOT suitable for production multi-instance deployments.
 
 ### Constructor
 
-> **new InMemoryBillingStore**(): `InMemoryBillingStore`
+> **new InMemoryBillingStore**(`clock?`): `InMemoryBillingStore`
+
+#### Parameters
+
+##### clock?
+
+() => `Date`
 
 #### Returns
 
 `InMemoryBillingStore`
 
-#### Inherited from
+#### Overrides
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`constructor`](/api/billing-core/src/classes/billingstore/#constructor)
 
 ## Methods
+
+### claimLifecycleEventDelivery()
+
+> **claimLifecycleEventDelivery**(`command`, `leaseDurationMs`): `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
+
+Atomically claims event delivery for the expected command revision.
+
+Implementations must return `null` when the command is no longer `pending_event`, the revision
+is stale, or another unexpired delivery lease exists. A successful claim increments the
+revision and persists a lease computed from datastore-authoritative time.
+
+#### Parameters
+
+##### command
+
+[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)
+
+##### leaseDurationMs
+
+`number`
+
+#### Returns
+
+`Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`claimLifecycleEventDelivery`](/api/billing-core/src/classes/billingstore/#claimlifecycleeventdelivery)
+
+---
 
 ### completeWebhook()
 
@@ -45,6 +81,32 @@ NOT suitable for production multi-instance deployments.
 #### Overrides
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`completeWebhook`](/api/billing-core/src/classes/billingstore/#completewebhook)
+
+---
+
+### createLifecycleCommand()
+
+> **createLifecycleCommand**(`command`): `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
+
+Persists a command before provider I/O.
+
+Implementations must return the existing command when the idempotency key and semantic
+command fields match, reject semantic key reuse, and reject a second incomplete command for
+the same tenant.
+
+#### Parameters
+
+##### command
+
+[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)
+
+#### Returns
+
+`Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`createLifecycleCommand`](/api/billing-core/src/classes/billingstore/#createlifecyclecommand)
 
 ---
 
@@ -153,6 +215,26 @@ independently of domain-state persistence.
 
 ---
 
+### findLifecycleCommand()
+
+> **findLifecycleCommand**(`idempotencyKey`): `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
+
+#### Parameters
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findLifecycleCommand`](/api/billing-core/src/classes/billingstore/#findlifecyclecommand)
+
+---
+
 ### findOrdersByAccount()
 
 > **findOrdersByAccount**(`billingAccountId`): `Promise`\<[`Order`](/api/billing-core/src/type-aliases/order/)[]\>
@@ -170,6 +252,26 @@ independently of domain-state persistence.
 #### Overrides
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findOrdersByAccount`](/api/billing-core/src/classes/billingstore/#findordersbyaccount)
+
+---
+
+### findPendingLifecycleCommandByTenantId()
+
+> **findPendingLifecycleCommandByTenantId**(`tenantId`): `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findPendingLifecycleCommandByTenantId`](/api/billing-core/src/classes/billingstore/#findpendinglifecyclecommandbytenantid)
 
 ---
 
@@ -210,6 +312,58 @@ independently of domain-state persistence.
 #### Overrides
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findSubscriptionByExternalId`](/api/billing-core/src/classes/billingstore/#findsubscriptionbyexternalid)
+
+---
+
+### listPendingLifecycleCommands()
+
+> **listPendingLifecycleCommands**(`limit`): `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)[]\>
+
+#### Parameters
+
+##### limit
+
+`number`
+
+#### Returns
+
+`Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)[]\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`listPendingLifecycleCommands`](/api/billing-core/src/classes/billingstore/#listpendinglifecyclecommands)
+
+---
+
+### reconcileLifecycleSubscription()
+
+> **reconcileLifecycleSubscription**(`command`, `target`): `Promise`\<[`BillingLifecycleLocalResult`](/api/billing-core/src/type-aliases/billinglifecyclelocalresult/)\>
+
+Applies a lifecycle target while the stored external subscription identity still matches the
+command. Implementations must atomically rebase the lifecycle delta onto a newer snapshot of
+that same external subscription. A `null` target atomically removes the matching subscription
+and account.
+
+Implementations must return `superseded` without mutation only when a different external
+subscription occupies the billing account.
+
+#### Parameters
+
+##### command
+
+[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)
+
+##### target
+
+[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`
+
+#### Returns
+
+`Promise`\<[`BillingLifecycleLocalResult`](/api/billing-core/src/type-aliases/billinglifecyclelocalresult/)\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`reconcileLifecycleSubscription`](/api/billing-core/src/classes/billingstore/#reconcilelifecyclesubscription)
 
 ---
 
@@ -254,6 +408,33 @@ Clear all data (for testing)
 
 ---
 
+### resolveLifecycleSubscription()
+
+> **resolveLifecycleSubscription**(`command`): `Promise`\<[`BillingLifecycleSubscriptionResolution`](/api/billing-core/src/type-aliases/billinglifecyclesubscriptionresolution/)\>
+
+Atomically resolves the subscription state for a pending lifecycle projection.
+
+Implementations must verify the command revision and pending state in the same operation that
+reads and classifies the subscription. The result must carry either the latest same-identity
+projection base or the authoritative replacement/absent state so callers never perform a
+second, racy subscription read.
+
+#### Parameters
+
+##### command
+
+[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)
+
+#### Returns
+
+`Promise`\<[`BillingLifecycleSubscriptionResolution`](/api/billing-core/src/type-aliases/billinglifecyclesubscriptionresolution/)\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`resolveLifecycleSubscription`](/api/billing-core/src/classes/billingstore/#resolvelifecyclesubscription)
+
+---
+
 ### saveAccount()
 
 > **saveAccount**(`account`): `Promise`\<`void`\>
@@ -271,6 +452,34 @@ Clear all data (for testing)
 #### Overrides
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`saveAccount`](/api/billing-core/src/classes/billingstore/#saveaccount)
+
+---
+
+### saveLifecycleCommand()
+
+> **saveLifecycleCommand**(`command`): `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
+
+Saves failure evidence or advances a command monotonically through
+`pending_provider` -> `pending_local` -> optional `pending_event` -> `completed`.
+
+`command.revision` is the expected current revision. Implementations must compare and increment
+it atomically, reject stale writes, semantic mutations, invalid transitions, and attempts to
+reopen or rewrite a completed command. Once local reconciliation runs, the command's
+`localResult` must be persisted as durable convergence evidence.
+
+#### Parameters
+
+##### command
+
+[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)
+
+#### Returns
+
+`Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
+
+#### Overrides
+
+[`BillingStore`](/api/billing-core/src/classes/billingstore/).[`saveLifecycleCommand`](/api/billing-core/src/classes/billingstore/#savelifecyclecommand)
 
 ---
 

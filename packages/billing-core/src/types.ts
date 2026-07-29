@@ -22,6 +22,62 @@ export type Subscription = {
   lastSyncedAt: Date;
 };
 
+export type BillingLifecycleCommandKind = "cancel_at_period_end" | "cancel_immediately" | "resume";
+
+export type BillingLifecycleCommandState =
+  | "pending_provider"
+  | "pending_local"
+  | "pending_event"
+  | "completed";
+
+export type BillingLifecycleCommandFailure = {
+  readonly stage: "provider" | "local" | "event";
+  readonly code: string;
+  readonly detail: string;
+  readonly attempt: number;
+  readonly occurredAt: Date;
+};
+
+export type BillingLifecycleLocalResult = "applied" | "superseded";
+
+/**
+ * Atomic read result for a pending lifecycle projection.
+ *
+ * `projection_base` identifies the same external subscription and carries its latest snapshot.
+ * `current` is authoritative when the command is stale, the subscription was replaced, or no
+ * subscription exists.
+ */
+export type BillingLifecycleSubscriptionResolution =
+  | {
+      readonly kind: "projection_base";
+      readonly subscription: Subscription;
+    }
+  | {
+      readonly kind: "current";
+      readonly subscription: Subscription | null;
+    };
+
+/**
+ * Durable evidence for one logical subscription lifecycle mutation.
+ *
+ * `pending_provider` keeps the local subscription authoritative.
+ * `pending_local` means the provider accepted the mutation and entitlement reads project the
+ * command's target state until local reconciliation completes.
+ */
+export type BillingLifecycleCommand = {
+  readonly idempotencyKey: string;
+  readonly tenantId: string;
+  readonly kind: BillingLifecycleCommandKind;
+  readonly subscription: Subscription;
+  readonly state: BillingLifecycleCommandState;
+  readonly revision: number;
+  readonly localResult?: BillingLifecycleLocalResult;
+  readonly eventDeliveryLeaseUntil?: Date;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly lastFailure?: BillingLifecycleCommandFailure;
+};
+
 export type LegacySubscription = Omit<Subscription, "planVersionRef">;
 
 export type Order = {
