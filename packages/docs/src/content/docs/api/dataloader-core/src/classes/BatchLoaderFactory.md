@@ -51,7 +51,8 @@ Function that loads data for multiple keys at once
 
 **options.maxBatchSize**
 
-Maximum items per batch (default: Infinity)
+Maximum items per batch; must be a positive safe integer or Infinity
+(default: Infinity)
 
 ## Param
 

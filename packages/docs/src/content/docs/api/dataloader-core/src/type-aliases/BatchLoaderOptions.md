@@ -62,7 +62,8 @@ Optional flag to enable/disable result caching (default: true)
 
 > `optional` **maxBatchSize?**: `number`
 
-Optional maximum number of items per batch (default: Infinity)
+Optional maximum number of items per batch; must be a positive safe integer or Infinity
+(default: Infinity)
 
 ***
 
