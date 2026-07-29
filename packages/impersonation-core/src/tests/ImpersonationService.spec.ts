@@ -146,6 +146,20 @@ describe("ImpersonationService", () => {
       expectNoStartSideEffects();
     });
 
+    it("rejects scoped manage permission before target lookup or side effects", async () => {
+      authProvider.principal = {
+        id: "admin-1",
+        permissions: ["impersonation:manage:tenant-1"],
+      };
+
+      await expect(service.start(context("admin-1"), "user-123")).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      });
+
+      expect(authProvider.targetLookupCount).toBe(0);
+      expectNoStartSideEffects();
+    });
+
     it("rejects self-targeting before target lookup or side effects", async () => {
       await expect(service.start(context("admin-1"), "admin-1")).rejects.toMatchObject({
         code: "SELF_IMPERSONATION_NOT_ALLOWED",
@@ -189,10 +203,10 @@ describe("ImpersonationService", () => {
       );
     });
 
-    it("accepts matching context identity and shared manage permission semantics", async () => {
+    it("accepts matching context identity and global manage permission", async () => {
       authProvider.principal = {
         id: "admin-1",
-        permissions: ["impersonation:manage:tenant-1"],
+        permissions: ["impersonation:manage"],
       };
 
       const result = await service.start(context("admin-1"), "user-123");

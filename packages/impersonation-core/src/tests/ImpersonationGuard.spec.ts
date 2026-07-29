@@ -33,13 +33,25 @@ describe("ImpersonationGuard", () => {
     );
   });
 
-  it("uses shared permission semantics for equivalent manage permission", () => {
+  it("accepts a global manage permission", () => {
+    const principal: Principal = {
+      type: "user",
+      id: "admin-1",
+      permissions: ["impersonation:manage"],
+    };
+
+    expect(guard.canActivate(contextWith(principal))).toBe(true);
+  });
+
+  it("rejects a scoped manage permission for the global requirement", () => {
     const principal: Principal = {
       type: "user",
       id: "admin-1",
       permissions: ["impersonation:manage:tenant-1"],
     };
 
-    expect(guard.canActivate(contextWith(principal))).toBe(true);
+    expect(() => guard.canActivate(contextWith(principal))).toThrow(
+      expect.objectContaining({ code: "FORBIDDEN" }),
+    );
   });
 });

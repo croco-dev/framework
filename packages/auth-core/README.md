@@ -91,4 +91,7 @@ provider가 `null`을 반환하는 경우 `UnauthorizedProblem`으로 실패하�
 
 - 세션 기반 인증은 `SessionProvider`와 `AuthProvider` 구현체로 연결합니다.
 - API 키 흐름은 이벤트로 감사 로그, 메트릭, 알림 패키지와 쉽게 결합할 수 있습니다.
-- 권한 문자열은 `resource:action` 형식을 따르며 `parsePermission`, `formatPermission` 유틸리티를 제공합니다.
+- 권한 문자열은 `resource:action` 또는 `resource:action:resourceId` 형식을 따르며 `parsePermission`,
+  `formatPermission` 유틸리티를 제공합니다. `resourceId`를 포함할 때는 비어 있지 않아야 합니다.
+- 전역 권한은 같은 resource/action의 객체별 요구를 충족하지만, 객체별 권한은 동일한 `resourceId`에만 적용되며
+  전역 요구를 충족하지 않습니다. `manage` 권한에도 같은 scope 규칙이 적용됩니다.

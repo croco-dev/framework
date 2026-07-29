@@ -17,7 +17,9 @@ function isPermissionAction(action: string): action is PermissionAction {
   return VALID_ACTIONS.some((validAction) => validAction === action);
 }
 
-export function parsePermission(permission: string): Permission {
+function parsePermissionParts(
+  permission: string,
+): [resource: string, action: string, resourceId?: string] {
   const parts = permission.split(":");
   if (parts.length < 2 || parts.length > 3) {
     throw new InvalidPermissionFormatProblem(permission);
@@ -29,6 +31,16 @@ export function parsePermission(permission: string): Permission {
     throw new InvalidPermissionFormatProblem(permission);
   }
 
+  if (parts.length === 3 && !resourceId) {
+    throw new InvalidPermissionFormatProblem(permission);
+  }
+
+  return [resource, action, resourceId];
+}
+
+export function parsePermission(permission: string): Permission {
+  const [resource, action, resourceId] = parsePermissionParts(permission);
+
   if (!isPermissionAction(action)) {
     throw new InvalidPermissionActionProblem(action);
   }
@@ -37,13 +49,21 @@ export function parsePermission(permission: string): Permission {
 }
 
 export function formatPermission(permission: Permission): string {
-  if (permission.resourceId) {
+  if (permission.resourceId === "") {
+    throw new InvalidPermissionFormatProblem(
+      `${permission.resource}:${permission.action}:${permission.resourceId}`,
+    );
+  }
+
+  if (permission.resourceId !== undefined) {
     return `${permission.resource}:${permission.action}:${permission.resourceId}`;
   }
   return `${permission.resource}:${permission.action}`;
 }
 
 export function hasPermission(userPermissions: string[], required: string): boolean {
+  parsePermissionParts(required);
+
   if (userPermissions.includes(required)) {
     return true;
   }
@@ -57,16 +77,13 @@ export function hasPermission(userPermissions: string[], required: string): bool
       if (userPerm.resource !== requiredPerm.resource) {
         return false;
       }
-      if (userPerm.action === "manage") {
-        return true;
-      }
-      if (userPerm.action !== requiredPerm.action) {
+      if (userPerm.action !== "manage" && userPerm.action !== requiredPerm.action) {
         return false;
       }
-      if (requiredPerm.resourceId) {
-        return userPerm.resourceId === requiredPerm.resourceId || userPerm.resourceId === undefined;
+      if (requiredPerm.resourceId === undefined) {
+        return userPerm.resourceId === undefined;
       }
-      return true;
+      return userPerm.resourceId === undefined || userPerm.resourceId === requiredPerm.resourceId;
     } catch {
       console.warn("Malformed permission string:", p);
       return false;
@@ -80,7 +97,8 @@ export function hasResourcePermission(
   action: PermissionAction,
   resourceId?: string,
 ): boolean {
-  const required = resourceId ? `${resource}:${action}:${resourceId}` : `${resource}:${action}`;
+  const required =
+    resourceId === undefined ? `${resource}:${action}` : `${resource}:${action}:${resourceId}`;
   return hasPermission(userPermissions, required);
 }
 
