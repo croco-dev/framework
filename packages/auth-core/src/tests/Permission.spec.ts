@@ -8,6 +8,13 @@ import {
   hasResourcePermission,
   parsePermission,
 } from "../libs/rbac/Permission";
+import type { PermissionAction } from "../libs/rbac/Permission";
+
+const REQUIRED_ACTIONS: PermissionAction[] = ["read", "write", "delete", "manage"];
+
+function permission(action: PermissionAction, resourceId?: string): string {
+  return resourceId ? `documents:${action}:${resourceId}` : `documents:${action}`;
+}
 
 describe("Permission", () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -162,6 +169,28 @@ describe("Permission", () => {
       expect(hasPermission(userPermissions, "billing:write")).toBe(true);
       expect(hasPermission(userPermissions, "billing:read")).toBe(true);
       expect(hasPermission(userPermissions, "billing:delete")).toBe(true);
+    });
+
+    it("should enforce manage implication within resource scope for every action", () => {
+      const scopeCases = [
+        { grantedId: undefined, requiredId: undefined, matches: true },
+        { grantedId: undefined, requiredId: "document-1", matches: true },
+        { grantedId: "document-1", requiredId: "document-1", matches: true },
+        { grantedId: "document-1", requiredId: "document-2", matches: false },
+        { grantedId: "document-1", requiredId: undefined, matches: false },
+      ];
+
+      for (const requiredAction of REQUIRED_ACTIONS) {
+        for (const { grantedId, requiredId, matches } of scopeCases) {
+          expect(
+            hasPermission(
+              [permission("manage", grantedId)],
+              permission(requiredAction, requiredId),
+            ),
+            `${permission("manage", grantedId)} -> ${permission(requiredAction, requiredId)}`,
+          ).toBe(matches);
+        }
+      }
     });
 
     it("should return false for mismatch", () => {
