@@ -238,6 +238,18 @@ describe("CI verification profile contract", () => {
     );
   });
 
+  it("routes auth changes to the real PostgreSQL rotation suite", () => {
+    expect(WORKFLOW).toContain("- 'packages/auth-core/**'");
+    expect(WORKFLOW).toContain("- 'packages/auth-drizzle/**'");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/auth-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain(
+      "AUTH_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain(
+      "pnpm --filter @croco/auth-drizzle exec vitest run src/tests/DrizzleApiKeyStore.postgres.spec.ts",
+    );
+  });
+
   it("runs typed TestKernel resources against real PostgreSQL and Redis", () => {
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/testing-resources...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/testing-resources test:real");

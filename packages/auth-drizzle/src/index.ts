@@ -17,4 +17,10 @@ export { DrizzleTenantMappingProvider } from "./libs/DrizzleTenantMappingProvide
 /**
  * 인증 저장소용 Drizzle 스키마입니다.
  */
-export { apiKeys, sessions, tenantMappings, userRoles } from "./schema/index.js";
+export { apiKeyRotations, apiKeys, sessions, tenantMappings, userRoles } from "./schema/index.js";
+
+/**
+ * API 키 회전 의도 테이블 마이그레이션입니다.
+ */
+export { addApiKeyRotations, removeApiKeyRotations } from "./migrations/addApiKeyRotations.js";
+export type { ApiKeyRotationMigrationClient } from "./migrations/addApiKeyRotations.js";

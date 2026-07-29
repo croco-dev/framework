@@ -11,7 +11,7 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 ### Constructor
 
-> **new ApiKeyManager**(`store`, `generator?`, `hasher?`, `eventBus?`, `logger?`): `ApiKeyManager`
+> **new ApiKeyManager**(`store`, `generator?`, `hasher?`, `eventBus?`, `logger?`, `rotationProtector?`): `ApiKeyManager`
 
 #### Parameters
 
@@ -35,6 +35,10 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 [`Logger`](/api/framework-logger/src/classes/logger/)
 
+##### rotationProtector?
+
+[`ApiKeyRotationProtector`](/api/auth-core/src/interfaces/apikeyrotationprotector/)
+
 #### Returns
 
 `ApiKeyManager`
@@ -55,7 +59,7 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 `Promise`\<[`CreateApiKeyResult`](/api/auth-core/src/type-aliases/createapikeyresult/)\>
 
-***
+---
 
 ### list()
 
@@ -71,7 +75,7 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 `Promise`\<`Omit`\<[`ApiKey`](/api/auth-core/src/type-aliases/apikey/), `"hash"`\>[]\>
 
-***
+---
 
 ### revoke()
 
@@ -87,11 +91,11 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 `Promise`\<`RevokeApiKeyResult`\>
 
-***
+---
 
 ### rotate()
 
-> **rotate**(`id`): `Promise`\<`RotateApiKeyResult`\>
+> **rotate**(`id`, `options`): `Promise`\<[`RotateApiKeyResult`](/api/auth-core/src/type-aliases/rotateapikeyresult/)\>
 
 #### Parameters
 
@@ -99,11 +103,15 @@ API 키 생성, 검증, 폐기, 회전을 담당하는 관리자입니다.
 
 `string`
 
+##### options
+
+[`RotateApiKeyOptions`](/api/auth-core/src/type-aliases/rotateapikeyoptions/)
+
 #### Returns
 
-`Promise`\<`RotateApiKeyResult`\>
+`Promise`\<[`RotateApiKeyResult`](/api/auth-core/src/type-aliases/rotateapikeyresult/)\>
 
-***
+---
 
 ### verify()
 

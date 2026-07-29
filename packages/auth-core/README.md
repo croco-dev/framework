@@ -11,7 +11,19 @@ pnpm add @croco/auth-core
 ## 사용법
 
 ```ts
-import { ApiKeyGenerator, ApiKeyHasher, ApiKeyManager } from "@croco/auth-core";
+import {
+  AesGcmApiKeyRotationProtector,
+  ApiKeyGenerator,
+  ApiKeyHasher,
+  ApiKeyManager,
+} from "@croco/auth-core";
+
+const rotationProtector = new AesGcmApiKeyRotationProtector({
+  activeKeyId: "2026-07",
+  keys: {
+    "2026-07": rotationProtectionKey,
+  },
+});
 
 const manager = new ApiKeyManager(
   apiKeyStore,
@@ -19,6 +31,7 @@ const manager = new ApiKeyManager(
   new ApiKeyHasher(),
   eventBus,
   logger,
+  rotationProtector,
 );
 
 const created = await manager.create({
@@ -28,7 +41,16 @@ const created = await manager.create({
 });
 
 const principal = await manager.verify(created.key);
+
+const rotated = await manager.rotate(created.id, {
+  idempotencyKey: "deploy-2026-07-30",
+});
 ```
+
+`rotate()`는 호출자가 제공한 멱등성 키로 하나의 논리적 회전을 식별합니다. 저장소는 기존 키 폐기와 대체 키 저장을
+원자적으로 처리해야 하며, 성공 응답이나 이벤트 발행이 유실되면 같은 멱등성 키로 재시도해 동일한 대체 키를 복구합니다.
+복구 자료는 AES-256-GCM으로 보호되며, 회전 레코드가 재생 가능한 동안 해당 레코드를 암호화한 이전 보호 키도 설정에
+유지해야 합니다.
 
 ```ts
 import { RequirePermission, RbacEngine, RoleRegistry } from "@croco/auth-core";
@@ -52,6 +74,7 @@ class ProjectController {
 - `ApiKeyManager`, API 키 생성, 검증, 폐기, 회전을 담당합니다.
 - `ApiKeyGenerator`, 안전한 API 키를 생성하고 파싱합니다.
 - `ApiKeyHasher`, API 키 해시와 검증을 담당합니다.
+- `AesGcmApiKeyRotationProtector`, 재시도 가능한 회전 복구 자료를 보호합니다.
 - `RbacEngine`, 사용자와 역할 기반 권한 검사를 수행합니다.
 - `RoleRegistry`, 역할과 권한 집합을 관리합니다.
 - `AuthGuard`, `ApiKeyGuard`, `PermissionGuard`, `UnifiedAuthGuard`, 라우트 보호를 담당합니다.
@@ -67,13 +90,14 @@ class ProjectController {
 
 - `AuthUser`, `Principal`, `ApiKeyPrincipal`, `UserPrincipal`
 - `AuthProvider`, `ApiKeyProvider`, `SessionProvider`, `TenantMappingProvider`
-- `AuthRequest`, `ApiKey`, `CreateApiKeyOptions`, `CreateApiKeyResult`
+- `AuthRequest`, `ApiKey`, `CreateApiKeyOptions`, `CreateApiKeyResult`, `RotateApiKeyOptions`
 
 ### 문제 타입
 
 - `UnauthorizedProblem`, `ForbiddenProblem`
 - `AuthProviderUnavailableProblem`
 - `ApiKeyExpiredProblem`, `ApiKeyRevokedProblem`, `ApiKeyNotFoundProblem`
+- `ApiKeyRotationConflictProblem`, `ApiKeyRotationProtectionProblem`
 - `InvalidPermissionFormatProblem`, `InvalidPermissionActionProblem`
 
 ## AuthGuard conformance

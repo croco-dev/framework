@@ -8,6 +8,7 @@ describe("DrizzleApiKeyStore", () => {
     insert: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
+    transaction: ReturnType<typeof vi.fn>;
     query: {
       apiKeys: {
         findFirst: ReturnType<typeof vi.fn>;
@@ -21,6 +22,7 @@ describe("DrizzleApiKeyStore", () => {
       insert: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+      transaction: vi.fn(async (callback) => callback(mockDb)),
       query: {
         apiKeys: {
           findFirst: vi.fn(),
@@ -295,7 +297,7 @@ describe("DrizzleApiKeyStore", () => {
 
       await store.delete("key-1");
 
-      expect(mockDb.delete).toHaveBeenCalled();
+      expect(mockDb.delete).toHaveBeenCalledTimes(2);
     });
   });
 });

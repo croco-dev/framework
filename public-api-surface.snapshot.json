@@ -3366,9 +3366,21 @@
               "declarationKind": "class"
             },
             {
+              "name": "AesGcmApiKeyRotationProtector",
+              "exportKind": "named",
+              "source": "./libs/apikey/ApiKeyRotationProtector",
+              "declarationKind": "class"
+            },
+            {
               "name": "API_KEY_REQUIRED_KEY",
               "exportKind": "named",
               "source": "./libs/constants",
+              "declarationKind": "const"
+            },
+            {
+              "name": "API_KEY_ROTATION_PROTECTOR_TOKEN",
+              "exportKind": "named",
+              "source": "./libs/apikey/ApiKeyRotationProtector",
               "declarationKind": "const"
             },
             {
@@ -3417,6 +3429,18 @@
               "name": "ApiKeyRevokedProblem",
               "exportKind": "named",
               "source": "./libs/problems/AuthProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ApiKeyRotationConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/AuthProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ApiKeyRotationProtectionProblem",
+              "exportKind": "named",
+              "source": "./libs/apikey/ApiKeyRotationProtector",
               "declarationKind": "class"
             },
             {
@@ -3516,6 +3540,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "InvalidApiKeyRotationIdempotencyKeyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/AuthProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidPermissionActionProblem",
               "exportKind": "named",
               "source": "./libs/problems/AuthProblems",
@@ -3590,6 +3620,11 @@
           ],
           "typeExports": [
             {
+              "name": "AesGcmApiKeyRotationProtectorOptions",
+              "exportKind": "named",
+              "source": "./libs/apikey/ApiKeyRotationProtector"
+            },
+            {
               "name": "ApiKey",
               "exportKind": "named",
               "source": "./libs/interfaces/ApiKey"
@@ -3608,6 +3643,31 @@
               "name": "ApiKeyRateLimit",
               "exportKind": "named",
               "source": "./libs/interfaces/ApiKey"
+            },
+            {
+              "name": "ApiKeyRotation",
+              "exportKind": "named",
+              "source": "./libs/interfaces/ApiKey"
+            },
+            {
+              "name": "ApiKeyRotationInput",
+              "exportKind": "named",
+              "source": "./libs/interfaces/ApiKey"
+            },
+            {
+              "name": "ApiKeyRotationPhaseStatus",
+              "exportKind": "named",
+              "source": "./libs/interfaces/ApiKey"
+            },
+            {
+              "name": "ApiKeyRotationProtectionContext",
+              "exportKind": "named",
+              "source": "./libs/apikey/ApiKeyRotationProtector"
+            },
+            {
+              "name": "ApiKeyRotationProtector",
+              "exportKind": "named",
+              "source": "./libs/apikey/ApiKeyRotationProtector"
             },
             {
               "name": "AuthProvider",
@@ -3663,6 +3723,16 @@
               "name": "RoleDefinition",
               "exportKind": "named",
               "source": "./libs/rbac/RoleDefinition"
+            },
+            {
+              "name": "RotateApiKeyOptions",
+              "exportKind": "named",
+              "source": "./libs/interfaces/ApiKey"
+            },
+            {
+              "name": "RotateApiKeyResult",
+              "exportKind": "named",
+              "source": "./libs/interfaces/ApiKey"
             },
             {
               "name": "RouteExecutionContext",
@@ -3727,6 +3797,18 @@
           "sourceEntrypoint": "packages/auth-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "addApiKeyRotations",
+              "exportKind": "named",
+              "source": "./migrations/addApiKeyRotations.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "apiKeyRotations",
+              "exportKind": "named",
+              "source": "./schema/index.js",
+              "declarationKind": "const"
+            },
+            {
               "name": "apiKeys",
               "exportKind": "named",
               "source": "./schema/index.js",
@@ -3757,6 +3839,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "removeApiKeyRotations",
+              "exportKind": "named",
+              "source": "./migrations/addApiKeyRotations.js",
+              "declarationKind": "function"
+            },
+            {
               "name": "sessions",
               "exportKind": "named",
               "source": "./schema/index.js",
@@ -3775,7 +3863,13 @@
               "declarationKind": "const"
             }
           ],
-          "typeExports": []
+          "typeExports": [
+            {
+              "name": "ApiKeyRotationMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/addApiKeyRotations.js"
+            }
+          ]
         }
       ]
     },

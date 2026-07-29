@@ -20,6 +20,20 @@ export { ApiKeyHasher } from "./libs/apikey/ApiKeyHasher";
 export { ApiKeyManager } from "./libs/apikey/ApiKeyManager";
 
 /**
+ * API 키 회전 복구 자료를 보호하는 계약과 AES-GCM 구현입니다.
+ */
+export {
+  API_KEY_ROTATION_PROTECTOR_TOKEN,
+  AesGcmApiKeyRotationProtector,
+  ApiKeyRotationProtectionProblem,
+} from "./libs/apikey/ApiKeyRotationProtector";
+export type {
+  AesGcmApiKeyRotationProtectorOptions,
+  ApiKeyRotationProtectionContext,
+  ApiKeyRotationProtector,
+} from "./libs/apikey/ApiKeyRotationProtector";
+
+/**
  * API 키 저장소 토큰과 추상 저장소 계약입니다.
  */
 export { API_KEY_STORE_TOKEN, ApiKeyStore } from "./libs/apikey/ApiKeyStore";
@@ -92,8 +106,13 @@ export { AbstractRoleRegistry } from "./libs/interfaces/AbstractRoleRegistry";
 export type {
   ApiKey,
   ApiKeyRateLimit,
+  ApiKeyRotation,
+  ApiKeyRotationInput,
+  ApiKeyRotationPhaseStatus,
   CreateApiKeyOptions,
   CreateApiKeyResult,
+  RotateApiKeyOptions,
+  RotateApiKeyResult,
 } from "./libs/interfaces/ApiKey";
 
 /**
@@ -152,7 +171,9 @@ export type { TenantMappingProvider } from "./libs/interfaces/TenantMapping";
 export {
   ApiKeyCreationFailedProblem,
   ApiKeyExpiredProblem,
+  ApiKeyRotationConflictProblem,
   ApiKeyRevokedProblem,
+  InvalidApiKeyRotationIdempotencyKeyProblem,
   AuthProviderUnavailableProblem,
   ForbiddenProblem,
   InvalidPermissionActionProblem,

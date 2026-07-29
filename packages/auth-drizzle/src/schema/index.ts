@@ -1,4 +1,13 @@
-import { index, json, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  json,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 /**
  * API 키를 저장하는 Drizzle 스키마입니다.
@@ -26,6 +35,41 @@ export const apiKeys = pgTable(
     tenantIdx: index().on(table.tenantId),
     uniqueShortToken: unique().on(table.shortToken),
   }),
+);
+
+/**
+ * API 키 회전의 멱등성, 복구 자료, 이벤트 전달 상태를 저장합니다.
+ */
+export const apiKeyRotations = pgTable(
+  "api_key_rotations",
+  {
+    oldKeyId: uuid("old_key_id")
+      .notNull()
+      .primaryKey()
+      .references(() => apiKeys.id, { onDelete: "restrict" }),
+    newKeyId: uuid("new_key_id")
+      .notNull()
+      .references(() => apiKeys.id, { onDelete: "restrict" }),
+    tenantId: text("tenant_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    recoveryCiphertext: text("recovery_ciphertext").notNull(),
+    eventStatus: text("event_status", { enum: ["pending", "processing", "completed"] })
+      .notNull()
+      .default("pending"),
+    eventClaimId: text("event_claim_id"),
+    eventClaimExpiresAt: timestamp("event_claim_expires_at"),
+    eventId: text("event_id").notNull(),
+    eventOccurredAt: timestamp("event_occurred_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    unique("api_key_rotations_new_key_unique").on(table.newKeyId),
+    uniqueIndex("api_key_rotations_tenant_idempotency_unique").on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+    index("api_key_rotations_event_status_idx").on(table.eventStatus, table.eventClaimExpiresAt),
+  ],
 );
 
 /**

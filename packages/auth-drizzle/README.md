@@ -16,13 +16,16 @@ import {
   DrizzleRoleRegistry,
   DrizzleSessionProvider,
   DrizzleTenantMappingProvider,
+  addApiKeyRotations,
+  apiKeyRotations,
   apiKeys,
   sessions,
   tenantMappings,
   userRoles,
 } from "@croco/auth-drizzle";
 
-const apiKeyStore = new DrizzleApiKeyStore(db, { apiKeys });
+await addApiKeyRotations(db);
+const apiKeyStore = new DrizzleApiKeyStore(db, { apiKeys, apiKeyRotations });
 const sessionProvider = new DrizzleSessionProvider(db, { sessions });
 const tenantMappingProvider = new DrizzleTenantMappingProvider(db, { tenantMappings });
 const roleRegistry = new DrizzleRoleRegistry(db, { userRoles });
@@ -49,7 +52,7 @@ const activeSessions = await sessionProvider.listSessions({ userId: "user-1", st
 
 ### 저장소
 
-- `DrizzleApiKeyStore`, API 키 저장, 조회, 폐기, 삭제를 담당합니다.
+- `DrizzleApiKeyStore`, API 키 저장, 조회, 원자적 회전, 폐기, 삭제를 담당합니다.
 - `DrizzleSessionProvider`, 세션 조회와 회수를 담당합니다.
 - `DrizzleTenantMappingProvider`, 외부 조직 ID와 테넌트 ID를 연결합니다.
 - `DrizzleRoleRegistry`, 역할 정의 등록과 사용자 역할 할당을 담당합니다.
@@ -57,8 +60,17 @@ const activeSessions = await sessionProvider.listSessions({ userId: "user-1", st
 ### 스키마
 
 - `apiKeys`, API 키 테이블입니다.
+- `apiKeyRotations`, 멱등 회전, 보호된 복구 자료, 이벤트 전달 상태 테이블입니다.
 - `sessions`, 세션 테이블입니다.
 - `tenantMappings`, 외부 조직 매핑 테이블입니다.
 - `userRoles`, 사용자 역할 테이블입니다.
 
 각 스키마는 PostgreSQL용 `pgTable` 정의이며, 인덱스와 유니크 제약을 함께 제공합니다.
+
+`addApiKeyRotations()`를 애플리케이션 스키마 마이그레이션에 포함해야 합니다. 회전은 내부 PostgreSQL 트랜잭션으로
+대체 키 저장과 기존 키 폐기를 함께 커밋하며, 회전 이벤트는 커밋 뒤 안정적인 이벤트 ID로 전달됩니다.
+
+기존 `save()` 후 `revoke()` 회전 경로를 사용하는 인스턴스와 새 원자적 회전 경로를 동시에 실행하면 안 됩니다.
+배포할 때는 먼저 마이그레이션을 적용하고 API 키 회전을 중지한 뒤, 기존 회전 writer를 모두 drain하고 새 버전을
+배포한 다음 회전을 다시 활성화합니다. 이 schema-first 2단계 절차를 지키지 않는 mixed-version rollout은 지원하지
+않습니다. `delete()`는 키와 연결된 회전 복구 자료를 같은 트랜잭션에서 영구 삭제합니다.

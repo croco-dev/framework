@@ -45,6 +45,30 @@ export type RotateApiKeyResult = {
   degraded?: boolean;
 };
 
+export type RotateApiKeyOptions = {
+  idempotencyKey: string;
+};
+
+export type ApiKeyRotationPhaseStatus = "pending" | "processing" | "completed";
+
+export type ApiKeyRotation = {
+  oldKeyId: string;
+  replacement: ApiKey;
+  tenantId: string;
+  idempotencyKey: string;
+  recoveryCiphertext: string;
+  eventStatus: ApiKeyRotationPhaseStatus;
+  eventClaimId: string | null;
+  eventClaimExpiresAt: Date | null;
+  eventId: string;
+  eventOccurredAt: Date;
+  createdAt: Date;
+};
+
+export type ApiKeyRotationInput = Omit<ApiKeyRotation, "replacement" | "createdAt"> & {
+  replacement: Pick<ApiKey, "id" | "prefix" | "shortToken" | "hash">;
+};
+
 export type RevokeApiKeyResult = {
   degraded?: boolean;
 };
