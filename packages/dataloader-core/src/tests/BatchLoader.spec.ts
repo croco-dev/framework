@@ -5,6 +5,7 @@ import * as otelApi from "@opentelemetry/api";
 import { ROOT_CONTEXT } from "@opentelemetry/api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BatchResultLengthMismatchProblem } from "../index";
+import { BatchLoaderImpl } from "../libs/BatchLoader";
 import { createBatchLoader } from "../libs/createBatchLoader";
 
 describe("BatchLoader", () => {
@@ -172,6 +173,28 @@ describe("BatchLoader", () => {
       expect(batchFn).toHaveBeenCalledWith([3]);
     });
   });
+
+  it.each([0.5, Number.NaN, Number.NEGATIVE_INFINITY, 0, -1, Number.MAX_SAFE_INTEGER + 1])(
+    "should reject invalid maxBatchSize %s synchronously",
+    (maxBatchSize) => {
+      const invalidBatchFn = vi.fn(
+        async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> =>
+          keys.map((key) => `Value: ${key}`),
+      );
+
+      expect(
+        () =>
+          new BatchLoaderImpl<number, string>({
+            name: "invalid-batch-size-loader",
+            batchFn: invalidBatchFn,
+            maxBatchSize,
+          }),
+      ).toThrow(
+        `Invalid BatchLoader configuration: maxBatchSize must be a positive safe integer or Infinity, got ${maxBatchSize}`,
+      );
+      expect(invalidBatchFn).not.toHaveBeenCalled();
+    },
+  );
 
   it("should not split batches by default", async () => {
     await Context.run({ requestId: "test-default-batch-size" }, async () => {
