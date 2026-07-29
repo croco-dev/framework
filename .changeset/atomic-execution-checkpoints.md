@@ -1,6 +1,7 @@
 ---
 "@croco/execution-core": minor
 "@croco/execution-drizzle": patch
+"@croco/problems-core": patch
 "create-croco-app": patch
 ---
 
