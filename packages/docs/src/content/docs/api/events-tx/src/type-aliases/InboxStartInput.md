@@ -42,3 +42,9 @@ title: "InboxStartInput"
 ### now
 
 > **now**: `Date`
+
+***
+
+### visibilityTimeoutMs?
+
+> `optional` **visibilityTimeoutMs?**: `number`

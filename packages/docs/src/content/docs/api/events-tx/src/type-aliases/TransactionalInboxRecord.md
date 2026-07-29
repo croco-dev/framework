@@ -63,6 +63,12 @@ title: "TransactionalInboxRecord"
 
 ***
 
+### lockedUntil?
+
+> `optional` **lockedUntil?**: `Date`
+
+***
+
 ### messageId
 
 > **messageId**: `string`
