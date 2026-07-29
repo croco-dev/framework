@@ -267,6 +267,30 @@ describe("transactional event configuration validation", () => {
     expect(startInboxProcessing).not.toHaveBeenCalled();
   });
 
+  it.each(POSITIVE_INTEGER_INVALID_VALUES)(
+    "rejects invalid inbox visibilityTimeoutMs %s synchronously",
+    (visibilityTimeoutMs) => {
+      const store = new InMemoryTransactionalEventStore();
+      const startInboxProcessing = vi.spyOn(store, "startInboxProcessing");
+      const error = captureSyncFailure(
+        () =>
+          new TransactionalInboxConsumer({
+            store,
+            consumerId: "ledger-projection",
+            visibilityTimeoutMs,
+          }),
+      );
+
+      assertInvalidConfiguration(
+        error,
+        "visibilityTimeoutMs",
+        "positive-int32",
+        visibilityTimeoutMs,
+      );
+      expect(startInboxProcessing).not.toHaveBeenCalled();
+    },
+  );
+
   it("rejects consumerId values longer than 128 characters and accepts exactly 128", () => {
     const store = new InMemoryTransactionalEventStore();
     const tooLong = "a".repeat(129);
@@ -344,6 +368,14 @@ describe("transactional event configuration validation", () => {
           },
         }),
     ).not.toThrow();
+    expect(
+      () =>
+        new TransactionalInboxConsumer({
+          store,
+          consumerId: "ledger-projection",
+          visibilityTimeoutMs: 2_147_483_647,
+        }),
+    ).not.toThrow();
     const outbox = new TransactionalOutbox({
       store,
       txManager,
@@ -406,7 +438,10 @@ describe("transactional event configuration validation", () => {
       async () => {},
     );
     expect(startInboxProcessing).toHaveBeenCalledWith(
-      expect.objectContaining({ consumerId: paddedConsumerId }),
+      expect.objectContaining({
+        consumerId: paddedConsumerId,
+        visibilityTimeoutMs: 30_000,
+      }),
       undefined,
     );
   });

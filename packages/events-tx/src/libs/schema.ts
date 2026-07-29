@@ -59,6 +59,7 @@ export const transactionalInboxRecords = pgTable(
     attempts: integer("attempts").notNull().default(1),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    lockedUntil: timestamp("locked_until"),
     processedAt: timestamp("processed_at"),
     failedAt: timestamp("failed_at"),
     lastError: jsonb("last_error").$type<TransactionalEventError>(),
@@ -72,6 +73,10 @@ export const transactionalInboxRecords = pgTable(
       table.inboxKey,
     ),
     statusIdx: index("croco_inbox_records_status_idx").on(table.status),
+    statusLockedUntilIdx: index("croco_inbox_records_status_locked_until_idx").on(
+      table.status,
+      table.lockedUntil,
+    ),
     eventTypeIdx: index("croco_inbox_records_event_type_idx").on(table.eventType),
   }),
 );

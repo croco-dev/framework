@@ -67,7 +67,7 @@ await consumer.handle(message, async (outboxMessage) => {
 });
 ```
 
-Inbox records are keyed by `consumerId` and message idempotency key. Processed or currently processing records return `duplicate`; failed records can be retried explicitly.
+Inbox records are keyed by `consumerId` and message idempotency key. Processed records and processing records with an active lease return `duplicate`. Failed records and processing records whose `lockedUntil` lease has expired can be claimed again.
 
 Each accepted start returns an `attempts` claim. Direct store callers must pass that value as `expectedAttempts` when marking the record processed or failed:
 
@@ -78,6 +78,7 @@ const started = await store.startInboxProcessing({
   inboxKey: message.idempotencyKey,
   eventType: message.eventType,
   now: new Date(),
+  visibilityTimeoutMs: 30_000,
 });
 
 if (started.status === "started") {
@@ -90,12 +91,23 @@ if (started.status === "started") {
 }
 ```
 
-Completion is a compare-and-set operation over the inbox identity, `processing` status, and claimed attempt. A stale or already completed claim fails with `InboxClaimConflictProblem` and leaves the current record unchanged. `TransactionalInboxConsumer` carries this claim automatically.
+Completion is a compare-and-set operation over the inbox identity, `processing` status, claimed attempt, and unexpired lease. A stale, expired, or already completed claim fails with `InboxClaimConflictProblem` and leaves the current record unchanged. `TransactionalInboxConsumer` carries the attempt and its configurable `visibilityTimeoutMs` lease automatically.
+
+Operators can reconcile interrupted work by listing `processing` records and comparing `lockedUntil` with the current time. Re-delivering an expired record atomically increments `attempts`, records an `events-tx/inbox-lease-reclaimed` diagnostic, and prevents the previous attempt from completing the newer claim.
 
 ## Storage Adapters
 
 - `InMemoryTransactionalEventStore` provides test/local storage plus a `createTxAdapter()` helper for `TxManager` rollback and savepoint fixtures.
 - `DrizzleTransactionalEventStore` uses Drizzle query-client methods and exported PostgreSQL table definitions: `transactionalOutboxMessages` and `transactionalInboxRecords`. It uses unique-key conflict handling for outbox idempotency and inbox dedupe.
+
+For rolling deployments, migrate the inbox table before deploying lease-aware consumers:
+
+1. Add the nullable `croco_inbox_records.locked_until` timestamp column and the exported status/lease index.
+2. Backfill every existing `processing` row with an operator-chosen lease, for example `updated_at + interval '30 seconds'`, and verify no `processing` row has a null lease.
+3. Deploy lease-aware consumers.
+4. After all old writers are drained, backfill any processing rows they created during the mixed-version window and verify zero null processing leases again.
+
+A null processing lease fails closed as `duplicate`; it is never reclaimed automatically. This keeps old binaries that do not write leases from racing a new worker during rollout. Operators must backfill or otherwise reconcile such rows before redelivery.
 
 ## Validation
 
