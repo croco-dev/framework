@@ -1,7 +1,6 @@
 import { Container, TRANSACTION_CONTEXT_TOKEN } from "@croco/framework-context";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  AfterCommitHooksProblem,
   DuplicateTxManagerRegistrationProblem,
   Transactional,
   type TxAdapter,
@@ -429,53 +428,23 @@ describe("@Transactional decorator", () => {
       expect(mockAdapter.transaction).toHaveBeenCalledTimes(1);
     });
 
-    it("should propagate afterCommit hook failures to decorated callers", async () => {
+    it("should reject decorated afterCommit registration before its outcome can be discarded", async () => {
+      const hook = vi.fn();
       class TestService {
         @Transactional({ propagation: "REQUIRED" })
         async execute() {
-          txManager.onAfterCommit(() => {
-            throw new Error("async projection failed");
-          });
-
+          txManager.onAfterCommit(hook);
           return "result";
         }
       }
 
       const service = new TestService();
 
-      await expect(service.execute()).rejects.toThrow(AfterCommitHooksProblem);
       await expect(service.execute()).rejects.toMatchObject({
-        code: "tx-core/after-commit-hooks-failed",
-        extensions: {
-          committed: true,
-          failureCount: 1,
-          failures: [{ name: "Error", message: "async projection failed" }],
-        },
+        code: "tx-core/after-commit-outcome-required",
       });
-      expect(mockAdapter.transaction).toHaveBeenCalledTimes(2);
-    });
-
-    it("should clear transaction context before decorated afterCommit hooks run", async () => {
-      let observedClient: { id: string } | null = { id: "uninitialized" };
-      let observedInTransaction = true;
-
-      class TestService {
-        @Transactional({ propagation: "REQUIRED" })
-        async execute() {
-          txManager.onAfterCommit(() => {
-            observedClient = txManager.getClient();
-            observedInTransaction = txManager.isInTransaction();
-          });
-
-          return "result";
-        }
-      }
-
-      const service = new TestService();
-
-      await expect(service.execute()).resolves.toBe("result");
-      expect(observedClient).toBeNull();
-      expect(observedInTransaction).toBe(false);
+      expect(mockAdapter.transaction).toHaveBeenCalledTimes(1);
+      expect(hook).not.toHaveBeenCalled();
     });
   });
 

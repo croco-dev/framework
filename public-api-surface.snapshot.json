@@ -7189,6 +7189,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "EventAfterCommitOutcomeRequiredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "EventAfterCommitRequiresActiveTransactionProblem",
               "exportKind": "named",
               "source": "./libs/problems/EventsProblems",
@@ -25339,10 +25345,28 @@
               "declarationKind": "class"
             },
             {
+              "name": "AfterCommitOutcomeRequiredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TransactionProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AfterCommitRegistrationClosedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TransactionProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "DEFAULT_TX_MANAGER_KEY",
               "exportKind": "named",
               "source": "./libs/types",
               "declarationKind": "const"
+            },
+            {
+              "name": "DetachedTransactionOperationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TransactionProblems",
+              "declarationKind": "class"
             },
             {
               "name": "DuplicateTxManagerRegistrationProblem",
@@ -25370,6 +25394,12 @@
             },
             {
               "name": "TransactionDecoratorProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TransactionProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TransactionOutcomeContextProblem",
               "exportKind": "named",
               "source": "./libs/problems/TransactionProblems",
               "declarationKind": "class"
@@ -25407,7 +25437,17 @@
           ],
           "typeExports": [
             {
+              "name": "AfterCommitFailure",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "AfterCommitHook",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AfterCommitOutcome",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -25443,6 +25483,11 @@
             },
             {
               "name": "TxRunOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "TxRunOutcome",
               "exportKind": "named",
               "source": "./libs/types"
             }

@@ -11,7 +11,7 @@ import {
   NotificationService,
 } from "@croco/notifications-core";
 import { recordError, recordEvent } from "@croco/telemetry-api";
-import { TxManager } from "@croco/tx-core";
+import { TxManager, type TxRunOutcome } from "@croco/tx-core";
 import {
   InvitationAcceptedEvent,
   InvitationCreatedEvent,
@@ -235,7 +235,7 @@ export class InvitationManager {
     return token;
   }
 
-  async acceptInvitation(input: AcceptInvitationInput): Promise<Invitation> {
+  async acceptInvitation(input: AcceptInvitationInput): Promise<TxRunOutcome<Invitation>> {
     const invitation = await this.getByTokenOrThrow(input.token);
     this.ensureAcceptableStatus(invitation, "accept");
 
@@ -253,7 +253,7 @@ export class InvitationManager {
       }
     }
 
-    return this.txManager.run(async () => {
+    return this.txManager.runWithOutcome(async () => {
       const accepted = await this.store.compareAndSetStatus(
         invitation.tenantId,
         invitation.id,

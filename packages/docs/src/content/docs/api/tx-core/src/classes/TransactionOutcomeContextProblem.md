@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "AfterCommitHooksProblem"
+title: "TransactionOutcomeContextProblem"
 ---
 
-after-commit 훅 중 하나 이상이 실패했을 때 발생하는 Problem입니다.
+커밋 결과 API가 이미 활성화된 트랜잭션 안에서 호출되면 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,21 +15,11 @@ after-commit 훅 중 하나 이상이 실패했을 때 발생하는 Problem입�
 
 ### Constructor
 
-> **new AfterCommitHooksProblem**(`failures`, `cause`): `AfterCommitHooksProblem`
-
-#### Parameters
-
-##### failures
-
-readonly [`AfterCommitFailure`](/api/tx-core/src/type-aliases/aftercommitfailure/)[]
-
-##### cause
-
-`Error`
+> **new TransactionOutcomeContextProblem**(): `TransactionOutcomeContextProblem`
 
 #### Returns
 
-`AfterCommitHooksProblem`
+`TransactionOutcomeContextProblem`
 
 #### Overrides
 
@@ -59,7 +49,7 @@ readonly [`AfterCommitFailure`](/api/tx-core/src/type-aliases/aftercommitfailure
 
 ### code
 
-> `readonly` **code**: `"tx-core/after-commit-hooks-failed"` = `"tx-core/after-commit-hooks-failed"`
+> `readonly` **code**: `"tx-core/outcome-requires-root"` = `"tx-core/outcome-requires-root"`
 
 #### Overrides
 

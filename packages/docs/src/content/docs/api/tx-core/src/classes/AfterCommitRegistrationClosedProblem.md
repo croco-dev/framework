@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "AfterCommitHooksProblem"
+title: "AfterCommitRegistrationClosedProblem"
 ---
 
-after-commit 훅 중 하나 이상이 실패했을 때 발생하는 Problem입니다.
+트랜잭션 콜백 완료 후 detached async 작업이 after-commit 훅을 등록하면 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,21 +15,11 @@ after-commit 훅 중 하나 이상이 실패했을 때 발생하는 Problem입�
 
 ### Constructor
 
-> **new AfterCommitHooksProblem**(`failures`, `cause`): `AfterCommitHooksProblem`
-
-#### Parameters
-
-##### failures
-
-readonly [`AfterCommitFailure`](/api/tx-core/src/type-aliases/aftercommitfailure/)[]
-
-##### cause
-
-`Error`
+> **new AfterCommitRegistrationClosedProblem**(): `AfterCommitRegistrationClosedProblem`
 
 #### Returns
 
-`AfterCommitHooksProblem`
+`AfterCommitRegistrationClosedProblem`
 
 #### Overrides
 
@@ -59,7 +49,7 @@ readonly [`AfterCommitFailure`](/api/tx-core/src/type-aliases/aftercommitfailure
 
 ### code
 
-> `readonly` **code**: `"tx-core/after-commit-hooks-failed"` = `"tx-core/after-commit-hooks-failed"`
+> `readonly` **code**: `"tx-core/after-commit-registration-closed"` = `"tx-core/after-commit-registration-closed"`
 
 #### Overrides
 

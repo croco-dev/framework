@@ -1,3 +1,8 @@
+import type { AfterCommitHooksProblem } from "./problems/TransactionProblems";
+import type { AfterCommitFailure } from "./afterCommitTypes";
+
+export type { AfterCommitFailure } from "./afterCommitTypes";
+
 export type NestingStrategy = "join" | "savepoint";
 
 export interface TxRunOptions<TOptions = unknown> {
@@ -16,6 +21,24 @@ export interface TxManagerConfig {
 export type Propagation = "REQUIRED" | "REQUIRES_NEW" | "MANDATORY" | "NEVER";
 
 export type AfterCommitHook = () => void | Promise<void>;
+
+export type AfterCommitOutcome =
+  | {
+      status: "succeeded";
+      hookCount: number;
+    }
+  | {
+      status: "failed";
+      hookCount: number;
+      failures: readonly AfterCommitFailure[];
+      problem: AfterCommitHooksProblem;
+    };
+
+export type TxRunOutcome<T> = {
+  status: "committed";
+  value: T;
+  afterCommit: AfterCommitOutcome;
+};
 
 export type TxManagerKey = string | symbol;
 

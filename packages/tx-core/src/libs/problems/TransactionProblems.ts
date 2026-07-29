@@ -1,9 +1,6 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
-type AfterCommitFailureSummary = {
-  name: string;
-  message: string;
-};
+import type { AfterCommitFailure } from "../afterCommitTypes";
 
 export const MAX_TRANSACTION_TIMEOUT_MS = 2_147_483_647;
 
@@ -32,6 +29,58 @@ export class TransactionContextProblem extends Problem {
 }
 
 /**
+ * after-commit 훅을 outcome을 반환하지 않는 트랜잭션 경로에 등록하면 발생하는 Problem입니다.
+ */
+export class AfterCommitOutcomeRequiredProblem extends Problem {
+  readonly code = "tx-core/after-commit-outcome-required";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor() {
+    super(
+      undefined,
+      undefined,
+      "onAfterCommit requires runWithOutcome so post-commit failures cannot be discarded",
+    );
+  }
+}
+
+/**
+ * 트랜잭션 콜백 완료 후 detached async 작업이 after-commit 훅을 등록하면 발생하는 Problem입니다.
+ */
+export class AfterCommitRegistrationClosedProblem extends Problem {
+  readonly code = "tx-core/after-commit-registration-closed";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor() {
+    super(undefined, undefined, "onAfterCommit registration is closed for this transaction");
+  }
+}
+
+/**
+ * 루트 callback 완료 시 await되지 않은 중첩 트랜잭션 작업이 남아 있으면 발생하는 Problem입니다.
+ */
+export class DetachedTransactionOperationProblem extends Problem {
+  readonly code = "tx-core/detached-transaction-operation";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor(activeOperationCount: number) {
+    super(
+      undefined,
+      undefined,
+      `Transaction callback completed with ${activeOperationCount} detached nested operation(s)`,
+    );
+  }
+}
+
+/**
+ * 커밋 결과 API가 이미 활성화된 트랜잭션 안에서 호출되면 발생하는 Problem입니다.
+ */
+export class TransactionOutcomeContextProblem extends Problem {
+  readonly code = "tx-core/outcome-requires-root";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor() {
+    super(undefined, undefined, "runWithOutcome must start outside an active transaction");
+  }
+}
+
+/**
  * 설정된 트랜잭션 제한 시간이 지원 범위를 벗어나면 발생하는 Problem입니다.
  */
 export class InvalidTransactionTimeoutProblem extends Problem {
@@ -54,16 +103,19 @@ export class AfterCommitHooksProblem extends Problem {
   readonly code = "tx-core/after-commit-hooks-failed";
   readonly category = ProblemCategory.InternalServerError;
 
-  constructor(failures: AfterCommitFailureSummary[], cause: Error) {
+  constructor(failures: readonly AfterCommitFailure[], cause: Error) {
+    const hookFailureCount = failures.filter(({ phase }) => phase === "hook").length;
+    const reportingFailureCount = failures.length - hookFailureCount;
     super(
       undefined,
       undefined,
-      `${failures.length} afterCommit hook(s) failed after transaction commit`,
+      `${hookFailureCount} afterCommit hook(s) failed after transaction commit`,
       {
         cause,
         extensions: {
           committed: true,
-          failureCount: failures.length,
+          failureCount: hookFailureCount,
+          reportingFailureCount,
           failures,
         },
       },

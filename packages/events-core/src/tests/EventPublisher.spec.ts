@@ -9,7 +9,10 @@ import { DomainEvent } from "../libs/DomainEvent";
 import type { EventBus } from "../libs/EventBus";
 import { EventBusConfig } from "../libs/EventBusConfig";
 import { EventPublisher } from "../libs/EventPublisher";
-import { EventAfterCommitRequiresActiveTransactionProblem } from "../libs/problems/EventsProblems";
+import {
+  EventAfterCommitOutcomeRequiredProblem,
+  EventAfterCommitRequiresActiveTransactionProblem,
+} from "../libs/problems/EventsProblems";
 
 class TestEvent extends DomainEvent {
   static eventName = "TestEvent";
@@ -125,6 +128,7 @@ describe("EventPublisher", () => {
       let registeredHook: (() => void | Promise<void>) | undefined;
       const mockTxContext: TransactionContext = {
         isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
         onAfterCommit: (hook) => {
           registeredHook = hook;
         },
@@ -151,6 +155,7 @@ describe("EventPublisher", () => {
       let registeredHook: (() => void | Promise<void>) | undefined;
       const mockTxContext: TransactionContext = {
         isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
         onAfterCommit: (hook) => {
           registeredHook = hook;
         },
@@ -178,10 +183,26 @@ describe("EventPublisher", () => {
       );
     });
 
+    it("should require a transaction that can return after-commit evidence", () => {
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => false,
+        onAfterCommit: vi.fn(),
+      };
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+
+      expect(() => publisher.publishAfterCommit(new TestEvent("uncaptured"))).toThrow(
+        EventAfterCommitOutcomeRequiredProblem,
+      );
+      expect(mockTxContext.onAfterCommit).not.toHaveBeenCalled();
+    });
+
     it("should register publish hook inside an active transaction", async () => {
       let registeredHook: (() => void | Promise<void>) | undefined;
       const mockTxContext: TransactionContext = {
         isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
         onAfterCommit: (hook) => {
           registeredHook = hook;
         },
@@ -207,6 +228,7 @@ describe("EventPublisher", () => {
       let acknowledged = false;
       const mockTxContext: TransactionContext = {
         isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
         onAfterCommit: (hook) => {
           registeredHook = hook;
         },
@@ -451,6 +473,7 @@ describe("EventPublisher", () => {
         TRANSACTION_CONTEXT_TOKEN as never,
         {
           isInTransaction: () => false,
+          canRegisterAfterCommit: () => false,
           onAfterCommit: () => {},
         } satisfies TransactionContext as never,
       );
@@ -478,6 +501,7 @@ describe("EventPublisher", () => {
       let registeredHook: (() => void | Promise<void>) | undefined;
       const mockTxContext: TransactionContext = {
         isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
         onAfterCommit: (hook) => {
           registeredHook = hook;
         },
@@ -503,6 +527,7 @@ describe("EventPublisher", () => {
     it("rollback 시 이벤트 발행 안 됨", async () => {
       const mockTxContext: TransactionContext = {
         isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
         onAfterCommit: () => {
           // registered, but simulating rollback by never executing the hook
         },
@@ -521,6 +546,7 @@ describe("EventPublisher", () => {
       let registeredHook: (() => void | Promise<void>) | undefined;
       const mockTxContext: TransactionContext = {
         isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
         onAfterCommit: (hook) => {
           registeredHook = hook;
         },

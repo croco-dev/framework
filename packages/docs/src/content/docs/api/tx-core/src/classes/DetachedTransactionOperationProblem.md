@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "AfterCommitHooksProblem"
+title: "DetachedTransactionOperationProblem"
 ---
 
-after-commit 훅 중 하나 이상이 실패했을 때 발생하는 Problem입니다.
+루트 callback 완료 시 await되지 않은 중첩 트랜잭션 작업이 남아 있으면 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,21 +15,17 @@ after-commit 훅 중 하나 이상이 실패했을 때 발생하는 Problem입�
 
 ### Constructor
 
-> **new AfterCommitHooksProblem**(`failures`, `cause`): `AfterCommitHooksProblem`
+> **new DetachedTransactionOperationProblem**(`activeOperationCount`): `DetachedTransactionOperationProblem`
 
 #### Parameters
 
-##### failures
+##### activeOperationCount
 
-readonly [`AfterCommitFailure`](/api/tx-core/src/type-aliases/aftercommitfailure/)[]
-
-##### cause
-
-`Error`
+`number`
 
 #### Returns
 
-`AfterCommitHooksProblem`
+`DetachedTransactionOperationProblem`
 
 #### Overrides
 
@@ -59,7 +55,7 @@ readonly [`AfterCommitFailure`](/api/tx-core/src/type-aliases/aftercommitfailure
 
 ### code
 
-> `readonly` **code**: `"tx-core/after-commit-hooks-failed"` = `"tx-core/after-commit-hooks-failed"`
+> `readonly` **code**: `"tx-core/detached-transaction-operation"` = `"tx-core/detached-transaction-operation"`
 
 #### Overrides
 

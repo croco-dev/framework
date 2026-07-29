@@ -1,7 +1,6 @@
 import { Container } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type TxAdapter, TxManager } from "../index";
-import { AfterCommitHooksProblem } from "../libs/problems/TransactionProblems";
 
 function createMockAdapter(
   options: { supportsSavepoint?: boolean } = {},
@@ -102,7 +101,7 @@ describe("TxManager", () => {
       const savepointAdapter = createMockAdapter({ supportsSavepoint: true });
       const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: "savepoint" });
 
-      await savepointTxManager.run(async () => {
+      await savepointTxManager.runWithOutcome(async () => {
         await savepointTxManager.run(async () => {
           expect(savepointTxManager.isInTransaction()).toBe(true);
         });
@@ -139,7 +138,7 @@ describe("TxManager", () => {
       const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: "savepoint" });
       const rolledBackHook = vi.fn();
 
-      await savepointTxManager.run(async () => {
+      await savepointTxManager.runWithOutcome(async () => {
         await expect(
           savepointTxManager.run(async () => {
             savepointTxManager.onAfterCommit(rolledBackHook);
@@ -169,7 +168,7 @@ describe("TxManager", () => {
       const savepointTxManager = new TxManager(savepointAdapter, { defaultNesting: "savepoint" });
       const rolledBackHook = vi.fn();
 
-      await savepointTxManager.run(async () => {
+      await savepointTxManager.runWithOutcome(async () => {
         const nestedResult = await savepointTxManager.run(async () => {
           savepointTxManager.onAfterCommit(rolledBackHook);
           throw new Error("savepoint rollback");
@@ -187,7 +186,7 @@ describe("TxManager", () => {
       const rootHook = vi.fn();
       const savepointHook = vi.fn();
 
-      await savepointTxManager.run(async () => {
+      await savepointTxManager.runWithOutcome(async () => {
         savepointTxManager.onAfterCommit(rootHook);
 
         await savepointTxManager.run(async () => {
@@ -203,7 +202,7 @@ describe("TxManager", () => {
       const observedClients: Array<{ id: string } | null> = [];
       const observedTransactionStates: boolean[] = [];
 
-      await txManager.run(async () => {
+      await txManager.runWithOutcome(async () => {
         txManager.onAfterCommit(async () => {
           observedClients.push(txManager.getClient());
           observedTransactionStates.push(txManager.isInTransaction());
@@ -215,23 +214,57 @@ describe("TxManager", () => {
       expect(txManager.getClient()).toBeNull();
     });
 
-    it("should reject after root commit when afterCommit hook fails", async () => {
-      const observedClients: Array<{ id: string } | null> = [];
+    it("should preserve row durability and return degraded evidence after a hook failure", async () => {
+      type DurableClient = {
+        insert(row: string): void;
+      };
+      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const observedClients: Array<DurableClient | null> = [];
       const observedTransactionStates: boolean[] = [];
-
-      await expect(
-        txManager.run(async () => {
-          txManager.onAfterCommit(async () => {
-            observedClients.push(txManager.getClient());
-            observedTransactionStates.push(txManager.isInTransaction());
-            throw new Error("post-commit event publish failed");
+      const rows: string[] = [];
+      const durableAdapter: TxAdapter<DurableClient> = {
+        transaction: vi.fn(async (fn) => {
+          const pendingRows: string[] = [];
+          const result = await fn({
+            insert(row: string) {
+              pendingRows.push(row);
+            },
           });
+          rows.push(...pendingRows);
+          return result;
         }),
-      ).rejects.toThrow(AfterCommitHooksProblem);
+        savepoint: vi.fn(async (client, fn) => fn(client)),
+        supportsSavepoint: () => true,
+      };
+      const durableTxManager = new TxManager(durableAdapter);
 
+      const outcome = await durableTxManager.runWithOutcome(async () => {
+        durableTxManager.getClient()?.insert("order-1");
+        durableTxManager.onAfterCommit(async () => {
+          observedClients.push(durableTxManager.getClient());
+          observedTransactionStates.push(durableTxManager.isInTransaction());
+          throw new Error("post-commit event publish failed");
+        });
+        return "order-1";
+      });
+
+      expect(rows).toEqual(["order-1"]);
+      expect(outcome.status).toBe("committed");
+      expect(outcome.value).toBe("order-1");
+      expect(outcome.afterCommit.status).toBe("failed");
       expect(observedClients).toEqual([null]);
       expect(observedTransactionStates).toEqual([false]);
-      expect(txManager.getClient()).toBeNull();
+      expect(durableTxManager.getClient()).toBeNull();
+      expect(consoleSpy).toHaveBeenCalledTimes(1);
+      consoleSpy.mockRestore();
+    });
+
+    it("should reject runWithOutcome before joining an active transaction", async () => {
+      await txManager.run(async () => {
+        await expect(txManager.runWithOutcome(async () => "nested")).rejects.toMatchObject({
+          code: "tx-core/outcome-requires-root",
+        });
+      });
     });
   });
 

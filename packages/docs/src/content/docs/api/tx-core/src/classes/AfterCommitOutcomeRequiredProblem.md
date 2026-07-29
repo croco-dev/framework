@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "AfterCommitHooksProblem"
+title: "AfterCommitOutcomeRequiredProblem"
 ---
 
-after-commit 훅 중 하나 이상이 실패했을 때 발생하는 Problem입니다.
+after-commit 훅을 outcome을 반환하지 않는 트랜잭션 경로에 등록하면 발생하는 Problem입니다.
 
 ## Extends
 
@@ -15,21 +15,11 @@ after-commit 훅 중 하나 이상이 실패했을 때 발생하는 Problem입�
 
 ### Constructor
 
-> **new AfterCommitHooksProblem**(`failures`, `cause`): `AfterCommitHooksProblem`
-
-#### Parameters
-
-##### failures
-
-readonly [`AfterCommitFailure`](/api/tx-core/src/type-aliases/aftercommitfailure/)[]
-
-##### cause
-
-`Error`
+> **new AfterCommitOutcomeRequiredProblem**(): `AfterCommitOutcomeRequiredProblem`
 
 #### Returns
 
-`AfterCommitHooksProblem`
+`AfterCommitOutcomeRequiredProblem`
 
 #### Overrides
 
@@ -59,7 +49,7 @@ readonly [`AfterCommitFailure`](/api/tx-core/src/type-aliases/aftercommitfailure
 
 ### code
 
-> `readonly` **code**: `"tx-core/after-commit-hooks-failed"` = `"tx-core/after-commit-hooks-failed"`
+> `readonly` **code**: `"tx-core/after-commit-outcome-required"` = `"tx-core/after-commit-outcome-required"`
 
 #### Overrides
 

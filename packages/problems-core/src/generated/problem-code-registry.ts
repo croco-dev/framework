@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 512,
+  problemCount: 517,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -4100,6 +4100,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
           line: 10,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-core/after-commit-outcome-required",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#events-core-after-commit-outcome-required",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-core/src/libs/problems/EventsProblems.ts",
+          line: 107,
           column: 3,
           kind: "problem-class",
         },
@@ -13564,7 +13597,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/testing.ts",
-          line: 183,
+          line: 184,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13822,7 +13855,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/testing.ts",
-          line: 170,
+          line: 171,
           column: 5,
           kind: "problem-constructor",
         },
@@ -14770,7 +14803,72 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 54,
+          line: 103,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "tx-core/after-commit-outcome-required",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tx-core-after-commit-outcome-required",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
+          line: 35,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "tx-core/after-commit-registration-closed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#tx-core-after-commit-registration-closed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
+          line: 50,
           column: 3,
           kind: "problem-class",
         },
@@ -14802,7 +14900,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 16,
+          line: 13,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "tx-core/detached-transaction-operation",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tx-core-detached-transaction-operation",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
+          line: 61,
           column: 3,
           kind: "problem-class",
         },
@@ -14865,7 +14995,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 38,
+          line: 87,
           column: 3,
           kind: "problem-class",
         },
@@ -14929,7 +15059,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 27,
+          line: 24,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "tx-core/outcome-requires-root",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tx-core-outcome-requires-root",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
+          line: 76,
           column: 3,
           kind: "problem-class",
         },
@@ -14992,7 +15154,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 78,
+          line: 130,
           column: 3,
           kind: "problem-class",
         },

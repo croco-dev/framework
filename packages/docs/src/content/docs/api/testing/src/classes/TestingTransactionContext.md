@@ -27,6 +27,22 @@ title: "TestingTransactionContext"
 
 ## Methods
 
+### canRegisterAfterCommit()
+
+> **canRegisterAfterCommit**(): `boolean`
+
+Whether the active callback still accepts hooks and preserves their delivery evidence.
+
+#### Returns
+
+`boolean`
+
+#### Implementation of
+
+[`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`canRegisterAfterCommit`](/api/framework-context/src/interfaces/transactioncontext/#canregisteraftercommit)
+
+---
+
 ### flushAfterCommitHooks()
 
 > **flushAfterCommitHooks**(): `Promise`\<`void`\>
@@ -35,7 +51,7 @@ title: "TestingTransactionContext"
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### getPendingAfterCommitHookCount()
 
@@ -45,7 +61,7 @@ title: "TestingTransactionContext"
 
 `number`
 
-***
+---
 
 ### isInTransaction()
 
@@ -59,7 +75,7 @@ title: "TestingTransactionContext"
 
 [`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`isInTransaction`](/api/framework-context/src/interfaces/transactioncontext/#isintransaction)
 
-***
+---
 
 ### onAfterCommit()
 
@@ -79,7 +95,7 @@ title: "TestingTransactionContext"
 
 [`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/).[`onAfterCommit`](/api/framework-context/src/interfaces/transactioncontext/#onaftercommit)
 
-***
+---
 
 ### runInTransaction()
 

@@ -18,7 +18,9 @@ This example shows one complete Croco SaaS flow: a customer checks out a paid pl
 
 Primary action: `POST /api/checkouts` creates a paid order.
 
-Success state: the response returns a paid order, `GET /api/orders/:id` reads it, and `GET /api/backoffice/audit` shows the after-commit audit entry.
+Success state: the response returns an explicit committed transaction outcome containing the paid order and the
+after-commit delivery outcome, `GET /api/orders/:id` reads the order, and `GET /api/backoffice/audit` shows the
+after-commit audit entry.
 
 Failure states: invalid checkout input returns `golden-path/checkout-validation`; terminal card decline returns `golden-path/payment-declined` without retrying or persisting an order; missing orders return `golden-path/order-not-found`.
 
