@@ -16,6 +16,7 @@ import type {
   ExecutionStore,
   ListExecutionsOptions,
 } from "@croco/execution-core";
+import { ExecutionProblems } from "@croco/execution-core";
 import {
   type AtomicQuotaCheckOptions,
   type AtomicQuotaCheckResult,
@@ -404,7 +405,7 @@ export class InMemoryExecutionStore implements ExecutionStore, ExecutionLogStore
   async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
     const execution = this.executions.get(id);
     if (!execution) {
-      throw new Error(`Execution with id '${id}' not found`);
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
     }
     const updated = {
       ...execution,

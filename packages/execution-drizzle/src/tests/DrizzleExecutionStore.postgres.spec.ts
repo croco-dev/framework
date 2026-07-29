@@ -1,10 +1,10 @@
 import {
   createExecutionCheckpointStoreConformanceSuite,
-  type ExecutionCheckpointWrite,
+  type Execution,
 } from "@croco/execution-core";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool, type PoolClient } from "pg";
-import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
+import { afterAll, assert, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { DrizzleExecutionStore } from "../libs/DrizzleExecutionStore";
 
 const connectionString = process.env.EXECUTION_POSTGRES_URL ?? "";
@@ -90,6 +90,7 @@ describe.skipIf(connectionString.length === 0)(
         const contentionId = ++contentionSequence;
         const secondApplicationName = `execution-checkpoint-writer-${contentionId}`;
         let firstCommitted = false;
+        let blockedWrite: Promise<Execution> | undefined;
 
         try {
           await Promise.all([
@@ -100,15 +101,19 @@ describe.skipIf(connectionString.length === 0)(
 
           const firstStore = new DrizzleExecutionStore(drizzle(firstClient) as never);
           const secondStore = new DrizzleExecutionStore(drizzle(secondClient) as never);
-          const firstWrite = writes[0] as ExecutionCheckpointWrite;
-          const secondWrite = writes[1] as ExecutionCheckpointWrite;
+          expect(writes).toHaveLength(2);
+          const firstWrite = writes[0];
+          const secondWrite = writes[1];
+          assert.isDefined(firstWrite);
+          assert.isDefined(secondWrite);
 
           await firstStore.mergeCheckpoint(executionId, firstWrite.key, firstWrite.value);
-          const blockedWrite = secondStore.mergeCheckpoint(
+          blockedWrite = secondStore.mergeCheckpoint(
             executionId,
             secondWrite.key,
             secondWrite.value,
           );
+          void blockedWrite.catch(() => undefined);
           await waitUntilCheckpointWriterBlocks(pool, secondApplicationName);
 
           await firstClient.query("commit");
@@ -118,6 +123,9 @@ describe.skipIf(connectionString.length === 0)(
         } finally {
           if (!firstCommitted) {
             await firstClient.query("rollback");
+          }
+          if (blockedWrite) {
+            await Promise.allSettled([blockedWrite]);
           }
           firstClient.release();
           secondClient.release();

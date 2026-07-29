@@ -7,7 +7,7 @@ import type {
   ExecutionReplayManager,
   ListExecutionsOptions,
 } from "@croco/execution-core";
-import { ExecutionManagerImpl, ExecutionStore } from "@croco/execution-core";
+import { ExecutionManagerImpl, ExecutionProblems, ExecutionStore } from "@croco/execution-core";
 import type {
   LifecycleRun,
   LifecycleRunClaim,
@@ -94,7 +94,7 @@ class MemoryExecutionStore extends ExecutionStore implements ExecutionLogStore {
   async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
     const execution = this.executions.get(id);
     if (!execution) {
-      throw new Error(`Execution with id '${id}' not found`);
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
     }
     const updated = {
       ...execution,

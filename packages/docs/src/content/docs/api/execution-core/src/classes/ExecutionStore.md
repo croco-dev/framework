@@ -182,6 +182,10 @@ conflict detection must use a separate compare-and-set contract.
 
 `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
 
+#### Throws
+
+ExecutionProblem if execution is not found or the merge fails
+
 ---
 
 ### update()

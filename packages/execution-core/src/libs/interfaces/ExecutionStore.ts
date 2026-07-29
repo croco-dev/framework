@@ -62,6 +62,8 @@ export abstract class ExecutionStore {
    * have no invocation-order or Promise-order guarantee: the store serializes the mutations and
    * the mutation applied last wins. Callers that require deterministic same-key ordering or
    * conflict detection must use a separate compare-and-set contract.
+   *
+   * @throws ExecutionProblem if execution is not found or the merge fails
    */
   abstract mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution>;
 

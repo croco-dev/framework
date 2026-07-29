@@ -745,7 +745,7 @@ describe("DrizzleExecutionStore", () => {
 
       const result = await store.mergeCheckpoint(execution.id, "page", 10);
       const expression = written.checkpoints;
-      if (!expression) throw new Error("expected an atomic checkpoints expression");
+      expect(expression).toBeDefined();
       const query = new PgDialect().sqlToQuery(expression as SQL);
 
       expect(query.sql).toContain(
