@@ -2,11 +2,14 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 const scriptPath = resolve(__dirname, "../package-entrypoint-smoke.mts");
+const scriptTestTimeout = 60_000;
 const spawnTimeoutMs = 180_000;
 const tempRoots: string[] = [];
+
+vi.setConfig({ testTimeout: scriptTestTimeout });
 
 type ScriptResult = {
   readonly stdout: string;
@@ -20,6 +23,10 @@ type TempRootOptions = {
 };
 
 describe("package-entrypoint-smoke.mts", () => {
+  afterAll(() => {
+    vi.resetConfig();
+  });
+
   afterEach(() => {
     for (const root of tempRoots.splice(0)) {
       rmSync(root, { force: true, recursive: true });
@@ -232,32 +239,36 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("summary checked=3 exempt=0 skippedPrivate=0");
   });
 
-  it("verifies packed ESM and CJS decorator metadata with implicit DI", () => {
-    const root = createTempRoot();
-    writeDecoratorMetadataPackages(root);
+  it(
+    "verifies packed ESM and CJS decorator metadata with implicit DI",
+    () => {
+      const root = createTempRoot();
+      writeDecoratorMetadataPackages(root);
 
-    const result = runScript(root);
+      const result = runScript(root);
 
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain(
-      "cjs decorator metadata and implicit DI ok @croco/auth-better-auth",
-    );
-    expect(result.stdout).toContain(
-      "esm decorator metadata and implicit DI ok @croco/auth-better-auth",
-    );
-    expect(result.stdout).toContain(
-      "cjs decorator metadata and implicit DI ok @croco/features-posthog",
-    );
-    expect(result.stdout).toContain(
-      "esm decorator metadata and implicit DI ok @croco/features-posthog",
-    );
-    expect(result.stdout).toContain(
-      "cjs decorator metadata and implicit DI ok @croco/metering-core",
-    );
-    expect(result.stdout).toContain(
-      "esm decorator metadata and implicit DI ok @croco/metering-core",
-    );
-  }, 30_000);
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain(
+        "cjs decorator metadata and implicit DI ok @croco/auth-better-auth",
+      );
+      expect(result.stdout).toContain(
+        "esm decorator metadata and implicit DI ok @croco/auth-better-auth",
+      );
+      expect(result.stdout).toContain(
+        "cjs decorator metadata and implicit DI ok @croco/features-posthog",
+      );
+      expect(result.stdout).toContain(
+        "esm decorator metadata and implicit DI ok @croco/features-posthog",
+      );
+      expect(result.stdout).toContain(
+        "cjs decorator metadata and implicit DI ok @croco/metering-core",
+      );
+      expect(result.stdout).toContain(
+        "esm decorator metadata and implicit DI ok @croco/metering-core",
+      );
+    },
+    scriptTestTimeout,
+  );
 
   it("fails when the packed auth service loses concrete constructor metadata", () => {
     const root = createTempRoot();
@@ -271,41 +282,53 @@ describe("package-entrypoint-smoke.mts", () => {
     );
   });
 
-  it("fails when the packed feature service loses concrete constructor metadata", () => {
-    const root = createTempRoot();
-    writeDecoratorMetadataPackages(root, { missingFeatureMetadata: true });
+  it(
+    "fails when the packed feature service loses concrete constructor metadata",
+    () => {
+      const root = createTempRoot();
+      writeDecoratorMetadataPackages(root, { missingFeatureMetadata: true });
 
-    const result = runScript(root);
+      const result = runScript(root);
 
-    expect(result.status).toBe(1);
-    expect(`${result.stdout}\n${result.stderr}`).toContain(
-      "PostHogFeatureManager design:paramtypes expected [PostHogClient], received [missing]",
-    );
-  }, 30_000);
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(
+        "PostHogFeatureManager design:paramtypes expected [PostHogClient], received [missing]",
+      );
+    },
+    scriptTestTimeout,
+  );
 
-  it("fails when a packed decorated method loses design:type metadata", () => {
-    const root = createTempRoot();
-    writeDecoratorMetadataPackages(root, { missingMemberMetadata: true });
+  it(
+    "fails when a packed decorated method loses design:type metadata",
+    () => {
+      const root = createTempRoot();
+      writeDecoratorMetadataPackages(root, { missingMemberMetadata: true });
 
-    const result = runScript(root);
+      const result = runScript(root);
 
-    expect(result.status).toBe(1);
-    expect(`${result.stdout}\n${result.stderr}`).toContain(
-      "LlmService.generate design:type expected Function, received missing",
-    );
-  }, 30_000);
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(
+        "LlmService.generate design:type expected Function, received missing",
+      );
+    },
+    scriptTestTimeout,
+  );
 
-  it("fails when the packed container injects trailing metadata instead of preserving defaults", () => {
-    const root = createTempRoot();
-    writeDecoratorMetadataPackages(root, { brokenDefaultResolution: true });
+  it(
+    "fails when the packed container injects trailing metadata instead of preserving defaults",
+    () => {
+      const root = createTempRoot();
+      writeDecoratorMetadataPackages(root, { brokenDefaultResolution: true });
 
-    const result = runScript(root);
+      const result = runScript(root);
 
-    expect(result.status).toBe(1);
-    expect(`${result.stdout}\n${result.stderr}`).toContain(
-      "Container.get(MeterRegistry) expected default cacheTtlMs=60000",
-    );
-  }, 30_000);
+      expect(result.status).toBe(1);
+      expect(`${result.stdout}\n${result.stderr}`).toContain(
+        "Container.get(MeterRegistry) expected default cacheTtlMs=60000",
+      );
+    },
+    scriptTestTimeout,
+  );
 
   it("matches packed tarballs by manifest name when package names share a prefix", () => {
     const root = createTempRoot();

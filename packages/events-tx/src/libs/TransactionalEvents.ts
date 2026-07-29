@@ -63,6 +63,7 @@ export type TransactionalInboxRecord = {
   attempts: number;
   createdAt: Date;
   updatedAt: Date;
+  lockedUntil?: Date;
   processedAt?: Date;
   failedAt?: Date;
   lastError?: TransactionalEventError;
@@ -124,6 +125,7 @@ export type InboxStartInput = {
   inboxKey: string;
   eventType: string;
   now: Date;
+  visibilityTimeoutMs?: number;
   metadata?: Record<string, unknown>;
 };
 
@@ -295,6 +297,7 @@ export type TransactionalInboxConsumerConfig<TClient> = {
   store: TransactionalEventStore<TClient>;
   consumerId: string;
   txManager?: Pick<TxManager<TClient>, "getClient">;
+  visibilityTimeoutMs?: number;
   now?: () => Date;
   throwOnError?: boolean;
 };
@@ -342,6 +345,12 @@ function validatePositiveInt32(value: number, field: TransactionalEventConfigura
       receivedValue: toConfigurationReceivedValue(value),
     });
   }
+}
+
+export function resolveInboxLockedUntil(input: InboxStartInput): Date {
+  const visibilityTimeoutMs = input.visibilityTimeoutMs ?? DEFAULT_VISIBILITY_TIMEOUT_MS;
+  validatePositiveInt32(visibilityTimeoutMs, "visibilityTimeoutMs");
+  return new Date(input.now.getTime() + visibilityTimeoutMs);
 }
 
 function validateNonNegativeInt32(
@@ -754,12 +763,16 @@ export class TransactionalOutboxRelay<TClient = unknown> {
  */
 export class TransactionalInboxConsumer<TClient = unknown> {
   private readonly consumerId: string;
+  private readonly visibilityTimeoutMs: number;
   private readonly now: () => Date;
   private readonly throwOnError: boolean;
 
   constructor(private readonly config: TransactionalInboxConsumerConfig<TClient>) {
     validateConsumerId(config.consumerId);
+    const visibilityTimeoutMs = config.visibilityTimeoutMs ?? DEFAULT_VISIBILITY_TIMEOUT_MS;
+    validatePositiveInt32(visibilityTimeoutMs, "visibilityTimeoutMs");
     this.consumerId = config.consumerId;
+    this.visibilityTimeoutMs = visibilityTimeoutMs;
     this.now = config.now ?? defaultNow;
     this.throwOnError = config.throwOnError ?? true;
   }
@@ -777,6 +790,7 @@ export class TransactionalInboxConsumer<TClient = unknown> {
         inboxKey,
         eventType: message.eventType,
         now,
+        visibilityTimeoutMs: this.visibilityTimeoutMs,
         metadata: {
           aggregateId: message.aggregateId,
         },

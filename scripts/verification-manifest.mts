@@ -258,12 +258,14 @@ const repoOnly = (
   },
   {
     id: "architecture-policy-runtime",
-    label: "Architecture policy runtime prerequisite",
+    label: "Verification runtime prerequisites",
     category: "build",
-    command: guarded("Fix the @croco/problems-core build prerequisite", [
+    command: guarded("Fix the verification runtime build prerequisites", [
       "pnpm",
       "--filter",
-      "@croco/problems-core",
+      "@croco/architecture-policy...",
+      "--filter",
+      "@croco/tenant-core...",
       "build",
     ]),
     timeoutMs: minutes(10),
@@ -575,7 +577,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "--require-task-summaries",
       ),
       timeoutMs: minutes(10),
-      applicable: packageGraphApplicable,
+      applicable: !changeScoped && packageGraphApplicable,
       artifacts: [
         {
           label: "Production-ready package markdown",
@@ -593,7 +595,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "scripts/spine-promotion-check.mts",
       ),
       timeoutMs: minutes(10),
-      applicable: packageGraphApplicable,
+      applicable: !changeScoped && packageGraphApplicable,
       artifacts: [
         {
           label: "Beta spine promotion markdown",

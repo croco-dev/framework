@@ -1,6 +1,6 @@
 import type { EventTraceContext } from "@croco/events-core";
 import type { TxManager } from "@croco/tx-core";
-import { and, asc, eq, inArray, lte, or, type SQL } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lte, or, type SQL } from "drizzle-orm";
 import {
   type AppendOutboxMessageInput,
   createTransactionalEventDiagnostic,
@@ -20,6 +20,7 @@ import {
   type TransactionalEventStoreContext,
   type TransactionalInboxRecord,
   type TransactionalOutboxMessage,
+  resolveInboxLockedUntil,
 } from "./TransactionalEvents";
 import { findOutboxIdempotencyConflicts } from "./OutboxIdempotency";
 import {
@@ -593,8 +594,9 @@ export class DrizzleTransactionalEventStore<
     input: InboxStartInput,
     context?: TransactionalEventStoreContext<TClient>,
   ): Promise<InboxStartResult> {
+    const lockedUntil = resolveInboxLockedUntil(input);
     const existing = await this.findInboxRecord(input.consumerId, input.inboxKey, context);
-    if (existing && existing.status !== "failed") {
+    if (existing && !this.isReclaimableInboxRecord(existing, input.now)) {
       return {
         status: "duplicate",
         record: existing,
@@ -602,32 +604,7 @@ export class DrizzleTransactionalEventStore<
     }
 
     if (existing) {
-      const [updated] = await this.client(context)
-        .update(this.inbox)
-        .set({
-          status: "processing",
-          attempts: existing.attempts + 1,
-          updatedAt: input.now,
-          diagnostics: appendDiagnostic(
-            existing.diagnostics,
-            createTransactionalEventDiagnostic(
-              "events-tx/inbox-retry-started",
-              "Inbox retry started.",
-              input.now,
-            ),
-          ),
-        })
-        .where(this.failedInboxCondition(input.consumerId, input.inboxKey))
-        .returning();
-      return updated !== undefined
-        ? {
-            status: "started",
-            record: this.mapInboxRow(updated),
-          }
-        : {
-            status: "duplicate",
-            record: existing,
-          };
+      return this.reclaimInboxRecord(existing, input, lockedUntil, context);
     }
 
     const [inserted] = await this.client(context)
@@ -641,6 +618,7 @@ export class DrizzleTransactionalEventStore<
         attempts: 1,
         createdAt: input.now,
         updatedAt: input.now,
+        lockedUntil,
         processedAt: null,
         failedAt: null,
         lastError: null,
@@ -668,40 +646,14 @@ export class DrizzleTransactionalEventStore<
         );
       }
 
-      if (duplicated.status !== "failed") {
+      if (!this.isReclaimableInboxRecord(duplicated, input.now)) {
         return {
           status: "duplicate",
           record: duplicated,
         };
       }
 
-      const [retrying] = await this.client(context)
-        .update(this.inbox)
-        .set({
-          status: "processing",
-          attempts: duplicated.attempts + 1,
-          updatedAt: input.now,
-          diagnostics: appendDiagnostic(
-            duplicated.diagnostics,
-            createTransactionalEventDiagnostic(
-              "events-tx/inbox-retry-started",
-              "Inbox retry started.",
-              input.now,
-            ),
-          ),
-        })
-        .where(this.failedInboxCondition(input.consumerId, input.inboxKey))
-        .returning();
-
-      return retrying !== undefined
-        ? {
-            status: "started",
-            record: this.mapInboxRow(retrying),
-          }
-        : {
-            status: "duplicate",
-            record: duplicated,
-          };
+      return this.reclaimInboxRecord(duplicated, input, lockedUntil, context);
     }
 
     return {
@@ -721,13 +673,12 @@ export class DrizzleTransactionalEventStore<
         status: "processed",
         processedAt: input.now,
         updatedAt: input.now,
+        lockedUntil: null,
         diagnostics: input.diagnostic
           ? appendDiagnostic(current.diagnostics, input.diagnostic)
           : current.diagnostics,
       })
-      .where(
-        this.activeInboxClaimCondition(input.consumerId, input.inboxKey, input.expectedAttempts),
-      )
+      .where(this.activeInboxClaimCondition(input))
       .returning();
     return updated !== undefined
       ? this.mapInboxRow(updated)
@@ -745,15 +696,14 @@ export class DrizzleTransactionalEventStore<
         status: "failed",
         failedAt: input.now,
         updatedAt: input.now,
+        lockedUntil: null,
         lastError: input.error,
         failureReason: input.reason,
         diagnostics: input.diagnostic
           ? appendDiagnostic(current.diagnostics, input.diagnostic)
           : current.diagnostics,
       })
-      .where(
-        this.activeInboxClaimCondition(input.consumerId, input.inboxKey, input.expectedAttempts),
-      )
+      .where(this.activeInboxClaimCondition(input))
       .returning();
     return updated !== undefined
       ? this.mapInboxRow(updated)
@@ -800,28 +750,85 @@ export class DrizzleTransactionalEventStore<
     return context?.client ?? this.config.txManager?.getClient() ?? this.config.db;
   }
 
+  private async reclaimInboxRecord(
+    existing: TransactionalInboxRecord,
+    input: InboxStartInput,
+    lockedUntil: Date,
+    context?: TransactionalEventStoreContext<TClient>,
+  ): Promise<InboxStartResult> {
+    const reclaimed = existing.status === "processing";
+    const [updated] = await this.client(context)
+      .update(this.inbox)
+      .set({
+        status: "processing",
+        attempts: existing.attempts + 1,
+        updatedAt: input.now,
+        lockedUntil,
+        diagnostics: appendDiagnostic(
+          existing.diagnostics,
+          createTransactionalEventDiagnostic(
+            reclaimed ? "events-tx/inbox-lease-reclaimed" : "events-tx/inbox-retry-started",
+            reclaimed ? "Expired inbox processing lease reclaimed." : "Inbox retry started.",
+            input.now,
+          ),
+        ),
+      })
+      .where(this.reclaimableInboxCondition(input, existing.attempts))
+      .returning();
+    if (updated !== undefined) {
+      return {
+        status: "started",
+        record: this.mapInboxRow(updated),
+      };
+    }
+
+    const current = await this.findInboxRecord(input.consumerId, input.inboxKey, context);
+    if (!current) {
+      throw new OutboxStorageProblem(
+        `Inbox record '${input.consumerId}:${input.inboxKey}' reclaim conflict could not be resolved.`,
+      );
+    }
+    return {
+      status: "duplicate",
+      record: current,
+    };
+  }
+
+  private isReclaimableInboxRecord(record: TransactionalInboxRecord, now: Date): boolean {
+    return (
+      record.status === "failed" ||
+      (record.status === "processing" &&
+        record.lockedUntil !== undefined &&
+        record.lockedUntil.getTime() <= now.getTime())
+    );
+  }
+
   private inboxStorageCondition(consumerId: string, inboxKey: string): SQL<unknown> | undefined {
     return and(eq(this.inbox.consumerId, consumerId), eq(this.inbox.inboxKey, inboxKey));
   }
 
-  private failedInboxCondition(consumerId: string, inboxKey: string): SQL<unknown> | undefined {
-    return and(
-      eq(this.inbox.consumerId, consumerId),
-      eq(this.inbox.inboxKey, inboxKey),
-      eq(this.inbox.status, "failed"),
-    );
-  }
-
-  private activeInboxClaimCondition(
-    consumerId: string,
-    inboxKey: string,
+  private reclaimableInboxCondition(
+    input: InboxStartInput,
     expectedAttempts: number,
   ): SQL<unknown> | undefined {
     return and(
-      eq(this.inbox.consumerId, consumerId),
-      eq(this.inbox.inboxKey, inboxKey),
-      eq(this.inbox.status, "processing"),
+      eq(this.inbox.consumerId, input.consumerId),
+      eq(this.inbox.inboxKey, input.inboxKey),
       eq(this.inbox.attempts, expectedAttempts),
+      or(
+        eq(this.inbox.status, "failed"),
+        and(eq(this.inbox.status, "processing"), lte(this.inbox.lockedUntil, input.now)),
+      ),
+    );
+  }
+
+  private activeInboxClaimCondition(input: InboxCompletionInput): SQL<unknown> | undefined {
+    return and(
+      eq(this.inbox.consumerId, input.consumerId),
+      eq(this.inbox.inboxKey, input.inboxKey),
+      eq(this.inbox.status, "processing"),
+      eq(this.inbox.attempts, input.expectedAttempts),
+      gt(this.inbox.lockedUntil, input.now),
     );
   }
 
@@ -937,6 +944,7 @@ export class DrizzleTransactionalEventStore<
     const context = storageRowContext("inbox", row);
     const processedAt = optionalDate(row["processedAt"], context, "processedAt");
     const failedAt = optionalDate(row["failedAt"], context, "failedAt");
+    const lockedUntil = optionalDate(row["lockedUntil"], context, "lockedUntil");
     const lastError = optionalError(row["lastError"], context, "lastError");
     const failureReason = optionalString(row["failureReason"], context, "failureReason");
     return {
@@ -953,6 +961,7 @@ export class DrizzleTransactionalEventStore<
       attempts: requireCount(row["attempts"], context, "attempts", 0),
       createdAt: requireDate(row["createdAt"], context, "createdAt"),
       updatedAt: requireDate(row["updatedAt"], context, "updatedAt"),
+      ...(lockedUntil ? { lockedUntil } : {}),
       ...(processedAt ? { processedAt } : {}),
       ...(failedAt ? { failedAt } : {}),
       ...(lastError !== undefined ? { lastError } : {}),

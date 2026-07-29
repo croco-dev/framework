@@ -20,6 +20,7 @@ import {
   type TransactionalEventStoreContext,
   type TransactionalInboxRecord,
   type TransactionalOutboxMessage,
+  resolveInboxLockedUntil,
 } from "./TransactionalEvents";
 import { findOutboxIdempotencyConflicts } from "./OutboxIdempotency";
 import {
@@ -99,6 +100,7 @@ function cloneInboxRecord(record: TransactionalInboxRecord): TransactionalInboxR
     ...record,
     createdAt: new Date(record.createdAt.getTime()),
     updatedAt: new Date(record.updatedAt.getTime()),
+    ...(record.lockedUntil ? { lockedUntil: new Date(record.lockedUntil.getTime()) } : {}),
     ...(cloneDate(record.processedAt) ? { processedAt: cloneDate(record.processedAt) } : {}),
     ...(cloneDate(record.failedAt) ? { failedAt: cloneDate(record.failedAt) } : {}),
     ...(cloneError(record.lastError) ? { lastError: cloneError(record.lastError) } : {}),
@@ -435,11 +437,12 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     context?: TransactionalEventStoreContext<InMemoryTransactionalEventStoreClient>,
   ): Promise<InboxStartResult> {
     await this.waitForPendingCommits(context);
+    const lockedUntil = resolveInboxLockedUntil(input);
     const state = this.resolveState(context);
     const storageKey = inboxStorageKey(input.consumerId, input.inboxKey);
     const existing = state.inbox.get(storageKey);
 
-    if (existing && existing.status !== "failed") {
+    if (existing && !this.isReclaimableInboxRecord(existing, input.now)) {
       return {
         status: "duplicate",
         record: cloneInboxRecord(existing),
@@ -447,16 +450,18 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     }
 
     if (existing) {
+      const reclaimed = existing.status === "processing";
       const retrying: TransactionalInboxRecord = {
         ...cloneInboxRecord(existing),
         status: "processing",
         attempts: existing.attempts + 1,
         updatedAt: new Date(input.now.getTime()),
+        lockedUntil,
         diagnostics: [
           ...existing.diagnostics.map(cloneDiagnostic),
           createTransactionalEventDiagnostic(
-            "events-tx/inbox-retry-started",
-            "Inbox retry started.",
+            reclaimed ? "events-tx/inbox-lease-reclaimed" : "events-tx/inbox-retry-started",
+            reclaimed ? "Expired inbox processing lease reclaimed." : "Inbox retry started.",
             input.now,
           ),
         ],
@@ -477,6 +482,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
       attempts: 1,
       createdAt: new Date(input.now.getTime()),
       updatedAt: new Date(input.now.getTime()),
+      lockedUntil,
       metadata: cloneRecord(input.metadata ?? {}),
       diagnostics: [
         createTransactionalEventDiagnostic(
@@ -515,6 +521,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         ...(input.diagnostic ? [cloneDiagnostic(input.diagnostic)] : []),
       ],
     };
+    delete updated.lockedUntil;
     state.inbox.set(storageKey, cloneInboxRecord(updated));
     return cloneInboxRecord(updated);
   }
@@ -540,6 +547,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         ...(input.diagnostic ? [cloneDiagnostic(input.diagnostic)] : []),
       ],
     };
+    delete updated.lockedUntil;
     state.inbox.set(storageKey, cloneInboxRecord(updated));
     return cloneInboxRecord(updated);
   }
@@ -808,7 +816,12 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     record: TransactionalInboxRecord,
     input: InboxCompletionInput,
   ): void {
-    if (record.status === "processing" && record.attempts === input.expectedAttempts) {
+    if (
+      record.status === "processing" &&
+      record.attempts === input.expectedAttempts &&
+      record.lockedUntil !== undefined &&
+      record.lockedUntil.getTime() > input.now.getTime()
+    ) {
       return;
     }
 
@@ -818,6 +831,15 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
       input.expectedAttempts,
       record.attempts,
       record.status,
+    );
+  }
+
+  private isReclaimableInboxRecord(record: TransactionalInboxRecord, now: Date): boolean {
+    return (
+      record.status === "failed" ||
+      (record.status === "processing" &&
+        record.lockedUntil !== undefined &&
+        record.lockedUntil.getTime() <= now.getTime())
     );
   }
 }

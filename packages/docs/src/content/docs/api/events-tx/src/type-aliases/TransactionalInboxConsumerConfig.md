@@ -46,3 +46,9 @@ title: "TransactionalInboxConsumerConfig"
 ### txManager?
 
 > `optional` **txManager?**: `Pick`\<[`TxManager`](/api/tx-core/src/classes/txmanager/)\<`TClient`\>, `"getClient"`\>
+
+***
+
+### visibilityTimeoutMs?
+
+> `optional` **visibilityTimeoutMs?**: `number`
