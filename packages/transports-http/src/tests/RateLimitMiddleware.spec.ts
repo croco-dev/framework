@@ -236,7 +236,9 @@ describe("RateLimitMiddleware", () => {
 
       await middleware(ctx, async () => {});
 
-      expect(ctx.get<string>("rateLimitKey")).toBe("rl:sliding:unknown");
+      expect(ctx.get<string>("rateLimitKey")).toBe(
+        'rl2:[["policy","node-spoofed-headers"],["ip","unknown"]]',
+      );
       expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toEqual({
         value: "unknown",
         source: "unknown",
@@ -278,7 +280,9 @@ describe("RateLimitMiddleware", () => {
         },
       );
 
-      expect(ctx.get<string>("rateLimitKey")).toBe("rl:sliding:203.0.113.11");
+      expect(ctx.get<string>("rateLimitKey")).toBe(
+        'rl2:[["policy","lambda-native-client-ip"],["ip","203.0.113.11"]]',
+      );
       expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toMatchObject({
         value: "203.0.113.11",
         source: "runtime.lambda.requestContext.http.sourceIp",
@@ -313,7 +317,9 @@ describe("RateLimitMiddleware", () => {
         },
       );
 
-      expect(ctx.get<string>("rateLimitKey")).toBe("rl:sliding:203.0.113.12");
+      expect(ctx.get<string>("rateLimitKey")).toBe(
+        'rl2:[["policy","cloudflare-client-ip"],["ip","203.0.113.12"]]',
+      );
       expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toMatchObject({
         value: "203.0.113.12",
         source: "header.cf-connecting-ip",
@@ -340,7 +346,9 @@ describe("RateLimitMiddleware", () => {
 
       await middleware(ctx, async () => {});
 
-      expect(ctx.get<string>("rateLimitKey")).toBe("rl:sliding:203.0.113.15");
+      expect(ctx.get<string>("rateLimitKey")).toBe(
+        'rl2:[["policy","trusted-proxy-client-ip"],["ip","203.0.113.15"]]',
+      );
       expect(ctx.get(RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY)).toMatchObject({
         value: "203.0.113.15",
         source: "trusted-proxy-header.x-real-ip",
@@ -572,7 +580,9 @@ describe("RateLimitMiddleware", () => {
 
       await factory()(ctx, async () => {});
 
-      expect(ctx.get<string>("rateLimitKey")).toBe("rl:sliding:203.0.113.16");
+      expect(ctx.get<string>("rateLimitKey")).toBe(
+        'rl2:[["policy","factory-client-identity"],["ip","203.0.113.16"]]',
+      );
     });
   });
 

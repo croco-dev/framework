@@ -67,7 +67,10 @@ describe("RateLimiter", () => {
 
       const result = await rateLimiter.check(context, policy);
 
-      expect(mockStore.check).toHaveBeenCalledWith("rl:test-policy:tenant_123:user_456", policy);
+      expect(mockStore.check).toHaveBeenCalledWith(
+        'rl2:[["policy","test-policy"],["tenant","tenant_123"],["user","user_456"]]',
+        policy,
+      );
       expect(result).toEqual({ ...successResult, policyName: "test-policy" });
     });
 
@@ -132,7 +135,7 @@ describe("RateLimiter", () => {
       const result = await rateLimiter.refund(context, policy, refundReceipt);
 
       expect(mockStore.refund).toHaveBeenCalledWith(
-        "rl:test-policy:tenant_123:user_456",
+        'rl2:[["policy","test-policy"],["tenant","tenant_123"],["user","user_456"]]',
         policy,
         refundReceipt,
       );
