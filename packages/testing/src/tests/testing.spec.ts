@@ -86,16 +86,41 @@ class TestingBillingProblem extends Problem {
 
 class InMemoryBillingGateway implements BillingGateway {
   readonly subscriptionOperations: string[] = [];
+  readonly checkouts = new Map<string, { fingerprint: string; result: CheckoutResult }>();
+  checkoutCreateCount = 0;
 
   async ensureCustomer(billingAccountId: string, _email: string): Promise<string> {
     return `customer-${billingAccountId}`;
   }
 
   async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
-    return {
+    const fingerprint = JSON.stringify({
+      billingAccountId: params.billingAccountId,
+      cancelUrl: params.cancelUrl ?? null,
+      email: params.email,
+      productId: params.productId,
+      successUrl: params.successUrl,
+    });
+    const existing = this.checkouts.get(params.idempotencyKey);
+    if (existing) {
+      if (existing.fingerprint !== fingerprint) {
+        throw new TestingBillingProblem("checkout idempotency key fingerprint conflict");
+      }
+      return existing.result;
+    }
+
+    this.checkoutCreateCount += 1;
+    const result = {
       checkoutId: `checkout-${params.billingAccountId}`,
       checkoutUrl: `https://billing.example.com/checkout/${params.productId}`,
     };
+    this.checkouts.set(params.idempotencyKey, { fingerprint, result });
+    return result;
+  }
+
+  async reconcileCheckout(params: CreateCheckoutParams): Promise<CheckoutResult | null> {
+    const existing = this.checkouts.get(params.idempotencyKey);
+    return existing?.result ?? null;
   }
 
   async cancelSubscription(
@@ -1606,12 +1631,14 @@ describe("@croco/testing", () => {
         providerName: "in-memory-billing",
         gateway: {
           createGateway: () => new InMemoryBillingGateway(),
+          getCheckoutCreateCount: (gateway) => gateway.checkoutCreateCount,
           fixtures: {
             checkout: {
               billingAccountId: "tenant-conformance",
               email: "billing@example.com",
               productId: "product-pro",
               successUrl: "https://app.example.com/success",
+              idempotencyKey: "checkout-conformance",
             },
             portal: {
               billingAccountId: "tenant-conformance",
@@ -1640,6 +1667,7 @@ describe("@croco/testing", () => {
                   email: "billing@example.com",
                   productId: "product-pro",
                   successUrl: "https://app.example.com/success",
+                  idempotencyKey: "checkout-conformance-failure",
                 }),
               assertProblem: (problem) => {
                 expect(problem.code).toBe("testing/billing-provider-failed");

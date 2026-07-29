@@ -86,6 +86,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`UnauthorizedProblem`](/api/auth-core/src/classes/unauthorizedproblem/)
 - [`BillingAccountNotFoundProblem`](/api/billing-core/src/classes/billingaccountnotfoundproblem/)
 - [`BillingCheckoutCreationProblem`](/api/billing-core/src/classes/billingcheckoutcreationproblem/)
+- [`BillingCheckoutInProgressProblem`](/api/billing-core/src/classes/billingcheckoutinprogressproblem/)
 - [`BillingLifecycleCommandConflictProblem`](/api/billing-core/src/classes/billinglifecyclecommandconflictproblem/)
 - [`BillingLifecycleCommandInProgressProblem`](/api/billing-core/src/classes/billinglifecyclecommandinprogressproblem/)
 - [`BillingLifecycleCommandNotFoundProblem`](/api/billing-core/src/classes/billinglifecyclecommandnotfoundproblem/)

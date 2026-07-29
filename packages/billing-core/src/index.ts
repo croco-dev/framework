@@ -130,6 +130,7 @@ export type {
 export {
   BillingAccountNotFoundProblem,
   BillingCheckoutCreationProblem,
+  BillingCheckoutInProgressProblem,
   BillingLifecycleCommandConflictProblem,
   BillingLifecycleCommandInProgressProblem,
   BillingLifecycleCommandNotFoundProblem,

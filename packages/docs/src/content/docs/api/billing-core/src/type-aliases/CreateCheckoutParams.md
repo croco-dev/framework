@@ -29,6 +29,15 @@ title: "CreateCheckoutParams"
 
 ***
 
+### idempotencyKey
+
+> **idempotencyKey**: `string`
+
+Stable identity for one logical checkout operation.
+Gateway implementations must reconcile retries with the same key to the same provider session.
+
+***
+
 ### productId
 
 > **productId**: `string`

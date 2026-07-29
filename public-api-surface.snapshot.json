@@ -4128,6 +4128,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "BillingCheckoutInProgressProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "BillingLifecycleCommandConflictProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",

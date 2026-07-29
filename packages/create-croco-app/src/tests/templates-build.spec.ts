@@ -731,6 +731,7 @@ function checkSaasStructure() {
       "@croco/auth-core": "workspace:*",
       "@croco/access-core": "workspace:*",
       "@croco/billing-core": "workspace:*",
+      "@croco/idempotency-core": "workspace:*",
       "@croco/metering-core": "workspace:*",
       "@croco/entitlements-core": "workspace:*",
       "@croco/execution-core": "workspace:*",

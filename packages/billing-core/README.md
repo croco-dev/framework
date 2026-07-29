@@ -13,10 +13,16 @@ pnpm add @croco/billing-core
 ```ts
 import type { BillingGateway } from "@croco/billing-core";
 import { BillingService, InMemoryBillingStore } from "@croco/billing-core";
+import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
 
 const store = new InMemoryBillingStore();
 const gateway = {} as BillingGateway;
-const billingService = new BillingService({ store, gateway });
+const billingService = new BillingService({
+  store,
+  gateway,
+  // Local development only. Production adapters must be durable and shared by every instance.
+  checkoutIdempotencyStore: new InMemoryIdempotencyStore(),
+});
 
 await billingService.createCheckout({
   tenantId: "tenant-123",
@@ -24,6 +30,7 @@ await billingService.createCheckout({
   productId: "product-pro",
   successUrl: "https://example.com/success",
   cancelUrl: "https://example.com/cancel",
+  idempotencyKey: "checkout-order-123",
 });
 ```
 
@@ -77,11 +84,16 @@ annual.toString();
 ### 이벤트와 문제 타입
 
 - 이벤트: `OrderPaidEvent`, `PlanChangedEvent`, `SubscriptionActivatedEvent`, `SubscriptionCanceledEvent`, `SubscriptionPastDueEvent`, `SubscriptionRevokedEvent`
-- 문제 타입: `BillingAccountNotFoundProblem`, `BillingCheckoutCreationProblem`, `SubscriptionNotFoundProblem`, `InvalidMoneyAmountProblem`
+- 문제 타입: `BillingAccountNotFoundProblem`, `BillingCheckoutCreationProblem`, `BillingCheckoutInProgressProblem`, `SubscriptionNotFoundProblem`, `InvalidMoneyAmountProblem`
 
 ## 구현 포인트
 
 - 외부 결제사는 `BillingGateway`를 구현해 연결합니다.
+- 체크아웃 호출자는 같은 논리적 구매 의도에 같은 `idempotencyKey`를 재사용해야 합니다. 운영 환경의
+  `checkoutIdempotencyStore`는 모든 애플리케이션 인스턴스가 공유하는 durable adapter여야 합니다.
+- `BillingGateway.createCheckout()` 구현은 전달된 provider operation key로 같은 checkout session을
+  반환해야 합니다. 응답 수신이나 멱등성 저장소 commit 결과가 모호하면
+  `BillingGateway.reconcileCheckout()`이 새 session을 만들지 않고 기존 결과만 조회해야 합니다.
 - 즉시 취소 시 주문 이력이 없으면 billing account와 subscription을 함께 정리합니다.
 - billing 상태 변화는 도메인 이벤트로 다른 SaaS 패키지와 연결할 수 있습니다.
 

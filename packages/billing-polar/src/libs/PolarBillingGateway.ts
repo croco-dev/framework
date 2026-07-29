@@ -1,14 +1,21 @@
-import type {
-  BillingGateway,
-  BillingLifecycleGatewayOptions,
-  CheckoutResult,
-  CreateCheckoutParams,
+import { createHash } from "node:crypto";
+import {
+  BillingCheckoutInProgressProblem,
+  type BillingGateway,
+  type BillingLifecycleGatewayOptions,
+  type CheckoutResult,
+  type CreateCheckoutParams,
 } from "@croco/billing-core";
 import type { ILogger } from "@croco/framework-context";
 import { Component, Inject, LOGGER_TOKEN } from "@croco/framework-context";
 import { Polar } from "@polar-sh/sdk";
 import type { PolarConfig } from "../types";
-import { normalizePolarBillingError, validatePolarConfig } from "./problems/PolarBillingProblems";
+import {
+  normalizePolarBillingError,
+  PolarRetryableUpstreamProblem,
+  PolarValidationProblem,
+  validatePolarConfig,
+} from "./problems/PolarBillingProblems";
 
 const POLAR_RETRY_CONFIG = {
   strategy: "backoff" as const,
@@ -22,6 +29,10 @@ const POLAR_RETRY_CONFIG = {
 };
 
 const POLAR_RETRY_CODES = ["429", "500", "502", "503", "504"];
+const CHECKOUT_OPERATION_KEY_METADATA = "croco_checkout_operation";
+const CHECKOUT_FINGERPRINT_METADATA = "croco_checkout_fingerprint";
+const CHECKOUT_RECONCILIATION_ATTEMPTS = 3;
+const CHECKOUT_RECONCILIATION_DELAY_MS = 25;
 
 type PolarLookupError = Error & {
   error?: string;
@@ -31,6 +42,7 @@ type PolarLookupError = Error & {
 export class PolarBillingGateway implements BillingGateway {
   private readonly client: Polar;
   private readonly organizationId?: string;
+  private readonly ambiguousCheckoutOperations = new Set<string>();
 
   constructor(
     config: PolarConfig,
@@ -96,6 +108,27 @@ export class PolarBillingGateway implements BillingGateway {
 
   async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
     const customerId = await this.ensureCustomer(params.billingAccountId, params.email);
+    const operationKey = hashCheckoutValue(params.idempotencyKey);
+    const fingerprint = checkoutFingerprint(params);
+
+    if (this.ambiguousCheckoutOperations.has(operationKey)) {
+      const reconciled = await this.reconcileCheckoutForCustomer(
+        customerId,
+        operationKey,
+        fingerprint,
+      );
+      if (reconciled) {
+        this.ambiguousCheckoutOperations.delete(operationKey);
+        return reconciled;
+      }
+      throw new BillingCheckoutInProgressProblem(params.billingAccountId);
+    }
+
+    const existing = await this.findCheckoutByOperation(customerId, operationKey, fingerprint);
+
+    if (existing) {
+      return existing;
+    }
 
     let checkout: { id: string; url: string };
     try {
@@ -104,15 +137,120 @@ export class PolarBillingGateway implements BillingGateway {
         customerId,
         successUrl: params.successUrl,
         ...(params.cancelUrl && { cancelUrl: params.cancelUrl }),
+        metadata: {
+          [CHECKOUT_OPERATION_KEY_METADATA]: operationKey,
+          [CHECKOUT_FINGERPRINT_METADATA]: fingerprint,
+        },
       });
     } catch (error) {
-      throw normalizePolarBillingError(error, "createCheckout");
+      const reconciled = await this.reconcileCheckoutForCustomer(
+        customerId,
+        operationKey,
+        fingerprint,
+      );
+      if (reconciled) {
+        return reconciled;
+      }
+
+      const normalized = normalizePolarBillingError(error, "createCheckout");
+      if (normalized instanceof PolarRetryableUpstreamProblem) {
+        this.ambiguousCheckoutOperations.add(operationKey);
+        throw new BillingCheckoutInProgressProblem(params.billingAccountId);
+      }
+      throw normalized;
     }
 
     return {
       checkoutUrl: checkout.url,
       checkoutId: checkout.id,
     };
+  }
+
+  async reconcileCheckout(params: CreateCheckoutParams): Promise<CheckoutResult | null> {
+    const customerId = await this.ensureCustomer(params.billingAccountId, params.email);
+    const operationKey = hashCheckoutValue(params.idempotencyKey);
+    const checkout = await this.reconcileCheckoutForCustomer(
+      customerId,
+      operationKey,
+      checkoutFingerprint(params),
+    );
+
+    if (checkout) {
+      this.ambiguousCheckoutOperations.delete(operationKey);
+    }
+
+    return checkout;
+  }
+
+  private async reconcileCheckoutForCustomer(
+    customerId: string,
+    operationKey: string,
+    fingerprint: string,
+  ): Promise<CheckoutResult | null> {
+    for (let attempt = 1; attempt <= CHECKOUT_RECONCILIATION_ATTEMPTS; attempt += 1) {
+      const checkout = await this.findCheckoutByOperation(customerId, operationKey, fingerprint);
+      if (checkout) {
+        return checkout;
+      }
+
+      if (attempt < CHECKOUT_RECONCILIATION_ATTEMPTS) {
+        await delay(CHECKOUT_RECONCILIATION_DELAY_MS * attempt);
+      }
+    }
+
+    return null;
+  }
+
+  private async findCheckoutByOperation(
+    customerId: string,
+    operationKey: string,
+    fingerprint: string,
+  ): Promise<CheckoutResult | null> {
+    let pages;
+    try {
+      pages = await this.client.checkouts.list(
+        {
+          customerId,
+          limit: 100,
+        },
+        {
+          retries: POLAR_RETRY_CONFIG,
+          retryCodes: POLAR_RETRY_CODES,
+        },
+      );
+    } catch (error) {
+      throw normalizePolarBillingError(error, "createCheckout.reconcile");
+    }
+
+    try {
+      for await (const page of pages) {
+        for (const checkout of page.result.items) {
+          if (checkout.metadata[CHECKOUT_OPERATION_KEY_METADATA] !== operationKey) {
+            continue;
+          }
+
+          if (checkout.metadata[CHECKOUT_FINGERPRINT_METADATA] !== fingerprint) {
+            throw new PolarValidationProblem(
+              {
+                provider: "polar",
+                operation: "createCheckout.reconcile",
+                upstreamCode: "idempotency-fingerprint-conflict",
+              },
+              "Polar checkout idempotency key was reused for different checkout input",
+            );
+          }
+
+          return {
+            checkoutId: checkout.id,
+            checkoutUrl: checkout.url,
+          };
+        }
+      }
+    } catch (error) {
+      throw normalizePolarBillingError(error, "createCheckout.reconcile");
+    }
+
+    return null;
   }
 
   async cancelSubscription(
@@ -220,4 +358,42 @@ export class PolarBillingGateway implements BillingGateway {
       return false;
     }
   }
+}
+
+function hashCheckoutValue(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function checkoutFingerprint(params: CreateCheckoutParams): string {
+  return hashCheckoutValue(
+    stableStringify({
+      billingAccountId: params.billingAccountId,
+      cancelUrl: params.cancelUrl ?? null,
+      email: params.email,
+      productId: params.productId,
+      successUrl: params.successUrl,
+    }),
+  );
+}
+
+async function delay(milliseconds: number): Promise<void> {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
+  }
+
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
+    .join(",")}}`;
 }

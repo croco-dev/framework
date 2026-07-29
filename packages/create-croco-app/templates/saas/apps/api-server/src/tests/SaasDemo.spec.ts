@@ -13,7 +13,7 @@ import {
 } from "../providerProfiles";
 import {
   assertSaasDemoSnapshot,
-  createSaasRuntime,
+  createSaasDemoRuntime,
   runSaasDemoFlow,
   seedDefaultSaasRuntime,
 } from "../saasDemo";
@@ -43,7 +43,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("creates tenant and owner membership", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.tenant.slug).toBe("acme");
     expect(snapshot.tenant.status).toBe("trial");
@@ -55,7 +55,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("creates invitation and member membership", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.invitation.status).toBe("accepted");
     expect(snapshot.invitation.invitedUserId).toBe("user_member");
@@ -64,7 +64,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("enforces membership seats from entitlement quota", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.membership.seatLimit).toMatchObject({
       quota: 2,
@@ -77,7 +77,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("allows configured permission for invited member", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.auth).toEqual({
       userId: "user_member",
@@ -90,7 +90,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("records usage for tenant", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.metering).toMatchObject({
       meterId: "api_requests",
@@ -100,7 +100,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("records AI usage and blocks over-quota LLM usage", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.ai).toMatchObject({
       provider: "in-memory",
@@ -115,7 +115,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("returns entitlement status after usage is recorded", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.entitlement).toMatchObject({
       featureKey: "api.requests",
@@ -137,7 +137,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("seeds dashboard-ready normal and over-quota usage states", async () => {
-    const runtime = createSaasRuntime();
+    const runtime = createSaasDemoRuntime();
     const snapshot = await runSaasDemoFlow(runtime);
 
     const meters = await runtime.meterRegistry.getByTenant(snapshot.tenant.id);
@@ -193,7 +193,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("exposes health and diagnostics endpoints", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.operations).toEqual({
       healthStatus: "up",
@@ -203,7 +203,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("keeps lifecycle evidence in the demo response contract", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
     const parsed = saasDemoSnapshotSchema.parse(snapshot);
 
     expect(parsed.lifecycle).toMatchObject({
@@ -327,7 +327,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("runs an inspectable billing sync background job", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.jobs).toMatchObject({
       type: "billing-sync",

@@ -19,7 +19,7 @@ import {
   AiTenantRequiredProblem,
 } from "./aiProblems";
 import { InMemoryEventBus } from "./inMemoryAdapters";
-import { createSaasRuntime, defaultSaasRuntime, type SaasRuntime } from "./saasDemo";
+import { createSaasDemoRuntime, defaultSaasRuntime, type SaasRuntime } from "./saasDemo";
 
 export const AI_SAAS_SMOKE_CONTRACT_VERSION = "ai-saas-smoke-contract/v1";
 export const DEFAULT_AI_MODEL_ID = "demo-deterministic";
@@ -481,7 +481,9 @@ export class AiSaasService {
   }
 }
 
-export function createAiSaasRuntime(saasRuntime: SaasRuntime = createSaasRuntime()): AiSaasRuntime {
+export function createAiSaasRuntime(
+  saasRuntime: SaasRuntime = createSaasDemoRuntime(),
+): AiSaasRuntime {
   const providerProfile = getAiProviderProfile("in-memory");
   const llmRegistry = new InMemoryLlmRegistry();
   llmRegistry.registerProvider(
@@ -536,6 +538,7 @@ export async function seedAiSaasTenant(runtime: AiSaasRuntime, planId: AiPlanId,
     productId: planId,
     successUrl: "https://app.example.test/ai/billing/success",
     cancelUrl: "https://app.example.test/ai/billing/cancel",
+    idempotencyKey: `checkout_${tenant.id}_${planId}`,
   });
   await runtime.saasRuntime.billingStore.saveSubscription({
     id: `subscription_${tenant.id}`,

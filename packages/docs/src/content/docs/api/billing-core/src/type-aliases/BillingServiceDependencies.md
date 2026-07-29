@@ -11,6 +11,12 @@ BillingService 생성에 필요한 의존성과 체크아웃 입력 타입입니
 
 ## Properties
 
+### checkoutIdempotencyStore
+
+> **checkoutIdempotencyStore**: [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`CheckoutResult`](/api/billing-core/src/type-aliases/checkoutresult/)\>
+
+***
+
 ### clock?
 
 > `optional` **clock?**: () => `Date`
@@ -19,19 +25,19 @@ BillingService 생성에 필요한 의존성과 체크아웃 입력 타입입니
 
 `Date`
 
----
+***
 
 ### eventPublisher?
 
 > `optional` **eventPublisher?**: [`BillingLifecycleEventPublisher`](/api/billing-core/src/interfaces/billinglifecycleeventpublisher/)
 
----
+***
 
 ### gateway
 
 > **gateway**: [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
 
----
+***
 
 ### store
 

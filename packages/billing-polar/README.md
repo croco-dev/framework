@@ -67,6 +67,7 @@ const checkout = await gateway.createCheckout({
   productId: "prod-456",
   successUrl: "https://example.com/success",
   cancelUrl: "https://example.com/cancel",
+  idempotencyKey: "checkout-order-123",
 });
 ```
 

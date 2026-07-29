@@ -42,7 +42,8 @@
  *   billingAccountId: 'tenant_123',
  *   email: 'buyer@example.com',
  *   productId: 'prod_123',
- *   successUrl: 'https://example.com/success'
+ *   successUrl: 'https://example.com/success',
+ *   idempotencyKey: 'checkout_order_123'
  * });
  * ```
  */

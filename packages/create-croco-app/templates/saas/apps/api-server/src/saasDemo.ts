@@ -7,6 +7,7 @@ import {
   WebhookAlreadyProcessedProblem,
   type BillingGateway,
   type BillingLifecycleGatewayOptions,
+  type CheckoutResult,
   type SubscriptionStatus,
 } from "@croco/billing-core";
 import { DiagnosticsCollector } from "@croco/diagnostics-core";
@@ -33,6 +34,7 @@ import {
   type DomainEvent,
 } from "@croco/events-core";
 import { HealthCheckService } from "@croco/health-core";
+import { InMemoryIdempotencyStore, type IdempotencyStore } from "@croco/idempotency-core";
 import { InMemoryInvitationStore, InvitationManager } from "@croco/invitation-core";
 import { InMemoryLlmModel, InMemoryLlmRegistry, LlmService } from "@croco/llm-core";
 import { LlmMeteringService, LlmQuotaExceededProblem, PricingTable } from "@croco/llm-metering";
@@ -104,6 +106,13 @@ class DemoBillingGateway implements BillingGateway {
   }
 
   async createCheckout(): Promise<{ checkoutUrl: string; checkoutId: string }> {
+    return {
+      checkoutUrl: "https://billing.example.test/checkout/team",
+      checkoutId: "checkout_team",
+    };
+  }
+
+  async reconcileCheckout(): Promise<CheckoutResult | null> {
     return {
       checkoutUrl: "https://billing.example.test/checkout/team",
       checkoutId: "checkout_team",
@@ -289,7 +298,11 @@ export type SaasRuntime = {
   lifecycleEvaluator: LifecycleRuleEvaluator;
 };
 
-export function createSaasRuntime(): SaasRuntime {
+export type SaasRuntimeOptions = {
+  checkoutIdempotencyStore: IdempotencyStore<CheckoutResult>;
+};
+
+export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
   const providerProfile = getSaasProviderProfile();
   const eventPublisher = createDemoEventPublisher();
 
@@ -310,6 +323,7 @@ export function createSaasRuntime(): SaasRuntime {
   const billingService = new BillingService({
     store: billingStore,
     gateway: new DemoBillingGateway(),
+    checkoutIdempotencyStore: options.checkoutIdempotencyStore,
   });
   const meterRepository = new InMemoryMeterRepository();
   const usageStorage = new InMemoryUsageStorage();
@@ -512,10 +526,16 @@ export function createSaasRuntime(): SaasRuntime {
   };
 }
 
-export let defaultSaasRuntime = createSaasRuntime();
+export function createSaasDemoRuntime(): SaasRuntime {
+  return createSaasRuntime({
+    checkoutIdempotencyStore: new InMemoryIdempotencyStore(),
+  });
+}
+
+export let defaultSaasRuntime = createSaasDemoRuntime();
 
 export function resetDefaultSaasRuntime(): SaasRuntime {
-  defaultSaasRuntime = createSaasRuntime();
+  defaultSaasRuntime = createSaasDemoRuntime();
   return defaultSaasRuntime;
 }
 
@@ -550,7 +570,7 @@ async function assertLlmQuotaForEntitlement(
 }
 
 export async function runSaasDemoFlow(
-  runtime: SaasRuntime = createSaasRuntime(),
+  runtime: SaasRuntime = createSaasDemoRuntime(),
 ): Promise<SaasDemoSnapshot> {
   const ownerUserId = "user_owner";
   const invitedUserId = "user_member";
@@ -572,6 +592,7 @@ export async function runSaasDemoFlow(
       productId: TEAM_PLAN_ID,
       successUrl: "https://app.example.test/billing/success",
       cancelUrl: "https://app.example.test/billing/cancel",
+      idempotencyKey: `checkout_${tenant.id}_${TEAM_PLAN_ID}`,
     });
     const billingMockEvent = await processBillingMockSubscriptionActivatedEvent(runtime, tenant.id);
     const entitlementPlanId = await runtime.subscriptionProvider.getCurrentPlanId(tenant.id);
