@@ -318,6 +318,7 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain(
       "real-resource-tests:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.real-resources == 'true'",
     );
+    expect(REAL_RESOURCE_JOB).toContain("permissions:\n      contents: read");
     expect(VALIDATE_JOB).not.toContain("membership-postgres:");
     expect(VALIDATE_JOB).not.toContain("Verify typed TestKernel resources");
     expect(WORKFLOW).toContain(

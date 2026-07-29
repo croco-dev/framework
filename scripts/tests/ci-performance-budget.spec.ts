@@ -3,29 +3,17 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  createMaintenancePullRequestManifest,
+  createOrdinaryPullRequestManifest,
   findCiPerformanceBudgetViolations,
   PR_CI_TARGET_MINUTES,
   pullRequestCiDesignBudgetMinutes,
 } from "../ci-performance-budget.mts";
-import { createVerificationManifest } from "../verification-manifest.mts";
 
 const ROOT_DIR = resolve(__dirname, "../..");
 const WORKFLOW = readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8");
-const ORDINARY_PR_MANIFEST = createVerificationManifest("spine", {
-  base: "origin/trunk",
-  changedFiles: ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"],
-  head: "HEAD",
-});
-const MAINTENANCE_PR_MANIFEST = createVerificationManifest("publish", {
-  base: "origin/trunk",
-  changedFiles: [
-    ".github/workflows/ci.yml",
-    "scripts/ci-performance-budget.mts",
-    "scripts/tests/ci-workflow.spec.ts",
-    "scripts/verification-manifest.mts",
-  ],
-  head: "HEAD",
-});
+const ORDINARY_PR_MANIFEST = createOrdinaryPullRequestManifest();
+const MAINTENANCE_PR_MANIFEST = createMaintenancePullRequestManifest();
 
 describe("pull-request CI performance budget", () => {
   it("keeps the ordinary PR critical path within the design budget", () => {

@@ -29,6 +29,32 @@ const guardedNodeScript = (
   ...args: string[]
 ): readonly string[] => guarded(recovery, nodeScript(script, ...args));
 
+const CORE_COVERAGE_PACKAGES = [
+  "@croco/framework-context",
+  "@croco/problems-core",
+  "@croco/protocols-core",
+  "@croco/protocols-rest",
+  "@croco/openapi-spec",
+  "@croco/rpc-codegen",
+  "@croco/transports-http",
+  "@croco/telemetry-api",
+  "@croco/telemetry-sdk-node",
+  "@croco/tx-core",
+  "@croco/tx-drizzle",
+  "@croco/events-core",
+  "@croco/events-tx",
+  "@croco/retry-core",
+  "@croco/idempotency-core",
+  "@croco/testing",
+  "create-croco-app",
+  "@croco/cli",
+  "@croco/auth-core",
+] as const;
+
+const CORE_COVERAGE_PACKAGE_DIRECTORIES = CORE_COVERAGE_PACKAGES.map((packageName) =>
+  packageName.startsWith("@croco/") ? packageName.slice("@croco/".length) : packageName,
+);
+
 function isApplicableToChangedFiles(
   context: VerificationContext,
   predicate: (path: string) => boolean,
@@ -79,8 +105,8 @@ function affectsPackageGraph(path: string): boolean {
 }
 
 function affectsCoreCoverage(path: string): boolean {
-  return /^packages\/(?:framework-context|problems-core|protocols-core|protocols-rest|openapi-spec|rpc-codegen|transports-http|telemetry-api|telemetry-sdk-node|tx-core|tx-drizzle|events-core|events-tx|retry-core|idempotency-core|testing|create-croco-app|cli|auth-core)\//.test(
-    path,
+  return CORE_COVERAGE_PACKAGE_DIRECTORIES.some((directory) =>
+    path.startsWith(`packages/${directory}/`),
   );
 }
 
@@ -579,44 +605,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
       category: "coverage",
       command: [
         "pnpm",
-        "--filter",
-        "@croco/framework-context",
-        "--filter",
-        "@croco/problems-core",
-        "--filter",
-        "@croco/protocols-core",
-        "--filter",
-        "@croco/protocols-rest",
-        "--filter",
-        "@croco/openapi-spec",
-        "--filter",
-        "@croco/rpc-codegen",
-        "--filter",
-        "@croco/transports-http",
-        "--filter",
-        "@croco/telemetry-api",
-        "--filter",
-        "@croco/telemetry-sdk-node",
-        "--filter",
-        "@croco/tx-core",
-        "--filter",
-        "@croco/tx-drizzle",
-        "--filter",
-        "@croco/events-core",
-        "--filter",
-        "@croco/events-tx",
-        "--filter",
-        "@croco/retry-core",
-        "--filter",
-        "@croco/idempotency-core",
-        "--filter",
-        "@croco/testing",
-        "--filter",
-        "create-croco-app",
-        "--filter",
-        "@croco/cli",
-        "--filter",
-        "@croco/auth-core",
+        ...CORE_COVERAGE_PACKAGES.flatMap((packageName) => ["--filter", packageName]),
         "exec",
         "vitest",
         "run",

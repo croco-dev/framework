@@ -532,6 +532,8 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.real-resources == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
     services:
       membership-postgres:
         image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297

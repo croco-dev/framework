@@ -45,13 +45,36 @@ export type CiPerformanceBudgetInput = {
 };
 
 function jobSection(workflow: string, job: string, nextJob: string): string {
-  const start = workflow.indexOf(`  ${job}:`);
-  const end = workflow.indexOf(`  ${nextJob}:`, start);
-  return start === -1 ? "" : workflow.slice(start, end === -1 ? undefined : end);
+  const startMarker = `\n  ${job}:\n`;
+  const endMarker = `\n  ${nextJob}:\n`;
+  const start = workflow.indexOf(startMarker);
+  const end = workflow.indexOf(endMarker, start + startMarker.length);
+  return start === -1 ? "" : workflow.slice(start + 1, end === -1 ? undefined : end + 1);
 }
 
 export function pullRequestCiDesignBudgetMinutes(): number {
   return Object.values(PR_CI_DESIGN_BUDGETS).reduce((total, value) => total + value, 0);
+}
+
+export function createOrdinaryPullRequestManifest(): readonly EvidenceCommand[] {
+  return createVerificationManifest("spine", {
+    base: "origin/trunk",
+    changedFiles: ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"],
+    head: "HEAD",
+  });
+}
+
+export function createMaintenancePullRequestManifest(): readonly EvidenceCommand[] {
+  return createVerificationManifest("publish", {
+    base: "origin/trunk",
+    changedFiles: [
+      ".github/workflows/ci.yml",
+      "scripts/ci-performance-budget.mts",
+      "scripts/tests/ci-workflow.spec.ts",
+      "scripts/verification-manifest.mts",
+    ],
+    head: "HEAD",
+  });
 }
 
 export function findCiPerformanceBudgetViolations(
@@ -59,6 +82,7 @@ export function findCiPerformanceBudgetViolations(
 ): readonly string[] {
   const violations: string[] = [];
   const validate = jobSection(input.workflow, "validate", "changes");
+  const changes = jobSection(input.workflow, "changes", "ecosystem-advisory");
   const ecosystemAdvisory = jobSection(input.workflow, "ecosystem-advisory", "real-resource-tests");
   const realResources = jobSection(input.workflow, "real-resource-tests", "windows-scaffold");
   const windowsScaffold = jobSection(input.workflow, "windows-scaffold", "docs-sync-check");
@@ -77,7 +101,7 @@ export function findCiPerformanceBudgetViolations(
   ) {
     violations.push("ecosystem advisory smoke must stay off automatic change runs");
   }
-  if (windowsScaffold.includes("- 'packages/**'")) {
+  if (changes.includes("- 'packages/**'")) {
     violations.push("Windows scaffold must not be triggered by every package change");
   }
   if (
@@ -158,21 +182,8 @@ export function findCiPerformanceBudgetViolations(
 function main(): void {
   const root = resolve(import.meta.dirname, "..");
   const workflow = readFileSync(resolve(root, ".github/workflows/ci.yml"), "utf8");
-  const ordinaryPullRequestManifest = createVerificationManifest("spine", {
-    base: "origin/trunk",
-    changedFiles: ["packages/customer-health-core/src/libs/CustomerHealthScore.ts"],
-    head: "HEAD",
-  });
-  const maintenancePullRequestManifest = createVerificationManifest("publish", {
-    base: "origin/trunk",
-    changedFiles: [
-      ".github/workflows/ci.yml",
-      "scripts/ci-performance-budget.mts",
-      "scripts/tests/ci-workflow.spec.ts",
-      "scripts/verification-manifest.mts",
-    ],
-    head: "HEAD",
-  });
+  const ordinaryPullRequestManifest = createOrdinaryPullRequestManifest();
+  const maintenancePullRequestManifest = createMaintenancePullRequestManifest();
   const violations = findCiPerformanceBudgetViolations({
     maintenancePullRequestManifest,
     ordinaryPullRequestManifest,
