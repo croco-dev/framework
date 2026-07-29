@@ -1,9 +1,9 @@
 import type { BackoffPolicy } from "./BackoffPolicy";
-import { RetryAbortedProblem, RetryExhaustedProblem } from "./errors";
+import { RetryAbortedProblem, RetryExhaustedProblem, RetrySuccessHookProblem } from "./errors";
 import type { RetryContext } from "./RetryContext";
 import type { RetryPolicy } from "./RetryPolicy";
 
-interface RetryHooks {
+export interface RetryHooks {
   onStart?: (context: RetryContext) => boolean | Promise<boolean>;
   onRetryError?: (error: Error, context: RetryContext) => void | Promise<void>;
   onSuccess?: (context: RetryContext) => void | Promise<void>;
@@ -35,11 +35,14 @@ export async function executeRetryLoop<T>(
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     context.incrementAttempt();
 
+    let result: T;
     try {
-      const result = await callback();
-      await retryHooks.onSuccess?.(context);
-      return result;
+      result = await callback();
     } catch (error) {
+      if (error instanceof RetrySuccessHookProblem) {
+        throw error;
+      }
+
       const retryError = error instanceof Error ? error : new Error(String(error));
       context.setLastError(retryError);
 
@@ -81,7 +84,17 @@ export async function executeRetryLoop<T>(
       if (shouldWait) {
         await backoffPolicy.wait(retryAttempt);
       }
+
+      continue;
     }
+
+    try {
+      await retryHooks.onSuccess?.(context);
+    } catch (error) {
+      throw new RetrySuccessHookProblem(context.methodName, attempt, error);
+    }
+
+    return result;
   }
 
   const exhaustedError =

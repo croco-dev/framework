@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { RetrySuccessHookProblem } from "./errors";
 
 /**
  * Determines whether an error should trigger a retry.
@@ -62,6 +63,10 @@ export class DefaultRetryPolicy implements RetryPolicy {
   shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
     // No more attempts left
     if (attempt >= maxAttempts) {
+      return false;
+    }
+
+    if (error instanceof RetrySuccessHookProblem) {
       return false;
     }
 

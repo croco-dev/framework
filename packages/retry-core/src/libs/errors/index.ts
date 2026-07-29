@@ -7,5 +7,6 @@ export {
   CircuitBreakerStateProblem,
   InvalidRetryConfigurationProblem,
   LambdaTimeoutProblem,
+  RetrySuccessHookProblem,
 } from "./RetryInfrastructureProblem";
 export type { RetryNumericConstraint } from "./RetryInfrastructureProblem";

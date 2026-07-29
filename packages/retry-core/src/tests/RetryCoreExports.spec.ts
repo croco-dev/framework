@@ -4,6 +4,8 @@ import {
   type OnStoreError,
   RedisCircuitBreakerStore,
   type RedisCircuitBreakerStoreOptions,
+  type RetryHooks,
+  RetrySuccessHookProblem,
 } from "../index";
 
 function createRootExportRedis(): RedisCircuitBreakerStoreOptions["redis"] {
@@ -55,5 +57,25 @@ describe("retry-core public exports", () => {
 
     expect(store).toBeInstanceOf(RedisCircuitBreakerStore);
     await expect(store.getState("root-export")).resolves.toBe(CircuitState.CLOSED);
+  });
+
+  it("exports typed success hook failure semantics from the package root", () => {
+    const hooks: RetryHooks = {
+      onSuccess: vi.fn(),
+    };
+    const cause = new Error("telemetry unavailable");
+    const problem = new RetrySuccessHookProblem("charge", 1, cause);
+
+    expect(hooks.onSuccess).toBeTypeOf("function");
+    expect(problem).toMatchObject({
+      cause,
+      code: "retry-core/success-hook-failed",
+      extensions: {
+        attempt: 1,
+        callbackSucceeded: true,
+        hook: "onSuccess",
+        methodName: "charge",
+      },
+    });
   });
 });

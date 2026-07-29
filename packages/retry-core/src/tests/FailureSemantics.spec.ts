@@ -7,6 +7,7 @@ import {
   LambdaTimeoutGuard,
   LambdaTimeoutProblem,
   NoBackoff,
+  RetrySuccessHookProblem,
   RetryTemplate,
 } from "../index";
 
@@ -33,6 +34,17 @@ describe("Croco failure semantics", () => {
     expect(policy.shouldRetry(new TransientProviderProblem(), 1, 3)).toBe(true);
     expect(policy.shouldRetry(new TerminalBusinessProblem(), 1, 3)).toBe(false);
     expect(policy.shouldRetry(new TypeError("programmer error"), 1, 3)).toBe(false);
+  });
+
+  it("never classifies a completed callback's success hook failure as retryable", () => {
+    const policy = new DefaultRetryPolicy();
+    const hookFailure = new RetrySuccessHookProblem(
+      "charge",
+      1,
+      new Error("telemetry unavailable"),
+    );
+
+    expect(policy.shouldRetry(hookFailure, 1, 3)).toBe(false);
   });
 
   it("stops retrying terminal Problem categories before attempts are exhausted", async () => {

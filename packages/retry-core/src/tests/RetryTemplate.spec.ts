@@ -6,7 +6,11 @@ import {
 } from "@croco/framework-context";
 import { describe, expect, it, vi } from "vitest";
 import { NoBackoff } from "../libs/BackoffPolicy";
-import { RetryAbortedProblem, RetryExhaustedProblem } from "../libs/errors";
+import {
+  RetryAbortedProblem,
+  RetryExhaustedProblem,
+  RetrySuccessHookProblem,
+} from "../libs/errors";
 import type { RetryListener } from "../libs/RetryListener";
 import { RetryTemplate } from "../libs/RetryTemplate";
 
@@ -220,6 +224,36 @@ describe("RetryTemplate", () => {
       await template.execute(async () => "success");
 
       expect(onSuccessSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("onSuccess 실패가 성공한 작업이나 recovery를 다시 실행하지 않아야 한다", async () => {
+      const hookError = new Error("telemetry unavailable");
+      const listener: RetryListener = {
+        onSuccess: vi.fn().mockRejectedValue(hookError),
+      };
+      const callback = vi.fn().mockResolvedValue("committed");
+      const recovery = vi.fn().mockResolvedValue("recovered");
+      const template = new RetryTemplate({
+        maxAttempts: 3,
+        backoffPolicy: new NoBackoff(),
+        listeners: [listener],
+      });
+      const execution = template.execute(callback, recovery);
+
+      await expect(execution).rejects.toMatchObject({
+        cause: hookError,
+        code: "retry-core/success-hook-failed",
+        extensions: {
+          attempt: 1,
+          callbackSucceeded: true,
+          hook: "onSuccess",
+          methodName: "execute",
+        },
+      });
+      await expect(execution).rejects.toBeInstanceOf(RetrySuccessHookProblem);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(recovery).not.toHaveBeenCalled();
     });
 
     it("onExhausted 콜백이 모든 시도 실패 시 호출되어야 한다", async () => {

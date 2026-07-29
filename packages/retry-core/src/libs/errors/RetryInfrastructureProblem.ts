@@ -67,3 +67,29 @@ export class InvalidRetryConfigurationProblem extends Problem {
     );
   }
 }
+
+/**
+ * 업무 콜백이 성공한 뒤 onSuccess 훅이 실패했을 때 발생하는 Problem입니다.
+ */
+export class RetrySuccessHookProblem extends Problem {
+  readonly code = "retry-core/success-hook-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(methodName: string, attempt: number, cause: unknown) {
+    const causeError = cause instanceof Error ? cause : new Error(String(cause));
+    super(
+      undefined,
+      undefined,
+      `Retry callback '${methodName}' succeeded, but its onSuccess hook failed`,
+      {
+        cause: causeError,
+        extensions: {
+          attempt,
+          callbackSucceeded: true,
+          hook: "onSuccess",
+          methodName,
+        },
+      },
+    );
+  }
+}

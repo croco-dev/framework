@@ -20747,6 +20747,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RetrySuccessHookProblem",
+              "exportKind": "named",
+              "source": "./libs/errors",
+              "declarationKind": "class"
+            },
+            {
               "name": "RetryTemplate",
               "exportKind": "named",
               "source": "./libs/RetryTemplate",
@@ -20845,6 +20851,11 @@
               "name": "RetryCallback",
               "exportKind": "named",
               "source": "./libs/RetryTemplate"
+            },
+            {
+              "name": "RetryHooks",
+              "exportKind": "named",
+              "source": "./libs/RetryEngine"
             },
             {
               "name": "RetryListener",

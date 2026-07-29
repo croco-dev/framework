@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 521,
+  problemCount: 522,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -11434,6 +11434,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/retry-core/src/libs/problems/CircuitBreakerProblems.ts",
           line: 7,
+          column: 3,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "retry-core/success-hook-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#retry-core-success-hook-failed",
+      recovery: {
+        cause:
+          "The business callback completed successfully, but its onSuccess observation hook failed afterward.",
+        userAction:
+          "Do not repeat the business operation from this failure; report the hook failure while preserving the successful callback outcome.",
+        operatorAction:
+          "Inspect the original cause and repair the named onSuccess listener or telemetry path without replaying the completed callback.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts",
+          line: 75,
           column: 3,
           kind: "problem-class",
         },

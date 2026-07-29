@@ -51,6 +51,7 @@ export {
   LambdaTimeoutProblem,
   RetryAbortedProblem,
   RetryExhaustedProblem,
+  RetrySuccessHookProblem,
 } from "./libs/errors";
 export type { RetryNumericConstraint } from "./libs/errors";
 
@@ -110,6 +111,7 @@ export { RetryContext } from "./libs/RetryContext";
  * 고수준 재시도 API가 공통으로 사용하는 저수준 재시도 루프 실행기입니다.
  */
 export { executeRetryLoop } from "./libs/RetryEngine";
+export type { RetryHooks } from "./libs/RetryEngine";
 
 /**
  * 재시도 라이프사이클을 관찰하는 리스너 계약입니다.

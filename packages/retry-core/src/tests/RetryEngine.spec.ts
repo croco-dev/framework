@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BackoffPolicy } from "../libs/BackoffPolicy";
 import { NoBackoff } from "../libs/BackoffPolicy";
-import { RetryAbortedProblem, RetryExhaustedProblem } from "../libs/errors";
+import {
+  RetryAbortedProblem,
+  RetryExhaustedProblem,
+  RetrySuccessHookProblem,
+} from "../libs/errors";
 import { RetryContext } from "../libs/RetryContext";
 import { executeRetryLoop } from "../libs/RetryEngine";
 import type { RetryPolicy } from "../libs/RetryPolicy";
@@ -227,6 +231,137 @@ describe("executeRetryLoop", () => {
       ),
     ).rejects.toThrow("fail");
     expect(onExhausted).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["retryable", new Error("telemetry unavailable")],
+    ["non-retryable", new TypeError("listener contract mismatch")],
+  ])(
+    "should report a %s success hook failure without retrying the successful callback",
+    async (_classification, hookError) => {
+      const callback = vi.fn().mockResolvedValue("committed");
+      const shouldRetry = vi.fn((error: unknown) => !(error instanceof TypeError));
+      const onRetryError = vi.fn();
+
+      const execution = executeRetryLoop(
+        callback,
+        {
+          maxAttempts: 3,
+          retryPolicy: { shouldRetry },
+          backoffPolicy,
+          context,
+        },
+        {
+          onRetryError,
+          onSuccess: vi.fn().mockRejectedValue(hookError),
+        },
+      );
+
+      await expect(execution).rejects.toMatchObject({
+        cause: hookError,
+        code: "retry-core/success-hook-failed",
+        extensions: {
+          attempt: 1,
+          callbackSucceeded: true,
+          hook: "onSuccess",
+          methodName: "execute",
+        },
+      });
+      await expect(execution).rejects.toBeInstanceOf(RetrySuccessHookProblem);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(shouldRetry).not.toHaveBeenCalled();
+      expect(onRetryError).not.toHaveBeenCalled();
+      expect(context.lastError).toBeNull();
+      expect(context.exhausted).toBe(false);
+    },
+  );
+
+  it("should preserve the last callback error when the eventual success hook fails", async () => {
+    const callbackError = new Error("provider unavailable");
+    const hookError = new Error("telemetry unavailable");
+    const callback = vi.fn().mockRejectedValueOnce(callbackError).mockResolvedValue("committed");
+    const onRetryError = vi.fn();
+
+    const execution = executeRetryLoop(
+      callback,
+      {
+        maxAttempts: 3,
+        retryPolicy,
+        backoffPolicy,
+        context,
+      },
+      {
+        onRetryError,
+        onSuccess: vi.fn().mockRejectedValue(hookError),
+      },
+    );
+
+    await expect(execution).rejects.toMatchObject({
+      cause: hookError,
+      extensions: {
+        attempt: 2,
+        callbackSucceeded: true,
+      },
+    });
+
+    expect(callback).toHaveBeenCalledTimes(2);
+    expect(onRetryError).toHaveBeenCalledOnce();
+    expect(onRetryError).toHaveBeenCalledWith(callbackError, context);
+    expect(context.lastError).toBe(callbackError);
+    expect(context.exhausted).toBe(false);
+  });
+
+  it("should not let an outer retry policy replay a nested callback after its success hook fails", async () => {
+    const hookError = new Error("telemetry unavailable");
+    const businessCallback = vi.fn().mockResolvedValue("committed");
+    const outerShouldRetry = vi.fn().mockReturnValue(true);
+    const outerOnRetryError = vi.fn();
+    const innerContext = new RetryContext("inner", [], 3);
+    const outerContext = new RetryContext("outer", [], 3);
+
+    const nestedExecution = () =>
+      executeRetryLoop(
+        businessCallback,
+        {
+          maxAttempts: 3,
+          retryPolicy,
+          backoffPolicy,
+          context: innerContext,
+        },
+        {
+          onSuccess: vi.fn().mockRejectedValue(hookError),
+        },
+      );
+
+    const execution = executeRetryLoop(
+      nestedExecution,
+      {
+        maxAttempts: 3,
+        retryPolicy: { shouldRetry: outerShouldRetry },
+        backoffPolicy,
+        context: outerContext,
+      },
+      {
+        onRetryError: outerOnRetryError,
+      },
+    );
+
+    await expect(execution).rejects.toMatchObject({
+      cause: hookError,
+      code: "retry-core/success-hook-failed",
+      extensions: {
+        attempt: 1,
+        callbackSucceeded: true,
+        methodName: "inner",
+      },
+    });
+
+    expect(businessCallback).toHaveBeenCalledTimes(1);
+    expect(outerShouldRetry).not.toHaveBeenCalled();
+    expect(outerOnRetryError).not.toHaveBeenCalled();
+    expect(outerContext.lastError).toBeNull();
+    expect(outerContext.exhausted).toBe(false);
   });
 
   it("should track context state accurately", async () => {
