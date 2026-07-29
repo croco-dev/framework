@@ -55,7 +55,7 @@ Upstash Redis와 Lua 스크립트로 슬라이딩 윈도우 제한을 수행하�
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`check`](/api/ratelimit-core/src/classes/slidingwindowstore/#check)
 
-***
+---
 
 ### checkSlidingWindow()
 
@@ -79,11 +79,21 @@ Upstash Redis와 Lua 스크립트로 슬라이딩 윈도우 제한을 수행하�
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`checkSlidingWindow`](/api/ratelimit-core/src/classes/slidingwindowstore/#checkslidingwindow)
 
-***
+---
 
 ### expire()
 
-> **expire**(): `Promise`\<`void`\>
+> **expire**(`key`, `ttlMs`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### ttlMs
+
+`number`
 
 #### Returns
 
@@ -93,11 +103,17 @@ Upstash Redis와 Lua 스크립트로 슬라이딩 윈도우 제한을 수행하�
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`expire`](/api/ratelimit-core/src/classes/slidingwindowstore/#expire)
 
-***
+---
 
 ### getCount()
 
-> **getCount**(): `Promise`\<`number`\>
+> **getCount**(`key`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### key
+
+`string`
 
 #### Returns
 
@@ -107,7 +123,7 @@ Upstash Redis와 Lua 스크립트로 슬라이딩 윈도우 제한을 수행하�
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`getCount`](/api/ratelimit-core/src/classes/slidingwindowstore/#getcount)
 
-***
+---
 
 ### getStats()
 
@@ -121,7 +137,7 @@ Upstash Redis와 Lua 스크립트로 슬라이딩 윈도우 제한을 수행하�
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`getStats`](/api/ratelimit-core/src/classes/slidingwindowstore/#getstats)
 
-***
+---
 
 ### increment()
 
@@ -145,7 +161,7 @@ Upstash Redis와 Lua 스크립트로 슬라이딩 윈도우 제한을 수행하�
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`increment`](/api/ratelimit-core/src/classes/slidingwindowstore/#increment)
 
-***
+---
 
 ### pruneExpired()
 
@@ -159,7 +175,7 @@ Upstash Redis와 Lua 스크립트로 슬라이딩 윈도우 제한을 수행하�
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`pruneExpired`](/api/ratelimit-core/src/classes/slidingwindowstore/#pruneexpired)
 
-***
+---
 
 ### refund()
 
@@ -187,7 +203,7 @@ Upstash Redis와 Lua 스크립트로 슬라이딩 윈도우 제한을 수행하�
 
 [`SlidingWindowStore`](/api/ratelimit-core/src/classes/slidingwindowstore/).[`refund`](/api/ratelimit-core/src/classes/slidingwindowstore/#refund)
 
-***
+---
 
 ### reset()
 

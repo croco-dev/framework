@@ -41,7 +41,10 @@ const result = await limiter.check({ ip: "127.0.0.1" }, policy);
 
 ## 동작 메모
 
-- 모든 알고리즘은 Redis Lua 스크립트로 원자성을 보장합니다.
+- 세 알고리즘의 check/refund 경로는 Redis Lua 스크립트로 원자성을 보장합니다.
+- 세 저장소의 `increment()`는 Redis `INCRBYFLOAT`를 사용하므로 여러 인스턴스의 동시 호출도
+  손실 없이 합산됩니다. 유한한 음수와 소수 증분을 지원하며, 기존 카운터 TTL은 증분 후에도
+  유지됩니다. `expire()`와 `reset()`은 같은 `:increment` 카운터 키에 적용됩니다.
 - 기본 prefix는 저장소별로 `ratelimit:sliding`, `ratelimit:bucket`, `ratelimit:fixed`를 사용합니다.
 - 통계는 메모리 기준으로 allowed, denied, total을 누적합니다.
 - Redis upstream 오류는 `UpstashRateLimitUpstreamProblem`으로 변환되며 `retryable` 확장 필드로
@@ -61,6 +64,7 @@ const result = await limiter.check({ ip: "127.0.0.1" }, policy);
 - refund idempotency
 - retryable upstream failure와 terminal upstream failure 구분
 - live smoke env gate skip
+- 실제 Upstash Redis에 대한 세 알고리즘의 동시 소수 증분, 음수 증분, TTL 보존, reset
 
 선택적 live smoke는 별도 opt-in env gate(`CROCO_LIVE_UPSTASH_REDIS`,
 `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`) 뒤에 두어야 합니다. 실제 Upstash backend smoke와

@@ -27,6 +27,7 @@ function createMockRedis(): {
   del: ReturnType<typeof vi.fn>;
   keys: ReturnType<typeof vi.fn>;
   expire: ReturnType<typeof vi.fn>;
+  incrbyfloat: ReturnType<typeof vi.fn>;
 } {
   return {
     eval: vi.fn(),
@@ -35,6 +36,7 @@ function createMockRedis(): {
     del: vi.fn(),
     keys: vi.fn(),
     expire: vi.fn(),
+    incrbyfloat: vi.fn(),
   };
 }
 
@@ -90,8 +92,9 @@ async function runUpstashRedisLiveSmoke(): Promise<void> {
     url: readRequiredEnv("UPSTASH_REDIS_REST_URL"),
   });
   const key = `smoke:${Date.now()}`;
+  const prefix = `croco:ratelimit-upstash:${Date.now()}`;
   const store = new UpstashFixedWindowStore({
-    prefix: `croco:ratelimit-upstash:${Date.now()}`,
+    prefix,
     redis,
   });
   const policy = createFixedWindowPolicy("live-smoke", 2, 1_000);
@@ -105,6 +108,35 @@ async function runUpstashRedisLiveSmoke(): Promise<void> {
   }
 
   await store.reset(key);
+
+  const counterStores = [
+    ["fixed", new UpstashFixedWindowStore({ prefix, redis })],
+    ["sliding", new UpstashSlidingWindowStore({ prefix, redis })],
+    ["token-bucket", new UpstashTokenBucketStore({ prefix, redis })],
+  ] as const;
+
+  for (const [algorithm, counterStore] of counterStores) {
+    const counterKey = `${key}:${algorithm}`;
+    const increments = await Promise.all(
+      Array.from({ length: 20 }, () => counterStore.increment(counterKey, 0.5)),
+    );
+
+    expect(Math.max(...increments)).toBe(10);
+    expect(await counterStore.getCount(counterKey)).toBe(10);
+    expect(await counterStore.increment(counterKey, -1.25)).toBe(8.75);
+
+    await counterStore.expire(counterKey, 5_000);
+    const redisCounterKey = `${prefix}:${counterKey}:increment`;
+    const ttlBeforeIncrement = await redis.pttl(redisCounterKey);
+    await counterStore.increment(counterKey, 0.25);
+    const ttlAfterIncrement = await redis.pttl(redisCounterKey);
+    expect(ttlBeforeIncrement).toBeGreaterThan(0);
+    expect(ttlAfterIncrement).toBeGreaterThan(0);
+    expect(ttlAfterIncrement).toBeLessThanOrEqual(ttlBeforeIncrement);
+
+    await counterStore.reset(counterKey);
+    expect(await counterStore.getCount(counterKey)).toBe(0);
+  }
 }
 
 describe("Upstash Redis rate-limit conformance", () => {
@@ -138,6 +170,7 @@ describe("UpstashFixedWindowStore", () => {
     del: ReturnType<typeof vi.fn>;
     keys: ReturnType<typeof vi.fn>;
     expire: ReturnType<typeof vi.fn>;
+    incrbyfloat: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -148,6 +181,7 @@ describe("UpstashFixedWindowStore", () => {
       del: vi.fn(),
       keys: vi.fn(),
       expire: vi.fn(),
+      incrbyfloat: vi.fn(),
     };
     store = new UpstashFixedWindowStore({ redis: mockRedis as never });
   });
@@ -247,6 +281,7 @@ describe("UpstashFixedWindowStore", () => {
     expect(mockRedis.keys).not.toHaveBeenCalled();
     expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:fixed:test-key");
     expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:fixed:test-key:receipts");
+    expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:fixed:test-key:increment");
   });
 
   it("should handle getCount", async () => {
@@ -266,18 +301,20 @@ describe("UpstashFixedWindowStore", () => {
   });
 
   it("should handle increment", async () => {
-    mockRedis.get.mockResolvedValue("5");
+    mockRedis.incrbyfloat.mockResolvedValue(7.5);
 
-    const newValue = await store.increment("test-key", 3);
+    const newValue = await store.increment("test-key", 2.5);
 
-    expect(newValue).toBe(8);
-    expect(mockRedis.set).toHaveBeenCalledWith("ratelimit:fixed:test-key:increment", "8");
+    expect(newValue).toBe(7.5);
+    expect(mockRedis.incrbyfloat).toHaveBeenCalledWith("ratelimit:fixed:test-key:increment", 2.5);
+    expect(mockRedis.get).not.toHaveBeenCalled();
+    expect(mockRedis.set).not.toHaveBeenCalled();
   });
 
   it("should handle expire", async () => {
     await store.expire("test-key", 60000);
 
-    expect(mockRedis.expire).toHaveBeenCalledWith("ratelimit:fixed:test-key:expire", 60);
+    expect(mockRedis.expire).toHaveBeenCalledWith("ratelimit:fixed:test-key:increment", 60);
   });
 
   it("should handle pruneExpired", async () => {
@@ -306,6 +343,8 @@ describe("UpstashSlidingWindowStore", () => {
     del: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
     set: ReturnType<typeof vi.fn>;
+    expire: ReturnType<typeof vi.fn>;
+    incrbyfloat: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -314,6 +353,8 @@ describe("UpstashSlidingWindowStore", () => {
       del: vi.fn(),
       get: vi.fn(),
       set: vi.fn(),
+      expire: vi.fn(),
+      incrbyfloat: vi.fn(),
     };
     store = new UpstashSlidingWindowStore({ redis: mockRedis as never });
   });
@@ -386,6 +427,7 @@ describe("UpstashSlidingWindowStore", () => {
     await store.reset("test-key");
 
     expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:sliding:test-key");
+    expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:sliding:test-key:increment");
   });
 
   it("should handle pruneExpired", async () => {
@@ -395,17 +437,31 @@ describe("UpstashSlidingWindowStore", () => {
   });
 
   it("should handle increment", async () => {
-    mockRedis.get.mockResolvedValue("5");
+    mockRedis.incrbyfloat.mockResolvedValue(4.5);
 
-    const newValue = await store.increment("test-key", 2);
+    const newValue = await store.increment("test-key", -0.5);
 
-    expect(newValue).toBe(7);
+    expect(newValue).toBe(4.5);
+    expect(mockRedis.incrbyfloat).toHaveBeenCalledWith(
+      "ratelimit:sliding:test-key:increment",
+      -0.5,
+    );
+    expect(mockRedis.get).not.toHaveBeenCalled();
+    expect(mockRedis.set).not.toHaveBeenCalled();
   });
 
   it("should handle getCount", async () => {
-    const count = await store.getCount();
+    mockRedis.get.mockResolvedValue("4.5");
 
-    expect(count).toBe(0);
+    const count = await store.getCount("test-key");
+
+    expect(count).toBe(4.5);
+  });
+
+  it("should expire the increment counter", async () => {
+    await store.expire("test-key", 60_000);
+
+    expect(mockRedis.expire).toHaveBeenCalledWith("ratelimit:sliding:test-key:increment", 60);
   });
 
   it("should track denied stats", async () => {
@@ -428,6 +484,8 @@ describe("UpstashTokenBucketStore", () => {
     del: ReturnType<typeof vi.fn>;
     get: ReturnType<typeof vi.fn>;
     set: ReturnType<typeof vi.fn>;
+    expire: ReturnType<typeof vi.fn>;
+    incrbyfloat: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -436,6 +494,8 @@ describe("UpstashTokenBucketStore", () => {
       del: vi.fn(),
       get: vi.fn(),
       set: vi.fn(),
+      expire: vi.fn(),
+      incrbyfloat: vi.fn(),
     };
     store = new UpstashTokenBucketStore({ redis: mockRedis as never });
   });
@@ -552,6 +612,7 @@ describe("UpstashTokenBucketStore", () => {
 
     expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:bucket:test-key");
     expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:bucket:test-key:receipts");
+    expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:bucket:test-key:increment");
   });
 
   it("should handle pruneExpired", async () => {
@@ -561,17 +622,28 @@ describe("UpstashTokenBucketStore", () => {
   });
 
   it("should handle increment", async () => {
-    mockRedis.get.mockResolvedValue("3");
+    mockRedis.incrbyfloat.mockResolvedValue(7.25);
 
-    const newValue = await store.increment("test-key", 4);
+    const newValue = await store.increment("test-key", 4.25);
 
-    expect(newValue).toBe(7);
+    expect(newValue).toBe(7.25);
+    expect(mockRedis.incrbyfloat).toHaveBeenCalledWith("ratelimit:bucket:test-key:increment", 4.25);
+    expect(mockRedis.get).not.toHaveBeenCalled();
+    expect(mockRedis.set).not.toHaveBeenCalled();
   });
 
   it("should handle getCount", async () => {
-    const count = await store.getCount();
+    mockRedis.get.mockResolvedValue("7.25");
 
-    expect(count).toBe(0);
+    const count = await store.getCount("test-key");
+
+    expect(count).toBe(7.25);
+  });
+
+  it("should expire the increment counter", async () => {
+    await store.expire("test-key", 60_000);
+
+    expect(mockRedis.expire).toHaveBeenCalledWith("ratelimit:bucket:test-key:increment", 60);
   });
 
   it("should track denied stats", async () => {
