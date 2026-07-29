@@ -34,8 +34,12 @@ describe("MigrationRunner", () => {
 
   describe("status", () => {
     it("should return empty array when no migrations", async () => {
+      vi.mocked(mockDb.execute).mockResolvedValueOnce([{ exists: false }]);
+
       const result = await runner.status();
+
       expect(Array.isArray(result)).toBe(true);
+      expect(mockDb.execute).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -332,6 +332,7 @@ jobs:
               - 'packages/framework-context/**'
               - 'packages/membership-core/**'
               - 'packages/membership-drizzle/**'
+              - 'packages/migration-runner/**'
               - 'packages/problems-core/**'
               - 'packages/testing/**'
               - 'packages/testing-resources/**'
@@ -582,6 +583,11 @@ jobs:
         run: |
           pnpm build --filter=@croco/membership-drizzle...
           pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
+
+      - name: Verify fresh migration status against PostgreSQL
+        env:
+          MIGRATION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+        run: pnpm --filter @croco/migration-runner exec vitest run src/tests/MigrationStatusPostgres.spec.ts
 
       - name: Verify typed TestKernel resources against real PostgreSQL and Redis
         run: |

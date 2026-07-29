@@ -87,6 +87,9 @@ Show database status before operating:
 pnpm exec migrate status --connection "$DATABASE_URL"
 ```
 
+`status` is read-only: it does not create the checkpoint table. When that table does not exist yet, every discovered
+migration is reported as pending. Existing checkpoint history is still reconciled against the migration files.
+
 Roll back the latest migration:
 
 ```bash

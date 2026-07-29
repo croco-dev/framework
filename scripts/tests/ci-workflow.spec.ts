@@ -243,6 +243,16 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/testing-resources test:real");
   });
 
+  it("runs fresh migration status against real PostgreSQL", () => {
+    expect(WORKFLOW).toContain("              - 'packages/migration-runner/**'");
+    expect(REAL_RESOURCE_JOB).toContain(
+      "MIGRATION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain(
+      "pnpm --filter @croco/migration-runner exec vitest run src/tests/MigrationStatusPostgres.spec.ts",
+    );
+  });
+
   it.each(["--log-opts=--max-count=0", "--no-git", "--redact=false"])(
     "rejects a production Gitleaks argv override: %s",
     (extraArgument) => {

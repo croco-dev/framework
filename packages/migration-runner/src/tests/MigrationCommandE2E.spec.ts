@@ -5,6 +5,50 @@ import { createMigrationFixtures } from "./helpers/createMigrationFixtures";
 import { DeterministicMigrationDatabase } from "./helpers/DeterministicMigrationDatabase";
 
 describe("migration command end-to-end", () => {
+  it("reports every migration as pending on a fresh backend without creating metadata", async () => {
+    const fixtures = createMigrationFixtures([
+      { id: "20260711000001", name: "create_accounts" },
+      { id: "20260711000002", name: "create_orders" },
+    ]);
+    const harness = createCommandHarness();
+    const fresh = harness.db.snapshot();
+
+    try {
+      await harness.run([
+        "status",
+        "--dir",
+        fixtures.path,
+        "--connection",
+        "postgresql://deterministic.test/migrations",
+      ]);
+
+      expect(harness.db.snapshot()).toEqual(fresh);
+      expect(harness.exitCodes).toEqual([0]);
+      expect(commandSignals(harness)).toMatchInlineSnapshot(`
+        {
+          "exitCodes": [
+            0,
+          ],
+          "lifecycle": [
+            "db:open",
+            "pool:end",
+            "exit:0",
+          ],
+          "stderr": [],
+          "stdout": [
+            "Migration status:",
+            "  ○ 20260711000001_create_accounts",
+            "  ○ 20260711000002_create_orders",
+            "
+        0/2 migrations executed",
+          ],
+        }
+      `);
+    } finally {
+      fixtures.cleanup();
+    }
+  });
+
   it("executes ordered migrations once and reports a repeated up as already applied", async () => {
     const fixtures = createMigrationFixtures([
       { id: "20260711000001", name: "create_accounts" },

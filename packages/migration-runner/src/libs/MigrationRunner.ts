@@ -30,7 +30,9 @@ export class MigrationRunner {
 
   async status(): Promise<MigrationStatus[]> {
     const files = await this.scanner.scan();
-    const executed = await this.store.getExecutedMigrations(this.db);
+    const executed = (await this.store.hasTable(this.db))
+      ? await this.store.getExecutedMigrations(this.db)
+      : [];
     const history = reconcileMigrationHistory(files, executed);
 
     return files.map((file) => {
