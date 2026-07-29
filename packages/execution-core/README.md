@@ -1,5 +1,14 @@
 # @croco/execution-core
 
+## Continuation lease configuration
+
+`ExecutionManagerImpl` uses a 30,000 ms continuation lease by default. Set
+`continuationLeaseDurationMs` to a positive integer from 1 ms through 2,147,483,647 ms, the
+largest delay supported consistently by JavaScript timers and continuation stores. Invalid
+values fail during manager construction with
+`InvalidContinuationLeaseDurationProblem` (`execution/invalid-continuation-lease-duration`)
+before execution or store work begins.
+
 실행(Execution) 상태 관리 및 추적을 위한 코어 라이브러리입니다. 모든 실행 가능한 단위(Task, Batch, Workflow)의 생명주기를 관리하는 기반을 제공합니다.
 
 ## 특징

@@ -15,19 +15,24 @@ title: "ExecutionManagerOptions"
 
 `Date`
 
-***
+---
 
 ### continuationLeaseDurationMs?
 
 > `optional` **continuationLeaseDurationMs?**: `number`
 
-***
+Continuation ownership duration in milliseconds.
+
+Must be an integer from MIN_CONTINUATION_LEASE_DURATION_MS through
+MAX_CONTINUATION_LEASE_DURATION_MS.
+
+---
 
 ### initialContinuationToken?
 
 > `optional` **initialContinuationToken?**: `string`
 
-***
+---
 
 ### tokenGenerator?
 

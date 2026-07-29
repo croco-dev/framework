@@ -14,7 +14,13 @@ import type {
   ListRunningExecutionsOptions,
   UpdateClaimedExecutionContinuationInput,
 } from "../index";
-import { ExecutionManagerImpl, ExecutionProblem } from "../index";
+import {
+  ExecutionManagerImpl,
+  ExecutionProblem,
+  InvalidContinuationLeaseDurationProblem,
+  MAX_CONTINUATION_LEASE_DURATION_MS,
+  MIN_CONTINUATION_LEASE_DURATION_MS,
+} from "../index";
 
 class InMemoryExecutionStore implements ExecutionStore, ExecutionContinuationStore {
   private execution?: Execution;
@@ -350,6 +356,64 @@ function acquiredClaim(
 }
 
 describe("ExecutionManagerImpl continuation claims", () => {
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])(
+    "rejects invalid continuation lease duration %s before execution work",
+    (continuationLeaseDurationMs) => {
+      const store = new InMemoryExecutionStore();
+
+      expect(() => new ExecutionManagerImpl(store, { continuationLeaseDurationMs })).toThrowError(
+        expect.objectContaining({
+          code: "execution/invalid-continuation-lease-duration",
+          receivedValue: continuationLeaseDurationMs,
+          minimumMs: MIN_CONTINUATION_LEASE_DURATION_MS,
+          maximumMs: MAX_CONTINUATION_LEASE_DURATION_MS,
+        }),
+      );
+    },
+  );
+
+  it.each([MIN_CONTINUATION_LEASE_DURATION_MS, MAX_CONTINUATION_LEASE_DURATION_MS])(
+    "accepts continuation lease boundary %s",
+    (continuationLeaseDurationMs) => {
+      const manager = new ExecutionManagerImpl(new InMemoryExecutionStore(), {
+        continuationLeaseDurationMs,
+      });
+
+      expect(manager.getContinuationLeaseDurationMs()).toBe(continuationLeaseDurationMs);
+    },
+  );
+
+  it("exposes invalid continuation lease configuration as a typed Problem", () => {
+    expect(() => {
+      new ExecutionManagerImpl(new InMemoryExecutionStore(), {
+        continuationLeaseDurationMs: Number.NEGATIVE_INFINITY,
+      });
+    }).toThrow(InvalidContinuationLeaseDurationProblem);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    "preserves non-finite lease duration %s in serialized evidence",
+    (continuationLeaseDurationMs) => {
+      const problem = (() => {
+        try {
+          new ExecutionManagerImpl(new InMemoryExecutionStore(), {
+            continuationLeaseDurationMs,
+          });
+        } catch (error) {
+          return error;
+        }
+      })();
+
+      expect(problem).toBeInstanceOf(InvalidContinuationLeaseDurationProblem);
+      expect((problem as InvalidContinuationLeaseDurationProblem).receivedValue).toBe(
+        continuationLeaseDurationMs,
+      );
+      expect((problem as InvalidContinuationLeaseDurationProblem).toJSON()).toMatchObject({
+        receivedValue: String(continuationLeaseDurationMs),
+      });
+    },
+  );
+
   it("atomically starts the first attempt and records deterministic claim evidence", async () => {
     const { create, manager } = createHarness();
     const execution = await create();
@@ -387,6 +451,35 @@ describe("ExecutionManagerImpl continuation claims", () => {
 
     expect(result.kind).toBe("contended");
     expect(result.execution.attempts).toBe(1);
+  });
+
+  it("keeps duplicate acquisition contended after the owner renews its lease", async () => {
+    const { advance, create, manager } = createHarness();
+    const execution = await create();
+    const first = await manager.claimContinuation(execution.id, {
+      deliveryToken: "initial",
+      workerId: "worker-a",
+    });
+    advance(999);
+
+    await manager.renewContinuationClaim(execution.id, acquiredClaim(first), {
+      workerId: "worker-a",
+    });
+    advance(2);
+
+    const duplicate = await manager.claimContinuation(execution.id, {
+      deliveryToken: "initial",
+      workerId: "worker-b",
+    });
+
+    expect(duplicate).toMatchObject({
+      kind: "contended",
+      execution: { attempts: 1 },
+      claim: {
+        workerId: "worker-a",
+        expiresAt: new Date("2026-01-01T00:00:01.999Z"),
+      },
+    });
   });
 
   it("lets one owner reclaim an expired lease while fencing every stale mutation", async () => {

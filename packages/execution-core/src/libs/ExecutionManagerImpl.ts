@@ -35,11 +35,33 @@ export const INITIAL_EXECUTION_CONTINUATION_TOKEN = "initial";
 export interface ExecutionManagerOptions {
   clock?: () => Date;
   tokenGenerator?: () => string;
+  /**
+   * Continuation ownership duration in milliseconds.
+   *
+   * Must be an integer from MIN_CONTINUATION_LEASE_DURATION_MS through
+   * MAX_CONTINUATION_LEASE_DURATION_MS.
+   */
   continuationLeaseDurationMs?: number;
   initialContinuationToken?: string;
 }
 
 const DEFAULT_CONTINUATION_LEASE_DURATION_MS = 30_000;
+export const MIN_CONTINUATION_LEASE_DURATION_MS = 1;
+export const MAX_CONTINUATION_LEASE_DURATION_MS = 2_147_483_647;
+
+function validateContinuationLeaseDuration(durationMs: number): void {
+  if (
+    !Number.isSafeInteger(durationMs) ||
+    durationMs < MIN_CONTINUATION_LEASE_DURATION_MS ||
+    durationMs > MAX_CONTINUATION_LEASE_DURATION_MS
+  ) {
+    throw ExecutionProblems.invalidContinuationLeaseDuration({
+      receivedValue: durationMs,
+      minimumMs: MIN_CONTINUATION_LEASE_DURATION_MS,
+      maximumMs: MAX_CONTINUATION_LEASE_DURATION_MS,
+    });
+  }
+}
 
 /**
  * State transition rules for ExecutionStatus.
@@ -151,8 +173,10 @@ export class ExecutionManagerImpl
   ) {
     this.clock = options.clock ?? (() => new Date());
     this.tokenGenerator = options.tokenGenerator ?? defaultTokenGenerator;
-    this.continuationLeaseDurationMs =
+    const continuationLeaseDurationMs =
       options.continuationLeaseDurationMs ?? DEFAULT_CONTINUATION_LEASE_DURATION_MS;
+    validateContinuationLeaseDuration(continuationLeaseDurationMs);
+    this.continuationLeaseDurationMs = continuationLeaseDurationMs;
     this.initialContinuationToken =
       options.initialContinuationToken ?? INITIAL_EXECUTION_CONTINUATION_TOKEN;
   }
