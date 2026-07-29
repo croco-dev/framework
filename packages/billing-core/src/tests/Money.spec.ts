@@ -19,7 +19,7 @@ function roundRational(
   const remainder = normalizedNumerator % normalizedDenominator;
 
   if (remainder === 0 || roundingMode === "down") {
-    return quotient;
+    return quotient === 0 ? 0 : quotient;
   }
 
   const direction = remainder > 0 ? 1 : -1;
@@ -29,7 +29,8 @@ function roundRational(
   }
 
   const absoluteRemainder = remainder < 0 ? -remainder : remainder;
-  return absoluteRemainder * 2 >= normalizedDenominator ? quotient + direction : quotient;
+  const rounded = absoluteRemainder * 2 >= normalizedDenominator ? quotient + direction : quotient;
+  return rounded === 0 ? 0 : rounded;
 }
 
 describe("Money", () => {
@@ -56,11 +57,9 @@ describe("Money", () => {
   ])(
     "should round exact, below-half, half, and above-half negative quotients",
     ({ amount, divisor, expected }) => {
-      expect(new Money(amount, "USD").divide(divisor, "half_up").amount === expected.half_up).toBe(
-        true,
-      );
-      expect(new Money(amount, "USD").divide(divisor, "down").amount === expected.down).toBe(true);
-      expect(new Money(amount, "USD").divide(divisor, "up").amount === expected.up).toBe(true);
+      expect(new Money(amount, "USD").divide(divisor, "half_up").amount).toBe(expected.half_up);
+      expect(new Money(amount, "USD").divide(divisor, "down").amount).toBe(expected.down);
+      expect(new Money(amount, "USD").divide(divisor, "up").amount).toBe(expected.up);
     },
   );
 
@@ -85,7 +84,7 @@ describe("Money", () => {
           const expected = roundRational(amount, divisor, roundingMode);
           const actual = new Money(amount, "USD").divide(divisor, roundingMode).amount;
 
-          expect(actual === expected).toBe(true);
+          expect(actual).toBe(expected);
         }
       }
 
@@ -98,7 +97,7 @@ describe("Money", () => {
           );
           const actual = new Money(amount, "USD").divide(divisor.value, roundingMode).amount;
 
-          expect(actual === expected).toBe(true);
+          expect(actual).toBe(expected);
         }
       }
     }
@@ -124,7 +123,7 @@ describe("Money", () => {
           );
           const actual = new Money(amount, "USD").multiply(multiplier.value, roundingMode).amount;
 
-          expect(actual === expected).toBe(true);
+          expect(actual).toBe(expected);
         }
       }
     }

@@ -139,7 +139,7 @@ export class Money {
       throw new InvalidMoneyAmountProblem(amount);
     }
 
-    return amount;
+    return amount === 0 ? 0 : amount;
   }
 
   private static normalizeCurrency(currency: string): string {
