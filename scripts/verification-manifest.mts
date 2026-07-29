@@ -95,6 +95,17 @@ const repoOnly = (
     timeoutMs: minutes(5),
   },
   {
+    id: "release-version-sync",
+    label: "Release version-derived metadata",
+    category: "metadata",
+    command: guardedNodeScript(
+      "pnpm release-version-sync:write && pnpm docs:catalog:write",
+      "scripts/release-version-sync.mts",
+      "--check",
+    ),
+    timeoutMs: minutes(5),
+  },
+  {
     id: "docs-catalog",
     label: "Package documentation catalog",
     category: "quality",

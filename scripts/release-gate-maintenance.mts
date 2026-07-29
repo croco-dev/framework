@@ -28,6 +28,7 @@ export const RELEASE_GATE_TEST_PATHS = [
   "scripts/tests/release-docs-check.spec.ts",
   "scripts/tests/release-metadata-check.spec.ts",
   "scripts/tests/release-spine-evidence.spec.ts",
+  "scripts/tests/release-version-sync.spec.ts",
   "scripts/tests/release-workflow.spec.ts",
   "scripts/tests/security-allowlist-metadata-check.spec.ts",
   "scripts/tests/spine-promotion-check.spec.ts",
@@ -68,6 +69,7 @@ export const RELEASE_GATE_ENTRYPOINT_PATHS = [
   "scripts/quick-start-lambda-smoke.mts",
   "scripts/release-docs-check.mts",
   "scripts/release-metadata-check.mts",
+  "scripts/release-version-sync.mts",
   "scripts/security-allowlist-metadata-check.mts",
   "scripts/spine-promotion-check.mts",
   "scripts/static-misuse-check.mts",
@@ -96,6 +98,7 @@ export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/verification-dispatcher.mts",
   "scripts/verification-manifest.mts",
   "scripts/verification-problem.mts",
+  "scripts/version-packages.mts",
   "scripts/workflow-verification-contract.mts",
 ] as const;
 
