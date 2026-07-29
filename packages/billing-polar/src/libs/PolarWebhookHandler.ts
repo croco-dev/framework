@@ -1,9 +1,8 @@
 import type { BillingStore, PlanRegistry, Subscription } from "@croco/billing-core";
-import { WebhookAlreadyProcessedProblem } from "@croco/billing-core";
-import type { EventPublisher } from "@croco/events-core";
+import { SubscriptionPastDueEvent, WebhookAlreadyProcessedProblem } from "@croco/billing-core";
+import type { DomainEvent, EventPublisher } from "@croco/events-core";
 import { Problem } from "@croco/problems-core";
 import { Trace } from "@croco/telemetry-api";
-import { validateEvent } from "@polar-sh/sdk/webhooks";
 import { ZodError } from "zod";
 import type { PolarConfig, WebhookHandlerResult } from "../types";
 import { PolarEventMapper } from "./PolarEventMapper";
@@ -17,6 +16,7 @@ import {
   PolarOrderDataSchema,
   PolarSubscriptionDataSchema,
 } from "./schemas/polarWebhookSchema";
+import { verifyPolarWebhook } from "./verifyPolarWebhook";
 
 export type WebhookDependencies = {
   store: BillingStore;
@@ -91,7 +91,7 @@ export class PolarWebhookHandler {
   ): Promise<WebhookHandlerResult> {
     let event: unknown;
     try {
-      event = validateEvent(body, headers, this.webhookSecret);
+      event = verifyPolarWebhook(body, headers, this.webhookSecret);
     } catch (error) {
       const reason = sanitizeWebhookValidationReason(
         error instanceof Error ? error.message : "Unknown error",
@@ -102,7 +102,7 @@ export class PolarWebhookHandler {
 
     let parsedEvent: PolarEvent;
     try {
-      parsedEvent = PolarEventSchema.parse(event);
+      parsedEvent = PolarEventSchema.parse(normalizeVerifiedEvent(event));
     } catch (error) {
       if (error instanceof ZodError) {
         throw new WebhookValidationProblem(`Invalid webhook payload: ${formatZodError(error)}`);
@@ -228,7 +228,6 @@ export class PolarWebhookHandler {
     const subscriptionData = PolarSubscriptionDataSchema.parse(data);
 
     const status = this.mapStatus(subscriptionData.status);
-
     return {
       id: subscriptionData.id,
       tenantId: this.extractTenantId(subscriptionData.customer),
@@ -332,6 +331,11 @@ export class PolarWebhookHandler {
     };
     await this.store.saveSubscription(subscription);
 
+    const pastDueTransitionReservationId = this.pastDueTransitionReservationId(payload.id);
+    if (payload.status !== "past_due") {
+      await this.clearPastDueTransition(pastDueTransitionReservationId);
+    }
+
     const domainEvents = this.eventMapper.mapSubscriptionEvent(
       eventType,
       payload.tenantId,
@@ -347,7 +351,7 @@ export class PolarWebhookHandler {
     );
 
     for (const event of domainEvents) {
-      await this.eventPublisher.publishNow(event);
+      await this.publishDomainEvent(event, pastDueTransitionReservationId);
     }
   }
 
@@ -370,6 +374,52 @@ export class PolarWebhookHandler {
 
     for (const event of domainEvents) {
       await this.eventPublisher.publishNow(event);
+    }
+  }
+
+  private async publishDomainEvent(
+    event: DomainEvent,
+    pastDueTransitionReservationId: string,
+  ): Promise<void> {
+    if (!(event instanceof SubscriptionPastDueEvent)) {
+      await this.eventPublisher.publishNow(event);
+      return;
+    }
+
+    const shouldPublish = await this.reserveWebhook(
+      pastDueTransitionReservationId,
+      event.eventName,
+    );
+    if (!shouldPublish) {
+      return;
+    }
+
+    try {
+      await this.eventPublisher.publishNow(event);
+    } catch (error) {
+      const rollbackErrorMessage = await this.tryRollbackWebhook(pastDueTransitionReservationId);
+      if (rollbackErrorMessage) {
+        throw new WebhookProcessingProblem(
+          `Past-due transition publication failed and reservation rollback failed: ${rollbackErrorMessage}`,
+          error instanceof Error ? error : undefined,
+        );
+      }
+      throw error;
+    }
+
+    await this.store.completeWebhook(pastDueTransitionReservationId);
+  }
+
+  private pastDueTransitionReservationId(externalSubscriptionId: string): string {
+    return `croco:billing:polar:subscription:${externalSubscriptionId}:past_due`;
+  }
+
+  private async clearPastDueTransition(reservationId: string): Promise<void> {
+    const rollbackErrorMessage = await this.tryRollbackWebhook(reservationId);
+    if (rollbackErrorMessage) {
+      throw new WebhookProcessingProblem(
+        `Past-due transition reset failed: ${rollbackErrorMessage}`,
+      );
     }
   }
 
@@ -420,6 +470,35 @@ function formatZodError(error: ZodError): string {
       return `${path}: ${issue.message}`;
     })
     .join("; ");
+}
+
+function normalizeVerifiedEvent(event: unknown): unknown {
+  if (!isRecord(event) || !isRecord(event.data)) {
+    return event;
+  }
+
+  const data = event.data;
+  const customer = isRecord(data.customer)
+    ? {
+        ...data.customer,
+        externalId: data.customer.externalId ?? data.customer.external_id,
+      }
+    : data.customer;
+
+  return {
+    ...event,
+    data: {
+      ...data,
+      customer,
+      currentPeriodEnd: data.currentPeriodEnd ?? data.current_period_end,
+      cancelAtPeriodEnd: data.cancelAtPeriodEnd ?? data.cancel_at_period_end,
+      createdAt: data.createdAt ?? data.created_at,
+    },
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 const SENSITIVE_WEBHOOK_KEY_VALUE_PATTERN =

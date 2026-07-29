@@ -46,7 +46,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`completeWebhook`](/api/billing-core/src/classes/billingstore/#completewebhook)
 
-***
+---
 
 ### deleteAccount()
 
@@ -66,7 +66,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`deleteAccount`](/api/billing-core/src/classes/billingstore/#deleteaccount)
 
-***
+---
 
 ### deleteSubscription()
 
@@ -86,11 +86,16 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`deleteSubscription`](/api/billing-core/src/classes/billingstore/#deletesubscription)
 
-***
+---
 
 ### failWebhook()
 
 > **failWebhook**(`eventId`): `Promise`\<`void`\>
+
+Idempotently removes a webhook reservation in either reserved or completed state.
+
+This operation must also succeed when no reservation exists so recovery work can be retried
+independently of domain-state persistence.
 
 #### Parameters
 
@@ -106,7 +111,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`failWebhook`](/api/billing-core/src/classes/billingstore/#failwebhook)
 
-***
+---
 
 ### findAccountByExternalId()
 
@@ -126,7 +131,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findAccountByExternalId`](/api/billing-core/src/classes/billingstore/#findaccountbyexternalid)
 
-***
+---
 
 ### findAccountByTenantId()
 
@@ -146,7 +151,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findAccountByTenantId`](/api/billing-core/src/classes/billingstore/#findaccountbytenantid)
 
-***
+---
 
 ### findOrdersByAccount()
 
@@ -166,7 +171,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findOrdersByAccount`](/api/billing-core/src/classes/billingstore/#findordersbyaccount)
 
-***
+---
 
 ### findSubscription()
 
@@ -186,7 +191,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findSubscription`](/api/billing-core/src/classes/billingstore/#findsubscription)
 
-***
+---
 
 ### findSubscriptionByExternalId()
 
@@ -206,7 +211,7 @@ NOT suitable for production multi-instance deployments.
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`findSubscriptionByExternalId`](/api/billing-core/src/classes/billingstore/#findsubscriptionbyexternalid)
 
-***
+---
 
 ### reserveWebhook()
 
@@ -235,7 +240,7 @@ reservation already exists. Other storage failures must retain their original fa
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`reserveWebhook`](/api/billing-core/src/classes/billingstore/#reservewebhook)
 
-***
+---
 
 ### reset()
 
@@ -247,7 +252,7 @@ Clear all data (for testing)
 
 `void`
 
-***
+---
 
 ### saveAccount()
 
@@ -267,7 +272,7 @@ Clear all data (for testing)
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`saveAccount`](/api/billing-core/src/classes/billingstore/#saveaccount)
 
-***
+---
 
 ### saveOrder()
 
@@ -287,7 +292,7 @@ Clear all data (for testing)
 
 [`BillingStore`](/api/billing-core/src/classes/billingstore/).[`saveOrder`](/api/billing-core/src/classes/billingstore/#saveorder)
 
-***
+---
 
 ### saveSubscription()
 

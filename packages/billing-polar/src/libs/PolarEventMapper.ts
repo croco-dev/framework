@@ -64,6 +64,10 @@ export class PolarEventMapper {
         }
         break;
 
+      case "subscription.past_due":
+        events.push(new SubscriptionPastDueEvent(tenantId, subscription.id));
+        break;
+
       case "subscription.canceled":
         events.push(
           new SubscriptionCanceledEvent(

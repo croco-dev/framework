@@ -104,14 +104,19 @@ const result = await handler.handle(requestBody, requestHeaders);
 
 ### 구독 이벤트
 
-| 이벤트 타입             | 설명          |
-| ----------------------- | ------------- |
-| `subscription.created`  | 구독 생성     |
-| `subscription.active`   | 구독 활성화   |
-| `subscription.updated`  | 구독 업데이트 |
-| `subscription.canceled` | 구독 취소     |
-| `subscription.revoked`  | 구독 해지     |
-| `subscription.past_due` | 결제 지연     |
+| 이벤트 타입             | 설명           |
+| ----------------------- | -------------- |
+| `subscription.created`  | 구독 생성      |
+| `subscription.active`   | 구독 활성화    |
+| `subscription.updated`  | 구독 업데이트  |
+| `subscription.canceled` | 구독 취소      |
+| `subscription.revoked`  | 구독 해지      |
+| `subscription.past_due` | 결제 지연 전환 |
+
+`subscription.updated`와 `subscription.past_due`가 같은 상태 전환을 알리면 구독별 past-due reservation을
+원자적으로 선점합니다. 여러 인스턴스에서 겹쳐 처리해도 한 번만 발행하고, 발행 실패 시에는 재시도를 위해
+reservation을 해제합니다. 구독이 past-due 상태를 벗어나면 reservation을 초기화하므로 이후의 새 연체
+전환은 다시 발행됩니다.
 
 ### 주문 이벤트
 

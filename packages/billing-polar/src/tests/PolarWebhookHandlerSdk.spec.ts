@@ -1,6 +1,10 @@
 import { createHmac } from "node:crypto";
 import type { BillingStore, PlanRegistry, PlanVersionDefinition } from "@croco/billing-core";
-import { planVersionRef, WebhookAlreadyProcessedProblem } from "@croco/billing-core";
+import {
+  planVersionRef,
+  SubscriptionPastDueEvent,
+  WebhookAlreadyProcessedProblem,
+} from "@croco/billing-core";
 import type { EventPublisher } from "@croco/events-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
@@ -165,7 +169,7 @@ function expectWebhookValidationProblem(
   });
 }
 
-describe("PolarWebhookHandler SDK-backed webhook verification", () => {
+describe("PolarWebhookHandler Standard Webhooks signature verification", () => {
   const webhookSecret = "test-secret";
   const now = new Date("2026-01-31T00:00:00Z");
   let handler!: PolarWebhookHandler;
@@ -216,7 +220,40 @@ describe("PolarWebhookHandler SDK-backed webhook verification", () => {
     expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
     expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
     expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
-    expect(mockStore.failWebhook).not.toHaveBeenCalled();
+    expect(mockStore.failWebhook).toHaveBeenCalledWith(
+      "croco:billing:polar:subscription:sub-sdk-replay:past_due",
+    );
+  });
+
+  it("should verify and publish a directly signed subscription.past_due event", async () => {
+    const eventId = "evt-sdk-past-due";
+    const createdPayload = createSdkSubscriptionPayload(eventId);
+    const payload = {
+      ...createdPayload,
+      type: "subscription.past_due",
+      data: {
+        ...createdPayload.data,
+        status: "past_due",
+      },
+    };
+    const body = JSON.stringify(payload);
+    const timestamp = Math.floor(now.getTime() / 1000);
+    const headers = createSignedHeaders({ body, eventId, secret: webhookSecret, timestamp });
+
+    vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+    vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
+    vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
+
+    const result = await handler.handle(body, headers);
+
+    expect(result).toEqual({ success: true, eventId });
+    expect(mockEventPublisher.publishNow).toHaveBeenCalledWith(
+      expect.any(SubscriptionPastDueEvent),
+    );
+    expect(mockStore.reserveWebhook).toHaveBeenCalledWith(
+      "croco:billing:polar:subscription:sub-sdk-replay:past_due",
+      "billing.subscription_past_due",
+    );
   });
 
   it("should map a real SDK stale timestamp rejection to a stable validation Problem", async () => {
