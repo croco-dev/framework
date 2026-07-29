@@ -708,6 +708,72 @@ describe("PolarWebhookHandler", () => {
       expect(mockStore.reserveWebhook).toHaveBeenCalledWith("evt-456", "order.paid");
       expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-456");
     });
+
+    it("lifecycle ordering and duplicate delivery cannot persist an unpaid order", async () => {
+      const orderData = {
+        id: "order-lifecycle",
+        amount: 9900,
+        currency: "USD",
+        customer: { externalId: "tenant-lifecycle", metadata: {} },
+        createdAt: "2026-01-31T00:00:00Z",
+      };
+      const deliveries = [
+        { id: "evt-order-created", type: "order.created", data: orderData },
+        { id: "evt-order-updated", type: "order.updated", data: orderData },
+        { id: "evt-order-paid", type: "order.paid", data: orderData },
+        { id: "evt-order-paid", type: "order.paid", data: orderData },
+      ];
+
+      vi.mocked(mockValidateEvent).mockImplementation((body: Buffer | string) => {
+        return JSON.parse(Buffer.isBuffer(body) ? body.toString("utf8") : body) as never;
+      });
+      vi.mocked(mockStore.reserveWebhook)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new WebhookAlreadyProcessedProblem("evt-order-paid"));
+
+      const results = [];
+      for (const delivery of deliveries) {
+        results.push(
+          await handler.handle(JSON.stringify(delivery), {
+            "webhook-id": delivery.id,
+          }),
+        );
+      }
+
+      expect(results).toEqual(
+        deliveries.map(({ id }) => ({
+          success: true,
+          eventId: id,
+        })),
+      );
+      expect(mockStore.reserveWebhook).toHaveBeenNthCalledWith(
+        1,
+        "evt-order-created",
+        "order.created",
+      );
+      expect(mockStore.reserveWebhook).toHaveBeenNthCalledWith(
+        2,
+        "evt-order-updated",
+        "order.updated",
+      );
+      expect(mockStore.reserveWebhook).toHaveBeenNthCalledWith(3, "evt-order-paid", "order.paid");
+      expect(mockStore.reserveWebhook).toHaveBeenNthCalledWith(4, "evt-order-paid", "order.paid");
+      expect(mockStore.completeWebhook).toHaveBeenCalledTimes(3);
+      expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-order-created");
+      expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-order-updated");
+      expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-order-paid");
+      expect(mockStore.saveOrder).toHaveBeenCalledTimes(1);
+      expect(mockStore.saveOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "order-lifecycle",
+          externalOrderId: "order-lifecycle",
+        }),
+      );
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
+      expect(mockStore.failWebhook).not.toHaveBeenCalled();
+    });
   });
 
   describe("webhook 검증 실패", () => {
