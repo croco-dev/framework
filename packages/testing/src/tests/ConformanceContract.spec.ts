@@ -409,12 +409,14 @@ describe("@croco/testing conformance public contract", () => {
       providerName: "Contract Billing",
       gateway: {
         createGateway: unexecuted,
+        getCheckoutCreateCount: unexecuted,
         fixtures: {
           checkout: {
             billingAccountId: "account_123",
             email: "buyer@example.com",
             productId: "product_123",
             successUrl: "https://example.com/success",
+            idempotencyKey: "checkout_123",
           },
           portal: {
             billingAccountId: "account_123",
@@ -468,6 +470,10 @@ describe("@croco/testing conformance public contract", () => {
 
     expect(caseNames(suite)).toEqual([
       "creates checkout sessions with stable checkout identifiers and URLs",
+      "reconciles repeated checkout operation keys to the original provider session",
+      "rejects checkout operation key reuse for a different product",
+      "rejects checkout operation key reuse for a different success URL",
+      "rejects checkout operation key reuse for a different cancel URL",
       "ensures customers before creating customer portal URLs",
       "supports deferred cancel, resume, and immediate cancel subscription lifecycle calls",
       "surfaces gateway failures as Croco Problems",

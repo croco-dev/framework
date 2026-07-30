@@ -22,6 +22,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/frontend-react": "^0.1.0",
   "@croco/frontend-vite": "^0.0.4",
   "@croco/health-core": "^0.0.4",
+  "@croco/idempotency-core": "^0.1.0",
   "@croco/invitation-core": "^0.0.4",
   "@croco/lifecycle-core": "^0.0.1",
   "@croco/llm-core": "^0.0.4",

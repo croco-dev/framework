@@ -76,6 +76,19 @@ export class BillingCheckoutCreationProblem extends Problem {
   }
 }
 
+export class BillingCheckoutInProgressProblem extends Problem {
+  readonly code = "billing/checkout-in-progress";
+  readonly category = ProblemCategory.Conflict;
+  constructor(tenantId: string, cause?: Error) {
+    super(
+      undefined,
+      undefined,
+      `An equivalent checkout is already in progress for tenant '${tenantId}'`,
+      cause === undefined ? undefined : { cause },
+    );
+  }
+}
+
 export class InvalidMoneyAmountProblem extends Problem {
   readonly code = "billing/invalid-money-amount";
   readonly category = ProblemCategory.BadRequest;

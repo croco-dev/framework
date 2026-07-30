@@ -4128,6 +4128,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "BillingCheckoutInProgressProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "BillingLifecycleCommandConflictProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
@@ -4156,6 +4162,12 @@
               "exportKind": "named",
               "source": "./libs/BillingStore",
               "declarationKind": "class"
+            },
+            {
+              "name": "hashCheckoutValue",
+              "exportKind": "named",
+              "source": "./libs/BillingService",
+              "declarationKind": "function"
             },
             {
               "name": "InMemoryBillingStore",
@@ -4251,6 +4263,12 @@
               "name": "planVersionRef",
               "exportKind": "named",
               "source": "./libs/planVersionRef",
+              "declarationKind": "function"
+            },
+            {
+              "name": "stableStringify",
+              "exportKind": "named",
+              "source": "./libs/BillingService",
               "declarationKind": "function"
             },
             {
@@ -4573,6 +4591,12 @@
               "name": "PolarBillingGateway",
               "exportKind": "named",
               "source": "./libs/PolarBillingGateway",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolarCheckoutIdempotencyConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PolarBillingProblems",
               "declarationKind": "class"
             },
             {

@@ -84,18 +84,63 @@ class TestingBillingProblem extends Problem {
   }
 }
 
+class TestingBillingConflictProblem extends Problem {
+  constructor() {
+    super(
+      "testing/billing-checkout-conflict",
+      ProblemCategory.Conflict,
+      "checkout idempotency key fingerprint conflict",
+    );
+  }
+}
+
 class InMemoryBillingGateway implements BillingGateway {
   readonly subscriptionOperations: string[] = [];
+  readonly checkouts = new Map<string, { fingerprint: string; result: CheckoutResult }>();
+  checkoutCreateCount = 0;
 
   async ensureCustomer(billingAccountId: string, _email: string): Promise<string> {
     return `customer-${billingAccountId}`;
   }
 
   async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
-    return {
+    const fingerprint = this.checkoutFingerprint(params);
+    const existing = this.checkouts.get(params.idempotencyKey);
+    if (existing) {
+      if (existing.fingerprint !== fingerprint) {
+        throw new TestingBillingConflictProblem();
+      }
+      return existing.result;
+    }
+
+    this.checkoutCreateCount += 1;
+    const result = {
       checkoutId: `checkout-${params.billingAccountId}`,
       checkoutUrl: `https://billing.example.com/checkout/${params.productId}`,
     };
+    this.checkouts.set(params.idempotencyKey, { fingerprint, result });
+    return result;
+  }
+
+  async reconcileCheckout(params: CreateCheckoutParams): Promise<CheckoutResult | null> {
+    const existing = this.checkouts.get(params.idempotencyKey);
+    if (!existing) {
+      return null;
+    }
+    if (existing.fingerprint !== this.checkoutFingerprint(params)) {
+      throw new TestingBillingConflictProblem();
+    }
+    return existing.result;
+  }
+
+  private checkoutFingerprint(params: CreateCheckoutParams): string {
+    return JSON.stringify({
+      billingAccountId: params.billingAccountId,
+      cancelUrl: params.cancelUrl ?? null,
+      email: params.email,
+      productId: params.productId,
+      successUrl: params.successUrl,
+    });
   }
 
   async cancelSubscription(
@@ -1606,12 +1651,15 @@ describe("@croco/testing", () => {
         providerName: "in-memory-billing",
         gateway: {
           createGateway: () => new InMemoryBillingGateway(),
+          getCheckoutCreateCount: (gateway) => gateway.checkoutCreateCount,
+          checkoutConflictProblemCode: "testing/billing-checkout-conflict",
           fixtures: {
             checkout: {
               billingAccountId: "tenant-conformance",
               email: "billing@example.com",
               productId: "product-pro",
               successUrl: "https://app.example.com/success",
+              idempotencyKey: "checkout-conformance",
             },
             portal: {
               billingAccountId: "tenant-conformance",
@@ -1640,6 +1688,7 @@ describe("@croco/testing", () => {
                   email: "billing@example.com",
                   productId: "product-pro",
                   successUrl: "https://app.example.com/success",
+                  idempotencyKey: "checkout-conformance-failure",
                 }),
               assertProblem: (problem) => {
                 expect(problem.code).toBe("testing/billing-provider-failed");

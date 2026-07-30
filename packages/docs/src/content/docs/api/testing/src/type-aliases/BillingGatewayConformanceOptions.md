@@ -21,6 +21,12 @@ title: "BillingGatewayConformanceOptions"
 
 ***
 
+### checkoutConflictProblemCode?
+
+> `readonly` `optional` **checkoutConflictProblemCode?**: `string`
+
+***
+
 ### createGateway
 
 > `readonly` **createGateway**: () => `TGateway` \| `Promise`\<`TGateway`\>
@@ -40,3 +46,19 @@ title: "BillingGatewayConformanceOptions"
 ### fixtures
 
 > `readonly` **fixtures**: [`BillingGatewayConformanceFixtures`](/api/testing/src/type-aliases/billinggatewayconformancefixtures/)
+
+***
+
+### getCheckoutCreateCount
+
+> `readonly` **getCheckoutCreateCount**: (`gateway`) => `number` \| `Promise`\<`number`\>
+
+#### Parameters
+
+##### gateway
+
+`TGateway`
+
+#### Returns
+
+`number` \| `Promise`\<`number`\>

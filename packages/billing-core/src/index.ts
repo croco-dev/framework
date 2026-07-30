@@ -29,7 +29,7 @@ export type {
 /**
  * 테넌트 기준 구독 조회, 체크아웃 생성, 취소, 재개를 처리하는 핵심 서비스입니다.
  */
-export { BillingService } from "./libs/BillingService";
+export { BillingService, hashCheckoutValue, stableStringify } from "./libs/BillingService";
 
 /**
  * billing account, subscription, order를 저장하는 영속 계약입니다.
@@ -130,6 +130,7 @@ export type {
 export {
   BillingAccountNotFoundProblem,
   BillingCheckoutCreationProblem,
+  BillingCheckoutInProgressProblem,
   BillingLifecycleCommandConflictProblem,
   BillingLifecycleCommandInProgressProblem,
   BillingLifecycleCommandNotFoundProblem,

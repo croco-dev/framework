@@ -1309,6 +1309,7 @@ describe("E2E: generate()", () => {
       "@croco/auth-core": externalCrocoRange("@croco/auth-core"),
       "@croco/access-core": externalCrocoRange("@croco/access-core"),
       "@croco/billing-core": externalCrocoRange("@croco/billing-core"),
+      "@croco/idempotency-core": externalCrocoRange("@croco/idempotency-core"),
       "@croco/metering-core": externalCrocoRange("@croco/metering-core"),
       "@croco/entitlements-core": externalCrocoRange("@croco/entitlements-core"),
       "@croco/execution-core": externalCrocoRange("@croco/execution-core"),

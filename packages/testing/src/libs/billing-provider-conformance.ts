@@ -53,6 +53,8 @@ export type BillingGatewayFailureScenario<TGateway extends BillingGateway = Bill
 
 export type BillingGatewayConformanceOptions<TGateway extends BillingGateway = BillingGateway> = {
   readonly createGateway: () => TGateway | Promise<TGateway>;
+  readonly getCheckoutCreateCount: (gateway: TGateway) => number | Promise<number>;
+  readonly checkoutConflictProblemCode?: string;
   readonly fixtures: BillingGatewayConformanceFixtures;
   readonly assertions?: BillingGatewayConformanceAssertions<TGateway>;
   readonly failureScenarios?: readonly BillingGatewayFailureScenario<TGateway>[];
@@ -166,6 +168,20 @@ function createBillingGatewayConformanceCases<TGateway extends BillingGateway>(
   options: BillingGatewayConformanceOptions<TGateway>,
 ): BillingProviderConformanceCase[] {
   const createGateway = async (): Promise<TGateway> => await options.createGateway();
+  const checkoutConflictCases = [
+    {
+      name: "rejects checkout operation key reuse for a different product",
+      change: { productId: `${options.fixtures.checkout.productId}-different` },
+    },
+    {
+      name: "rejects checkout operation key reuse for a different success URL",
+      change: { successUrl: "https://example.invalid/different-success" },
+    },
+    {
+      name: "rejects checkout operation key reuse for a different cancel URL",
+      change: { cancelUrl: "https://example.invalid/different-cancel" },
+    },
+  ] as const;
 
   const cases: BillingProviderConformanceCase[] = [
     {
@@ -183,6 +199,69 @@ function createBillingGatewayConformanceCases<TGateway extends BillingGateway>(
         });
       },
     },
+    {
+      name: "reconciles repeated checkout operation keys to the original provider session",
+      run: async () => {
+        const gateway = await createGateway();
+        const initialCreateCount = await options.getCheckoutCreateCount(gateway);
+        const initial = await gateway.createCheckout(options.fixtures.checkout);
+        const replay = await gateway.createCheckout(options.fixtures.checkout);
+        const reconciled = await gateway.reconcileCheckout(options.fixtures.checkout);
+
+        assert.deepEqual(
+          replay,
+          initial,
+          `${providerName} must replay the original checkout for the same idempotency key`,
+        );
+        assert.deepEqual(
+          reconciled,
+          initial,
+          `${providerName} must reconcile the original checkout for the same idempotency key`,
+        );
+        assert.equal(
+          await options.getCheckoutCreateCount(gateway),
+          initialCreateCount + 1,
+          `${providerName} must create exactly one provider checkout for repeated operation keys`,
+        );
+      },
+    },
+    ...checkoutConflictCases.map(
+      ({ name, change }): BillingProviderConformanceCase => ({
+        name,
+        run: async () => {
+          const gateway = await createGateway();
+          const initialCreateCount = await options.getCheckoutCreateCount(gateway);
+          await gateway.createCheckout(options.fixtures.checkout);
+
+          let caught: unknown;
+          try {
+            await gateway.createCheckout({
+              ...options.fixtures.checkout,
+              ...change,
+            });
+          } catch (error) {
+            caught = error;
+          }
+
+          assert.ok(
+            caught instanceof Problem,
+            `${providerName} must reject checkout idempotency key reuse with conflicting input as a Croco Problem.`,
+          );
+          if (options.checkoutConflictProblemCode !== undefined) {
+            assert.equal(
+              caught.code,
+              options.checkoutConflictProblemCode,
+              `${providerName} must reject conflicting checkout input with its stable conflict Problem code`,
+            );
+          }
+          assert.equal(
+            await options.getCheckoutCreateCount(gateway),
+            initialCreateCount + 1,
+            `${providerName} must not create another provider checkout for conflicting input`,
+          );
+        },
+      }),
+    ),
     {
       name: "ensures customers before creating customer portal URLs",
       run: async () => {

@@ -86,6 +86,25 @@ Implementations: PolarBillingGateway
 
 ---
 
+### reconcileCheckout()
+
+> **reconcileCheckout**(`params`): `Promise`\<[`CheckoutResult`](/api/billing-core/src/type-aliases/checkoutresult/) \| `null`\>
+
+Look up a previously accepted checkout without creating another provider session.
+Used to recover ambiguous provider responses and idempotency-store commit failures.
+
+#### Parameters
+
+##### params
+
+[`CreateCheckoutParams`](/api/billing-core/src/type-aliases/createcheckoutparams/)
+
+#### Returns
+
+`Promise`\<[`CheckoutResult`](/api/billing-core/src/type-aliases/checkoutresult/) \| `null`\>
+
+---
+
 ### resumeSubscription()
 
 > **resumeSubscription**(`externalSubscriptionId`, `options`): `Promise`\<`void`\>

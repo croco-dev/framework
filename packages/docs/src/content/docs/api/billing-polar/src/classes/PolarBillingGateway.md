@@ -13,20 +13,21 @@ and payment processing.
 ## Example
 
 ```typescript
-import { PolarBillingGateway, PolarConfig } from "@croco/billing-polar";
+import { PolarBillingGateway, PolarConfig } from '@croco/billing-polar';
 
 const config: PolarConfig = {
-  accessToken: "polar_access_token",
-  environment: "sandbox",
-  webhookSecret: "whsec_...",
+  accessToken: 'polar_access_token',
+  environment: 'sandbox',
+  webhookSecret: 'whsec_...',
 };
 
 const gateway = new PolarBillingGateway(config, logger);
 const checkout = await gateway.createCheckout({
-  billingAccountId: "tenant_123",
-  email: "buyer@example.com",
-  productId: "prod_123",
-  successUrl: "https://example.com/success",
+  billingAccountId: 'tenant_123',
+  email: 'buyer@example.com',
+  productId: 'prod_123',
+  successUrl: 'https://example.com/success',
+  idempotencyKey: 'checkout_order_123'
 });
 ```
 
@@ -82,7 +83,7 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`cancelSubscription`](/api/billing-core/src/interfaces/billinggateway/#cancelsubscription)
 
----
+***
 
 ### createCheckout()
 
@@ -102,7 +103,7 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`createCheckout`](/api/billing-core/src/interfaces/billinggateway/#createcheckout)
 
----
+***
 
 ### ensureCustomer()
 
@@ -126,7 +127,7 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`ensureCustomer`](/api/billing-core/src/interfaces/billinggateway/#ensurecustomer)
 
----
+***
 
 ### getCustomerPortalUrl()
 
@@ -146,7 +147,30 @@ const checkout = await gateway.createCheckout({
 
 [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`getCustomerPortalUrl`](/api/billing-core/src/interfaces/billinggateway/#getcustomerportalurl)
 
----
+***
+
+### reconcileCheckout()
+
+> **reconcileCheckout**(`params`): `Promise`\<[`CheckoutResult`](/api/billing-core/src/type-aliases/checkoutresult/) \| `null`\>
+
+Look up a previously accepted checkout without creating another provider session.
+Used to recover ambiguous provider responses and idempotency-store commit failures.
+
+#### Parameters
+
+##### params
+
+[`CreateCheckoutParams`](/api/billing-core/src/type-aliases/createcheckoutparams/)
+
+#### Returns
+
+`Promise`\<[`CheckoutResult`](/api/billing-core/src/type-aliases/checkoutresult/) \| `null`\>
+
+#### Implementation of
+
+[`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/).[`reconcileCheckout`](/api/billing-core/src/interfaces/billinggateway/#reconcilecheckout)
+
+***
 
 ### resumeSubscription()
 

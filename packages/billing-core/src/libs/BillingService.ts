@@ -1,18 +1,26 @@
+import { createHash } from "node:crypto";
+import {
+  deriveIdempotencyKey,
+  type DerivedIdempotencyKey,
+  type IdempotencyStore,
+} from "@croco/idempotency-core";
 import { Problem } from "@croco/problems-core";
 import { Trace } from "@croco/telemetry-api";
 import type {
+  BillingAccount,
   BillingLifecycleCommand,
   BillingLifecycleCommandKind,
   BillingLifecycleLocalResult,
   Subscription,
   SubscriptionStatus,
 } from "../types";
-import type { BillingGateway, CreateCheckoutParams } from "./BillingGateway";
+import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from "./BillingGateway";
 import type { BillingStore } from "./BillingStore";
 import { SubscriptionCanceledEvent } from "./events/SubscriptionCanceledEvent";
 import {
   BillingAccountNotFoundProblem,
   BillingCheckoutCreationProblem,
+  BillingCheckoutInProgressProblem,
   BillingLifecycleCommandConflictProblem,
   BillingLifecycleCommandNotFoundProblem,
   InvalidBillingLifecycleIdempotencyKeyProblem,
@@ -30,9 +38,24 @@ export interface BillingLifecycleEventPublisher {
   publishIdempotently(event: SubscriptionCanceledEvent): Promise<void>;
 }
 
+type BillingCheckoutResponse = {
+  checkoutUrl: string;
+};
+
+type InFlightCheckout = {
+  readonly fingerprint: string;
+  readonly promise: Promise<BillingCheckoutResponse>;
+};
+
 export type BillingServiceDependencies = {
   store: BillingStore;
   gateway: BillingGateway;
+  checkoutIdempotencyStore: IdempotencyStore<CheckoutResult>;
+  /**
+   * Maximum time one request owns an unfinished checkout reservation.
+   * Expiration lets a later request retry provider reconciliation or creation after an abandoned owner.
+   */
+  checkoutReservationTtlMs?: number;
   eventPublisher?: BillingLifecycleEventPublisher;
   clock?: () => Date;
 };
@@ -61,6 +84,7 @@ export type ReconcileBillingLifecycleCommandsResult = {
 };
 
 const DEFAULT_RECONCILIATION_LIMIT = 100;
+const DEFAULT_CHECKOUT_RESERVATION_TTL_MS = 5 * 60 * 1_000;
 const EVENT_DELIVERY_LEASE_MS = 30_000;
 const PROVIDER_FAILURE_DETAIL = "Provider lifecycle command failed";
 const LOCAL_FAILURE_DETAIL = "Local lifecycle reconciliation failed";
@@ -73,12 +97,18 @@ const EVENT_FAILURE_DETAIL = "Lifecycle event delivery failed";
 export class BillingService {
   private readonly store: BillingStore;
   private readonly gateway: BillingGateway;
+  private readonly checkoutIdempotencyStore: IdempotencyStore<CheckoutResult>;
+  private readonly checkoutReservationTtlMs: number;
   private readonly eventPublisher?: BillingLifecycleEventPublisher;
   private readonly clock: () => Date;
+  private readonly inFlightCheckouts = new Map<string, InFlightCheckout>();
 
   constructor(deps: BillingServiceDependencies) {
     this.store = deps.store;
     this.gateway = deps.gateway;
+    this.checkoutIdempotencyStore = deps.checkoutIdempotencyStore;
+    this.checkoutReservationTtlMs =
+      deps.checkoutReservationTtlMs ?? DEFAULT_CHECKOUT_RESERVATION_TTL_MS;
     this.eventPublisher = deps.eventPublisher;
     this.clock = deps.clock ?? (() => new Date());
   }
@@ -113,20 +143,149 @@ export class BillingService {
   @Trace({ name: "billing.checkout.create" })
   async createCheckout(params: CreateBillingCheckoutParams): Promise<{ checkoutUrl: string }> {
     const account = await this.store.findAccountByTenantId(params.tenantId);
+    const key = this.createCheckoutIdempotencyKey(params);
+    const inFlight = this.inFlightCheckouts.get(key.storageKey);
 
-    if (account) {
-      const result = await this.gateway.createCheckout(
-        this.toGatewayCheckoutParams(params, account.id),
-      );
-      return { checkoutUrl: result.checkoutUrl };
+    if (inFlight?.fingerprint === key.fingerprint) {
+      return inFlight.promise;
     }
 
-    return this.createCheckoutWithAccountTransaction(params);
+    const promise = this.createIdempotentCheckout(params, key, account);
+    this.inFlightCheckouts.set(key.storageKey, {
+      fingerprint: key.fingerprint,
+      promise,
+    });
+
+    try {
+      return await promise;
+    } finally {
+      if (this.inFlightCheckouts.get(key.storageKey)?.promise === promise) {
+        this.inFlightCheckouts.delete(key.storageKey);
+      }
+    }
+  }
+
+  private async createIdempotentCheckout(
+    params: CreateBillingCheckoutParams,
+    key: DerivedIdempotencyKey,
+    account: BillingAccount | null,
+  ): Promise<BillingCheckoutResponse> {
+    const reservation = await this.checkoutIdempotencyStore.reserve(key, {
+      ttlMs: this.checkoutReservationTtlMs,
+      metadata: {
+        productId: params.productId,
+      },
+    });
+
+    if (reservation.outcome === "replay") {
+      return { checkoutUrl: reservation.response.checkoutUrl };
+    }
+
+    if (reservation.outcome === "in-flight") {
+      return this.reconcileInFlightCheckout(params, key, account);
+    }
+
+    if (reservation.outcome === "failed") {
+      throw new BillingCheckoutCreationProblem(
+        params.tenantId,
+        `A previous checkout attempt for tenant ${params.tenantId} cannot be retried`,
+      );
+    }
+
+    let checkout: CheckoutResult;
+    try {
+      checkout = await this.createProviderCheckout(params, key.storageKey, account);
+    } catch (error) {
+      if (error instanceof BillingCheckoutInProgressProblem) {
+        throw error;
+      }
+
+      try {
+        await this.checkoutIdempotencyStore.fail({
+          key,
+          reservationId: reservation.reservation.reservationId,
+          retryable: true,
+          metadata: {
+            productId: params.productId,
+          },
+        });
+      } catch (storageError) {
+        throw new BillingCheckoutInProgressProblem(
+          params.tenantId,
+          storageError instanceof Error ? storageError : undefined,
+        );
+      }
+
+      throw this.createCheckoutError(params.tenantId, error);
+    }
+
+    return this.commitCheckout(
+      params.tenantId,
+      key,
+      reservation.reservation.reservationId,
+      checkout,
+    );
+  }
+
+  private async reconcileInFlightCheckout(
+    params: CreateBillingCheckoutParams,
+    key: DerivedIdempotencyKey,
+    account: BillingAccount | null,
+  ): Promise<BillingCheckoutResponse> {
+    const checkout = await this.gateway.reconcileCheckout(
+      this.toGatewayCheckoutParams(params, account?.id ?? params.tenantId, key.storageKey),
+    );
+
+    if (checkout === null) {
+      throw new BillingCheckoutInProgressProblem(params.tenantId);
+    }
+
+    return { checkoutUrl: checkout.checkoutUrl };
+  }
+
+  private async commitCheckout(
+    tenantId: string,
+    key: DerivedIdempotencyKey,
+    reservationId: string,
+    checkout: CheckoutResult,
+  ): Promise<BillingCheckoutResponse> {
+    try {
+      await this.checkoutIdempotencyStore.commit({
+        key,
+        reservationId,
+        response: checkout,
+        metadata: {
+          checkoutId: checkout.checkoutId,
+        },
+      });
+    } catch (storageError) {
+      throw new BillingCheckoutInProgressProblem(
+        tenantId,
+        storageError instanceof Error ? storageError : undefined,
+      );
+    }
+
+    return { checkoutUrl: checkout.checkoutUrl };
+  }
+
+  private async createProviderCheckout(
+    params: CreateBillingCheckoutParams,
+    providerOperationKey: string,
+    account: BillingAccount | null,
+  ): Promise<CheckoutResult> {
+    if (account) {
+      return this.gateway.createCheckout(
+        this.toGatewayCheckoutParams(params, account.id, providerOperationKey),
+      );
+    }
+
+    return this.createCheckoutWithAccountTransaction(params, providerOperationKey);
   }
 
   private async createCheckoutWithAccountTransaction(
     params: CreateBillingCheckoutParams,
-  ): Promise<{ checkoutUrl: string }> {
+    providerOperationKey: string,
+  ): Promise<CheckoutResult> {
     const billingAccountId = params.tenantId;
     const externalCustomerId = await this.gateway.ensureCustomer(billingAccountId, params.email);
     const accountDraft = {
@@ -137,20 +296,16 @@ export class BillingService {
       createdAt: new Date(),
     };
 
-    try {
-      await this.store.saveAccount(accountDraft);
-      const result = await this.gateway.createCheckout(
-        this.toGatewayCheckoutParams(params, billingAccountId),
-      );
-      return { checkoutUrl: result.checkoutUrl };
-    } catch (error) {
-      throw this.createCheckoutError(params.tenantId, error);
-    }
+    await this.store.saveAccount(accountDraft);
+    return this.gateway.createCheckout(
+      this.toGatewayCheckoutParams(params, billingAccountId, providerOperationKey),
+    );
   }
 
   private toGatewayCheckoutParams(
     params: CreateBillingCheckoutParams,
     billingAccountId: string,
+    providerOperationKey: string,
   ): CreateCheckoutParams {
     return {
       billingAccountId,
@@ -158,7 +313,27 @@ export class BillingService {
       productId: params.productId,
       successUrl: params.successUrl,
       cancelUrl: params.cancelUrl,
+      idempotencyKey: providerOperationKey,
     };
+  }
+
+  private createCheckoutIdempotencyKey(params: CreateBillingCheckoutParams): DerivedIdempotencyKey {
+    return deriveIdempotencyKey({
+      namespace: "billing-checkout",
+      tenantId: params.tenantId,
+      source: {
+        kind: "explicit",
+        key: params.idempotencyKey,
+        fingerprint: hashCheckoutValue(
+          stableStringify({
+            cancelUrl: params.cancelUrl ?? null,
+            email: params.email,
+            productId: params.productId,
+            successUrl: params.successUrl,
+          }),
+        ),
+      },
+    });
   }
 
   private createCheckoutError(
@@ -497,4 +672,24 @@ export class BillingService {
 
     return null;
   }
+}
+
+export function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
+  }
+
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
+    .join(",")}}`;
+}
+
+export function hashCheckoutValue(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }

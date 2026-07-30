@@ -1,3 +1,5 @@
+import type { CheckoutResult } from "@croco/billing-core";
+import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
 import { createTestKernel } from "@croco/testing";
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -14,6 +16,8 @@ import {
 import {
   assertSaasDemoSnapshot,
   createSaasRuntime,
+  createSaasDemoRuntime,
+  DemoBillingGateway,
   runSaasDemoFlow,
   seedDefaultSaasRuntime,
 } from "../saasDemo";
@@ -21,6 +25,38 @@ import {
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
     Container.reset();
+  });
+
+  it("keeps demo checkout sessions distinct and shareable across runtimes", async () => {
+    const billingGateway = new DemoBillingGateway();
+    const checkoutIdempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>();
+    const firstRuntime = createSaasRuntime({ billingGateway, checkoutIdempotencyStore });
+    const secondRuntime = createSaasRuntime({ billingGateway, checkoutIdempotencyStore });
+    const baseParams = {
+      billingAccountId: "tenant-1",
+      email: "owner@example.com",
+      productId: "team",
+      successUrl: "https://example.com/success",
+    };
+
+    const first = await billingGateway.createCheckout({
+      ...baseParams,
+      idempotencyKey: "checkout-operation-1",
+    });
+    const replay = await billingGateway.createCheckout({
+      ...baseParams,
+      idempotencyKey: "checkout-operation-1",
+    });
+    const distinct = await billingGateway.createCheckout({
+      ...baseParams,
+      idempotencyKey: "checkout-operation-2",
+    });
+
+    expect(firstRuntime.billingGateway).toBe(billingGateway);
+    expect(secondRuntime.billingGateway).toBe(billingGateway);
+    expect(replay).toEqual(first);
+    expect(distinct.checkoutId).not.toBe(first.checkoutId);
+    expect(distinct.checkoutUrl).not.toBe(first.checkoutUrl);
   });
 
   it("boots application-fidelity tests through the exported production bootstrap", async () => {
@@ -43,7 +79,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("creates tenant and owner membership", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.tenant.slug).toBe("acme");
     expect(snapshot.tenant.status).toBe("trial");
@@ -55,7 +91,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("creates invitation and member membership", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.invitation.status).toBe("accepted");
     expect(snapshot.invitation.invitedUserId).toBe("user_member");
@@ -64,7 +100,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("enforces membership seats from entitlement quota", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.membership.seatLimit).toMatchObject({
       quota: 2,
@@ -77,7 +113,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("allows configured permission for invited member", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.auth).toEqual({
       userId: "user_member",
@@ -90,7 +126,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("records usage for tenant", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.metering).toMatchObject({
       meterId: "api_requests",
@@ -100,7 +136,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("records AI usage and blocks over-quota LLM usage", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.ai).toMatchObject({
       provider: "in-memory",
@@ -115,7 +151,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("returns entitlement status after usage is recorded", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.entitlement).toMatchObject({
       featureKey: "api.requests",
@@ -137,7 +173,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("seeds dashboard-ready normal and over-quota usage states", async () => {
-    const runtime = createSaasRuntime();
+    const runtime = createSaasDemoRuntime();
     const snapshot = await runSaasDemoFlow(runtime);
 
     const meters = await runtime.meterRegistry.getByTenant(snapshot.tenant.id);
@@ -193,7 +229,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("exposes health and diagnostics endpoints", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.operations).toEqual({
       healthStatus: "up",
@@ -203,7 +239,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("keeps lifecycle evidence in the demo response contract", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
     const parsed = saasDemoSnapshotSchema.parse(snapshot);
 
     expect(parsed.lifecycle).toMatchObject({
@@ -327,7 +363,7 @@ describe("SaaS golden path demo", () => {
   });
 
   it("runs an inspectable billing sync background job", async () => {
-    const snapshot = await runSaasDemoFlow(createSaasRuntime());
+    const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
 
     expect(snapshot.jobs).toMatchObject({
       type: "billing-sync",

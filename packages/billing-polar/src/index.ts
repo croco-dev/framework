@@ -42,7 +42,8 @@
  *   billingAccountId: 'tenant_123',
  *   email: 'buyer@example.com',
  *   productId: 'prod_123',
- *   successUrl: 'https://example.com/success'
+ *   successUrl: 'https://example.com/success',
+ *   idempotencyKey: 'checkout_order_123'
  * });
  * ```
  */
@@ -106,6 +107,7 @@ export type { WebhookDependencies } from "./libs/PolarWebhookHandler";
 export { PolarWebhookHandler } from "./libs/PolarWebhookHandler";
 export { BillingStatusMappingProblem } from "./libs/problems/BillingStatusMappingProblem";
 export {
+  PolarCheckoutIdempotencyConflictProblem,
   PolarCustomerNotFoundProblem,
   PolarMissingConfigProblem,
   PolarRetryableUpstreamProblem,

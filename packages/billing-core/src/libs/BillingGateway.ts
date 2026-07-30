@@ -4,6 +4,11 @@ export type CreateCheckoutParams = {
   productId: string;
   successUrl: string;
   cancelUrl?: string;
+  /**
+   * Stable identity for one logical checkout operation.
+   * Gateway implementations must reconcile retries with the same key to the same provider session.
+   */
+  idempotencyKey: string;
 };
 
 export type CheckoutResult = {
@@ -25,6 +30,11 @@ export interface BillingGateway {
 
   // Checkout
   createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult>;
+  /**
+   * Look up a previously accepted checkout without creating another provider session.
+   * Used to recover ambiguous provider responses and idempotency-store commit failures.
+   */
+  reconcileCheckout(params: CreateCheckoutParams): Promise<CheckoutResult | null>;
 
   // Subscription
   cancelSubscription(
