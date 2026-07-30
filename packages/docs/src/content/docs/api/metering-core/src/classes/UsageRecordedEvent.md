@@ -14,13 +14,16 @@ title: "UsageRecordedEvent"
 ## Example
 
 ```typescript
-eventBus.publish(new UsageRecordedEvent({
-  tenantId: 'tenant-123',
-  meterId: 'api_calls',
-  value: 1,
-  recordedAt: new Date(),
-  metadata: { endpoint: '/api/users' },
-}));
+eventBus.publish(
+  new UsageRecordedEvent(
+    "tenant-123",
+    "api_calls",
+    1,
+    "request-123",
+    { endpoint: "/api/users" },
+    "operation-123",
+  ),
+);
 ```
 
 ## Extends
@@ -31,7 +34,7 @@ eventBus.publish(new UsageRecordedEvent({
 
 ### Constructor
 
-> **new UsageRecordedEvent**(`tenantId`, `meterId`, `value`, `idempotencyKey`, `metadata?`): `UsageRecordedEvent`
+> **new UsageRecordedEvent**(`tenantId`, `meterId`, `value`, `idempotencyKey`, `metadata?`, `operationId?`): `UsageRecordedEvent`
 
 #### Parameters
 
@@ -55,6 +58,10 @@ eventBus.publish(new UsageRecordedEvent({
 
 `Record`\<`string`, `unknown`\>
 
+##### operationId?
+
+`string`
+
 #### Returns
 
 `UsageRecordedEvent`
@@ -73,7 +80,7 @@ eventBus.publish(new UsageRecordedEvent({
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -83,13 +90,13 @@ eventBus.publish(new UsageRecordedEvent({
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### idempotencyKey
 
 > `readonly` **idempotencyKey**: `string`
 
-***
+---
 
 ### metadata
 
@@ -99,19 +106,19 @@ eventBus.publish(new UsageRecordedEvent({
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### meterId
 
 > `readonly` **meterId**: `string`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -121,13 +128,13 @@ eventBus.publish(new UsageRecordedEvent({
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### value
 
 > `readonly` **value**: `number`
 
-***
+---
 
 ### eventName
 

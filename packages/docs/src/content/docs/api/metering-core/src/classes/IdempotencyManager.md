@@ -10,6 +10,7 @@ Idempotency 관리자
 ## Description
 
 Redis SET NX 기반으로 중복 요청을 방지합니다.
+
 - 사용자 제공 idempotencyKey가 있으면 사용
 - 없으면 ULID 자동 생성
 
@@ -17,7 +18,7 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 ### Constructor
 
-> **new IdempotencyManager**(`redis`, `ttlSeconds?`): `IdempotencyManager`
+> **new IdempotencyManager**(`redis`, `ttlSeconds?`, `processingLeaseMilliseconds?`): `IdempotencyManager`
 
 #### Parameters
 
@@ -29,11 +30,43 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 `number` = `IdempotencyManager.DEFAULT_TTL_SECONDS`
 
+##### processingLeaseMilliseconds?
+
+`number` = `IdempotencyManager.DEFAULT_PROCESSING_LEASE_MILLISECONDS`
+
 #### Returns
 
 `IdempotencyManager`
 
 ## Methods
+
+### abortMeteringProcessing()
+
+> **abortMeteringProcessing**(`tenantId`, `meterId`, `idempotencyKey`, `token`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### token
+
+[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
 
 ### abortProcessing()
 
@@ -63,7 +96,7 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### beginProcessing()
 
@@ -91,7 +124,7 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 새 lease의 ownership claim, 중복 key이면 null
 
-***
+---
 
 ### beginProcessingOrThrow()
 
@@ -123,7 +156,7 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 DuplicateRecordProblem 동일한 idempotency key가 이미 처리 중이거나 완료된 경우
 
-***
+---
 
 ### checkAndMark()
 
@@ -151,7 +184,7 @@ DuplicateRecordProblem 동일한 idempotency key가 이미 처리 중이거나 �
 
 true: 새 요청 (처리 가능), false: 중복 (이미 처리됨)
 
-***
+---
 
 ### checkAndMarkOrThrow()
 
@@ -181,7 +214,59 @@ true: 새 요청 (처리 가능), false: 중복 (이미 처리됨)
 
 DuplicateRecordProblem 중복 시
 
-***
+---
+
+### claimMeteringProcessingOrThrow()
+
+> **claimMeteringProcessingOrThrow**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<[`MeteringProcessingClaim`](/api/metering-core/src/type-aliases/meteringprocessingclaim/)\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<[`MeteringProcessingClaim`](/api/metering-core/src/type-aliases/meteringprocessingclaim/)\>
+
+---
+
+### completeMeteringProcessing()
+
+> **completeMeteringProcessing**(`tenantId`, `meterId`, `idempotencyKey`, `token`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### token
+
+[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
 
 ### completeProcessing()
 
@@ -211,7 +296,7 @@ DuplicateRecordProblem 중복 시
 
 `Promise`\<`void`\>
 
-***
+---
 
 ### ensureIdempotencyKey()
 
@@ -228,3 +313,91 @@ Idempotency key 확보 (없으면 생성)
 #### Returns
 
 `string`
+
+---
+
+### markMeteringEventsPublishing()
+
+> **markMeteringEventsPublishing**(`tenantId`, `meterId`, `idempotencyKey`, `token`, `delivery`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### token
+
+[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
+
+##### delivery
+
+[`PendingMeteringDelivery`](/api/metering-core/src/type-aliases/pendingmeteringdelivery/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### releaseMeteringEvents()
+
+> **releaseMeteringEvents**(`tenantId`, `meterId`, `idempotencyKey`, `token`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### token
+
+[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### releaseMeteringProcessing()
+
+> **releaseMeteringProcessing**(`tenantId`, `meterId`, `idempotencyKey`, `token`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### token
+
+[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
+
+#### Returns
+
+`Promise`\<`void`\>

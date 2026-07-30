@@ -3,6 +3,7 @@ import { AtomicQuotaNotSupportedProblem } from "../../libs/problems/AtomicQuotaN
 import { DuplicateRecordProblem } from "../../libs/problems/DuplicateRecordProblem";
 import { InvalidMeterProblem } from "../../libs/problems/InvalidMeterProblem";
 import { InvalidUsageQueryProblem } from "../../libs/problems/InvalidUsageQueryProblem";
+import { MeteringTransitionProblem } from "../../libs/problems/MeteringTransitionProblem";
 import { QuotaExceededProblem } from "../../libs/problems/QuotaExceededProblem";
 import { RedisProblem } from "../../libs/problems/RedisProblem";
 
@@ -69,6 +70,20 @@ describe("Problems", () => {
 
       const json = problem.toJSON();
       expect(json.idempotencyKey).toBe("idem-key-123");
+    });
+  });
+
+  describe("MeteringTransitionProblem", () => {
+    it("should expose stable transition failure evidence", () => {
+      const problem = new MeteringTransitionProblem("release-events", "TOKEN", "idem-key-123");
+
+      expect(problem.code).toBe("metering/transition-conflict");
+      expect(problem.status).toBe(409);
+      expect(problem.toJSON()).toMatchObject({
+        idempotencyKey: "idem-key-123",
+        reason: "TOKEN",
+        transition: "release-events",
+      });
     });
   });
 

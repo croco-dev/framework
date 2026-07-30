@@ -23,8 +23,15 @@ export type AtomicQuotaCheckResult = {
  */
 export interface UsageStorage {
   /**
+   * MeteringService가 lease 만료 후 persistence를 안전하게 재개할 수 있음을 선언합니다.
+   */
+  readonly replayContract: "idempotent";
+
+  /**
    * Usage 기록 (즉시 flush)
    * Redis Sorted Set에 저장
+   *
+   * 동일한 tenantId, meterId, idempotencyKey 조합의 재시도는 사용량을 중복 기록하지 않아야 합니다.
    */
   record(usage: UsageRecord): Promise<void>;
 
@@ -56,7 +63,11 @@ export interface UsageStorage {
    */
   deleteUsageRecords?(options: UsageQueryOptions, records: UsageRecord[]): Promise<void>;
 
-  checkAndRecordWithinQuota?(options: AtomicQuotaCheckOptions): Promise<AtomicQuotaCheckResult>;
+  /**
+   * 동일한 tenantId, meterId, usageRecord.idempotencyKey 조합의 재시도는 사용량을 중복 기록하지 않고
+   * 최초 호출과 동일한 quota 결과를 반환해야 합니다.
+   */
+  checkAndRecordWithinQuota(options: AtomicQuotaCheckOptions): Promise<AtomicQuotaCheckResult>;
 
   /**
    * 빌링 주기 리셋

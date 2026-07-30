@@ -31,10 +31,12 @@ describe("UsageAggregator", () => {
 
   beforeEach(() => {
     mockStorage = {
+      replayContract: "idempotent",
       record: vi.fn().mockResolvedValue(undefined),
       getUsage: vi.fn().mockResolvedValue(0),
       isIdempotent: vi.fn().mockResolvedValue(true),
       fetchUsageRecords: vi.fn().mockResolvedValue([]),
+      checkAndRecordWithinQuota: vi.fn().mockResolvedValue({ exceeded: false, newUsage: 0 }),
     };
 
     mockRepository = {

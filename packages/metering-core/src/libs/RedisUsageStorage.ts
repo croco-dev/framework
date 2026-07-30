@@ -9,6 +9,9 @@ type ScanDeleteResult = [string | number, number];
 type UsageMemberEnvelope = Partial<
   Pick<UsageRecord, "idempotencyKey" | "eventId" | "dimensions" | "metadata">
 >;
+type RecordedQuotaResult = AtomicQuotaCheckResult & {
+  expiresAt: number;
+};
 
 function stableStringify(value: unknown): string {
   return JSON.stringify(value, (_key, nestedValue: unknown) => {
@@ -37,6 +40,8 @@ function stableStringify(value: unknown): string {
  * - Usage 기록과 idempotency marker를 단일 Redis Lua script로 처리
  */
 export class RedisUsageStorage implements UsageStorage {
+  readonly replayContract = "idempotent" as const;
+
   private static readonly USAGE_KEY_NAMESPACE = "usage2";
   private static readonly IDEM_KEY_NAMESPACE = "idem2";
   private static readonly RECORD_IDEMPOTENCY_TTL_SECONDS = 86400;
@@ -77,7 +82,7 @@ end
 return { nextCursor, #keys }
 `;
   // Redis remains the idempotency source of truth; this cache only short-circuits duplicate quota writes.
-  private readonly recordedRecordKeys = new Map<string, number>();
+  private readonly recordedRecordKeys = new Map<string, RecordedQuotaResult>();
   private nextRecordIdempotencyCachePruneAt = 0;
 
   private static readonly CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT = `
@@ -89,6 +94,16 @@ local score = tonumber(ARGV[3])
 local member = ARGV[4]
 local allowOverQuota = ARGV[5] == '1'
 local ttlSeconds = ${RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS}
+local recordedResult = redis.call('GET', dedupeKey)
+
+if recordedResult then
+  local recordedExceeded, recordedUsage = string.match(recordedResult, '^quota:([01]):(.+)$')
+  local recordedUsageNumber = recordedUsage and tonumber(recordedUsage) or nil
+  if recordedExceeded and recordedUsageNumber then
+    return { tonumber(recordedExceeded), recordedUsageNumber }
+  end
+end
+
 local records = redis.call('ZRANGEBYSCORE', usageKey, '-inf', '+inf')
 local currentUsage = 0
 
@@ -99,8 +114,9 @@ for _, existingMember in ipairs(records) do
   end
 end
 
-if redis.call('EXISTS', dedupeKey) == 1 then
-  return { 0, currentUsage }
+if recordedResult then
+  local legacyExceeded = currentUsage > quota
+  return { legacyExceeded and 1 or 0, currentUsage }
 end
 
 local newUsage = currentUsage + value
@@ -108,8 +124,15 @@ local exceeded = newUsage > quota
 
 if (not exceeded) or allowOverQuota then
   redis.call('ZADD', usageKey, score, member)
-  redis.call('SET', dedupeKey, '1', 'EX', ttlSeconds)
 end
+
+redis.call(
+  'SET',
+  dedupeKey,
+  'quota:' .. (exceeded and '1' or '0') .. ':' .. tostring(newUsage),
+  'EX',
+  ttlSeconds
+)
 
 return { exceeded and 1 or 0, newUsage }
 `;
@@ -198,16 +221,9 @@ return { exceeded and 1 or 0, newUsage }
     );
     const score = options.usageRecord.timestamp.getTime();
     const member = this.serializeUsageMember(options.usageRecord);
-    if (this.hasRecordedRecordKey(dedupeKey)) {
-      const records = await this.runRedisOperation("ZRANGEBYSCORE", () =>
-        this.redis.zrangebyscore(key, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY),
-      );
-      const currentUsage = this.sumUsageMembers(records);
-
-      return {
-        exceeded: false,
-        newUsage: currentUsage,
-      };
+    const recordedResult = this.getRecordedQuotaResult(dedupeKey);
+    if (recordedResult) {
+      return recordedResult;
     }
 
     const [exceeded, newUsage] = await this.runRedisOperation("EVAL", () =>
@@ -218,9 +234,10 @@ return { exceeded and 1 or 0, newUsage }
       ),
     );
 
-    if (exceeded !== 1 || options.allowOverQuota) {
-      this.rememberRecordIdempotencyKey(dedupeKey);
-    }
+    this.rememberRecordIdempotencyKey(dedupeKey, {
+      exceeded: exceeded === 1,
+      newUsage,
+    });
 
     return {
       exceeded: exceeded === 1,
@@ -374,26 +391,29 @@ return { exceeded and 1 or 0, newUsage }
     ]);
   }
 
-  private hasRecordedRecordKey(dedupeKey: string): boolean {
+  private getRecordedQuotaResult(dedupeKey: string): AtomicQuotaCheckResult | undefined {
     const now = Date.now();
 
     this.pruneRecordedRecordKeysIfNeeded(now);
 
-    const expiresAt = this.recordedRecordKeys.get(dedupeKey);
+    const recordedResult = this.recordedRecordKeys.get(dedupeKey);
 
-    if (expiresAt === undefined) {
-      return false;
+    if (recordedResult === undefined) {
+      return undefined;
     }
 
-    if (expiresAt > now) {
-      return true;
+    if (recordedResult.expiresAt > now) {
+      return {
+        exceeded: recordedResult.exceeded,
+        newUsage: recordedResult.newUsage,
+      };
     }
 
     this.recordedRecordKeys.delete(dedupeKey);
-    return false;
+    return undefined;
   }
 
-  private rememberRecordIdempotencyKey(dedupeKey: string): void {
+  private rememberRecordIdempotencyKey(dedupeKey: string, result: AtomicQuotaCheckResult): void {
     const now = Date.now();
 
     this.pruneRecordedRecordKeysIfNeeded(now);
@@ -407,10 +427,10 @@ return { exceeded and 1 or 0, newUsage }
       );
     }
 
-    this.recordedRecordKeys.set(
-      dedupeKey,
-      now + RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_MILLISECONDS,
-    );
+    this.recordedRecordKeys.set(dedupeKey, {
+      ...result,
+      expiresAt: now + RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_MILLISECONDS,
+    });
   }
 
   private pruneRecordedRecordKeysIfNeeded(now: number): void {
@@ -427,8 +447,8 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   private pruneExpiredRecordedRecordKeys(now: number): void {
-    for (const [dedupeKey, expiresAt] of this.recordedRecordKeys) {
-      if (expiresAt <= now) {
+    for (const [dedupeKey, result] of this.recordedRecordKeys) {
+      if (result.expiresAt <= now) {
         this.recordedRecordKeys.delete(dedupeKey);
       }
     }

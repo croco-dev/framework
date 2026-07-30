@@ -19,6 +19,7 @@ function createRedisClient(
   let shouldThrowAfterEval = throwAfterNextEval;
 
   return {
+    scriptKeyAccess: "multi-key",
     eval: async <TResult extends unknown[]>(
       script: string,
       keys: string[],
@@ -150,6 +151,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     const keys = (await connection.client.keys("*")).filter((key) => key.includes("idem2:")).sort();
     expect(keys).toEqual(
       [
+        `${connection.keyPrefix}idem2:delivery:tenant-1:${meterId}:${idempotencyKey}`,
         `${connection.keyPrefix}idem2:lifecycle:tenant-1:${meterId}:${idempotencyKey}`,
         `${connection.keyPrefix}idem2:record:tenant-1:${meterId}:${idempotencyKey}`,
       ].sort(),
@@ -167,7 +169,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
 
     await expect(service.record(input)).resolves.toMatchObject(input);
     await expectSeparateIdempotencyKeys(input.meterId, input.idempotencyKey);
-    await expect(service.record(input)).rejects.toBeInstanceOf(DuplicateRecordProblem);
+    await expect(service.record(input)).rejects.toThrow(DuplicateRecordProblem);
     await expect(
       service.getUsage({
         tenantId: input.tenantId,
@@ -188,7 +190,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
 
     await expect(service.record(input)).resolves.toMatchObject(input);
     await expectSeparateIdempotencyKeys(input.meterId, input.idempotencyKey);
-    await expect(service.record(input)).rejects.toBeInstanceOf(DuplicateRecordProblem);
+    await expect(service.record(input)).rejects.toThrow(DuplicateRecordProblem);
     await expect(
       service.getUsage({
         tenantId: input.tenantId,
@@ -217,7 +219,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
       "-zadd",
     );
     const restrictedClient = connection.client.duplicate({
-      keyPrefix: "",
+      keyPrefix: connection.keyPrefix,
       username: zaddDeniedUser,
       password: zaddDeniedPassword,
     });
@@ -227,7 +229,9 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
       const restrictedStorage = new RedisUsageStorage(
         createRedisClient({ ...connection, client: restrictedClient }),
       );
-      await expect(restrictedStorage.record(record)).rejects.toMatchObject({
+      const failedRecord = restrictedStorage.record(record);
+      await expect(failedRecord).rejects.toThrow();
+      await expect(failedRecord).rejects.toMatchObject({
         code: "metering/redis-error",
         extensions: { operation: "EVAL" },
       });
@@ -256,7 +260,9 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     const dedupeKey = "idem2:record:tenant-atomic-record:api_calls:ambiguous-response";
     const storage = new RedisUsageStorage(createRedisClient(connection, true));
 
-    await expect(storage.record(record)).rejects.toMatchObject({
+    const ambiguousRecord = storage.record(record);
+    await expect(ambiguousRecord).rejects.toThrow();
+    await expect(ambiguousRecord).rejects.toMatchObject({
       code: "metering/redis-error",
       extensions: { operation: "EVAL" },
     });

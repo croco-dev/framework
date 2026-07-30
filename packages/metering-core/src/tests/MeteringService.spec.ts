@@ -2,8 +2,11 @@ import type { EventBus } from "@croco/events-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QuotaExceededEvent } from "../libs/events/QuotaExceededEvent";
 import { UsageRecordedEvent } from "../libs/events/UsageRecordedEvent";
-import type { IdempotencyManager } from "../libs/IdempotencyManager";
-import type { IdempotencyClaim } from "../libs/IdempotencyManager";
+import type {
+  IdempotencyClaim,
+  IdempotencyManager,
+  PendingMeteringDelivery,
+} from "../libs/IdempotencyManager";
 import { MeteringService } from "../libs/MeteringService";
 import type { MeterRecordInput } from "../libs/MeterRef";
 import { defineMeter, dimension } from "../libs/MeterRef";
@@ -21,7 +24,6 @@ describe("MeteringService", () => {
   let mockStorage!: UsageStorage;
   let mockIdempotency!: IdempotencyManager;
   let mockEventBus!: EventBus;
-  const idempotencyClaim = "claim-1" as IdempotencyClaim;
 
   const createMeter = (overrides: Partial<MeterDefinition> = {}): MeterDefinition => ({
     id: "meter-123",
@@ -46,6 +48,7 @@ describe("MeteringService", () => {
     } as unknown as MeterRegistry;
 
     mockStorage = {
+      replayContract: "idempotent",
       record: vi.fn().mockResolvedValue(undefined),
       getUsage: vi.fn().mockResolvedValue(0),
       isIdempotent: vi.fn().mockResolvedValue(true),
@@ -57,10 +60,18 @@ describe("MeteringService", () => {
       ensureIdempotencyKey: vi.fn().mockReturnValue("generated-key"),
       checkAndMark: vi.fn().mockResolvedValue(true),
       checkAndMarkOrThrow: vi.fn().mockResolvedValue(undefined),
-      beginProcessing: vi.fn().mockResolvedValue(idempotencyClaim),
-      beginProcessingOrThrow: vi.fn().mockResolvedValue(idempotencyClaim),
+      beginProcessing: vi.fn().mockResolvedValue(true),
+      beginProcessingOrThrow: vi.fn().mockResolvedValue(undefined),
       completeProcessing: vi.fn().mockResolvedValue(undefined),
       abortProcessing: vi.fn().mockResolvedValue(undefined),
+      claimMeteringProcessingOrThrow: vi
+        .fn()
+        .mockResolvedValue({ operationId: "operation-id", token: "claim-token" }),
+      markMeteringEventsPublishing: vi.fn().mockResolvedValue(undefined),
+      releaseMeteringProcessing: vi.fn().mockResolvedValue(undefined),
+      releaseMeteringEvents: vi.fn().mockResolvedValue(undefined),
+      completeMeteringProcessing: vi.fn().mockResolvedValue(undefined),
+      abortMeteringProcessing: vi.fn().mockResolvedValue(undefined),
     } as unknown as IdempotencyManager;
 
     mockEventBus = {
@@ -91,16 +102,16 @@ describe("MeteringService", () => {
       expect(result.meterId).toBe("api_calls");
       expect(result.value).toBe(5);
       expect(result.idempotencyKey).toBe("generated-key");
-      expect(mockIdempotency.beginProcessingOrThrow).toHaveBeenCalledWith(
+      expect(mockIdempotency.claimMeteringProcessingOrThrow).toHaveBeenCalledWith(
         "tenant-1",
         "api_calls",
         "generated-key",
       );
-      expect(mockIdempotency.completeProcessing).toHaveBeenCalledWith(
+      expect(mockIdempotency.completeMeteringProcessing).toHaveBeenCalledWith(
         "tenant-1",
         "api_calls",
         "generated-key",
-        idempotencyClaim,
+        "claim-token",
       );
       expect(mockStorage.checkAndRecordWithinQuota).toHaveBeenCalledTimes(1);
     });
@@ -340,7 +351,7 @@ describe("MeteringService", () => {
     it("should throw DuplicateRecordProblem for duplicate key", async () => {
       const meter = createMeter();
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(mockIdempotency.beginProcessingOrThrow).mockRejectedValue(
+      vi.mocked(mockIdempotency.claimMeteringProcessingOrThrow).mockRejectedValue(
         new DuplicateRecordProblem("dup-key"),
       );
 
@@ -371,13 +382,14 @@ describe("MeteringService", () => {
         }),
       ).rejects.toThrow(QuotaExceededProblem);
 
-      expect(mockIdempotency.completeProcessing).toHaveBeenCalledWith(
+      expect(mockIdempotency.completeMeteringProcessing).toHaveBeenCalledWith(
         "tenant-1",
         "api_calls",
         "generated-key",
-        idempotencyClaim,
+        "claim-token",
       );
-      expect(mockIdempotency.abortProcessing).not.toHaveBeenCalled();
+      expect(mockIdempotency.abortMeteringProcessing).not.toHaveBeenCalled();
+      expect(mockIdempotency.releaseMeteringEvents).not.toHaveBeenCalled();
     });
 
     it("BUG-11 동시 할당량 소진에서 atomic storage 결과를 그대로 반영한다", async () => {
@@ -470,11 +482,11 @@ describe("MeteringService", () => {
       });
 
       expect(result.value).toBe(1000000);
-      expect(mockIdempotency.completeProcessing).toHaveBeenCalledWith(
+      expect(mockIdempotency.completeMeteringProcessing).toHaveBeenCalledWith(
         "tenant-1",
         "api_calls",
         "generated-key",
-        idempotencyClaim,
+        "claim-token",
       );
     });
 
@@ -489,13 +501,13 @@ describe("MeteringService", () => {
         storageError,
       );
 
-      expect(mockIdempotency.abortProcessing).toHaveBeenCalledWith(
+      expect(mockIdempotency.abortMeteringProcessing).toHaveBeenCalledWith(
         "tenant-1",
         "api_calls",
         "generated-key",
-        idempotencyClaim,
+        "claim-token",
       );
-      expect(mockIdempotency.completeProcessing).not.toHaveBeenCalled();
+      expect(mockIdempotency.completeMeteringProcessing).not.toHaveBeenCalled();
     });
 
     it("should publish UsageRecordedEvent", async () => {
@@ -566,7 +578,103 @@ describe("MeteringService", () => {
       expect(result.metadata).toEqual({ userId: "user-1", action: "create" });
     });
 
-    it("BUG-12 publish 실패 후 retry 시 재진입 가능해야 한다 - quota branch", async () => {
+    it("should release non-quota processing state when delivery staging fails after persistence", async () => {
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(createMeter({ quota: undefined }));
+      vi.mocked(mockIdempotency.markMeteringEventsPublishing)
+        .mockRejectedValueOnce(new Error("staging unavailable"))
+        .mockResolvedValueOnce(undefined);
+      const persistedOperations = new Set<string>();
+      let recordCallCount = 0;
+      vi.mocked(mockStorage.record).mockImplementation(async (usage) => {
+        recordCallCount += 1;
+        persistedOperations.add(usage.idempotencyKey);
+      });
+
+      await expect(
+        service.record({
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 5,
+          idempotencyKey: "staging-failure",
+        }),
+      ).rejects.toThrow("staging unavailable");
+
+      expect(mockStorage.record).toHaveBeenCalledTimes(1);
+      expect(mockIdempotency.abortMeteringProcessing).not.toHaveBeenCalled();
+      expect(mockIdempotency.releaseMeteringEvents).not.toHaveBeenCalled();
+      expect(mockIdempotency.releaseMeteringProcessing).toHaveBeenCalledTimes(1);
+
+      const recovered = await service.record({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        value: 5,
+        idempotencyKey: "staging-failure",
+      });
+
+      expect(recovered.value).toBe(5);
+      expect(persistedOperations.size).toBe(1);
+      expect(recordCallCount).toBe(2);
+      expect(mockStorage.record).toHaveBeenCalledTimes(2);
+      expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it("should release quota processing state when delivery staging fails after persistence", async () => {
+      const checkAndRecordWithinQuota = mockStorage.checkAndRecordWithinQuota;
+      if (!checkAndRecordWithinQuota) {
+        throw new Error("Expected atomic quota check support");
+      }
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(
+        createMeter({ quota: 100, allowOverQuota: false }),
+      );
+      const persistedOperations = new Map<string, { exceeded: boolean; newUsage: number }>();
+      let quotaCallCount = 0;
+      vi.mocked(checkAndRecordWithinQuota).mockImplementation(async ({ usageRecord }) => {
+        quotaCallCount += 1;
+        const persisted = persistedOperations.get(usageRecord.idempotencyKey);
+        if (persisted) {
+          return persisted;
+        }
+        const result = {
+          exceeded: true,
+          newUsage: 105,
+        };
+        persistedOperations.set(usageRecord.idempotencyKey, result);
+        return result;
+      });
+      vi.mocked(mockIdempotency.markMeteringEventsPublishing)
+        .mockRejectedValueOnce(new Error("staging unavailable"))
+        .mockResolvedValueOnce(undefined);
+
+      await expect(
+        service.record({
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 5,
+          idempotencyKey: "quota-staging-failure",
+        }),
+      ).rejects.toThrow("staging unavailable");
+
+      expect(checkAndRecordWithinQuota).toHaveBeenCalledTimes(1);
+      expect(mockIdempotency.abortMeteringProcessing).not.toHaveBeenCalled();
+      expect(mockIdempotency.releaseMeteringEvents).not.toHaveBeenCalled();
+      expect(mockIdempotency.releaseMeteringProcessing).toHaveBeenCalledTimes(1);
+
+      await expect(
+        service.record({
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 5,
+          idempotencyKey: "quota-staging-failure",
+        }),
+      ).rejects.toMatchObject({ code: "metering/quota-exceeded" });
+
+      expect(persistedOperations.size).toBe(1);
+      expect(quotaCallCount).toBe(2);
+      expect(checkAndRecordWithinQuota).toHaveBeenCalledTimes(2);
+      expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
+    });
+
+    it("should recover quota event publication without duplicating usage", async () => {
       const meter = createMeter({ quota: 100, allowOverQuota: true });
       const checkAndRecordWithinQuota = mockStorage.checkAndRecordWithinQuota;
 
@@ -575,18 +683,41 @@ describe("MeteringService", () => {
       }
 
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
-      vi.mocked(checkAndRecordWithinQuota).mockResolvedValue({
-        exceeded: true,
-        newUsage: 50,
+      const recordedKeys = new Set<string>();
+      let quotaCallCount = 0;
+      vi.mocked(checkAndRecordWithinQuota).mockImplementation(async ({ usageRecord }) => {
+        quotaCallCount += 1;
+        recordedKeys.add(usageRecord.idempotencyKey);
+        return {
+          exceeded: true,
+          newUsage: 105,
+        };
       });
       vi.mocked(mockIdempotency.ensureIdempotencyKey).mockImplementation(
         (key?: string) => key ?? "generated-key",
       );
+      let pendingDelivery: PendingMeteringDelivery | undefined;
+      let claimCount = 0;
+      vi.mocked(mockIdempotency.claimMeteringProcessingOrThrow).mockImplementation(async () => {
+        claimCount += 1;
+        return {
+          operationId: "quota-operation",
+          token: `claim-${claimCount}` as IdempotencyClaim,
+          delivery: pendingDelivery,
+        };
+      });
+      vi.mocked(mockIdempotency.markMeteringEventsPublishing).mockImplementation(
+        async (_tenantId, _meterId, _idempotencyKey, _token, delivery) => {
+          pendingDelivery = delivery;
+        },
+      );
+      vi.mocked(mockIdempotency.completeMeteringProcessing).mockImplementation(async () => {
+        pendingDelivery = undefined;
+      });
 
-      let firstCall = true;
-      vi.mocked(mockEventBus.publish).mockImplementation(async () => {
-        if (firstCall) {
-          firstCall = false;
+      const publish = vi.mocked(mockEventBus.publish);
+      publish.mockImplementation(async () => {
+        if (publish.mock.calls.length === 1) {
           throw new Error("publish failure");
         }
       });
@@ -600,30 +731,69 @@ describe("MeteringService", () => {
         }),
       ).rejects.toThrow("publish failure");
 
-      vi.mocked(mockIdempotency.beginProcessing).mockResolvedValueOnce(null);
-
       const result = await service.record({
         tenantId: "tenant-1",
         meterId: "api_calls",
-        value: 5,
+        value: 999,
         idempotencyKey: "idem-publish-fail-quota",
       });
 
       expect(result).toBeDefined();
       expect(result.idempotencyKey).toBe("idem-publish-fail-quota");
+      expect(result.value).toBe(5);
+      expect(quotaCallCount).toBe(1);
+      expect(recordedKeys).toEqual(new Set(["idem-publish-fail-quota"]));
+      expect(mockRegistry.getOrThrow).toHaveBeenCalledTimes(1);
+      expect(mockIdempotency.abortMeteringProcessing).not.toHaveBeenCalled();
+      expect(mockIdempotency.releaseMeteringEvents).toHaveBeenCalledTimes(1);
+      expect(mockIdempotency.markMeteringEventsPublishing).toHaveBeenCalledTimes(1);
+      expect(mockIdempotency.completeMeteringProcessing).toHaveBeenCalledTimes(1);
+
+      const firstQuotaEvent = publish.mock.calls[0]?.[0];
+      const retriedQuotaEvent = publish.mock.calls[1]?.[0];
+      expect(firstQuotaEvent).toBeInstanceOf(QuotaExceededEvent);
+      expect(retriedQuotaEvent).toBeInstanceOf(QuotaExceededEvent);
+      expect(retriedQuotaEvent?.eventId).toBe(firstQuotaEvent?.eventId);
+      expect(publish.mock.calls[2]?.[0]).toBeInstanceOf(UsageRecordedEvent);
+      expect(publish.mock.calls[2]?.[0]).toMatchObject({ value: 5 });
     });
 
-    it("BUG-12 publish 실패 후 retry 시 재진입 가능해야 한다 - non-quota branch", async () => {
+    it("should recover usage event publication without duplicating non-quota usage", async () => {
       const meter = createMeter({ quota: undefined });
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
       vi.mocked(mockIdempotency.ensureIdempotencyKey).mockImplementation(
         (key?: string) => key ?? "generated-key",
       );
+      let pendingDelivery: PendingMeteringDelivery | undefined;
+      let claimCount = 0;
+      vi.mocked(mockIdempotency.claimMeteringProcessingOrThrow).mockImplementation(async () => {
+        claimCount += 1;
+        return {
+          operationId: "usage-operation",
+          token: `claim-${claimCount}` as IdempotencyClaim,
+          delivery: pendingDelivery,
+        };
+      });
+      vi.mocked(mockIdempotency.markMeteringEventsPublishing).mockImplementation(
+        async (_tenantId, _meterId, _idempotencyKey, _token, delivery) => {
+          pendingDelivery = delivery;
+        },
+      );
+      vi.mocked(mockIdempotency.completeMeteringProcessing).mockImplementation(async () => {
+        pendingDelivery = undefined;
+      });
+      const recordedKeys = new Set<string>();
+      let persistedUsageCount = 0;
+      vi.mocked(mockStorage.record).mockImplementation(async (usage) => {
+        if (!recordedKeys.has(usage.idempotencyKey)) {
+          recordedKeys.add(usage.idempotencyKey);
+          persistedUsageCount += 1;
+        }
+      });
 
-      let firstCall = true;
-      vi.mocked(mockEventBus.publish).mockImplementation(async () => {
-        if (firstCall) {
-          firstCall = false;
+      const publish = vi.mocked(mockEventBus.publish);
+      publish.mockImplementation(async () => {
+        if (publish.mock.calls.length === 1) {
           throw new Error("publish failure");
         }
       });
@@ -637,17 +807,29 @@ describe("MeteringService", () => {
         }),
       ).rejects.toThrow("publish failure");
 
-      vi.mocked(mockIdempotency.beginProcessing).mockResolvedValueOnce(null);
-
       const result = await service.record({
         tenantId: "tenant-1",
         meterId: "api_calls",
-        value: 1,
+        value: 999,
         idempotencyKey: "idem-publish-fail-non-quota",
       });
 
       expect(result).toBeDefined();
       expect(result.idempotencyKey).toBe("idem-publish-fail-non-quota");
+      expect(result.value).toBe(1);
+      expect(persistedUsageCount).toBe(1);
+      expect(mockRegistry.getOrThrow).toHaveBeenCalledTimes(1);
+      expect(mockIdempotency.abortMeteringProcessing).not.toHaveBeenCalled();
+      expect(mockIdempotency.releaseMeteringEvents).toHaveBeenCalledTimes(1);
+      expect(mockIdempotency.markMeteringEventsPublishing).toHaveBeenCalledTimes(1);
+      expect(mockIdempotency.completeMeteringProcessing).toHaveBeenCalledTimes(1);
+
+      const firstUsageEvent = publish.mock.calls[0]?.[0];
+      const retriedUsageEvent = publish.mock.calls[1]?.[0];
+      expect(firstUsageEvent).toBeInstanceOf(UsageRecordedEvent);
+      expect(retriedUsageEvent).toBeInstanceOf(UsageRecordedEvent);
+      expect(retriedUsageEvent?.eventId).toBe(firstUsageEvent?.eventId);
+      expect(retriedUsageEvent).toMatchObject({ value: 1 });
     });
   });
 

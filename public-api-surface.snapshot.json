@@ -15156,6 +15156,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "MeteringTransitionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MeteringTransitionProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "MeterRegistry",
               "exportKind": "named",
               "source": "./libs/MeterRegistry",
@@ -15304,6 +15310,11 @@
               "source": "./libs/decorators/Metered"
             },
             {
+              "name": "MeteringProcessingClaim",
+              "exportKind": "named",
+              "source": "./libs/IdempotencyManager"
+            },
+            {
               "name": "MeteringServiceOptions",
               "exportKind": "named",
               "source": "./libs/MeteringService"
@@ -15342,6 +15353,11 @@
               "name": "NonEmptyMeterDimensionValues",
               "exportKind": "named",
               "source": "./libs/MeterRef"
+            },
+            {
+              "name": "PendingMeteringDelivery",
+              "exportKind": "named",
+              "source": "./libs/IdempotencyManager"
             },
             {
               "name": "QuotaCheckAndRecordOptions",

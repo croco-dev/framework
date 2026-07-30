@@ -50,6 +50,7 @@ try {
     "--ignore-scripts",
   ]);
   await runPhase("build", "pnpm", ["--filter", `${packageName}...`, "build"]);
+  await runMeteringReplaySmoke();
   await runRuntimeSmoke();
 
   console.log("quick-start-lambda-smoke: all checks passed");
@@ -195,9 +196,78 @@ async function runRuntimeSmoke(): Promise<void> {
       headers: { "content-type": "application/json", "x-api-key": "test-key" },
       method: "POST",
     });
+    await assertServerOutput("create user metering", serverOutput, "usage recorded");
   } finally {
     await stopServer(server);
   }
+}
+
+async function assertServerOutput(
+  label: string,
+  output: readonly string[],
+  expectedText: string,
+): Promise<void> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < 5_000) {
+    if (output.join("").includes(expectedText)) {
+      console.log(`quick-start-lambda-smoke: ${label} passed`);
+      return;
+    }
+    await delay(100);
+  }
+
+  throw new Error(
+    `quick-start-lambda-smoke: ${label} failed: server output did not include ${JSON.stringify(expectedText)}`,
+  );
+}
+
+async function runMeteringReplaySmoke(): Promise<void> {
+  const exampleDir = join(smokeRoot, "examples", "quick-start-lambda");
+  const probe = `
+    import { IdempotencyManager } from "@croco/metering-core";
+    import { InMemoryRedisClient } from "./src/integrations/inMemoryMetering.ts";
+
+    void (async () => {
+      const manager = new IdempotencyManager(new InMemoryRedisClient());
+      const firstClaim = await manager.claimMeteringProcessingOrThrow("tenant", "meter", "request");
+      const delivery = {
+        usageRecord: {
+          id: firstClaim.operationId,
+          tenantId: "tenant",
+          meterId: "meter",
+          value: 1,
+          timestamp: new Date().toISOString(),
+          idempotencyKey: "request",
+        },
+      };
+      await manager.markMeteringEventsPublishing(
+        "tenant",
+        "meter",
+        "request",
+        firstClaim.token,
+        delivery,
+      );
+      await manager.releaseMeteringEvents("tenant", "meter", "request", firstClaim.token);
+      const replayClaim = await manager.claimMeteringProcessingOrThrow("tenant", "meter", "request");
+      if (
+        replayClaim.operationId !== firstClaim.operationId ||
+        JSON.stringify(replayClaim.delivery) !== JSON.stringify(delivery)
+      ) {
+        throw new Error("pending delivery did not replay with its original operation identity");
+      }
+      await manager.completeMeteringProcessing(
+        "tenant",
+        "meter",
+        "request",
+        replayClaim.token,
+      );
+    })().catch((error: unknown) => {
+      console.error("quick-start-lambda-smoke: metering replay probe failed", error);
+      process.exitCode = 1;
+    });
+  `;
+
+  await runPhase("metering replay", "pnpm", ["--dir", exampleDir, "exec", "tsx", "-e", probe]);
 }
 
 function writeLiveServerOutput(output: string, stream: NodeJS.WriteStream): void {

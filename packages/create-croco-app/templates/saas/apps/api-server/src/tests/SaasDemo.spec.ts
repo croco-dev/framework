@@ -1,5 +1,10 @@
 import type { CheckoutResult } from "@croco/billing-core";
 import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
+import {
+  DuplicateRecordProblem,
+  IdempotencyManager,
+  type PendingMeteringDelivery,
+} from "@croco/metering-core";
 import { createTestKernel } from "@croco/testing";
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -7,6 +12,7 @@ import { createCrocoApp } from "../app";
 import { JobsController } from "../controllers/JobsController";
 import { assertDemoEndpointsEnabled, SaasController } from "../controllers/SaasController";
 import { saasDemoSnapshotSchema } from "../controllers/schemas";
+import { InMemoryRedisClient } from "../inMemoryAdapters";
 import { DemoEndpointDisabledProblem } from "../problems";
 import {
   getSaasProviderProfile,
@@ -25,6 +31,56 @@ import {
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
     Container.reset();
+  });
+
+  it("replays pending metering delivery state without changing its operation identity", async () => {
+    const manager = new IdempotencyManager(new InMemoryRedisClient());
+    const firstClaim = await manager.claimMeteringProcessingOrThrow(
+      "tenant-1",
+      "api_requests",
+      "request-1",
+    );
+    const delivery: PendingMeteringDelivery = {
+      usageRecord: {
+        id: firstClaim.operationId,
+        tenantId: "tenant-1",
+        meterId: "api_requests",
+        value: 1,
+        timestamp: new Date().toISOString(),
+        idempotencyKey: "request-1",
+      },
+    };
+
+    await manager.markMeteringEventsPublishing(
+      "tenant-1",
+      "api_requests",
+      "request-1",
+      firstClaim.token,
+      delivery,
+    );
+    await manager.releaseMeteringEvents("tenant-1", "api_requests", "request-1", firstClaim.token);
+
+    const replayClaim = await manager.claimMeteringProcessingOrThrow(
+      "tenant-1",
+      "api_requests",
+      "request-1",
+    );
+    expect(replayClaim.operationId).toBe(firstClaim.operationId);
+    expect(replayClaim.delivery).toEqual(delivery);
+
+    await manager.completeMeteringProcessing(
+      "tenant-1",
+      "api_requests",
+      "request-1",
+      replayClaim.token,
+    );
+    const duplicateClaim = manager.claimMeteringProcessingOrThrow(
+      "tenant-1",
+      "api_requests",
+      "request-1",
+    );
+    await expect(duplicateClaim).rejects.toThrow(DuplicateRecordProblem);
+    await expect(duplicateClaim).rejects.toMatchObject({ code: "metering/duplicate-record" });
   });
 
   it("keeps demo checkout sessions distinct and shareable across runtimes", async () => {

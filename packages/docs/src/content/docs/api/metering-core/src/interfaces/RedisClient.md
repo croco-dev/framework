@@ -7,6 +7,15 @@ title: "RedisClient"
 
 Redis 클라이언트 인터페이스 (ioredis, upstash 등 구현체와 분리)
 
+## Properties
+
+### scriptKeyAccess
+
+> `readonly` **scriptKeyAccess**: `"multi-key"`
+
+Metering의 원자적 스크립트는 여러 키에 접근하므로 단일 노드/단일 슬롯 실행 모델이 필요합니다.
+Redis Cluster처럼 서로 다른 슬롯의 키 접근을 거부하는 클라이언트는 지원하지 않습니다.
+
 ## Methods
 
 ### eval()
@@ -19,7 +28,7 @@ Lua 스크립트 실행
 
 ##### TResult
 
-`TResult` *extends* `unknown`[]
+`TResult` _extends_ `unknown`[]
 
 #### Parameters
 
@@ -39,7 +48,7 @@ Lua 스크립트 실행
 
 `Promise`\<`TResult`\>
 
-***
+---
 
 ### set()
 
@@ -73,7 +82,7 @@ Lua 스크립트 실행
 
 `Promise`\<`string` \| `null`\>
 
-***
+---
 
 ### zadd()
 
@@ -99,7 +108,7 @@ Sorted Set에 멤버 추가
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### zrangebyscore()
 

@@ -134,6 +134,16 @@ class ApiController {
 - 이 원자적 기록은 usage key와 dedupe key를 함께 실행하는 single-shard Redis를 요구합니다. 현재 key schema는 Redis Cluster hash-slot colocation을 제공하지 않습니다.
 - quota 초과 시 `allowOverQuota` 설정에 따라 이벤트 발행 또는 Problem 예외가 발생합니다.
 - billing, entitlements 같은 상위 패키지와 이벤트 기반으로 연결할 수 있습니다.
+- 이벤트 발행 payload는 exclusive processing lease와 함께 저장됩니다. 발행 실패 후 동일한 idempotency
+  key를 재시도하면 저장된 payload만 재개하므로 사용량을 다시 기록하지 않고, 이벤트는 동일한 event ID로
+  다시 발행됩니다.
+- `UsageStorage` 구현은 `replayContract: "idempotent"`를 선언하고 동일 idempotency key의 persistence
+  재실행을 안전하게 처리해야 합니다. 이는 usage 저장 직후 프로세스가 중단되어 processing lease가 만료된
+  경우의 복구 계약입니다.
+- `RedisUsageStorage`와 `IdempotencyManager`는 `scriptKeyAccess: "multi-key"` capability를 선언한
+  `RedisClient`가 필요합니다. 원자적 Lua 스크립트가 여러 logical key에 접근하므로 cross-slot script를
+  거부하는 Redis Cluster deployment는 지원하지 않습니다. Standalone Redis와 제공되는 Upstash adapter는
+  이 계약을 충족합니다.
 - `RedisUsageStorage.resetBillingCycle(tenantId)`는 현재 billing cycle의 tenant usage key를 `KEYS` 대신 bounded `SCAN` batch로 삭제합니다.
 - tenant-wide reset은 이미 삭제된 key를 다시 삭제하지 않는 idempotent 작업이며, batch 사이에 새로 기록된 현재 cycle usage는 다음 reset에서 정리될 수 있습니다.
 

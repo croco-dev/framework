@@ -1,9 +1,12 @@
 import type { EventBus } from "@croco/events-core";
 import { Component } from "@croco/framework-context";
-import { ulid } from "ulid";
 import { QuotaExceededEvent } from "./events/QuotaExceededEvent";
 import { UsageRecordedEvent } from "./events/UsageRecordedEvent";
-import type { IdempotencyManager } from "./IdempotencyManager";
+import type {
+  IdempotencyManager,
+  MeteringProcessingClaim,
+  PendingMeteringDelivery,
+} from "./IdempotencyManager";
 import type {
   MeterDimensionSchema,
   MeterDimensionValue,
@@ -99,19 +102,77 @@ export class MeteringService {
       dimensions?: Record<string, MeterDimensionValue>;
     },
   ): Promise<UsageRecord> {
-    const { tenantId, meterId, value = 1, metadata } = options;
-
-    const meter = await this.meterRegistry.getOrThrow(tenantId, meterId);
-
+    const { tenantId, meterId } = options;
     const idempotencyKey = this.idempotencyManager.ensureIdempotencyKey(options.idempotencyKey);
-    const idempotencyClaim = await this.idempotencyManager.beginProcessingOrThrow(
+    const claim = await this.idempotencyManager.claimMeteringProcessingOrThrow(
       tenantId,
       meterId,
       idempotencyKey,
     );
+    let publishingClaimed = claim.delivery !== undefined;
+    let persistenceCompleted = claim.delivery !== undefined;
+    let processingCompleted = false;
 
+    try {
+      let delivery = claim.delivery;
+      if (!delivery) {
+        delivery = await this.persistUsage(options, idempotencyKey, claim.operationId);
+        persistenceCompleted = true;
+        await this.idempotencyManager.markMeteringEventsPublishing(
+          tenantId,
+          meterId,
+          idempotencyKey,
+          claim.token,
+          delivery,
+        );
+        publishingClaimed = true;
+      }
+
+      return await this.publishDelivery(claim, delivery, () => {
+        processingCompleted = true;
+      });
+    } catch (error) {
+      if (processingCompleted) {
+        throw error;
+      }
+      if (publishingClaimed) {
+        await this.idempotencyManager.releaseMeteringEvents(
+          tenantId,
+          meterId,
+          idempotencyKey,
+          claim.token,
+        );
+      } else if (!persistenceCompleted) {
+        await this.idempotencyManager.abortMeteringProcessing(
+          tenantId,
+          meterId,
+          idempotencyKey,
+          claim.token,
+        );
+      } else {
+        await this.idempotencyManager.releaseMeteringProcessing(
+          tenantId,
+          meterId,
+          idempotencyKey,
+          claim.token,
+        );
+      }
+      throw error;
+    }
+  }
+
+  private async persistUsage(
+    options: RecordOptions & {
+      eventId?: string;
+      dimensions?: Record<string, MeterDimensionValue>;
+    },
+    idempotencyKey: string,
+    operationId: string,
+  ): Promise<PendingMeteringDelivery> {
+    const { tenantId, meterId, value = 1, metadata } = options;
+    const meter = await this.meterRegistry.getOrThrow(tenantId, meterId);
     const usageRecord: UsageRecord = {
-      id: ulid(),
+      id: operationId,
       tenantId,
       meterId,
       value,
@@ -121,97 +182,99 @@ export class MeteringService {
       dimensions: options.dimensions,
       metadata,
     };
+    const serializedUsageRecord = {
+      ...usageRecord,
+      timestamp: usageRecord.timestamp.toISOString(),
+    };
 
-    let idempotencyCompleted = false;
+    if (meter.quota === undefined) {
+      await this.usageStorage.record(usageRecord);
+      return { usageRecord: serializedUsageRecord };
+    }
 
-    try {
-      if (meter.quota !== undefined) {
-        const allowOverQuota = meter.allowOverQuota ?? false;
-        const quotaResult = await this.quotaManager.checkAndRecord({
+    const allowOverQuota = meter.allowOverQuota ?? false;
+    const quotaResult = await this.quotaManager.checkAndRecord({
+      tenantId,
+      meterId,
+      value,
+      quota: meter.quota,
+      allowOverQuota,
+      usageRecord,
+    });
+    return {
+      usageRecord: serializedUsageRecord,
+      quota: {
+        allowOverQuota,
+        exceeded: quotaResult.exceeded,
+        newUsage: quotaResult.newUsage,
+        quota: meter.quota,
+      },
+    };
+  }
+
+  private async publishDelivery(
+    claim: MeteringProcessingClaim,
+    delivery: PendingMeteringDelivery,
+    onCompleted: () => void,
+  ): Promise<UsageRecord> {
+    const usageRecord: UsageRecord = {
+      ...delivery.usageRecord,
+      timestamp: new Date(delivery.usageRecord.timestamp),
+    };
+    const { tenantId, meterId, value, idempotencyKey, metadata } = usageRecord;
+    const quota = delivery.quota;
+
+    if (quota?.exceeded && this.eventBus) {
+      await this.eventBus.publish(
+        new QuotaExceededEvent(
+          tenantId,
+          meterId,
+          quota.newUsage,
+          quota.quota,
+          idempotencyKey,
+          claim.operationId,
+        ),
+      );
+    }
+
+    if (quota?.exceeded && !quota.allowOverQuota) {
+      await this.idempotencyManager.completeMeteringProcessing(
+        tenantId,
+        meterId,
+        idempotencyKey,
+        claim.token,
+      );
+      onCompleted();
+      this.quotaManager.validateOrThrow({
+        meterId,
+        quota: quota.quota,
+        allowOverQuota: quota.allowOverQuota,
+        exceeded: quota.exceeded,
+        newUsage: quota.newUsage,
+      });
+    }
+
+    if (this.eventBus) {
+      await this.eventBus.publish(
+        new UsageRecordedEvent(
           tenantId,
           meterId,
           value,
-          quota: meter.quota,
-          allowOverQuota,
-          usageRecord,
-        });
-
-        const shouldPublishQuotaExceeded = quotaResult.exceeded && this.eventBus !== undefined;
-
-        if (quotaResult.exceeded && !allowOverQuota) {
-          // Quota exceeded is not retryable - complete idempotency so the same key is never replayed
-          await this.idempotencyManager.completeProcessing(
-            tenantId,
-            meterId,
-            idempotencyKey,
-            idempotencyClaim,
-          );
-          idempotencyCompleted = true;
-          this.quotaManager.validateOrThrow({
-            meterId,
-            quota: meter.quota,
-            allowOverQuota,
-            exceeded: quotaResult.exceeded,
-            newUsage: quotaResult.newUsage,
-          });
-        } else {
-          this.quotaManager.validateOrThrow({
-            meterId,
-            quota: meter.quota,
-            allowOverQuota,
-            exceeded: quotaResult.exceeded,
-            newUsage: quotaResult.newUsage,
-          });
-
-          await this.idempotencyManager.completeProcessing(
-            tenantId,
-            meterId,
-            idempotencyKey,
-            idempotencyClaim,
-          );
-          idempotencyCompleted = true;
-        }
-
-        if (shouldPublishQuotaExceeded) {
-          await this.eventBus.publish(
-            new QuotaExceededEvent(tenantId, meterId, quotaResult.newUsage, meter.quota),
-          );
-        }
-
-        if (this.eventBus) {
-          await this.eventBus.publish(
-            new UsageRecordedEvent(tenantId, meterId, value, idempotencyKey, metadata),
-          );
-        }
-      } else {
-        await this.usageStorage.record(usageRecord);
-        await this.idempotencyManager.completeProcessing(
-          tenantId,
-          meterId,
           idempotencyKey,
-          idempotencyClaim,
-        );
-        idempotencyCompleted = true;
-
-        if (this.eventBus) {
-          await this.eventBus.publish(
-            new UsageRecordedEvent(tenantId, meterId, value, idempotencyKey, metadata),
-          );
-        }
-      }
-
-      return usageRecord;
-    } catch (error) {
-      if (!idempotencyCompleted) {
-        await this.idempotencyManager.abortProcessing(
-          tenantId,
-          meterId,
-          idempotencyKey,
-          idempotencyClaim,
-        );
-      }
-      throw error;
+          metadata,
+          claim.operationId,
+        ),
+      );
     }
+
+    await this.idempotencyManager.completeMeteringProcessing(
+      tenantId,
+      meterId,
+      idempotencyKey,
+      claim.token,
+    );
+    onCompleted();
+    return usageRecord;
   }
 
   private validateTypedRecord<Meter extends MeterRef>(

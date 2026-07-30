@@ -263,6 +263,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`AtomicQuotaNotSupportedProblem`](/api/metering-core/src/classes/atomicquotanotsupportedproblem/)
 - [`DuplicateRecordProblem`](/api/metering-core/src/classes/duplicaterecordproblem/)
 - [`InvalidMeterDimensionProblem`](/api/metering-core/src/classes/invalidmeterdimensionproblem/)
+- [`MeteringTransitionProblem`](/api/metering-core/src/classes/meteringtransitionproblem/)
 - [`InvalidMeterProblem`](/api/metering-core/src/classes/invalidmeterproblem/)
 - [`InvalidUsageEnvelopeProblem`](/api/metering-core/src/classes/invalidusageenvelopeproblem/)
 - [`InvalidUsageQueryProblem`](/api/metering-core/src/classes/invalidusagequeryproblem/)

@@ -49,7 +49,13 @@ title: "DomainEvent"
 
 ### Constructor
 
-> **new DomainEvent**(): `DomainEvent`
+> **new DomainEvent**(`eventId?`): `DomainEvent`
+
+#### Parameters
+
+##### eventId?
+
+`string`
 
 #### Returns
 
@@ -61,25 +67,25 @@ title: "DomainEvent"
 
 > `readonly` **eventId**: `string`
 
-***
+---
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
-***
+---
 
 ### metadata
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
 
-***
+---
 
 ### timestamp
 
 > `readonly` **timestamp**: `Date`
 
-***
+---
 
 ### eventName?
 

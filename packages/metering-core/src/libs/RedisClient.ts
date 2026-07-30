@@ -3,6 +3,12 @@
  */
 export interface RedisClient {
   /**
+   * Metering의 원자적 스크립트는 여러 키에 접근하므로 단일 노드/단일 슬롯 실행 모델이 필요합니다.
+   * Redis Cluster처럼 서로 다른 슬롯의 키 접근을 거부하는 클라이언트는 지원하지 않습니다.
+   */
+  readonly scriptKeyAccess: "multi-key";
+
+  /**
    * Sorted Set에 멤버 추가
    */
   zadd(key: string, score: number, member: string): Promise<number>;
