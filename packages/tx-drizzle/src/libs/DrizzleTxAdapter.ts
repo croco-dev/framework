@@ -1,4 +1,5 @@
-import { TransactionRollbackConfirmedProblem, type TxAdapter } from "@croco/tx-core";
+import { TransactionRollbackConfirmedProblem } from "@croco/tx-core";
+import type { TxAdapter } from "@croco/tx-core";
 import { SavepointUnsupportedProblem } from "./problems/TxDrizzleProblems";
 import type { DrizzleDb, DrizzleTx, InferTxClient, InferTxOptions } from "./types";
 

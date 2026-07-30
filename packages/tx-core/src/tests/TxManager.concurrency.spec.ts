@@ -7,10 +7,10 @@ import {
   TransactionOutcomeUnknownProblem,
   TransactionRollbackConfirmedProblem,
   TransactionTimeoutProblem,
-  type TxAdapter,
   TxManager,
   TxManagerRegistry,
 } from "../index";
+import type { TxAdapter } from "../index";
 
 function throwIfAbortedWithRollback(signal?: AbortSignal): void {
   if (!signal?.aborted) {
@@ -505,7 +505,9 @@ describe("TxManager Transaction Timeout", () => {
       };
       txManager = new TxManager(ambiguousAdapter);
 
-      await expect(txManager.run(async () => "result", { timeout: 10 })).rejects.toMatchObject({
+      const transactionPromise = txManager.run(async () => "result", { timeout: 10 });
+      await expect(transactionPromise).rejects.toThrow(TransactionOutcomeUnknownProblem);
+      await expect(transactionPromise).rejects.toMatchObject({
         name: TransactionOutcomeUnknownProblem.name,
         cause: adapterFailure,
         extensions: {
@@ -534,7 +536,9 @@ describe("TxManager Transaction Timeout", () => {
       };
       txManager = new TxManager(unsafeAdapter);
 
-      await expect(txManager.run(async () => "committed", { timeout: 10 })).rejects.toMatchObject({
+      const transactionPromise = txManager.run(async () => "committed", { timeout: 10 });
+      await expect(transactionPromise).rejects.toThrow(TransactionOutcomeUnknownProblem);
+      await expect(transactionPromise).rejects.toMatchObject({
         name: TransactionOutcomeUnknownProblem.name,
         cause: {
           code: "tx-core/transaction-timeout",
