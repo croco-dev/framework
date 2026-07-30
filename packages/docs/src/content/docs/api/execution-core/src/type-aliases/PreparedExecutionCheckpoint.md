@@ -13,7 +13,7 @@ title: "PreparedExecutionCheckpoint"
 
 > `readonly` **serialized**: `string`
 
----
+***
 
 ### value
 

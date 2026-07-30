@@ -15,7 +15,7 @@ Provider-neutral usage event ingestion and customer meter state contracts.
 
 > `readonly` **eventId**: `string`
 
----
+***
 
 ### status
 

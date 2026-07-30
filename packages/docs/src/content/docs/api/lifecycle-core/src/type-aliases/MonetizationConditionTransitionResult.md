@@ -13,13 +13,13 @@ title: "MonetizationConditionTransitionResult"
 
 > `readonly` **accepted**: `boolean`
 
----
+***
 
 ### duplicate
 
 > `readonly` **duplicate**: `boolean`
 
----
+***
 
 ### outOfOrder
 

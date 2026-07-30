@@ -1,6 +1,8 @@
+import { BILLING_PROVIDER_CAPABILITIES } from "@croco/billing-core";
 import type { DiagnosticsProvider, HealthStatus } from "@croco/diagnostics-core";
 import { Problem } from "@croco/problems-core";
 import type { PolarConfig } from "../types";
+import { POLAR_BILLING_PROVIDER_PROFILE } from "./PolarBillingProviderProfile";
 import { normalizePolarBillingError, validatePolarConfig } from "./problems/PolarBillingProblems";
 
 export type PolarReadinessCheckContext = {
@@ -100,6 +102,17 @@ export class PolarBillingDiagnosticsProvider implements DiagnosticsProvider {
   private createSafeConfigDetails(): Record<string, unknown> {
     return {
       provider: "polar",
+      capabilities: Object.fromEntries(
+        BILLING_PROVIDER_CAPABILITIES.map((capability) => {
+          const availability = POLAR_BILLING_PROVIDER_PROFILE.capabilities[capability];
+          return [
+            capability,
+            availability.supported
+              ? { supported: true }
+              : { supported: false, reason: availability.reason },
+          ];
+        }),
+      ),
       environment: this.config.environment ?? "missing",
       hasAccessToken: isNonEmptyString(this.config.accessToken),
       hasWebhookSecret: isNonEmptyString(this.config.webhookSecret),

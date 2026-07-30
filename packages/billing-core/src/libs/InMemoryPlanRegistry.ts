@@ -128,6 +128,18 @@ function validatePlanVersion(planVersion: PlanVersionDefinition): void {
     planVersion.currency.length !== 3 ||
     !Number.isSafeInteger(planVersion.intervalCount) ||
     planVersion.intervalCount <= 0 ||
+    !Number.isSafeInteger(planVersion.quantityPolicy.minimumQuantity) ||
+    planVersion.quantityPolicy.minimumQuantity < 0 ||
+    !Number.isSafeInteger(planVersion.quantityPolicy.includedSeats) ||
+    planVersion.quantityPolicy.includedSeats < 0 ||
+    !Number.isSafeInteger(planVersion.quantityPolicy.seatQuota) ||
+    planVersion.quantityPolicy.seatQuota < 0 ||
+    planVersion.quantityPolicy.billableMembershipRoles.length === 0 ||
+    planVersion.quantityPolicy.billableMembershipRoles.some((role) => !isNonEmpty(role)) ||
+    new Set(planVersion.quantityPolicy.billableMembershipRoles).size !==
+      planVersion.quantityPolicy.billableMembershipRoles.length ||
+    planVersion.quantityPolicy.includedSeats > planVersion.quantityPolicy.seatQuota ||
+    planVersion.quantityPolicy.minimumQuantity > planVersion.quantityPolicy.seatQuota ||
     planVersion.providerBindings.length === 0
   ) {
     throw new InvalidPlanVersionDefinitionProblem("required fields are invalid");
@@ -202,6 +214,12 @@ function freezePlanVersion(planVersion: PlanVersionDefinition): PlanVersionDefin
   return Object.freeze({
     ...planVersion,
     rating: Object.freeze({ ...planVersion.rating }),
+    quantityPolicy: Object.freeze({
+      ...planVersion.quantityPolicy,
+      billableMembershipRoles: Object.freeze([
+        ...planVersion.quantityPolicy.billableMembershipRoles,
+      ]),
+    }),
     providerBindings: Object.freeze(providerBindings),
   });
 }

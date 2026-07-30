@@ -13,7 +13,7 @@ title: "MonetizationRecipeCapabilities"
 
 > `readonly` **actionTypes**: readonly `string`[]
 
----
+***
 
 ### signalSources
 

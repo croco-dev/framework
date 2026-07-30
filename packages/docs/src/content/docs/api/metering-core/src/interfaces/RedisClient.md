@@ -28,7 +28,7 @@ Lua 스크립트 실행
 
 ##### TResult
 
-`TResult` _extends_ `unknown`[]
+`TResult` *extends* `unknown`[]
 
 #### Parameters
 
@@ -48,7 +48,7 @@ Lua 스크립트 실행
 
 `Promise`\<`TResult`\>
 
----
+***
 
 ### set()
 
@@ -82,7 +82,7 @@ Lua 스크립트 실행
 
 `Promise`\<`string` \| `null`\>
 
----
+***
 
 ### zadd()
 
@@ -108,7 +108,7 @@ Sorted Set에 멤버 추가
 
 `Promise`\<`number`\>
 
----
+***
 
 ### zrangebyscore()
 

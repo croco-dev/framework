@@ -56,7 +56,7 @@ export class MembershipService implements MembershipManager {
       role,
     });
 
-    await this.publishSafely(new MembershipCreatedEvent({ tenantId, userId, role }));
+    await this.publishAfterCommitOrNow(new MembershipCreatedEvent({ tenantId, userId, role }));
     return membership;
   }
 
@@ -73,7 +73,7 @@ export class MembershipService implements MembershipManager {
       throw new LastOwnerCannotBeRemovedProblem(tenantId, userId);
     }
 
-    await this.publishSafely(
+    await this.publishAfterCommitOrNow(
       new MembershipRemovedEvent({ tenantId, userId, role: result.membership.role }),
     );
   }
@@ -118,7 +118,7 @@ export class MembershipService implements MembershipManager {
       });
     }
 
-    await this.publishSafely(
+    await this.publishAfterCommitOrNow(
       new MembershipUpdatedEvent({
         tenantId,
         userId,
@@ -203,7 +203,9 @@ export class MembershipService implements MembershipManager {
     await this.eventPublisher.publishNow(event);
   }
 
-  private async publishAfterCommitOrNow(event: MembershipUpdatedEvent): Promise<void> {
+  private async publishAfterCommitOrNow(
+    event: MembershipCreatedEvent | MembershipUpdatedEvent | MembershipRemovedEvent,
+  ): Promise<void> {
     try {
       this.eventPublisher.publishAfterCommit(event);
     } catch (error) {

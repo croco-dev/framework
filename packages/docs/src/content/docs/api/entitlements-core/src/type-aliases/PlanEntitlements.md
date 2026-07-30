@@ -13,13 +13,13 @@ title: "PlanEntitlements"
 
 > `readonly` **entitlements**: readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]
 
----
+***
 
 ### planId
 
 > `readonly` **planId**: `string`
 
----
+***
 
 ### planVersionRef
 

@@ -6,10 +6,12 @@ import type {
   BillingProviderCapabilityProfile,
   BillingProviderProfile,
 } from "./BillingProviderCapabilities";
+import type { LicensedQuantityGateway } from "./SubscriptionQuantity";
 import type { UsageBillingGateway } from "./UsageBillingGateway";
 
 type BillingProviderCapabilityMap = {
   readonly checkout: BillingGateway;
+  readonly "licensed-quantity": LicensedQuantityGateway;
   readonly usage: UsageBillingGateway;
 };
 
@@ -59,12 +61,16 @@ export function defineBillingProviderProfile<
 >(
   profile: BillingProviderProfile<ProviderName, Capabilities>,
 ): BillingProviderProfile<ProviderName, Capabilities> {
+  const capabilities = Object.fromEntries(
+    BILLING_PROVIDER_CAPABILITIES.map((capability) => [
+      capability,
+      Object.freeze({ ...profile.capabilities[capability] }),
+    ]),
+  );
+
   return Object.freeze({
     providerName: profile.providerName,
-    capabilities: Object.freeze({
-      checkout: Object.freeze({ ...profile.capabilities.checkout }),
-      usage: Object.freeze({ ...profile.capabilities.usage }),
-    }),
+    capabilities: Object.freeze(capabilities),
   }) as BillingProviderProfile<ProviderName, Capabilities>;
 }
 

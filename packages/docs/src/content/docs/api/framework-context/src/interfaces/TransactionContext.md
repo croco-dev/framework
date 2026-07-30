@@ -17,7 +17,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 `boolean`
 
----
+***
 
 ### isInTransaction()
 
@@ -27,7 +27,7 @@ Whether the active callback still accepts hooks and preserves their delivery evi
 
 `boolean`
 
----
+***
 
 ### onAfterCommit()
 

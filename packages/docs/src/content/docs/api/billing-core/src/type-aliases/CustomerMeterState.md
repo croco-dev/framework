@@ -15,19 +15,19 @@ Provider-neutral usage event ingestion and customer meter state contracts.
 
 > `readonly` **billingAccountId**: `string`
 
----
+***
 
 ### meterId
 
 > `readonly` **meterId**: `string`
 
----
+***
 
 ### updatedAt
 
 > `readonly` **updatedAt**: `Date`
 
----
+***
 
 ### value
 

@@ -27,6 +27,7 @@ describe.skipIf(connectionString.length === 0)(
       txManager = new TxManager(createDrizzleTxAdapter(client));
       store = new DrizzleMembershipStore(client, txManager);
       service = new MembershipService(store, {
+        publishAfterCommit: () => undefined,
         publishNow: async () => undefined,
         publishMany: async () => undefined,
       } as unknown as ConstructorParameters<typeof MembershipService>[1]);

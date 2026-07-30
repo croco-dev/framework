@@ -69,7 +69,7 @@ resume은 같은 external subscription의 최신 plan을 유지합니다.
 
 [`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/).[`getCurrentPlanId`](/api/entitlements-core/src/classes/subscriptionprovider/#getcurrentplanid)
 
----
+***
 
 ### getCurrentPlanVersion()
 

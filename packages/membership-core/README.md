@@ -56,3 +56,5 @@ await manager.transferOwnership("tenant-123", "user-1", "user-2");
 - 역할 계층은 `owner > admin > member > viewer` 순서입니다.
 - 소유자 제거, 강등, 이전은 원자적으로 적용되며 마지막 소유자는 항상 유지됩니다.
 - `SeatLimitChecker`를 주입하면 플랜별 좌석 수를 강제할 수 있습니다.
+- 활성 transaction context가 있으면 membership 생성·변경·제거 이벤트는 commit 후 발행됩니다.
+  billing provider 동기화 같은 외부 side effect는 이 이벤트를 소비해 요청 transaction 밖에서 수행합니다.

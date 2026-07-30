@@ -152,6 +152,43 @@ export type {
   ProrationCalculator,
 } from "./libs/ProrationCalculator";
 
+/** Quantity policy and billable membership evidence produce the provider's desired licensed quantity. */
+export { calculateDesiredQuantity } from "./libs/SubscriptionQuantity";
+/** Creates a deterministic reconciliation identity from tenant, subscription, plan, quantity, and source version. */
+export { createSubscriptionQuantityReconciliationId } from "./libs/SubscriptionQuantity";
+/** In-memory reconciliation intent store for tests and local composition. */
+export { InMemorySubscriptionQuantityReconciliationStore } from "./libs/SubscriptionQuantity";
+/** Signals that the provider quantity differs from the desired application-owned quantity. */
+export { SubscriptionQuantityDriftDetectedEvent } from "./libs/SubscriptionQuantity";
+/** Signals that a previously observed provider quantity drift has recovered. */
+export { SubscriptionQuantityDriftRecoveredEvent } from "./libs/SubscriptionQuantity";
+/** Persists and converges licensed-quantity reconciliation intents against a provider gateway. */
+export { SubscriptionQuantityReconciler } from "./libs/SubscriptionQuantity";
+/** Carries stable Problem evidence for a failed licensed-quantity reconciliation. */
+export { SubscriptionQuantityReconciliationFailedEvent } from "./libs/SubscriptionQuantity";
+/** Carries the quantity that was successfully reconciled with the provider. */
+export { SubscriptionQuantityReconciliationSucceededEvent } from "./libs/SubscriptionQuantity";
+export type {
+  CreateSubscriptionQuantityIntent,
+  LicensedQuantityGateway,
+  LicensedQuantityObservation,
+  ReconcileSubscriptionQuantitiesResult,
+  ReconcileSubscriptionQuantityInput,
+  SetLicensedQuantityInput,
+  SetLicensedQuantityResult,
+  SubscriptionQuantityDiagnostics,
+  SubscriptionQuantityFailureEvidence,
+  SubscriptionQuantityReconcilerDependencies,
+  SubscriptionQuantityReconciliationEventPublisher,
+  SubscriptionQuantityReconciliationState,
+  SubscriptionQuantityReconciliationStore,
+  SubscriptionQuantityRepairSource,
+  SubscriptionQuantitySnapshot,
+  SubscriptionQuantitySource,
+  SubscriptionQuantitySourceInput,
+  SubscriptionQuantitySourceSnapshot,
+} from "./libs/SubscriptionQuantity";
+
 /**
  * billing 도메인에서 사용하는 Problem 하위 타입들입니다.
  */
@@ -172,6 +209,12 @@ export {
   PlanVersionAlreadyPublishedProblem,
   PlanVersionConflictProblem,
   ProviderCapabilityUnavailableProblem,
+  InvalidSubscriptionQuantityProblem,
+  SubscriptionQuantityReconciliationConflictProblem,
+  SubscriptionQuantityReconciliationFailedProblem,
+  SubscriptionQuantityProviderMismatchProblem,
+  SubscriptionQuantityProviderSourceAheadProblem,
+  SubscriptionQuantitySourceMismatchProblem,
   SubscriptionPlanVersionMismatchProblem,
   SubscriptionNotFoundProblem,
   UnknownPlanVersionProblem,
@@ -195,10 +238,12 @@ export type {
   InvoiceLineItemType,
   InvoiceStatus,
   LegacySubscription,
+  MembershipRole,
   Order,
   Plan,
   PlanInterval,
   PlanRatingDefinition,
+  SubscriptionQuantityPolicy,
   PlanVersionDefinition,
   PlanVersionRef,
   ProcessedWebhook,

@@ -29,7 +29,7 @@ title: "PendingMeteringDelivery"
 
 > **quota**: `number`
 
----
+***
 
 ### usageRecord
 

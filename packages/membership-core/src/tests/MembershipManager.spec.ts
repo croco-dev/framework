@@ -118,6 +118,26 @@ describe("MembershipManager", () => {
         "publish failed",
       );
     });
+
+    it("should defer the membership-created event until commit when a transaction is active", async () => {
+      const afterCommitEvents: MembershipCreatedEvent[] = [];
+      manager = new MembershipManager(store, {
+        publishAfterCommit: (event: MembershipCreatedEvent) => {
+          afterCommitEvents.push(event);
+        },
+        publishNow,
+      } as unknown as EventPublisher);
+
+      await manager.addMember("tenant-1", "user-1", "member");
+
+      expect(afterCommitEvents).toHaveLength(1);
+      expect(afterCommitEvents[0]?.data).toEqual({
+        tenantId: "tenant-1",
+        userId: "user-1",
+        role: "member",
+      });
+      expect(publishNow).not.toHaveBeenCalled();
+    });
   });
 
   describe("seat limit", () => {
@@ -135,7 +155,13 @@ describe("MembershipManager", () => {
 
       manager = new MembershipManager(
         store,
-        { publishNow, publishMany: vi.fn() } as unknown as EventPublisher,
+        {
+          publishAfterCommit: vi.fn(() => {
+            throw new EventAfterCommitRequiresActiveTransactionProblem();
+          }),
+          publishNow,
+          publishMany: vi.fn(),
+        } as unknown as EventPublisher,
         seatLimitChecker,
       );
 
@@ -158,7 +184,13 @@ describe("MembershipManager", () => {
 
       manager = new MembershipManager(
         store,
-        { publishNow, publishMany: vi.fn() } as unknown as EventPublisher,
+        {
+          publishAfterCommit: vi.fn(() => {
+            throw new EventAfterCommitRequiresActiveTransactionProblem();
+          }),
+          publishNow,
+          publishMany: vi.fn(),
+        } as unknown as EventPublisher,
         seatLimitChecker,
       );
 
@@ -179,6 +211,27 @@ describe("MembershipManager", () => {
 
       const [event] = publishNow.mock.calls[0] as [MembershipRemovedEvent];
       expect(event.data).toEqual({ tenantId: "tenant-1", userId: "user-1", role: "member" });
+    });
+
+    it("should defer the membership-removed event until commit when a transaction is active", async () => {
+      const afterCommitEvents: MembershipRemovedEvent[] = [];
+      manager = new MembershipManager(store, {
+        publishAfterCommit: (event: MembershipRemovedEvent) => {
+          afterCommitEvents.push(event);
+        },
+        publishNow,
+      } as unknown as EventPublisher);
+      await seedMembership({ role: "member" });
+
+      await manager.removeMember("tenant-1", "user-1");
+
+      expect(afterCommitEvents).toHaveLength(1);
+      expect(afterCommitEvents[0]?.data).toEqual({
+        tenantId: "tenant-1",
+        userId: "user-1",
+        role: "member",
+      });
+      expect(publishNow).not.toHaveBeenCalled();
     });
 
     it("should prevent removing the last owner", async () => {
@@ -216,6 +269,28 @@ describe("MembershipManager", () => {
         oldRole: "member",
         newRole: "admin",
       });
+    });
+
+    it("should defer the membership-updated event until commit when a transaction is active", async () => {
+      const afterCommitEvents: MembershipUpdatedEvent[] = [];
+      manager = new MembershipManager(store, {
+        publishAfterCommit: (event: MembershipUpdatedEvent) => {
+          afterCommitEvents.push(event);
+        },
+        publishNow,
+      } as unknown as EventPublisher);
+      await seedMembership({ role: "member" });
+
+      await manager.updateRole("tenant-1", "user-1", "admin");
+
+      expect(afterCommitEvents).toHaveLength(1);
+      expect(afterCommitEvents[0]?.data).toEqual({
+        tenantId: "tenant-1",
+        userId: "user-1",
+        oldRole: "member",
+        newRole: "admin",
+      });
+      expect(publishNow).not.toHaveBeenCalled();
     });
 
     it("should return same membership when role is unchanged", async () => {

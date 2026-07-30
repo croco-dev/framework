@@ -48,7 +48,7 @@ revision and persists a lease computed from datastore-authoritative time.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
 
----
+***
 
 ### completeWebhook()
 
@@ -64,7 +64,7 @@ revision and persists a lease computed from datastore-authoritative time.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### createLifecycleCommand()
 
@@ -86,7 +86,7 @@ the same tenant.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
 
----
+***
 
 ### deleteAccount()
 
@@ -102,7 +102,7 @@ the same tenant.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### deleteSubscription()
 
@@ -118,7 +118,7 @@ the same tenant.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### failWebhook()
 
@@ -139,7 +139,7 @@ independently of domain-state persistence.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### findAccountByExternalId()
 
@@ -155,7 +155,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
----
+***
 
 ### findAccountByTenantId()
 
@@ -171,7 +171,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`BillingAccount`](/api/billing-core/src/type-aliases/billingaccount/) \| `null`\>
 
----
+***
 
 ### findLifecycleCommand()
 
@@ -187,7 +187,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
 
----
+***
 
 ### findOrdersByAccount()
 
@@ -203,7 +203,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`Order`](/api/billing-core/src/type-aliases/order/)[]\>
 
----
+***
 
 ### findPendingLifecycleCommandByTenantId()
 
@@ -219,7 +219,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/) \| `null`\>
 
----
+***
 
 ### findSubscription()
 
@@ -235,7 +235,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
----
+***
 
 ### findSubscriptionByExternalId()
 
@@ -251,7 +251,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
----
+***
 
 ### listPendingLifecycleCommands()
 
@@ -267,7 +267,7 @@ independently of domain-state persistence.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)[]\>
 
----
+***
 
 ### reconcileLifecycleSubscription()
 
@@ -295,7 +295,7 @@ subscription occupies the billing account.
 
 `Promise`\<[`BillingLifecycleLocalResult`](/api/billing-core/src/type-aliases/billinglifecyclelocalresult/)\>
 
----
+***
 
 ### reserveWebhook()
 
@@ -320,7 +320,7 @@ reservation already exists. Other storage failures must retain their original fa
 
 `Promise`\<`void`\>
 
----
+***
 
 ### resolveLifecycleSubscription()
 
@@ -343,7 +343,7 @@ second, racy subscription read.
 
 `Promise`\<[`BillingLifecycleSubscriptionResolution`](/api/billing-core/src/type-aliases/billinglifecyclesubscriptionresolution/)\>
 
----
+***
 
 ### saveAccount()
 
@@ -359,7 +359,7 @@ second, racy subscription read.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### saveLifecycleCommand()
 
@@ -383,7 +383,7 @@ reopen or rewrite a completed command. Once local reconciliation runs, the comma
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
 
----
+***
 
 ### saveOrder()
 
@@ -399,7 +399,7 @@ reopen or rewrite a completed command. Once local reconciliation runs, the comma
 
 `Promise`\<`void`\>
 
----
+***
 
 ### saveSubscription()
 

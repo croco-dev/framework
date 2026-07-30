@@ -45,7 +45,7 @@ required. Callers must not interpret promise fulfillment as an atomic cross-syst
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
 
----
+***
 
 ### createCheckout()
 
@@ -63,7 +63,7 @@ Create a checkout session for a tenant.
 
 `Promise`\<\{ `checkoutUrl`: `string`; \}\>
 
----
+***
 
 ### getCustomerPortalUrl()
 
@@ -81,7 +81,7 @@ Get customer portal URL.
 
 `Promise`\<`string`\>
 
----
+***
 
 ### getSubscription()
 
@@ -99,7 +99,7 @@ Get full subscription details.
 
 `Promise`\<[`Subscription`](/api/billing-core/src/type-aliases/subscription/) \| `null`\>
 
----
+***
 
 ### getSubscriptionStatus()
 
@@ -117,7 +117,7 @@ Get subscription status for a tenant.
 
 `Promise`\<[`SubscriptionStatus`](/api/billing-core/src/type-aliases/subscriptionstatus/) \| `null`\>
 
----
+***
 
 ### hasActiveSubscription()
 
@@ -135,7 +135,7 @@ Check if a tenant has an active subscription.
 
 `Promise`\<`boolean`\>
 
----
+***
 
 ### reconcileLifecycleCommand()
 
@@ -153,7 +153,7 @@ Retry one durable lifecycle command from its persisted reconciliation state.
 
 `Promise`\<[`BillingLifecycleCommand`](/api/billing-core/src/type-aliases/billinglifecyclecommand/)\>
 
----
+***
 
 ### reconcilePendingLifecycleCommands()
 
@@ -171,7 +171,7 @@ Retry a bounded, deterministic batch of incomplete lifecycle commands.
 
 `Promise`\<[`ReconcileBillingLifecycleCommandsResult`](/api/billing-core/src/type-aliases/reconcilebillinglifecyclecommandsresult/)\>
 
----
+***
 
 ### resumeSubscription()
 

@@ -11,7 +11,7 @@ title: "ExecutionCheckpointStoreConformanceOptions"
 
 ### TStore
 
-`TStore` _extends_ [`ExecutionStore`](/api/execution-core/src/classes/executionstore/)
+`TStore` *extends* [`ExecutionStore`](/api/execution-core/src/classes/executionstore/)
 
 ## Properties
 
@@ -23,7 +23,7 @@ title: "ExecutionCheckpointStoreConformanceOptions"
 
 `TStore` \| `Promise`\<`TStore`\>
 
----
+***
 
 ### disposeStore?
 
@@ -39,7 +39,7 @@ title: "ExecutionCheckpointStoreConformanceOptions"
 
 `Promise`\<`void`\> \| `void`
 
----
+***
 
 ### runConcurrentWrites
 

@@ -4,17 +4,18 @@ This example shows one complete Croco SaaS flow: a customer checks out a paid pl
 
 ## Architecture Map
 
-| Layer        | Example role                                          | Files and packages                                                                                 |
-| ------------ | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Framework    | DI, logger token, request/runtime context boundaries  | `@croco/framework-context`, `src/app/bootstrap.ts`                                                 |
-| Protocols    | REST route metadata and parameter binding             | `@croco/protocols-rest`, `src/protocols/BillingController.ts`                                      |
-| Transports   | Local HTTP and AWS Lambda execution                   | `@croco/transports-http`, `createApp()`, `src/index.ts`                                            |
-| Domain       | Checkout orchestration, explicit Problems, repository | `src/domain/CheckoutService.ts`, `src/domain/InMemoryOrderRepository.ts`, `src/domain/Problems.ts` |
-| Events       | After-commit domain event and projection              | `@croco/events-core`, `@croco/events-inmemory`, `src/events/OrderPaidEvent.ts`                     |
-| Resilience   | Transient payment retry and terminal decline handling | `@croco/retry-core`, `src/integrations/ScriptedPaymentGateway.ts`                                  |
-| Transactions | Save order and publish event only after commit        | `@croco/tx-core`, `src/integrations/InMemoryTxAdapter.ts`                                          |
-| Telemetry    | Checkout span and lifecycle events                    | `@croco/telemetry-api`, `withSpan()`, `recordEvent()`, Lambda `flush` hook in `src/index.ts`       |
-| Testing      | Executable HTTP harness and Problem assertions        | `@croco/testing`, `src/tests/golden-path.spec.ts`                                                  |
+| Layer        | Example role                                          | Files and packages                                                                                  |
+| ------------ | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Framework    | DI, logger token, request/runtime context boundaries  | `@croco/framework-context`, `src/app/bootstrap.ts`                                                  |
+| Protocols    | REST route metadata and parameter binding             | `@croco/protocols-rest`, `src/protocols/BillingController.ts`                                       |
+| Transports   | Local HTTP and AWS Lambda execution                   | `@croco/transports-http`, `createApp()`, `src/index.ts`                                             |
+| Domain       | Checkout orchestration, explicit Problems, repository | `src/domain/CheckoutService.ts`, `src/domain/InMemoryOrderRepository.ts`, `src/domain/Problems.ts`  |
+| Events       | After-commit domain event and projection              | `@croco/events-core`, `@croco/events-inmemory`, `src/events/OrderPaidEvent.ts`                      |
+| Quantity     | Membership seat source and licensed quantity repair   | `@croco/billing-core`, `@croco/membership-core`, `src/integrations/MembershipSeatQuantitySource.ts` |
+| Resilience   | Transient payment retry and terminal decline handling | `@croco/retry-core`, `src/integrations/ScriptedPaymentGateway.ts`                                   |
+| Transactions | Save order and publish event only after commit        | `@croco/tx-core`, `src/integrations/InMemoryTxAdapter.ts`                                           |
+| Telemetry    | Checkout span and lifecycle events                    | `@croco/telemetry-api`, `withSpan()`, `recordEvent()`, Lambda `flush` hook in `src/index.ts`        |
+| Testing      | Executable HTTP harness and Problem assertions        | `@croco/testing`, `src/tests/golden-path.spec.ts`                                                   |
 
 Primary action: `POST /api/checkouts` creates a paid order.
 
@@ -75,6 +76,11 @@ The root smoke command builds the example and its workspace dependencies before 
 checked-in Vitest suite. The suite executes the real HTTP transport with `@croco/testing`, proving
 the success path, retry behavior, after-commit event projection, validation Problem, terminal
 payment Problem, and not-found Problem.
+
+The membership quantity fixture also proves that membership state commits before a billing reconciliation
+intent is created, provider outages leave retryable evidence without rolling membership back, removals reduce
+only licensed quantity, stale delivery cannot overwrite newer source state, and a bounded repair scan recovers
+missed membership events.
 
 ## Deploy
 

@@ -54,7 +54,7 @@ for as long as rotation records encrypted with them must remain replayable.
 
 [`ApiKeyRotationProtector`](/api/auth-core/src/interfaces/apikeyrotationprotector/).[`decrypt`](/api/auth-core/src/interfaces/apikeyrotationprotector/#decrypt)
 
----
+***
 
 ### encrypt()
 

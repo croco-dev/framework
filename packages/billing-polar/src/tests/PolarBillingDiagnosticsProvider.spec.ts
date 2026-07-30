@@ -16,6 +16,17 @@ describe("PolarBillingDiagnosticsProvider", () => {
       component: "billing-polar",
       details: expect.objectContaining({
         provider: "polar",
+        capabilities: {
+          checkout: { supported: true },
+          "licensed-quantity": {
+            supported: false,
+            reason: "Polar licensed quantity updates are not implemented by this package.",
+          },
+          usage: {
+            supported: false,
+            reason: "Polar usage delivery is not implemented by this package.",
+          },
+        },
         environment: "sandbox",
         hasAccessToken: true,
         hasWebhookSecret: false,

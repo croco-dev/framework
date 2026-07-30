@@ -61,7 +61,7 @@ title: "StaticSubscriptionProvider"
 
 [`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/).[`getCurrentPlanId`](/api/entitlements-core/src/classes/subscriptionprovider/#getcurrentplanid)
 
----
+***
 
 ### getCurrentPlanVersion()
 

@@ -49,7 +49,7 @@ implementations should return the existing execution instead of creating a new o
 
 Error if creation fails (excluding idempotency conflicts)
 
----
+***
 
 ### delete()
 
@@ -71,7 +71,7 @@ Delete an execution record.
 
 Error if execution not found or deletion fails
 
----
+***
 
 ### findById()
 
@@ -91,7 +91,7 @@ Find an execution by its ID.
 
 Execution or null if not found
 
----
+***
 
 ### findByIdempotencyKey()
 
@@ -113,7 +113,7 @@ Used for idempotency check during creation.
 
 Execution or null if not found
 
----
+***
 
 ### list()
 
@@ -133,7 +133,7 @@ List executions with optional filtering.
 
 Array of executions matching the criteria
 
----
+***
 
 ### listRunning()
 
@@ -151,7 +151,7 @@ List running executions in stable ID order using keyset pagination.
 
 `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)[]\>
 
----
+***
 
 ### mergeCheckpoint()
 
@@ -186,7 +186,7 @@ conflict detection must use a separate compare-and-set contract.
 
 ExecutionProblem if execution is not found or the merge fails
 
----
+***
 
 ### update()
 
@@ -218,7 +218,7 @@ Updated execution
 
 Error if execution not found or update fails
 
----
+***
 
 ### updateIfStatus()
 

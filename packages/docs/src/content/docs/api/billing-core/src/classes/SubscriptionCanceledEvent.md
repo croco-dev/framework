@@ -49,7 +49,7 @@ title: "SubscriptionCanceledEvent"
 
 > `readonly` **cancelAtPeriodEnd**: `boolean`
 
----
+***
 
 ### eventId
 
@@ -59,7 +59,7 @@ title: "SubscriptionCanceledEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
----
+***
 
 ### eventName
 
@@ -69,13 +69,13 @@ title: "SubscriptionCanceledEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
----
+***
 
 ### externalSubscriptionId
 
 > `readonly` **externalSubscriptionId**: `string`
 
----
+***
 
 ### metadata
 
@@ -85,13 +85,13 @@ title: "SubscriptionCanceledEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
----
+***
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
----
+***
 
 ### timestamp
 
@@ -101,7 +101,7 @@ title: "SubscriptionCanceledEvent"
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
----
+***
 
 ### eventName
 

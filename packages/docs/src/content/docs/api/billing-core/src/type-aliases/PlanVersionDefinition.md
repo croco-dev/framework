@@ -59,6 +59,12 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 
 ***
 
+### quantityPolicy
+
+> `readonly` **quantityPolicy**: [`SubscriptionQuantityPolicy`](/api/billing-core/src/type-aliases/subscriptionquantitypolicy/)
+
+***
+
 ### rating
 
 > `readonly` **rating**: [`PlanRatingDefinition`](/api/billing-core/src/type-aliases/planratingdefinition/)
