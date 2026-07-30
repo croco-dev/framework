@@ -123,6 +123,7 @@ describe("DrizzleExecutionStore", () => {
                     "attempts",
                     "maxAttempts",
                     "idempotencyKey",
+                    "requestFingerprint",
                     "replayOf",
                     "logs",
                     "parentId",
@@ -240,6 +241,7 @@ describe("DrizzleExecutionStore", () => {
                       store.create({
                         type: "task",
                         idempotencyKey: "conformance-race-key",
+                        requestFingerprint: "a".repeat(64),
                       }),
                     {
                       code: "execution/conflict",
@@ -310,6 +312,15 @@ describe("DrizzleExecutionStore", () => {
       expect(result.attempts).toBe(0);
     });
 
+    it("keeps persisted null payloads compatible with the optional payload API", async () => {
+      const result = await store.create({
+        type: "task",
+        payload: null,
+      });
+
+      expect(result.payload).toBeUndefined();
+    });
+
     it("should return existing execution when idempotency key is provided and exists", async () => {
       const existing = createMockExecution({
         idempotencyKey: "unique-key-123",
@@ -346,6 +357,7 @@ describe("DrizzleExecutionStore", () => {
 
       const params = {
         type: "batch",
+        requestFingerprint: "a".repeat(64),
         scheduledFor: new Date("2026-01-01T00:00:00Z"),
         idempotencyKey: "batch-key-123",
         parentId: "parent-execution-id",
@@ -363,6 +375,7 @@ describe("DrizzleExecutionStore", () => {
     it("should create execution replay fields and initial logs", async () => {
       const result = await store.create({
         type: "workflow",
+        requestFingerprint: "a".repeat(64),
         replayOf: "source-execution-id",
         logs: [
           {
@@ -405,6 +418,7 @@ describe("DrizzleExecutionStore", () => {
       const result = await store.create({
         type: "task",
         idempotencyKey: "race-key-123",
+        requestFingerprint: "a".repeat(64),
       });
 
       expect(result).toEqual(existing);
@@ -429,6 +443,7 @@ describe("DrizzleExecutionStore", () => {
         store.create({
           type: "task",
           idempotencyKey: "race-key-456",
+          requestFingerprint: "a".repeat(64),
         }),
       ).rejects.toThrow("Execution with idempotency key 'race-key-456' already exists");
     });
@@ -451,6 +466,7 @@ describe("DrizzleExecutionStore", () => {
       await expect(
         store.create({
           type: "task",
+          requestFingerprint: "a".repeat(64),
         }),
       ).rejects.toThrow("insert failed");
     });

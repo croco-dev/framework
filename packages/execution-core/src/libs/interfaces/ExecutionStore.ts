@@ -1,5 +1,5 @@
 import type {
-  CreateExecutionParams,
+  CreateExecutionRecordParams,
   Execution,
   ExecutionContinuationClaim,
   ExecutionContinuationPublication,
@@ -25,7 +25,7 @@ export abstract class ExecutionStore {
    *
    * @throws Error if creation fails (excluding idempotency conflicts)
    */
-  abstract create(params: CreateExecutionParams): Promise<Execution>;
+  abstract create(params: CreateExecutionRecordParams): Promise<Execution>;
 
   /**
    * Find an execution by its ID.

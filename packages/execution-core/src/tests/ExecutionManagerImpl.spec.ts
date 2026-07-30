@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
-  CreateExecutionParams,
+  CreateExecutionRecordParams,
   Execution,
   ExecutionError,
   ExecutionLogEntry,
@@ -16,7 +16,7 @@ class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
   private executions: Map<string, Execution> = new Map();
   private idCounter = 0;
 
-  async create(params: CreateExecutionParams): Promise<Execution> {
+  async create(params: CreateExecutionRecordParams): Promise<Execution> {
     const id = `exec-${++this.idCounter}`;
     const now = new Date();
 
@@ -29,6 +29,7 @@ class MockExecutionStore implements ExecutionStore, ExecutionLogStore {
       timeout: params.timeout,
       scheduledFor: params.scheduledFor,
       idempotencyKey: params.idempotencyKey,
+      requestFingerprint: params.requestFingerprint,
       replayOf: params.replayOf,
       logs: params.logs,
       parentId: params.parentId,
@@ -160,15 +161,252 @@ describe("ExecutionManagerImpl", () => {
     it("returns existing execution for same idempotencyKey", async () => {
       const first = await manager.create({
         type: "task",
+        payload: { accountId: "acct-1", action: "sync" },
         idempotencyKey: "key-1",
       });
       const second = await manager.create({
         type: "task",
+        payload: { action: "sync", accountId: "acct-1" },
         idempotencyKey: "key-1",
       });
 
       expect(first.id).toBe(second.id);
     });
+
+    it.each(["running", "completed", "failed"] as const)(
+      "rejects a different request fingerprint for an existing %s execution",
+      async (status) => {
+        const first = await manager.create({
+          type: "billing-sync",
+          payload: { accountId: "acct-1" },
+          idempotencyKey: "key-1",
+        });
+        await manager.start(first.id);
+        if (status === "completed") {
+          await manager.complete(first.id, "done");
+        } else if (status === "failed") {
+          await manager.fail(first.id, { message: "provider unavailable", retryable: false });
+        }
+
+        await expect(
+          manager.create({
+            type: "billing-sync",
+            payload: { accountId: "acct-2" },
+            idempotencyKey: "key-1",
+          }),
+        ).rejects.toMatchObject({
+          code: "execution/idempotency-conflict",
+          category: "Conflict",
+        });
+
+        const repeated = await manager.create({
+          type: "billing-sync",
+          payload: { accountId: "acct-1" },
+          idempotencyKey: "key-1",
+        });
+        expect(repeated.id).toBe(first.id);
+        expect(repeated.status).toBe(status);
+      },
+    );
+
+    it("validates an idempotent execution returned by a concurrent store create", async () => {
+      vi.spyOn(store, "findByIdempotencyKey").mockResolvedValueOnce(null);
+      vi.spyOn(store, "create").mockResolvedValueOnce({
+        id: "exec-concurrent",
+        type: "other-task",
+        status: "completed",
+        payload: { accountId: "acct-2" },
+        attempts: 1,
+        maxAttempts: 1,
+        createdAt: new Date(),
+        idempotencyKey: "key-1",
+      });
+
+      await expect(
+        manager.create({
+          type: "billing-sync",
+          payload: { accountId: "acct-1" },
+          idempotencyKey: "key-1",
+        }),
+      ).rejects.toMatchObject({
+        code: "execution/idempotency-conflict",
+      });
+    });
+
+    it("reuses a matching execution through a legacy idempotency key", async () => {
+      const legacy = await manager.create({
+        type: "billing-sync",
+        payload: { accountId: "acct-1" },
+        idempotencyKey: "legacy-key",
+      });
+      await manager.start(legacy.id);
+      await manager.complete(legacy.id, "legacy-result");
+
+      const migrated = await manager.create({
+        type: "billing-sync",
+        payload: { accountId: "acct-1" },
+        idempotencyKey: "scoped-key",
+        legacyIdempotencyKeys: ["legacy-key"],
+      });
+
+      expect(migrated.id).toBe(legacy.id);
+      expect(migrated.result).toBe("legacy-result");
+    });
+
+    it("ignores a conflicting legacy key and creates the scoped execution", async () => {
+      const legacy = await manager.create({
+        type: "other-task",
+        payload: { accountId: "acct-2" },
+        idempotencyKey: "legacy-key",
+      });
+
+      const migrated = await manager.create({
+        type: "billing-sync",
+        payload: { accountId: "acct-1" },
+        idempotencyKey: "scoped-key",
+        legacyIdempotencyKeys: ["legacy-key"],
+      });
+
+      expect(migrated.id).not.toBe(legacy.id);
+      expect(migrated.idempotencyKey).toBe("scoped-key");
+    });
+
+    it("rejects a different payload for the same execution type through a legacy key", async () => {
+      const legacy = await manager.create({
+        type: "billing-sync",
+        payload: { accountId: "acct-1" },
+        idempotencyKey: "legacy-key",
+      });
+      await store.update(legacy.id, { requestFingerprint: undefined });
+
+      await expect(
+        manager.create({
+          type: "billing-sync",
+          payload: { accountId: "acct-2" },
+          idempotencyKey: "scoped-key",
+          legacyIdempotencyKeys: ["legacy-key"],
+        }),
+      ).rejects.toMatchObject({
+        code: "execution/idempotency-conflict",
+      });
+    });
+
+    it.each([
+      ["null", null, null],
+      [
+        "a date serialized by durable JSON storage",
+        "2026-01-01T00:00:00.000Z",
+        new Date("2026-01-01T00:00:00.000Z"),
+      ],
+    ])("reuses a matching legacy %s payload", async (_case, storedPayload, requestedPayload) => {
+      const legacy = await manager.create({
+        type: "billing-sync",
+        payload: storedPayload,
+        idempotencyKey: "legacy-key",
+      });
+      await store.update(legacy.id, {
+        payload: storedPayload,
+        requestFingerprint: undefined,
+      });
+
+      const migrated = await manager.create({
+        type: "billing-sync",
+        payload: requestedPayload,
+        idempotencyKey: "scoped-key",
+        legacyIdempotencyKeys: ["legacy-key"],
+      });
+
+      expect(migrated.id).toBe(legacy.id);
+    });
+
+    it("reuses a matching legacy object when its keys are reordered", async () => {
+      const legacy = await manager.create({
+        type: "billing-sync",
+        payload: { accountId: "acct-1", action: "sync" },
+        idempotencyKey: "legacy-key",
+      });
+      await store.update(legacy.id, { requestFingerprint: undefined });
+
+      const migrated = await manager.create({
+        type: "billing-sync",
+        payload: { action: "sync", accountId: "acct-1" },
+        idempotencyKey: "scoped-key",
+        legacyIdempotencyKeys: ["legacy-key"],
+      });
+
+      expect(migrated.id).toBe(legacy.id);
+    });
+
+    it.each([
+      ["an omitted payload persisted as null", null, undefined],
+      [
+        "a date persisted as an ISO string",
+        "2026-01-01T00:00:00.000Z",
+        new Date("2026-01-01T00:00:00.000Z"),
+      ],
+    ])("reuses an unchanged legacy key with %s", async (_case, storedPayload, requestedPayload) => {
+      const legacy = await manager.create({
+        type: "billing-sync",
+        payload: storedPayload,
+        idempotencyKey: "unchanged-key",
+      });
+      await store.update(legacy.id, {
+        payload: storedPayload,
+        requestFingerprint: undefined,
+      });
+
+      const repeated = await manager.create({
+        type: "billing-sync",
+        payload: requestedPayload,
+        idempotencyKey: "unchanged-key",
+      });
+
+      expect(repeated.id).toBe(legacy.id);
+    });
+
+    it.each([
+      ["undefined and null", undefined, null],
+      ["an omitted object field and an undefined field", {}, { value: undefined }],
+      ["zero and negative zero", 0, -0],
+    ])(
+      "distinguishes %s in persisted request fingerprints",
+      async (_case, firstPayload, nextPayload) => {
+        await manager.create({
+          type: "task",
+          payload: firstPayload,
+          idempotencyKey: "key-1",
+        });
+
+        await expect(
+          manager.create({
+            type: "task",
+            payload: nextPayload,
+            idempotencyKey: "key-1",
+          }),
+        ).rejects.toMatchObject({
+          code: "execution/idempotency-conflict",
+        });
+      },
+    );
+
+    it.each([
+      ["Map", new Map([["value", 1]])],
+      ["Set", new Set([1])],
+      ["typed array", new Uint8Array([1])],
+    ])(
+      "rejects unsupported %s payloads instead of fingerprinting them as plain objects",
+      async (_case, payload) => {
+        await expect(
+          manager.create({
+            type: "task",
+            payload,
+            idempotencyKey: "key-1",
+          }),
+        ).rejects.toMatchObject({
+          code: "execution/idempotency-conflict",
+        });
+      },
+    );
 
     it("creates new execution for different idempotencyKey", async () => {
       const first = await manager.create({

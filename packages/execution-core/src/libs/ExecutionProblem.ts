@@ -3,6 +3,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 export enum ExecutionProblemCode {
   NOT_FOUND = "execution/not-found",
   CONFLICT = "execution/conflict",
+  IDEMPOTENCY_CONFLICT = "execution/idempotency-conflict",
   MAX_RETRIES_EXCEEDED = "execution/max-retries-exceeded",
   INVALID_STATE_TRANSITION = "execution/invalid-state-transition",
   INVALID_CONTINUATION_LEASE_DURATION = "execution/invalid-continuation-lease-duration",
@@ -86,6 +87,14 @@ export class ExecutionProblems {
 
   static conflict(detail: string): ExecutionProblem {
     return new ExecutionProblem(ExecutionProblemCode.CONFLICT, ProblemCategory.Conflict, detail);
+  }
+
+  static idempotencyConflict(detail: string): ExecutionProblem {
+    return new ExecutionProblem(
+      ExecutionProblemCode.IDEMPOTENCY_CONFLICT,
+      ProblemCategory.Conflict,
+      detail,
+    );
   }
 
   static maxRetriesExceeded(detail: string): ExecutionProblem {

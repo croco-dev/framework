@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 527,
+  problemCount: 528,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5048,7 +5048,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 88,
+          line: 89,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5078,7 +5078,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 119,
+          line: 128,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5110,7 +5110,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 108,
+          line: 117,
+          column: 12,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "execution/idempotency-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#execution-idempotency-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/execution-core/src/libs/ExecutionProblem.ts",
+          line: 93,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5141,7 +5171,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 27,
+          line: 28,
           column: 3,
           kind: "problem-class",
         },
@@ -5171,7 +5201,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 100,
+          line: 109,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5201,7 +5231,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 92,
+          line: 101,
           column: 12,
           kind: "problem-constructor",
         },
@@ -5232,7 +5262,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/execution-core/src/libs/ExecutionProblem.ts",
-          line: 84,
+          line: 85,
           column: 12,
           kind: "problem-constructor",
         },

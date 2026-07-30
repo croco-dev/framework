@@ -144,6 +144,116 @@ function defaultTokenGenerator(): string {
   return globalThis.crypto.randomUUID();
 }
 
+async function executionRequestFingerprint(type: string, payload: unknown): Promise<string> {
+  return sha256(
+    canonicalStringify({
+      payload,
+      type,
+    }),
+  );
+}
+
+async function legacyExecutionRequestFingerprint(type: string, payload: unknown): Promise<string> {
+  let durablePayload: unknown;
+
+  try {
+    durablePayload = JSON.parse(JSON.stringify(payload) ?? "null") as unknown;
+  } catch {
+    throw ExecutionProblems.idempotencyConflict(
+      "Execution request payload cannot be compared with a legacy persisted payload",
+    );
+  }
+
+  return sha256(
+    canonicalStringify({
+      payload: durablePayload,
+      type,
+    }),
+  );
+}
+
+async function sha256(value: string): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function canonicalStringify(value: unknown, ancestors = new WeakSet<object>()): string {
+  if (value === null) return '["null"]';
+
+  switch (typeof value) {
+    case "undefined":
+      return '["undefined"]';
+    case "boolean":
+      return JSON.stringify(["boolean", value]);
+    case "string":
+      return JSON.stringify(["string", value]);
+    case "number":
+      if (Number.isNaN(value)) return '["number","NaN"]';
+      if (value === Number.POSITIVE_INFINITY) return '["number","Infinity"]';
+      if (value === Number.NEGATIVE_INFINITY) return '["number","-Infinity"]';
+      if (Object.is(value, -0)) return '["number","-0"]';
+      return JSON.stringify(["number", value]);
+    case "bigint":
+      return JSON.stringify(["bigint", value.toString()]);
+    case "symbol":
+    case "function":
+      throw ExecutionProblems.idempotencyConflict(
+        `Execution request payload contains unsupported ${typeof value} data`,
+      );
+  }
+
+  if (ancestors.has(value)) {
+    throw ExecutionProblems.idempotencyConflict(
+      "Execution request payload contains a circular reference",
+    );
+  }
+  ancestors.add(value);
+
+  try {
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) {
+        throw ExecutionProblems.idempotencyConflict(
+          "Execution request payload contains an invalid date",
+        );
+      }
+      return JSON.stringify(["date", value.toISOString()]);
+    }
+
+    if (Array.isArray(value)) {
+      const entries = Array.from({ length: value.length }, (_, index) =>
+        index in value ? canonicalStringify(value[index], ancestors) : '["hole"]',
+      );
+      return `["array",[${entries.join(",")}]]`;
+    }
+
+    const symbolKeys = Object.getOwnPropertySymbols(value).filter((key) =>
+      Object.prototype.propertyIsEnumerable.call(value, key),
+    );
+    if (symbolKeys.length > 0) {
+      throw ExecutionProblems.idempotencyConflict(
+        "Execution request payload contains unsupported symbol-keyed data",
+      );
+    }
+
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw ExecutionProblems.idempotencyConflict(
+        "Execution request payload contains an unsupported object type",
+      );
+    }
+
+    const record = value as Record<string, unknown>;
+    const entries = Object.keys(record)
+      .sort()
+      .map((key) => `[${JSON.stringify(key)},${canonicalStringify(record[key], ancestors)}]`);
+    return `["object",[${entries.join(",")}]]`;
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
 /**
  * ExecutionManagerImpl provides lifecycle management for executions.
  *
@@ -194,22 +304,87 @@ export class ExecutionManagerImpl
   }
 
   async create(params: CreateExecutionParams): Promise<Execution> {
-    const { idempotencyKey, maxAttempts = 1, timeout, ...rest } = params;
+    const {
+      idempotencyKey,
+      legacyIdempotencyKeys = [],
+      maxAttempts = 1,
+      timeout,
+      ...rest
+    } = params;
+    let requestFingerprint: string | undefined;
 
-    // Idempotency check: if idempotencyKey exists, return existing execution
     if (idempotencyKey) {
+      requestFingerprint = await executionRequestFingerprint(params.type, params.payload);
+      const legacyRequestFingerprint =
+        legacyIdempotencyKeys.length === 0
+          ? undefined
+          : await legacyExecutionRequestFingerprint(params.type, params.payload);
       const existing = await this.store.findByIdempotencyKey(idempotencyKey);
       if (existing) {
+        await this.assertMatchingIdempotentRequest(
+          existing,
+          requestFingerprint,
+          params.type,
+          params.payload,
+        );
         return existing;
+      }
+
+      for (const legacyKey of new Set(legacyIdempotencyKeys)) {
+        if (legacyKey === idempotencyKey) continue;
+        const legacy = await this.store.findByIdempotencyKey(legacyKey);
+        if (!legacy || legacy.type !== params.type) continue;
+
+        const matches =
+          legacy.requestFingerprint === undefined
+            ? legacyRequestFingerprint !== undefined &&
+              (await legacyExecutionRequestFingerprint(legacy.type, legacy.payload)) ===
+                legacyRequestFingerprint
+            : legacy.requestFingerprint === requestFingerprint;
+        if (matches) return legacy;
+
+        throw ExecutionProblems.idempotencyConflict(
+          "Execution idempotency key was reused for a different type or payload",
+        );
       }
     }
 
-    return this.store.create({
+    const execution = await this.store.create({
       ...rest,
       maxAttempts,
       timeout,
       idempotencyKey,
+      ...(requestFingerprint === undefined ? {} : { requestFingerprint }),
     });
+
+    if (idempotencyKey && requestFingerprint !== undefined) {
+      await this.assertMatchingIdempotentRequest(
+        execution,
+        requestFingerprint,
+        params.type,
+        params.payload,
+      );
+    }
+
+    return execution;
+  }
+
+  private async assertMatchingIdempotentRequest(
+    existing: Execution,
+    requestedFingerprint: string,
+    requestedType: string,
+    requestedPayload: unknown,
+  ): Promise<void> {
+    const matches =
+      existing.requestFingerprint === undefined
+        ? (await legacyExecutionRequestFingerprint(existing.type, existing.payload)) ===
+          (await legacyExecutionRequestFingerprint(requestedType, requestedPayload))
+        : existing.requestFingerprint === requestedFingerprint;
+    if (matches) return;
+
+    throw ExecutionProblems.idempotencyConflict(
+      "Execution idempotency key was reused for a different type or payload",
+    );
   }
 
   async start(id: string): Promise<Execution> {
