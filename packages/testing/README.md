@@ -191,7 +191,9 @@ The billing provider helper currently covers:
 - `createBillingProviderConformanceSuite()` for `@croco/billing-core` providers: checkout
   creation, customer portal access, subscription cancel/resume lifecycle behavior, optional
   provider failure scenarios, signed webhook handling, webhook idempotency, and invalid webhook
-  rejection as Croco `Problem` instances.
+  rejection as Croco `Problem` instances. Its optional `capabilities` contract inspects the provider
+  profile and can require `checkout` or `usage` independently, including verification of the
+  capability-specific public methods.
 
 The auth provider helper currently covers:
 

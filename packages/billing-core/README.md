@@ -34,6 +34,48 @@ await billingService.createCheckout({
 });
 ```
 
+### 명시적 provider capability
+
+`BillingGateway`는 기존 checkout 전용 구현과 source-compatible하게 유지됩니다. 런타임에서 provider를
+선택하는 경로는 별도 profile과 구현을 조합해 지원 capability를 검사합니다.
+
+```ts
+import {
+  defineBillingProvider,
+  defineBillingProviderProfile,
+  type BillingGateway,
+  type UsageBillingGateway,
+} from "@croco/billing-core";
+
+const profile = defineBillingProviderProfile({
+  providerName: "example",
+  capabilities: {
+    checkout: { supported: true },
+    usage: { supported: true },
+  },
+});
+
+const provider = defineBillingProvider(profile, {
+  checkout: checkoutGateway satisfies BillingGateway,
+  usage: usageGateway satisfies UsageBillingGateway,
+});
+
+await provider.requireCapability("usage").ingest([
+  {
+    eventId: "request-123",
+    billingAccountId: "account-123",
+    meterId: "ai.tokens",
+    value: 100,
+    occurredAt: new Date(),
+    dimensions: { model: "gpt-5" },
+  },
+]);
+```
+
+`UsageBillingGateway.ingest()`는 배치별로 `inserted` 또는 `duplicate` 영수증을 반환합니다. duplicate는
+실패나 no-op 성공으로 숨기지 않고 명시적인 성공 acknowledgement입니다. 지원하지 않는 capability를
+`requireCapability()`로 요청하면 `billing/provider-capability-unavailable` Problem이 발생합니다.
+
 ```ts
 import { Money } from "@croco/billing-core";
 
@@ -63,6 +105,8 @@ annual.toString();
 - `BillingService`, 테넌트 기준 구독 조회, 체크아웃 생성, 취소, 재개를 처리합니다.
 - `BillingStore`, billing account, subscription, order 저장 계약입니다.
 - `BillingGateway`, 외부 결제 제공자 연동 계약입니다.
+- `UsageBillingGateway`, 배치 usage 수신과 customer meter state 조회 계약입니다.
+- `BillingProvider`, inspectable capability profile과 런타임 구현을 조합합니다.
 - `InMemoryBillingStore`, 테스트용 인메모리 저장소입니다.
 - `InMemoryPlanRegistry`, 게시 후 변경할 수 없는 플랜 버전을 조회하는 인메모리 레지스트리입니다.
 - `Money`, 통화 안전 계산용 값 객체입니다.
@@ -78,13 +122,14 @@ annual.toString();
 
 - `BillingAccount`, `Subscription`, `Order`, `Invoice`, `Plan`, `PlanVersionDefinition`
 - `CreateCheckoutParams`, `CheckoutResult`
+- `UsageBillingEvent`, `UsageBillingEventReceipt`, `CustomerMeterState`
 - `CreateBillingCheckoutParams`, `BillingServiceDependencies`
 - `PlanTransitionParams`, `ProrationCalculationParams`, `GenerateInvoiceParams`
 
 ### 이벤트와 문제 타입
 
 - 이벤트: `OrderPaidEvent`, `PlanChangedEvent`, `SubscriptionActivatedEvent`, `SubscriptionCanceledEvent`, `SubscriptionPastDueEvent`, `SubscriptionRevokedEvent`
-- 문제 타입: `BillingAccountNotFoundProblem`, `BillingCheckoutCreationProblem`, `BillingCheckoutInProgressProblem`, `SubscriptionNotFoundProblem`, `InvalidMoneyAmountProblem`
+- 문제 타입: `BillingAccountNotFoundProblem`, `BillingCheckoutCreationProblem`, `BillingCheckoutInProgressProblem`, `ProviderCapabilityUnavailableProblem`, `SubscriptionNotFoundProblem`, `InvalidMoneyAmountProblem`
 
 ## 구현 포인트
 

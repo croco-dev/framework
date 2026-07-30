@@ -14,6 +14,34 @@ export type {
   CreateCheckoutParams,
 } from "./libs/BillingGateway";
 
+/** Explicit billing provider capability profiles and runtime composition. */
+export {
+  BillingProvider,
+  defineBillingProvider,
+  defineBillingProviderProfile,
+} from "./libs/BillingProvider";
+export { BILLING_PROVIDER_CAPABILITIES } from "./libs/BillingProviderCapabilities";
+export type {
+  BillingProviderCapability,
+  BillingProviderCapabilityAvailability,
+  BillingProviderCapabilityProfile,
+  BillingProviderProfile,
+} from "./libs/BillingProviderCapabilities";
+export type { BillingProviderImplementations } from "./libs/BillingProvider";
+
+/** Provider-neutral usage event ingestion and customer meter state contracts. */
+export type {
+  CustomerMeterState,
+  CustomerMeterStateQuery,
+  DuplicateUsageBillingEventReceipt,
+  InsertedUsageBillingEventReceipt,
+  UsageBillingBatchReceipt,
+  UsageBillingDimensionValue,
+  UsageBillingEvent,
+  UsageBillingEventReceipt,
+  UsageBillingGateway,
+} from "./libs/UsageBillingGateway";
+
 /**
  * BillingService 생성에 필요한 의존성과 체크아웃 입력 타입입니다.
  */
@@ -143,6 +171,7 @@ export {
   MoneyDivisionByZeroProblem,
   PlanVersionAlreadyPublishedProblem,
   PlanVersionConflictProblem,
+  ProviderCapabilityUnavailableProblem,
   SubscriptionPlanVersionMismatchProblem,
   SubscriptionNotFoundProblem,
   UnknownPlanVersionProblem,

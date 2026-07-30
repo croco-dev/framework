@@ -8,6 +8,7 @@ title: "CreditLedgerStore"
 ## Extended by
 
 - [`InMemoryCreditLedgerStore`](/api/credits-core/src/classes/inmemorycreditledgerstore/)
+- [`DrizzleCreditLedgerStore`](/api/credits-drizzle/src/classes/drizzlecreditledgerstore/)
 
 ## Constructors
 
@@ -35,7 +36,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditCommandResult`](/api/credits-core/src/type-aliases/creditcommandresult/)\>
 
-***
+---
 
 ### getAccount()
 
@@ -51,7 +52,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditAccount`](/api/credits-core/src/type-aliases/creditaccount/) \| `null`\>
 
-***
+---
 
 ### getBalance()
 
@@ -71,7 +72,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditBalance`](/api/credits-core/src/type-aliases/creditbalance/)\>
 
-***
+---
 
 ### getHistory()
 
@@ -101,7 +102,7 @@ title: "CreditLedgerStore"
 
 `Promise`\<[`CreditHistoryPage`](/api/credits-core/src/type-aliases/credithistorypage/)\>
 
-***
+---
 
 ### getReservation()
 

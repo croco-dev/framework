@@ -48,6 +48,7 @@
  * ```
  */
 export { PolarBillingGateway } from "./libs/PolarBillingGateway";
+export { POLAR_BILLING_PROVIDER_PROFILE } from "./libs/PolarBillingProviderProfile";
 
 // Event Mapper
 /**

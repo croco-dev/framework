@@ -1,5 +1,12 @@
 import * as assert from "node:assert/strict";
-import type { BillingGateway, CheckoutResult, CreateCheckoutParams } from "@croco/billing-core";
+import {
+  BILLING_PROVIDER_CAPABILITIES,
+  type BillingGateway,
+  type BillingProvider,
+  type BillingProviderCapability,
+  type CheckoutResult,
+  type CreateCheckoutParams,
+} from "@croco/billing-core";
 import { Problem } from "@croco/problems-core";
 
 export type BillingProviderConformanceCase = {
@@ -129,9 +136,15 @@ export type BillingProviderConformanceOptions<
   TResult extends BillingWebhookResult = BillingWebhookResult,
   THandler extends BillingWebhookHandlerContract<TResult> = BillingWebhookHandlerContract<TResult>,
 > = {
+  readonly capabilities?: BillingProviderCapabilityConformanceOptions;
   readonly providerName: string;
   readonly gateway?: BillingGatewayConformanceOptions<TGateway>;
   readonly webhook?: BillingWebhookConformanceOptions<TResult, THandler>;
+};
+
+export type BillingProviderCapabilityConformanceOptions = {
+  readonly createProvider: () => BillingProvider | Promise<BillingProvider>;
+  readonly required: readonly BillingProviderCapability[];
 };
 
 export type BillingProviderConformanceSuite = {
@@ -147,6 +160,15 @@ export function createBillingProviderConformanceSuite<
 ): BillingProviderConformanceSuite {
   const cases: BillingProviderConformanceCase[] = [];
 
+  if (options.capabilities) {
+    cases.push(
+      ...createBillingProviderCapabilityConformanceCases(
+        options.providerName,
+        options.capabilities,
+      ),
+    );
+  }
+
   if (options.gateway) {
     cases.push(...createBillingGatewayConformanceCases(options.providerName, options.gateway));
   }
@@ -161,6 +183,68 @@ export function createBillingProviderConformanceSuite<
   }
 
   return { cases };
+}
+
+const BILLING_PROVIDER_CAPABILITY_METHODS = {
+  checkout: [
+    "ensureCustomer",
+    "createCheckout",
+    "reconcileCheckout",
+    "cancelSubscription",
+    "resumeSubscription",
+    "getCustomerPortalUrl",
+  ],
+  usage: ["ingest", "getCustomerMeterState"],
+} as const satisfies Record<BillingProviderCapability, readonly string[]>;
+
+function createBillingProviderCapabilityConformanceCases(
+  providerName: string,
+  options: BillingProviderCapabilityConformanceOptions,
+): BillingProviderConformanceCase[] {
+  return [
+    {
+      name: "exposes an inspectable billing provider capability profile",
+      run: async () => {
+        const provider = await options.createProvider();
+
+        assertNonEmptyString(
+          provider.profile.providerName,
+          `${providerName} provider profile name`,
+        );
+        for (const capability of BILLING_PROVIDER_CAPABILITIES) {
+          const declaration = provider.profile.capabilities[capability];
+          assert.equal(
+            typeof declaration.supported,
+            "boolean",
+            `${providerName} must explicitly declare billing capability '${capability}'`,
+          );
+          if (!declaration.supported) {
+            assertNonEmptyString(
+              declaration.reason,
+              `${providerName} unsupported capability '${capability}' reason`,
+            );
+          }
+        }
+      },
+    },
+    ...options.required.map(
+      (capability): BillingProviderConformanceCase => ({
+        name: `requires billing provider capability '${capability}' independently`,
+        run: async () => {
+          const provider = await options.createProvider();
+          const implementation = provider.requireCapability(capability);
+
+          for (const method of BILLING_PROVIDER_CAPABILITY_METHODS[capability]) {
+            assert.equal(
+              typeof implementation[method as keyof typeof implementation],
+              "function",
+              `${providerName} capability '${capability}' must implement '${method}'`,
+            );
+          }
+        },
+      }),
+    ),
+  ];
 }
 
 function createBillingGatewayConformanceCases<TGateway extends BillingGateway>(
