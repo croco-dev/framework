@@ -1,4 +1,5 @@
 import { Container } from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AfterCommitHooksProblem,
@@ -11,6 +12,12 @@ import {
   TxManagerRegistry,
 } from "../index";
 import type { TxAdapter } from "../index";
+
+class TestTransactionFailureProblem extends Problem {
+  constructor(detail: string) {
+    super("tx-core/test-transaction-failure", ProblemCategory.InternalServerError, detail);
+  }
+}
 
 function throwIfAbortedWithRollback(signal?: AbortSignal): void {
   if (!signal?.aborted) {
@@ -526,7 +533,9 @@ describe("TxManager Transaction Timeout", () => {
       ): Promise<T> => {
         await fn({ id: "tx-client" });
         await new Promise((resolve) => setTimeout(resolve, 40));
-        if (!signal?.aborted) throw new Error("Expected the transaction deadline to expire");
+        if (!signal?.aborted) {
+          throw new TestTransactionFailureProblem("Expected the transaction deadline to expire");
+        }
         throw signal.reason;
       };
       const unsafeAdapter: TxAdapter<{ id: string }> = {
@@ -583,7 +592,7 @@ describe("TxManager Transaction Timeout", () => {
         async () => {
           txManager.onAfterCommit(async () => {
             await new Promise((resolve) => setTimeout(resolve, 40));
-            throw new Error("post-commit delivery failed");
+            throw new TestTransactionFailureProblem("post-commit delivery failed");
           });
           return "committed";
         },
