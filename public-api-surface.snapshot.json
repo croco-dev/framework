@@ -8020,6 +8020,12 @@
           "sourceEntrypoint": "packages/execution-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "createExecutionCheckpointStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance",
+              "declarationKind": "function"
+            },
+            {
               "name": "createExecutionJobsOperations",
               "exportKind": "named",
               "source": "./libs/JobsOperations",
@@ -8086,6 +8092,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "prepareExecutionCheckpoint",
+              "exportKind": "named",
+              "source": "./libs/ExecutionCheckpoint",
+              "declarationKind": "function"
+            },
+            {
               "name": "summarizeJob",
               "exportKind": "named",
               "source": "./libs/JobsOperations",
@@ -8142,6 +8154,36 @@
               "name": "Execution",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "ExecutionCheckpointConcurrencyResult",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "ExecutionCheckpointStoreConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "ExecutionCheckpointStoreConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "ExecutionCheckpointStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/conformance"
+            },
+            {
+              "name": "ExecutionCheckpointValue",
+              "exportKind": "named",
+              "source": "./libs/ExecutionCheckpoint"
+            },
+            {
+              "name": "ExecutionCheckpointWrite",
+              "exportKind": "named",
+              "source": "./libs/conformance"
             },
             {
               "name": "ExecutionContinuationAcquired",
@@ -8287,6 +8329,11 @@
               "name": "ListRunningExecutionsOptions",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "PreparedExecutionCheckpoint",
+              "exportKind": "named",
+              "source": "./libs/ExecutionCheckpoint"
             },
             {
               "name": "ProgressInfo",

@@ -17,6 +17,7 @@ import {
   readGeneratedSmokeAllowlistMetadata,
   requiresCommandShell,
   turboBuildArguments,
+  turboConcurrencyArguments,
 } from "../create-croco-app-generated-smoke.mts";
 import {
   classifySmokeCommandFailure,
@@ -71,6 +72,8 @@ describe("generated smoke command execution", () => {
   });
 
   it("bounds Windows workspace build concurrency for TypeScript declaration bundling", () => {
+    expect(turboConcurrencyArguments("win32")).toEqual(["--concurrency=4"]);
+    expect(turboConcurrencyArguments("linux")).toEqual([]);
     expect(turboBuildArguments(["@croco/example"], "win32")).toEqual([
       "build",
       "--concurrency=4",

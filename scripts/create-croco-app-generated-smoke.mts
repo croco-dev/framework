@@ -1509,6 +1509,7 @@ if (isMainModule()) {
         [
           turboPath,
           "build",
+          ...turboConcurrencyArguments(),
           "--filter=@croco/auth-better-auth...",
           "--filter=@croco/auth-clerk...",
           "--filter=@croco/auth-drizzle...",
@@ -3434,11 +3435,15 @@ export function turboBuildArguments(
 ): string[] {
   return [
     "build",
-    // TypeScript 6 declaration bundling is substantially more memory-intensive on the hosted Windows runner.
-    // Bound parallelism there so a large generated-app dependency graph cannot terminate Turbo without diagnostics.
-    ...(platform === "win32" ? ["--concurrency=4"] : []),
+    ...turboConcurrencyArguments(platform),
     ...packageNames.map((packageName) => `--filter=${packageName}...`),
   ];
+}
+
+export function turboConcurrencyArguments(platform: NodeJS.Platform = process.platform): string[] {
+  // TypeScript 6 declaration bundling is substantially more memory-intensive on the hosted Windows runner.
+  // Bound parallelism there so a large generated-app dependency graph cannot terminate Turbo without diagnostics.
+  return platform === "win32" ? ["--concurrency=4"] : [];
 }
 
 function packWorkspacePackage(

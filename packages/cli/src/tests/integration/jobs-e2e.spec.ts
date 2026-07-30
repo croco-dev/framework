@@ -6,6 +6,7 @@ import {
   type ExecutionLogEntry,
   type ExecutionLogStore,
   ExecutionManagerImpl,
+  ExecutionProblems,
   type ExecutionStore,
   type JobsOperations,
   type ListExecutionsOptions,
@@ -62,6 +63,19 @@ class TestExecutionStore implements ExecutionStore, ExecutionLogStore {
     }
 
     const updated = { ...execution, ...data };
+    this.executions.set(id, updated);
+    return updated;
+  }
+
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    const execution = this.executions.get(id);
+    if (!execution) {
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+    }
+    const updated = {
+      ...execution,
+      checkpoints: { ...execution.checkpoints, [key]: value },
+    };
     this.executions.set(id, updated);
     return updated;
   }

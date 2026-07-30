@@ -13,6 +13,7 @@ import type {
   ListRunningExecutionsOptions,
   UpdateClaimedExecutionContinuationInput,
 } from "@croco/execution-core";
+import { ExecutionProblems } from "@croco/execution-core";
 
 export class InMemoryContinuationStore implements ExecutionStore, ExecutionContinuationStore {
   private readonly executions = new Map<string, Execution>();
@@ -44,6 +45,13 @@ export class InMemoryContinuationStore implements ExecutionStore, ExecutionConti
     const updated = { ...execution, ...data };
     this.executions.set(id, updated);
     return updated;
+  }
+
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    const execution = this.required(id);
+    return this.update(id, {
+      checkpoints: { ...execution.checkpoints, [key]: value },
+    });
   }
 
   async updateIfStatus(
@@ -312,7 +320,9 @@ export class InMemoryContinuationStore implements ExecutionStore, ExecutionConti
 
   private required(id: string): Execution {
     const execution = this.executions.get(id);
-    if (!execution) throw new Error(`Missing execution '${id}'`);
+    if (!execution) {
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+    }
     return execution;
   }
 }

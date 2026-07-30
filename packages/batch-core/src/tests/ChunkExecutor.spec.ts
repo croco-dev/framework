@@ -3,6 +3,7 @@ import {
   type Execution,
   type ExecutionManager,
   ExecutionManagerImpl,
+  ExecutionProblems,
   type ExecutionStore,
   type ListExecutionsOptions,
 } from "@croco/execution-core";
@@ -536,6 +537,16 @@ class TestExecutionStore implements ExecutionStore {
     const updated = { ...execution, ...data };
     this.executions.set(id, updated);
     return updated;
+  }
+
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    const execution = this.executions.get(id);
+    if (!execution) {
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+    }
+    return this.update(id, {
+      checkpoints: { ...execution.checkpoints, [key]: value },
+    });
   }
 
   async updateIfStatus(

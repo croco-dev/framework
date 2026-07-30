@@ -490,14 +490,7 @@ export class ExecutionManagerImpl
   }
 
   async checkpoint(id: string, key: string, value: unknown): Promise<Execution> {
-    const execution = await this.findExisting(id);
-
-    return this.store.update(id, {
-      checkpoints: {
-        ...execution.checkpoints,
-        [key]: value,
-      },
-    });
+    return this.store.mergeCheckpoint(id, key, value);
   }
 
   async timeout(id: string): Promise<Execution> {

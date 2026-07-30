@@ -16,6 +16,7 @@ import type {
   ExecutionStore,
   ListExecutionsOptions,
 } from "@croco/execution-core";
+import { ExecutionProblems, prepareExecutionCheckpoint } from "@croco/execution-core";
 import {
   type AtomicQuotaCheckOptions,
   type AtomicQuotaCheckResult,
@@ -397,6 +398,20 @@ export class InMemoryExecutionStore implements ExecutionStore, ExecutionLogStore
     }
 
     const updated = { ...execution, ...data };
+    this.executions.set(id, updated);
+    return updated;
+  }
+
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    const execution = this.executions.get(id);
+    if (!execution) {
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+    }
+    const checkpoint = prepareExecutionCheckpoint(key, value);
+    const updated = {
+      ...execution,
+      checkpoints: { ...execution.checkpoints, [key]: checkpoint.value },
+    };
     this.executions.set(id, updated);
     return updated;
   }

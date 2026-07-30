@@ -17,9 +17,11 @@ import type {
 import {
   ExecutionManagerImpl,
   ExecutionProblem,
+  ExecutionProblems,
   InvalidContinuationLeaseDurationProblem,
   MAX_CONTINUATION_LEASE_DURATION_MS,
   MIN_CONTINUATION_LEASE_DURATION_MS,
+  prepareExecutionCheckpoint,
 } from "../index";
 
 class InMemoryExecutionStore implements ExecutionStore, ExecutionContinuationStore {
@@ -48,6 +50,18 @@ class InMemoryExecutionStore implements ExecutionStore, ExecutionContinuationSto
   async update(id: string, data: Partial<Execution>): Promise<Execution> {
     const execution = await this.required(id);
     this.execution = { ...execution, ...data };
+    return this.execution;
+  }
+
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    if (this.execution?.id !== id) {
+      throw ExecutionProblems.notFound(`Execution '${id}' not found`);
+    }
+    const checkpoint = prepareExecutionCheckpoint(key, value);
+    this.execution = {
+      ...this.execution,
+      checkpoints: { ...this.execution.checkpoints, [key]: checkpoint.value },
+    };
     return this.execution;
   }
 
@@ -636,6 +650,11 @@ describe("ExecutionManagerImpl continuation claims", () => {
       findByIdempotencyKey: async () => null,
       update: async () => {
         throw new Error("unused");
+      },
+      mergeCheckpoint: async () => {
+        throw ExecutionProblems.checkpointStoreConformance(
+          "Unexpected checkpoint merge without atomic continuation support",
+        );
       },
       updateIfStatus: async () => null,
       listRunning: async () => [],

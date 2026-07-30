@@ -9,6 +9,7 @@ export enum ExecutionProblemCode {
   INVALID_CONTINUATION_LEASE_DURATION = "execution/invalid-continuation-lease-duration",
   CONTINUATION_UNSUPPORTED = "execution/continuation-unsupported",
   CONTINUATION_CONFLICT = "execution/continuation-conflict",
+  CHECKPOINT_STORE_CONFORMANCE = "execution/checkpoint-store-conformance",
 }
 
 export type InvalidContinuationLeaseDurationProblemOptions = {
@@ -130,6 +131,14 @@ export class ExecutionProblems {
       ProblemCategory.Conflict,
       detail,
       evidence,
+    );
+  }
+
+  static checkpointStoreConformance(detail: string): ExecutionProblem {
+    return new ExecutionProblem(
+      ExecutionProblemCode.CHECKPOINT_STORE_CONFORMANCE,
+      ProblemCategory.InternalServerError,
+      detail,
     );
   }
 }

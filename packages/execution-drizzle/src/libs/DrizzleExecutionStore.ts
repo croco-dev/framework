@@ -13,6 +13,7 @@ import {
   ExecutionStore,
   type ListExecutionsOptions,
   type ListRunningExecutionsOptions,
+  prepareExecutionCheckpoint,
   type UpdateClaimedExecutionContinuationInput,
 } from "@croco/execution-core";
 import { and, asc, eq, gt, isNull, sql } from "drizzle-orm";
@@ -263,6 +264,26 @@ export class DrizzleExecutionStore<TDb extends ExecutionDb>
       .update(executions)
       .set({
         logs: sql`coalesce(${executions.logs}, '[]'::jsonb) || ${JSON.stringify([entry])}::jsonb`,
+      })
+      .where(eq(executions.id, id))
+      .returning()) as ExecutionRow[];
+
+    if (result.length === 0) {
+      throw ExecutionProblems.notFound(`Execution with id '${id}' not found`);
+    }
+
+    return this.mapToExecution(result[0]);
+  }
+
+  /**
+   * 체크포인트 키 하나를 원자적으로 병합합니다.
+   */
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    const checkpoint = prepareExecutionCheckpoint(key, value).serialized;
+    const result = (await this.dbOp
+      .update(executions)
+      .set({
+        checkpoints: sql`(coalesce(${executions.checkpoints}::jsonb, '{}'::jsonb) || ${checkpoint}::jsonb)::json`,
       })
       .where(eq(executions.id, id))
       .returning()) as ExecutionRow[];

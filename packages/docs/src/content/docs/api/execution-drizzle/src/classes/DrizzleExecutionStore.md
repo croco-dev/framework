@@ -230,6 +230,36 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 ---
 
+### mergeCheckpoint()
+
+> **mergeCheckpoint**(`id`, `key`, `value`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+체크포인트 키 하나를 원자적으로 병합합니다.
+
+#### Parameters
+
+##### id
+
+`string`
+
+##### key
+
+`string`
+
+##### value
+
+`unknown`
+
+#### Returns
+
+`Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>
+
+#### Overrides
+
+[`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`mergeCheckpoint`](/api/execution-core/src/classes/executionstore/#mergecheckpoint)
+
+---
+
 ### update()
 
 > **update**(`id`, `data`): `Promise`\<[`Execution`](/api/execution-core/src/interfaces/execution/)\>

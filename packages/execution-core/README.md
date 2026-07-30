@@ -85,6 +85,10 @@ export class MyDynamoExecutionStore extends ExecutionStore {
     // 실행 업데이트
   }
 
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    // 단일 UpdateExpression으로 checkpoints.#key만 원자적으로 갱신
+  }
+
   async updateIfStatus(
     id: string,
     expectedStatus: ExecutionStatus,
@@ -106,6 +110,12 @@ export class MyDynamoExecutionStore extends ExecutionStore {
   }
 }
 ```
+
+모든 `ExecutionStore`는 `mergeCheckpoint(id, key, value)`를 저장소 내부의 단일 원자적 연산으로
+구현해야 합니다. 이 연산은 서로 다른 키의 동시 쓰기를 모두 보존합니다. 동일 키의 동시 쓰기는
+호출 순서나 Promise 완료 순서를 보장하지 않으며, 저장소가 직렬화한 변경 중 마지막으로 적용된
+값이 남습니다. 동일 키에 결정적 순서나 충돌 감지가 필요하면 별도의 compare-and-set 계약을
+사용해야 합니다.
 
 ## 사용 방법
 
@@ -486,6 +496,10 @@ export class RedisExecutionStore extends ExecutionStore {
   async findById(id: string): Promise<Execution | null> {
     const data = await this.redis.get(`execution:${id}`);
     return data ? JSON.parse(data) : null;
+  }
+
+  async mergeCheckpoint(id: string, key: string, value: unknown): Promise<Execution> {
+    // Lua script로 저장된 실행의 checkpoints[key]만 원자적으로 갱신
   }
 
   // Lifecycle writes must compare the persisted status atomically.
