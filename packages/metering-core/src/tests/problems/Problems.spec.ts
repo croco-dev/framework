@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AtomicQuotaNotSupportedProblem } from "../../libs/problems/AtomicQuotaNotSupportedProblem";
 import { DuplicateRecordProblem } from "../../libs/problems/DuplicateRecordProblem";
 import { InvalidMeterProblem } from "../../libs/problems/InvalidMeterProblem";
+import { InvalidUsageQueryProblem } from "../../libs/problems/InvalidUsageQueryProblem";
 import { QuotaExceededProblem } from "../../libs/problems/QuotaExceededProblem";
 import { RedisProblem } from "../../libs/problems/RedisProblem";
 
@@ -44,6 +45,17 @@ describe("Problems", () => {
       const json = problem.toJSON();
       expect(json.meterId).toBe("unknown_meter");
       expect(json.tenantId).toBe("tenant-1");
+    });
+  });
+
+  describe("InvalidUsageQueryProblem", () => {
+    it("should create a validation response with a stable reason", () => {
+      const problem = new InvalidUsageQueryProblem("dates must be valid");
+
+      expect(problem.code).toBe("metering/invalid-usage-query");
+      expect(problem.status).toBe(422);
+      expect(problem.detail).toContain("dates must be valid");
+      expect(problem.toJSON().reason).toBe("dates must be valid");
     });
   });
 

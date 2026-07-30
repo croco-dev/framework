@@ -1,3 +1,4 @@
+import { InvalidUsageQueryProblem } from "./problems/InvalidUsageQueryProblem";
 import { RedisProblem } from "./problems/RedisProblem";
 import { buildMeteringRedisKey, encodeRedisKeySegment } from "./redisKey";
 import type { RedisClient } from "./RedisClient";
@@ -43,6 +44,7 @@ export class RedisUsageStorage implements UsageStorage {
     RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS * 1000;
   private static readonly RECORD_IDEMPOTENCY_CACHE_MAX_ENTRIES = 10_000;
   private static readonly RECORD_IDEMPOTENCY_CACHE_PRUNE_INTERVAL_MILLISECONDS = 60_000;
+  private static readonly MAX_BILLING_CYCLE_PARTITIONS = 1_200;
   private static readonly RESET_SCAN_BATCH_SIZE = 500;
   private static readonly SCAN_AND_DELETE_USAGE_KEYS_SCRIPT = `
 local cursor = ARGV[1]
@@ -112,8 +114,11 @@ return { exceeded and 1 or 0, newUsage }
 
   constructor(private readonly redis: RedisClient) {}
 
-  private toRedisProblem(operation: string, error: unknown): RedisProblem {
-    if (error instanceof RedisProblem) {
+  private toRedisProblem(
+    operation: string,
+    error: unknown,
+  ): RedisProblem | InvalidUsageQueryProblem {
+    if (error instanceof RedisProblem || error instanceof InvalidUsageQueryProblem) {
       return error;
     }
 
@@ -268,15 +273,61 @@ return { exceeded and 1 or 0, newUsage }
   private getUsageKeyCandidates(
     tenantId: string,
     meterId: string,
-    date: Date,
+    min: number,
+    max: number,
     period: AggregationPeriod,
   ): string[] {
-    const primaryKey = this.buildUsageKey(tenantId, meterId, date, period);
     if (period === "billing_cycle") {
-      return [primaryKey];
+      return this.getBillingCycleUsageKeys(tenantId, meterId, min, max);
     }
 
+    const date = new Date(min);
+    const primaryKey = this.buildUsageKey(tenantId, meterId, date, period);
     return [primaryKey, this.buildUsageKey(tenantId, meterId, date, "billing_cycle")];
+  }
+
+  private getBillingCycleUsageKeys(
+    tenantId: string,
+    meterId: string,
+    min: number,
+    max: number,
+  ): string[] {
+    const start = new Date(min);
+    const end = new Date(max);
+    const keys: string[] = [];
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      start.getTime() > end.getTime()
+    ) {
+      return [this.buildUsageKey(tenantId, meterId, start, "billing_cycle")];
+    }
+
+    const cursor = new Date(start);
+    cursor.setUTCDate(1);
+    cursor.setUTCHours(0, 0, 0, 0);
+    const endMonth = new Date(end);
+    endMonth.setUTCDate(1);
+    endMonth.setUTCHours(0, 0, 0, 0);
+    const partitionCount =
+      (endMonth.getUTCFullYear() - cursor.getUTCFullYear()) * 12 +
+      endMonth.getUTCMonth() -
+      cursor.getUTCMonth() +
+      1;
+
+    if (partitionCount > RedisUsageStorage.MAX_BILLING_CYCLE_PARTITIONS) {
+      throw new InvalidUsageQueryProblem(
+        `Usage query spans ${partitionCount} billing-cycle partitions; the maximum is ${RedisUsageStorage.MAX_BILLING_CYCLE_PARTITIONS}`,
+      );
+    }
+
+    while (cursor.getTime() <= endMonth.getTime()) {
+      keys.push(this.buildUsageKey(tenantId, meterId, cursor, "billing_cycle"));
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+    }
+
+    return keys;
   }
 
   private async readUsageMembers(
@@ -285,19 +336,29 @@ return { exceeded and 1 or 0, newUsage }
   ): Promise<{ key: string; members: string[] }> {
     const { tenantId, meterId, period, startDate, endDate } = options;
     const { min, max } = this.getTimeRange(period, startDate, endDate);
-    const candidates = this.getUsageKeyCandidates(tenantId, meterId, new Date(min), period);
+    const partitionMax = startDate && endDate ? max : max - 1;
+    const candidates = this.getUsageKeyCandidates(tenantId, meterId, min, partitionMax, period);
+    const allMembers: string[] = [];
 
     for (const key of candidates) {
       const members =
         withScores === "WITHSCORES"
           ? await this.redis.zrangebyscore(key, min, max, withScores)
           : await this.redis.zrangebyscore(key, min, max);
+
+      if (period === "billing_cycle") {
+        for (const member of members) {
+          allMembers.push(member);
+        }
+        continue;
+      }
+
       if (members.length > 0) {
         return { key, members };
       }
     }
 
-    return { key: candidates[0], members: [] };
+    return { key: candidates[0], members: allMembers };
   }
 
   private buildRecordIdempotencyKey(
@@ -519,11 +580,28 @@ return { exceeded and 1 or 0, newUsage }
     endDate?: Date,
   ): { min: number; max: number } {
     const now = new Date();
+    const hasStartDate = startDate !== undefined;
+    const hasEndDate = endDate !== undefined;
+
+    if (hasStartDate !== hasEndDate) {
+      throw new InvalidUsageQueryProblem("startDate and endDate must be provided together");
+    }
 
     if (startDate && endDate) {
+      const min = startDate.getTime();
+      const max = endDate.getTime();
+
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        throw new InvalidUsageQueryProblem("dates must be valid");
+      }
+
+      if (min > max) {
+        throw new InvalidUsageQueryProblem("startDate must not be after endDate");
+      }
+
       return {
-        min: startDate.getTime(),
-        max: endDate.getTime(),
+        min,
+        max,
       };
     }
 
@@ -593,17 +671,47 @@ return { exceeded and 1 or 0, newUsage }
       return;
     }
 
-    const members = records.flatMap((record) => [
-      this.serializeUsageMember(record),
-      this.serializeLegacyUsageMember(record),
-    ]);
-    const { min } = this.getTimeRange(options.period, options.startDate, options.endDate);
+    const { min, max } = this.getTimeRange(options.period, options.startDate, options.endDate);
+    const partitionMax = options.startDate && options.endDate ? max : max - 1;
     const keys = this.getUsageKeyCandidates(
       options.tenantId,
       options.meterId,
-      new Date(min),
+      min,
+      partitionMax,
       options.period,
     );
+    const membersByKey = new Map<string, string[]>();
+
+    if (options.period === "billing_cycle") {
+      const candidateKeys = new Set(keys);
+
+      for (const record of records) {
+        const key = this.buildUsageKey(
+          options.tenantId,
+          options.meterId,
+          record.timestamp,
+          "billing_cycle",
+        );
+
+        if (!candidateKeys.has(key)) {
+          continue;
+        }
+
+        const members = membersByKey.get(key) ?? [];
+        members.push(this.serializeUsageMember(record), this.serializeLegacyUsageMember(record));
+        membersByKey.set(key, members);
+      }
+    } else {
+      const members = records.flatMap((record) => [
+        this.serializeUsageMember(record),
+        this.serializeLegacyUsageMember(record),
+      ]);
+
+      for (const key of keys) {
+        membersByKey.set(key, members);
+      }
+    }
+
     const script = `
 local removed = 0
 local usageKey = KEYS[1]
@@ -614,7 +722,7 @@ return removed
 `;
 
     try {
-      for (const key of keys) {
+      for (const [key, members] of membersByKey) {
         await this.redis.eval<[number]>(script, [key], members);
       }
     } catch (error) {

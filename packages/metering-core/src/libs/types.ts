@@ -61,7 +61,9 @@ export type UsageQueryOptions = {
   tenantId: string;
   meterId: string;
   period: AggregationPeriod;
+  /** Inclusive lower timestamp bound. Must be provided together with endDate. */
   startDate?: Date;
+  /** Inclusive upper timestamp bound. Must be provided together with startDate. */
   endDate?: Date;
 };
 
