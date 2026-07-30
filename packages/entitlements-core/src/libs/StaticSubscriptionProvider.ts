@@ -22,9 +22,9 @@ export class StaticSubscriptionProvider extends SubscriptionProvider {
     return this.defaultPlan.planId;
   }
 
-  override async getCurrentPlanVersion(
+  override readonly getCurrentPlanVersion = async (
     _tenantId: string,
-  ): Promise<SubscriptionPlanReference | null> {
+  ): Promise<SubscriptionPlanReference | null> => {
     return this.defaultPlan;
-  }
+  };
 }

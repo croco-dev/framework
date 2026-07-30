@@ -65,7 +65,7 @@ title: "StaticSubscriptionProvider"
 
 ### getCurrentPlanVersion()
 
-> **getCurrentPlanVersion**(`_tenantId`): `Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>
+> `readonly` **getCurrentPlanVersion**(`_tenantId`): `Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>
 
 #### Parameters
 
@@ -79,4 +79,4 @@ title: "StaticSubscriptionProvider"
 
 #### Overrides
 
-[`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/).[`getCurrentPlanVersion`](/api/entitlements-core/src/classes/subscriptionprovider/#getcurrentplanversion)
+`SubscriptionProvider.getCurrentPlanVersion`

@@ -17,7 +17,7 @@ export abstract class SubscriptionProvider {
 
   abstract getCurrentPlanId(tenantId: string): Promise<string | null>;
 
-  abstract getCurrentPlanVersion?(tenantId: string): Promise<SubscriptionPlanReference | null>;
+  getCurrentPlanVersion?: (tenantId: string) => Promise<SubscriptionPlanReference | null>;
 }
 
 export abstract class PlanEntitlementRegistry {

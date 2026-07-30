@@ -34,9 +34,9 @@ export class BillingStoreSubscriptionProvider extends SubscriptionProvider {
   /**
    * 테넌트의 현재 구독에 고정된 플랜 버전 참조를 반환합니다.
    */
-  override async getCurrentPlanVersion(
+  override readonly getCurrentPlanVersion = async (
     tenantId: string,
-  ): Promise<SubscriptionPlanReference | null> {
+  ): Promise<SubscriptionPlanReference | null> => {
     const pendingCommand = await this.billingStore.findPendingLifecycleCommandByTenantId(tenantId);
     if (pendingCommand?.state === "pending_local" || pendingCommand?.state === "pending_event") {
       const resolution = await this.billingStore.resolveLifecycleSubscription(pendingCommand);
@@ -59,7 +59,7 @@ export class BillingStoreSubscriptionProvider extends SubscriptionProvider {
     }
 
     return activePlanReference(subscription);
-  }
+  };
 }
 
 function activePlanReference(
