@@ -5,6 +5,7 @@ import {
   RequireEntitlement,
 } from "../libs/decorators/RequireEntitlement";
 import { getEntitlementRequirements } from "../libs/EntitlementRequirement";
+import { defineFeature } from "../libs/EntitlementDefinition";
 
 describe("RequireEntitlement", () => {
   it("should store entitlement policy metadata with source location", () => {
@@ -29,5 +30,21 @@ describe("RequireEntitlement", () => {
         line: expect.any(Number),
       },
     });
+  });
+
+  it("serializes typed feature references as stable string metadata", () => {
+    const REPORTS = defineFeature("reports.export");
+
+    class TestController {
+      @RequireEntitlement({ feature: REPORTS })
+      exportReports() {}
+    }
+
+    expect(getEntitlementRequirements(TestController, "exportReports")).toMatchObject([
+      {
+        feature: "reports.export",
+        ruleId: "entitlement:reports.export",
+      },
+    ]);
   });
 });

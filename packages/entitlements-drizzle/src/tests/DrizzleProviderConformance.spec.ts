@@ -4,7 +4,7 @@ import { ProblemFactory } from "@croco/problems-core";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { DrizzlePlanEntitlementRegistry } from "../libs/DrizzlePlanEntitlementRegistry";
-import { planEntitlements } from "../libs/schema";
+import { planEntitlements, planEntitlementSets } from "../libs/schema";
 
 type DrizzleEntitlementsClient = ConstructorParameters<typeof DrizzlePlanEntitlementRegistry>[0];
 
@@ -15,6 +15,7 @@ const entitlementRow = {
   type: "metered",
   value: null,
   meterId: "seat_count",
+  meterBilling: null,
   quota: 10,
   overagePolicy: "block",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -77,12 +78,17 @@ describe("entitlements-drizzle provider conformance", () => {
                 expect.arrayContaining([
                   "id",
                   "planId",
+                  "planVersionRef",
                   "featureKey",
                   "type",
                   "meterId",
+                  "meterBilling",
                   "quota",
                   "overagePolicy",
                 ]),
+              );
+              expect(Object.keys(getTableColumns(planEntitlementSets))).toEqual(
+                expect.arrayContaining(["planVersionRef", "planId"]),
               );
             },
           },
@@ -153,8 +159,9 @@ describe("entitlements-drizzle provider conformance", () => {
         type: "metered",
         value: undefined,
         meterId: "seat_count",
+        meterBilling: undefined,
         quota: 10,
-        overagePolicy: "block",
+        overagePolicy: "BLOCK",
       },
     ]);
   });

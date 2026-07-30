@@ -46,7 +46,31 @@ title: "PlanEntitlementRegistry"
 
 `Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
 
-***
+---
+
+### findRuleByPlanVersion()
+
+> **findRuleByPlanVersion**(`ref`, `featureKey`, `expectedPlanId?`): `Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
+
+#### Parameters
+
+##### ref
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+##### featureKey
+
+`string`
+
+##### expectedPlanId?
+
+`string`
+
+#### Returns
+
+`Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
+
+---
 
 ### getEntitlements()
 
@@ -61,3 +85,23 @@ title: "PlanEntitlementRegistry"
 #### Returns
 
 `Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
+
+---
+
+### getEntitlementsByPlanVersion()
+
+> **getEntitlementsByPlanVersion**(`ref`, `_expectedPlanId?`): `Promise`\<readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
+
+#### Parameters
+
+##### ref
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+##### \_expectedPlanId?
+
+`string`
+
+#### Returns
+
+`Promise`\<readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>

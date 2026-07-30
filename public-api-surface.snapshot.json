@@ -7064,9 +7064,27 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertPlanVersionMatches",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition",
+              "declarationKind": "function"
+            },
+            {
               "name": "defineEntitlementRequirement",
               "exportKind": "named",
               "source": "./libs/EntitlementRequirement",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineFeature",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition",
+              "declarationKind": "function"
+            },
+            {
+              "name": "definePlanEntitlements",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition",
               "declarationKind": "function"
             },
             {
@@ -7080,6 +7098,12 @@
               "exportKind": "named",
               "source": "./libs/EntitlementRequirement",
               "declarationKind": "const"
+            },
+            {
+              "name": "EntitlementDefinitionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EntitlementProblems",
+              "declarationKind": "class"
             },
             {
               "name": "EntitlementDeniedEvent",
@@ -7130,6 +7154,24 @@
               "declarationKind": "class"
             },
             {
+              "name": "EntitlementPlanVersionAlreadyRegisteredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EntitlementProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "EntitlementPlanVersionMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EntitlementProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "EntitlementPlanVersionNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EntitlementProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "EntitlementProviderUnavailableProblem",
               "exportKind": "named",
               "source": "./libs/problems/EntitlementProblems",
@@ -7154,9 +7196,21 @@
               "declarationKind": "class"
             },
             {
+              "name": "featureKey",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition",
+              "declarationKind": "function"
+            },
+            {
               "name": "getEntitlementRequirements",
               "exportKind": "named",
               "source": "./libs/EntitlementRequirement",
+              "declarationKind": "function"
+            },
+            {
+              "name": "getLegacyPlanId",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition",
               "declarationKind": "function"
             },
             {
@@ -7164,6 +7218,24 @@
               "exportKind": "named",
               "source": "./libs/InMemoryPlanEntitlementRegistry",
               "declarationKind": "class"
+            },
+            {
+              "name": "legacyPlanVersionRef",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition",
+              "declarationKind": "function"
+            },
+            {
+              "name": "meterKey",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition",
+              "declarationKind": "function"
+            },
+            {
+              "name": "migrateLegacyPlanEntitlements",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition",
+              "declarationKind": "function"
             },
             {
               "name": "RequireEntitlement",
@@ -7240,6 +7312,12 @@
               "declarationKind": "type"
             },
             {
+              "name": "LegacyPlanEntitlements",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
               "name": "OveragePolicy",
               "exportKind": "declaration",
               "source": "./libs/types",
@@ -7247,6 +7325,12 @@
             },
             {
               "name": "PlanEntitlements",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SubscriptionPlanReference",
               "exportKind": "declaration",
               "source": "./libs/types",
               "declarationKind": "type"
@@ -7262,6 +7346,16 @@
               "exportKind": "declaration",
               "source": "./libs/types",
               "declarationKind": "type"
+            },
+            {
+              "name": "BillingRequiredMeterRef",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition"
+            },
+            {
+              "name": "EntitlementDefinition",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition"
             },
             {
               "name": "EntitlementGuardInput",
@@ -7294,6 +7388,11 @@
               "source": "./libs/EntitlementRequirement"
             },
             {
+              "name": "EntitlementRequirementInput",
+              "exportKind": "named",
+              "source": "./libs/EntitlementRequirement"
+            },
+            {
               "name": "EntitlementRequirementMetadata",
               "exportKind": "named",
               "source": "./libs/EntitlementRequirement"
@@ -7302,6 +7401,26 @@
               "name": "EntitlementResourceRequirement",
               "exportKind": "named",
               "source": "./libs/EntitlementRequirement"
+            },
+            {
+              "name": "FeatureRef",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition"
+            },
+            {
+              "name": "FeatureReference",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition"
+            },
+            {
+              "name": "MeterReference",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition"
+            },
+            {
+              "name": "PlanEntitlementDefinition",
+              "exportKind": "named",
+              "source": "./libs/EntitlementDefinition"
             },
             {
               "name": "RouteExecutionContext",
@@ -7336,6 +7455,18 @@
           "sourceEntrypoint": "packages/entitlements-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "addPlanVersionEntitlementsPostgres",
+              "exportKind": "named",
+              "source": "./migrations/addPlanVersionEntitlements",
+              "declarationKind": "function"
+            },
+            {
+              "name": "backfillPlanVersionEntitlementsPostgres",
+              "exportKind": "named",
+              "source": "./migrations/addPlanVersionEntitlements",
+              "declarationKind": "function"
+            },
+            {
               "name": "BILLING_STORE_TOKEN",
               "exportKind": "named",
               "source": "./libs/BillingStoreSubscriptionProvider",
@@ -7364,9 +7495,26 @@
               "exportKind": "named",
               "source": "./libs/schema",
               "declarationKind": "const"
+            },
+            {
+              "name": "planEntitlementSets",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
             }
           ],
-          "typeExports": []
+          "typeExports": [
+            {
+              "name": "EntitlementMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/addPlanVersionEntitlements"
+            },
+            {
+              "name": "PlanVersionEntitlementMigrationMapping",
+              "exportKind": "named",
+              "source": "./migrations/addPlanVersionEntitlements"
+            }
+          ]
         }
       ]
     },

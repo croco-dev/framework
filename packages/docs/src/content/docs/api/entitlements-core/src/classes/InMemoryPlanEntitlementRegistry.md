@@ -45,7 +45,7 @@ title: "InMemoryPlanEntitlementRegistry"
 
 `void`
 
-***
+---
 
 ### findRule()
 
@@ -69,7 +69,35 @@ title: "InMemoryPlanEntitlementRegistry"
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`findRule`](/api/entitlements-core/src/classes/planentitlementregistry/#findrule)
 
-***
+---
+
+### findRuleByPlanVersion()
+
+> **findRuleByPlanVersion**(`ref`, `featureKey`, `expectedPlanId?`): `Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
+
+#### Parameters
+
+##### ref
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+##### featureKey
+
+`string`
+
+##### expectedPlanId?
+
+`string`
+
+#### Returns
+
+`Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
+
+#### Overrides
+
+[`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`findRuleByPlanVersion`](/api/entitlements-core/src/classes/planentitlementregistry/#findrulebyplanversion)
+
+---
 
 ### getEntitlements()
 
@@ -89,22 +117,62 @@ title: "InMemoryPlanEntitlementRegistry"
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`getEntitlements`](/api/entitlements-core/src/classes/planentitlementregistry/#getentitlements)
 
-***
+---
 
-### register()
+### getEntitlementsByPlanVersion()
 
-> **register**(`planId`, `rules`): `void`
+> **getEntitlementsByPlanVersion**(`ref`, `expectedPlanId?`): `Promise`\<readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
 
 #### Parameters
 
-##### planId
+##### ref
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+##### expectedPlanId?
 
 `string`
 
-##### rules
+#### Returns
+
+`Promise`\<readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
+
+#### Overrides
+
+[`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`getEntitlementsByPlanVersion`](/api/entitlements-core/src/classes/planentitlementregistry/#getentitlementsbyplanversion)
+
+---
+
+### register()
+
+#### Call Signature
+
+> **register**(`definition`): `void`
+
+##### Parameters
+
+###### definition
+
+[`PlanEntitlements`](/api/entitlements-core/src/type-aliases/planentitlements/)
+
+##### Returns
+
+`void`
+
+#### Call Signature
+
+> **register**(`planId`, `rules`): `void`
+
+##### Parameters
+
+###### planId
+
+`string`
+
+###### rules
 
 [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]
 
-#### Returns
+##### Returns
 
 `void`

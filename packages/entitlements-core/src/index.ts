@@ -21,9 +21,32 @@ export {
 } from "./libs/EntitlementRequirement";
 export type {
   EntitlementRequirement,
+  EntitlementRequirementInput,
   EntitlementRequirementMetadata,
   EntitlementResourceRequirement,
 } from "./libs/EntitlementRequirement";
+
+/**
+ * 타입 안전하고 버전 고정된 entitlement 정의를 만드는 공개 계약입니다.
+ */
+export {
+  defineFeature,
+  definePlanEntitlements,
+  assertPlanVersionMatches,
+  featureKey,
+  getLegacyPlanId,
+  legacyPlanVersionRef,
+  meterKey,
+  migrateLegacyPlanEntitlements,
+} from "./libs/EntitlementDefinition";
+export type {
+  BillingRequiredMeterRef,
+  EntitlementDefinition,
+  FeatureRef,
+  FeatureReference,
+  MeterReference,
+  PlanEntitlementDefinition,
+} from "./libs/EntitlementDefinition";
 
 /**
  * 라우트 실행 전에 entitlement를 검사하는 가드입니다.
@@ -66,10 +89,14 @@ export * from "./libs/interfaces";
  * entitlement 검사 실패 시 사용하는 Problem 타입입니다.
  */
 export {
+  EntitlementDefinitionProblem,
   EntitlementDeniedProblem,
   EntitlementInactiveSubscriptionProblem,
   EntitlementMissingPlanProblem,
   EntitlementNotFoundProblem,
+  EntitlementPlanVersionAlreadyRegisteredProblem,
+  EntitlementPlanVersionMismatchProblem,
+  EntitlementPlanVersionNotFoundProblem,
   EntitlementProviderUnavailableProblem,
   EntitlementQuotaExceededProblem,
   EntitlementRequirementProblem,

@@ -1,5 +1,6 @@
 import type { BillingStore } from "@croco/billing-core";
 import { SubscriptionProvider } from "@croco/entitlements-core";
+import type { SubscriptionPlanReference } from "@croco/entitlements-core";
 import { Component, Inject, Token } from "@croco/framework-context";
 
 /**
@@ -27,13 +28,24 @@ export class BillingStoreSubscriptionProvider extends SubscriptionProvider {
    * resume은 같은 external subscription의 최신 plan을 유지합니다.
    */
   async getCurrentPlanId(tenantId: string): Promise<string | null> {
+    return (await this.getCurrentPlanVersion(tenantId))?.planId ?? null;
+  }
+
+  /**
+   * 테넌트의 현재 구독에 고정된 플랜 버전 참조를 반환합니다.
+   */
+  override readonly getCurrentPlanVersion = async (
+    tenantId: string,
+  ): Promise<SubscriptionPlanReference | null> => {
     const pendingCommand = await this.billingStore.findPendingLifecycleCommandByTenantId(tenantId);
     if (pendingCommand?.state === "pending_local" || pendingCommand?.state === "pending_event") {
       const resolution = await this.billingStore.resolveLifecycleSubscription(pendingCommand);
       if (resolution.kind === "projection_base") {
-        return pendingCommand.kind === "cancel_immediately" ? null : resolution.subscription.planId;
+        return pendingCommand.kind === "cancel_immediately"
+          ? null
+          : activePlanReference(resolution.subscription);
       }
-      return activePlanId(resolution.subscription);
+      return activePlanReference(resolution.subscription);
     }
 
     const billingAccount = await this.billingStore.findAccountByTenantId(tenantId);
@@ -46,15 +58,18 @@ export class BillingStoreSubscriptionProvider extends SubscriptionProvider {
       return null;
     }
 
-    return activePlanId(subscription);
-  }
+    return activePlanReference(subscription);
+  };
 }
 
-function activePlanId(
+function activePlanReference(
   subscription: Awaited<ReturnType<BillingStore["findSubscription"]>>,
-): string | null {
+): SubscriptionPlanReference | null {
   if (!subscription) return null;
   return subscription.status === "active" || subscription.status === "trialing"
-    ? subscription.planId
+    ? {
+        planId: subscription.planId,
+        planVersionRef: subscription.planVersionRef,
+      }
     : null;
 }

@@ -69,7 +69,37 @@ Drizzle 클라이언트를 받아 권한 레지스트리를 초기화합니다.
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`findRule`](/api/entitlements-core/src/classes/planentitlementregistry/#findrule)
 
-***
+---
+
+### findRuleByPlanVersion()
+
+> **findRuleByPlanVersion**(`ref`, `featureKey`, `expectedPlanId?`): `Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
+
+고정된 플랜 버전에서 특정 기능 키의 규칙을 조회합니다.
+
+#### Parameters
+
+##### ref
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+##### featureKey
+
+`string`
+
+##### expectedPlanId?
+
+`string`
+
+#### Returns
+
+`Promise`\<[`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/) \| `null`\>
+
+#### Overrides
+
+[`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`findRuleByPlanVersion`](/api/entitlements-core/src/classes/planentitlementregistry/#findrulebyplanversion)
+
+---
 
 ### getEntitlements()
 
@@ -90,3 +120,29 @@ Drizzle 클라이언트를 받아 권한 레지스트리를 초기화합니다.
 #### Overrides
 
 [`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`getEntitlements`](/api/entitlements-core/src/classes/planentitlementregistry/#getentitlements)
+
+---
+
+### getEntitlementsByPlanVersion()
+
+> **getEntitlementsByPlanVersion**(`ref`, `expectedPlanId?`): `Promise`\<readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
+
+고정된 플랜 버전에 연결된 모든 권한 규칙을 반환합니다.
+
+#### Parameters
+
+##### ref
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+##### expectedPlanId?
+
+`string`
+
+#### Returns
+
+`Promise`\<readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]\>
+
+#### Overrides
+
+[`PlanEntitlementRegistry`](/api/entitlements-core/src/classes/planentitlementregistry/).[`getEntitlementsByPlanVersion`](/api/entitlements-core/src/classes/planentitlementregistry/#getentitlementsbyplanversion)

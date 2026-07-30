@@ -1,4 +1,5 @@
 import { DomainEvent } from "@croco/events-core";
+import type { PlanVersionRef } from "@croco/billing-core";
 
 export class EntitlementDeniedEvent extends DomainEvent {
   public static eventName = "entitlement.denied";
@@ -34,6 +35,7 @@ export class EntitlementOverageAllowedEvent extends DomainEvent {
     public readonly usage: number,
     public readonly quota: number,
     public readonly planId: string,
+    public readonly planVersionRef: PlanVersionRef,
   ) {
     super();
   }

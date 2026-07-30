@@ -44,6 +44,13 @@ describe("BillingStoreSubscriptionProvider", () => {
     await expect(provider.getCurrentPlanId("tenant-1")).resolves.toBe("plan-pro");
   });
 
+  it("returns the immutable plan version pinned to the subscription", async () => {
+    await expect(provider.getCurrentPlanVersion("tenant-1")).resolves.toEqual({
+      planId: "plan-pro",
+      planVersionRef: PLAN_VERSION_REF,
+    });
+  });
+
   it("removes entitlements after an immediate cancellation reaches pending local", async () => {
     await saveCommand("pending_local", "cancel_immediately");
 

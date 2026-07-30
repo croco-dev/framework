@@ -17,7 +17,7 @@ route/service 경계에서 공유하는 entitlement requirement metadata contrac
 
 ### requirement
 
-[`EntitlementRequirement`](/api/entitlements-core/src/type-aliases/entitlementrequirement/)
+[`EntitlementRequirementInput`](/api/entitlements-core/src/type-aliases/entitlementrequirementinput/)
 
 ### propertyKey?
 

@@ -1,4 +1,5 @@
 import { Container } from "@croco/framework-context";
+import { planVersionRef } from "@croco/billing-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { InMemoryPlanEntitlementRegistry } from "../libs/InMemoryPlanEntitlementRegistry";
 import type { EntitlementRule } from "../libs/types";
@@ -50,5 +51,74 @@ describe("InMemoryPlanEntitlementRegistry", () => {
   it("should return null for unknown planId in findRule", async () => {
     const rule = await registry.findRule("unknown", "projects");
     expect(rule).toBeNull();
+  });
+
+  it("keeps entitlement rules isolated by immutable plan version", async () => {
+    const grandfatheredRef = planVersionRef("pro@2026-01");
+    const currentRef = planVersionRef("pro@2026-07");
+    registry.register({
+      planId: "pro",
+      planVersionRef: grandfatheredRef,
+      entitlements: [{ featureKey: "reports", type: "metered", quota: 10 }],
+    });
+    registry.register({
+      planId: "pro",
+      planVersionRef: currentRef,
+      entitlements: [
+        {
+          featureKey: "reports",
+          type: "metered",
+          quota: 100,
+          overagePolicy: "WARN",
+        },
+      ],
+    });
+
+    await expect(
+      registry.findRuleByPlanVersion(grandfatheredRef, "reports"),
+    ).resolves.toMatchObject({ quota: 10 });
+    await expect(registry.findRuleByPlanVersion(currentRef, "reports")).resolves.toMatchObject({
+      quota: 100,
+      overagePolicy: "WARN",
+    });
+  });
+
+  it("fails with a stable Problem for an unknown plan version", async () => {
+    await expect(
+      registry.getEntitlementsByPlanVersion(planVersionRef("pro@missing")),
+    ).rejects.toMatchObject({
+      code: "entitlements-core/plan-version-not-found",
+      status: 404,
+    });
+  });
+
+  it("rejects a plan version owned by a different plan family", async () => {
+    const ref = planVersionRef("enterprise@2026-01");
+    registry.register({
+      planId: "enterprise",
+      planVersionRef: ref,
+      entitlements: [],
+    });
+
+    await expect(registry.getEntitlementsByPlanVersion(ref, "pro")).rejects.toMatchObject({
+      code: "entitlements-core/plan-version-mismatch",
+      status: 409,
+    });
+  });
+
+  it("rejects version-bound metered rules that delegate quota to mutable state", () => {
+    expect(() =>
+      registry.register({
+        planId: "pro",
+        planVersionRef: planVersionRef("pro@2026-01"),
+        entitlements: [
+          {
+            featureKey: "reports",
+            type: "metered",
+            meterId: "reports.generated",
+          },
+        ],
+      }),
+    ).toThrow("requires an inline quota");
   });
 });

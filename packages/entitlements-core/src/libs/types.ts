@@ -1,4 +1,5 @@
 import type { PolicyDecisionSourceLocation, PolicyDecisionTrace } from "@croco/access-core";
+import type { PlanVersionRef } from "@croco/billing-core";
 
 export type EntitlementType = "boolean" | "metered" | "static";
 
@@ -43,13 +44,25 @@ export type EntitlementRule = {
   type: EntitlementType;
   value?: number;
   meterId?: string;
+  meterBilling?: "local" | "required";
   quota?: number;
   overagePolicy?: OveragePolicy;
 };
 
 export type PlanEntitlements = {
-  planId: string;
-  entitlements: EntitlementRule[];
+  readonly planId: string;
+  readonly planVersionRef: PlanVersionRef;
+  readonly entitlements: readonly EntitlementRule[];
+};
+
+export type LegacyPlanEntitlements = {
+  readonly planId: string;
+  readonly entitlements: readonly EntitlementRule[];
+};
+
+export type SubscriptionPlanReference = {
+  readonly planId: string;
+  readonly planVersionRef: PlanVersionRef;
 };
 
 export type EntitlementCheckResult = {
@@ -63,6 +76,7 @@ export type EntitlementCheckResult = {
   exceeded?: boolean;
   value?: number;
   planId?: string;
+  planVersionRef?: PlanVersionRef;
   reason?: EntitlementFailureReason;
   overagePolicy?: OveragePolicy;
   trace?: PolicyDecisionTrace;

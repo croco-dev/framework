@@ -22,6 +22,22 @@ title: "SubscriptionProvider"
 
 ## Properties
 
+### getCurrentPlanVersion?
+
+> `optional` **getCurrentPlanVersion?**: (`tenantId`) => `Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>
+
+---
+
 ### token
 
 > `readonly` `static` **token**: [`Token`](/api/framework-context/src/classes/token/)\<`SubscriptionProvider`\>

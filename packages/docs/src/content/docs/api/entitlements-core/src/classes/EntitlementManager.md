@@ -43,7 +43,7 @@ title: "EntitlementManager"
 
 ### check()
 
-> **check**(`tenantId`, `featureKey`, `checkOptions?`): `Promise`\<[`EntitlementCheckResult`](/api/entitlements-core/src/type-aliases/entitlementcheckresult/)\>
+> **check**(`tenantId`, `feature`, `checkOptions?`): `Promise`\<[`EntitlementCheckResult`](/api/entitlements-core/src/type-aliases/entitlementcheckresult/)\>
 
 #### Parameters
 
@@ -51,9 +51,9 @@ title: "EntitlementManager"
 
 `string`
 
-##### featureKey
+##### feature
 
-`string`
+[`FeatureReference`](/api/entitlements-core/src/type-aliases/featurereference/)
 
 ##### checkOptions?
 

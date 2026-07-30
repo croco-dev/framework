@@ -274,6 +274,7 @@ describe("EntitlementIntegration", () => {
         exceeded: true,
         overagePolicy: "ALLOW_WITH_OVERAGE",
         planId: "free",
+        planVersionRef: "legacy:free",
       });
       expect(eventPublisher.publish).toHaveBeenNthCalledWith(
         1,

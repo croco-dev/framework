@@ -11,10 +11,16 @@ title: "PlanEntitlements"
 
 ### entitlements
 
-> **entitlements**: [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]
+> `readonly` **entitlements**: readonly [`EntitlementRule`](/api/entitlements-core/src/type-aliases/entitlementrule/)[]
 
-***
+---
 
 ### planId
 
-> **planId**: `string`
+> `readonly` **planId**: `string`
+
+---
+
+### planVersionRef
+
+> `readonly` **planVersionRef**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)

@@ -5,6 +5,9 @@ import {
   type PolicyDecisionTraceSink,
 } from "@croco/access-core";
 import { Component, Container, Inject } from "@croco/framework-context";
+import type { PlanVersionRef } from "@croco/billing-core";
+import { featureKey, getLegacyPlanId, legacyPlanVersionRef } from "./EntitlementDefinition";
+import type { FeatureReference } from "./EntitlementDefinition";
 import { EntitlementOverageAllowedEvent, EntitlementQuotaExceededEvent } from "./events";
 import {
   EntitlementEventPublisher,
@@ -13,6 +16,7 @@ import {
   PlanEntitlementRegistry,
   SubscriptionProvider,
 } from "./interfaces";
+import { EntitlementDefinitionProblem } from "./problems/EntitlementProblems";
 import type {
   EntitlementCheckOptions,
   EntitlementCheckResult,
@@ -36,17 +40,20 @@ export class EntitlementManager {
 
   async check(
     tenantId: string,
-    featureKey: string,
+    feature: FeatureReference,
     checkOptions: EntitlementCheckOptions = {},
   ): Promise<EntitlementCheckResult> {
-    const planId = await this.subscriptionProvider.getCurrentPlanId(tenantId);
-    if (!planId) {
+    const normalizedFeatureKey = featureKey(feature);
+    const plan = this.subscriptionProvider.getCurrentPlanVersion
+      ? await this.subscriptionProvider.getCurrentPlanVersion(tenantId)
+      : await this.getLegacySubscriptionPlan(tenantId);
+    if (!plan) {
       return this.withTrace(
         tenantId,
         {
           granted: false,
           status: "denied",
-          featureKey,
+          featureKey: normalizedFeatureKey,
           type: "boolean",
           reason: "no_subscription",
         },
@@ -54,17 +61,22 @@ export class EntitlementManager {
       );
     }
 
-    const rule = await this.registry.findRule(planId, featureKey);
+    const rule = await this.registry.findRuleByPlanVersion(
+      plan.planVersionRef,
+      normalizedFeatureKey,
+      plan.planId,
+    );
     if (!rule) {
       return this.withTrace(
         tenantId,
         {
           granted: false,
           status: "denied",
-          featureKey,
+          featureKey: normalizedFeatureKey,
           type: "boolean",
           reason: "not_entitled",
-          planId,
+          planId: plan.planId,
+          planVersionRef: plan.planVersionRef,
         },
         checkOptions,
       );
@@ -77,9 +89,10 @@ export class EntitlementManager {
           {
             granted: true,
             status: "allowed",
-            featureKey,
+            featureKey: normalizedFeatureKey,
             type: "boolean",
-            planId,
+            planId: plan.planId,
+            planVersionRef: plan.planVersionRef,
           },
           checkOptions,
         );
@@ -90,17 +103,37 @@ export class EntitlementManager {
           {
             granted: true,
             status: "allowed",
-            featureKey,
+            featureKey: normalizedFeatureKey,
             type: "static",
             value: rule.value,
-            planId,
+            planId: plan.planId,
+            planVersionRef: plan.planVersionRef,
           },
           checkOptions,
         );
 
       case "metered":
-        return this.checkMetered(tenantId, featureKey, rule, planId, checkOptions);
+        return this.checkMetered(
+          tenantId,
+          normalizedFeatureKey,
+          rule,
+          plan.planId,
+          plan.planVersionRef,
+          checkOptions,
+        );
     }
+  }
+
+  private async getLegacySubscriptionPlan(
+    tenantId: string,
+  ): Promise<{ planId: string; planVersionRef: PlanVersionRef } | null> {
+    const planId = await this.subscriptionProvider.getCurrentPlanId(tenantId);
+    return planId === null
+      ? null
+      : {
+          planId,
+          planVersionRef: legacyPlanVersionRef(planId),
+        };
   }
 
   private async checkMetered(
@@ -108,8 +141,15 @@ export class EntitlementManager {
     featureKey: string,
     rule: EntitlementRule,
     planId: string,
+    planVersionRef: PlanVersionRef,
     checkOptions: EntitlementCheckOptions,
   ): Promise<EntitlementCheckResult> {
+    if (getLegacyPlanId(planVersionRef) === null && rule.quota === undefined) {
+      throw new EntitlementDefinitionProblem(
+        `Version-bound metered entitlement '${featureKey}' requires an inline quota.`,
+      );
+    }
+
     const usageKey = rule.meterId ?? featureKey;
     const meterQuota = rule.meterId
       ? await this.meterLookup.getMeterQuota(tenantId, rule.meterId)
@@ -126,6 +166,7 @@ export class EntitlementManager {
           type: "metered",
           reason: "no_quota_defined",
           planId,
+          planVersionRef,
         },
         checkOptions,
         {
@@ -146,6 +187,7 @@ export class EntitlementManager {
           status: "allowed",
           featureKey,
           planId,
+          planVersionRef,
           quota,
           usage: quotaStatus.usage,
           remaining: quotaStatus.remaining,
@@ -169,6 +211,7 @@ export class EntitlementManager {
             status: "denied",
             featureKey,
             planId,
+            planVersionRef,
             quota,
             usage: quotaStatus.usage,
             remaining: quotaStatus.remaining,
@@ -187,6 +230,7 @@ export class EntitlementManager {
             status: "soft-limit",
             featureKey,
             planId,
+            planVersionRef,
             quota,
             usage: quotaStatus.usage,
             remaining: quotaStatus.remaining,
@@ -204,6 +248,7 @@ export class EntitlementManager {
             quotaStatus.usage,
             quota,
             planId,
+            planVersionRef,
           ),
         );
 
@@ -214,6 +259,7 @@ export class EntitlementManager {
             status: "overage-allowed",
             featureKey,
             planId,
+            planVersionRef,
             quota,
             usage: quotaStatus.usage,
             remaining: quotaStatus.remaining,
@@ -230,6 +276,7 @@ export class EntitlementManager {
     status: EntitlementCheckResult["status"];
     featureKey: string;
     planId: string;
+    planVersionRef: PlanVersionRef;
     quota: number;
     usage: number;
     remaining: number;
@@ -247,6 +294,7 @@ export class EntitlementManager {
       remaining: options.remaining,
       exceeded: options.exceeded,
       planId: options.planId,
+      planVersionRef: options.planVersionRef,
       reason: options.reason,
       overagePolicy: options.overagePolicy,
     };
@@ -284,6 +332,7 @@ export class EntitlementManager {
         featureKey: result.featureKey,
         type: result.type,
         planId: result.planId,
+        planVersionRef: result.planVersionRef,
         usage: result.usage,
         quota: result.quota,
         remaining: result.remaining,
