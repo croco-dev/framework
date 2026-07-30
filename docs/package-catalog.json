@@ -409,6 +409,7 @@
         "auth-drizzle",
         "batch-qstash",
         "billing-polar",
+        "credits-drizzle",
         "customer-health-drizzle",
         "entitlements-drizzle",
         "execution-drizzle",
@@ -606,6 +607,7 @@
         "auth-clerk",
         "batch-qstash",
         "credits-core",
+        "credits-drizzle",
         "frontend-problems",
         "metering-upstash",
         "notifications-resend",
@@ -740,6 +742,19 @@
           "POLAR_ORGANIZATION_ID optional"
         ],
         "features": ["checkout", "webhooks", "subscription lifecycle", "customer portal"]
+      },
+      "credits-drizzle": {
+        "domain": "Credits",
+        "adapter": "Transactional Drizzle credit ledger",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "atomic credit ledger persistence",
+          "concurrent overdraft prevention",
+          "durable idempotency",
+          "bounded grant expiry",
+          "deterministic ledger history"
+        ]
       },
       "customer-health-drizzle": {
         "domain": "Customer health",

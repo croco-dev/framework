@@ -382,7 +382,7 @@ Follow-up work is tracked in GitHub Issues and in [Croco 1.0 Spine](docs/release
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **114개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **115개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Croco 1.0 Spine
 
@@ -428,7 +428,7 @@ Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alph
 | ------------ | ------------------------------------------------------------------------------------------ | --------: |
 | Core         | Framework primitives, context, reliability, transactions, and cross-cutting core utilities |        24 |
 | Domain       | Business-domain APIs and package-level abstractions                                        |        30 |
-| Provider     | Concrete datastore, SaaS provider, and external service adapters                           |        26 |
+| Provider     | Concrete datastore, SaaS provider, and external service adapters                           |        27 |
 | Integration  | Analytics, feature-flag, and observability integrations                                    |         5 |
 | Protocol     | API protocol definitions and code generation                                               |         8 |
 | Transport    | Runtime adapters that execute protocol routes                                              |         3 |
@@ -443,7 +443,7 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | ------------------- | ----------------------------------- | --------------------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |                    24 |
 | 🟡 beta             | 기능 완성, 실사용 검증 중           |                    76 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    14 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    15 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |                     0 |
 
 ### Extension & Adapter Matrix
@@ -467,6 +467,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/auth-drizzle`            | Auth            | Drizzle store                        | yes  | yes    | -       | -        | database connection supplied by app                                                 | drizzle-orm                                                     | API key store<br>role registry                                                                                                                                                            | 🟡 beta      | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/batch-qstash`            | Batch           | QStash chunk executor                | yes  | yes    | -       | -        | QSTASH_TOKEN<br>public webhook URL                                                  | -                                                               | chunk scheduling<br>checkpoint resume<br>idempotent publish<br>shared conformance<br>redacted upstream Problems                                                                           | 🔴 alpha/WIP | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/billing-polar`           | Billing         | Polar billing gateway                | yes  | yes    | -       | -        | POLAR_ACCESS_TOKEN<br>POLAR_WEBHOOK_SECRET<br>POLAR_ORGANIZATION_ID optional        | -                                                               | checkout<br>webhooks<br>subscription lifecycle<br>customer portal                                                                                                                         | 🟡 beta      | has package tests | uncertified (0.0.4)<br>@croco/billing-core/BillingGateway<br>node<br>lambda<br>missing: liveSmoke  |
+| `@croco/credits-drizzle`         | Credits         | Transactional Drizzle credit ledger  | yes  | yes    | -       | -        | PostgreSQL connection supplied by app                                               | drizzle-orm                                                     | atomic credit ledger persistence<br>concurrent overdraft prevention<br>durable idempotency<br>bounded grant expiry<br>deterministic ledger history                                        | 🔴 alpha/WIP | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/customer-health-drizzle` | Customer health | Drizzle repository                   | yes  | yes    | -       | -        | database connection supplied by app                                                 | drizzle-orm                                                     | health score persistence<br>customer health lookup                                                                                                                                        | 🟡 beta      | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/entitlements-drizzle`    | Entitlements    | Drizzle repository                   | yes  | yes    | -       | -        | database connection supplied by app                                                 | drizzle-orm                                                     | entitlement persistence<br>billing entitlement lookup                                                                                                                                     | 🟡 beta      | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/execution-drizzle`       | Execution       | Drizzle execution store              | yes  | yes    | -       | -        | database connection supplied by app                                                 | drizzle-orm                                                     | execution state persistence<br>retryable failure records                                                                                                                                  | 🟡 beta      | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
@@ -640,6 +641,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/auth-better-auth`     | Provider     | `packages/auth-better-auth`     | README, API, tests |
 | `@croco/auth-clerk`           | Provider     | `packages/auth-clerk`           | README, API, tests |
 | `@croco/batch-qstash`         | Provider     | `packages/batch-qstash`         | README, API, tests |
+| `@croco/credits-drizzle`      | Provider     | `packages/credits-drizzle`      | README, API, tests |
 | `@croco/metering-upstash`     | Provider     | `packages/metering-upstash`     | README, API, tests |
 | `@croco/notifications-resend` | Provider     | `packages/notifications-resend` | README, API, tests |
 | `@croco/ratelimit-upstash`    | Provider     | `packages/ratelimit-upstash`    | README, API, tests |
