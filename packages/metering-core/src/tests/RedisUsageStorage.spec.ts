@@ -158,13 +158,13 @@ describe("RedisUsageStorage", () => {
 
     it("should keep lifecycle and record idempotency state in distinct keys", async () => {
       const manager = new IdempotencyManager(mockRedis);
-      vi.mocked(mockRedis.eval).mockResolvedValue([1]);
 
       await manager.beginProcessing("tenant-1", "api_calls", "request-1");
       await storage.record(createUsageRecord("request-1"));
 
-      const lifecycleKey = vi.mocked(mockRedis.eval).mock.calls[0]?.[1][0];
-      const recordKey = vi.mocked(mockRedis.set).mock.calls[0]?.[0];
+      const idempotencyKeys = vi.mocked(mockRedis.set).mock.calls.map(([key]) => key);
+      const lifecycleKey = idempotencyKeys.find((key) => key.startsWith("idem2:lifecycle:"));
+      const recordKey = idempotencyKeys.find((key) => key.startsWith("idem2:record:"));
       expect(lifecycleKey).toBe("idem2:lifecycle:tenant-1:api_calls:request-1");
       expect(recordKey).toBe("idem2:record:tenant-1:api_calls:request-1");
       expect(recordKey).not.toBe(lifecycleKey);

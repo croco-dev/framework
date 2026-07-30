@@ -3,6 +3,15 @@ import { DuplicateRecordProblem } from "./problems/DuplicateRecordProblem";
 import { buildMeteringRedisKey } from "./redisKey";
 import type { RedisClient } from "./RedisClient";
 
+declare const IDEMPOTENCY_CLAIM: unique symbol;
+
+/**
+ * 현재 idempotency lease의 소유권을 증명하는 opaque claim입니다.
+ */
+export type IdempotencyClaim = string & {
+  readonly [IDEMPOTENCY_CLAIM]: "IdempotencyClaim";
+};
+
 /**
  * Idempotency 관리자
  *
@@ -14,7 +23,7 @@ import type { RedisClient } from "./RedisClient";
 export class IdempotencyManager {
   private static readonly DEFAULT_TTL_SECONDS = 86400; // 24시간
   private static readonly KEY_NAMESPACE = "idem2";
-  private static readonly STATUS_IN_PROGRESS = "IN_PROGRESS";
+  private static readonly STATUS_IN_PROGRESS_PREFIX = "IN_PROGRESS:";
   private static readonly STATUS_COMPLETED = "COMPLETED";
 
   constructor(
@@ -45,43 +54,55 @@ export class IdempotencyManager {
     return result === "OK";
   }
 
+  /**
+   * 처리 lease를 원자적으로 획득합니다.
+   *
+   * @returns 새 lease의 ownership claim, 중복 key이면 null
+   */
   async beginProcessing(
     tenantId: string,
     meterId: string,
     idempotencyKey: string,
-  ): Promise<boolean> {
+  ): Promise<IdempotencyClaim | null> {
     const key = this.buildKey(tenantId, meterId, idempotencyKey);
-    const [result] = await this.redis.eval<[number]>(
-      `
-        if redis.call('EXISTS', KEYS[1]) == 1 then
-          return 0
-        end
-
-        redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])
-        return 1
-      `,
-      [key],
-      [IdempotencyManager.STATUS_IN_PROGRESS, String(this.ttlSeconds)],
+    const claim = ulid() as IdempotencyClaim;
+    const result = await this.redis.set(
+      key,
+      this.buildLeaseValue(claim),
+      "NX",
+      "EX",
+      this.ttlSeconds,
     );
 
-    return result === 1;
+    return result === "OK" ? claim : null;
   }
 
+  /**
+   * 처리 lease를 획득하고 현재 소유권 claim을 반환합니다.
+   *
+   * @returns 새 lease의 claim
+   * @throws DuplicateRecordProblem 동일한 idempotency key가 이미 처리 중이거나 완료된 경우
+   */
   async beginProcessingOrThrow(
     tenantId: string,
     meterId: string,
     idempotencyKey: string,
-  ): Promise<void> {
-    const isNew = await this.beginProcessing(tenantId, meterId, idempotencyKey);
-    if (!isNew) {
+  ): Promise<IdempotencyClaim> {
+    const claim = await this.beginProcessing(tenantId, meterId, idempotencyKey);
+    if (claim === null) {
       throw new DuplicateRecordProblem(idempotencyKey);
     }
+    return claim;
   }
 
+  /**
+   * 현재 claim이 소유한 lease만 완료 상태로 전환합니다.
+   */
   async completeProcessing(
     tenantId: string,
     meterId: string,
     idempotencyKey: string,
+    claim: IdempotencyClaim,
   ): Promise<void> {
     const key = this.buildKey(tenantId, meterId, idempotencyKey);
     await this.redis.eval<[number]>(
@@ -92,15 +113,19 @@ export class IdempotencyManager {
         return 1
       `,
       [key],
-      [
-        IdempotencyManager.STATUS_IN_PROGRESS,
-        IdempotencyManager.STATUS_COMPLETED,
-        String(this.ttlSeconds),
-      ],
+      [this.buildLeaseValue(claim), IdempotencyManager.STATUS_COMPLETED, String(this.ttlSeconds)],
     );
   }
 
-  async abortProcessing(tenantId: string, meterId: string, idempotencyKey: string): Promise<void> {
+  /**
+   * 현재 claim이 소유한 처리 중 lease만 삭제합니다.
+   */
+  async abortProcessing(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+    claim: IdempotencyClaim,
+  ): Promise<void> {
     const key = this.buildKey(tenantId, meterId, idempotencyKey);
     await this.redis.eval<[number]>(
       `
@@ -110,7 +135,7 @@ export class IdempotencyManager {
         return 1
       `,
       [key],
-      [IdempotencyManager.STATUS_IN_PROGRESS],
+      [this.buildLeaseValue(claim)],
     );
   }
 
@@ -140,5 +165,9 @@ export class IdempotencyManager {
       meterId,
       idempotencyKey,
     ]);
+  }
+
+  private buildLeaseValue(claim: IdempotencyClaim): string {
+    return `${IdempotencyManager.STATUS_IN_PROGRESS_PREFIX}${claim}`;
   }
 }

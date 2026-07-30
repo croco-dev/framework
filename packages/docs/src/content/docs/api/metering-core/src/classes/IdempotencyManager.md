@@ -37,7 +37,9 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 ### abortProcessing()
 
-> **abortProcessing**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<`void`\>
+> **abortProcessing**(`tenantId`, `meterId`, `idempotencyKey`, `claim`): `Promise`\<`void`\>
+
+현재 claim이 소유한 처리 중 lease만 삭제합니다.
 
 #### Parameters
 
@@ -52,6 +54,10 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 ##### idempotencyKey
 
 `string`
+
+##### claim
+
+[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
 
 #### Returns
 
@@ -61,7 +67,9 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 ### beginProcessing()
 
-> **beginProcessing**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<`boolean`\>
+> **beginProcessing**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/) \| `null`\>
+
+처리 lease를 원자적으로 획득합니다.
 
 #### Parameters
 
@@ -79,13 +87,17 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 #### Returns
 
-`Promise`\<`boolean`\>
+`Promise`\<[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/) \| `null`\>
+
+새 lease의 ownership claim, 중복 key이면 null
 
 ***
 
 ### beginProcessingOrThrow()
 
-> **beginProcessingOrThrow**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<`void`\>
+> **beginProcessingOrThrow**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)\>
+
+처리 lease를 획득하고 현재 소유권 claim을 반환합니다.
 
 #### Parameters
 
@@ -103,7 +115,13 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)\>
+
+새 lease의 claim
+
+#### Throws
+
+DuplicateRecordProblem 동일한 idempotency key가 이미 처리 중이거나 완료된 경우
 
 ***
 
@@ -167,7 +185,9 @@ DuplicateRecordProblem 중복 시
 
 ### completeProcessing()
 
-> **completeProcessing**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<`void`\>
+> **completeProcessing**(`tenantId`, `meterId`, `idempotencyKey`, `claim`): `Promise`\<`void`\>
+
+현재 claim이 소유한 lease만 완료 상태로 전환합니다.
 
 #### Parameters
 
@@ -182,6 +202,10 @@ DuplicateRecordProblem 중복 시
 ##### idempotencyKey
 
 `string`
+
+##### claim
+
+[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
 
 #### Returns
 

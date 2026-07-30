@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QuotaExceededEvent } from "../libs/events/QuotaExceededEvent";
 import { UsageRecordedEvent } from "../libs/events/UsageRecordedEvent";
 import type { IdempotencyManager } from "../libs/IdempotencyManager";
+import type { IdempotencyClaim } from "../libs/IdempotencyManager";
 import { MeteringService } from "../libs/MeteringService";
 import type { MeterRecordInput } from "../libs/MeterRef";
 import { defineMeter, dimension } from "../libs/MeterRef";
@@ -20,6 +21,7 @@ describe("MeteringService", () => {
   let mockStorage!: UsageStorage;
   let mockIdempotency!: IdempotencyManager;
   let mockEventBus!: EventBus;
+  const idempotencyClaim = "claim-1" as IdempotencyClaim;
 
   const createMeter = (overrides: Partial<MeterDefinition> = {}): MeterDefinition => ({
     id: "meter-123",
@@ -55,8 +57,8 @@ describe("MeteringService", () => {
       ensureIdempotencyKey: vi.fn().mockReturnValue("generated-key"),
       checkAndMark: vi.fn().mockResolvedValue(true),
       checkAndMarkOrThrow: vi.fn().mockResolvedValue(undefined),
-      beginProcessing: vi.fn().mockResolvedValue(true),
-      beginProcessingOrThrow: vi.fn().mockResolvedValue(undefined),
+      beginProcessing: vi.fn().mockResolvedValue(idempotencyClaim),
+      beginProcessingOrThrow: vi.fn().mockResolvedValue(idempotencyClaim),
       completeProcessing: vi.fn().mockResolvedValue(undefined),
       abortProcessing: vi.fn().mockResolvedValue(undefined),
     } as unknown as IdempotencyManager;
@@ -98,6 +100,7 @@ describe("MeteringService", () => {
         "tenant-1",
         "api_calls",
         "generated-key",
+        idempotencyClaim,
       );
       expect(mockStorage.checkAndRecordWithinQuota).toHaveBeenCalledTimes(1);
     });
@@ -372,6 +375,7 @@ describe("MeteringService", () => {
         "tenant-1",
         "api_calls",
         "generated-key",
+        idempotencyClaim,
       );
       expect(mockIdempotency.abortProcessing).not.toHaveBeenCalled();
     });
@@ -470,6 +474,7 @@ describe("MeteringService", () => {
         "tenant-1",
         "api_calls",
         "generated-key",
+        idempotencyClaim,
       );
     });
 
@@ -488,6 +493,7 @@ describe("MeteringService", () => {
         "tenant-1",
         "api_calls",
         "generated-key",
+        idempotencyClaim,
       );
       expect(mockIdempotency.completeProcessing).not.toHaveBeenCalled();
     });
@@ -594,7 +600,7 @@ describe("MeteringService", () => {
         }),
       ).rejects.toThrow("publish failure");
 
-      vi.mocked(mockIdempotency.beginProcessing).mockResolvedValueOnce(false);
+      vi.mocked(mockIdempotency.beginProcessing).mockResolvedValueOnce(null);
 
       const result = await service.record({
         tenantId: "tenant-1",
@@ -631,7 +637,7 @@ describe("MeteringService", () => {
         }),
       ).rejects.toThrow("publish failure");
 
-      vi.mocked(mockIdempotency.beginProcessing).mockResolvedValueOnce(false);
+      vi.mocked(mockIdempotency.beginProcessing).mockResolvedValueOnce(null);
 
       const result = await service.record({
         tenantId: "tenant-1",
