@@ -1,3 +1,4 @@
+import { recordEvent } from "@croco/telemetry-api";
 import {
   type CircuitBreakerStateStore,
   CircuitState,
@@ -116,15 +117,17 @@ export class CircuitBreaker {
       throw new CircuitBreakerOpenProblem(this.circuitId);
     }
 
+    let result: T;
     try {
-      const result = await fn();
-      await this.markHalfOpenSuccess();
-      return result;
+      result = await fn();
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       await this.markHalfOpenFailure();
       throw err;
     }
+
+    await this.recordSuccessBookkeeping(CircuitState.HALF_OPEN, () => this.markHalfOpenSuccess());
+    return result;
   }
 
   private async handleClosed<T>(fn: () => Promise<T>): Promise<T> {
@@ -134,15 +137,43 @@ export class CircuitBreaker {
     }
 
     try {
-      const result = await fn();
-      await this.recordClosedSuccess();
+      let result: T;
+      try {
+        result = await fn();
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        await this.recordClosedFailure();
+        throw err;
+      }
+
+      await this.recordSuccessBookkeeping(CircuitState.CLOSED, () => this.recordClosedSuccess());
       return result;
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      await this.recordClosedFailure();
-      throw err;
     } finally {
       this.releaseClosedExecutionSlot();
+    }
+  }
+
+  private async recordSuccessBookkeeping(
+    state: CircuitState,
+    operation: () => Promise<void>,
+  ): Promise<void> {
+    try {
+      await operation();
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+
+      try {
+        recordEvent("circuit_breaker.bookkeeping_failed", {
+          "circuit.id": this.circuitId,
+          "circuit.state": state,
+          "error.message": err.message,
+          "error.type": err.name,
+          "operation.succeeded": true,
+        });
+      } catch {
+        // Observation failures must not replace an already successful operation outcome.
+        return;
+      }
     }
   }
 

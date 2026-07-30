@@ -1,3 +1,4 @@
+import { recordEvent } from "@croco/telemetry-api";
 import { describe, expect, it, vi } from "vitest";
 import { CircuitBreaker, type CircuitBreakerOptions } from "../libs/CircuitBreaker";
 import {
@@ -6,6 +7,10 @@ import {
   InMemoryCircuitBreakerStateStore,
 } from "../libs/CircuitBreakerState";
 import { CircuitBreakerOpenProblem } from "../libs/errors/CircuitBreakerOpenProblem";
+
+vi.mock("@croco/telemetry-api", () => ({
+  recordEvent: vi.fn(),
+}));
 
 describe("CircuitBreaker", () => {
   const createBreaker = (options: Partial<CircuitBreakerOptions> = {}) => {
@@ -498,6 +503,71 @@ describe("CircuitBreaker", () => {
   });
 
   describe("저장소 예외 처리", () => {
+    it("CLOSED 성공 bookkeeping 실패가 성공 결과를 덮거나 실패 카운터를 증가시키지 않아야 한다", async () => {
+      const stateStore = new InMemoryCircuitBreakerStateStore();
+      const resetFailureCount = vi
+        .spyOn(stateStore, "resetFailureCount")
+        .mockRejectedValue(new Error("Store write failed"));
+      const incrementFailureAndCheck = vi.spyOn(stateStore, "incrementFailureAndCheck");
+      const breaker = createBreaker({ stateStore });
+      const fn = vi.fn().mockResolvedValue("committed");
+
+      await expect(breaker.execute(fn)).resolves.toBe("committed");
+
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(resetFailureCount).toHaveBeenCalledTimes(1);
+      expect(incrementFailureAndCheck).not.toHaveBeenCalled();
+      expect(await stateStore.getFailureCount("test-circuit")).toBe(0);
+      expect(recordEvent).toHaveBeenCalledWith("circuit_breaker.bookkeeping_failed", {
+        "circuit.id": "test-circuit",
+        "circuit.state": CircuitState.CLOSED,
+        "error.message": "Store write failed",
+        "error.type": "Error",
+        "operation.succeeded": true,
+      });
+    });
+
+    it("bookkeeping 장애 telemetry 실패도 성공 결과를 덮지 않아야 한다", async () => {
+      const stateStore = new InMemoryCircuitBreakerStateStore();
+      vi.spyOn(stateStore, "resetFailureCount").mockRejectedValue(new Error("Store write failed"));
+      vi.mocked(recordEvent).mockImplementationOnce(() => {
+        throw new Error("Telemetry unavailable");
+      });
+      const breaker = createBreaker({ stateStore });
+
+      await expect(breaker.execute(async () => "committed")).resolves.toBe("committed");
+      expect(await stateStore.getFailureCount("test-circuit")).toBe(0);
+    });
+
+    it("HALF_OPEN 성공 bookkeeping 실패가 성공 결과를 덮거나 실패 전이로 들어가지 않아야 한다", async () => {
+      const stateStore = new InMemoryCircuitBreakerStateStore();
+      await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
+      await stateStore.incrementFailureCount("test-circuit");
+      const resetFailureCount = vi
+        .spyOn(stateStore, "resetFailureCount")
+        .mockRejectedValue(new Error("Store write failed"));
+      const incrementFailureAndCheck = vi.spyOn(stateStore, "incrementFailureAndCheck");
+      const setLastFailureTime = vi.spyOn(stateStore, "setLastFailureTime");
+      const breaker = createBreaker({ stateStore, halfOpenRequests: 1 });
+      const fn = vi.fn().mockResolvedValue("committed");
+
+      await expect(breaker.execute(fn)).resolves.toBe("committed");
+
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(resetFailureCount).toHaveBeenCalledTimes(1);
+      expect(incrementFailureAndCheck).not.toHaveBeenCalled();
+      expect(setLastFailureTime).not.toHaveBeenCalled();
+      expect(await stateStore.getFailureCount("test-circuit")).toBe(1);
+      expect(await stateStore.getState("test-circuit")).toBe(CircuitState.HALF_OPEN);
+      expect(recordEvent).toHaveBeenCalledWith("circuit_breaker.bookkeeping_failed", {
+        "circuit.id": "test-circuit",
+        "circuit.state": CircuitState.HALF_OPEN,
+        "error.message": "Store write failed",
+        "error.type": "Error",
+        "operation.succeeded": true,
+      });
+    });
+
     it("getState 실패 시 에러를 전파해야 한다", async () => {
       const mockStore: CircuitBreakerStateStore = {
         getState: vi.fn().mockRejectedValue(new Error("Store unavailable")),
