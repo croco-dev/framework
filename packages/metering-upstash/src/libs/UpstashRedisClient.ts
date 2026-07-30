@@ -15,6 +15,8 @@ export type UpstashRedisClientEnv = {
  * `@upstash/redis`를 `@croco/metering-core`의 RedisClient로 감싸는 어댑터입니다.
  */
 export class UpstashRedisClient implements RedisClient {
+  readonly scriptKeyAccess = "multi-key" as const;
+
   private readonly redis: Redis;
 
   constructor(redis: Redis) {

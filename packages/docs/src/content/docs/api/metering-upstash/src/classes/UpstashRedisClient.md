@@ -27,6 +27,19 @@ title: "UpstashRedisClient"
 
 `UpstashRedisClient`
 
+## Properties
+
+### scriptKeyAccess
+
+> `readonly` **scriptKeyAccess**: `"multi-key"`
+
+Metering의 원자적 스크립트는 여러 키에 접근하므로 단일 노드/단일 슬롯 실행 모델이 필요합니다.
+Redis Cluster처럼 서로 다른 슬롯의 키 접근을 거부하는 클라이언트는 지원하지 않습니다.
+
+#### Implementation of
+
+[`RedisClient`](/api/metering-core/src/interfaces/redisclient/).[`scriptKeyAccess`](/api/metering-core/src/interfaces/redisclient/#scriptkeyaccess)
+
 ## Methods
 
 ### eval()
@@ -39,7 +52,7 @@ Lua 스크립트 실행
 
 ##### TResult
 
-`TResult` *extends* `unknown`[]
+`TResult` _extends_ `unknown`[]
 
 #### Parameters
 
@@ -63,7 +76,7 @@ Lua 스크립트 실행
 
 [`RedisClient`](/api/metering-core/src/interfaces/redisclient/).[`eval`](/api/metering-core/src/interfaces/redisclient/#eval)
 
-***
+---
 
 ### set()
 
@@ -101,7 +114,7 @@ Lua 스크립트 실행
 
 [`RedisClient`](/api/metering-core/src/interfaces/redisclient/).[`set`](/api/metering-core/src/interfaces/redisclient/#set)
 
-***
+---
 
 ### zadd()
 
@@ -131,7 +144,7 @@ Sorted Set에 멤버 추가
 
 [`RedisClient`](/api/metering-core/src/interfaces/redisclient/).[`zadd`](/api/metering-core/src/interfaces/redisclient/#zadd)
 
-***
+---
 
 ### zrangebyscore()
 

@@ -32,11 +32,26 @@ Redis 기반 UsageStorage 구현체
 
 `RedisUsageStorage`
 
+## Properties
+
+### replayContract
+
+> `readonly` **replayContract**: `"idempotent"`
+
+MeteringService가 lease 만료 후 persistence를 안전하게 재개할 수 있음을 선언합니다.
+
+#### Implementation of
+
+[`UsageStorage`](/api/metering-core/src/interfaces/usagestorage/).[`replayContract`](/api/metering-core/src/interfaces/usagestorage/#replaycontract)
+
 ## Methods
 
 ### checkAndRecordWithinQuota()
 
 > **checkAndRecordWithinQuota**(`options`): `Promise`\<[`AtomicQuotaCheckResult`](/api/metering-core/src/type-aliases/atomicquotacheckresult/)\>
+
+동일한 tenantId, meterId, usageRecord.idempotencyKey 조합의 재시도는 사용량을 중복 기록하지 않고
+최초 호출과 동일한 quota 결과를 반환해야 합니다.
 
 #### Parameters
 
@@ -168,6 +183,8 @@ true: 새 키 (기록 가능), false: 중복 (기록 불가)
 
 Usage 기록 (즉시 flush)
 Redis Sorted Set에 저장
+
+동일한 tenantId, meterId, idempotencyKey 조합의 재시도는 사용량을 중복 기록하지 않아야 합니다.
 
 #### Parameters
 

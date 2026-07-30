@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AtomicQuotaNotSupportedProblem } from "../libs/problems/AtomicQuotaNotSupportedProblem";
 import { QuotaExceededProblem } from "../libs/problems/QuotaExceededProblem";
 import { QuotaManager } from "../libs/QuotaManager";
 import type { UsageRecord } from "../libs/types";
@@ -21,10 +20,12 @@ describe("QuotaManager", () => {
 
   beforeEach(() => {
     mockStorage = {
+      replayContract: "idempotent",
       record: vi.fn().mockResolvedValue(undefined),
       getUsage: vi.fn().mockResolvedValue(0),
       isIdempotent: vi.fn().mockResolvedValue(true),
       fetchUsageRecords: vi.fn().mockResolvedValue([]),
+      checkAndRecordWithinQuota: vi.fn().mockResolvedValue({ exceeded: false, newUsage: 8 }),
     };
 
     quotaManager = new QuotaManager({ usageStorage: mockStorage });
@@ -56,19 +57,6 @@ describe("QuotaManager", () => {
         allowOverQuota: false,
         usageRecord,
       });
-    });
-
-    it("should throw when storage does not support atomic quota checks", async () => {
-      await expect(
-        quotaManager.checkAndRecord({
-          tenantId: "tenant-1",
-          meterId: "api_calls",
-          value: 4,
-          quota: 10,
-          allowOverQuota: false,
-          usageRecord: createUsageRecord(),
-        }),
-      ).rejects.toThrow(AtomicQuotaNotSupportedProblem);
     });
 
     it("should return exceeded result from atomic storage", async () => {

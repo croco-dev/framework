@@ -20,14 +20,14 @@ export abstract class DomainEvent {
   public readonly timestamp: Date;
   public metadata: DomainEventMetadata;
 
-  constructor() {
+  constructor(eventId?: string) {
     const ctor = this.constructor as typeof DomainEvent & { eventName?: string };
 
     if (!ctor.eventName) {
       throw new EventDefinitionProblem();
     }
 
-    this.eventId = Math.random().toString(36).substring(2, 15);
+    this.eventId = eventId ?? Math.random().toString(36).substring(2, 15);
     this.eventName = ctor.eventName;
     this.timestamp = new Date();
     this.metadata = {};

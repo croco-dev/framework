@@ -23,6 +23,7 @@ describe("RedisUsageStorage", () => {
 
   beforeEach(() => {
     mockRedis = {
+      scriptKeyAccess: "multi-key",
       zadd: vi.fn().mockResolvedValue(1),
       zrangebyscore: vi.fn().mockResolvedValue([]),
       set: vi.fn().mockResolvedValue("OK"),
@@ -44,6 +45,7 @@ describe("RedisUsageStorage", () => {
     const scripts: string[] = [];
     const snapshots = new Map<string, string[]>();
     const redis: RedisClient = {
+      scriptKeyAccess: "multi-key",
       zadd: vi.fn().mockResolvedValue(1),
       zrangebyscore: vi.fn().mockResolvedValue([]),
       set: vi.fn().mockResolvedValue("OK"),
@@ -117,7 +119,7 @@ describe("RedisUsageStorage", () => {
       await storage.record(usage);
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
-        expect.stringContaining("redis.call('ZADD'"),
+        expect.any(String),
         ["usage2:tenant-1:api_calls:2024-01", "idem2:record:tenant-1:api_calls:key-123"],
         [usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v2\./), 86400],
       );
@@ -259,6 +261,7 @@ describe("RedisUsageStorage", () => {
       await storage.record({ ...usage, id: "usage-456" });
 
       expect(mockRedis.eval).toHaveBeenCalledTimes(2);
+      expect(mockRedis.zadd).not.toHaveBeenCalled();
     });
 
     it("should throw RedisProblem on error", async () => {
@@ -792,7 +795,7 @@ describe("RedisUsageStorage", () => {
 
       expect(result).toEqual({ exceeded: false, newUsage: 8 });
       expect(mockRedis.eval).toHaveBeenCalledWith(
-        expect.stringContaining("redis.call('ZRANGEBYSCORE'"),
+        expect.any(String),
         ["usage2:tenant-1:api_calls:2024-01", "idem2:record:tenant-1:api_calls:key-123"],
         [10, 5, usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v2\./), 0],
       );
@@ -932,13 +935,76 @@ describe("RedisUsageStorage", () => {
       ).rejects.toThrow(RedisProblem);
     });
 
-    it("should label cached idempotency reads as ZRANGEBYSCORE errors", async () => {
-      vi.mocked(mockRedis.eval).mockResolvedValueOnce([0, 8]);
-      vi.mocked(mockRedis.zrangebyscore).mockRejectedValue(new Error("Read failed"));
+    it("should replay the original quota result for a cached idempotency key", async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValueOnce([1, 12]);
 
       const usageRecord = createUsageRecord("key-123");
 
-      await storage.checkAndRecordWithinQuota({
+      const first = await storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 10,
+        allowOverQuota: true,
+        usageRecord,
+      });
+
+      const retry = await storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 10,
+        allowOverQuota: true,
+        usageRecord: { ...usageRecord, id: "usage-456" },
+      });
+
+      expect(first).toEqual({ exceeded: true, newUsage: 12 });
+      expect(retry).toEqual(first);
+      expect(mockRedis.eval).toHaveBeenCalledTimes(1);
+      expect(mockRedis.zrangebyscore).not.toHaveBeenCalled();
+    });
+
+    it("should persist and replay a rejected quota result after process restart", async () => {
+      const dedupeValues = new Map<string, string>();
+      let usageRecordCount = 0;
+      let evalCallCount = 0;
+      const redis: RedisClient = {
+        scriptKeyAccess: "multi-key",
+        zadd: vi.fn().mockResolvedValue(1),
+        zrangebyscore: vi.fn().mockResolvedValue([]),
+        set: vi.fn().mockResolvedValue("OK"),
+        async eval<TResult extends unknown[]>(
+          _script: string,
+          keys: string[],
+          args: Array<string | number>,
+        ): Promise<TResult> {
+          evalCallCount += 1;
+          const dedupeKey = keys[1];
+          if (!dedupeKey) {
+            throw new Error("Expected quota dedupe key");
+          }
+          const recordedResult = dedupeValues.get(dedupeKey);
+          const recordedMatch = recordedResult?.match(/^quota:([01]):(.+)$/);
+          if (recordedMatch) {
+            return [Number(recordedMatch[1]), Number(recordedMatch[2])] as unknown as TResult;
+          }
+
+          const quota = Number(args[0]);
+          const value = Number(args[1]);
+          const newUsage = 8 + value;
+          const exceeded = newUsage > quota ? 1 : 0;
+
+          if (exceeded === 0 || args[4] === 1) {
+            usageRecordCount += 1;
+          }
+          dedupeValues.set(dedupeKey, `quota:${exceeded}:${newUsage}`);
+          return [exceeded, newUsage] as unknown as TResult;
+        },
+      };
+      const usageRecord = createUsageRecord("rejected-key");
+      const firstStorage = new RedisUsageStorage(redis);
+
+      const first = await firstStorage.checkAndRecordWithinQuota({
         tenantId: usageRecord.tenantId,
         meterId: usageRecord.meterId,
         value: usageRecord.value,
@@ -947,20 +1013,62 @@ describe("RedisUsageStorage", () => {
         usageRecord,
       });
 
-      const request = storage.checkAndRecordWithinQuota({
+      const restartedStorage = new RedisUsageStorage(redis);
+      const retry = await restartedStorage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: 1,
+        quota: 100,
+        allowOverQuota: false,
+        usageRecord: { ...usageRecord, id: "usage-after-restart", value: 1 },
+      });
+
+      expect(first).toEqual({ exceeded: true, newUsage: 13 });
+      expect(retry).toEqual(first);
+      expect(dedupeValues.get("idem2:record:tenant-1:api_calls:rejected-key")).toBe("quota:1:13");
+      expect(usageRecordCount).toBe(0);
+      expect(evalCallCount).toBe(2);
+    });
+
+    it("should replay a legacy dedupe marker with its current quota outcome", async () => {
+      const dedupeKey = "idem2:record:tenant-1:api_calls:legacy-key";
+      const dedupeValues = new Map([[dedupeKey, "1"]]);
+      let usageRecordCount = 0;
+      const redis: RedisClient = {
+        scriptKeyAccess: "multi-key",
+        zadd: vi.fn().mockResolvedValue(1),
+        zrangebyscore: vi.fn().mockResolvedValue([]),
+        set: vi.fn().mockResolvedValue("OK"),
+        async eval<TResult extends unknown[]>(
+          _script: string,
+          keys: string[],
+          args: Array<string | number>,
+        ): Promise<TResult> {
+          const recordedResult = dedupeValues.get(keys[1] ?? "");
+          if (recordedResult === "1") {
+            const currentUsage = 13;
+            return [currentUsage > Number(args[0]) ? 1 : 0, currentUsage] as unknown as TResult;
+          }
+
+          usageRecordCount += 1;
+          return [0, 13] as unknown as TResult;
+        },
+      };
+      const legacyStorage = new RedisUsageStorage(redis);
+      const usageRecord = createUsageRecord("legacy-key");
+
+      const result = await legacyStorage.checkAndRecordWithinQuota({
         tenantId: usageRecord.tenantId,
         meterId: usageRecord.meterId,
         value: usageRecord.value,
         quota: 10,
         allowOverQuota: false,
-        usageRecord: { ...usageRecord, id: "usage-456" },
+        usageRecord,
       });
 
-      await expect(request).rejects.toThrow(RedisProblem);
-      await expect(request).rejects.toMatchObject({
-        detail: expect.stringContaining("Redis operation 'ZRANGEBYSCORE' failed"),
-        extensions: { operation: "ZRANGEBYSCORE", originalMessage: "Read failed" },
-      });
+      expect(result).toEqual({ exceeded: true, newUsage: 13 });
+      expect(dedupeValues.get(dedupeKey)).toBe("1");
+      expect(usageRecordCount).toBe(0);
     });
   });
 

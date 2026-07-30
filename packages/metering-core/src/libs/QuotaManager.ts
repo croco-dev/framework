@@ -1,4 +1,3 @@
-import { AtomicQuotaNotSupportedProblem } from "./problems/AtomicQuotaNotSupportedProblem";
 import { QuotaExceededProblem } from "./problems/QuotaExceededProblem";
 import type { UsageRecord } from "./types";
 import type { AtomicQuotaCheckResult, UsageStorage } from "./UsageStorage";
@@ -29,10 +28,6 @@ export class QuotaManager {
   }
 
   async checkAndRecord(options: QuotaCheckAndRecordOptions): Promise<QuotaCheckAndRecordResult> {
-    if (!this.usageStorage.checkAndRecordWithinQuota) {
-      throw new AtomicQuotaNotSupportedProblem();
-    }
-
     const atomicResult = await this.usageStorage.checkAndRecordWithinQuota(options);
     return this.toQuotaCheckResult(atomicResult);
   }

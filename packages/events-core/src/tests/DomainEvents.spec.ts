@@ -13,8 +13,11 @@ import {
 
 class TestEvent extends DomainEvent {
   static eventName = "TestEvent";
-  constructor(public readonly data: string) {
-    super();
+  constructor(
+    public readonly data: string,
+    eventId?: string,
+  ) {
+    super(eventId);
   }
 }
 
@@ -57,6 +60,12 @@ describe("DomainEvent", () => {
 
     expect(event.eventId).toMatch(/^[a-z0-9]+$/);
     expect(event.eventId).toBe(event.eventId);
+  });
+
+  it("should preserve an explicitly supplied logical event identity", () => {
+    const event = new TestEvent("test", "logical-event-1");
+
+    expect(event.eventId).toBe("logical-event-1");
   });
 
   it("should store provided data", () => {

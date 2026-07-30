@@ -7,10 +7,12 @@ describe("UsageStorage", () => {
 
   beforeEach(() => {
     mockStorage = {
+      replayContract: "idempotent",
       record: vi.fn(),
       getUsage: vi.fn(),
       isIdempotent: vi.fn(),
       fetchUsageRecords: vi.fn(),
+      checkAndRecordWithinQuota: vi.fn(),
     };
   });
 

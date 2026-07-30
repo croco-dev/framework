@@ -185,7 +185,11 @@ export { UsageRecordedEvent } from "./libs/events/UsageRecordedEvent";
  * ```
  */
 export { IdempotencyManager } from "./libs/IdempotencyManager";
-export type { IdempotencyClaim } from "./libs/IdempotencyManager";
+export type {
+  IdempotencyClaim,
+  MeteringProcessingClaim,
+  PendingMeteringDelivery,
+} from "./libs/IdempotencyManager";
 
 /**
  * MeteringService 생성 옵션 타입입니다.
@@ -336,6 +340,7 @@ export { AtomicQuotaNotSupportedProblem } from "./libs/problems/AtomicQuotaNotSu
  */
 export { DuplicateRecordProblem } from "./libs/problems/DuplicateRecordProblem";
 export { InvalidMeterDimensionProblem } from "./libs/problems/InvalidMeterDimensionProblem";
+export { MeteringTransitionProblem } from "./libs/problems/MeteringTransitionProblem";
 
 /**
  * 등록되지 않은 Meter를 사용할 때 발생하는 문제 타입입니다.
@@ -424,11 +429,12 @@ export { QuotaManager } from "./libs/QuotaManager";
  *
  * @example
  * ```typescript
- * import Redis from 'ioredis';
+ * import type { RedisClient } from '@croco/metering-core';
+ * import { createUpstashRedisClientFromEnv } from '@croco/metering-upstash';
  *
- * const client: RedisClient = new Redis({
- *   host: 'localhost',
- *   port: 6379,
+ * const client: RedisClient = createUpstashRedisClientFromEnv({
+ *   UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+ *   UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
  * });
  * ```
  */
