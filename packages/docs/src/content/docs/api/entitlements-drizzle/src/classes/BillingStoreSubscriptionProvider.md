@@ -68,3 +68,25 @@ resume은 같은 external subscription의 최신 plan을 유지합니다.
 #### Overrides
 
 [`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/).[`getCurrentPlanId`](/api/entitlements-core/src/classes/subscriptionprovider/#getcurrentplanid)
+
+---
+
+### getCurrentPlanVersion()
+
+> **getCurrentPlanVersion**(`tenantId`): `Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>
+
+테넌트의 현재 구독에 고정된 플랜 버전 참조를 반환합니다.
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>
+
+#### Overrides
+
+[`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/).[`getCurrentPlanVersion`](/api/entitlements-core/src/classes/subscriptionprovider/#getcurrentplanversion)

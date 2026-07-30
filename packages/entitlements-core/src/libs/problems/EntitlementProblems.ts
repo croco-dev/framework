@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { PlanVersionRef } from "@croco/billing-core";
 
 function decisionIdOptions(
   decisionId?: string,
@@ -87,5 +88,45 @@ export class EntitlementNotFoundProblem extends Problem {
 
   constructor(feature: string) {
     super(undefined, undefined, `Entitlement '${feature}' not found`);
+  }
+}
+
+export class EntitlementDefinitionProblem extends Problem {
+  readonly code = "entitlements-core/definition-invalid";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(detail: string) {
+    super(undefined, undefined, detail);
+  }
+}
+
+export class EntitlementPlanVersionNotFoundProblem extends Problem {
+  readonly code = "entitlements-core/plan-version-not-found";
+  readonly category = ProblemCategory.NotFound;
+
+  constructor(ref: PlanVersionRef) {
+    super(undefined, undefined, `Entitlement set for plan version '${ref}' was not found`);
+  }
+}
+
+export class EntitlementPlanVersionAlreadyRegisteredProblem extends Problem {
+  readonly code = "entitlements-core/plan-version-already-registered";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(ref: PlanVersionRef) {
+    super(undefined, undefined, `Entitlement set for plan version '${ref}' is already registered`);
+  }
+}
+
+export class EntitlementPlanVersionMismatchProblem extends Problem {
+  readonly code = "entitlements-core/plan-version-mismatch";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(ref: PlanVersionRef, expectedPlanId: string, actualPlanId: string) {
+    super(
+      undefined,
+      undefined,
+      `Plan version '${ref}' belongs to '${actualPlanId}', not '${expectedPlanId}'`,
+    );
   }
 }

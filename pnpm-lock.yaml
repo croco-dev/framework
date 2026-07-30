@@ -1414,6 +1414,9 @@ importers:
       '@croco/auth-core':
         specifier: workspace:*
         version: link:../auth-core
+      '@croco/billing-core':
+        specifier: workspace:*
+        version: link:../billing-core
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core

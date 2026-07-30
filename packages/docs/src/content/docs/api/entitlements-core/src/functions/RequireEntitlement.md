@@ -13,7 +13,7 @@ title: "RequireEntitlement"
 
 ### options
 
-[`EntitlementRequirement`](/api/entitlements-core/src/type-aliases/entitlementrequirement/)
+[`EntitlementRequirementInput`](/api/entitlements-core/src/type-aliases/entitlementrequirementinput/)
 
 ## Returns
 

@@ -1,5 +1,7 @@
 import "reflect-metadata";
 import type { PolicyDecisionSourceLocation } from "@croco/access-core";
+import { featureKey } from "./EntitlementDefinition";
+import type { FeatureReference } from "./EntitlementDefinition";
 import { EntitlementRequirementProblem } from "./problems/EntitlementProblems";
 
 export const ENTITLEMENT_REQUIRED_KEY = "entitlement:required";
@@ -20,26 +22,30 @@ export type EntitlementRequirement = {
 };
 
 export type EntitlementRequirementMetadata = EntitlementRequirement;
+export type EntitlementRequirementInput = Omit<EntitlementRequirement, "feature"> & {
+  readonly feature: FeatureReference;
+};
 
 export function defineEntitlementRequirement(
-  requirement: EntitlementRequirement,
+  requirement: EntitlementRequirementInput,
 ): EntitlementRequirement {
   assertValidEntitlementRequirement(requirement);
+  const normalizedFeature = featureKey(requirement.feature);
 
   return {
-    feature: requirement.feature,
+    feature: normalizedFeature,
     ...(requirement.description ? { description: requirement.description } : {}),
     ...(requirement.resource
       ? { resource: normalizeResourceRequirement(requirement.resource) }
       : {}),
-    ruleId: requirement.ruleId ?? `entitlement:${requirement.feature}`,
+    ruleId: requirement.ruleId ?? `entitlement:${normalizedFeature}`,
     ...(requirement.sourceLocation ? { sourceLocation: requirement.sourceLocation } : {}),
   };
 }
 
 export function appendEntitlementRequirement(
   target: object,
-  requirement: EntitlementRequirement,
+  requirement: EntitlementRequirementInput,
   propertyKey?: string | symbol,
 ): void {
   const normalized = defineEntitlementRequirement(requirement);
@@ -47,7 +53,7 @@ export function appendEntitlementRequirement(
 
   if (propertyKey === undefined) {
     Reflect.defineMetadata(ENTITLEMENT_REQUIREMENTS_KEY, [...existing, normalized], target);
-    Reflect.defineMetadata(ENTITLEMENT_REQUIRED_KEY, normalized.feature, target);
+    Reflect.defineMetadata(ENTITLEMENT_REQUIRED_KEY, featureKey(normalized.feature), target);
     return;
   }
 
@@ -57,7 +63,12 @@ export function appendEntitlementRequirement(
     target,
     propertyKey,
   );
-  Reflect.defineMetadata(ENTITLEMENT_REQUIRED_KEY, normalized.feature, target, propertyKey);
+  Reflect.defineMetadata(
+    ENTITLEMENT_REQUIRED_KEY,
+    featureKey(normalized.feature),
+    target,
+    propertyKey,
+  );
 }
 
 export function getEntitlementRequirements(
@@ -142,8 +153,9 @@ function isEntitlementRequirement(value: unknown): value is EntitlementRequireme
   );
 }
 
-function assertValidEntitlementRequirement(requirement: EntitlementRequirement): void {
-  if (typeof requirement.feature !== "string" || requirement.feature.length === 0) {
+function assertValidEntitlementRequirement(requirement: EntitlementRequirementInput): void {
+  const normalizedFeature = featureKey(requirement.feature);
+  if (normalizedFeature.length === 0) {
     throw new EntitlementRequirementProblem("Entitlement requirement feature must not be empty.");
   }
 

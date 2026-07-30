@@ -41,3 +41,19 @@ title: "SubscriptionProvider"
 #### Returns
 
 `Promise`\<`string` \| `null`\>
+
+---
+
+### getCurrentPlanVersion()?
+
+> `abstract` `optional` **getCurrentPlanVersion**(`tenantId`): `Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>

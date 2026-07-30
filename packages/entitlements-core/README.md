@@ -12,29 +12,51 @@ pnpm add @croco/entitlements-core
 
 ```ts
 import {
+  defineFeature,
+  definePlanEntitlements,
   EntitlementManager,
   InMemoryPlanEntitlementRegistry,
   StaticSubscriptionProvider,
 } from "@croco/entitlements-core";
+import { planVersionRef } from "@croco/billing-core";
+import { defineMeter } from "@croco/metering-core";
 
+const API_CALLS = defineFeature("api_calls");
+const API_CALL_METER = defineMeter({
+  key: "api.calls",
+  aggregation: "COUNT",
+  unit: "request",
+  billing: "required",
+});
+const PRO_2026_01 = planVersionRef("pro@2026-01");
 const registry = new InMemoryPlanEntitlementRegistry();
-registry.register("pro", [
-  {
-    featureKey: "api_calls",
-    type: "metered",
-    quota: 100,
-    overagePolicy: "BLOCK",
-  },
-]);
+registry.register(
+  definePlanEntitlements({
+    planId: "pro",
+    planVersionRef: PRO_2026_01,
+    entitlements: [
+      {
+        feature: API_CALLS,
+        type: "metered",
+        meter: API_CALL_METER,
+        quota: 100,
+        overagePolicy: "ALLOW_WITH_OVERAGE",
+      },
+    ],
+  }),
+);
 
 const manager = new EntitlementManager(
   registry,
-  new StaticSubscriptionProvider("pro"),
+  new StaticSubscriptionProvider({
+    planId: "pro",
+    planVersionRef: PRO_2026_01,
+  }),
   quotaChecker,
   meterLookup,
 );
 
-const result = await manager.check("tenant-1", "api_calls");
+const result = await manager.check("tenant-1", API_CALLS);
 ```
 
 ### 라우트와 서비스 경계 강제
@@ -42,11 +64,12 @@ const result = await manager.check("tenant-1", "api_calls");
 `@RequireEntitlement`는 클래스나 메서드에 필요한 기능 키를 선언합니다. `EntitlementGuard`는 핸들러 실행 전에 tenant, user, route, resource를 명시적인 guard 입력으로 만들어 `EntitlementManager.check()`를 호출하고, 실패 시 표준 Problem을 throw합니다.
 
 ```ts
-import { EntitlementGuard, RequireEntitlement } from "@croco/entitlements-core";
+import { defineFeature, EntitlementGuard, RequireEntitlement } from "@croco/entitlements-core";
 
+const REPORT_EXPORT = defineFeature("reports.export");
 class ReportsController {
   @RequireEntitlement({
-    feature: "reports.export",
+    feature: REPORT_EXPORT,
     resource: { type: "report", idParam: "reportId" },
   })
   exportReport() {
@@ -76,13 +99,14 @@ resource id는 `resource.id`로 고정하거나 `resource.idParam`을 통해 req
 
 - `EntitlementRule`, `EntitlementCheckResult`, `EntitlementQuotaStatus`
 - `EntitlementCheckStatus`, `EntitlementType`, `OveragePolicy`, `PlanEntitlements`
+- `FeatureRef`, `EntitlementDefinition`, `PlanEntitlementDefinition`, `SubscriptionPlanReference`
 - `EntitlementRequirement`, `EntitlementResourceRequirement`, `EntitlementGuardInput`
 - `UsageHistoryEntry`, `UsageHistoryPeriod`
 
 ### 이벤트와 문제 타입
 
 - 이벤트: `EntitlementDeniedEvent`, `EntitlementQuotaExceededEvent`, `EntitlementOverageAllowedEvent`
-- 문제 타입: `EntitlementDeniedProblem`, `EntitlementMissingPlanProblem`, `EntitlementInactiveSubscriptionProblem`, `EntitlementQuotaExceededProblem`, `EntitlementProviderUnavailableProblem`, `EntitlementNotFoundProblem`
+- 문제 타입: `EntitlementDeniedProblem`, `EntitlementMissingPlanProblem`, `EntitlementInactiveSubscriptionProblem`, `EntitlementQuotaExceededProblem`, `EntitlementProviderUnavailableProblem`, `EntitlementNotFoundProblem`, `EntitlementPlanVersionNotFoundProblem`
 
 ## Contract artifacts
 
@@ -91,6 +115,23 @@ resource id는 `resource.id`로 고정하거나 `resource.idParam`을 통해 req
 ## 구현 포인트
 
 - `BLOCK`, `WARN`, `ALLOW_WITH_OVERAGE` 세 가지 overage 정책을 지원합니다.
+- entitlement set은 `PlanVersionRef`로 등록하고 subscription의 같은 immutable reference로 조회합니다. 알 수 없는 reference는 최신 플랜으로 fallback하지 않고 `entitlements-core/plan-version-not-found` Problem으로 실패합니다.
+- version-bound metered rule은 quota를 definition에 직접 고정합니다. 외부의 현재 meter quota로 fallback하는 동적 quota는 legacy plan-ID 경로에서만 지원합니다.
+- `ALLOW_WITH_OVERAGE` canonical definition은 `billing: "required"`인 typed `MeterRef`를 요구합니다.
+- 정규화된 rule은 `meterId`와 `meterBilling`을 함께 보존하므로 persistent adapter와 후속 verification도 billable binding을 검사할 수 있습니다.
 - `EntitlementCheckResult.status`는 `allowed`, `denied`, `soft-limit`, `overage-allowed`, `unknown` 상태를 사용해 guard/audit/telemetry evidence를 정규화합니다.
 - `meterId`를 지정하면 metering-core의 실제 사용량과 quota를 연결할 수 있습니다.
 - subscription, billing, membership 같은 패키지와 조합해 플랜 제한을 중앙에서 관리할 수 있습니다.
+
+## 기존 plan-ID registry 마이그레이션
+
+기존 `registry.register(planId, rules)`와 문자열 `StaticSubscriptionProvider(planId)`는 source compatibility를 위해 유지되며, 둘 다 결정적인 `legacy:<planId>` reference만 사용합니다. 이 경로는 최신 버전을 추정하지 않습니다.
+
+운영 데이터는 다음 순서로 옮깁니다.
+
+1. billing registry에서 대상 subscription에 적용할 정확한 published `PlanVersionRef`를 선택합니다.
+2. `migrateLegacyPlanEntitlements({ planId, entitlements }, selectedRef)`로 entitlement set을 변환합니다. `legacy:` reference는 거부됩니다.
+3. 변환된 set을 등록한 뒤 subscription의 `planVersionRef`를 같은 값으로 backfill합니다.
+4. 모든 subscription과 entitlement set이 고정된 뒤 legacy plan-ID 등록을 제거합니다.
+
+자동으로 최신 plan version을 선택하는 migration은 지원하지 않습니다.

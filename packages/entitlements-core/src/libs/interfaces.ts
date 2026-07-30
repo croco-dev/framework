@@ -1,9 +1,13 @@
 import type { DomainEvent } from "@croco/events-core";
 import { Token } from "@croco/framework-context";
+import type { PlanVersionRef } from "@croco/billing-core";
+import { getLegacyPlanId } from "./EntitlementDefinition";
+import { EntitlementPlanVersionNotFoundProblem } from "./problems/EntitlementProblems";
 import type {
   EntitlementCheckStatus,
   EntitlementQuotaStatus,
   EntitlementRule,
+  SubscriptionPlanReference,
   UsageHistoryEntry,
   UsageHistoryPeriod,
 } from "./types";
@@ -12,6 +16,8 @@ export abstract class SubscriptionProvider {
   static readonly token = new Token<SubscriptionProvider>("SubscriptionProvider");
 
   abstract getCurrentPlanId(tenantId: string): Promise<string | null>;
+
+  abstract getCurrentPlanVersion?(tenantId: string): Promise<SubscriptionPlanReference | null>;
 }
 
 export abstract class PlanEntitlementRegistry {
@@ -20,6 +26,27 @@ export abstract class PlanEntitlementRegistry {
   abstract getEntitlements(planId: string): Promise<EntitlementRule[]>;
 
   abstract findRule(planId: string, featureKey: string): Promise<EntitlementRule | null>;
+
+  async getEntitlementsByPlanVersion(
+    ref: PlanVersionRef,
+    _expectedPlanId?: string,
+  ): Promise<readonly EntitlementRule[]> {
+    const legacyPlanId = getLegacyPlanId(ref);
+    if (legacyPlanId === null) {
+      throw new EntitlementPlanVersionNotFoundProblem(ref);
+    }
+
+    return this.getEntitlements(legacyPlanId);
+  }
+
+  async findRuleByPlanVersion(
+    ref: PlanVersionRef,
+    featureKey: string,
+    expectedPlanId?: string,
+  ): Promise<EntitlementRule | null> {
+    const entitlements = await this.getEntitlementsByPlanVersion(ref, expectedPlanId);
+    return entitlements.find((rule) => rule.featureKey === featureKey) ?? null;
+  }
 }
 
 export abstract class EntitlementQuotaChecker {

@@ -15,4 +15,12 @@ export {
 /**
  * 플랜 권한 영속화에 사용하는 스키마입니다.
  */
-export { planEntitlements } from "./libs/schema";
+export { planEntitlements, planEntitlementSets } from "./libs/schema";
+export {
+  addPlanVersionEntitlementsPostgres,
+  backfillPlanVersionEntitlementsPostgres,
+} from "./migrations/addPlanVersionEntitlements";
+export type {
+  EntitlementMigrationClient,
+  PlanVersionEntitlementMigrationMapping,
+} from "./migrations/addPlanVersionEntitlements";

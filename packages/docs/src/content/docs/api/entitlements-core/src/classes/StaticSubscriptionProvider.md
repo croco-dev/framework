@@ -15,13 +15,13 @@ title: "StaticSubscriptionProvider"
 
 ### Constructor
 
-> **new StaticSubscriptionProvider**(`defaultPlanId`): `StaticSubscriptionProvider`
+> **new StaticSubscriptionProvider**(`defaultPlan`): `StaticSubscriptionProvider`
 
 #### Parameters
 
-##### defaultPlanId
+##### defaultPlan
 
-`string`
+`string` \| [`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/)
 
 #### Returns
 
@@ -60,3 +60,23 @@ title: "StaticSubscriptionProvider"
 #### Overrides
 
 [`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/).[`getCurrentPlanId`](/api/entitlements-core/src/classes/subscriptionprovider/#getcurrentplanid)
+
+---
+
+### getCurrentPlanVersion()
+
+> **getCurrentPlanVersion**(`_tenantId`): `Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>
+
+#### Parameters
+
+##### \_tenantId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`SubscriptionPlanReference`](/api/entitlements-core/src/type-aliases/subscriptionplanreference/) \| `null`\>
+
+#### Overrides
+
+[`SubscriptionProvider`](/api/entitlements-core/src/classes/subscriptionprovider/).[`getCurrentPlanVersion`](/api/entitlements-core/src/classes/subscriptionprovider/#getcurrentplanversion)

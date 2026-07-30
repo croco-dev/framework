@@ -15,7 +15,7 @@ entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입�
 
 ### Constructor
 
-> **new EntitlementOverageAllowedEvent**(`tenantId`, `featureKey`, `usage`, `quota`, `planId`): `EntitlementOverageAllowedEvent`
+> **new EntitlementOverageAllowedEvent**(`tenantId`, `featureKey`, `usage`, `quota`, `planId`, `planVersionRef`): `EntitlementOverageAllowedEvent`
 
 #### Parameters
 
@@ -39,6 +39,10 @@ entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입�
 
 `string`
 
+##### planVersionRef
+
+[`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
 #### Returns
 
 `EntitlementOverageAllowedEvent`
@@ -57,7 +61,7 @@ entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입�
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventId`](/api/events-core/src/classes/domainevent/#eventid)
 
-***
+---
 
 ### eventName
 
@@ -67,13 +71,13 @@ entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입�
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`eventName`](/api/events-core/src/classes/domainevent/#eventname)
 
-***
+---
 
 ### featureKey
 
 > `readonly` **featureKey**: `string`
 
-***
+---
 
 ### metadata
 
@@ -83,25 +87,31 @@ entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입�
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`metadata`](/api/events-core/src/classes/domainevent/#metadata)
 
-***
+---
 
 ### planId
 
 > `readonly` **planId**: `string`
 
-***
+---
+
+### planVersionRef
+
+> `readonly` **planVersionRef**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+---
 
 ### quota
 
 > `readonly` **quota**: `number`
 
-***
+---
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
-***
+---
 
 ### timestamp
 
@@ -111,13 +121,13 @@ entitlement 거부, quota 초과, overage 허용 시 발행되는 이벤트입�
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/).[`timestamp`](/api/events-core/src/classes/domainevent/#timestamp)
 
-***
+---
 
 ### usage
 
 > `readonly` **usage**: `number`
 
-***
+---
 
 ### eventName
 

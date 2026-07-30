@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 534,
+  "problemCount": 538,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -4106,7 +4106,7 @@
       "sources": [
         {
           "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          "line": 19,
+          "line": 20,
           "column": 3,
           "kind": "problem-class"
         }
@@ -4136,7 +4136,7 @@
       "sources": [
         {
           "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          "line": 45,
+          "line": 46,
           "column": 3,
           "kind": "problem-class"
         }
@@ -4166,7 +4166,7 @@
       "sources": [
         {
           "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          "line": 31,
+          "line": 32,
           "column": 3,
           "kind": "problem-class"
         }
@@ -4196,7 +4196,7 @@
       "sources": [
         {
           "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          "line": 85,
+          "line": 86,
           "column": 3,
           "kind": "problem-class"
         }
@@ -4226,7 +4226,7 @@
       "sources": [
         {
           "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          "line": 73,
+          "line": 74,
           "column": 3,
           "kind": "problem-class"
         }
@@ -4256,7 +4256,7 @@
       "sources": [
         {
           "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          "line": 59,
+          "line": 60,
           "column": 3,
           "kind": "problem-class"
         }
@@ -4286,7 +4286,127 @@
       "sources": [
         {
           "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
-          "line": 10,
+          "line": 11,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "entitlements-core/definition-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#entitlements-core-definition-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          "line": 95,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "entitlements-core/plan-version-already-registered",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#entitlements-core-plan-version-already-registered",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          "line": 113,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "entitlements-core/plan-version-mismatch",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#entitlements-core-plan-version-mismatch",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          "line": 122,
+          "column": 3,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "entitlements-core/plan-version-not-found",
+      "category": "NotFound",
+      "status": 404,
+      "title": "Not Found",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#entitlements-core-plan-version-not-found",
+      "recovery": {
+        "cause": "The requested resource or route-visible record does not exist.",
+        "userAction": "Verify the identifier and refresh the resource list before retrying.",
+        "operatorAction": "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
+          "line": 104,
           "column": 3,
           "kind": "problem-class"
         }

@@ -1,5 +1,6 @@
 import { Container } from "@croco/framework-context";
 import type { PolicyDecisionTrace } from "@croco/access-core";
+import { planVersionRef } from "@croco/billing-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EntitlementManager } from "../libs/EntitlementManager";
 import { EntitlementOverageAllowedEvent, EntitlementQuotaExceededEvent } from "../libs/events";
@@ -7,6 +8,7 @@ import { InMemoryPlanEntitlementRegistry } from "../libs/InMemoryPlanEntitlement
 import {
   EntitlementEventPublisher,
   EntitlementMeterLookup,
+  PlanEntitlementRegistry,
   EntitlementQuotaChecker,
   type SubscriptionProvider,
 } from "../libs/interfaces";
@@ -120,6 +122,84 @@ describe("EntitlementManager", () => {
       resourceRef: "entitlement:advanced_support",
       tenantId: "tenant-1",
     });
+  });
+
+  it("keeps a grandfathered subscription on its pinned entitlement policy", async () => {
+    const grandfatheredRef = planVersionRef("pro@2026-01");
+    const currentRef = planVersionRef("pro@2026-07");
+    registry.register({
+      planId: "pro",
+      planVersionRef: grandfatheredRef,
+      entitlements: [{ featureKey: "reports", type: "metered", quota: 10 }],
+    });
+    registry.register({
+      planId: "pro",
+      planVersionRef: currentRef,
+      entitlements: [
+        {
+          featureKey: "reports",
+          type: "metered",
+          quota: 100,
+          overagePolicy: "WARN",
+        },
+      ],
+    });
+    manager = new EntitlementManager(
+      registry,
+      new StaticSubscriptionProvider({
+        planId: "pro",
+        planVersionRef: grandfatheredRef,
+      }),
+      quotaChecker,
+      meterLookup,
+    );
+    quotaChecker.setQuotaStatus({
+      usage: 11,
+      quota: 10,
+      exceeded: true,
+      remaining: -1,
+    });
+
+    await expect(manager.check("tenant-1", "reports")).resolves.toMatchObject({
+      granted: false,
+      reason: "quota_exceeded",
+      quota: 10,
+      overagePolicy: "BLOCK",
+      planId: "pro",
+      planVersionRef: grandfatheredRef,
+    });
+  });
+
+  it("rejects dynamic quota returned by a custom version-aware registry", async () => {
+    const pinnedRef = planVersionRef("pro@2026-01");
+    const meterQuotaSpy = vi.spyOn(meterLookup, "getMeterQuota");
+    const customRegistry = new (class extends PlanEntitlementRegistry {
+      async getEntitlements(): Promise<EntitlementRule[]> {
+        return [];
+      }
+
+      async findRule(): Promise<EntitlementRule | null> {
+        return null;
+      }
+
+      override async findRuleByPlanVersion(): Promise<EntitlementRule> {
+        return { featureKey: "storage", type: "metered", meterId: "storage" };
+      }
+    })();
+    manager = new EntitlementManager(
+      customRegistry,
+      new StaticSubscriptionProvider({
+        planId: "pro",
+        planVersionRef: pinnedRef,
+      }),
+      quotaChecker,
+      meterLookup,
+    );
+
+    await expect(manager.check("tenant-1", "storage")).rejects.toMatchObject({
+      code: "entitlements-core/definition-invalid",
+    });
+    expect(meterQuotaSpy).not.toHaveBeenCalled();
   });
 
   it("should grant static entitlement with value", async () => {
@@ -290,6 +370,7 @@ describe("EntitlementManager", () => {
 
   it("should record redacted entitlement decision traces through the audit sink", async () => {
     const traces: PolicyDecisionTrace[] = [];
+    registry.register("pro", []);
     manager = new EntitlementManager(
       registry,
       new StaticSubscriptionProvider("pro"),
@@ -383,6 +464,7 @@ describe("EntitlementManager", () => {
         usage: 4,
         quota: 3,
         planId: "pro",
+        planVersionRef: "legacy:pro",
       }),
     );
   });

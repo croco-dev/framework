@@ -1,6 +1,10 @@
 import "reflect-metadata";
 import { capturePolicyDecisionSourceLocation } from "@croco/access-core";
-import type { EntitlementRequirement } from "../EntitlementRequirement";
+import { featureKey } from "../EntitlementDefinition";
+import type {
+  EntitlementRequirement,
+  EntitlementRequirementInput,
+} from "../EntitlementRequirement";
 import {
   appendEntitlementRequirement,
   ENTITLEMENT_REQUIRED_KEY,
@@ -8,15 +12,17 @@ import {
 } from "../EntitlementRequirement";
 
 export { ENTITLEMENT_REQUIRED_KEY, ENTITLEMENT_REQUIREMENTS_KEY };
-export type RequireEntitlementOptions = EntitlementRequirement;
+export type RequireEntitlementOptions = EntitlementRequirementInput;
 
 export function RequireEntitlement(
   options: RequireEntitlementOptions,
 ): ClassDecorator & MethodDecorator {
   const sourceLocation = capturePolicyDecisionSourceLocation();
+  const normalizedFeature = featureKey(options.feature);
   const requirement: EntitlementRequirement = {
     ...options,
-    ruleId: options.ruleId ?? `entitlement:${options.feature}`,
+    feature: normalizedFeature,
+    ruleId: options.ruleId ?? `entitlement:${normalizedFeature}`,
     ...(sourceLocation ? { sourceLocation } : {}),
   };
 
