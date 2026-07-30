@@ -24,6 +24,7 @@ import { InvalidUsageEnvelopeProblem } from "./problems/InvalidUsageEnvelopeProb
 import { QuotaManager } from "./QuotaManager";
 import type { MeterDefinition, RecordOptions, UsageQueryOptions, UsageRecord } from "./types";
 import type { UsageStorage } from "./UsageStorage";
+import { validateUsageValue } from "./validateUsageValue";
 
 export type MeteringServiceOptions = {
   meterRegistry: MeterRegistry;
@@ -69,6 +70,7 @@ export class MeteringService {
    * @throws DuplicateRecordProblem 중복 idempotencyKey 시
    * @throws InvalidMeterProblem meter 없을 시
    * @throws InvalidUsageEnvelopeProblem typed usage envelope이 meter 계약과 일치하지 않을 시
+   * @throws InvalidUsageValueProblem value가 지원되는 양의 32-bit 정수가 아닐 시
    */
   async record<Meter extends MeterRef>(
     meter: Meter,
@@ -80,6 +82,7 @@ export class MeteringService {
    * @throws QuotaExceededProblem quota 초과 시 (allowOverQuota=false)
    * @throws DuplicateRecordProblem 중복 idempotencyKey 시
    * @throws InvalidMeterProblem meter 없을 시
+   * @throws InvalidUsageValueProblem value가 지원되는 양의 32-bit 정수가 아닐 시
    */
   async record(options: RecordOptions): Promise<UsageRecord>;
   async record<Meter extends MeterRef>(
@@ -116,7 +119,9 @@ export class MeteringService {
     },
     billableMeter?: BillableMeterDescriptor,
   ): Promise<UsageRecord> {
-    const { tenantId, meterId } = options;
+    const { tenantId, meterId, value = 1 } = options;
+
+    validateUsageValue(value);
     const normalizedProvidedKey = options.idempotencyKey?.trim() || undefined;
     const normalizedEventId = options.eventId?.trim() || normalizedProvidedKey;
     const idempotencyKey = this.idempotencyManager.ensureIdempotencyKey(normalizedProvidedKey);

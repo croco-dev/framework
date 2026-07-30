@@ -42,3 +42,5 @@ record() 메서드의 호환성 옵션
 ### value?
 
 > `optional` **value?**: `number`
+
+Optional usage amount from 1 through 2_147_483_647. Defaults to 1.

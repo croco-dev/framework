@@ -42,6 +42,9 @@ await meteringService.record(aiTokens, {
 `billing: "required"` meter는 비어 있지 않은 `eventId`를 타입과 런타임에서 요구합니다. dimension은 정의된
 key와 enum 값만 허용되며 provider billing dimension과 자유 형식 application `metadata`는 별도 필드로
 유지됩니다. `defineMeter()`가 반환하는 descriptor는 함수 값을 포함하지 않고 결정적으로 직렬화됩니다.
+모든 meter의 `value`는 모든 지원 storage adapter가 보존할 수 있는 1 이상 2,147,483,647 이하의 정수여야
+합니다. 소수, 0, 음수, 비유한 수, 이 범위를 벗어난 값은 idempotency key를 획득하거나 usage를 저장하기
+전에 `InvalidUsageValueProblem`으로 거부됩니다.
 
 ## Durable billable usage delivery
 
@@ -158,7 +161,7 @@ class ApiController {
 
 - 이벤트: `UsageRecordedEvent`, `QuotaExceededEvent`
 - core 문제 타입: `DuplicateRecordProblem`, `InvalidMeterDimensionProblem`, `InvalidMeterProblem`,
-  `InvalidUsageEnvelopeProblem`, `QuotaExceededProblem`, `RedisProblem`
+  `InvalidUsageEnvelopeProblem`, `InvalidUsageValueProblem`, `QuotaExceededProblem`, `RedisProblem`
 - Drizzle adapter 문제 타입: `UsageEnvelopeConfigurationProblem`
 
 ## 구현 포인트
@@ -210,3 +213,7 @@ Usage sorted set과 record dedupe marker는 한 Lua script에서 함께 기록�
 
 구버전과 신버전 인스턴스를 함께 운영하면 usage와 idempotency state가 두 namespace로 분리되어 quota와
 dedupe 보장이 깨집니다. 모든 구버전 writer를 중지하고 migration을 검증한 뒤 신버전 writer를 시작하세요.
+
+- 기존 Redis usage member에 소수, 0, 음수, 지원 범위를 벗어난 값이 있으면 조회와 quota 검사는 값을
+  축소하지 않고 실패합니다. 운영자는 해당 record의 원본 과금 근거를 확인해 정수 minor unit으로
+  재작성하거나 격리해야 합니다.

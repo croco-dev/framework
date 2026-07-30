@@ -16826,6 +16826,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidUsageValueProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidUsageValueProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "METER_METADATA_KEY",
               "exportKind": "named",
               "source": "./libs/decorators/Meter",

@@ -18,6 +18,7 @@ import type { MeterRegistry } from "../libs/MeterRegistry";
 import { DuplicateRecordProblem } from "../libs/problems/DuplicateRecordProblem";
 import { InvalidMeterProblem } from "../libs/problems/InvalidMeterProblem";
 import { InvalidUsageEnvelopeProblem } from "../libs/problems/InvalidUsageEnvelopeProblem";
+import { InvalidUsageValueProblem } from "../libs/problems/InvalidUsageValueProblem";
 import { QuotaExceededProblem } from "../libs/problems/QuotaExceededProblem";
 import type { MeterDefinition } from "../libs/types";
 import type { UsageStorage } from "../libs/UsageStorage";
@@ -180,6 +181,42 @@ describe("MeteringService", () => {
       expect(result.value).toBe(1);
     });
 
+    it("should accept the largest value supported by every storage adapter", async () => {
+      const meter = createMeter({ quota: undefined });
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
+
+      const result = await service.record({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        value: 2_147_483_647,
+      });
+
+      expect(result.value).toBe(2_147_483_647);
+      expect(mockStorage.record).toHaveBeenCalledWith(
+        expect.objectContaining({ value: 2_147_483_647 }),
+      );
+    });
+
+    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])(
+      "should reject invalid usage value %s before acquiring idempotency",
+      async (value) => {
+        const recording = service.record({
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value,
+          idempotencyKey: "invalid-value",
+        });
+        await expect(recording).rejects.toThrow(InvalidUsageValueProblem);
+        const problem = await recording.catch((error: unknown) => error);
+        expect(problem).toMatchObject({ code: "metering/invalid-usage-value" });
+
+        expect(mockRegistry.getOrThrow).not.toHaveBeenCalled();
+        expect(mockIdempotency.ensureIdempotencyKey).not.toHaveBeenCalled();
+        expect(mockIdempotency.beginProcessingOrThrow).not.toHaveBeenCalled();
+        expect(mockStorage.record).not.toHaveBeenCalled();
+      },
+    );
+
     it("should use provided idempotency key", async () => {
       const meter = createMeter();
       vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(meter);
@@ -238,6 +275,29 @@ describe("MeteringService", () => {
         value: 42,
         dimensions: { model: "gpt-5" },
       });
+    });
+
+    it("should reject a fractional typed usage value before acquiring idempotency", async () => {
+      const meterRef = defineMeter({
+        key: "ai.tokens",
+        aggregation: "SUM",
+        unit: "token",
+        billing: "required",
+      });
+
+      const recording = service.record(meterRef, {
+        tenantId: "tenant-1",
+        eventId: "request-1",
+        value: 1.9,
+      });
+      await expect(recording).rejects.toThrow(InvalidUsageValueProblem);
+      const problem = await recording.catch((error: unknown) => error);
+      expect(problem).toMatchObject({ code: "metering/invalid-usage-value" });
+
+      expect(mockRegistry.getOrThrow).not.toHaveBeenCalled();
+      expect(mockIdempotency.ensureIdempotencyKey).not.toHaveBeenCalled();
+      expect(mockIdempotency.beginProcessingOrThrow).not.toHaveBeenCalled();
+      expect(mockStorage.record).not.toHaveBeenCalled();
     });
 
     it("should use the normalized billing event identity consistently", async () => {

@@ -62,3 +62,5 @@ title: "UsageRecord"
 ### value
 
 > **value**: `number`
+
+Usage amount from 1 through 2_147_483_647, supported by every storage adapter.

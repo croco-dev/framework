@@ -4,6 +4,7 @@ import { BillableUsageJournalRequiredProblem } from "../../libs/problems/Billabl
 import { DuplicateRecordProblem } from "../../libs/problems/DuplicateRecordProblem";
 import { InvalidMeterProblem } from "../../libs/problems/InvalidMeterProblem";
 import { InvalidUsageQueryProblem } from "../../libs/problems/InvalidUsageQueryProblem";
+import { InvalidUsageValueProblem } from "../../libs/problems/InvalidUsageValueProblem";
 import { MeteringTransitionProblem } from "../../libs/problems/MeteringTransitionProblem";
 import { QuotaExceededProblem } from "../../libs/problems/QuotaExceededProblem";
 import { RedisProblem } from "../../libs/problems/RedisProblem";
@@ -66,6 +67,20 @@ describe("Problems", () => {
       expect(problem.status).toBe(422);
       expect(problem.detail).toContain("dates must be valid");
       expect(problem.toJSON().reason).toBe("dates must be valid");
+    });
+  });
+
+  describe("InvalidUsageValueProblem", () => {
+    it("should expose a stable validation contract", () => {
+      const problem = new InvalidUsageValueProblem(1.9);
+
+      expect(problem.code).toBe("metering/invalid-usage-value");
+      expect(problem.status).toBe(422);
+      expect(problem.detail).toContain("between 1 and 2147483647");
+      expect(problem.toJSON()).toMatchObject({
+        receivedValue: "1.9",
+        reason: "value must be an integer between 1 and 2147483647",
+      });
     });
   });
 
