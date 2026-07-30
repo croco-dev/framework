@@ -14869,6 +14869,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "IdempotencyClaim",
+              "exportKind": "named",
+              "source": "./libs/IdempotencyManager"
+            },
+            {
               "name": "MeterAggregation",
               "exportKind": "named",
               "source": "./libs/MeterRef"

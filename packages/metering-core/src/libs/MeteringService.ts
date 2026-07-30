@@ -104,7 +104,11 @@ export class MeteringService {
     const meter = await this.meterRegistry.getOrThrow(tenantId, meterId);
 
     const idempotencyKey = this.idempotencyManager.ensureIdempotencyKey(options.idempotencyKey);
-    await this.idempotencyManager.beginProcessingOrThrow(tenantId, meterId, idempotencyKey);
+    const idempotencyClaim = await this.idempotencyManager.beginProcessingOrThrow(
+      tenantId,
+      meterId,
+      idempotencyKey,
+    );
 
     const usageRecord: UsageRecord = {
       id: ulid(),
@@ -136,7 +140,12 @@ export class MeteringService {
 
         if (quotaResult.exceeded && !allowOverQuota) {
           // Quota exceeded is not retryable - complete idempotency so the same key is never replayed
-          await this.idempotencyManager.completeProcessing(tenantId, meterId, idempotencyKey);
+          await this.idempotencyManager.completeProcessing(
+            tenantId,
+            meterId,
+            idempotencyKey,
+            idempotencyClaim,
+          );
           idempotencyCompleted = true;
           this.quotaManager.validateOrThrow({
             meterId,
@@ -154,7 +163,12 @@ export class MeteringService {
             newUsage: quotaResult.newUsage,
           });
 
-          await this.idempotencyManager.completeProcessing(tenantId, meterId, idempotencyKey);
+          await this.idempotencyManager.completeProcessing(
+            tenantId,
+            meterId,
+            idempotencyKey,
+            idempotencyClaim,
+          );
           idempotencyCompleted = true;
         }
 
@@ -171,7 +185,12 @@ export class MeteringService {
         }
       } else {
         await this.usageStorage.record(usageRecord);
-        await this.idempotencyManager.completeProcessing(tenantId, meterId, idempotencyKey);
+        await this.idempotencyManager.completeProcessing(
+          tenantId,
+          meterId,
+          idempotencyKey,
+          idempotencyClaim,
+        );
         idempotencyCompleted = true;
 
         if (this.eventBus) {
@@ -184,7 +203,12 @@ export class MeteringService {
       return usageRecord;
     } catch (error) {
       if (!idempotencyCompleted) {
-        await this.idempotencyManager.abortProcessing(tenantId, meterId, idempotencyKey);
+        await this.idempotencyManager.abortProcessing(
+          tenantId,
+          meterId,
+          idempotencyKey,
+          idempotencyClaim,
+        );
       }
       throw error;
     }

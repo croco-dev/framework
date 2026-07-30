@@ -185,6 +185,7 @@ export { UsageRecordedEvent } from "./libs/events/UsageRecordedEvent";
  * ```
  */
 export { IdempotencyManager } from "./libs/IdempotencyManager";
+export type { IdempotencyClaim } from "./libs/IdempotencyManager";
 
 /**
  * MeteringService 생성 옵션 타입입니다.

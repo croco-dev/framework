@@ -1,7 +1,67 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { IdempotencyManager } from "../libs/IdempotencyManager";
 import { DuplicateRecordProblem } from "../libs/problems/DuplicateRecordProblem";
+import type { IdempotencyClaim } from "../libs/IdempotencyManager";
 import type { RedisClient } from "../libs/RedisClient";
+
+function createLeaseRedis(): {
+  redis: RedisClient;
+  advanceSeconds(seconds: number): void;
+  read(key: string): string | null;
+} {
+  let nowSeconds = 0;
+  const entries = new Map<string, { value: string; expiresAt: number }>();
+
+  const read = (key: string): string | null => {
+    const entry = entries.get(key);
+    if (entry === undefined) {
+      return null;
+    }
+    if (entry.expiresAt <= nowSeconds) {
+      entries.delete(key);
+      return null;
+    }
+    return entry.value;
+  };
+
+  const redis: RedisClient = {
+    zadd: vi.fn(),
+    zrangebyscore: vi.fn(),
+    set: async (key, value, _mode, _expireMode, expire) => {
+      if (read(key) !== null) {
+        return null;
+      }
+      entries.set(key, { value, expiresAt: nowSeconds + expire });
+      return "OK";
+    },
+    eval: async <TResult extends unknown[]>(
+      script: string,
+      keys: string[],
+      args: Array<string | number>,
+    ) => {
+      const key = keys[0];
+      if (key !== undefined && read(key) === args[0]) {
+        if (script.includes("redis.call('DEL'")) {
+          entries.delete(key);
+        } else {
+          entries.set(key, {
+            value: String(args[1]),
+            expiresAt: nowSeconds + Number(args[2]),
+          });
+        }
+      }
+      return [1] as unknown as TResult;
+    },
+  };
+
+  return {
+    redis,
+    advanceSeconds(seconds: number): void {
+      nowSeconds += seconds;
+    },
+    read,
+  };
+}
 
 describe("IdempotencyManager", () => {
   let manager!: IdempotencyManager;
@@ -121,31 +181,33 @@ describe("IdempotencyManager", () => {
   });
 
   describe("beginProcessing", () => {
-    it("should return true for new in-progress key", async () => {
-      vi.mocked(mockRedis.eval).mockResolvedValue([1]);
+    it("should return a unique claim for a new in-progress key", async () => {
+      vi.mocked(mockRedis.set).mockResolvedValue("OK");
 
       const result = await manager.beginProcessing("tenant-1", "api_calls", "key-123");
 
-      expect(result).toBe(true);
-      expect(mockRedis.eval).toHaveBeenCalledWith(
-        expect.stringContaining("redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])"),
-        ["idem2:lifecycle:tenant-1:api_calls:key-123"],
-        ["IN_PROGRESS", "86400"],
+      expect(result).toMatch(/^[0-9A-Z]{26}$/);
+      expect(mockRedis.set).toHaveBeenCalledWith(
+        "idem2:lifecycle:tenant-1:api_calls:key-123",
+        `IN_PROGRESS:${result}`,
+        "NX",
+        "EX",
+        86400,
       );
     });
 
-    it("should return false for duplicate key", async () => {
-      vi.mocked(mockRedis.eval).mockResolvedValue([0]);
+    it("should return null for duplicate key", async () => {
+      vi.mocked(mockRedis.set).mockResolvedValue(null);
 
       const result = await manager.beginProcessing("tenant-1", "api_calls", "existing-key");
 
-      expect(result).toBe(false);
+      expect(result).toBeNull();
     });
   });
 
   describe("beginProcessingOrThrow", () => {
     it("should throw DuplicateRecordProblem for duplicate key", async () => {
-      vi.mocked(mockRedis.eval).mockResolvedValue([0]);
+      vi.mocked(mockRedis.set).mockResolvedValue(null);
 
       await expect(
         manager.beginProcessingOrThrow("tenant-1", "api_calls", "duplicate-key"),
@@ -155,30 +217,62 @@ describe("IdempotencyManager", () => {
 
   describe("completeProcessing", () => {
     it("should mark in-progress key as completed", async () => {
+      const claim = "claim-1" as IdempotencyClaim;
       vi.mocked(mockRedis.eval).mockResolvedValue([1]);
 
-      await manager.completeProcessing("tenant-1", "api_calls", "key-123");
+      await manager.completeProcessing("tenant-1", "api_calls", "key-123", claim);
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])"),
         ["idem2:lifecycle:tenant-1:api_calls:key-123"],
-        ["IN_PROGRESS", "COMPLETED", "86400"],
+        ["IN_PROGRESS:claim-1", "COMPLETED", "86400"],
       );
     });
   });
 
   describe("abortProcessing", () => {
     it("should delete in-progress key", async () => {
+      const claim = "claim-1" as IdempotencyClaim;
       vi.mocked(mockRedis.eval).mockResolvedValue([1]);
 
-      await manager.abortProcessing("tenant-1", "api_calls", "key-123");
+      await manager.abortProcessing("tenant-1", "api_calls", "key-123", claim);
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("redis.call('DEL', KEYS[1])"),
         ["idem2:lifecycle:tenant-1:api_calls:key-123"],
-        ["IN_PROGRESS"],
+        ["IN_PROGRESS:claim-1"],
       );
     });
+  });
+
+  it("should fence stale completion and abort after expiry and reacquisition", async () => {
+    const leaseRedis = createLeaseRedis();
+    const expiringManager = new IdempotencyManager(leaseRedis.redis, 1);
+    const key = "idem2:lifecycle:tenant-1:api_calls:key-123";
+
+    const staleClaim = await expiringManager.beginProcessingOrThrow(
+      "tenant-1",
+      "api_calls",
+      "key-123",
+    );
+
+    leaseRedis.advanceSeconds(1);
+    const currentClaim = await expiringManager.beginProcessingOrThrow(
+      "tenant-1",
+      "api_calls",
+      "key-123",
+    );
+    expect(currentClaim).not.toBe(staleClaim);
+    expect(leaseRedis.read(key)).toBe(`IN_PROGRESS:${currentClaim}`);
+
+    await expiringManager.completeProcessing("tenant-1", "api_calls", "key-123", staleClaim);
+    expect(leaseRedis.read(key)).toBe(`IN_PROGRESS:${currentClaim}`);
+
+    await expiringManager.abortProcessing("tenant-1", "api_calls", "key-123", staleClaim);
+    expect(leaseRedis.read(key)).toBe(`IN_PROGRESS:${currentClaim}`);
+
+    await expiringManager.completeProcessing("tenant-1", "api_calls", "key-123", currentClaim);
+    expect(leaseRedis.read(key)).toBe("COMPLETED");
   });
 
   describe("checkAndMarkOrThrow", () => {
