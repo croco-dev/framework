@@ -95,7 +95,7 @@ class ProjectController {
 ### 문제 타입
 
 - `UnauthorizedProblem`, `ForbiddenProblem`
-- `AuthProviderUnavailableProblem`
+- `AuthProviderUnavailableProblem`, `InvalidRouteMetadataTargetProblem`
 - `ApiKeyExpiredProblem`, `ApiKeyRevokedProblem`, `ApiKeyNotFoundProblem`
 - `ApiKeyRotationConflictProblem`, `ApiKeyRotationProtectionProblem`
 - `InvalidPermissionFormatProblem`, `InvalidPermissionActionProblem`
@@ -110,6 +110,8 @@ auth-core는 scope를 별도 최상위 필드로 해석하지 않으며, scope �
 공개 route는 `@Public`/`AUTH_PUBLIC_KEY` 메타데이터로 표시하며 provider를 호출하지 않습니다. provider 미등록 또는
 provider가 `null`을 반환하는 경우 `UnauthorizedProblem`으로 실패하고, provider가 일반 예외를 던지는 경우
 `AuthProviderUnavailableProblem`으로 실패합니다. provider가 이미 Croco `Problem`을 던진 경우에는 해당 Problem을 보존합니다.
+가드 실행 컨텍스트가 유효한 controller metadata target을 제공하지 않으면 공개 route로 추정하지 않고
+`InvalidRouteMetadataTargetProblem`으로 실패합니다.
 
 ## 구현 포인트
 

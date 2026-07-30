@@ -31,6 +31,19 @@ export class AuthProviderUnavailableProblem extends Problem {
   }
 }
 
+export class InvalidRouteMetadataTargetProblem extends Problem {
+  readonly code = "auth-core/invalid-route-metadata-target";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor(target: unknown) {
+    const targetType = target === null ? "null" : typeof target;
+    super(
+      "auth-core/invalid-route-metadata-target",
+      ProblemCategory.InternalServerError,
+      `Route metadata target must be an object or function; received ${targetType}`,
+    );
+  }
+}
+
 export class ApiKeyExpiredProblem extends Problem {
   readonly code = "API_KEY_EXPIRED";
   readonly category = ProblemCategory.Unauthorized;

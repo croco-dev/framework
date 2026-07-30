@@ -7,6 +7,7 @@ import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
 import { UnauthorizedProblem } from "../problems/AuthProblems";
 import { authenticateWithProvider } from "./authenticateWithProvider";
 import { getHeaderValue } from "./headerUtils";
+import { requireRouteMetadataTarget } from "./requireRouteMetadataTarget";
 
 function isPublicRoute(controllerTarget: object, handler: string | symbol): boolean {
   const classTarget =
@@ -21,10 +22,6 @@ function isPublicRoute(controllerTarget: object, handler: string | symbol): bool
   );
 }
 
-function isMetadataTarget(value: unknown): value is object {
-  return (typeof value === "object" && value !== null) || typeof value === "function";
-}
-
 export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
   constructor(
     private readonly authProvider: AuthProvider,
@@ -32,12 +29,8 @@ export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
   ) {}
 
   async canActivate(context: RouteExecutionContext): Promise<boolean> {
-    const target = context.getClass();
+    const target = requireRouteMetadataTarget(context.getClass());
     const handler = context.getHandler();
-
-    if (!isMetadataTarget(target)) {
-      return true;
-    }
 
     const isPublic = isPublicRoute(target, handler);
 

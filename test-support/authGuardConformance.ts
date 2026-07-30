@@ -16,6 +16,18 @@ export type AuthGuardConformanceSubject = {
   };
 };
 
+export type RouteMetadataAdapterFixture = {
+  readonly adapter: "REST" | "GraphQL" | "custom";
+  readonly context: {
+    getClass(): unknown;
+    getFieldName?(): string | symbol;
+    getHandler(): string | symbol;
+    getMethod?(): string;
+    getPath?(): string;
+    getRequest(): unknown;
+  };
+};
+
 const roles = ["admin", "operator"] as const;
 const scopes = ["widgets:read", "widgets:write"] as const;
 const tenantId = "tenant-auth-conformance";
@@ -65,6 +77,13 @@ export const authGuardConformance = {
       code: "ACCESS_DENIED",
     },
   } satisfies Record<string, AuthGuardConformanceProblem>,
+  invalidRouteMetadataTargets: [
+    { name: "undefined", value: undefined },
+    { name: "null", value: null },
+    { name: "string", value: "TestController" },
+    { name: "number", value: 42 },
+    { name: "boolean", value: true },
+  ],
   rest: {
     missingCredentials: {
       status: 401,
@@ -102,6 +121,42 @@ export const authGuardConformance = {
     },
   } satisfies Record<string, AuthGuardConformanceProblem>,
 } as const;
+
+export function createRouteMetadataAdapterFixtures(
+  target: unknown,
+  request: unknown,
+  handler: string | symbol = "protectedMethod",
+): readonly RouteMetadataAdapterFixture[] {
+  return [
+    {
+      adapter: "REST",
+      context: {
+        getClass: () => target,
+        getHandler: () => handler,
+        getRequest: () => request,
+        getPath: () => "/test",
+        getMethod: () => "GET",
+      },
+    },
+    {
+      adapter: "GraphQL",
+      context: {
+        getClass: () => target,
+        getHandler: () => handler,
+        getRequest: () => request,
+        getFieldName: () => handler,
+      },
+    },
+    {
+      adapter: "custom",
+      context: {
+        getClass: () => target,
+        getHandler: () => handler,
+        getRequest: () => request,
+      },
+    },
+  ];
+}
 
 function mutableCopy(values: readonly string[]): string[] {
   return [...values];

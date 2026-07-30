@@ -82,6 +82,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ForbiddenProblem`](/api/auth-core/src/classes/forbiddenproblem/)
 - [`InvalidPermissionActionProblem`](/api/auth-core/src/classes/invalidpermissionactionproblem/)
 - [`InvalidPermissionFormatProblem`](/api/auth-core/src/classes/invalidpermissionformatproblem/)
+- [`InvalidRouteMetadataTargetProblem`](/api/auth-core/src/classes/invalidroutemetadatatargetproblem/)
 - [`UnauthorizedProblem`](/api/auth-core/src/classes/unauthorizedproblem/)
 - [`BillingAccountNotFoundProblem`](/api/billing-core/src/classes/billingaccountnotfoundproblem/)
 - [`BillingCheckoutCreationProblem`](/api/billing-core/src/classes/billingcheckoutcreationproblem/)
@@ -412,7 +413,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
----
+***
 
 ### cause?
 
@@ -422,31 +423,31 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.cause`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### detail?
 
 > `readonly` `optional` **detail?**: `string`
 
----
+***
 
 ### extensions?
 
 > `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
----
+***
 
 ### instance?
 
 > `readonly` `optional` **instance?**: `string`
 
----
+***
 
 ### message
 
@@ -456,7 +457,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.message`
 
----
+***
 
 ### name
 
@@ -466,7 +467,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.name`
 
----
+***
 
 ### stack?
 
@@ -476,13 +477,13 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.stack`
 
----
+***
 
 ### type
 
 > `readonly` **type**: `string`
 
----
+***
 
 ### stackTraceLimit
 
@@ -514,7 +515,7 @@ not capture any frames.
 
 `number`
 
----
+***
 
 ### title
 
@@ -536,7 +537,7 @@ not capture any frames.
 
 [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### captureStackTrace()
 
@@ -549,7 +550,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -604,7 +605,7 @@ a();
 
 `Error.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 
