@@ -124,6 +124,13 @@ deduplication만 나타냅니다. 두 계약은 동일한 logical request에서�
 Usage sorted set과 `record` 키는 한 Lua script에서 원자적으로 기록되므로 첫 성공은 usage를 정확히 한 번
 반영하고 같은 idempotency key의 재시도는 두 번째 record를 만들지 않습니다.
 
+`RedisUsageStorage.record()`는 sorted-set member를 먼저 추가하고 이 marker를 설정하는 과정을 단일 Lua script로
+실행합니다. Script 실행이 실패하면 marker가 남지 않으며, commit 후 응답이 유실된 경우에도 같은 record를 재시도하면
+기존 marker가 중복 기록을 막습니다.
+
+이 script는 usage key와 dedupe key를 함께 실행하므로 single-shard Redis를 요구합니다. 현재 key schema는 Redis
+Cluster hash-slot colocation을 제공하지 않습니다.
+
 ### Legacy Redis key 마이그레이션
 
 이전 버전의 `idem:{tenantId}:{meterId}:{idempotencyKey}` 키는 lifecycle과 record 의미가 충돌하고,

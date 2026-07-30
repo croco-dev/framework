@@ -130,6 +130,8 @@ class ApiController {
 ## 구현 포인트
 
 - 저장소는 `MeterRepository`, `UsageStorage`, `RedisClient` 계약을 구현해 연결합니다.
+- `RedisUsageStorage.record()`는 usage member와 24시간 dedupe marker를 단일 Lua script로 기록하여 실패하거나 응답이 유실된 요청도 같은 idempotency key로 안전하게 재시도할 수 있습니다.
+- 이 원자적 기록은 usage key와 dedupe key를 함께 실행하는 single-shard Redis를 요구합니다. 현재 key schema는 Redis Cluster hash-slot colocation을 제공하지 않습니다.
 - quota 초과 시 `allowOverQuota` 설정에 따라 이벤트 발행 또는 Problem 예외가 발생합니다.
 - billing, entitlements 같은 상위 패키지와 이벤트 기반으로 연결할 수 있습니다.
 - `RedisUsageStorage.resetBillingCycle(tenantId)`는 현재 billing cycle의 tenant usage key를 `KEYS` 대신 bounded `SCAN` batch로 삭제합니다.
