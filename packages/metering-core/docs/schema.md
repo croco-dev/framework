@@ -62,15 +62,18 @@ CREATE INDEX idx_usage_records_idempotency
 **키 패턴:**
 
 ```
-usage:{tenantId}:{meterId}:{period}
+usage2:{encodedTenantId}:{encodedMeterId}:{period}
 ```
 
 **예시:**
 
 ```
-usage:tenant-123:api_calls:2024-01
-usage:tenant-123:storage:2024-01-15
+usage2:tenant-123:api_calls:2024-01
+usage2:tenant-123:storage:2024-01-15
 ```
+
+각 identifier segment는 안전한 ASCII 문자를 제외한 UTF-16 code unit을 고정 폭으로 인코딩하므로,
+delimiter나 Unicode가 포함된 서로 다른 tuple도 같은 physical key로 충돌하지 않습니다.
 
 **자료구조:**
 
@@ -82,47 +85,57 @@ usage:tenant-123:storage:2024-01-15
 
 ```redis
 # 저장
-ZADD usage:tenant-123:api_calls:2024-01 1706745600000 "uuid-abc:5"
+ZADD usage2:tenant-123:api_calls:2024-01 1706745600000 "uuid-abc:5"
 
 # 조회 (시간 범위)
-ZRANGEBYSCORE usage:tenant-123:api_calls:2024-01 1706745600000 1706832000000
+ZRANGEBYSCORE usage2:tenant-123:api_calls:2024-01 1706745600000 1706832000000
 
 # 삭제 (배치 저장 후)
-ZREMRANGEBYSCORE usage:tenant-123:api_calls:2024-01 0 1706832000000
+ZREMRANGEBYSCORE usage2:tenant-123:api_calls:2024-01 0 1706832000000
 ```
 
 ### Idempotency 키 (String)
 
-중복 요청 방지를 위한 키입니다.
+요청 lifecycle ownership과 durable usage record deduplication은 서로 독립된 키를 사용합니다.
 
 **키 패턴:**
 
 ```
-idem:{tenantId}:{meterId}:{idempotencyKey}
+idem2:lifecycle:{encodedTenantId}:{encodedMeterId}:{encodedIdempotencyKey}
+idem2:record:{encodedTenantId}:{encodedMeterId}:{encodedIdempotencyKey}
 ```
 
 **예시:**
 
 ```
-idem:tenant-123:api_calls:req-abc-123
+idem2:lifecycle:tenant-123:api_calls:req-abc-123
+idem2:record:tenant-123:api_calls:req-abc-123
 ```
 
 **자료구조:**
 
 - Type: String
-- Value: "1"
+- Operation value: `"IN_PROGRESS"` 또는 `"COMPLETED"`
+- Record value: `"1"`
 - TTL: 24시간 (86400초)
 
-**명령어 예시:**
+`lifecycle` 키는 처리 소유권과 완료 상태만 나타내며, `record` 키는 sorted set에 반영된 usage의
+deduplication만 나타냅니다. 두 계약은 동일한 logical request에서도 물리적으로 충돌하지 않습니다.
+Usage sorted set과 `record` 키는 한 Lua script에서 원자적으로 기록되므로 첫 성공은 usage를 정확히 한 번
+반영하고 같은 idempotency key의 재시도는 두 번째 record를 만들지 않습니다.
 
-```redis
-# 설정 (NX = 존재하지 않을 때만, EX = TTL)
-SET idem:tenant-123:api_calls:req-abc-123 1 NX EX 86400
+### Legacy Redis key 마이그레이션
 
-# 결과
-# - "OK": 새 키 (기록 가능)
-# - null: 이미 존재 (중복)
-```
+이전 버전의 `idem:{tenantId}:{meterId}:{idempotencyKey}` 키는 lifecycle과 record 의미가 충돌하고,
+`usage:{tenantId}:{meterId}:{period}`는 segment 경계가 모호하므로 새 버전에서 읽거나 자동 변환하지
+않습니다. 기존 idempotency 키는 삭제하지 않고 원래 TTL에 따라 만료시킵니다.
+
+rolling deployment 중에는 구버전 writer와 신버전 writer가 서로의 idempotency namespace를 인식하지
+못하므로 혼합 운영하지 마십시오. 모든 metering writer를 중지하고 legacy `idem:*` 키가 모두 만료되었음을
+확인한 뒤 신버전 writer를 시작해야 upgrade 경계를 넘는 retry의 중복 기록을 방지할 수 있습니다. 대기
+시간은 configured lifecycle TTL, 24시간 record TTL, `isIdempotent()`에 전달한 custom TTL을 포함해
+배포에서 사용한 가장 긴 TTL 이상이어야 합니다. 그 대기 시간을 보장할 수 없다면 upstream에서 upgrade
+경계를 넘는 request key 재전송을 차단해야 합니다.
 
 ## Period 계산
 
@@ -172,10 +185,10 @@ SELECT * FROM meters WHERE meter_id = $1;
 
 ```redis
 # 올바른 키 (tenant_id 포함)
-GET usage:tenant-123:api_calls:2024-01
+GET usage2:tenant-123:api_calls:2024-01
 
 # 잘못된 키 (tenant_id 누락 - 보안 취약점!)
-GET usage:api_calls:2024-01
+GET usage2:api_calls:2024-01
 ```
 
 ## 마이그레이션 가이드

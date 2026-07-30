@@ -142,6 +142,8 @@ class ApiController {
 Lifecycle marker와 record dedupe marker는 각각 `idem2:lifecycle:`과 `idem2:record:`로 분리됩니다. 따라서
 `:`, Unicode, glob 문자, 빈 문자열을 포함한 식별자도 서로 다른 tuple이면 서로 다른 Redis key를 생성하고,
 서로 다른 idempotency state machine도 같은 key를 점유하지 않습니다.
+Usage sorted set과 record dedupe marker는 한 Lua script에서 함께 기록되므로 첫 성공은 usage를 정확히 한 번
+반영하고, 같은 idempotency key의 재시도는 두 번째 record를 만들지 않습니다.
 
 이전 `idem:<tenant>:<meter>:<key>`와 `usage:<tenant>:<meter>:<period>` 형식은 segment 경계가
 모호하므로 새 코드에서 읽거나 삭제하지 않습니다. 기존 deployment를 전환할 때는 다음 중 하나를 선택해야
@@ -157,7 +159,8 @@ Lifecycle marker와 record dedupe marker는 각각 `idem2:lifecycle:`과 `idem2:
   복구하거나 수동 reconcile해야 하며, 같은 legacy set을 각 tuple에 복제하면 안 됩니다. 모호한 legacy key
   문자열만 역파싱해 이관하는 것도 안전하지 않습니다.
 - idempotency TTL이 지나기 전에 재개하면 이미 처리된 요청이 새 namespace에서 다시 처리될 수 있으므로,
-  해당 요청은 독립 request ledger로 reconcile해야 합니다.
+  해당 요청은 독립 request ledger로 reconcile해야 합니다. 안전한 drain 시간은 configured lifecycle TTL,
+  24시간 record TTL, `isIdempotent()`에 전달한 custom TTL을 포함해 배포에서 사용한 가장 긴 TTL 이상입니다.
 
 구버전과 신버전 인스턴스를 함께 운영하면 usage와 idempotency state가 두 namespace로 분리되어 quota와
 dedupe 보장이 깨집니다. 모든 구버전 writer를 중지하고 migration을 검증한 뒤 신버전 writer를 시작하세요.

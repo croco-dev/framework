@@ -253,6 +253,18 @@ describe("verification manifest", () => {
     expect(byId.get("release-gate-tests")?.applicable).toBe(true);
   });
 
+  it("builds create-croco-app before scaffold checks selected by a lockfile change", () => {
+    const manifest = createVerificationManifest("publish", {
+      base: "origin/trunk",
+      changedFiles: ["pnpm-lock.yaml"],
+      head: "HEAD",
+    });
+
+    expect(manifest.find(({ id }) => id === "build")?.command).toContain(
+      "--filter=create-croco-app",
+    );
+  });
+
   it("keeps the release-gate inventory complete, sorted, and executable from one root alias", () => {
     const command = createVerificationManifest("publish").find(
       ({ id }) => id === "release-gate-tests",

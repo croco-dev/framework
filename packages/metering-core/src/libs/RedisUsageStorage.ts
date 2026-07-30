@@ -46,6 +46,18 @@ export class RedisUsageStorage implements UsageStorage {
   private static readonly RECORD_IDEMPOTENCY_CACHE_PRUNE_INTERVAL_MILLISECONDS = 60_000;
   private static readonly MAX_BILLING_CYCLE_PARTITIONS = 1_200;
   private static readonly RESET_SCAN_BATCH_SIZE = 500;
+  private static readonly RECORD_SCRIPT = `
+local usageKey = KEYS[1]
+local dedupeKey = KEYS[2]
+
+if redis.call('EXISTS', dedupeKey) == 1 then
+  return 0
+end
+
+redis.call('ZADD', usageKey, ARGV[1], ARGV[2])
+redis.call('SET', dedupeKey, '1', 'EX', ${RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS})
+return 1
+`;
   private static readonly SCAN_AND_DELETE_USAGE_KEYS_SCRIPT = `
 local cursor = ARGV[1]
 local pattern = ARGV[2]
@@ -64,12 +76,9 @@ return { nextCursor, #keys }
   private readonly recordedRecordKeys = new Map<string, number>();
   private nextRecordIdempotencyCachePruneAt = 0;
 
-  private static buildCheckAndRecordWithinQuotaScript(dedupeKey: string): string {
-    const dedupeKeyLiteral = RedisUsageStorage.toLuaLongString(dedupeKey);
-
-    return `
+  private static readonly CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT = `
 local usageKey = KEYS[1]
-local dedupeKey = ${dedupeKeyLiteral}
+local dedupeKey = KEYS[2]
 local quota = tonumber(ARGV[1])
 local value = tonumber(ARGV[2])
 local score = tonumber(ARGV[3])
@@ -100,17 +109,6 @@ end
 
 return { exceeded and 1 or 0, newUsage }
 `;
-  }
-
-  private static toLuaLongString(value: string): string {
-    let delimiter = "=";
-
-    while (value.includes(`]${delimiter}]`)) {
-      delimiter += "=";
-    }
-
-    return `[${delimiter}[${value}]${delimiter}]`;
-  }
 
   constructor(private readonly redis: RedisClient) {}
 
@@ -143,19 +141,13 @@ return { exceeded and 1 or 0, newUsage }
       usage.meterId,
       usage.idempotencyKey,
     );
-    const acquired = await this.runRedisOperation("SET", () =>
-      this.redis.set(dedupeKey, "1", "NX", "EX", RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS),
-    );
-
-    if (acquired !== "OK") {
-      return;
-    }
-
     const key = this.buildUsageKey(usage.tenantId, usage.meterId, usage.timestamp, "billing_cycle");
     const member = this.serializeUsageMember(usage);
     const score = usage.timestamp.getTime();
 
-    await this.runRedisOperation("ZADD", () => this.redis.zadd(key, score, member));
+    await this.runRedisOperation("EVAL", () =>
+      this.redis.eval<[number]>(RedisUsageStorage.RECORD_SCRIPT, [key, dedupeKey], [score, member]),
+    );
   }
 
   async getUsage(options: UsageQueryOptions): Promise<number> {
@@ -212,8 +204,8 @@ return { exceeded and 1 or 0, newUsage }
 
     const [exceeded, newUsage] = await this.runRedisOperation("EVAL", () =>
       this.redis.eval<[number, number]>(
-        RedisUsageStorage.buildCheckAndRecordWithinQuotaScript(dedupeKey),
-        [key],
+        RedisUsageStorage.CHECK_AND_RECORD_WITHIN_QUOTA_SCRIPT,
+        [key, dedupeKey],
         [options.quota, options.value, score, member, options.allowOverQuota ? 1 : 0],
       ),
     );

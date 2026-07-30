@@ -262,6 +262,12 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/testing-resources test:real");
   });
 
+  it("runs metering idempotency composition against real Redis", () => {
+    expect(WORKFLOW).toContain("              - 'packages/metering-core/**'");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/metering-core...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/metering-core test:real");
+  });
+
   it("runs fresh migration status against real PostgreSQL", () => {
     expect(WORKFLOW).toContain("              - 'packages/migration-runner/**'");
     expect(REAL_RESOURCE_JOB).toContain(
