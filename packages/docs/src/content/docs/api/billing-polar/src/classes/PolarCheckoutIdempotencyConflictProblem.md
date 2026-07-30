@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "BillingCheckoutInProgressProblem"
+title: "PolarCheckoutIdempotencyConflictProblem"
 ---
 
-billing 도메인에서 사용하는 Problem 하위 타입들입니다.
+RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
 
 ## Extends
 
@@ -15,21 +15,17 @@ billing 도메인에서 사용하는 Problem 하위 타입들입니다.
 
 ### Constructor
 
-> **new BillingCheckoutInProgressProblem**(`tenantId`, `cause?`): `BillingCheckoutInProgressProblem`
+> **new PolarCheckoutIdempotencyConflictProblem**(`operation`): `PolarCheckoutIdempotencyConflictProblem`
 
 #### Parameters
 
-##### tenantId
+##### operation
 
 `string`
 
-##### cause?
-
-`Error`
-
 #### Returns
 
-`BillingCheckoutInProgressProblem`
+`PolarCheckoutIdempotencyConflictProblem`
 
 #### Overrides
 
@@ -39,9 +35,9 @@ billing 도메인에서 사용하는 Problem 하위 타입들입니다.
 
 ### category
 
-> `readonly` **category**: [`Conflict`](/api/problems-core/src/enumerations/problemcategory/#conflict) = `ProblemCategory.Conflict`
+> `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`category`](/api/problems-core/src/classes/problem/#category)
 
@@ -59,9 +55,9 @@ billing 도메인에서 사용하는 Problem 하위 타입들입니다.
 
 ### code
 
-> `readonly` **code**: `"billing/checkout-in-progress"` = `"billing/checkout-in-progress"`
+> `readonly` **code**: `string`
 
-#### Overrides
+#### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`code`](/api/problems-core/src/classes/problem/#code)
 

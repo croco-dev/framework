@@ -84,6 +84,16 @@ class TestingBillingProblem extends Problem {
   }
 }
 
+class TestingBillingConflictProblem extends Problem {
+  constructor() {
+    super(
+      "testing/billing-checkout-conflict",
+      ProblemCategory.Conflict,
+      "checkout idempotency key fingerprint conflict",
+    );
+  }
+}
+
 class InMemoryBillingGateway implements BillingGateway {
   readonly subscriptionOperations: string[] = [];
   readonly checkouts = new Map<string, { fingerprint: string; result: CheckoutResult }>();
@@ -94,17 +104,11 @@ class InMemoryBillingGateway implements BillingGateway {
   }
 
   async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
-    const fingerprint = JSON.stringify({
-      billingAccountId: params.billingAccountId,
-      cancelUrl: params.cancelUrl ?? null,
-      email: params.email,
-      productId: params.productId,
-      successUrl: params.successUrl,
-    });
+    const fingerprint = this.checkoutFingerprint(params);
     const existing = this.checkouts.get(params.idempotencyKey);
     if (existing) {
       if (existing.fingerprint !== fingerprint) {
-        throw new TestingBillingProblem("checkout idempotency key fingerprint conflict");
+        throw new TestingBillingConflictProblem();
       }
       return existing.result;
     }
@@ -120,7 +124,23 @@ class InMemoryBillingGateway implements BillingGateway {
 
   async reconcileCheckout(params: CreateCheckoutParams): Promise<CheckoutResult | null> {
     const existing = this.checkouts.get(params.idempotencyKey);
-    return existing?.result ?? null;
+    if (!existing) {
+      return null;
+    }
+    if (existing.fingerprint !== this.checkoutFingerprint(params)) {
+      throw new TestingBillingConflictProblem();
+    }
+    return existing.result;
+  }
+
+  private checkoutFingerprint(params: CreateCheckoutParams): string {
+    return JSON.stringify({
+      billingAccountId: params.billingAccountId,
+      cancelUrl: params.cancelUrl ?? null,
+      email: params.email,
+      productId: params.productId,
+      successUrl: params.successUrl,
+    });
   }
 
   async cancelSubscription(
@@ -1632,6 +1652,7 @@ describe("@croco/testing", () => {
         gateway: {
           createGateway: () => new InMemoryBillingGateway(),
           getCheckoutCreateCount: (gateway) => gateway.checkoutCreateCount,
+          checkoutConflictProblemCode: "testing/billing-checkout-conflict",
           fixtures: {
             checkout: {
               billingAccountId: "tenant-conformance",

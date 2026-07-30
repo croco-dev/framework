@@ -12,8 +12,8 @@ import { Polar } from "@polar-sh/sdk";
 import type { PolarConfig } from "../types";
 import {
   normalizePolarBillingError,
+  PolarCheckoutIdempotencyConflictProblem,
   PolarRetryableUpstreamProblem,
-  PolarValidationProblem,
   validatePolarConfig,
 } from "./problems/PolarBillingProblems";
 
@@ -230,14 +230,7 @@ export class PolarBillingGateway implements BillingGateway {
           }
 
           if (checkout.metadata[CHECKOUT_FINGERPRINT_METADATA] !== fingerprint) {
-            throw new PolarValidationProblem(
-              {
-                provider: "polar",
-                operation: "createCheckout.reconcile",
-                upstreamCode: "idempotency-fingerprint-conflict",
-              },
-              "Polar checkout idempotency key was reused for different checkout input",
-            );
+            throw new PolarCheckoutIdempotencyConflictProblem("createCheckout.reconcile");
           }
 
           return {

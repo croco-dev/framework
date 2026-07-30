@@ -293,7 +293,7 @@ describe("BillingService", () => {
       });
       const second = secondService.createCheckout(params);
 
-      await expect(second).rejects.toBeInstanceOf(BillingCheckoutInProgressProblem);
+      await expect(second).rejects.toThrow(BillingCheckoutInProgressProblem);
       releaseProvider({
         checkoutUrl: "https://checkout.example.com/distributed",
         checkoutId: "checkout-distributed",
@@ -348,7 +348,7 @@ describe("BillingService", () => {
 
       await service.createCheckout(params);
 
-      await expect(service.createCheckout({ ...params, ...changed })).rejects.toBeInstanceOf(
+      await expect(service.createCheckout({ ...params, ...changed })).rejects.toThrow(
         IdempotencyConflictProblem,
       );
       expect(mockGateway.createCheckout).toHaveBeenCalledTimes(1);
@@ -372,7 +372,7 @@ describe("BillingService", () => {
         checkoutId: "checkout-ambiguous",
       });
 
-      await expect(service.createCheckout(params)).rejects.toBeInstanceOf(
+      await expect(service.createCheckout(params)).rejects.toThrow(
         BillingCheckoutInProgressProblem,
       );
       await expect(service.createCheckout(params)).resolves.toEqual({
@@ -407,14 +407,20 @@ describe("BillingService", () => {
         checkoutId: "checkout-commit-recovery",
       };
 
-      vi.spyOn(idempotencyStore, "commit").mockRejectedValueOnce(new Error("store unavailable"));
+      const storageError = new Error("store unavailable");
+      vi.spyOn(idempotencyStore, "commit").mockRejectedValueOnce(storageError);
       vi.mocked(mockGateway.ensureCustomer).mockResolvedValue("ext-cust-commit-recovery");
       vi.mocked(mockGateway.createCheckout).mockResolvedValue(checkout);
       vi.mocked(mockGateway.reconcileCheckout).mockResolvedValue(checkout);
 
-      await expect(serviceWithCommitFailure.createCheckout(params)).rejects.toBeInstanceOf(
-        BillingCheckoutInProgressProblem,
-      );
+      let caught: unknown;
+      try {
+        await serviceWithCommitFailure.createCheckout(params);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(BillingCheckoutInProgressProblem);
+      expect(caught).toMatchObject({ cause: storageError });
       await expect(serviceWithCommitFailure.createCheckout(params)).resolves.toEqual({
         checkoutUrl: checkout.checkoutUrl,
       });
@@ -518,7 +524,7 @@ describe("BillingService", () => {
 
       const checkoutPromise = service.createCheckout(params);
 
-      await expect(checkoutPromise).rejects.toBeInstanceOf(BillingCheckoutCreationProblem);
+      await expect(checkoutPromise).rejects.toThrow(BillingCheckoutCreationProblem);
       await expect(checkoutPromise).rejects.toThrow(
         "Failed to create checkout for tenant tenant-bug-09: payment failed",
       );

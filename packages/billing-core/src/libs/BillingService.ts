@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   deriveIdempotencyKey,
   type DerivedIdempotencyKey,
@@ -198,8 +199,11 @@ export class BillingService {
             productId: params.productId,
           },
         });
-      } catch {
-        throw new BillingCheckoutInProgressProblem(params.tenantId);
+      } catch (storageError) {
+        throw new BillingCheckoutInProgressProblem(
+          params.tenantId,
+          storageError instanceof Error ? storageError : undefined,
+        );
       }
 
       throw this.createCheckoutError(params.tenantId, error);
@@ -245,8 +249,11 @@ export class BillingService {
           checkoutId: checkout.checkoutId,
         },
       });
-    } catch {
-      throw new BillingCheckoutInProgressProblem(tenantId);
+    } catch (storageError) {
+      throw new BillingCheckoutInProgressProblem(
+        tenantId,
+        storageError instanceof Error ? storageError : undefined,
+      );
     }
 
     return { checkoutUrl: checkout.checkoutUrl };
@@ -308,12 +315,14 @@ export class BillingService {
       source: {
         kind: "explicit",
         key: params.idempotencyKey,
-        fingerprint: stableStringify({
-          cancelUrl: params.cancelUrl ?? null,
-          email: params.email,
-          productId: params.productId,
-          successUrl: params.successUrl,
-        }),
+        fingerprint: hashCheckoutValue(
+          stableStringify({
+            cancelUrl: params.cancelUrl ?? null,
+            email: params.email,
+            productId: params.productId,
+            successUrl: params.successUrl,
+          }),
+        ),
       },
     });
   }
@@ -670,4 +679,8 @@ function stableStringify(value: unknown): string {
     .sort()
     .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
     .join(",")}}`;
+}
+
+function hashCheckoutValue(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
 }

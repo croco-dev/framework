@@ -103,7 +103,7 @@ Used to recover ambiguous provider responses and idempotency-store commit failur
 
 `Promise`\<[`CheckoutResult`](/api/billing-core/src/type-aliases/checkoutresult/) \| `null`\>
 
-***
+---
 
 ### resumeSubscription()
 

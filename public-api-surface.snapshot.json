@@ -4582,6 +4582,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "PolarCheckoutIdempotencyConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PolarBillingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "PolarCustomerNotFoundProblem",
               "exportKind": "named",
               "source": "./libs/problems/PolarBillingProblems",

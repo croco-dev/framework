@@ -21,6 +21,12 @@ title: "BillingGatewayConformanceOptions"
 
 ***
 
+### checkoutConflictProblemCode?
+
+> `readonly` `optional` **checkoutConflictProblemCode?**: `string`
+
+***
+
 ### createGateway
 
 > `readonly` **createGateway**: () => `TGateway` \| `Promise`\<`TGateway`\>

@@ -19,7 +19,8 @@ import {
   AiTenantRequiredProblem,
 } from "./aiProblems";
 import { InMemoryEventBus } from "./inMemoryAdapters";
-import { createSaasDemoRuntime, defaultSaasRuntime, type SaasRuntime } from "./saasDemo";
+import { createSaasDemoRuntime, defaultSaasRuntime } from "./saasDemo";
+import type { SaasRuntime } from "./saasDemo";
 
 export const AI_SAAS_SMOKE_CONTRACT_VERSION = "ai-saas-smoke-contract/v1";
 export const DEFAULT_AI_MODEL_ID = "demo-deterministic";

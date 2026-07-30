@@ -1,14 +1,19 @@
 import { AccessEngine } from "@croco/access-core";
-import { type AuthUser, RbacEngine, RoleRegistry } from "@croco/auth-core";
+import { RbacEngine, RoleRegistry } from "@croco/auth-core";
+import type { AuthUser } from "@croco/auth-core";
 import {
+  BillingCheckoutCreationProblem,
   BillingService,
   InMemoryBillingStore,
   planVersionRef,
   WebhookAlreadyProcessedProblem,
-  type BillingGateway,
-  type BillingLifecycleGatewayOptions,
-  type CheckoutResult,
-  type SubscriptionStatus,
+} from "@croco/billing-core";
+import type {
+  BillingGateway,
+  BillingLifecycleGatewayOptions,
+  CheckoutResult,
+  CreateCheckoutParams,
+  SubscriptionStatus,
 } from "@croco/billing-core";
 import { DiagnosticsCollector } from "@croco/diagnostics-core";
 import {
@@ -34,7 +39,8 @@ import {
   type DomainEvent,
 } from "@croco/events-core";
 import { HealthCheckService } from "@croco/health-core";
-import { InMemoryIdempotencyStore, type IdempotencyStore } from "@croco/idempotency-core";
+import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
+import type { IdempotencyStore } from "@croco/idempotency-core";
 import { InMemoryInvitationStore, InvitationManager } from "@croco/invitation-core";
 import { InMemoryLlmModel, InMemoryLlmRegistry, LlmService } from "@croco/llm-core";
 import { LlmMeteringService, LlmQuotaExceededProblem, PricingTable } from "@croco/llm-metering";
@@ -101,22 +107,42 @@ const ACTIVE_ENTITLEMENT_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
 ]);
 
 class DemoBillingGateway implements BillingGateway {
+  private readonly checkouts = new Map<
+    string,
+    { readonly fingerprint: string; readonly result: CheckoutResult }
+  >();
+
   async ensureCustomer(billingAccountId: string): Promise<string> {
     return `customer_${billingAccountId}`;
   }
 
-  async createCheckout(): Promise<{ checkoutUrl: string; checkoutId: string }> {
-    return {
+  async createCheckout(params: CreateCheckoutParams): Promise<CheckoutResult> {
+    const fingerprint = this.checkoutFingerprint(params);
+    const existing = this.checkouts.get(params.idempotencyKey);
+    if (existing) {
+      if (existing.fingerprint !== fingerprint) {
+        throw new BillingCheckoutCreationProblem(
+          params.billingAccountId,
+          "Demo checkout idempotency key was reused for different checkout input",
+        );
+      }
+      return existing.result;
+    }
+
+    const result = {
       checkoutUrl: "https://billing.example.test/checkout/team",
       checkoutId: "checkout_team",
     };
+    this.checkouts.set(params.idempotencyKey, { fingerprint, result });
+    return result;
   }
 
-  async reconcileCheckout(): Promise<CheckoutResult | null> {
-    return {
-      checkoutUrl: "https://billing.example.test/checkout/team",
-      checkoutId: "checkout_team",
-    };
+  async reconcileCheckout(params: CreateCheckoutParams): Promise<CheckoutResult | null> {
+    const existing = this.checkouts.get(params.idempotencyKey);
+    if (!existing || existing.fingerprint !== this.checkoutFingerprint(params)) {
+      return null;
+    }
+    return existing.result;
   }
 
   async cancelSubscription(
@@ -132,6 +158,16 @@ class DemoBillingGateway implements BillingGateway {
 
   async getCustomerPortalUrl(externalCustomerId: string): Promise<string> {
     return `https://billing.example.test/portal/${externalCustomerId}`;
+  }
+
+  private checkoutFingerprint(params: CreateCheckoutParams): string {
+    return JSON.stringify({
+      billingAccountId: params.billingAccountId,
+      cancelUrl: params.cancelUrl ?? null,
+      email: params.email,
+      productId: params.productId,
+      successUrl: params.successUrl,
+    });
   }
 }
 

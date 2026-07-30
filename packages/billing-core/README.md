@@ -5,7 +5,7 @@
 ## 설치
 
 ```bash
-pnpm add @croco/billing-core
+pnpm add @croco/billing-core @croco/idempotency-core
 ```
 
 ## 사용법

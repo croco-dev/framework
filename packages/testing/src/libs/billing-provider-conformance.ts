@@ -54,6 +54,7 @@ export type BillingGatewayFailureScenario<TGateway extends BillingGateway = Bill
 export type BillingGatewayConformanceOptions<TGateway extends BillingGateway = BillingGateway> = {
   readonly createGateway: () => TGateway | Promise<TGateway>;
   readonly getCheckoutCreateCount: (gateway: TGateway) => number | Promise<number>;
+  readonly checkoutConflictProblemCode?: string;
   readonly fixtures: BillingGatewayConformanceFixtures;
   readonly assertions?: BillingGatewayConformanceAssertions<TGateway>;
   readonly failureScenarios?: readonly BillingGatewayFailureScenario<TGateway>[];
@@ -246,6 +247,13 @@ function createBillingGatewayConformanceCases<TGateway extends BillingGateway>(
             caught instanceof Problem,
             `${providerName} must reject checkout idempotency key reuse with conflicting input as a Croco Problem.`,
           );
+          if (options.checkoutConflictProblemCode !== undefined) {
+            assert.equal(
+              caught.code,
+              options.checkoutConflictProblemCode,
+              `${providerName} must reject conflicting checkout input with its stable conflict Problem code`,
+            );
+          }
           assert.equal(
             await options.getCheckoutCreateCount(gateway),
             initialCreateCount + 1,

@@ -46,6 +46,23 @@ export class PolarValidationProblem extends Problem {
   }
 }
 
+export class PolarCheckoutIdempotencyConflictProblem extends Problem {
+  constructor(operation: string) {
+    super(
+      "billing-polar/checkout-idempotency-conflict",
+      ProblemCategory.Conflict,
+      `Polar checkout idempotency key was reused for different checkout input during ${operation}`,
+      {
+        extensions: {
+          provider: "polar",
+          operation,
+          fingerprintMismatch: true,
+        },
+      },
+    );
+  }
+}
+
 export class PolarCustomerNotFoundProblem extends Problem {
   constructor(context: PolarBillingErrorContext) {
     super(

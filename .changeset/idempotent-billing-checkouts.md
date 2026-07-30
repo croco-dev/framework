@@ -1,6 +1,6 @@
 ---
 "@croco/billing-core": minor
-"@croco/billing-polar": patch
+"@croco/billing-polar": minor
 "@croco/problems-core": patch
 "@croco/testing": minor
 "create-croco-app": patch

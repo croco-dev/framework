@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarBillingGateway } from "../libs/PolarBillingGateway";
 import {
   PolarCustomerNotFoundProblem,
+  PolarCheckoutIdempotencyConflictProblem,
   PolarMissingConfigProblem,
   PolarRetryableUpstreamProblem,
   PolarSubscriptionNotFoundProblem,
@@ -146,18 +147,30 @@ function createCheckoutPages(
     url: string;
     metadata: Record<string, string>;
   }[],
+  ...additionalPages: ReadonlyArray<
+    readonly {
+      id: string;
+      url: string;
+      metadata: Record<string, string>;
+    }[]
+  >
 ) {
+  const pages = [items, ...additionalPages];
+  const totalCount = pages.reduce((count, page) => count + page.length, 0);
+
   return {
     async *[Symbol.asyncIterator]() {
-      yield {
-        result: {
-          items,
-          pagination: {
-            totalCount: items.length,
-            maxPage: 1,
+      for (const page of pages) {
+        yield {
+          result: {
+            items: page,
+            pagination: {
+              totalCount,
+              maxPage: pages.length,
+            },
           },
-        },
-      };
+        };
+      }
     },
   };
 }
@@ -183,6 +196,7 @@ describe("PolarBillingGateway", () => {
             return createGateway();
           },
           getCheckoutCreateCount: () => mockCreateCheckout.mock.calls.length,
+          checkoutConflictProblemCode: "billing-polar/checkout-idempotency-conflict",
           fixtures: {
             checkout: {
               billingAccountId: "account-conformance",
@@ -453,7 +467,6 @@ describe("PolarBillingGateway", () => {
         .mockResolvedValueOnce(emptyPage)
         .mockResolvedValueOnce(emptyPage)
         .mockResolvedValueOnce(emptyPage)
-        .mockResolvedValueOnce(emptyPage)
         .mockResolvedValueOnce(existingPage);
       mockCreateCheckout.mockRejectedValue(
         Object.assign(new Error("connection closed after acceptance"), {
@@ -468,10 +481,11 @@ describe("PolarBillingGateway", () => {
         idempotencyKey: "checkout-delayed",
       };
 
-      await expect(gateway.createCheckout(params)).rejects.toBeInstanceOf(
+      await expect(gateway.createCheckout(params)).rejects.toThrow(
         BillingCheckoutInProgressProblem,
       );
-      await expect(gateway.createCheckout(params)).resolves.toEqual({
+      const retryGateway = createGateway();
+      await expect(retryGateway.createCheckout(params)).resolves.toEqual({
         checkoutId: "checkout-delayed",
         checkoutUrl: "https://checkout.polar.sh/checkout-delayed",
       });
@@ -509,6 +523,50 @@ describe("PolarBillingGateway", () => {
       ).resolves.toEqual({
         checkoutId: "checkout-existing",
         checkoutUrl: "https://checkout.polar.sh/checkout-existing",
+      });
+      expect(mockCreateCheckout).not.toHaveBeenCalled();
+    });
+
+    it("should reconcile a checkout found on a later provider page", async () => {
+      const gateway = createGateway();
+      const operationKey = sha256("checkout-paginated");
+      const fingerprint = sha256(
+        '{"billingAccountId":"account-1","cancelUrl":null,"email":"test@example.com","productId":"prod-1","successUrl":"https://example.com/success"}',
+      );
+      mockGetExternal.mockResolvedValue({ id: "cust-existing" });
+      mockListCheckouts.mockResolvedValue(
+        createCheckoutPages(
+          [
+            {
+              id: "checkout-unrelated",
+              url: "https://checkout.polar.sh/checkout-unrelated",
+              metadata: {},
+            },
+          ],
+          [
+            {
+              id: "checkout-paginated",
+              url: "https://checkout.polar.sh/checkout-paginated",
+              metadata: {
+                croco_checkout_operation: operationKey,
+                croco_checkout_fingerprint: fingerprint,
+              },
+            },
+          ],
+        ),
+      );
+
+      await expect(
+        gateway.reconcileCheckout({
+          billingAccountId: "account-1",
+          email: "test@example.com",
+          productId: "prod-1",
+          successUrl: "https://example.com/success",
+          idempotencyKey: "checkout-paginated",
+        }),
+      ).resolves.toEqual({
+        checkoutId: "checkout-paginated",
+        checkoutUrl: "https://checkout.polar.sh/checkout-paginated",
       });
       expect(mockCreateCheckout).not.toHaveBeenCalled();
     });

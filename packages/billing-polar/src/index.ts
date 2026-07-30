@@ -107,6 +107,7 @@ export type { WebhookDependencies } from "./libs/PolarWebhookHandler";
 export { PolarWebhookHandler } from "./libs/PolarWebhookHandler";
 export { BillingStatusMappingProblem } from "./libs/problems/BillingStatusMappingProblem";
 export {
+  PolarCheckoutIdempotencyConflictProblem,
   PolarCustomerNotFoundProblem,
   PolarMissingConfigProblem,
   PolarRetryableUpstreamProblem,
