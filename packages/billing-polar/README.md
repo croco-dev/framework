@@ -256,6 +256,10 @@ pnpm --filter @croco/testing test
 subscription lifecycle, webhook 처리, webhook idempotency, invalid signature/payload rejection을
 mocked Polar backend로 검증합니다.
 
+`POLAR_BILLING_PROVIDER_PROFILE`은 checkout capability를 지원하고 usage capability는 아직 지원하지
+않는다는 사실과 이유를 공개합니다. 따라서 runtime discovery와 provider certification은 usage 호출을
+빈 상태나 성공으로 처리하지 않고 명시적인 capability gap으로 판정할 수 있습니다.
+
 `PolarWebhookHandler` 테스트는 credential 없이 real `@polar-sh/sdk` signature verifier를 통과하는
 replayed signed delivery, duplicate event idempotency, stale timestamp/clock-skew rejection mapping,
 invalid signature Problem code/status, 그리고 caller-facing Problem detail redaction을 검증합니다.

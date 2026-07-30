@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
-import { BillingCheckoutInProgressProblem } from "@croco/billing-core";
+import { BillingCheckoutInProgressProblem, defineBillingProvider } from "@croco/billing-core";
 import type { ILogger } from "@croco/framework-context";
 import { createBillingProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarBillingGateway } from "../libs/PolarBillingGateway";
+import { POLAR_BILLING_PROVIDER_PROFILE } from "../libs/PolarBillingProviderProfile";
 import {
   PolarCustomerNotFoundProblem,
   PolarCheckoutIdempotencyConflictProblem,
@@ -190,6 +191,13 @@ describe("PolarBillingGateway", () => {
     it.each(
       createBillingProviderConformanceSuite({
         providerName: "billing-polar",
+        capabilities: {
+          createProvider: () =>
+            defineBillingProvider(POLAR_BILLING_PROVIDER_PROFILE, {
+              checkout: createGateway(),
+            }),
+          required: ["checkout"],
+        },
         gateway: {
           createGateway: () => {
             setupSuccessfulGatewayBackend();

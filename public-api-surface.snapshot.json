@@ -4116,6 +4116,12 @@
           "sourceEntrypoint": "packages/billing-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "BILLING_PROVIDER_CAPABILITIES",
+              "exportKind": "named",
+              "source": "./libs/BillingProviderCapabilities",
+              "declarationKind": "const"
+            },
+            {
               "name": "BillingAccountNotFoundProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
@@ -4152,6 +4158,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "BillingProvider",
+              "exportKind": "named",
+              "source": "./libs/BillingProvider",
+              "declarationKind": "class"
+            },
+            {
               "name": "BillingService",
               "exportKind": "named",
               "source": "./libs/BillingService",
@@ -4162,6 +4174,18 @@
               "exportKind": "named",
               "source": "./libs/BillingStore",
               "declarationKind": "class"
+            },
+            {
+              "name": "defineBillingProvider",
+              "exportKind": "named",
+              "source": "./libs/BillingProvider",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineBillingProviderProfile",
+              "exportKind": "named",
+              "source": "./libs/BillingProvider",
+              "declarationKind": "function"
             },
             {
               "name": "hashCheckoutValue",
@@ -4264,6 +4288,12 @@
               "exportKind": "named",
               "source": "./libs/planVersionRef",
               "declarationKind": "function"
+            },
+            {
+              "name": "ProviderCapabilityUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
             },
             {
               "name": "stableStringify",
@@ -4378,6 +4408,31 @@
               "source": "./types"
             },
             {
+              "name": "BillingProviderCapability",
+              "exportKind": "named",
+              "source": "./libs/BillingProviderCapabilities"
+            },
+            {
+              "name": "BillingProviderCapabilityAvailability",
+              "exportKind": "named",
+              "source": "./libs/BillingProviderCapabilities"
+            },
+            {
+              "name": "BillingProviderCapabilityProfile",
+              "exportKind": "named",
+              "source": "./libs/BillingProviderCapabilities"
+            },
+            {
+              "name": "BillingProviderImplementations",
+              "exportKind": "named",
+              "source": "./libs/BillingProvider"
+            },
+            {
+              "name": "BillingProviderProfile",
+              "exportKind": "named",
+              "source": "./libs/BillingProviderCapabilities"
+            },
+            {
               "name": "BillingServiceDependencies",
               "exportKind": "named",
               "source": "./libs/BillingService"
@@ -4403,9 +4458,29 @@
               "source": "./libs/BillingGateway"
             },
             {
+              "name": "CustomerMeterState",
+              "exportKind": "named",
+              "source": "./libs/UsageBillingGateway"
+            },
+            {
+              "name": "CustomerMeterStateQuery",
+              "exportKind": "named",
+              "source": "./libs/UsageBillingGateway"
+            },
+            {
+              "name": "DuplicateUsageBillingEventReceipt",
+              "exportKind": "named",
+              "source": "./libs/UsageBillingGateway"
+            },
+            {
               "name": "GenerateInvoiceParams",
               "exportKind": "named",
               "source": "./libs/InvoiceGenerator"
+            },
+            {
+              "name": "InsertedUsageBillingEventReceipt",
+              "exportKind": "named",
+              "source": "./libs/UsageBillingGateway"
             },
             {
               "name": "Invoice",
@@ -4541,6 +4616,31 @@
               "name": "SubscriptionStatus",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "UsageBillingBatchReceipt",
+              "exportKind": "named",
+              "source": "./libs/UsageBillingGateway"
+            },
+            {
+              "name": "UsageBillingDimensionValue",
+              "exportKind": "named",
+              "source": "./libs/UsageBillingGateway"
+            },
+            {
+              "name": "UsageBillingEvent",
+              "exportKind": "named",
+              "source": "./libs/UsageBillingGateway"
+            },
+            {
+              "name": "UsageBillingEventReceipt",
+              "exportKind": "named",
+              "source": "./libs/UsageBillingGateway"
+            },
+            {
+              "name": "UsageBillingGateway",
+              "exportKind": "named",
+              "source": "./libs/UsageBillingGateway"
             }
           ]
         }
@@ -4580,6 +4680,12 @@
               "exportKind": "named",
               "source": "./libs/problems/PolarBillingProblems",
               "declarationKind": "function"
+            },
+            {
+              "name": "POLAR_BILLING_PROVIDER_PROFILE",
+              "exportKind": "named",
+              "source": "./libs/PolarBillingProviderProfile",
+              "declarationKind": "const"
             },
             {
               "name": "PolarBillingDiagnosticsProvider",
@@ -24044,6 +24150,11 @@
             },
             {
               "name": "BillingGatewayFailureScenario",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
+            },
+            {
+              "name": "BillingProviderCapabilityConformanceOptions",
               "exportKind": "named",
               "source": "./libs/billing-provider-conformance"
             },

@@ -139,6 +139,7 @@ export {
   type BillingGatewayConformanceFixtures,
   type BillingGatewayConformanceOptions,
   type BillingGatewayFailureScenario,
+  type BillingProviderCapabilityConformanceOptions,
   type BillingProviderConformanceCase,
   type BillingProviderConformanceOptions,
   type BillingProviderConformanceSuite,

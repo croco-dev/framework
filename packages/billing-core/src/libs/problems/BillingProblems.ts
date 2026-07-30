@@ -1,5 +1,25 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+import type { BillingProviderCapability } from "../BillingProviderCapabilities";
+
+export class ProviderCapabilityUnavailableProblem extends Problem {
+  readonly code = "billing/provider-capability-unavailable";
+  readonly category = ProblemCategory.NotImplemented;
+  constructor(providerName: string, capability: BillingProviderCapability) {
+    super(
+      undefined,
+      undefined,
+      `Billing provider '${providerName}' does not support capability '${capability}'`,
+      {
+        extensions: {
+          capability,
+          providerName,
+        },
+      },
+    );
+  }
+}
+
 export class SubscriptionNotFoundProblem extends Problem {
   readonly code = "billing/subscription-not-found";
   readonly category = ProblemCategory.NotFound;
