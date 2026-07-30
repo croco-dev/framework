@@ -1770,7 +1770,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
-          line: 51,
+          line: 54,
           column: 5,
           kind: "problem-constructor",
         },
@@ -1801,7 +1801,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
-          line: 68,
+          line: 72,
           column: 5,
           kind: "problem-constructor",
         },
@@ -1865,7 +1865,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
-          line: 94,
+          line: 98,
           column: 5,
           kind: "problem-constructor",
         },
@@ -1896,7 +1896,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
-          line: 81,
+          line: 85,
           column: 5,
           kind: "problem-constructor",
         },
@@ -1928,7 +1928,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-polar/src/libs/problems/PolarBillingProblems.ts",
-          line: 110,
+          line: 114,
           column: 5,
           kind: "problem-constructor",
         },

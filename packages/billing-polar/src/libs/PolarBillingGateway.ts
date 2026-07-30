@@ -1,6 +1,7 @@
-import { createHash } from "node:crypto";
 import {
   BillingCheckoutInProgressProblem,
+  hashCheckoutValue,
+  stableStringify,
   type BillingGateway,
   type BillingLifecycleGatewayOptions,
   type CheckoutResult,
@@ -230,7 +231,10 @@ export class PolarBillingGateway implements BillingGateway {
           }
 
           if (checkout.metadata[CHECKOUT_FINGERPRINT_METADATA] !== fingerprint) {
-            throw new PolarCheckoutIdempotencyConflictProblem("createCheckout.reconcile");
+            throw new PolarCheckoutIdempotencyConflictProblem(
+              "createCheckout.reconcile",
+              operationKey,
+            );
           }
 
           return {
@@ -353,10 +357,6 @@ export class PolarBillingGateway implements BillingGateway {
   }
 }
 
-function hashCheckoutValue(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
-
 function checkoutFingerprint(params: CreateCheckoutParams): string {
   return hashCheckoutValue(
     stableStringify({
@@ -373,20 +373,4 @@ async function delay(milliseconds: number): Promise<void> {
   await new Promise<void>((resolve) => {
     setTimeout(resolve, milliseconds);
   });
-}
-
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") {
-    return JSON.stringify(value);
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
-  }
-
-  const record = value as Record<string, unknown>;
-  return `{${Object.keys(record)
-    .sort()
-    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
-    .join(",")}}`;
 }

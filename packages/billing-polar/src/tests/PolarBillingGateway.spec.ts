@@ -462,12 +462,10 @@ describe("PolarBillingGateway", () => {
       ]);
 
       mockGetExternal.mockResolvedValue({ id: "cust-existing" });
-      mockListCheckouts
-        .mockResolvedValueOnce(emptyPage)
-        .mockResolvedValueOnce(emptyPage)
-        .mockResolvedValueOnce(emptyPage)
-        .mockResolvedValueOnce(emptyPage)
-        .mockResolvedValueOnce(existingPage);
+      let checkoutVisible = false;
+      mockListCheckouts.mockImplementation(async () =>
+        checkoutVisible ? existingPage : emptyPage,
+      );
       mockCreateCheckout.mockRejectedValue(
         Object.assign(new Error("connection closed after acceptance"), {
           name: "ConnectionError",
@@ -484,6 +482,7 @@ describe("PolarBillingGateway", () => {
       await expect(gateway.createCheckout(params)).rejects.toThrow(
         BillingCheckoutInProgressProblem,
       );
+      checkoutVisible = true;
       const retryGateway = createGateway();
       await expect(retryGateway.createCheckout(params)).resolves.toEqual({
         checkoutId: "checkout-delayed",

@@ -4,6 +4,7 @@ import type { AuthUser } from "@croco/auth-core";
 import {
   BillingCheckoutCreationProblem,
   BillingService,
+  hashCheckoutValue,
   InMemoryBillingStore,
   planVersionRef,
   WebhookAlreadyProcessedProblem,
@@ -106,7 +107,7 @@ const ACTIVE_ENTITLEMENT_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
   "trialing",
 ]);
 
-class DemoBillingGateway implements BillingGateway {
+export class DemoBillingGateway implements BillingGateway {
   private readonly checkouts = new Map<
     string,
     { readonly fingerprint: string; readonly result: CheckoutResult }
@@ -129,9 +130,10 @@ class DemoBillingGateway implements BillingGateway {
       return existing.result;
     }
 
+    const checkoutId = `checkout_${hashCheckoutValue(params.idempotencyKey).slice(0, 16)}`;
     const result = {
-      checkoutUrl: "https://billing.example.test/checkout/team",
-      checkoutId: "checkout_team",
+      checkoutUrl: `https://billing.example.test/checkout/${checkoutId}`,
+      checkoutId,
     };
     this.checkouts.set(params.idempotencyKey, { fingerprint, result });
     return result;
@@ -316,6 +318,7 @@ export type SaasRuntime = {
   accessEngine: AccessEngine;
   rbacEngine: RbacEngine;
   billingStore: InMemoryBillingStore;
+  billingGateway: BillingGateway;
   billingService: BillingService;
   meterRegistry: MeterRegistry;
   meteringService: MeteringService;
@@ -336,6 +339,7 @@ export type SaasRuntime = {
 
 export type SaasRuntimeOptions = {
   checkoutIdempotencyStore: IdempotencyStore<CheckoutResult>;
+  billingGateway?: BillingGateway;
 };
 
 export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
@@ -356,9 +360,10 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
   });
 
   const billingStore = new InMemoryBillingStore();
+  const billingGateway = options.billingGateway ?? new DemoBillingGateway();
   const billingService = new BillingService({
     store: billingStore,
-    gateway: new DemoBillingGateway(),
+    gateway: billingGateway,
     checkoutIdempotencyStore: options.checkoutIdempotencyStore,
   });
   const meterRepository = new InMemoryMeterRepository();
@@ -543,6 +548,7 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
     accessEngine,
     rbacEngine: new RbacEngine(roleRegistry),
     billingStore,
+    billingGateway,
     billingService,
     meterRegistry,
     meteringService,

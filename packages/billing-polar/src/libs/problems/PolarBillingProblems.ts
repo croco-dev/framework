@@ -46,8 +46,11 @@ export class PolarValidationProblem extends Problem {
   }
 }
 
+/**
+ * Reports that one Polar checkout operation key was reused with different checkout input.
+ */
 export class PolarCheckoutIdempotencyConflictProblem extends Problem {
-  constructor(operation: string) {
+  constructor(operation: string, operationKey: string) {
     super(
       "billing-polar/checkout-idempotency-conflict",
       ProblemCategory.Conflict,
@@ -56,6 +59,7 @@ export class PolarCheckoutIdempotencyConflictProblem extends Problem {
         extensions: {
           provider: "polar",
           operation,
+          operationKey,
           fingerprintMismatch: true,
         },
       },

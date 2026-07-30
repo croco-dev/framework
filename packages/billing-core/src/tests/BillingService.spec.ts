@@ -305,6 +305,92 @@ describe("BillingService", () => {
       expect(mockGateway.reconcileCheckout).toHaveBeenCalledTimes(1);
     });
 
+    it("should not commit a checkout reservation owned by another service instance", async () => {
+      const params = {
+        tenantId: "tenant-foreign-reservation",
+        email: "foreign-reservation@example.com",
+        productId: "product-1",
+        successUrl: "https://example.com/success",
+        cancelUrl: "https://example.com/cancel",
+        idempotencyKey: "checkout-foreign-reservation",
+      };
+      const idempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>();
+      const firstService = new BillingService({
+        store,
+        gateway: mockGateway,
+        checkoutIdempotencyStore: idempotencyStore,
+      });
+      const secondService = new BillingService({
+        store,
+        gateway: mockGateway,
+        checkoutIdempotencyStore: idempotencyStore,
+      });
+      const checkout = {
+        checkoutUrl: "https://checkout.example.com/foreign-reservation",
+        checkoutId: "checkout-foreign-reservation",
+      };
+      let releaseProvider!: (checkout: CheckoutResult) => void;
+      const providerResponse = new Promise<CheckoutResult>((resolve) => {
+        releaseProvider = resolve;
+      });
+      const commit = vi.spyOn(idempotencyStore, "commit");
+
+      vi.mocked(mockGateway.ensureCustomer).mockResolvedValue("ext-cust-foreign-reservation");
+      vi.mocked(mockGateway.createCheckout).mockReturnValue(providerResponse);
+      vi.mocked(mockGateway.reconcileCheckout).mockResolvedValue(checkout);
+
+      const ownerRequest = firstService.createCheckout(params);
+      await vi.waitFor(() => {
+        expect(mockGateway.createCheckout).toHaveBeenCalledTimes(1);
+      });
+
+      await expect(secondService.createCheckout(params)).resolves.toEqual({
+        checkoutUrl: checkout.checkoutUrl,
+      });
+      expect(commit).not.toHaveBeenCalled();
+
+      releaseProvider(checkout);
+      await expect(ownerRequest).resolves.toEqual({ checkoutUrl: checkout.checkoutUrl });
+      expect(commit).toHaveBeenCalledTimes(1);
+    });
+
+    it("should retry an abandoned checkout after its reservation expires", async () => {
+      const params = {
+        tenantId: "tenant-expired-reservation",
+        email: "expired-reservation@example.com",
+        productId: "product-1",
+        successUrl: "https://example.com/success",
+        cancelUrl: "https://example.com/cancel",
+        idempotencyKey: "checkout-expired-reservation",
+      };
+      let now = new Date("2026-01-01T00:00:00.000Z");
+      const idempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>({ now: () => now });
+      const serviceWithExpiringReservation = new BillingService({
+        store,
+        gateway: mockGateway,
+        checkoutIdempotencyStore: idempotencyStore,
+        checkoutReservationTtlMs: 100,
+      });
+      const checkout = {
+        checkoutUrl: "https://checkout.example.com/expired-reservation",
+        checkoutId: "checkout-expired-reservation",
+      };
+
+      vi.mocked(mockGateway.ensureCustomer).mockResolvedValue("ext-cust-expired-reservation");
+      vi.mocked(mockGateway.createCheckout)
+        .mockRejectedValueOnce(new BillingCheckoutInProgressProblem(params.tenantId))
+        .mockResolvedValueOnce(checkout);
+
+      await expect(serviceWithExpiringReservation.createCheckout(params)).rejects.toThrow(
+        BillingCheckoutInProgressProblem,
+      );
+      now = new Date(now.getTime() + 101);
+      await expect(serviceWithExpiringReservation.createCheckout(params)).resolves.toEqual({
+        checkoutUrl: checkout.checkoutUrl,
+      });
+      expect(mockGateway.createCheckout).toHaveBeenCalledTimes(2);
+    });
+
     it("should replay a completed checkout without another provider call", async () => {
       const params = {
         tenantId: "tenant-replay",
@@ -413,14 +499,9 @@ describe("BillingService", () => {
       vi.mocked(mockGateway.createCheckout).mockResolvedValue(checkout);
       vi.mocked(mockGateway.reconcileCheckout).mockResolvedValue(checkout);
 
-      let caught: unknown;
-      try {
-        await serviceWithCommitFailure.createCheckout(params);
-      } catch (error) {
-        caught = error;
-      }
-      expect(caught).toBeInstanceOf(BillingCheckoutInProgressProblem);
-      expect(caught).toMatchObject({ cause: storageError });
+      const failedCheckout = serviceWithCommitFailure.createCheckout(params);
+      await expect(failedCheckout).rejects.toThrow(BillingCheckoutInProgressProblem);
+      await expect(failedCheckout).rejects.toMatchObject({ cause: storageError });
       await expect(serviceWithCommitFailure.createCheckout(params)).resolves.toEqual({
         checkoutUrl: checkout.checkoutUrl,
       });

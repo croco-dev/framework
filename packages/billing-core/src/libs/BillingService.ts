@@ -51,6 +51,11 @@ export type BillingServiceDependencies = {
   store: BillingStore;
   gateway: BillingGateway;
   checkoutIdempotencyStore: IdempotencyStore<CheckoutResult>;
+  /**
+   * Maximum time one request owns an unfinished checkout reservation.
+   * Expiration lets a later request retry provider reconciliation or creation after an abandoned owner.
+   */
+  checkoutReservationTtlMs?: number;
   eventPublisher?: BillingLifecycleEventPublisher;
   clock?: () => Date;
 };
@@ -79,6 +84,7 @@ export type ReconcileBillingLifecycleCommandsResult = {
 };
 
 const DEFAULT_RECONCILIATION_LIMIT = 100;
+const DEFAULT_CHECKOUT_RESERVATION_TTL_MS = 5 * 60 * 1_000;
 const EVENT_DELIVERY_LEASE_MS = 30_000;
 const PROVIDER_FAILURE_DETAIL = "Provider lifecycle command failed";
 const LOCAL_FAILURE_DETAIL = "Local lifecycle reconciliation failed";
@@ -92,6 +98,7 @@ export class BillingService {
   private readonly store: BillingStore;
   private readonly gateway: BillingGateway;
   private readonly checkoutIdempotencyStore: IdempotencyStore<CheckoutResult>;
+  private readonly checkoutReservationTtlMs: number;
   private readonly eventPublisher?: BillingLifecycleEventPublisher;
   private readonly clock: () => Date;
   private readonly inFlightCheckouts = new Map<string, InFlightCheckout>();
@@ -100,6 +107,8 @@ export class BillingService {
     this.store = deps.store;
     this.gateway = deps.gateway;
     this.checkoutIdempotencyStore = deps.checkoutIdempotencyStore;
+    this.checkoutReservationTtlMs =
+      deps.checkoutReservationTtlMs ?? DEFAULT_CHECKOUT_RESERVATION_TTL_MS;
     this.eventPublisher = deps.eventPublisher;
     this.clock = deps.clock ?? (() => new Date());
   }
@@ -162,6 +171,7 @@ export class BillingService {
     account: BillingAccount | null,
   ): Promise<BillingCheckoutResponse> {
     const reservation = await this.checkoutIdempotencyStore.reserve(key, {
+      ttlMs: this.checkoutReservationTtlMs,
       metadata: {
         productId: params.productId,
       },
@@ -172,7 +182,7 @@ export class BillingService {
     }
 
     if (reservation.outcome === "in-flight") {
-      return this.reconcileInFlightCheckout(params, key, account, reservation.record.reservationId);
+      return this.reconcileInFlightCheckout(params, key, account);
     }
 
     if (reservation.outcome === "failed") {
@@ -221,7 +231,6 @@ export class BillingService {
     params: CreateBillingCheckoutParams,
     key: DerivedIdempotencyKey,
     account: BillingAccount | null,
-    reservationId: string,
   ): Promise<BillingCheckoutResponse> {
     const checkout = await this.gateway.reconcileCheckout(
       this.toGatewayCheckoutParams(params, account?.id ?? params.tenantId, key.storageKey),
@@ -231,7 +240,7 @@ export class BillingService {
       throw new BillingCheckoutInProgressProblem(params.tenantId);
     }
 
-    return this.commitCheckout(params.tenantId, key, reservationId, checkout);
+    return { checkoutUrl: checkout.checkoutUrl };
   }
 
   private async commitCheckout(
@@ -665,7 +674,7 @@ export class BillingService {
   }
 }
 
-function stableStringify(value: unknown): string {
+export function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") {
     return JSON.stringify(value);
   }
@@ -681,6 +690,6 @@ function stableStringify(value: unknown): string {
     .join(",")}}`;
 }
 
-function hashCheckoutValue(value: string): string {
+export function hashCheckoutValue(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }

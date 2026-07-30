@@ -1,3 +1,5 @@
+import type { CheckoutResult } from "@croco/billing-core";
+import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
 import { createTestKernel } from "@croco/testing";
 import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -13,7 +15,9 @@ import {
 } from "../providerProfiles";
 import {
   assertSaasDemoSnapshot,
+  createSaasRuntime,
   createSaasDemoRuntime,
+  DemoBillingGateway,
   runSaasDemoFlow,
   seedDefaultSaasRuntime,
 } from "../saasDemo";
@@ -21,6 +25,38 @@ import {
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
     Container.reset();
+  });
+
+  it("keeps demo checkout sessions distinct and shareable across runtimes", async () => {
+    const billingGateway = new DemoBillingGateway();
+    const checkoutIdempotencyStore = new InMemoryIdempotencyStore<CheckoutResult>();
+    const firstRuntime = createSaasRuntime({ billingGateway, checkoutIdempotencyStore });
+    const secondRuntime = createSaasRuntime({ billingGateway, checkoutIdempotencyStore });
+    const baseParams = {
+      billingAccountId: "tenant-1",
+      email: "owner@example.com",
+      productId: "team",
+      successUrl: "https://example.com/success",
+    };
+
+    const first = await billingGateway.createCheckout({
+      ...baseParams,
+      idempotencyKey: "checkout-operation-1",
+    });
+    const replay = await billingGateway.createCheckout({
+      ...baseParams,
+      idempotencyKey: "checkout-operation-1",
+    });
+    const distinct = await billingGateway.createCheckout({
+      ...baseParams,
+      idempotencyKey: "checkout-operation-2",
+    });
+
+    expect(firstRuntime.billingGateway).toBe(billingGateway);
+    expect(secondRuntime.billingGateway).toBe(billingGateway);
+    expect(replay).toEqual(first);
+    expect(distinct.checkoutId).not.toBe(first.checkoutId);
+    expect(distinct.checkoutUrl).not.toBe(first.checkoutUrl);
   });
 
   it("boots application-fidelity tests through the exported production bootstrap", async () => {
