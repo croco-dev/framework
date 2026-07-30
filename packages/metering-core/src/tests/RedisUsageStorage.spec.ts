@@ -317,7 +317,7 @@ describe("RedisUsageStorage", () => {
       expect(mockRedis.eval).toHaveBeenCalledTimes(2);
     });
 
-    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])(
+    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
       "should reject invalid usage value %s before acquiring idempotency",
       async (value) => {
         await expect(
@@ -329,8 +329,7 @@ describe("RedisUsageStorage", () => {
           code: "metering/invalid-usage-value",
         });
 
-        expect(mockRedis.set).not.toHaveBeenCalled();
-        expect(mockRedis.zadd).not.toHaveBeenCalled();
+        expect(mockRedis.eval).not.toHaveBeenCalled();
       },
     );
   });
@@ -358,7 +357,7 @@ describe("RedisUsageStorage", () => {
       "usage-1:0",
       "usage-1:-1",
       "usage-1:NaN",
-      "usage-1:2147483648",
+      "usage-1:9007199254740992",
     ])("should fail closed for invalid stored usage member %s", async (member) => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([member]);
 
@@ -398,7 +397,7 @@ describe("RedisUsageStorage", () => {
     });
 
     it("should preserve the largest supported stored usage value", async () => {
-      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(["usage-1:2147483647"]);
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(["usage-1:9007199254740991"]);
 
       await expect(
         storage.getUsage({
@@ -406,7 +405,7 @@ describe("RedisUsageStorage", () => {
           meterId: "api_calls",
           period: "billing_cycle",
         }),
-      ).resolves.toBe(2_147_483_647);
+      ).resolves.toBe(Number.MAX_SAFE_INTEGER);
     });
 
     it("should query the requested period before falling back", async () => {
@@ -897,7 +896,7 @@ describe("RedisUsageStorage", () => {
       );
     });
 
-    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])(
+    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
       "should reject invalid quota usage value %s before eval",
       async (value) => {
         const usageRecord = {

@@ -76,10 +76,10 @@ describe("Problems", () => {
 
       expect(problem.code).toBe("metering/invalid-usage-value");
       expect(problem.status).toBe(422);
-      expect(problem.detail).toContain("between 1 and 2147483647");
+      expect(problem.detail).toContain("between 1 and 9007199254740991");
       expect(problem.toJSON()).toMatchObject({
         receivedValue: "1.9",
-        reason: "value must be an integer between 1 and 2147483647",
+        reason: "value must be an integer between 1 and 9007199254740991",
       });
     });
   });

@@ -15436,6 +15436,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "COST_USD_NANOS",
+              "exportKind": "named",
+              "source": "./libs/types",
+              "declarationKind": "const"
+            },
+            {
               "name": "COST_USD",
               "exportKind": "named",
               "source": "./libs/types",
@@ -17213,6 +17219,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "widenMeteringIntegersPostgres",
+              "exportKind": "declaration",
+              "source": "./migrations/widenMeteringIntegers",
+              "declarationKind": "function"
+            },
+            {
               "name": "DrizzleMeterRepository",
               "exportKind": "named",
               "source": "./DrizzleMeterRepository",
@@ -17250,6 +17262,12 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "MeteringIntegerMigrationClient",
+              "exportKind": "declaration",
+              "source": "./migrations/widenMeteringIntegers",
+              "declarationKind": "type"
+            },
             {
               "name": "MeteringMigrationClient",
               "exportKind": "declaration",

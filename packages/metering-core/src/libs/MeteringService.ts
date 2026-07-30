@@ -70,7 +70,7 @@ export class MeteringService {
    * @throws DuplicateRecordProblem 중복 idempotencyKey 시
    * @throws InvalidMeterProblem meter 없을 시
    * @throws InvalidUsageEnvelopeProblem typed usage envelope이 meter 계약과 일치하지 않을 시
-   * @throws InvalidUsageValueProblem value가 지원되는 양의 32-bit 정수가 아닐 시
+   * @throws InvalidUsageValueProblem value가 1부터 Number.MAX_SAFE_INTEGER까지의 정수가 아닐 시
    */
   async record<Meter extends MeterRef>(
     meter: Meter,
@@ -82,7 +82,7 @@ export class MeteringService {
    * @throws QuotaExceededProblem quota 초과 시 (allowOverQuota=false)
    * @throws DuplicateRecordProblem 중복 idempotencyKey 시
    * @throws InvalidMeterProblem meter 없을 시
-   * @throws InvalidUsageValueProblem value가 지원되는 양의 32-bit 정수가 아닐 시
+   * @throws InvalidUsageValueProblem value가 1부터 Number.MAX_SAFE_INTEGER까지의 정수가 아닐 시
    */
   async record(options: RecordOptions): Promise<UsageRecord>;
   async record<Meter extends MeterRef>(

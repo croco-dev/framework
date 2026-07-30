@@ -673,6 +673,34 @@ describe("DrizzleMeterRepository", () => {
       expect(JSON.parse(result.metadata)).toEqual({ route: "/generate" });
     });
 
+    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+      "should reject invalid usage value %s before writing any batch record",
+      async (value) => {
+        await expect(
+          repository.saveUsageRecords([
+            {
+              id: "valid-record",
+              tenantId: "tenant-1",
+              meterId: "api_calls",
+              value: 1,
+              timestamp: new Date(),
+              idempotencyKey: "valid-idem",
+            },
+            {
+              id: "invalid-record",
+              tenantId: "tenant-1",
+              meterId: "api_calls",
+              value,
+              timestamp: new Date(),
+              idempotencyKey: "invalid-idem",
+            },
+          ]),
+        ).rejects.toMatchObject({ code: "metering/invalid-usage-value" });
+
+        expect(sqlite.prepare("SELECT * FROM usage_records").all()).toHaveLength(0);
+      },
+    );
+
     it.each([
       "GelJson",
       "MySqlJson",

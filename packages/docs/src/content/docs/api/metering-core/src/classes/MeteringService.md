@@ -39,7 +39,7 @@ Usage Metering 핵심 서비스
 
 `Promise`\<[`BillableUsageJournalDiagnostics`](/api/metering-core/src/type-aliases/billableusagejournaldiagnostics/) \| `null`\>
 
-***
+---
 
 ### getBillableUsageRequirement()
 
@@ -59,7 +59,7 @@ Usage Metering 핵심 서비스
 
 `"unknown"` \| `"local"` \| `"required"`
 
-***
+---
 
 ### getUsage()
 
@@ -77,7 +77,7 @@ Usage Metering 핵심 서비스
 
 `Promise`\<`number`\>
 
-***
+---
 
 ### record()
 
@@ -91,7 +91,7 @@ Usage Metering 핵심 서비스
 
 ###### Meter
 
-`Meter` *extends* [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
+`Meter` _extends_ [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
 
 ##### Parameters
 
@@ -123,6 +123,10 @@ InvalidMeterProblem meter 없을 시
 
 InvalidUsageEnvelopeProblem typed usage envelope이 meter 계약과 일치하지 않을 시
 
+##### Throws
+
+InvalidUsageValueProblem value가 1부터 Number.MAX_SAFE_INTEGER까지의 정수가 아닐 시
+
 #### Call Signature
 
 > **record**(`options`): `Promise`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/)\>
@@ -151,7 +155,11 @@ DuplicateRecordProblem 중복 idempotencyKey 시
 
 InvalidMeterProblem meter 없을 시
 
-***
+##### Throws
+
+InvalidUsageValueProblem value가 1부터 Number.MAX_SAFE_INTEGER까지의 정수가 아닐 시
+
+---
 
 ### resolveBillableUsageRequirement()
 

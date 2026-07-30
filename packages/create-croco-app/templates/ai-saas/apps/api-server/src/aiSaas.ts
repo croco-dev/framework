@@ -2,7 +2,7 @@ import { planVersionRef } from "@croco/billing-core";
 import { InMemoryLlmModel, InMemoryLlmRegistry, LlmService, type LlmUsage } from "@croco/llm-core";
 import {
   COMPLETION_TOKENS,
-  COST_USD,
+  COST_USD_NANOS,
   EMBEDDING_TOKENS,
   LlmMeteringService,
   PROMPT_TOKENS,
@@ -315,12 +315,13 @@ export class AiSaasService {
 
     const plan = await this.resolvePlan(tenantId);
     await this.registerAiMeters(tenantId, plan);
-    const [promptTokens, completionTokens, embeddingTokens, costUsd] = await Promise.all([
+    const [promptTokens, completionTokens, embeddingTokens, costUsdNanos] = await Promise.all([
       this.readUsage(tenantId, PROMPT_TOKENS),
       this.readUsage(tenantId, COMPLETION_TOKENS),
       this.readUsage(tenantId, EMBEDDING_TOKENS),
-      this.readUsage(tenantId, COST_USD),
+      this.readUsage(tenantId, COST_USD_NANOS),
     ]);
+    const costUsd = costUsdNanos / 1_000_000_000;
     const totalTokens = promptTokens + completionTokens + embeddingTokens;
     const remainingTokens = Math.max(0, plan.monthlyTokenBudget - totalTokens);
     const remainingCostUsd = Math.max(0, plan.monthlyCostBudgetUsd - costUsd);
@@ -404,11 +405,11 @@ export class AiSaasService {
       }),
       this.saasRuntime.meterRegistry.register({
         tenantId,
-        meterId: COST_USD,
+        meterId: COST_USD_NANOS,
         type: "CUSTOM_EVENT",
-        quota: plan.monthlyCostBudgetUsd,
+        quota: plan.monthlyCostBudgetUsd * 1_000_000_000,
         allowOverQuota: false,
-        metadata: { unit: "usd", source: "ai-saas", planId: plan.id },
+        metadata: { unit: "usd_nanodollar", source: "ai-saas", planId: plan.id },
       }),
     ]);
   }
@@ -420,7 +421,11 @@ export class AiSaasService {
     }
 
     if (usage.usage.costUsd >= plan.monthlyCostBudgetUsd) {
-      throw new AiQuotaExceededProblem(COST_USD, usage.usage.costUsd, plan.monthlyCostBudgetUsd);
+      throw new AiQuotaExceededProblem(
+        COST_USD_NANOS,
+        usage.usage.costUsd * 1_000_000_000,
+        plan.monthlyCostBudgetUsd * 1_000_000_000,
+      );
     }
   }
 

@@ -68,7 +68,7 @@ describe("LlmMeteringProblems", () => {
     it("should expose failed operation and meter ids", () => {
       const problem = new LlmMeteringRecordFailedProblem(
         "generate",
-        ["llm.prompt_tokens", "llm.cost_usd"],
+        ["llm.prompt_tokens", "llm.cost_usd_nanos"],
         new Error("boom"),
       );
 
@@ -77,7 +77,7 @@ describe("LlmMeteringProblems", () => {
       expect(problem.status).toBe(500);
       expect(problem.detail).toContain("operation 'generate'");
       expect(problem.extensions?.operation).toBe("generate");
-      expect(problem.extensions?.meterIds).toEqual(["llm.prompt_tokens", "llm.cost_usd"]);
+      expect(problem.extensions?.meterIds).toEqual(["llm.prompt_tokens", "llm.cost_usd_nanos"]);
       expect(problem.cause).toBeInstanceOf(Error);
       expect((problem.cause as Error).message).toBe("boom");
     });

@@ -42,7 +42,7 @@ await meteringService.record(aiTokens, {
 `billing: "required"` meter는 비어 있지 않은 `eventId`를 타입과 런타임에서 요구합니다. dimension은 정의된
 key와 enum 값만 허용되며 provider billing dimension과 자유 형식 application `metadata`는 별도 필드로
 유지됩니다. `defineMeter()`가 반환하는 descriptor는 함수 값을 포함하지 않고 결정적으로 직렬화됩니다.
-모든 meter의 `value`는 모든 지원 storage adapter가 보존할 수 있는 1 이상 2,147,483,647 이하의 정수여야
+모든 meter의 `value`는 모든 지원 storage adapter가 보존할 수 있는 1 이상 `Number.MAX_SAFE_INTEGER` 이하의 정수여야
 합니다. 소수, 0, 음수, 비유한 수, 이 범위를 벗어난 값은 idempotency key를 획득하거나 usage를 저장하기
 전에 `InvalidUsageValueProblem`으로 거부됩니다.
 

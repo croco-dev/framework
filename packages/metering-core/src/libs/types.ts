@@ -36,7 +36,7 @@ export type UsageRecord = {
   id: string;
   tenantId: string;
   meterId: string;
-  /** Usage amount from 1 through 2_147_483_647, supported by every storage adapter. */
+  /** Usage amount from 1 through Number.MAX_SAFE_INTEGER, supported by every storage adapter. */
   value: number;
   timestamp: Date;
   idempotencyKey: string;
@@ -53,7 +53,7 @@ export type UsageRecord = {
 export type RecordOptions = {
   tenantId: string;
   meterId: string;
-  /** Optional usage amount from 1 through 2_147_483_647. Defaults to 1. */
+  /** Optional usage amount from 1 through Number.MAX_SAFE_INTEGER. Defaults to 1. */
   value?: number;
   idempotencyKey?: string;
   metadata?: Record<string, unknown>;

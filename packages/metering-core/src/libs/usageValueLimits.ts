@@ -1,1 +1,1 @@
-export const MAX_USAGE_VALUE = 2_147_483_647;
+export const MAX_USAGE_VALUE = Number.MAX_SAFE_INTEGER;

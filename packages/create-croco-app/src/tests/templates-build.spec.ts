@@ -1204,7 +1204,7 @@ function checkAiSaasStructure() {
 
   checkFileContains("ai-saas", ["apps", "api-server", "src", "app.ts.hbs"], /AiController/);
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /PROMPT_TOKENS/);
-  checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /COST_USD/);
+  checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /COST_USD_NANOS/);
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /buildAiIdempotencyKey/);
   checkFileContains(
     "ai-saas",

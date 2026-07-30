@@ -102,6 +102,8 @@ await addUsageEnvelopeFieldsSqlite(migrationClient);
 ```
 
 PostgreSQL을 사용하는 경우에는 대신 `addUsageEnvelopeFieldsPostgres(postgresClient)`를 실행합니다.
+safe-integer usage 또는 고정 소수점 quota를 사용하려면 `widenMeteringIntegersPostgres(postgresClient)`도
+실행해 `usage_records.value`와 `meters.quota`를 `BIGINT`로 확장합니다.
 
 typed usage에 `eventId` 또는 `dimensions`가 있지만 해당 mapping이 없으면
 `UsageEnvelopeConfigurationProblem`으로 기록을 거부하며, billing field를 조용히 버리지 않습니다.

@@ -1,5 +1,5 @@
 import { and, eq, getTableColumns } from "drizzle-orm";
-import { MeterRepository } from "@croco/metering-core";
+import { InvalidUsageValueProblem, MeterRepository } from "@croco/metering-core";
 import { ProblemFactory } from "@croco/problems-core";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -183,6 +183,12 @@ export class DrizzleMeterRepository extends MeterRepository {
   async saveUsageRecords(records: UsageRecord[]): Promise<void> {
     if (records.length === 0) {
       return;
+    }
+
+    for (const record of records) {
+      if (!Number.isSafeInteger(record.value) || record.value <= 0) {
+        throw new InvalidUsageValueProblem(record.value);
+      }
     }
 
     const client = this.getClient();

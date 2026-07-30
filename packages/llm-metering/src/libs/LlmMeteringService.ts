@@ -11,15 +11,18 @@ import {
 } from "./problems/LlmMeteringProblems";
 import {
   COMPLETION_TOKENS,
-  COST_USD,
+  COST_USD_NANOS,
   EMBEDDING_TOKENS,
   PROMPT_TOKENS,
   type LlmEmbeddingUsageRecord,
   type LlmMeteringFailurePolicy,
   type LlmMeterUsageDelta,
+  type ModelPricing,
   type LlmQuotaPolicy,
   type LlmUsageRecord,
 } from "./types";
+
+const USD_NANOS_PER_USD = 1_000_000_000;
 
 type MeterRecordAttempt = {
   meterId: string;
@@ -97,7 +100,7 @@ export class LlmMeteringService {
    * 텍스트 생성 사용량 기록
    *
    * @description
-   * - 3개 meter 동시 기록: prompt_tokens, completion_tokens, cost_usd
+   * - 3개 meter 동시 기록: prompt_tokens, completion_tokens, cost_usd_nanos
    * - 멱등성 보장 (idempotencyKey:suffix)
    * - accuracy 플래그 전파 (reported|estimated)
    */
@@ -137,24 +140,34 @@ export class LlmMeteringService {
     };
     this.assertValidMeterValue(PROMPT_TOKENS, usage.promptTokens, operationType);
     this.assertValidMeterValue(COMPLETION_TOKENS, usage.completionTokens, operationType);
-    this.assertValidMeterValue(COST_USD, costUsd, operationType);
-    const meterDeltas: LlmMeterUsageDelta[] = [
-      {
+    const costUsdNanos = this.calculateUsdNanos(
+      pricing,
+      usage.promptTokens,
+      usage.completionTokens,
+      operationType,
+    );
+    const meterDeltas: LlmMeterUsageDelta[] = [];
+    if (usage.promptTokens > 0) {
+      meterDeltas.push({
         meterId: PROMPT_TOKENS,
         value: usage.promptTokens,
         operation: baseMetadata.operationType,
-      },
-      {
+      });
+    }
+    if (usage.completionTokens > 0) {
+      meterDeltas.push({
         meterId: COMPLETION_TOKENS,
         value: usage.completionTokens,
         operation: baseMetadata.operationType,
-      },
-      {
-        meterId: COST_USD,
-        value: costUsd,
+      });
+    }
+    if (costUsdNanos > 0) {
+      meterDeltas.push({
+        meterId: COST_USD_NANOS,
+        value: costUsdNanos,
         operation: baseMetadata.operationType,
-      },
-    ];
+      });
+    }
 
     await this.enforceQuota({
       tenantId,
@@ -166,9 +179,9 @@ export class LlmMeteringService {
       metadata: baseMetadata,
     });
 
-    const recordAttempts: MeterRecordAttempt[] = [
-      // Prompt tokens
-      {
+    const recordAttempts: MeterRecordAttempt[] = [];
+    if (usage.promptTokens > 0) {
+      recordAttempts.push({
         meterId: PROMPT_TOKENS,
         promise: this.meteringService.record({
           tenantId,
@@ -177,10 +190,10 @@ export class LlmMeteringService {
           idempotencyKey: `${idempotencyKey}:prompt`,
           metadata: baseMetadata,
         }),
-      },
-
-      // Completion tokens
-      {
+      });
+    }
+    if (usage.completionTokens > 0) {
+      recordAttempts.push({
         meterId: COMPLETION_TOKENS,
         promise: this.meteringService.record({
           tenantId,
@@ -189,20 +202,20 @@ export class LlmMeteringService {
           idempotencyKey: `${idempotencyKey}:completion`,
           metadata: baseMetadata,
         }),
-      },
-
-      // Cost USD
-      {
-        meterId: COST_USD,
+      });
+    }
+    if (costUsdNanos > 0) {
+      recordAttempts.push({
+        meterId: COST_USD_NANOS,
         promise: this.meteringService.record({
           tenantId,
-          meterId: COST_USD,
-          value: costUsd,
+          meterId: COST_USD_NANOS,
+          value: costUsdNanos,
           idempotencyKey: `${idempotencyKey}:cost`,
           metadata: baseMetadata,
         }),
-      },
-    ];
+      });
+    }
 
     await this.assertRecordAttempts(recordAttempts, baseMetadata.operationType);
 
@@ -231,7 +244,7 @@ export class LlmMeteringService {
    * 임베딩 사용량 기록
    *
    * @description
-   * - 2개 meter 기록: embedding_tokens, cost_usd
+   * - 2개 meter 기록: embedding_tokens, cost_usd_nanos
    * - embed/embedMany 전용
    */
   async recordEmbeddingUsage(event: {
@@ -273,19 +286,27 @@ export class LlmMeteringService {
       operationType: "embed",
     };
     this.assertValidMeterValue(EMBEDDING_TOKENS, embeddingTokens, baseMetadata.operationType);
-    this.assertValidMeterValue(COST_USD, costUsd, baseMetadata.operationType);
-    const meterDeltas: LlmMeterUsageDelta[] = [
-      {
+    const costUsdNanos = this.calculateUsdNanos(
+      pricing,
+      embeddingTokens,
+      0,
+      baseMetadata.operationType,
+    );
+    const meterDeltas: LlmMeterUsageDelta[] = [];
+    if (embeddingTokens > 0) {
+      meterDeltas.push({
         meterId: EMBEDDING_TOKENS,
         value: embeddingTokens,
         operation: baseMetadata.operationType,
-      },
-      {
-        meterId: COST_USD,
-        value: costUsd,
+      });
+    }
+    if (costUsdNanos > 0) {
+      meterDeltas.push({
+        meterId: COST_USD_NANOS,
+        value: costUsdNanos,
         operation: baseMetadata.operationType,
-      },
-    ];
+      });
+    }
 
     await this.enforceQuota({
       tenantId,
@@ -297,31 +318,32 @@ export class LlmMeteringService {
       metadata: baseMetadata,
     });
 
-    await this.assertRecordAttempts(
-      [
-        {
+    const recordAttempts: MeterRecordAttempt[] = [];
+    if (embeddingTokens > 0) {
+      recordAttempts.push({
+        meterId: EMBEDDING_TOKENS,
+        promise: this.meteringService.record({
+          tenantId,
           meterId: EMBEDDING_TOKENS,
-          promise: this.meteringService.record({
-            tenantId,
-            meterId: EMBEDDING_TOKENS,
-            value: embeddingTokens,
-            idempotencyKey: `${idempotencyKey}:tokens`,
-            metadata: baseMetadata,
-          }),
-        },
-        {
-          meterId: COST_USD,
-          promise: this.meteringService.record({
-            tenantId,
-            meterId: COST_USD,
-            value: costUsd,
-            idempotencyKey: `${idempotencyKey}:cost`,
-            metadata: baseMetadata,
-          }),
-        },
-      ],
-      baseMetadata.operationType,
-    );
+          value: embeddingTokens,
+          idempotencyKey: `${idempotencyKey}:tokens`,
+          metadata: baseMetadata,
+        }),
+      });
+    }
+    if (costUsdNanos > 0) {
+      recordAttempts.push({
+        meterId: COST_USD_NANOS,
+        promise: this.meteringService.record({
+          tenantId,
+          meterId: COST_USD_NANOS,
+          value: costUsdNanos,
+          idempotencyKey: `${idempotencyKey}:cost`,
+          metadata: baseMetadata,
+        }),
+      });
+    }
+    await this.assertRecordAttempts(recordAttempts, baseMetadata.operationType);
 
     // 4. LlmEmbeddingUsageRecord 생성
     const usageRecord: LlmEmbeddingUsageRecord = {
@@ -343,7 +365,7 @@ export class LlmMeteringService {
    *
    * @description
    * - PricingTable 조회 → 비용 계산
-   * - cost_usd meter 기록
+   * - cost_usd_nanos meter 기록
    */
   async trackCost(event: LlmUsageEvent): Promise<LlmCostRecord> {
     const { tenantId, modelId, provider, usage, idempotencyKey } = event;
@@ -370,22 +392,29 @@ export class LlmMeteringService {
       pricing,
     );
 
-    this.assertValidMeterValue(COST_USD, costUsd, "cost_tracking");
+    const costUsdNanos = this.calculateUsdNanos(
+      pricing,
+      usage.promptTokens,
+      usage.completionTokens,
+      "cost_tracking",
+    );
+    const meterDeltas: LlmMeterUsageDelta[] = [];
+    if (costUsdNanos > 0) {
+      meterDeltas.push({
+        meterId: COST_USD_NANOS,
+        value: costUsdNanos,
+        operation: "cost_tracking",
+      });
+    }
 
-    // 3. cost_usd meter 기록
+    // 3. cost_usd_nanos meter 기록
     await this.enforceQuota({
       tenantId,
       modelId,
       provider,
       operation: "cost_tracking",
       idempotencyKey,
-      meters: [
-        {
-          meterId: COST_USD,
-          value: costUsd,
-          operation: "cost_tracking",
-        },
-      ],
+      meters: meterDeltas,
       metadata: {
         provider,
         model: modelId,
@@ -394,26 +423,25 @@ export class LlmMeteringService {
       },
     });
 
-    await this.assertRecordAttempts(
-      [
-        {
-          meterId: COST_USD,
-          promise: this.meteringService.record({
-            tenantId,
-            meterId: COST_USD,
-            value: costUsd,
-            idempotencyKey: `${idempotencyKey}:cost`,
-            metadata: {
-              provider,
-              model: modelId,
-              accuracy: usage.accuracy ?? "UNKNOWN",
-              operationType: "cost_tracking",
-            },
-          }),
-        },
-      ],
-      "cost_tracking",
-    );
+    const recordAttempts: MeterRecordAttempt[] = [];
+    if (costUsdNanos > 0) {
+      recordAttempts.push({
+        meterId: COST_USD_NANOS,
+        promise: this.meteringService.record({
+          tenantId,
+          meterId: COST_USD_NANOS,
+          value: costUsdNanos,
+          idempotencyKey: `${idempotencyKey}:cost`,
+          metadata: {
+            provider,
+            model: modelId,
+            accuracy: usage.accuracy ?? "UNKNOWN",
+            operationType: "cost_tracking",
+          },
+        }),
+      });
+    }
+    await this.assertRecordAttempts(recordAttempts, "cost_tracking");
 
     return {
       tenantId,
@@ -486,7 +514,7 @@ export class LlmMeteringService {
   }
 
   private assertValidMeterValue(meterId: string, value: number, operation: string): void {
-    if (Number.isFinite(value) && value >= 0) {
+    if (Number.isSafeInteger(value) && value >= 0) {
       return;
     }
 
@@ -495,6 +523,61 @@ export class LlmMeteringService {
       [meterId],
       new TypeError(`Invalid LLM metering value for '${meterId}': ${String(value)}`),
     );
+  }
+
+  private calculateUsdNanos(
+    pricing: ModelPricing,
+    inputTokens: number,
+    outputTokens: number,
+    operation: string,
+  ): number {
+    if (
+      !Number.isSafeInteger(inputTokens) ||
+      inputTokens < 0 ||
+      !Number.isSafeInteger(outputTokens) ||
+      outputTokens < 0
+    ) {
+      throw new LlmMeteringRecordFailedProblem(
+        operation,
+        [COST_USD_NANOS],
+        new TypeError("LLM token counts must be non-negative safe integers"),
+      );
+    }
+    const inputPriceNanos = this.toExactUsdNanos(pricing.inputPricePerToken);
+    const outputPriceNanos = this.toExactUsdNanos(pricing.outputPricePerToken);
+    const total = inputPriceNanos * BigInt(inputTokens) + outputPriceNanos * BigInt(outputTokens);
+    if (total >= 0 && total <= BigInt(Number.MAX_SAFE_INTEGER)) {
+      return Number(total);
+    }
+
+    throw new LlmMeteringRecordFailedProblem(
+      operation,
+      [COST_USD_NANOS],
+      new TypeError(
+        `LLM cost must be exactly representable as non-negative safe-integer USD nanodollars`,
+      ),
+    );
+  }
+
+  private toExactUsdNanos(priceUsd: number): bigint {
+    const match = /^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/.exec(String(priceUsd).toLowerCase());
+    if (!match) {
+      return BigInt(Number.MAX_SAFE_INTEGER) + BigInt(1);
+    }
+
+    const integerDigits = match[1] ?? "0";
+    const fractionalDigits = match[2] ?? "";
+    const exponent = Number(match[3] ?? "0");
+    const digits = BigInt(`${integerDigits}${fractionalDigits}`);
+    const scale = exponent - fractionalDigits.length + Math.log10(USD_NANOS_PER_USD);
+    if (scale >= 0) {
+      return digits * BigInt(10) ** BigInt(scale);
+    }
+
+    const divisor = BigInt(10) ** BigInt(-scale);
+    return digits % divisor === BigInt(0)
+      ? digits / divisor
+      : BigInt(Number.MAX_SAFE_INTEGER) + BigInt(1);
   }
 
   private async assertRecordAttempts(

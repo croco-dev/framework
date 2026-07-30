@@ -127,7 +127,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
 
   afterAll(async () => {
     await dispose?.();
-  });
+  }, 180_000);
 
   function createService(): MeteringService {
     if (!connection) {
@@ -275,6 +275,91 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
 
     expect(await connection.client.zcard(usageKey)).toBe(1);
     expect(await connection.client.exists(dedupeKey)).toBe(1);
+  });
+
+  it.each(["0.1", "1.9", "9007199254740992"])(
+    "rejects malformed legacy quota member %s without committing usage or dedupe",
+    async (legacyValue) => {
+      if (!connection) {
+        throw new Error("Redis test resource did not start");
+      }
+
+      const usageKey = "usage2:tenant-atomic-record:api_calls:2024-01";
+      const dedupeKey = "idem2:record:tenant-atomic-record:api_calls:legacy-member";
+      const storage = new RedisUsageStorage(createRedisClient(connection));
+      const usageRecord = createUsageRecord("legacy-member");
+      await connection.client.zadd(
+        usageKey,
+        usageRecord.timestamp.getTime(),
+        `legacy:${legacyValue}`,
+      );
+
+      const quotaCheck = storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 100,
+        allowOverQuota: false,
+        usageRecord,
+      });
+
+      await expect(quotaCheck).rejects.toMatchObject({
+        code: "metering/redis-error",
+        extensions: { operation: "EVAL" },
+      });
+      expect(await connection.client.zcard(usageKey)).toBe(1);
+      expect(await connection.client.exists(dedupeKey)).toBe(0);
+    },
+  );
+
+  it("computes an exact quota total across valid integer members", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const usageKey = "usage2:tenant-atomic-record:api_calls:2024-01";
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usageRecord = createUsageRecord("integer-total");
+    await connection.client.zadd(usageKey, usageRecord.timestamp.getTime() - 2, "legacy-1:3");
+    await connection.client.zadd(usageKey, usageRecord.timestamp.getTime() - 1, "legacy-2:7");
+
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 100,
+        allowOverQuota: false,
+        usageRecord,
+      }),
+    ).resolves.toEqual({ exceeded: false, newUsage: 15 });
+    expect(await connection.client.zcard(usageKey)).toBe(3);
+  });
+
+  it("replays the maximum safe-integer quota result exactly", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usageRecord = { ...createUsageRecord("max-safe-replay"), value: Number.MAX_SAFE_INTEGER };
+    const options = {
+      tenantId: usageRecord.tenantId,
+      meterId: usageRecord.meterId,
+      value: usageRecord.value,
+      quota: Number.MAX_SAFE_INTEGER,
+      allowOverQuota: false,
+      usageRecord,
+    };
+
+    await expect(storage.checkAndRecordWithinQuota(options)).resolves.toEqual({
+      exceeded: false,
+      newUsage: Number.MAX_SAFE_INTEGER,
+    });
+    await expect(storage.checkAndRecordWithinQuota(options)).resolves.toEqual({
+      exceeded: false,
+      newUsage: Number.MAX_SAFE_INTEGER,
+    });
   });
 
   it("atomically fences concurrent billable delivery claims and replays an expired lease", async () => {

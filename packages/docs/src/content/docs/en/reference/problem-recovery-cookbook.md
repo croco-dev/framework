@@ -346,6 +346,7 @@ This cookbook documents 622 public Croco Problem codes. The deterministic JSON r
 | [`metering/invalid-meter-dimension`](#metering-invalid-meter-dimension)                                                               | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`metering/invalid-usage-envelope`](#metering-invalid-usage-envelope)                                                                 | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`metering/invalid-usage-query`](#metering-invalid-usage-query)                                                                       | ValidationError       |    422 | not-retryable | public        | active    |       1 |
+| [`metering/invalid-usage-value`](#metering-invalid-usage-value)                                                                       | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`metering/quota-exceeded`](#metering-quota-exceeded)                                                                                 | TooManyRequests       |    429 | retryable     | safe-message  | active    |       1 |
 | [`metering/redis-error`](#metering-redis-error)                                                                                       | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`metering/transition-conflict`](#metering-transition-conflict)                                                                       | Conflict              |    409 | conditional   | safe-message  | active    |       1 |
@@ -6631,6 +6632,24 @@ Sources:
 Sources:
 
 - `packages/metering-core/src/libs/problems/InvalidUsageQueryProblem.ts:6:5` (problem-constructor)
+
+<a id="metering-invalid-usage-value"></a>
+
+## `metering/invalid-usage-value`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/metering-core/src/libs/problems/InvalidUsageValueProblem.ts:7:5` (problem-constructor)
 
 <a id="metering-quota-exceeded"></a>
 

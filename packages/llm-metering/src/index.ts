@@ -87,4 +87,10 @@ export type {
 /**
  * 기본 meter 이름 상수입니다.
  */
-export { COMPLETION_TOKENS, COST_USD, EMBEDDING_TOKENS, PROMPT_TOKENS } from "./libs/types";
+export {
+  COMPLETION_TOKENS,
+  COST_USD,
+  COST_USD_NANOS,
+  EMBEDDING_TOKENS,
+  PROMPT_TOKENS,
+} from "./libs/types";

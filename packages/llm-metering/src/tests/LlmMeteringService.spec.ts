@@ -93,7 +93,8 @@ describe("LlmMeteringService", () => {
       expect(mockMeteringCore.record).toHaveBeenCalledWith(
         expect.objectContaining({
           tenantId: "tenant-123",
-          meterId: "llm.cost_usd",
+          meterId: "llm.cost_usd_nanos",
+          value: 6_000_000,
           idempotencyKey: "test-key-123:cost",
         }),
       );
@@ -154,7 +155,7 @@ describe("LlmMeteringService", () => {
         code: "llm-metering/record-failed",
         extensions: {
           operation: "generate",
-          meterIds: ["llm.prompt_tokens", "llm.cost_usd"],
+          meterIds: ["llm.prompt_tokens", "llm.cost_usd_nanos"],
         },
       });
     });
@@ -220,7 +221,7 @@ describe("LlmMeteringService", () => {
           meters: [
             { meterId: "llm.prompt_tokens", value: 105, operation: "generate" },
             { meterId: "llm.completion_tokens", value: 5, operation: "generate" },
-            { meterId: "llm.cost_usd", value: expect.any(Number), operation: "generate" },
+            { meterId: "llm.cost_usd_nanos", value: 3_450_000, operation: "generate" },
           ],
         }),
       );
@@ -320,7 +321,7 @@ describe("LlmMeteringService", () => {
       expect(mockMeteringCore.record).toHaveBeenCalledWith(
         expect.objectContaining({
           tenantId: "tenant-123",
-          meterId: "llm.cost_usd",
+          meterId: "llm.cost_usd_nanos",
           idempotencyKey: "embed-key-123:cost",
         }),
       );
@@ -437,8 +438,8 @@ describe("LlmMeteringService", () => {
       expect(mockMeteringCore.record).toHaveBeenCalledWith(
         expect.objectContaining({
           tenantId: "tenant-123",
-          meterId: "llm.cost_usd",
-          value: expect.any(Number),
+          meterId: "llm.cost_usd_nanos",
+          value: 60_000_000,
         }),
       );
     });
@@ -492,7 +493,162 @@ describe("LlmMeteringService", () => {
       const costRecord = await isolatedMeteringService.trackCost(usageEvent);
 
       expect(costRecord.costUsd).toBe(8);
+      expect(mockMeteringCore.record).toHaveBeenCalledWith(
+        expect.objectContaining({ meterId: "llm.cost_usd_nanos", value: 8_000_000_000 }),
+      );
     });
+
+    it("should preserve large exact costs as safe-integer nanodollars", async () => {
+      const pricingTable = new PricingTable();
+      pricingTable.setPrice("custom", "large-cost", {
+        inputPricePerToken: 3,
+        outputPricePerToken: 0,
+        currency: "USD",
+      });
+      const isolatedMeteringService = new LlmMeteringService({
+        meteringService: mockMeteringCore,
+        pricingTable,
+      });
+
+      await isolatedMeteringService.trackCost({
+        tenantId: "tenant-123",
+        modelId: "large-cost",
+        provider: "custom",
+        usage: { promptTokens: 1, completionTokens: 0, totalTokens: 1 },
+        idempotencyKey: "large-cost",
+      });
+
+      expect(mockMeteringCore.record).toHaveBeenCalledWith(
+        expect.objectContaining({ value: 3_000_000_000, idempotencyKey: "large-cost:cost" }),
+      );
+    });
+
+    it("should reject costs that cannot be represented exactly as USD nanodollars", async () => {
+      const pricingTable = new PricingTable();
+      pricingTable.setPrice("custom", "sub-nanodollar", {
+        inputPricePerToken: 0.0000000001,
+        outputPricePerToken: 0,
+        currency: "USD",
+      });
+      const isolatedMeteringService = new LlmMeteringService({
+        meteringService: mockMeteringCore,
+        pricingTable,
+      });
+
+      await expect(
+        isolatedMeteringService.trackCost({
+          tenantId: "tenant-123",
+          modelId: "sub-nanodollar",
+          provider: "custom",
+          usage: { promptTokens: 1, completionTokens: 0, totalTokens: 1 },
+          idempotencyKey: "sub-nanodollar-cost",
+        }),
+      ).rejects.toMatchObject({
+        code: "llm-metering/record-failed",
+        extensions: { meterIds: ["llm.cost_usd_nanos"] },
+      });
+      expect(mockMeteringCore.record).not.toHaveBeenCalled();
+    });
+
+    it("should not round fractional nanodollars at large magnitudes", async () => {
+      const pricingTable = new PricingTable();
+      pricingTable.setPrice("custom", "fractional-large-cost", {
+        inputPricePerToken: 2_000_000.0000000005,
+        outputPricePerToken: 0,
+        currency: "USD",
+      });
+      const isolatedMeteringService = new LlmMeteringService({
+        meteringService: mockMeteringCore,
+        pricingTable,
+      });
+
+      await expect(
+        isolatedMeteringService.trackCost({
+          tenantId: "tenant-123",
+          modelId: "fractional-large-cost",
+          provider: "custom",
+          usage: { promptTokens: 1, completionTokens: 0, totalTokens: 1 },
+          idempotencyKey: "fractional-large-cost",
+        }),
+      ).rejects.toMatchObject({ code: "llm-metering/record-failed" });
+      expect(mockMeteringCore.record).not.toHaveBeenCalled();
+    });
+
+    it("should omit zero-valued token and cost meters", async () => {
+      const pricingTable = new PricingTable();
+      pricingTable.setPrice("custom", "free-output", {
+        inputPricePerToken: 0.000001,
+        outputPricePerToken: 0,
+        currency: "USD",
+      });
+      const isolatedMeteringService = new LlmMeteringService({
+        meteringService: mockMeteringCore,
+        pricingTable,
+      });
+
+      await isolatedMeteringService.recordUsage({
+        tenantId: "tenant-123",
+        modelId: "free-output",
+        provider: "custom",
+        usage: { promptTokens: 1, completionTokens: 0, totalTokens: 1 },
+        idempotencyKey: "zero-components",
+      });
+
+      expect(mockMeteringCore.record).toHaveBeenCalledTimes(2);
+      expect(mockMeteringCore.record).not.toHaveBeenCalledWith(
+        expect.objectContaining({ meterId: "llm.completion_tokens" }),
+      );
+    });
+
+    it("should omit a zero cost from quota policy and persistence", async () => {
+      const pricingTable = new PricingTable();
+      pricingTable.setPrice("custom", "free-model", {
+        inputPricePerToken: 0,
+        outputPricePerToken: 0,
+        currency: "USD",
+      });
+      const quotaPolicy = { enforce: vi.fn() };
+      const isolatedMeteringService = new LlmMeteringService({
+        meteringService: mockMeteringCore,
+        pricingTable,
+        quotaPolicy,
+      });
+
+      await isolatedMeteringService.trackCost({
+        tenantId: "tenant-123",
+        modelId: "free-model",
+        provider: "custom",
+        usage: { promptTokens: 1, completionTokens: 0, totalTokens: 1 },
+        idempotencyKey: "free-model-cost",
+      });
+
+      expect(quotaPolicy.enforce).toHaveBeenCalledWith(expect.objectContaining({ meters: [] }));
+      expect(mockMeteringCore.record).not.toHaveBeenCalled();
+    });
+
+    it.each([1.9, Number.MAX_SAFE_INTEGER + 1])(
+      "should reject invalid token value %s before quota or persistence",
+      async (promptTokens) => {
+        const quotaPolicy = { enforce: vi.fn() };
+        const isolatedMeteringService = new LlmMeteringService({
+          meteringService: mockMeteringCore,
+          quotaPolicy,
+        });
+
+        await expect(
+          isolatedMeteringService.recordUsage({
+            tenantId: "tenant-123",
+            modelId: "gpt-4",
+            provider: "openai",
+            usage: { promptTokens, completionTokens: 1, totalTokens: promptTokens + 1 },
+            idempotencyKey: "invalid-token",
+          }),
+        ).rejects.toMatchObject({ code: "llm-metering/record-failed" });
+
+        expect(quotaPolicy.enforce).not.toHaveBeenCalled();
+        expect(mockMeteringCore.record).not.toHaveBeenCalled();
+      },
+    );
 
     it("should throw when cost metering fails", async () => {
       const usageEvent = {
@@ -531,7 +687,7 @@ describe("LlmMeteringService", () => {
         code: "llm-metering/record-failed",
         extensions: {
           operation: "cost_tracking",
-          meterIds: ["llm.cost_usd"],
+          meterIds: ["llm.cost_usd_nanos"],
         },
       });
 

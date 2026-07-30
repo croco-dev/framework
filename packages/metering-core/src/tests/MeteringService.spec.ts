@@ -188,16 +188,16 @@ describe("MeteringService", () => {
       const result = await service.record({
         tenantId: "tenant-1",
         meterId: "api_calls",
-        value: 2_147_483_647,
+        value: Number.MAX_SAFE_INTEGER,
       });
 
-      expect(result.value).toBe(2_147_483_647);
+      expect(result.value).toBe(Number.MAX_SAFE_INTEGER);
       expect(mockStorage.record).toHaveBeenCalledWith(
-        expect.objectContaining({ value: 2_147_483_647 }),
+        expect.objectContaining({ value: Number.MAX_SAFE_INTEGER }),
       );
     });
 
-    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])(
+    it.each([0.1, 1.9, 0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
       "should reject invalid usage value %s before acquiring idempotency",
       async (value) => {
         const recording = service.record({

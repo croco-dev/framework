@@ -73,10 +73,19 @@ class LlmFacade {
 
 ## 구현 포인트
 
-- 내부적으로 `@croco/metering-core`에 `llm.prompt_tokens`, `llm.completion_tokens`, `llm.cost_usd` 같은 meter를 기록합니다.
+- 내부적으로 `@croco/metering-core`에 `llm.prompt_tokens`, `llm.completion_tokens`, `llm.cost_usd_nanos` 같은 meter를 기록합니다. USD 비용은 손실 없는 정수 계약을 위해 1 USD = 1,000,000,000 nanodollars로 기록하며, nanodollar 단위로 정확히 표현할 수 없는 가격은 기록 전에 거부합니다.
 - 스트리밍 응답과 임베딩 결과 모두 같은 서비스에서 다룰 수 있습니다.
 - `PricingTable.fromRegistry()`로 version/source/effectiveDate가 있는 가격 registry를 주입합니다. 기본 `samplePricingRegistry`는 테스트와 데모용 sample data이며 현재 공급자 가격으로 간주하지 않습니다.
 - `quotaPolicy`는 기록 전 projected usage를 검사합니다. `metering-core` meter quota도 함께 등록하면 기록 중 quota도 fail-closed로 유지됩니다.
+
+### `llm.cost_usd` 마이그레이션
+
+업그레이드 전에 기존 `llm.cost_usd` writer를 모두 중지하고 `llm.cost_usd_nanos` meter를 등록합니다. 기존 USD quota는
+`1_000_000_000`을 곱한 정수 quota로 변환하며, PostgreSQL metering 저장소는 먼저
+`widenMeteringIntegersPostgres()`를 실행합니다. 기존 cost history는 원본 USD 값을 nanodollar 정수로 정확히 변환할 수
+있는 경우에만 새 meter로 backfill하고, 전환 시점 이후에는 두 meter를 동시에 쓰지 않습니다. 읽기 경로도 새 meter로
+전환한 뒤 구 `COST_USD` 상수는 레거시 데이터 식별에만 사용합니다.
+
 - 미터링 실패 정책은 명시적 fail-closed입니다. 현재 지원되는 정책은 `failurePolicy: "fail-closed"`이며, quota policy 또는 meter write가 실패하면 `LlmMeteringRecordFailedProblem`/`LlmQuotaExceededProblem`으로 실패 meter와 quota 정보를 보존합니다.
 - `LlmTelemetryBridge`는 `gen_ai.system`, `gen_ai.request.model`, `gen_ai.usage.prompt_tokens`, `gen_ai.usage.completion_tokens`, `gen_ai.usage.cost_usd`, `gen_ai.client.user`, `gen_ai.usage.accuracy` 속성과 `llm.usage` 이벤트를 기록합니다.
 - 전체 provider/pricing/quota/telemetry 가이드는 [docs/llm-governance.md](../../docs/llm-governance.md)를 참고하세요.

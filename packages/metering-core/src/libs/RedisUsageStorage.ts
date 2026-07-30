@@ -144,7 +144,7 @@ end
 redis.call(
   'SET',
   dedupeKey,
-  'quota:' .. (exceeded and '1' or '0') .. ':' .. tostring(newUsage),
+  'quota:' .. (exceeded and '1' or '0') .. ':' .. string.format('%.0f', newUsage),
   'EX',
   ttlSeconds
 )
