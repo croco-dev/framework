@@ -25677,6 +25677,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "TransactionOutcomeUnknownProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TransactionProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TransactionRollbackConfirmedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TransactionProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "TransactionTimeoutProblem",
               "exportKind": "named",
               "source": "./libs/problems/TransactionProblems",

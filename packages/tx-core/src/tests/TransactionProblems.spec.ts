@@ -14,6 +14,8 @@ import {
   TransactionContextProblem,
   TransactionDecoratorProblem,
   TransactionOutcomeContextProblem,
+  TransactionOutcomeUnknownProblem,
+  TransactionRollbackConfirmedProblem,
 } from "../libs/problems/TransactionProblems";
 
 describe("TransactionProblems", () => {
@@ -118,6 +120,34 @@ describe("TransactionProblems", () => {
           code: "CACHE_REFRESH_FAILED",
         },
       ],
+    });
+  });
+
+  it("should create TransactionOutcomeUnknownProblem with commit-aware metadata", () => {
+    const cause = new Error("adapter failed after cancellation");
+    const problem = new TransactionOutcomeUnknownProblem(50, cause);
+
+    expect(problem.code).toBe("tx-core/transaction-outcome-unknown");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.detail).toBe("Transaction outcome is unknown after the 50ms deadline");
+    expect(problem.cause).toBe(cause);
+    expect(problem.extensions).toEqual({
+      committed: "unknown",
+      timedOut: true,
+      timeoutMs: 50,
+    });
+  });
+
+  it("should create TransactionRollbackConfirmedProblem with rollback metadata", () => {
+    const cause = new Error("transaction deadline exceeded");
+    const problem = new TransactionRollbackConfirmedProblem(cause);
+
+    expect(problem.code).toBe("tx-core/transaction-rollback-confirmed");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.detail).toBe("Transaction rollback completed after cancellation");
+    expect(problem.cause).toBe(cause);
+    expect(problem.extensions).toEqual({
+      committed: false,
     });
   });
 

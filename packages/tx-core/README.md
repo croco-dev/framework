@@ -62,6 +62,14 @@ if (outcome.afterCommit.status === "failed") {
 않으면 해당 옵션을 생략합니다. 잘못된 값은 트랜잭션이나 사용자 콜백이 시작되기 전에
 `InvalidTransactionTimeoutProblem`으로 거부됩니다.
 
+타임아웃은 어댑터의 트랜잭션/세이브포인트 경계에만 적용되며 after-commit 훅 실행 시간은 포함하지 않습니다.
+어댑터가 제한 시간 이후에도 성공을 반환하면 이미 커밋된 결과로 처리합니다. 제한 시간 이후 취소 사유와 다른
+오류가 반환되어 커밋 여부를 확정할 수 없으면 `TransactionOutcomeUnknownProblem`이 발생하며
+`extensions.committed`는 `"unknown"`입니다.
+
+사용자 정의 `TxAdapter`가 제한 시간을 안전하게 취소하면 롤백을 마친 뒤 `signal.reason`을 원인으로 갖는
+`TransactionRollbackConfirmedProblem`으로 거부해야 합니다. 성공 반환은 커밋 완료를 의미해야 합니다.
+
 ### `@Transactional` 데코레이터 사용
 
 ```typescript
@@ -83,7 +91,8 @@ class OrderService {
   `Propagation`, `NestingStrategy`
 - Problem: `TransactionTimeoutProblem`, `InvalidTransactionTimeoutProblem`, `TransactionContextProblem`,
   `AfterCommitHooksProblem`, `AfterCommitOutcomeRequiredProblem`, `AfterCommitRegistrationClosedProblem`,
-  `DetachedTransactionOperationProblem`, `TxPropagationError`
+  `DetachedTransactionOperationProblem`, `TransactionOutcomeUnknownProblem`, `TransactionRollbackConfirmedProblem`,
+  `TxPropagationError`
 
 ## 전파 규칙
 

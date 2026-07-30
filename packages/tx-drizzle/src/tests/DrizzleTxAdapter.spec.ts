@@ -1,4 +1,5 @@
 import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import { TransactionRollbackConfirmedProblem } from "@croco/tx-core";
 import type { TxAdapter } from "@croco/tx-core";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
@@ -136,7 +137,12 @@ describe("DrizzleTxAdapter", () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
       controller.abort(timeout);
 
-      await expect(transactionPromise).rejects.toBe(timeout);
+      await expect(transactionPromise).rejects.toThrow(TransactionRollbackConfirmedProblem);
+      await expect(transactionPromise).rejects.toMatchObject({
+        name: TransactionRollbackConfirmedProblem.name,
+        cause: timeout,
+        extensions: { committed: false },
+      });
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(lifecycle).toEqual(["callback:start", "rollback", "callback:after-timeout"]);
@@ -186,8 +192,40 @@ describe("DrizzleTxAdapter", () => {
       expect(settled).toBe(false);
       expect(lifecycle).toEqual(["callback:start", "rollback:start"]);
 
-      await expect(transactionPromise).rejects.toBe(timeout);
+      await expect(transactionPromise).rejects.toThrow(TransactionRollbackConfirmedProblem);
+      await expect(transactionPromise).rejects.toMatchObject({
+        name: TransactionRollbackConfirmedProblem.name,
+        cause: timeout,
+        extensions: { committed: false },
+      });
       expect(lifecycle).toEqual(["callback:start", "rollback:start", "rollback:end"]);
+    });
+
+    it("should preserve a committed result when the deadline expires during commit response", async () => {
+      const lifecycle: string[] = [];
+      const transaction = async <T>(fn: (tx: MockTx) => Promise<T>): Promise<T> => {
+        const result = await fn({ id: "drizzle-tx" });
+        lifecycle.push("commit");
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        lifecycle.push("response");
+        return result;
+      };
+      const db: MockDrizzleDb<MockTx> = {
+        transaction: vi.fn(transaction) as typeof transaction,
+      };
+      const adapter = createDrizzleTxAdapter(db) as TxAdapter<MockTx>;
+      const controller = new AbortController();
+
+      const transactionPromise = adapter.transaction(
+        async () => "committed",
+        undefined,
+        controller.signal,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      controller.abort(new Error("Transaction timed out after 5ms"));
+
+      await expect(transactionPromise).resolves.toBe("committed");
+      expect(lifecycle).toEqual(["commit", "response"]);
     });
 
     it("should block stored builders and nested query clients after abort", async () => {
@@ -236,7 +274,12 @@ describe("DrizzleTxAdapter", () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
       controller.abort(timeout);
 
-      await expect(transactionPromise).rejects.toBe(timeout);
+      await expect(transactionPromise).rejects.toThrow(TransactionRollbackConfirmedProblem);
+      await expect(transactionPromise).rejects.toMatchObject({
+        name: TransactionRollbackConfirmedProblem.name,
+        cause: timeout,
+        extensions: { committed: false },
+      });
       await expect(postAbortProbe).resolves.toBeUndefined();
       expect(execute).not.toHaveBeenCalled();
       expect(findFirst).not.toHaveBeenCalled();
@@ -314,7 +357,12 @@ describe("DrizzleTxAdapter", () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
       controller.abort(timeout);
 
-      await expect(savepointPromise).rejects.toBe(timeout);
+      await expect(savepointPromise).rejects.toThrow(TransactionRollbackConfirmedProblem);
+      await expect(savepointPromise).rejects.toMatchObject({
+        name: TransactionRollbackConfirmedProblem.name,
+        cause: timeout,
+        extensions: { committed: false },
+      });
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(lifecycle).toEqual(["callback:start", "rollback", "callback:after-timeout"]);
@@ -366,7 +414,12 @@ describe("DrizzleTxAdapter", () => {
       expect(settled).toBe(false);
       expect(lifecycle).toEqual(["callback:start", "rollback:start"]);
 
-      await expect(savepointPromise).rejects.toBe(timeout);
+      await expect(savepointPromise).rejects.toThrow(TransactionRollbackConfirmedProblem);
+      await expect(savepointPromise).rejects.toMatchObject({
+        name: TransactionRollbackConfirmedProblem.name,
+        cause: timeout,
+        extensions: { committed: false },
+      });
       expect(lifecycle).toEqual(["callback:start", "rollback:start", "rollback:end"]);
     });
 

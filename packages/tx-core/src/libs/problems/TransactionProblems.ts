@@ -139,3 +139,45 @@ export class TransactionTimeoutProblem extends Problem {
     );
   }
 }
+
+/**
+ * 어댑터가 제한 시간 취소를 처리하고 롤백 완료를 확인했을 때 사용하는 Problem입니다.
+ */
+export class TransactionRollbackConfirmedProblem extends Problem {
+  readonly code = "tx-core/transaction-rollback-confirmed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(cause: Error) {
+    super(undefined, undefined, "Transaction rollback completed after cancellation", {
+      cause,
+      extensions: {
+        committed: false,
+      },
+    });
+  }
+}
+
+/**
+ * 제한 시간이 지난 뒤 어댑터가 취소 사유와 다른 오류를 반환해 커밋 여부를 확정할 수 없을 때
+ * 발생하는 Problem입니다.
+ */
+export class TransactionOutcomeUnknownProblem extends Problem {
+  readonly code = "tx-core/transaction-outcome-unknown";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(timeoutMs: number, cause: Error) {
+    super(
+      undefined,
+      undefined,
+      `Transaction outcome is unknown after the ${timeoutMs}ms deadline`,
+      {
+        cause,
+        extensions: {
+          committed: "unknown",
+          timedOut: true,
+          timeoutMs,
+        },
+      },
+    );
+  }
+}
