@@ -37,7 +37,7 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --exclude src/tests/integration/**",
+    "test": "vitest run --exclude \"src/tests/integration/**\"",
     "test:e2e": "vitest run src/tests/integration",
     "lint": "oxlint ."
   },

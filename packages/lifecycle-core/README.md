@@ -127,3 +127,74 @@ Pass an `InMemoryLifecycleDryRunStore` (or another `LifecycleDryRunStore`) to th
 The synchronous `get()`, `getAll()`, and `match()` methods are a local compatibility view for `register(rule)`. They can be stale when another process changes a shared store, so do not use them for authoritative version state or dispatch decisions. Versioned execution uses `matchRegistrations()` internally; operational callers should await `inspect()` and `getIdentityState()` against the durable store.
 
 Custom `LifecycleActionAdapter` implementations must now accept `ruleVersion` and `ruleFingerprint` in the run reference. Custom `LifecycleRunStore` implementations must implement atomic `claim()`/`abortClaim()` and persist those required fields. Custom `LifecycleRuleStateStore` implementations must implement expiring, uniquely owned execution leases through `claimExecution()` and `releaseExecution()`. These contracts keep concurrent dispatch attributable, suppress duplicate actions, recover from infrastructure failure, and make pause a reliable dispatch boundary.
+
+## Monetization signals and recipes
+
+The monetization vocabulary normalizes billing, metering, credit, delivery, and seat read models without exposing provider webhook payloads or making lifecycle rules responsible for collection, entitlement enforcement, or reconciliation. Every factory records tenant identity, effective and source timestamps, a deterministic signal ID, a provider-neutral reason/status, and whitelisted diagnostic evidence. Signals tied to subscription governance also require the immutable `PlanVersionRef` from `@croco/billing-core`. Credit signals require a stable `conditionId`: balance changes within the same low-credit condition keep the low-balance signal idempotent, while the distinct exhausted signal still advances the lifecycle.
+
+```ts
+import { planVersionRef } from "@croco/billing-core";
+import {
+  InMemoryMonetizationThresholdStore,
+  MonetizationThresholdTracker,
+  createLifecycleContext,
+} from "@croco/lifecycle-core";
+
+const tracker = new MonetizationThresholdTracker(new InMemoryMonetizationThresholdStore());
+
+const crossing = await tracker.evaluate({
+  tenantId,
+  meterKey: "ai.tokens",
+  planVersionRef: planVersionRef("pro@2026-07"),
+  thresholds: [0.5, 0.8, 1, 1.25],
+  consumed: 800_000,
+  limit: 1_000_000,
+  periodStartsAt,
+  periodEndsAt,
+  effectiveAt,
+  sourceAt,
+});
+
+for (const signal of crossing.signals) {
+  await evaluator.evaluate(createLifecycleContext({ signal }));
+}
+await tracker.acknowledge(crossing);
+```
+
+`MonetizationThresholdStore.claimCrossings()` is the atomic boundary for one-shot crossings. A claim remains leased until `tracker.acknowledge()` confirms that every returned signal was durably handed to lifecycle evaluation; call `tracker.release()` when delivery fails. Expired in-memory claims can be retried, so a process crash between claim and dispatch does not consume the crossing forever. The in-memory implementation is suitable for tests and single-process applications; distributed implementations must durably lease and acknowledge each `(tenant, meter, plan version, billing period, threshold)` tuple. Repeated observations above a pending or acknowledged level are suppressed, a newly reached higher level emits once, stale source observations cannot create crossings, and a new period or plan version naturally creates a new scope. Thresholds above `1` represent configured overage bands. Hard quota enforcement remains an `entitlements-core` responsibility.
+
+Normalize delinquency ordering with `MonetizationSubscriptionConditionTracker` before evaluation. Its store atomically orders `past_due` and `recovered` transitions by tenant, plan version, correlated condition, and source timestamp, preventing a delayed provider event from reopening a condition that has already recovered. Exact duplicate transitions return the same deterministic signal so a crash before lifecycle delivery can be retried; the lifecycle run store remains the durable delivery idempotency boundary. Distributed applications should provide a durable `MonetizationConditionStore`.
+
+Nine signal descriptors are published through `MONETIZATION_SIGNAL_DESCRIPTORS`:
+
+- `billing.trial.ending`
+- `billing.subscription.past_due`
+- `billing.subscription.recovered`
+- `billing.usage.threshold_crossed`
+- `billing.credit.balance_low`
+- `billing.credit.exhausted`
+- `billing.usage.delivery_lagging`
+- `billing.usage.sync_drifted`
+- `billing.seat.quantity_drifted`
+
+Use `createMonetizationReferenceRecipes()` for the eight opt-in reference recipes. Install only reviewed recipes and declare the signal sources and action adapters available in the composition root:
+
+```ts
+const [trialReminder] = createMonetizationReferenceRecipes();
+
+await installMonetizationRecipe(
+  registry,
+  trialReminder,
+  {
+    signalSources: ["billing.trial.ending"],
+    actionTypes: ["customer.notify"],
+  },
+  { activate: true },
+);
+```
+
+Installation fails with `MonetizationRecipeCapabilityProblem` when a required source or action adapter is absent. `createMonetizationLifecycleArtifact()` exposes the same missing-capability diagnostics together with deterministic signal and recipe descriptors for build artifacts and contract inspection. Pass the enabled recipes and a live `MonetizationCapabilitySource` to `LifecycleDiagnosticsProvider` to detect an adapter removed after installation. Installed recipes use immutable version `1.0.0`, with fingerprints covering the descriptor, execution model version, action descriptors, signal-specific action IDs, cooldown, and threshold range. The past-due recipe correlates `billing.subscription.recovered` through `recoveryOf` and gives the recovery action its own deterministic signal identity, so replay does not repeat completed delinquency actions.
+
+Default evidence never accepts arbitrary provider metadata. It contains only the factory's documented numeric, timestamp, status, meter, unit, period, and correlation fields. Keep customer contact data, payment instruments, provider customer/subscription IDs, and raw webhook bodies outside signal evidence and action predicates.
+
+Pass the threshold store to `LifecycleDiagnosticsProvider` to report suppressed duplicate crossings. Diagnostics also report monetization run counts by signal type, failed actions, and the latest subscription recovery result without returning signal or action payloads.

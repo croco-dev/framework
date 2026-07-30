@@ -13018,6 +13018,24 @@
               "declarationKind": "function"
             },
             {
+              "name": "createCreditBalanceLowSignal",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createCreditExhaustedSignal",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createDeliveryBacklogEscalationRecipe",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
               "name": "createHealthScoreDroppedSignal",
               "exportKind": "named",
               "source": "./libs/signals",
@@ -13036,6 +13054,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createLowCreditWarningRecipe",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
               "name": "createMeteringQuotaExceededSignal",
               "exportKind": "named",
               "source": "./libs/signals",
@@ -13048,15 +13072,105 @@
               "declarationKind": "function"
             },
             {
+              "name": "createMonetizationLifecycleArtifact",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createMonetizationReferenceRecipes",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
               "name": "createOnboardingStateSignal",
               "exportKind": "named",
               "source": "./libs/signals",
               "declarationKind": "function"
             },
             {
+              "name": "createPastDueGraceFollowUpRecipe",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createQuotaReachedNotificationRecipe",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
               "name": "createScheduledLifecycleSignal",
               "exportKind": "named",
               "source": "./libs/signals",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createSeatDriftEscalationRecipe",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createSeatQuantityDriftedSignal",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createSubscriptionPastDueSignal",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createSubscriptionRecoveredSignal",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createTrialEndingReminderRecipe",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createTrialEndingSignal",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createUsageDeliveryLaggingSignal",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createUsageDriftEscalationRecipe",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createUsageSyncDriftedSignal",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createUsageThresholdCrossedSignal",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createUsageUpgradePromptRecipe",
+              "exportKind": "named",
+              "source": "./libs/monetization",
               "declarationKind": "function"
             },
             {
@@ -13088,6 +13202,24 @@
               "exportKind": "named",
               "source": "./libs/InMemoryLifecycleRunStore",
               "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryMonetizationConditionStore",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryMonetizationThresholdStore",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "class"
+            },
+            {
+              "name": "installMonetizationRecipe",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
             },
             {
               "name": "LifecycleActionAdapterProblem",
@@ -13150,6 +13282,42 @@
               "declarationKind": "class"
             },
             {
+              "name": "MONETIZATION_SIGNAL_DESCRIPTORS",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "const"
+            },
+            {
+              "name": "MonetizationRecipeCapabilityProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MonetizationSignalDefinitionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MonetizationSubscriptionConditionTracker",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MonetizationThresholdClaimProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MonetizationThresholdTracker",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "class"
+            },
+            {
               "name": "UnavailableLifecycleRuleVersionProblem",
               "exportKind": "named",
               "source": "./libs/problems/LifecycleProblems",
@@ -13162,6 +13330,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "validateMonetizationRecipeCapabilities",
+              "exportKind": "named",
+              "source": "./libs/monetization",
+              "declarationKind": "function"
+            },
+            {
               "name": "WebhookLifecycleActionAdapter",
               "exportKind": "named",
               "source": "./libs/WebhookLifecycleActionAdapter",
@@ -13170,9 +13344,24 @@
           ],
           "typeExports": [
             {
+              "name": "CreditBalanceLowSignalInput",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "CreditExhaustedSignalInput",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
               "name": "InMemoryLifecycleRuleStateStoreOptions",
               "exportKind": "named",
               "source": "./libs/InMemoryLifecycleRuleStateStore"
+            },
+            {
+              "name": "InMemoryMonetizationThresholdStoreOptions",
+              "exportKind": "named",
+              "source": "./libs/monetization"
             },
             {
               "name": "LifecycleAction",
@@ -13213,6 +13402,26 @@
               "name": "LifecycleContextInput",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleDiagnosticsDetails",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/LifecycleDiagnosticsProvider"
+            },
+            {
+              "name": "LifecycleDiagnosticsDryRunDetails",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/LifecycleDiagnosticsProvider"
+            },
+            {
+              "name": "LifecycleDiagnosticsProviderOptions",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/LifecycleDiagnosticsProvider"
+            },
+            {
+              "name": "LifecycleDiagnosticsRunDetails",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/LifecycleDiagnosticsProvider"
             },
             {
               "name": "LifecycleDryRunInput",
@@ -13258,6 +13467,11 @@
               "name": "LifecycleIdempotencyResolver",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleMonetizationOperationalDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/diagnostics/LifecycleDiagnosticsProvider"
             },
             {
               "name": "LifecycleOnboardingSummary",
@@ -13428,6 +13642,166 @@
               "name": "LifecycleUsageSummary",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "MonetizationCapabilitySource",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationConditionEvaluation",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationConditionStore",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationConditionTransition",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationConditionTransitionResult",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationLifecycleArtifact",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationLifecycleSignal",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationRecipeCapabilities",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationRecipeCapabilityDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationRecipeDefinition",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationRecipeDescriptor",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationRecipeId",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MonetizationSafeEvidence",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationSignalData",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationSignalDescriptor",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationSignalEvidenceByType",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationSignalMetadataByType",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationSignalReason",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationSignalType",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MonetizationThresholdClaim",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationThresholdClaimResult",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationThresholdDiagnostics",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationThresholdEvaluation",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationThresholdScope",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "MonetizationThresholdStore",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "SeatQuantityDriftedSignalInput",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "SubscriptionPastDueSignalInput",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "SubscriptionRecoveredSignalInput",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "TrialEndingSignalInput",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "UsageDeliveryLaggingSignalInput",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "UsageSyncDriftedSignalInput",
+              "exportKind": "named",
+              "source": "./libs/monetization"
+            },
+            {
+              "name": "UsageThresholdCrossedSignalInput",
+              "exportKind": "named",
+              "source": "./libs/monetization"
             }
           ]
         }

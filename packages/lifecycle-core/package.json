@@ -32,6 +32,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@croco/billing-core": "workspace:*",
     "@croco/diagnostics-core": "workspace:*",
     "@croco/problems-core": "workspace:*"
   },

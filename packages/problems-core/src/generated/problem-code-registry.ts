@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 541,
+  problemCount: 544,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7596,7 +7596,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 37,
+          line: 38,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7628,7 +7628,100 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 5,
+          line: 6,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "lifecycle-core/monetization-recipe-capability-missing",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#lifecycle-core-monetization-recipe-capability-missing",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
+          line: 191,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "lifecycle-core/monetization-signal-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#lifecycle-core-monetization-signal-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
+          line: 174,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "lifecycle-core/monetization-threshold-claim-unavailable",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#lifecycle-core-monetization-threshold-claim-unavailable",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
+          line: 209,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7661,7 +7754,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 155,
+          line: 156,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7691,7 +7784,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 102,
+          line: 103,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7723,7 +7816,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 21,
+          line: 22,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7753,7 +7846,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 118,
+          line: 119,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7783,7 +7876,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 84,
+          line: 85,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7816,7 +7909,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 138,
+          line: 139,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7846,7 +7939,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 66,
+          line: 67,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7877,7 +7970,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 48,
+          line: 49,
           column: 5,
           kind: "problem-constructor",
         },
