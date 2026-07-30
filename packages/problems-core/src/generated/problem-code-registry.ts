@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 550,
+  problemCount: 551,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -125,6 +125,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 6,
           column: 79,
           kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "admin-core/credit-operations-validation-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#admin-core-credit-operations-validation-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/CreditOperations.ts",
+          line: 284,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },

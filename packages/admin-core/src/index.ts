@@ -1,4 +1,16 @@
 export {
+  assertCreditOperationsActionRequest,
+  createCreditOperationsActions,
+  createCreditOperationsLoadingState,
+  createCreditOperationsTenantExtension,
+  CREDIT_OPERATIONS_READ_PERMISSION,
+  executeCreditOperationsAction,
+  filterCreditOperationsTransactions,
+  loadCreditOperations,
+  resolveCreditOperationsReference,
+  CreditOperationsValidationProblem,
+} from "./libs/CreditOperations";
+export {
   ADMIN_CORE_DIAGNOSTIC_CODES,
   AdminResourceValidationProblem,
   assertAdminResourceValid,
@@ -24,6 +36,29 @@ export {
   redactWebhookOperationsText,
   WebhookOperationsActionValidationProblem,
 } from "./libs/WebhookOperations";
+export type {
+  CreditOperationsAction,
+  CreditOperationsActionKind,
+  CreditOperationsActionRequest,
+  CreditOperationsActionResult,
+  CreditOperationsAllocation,
+  CreditOperationsBalance,
+  CreditOperationsFilter,
+  CreditOperationsGrantLot,
+  CreditOperationsHistoryCompleteness,
+  CreditOperationsMutationExecutor,
+  CreditOperationsReadyState,
+  CreditOperationsReference,
+  CreditOperationsReservation,
+  CreditOperationsSnapshot,
+  CreditOperationsSource,
+  CreditOperationsSourceResult,
+  CreditOperationsState,
+  CreditOperationsTransaction,
+  CreditOperationsTransactionKind,
+  CreditOperationsWriteEvidence,
+  LoadCreditOperationsInput,
+} from "./libs/CreditOperations";
 export type {
   AdminResourceDiagnostic,
   AdminResourceDiagnosticCode,

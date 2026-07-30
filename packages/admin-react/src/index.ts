@@ -22,6 +22,7 @@ export {
   TenantSwitcher,
   UsageQuotaMeter,
 } from "./libs/components";
+export { CreditOperationsConsole } from "./libs/CreditOperationsConsole";
 export {
   createTenantWorkspaceActionRequest,
   TenantBusinessWorkspace,
@@ -69,6 +70,7 @@ export {
   submitAdminForm,
   updateAdminFormField,
 } from "./libs/snapshot";
+export type { CreditOperationsConsoleProps } from "./libs/CreditOperationsConsole";
 export type {
   AdminActionContract,
   AdminActionPermissionDecision,

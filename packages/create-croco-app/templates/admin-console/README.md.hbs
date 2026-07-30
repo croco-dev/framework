@@ -1,6 +1,6 @@
 # {{projectName}}
 
-Croco admin console starter입니다. REST API, Vite React admin app, contract-first generated client, RFC 7807 Problem 상태, tenant-scoped resource table, form action, operations timeline, Tenant 360 workspace, lifecycle automation operations, outbound webhook reliability console을 zero-credential workspace로 연결합니다. This is not a marketing landing page.
+Croco admin console starter입니다. REST API, Vite React admin app, contract-first generated client, RFC 7807 Problem 상태, tenant-scoped resource table, form action, operations timeline, Tenant 360 workspace, append-only credit operations, lifecycle automation operations, outbound webhook reliability console을 zero-credential workspace로 연결합니다. This is not a marketing landing page.
 
 이 preset은 운영 콘솔의 반복 루프를 먼저 보여줍니다: tenant 선택, in-memory source와 fake provider로 Tenant 360 상태 확인, 사용자 초대, 실패한 조회의 Problem 확인, operations timeline으로 복구 상태 추적. Production auth provider, persistent storage migration, provider dashboard embedding, external credentials는 비범위입니다.
 
@@ -28,18 +28,23 @@ pnpm dev:web
 
 1. `tenant_acme` 또는 `tenant_globex`를 선택합니다.
 2. Tenant 360 workspace에서 plan version, usage/seat limits, onboarding, health, operations, engagement extension을 확인합니다.
-3. Lifecycle automation console에서 exact rule version, descriptor evidence, production match, cooldown suppression, audited pause/resume, redacted dry-run evidence를 확인합니다.
-4. Users resource table에서 tenant별 admin 사용자를 확인합니다.
-5. Invite form으로 새 사용자를 생성합니다.
-6. Missing user probe가 `admin-console/user-not-found` Problem 상태를 표시합니다.
-7. Outbound webhook reliability console에서 endpoint secret version, logical event, delivery, attempt, retry classification을 분리해 확인합니다.
-8. `pnpm admin:smoke`의 fake endpoint transport가 success, timeout, 429 retry, permanent 4xx를 분류하고 실제 in-memory core runtime으로 rotation metadata와 idempotent audited replay를 검증합니다.
-9. Operations timeline에서 invite와 Problem event가 남았는지 확인합니다.
+3. Credit operations console에서 실제 in-memory 원장의 grant, reserve, partial commit, expiry, refund와 grant allocation을 확인하고 actor, reason, idempotency key, ledger position이 필요한 append-only action을 실행합니다.
+4. Lifecycle automation console에서 exact rule version, descriptor evidence, production match, cooldown suppression, audited pause/resume, redacted dry-run evidence를 확인합니다.
+5. Users resource table에서 tenant별 admin 사용자를 확인합니다.
+6. Invite form으로 새 사용자를 생성합니다.
+7. Missing user probe가 `admin-console/user-not-found` Problem 상태를 표시합니다.
+8. Outbound webhook reliability console에서 endpoint secret version, logical event, delivery, attempt, retry classification을 분리해 확인합니다.
+9. `pnpm admin:smoke`의 fake endpoint transport가 success, timeout, 429 retry, permanent 4xx를 분류하고 실제 in-memory core runtime으로 rotation metadata와 idempotent audited replay를 검증합니다.
+10. 같은 smoke가 credit grant → reserve → partial commit/release → expiry → consume/refund를 실행하고, append-only position, allocation evidence, idempotent replay, duplicate conflict, stale refresh, committed event-publication recovery를 검증합니다.
+10. Operations timeline에서 invite와 Problem event가 남았는지 확인합니다.
 
 ## Recovery States
 
 - API unavailable: resource table과 timeline은 마지막 성공 상태를 유지하고 상단 alert에 네트워크 실패를 표시합니다.
 - Missing user: generated `getUserResult` client가 declared Problem branch를 반환하며 UI는 `admin-console/user-not-found` code와 recovery action을 표시합니다.
+- Credit stale ledger: 모든 write는 표시된 ledger position을 optimistic input으로 보내며 `credits-core/stale-ledger-position`이면 현재 원장을 새로고침한 뒤 다시 확인합니다.
+- Credit duplicate conflict: 같은 idempotency key가 다른 amount, expiry, restriction, reference에 재사용되면 `credits-core/duplicate-conflict` 증거를 유지하고 새 키로 자동 재시도하지 않습니다.
+- Credit partial/provider failure: 일부 history가 없거나 store가 실패한 상태는 empty balance로 표시하지 않습니다. 읽은 ledger prefix와 Problem을 함께 보여주며 write action은 숨깁니다.
 - Lifecycle stale descriptor: fingerprint나 revision 변경은 `admin-react/lifecycle-action-intent-stale`을 반환합니다. 콘솔을 새로고침해 현재 descriptor를 다시 검토한 뒤 실행합니다.
 - Lifecycle permission denied: `lifecycle:read`, `lifecycle:write`, `lifecycle:dry-run` 권한이 없으면 필요한 권한과 stable Problem code를 표시하고 해당 컨트롤을 비활성화합니다.
 - Lifecycle cooldown suppression: cooldown 구간의 signal은 `suppressed-cooldown` outcome으로 남고 action은 dispatch되지 않습니다.
@@ -67,6 +72,7 @@ Generated OpenAPI/RPC commands run strict ContractGraph schema checks by default
 apps/api-server/src/controllers/AdminController.ts  admin resource and operations REST contract
 apps/api-server/src/admin.ts                        in-memory admin runtime and timeline
 apps/console-web/src/App.tsx                        generated-client admin console
+apps/console-web/src/CreditOperationsDemo.tsx       append-only in-memory credit ledger and audited actions
 apps/console-web/src/TenantWorkspaceDemo.tsx         in-memory Tenant 360 sources and fake provider fixture
 apps/console-web/src/WebhookReliabilityDemo.tsx      fake outbound webhook operations states
 apps/console-web/src/LifecycleAutomationDemo.tsx      versioned rule operations and dry-run fixture

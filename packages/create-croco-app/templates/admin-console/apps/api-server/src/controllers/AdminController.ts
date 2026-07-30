@@ -15,7 +15,15 @@ import {
 } from "@croco/protocols-rest";
 import { getAdminConsoleService } from "../admin";
 import {
+  fromCreditOperationsActionCommand,
+  getCreditOperationsService,
+  toCreditOperationsWireActionResult,
+  toCreditOperationsWireSnapshot,
+} from "../creditOperations";
+import {
+  adminCreditOperationsRoute,
   adminCreateUserRoute,
+  adminExecuteCreditOperationRoute,
   adminGetUserRoute,
   adminListOperationsRoute,
   adminListUsersRoute,
@@ -64,5 +72,24 @@ export class AdminController {
     tenantId?: RouteQueryParam<typeof adminListOperationsRoute, "tenantId">,
   ): Promise<RouteResponse<typeof adminListOperationsRoute>> {
     return await getAdminConsoleService().listOperations(tenantId);
+  }
+
+  @Get(adminCreditOperationsRoute)
+  async creditOperations(
+    @Query(adminCreditOperationsRoute, "tenantId")
+    tenantId: RouteQueryParam<typeof adminCreditOperationsRoute, "tenantId">,
+  ): Promise<RouteResponse<typeof adminCreditOperationsRoute>> {
+    const snapshot = await getCreditOperationsService().snapshot(tenantId);
+    return toCreditOperationsWireSnapshot(snapshot);
+  }
+
+  @Post(adminExecuteCreditOperationRoute)
+  async executeCreditOperation(
+    @Body(adminExecuteCreditOperationRoute)
+    input: RouteBody<typeof adminExecuteCreditOperationRoute>,
+  ): Promise<RouteResponse<typeof adminExecuteCreditOperationRoute>> {
+    const command = fromCreditOperationsActionCommand(input);
+    const result = await getCreditOperationsService().execute(command.selector, command.request);
+    return toCreditOperationsWireActionResult(result);
   }
 }

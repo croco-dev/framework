@@ -54,6 +54,206 @@ export const adminConsoleSnapshotSchema = z.object({
   operations: z.array(adminOperationSchema),
 });
 
+const creditReferenceSchema = z.object({
+  type: z.string(),
+  value: z.string().optional(),
+  maskedValue: z.string().optional(),
+  visibility: z.enum(["visible", "masked", "denied"]),
+  requiredPermissions: z.array(z.string()).optional(),
+});
+
+const creditAllocationSchema = z.object({
+  grantTransactionId: z.string(),
+  amount: z.string(),
+});
+
+const creditTransactionKindSchema = z.enum([
+  "grant",
+  "reserve",
+  "commit",
+  "release",
+  "consume",
+  "expire",
+  "refund",
+  "adjustment",
+]);
+
+const creditTransactionSchema = z.object({
+  id: z.string(),
+  position: z.number().int().nonnegative(),
+  kind: creditTransactionKindSchema,
+  amount: z.string(),
+  occurredAt: z.string().datetime(),
+  reference: creditReferenceSchema,
+  allocations: z.array(creditAllocationSchema),
+  reservationId: z.string().optional(),
+  relatedTransactionId: z.string().optional(),
+  meterKey: z.string().optional(),
+  adjustmentDirection: z.enum(["credit", "debit"]).optional(),
+  actorId: z.string().optional(),
+  correlationId: z.string().optional(),
+  refundableAmount: z.string().optional(),
+});
+
+const creditGrantLotSchema = z.object({
+  transactionId: z.string(),
+  amount: z.string(),
+  remaining: z.string(),
+  expiresAt: z.string().datetime().optional(),
+  source: creditReferenceSchema.optional(),
+  meterKeys: z.array(z.string()),
+  status: z.enum(["available", "reserved", "consumed", "expired"]),
+});
+
+const creditReservationSchema = z.object({
+  id: z.string(),
+  amount: z.string(),
+  status: z.enum(["active", "committed", "released"]),
+  meterKey: z.string().optional(),
+  allocations: z.array(creditAllocationSchema),
+  createdAt: z.string().datetime(),
+  settledAt: z.string().datetime().optional(),
+  release: z
+    .object({
+      allowed: z.boolean(),
+      reason: z.string(),
+    })
+    .optional(),
+});
+
+export const creditOperationsSnapshotSchema = z.object({
+  tenantId: tenantIdSchema,
+  accountId: z.string(),
+  generatedAt: z.string().datetime(),
+  balance: z.object({
+    accountId: z.string(),
+    ledgerPosition: z.number().int().nonnegative(),
+    available: z.string(),
+    reserved: z.string(),
+    consumed: z.string(),
+    expired: z.string(),
+    lifetimeGranted: z.string(),
+    netAdjusted: z.string(),
+    expiringSoon: z.string(),
+    expiringSoonBefore: z.string().datetime(),
+  }),
+  grantLots: z.array(creditGrantLotSchema),
+  transactions: z.array(creditTransactionSchema),
+  reservations: z.array(creditReservationSchema),
+  history: z.union([
+    z.object({ kind: z.literal("complete") }),
+    z.object({
+      kind: z.literal("partial"),
+      earliestPosition: z.number().int().positive(),
+      reason: z.string(),
+    }),
+  ]),
+});
+
+export const creditOperationsActionSchema = z.object({
+  kind: z.enum(["grant", "refund", "release-reservation", "adjustment"]),
+  targetId: z.string(),
+  accountId: z.string(),
+  tenantId: tenantIdSchema,
+  ledgerPosition: z.number().int().nonnegative(),
+  permission: z.string(),
+  allowed: z.boolean(),
+  reason: z.string(),
+  auditEvent: z.string(),
+  possibleProblems: z.array(z.string()),
+});
+
+const creditActionRequestBaseShape = {
+  actorId: z.string(),
+  reason: z.string(),
+  idempotencyKey: z.string(),
+  reference: z.object({ type: z.string(), id: z.string() }),
+  expectedPosition: z.number().int().nonnegative(),
+  tenantId: tenantIdSchema,
+  accountId: z.string(),
+  action: z.enum(["grant", "refund", "release-reservation", "adjustment"]),
+  targetId: z.string(),
+};
+
+export const creditOperationsActionRequestSchema = z.object({
+  ...creditActionRequestBaseShape,
+  input: z.union([
+    z.object({
+      kind: z.literal("grant"),
+      amount: z.string(),
+      expiresAt: z.string().datetime().optional(),
+      source: z.string().optional(),
+      meterKeys: z.array(z.string()).optional(),
+    }),
+    z.object({
+      kind: z.literal("refund"),
+      consumptionTransactionId: z.string(),
+      amount: z.string(),
+    }),
+    z.object({
+      kind: z.literal("release-reservation"),
+      reservationId: z.string(),
+    }),
+    z.object({
+      kind: z.literal("adjustment"),
+      direction: z.enum(["credit", "debit"]),
+      amount: z.string(),
+      expiresAt: z.string().datetime().optional(),
+      source: z.string().optional(),
+      meterKeys: z.array(z.string()).optional(),
+    }),
+  ]),
+});
+
+const adminProblemSchema = z.object({
+  code: z.string(),
+  status: z.number().int().optional(),
+  title: z.string().optional(),
+  detail: z.string().optional(),
+  retryable: z.boolean().optional(),
+});
+
+export const creditOperationsActionResultSchema = z.union([
+  z.object({
+    kind: z.literal("succeeded"),
+    replayed: z.boolean(),
+    ledgerPosition: z.number().int().nonnegative(),
+    transactionIds: z.array(z.string()),
+  }),
+  z.object({
+    kind: z.literal("problem"),
+    problem: adminProblemSchema,
+    recovery: z.enum([
+      "change-input",
+      "refresh-ledger",
+      "reuse-idempotency-result",
+      "retry-event-publication",
+    ]),
+    ledgerCommitted: z.boolean().optional(),
+  }),
+]);
+
+export const creditOperationsActionCommandSchema = z.object({
+  actionKind: z.enum(["grant", "refund", "release-reservation", "adjustment"]),
+  targetId: z.string(),
+  accountId: z.string(),
+  tenantId: tenantIdSchema,
+  actorId: z.string(),
+  auditReason: z.string(),
+  idempotencyKey: z.string(),
+  referenceType: z.string(),
+  referenceId: z.string(),
+  expectedPosition: z.number().int().nonnegative(),
+  inputKind: z.enum(["grant", "refund", "release-reservation", "adjustment"]),
+  amount: z.string().optional(),
+  expiresAt: z.string().datetime().optional(),
+  source: z.string().optional(),
+  meterKeys: z.array(z.string()).optional(),
+  direction: z.enum(["credit", "debit"]).optional(),
+  consumptionTransactionId: z.string().optional(),
+  reservationId: z.string().optional(),
+});
+
 const tenantQuerySchema = z.object({
   tenantId: tenantIdSchema.optional(),
 });
@@ -109,8 +309,32 @@ export const adminListOperationsRoute = defineRouteContract({
   problems: [],
 });
 
+export const adminCreditOperationsRoute = defineRouteContract({
+  id: "admin.credits.snapshot",
+  method: HttpMethod.GET,
+  path: "/admin/credits",
+  operationId: "getAdminCreditOperations",
+  query: z.object({ tenantId: tenantIdSchema }),
+  response: creditOperationsSnapshotSchema,
+  problems: [],
+});
+
+export const adminExecuteCreditOperationRoute = defineRouteContract({
+  id: "admin.credits.execute",
+  method: HttpMethod.POST,
+  path: "/admin/credits/actions",
+  operationId: "executeAdminCreditOperation",
+  body: creditOperationsActionCommandSchema,
+  response: creditOperationsActionResultSchema,
+  problems: [],
+});
+
 export type AdminUser = z.infer<typeof adminUserSchema>;
 export type CreateAdminUserInput = z.infer<typeof createAdminUserInputSchema>;
 export type TenantSummary = z.infer<typeof tenantSummarySchema>;
 export type AdminOperation = z.infer<typeof adminOperationSchema>;
 export type AdminConsoleSnapshot = z.infer<typeof adminConsoleSnapshotSchema>;
+export type CreditOperationsWireSnapshot = z.infer<typeof creditOperationsSnapshotSchema>;
+export type CreditOperationsWireActionRequest = z.infer<typeof creditOperationsActionRequestSchema>;
+export type CreditOperationsWireActionResult = z.infer<typeof creditOperationsActionResultSchema>;
+export type CreditOperationsActionCommand = z.infer<typeof creditOperationsActionCommandSchema>;
