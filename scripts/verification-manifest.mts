@@ -401,6 +401,8 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
   const changeScoped = isChangeScopedVerification(context);
   const affectedArguments = affectedTurboArguments(context);
   const scaffoldApplicable = isApplicableToChangedFiles(context, affectsScaffold);
+  const scaffoldBuildArguments =
+    changeScoped && scaffoldApplicable ? ["--filter=create-croco-app"] : [];
   const entrypointsApplicable = isApplicableToChangedFiles(context, affectsPackageEntrypoints);
   const binsApplicable = isApplicableToChangedFiles(context, affectsPackageBins);
   const cliApplicable = isApplicableToChangedFiles(context, affectsCli);
@@ -419,6 +421,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "build",
         ...(changeScoped ? ["typecheck", "test"] : []),
         ...affectedArguments,
+        ...scaffoldBuildArguments,
         "--summarize",
         "--continue=always",
       ],
