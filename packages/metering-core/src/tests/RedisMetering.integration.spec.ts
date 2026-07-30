@@ -1,16 +1,23 @@
 import { redisResource, type RedisTestConnection } from "@croco/testing-resources";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { IdempotencyManager } from "../libs/IdempotencyManager";
 import { MeteringService } from "../libs/MeteringService";
 import type { MeterRegistry } from "../libs/MeterRegistry";
 import { DuplicateRecordProblem } from "../libs/problems/DuplicateRecordProblem";
 import type { RedisClient } from "../libs/RedisClient";
 import { RedisUsageStorage } from "../libs/RedisUsageStorage";
-import type { MeterDefinition } from "../libs/types";
+import type { MeterDefinition, UsageRecord } from "../libs/types";
 
 const realResourcesEnabled = process.env.CROCO_TEST_REAL_RESOURCES === "1";
+const zaddDeniedUser = "metering-zadd-denied";
+const zaddDeniedPassword = "metering-zadd-denied-password";
 
-function createRedisClient(connection: RedisTestConnection): RedisClient {
+function createRedisClient(
+  connection: RedisTestConnection,
+  throwAfterNextEval = false,
+): RedisClient {
+  let shouldThrowAfterEval = throwAfterNextEval;
+
   return {
     eval: async <TResult extends unknown[]>(
       script: string,
@@ -23,6 +30,12 @@ function createRedisClient(connection: RedisTestConnection): RedisClient {
         ...keys,
         ...args.map(String),
       );
+
+      if (shouldThrowAfterEval) {
+        shouldThrowAfterEval = false;
+        throw new Error("Injected response loss after Redis committed the script");
+      }
+
       return (Array.isArray(result) ? result : [result]) as TResult;
     },
     set: async (key, value, _mode, _expireMode, expire) =>
@@ -32,6 +45,17 @@ function createRedisClient(connection: RedisTestConnection): RedisClient {
       withScores === "WITHSCORES"
         ? connection.client.zrangebyscore(key, min, max, "WITHSCORES")
         : connection.client.zrangebyscore(key, min, max),
+  };
+}
+
+function createUsageRecord(idempotencyKey: string): UsageRecord {
+  return {
+    id: `usage-${idempotencyKey}`,
+    tenantId: "tenant-atomic-record",
+    meterId: "api_calls",
+    value: 5,
+    timestamp: new Date("2024-01-15T10:30:00.000Z"),
+    idempotencyKey,
   };
 }
 
@@ -92,6 +116,10 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
 
   beforeEach(async () => {
     await connection?.client.flushdb();
+  });
+
+  afterEach(async () => {
+    await connection?.client.call("ACL", "DELUSER", zaddDeniedUser);
   });
 
   afterAll(async () => {
@@ -168,5 +196,76 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
         period: "billing_cycle",
       }),
     ).resolves.toBe(4);
+  });
+
+  it("leaves no dedupe marker after ZADD fails and persists exactly once on retry", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const record = createUsageRecord("zadd-failure");
+    const usageKey = "usage2:tenant-atomic-record:api_calls:2024-01";
+    const dedupeKey = "idem2:record:tenant-atomic-record:api_calls:zadd-failure";
+    await connection.client.call(
+      "ACL",
+      "SETUSER",
+      zaddDeniedUser,
+      "on",
+      `>${zaddDeniedPassword}`,
+      "~*",
+      "+@all",
+      "-zadd",
+    );
+    const restrictedClient = connection.client.duplicate({
+      keyPrefix: "",
+      username: zaddDeniedUser,
+      password: zaddDeniedPassword,
+    });
+    await restrictedClient.connect();
+
+    try {
+      const restrictedStorage = new RedisUsageStorage(
+        createRedisClient({ ...connection, client: restrictedClient }),
+      );
+      await expect(restrictedStorage.record(record)).rejects.toMatchObject({
+        code: "metering/redis-error",
+        extensions: { operation: "EVAL" },
+      });
+    } finally {
+      await restrictedClient.quit();
+    }
+
+    expect(await connection.client.zcard(usageKey)).toBe(0);
+    expect(await connection.client.exists(dedupeKey)).toBe(0);
+
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    await storage.record(record);
+    await storage.record(record);
+
+    expect(await connection.client.zcard(usageKey)).toBe(1);
+    expect(await connection.client.exists(dedupeKey)).toBe(1);
+  });
+
+  it("converges an ambiguous committed response to one record on retry", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const record = createUsageRecord("ambiguous-response");
+    const usageKey = "usage2:tenant-atomic-record:api_calls:2024-01";
+    const dedupeKey = "idem2:record:tenant-atomic-record:api_calls:ambiguous-response";
+    const storage = new RedisUsageStorage(createRedisClient(connection, true));
+
+    await expect(storage.record(record)).rejects.toMatchObject({
+      code: "metering/redis-error",
+      extensions: { operation: "EVAL" },
+    });
+    expect(await connection.client.zcard(usageKey)).toBe(1);
+    expect(await connection.client.exists(dedupeKey)).toBe(1);
+
+    await storage.record(record);
+
+    expect(await connection.client.zcard(usageKey)).toBe(1);
+    expect(await connection.client.exists(dedupeKey)).toBe(1);
   });
 });

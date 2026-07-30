@@ -34,7 +34,7 @@ function stableStringify(value: unknown): string {
  *
  * @description
  * - Usage 데이터를 Redis Sorted Set에 저장
- * - Idempotency 체크를 Redis SET NX로 처리
+ * - Usage 기록과 idempotency marker를 단일 Redis Lua script로 처리
  */
 export class RedisUsageStorage implements UsageStorage {
   private static readonly USAGE_KEY_NAMESPACE = "usage2";
@@ -46,17 +46,21 @@ export class RedisUsageStorage implements UsageStorage {
   private static readonly RECORD_IDEMPOTENCY_CACHE_PRUNE_INTERVAL_MILLISECONDS = 60_000;
   private static readonly MAX_BILLING_CYCLE_PARTITIONS = 1_200;
   private static readonly RESET_SCAN_BATCH_SIZE = 500;
-  private static readonly RECORD_SCRIPT = `
+  private static readonly RECORD_USAGE_SCRIPT = `
 local usageKey = KEYS[1]
 local dedupeKey = KEYS[2]
+local score = ARGV[1]
+local member = ARGV[2]
+local ttlSeconds = ARGV[3]
 
 if redis.call('EXISTS', dedupeKey) == 1 then
-  return 0
+  return { 0 }
 end
 
-redis.call('ZADD', usageKey, ARGV[1], ARGV[2])
-redis.call('SET', dedupeKey, '1', 'EX', ${RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS})
-return 1
+redis.call('ZADD', usageKey, score, member)
+redis.call('SET', dedupeKey, '1', 'EX', ttlSeconds)
+
+return { 1 }
 `;
   private static readonly SCAN_AND_DELETE_USAGE_KEYS_SCRIPT = `
 local cursor = ARGV[1]
@@ -136,17 +140,21 @@ return { exceeded and 1 or 0, newUsage }
   }
 
   async record(usage: UsageRecord): Promise<void> {
+    const key = this.buildUsageKey(usage.tenantId, usage.meterId, usage.timestamp, "billing_cycle");
     const dedupeKey = this.buildRecordIdempotencyKey(
       usage.tenantId,
       usage.meterId,
       usage.idempotencyKey,
     );
-    const key = this.buildUsageKey(usage.tenantId, usage.meterId, usage.timestamp, "billing_cycle");
     const member = this.serializeUsageMember(usage);
     const score = usage.timestamp.getTime();
 
     await this.runRedisOperation("EVAL", () =>
-      this.redis.eval<[number]>(RedisUsageStorage.RECORD_SCRIPT, [key, dedupeKey], [score, member]),
+      this.redis.eval<[number]>(
+        RedisUsageStorage.RECORD_USAGE_SCRIPT,
+        [key, dedupeKey],
+        [score, member, RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS],
+      ),
     );
   }
 

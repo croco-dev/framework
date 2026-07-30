@@ -26,7 +26,7 @@ describe("RedisUsageStorage", () => {
       zadd: vi.fn().mockResolvedValue(1),
       zrangebyscore: vi.fn().mockResolvedValue([]),
       set: vi.fn().mockResolvedValue("OK"),
-      eval: vi.fn(),
+      eval: vi.fn().mockResolvedValue([1]),
     };
     storage = new RedisUsageStorage(mockRedis);
   });
@@ -117,10 +117,12 @@ describe("RedisUsageStorage", () => {
       await storage.record(usage);
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
-        expect.stringContaining("redis.call('ZADD', usageKey, ARGV[1], ARGV[2])"),
+        expect.stringContaining("redis.call('ZADD'"),
         ["usage2:tenant-1:api_calls:2024-01", "idem2:record:tenant-1:api_calls:key-123"],
-        [usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v2\./)],
+        [usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v2\./), 86400],
       );
+      expect(mockRedis.set).not.toHaveBeenCalled();
+      expect(mockRedis.zadd).not.toHaveBeenCalled();
     });
 
     it("should keep colliding tenant and meter tuples in distinct usage and dedupe keys", async () => {
@@ -144,9 +146,9 @@ describe("RedisUsageStorage", () => {
       await storage.record(second);
       await storage.record(third);
 
-      const keyPairs = vi.mocked(mockRedis.eval).mock.calls.map(([, keys]) => keys);
-      const usageKeys = keyPairs.map(([usageKey]) => usageKey);
-      const dedupeKeys = keyPairs.map(([, dedupeKey]) => dedupeKey);
+      const recordKeys = vi.mocked(mockRedis.eval).mock.calls.map(([, keys]) => keys);
+      const usageKeys = recordKeys.map(([usageKey]) => usageKey);
+      const dedupeKeys = recordKeys.map(([, dedupeKey]) => dedupeKey);
       expect(new Set(usageKeys)).toHaveLength(3);
       expect(new Set(dedupeKeys)).toHaveLength(3);
       expect(usageKeys.every((key) => key.startsWith("usage2:"))).toBe(true);
@@ -164,8 +166,14 @@ describe("RedisUsageStorage", () => {
       await manager.beginProcessing("tenant-1", "api_calls", "request-1");
       await storage.record(createUsageRecord("request-1"));
 
-      const lifecycleKey = vi.mocked(mockRedis.set).mock.calls[0]?.[0];
-      const recordKey = vi.mocked(mockRedis.eval).mock.calls[0]?.[1][1];
+      const lifecycleKey = vi
+        .mocked(mockRedis.set)
+        .mock.calls.map(([key]) => key)
+        .find((key) => key.startsWith("idem2:lifecycle:"));
+      const recordKey = vi
+        .mocked(mockRedis.eval)
+        .mock.calls.flatMap(([, keys]) => keys)
+        .find((key) => key.startsWith("idem2:record:"));
       expect(lifecycleKey).toBe("idem2:lifecycle:tenant-1:api_calls:request-1");
       expect(recordKey).toBe("idem2:record:tenant-1:api_calls:request-1");
       expect(recordKey).not.toBe(lifecycleKey);
@@ -290,6 +298,8 @@ describe("RedisUsageStorage", () => {
         detail: expect.stringContaining("Redis operation 'EVAL' failed"),
         extensions: { operation: "EVAL", originalMessage: "EVAL failed" },
       });
+      expect(mockRedis.set).not.toHaveBeenCalled();
+      expect(mockRedis.zadd).not.toHaveBeenCalled();
     });
 
     it("should retry the atomic record operation after Redis rejects it", async () => {
