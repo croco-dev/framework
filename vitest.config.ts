@@ -40,6 +40,7 @@ const coreCoveragePackagePaths = CORE_COVERAGE_PACKAGES.map(
 const currentWorkingDirectory = process.cwd().replace(/\\/g, "/");
 const isFrameworkContextPackageRun = currentWorkingDirectory.endsWith("packages/framework-context");
 const isTestingPackageRun = currentWorkingDirectory.endsWith("packages/testing");
+const isTxDrizzlePackageRun = currentWorkingDirectory.endsWith("packages/tx-drizzle");
 const shouldExcludeCliIntegrationTestsFromCoreCoverage =
   isCoreCoverageRun && currentWorkingDirectory.endsWith("packages/cli");
 const shouldApplyCoreCoverageThresholds =
@@ -58,12 +59,18 @@ const testingPackageAliases = isTestingPackageRun
       "@croco/testing": resolve(currentWorkingDirectory, "src/index.ts"),
     }
   : {};
+const txDrizzlePackageAliases = isTxDrizzlePackageRun
+  ? {
+      "@croco/dataloader-core": resolve(currentWorkingDirectory, "../dataloader-core/src/index.ts"),
+    }
+  : {};
 
 export default defineConfig({
   resolve: {
     alias: {
       ...frameworkContextPackageAliases,
       ...testingPackageAliases,
+      ...txDrizzlePackageAliases,
     },
   },
   test: {

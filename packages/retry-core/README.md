@@ -92,6 +92,8 @@ class PaymentService {
 
 `LambdaTimeoutGuard`는 다음 재시도를 시작할 시간이 부족하면 `LambdaTimeoutProblem`을 throw합니다. 열린 서킷은 `CircuitBreakerOpenProblem`을 throw하며 category는 `TooManyRequests`입니다. 두 실패 모두 generic `Error`가 아니라 Croco `Problem`이므로 호출자는 코드와 category로 복구 경로를 판단할 수 있습니다.
 
+서킷 브레이커의 보호 대상 작업이 성공한 뒤 상태 저장소의 성공 bookkeeping이 실패하더라도 완료된 작업 결과는 실패로 바뀌지 않으며 실패 카운터도 증가하지 않습니다. 활성 trace에는 `circuit_breaker.bookkeeping_failed` 이벤트가 기록되므로 저장소 장애를 업무 작업의 재시도와 분리해 관찰할 수 있습니다.
+
 업무 콜백이 성공한 뒤 `RetryListener.onSuccess` 또는 저수준 `RetryHooks.onSuccess`가 실패하면 콜백과 recovery는 다시 실행되지 않습니다. 대신 `RetrySuccessHookProblem`이 throw되며 `callbackSucceeded: true`, 훅 이름, 메서드 이름, 성공 시도 횟수와 원래 오류를 제공합니다. 따라서 호출자는 성공한 비멱등 작업을 재호출하지 않고 관측·리스너 장애를 별도로 처리해야 합니다.
 
 ## API 레퍼런스
