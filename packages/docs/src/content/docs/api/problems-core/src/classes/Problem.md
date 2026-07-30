@@ -259,6 +259,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidMeterDimensionProblem`](/api/metering-core/src/classes/invalidmeterdimensionproblem/)
 - [`InvalidMeterProblem`](/api/metering-core/src/classes/invalidmeterproblem/)
 - [`InvalidUsageEnvelopeProblem`](/api/metering-core/src/classes/invalidusageenvelopeproblem/)
+- [`InvalidUsageQueryProblem`](/api/metering-core/src/classes/invalidusagequeryproblem/)
 - [`QuotaExceededProblem`](/api/metering-core/src/classes/quotaexceededproblem/)
 - [`RedisProblem`](/api/metering-core/src/classes/redisproblem/)
 - [`UsageEnvelopeConfigurationProblem`](/api/metering-drizzle/src/classes/usageenvelopeconfigurationproblem/)

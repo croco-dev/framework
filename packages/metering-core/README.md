@@ -99,6 +99,9 @@ class ApiController {
 - `QuotaManager`, quota 확인과 기록을 원자적으로 처리합니다.
 - `IdempotencyManager`, 중복 기록을 방지합니다.
 - `RedisUsageStorage`, Redis 기반 실시간 사용량 저장소입니다.
+- 명시적인 usage 조회 범위의 `startDate`와 `endDate`는 모두 포함되며, 월 경계를 넘는 billing cycle 조회는
+  범위와 겹치는 모든 UTC 월 파티션을 집계합니다. 두 날짜는 함께 제공해야 하며 한 번의 조회는 최대 1,200개
+  월 파티션으로 제한됩니다.
 - `UsageAggregator`, Redis 데이터를 영구 저장소로 flush 합니다.
 
 ### 데코레이터

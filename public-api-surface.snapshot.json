@@ -14741,6 +14741,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidUsageQueryProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidUsageQueryProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "METER_METADATA_KEY",
               "exportKind": "named",
               "source": "./libs/decorators/Meter",

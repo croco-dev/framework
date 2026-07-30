@@ -338,6 +338,101 @@ describe("RedisUsageStorage", () => {
       );
     });
 
+    it("should aggregate every billing-cycle month across empty intermediate partitions", async () => {
+      vi.mocked(mockRedis.zrangebyscore)
+        .mockResolvedValueOnce(["usage-january:10"])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(["usage-march:20"]);
+      const startDate = new Date("2026-01-31T23:00:00Z");
+      const endDate = new Date("2026-03-01T01:00:00Z");
+
+      const result = await storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+        startDate,
+        endDate,
+      });
+
+      expect(result).toBe(30);
+      expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
+        1,
+        "usage2:tenant-1:api_calls:2026-01",
+        startDate.getTime(),
+        endDate.getTime(),
+      );
+      expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
+        2,
+        "usage2:tenant-1:api_calls:2026-02",
+        startDate.getTime(),
+        endDate.getTime(),
+      );
+      expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
+        3,
+        "usage2:tenant-1:api_calls:2026-03",
+        startDate.getTime(),
+        endDate.getTime(),
+      );
+    });
+
+    it("should aggregate large Redis partitions without spreading members onto the call stack", async () => {
+      vi.mocked(mockRedis.zrangebyscore).mockResolvedValue(
+        Array.from({ length: 200_000 }, (_, index) => `usage-${index}:1`),
+      );
+
+      const result = await storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+        startDate: new Date("2026-01-01T00:00:00Z"),
+        endDate: new Date("2026-01-31T23:59:59Z"),
+      });
+
+      expect(result).toBe(200_000);
+    });
+
+    it.each([
+      {
+        name: "only one date bound",
+        startDate: new Date("2026-01-01T00:00:00Z"),
+        endDate: undefined,
+        detail: "must be provided together",
+      },
+      {
+        name: "an invalid date",
+        startDate: new Date("invalid"),
+        endDate: new Date("2026-01-01T00:00:00Z"),
+        detail: "must be valid",
+      },
+      {
+        name: "a reversed range",
+        startDate: new Date("2026-02-01T00:00:00Z"),
+        endDate: new Date("2026-01-01T00:00:00Z"),
+        detail: "must not be after",
+      },
+      {
+        name: "more than 1,200 billing-cycle partitions",
+        startDate: new Date("2026-01-01T00:00:00Z"),
+        endDate: new Date("2126-01-01T00:00:00Z"),
+        detail: "maximum is 1200",
+      },
+    ])("should reject $name", async ({ startDate, endDate, detail }) => {
+      const request = storage.getUsage({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+        startDate,
+        endDate,
+      });
+
+      await expect(request).rejects.toMatchObject({
+        code: "metering/invalid-usage-query",
+        status: 422,
+        detail: expect.stringContaining(detail),
+      });
+      expect(mockRedis.zrangebyscore).not.toHaveBeenCalled();
+    });
+
     it("should return 0 for empty result", async () => {
       vi.mocked(mockRedis.zrangebyscore).mockResolvedValue([]);
 
@@ -481,6 +576,41 @@ describe("RedisUsageStorage", () => {
         endpoint: "/users",
         nested: { active: true },
       });
+    });
+
+    it("should fetch billing-cycle records deterministically across a year boundary", async () => {
+      const decemberTimestamp = new Date("2025-12-31T23:00:00Z");
+      const januaryTimestamp = new Date("2026-01-01T01:00:00Z");
+      vi.mocked(mockRedis.zrangebyscore)
+        .mockResolvedValueOnce(["usage-december:10", String(decemberTimestamp.getTime())])
+        .mockResolvedValueOnce(["usage-january:20", String(januaryTimestamp.getTime())]);
+
+      const records = await storage.fetchUsageRecords({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+        startDate: decemberTimestamp,
+        endDate: januaryTimestamp,
+      });
+
+      expect(records.map(({ id, value, timestamp }) => ({ id, value, timestamp }))).toEqual([
+        { id: "usage-december", value: 10, timestamp: decemberTimestamp },
+        { id: "usage-january", value: 20, timestamp: januaryTimestamp },
+      ]);
+      expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
+        1,
+        "usage2:tenant-1:api_calls:2025-12",
+        decemberTimestamp.getTime(),
+        januaryTimestamp.getTime(),
+        "WITHSCORES",
+      );
+      expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
+        2,
+        "usage2:tenant-1:api_calls:2026-01",
+        decemberTimestamp.getTime(),
+        januaryTimestamp.getTime(),
+        "WITHSCORES",
+      );
     });
 
     it("should preserve metadata when records are fetched", async () => {
@@ -884,6 +1014,83 @@ describe("RedisUsageStorage", () => {
         expect.stringContaining("ZREM"),
         ["usage2:tenant-1:api_calls:2024-01"],
         expect.arrayContaining([legacyMember]),
+      );
+    });
+
+    it("should delete billing-cycle records from every intersecting month", async () => {
+      const januaryTimestamp = new Date("2026-01-31T23:00:00Z");
+      const februaryTimestamp = new Date("2026-02-01T01:00:00Z");
+      const records: UsageRecord[] = [
+        {
+          id: "usage-january",
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 10,
+          timestamp: januaryTimestamp,
+          idempotencyKey: "january",
+        },
+        {
+          id: "usage-february",
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 20,
+          timestamp: februaryTimestamp,
+          idempotencyKey: "february",
+        },
+      ];
+
+      await storage.deleteUsageRecords(
+        {
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          period: "billing_cycle",
+          startDate: januaryTimestamp,
+          endDate: februaryTimestamp,
+        },
+        records,
+      );
+
+      expect(mockRedis.eval).toHaveBeenCalledTimes(2);
+      expect(mockRedis.eval).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining("ZREM"),
+        ["usage2:tenant-1:api_calls:2026-01"],
+        expect.any(Array),
+      );
+      expect(mockRedis.eval).toHaveBeenNthCalledWith(
+        2,
+        expect.stringContaining("ZREM"),
+        ["usage2:tenant-1:api_calls:2026-02"],
+        expect.any(Array),
+      );
+    });
+
+    it("should not delete an identical member from a different billing-cycle partition", async () => {
+      const januaryRecord: UsageRecord = {
+        id: "usage-shared",
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        value: 10,
+        timestamp: new Date("2026-01-31T23:00:00Z"),
+        idempotencyKey: "shared",
+      };
+
+      await storage.deleteUsageRecords(
+        {
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          period: "billing_cycle",
+          startDate: januaryRecord.timestamp,
+          endDate: new Date("2026-02-01T00:00:00Z"),
+        },
+        [januaryRecord],
+      );
+
+      expect(mockRedis.eval).toHaveBeenCalledTimes(1);
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("ZREM"),
+        ["usage2:tenant-1:api_calls:2026-01"],
+        expect.arrayContaining([expect.stringMatching(/^usage-shared:10:v2\./), "usage-shared:10"]),
       );
     });
   });
