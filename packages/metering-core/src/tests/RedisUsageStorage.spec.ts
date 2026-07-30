@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { IdempotencyManager } from "../libs/IdempotencyManager";
 import { RedisProblem } from "../libs/problems/RedisProblem";
 import type { RedisClient } from "../libs/RedisClient";
 import { RedisUsageStorage } from "../libs/RedisUsageStorage";
@@ -115,10 +116,58 @@ describe("RedisUsageStorage", () => {
       await storage.record(usage);
 
       expect(mockRedis.zadd).toHaveBeenCalledWith(
-        "usage:tenant-1:api_calls:2024-01",
+        "usage2:tenant-1:api_calls:2024-01",
         usage.timestamp.getTime(),
         expect.stringMatching(/^usage-123:5:v2\./),
       );
+    });
+
+    it("should keep colliding tenant and meter tuples in distinct usage and dedupe keys", async () => {
+      const first = {
+        ...createUsageRecord("request:*?[]"),
+        tenantId: "a:b",
+        meterId: "c",
+      };
+      const second = {
+        ...createUsageRecord("request:*?[]"),
+        tenantId: "a",
+        meterId: "b:c",
+      };
+      const third = {
+        ...createUsageRecord(""),
+        tenantId: "tenant*[α]?\\",
+        meterId: "",
+      };
+
+      await storage.record(first);
+      await storage.record(second);
+      await storage.record(third);
+
+      const usageKeys = vi.mocked(mockRedis.zadd).mock.calls.map(([key]) => key);
+      const dedupeKeys = vi.mocked(mockRedis.set).mock.calls.map(([key]) => key);
+      expect(new Set(usageKeys)).toHaveLength(3);
+      expect(new Set(dedupeKeys)).toHaveLength(3);
+      expect(usageKeys.every((key) => key.startsWith("usage2:"))).toBe(true);
+      expect(dedupeKeys.every((key) => key.startsWith("idem2:"))).toBe(true);
+      expect(
+        [...usageKeys, ...dedupeKeys].every(
+          (key) => !key.includes("*") && !key.includes("?") && !key.includes("["),
+        ),
+      ).toBe(true);
+    });
+
+    it("should keep lifecycle and record idempotency state in distinct keys", async () => {
+      const manager = new IdempotencyManager(mockRedis);
+      vi.mocked(mockRedis.eval).mockResolvedValue([1]);
+
+      await manager.beginProcessing("tenant-1", "api_calls", "request-1");
+      await storage.record(createUsageRecord("request-1"));
+
+      const lifecycleKey = vi.mocked(mockRedis.eval).mock.calls[0]?.[1][0];
+      const recordKey = vi.mocked(mockRedis.set).mock.calls[0]?.[0];
+      expect(lifecycleKey).toBe("idem2:lifecycle:tenant-1:api_calls:request-1");
+      expect(recordKey).toBe("idem2:record:tenant-1:api_calls:request-1");
+      expect(recordKey).not.toBe(lifecycleKey);
     });
 
     it("should delete v2 records after nested envelope keys are reordered", async () => {
@@ -277,13 +326,13 @@ describe("RedisUsageStorage", () => {
       expect(result).toBe(5);
       expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
         1,
-        "usage:tenant-1:api_calls:2024-01-15",
+        "usage2:tenant-1:api_calls:2024-01-15",
         expect.any(Number),
         expect.any(Number),
       );
       expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
         2,
-        "usage:tenant-1:api_calls:2024-01",
+        "usage2:tenant-1:api_calls:2024-01",
         expect.any(Number),
         expect.any(Number),
       );
@@ -319,13 +368,13 @@ describe("RedisUsageStorage", () => {
       expect(result).toBe(5);
       expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
         1,
-        "usage:tenant-1:api_calls:2024-01-15",
+        "usage2:tenant-1:api_calls:2024-01-15",
         new Date("2024-01-15T00:00:00Z").getTime(),
         new Date("2024-01-15T23:59:59Z").getTime(),
       );
       expect(mockRedis.zrangebyscore).toHaveBeenNthCalledWith(
         2,
-        "usage:tenant-1:api_calls:2024-01",
+        "usage2:tenant-1:api_calls:2024-01",
         new Date("2024-01-15T00:00:00Z").getTime(),
         new Date("2024-01-15T23:59:59Z").getTime(),
       );
@@ -352,7 +401,7 @@ describe("RedisUsageStorage", () => {
 
       expect(result).toBe(true);
       expect(mockRedis.set).toHaveBeenCalledWith(
-        "idem:tenant-1:api_calls:key-123",
+        "idem2:record:tenant-1:api_calls:key-123",
         "1",
         "NX",
         "EX",
@@ -408,7 +457,7 @@ describe("RedisUsageStorage", () => {
       expect(result[1].value).toBe(3);
       expect(result[1].timestamp).toEqual(secondTimestamp);
       expect(mockRedis.zrangebyscore).toHaveBeenCalledWith(
-        "usage:tenant-1:api_calls:2024-01-15",
+        "usage2:tenant-1:api_calls:2024-01-15",
         startDate.getTime(),
         endDate.getTime(),
         "WITHSCORES",
@@ -555,7 +604,7 @@ describe("RedisUsageStorage", () => {
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("ZREM"),
-        ["usage:tenant-1:api_calls:2024-01"],
+        ["usage2:tenant-1:api_calls:2024-01"],
         expect.arrayContaining([
           expect.stringMatching(/^usage-1:5:v2\./),
           "usage-1:5:%7B%22endpoint%22%3A%22%2Fusers%22%7D",
@@ -589,7 +638,7 @@ describe("RedisUsageStorage", () => {
       expect(result).toEqual({ exceeded: false, newUsage: 8 });
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("redis.call('ZRANGEBYSCORE'"),
-        ["usage:tenant-1:api_calls:2024-01"],
+        ["usage2:tenant-1:api_calls:2024-01"],
         [10, 5, usage.timestamp.getTime(), expect.stringMatching(/^usage-123:5:v2\./), 0],
       );
     });
@@ -666,7 +715,7 @@ describe("RedisUsageStorage", () => {
         usageRecord: firstRecord,
       });
 
-      expect(getRecordedRecordKeys().has("idem:tenant-1:api_calls:key-1")).toBe(true);
+      expect(getRecordedRecordKeys().has("idem2:record:tenant-1:api_calls:key-1")).toBe(true);
 
       vi.setSystemTime(new Date("2024-01-02T00:00:01.000Z"));
 
@@ -680,8 +729,8 @@ describe("RedisUsageStorage", () => {
         usageRecord: secondRecord,
       });
 
-      expect(getRecordedRecordKeys().has("idem:tenant-1:api_calls:key-1")).toBe(false);
-      expect(getRecordedRecordKeys().has("idem:tenant-1:api_calls:key-2")).toBe(true);
+      expect(getRecordedRecordKeys().has("idem2:record:tenant-1:api_calls:key-1")).toBe(false);
+      expect(getRecordedRecordKeys().has("idem2:record:tenant-1:api_calls:key-2")).toBe(true);
       expect(getRecordedRecordKeys().size).toBe(1);
     });
 
@@ -702,8 +751,8 @@ describe("RedisUsageStorage", () => {
       }
 
       expect(getRecordedRecordKeys().size).toBe(10_000);
-      expect(getRecordedRecordKeys().has("idem:tenant-1:api_calls:key-0")).toBe(false);
-      expect(getRecordedRecordKeys().has("idem:tenant-1:api_calls:key-10000")).toBe(true);
+      expect(getRecordedRecordKeys().has("idem2:record:tenant-1:api_calls:key-0")).toBe(false);
+      expect(getRecordedRecordKeys().has("idem2:record:tenant-1:api_calls:key-10000")).toBe(true);
     });
 
     it("should throw RedisProblem on eval error", async () => {
@@ -795,7 +844,7 @@ describe("RedisUsageStorage", () => {
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("ZREM"),
-        ["usage:tenant-1:api_calls:2024-01-15"],
+        ["usage2:tenant-1:api_calls:2024-01-15"],
         expect.arrayContaining([
           expect.stringMatching(/^usage-1:5:v2\./),
           expect.stringMatching(/^usage-2:3:v2\./),
@@ -833,7 +882,7 @@ describe("RedisUsageStorage", () => {
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("ZREM"),
-        ["usage:tenant-1:api_calls:2024-01"],
+        ["usage2:tenant-1:api_calls:2024-01"],
         expect.arrayContaining([legacyMember]),
       );
     });
@@ -848,7 +897,20 @@ describe("RedisUsageStorage", () => {
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
         'return redis.call("DEL", KEYS[1])',
-        ["usage:tenant-1:api_calls:2024-01"],
+        ["usage2:tenant-1:api_calls:2024-01"],
+        [],
+      );
+    });
+
+    it("should treat an empty meter ID as a concrete encoded segment", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
+
+      await storage.resetBillingCycle("tenant*[α]?\\", "");
+
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        'return redis.call("DEL", KEYS[1])',
+        ["usage2:tenant%002A%005B%03B1%005D%003F%005C::2024-01"],
         [],
       );
     });
@@ -867,30 +929,30 @@ describe("RedisUsageStorage", () => {
       expect(firstScript).toContain("redis.call('SCAN'");
       expect(firstScript).not.toContain("redis.call('KEYS'");
       expect(firstKeys).toEqual([]);
-      expect(firstArgs).toEqual(["0", "usage:tenant-1:*:2024-01", 500]);
+      expect(firstArgs).toEqual(["0", "usage2:tenant-1:*:2024-01", 500]);
       expect(secondScript).toBe(firstScript);
       expect(secondKeys).toEqual([]);
-      expect(secondArgs).toEqual(["7", "usage:tenant-1:*:2024-01", 500]);
+      expect(secondArgs).toEqual(["7", "usage2:tenant-1:*:2024-01", 500]);
     });
 
     it("should delete only current tenant billing cycle keys from a Redis-like keyspace", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2024-01-15T10:30:00Z"));
       const { keyspace, redis, scripts } = createScanDeleteRedis([
-        "usage:tenant-1:api_calls:2024-01",
-        "usage:tenant-1:storage:2024-01",
-        "usage:tenant-1:api_calls:2024-02",
-        "usage:tenant-2:api_calls:2024-01",
-        "idem:tenant-1:api_calls:key-1",
+        "usage2:tenant-1:api_calls:2024-01",
+        "usage2:tenant-1:storage:2024-01",
+        "usage2:tenant-1:api_calls:2024-02",
+        "usage2:tenant-2:api_calls:2024-01",
+        "idem2:record:tenant-1:api_calls:key-1",
       ]);
       const redisBackedStorage = new RedisUsageStorage(redis);
 
       await redisBackedStorage.resetBillingCycle("tenant-1");
 
       expect(Array.from(keyspace).sort()).toEqual([
-        "idem:tenant-1:api_calls:key-1",
-        "usage:tenant-1:api_calls:2024-02",
-        "usage:tenant-2:api_calls:2024-01",
+        "idem2:record:tenant-1:api_calls:key-1",
+        "usage2:tenant-1:api_calls:2024-02",
+        "usage2:tenant-2:api_calls:2024-01",
       ]);
       expect(scripts).toHaveLength(2);
       expect(scripts.every((script) => script.includes("redis.call('SCAN'"))).toBe(true);
@@ -905,7 +967,7 @@ describe("RedisUsageStorage", () => {
       await storage.resetBillingCycle("tenant*[alpha]?\\");
 
       const [, , args] = vi.mocked(mockRedis.eval).mock.calls[0];
-      expect(args).toEqual(["0", "usage:tenant\\*\\[alpha\\]\\?\\\\:*:2024-01", 500]);
+      expect(args).toEqual(["0", "usage2:tenant%002A%005Balpha%005D%003F%005C:*:2024-01", 500]);
     });
   });
 

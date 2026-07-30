@@ -1,5 +1,6 @@
 import { ulid } from "ulid";
 import { DuplicateRecordProblem } from "./problems/DuplicateRecordProblem";
+import { buildMeteringRedisKey } from "./redisKey";
 import type { RedisClient } from "./RedisClient";
 
 /**
@@ -12,7 +13,7 @@ import type { RedisClient } from "./RedisClient";
  */
 export class IdempotencyManager {
   private static readonly DEFAULT_TTL_SECONDS = 86400; // 24시간
-  private static readonly KEY_PREFIX = "idem";
+  private static readonly KEY_NAMESPACE = "idem2";
   private static readonly STATUS_IN_PROGRESS = "IN_PROGRESS";
   private static readonly STATUS_COMPLETED = "COMPLETED";
 
@@ -130,9 +131,14 @@ export class IdempotencyManager {
 
   /**
    * Redis 키 생성
-   * 패턴: idem:{tenantId}:{meterId}:{idempotencyKey}
+   * 패턴: idem2:lifecycle:{encodedTenantId}:{encodedMeterId}:{encodedIdempotencyKey}
    */
   private buildKey(tenantId: string, meterId: string, idempotencyKey: string): string {
-    return `${IdempotencyManager.KEY_PREFIX}:${tenantId}:${meterId}:${idempotencyKey}`;
+    return buildMeteringRedisKey(IdempotencyManager.KEY_NAMESPACE, [
+      "lifecycle",
+      tenantId,
+      meterId,
+      idempotencyKey,
+    ]);
   }
 }
