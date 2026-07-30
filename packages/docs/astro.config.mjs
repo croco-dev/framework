@@ -83,6 +83,7 @@ export default defineConfig({
             "../cli/src/index.ts",
             "../create-croco-app/src/cli.ts",
             "../credits-core/src/index.ts",
+            "../credits-drizzle/src/index.ts",
             "../customer-health-core/src/index.ts",
             "../customer-health-drizzle/src/index.ts",
             "../dataloader-core/src/index.ts",

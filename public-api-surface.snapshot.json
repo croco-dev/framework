@@ -6373,6 +6373,131 @@
       ]
     },
     {
+      "packageName": "@croco/credits-drizzle",
+      "relativeDir": "packages/credits-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            },
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            }
+          ],
+          "sourceEntrypoint": "packages/credits-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "createCreditsSchema",
+              "exportKind": "named",
+              "source": "./migrations/creditsSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "creditAccounts",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "creditAllocations",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "creditGrantLots",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "creditIdempotencyRecords",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "CreditLedgerPersistenceProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "creditReservationAllocations",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "creditReservations",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "creditTransactions",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "DrizzleCreditLedgerStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleCreditLedgerStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "dropCreditsSchema",
+              "exportKind": "named",
+              "source": "./migrations/creditsSchema",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CreditAccountRow",
+              "exportKind": "named",
+              "source": "./libs/schema"
+            },
+            {
+              "name": "CreditGrantLotRow",
+              "exportKind": "named",
+              "source": "./libs/schema"
+            },
+            {
+              "name": "CreditReservationRow",
+              "exportKind": "named",
+              "source": "./libs/schema"
+            },
+            {
+              "name": "CreditTransactionRow",
+              "exportKind": "named",
+              "source": "./libs/schema"
+            },
+            {
+              "name": "DrizzleCreditClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleCreditLedgerStore"
+            },
+            {
+              "name": "DrizzleCreditTxManager",
+              "exportKind": "named",
+              "source": "./libs/DrizzleCreditLedgerStore"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/customer-health-core",
       "relativeDir": "packages/customer-health-core",
       "entrypoints": [
