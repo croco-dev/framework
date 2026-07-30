@@ -48,7 +48,7 @@ describe("IdempotencyManager", () => {
 
       expect(result).toBe(true);
       expect(mockRedis.set).toHaveBeenCalledWith(
-        "idem:tenant-1:api_calls:key-123",
+        "idem2:lifecycle:tenant-1:api_calls:key-123",
         "COMPLETED",
         "NX",
         "EX",
@@ -71,7 +71,7 @@ describe("IdempotencyManager", () => {
       await customManager.checkAndMark("tenant-1", "api_calls", "key-123");
 
       expect(mockRedis.set).toHaveBeenCalledWith(
-        "idem:tenant-1:api_calls:key-123",
+        "idem2:lifecycle:tenant-1:api_calls:key-123",
         "COMPLETED",
         "NX",
         "EX",
@@ -87,7 +87,7 @@ describe("IdempotencyManager", () => {
 
       expect(mockRedis.set).toHaveBeenNthCalledWith(
         1,
-        "idem:tenant-A:meter-X:same-key",
+        "idem2:lifecycle:tenant-A:meter-X:same-key",
         "COMPLETED",
         "NX",
         "EX",
@@ -95,12 +95,28 @@ describe("IdempotencyManager", () => {
       );
       expect(mockRedis.set).toHaveBeenNthCalledWith(
         2,
-        "idem:tenant-B:meter-X:same-key",
+        "idem2:lifecycle:tenant-B:meter-X:same-key",
         "COMPLETED",
         "NX",
         "EX",
         86400,
       );
+    });
+
+    it("should keep ambiguous and special-character tuples in distinct keys", async () => {
+      vi.mocked(mockRedis.set).mockResolvedValue("OK");
+
+      await manager.checkAndMark("a:b", "c", "request:*?[]");
+      await manager.checkAndMark("a", "b:c", "request:*?[]");
+      await manager.checkAndMark("", "측정기:α", "");
+      await manager.checkAndMark("\ud800", "", "");
+
+      const keys = vi.mocked(mockRedis.set).mock.calls.map(([key]) => key);
+      expect(new Set(keys)).toHaveLength(4);
+      expect(keys.every((key) => key.startsWith("idem2:"))).toBe(true);
+      expect(
+        keys.every((key) => !key.includes("*") && !key.includes("?") && !key.includes("[")),
+      ).toBe(true);
     });
   });
 
@@ -113,7 +129,7 @@ describe("IdempotencyManager", () => {
       expect(result).toBe(true);
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])"),
-        ["idem:tenant-1:api_calls:key-123"],
+        ["idem2:lifecycle:tenant-1:api_calls:key-123"],
         ["IN_PROGRESS", "86400"],
       );
     });
@@ -145,7 +161,7 @@ describe("IdempotencyManager", () => {
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])"),
-        ["idem:tenant-1:api_calls:key-123"],
+        ["idem2:lifecycle:tenant-1:api_calls:key-123"],
         ["IN_PROGRESS", "COMPLETED", "86400"],
       );
     });
@@ -159,7 +175,7 @@ describe("IdempotencyManager", () => {
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
         expect.stringContaining("redis.call('DEL', KEYS[1])"),
-        ["idem:tenant-1:api_calls:key-123"],
+        ["idem2:lifecycle:tenant-1:api_calls:key-123"],
         ["IN_PROGRESS"],
       );
     });

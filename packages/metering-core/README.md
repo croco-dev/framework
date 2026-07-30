@@ -131,3 +131,30 @@ class ApiController {
 - billing, entitlements 같은 상위 패키지와 이벤트 기반으로 연결할 수 있습니다.
 - `RedisUsageStorage.resetBillingCycle(tenantId)`는 현재 billing cycle의 tenant usage key를 `KEYS` 대신 bounded `SCAN` batch로 삭제합니다.
 - tenant-wide reset은 이미 삭제된 key를 다시 삭제하지 않는 idempotent 작업이며, batch 사이에 새로 기록된 현재 cycle usage는 다음 reset에서 정리될 수 있습니다.
+
+### Redis key 마이그레이션
+
+`IdempotencyManager`와 `RedisUsageStorage`는 tenant, meter, idempotency segment의 안전한 ASCII 문자는
+그대로 두고 나머지 UTF-16 code unit을 고정 폭으로 인코딩한 `idem2:` 및 `usage2:` key를 사용합니다.
+Lifecycle marker와 record dedupe marker는 각각 `idem2:lifecycle:`과 `idem2:record:`로 분리됩니다. 따라서
+`:`, Unicode, glob 문자, 빈 문자열을 포함한 식별자도 서로 다른 tuple이면 서로 다른 Redis key를 생성하고,
+서로 다른 idempotency state machine도 같은 key를 점유하지 않습니다.
+
+이전 `idem:<tenant>:<meter>:<key>`와 `usage:<tenant>:<meter>:<period>` 형식은 segment 경계가
+모호하므로 새 코드에서 읽거나 삭제하지 않습니다. 기존 deployment를 전환할 때는 다음 중 하나를 선택해야
+합니다.
+
+- billing cycle 경계에서 metering write를 중단하고, idempotency TTL(기본 24시간)이 지난 뒤 새 버전을
+  배포해 새 cycle을 `usage2:`에서 시작합니다.
+- cycle 중간에 전환해야 하면 write를 중단하고, authoritative tenant/meter mapping의 tuple을 legacy physical
+  key 기준으로 먼저 그룹화합니다. 하나의 legacy key에 tuple 하나만 대응하는 singleton group만 해당 usage
+  record를 `RedisUsageStorage`의 새 record 경로 또는 동등한 `usage2:` import 절차로 이관할 수 있습니다.
+  tuple 여러 개가 같은 legacy key에 대응하는 collision group은 Redis sorted set member에 tenant/meter
+  ownership이 없으므로 그 set 자체로는 분리할 수 없습니다. 독립적인 per-record/event ledger에서 소유권을
+  복구하거나 수동 reconcile해야 하며, 같은 legacy set을 각 tuple에 복제하면 안 됩니다. 모호한 legacy key
+  문자열만 역파싱해 이관하는 것도 안전하지 않습니다.
+- idempotency TTL이 지나기 전에 재개하면 이미 처리된 요청이 새 namespace에서 다시 처리될 수 있으므로,
+  해당 요청은 독립 request ledger로 reconcile해야 합니다.
+
+구버전과 신버전 인스턴스를 함께 운영하면 usage와 idempotency state가 두 namespace로 분리되어 quota와
+dedupe 보장이 깨집니다. 모든 구버전 writer를 중지하고 migration을 검증한 뒤 신버전 writer를 시작하세요.

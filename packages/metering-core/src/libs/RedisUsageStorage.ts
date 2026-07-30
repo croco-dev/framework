@@ -1,4 +1,5 @@
 import { RedisProblem } from "./problems/RedisProblem";
+import { buildMeteringRedisKey, encodeRedisKeySegment } from "./redisKey";
 import type { RedisClient } from "./RedisClient";
 import type { AggregationPeriod, UsageQueryOptions, UsageRecord } from "./types";
 import type { AtomicQuotaCheckOptions, AtomicQuotaCheckResult, UsageStorage } from "./UsageStorage";
@@ -35,8 +36,8 @@ function stableStringify(value: unknown): string {
  * - Idempotency 체크를 Redis SET NX로 처리
  */
 export class RedisUsageStorage implements UsageStorage {
-  private static readonly USAGE_KEY_PREFIX = "usage";
-  private static readonly IDEM_KEY_PREFIX = "idem";
+  private static readonly USAGE_KEY_NAMESPACE = "usage2";
+  private static readonly IDEM_KEY_NAMESPACE = "idem2";
   private static readonly RECORD_IDEMPOTENCY_TTL_SECONDS = 86400;
   private static readonly RECORD_IDEMPOTENCY_TTL_MILLISECONDS =
     RedisUsageStorage.RECORD_IDEMPOTENCY_TTL_SECONDS * 1000;
@@ -168,7 +169,7 @@ return { exceeded and 1 or 0, newUsage }
     ttlSeconds: number,
   ): Promise<boolean> {
     try {
-      const key = `${RedisUsageStorage.IDEM_KEY_PREFIX}:${tenantId}:${meterId}:${idempotencyKey}`;
+      const key = this.buildRecordIdempotencyKey(tenantId, meterId, idempotencyKey);
       const result = await this.redis.set(key, "1", "NX", "EX", ttlSeconds);
       return result === "OK";
     } catch (error) {
@@ -248,7 +249,7 @@ return { exceeded and 1 or 0, newUsage }
 
   /**
    * Usage 키 생성
-   * 패턴: usage:{tenantId}:{meterId}:{period}
+   * 패턴: usage2:{encodedTenantId}:{encodedMeterId}:{period}
    */
   private buildUsageKey(
     tenantId: string,
@@ -257,7 +258,11 @@ return { exceeded and 1 or 0, newUsage }
     period: AggregationPeriod,
   ): string {
     const periodKey = this.getPeriodKey(date, period);
-    return `${RedisUsageStorage.USAGE_KEY_PREFIX}:${tenantId}:${meterId}:${periodKey}`;
+    return buildMeteringRedisKey(RedisUsageStorage.USAGE_KEY_NAMESPACE, [
+      tenantId,
+      meterId,
+      periodKey,
+    ]);
   }
 
   private getUsageKeyCandidates(
@@ -300,7 +305,12 @@ return { exceeded and 1 or 0, newUsage }
     meterId: string,
     idempotencyKey: string,
   ): string {
-    return `${RedisUsageStorage.IDEM_KEY_PREFIX}:${tenantId}:${meterId}:${idempotencyKey}`;
+    return buildMeteringRedisKey(RedisUsageStorage.IDEM_KEY_NAMESPACE, [
+      "record",
+      tenantId,
+      meterId,
+      idempotencyKey,
+    ]);
   }
 
   private hasRecordedRecordKey(dedupeKey: string): boolean {
@@ -547,7 +557,7 @@ return { exceeded and 1 or 0, newUsage }
    */
   async resetBillingCycle(tenantId: string, meterId?: string): Promise<void> {
     try {
-      if (meterId) {
+      if (meterId !== undefined) {
         const key = this.buildUsageKey(tenantId, meterId, new Date(), "billing_cycle");
         await this.redis.eval<[number]>('return redis.call("DEL", KEYS[1])', [key], []);
       } else {
@@ -556,7 +566,7 @@ return { exceeded and 1 or 0, newUsage }
         await this.deleteTenantBillingCycleUsageKeys(tenantId, periodKey);
       }
     } catch (error) {
-      throw this.toRedisProblem(meterId ? "DEL" : "SCAN", error);
+      throw this.toRedisProblem(meterId !== undefined ? "DEL" : "SCAN", error);
     }
   }
 
@@ -564,7 +574,8 @@ return { exceeded and 1 or 0, newUsage }
     tenantId: string,
     periodKey: string,
   ): Promise<void> {
-    const keyPattern = `${RedisUsageStorage.USAGE_KEY_PREFIX}:${this.escapeRedisGlob(tenantId)}:*:${periodKey}`;
+    const encodedTenantId = encodeRedisKeySegment(tenantId);
+    const keyPattern = `${RedisUsageStorage.USAGE_KEY_NAMESPACE}:${encodedTenantId}:*:${periodKey}`;
     let cursor = "0";
 
     do {
@@ -575,10 +586,6 @@ return { exceeded and 1 or 0, newUsage }
       );
       cursor = String(nextCursor);
     } while (cursor !== "0");
-  }
-
-  private escapeRedisGlob(value: string): string {
-    return value.replace(/[\\*?[\]]/g, "\\$&");
   }
 
   async deleteUsageRecords(options: UsageQueryOptions, records: UsageRecord[]): Promise<void> {
