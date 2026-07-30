@@ -58,6 +58,7 @@ describe.skipIf(connectionString.length === 0)(
           scheduled_for timestamp,
           timeout integer,
           idempotency_key varchar(255),
+          request_fingerprint varchar(64),
           replay_of varchar(26),
           logs jsonb,
           parent_id varchar(26),
