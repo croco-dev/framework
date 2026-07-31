@@ -133,7 +133,9 @@ export type CommandRunResult = {
   readonly signal: string | null;
   readonly status: number | null;
   readonly stderr: string;
+  readonly stderrFileComplete?: boolean;
   readonly stdout: string;
+  readonly stdoutFileComplete?: boolean;
   readonly timedOut: boolean;
 };
 
@@ -146,6 +148,12 @@ export type CommandRunner = (
     readonly stderrPath?: string;
     readonly stdoutPath?: string;
     readonly timeoutMs: number;
+    readonly writeOutput?: (
+      descriptor: number,
+      output: Uint8Array,
+      offset: number,
+      length: number,
+    ) => number;
   },
 ) => CommandRunResult | Promise<CommandRunResult>;
 
@@ -169,11 +177,14 @@ type RunOptions = Options & {
   readonly clock?: Clock;
   readonly commands?: readonly EvidenceCommand[];
   readonly getInterruptSignal?: () => NodeJS.Signals | null;
+  readonly commandOutputWriter?: CommandRunnerContext["writeOutput"];
   readonly maxCommandOutputBufferLength?: number;
   readonly maxOutputExcerptLength?: number;
   readonly onCheckpoint?: (report: ReleaseSpineEvidenceReport) => void;
   readonly runner?: CommandRunner;
 };
+
+type CommandRunnerContext = Parameters<CommandRunner>[1];
 
 const systemClock: Clock = {
   nowIso: () => new Date().toISOString(),
@@ -461,7 +472,9 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
         signal: null,
         status: null,
         stderr: "",
+        stderrFileComplete: false,
         stdout: "",
+        stdoutFileComplete: false,
         timedOut: false,
       });
       return;
@@ -474,8 +487,67 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
     let stderr = "";
     let stdout = "";
     let timedOut = false;
-    const stdoutDescriptor = openCommandOutput(context.stdoutPath);
-    const stderrDescriptor = openCommandOutput(context.stderrPath);
+    const writeOutput =
+      context.writeOutput ??
+      ((descriptor: number, output: Uint8Array, offset: number, length: number) =>
+        writeSync(descriptor, output, offset, length));
+    let stdoutFileComplete = context.stdoutPath === undefined;
+    let stderrFileComplete = context.stderrPath === undefined;
+    let stdoutDescriptor: number | null = null;
+    let stderrDescriptor: number | null = null;
+    const recordOutputError = (stream: "stderr" | "stdout", error: unknown) => {
+      if (stream === "stdout") {
+        stdoutFileComplete = false;
+      } else {
+        stderrFileComplete = false;
+      }
+      if (errorMessage !== null) {
+        return;
+      }
+      const normalizedError = error instanceof Error ? error : new Error(String(error));
+      errorCode = getErrorCode(normalizedError);
+      errorMessage = `Failed to persist command ${stream}: ${normalizedError.message}`;
+    };
+    const closeOutput = (stream: "stderr" | "stdout", descriptor: number | null) => {
+      if (descriptor === null) {
+        return;
+      }
+      try {
+        closeSync(descriptor);
+      } catch (error) {
+        recordOutputError(stream, error);
+      }
+    };
+    try {
+      stdoutDescriptor = openCommandOutput(context.stdoutPath);
+      stdoutFileComplete = true;
+    } catch (error) {
+      recordOutputError("stdout", error);
+    }
+    if (errorMessage === null) {
+      try {
+        stderrDescriptor = openCommandOutput(context.stderrPath);
+        stderrFileComplete = true;
+      } catch (error) {
+        recordOutputError("stderr", error);
+      }
+    }
+    if (errorMessage !== null) {
+      closeOutput("stdout", stdoutDescriptor);
+      closeOutput("stderr", stderrDescriptor);
+      resolveResult({
+        errorCode,
+        errorMessage,
+        signal: null,
+        status: null,
+        stderr,
+        stderrFileComplete,
+        stdout,
+        stdoutFileComplete,
+        timedOut: false,
+      });
+      return;
+    }
     const child = spawn(command, args, {
       cwd: context.cwd,
       detached: process.platform !== "win32",
@@ -508,26 +580,55 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
         clearTimeout(activeInterruptKillTimer);
         activeInterruptKillTimer = null;
       }
-      if (stdoutDescriptor !== null) {
-        closeSync(stdoutDescriptor);
-      }
-      if (stderrDescriptor !== null) {
-        closeSync(stderrDescriptor);
-      }
-      resolveResult(result);
+      closeOutput("stdout", stdoutDescriptor);
+      closeOutput("stderr", stderrDescriptor);
+      resolveResult({
+        ...result,
+        errorCode: errorCode ?? result.errorCode,
+        errorMessage: errorMessage ?? result.errorMessage,
+        stderrFileComplete,
+        status: errorMessage ? null : result.status,
+        stdoutFileComplete,
+      });
     };
 
     child.stdout?.on("data", (chunk: unknown) => {
       const output = toText(chunk);
       if (stdoutDescriptor !== null) {
-        writeSync(stdoutDescriptor, output);
+        try {
+          writeAllCommandOutput(stdoutDescriptor, output, writeOutput);
+        } catch (error) {
+          recordOutputError("stdout", error);
+          closeOutput("stdout", stdoutDescriptor);
+          stdoutDescriptor = null;
+          signalCommandProcessTree(child, "SIGTERM");
+          if (!killTimer) {
+            killTimer = setTimeout(
+              () => signalCommandProcessTree(child, "SIGKILL"),
+              COMMAND_TIMEOUT_KILL_GRACE_MS,
+            );
+          }
+        }
       }
       stdout = appendBoundedText(stdout, output, context.maxOutputBufferLength);
     });
     child.stderr?.on("data", (chunk: unknown) => {
       const output = toText(chunk);
       if (stderrDescriptor !== null) {
-        writeSync(stderrDescriptor, output);
+        try {
+          writeAllCommandOutput(stderrDescriptor, output, writeOutput);
+        } catch (error) {
+          recordOutputError("stderr", error);
+          closeOutput("stderr", stderrDescriptor);
+          stderrDescriptor = null;
+          signalCommandProcessTree(child, "SIGTERM");
+          if (!killTimer) {
+            killTimer = setTimeout(
+              () => signalCommandProcessTree(child, "SIGKILL"),
+              COMMAND_TIMEOUT_KILL_GRACE_MS,
+            );
+          }
+        }
       }
       stderr = appendBoundedText(stderr, output, context.maxOutputBufferLength);
     });
@@ -564,6 +665,23 @@ function openCommandOutput(path: string | undefined): number | null {
 
   mkdirSync(dirname(path), { recursive: true });
   return openSync(path, "w");
+}
+
+function writeAllCommandOutput(
+  descriptor: number,
+  output: string,
+  writer: NonNullable<CommandRunnerContext["writeOutput"]>,
+): void {
+  const buffer = Buffer.from(output, "utf8");
+  let offset = 0;
+  while (offset < buffer.byteLength) {
+    const remaining = buffer.byteLength - offset;
+    const written = writer(descriptor, buffer, offset, remaining);
+    if (!Number.isInteger(written) || written <= 0 || written > remaining) {
+      throw new Error(`Command output writer returned invalid byte count ${written}.`);
+    }
+    offset += written;
+  }
 }
 
 function outputExcerpt(value: string, maxLength: number): string {
@@ -673,26 +791,34 @@ function persistFailedCommandOutput(
   modifiedAt: string,
 ): readonly EvidenceArtifactReference[] {
   const outputRoot = join(outputDir, RELEASE_ARTIFACT_DIRECTORY, checkId);
-  mkdirSync(outputRoot, { recursive: true });
 
   return [
-    ["Command stdout", "stdout.log", result.stdout],
-    ["Command stderr", "stderr.log", result.stderr],
-  ].map(([label, fileName, output]) => {
+    ["Command stdout", "stdout.log", result.stdout, result.stdoutFileComplete],
+    ["Command stderr", "stderr.log", result.stderr, result.stderrFileComplete],
+  ].map(([label, fileName, output, fileComplete]) => {
     const outputPath = join(outputRoot, fileName);
-    if (!existsSync(outputPath)) {
-      writeFileSync(outputPath, output);
+    let writeError: string | null = null;
+    let wroteCurrentOutput = fileComplete === true;
+    if (!wroteCurrentOutput) {
+      try {
+        mkdirSync(outputRoot, { recursive: true });
+        writeFileSync(outputPath, output);
+        wroteCurrentOutput = true;
+      } catch (error) {
+        writeError = error instanceof Error ? error.message : String(error);
+      }
     }
     const artifactPath = relativeToRoot(rootDir, outputPath);
+    const exists = existsSync(outputPath);
 
     return {
       label,
       path: artifactPath,
       required: false,
-      copiedPath: artifactPath,
-      copyError: null,
-      exists: true,
-      fresh: true,
+      copiedPath: exists && wroteCurrentOutput ? artifactPath : null,
+      copyError: writeError,
+      exists,
+      fresh: exists && wroteCurrentOutput,
       modifiedAt,
       sourcePath: artifactPath,
     };
@@ -771,6 +897,21 @@ function failureReason(result: CommandRunResult, artifactReason: string | null):
   }
 
   return null;
+}
+
+function rejectedCommandRunResult(error: unknown): CommandRunResult {
+  const normalizedError = error instanceof Error ? error : new Error(String(error));
+  return {
+    errorCode: getErrorCode(normalizedError),
+    errorMessage: normalizedError.message,
+    signal: null,
+    status: null,
+    stderr: "",
+    stderrFileComplete: false,
+    stdout: "",
+    stdoutFileComplete: false,
+    timedOut: false,
+  };
 }
 
 function markSkippedAfterTimeout(
@@ -929,23 +1070,29 @@ export async function runReleaseSpineEvidence(
             PACKAGE_QUALITY_SPINE_PROMOTION_STATUS: dashboardStatus("spine-promotion"),
           }
         : baseCommandEnv;
-    const result = await runner(check, {
-      cwd: rootDir,
-      env:
-        check.id === "spine-promotion"
-          ? {
-              ...process.env,
-              SPINE_PROMOTION_COMMIT_SHA: report.provenance.commitSha,
-              SPINE_PROMOTION_RELEASE_CHECKPOINT: join(outputDir, REPORT_JSON_FILE_NAME),
-              SPINE_PROMOTION_RUN_ATTEMPT: report.provenance.runAttempt,
-              SPINE_PROMOTION_RUN_ID: report.provenance.runId,
-            }
-          : commandEnv,
-      maxOutputBufferLength: options.maxCommandOutputBufferLength,
-      stderrPath: join(outputDir, RELEASE_ARTIFACT_DIRECTORY, check.id, "stderr.log"),
-      stdoutPath: join(outputDir, RELEASE_ARTIFACT_DIRECTORY, check.id, "stdout.log"),
-      timeoutMs: effectiveTimeoutMs,
-    });
+    let result: CommandRunResult;
+    try {
+      result = await runner(check, {
+        cwd: rootDir,
+        env:
+          check.id === "spine-promotion"
+            ? {
+                ...process.env,
+                SPINE_PROMOTION_COMMIT_SHA: report.provenance.commitSha,
+                SPINE_PROMOTION_RELEASE_CHECKPOINT: join(outputDir, REPORT_JSON_FILE_NAME),
+                SPINE_PROMOTION_RUN_ATTEMPT: report.provenance.runAttempt,
+                SPINE_PROMOTION_RUN_ID: report.provenance.runId,
+              }
+            : commandEnv,
+        maxOutputBufferLength: options.maxCommandOutputBufferLength,
+        stderrPath: join(outputDir, RELEASE_ARTIFACT_DIRECTORY, check.id, "stderr.log"),
+        stdoutPath: join(outputDir, RELEASE_ARTIFACT_DIRECTORY, check.id, "stdout.log"),
+        timeoutMs: effectiveTimeoutMs,
+        writeOutput: options.commandOutputWriter,
+      });
+    } catch (error) {
+      result = rejectedCommandRunResult(error);
+    }
     const completedAt = clock.nowIso();
     const durationMs = Math.max(0, clock.nowMs() - startedMs);
     const commandArtifacts = collectArtifactReferences(check, rootDir, outputDir, startedMs);
