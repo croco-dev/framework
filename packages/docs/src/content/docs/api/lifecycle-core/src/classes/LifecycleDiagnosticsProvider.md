@@ -23,7 +23,7 @@ title: "LifecycleDiagnosticsProvider"
 
 ##### options?
 
-`LifecycleDiagnosticsProviderOptions` = `{}`
+[`LifecycleDiagnosticsProviderOptions`](/api/lifecycle-core/src/type-aliases/lifecyclediagnosticsprovideroptions/) = `{}`
 
 #### Returns
 

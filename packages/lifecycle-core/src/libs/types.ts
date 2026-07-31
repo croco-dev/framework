@@ -1,8 +1,30 @@
+export type MonetizationSignalType =
+  | "billing.trial.ending"
+  | "billing.subscription.past_due"
+  | "billing.subscription.recovered"
+  | "billing.usage.threshold_crossed"
+  | "billing.credit.balance_low"
+  | "billing.credit.exhausted"
+  | "billing.usage.delivery_lagging"
+  | "billing.usage.sync_drifted"
+  | "billing.seat.quantity_drifted";
+
+export type MonetizationRecipeId =
+  | "monetization.trial-ending-reminder"
+  | "monetization.past-due-grace-follow-up"
+  | "monetization.usage-80-upgrade-prompt"
+  | "monetization.quota-reached-notification"
+  | "monetization.low-credit-warning"
+  | "monetization.delivery-backlog-escalation"
+  | "monetization.usage-drift-escalation"
+  | "monetization.seat-drift-escalation";
+
 export type LifecycleSignalType =
   | "health.status.changed"
   | "health.score.dropped"
   | "billing.subscription.updated"
   | "billing.plan.changed"
+  | MonetizationSignalType
   | "metering.usage.recorded"
   | "metering.quota.exceeded"
   | "onboarding.state.changed"

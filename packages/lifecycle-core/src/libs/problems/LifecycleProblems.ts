@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { MonetizationRecipeId, MonetizationSignalType } from "../types";
 
 export class DuplicateLifecycleRuleProblem extends Problem {
   constructor(ruleId: string) {
@@ -160,6 +161,58 @@ export class LifecycleRuleActionContractProblem extends Problem {
         extensions: {
           ruleId,
           version,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+/** Reports invalid data supplied for a provider-neutral monetization signal. */
+export class MonetizationSignalDefinitionProblem extends Problem {
+  constructor(signalType: MonetizationSignalType, message: string) {
+    super(
+      "lifecycle-core/monetization-signal-invalid",
+      ProblemCategory.ValidationError,
+      `Monetization signal '${signalType}' is invalid: ${message}`,
+      {
+        extensions: {
+          signalType,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+/** Reports runtime capabilities required by a monetization recipe but not currently available. */
+export class MonetizationRecipeCapabilityProblem extends Problem {
+  constructor(recipeId: MonetizationRecipeId, missingCapabilities: readonly string[]) {
+    super(
+      "lifecycle-core/monetization-recipe-capability-missing",
+      ProblemCategory.Conflict,
+      `Monetization recipe '${recipeId}' requires unavailable capabilities: ${missingCapabilities.join(", ")}`,
+      {
+        extensions: {
+          recipeId,
+          missingCapabilities: [...missingCapabilities],
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+/** Reports a threshold-delivery claim that can no longer be acknowledged. */
+export class MonetizationThresholdClaimProblem extends Problem {
+  constructor(claimId: string) {
+    super(
+      "lifecycle-core/monetization-threshold-claim-unavailable",
+      ProblemCategory.Conflict,
+      `Monetization threshold claim '${claimId}' is missing or expired`,
+      {
+        extensions: {
+          claimId,
           retryable: false,
         },
       },

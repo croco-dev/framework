@@ -1983,6 +1983,9 @@ importers:
 
   packages/lifecycle-core:
     dependencies:
+      '@croco/billing-core':
+        specifier: workspace:*
+        version: link:../billing-core
       '@croco/diagnostics-core':
         specifier: workspace:*
         version: link:../diagnostics-core
