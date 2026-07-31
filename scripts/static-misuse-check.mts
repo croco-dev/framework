@@ -76,6 +76,12 @@ type LoadedStaticMisuseAllowlist = {
   readonly diagnostics: readonly StaticMisuseDiagnostic[];
 };
 
+type StaticMisuseAllowlist = {
+  readonly schemaVersion: 1;
+  readonly baselineEntryCount: number;
+  readonly entries: readonly unknown[];
+};
+
 type StaticMisuseAllowlistEntryValidation =
   | { readonly ok: true; readonly entry: StaticMisuseAllowlistEntry }
   | { readonly ok: false; readonly reason: string };
@@ -95,6 +101,7 @@ type RestImportBindings = {
 const sourceFilePattern = /\.[cm]?[jt]sx?$/;
 const ignoreLinePrefix = "croco-static-misuse-ignore-line";
 const ignoreNextLinePrefix = "croco-static-misuse-ignore-next-line";
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const repositoryBoundaryRule: StaticMisuseRule = {
   id: "repository-core-implementation-boundary",
@@ -177,7 +184,7 @@ const rawErrorRuntimeBoundaryRule: StaticMisuseRule = {
   limitation:
     "This first-pass checker is line-oriented and scoped to production packages/*/src files. Multiline throw expressions and generated output snapshots need dedicated future rules.",
   recovery:
-    "Throw a Croco Problem subclass or a package-specific diagnostic-coded error class. If the throw is a reviewed internal programmer assertion, add it to scripts/static-misuse-raw-error-allowlist.json with package, file, reason, and owner or expiration.",
+    "Throw a Croco Problem subclass or a package-specific diagnostic-coded error class. If the throw is a reviewed internal programmer assertion, add it to scripts/static-misuse-raw-error-allowlist.json with package, file, reason, owner, and expiry.",
   includeFile: isProductionPackageSourceFile,
   allowlistPath: "scripts/static-misuse-raw-error-allowlist.json",
   detectors: [
@@ -200,11 +207,11 @@ const emptyCatchRuntimeBoundaryRule: StaticMisuseRule = {
   title: "Production package runtime catches must preserve reviewed failure evidence",
   targetDir: "packages",
   description:
-    "Croco runtime package source must not silently swallow failures in empty catch blocks. Intentional best-effort recovery needs a reviewed baseline entry with owner or expiration metadata.",
+    "Croco runtime package source must not silently swallow failures in empty catch blocks. Intentional best-effort recovery needs a reviewed baseline entry with owner and expiration metadata.",
   limitation:
     "This syntax-aware checker is scoped to production packages/*/src source files. It flags catch clauses whose block has no executable statements, including comments-only catch blocks.",
   recovery:
-    "Handle the failure explicitly with Problem, diagnostic, telemetry, logging, or recovery behavior. If the catch is intentionally best-effort, add it to scripts/static-misuse-empty-catch-allowlist.json with package, file, reason, and owner or expiration.",
+    "Handle the failure explicitly with Problem, diagnostic, telemetry, logging, or recovery behavior. If the catch is intentionally best-effort, add it to scripts/static-misuse-empty-catch-allowlist.json with package, file, reason, owner, and expiry.",
   detectors: [],
   syntaxDetectors: [
     {
@@ -1478,6 +1485,23 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isValidIsoDate(value: string): boolean {
+  if (!ISO_DATE_PATTERN.test(value)) {
+    return false;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  );
+}
+
+function currentIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function readPackageName(rootDir: string, relativeFile: string): string | null {
   const parts = toPosixPath(relativeFile).split("/");
 
@@ -1555,24 +1579,43 @@ function loadAllowlist(rootDir: string, rule: StaticMisuseRule): LoadedStaticMis
     };
   }
 
-  if (!isRecord(parsed) || parsed.schemaVersion !== 1 || !Array.isArray(parsed.entries)) {
+  if (
+    !isRecord(parsed) ||
+    parsed.schemaVersion !== 1 ||
+    !Number.isInteger(parsed.baselineEntryCount) ||
+    Number(parsed.baselineEntryCount) < 0 ||
+    !Array.isArray(parsed.entries)
+  ) {
     return {
       entries: [],
       diagnostics: [
         createAllowlistDiagnostic(
           rule,
           allowlistPath,
-          "Static misuse allowlist must use schemaVersion 1 and an entries array.",
-          "Write the allowlist as { schemaVersion: 1, entries: [...] }.",
+          "Static misuse allowlist must use schemaVersion 1, a non-negative integer baselineEntryCount, and an entries array.",
+          "Write the allowlist as { schemaVersion: 1, baselineEntryCount: entries.length, entries: [...] }.",
         ),
       ],
     };
   }
 
+  const allowlist = parsed as StaticMisuseAllowlist;
+
   const entries: StaticMisuseAllowlistEntry[] = [];
   const diagnostics: StaticMisuseDiagnostic[] = [];
 
-  parsed.entries.forEach((entry, index) => {
+  if (allowlist.entries.length !== allowlist.baselineEntryCount) {
+    diagnostics.push(
+      createAllowlistDiagnostic(
+        rule,
+        allowlistPath,
+        `Static misuse allowlist has ${allowlist.entries.length} entries but baselineEntryCount is ${allowlist.baselineEntryCount}.`,
+        "Remove the new suppression or deliberately update baselineEntryCount in the same reviewed change.",
+      ),
+    );
+  }
+
+  allowlist.entries.forEach((entry, index) => {
     const validation = validateAllowlistEntry(rootDir, entry);
 
     if (isValidAllowlistEntry(validation)) {
@@ -1585,7 +1628,7 @@ function loadAllowlist(rootDir: string, rule: StaticMisuseRule): LoadedStaticMis
         rule,
         allowlistPath,
         `Static misuse allowlist entry ${index} is invalid: ${validation.reason}`,
-        "Each allowlist entry must name package, file, line, excerpt, reason, and owner or expiresOn, and it must match the current source line.",
+        "Each allowlist entry must name package, file, line, excerpt, reason, owner, and a current expiresOn date, and it must match the current source line.",
       ),
     );
   });
@@ -1623,12 +1666,17 @@ function validateAllowlistEntry(
     return { ok: false, reason: "reason must be a non-empty string" };
   }
 
-  if (!isNonEmptyString(entry.owner) && !isNonEmptyString(entry.expiresOn)) {
-    return { ok: false, reason: "owner or expiresOn must be provided" };
+  if (!isNonEmptyString(entry.owner)) {
+    return { ok: false, reason: "owner must be a non-empty string" };
   }
 
-  if (entry.expiresOn !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(entry.expiresOn))) {
-    return { ok: false, reason: "expiresOn must use YYYY-MM-DD format when provided" };
+  if (!isNonEmptyString(entry.expiresOn) || !isValidIsoDate(entry.expiresOn)) {
+    return { ok: false, reason: "expiresOn must be a valid YYYY-MM-DD date" };
+  }
+
+  const today = currentIsoDate();
+  if (entry.expiresOn < today) {
+    return { ok: false, reason: `expiresOn is stale (${entry.expiresOn} is before ${today})` };
   }
 
   const relativeFile = toPosixPath(entry.file);
@@ -1666,8 +1714,8 @@ function validateAllowlistEntry(
       line,
       excerpt: entry.excerpt,
       reason: entry.reason,
-      ...(isNonEmptyString(entry.owner) ? { owner: entry.owner } : {}),
-      ...(isNonEmptyString(entry.expiresOn) ? { expiresOn: entry.expiresOn } : {}),
+      owner: entry.owner,
+      expiresOn: entry.expiresOn,
     },
   };
 }

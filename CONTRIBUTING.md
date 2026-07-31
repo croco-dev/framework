@@ -86,6 +86,8 @@ Run `pnpm format` before committing to format the repository. Use `pnpm lint` an
 read-only lint and repository verification.
 
 For full naming conventions, decorator patterns, and error handling rules, see [AGENTS.md](./AGENTS.md).
+Reviewed exceptions to the static failure-handling rules must follow the
+[static misuse exception process](./docs/contributing/static-misuse-exceptions.md).
 
 ## Testing
 

@@ -751,6 +751,7 @@ describe("static-misuse-check.mts", () => {
       JSON.stringify(
         {
           schemaVersion: 1,
+          baselineEntryCount: 1,
           entries: [
             {
               package: "@croco/internal-runtime",
@@ -760,6 +761,7 @@ describe("static-misuse-check.mts", () => {
               reason:
                 "Internal programmer assertion that is not exposed as a runtime recovery boundary.",
               owner: "framework-error-handling",
+              expiresOn: "2099-12-31",
             },
           ],
         },
@@ -778,7 +780,7 @@ describe("static-misuse-check.mts", () => {
     );
   });
 
-  it("rejects raw-error allowlist entries without owner or expiration metadata", () => {
+  it("rejects raw-error allowlist entries without expiration metadata", () => {
     const repo = createTempRepo();
     writeFile(
       repo,
@@ -801,6 +803,7 @@ describe("static-misuse-check.mts", () => {
       JSON.stringify(
         {
           schemaVersion: 1,
+          baselineEntryCount: 1,
           entries: [
             {
               package: "@croco/internal-runtime",
@@ -809,6 +812,7 @@ describe("static-misuse-check.mts", () => {
               excerpt: 'throw new Error("internal invariant");',
               reason:
                 "Internal programmer assertion that is not exposed as a runtime recovery boundary.",
+              owner: "framework-error-handling",
             },
           ],
         },
@@ -827,13 +831,142 @@ describe("static-misuse-check.mts", () => {
     expect(result?.diagnostics).toEqual([
       expect.objectContaining({
         file: "scripts/static-misuse-raw-error-allowlist.json",
-        message: expect.stringContaining("owner or expiresOn must be provided"),
+        message: expect.stringContaining("expiresOn must be a valid YYYY-MM-DD date"),
       }),
       expect.objectContaining({
         file: "packages/internal-runtime/src/index.ts",
         line: 2,
       }),
     ]);
+  });
+
+  it("rejects stale raw-error allowlist entries", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/internal-runtime/package.json",
+      JSON.stringify({ name: "@croco/internal-runtime" }),
+    );
+    writeFile(
+      repo,
+      "packages/internal-runtime/src/index.ts",
+      'export function fail(): never {\n  throw new Error("stale");\n}\n',
+    );
+    writeFile(
+      repo,
+      "scripts/static-misuse-raw-error-allowlist.json",
+      JSON.stringify({
+        schemaVersion: 1,
+        baselineEntryCount: 1,
+        entries: [
+          {
+            package: "@croco/internal-runtime",
+            file: "packages/internal-runtime/src/index.ts",
+            line: 2,
+            excerpt: 'throw new Error("stale");',
+            reason: "Temporary fixture exception.",
+            owner: "framework-error-handling",
+            expiresOn: "2000-01-01",
+          },
+        ],
+      }),
+    );
+
+    const result = findResult(repo, "raw-error-runtime-boundary");
+
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ message: expect.stringContaining("expiresOn is stale") }),
+      ]),
+    );
+  });
+
+  it("requires an owner even when a raw-error allowlist entry has a future expiry", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/internal-runtime/package.json",
+      JSON.stringify({ name: "@croco/internal-runtime" }),
+    );
+    writeFile(
+      repo,
+      "packages/internal-runtime/src/index.ts",
+      'export function fail(): never {\n  throw new Error("unowned");\n}\n',
+    );
+    writeFile(
+      repo,
+      "scripts/static-misuse-raw-error-allowlist.json",
+      JSON.stringify({
+        schemaVersion: 1,
+        baselineEntryCount: 1,
+        entries: [
+          {
+            package: "@croco/internal-runtime",
+            file: "packages/internal-runtime/src/index.ts",
+            line: 2,
+            excerpt: 'throw new Error("unowned");',
+            reason: "Temporary fixture exception.",
+            expiresOn: "2099-12-31",
+          },
+        ],
+      }),
+    );
+
+    const result = findResult(repo, "raw-error-runtime-boundary");
+
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("owner must be a non-empty string"),
+        }),
+      ]),
+    );
+  });
+
+  it("rejects allowlist entry growth without a baseline count update", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/internal-runtime/package.json",
+      JSON.stringify({ name: "@croco/internal-runtime" }),
+    );
+    writeFile(
+      repo,
+      "packages/internal-runtime/src/index.ts",
+      'export function fail(): never {\n  throw new Error("new suppression");\n}\n',
+    );
+    writeFile(
+      repo,
+      "scripts/static-misuse-raw-error-allowlist.json",
+      JSON.stringify({
+        schemaVersion: 1,
+        baselineEntryCount: 0,
+        entries: [
+          {
+            package: "@croco/internal-runtime",
+            file: "packages/internal-runtime/src/index.ts",
+            line: 2,
+            excerpt: 'throw new Error("new suppression");',
+            reason: "Temporary fixture exception.",
+            owner: "framework-error-handling",
+            expiresOn: "2099-12-31",
+          },
+        ],
+      }),
+    );
+
+    const result = findResult(repo, "raw-error-runtime-boundary");
+
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: "Static misuse allowlist has 1 entries but baselineEntryCount is 0.",
+        }),
+      ]),
+    );
   });
 
   it("flags empty catch blocks in production package source", () => {
@@ -959,6 +1092,7 @@ describe("static-misuse-check.mts", () => {
       JSON.stringify(
         {
           schemaVersion: 1,
+          baselineEntryCount: 1,
           entries: [
             {
               package: "@croco/runtime-boundary",
@@ -968,6 +1102,7 @@ describe("static-misuse-check.mts", () => {
               reason:
                 "Telemetry delivery is best-effort and must not replace the primary runtime outcome.",
               owner: "framework-error-handling",
+              expiresOn: "2099-12-31",
             },
           ],
         },
@@ -986,7 +1121,7 @@ describe("static-misuse-check.mts", () => {
     );
   });
 
-  it("rejects empty-catch allowlist entries without owner or expiration metadata", () => {
+  it("rejects empty-catch allowlist entries without expiration metadata", () => {
     const repo = createTempRepo();
     writeFile(
       repo,
@@ -1013,6 +1148,7 @@ describe("static-misuse-check.mts", () => {
       JSON.stringify(
         {
           schemaVersion: 1,
+          baselineEntryCount: 1,
           entries: [
             {
               package: "@croco/runtime-boundary",
@@ -1021,6 +1157,7 @@ describe("static-misuse-check.mts", () => {
               excerpt: "} catch {",
               reason:
                 "Telemetry delivery is best-effort and must not replace the primary runtime outcome.",
+              owner: "framework-error-handling",
             },
           ],
         },
@@ -1039,7 +1176,7 @@ describe("static-misuse-check.mts", () => {
     expect(result?.diagnostics).toEqual([
       expect.objectContaining({
         file: "scripts/static-misuse-empty-catch-allowlist.json",
-        message: expect.stringContaining("owner or expiresOn must be provided"),
+        message: expect.stringContaining("expiresOn must be a valid YYYY-MM-DD date"),
       }),
       expect.objectContaining({
         file: "packages/runtime-boundary/src/index.ts",

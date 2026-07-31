@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { DiagnosticsCollector } from "@croco/diagnostics-core";
 import {
   Container,
+  LOGGER_TOKEN,
   RuntimeInspector,
   type RuntimeInspectorSnapshot,
 } from "@croco/framework-context";
@@ -340,6 +341,23 @@ describe("Operational endpoints", () => {
   });
 
   it("does not let inspector failures change route responses", async () => {
+    const inspectorError = Object.assign(new Error("logger unavailable"), {
+      token: "secret-inspector-token",
+    });
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn((message: string) => {
+        if (message === "Dev Inspector instrumentation failed") {
+          throw inspectorError;
+        }
+      }),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as unknown as Logger;
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    Container.set(Logger, logger);
+    Container.set(LOGGER_TOKEN, logger);
+
     const app = createApp({
       controllers: [InspectorController],
       securityValidation: "off",
@@ -354,6 +372,11 @@ describe("Operational endpoints", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ ok: true });
+    expect(consoleWarn).toHaveBeenCalledWith("Dev Inspector failure logging failed", {
+      inspectorErrorName: "Error",
+      loggingErrorName: "Error",
+    });
+    expect(JSON.stringify(consoleWarn.mock.calls)).not.toContain("secret-inspector-token");
   });
 
   it("keeps inspector records isolated between multiple apps in one process", async () => {
@@ -825,6 +848,8 @@ describe("Operational endpoints", () => {
             nodeVersion: expect.any(String),
           }),
         }),
+        expect.objectContaining({ component: "container" }),
+        expect.objectContaining({ component: "events" }),
       ]),
     );
   });

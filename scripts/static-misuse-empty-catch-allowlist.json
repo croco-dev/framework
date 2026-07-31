@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
-  "description": "Reviewed baseline for CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY. New production empty catch blocks must be converted or added with package/file/reason and owner/expiration metadata.",
+  "baselineEntryCount": 6,
+  "description": "Reviewed baseline for CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY. New production empty catch blocks must be converted or added with package/file/reason and owner and unexpired expiresOn metadata.",
   "entries": [
     {
       "package": "@croco/cache-core",
@@ -8,7 +9,8 @@
       "line": 683,
       "excerpt": "} catch {",
       "reason": "Telemetry event delivery is best-effort and must not replace the cache invalidation outcome.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cache-core",
@@ -16,7 +18,8 @@
       "line": 695,
       "excerpt": "} catch {",
       "reason": "Telemetry error reporting is best-effort and must not replace the original adapter failure evidence.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/framework-context",
@@ -24,7 +27,8 @@
       "line": 566,
       "excerpt": "} catch {",
       "reason": "Runtime inspector failure reporters are optional instrumentation and must not affect application behavior.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/onboarding-core",
@@ -32,7 +36,8 @@
       "line": 107,
       "excerpt": "} catch {",
       "reason": "Analytics delivery is best-effort after onboarding state has already been persisted.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-15"
     },
     {
       "package": "@croco/testing",
@@ -40,7 +45,8 @@
       "line": 233,
       "excerpt": "} catch {",
       "reason": "Best-effort test logger failure must not hide the original after-commit hook failure.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-15"
     },
     {
       "package": "@croco/transports-graphql",
@@ -48,39 +54,8 @@
       "line": 171,
       "excerpt": "} catch {",
       "reason": "Startup logging is optional and must not prevent the GraphQL server from resolving a successful listen callback.",
-      "owner": "framework-error-handling"
-    },
-    {
-      "package": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
-      "line": 747,
-      "excerpt": "} catch {",
-      "reason": "Dev inspector warning logging is best-effort and must not affect request handling.",
-      "owner": "framework-error-handling"
-    },
-    {
-      "package": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
-      "line": 317,
-      "excerpt": "} catch {",
-      "reason": "Telemetry degraded header emission is best-effort because telemetry setup has already failed and request handling should continue.",
-      "owner": "framework-error-handling"
-    },
-    {
-      "package": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
-      "line": 91,
-      "excerpt": "} catch {",
-      "reason": "Container diagnostics provider registration is optional; unavailable providers should not prevent default operational diagnostics.",
-      "owner": "framework-error-handling"
-    },
-    {
-      "package": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/operationalEndpoints.ts",
-      "line": 97,
-      "excerpt": "} catch {",
-      "reason": "Event bus diagnostics provider registration is optional; unavailable providers should not prevent default operational diagnostics.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     }
   ]
 }

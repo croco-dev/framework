@@ -314,8 +314,11 @@ function setFailureStatus(span: Span, status: number, message?: string): void {
 function setTelemetryDegradedHeader(ctx: CrocoHttpContext): void {
   try {
     ctx.raw.header(TELEMETRY_DEGRADED_HEADER, TELEMETRY_DEGRADED_REASON);
-  } catch {
-    // Header emission is best-effort because telemetry setup has already failed.
+  } catch (headerError) {
+    console.warn("[TelemetryMiddleware] Failed to emit telemetry degradation header", {
+      header: TELEMETRY_DEGRADED_HEADER,
+      errorName: headerError instanceof Error ? headerError.name : "NonErrorThrown",
+    });
   }
 }
 
