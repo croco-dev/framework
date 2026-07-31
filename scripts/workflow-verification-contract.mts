@@ -10,6 +10,11 @@ export type WorkflowCommandViolation = {
   readonly reason: string;
 };
 
+export type WorkflowPermissionViolation = {
+  readonly path: string;
+  readonly reason: string;
+};
+
 type RootScripts = Readonly<Record<string, string>>;
 
 const GITLEAKS_PRODUCTION_COMMAND =
@@ -18,6 +23,10 @@ const GITLEAKS_RENOVATE_DIRECTIVE =
   "# renovate: datasource=docker depName=ghcr.io/gitleaks/gitleaks";
 export const TRUSTED_GITLEAKS_IMAGE =
   "ghcr.io/gitleaks/gitleaks:v8.23.0@sha256:b4b81841085b4060054a71155500a340e3d2e2a5995c186546649e3efd80b84e";
+const ALLOWED_WRITE_PERMISSIONS = new Set([
+  "benchmark.yml:jobs.benchmark:pull-requests",
+  "release.yml:workflow:id-token",
+]);
 
 export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   'node -e \'const fs = require("node:fs"); fs.writeFileSync("ci-reports/package-quality/spine-promotion-run.json", JSON.stringify({ commitSha: process.env.SPINE_PROMOTION_COMMIT_SHA, runId: process.env.SPINE_PROMOTION_RUN_ID, runAttempt: process.env.SPINE_PROMOTION_RUN_ATTEMPT, startedAt: new Date().toISOString() }, null, 2) + "\\n")\'',
@@ -103,6 +112,108 @@ function matchesArgvPrefix(command: string, allowed: string): boolean {
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function workflowName(path: string): string {
+  return path.split("/").at(-1) ?? path;
+}
+
+function inspectPermissionScope(
+  path: string,
+  owner: string,
+  permissions: Record<string, unknown>,
+): readonly WorkflowPermissionViolation[] {
+  const name = workflowName(path);
+  const violations: WorkflowPermissionViolation[] = [];
+
+  for (const [scope, access] of Object.entries(permissions)) {
+    if (access !== "read" && access !== "write" && access !== "none") {
+      violations.push({ path, reason: `${owner}.${scope} must be read, write, or none` });
+      continue;
+    }
+    if (access === "write" && !ALLOWED_WRITE_PERMISSIONS.has(`${name}:${owner}:${scope}`)) {
+      violations.push({ path, reason: `${owner}.${scope} grants unapproved write access` });
+    }
+  }
+
+  return violations;
+}
+
+export function findWorkflowPermissionViolations(
+  workflows: Readonly<Record<string, string>>,
+): readonly WorkflowPermissionViolation[] {
+  const violations: WorkflowPermissionViolation[] = [];
+
+  for (const [path, source] of Object.entries(workflows).sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
+    let workflow: unknown;
+    try {
+      workflow = parseYaml(source);
+    } catch {
+      violations.push({ path, reason: "workflow YAML could not be inspected" });
+      continue;
+    }
+
+    if (!isPlainRecord(workflow)) {
+      violations.push({ path, reason: "workflow must be a YAML object" });
+      continue;
+    }
+
+    const topLevelPermissions = workflow.permissions;
+    if (!isPlainRecord(topLevelPermissions)) {
+      violations.push({ path, reason: "workflow must declare top-level permissions" });
+    } else {
+      if (topLevelPermissions.contents !== "read") {
+        violations.push({ path, reason: "workflow permissions must grant contents: read" });
+      }
+      violations.push(...inspectPermissionScope(path, "workflow", topLevelPermissions));
+    }
+
+    if (!isPlainRecord(workflow.jobs)) {
+      violations.push({ path, reason: "workflow must define jobs" });
+      continue;
+    }
+
+    for (const [jobName, job] of Object.entries(workflow.jobs)) {
+      if (!isPlainRecord(job)) {
+        violations.push({ path, reason: `jobs.${jobName} must be a YAML object` });
+        continue;
+      }
+      if (!isPlainRecord(topLevelPermissions) && !isPlainRecord(job.permissions)) {
+        violations.push({
+          path,
+          reason: `jobs.${jobName} must declare permissions when the workflow does not`,
+        });
+      }
+      if (job.permissions !== undefined && !isPlainRecord(job.permissions)) {
+        violations.push({
+          path,
+          reason: `jobs.${jobName}.permissions must be an explicit permission map`,
+        });
+      }
+      if (isPlainRecord(job.permissions)) {
+        violations.push(...inspectPermissionScope(path, `jobs.${jobName}`, job.permissions));
+      }
+    }
+
+    if (workflowName(path) === "ci.yml") {
+      const changes = workflow.jobs.changes;
+      const changesPermissions = isPlainRecord(changes) ? changes.permissions : null;
+      if (
+        !isPlainRecord(changesPermissions) ||
+        changesPermissions.contents !== "read" ||
+        changesPermissions["pull-requests"] !== "read"
+      ) {
+        violations.push({
+          path,
+          reason: "jobs.changes must grant contents: read and pull-requests: read",
+        });
+      }
+    }
+  }
+
+  return violations;
 }
 
 export function findTrustedGitleaksImageViolations(workflowSource: string): readonly string[] {

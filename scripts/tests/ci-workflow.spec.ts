@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -7,12 +7,18 @@ import { getVerificationCommand } from "../verification-manifest.mts";
 import { ensureSarif, GITLEAKS_CORE_ARGS } from "../security-gitleaks-smoke.mts";
 import {
   findTrustedGitleaksImageViolations,
+  findWorkflowPermissionViolations,
   findWorkflowVerificationViolations,
   TRUSTED_GITLEAKS_IMAGE,
 } from "../workflow-verification-contract.mts";
 
 const ROOT_DIR = resolve(__dirname, "../..");
 const WORKFLOW = readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8");
+const WORKFLOWS = Object.fromEntries(
+  readdirSync(resolve(ROOT_DIR, ".github/workflows"))
+    .filter((path) => /\.ya?ml$/.test(path))
+    .map((path) => [path, readFileSync(resolve(ROOT_DIR, ".github/workflows", path), "utf8")]),
+);
 const RENOVATE_CONFIG = JSON.parse(
   readFileSync(resolve(ROOT_DIR, ".github/renovate.json"), "utf8"),
 ) as Record<string, unknown>;
@@ -37,6 +43,75 @@ const SECRET_SCAN = WORKFLOW.slice(
   WORKFLOW.indexOf("      - name: Secret scan blocking report"),
   WORKFLOW.indexOf("      - name: Assemble security policy summary"),
 );
+
+describe("workflow token permissions", () => {
+  it("gives every workflow job an explicit effective permission scope", () => {
+    expect(findWorkflowPermissionViolations(WORKFLOWS)).toEqual([]);
+  });
+
+  it("rejects a workflow that omits both workflow and job permissions", () => {
+    const mutant = {
+      "unsafe.yml":
+        "name: Unsafe\non: pull_request\njobs:\n  validate:\n    runs-on: ubuntu-latest\n    steps: []\n",
+    };
+
+    expect(findWorkflowPermissionViolations(mutant)).toEqual([
+      { path: "unsafe.yml", reason: "workflow must declare top-level permissions" },
+      {
+        path: "unsafe.yml",
+        reason: "jobs.validate must declare permissions when the workflow does not",
+      },
+    ]);
+  });
+
+  it("requires a top-level fail-closed default even when each job is scoped", () => {
+    const mutant = {
+      "job-scoped.yml":
+        "name: Job scoped\non: pull_request\njobs:\n  validate:\n    permissions:\n      contents: read\n    runs-on: ubuntu-latest\n    steps: []\n",
+    };
+
+    expect(findWorkflowPermissionViolations(mutant)).toEqual([
+      { path: "job-scoped.yml", reason: "workflow must declare top-level permissions" },
+    ]);
+  });
+
+  it("rejects unapproved write grants", () => {
+    const mutant = {
+      "unsafe.yml":
+        "name: Unsafe\non: pull_request\npermissions:\n  contents: read\n  pull-requests: write\njobs:\n  validate:\n    runs-on: ubuntu-latest\n    steps: []\n",
+    };
+
+    expect(findWorkflowPermissionViolations(mutant)).toContainEqual({
+      path: "unsafe.yml",
+      reason: "workflow.pull-requests grants unapproved write access",
+    });
+  });
+
+  it("rejects job-level write-all grants", () => {
+    const mutant = {
+      "unsafe.yml":
+        "name: Unsafe\non: pull_request\npermissions:\n  contents: read\njobs:\n  validate:\n    permissions: write-all\n    runs-on: ubuntu-latest\n    steps: []\n",
+    };
+
+    expect(findWorkflowPermissionViolations(mutant)).toContainEqual({
+      path: "unsafe.yml",
+      reason: "jobs.validate.permissions must be an explicit permission map",
+    });
+  });
+
+  it("keeps pull request path filtering readable", () => {
+    const ciWorkflow = WORKFLOWS["ci.yml"] ?? "";
+    const mutant = {
+      "ci.yml": ciWorkflow.replace("      pull-requests: read\n", ""),
+    };
+
+    expect(mutant["ci.yml"]).not.toBe(ciWorkflow);
+    expect(findWorkflowPermissionViolations(mutant)).toContainEqual({
+      path: "ci.yml",
+      reason: "jobs.changes must grant contents: read and pull-requests: read",
+    });
+  });
+});
 
 describe("CI executable supply chain", () => {
   it("pins Gitleaks to a readable version and immutable OCI digest", () => {
