@@ -231,6 +231,34 @@ describe("TelemetryMiddleware", () => {
     );
   });
 
+  it("should preserve evidence when the degraded response header cannot be emitted", async () => {
+    const ctx = createContext();
+    const next = vi.fn().mockResolvedValue(undefined);
+    const headerError = Object.assign(new Error("response headers already committed"), {
+      authorization: "secret-bearer-token",
+    });
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    vi.spyOn(ctx, "header").mockImplementation(() => {
+      throw new Error("telemetry setup failure");
+    });
+    vi.mocked(ctx.raw.header).mockImplementation(() => {
+      throw headerError;
+    });
+
+    await telemetryMiddleware("/health")(ctx, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(consoleWarn).toHaveBeenCalledWith(
+      "[TelemetryMiddleware] Failed to emit telemetry degradation header",
+      {
+        header: "X-Croco-Telemetry-Degraded",
+        errorName: "Error",
+      },
+    );
+    expect(JSON.stringify(consoleWarn.mock.calls)).not.toContain("secret-bearer-token");
+  });
+
   it("should leave client error responses as unset span status", async () => {
     const span = setupSpan();
     const ctx = createContext();

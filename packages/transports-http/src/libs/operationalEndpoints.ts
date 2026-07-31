@@ -86,17 +86,8 @@ export function createDefaultDiagnosticsCollector(
   const collector = new DiagnosticsCollector();
   collector.registerProvider(new RuntimeDiagnosticsProvider());
 
-  try {
-    collector.registerProvider(new ContainerDiagnosticsProvider());
-  } catch {
-    /* provider unavailable */
-  }
-
-  try {
-    collector.registerProvider(new EventBusDiagnosticsProvider());
-  } catch {
-    /* provider unavailable */
-  }
+  collector.registerProvider(new ContainerDiagnosticsProvider());
+  collector.registerProvider(new EventBusDiagnosticsProvider());
 
   for (const provider of providers) {
     collector.registerProvider(provider);

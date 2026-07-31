@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
-  "description": "Reviewed baseline for CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY. New production raw built-in Error throws must be converted or added with owner/expiration metadata.",
+  "baselineEntryCount": 72,
+  "description": "Reviewed baseline for CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY. New production raw built-in Error throws must be converted or added with owner and unexpired expiresOn metadata.",
   "entries": [
     {
       "package": "@croco/admin-ops",
@@ -8,7 +9,8 @@
       "line": 365,
       "excerpt": "throw new Error(\"Execution manager does not support audit log append\");",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/admin-ops",
@@ -16,7 +18,8 @@
       "line": 390,
       "excerpt": "throw new Error(\"Execution manager does not support replay\");",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/admin-ops",
@@ -24,7 +27,8 @@
       "line": 585,
       "excerpt": "throw new Error(\"Lifecycle recovery provider is not configured\");",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/admin-ops",
@@ -32,7 +36,8 @@
       "line": 591,
       "excerpt": "throw new Error(`Lifecycle run '${item.id}' was not found`);",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/cli",
@@ -40,7 +45,8 @@
       "line": 212,
       "excerpt": "throw new Error(`${path} is not a croco.contract-graph.snapshot.v1 JSON snapshot.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -48,7 +54,8 @@
       "line": 34,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -56,7 +63,8 @@
       "line": 39,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -64,7 +72,8 @@
       "line": 42,
       "excerpt": "throw new Error(`Invalid page mode: ${mode}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -72,7 +81,8 @@
       "line": 59,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -80,7 +90,8 @@
       "line": 132,
       "excerpt": "throw new Error(`Invalid page mode: ${String(value)}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -88,7 +99,8 @@
       "line": 33,
       "excerpt": "throw new Error(\"Scaffold generation failed: domain generation failed.\");",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -96,7 +108,8 @@
       "line": 39,
       "excerpt": "throw new Error(\"page generation failed\");",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -104,7 +117,8 @@
       "line": 43,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -112,7 +126,8 @@
       "line": 86,
       "excerpt": "throw new Error(`Invalid page mode: ${String(value)}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -120,7 +135,8 @@
       "line": 28,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -128,7 +144,8 @@
       "line": 27,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -136,7 +153,8 @@
       "line": 28,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -144,7 +162,8 @@
       "line": 28,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -152,7 +171,8 @@
       "line": 28,
       "excerpt": "throw new Error(`Invalid name: ${name}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -160,7 +180,8 @@
       "line": 1411,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -168,7 +189,8 @@
       "line": 1429,
       "excerpt": "throw new Error(`Missing Contract Graph snapshot '${manifestPath}'.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -176,7 +198,8 @@
       "line": 1438,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -184,7 +207,8 @@
       "line": 1456,
       "excerpt": "throw new Error(`Missing runtime policy manifest '${manifestPath}'.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -192,7 +216,8 @@
       "line": 1478,
       "excerpt": "throw new Error(`Missing provider profile manifest '${manifestPath}'.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -200,7 +225,8 @@
       "line": 1516,
       "excerpt": "throw new Error(`Runtime policy manifest at ${manifestPath} must be a JSON object.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -208,7 +234,8 @@
       "line": 1612,
       "excerpt": "throw new Error(`Unable to read JSON '${path}': ${message}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -216,7 +243,8 @@
       "line": 195,
       "excerpt": "throw new Error(`Runtime policy manifest at ${manifestPath} must be a JSON object.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -224,7 +252,8 @@
       "line": 216,
       "excerpt": "throw new Error(\"Runtime policy manifest must contain table.plans or plans.\");",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -232,7 +261,8 @@
       "line": 473,
       "excerpt": "throw new Error(`Upgrade target '${path}' does not exist.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -240,7 +270,8 @@
       "line": 546,
       "excerpt": "throw new Error(\"Upgrade codemod replacements overlap.\");",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -248,7 +279,8 @@
       "line": 39,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -256,7 +288,8 @@
       "line": 198,
       "excerpt": "throw new Error(\"Invalid input: cannot normalize empty result\");",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "@croco/cli",
@@ -264,7 +297,8 @@
       "line": 209,
       "excerpt": "throw new Error(\"Unknown kind: \" + kind);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-15"
     },
     {
       "package": "create-croco-app",
@@ -272,7 +306,8 @@
       "line": 507,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-15"
     },
     {
       "package": "create-croco-app",
@@ -280,7 +315,8 @@
       "line": 70,
       "excerpt": "throw new Error(`No published range configured for generated dependency ${packageName}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-15"
     },
     {
       "package": "create-croco-app",
@@ -288,7 +324,8 @@
       "line": 13,
       "excerpt": "throw new Error(\"Missing package version in package.json\");",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-15"
     },
     {
       "package": "create-croco-app",
@@ -296,7 +333,8 @@
       "line": 538,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-15"
     },
     {
       "package": "create-croco-app",
@@ -304,7 +342,8 @@
       "line": 551,
       "excerpt": "throw new Error(`CROCO_SAAS_PROFILE_PACKAGE_RANGE_MISSING: ${packageName}`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-15"
     },
     {
       "package": "create-croco-app",
@@ -312,7 +351,8 @@
       "line": 570,
       "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-15"
     },
     {
       "package": "@croco/diagnostics-core",
@@ -320,7 +360,8 @@
       "line": 16,
       "excerpt": "throw new Error(\"maxSize must be at least 1\");",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/frontend-problems",
@@ -328,7 +369,8 @@
       "line": 470,
       "excerpt": "throw new Error(`Unhandled Problem variant${suffix}`);",
       "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/idempotency-core",
@@ -336,7 +378,8 @@
       "line": 298,
       "excerpt": "throw new Error(`${message}. Expected ${String(expected)}, got ${String(actual)}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/idempotency-core",
@@ -344,7 +387,8 @@
       "line": 310,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/idempotency-core",
@@ -352,7 +396,8 @@
       "line": 315,
       "excerpt": "throw new Error(`Expected ${expected.name} to be thrown.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/meta-vite",
@@ -360,7 +405,8 @@
       "line": 152,
       "excerpt": "throw new Error(`ServerAction '${config.name}' already registered`);",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/meta-vite",
@@ -368,7 +414,8 @@
       "line": 37,
       "excerpt": "throw new Error(\"CacheStore returned no ISR response\");",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/migration-runner",
@@ -376,7 +423,8 @@
       "line": 11,
       "excerpt": "throw new Error(\"Missing package version in package.json\");",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/outbox-core",
@@ -384,7 +432,8 @@
       "line": 295,
       "excerpt": "throw new Error(\"rollback\");",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/problems-core",
@@ -392,7 +441,8 @@
       "line": 33,
       "excerpt": "throw new Error(`Unhandled Problem variant${suffix}`);",
       "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/protocols-core",
@@ -400,7 +450,8 @@
       "line": 592,
       "excerpt": "throw new Error(`Unknown contract graph consumer '${consumerId}'.`);",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/rpc-codegen",
@@ -408,7 +459,8 @@
       "line": 1371,
       "excerpt": "throw new Error(\\`Unhandled RPC Problem variant\\${suffix}\\`);",
       "reason": "Internal exhaustive/programmer assertion retained as a reviewed exception while user-facing runtime validation paths use coded errors.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -416,7 +468,8 @@
       "line": 356,
       "excerpt": "throw new Error(`Failure drill '${scenario.id}' did not return a Problem.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -424,7 +477,8 @@
       "line": 359,
       "excerpt": "throw new Error(`Failure drill '${scenario.id}' did not return a recovery action.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -432,7 +486,8 @@
       "line": 383,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -440,7 +495,8 @@
       "line": 389,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -448,7 +504,8 @@
       "line": 395,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -456,7 +513,8 @@
       "line": 402,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -464,7 +522,8 @@
       "line": 414,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -472,7 +531,8 @@
       "line": 439,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -480,7 +540,8 @@
       "line": 450,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -488,7 +549,8 @@
       "line": 558,
       "excerpt": "throw new Error(\"Expected response body to be RFC 7807 Problem Details.\");",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -496,7 +558,8 @@
       "line": 569,
       "excerpt": "throw new Error(`Expected HTTP status ${expected.status}, received ${response.status}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -504,7 +567,8 @@
       "line": 582,
       "excerpt": "throw new Error(`Expected Problem detail to include \"${expectedDetail}\".`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -512,7 +576,8 @@
       "line": 604,
       "excerpt": "throw new Error(`Expected OpenAPI operation ${method.toUpperCase()} ${path}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -520,7 +585,8 @@
       "line": 612,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -528,7 +594,8 @@
       "line": 618,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -536,7 +603,8 @@
       "line": 711,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/testing",
@@ -544,7 +612,8 @@
       "line": 825,
       "excerpt": "throw new Error(`${label} expected ${String(expected)}, received ${String(actual)}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-09-30"
     },
     {
       "package": "@croco/webhooks-core",
@@ -552,7 +621,8 @@
       "line": 166,
       "excerpt": "throw new Error(`${message}. Expected ${String(expected)}, got ${String(actual)}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/webhooks-core",
@@ -560,7 +630,8 @@
       "line": 174,
       "excerpt": "throw new Error(`${message}. Expected ${expectedJson}, got ${actualJson}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/webhooks-core",
@@ -568,7 +639,8 @@
       "line": 190,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/webhooks-core",
@@ -576,7 +648,8 @@
       "line": 195,
       "excerpt": "throw new Error(`Expected ${expectedName} to be thrown.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling"
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
     }
   ]
 }

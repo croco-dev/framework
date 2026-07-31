@@ -744,8 +744,15 @@ export class CrocoRouteRegistrar {
         name: error.name,
         message: error.message,
       });
-    } catch {
-      /* logging must not affect request handling */
+    } catch (loggingError) {
+      console.warn("Dev Inspector failure logging failed", {
+        inspectorErrorName: error.name,
+        loggingErrorName: getErrorName(loggingError),
+      });
     }
   }
+}
+
+function getErrorName(error: unknown): string {
+  return error instanceof Error ? error.name : "NonErrorThrown";
 }

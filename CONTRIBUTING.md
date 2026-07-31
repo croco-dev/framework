@@ -86,6 +86,8 @@ Croco uses [Biome](https://biomejs.dev/) for linting and formatting. Key rules:
 Run `pnpm check --write` before committing to auto-fix most issues.
 
 For full naming conventions, decorator patterns, and error handling rules, see [AGENTS.md](./AGENTS.md).
+Reviewed exceptions to the static failure-handling rules must follow the
+[static misuse exception process](./docs/contributing/static-misuse-exceptions.md).
 
 ## Testing
 
