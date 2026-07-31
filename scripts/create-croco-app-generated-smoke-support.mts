@@ -40,10 +40,12 @@ const skippedPackageJsonDirectories = new Set([".turbo", "coverage", "dist", "no
 
 const generatedLintToolchains = {
   biome: {
+    command: "biome lint .",
     configFile: "biome.json",
     dependency: "@biomejs/biome",
   },
   oxlint: {
+    command: "oxlint .",
     configFile: ".oxlintrc.json",
     dependency: "oxlint",
   },
@@ -83,6 +85,11 @@ export function assertGeneratedTemplateLintContracts(templatesDir: string): void
     expectedLinter = linter;
 
     const toolchain = generatedLintToolchains[linter];
+    if (lintCommand.trim() !== toolchain.command) {
+      throw new Error(
+        `${manifestPath}: lint script must be exactly ${toolchain.command}, received ${lintCommand}`,
+      );
+    }
     const configPath = join(templateDir, toolchain.configFile);
     if (!existsSync(configPath)) {
       throw new Error(`${manifestPath}: lint script requires missing config ${configPath}`);

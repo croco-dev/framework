@@ -14,6 +14,7 @@
       "unsafeParameterDecoratorsEnabled": true
     },
     "formatter": {
+      "jsxQuoteStyle": "single",
       "quoteStyle": "single",
       "trailingCommas": "es5"
     }

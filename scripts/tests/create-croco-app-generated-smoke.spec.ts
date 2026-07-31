@@ -142,6 +142,17 @@ describe("generated template lint contracts", () => {
       "must use an exact version",
     );
   });
+
+  it("rejects lint scripts that mask tool failures", () => {
+    const templatesDir = createTempRoot();
+    writeGeneratedLintTemplate(templatesDir, "blank", {
+      lintCommand: "biome lint . || true",
+    });
+
+    expect(() => assertGeneratedTemplateLintContracts(templatesDir)).toThrow(
+      "lint script must be exactly biome lint .",
+    );
+  });
 });
 
 describe("create-croco-app generated smoke journey report", () => {
