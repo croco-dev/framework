@@ -273,7 +273,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(42);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(43);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_SUPPORT_PATHS).toEqual([...RELEASE_GATE_SUPPORT_PATHS].sort());
@@ -294,6 +294,8 @@ describe("verification manifest", () => {
       "--config",
       "vitest.config.ts",
     ]);
+    expect(command?.applicable).toBe(true);
+    expect(command?.command).toContain("scripts/tests/turbo-task-contract.spec.ts");
     expect(packageJson.scripts?.["test:release-gates"]).toBe(
       "node --experimental-strip-types scripts/verification-command.mts --id release-gate-tests",
     );
@@ -413,6 +415,7 @@ describe("verification manifest", () => {
       "scripts/tests/ci-workflow.spec.ts",
       "scripts/tests/ci-performance-budget.spec.ts",
       "scripts/tests/release-workflow.spec.ts",
+      "scripts/tests/turbo-task-contract.spec.ts",
       "scripts/tests/verification-policy.spec.ts",
     ]);
   });
