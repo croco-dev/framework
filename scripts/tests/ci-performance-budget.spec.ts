@@ -61,6 +61,101 @@ describe("pull-request CI performance budget", () => {
     ).toContain("affected validation warm-up must filter from the pull-request base");
   });
 
+  it("rejects overlapping affected validation phases", () => {
+    const manifest = ORDINARY_PR_MANIFEST.map((command) =>
+      command.id === "build"
+        ? {
+            ...command,
+            command: command.command.flatMap((argument) =>
+              argument === "build" ? [argument, "typecheck", "test"] : [argument],
+            ),
+          }
+        : command,
+    );
+    const violations = findCiPerformanceBudgetViolations({
+      maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+      ordinaryPullRequestManifest: manifest,
+      workflow: WORKFLOW,
+    });
+
+    expect(violations).toContain("affected validation warm-up must run only build");
+  });
+
+  it.each(["typecheck", "test"] as const)(
+    "rejects build overlap in the %s evidence phase",
+    (phase) => {
+      const manifest = ORDINARY_PR_MANIFEST.map((command) =>
+        command.id === phase
+          ? {
+              ...command,
+              command: command.command.flatMap((argument) =>
+                argument === phase ? ["build", argument] : [argument],
+              ),
+            }
+          : command,
+      );
+
+      expect(
+        findCiPerformanceBudgetViolations({
+          maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+          ordinaryPullRequestManifest: manifest,
+          workflow: WORKFLOW,
+        }),
+      ).toContain(`${phase} evidence must run only ${phase}`);
+    },
+  );
+
+  it.each([
+    ["build", "typecheck"],
+    ["typecheck", "build"],
+    ["test", "build"],
+  ] as const)("rejects %s phase overlap after Turbo options", (phase, overlap) => {
+    const manifest = ORDINARY_PR_MANIFEST.map((command) => {
+      if (command.id !== phase) return command;
+
+      const filterIndex = command.command.findIndex((argument) => argument.startsWith("--filter="));
+      return {
+        ...command,
+        command: [
+          ...command.command.slice(0, filterIndex + 1),
+          overlap,
+          ...command.command.slice(filterIndex + 1),
+        ],
+      };
+    });
+
+    expect(
+      findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+        ordinaryPullRequestManifest: manifest,
+        workflow: WORKFLOW,
+      }),
+    ).toContain(
+      phase === "build"
+        ? "affected validation warm-up must run only build"
+        : `${phase} evidence must run only ${phase}`,
+    );
+  });
+
+  it("rejects affected validation phases that can run out of order", () => {
+    const manifest = ORDINARY_PR_MANIFEST.map((command) => command);
+    const typecheckIndex = manifest.findIndex(({ id }) => id === "typecheck");
+    const testIndex = manifest.findIndex(({ id }) => id === "test");
+    const reordered = [...manifest];
+    [reordered[typecheckIndex], reordered[testIndex]] = [
+      reordered[testIndex],
+      reordered[typecheckIndex],
+    ];
+
+    expect(
+      findCiPerformanceBudgetViolations({
+        maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
+        ordinaryPullRequestManifest: reordered,
+        workflow: WORKFLOW,
+      }),
+    ).toContain("affected validation must run build, typecheck, and test in order");
+  });
+
   it("rejects restoring full-spine validation on trunk pushes", () => {
     const mutant = WORKFLOW.replace(
       'if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then',

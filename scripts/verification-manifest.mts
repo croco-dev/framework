@@ -412,14 +412,13 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
   return [
     {
       id: "build",
-      label: changeScoped ? "Affected build, typecheck, and tests" : "Summarized build",
+      label: changeScoped ? "Affected build" : "Summarized build",
       category: "build",
       command: [
         "pnpm",
         "turbo",
         "run",
         "build",
-        ...(changeScoped ? ["typecheck", "test"] : []),
         ...affectedArguments,
         ...scaffoldBuildArguments,
         "--summarize",
