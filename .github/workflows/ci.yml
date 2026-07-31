@@ -9,6 +9,9 @@ on:
       - trunk
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -269,6 +272,9 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       docs: ${{ steps.filter.outputs.docs }}
       api-source: ${{ steps.filter.outputs.api-source }}

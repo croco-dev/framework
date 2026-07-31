@@ -19,6 +19,9 @@ on:
       - ".github/workflows/benchmark.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   BENCHMARK_GATE_MODE: enforce
 
