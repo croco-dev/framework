@@ -346,8 +346,10 @@ describe("Operational endpoints", () => {
     });
     const logger = {
       info: vi.fn(),
-      warn: vi.fn(() => {
-        throw inspectorError;
+      warn: vi.fn((message: string) => {
+        if (message === "Dev Inspector instrumentation failed") {
+          throw inspectorError;
+        }
       }),
       error: vi.fn(),
       debug: vi.fn(),
