@@ -432,7 +432,12 @@ function checkAdminConsoleStructure() {
   checkFileContains(
     "admin-console",
     ["apps", "api-server", "src", "creditOperations.ts"],
-    /partial/,
+    /reserveCredits/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "api-server", "src", "creditOperations.ts"],
+    /commitCredits/,
   );
   checkFileContains(
     "admin-console",
@@ -447,7 +452,7 @@ function checkAdminConsoleStructure() {
   checkFileContains(
     "admin-console",
     ["apps", "console-web", "src", "CreditOperationsDemo.tsx"],
-    /new URLSearchParams\(\{[\s\S]*actorId:[\s\S]*reason:/,
+    /createCreditOperationsActionRequest\(pendingAction,[\s\S]*actorId,[\s\S]*reason,/,
   );
   checkFileContains(
     "admin-console",

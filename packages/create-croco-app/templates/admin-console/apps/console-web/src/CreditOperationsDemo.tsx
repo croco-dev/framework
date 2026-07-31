@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import {
+  createCreditOperationsActionRequest,
   executeCreditOperationsAction,
   loadCreditOperations,
   type CreditOperationsAction,
@@ -10,6 +11,7 @@ import {
   type CreditOperationsState,
 } from "@croco/admin-core";
 import { CreditOperationsConsole } from "@croco/admin-react";
+import { Problem } from "@croco/problems-core";
 
 const grantedPermissions = [
   "credits:read",
@@ -77,24 +79,24 @@ export function CreditOperationsDemo({
     ) {
       return;
     }
-    const request = createActionRequest(pendingAction, {
+    const request = createCreditOperationsActionRequest(pendingAction, {
       actorId,
       idempotencyKey,
       reason,
     });
-    const actionResult = await executeCreditOperationsAction({
-      action: pendingAction,
-      executor: { execute: () => executeAction(pendingAction, request) },
-      grantedPermissions,
-      request,
-    });
-    setResult(
-      actionResult.kind === "succeeded"
-        ? `Appended ${actionResult.transactionIds.join(", ")} at ledger position ${actionResult.ledgerPosition}.`
-        : `${actionResult.problem.code}: ${actionResult.recovery}`,
-    );
-    setPendingAction(undefined);
-    await refresh();
+    try {
+      const actionResult = await executeCreditOperationsAction({
+        action: pendingAction,
+        executor: { execute: () => executeAction(pendingAction, request) },
+        grantedPermissions,
+        request,
+      });
+      setResult(formatActionResult(actionResult));
+      setPendingAction(undefined);
+      await refresh();
+    } catch (caught) {
+      setResult(formatActionResult(toActionFailure(caught)));
+    }
   }
 
   return (
@@ -143,56 +145,24 @@ export function CreditOperationsDemo({
   );
 }
 
-export function createActionRequest(
-  action: CreditOperationsAction,
-  evidence: {
-    readonly actorId: string;
-    readonly reason: string;
-    readonly idempotencyKey: string;
-  },
-): CreditOperationsActionRequest {
-  const common = {
-    ...evidence,
-    accountId: action.accountId,
-    action: action.kind,
-    expectedPosition: action.ledgerPosition,
-    reference: {
-      id: new URLSearchParams({
-        actorId: evidence.actorId,
-        idempotencyKey: evidence.idempotencyKey,
-        reason: evidence.reason,
-      }).toString(),
-      type: "admin-credit-operation",
-    },
-    targetId: action.targetId,
-    tenantId: action.tenantId,
+function toActionFailure(caught: unknown): CreditOperationsActionResult {
+  return {
+    kind: "problem",
+    problem:
+      caught instanceof Problem
+        ? caught.toJSON()
+        : {
+            code: "admin-console/credit-operation-transport-failed",
+            detail:
+              "The credit operation or ledger refresh failed. Refresh the ledger before retrying.",
+            retryable: true,
+          },
+    recovery: caught instanceof Problem ? "change-input" : "refresh-ledger",
   };
-  switch (action.kind) {
-    case "grant":
-      return { ...common, input: { amount: "5", kind: "grant", source: "operator-grant" } };
-    case "adjustment":
-      return {
-        ...common,
-        input: {
-          amount: "1",
-          direction: "credit",
-          kind: "adjustment",
-          source: "operator-adjustment",
-        },
-      };
-    case "refund":
-      return {
-        ...common,
-        input: {
-          amount: "1",
-          consumptionTransactionId: action.targetId,
-          kind: "refund",
-        },
-      };
-    case "release-reservation":
-      return {
-        ...common,
-        input: { kind: "release-reservation", reservationId: action.targetId },
-      };
-  }
+}
+
+function formatActionResult(result: CreditOperationsActionResult): string {
+  return result.kind === "succeeded"
+    ? `Appended ${result.transactionIds.join(", ")} at ledger position ${result.ledgerPosition}.`
+    : `${result.problem.code}: ${result.recovery}`;
 }

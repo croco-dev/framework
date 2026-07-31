@@ -20,6 +20,14 @@ type GrantActionRequest = CreditOperationsActionRequest & {
   readonly input: Extract<CreditOperationsActionRequest["input"], { readonly kind: "grant" }>;
 };
 
+function requireItem<T>(items: readonly T[], index: number): T {
+  const item = items[index];
+  if (item === undefined) {
+    throw new Error(`Expected test fixture item at index ${index}.`);
+  }
+  return item;
+}
+
 function createSnapshot(): CreditOperationsSnapshot {
   return {
     accountId: "credit-account-1",
@@ -123,7 +131,7 @@ function createRefundSnapshot(): CreditOperationsSnapshot {
       ledgerPosition: 4,
     },
     grantLots: [
-      snapshot.grantLots[0],
+      requireItem(snapshot.grantLots, 0),
       {
         amount: "1",
         meterKeys: [],
@@ -133,9 +141,9 @@ function createRefundSnapshot(): CreditOperationsSnapshot {
       },
     ],
     transactions: [
-      snapshot.transactions[0],
-      { ...snapshot.transactions[1], refundableAmount: "28" },
-      snapshot.transactions[2],
+      requireItem(snapshot.transactions, 0),
+      { ...requireItem(snapshot.transactions, 1), refundableAmount: "28" },
+      requireItem(snapshot.transactions, 2),
       {
         allocations: [{ amount: "1", grantTransactionId: "grant-1" }],
         amount: "1",
@@ -156,7 +164,7 @@ function createSettledReservationSnapshot(): CreditOperationsSnapshot {
     ...snapshot,
     balance: { ...snapshot.balance, ledgerPosition: 5 },
     reservations: [
-      snapshot.reservations[0],
+      requireItem(snapshot.reservations, 0),
       {
         allocations: [{ amount: "10", grantTransactionId: "grant-1" }],
         amount: "10",
@@ -205,10 +213,10 @@ function createPartiallyCommittedReservationSnapshot(): CreditOperationsSnapshot
       ledgerPosition: 5,
       reserved: "0",
     },
-    grantLots: [{ ...snapshot.grantLots[0], remaining: "65" }],
+    grantLots: [{ ...requireItem(snapshot.grantLots, 0), remaining: "65" }],
     reservations: [
       {
-        ...snapshot.reservations[0],
+        ...requireItem(snapshot.reservations, 0),
         release: undefined,
         settledAt,
         status: "committed",
@@ -304,23 +312,103 @@ describe("credit operations contracts", () => {
       }),
       tenantId: "tenant-1",
     });
+    const sourceFailure = new CreditOperationsValidationProblem("source", "failed");
     const failed = await loadCreditOperations({
       grantedPermissions: ["credits:read"],
       source: {
         requiredPermissions: ["credits:read"],
-        load: () => Promise.reject(new CreditOperationsValidationProblem("source", "failed")),
+        load: () => Promise.reject(sourceFailure),
       },
+      tenantId: "tenant-1",
+    });
+    const invalidPartial = await loadCreditOperations({
+      grantedPermissions: ["credits:read"],
+      source: source({
+        kind: "problem",
+        partial: { ...snapshot, tenantId: "other-tenant" },
+        problem: { code: "credits-provider/history-page-failed", retryable: true },
+      }),
       tenantId: "tenant-1",
     });
 
     expect(partial).toMatchObject({
       kind: "problem",
-      partial: { kind: "ready", snapshot: { history: { kind: "partial" } } },
+      partial: { actions: [], kind: "ready", snapshot: { history: { kind: "partial" } } },
     });
     expect(failed).toMatchObject({
       kind: "problem",
-      problem: { code: "admin-core/credit-operations-source-failed" },
+      problem: {
+        code: "admin-core/credit-operations-source-failed",
+        metadata: { cause: sourceFailure },
+      },
     });
+    expect(invalidPartial).toMatchObject({
+      kind: "problem",
+      problem: {
+        code: "credits-provider/history-page-failed",
+        metadata: { partialValidationCause: expect.any(CreditOperationsValidationProblem) },
+      },
+    });
+    expect(invalidPartial).toHaveProperty("partial", undefined);
+
+    const readyPartial = await loadCreditOperations({
+      grantedPermissions: ["credits:read", "credits:write"],
+      source: source({ kind: "ready", snapshot }),
+      tenantId: "tenant-1",
+    });
+    expect(readyPartial).toMatchObject({ actions: [], kind: "ready" });
+  });
+
+  it("accepts only stale positions that match the validated snapshot", async () => {
+    const valid = await loadCreditOperations({
+      grantedPermissions: ["credits:read"],
+      source: source({
+        actualPosition: 3,
+        expectedPosition: 2,
+        kind: "stale",
+        problem: { code: "credits-core/stale-ledger-position" },
+        snapshot: createSnapshot(),
+      }),
+      tenantId: "tenant-1",
+    });
+    expect(valid).toMatchObject({ actualPosition: 3, expectedPosition: 2, kind: "stale" });
+
+    for (const positions of [
+      { actualPosition: 4, expectedPosition: 2 },
+      { actualPosition: 3, expectedPosition: 3 },
+      { actualPosition: 3, expectedPosition: 1.5 },
+    ]) {
+      await expect(
+        loadCreditOperations({
+          grantedPermissions: ["credits:read"],
+          source: source({
+            ...positions,
+            kind: "stale",
+            problem: { code: "credits-core/stale-ledger-position" },
+            snapshot: createSnapshot(),
+          }),
+          tenantId: "tenant-1",
+        }),
+      ).rejects.toThrow(CreditOperationsValidationProblem);
+    }
+  });
+
+  it("propagates cancellation instead of reporting the source as unavailable", async () => {
+    const controller = new AbortController();
+    const abortReason = new CreditOperationsValidationProblem("signal", "cancelled");
+    controller.abort(abortReason);
+
+    await expect(
+      loadCreditOperations({
+        grantedPermissions: ["credits:read"],
+        signal: controller.signal,
+        source: {
+          requiredPermissions: ["credits:read"],
+          load: () => Promise.reject(new CreditOperationsValidationProblem("source", "failed")),
+        },
+        tenantId: "tenant-1",
+      }),
+    ).rejects.toThrow(abortReason);
   });
 
   it("rejects cross-tenant, cross-account, and incomplete or inconsistent ledger evidence", async () => {
@@ -331,7 +419,7 @@ describe("credit operations contracts", () => {
         source: source({ kind: "ready", snapshot: createSnapshot() }),
         tenantId: "tenant-1",
       }),
-    ).rejects.toBeInstanceOf(CreditOperationsValidationProblem);
+    ).rejects.toThrow(CreditOperationsValidationProblem);
 
     for (const snapshot of [
       {
@@ -382,7 +470,7 @@ describe("credit operations contracts", () => {
           source: source({ kind: "ready", snapshot }),
           tenantId: "tenant-1",
         }),
-      ).rejects.toBeInstanceOf(CreditOperationsValidationProblem);
+      ).rejects.toThrow(CreditOperationsValidationProblem);
     }
 
     await expect(
@@ -402,7 +490,7 @@ describe("credit operations contracts", () => {
         }),
         tenantId: "tenant-1",
       }),
-    ).rejects.toBeInstanceOf(CreditOperationsValidationProblem);
+    ).rejects.toThrow(CreditOperationsValidationProblem);
   });
 
   it("rejects forged refund eligibility and invalid refund targets", async () => {
@@ -457,7 +545,7 @@ describe("credit operations contracts", () => {
           source: source({ kind: "ready", snapshot }),
           tenantId: "tenant-1",
         }),
-      ).rejects.toBeInstanceOf(CreditOperationsValidationProblem);
+      ).rejects.toThrow(CreditOperationsValidationProblem);
     }
   });
 
@@ -522,9 +610,9 @@ describe("credit operations contracts", () => {
         ...partiallyCommitted,
         transactions: partiallyCommitted.transactions.map((transaction) =>
           transaction.position === 4
-            ? { ...partiallyCommitted.transactions[4], position: 4 }
+            ? { ...requireItem(partiallyCommitted.transactions, 4), position: 4 }
             : transaction.position === 5
-              ? { ...partiallyCommitted.transactions[3], position: 5 }
+              ? { ...requireItem(partiallyCommitted.transactions, 3), position: 5 }
               : transaction,
         ),
       },
@@ -535,7 +623,7 @@ describe("credit operations contracts", () => {
           source: source({ kind: "ready", snapshot }),
           tenantId: "tenant-1",
         }),
-      ).rejects.toBeInstanceOf(CreditOperationsValidationProblem);
+      ).rejects.toThrow(CreditOperationsValidationProblem);
     }
   });
 
@@ -587,7 +675,7 @@ describe("credit operations contracts", () => {
         }),
         tenantId: "tenant-1",
       }),
-    ).rejects.toBeInstanceOf(CreditOperationsValidationProblem);
+    ).rejects.toThrow(CreditOperationsValidationProblem);
   });
 
   it("keeps source loading unfiltered so a complete snapshot is validated before local filtering", async () => {
@@ -707,24 +795,31 @@ describe("credit operations contracts", () => {
         now: generatedAt,
         request: requestFixture(),
       }),
-    ).rejects.toBeInstanceOf(CreditOperationsValidationProblem);
+    ).rejects.toThrow(CreditOperationsValidationProblem);
 
     const undeclaredExecutor: CreditOperationsMutationExecutor = {
       execute: vi.fn().mockResolvedValue({
         kind: "problem",
+        ledgerCommitted: true,
         problem: { code: "provider/secret-failure" },
-        recovery: "change-input",
+        recovery: "retry-event-publication",
       }),
     };
-    await expect(
-      executeCreditOperationsAction({
-        action,
-        executor: undeclaredExecutor,
-        grantedPermissions: ["credits:write"],
-        now: generatedAt,
-        request: requestFixture(),
-      }),
-    ).rejects.toBeInstanceOf(CreditOperationsValidationProblem);
+    const undeclaredExecution = executeCreditOperationsAction({
+      action,
+      executor: undeclaredExecutor,
+      grantedPermissions: ["credits:write"],
+      now: generatedAt,
+      request: requestFixture(),
+    });
+    await expect(undeclaredExecution).rejects.toThrow(CreditOperationsValidationProblem);
+    await expect(undeclaredExecution).rejects.toMatchObject({
+      extensions: {
+        ledgerCommitted: true,
+        recovery: "retry-event-publication",
+        returnedProblemCode: "provider/secret-failure",
+      },
+    });
   });
 
   it("mounts the same state as a Tenant 360 extension without adding a balance editor", () => {

@@ -75,6 +75,7 @@ export class AdminController {
   }
 
   @Get(adminCreditOperationsRoute)
+  @ProblemResponses(...routeProblemResponses(adminCreditOperationsRoute))
   async creditOperations(
     @Query(adminCreditOperationsRoute, "tenantId")
     tenantId: RouteQueryParam<typeof adminCreditOperationsRoute, "tenantId">,
@@ -84,6 +85,7 @@ export class AdminController {
   }
 
   @Post(adminExecuteCreditOperationRoute)
+  @ProblemResponses(...routeProblemResponses(adminExecuteCreditOperationRoute))
   async executeCreditOperation(
     @Body(adminExecuteCreditOperationRoute)
     input: RouteBody<typeof adminExecuteCreditOperationRoute>,

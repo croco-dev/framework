@@ -63,18 +63,22 @@ export function CreditOperationsConsole({
   }
   if (state.kind === "problem") {
     return createElement(
-      "section",
-      {
-        "aria-label": "Tenant credit operations",
-        "data-problem-code": state.problem.code,
-        "data-state": "problem",
-        role: "alert",
-      },
-      createElement("h1", null, state.problem.title ?? "Credit ledger unavailable"),
-      createElement("p", null, state.problem.detail ?? state.problem.code),
-      onRefresh
-        ? createElement("button", { onClick: onRefresh, type: "button" }, "Retry credit history")
-        : null,
+      Fragment,
+      null,
+      createElement(
+        "section",
+        {
+          "aria-label": "Tenant credit operations problem",
+          "data-problem-code": state.problem.code,
+          "data-state": "problem",
+          role: "alert",
+        },
+        createElement("h1", null, state.problem.title ?? "Credit ledger unavailable"),
+        createElement("p", null, state.problem.detail ?? state.problem.code),
+        onRefresh
+          ? createElement("button", { onClick: onRefresh, type: "button" }, "Retry credit history")
+          : null,
+      ),
       state.partial
         ? createReadyConsole({
             filter,
@@ -109,7 +113,7 @@ export function CreditOperationsConsole({
       ),
       createSnapshot(
         state.snapshot,
-        [],
+        state.grantedPermissions,
         filter,
         onFilterChange,
         selectedTransactionId,
@@ -331,15 +335,17 @@ function createDateFilter(
     label,
     createElement("input", {
       onChange: (event: ChangeEvent<HTMLInputElement>) =>
-        onChange(
-          event.currentTarget.value === undefined || event.currentTarget.value === ""
-            ? undefined
-            : new Date(event.currentTarget.value),
-        ),
+        onChange(parseLocalDateTime(event.currentTarget.value)),
       type: "datetime-local",
       value: value === undefined ? "" : formatLocalDateTime(value),
     }),
   );
+}
+
+function parseLocalDateTime(value: string): Date | undefined {
+  if (value === "") return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
 function formatLocalDateTime(value: Date): string {
@@ -443,6 +449,9 @@ function createTransactionDetail(
   snapshot: CreditOperationsSnapshot,
   grantedPermissions: readonly string[],
 ): ReactElement {
+  const refunds = snapshot.transactions.filter(
+    (candidate) => candidate.kind === "refund" && candidate.relatedTransactionId === transaction.id,
+  );
   return createElement(
     "section",
     { "aria-label": `Transaction ${transaction.id} details` },
@@ -465,6 +474,13 @@ function createTransactionDetail(
       : null,
     transaction.relatedTransactionId
       ? createElement("p", null, `Related transaction: ${transaction.relatedTransactionId}`)
+      : null,
+    refunds.length > 0
+      ? createElement(
+          "p",
+          null,
+          `Refund transactions: ${refunds.map((refund) => refund.id).join(", ")}`,
+        )
       : null,
     transaction.actorId ? createElement("p", null, `Actor: ${transaction.actorId}`) : null,
     transaction.correlationId
@@ -511,6 +527,11 @@ function createReservationDetail(
   reservation: CreditOperationsReservation,
   snapshot: CreditOperationsSnapshot,
 ): ReactElement {
+  const settlementTransactions = snapshot.transactions.filter(
+    (transaction) =>
+      transaction.reservationId === reservation.id &&
+      (transaction.kind === "commit" || transaction.kind === "release"),
+  );
   return createElement(
     "section",
     { "aria-label": `Reservation ${reservation.id} details` },
@@ -522,6 +543,15 @@ function createReservationDetail(
         reservation.settledAt ? ` · settled ${reservation.settledAt.toISOString()}` : ""
       }`,
     ),
+    settlementTransactions.length > 0
+      ? createElement(
+          "p",
+          null,
+          `Settlement transactions: ${settlementTransactions
+            .map((transaction) => transaction.id)
+            .join(", ")}`,
+        )
+      : null,
     createAllocationEvidence(reservation.allocations, snapshot),
   );
 }

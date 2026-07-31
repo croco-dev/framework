@@ -186,6 +186,7 @@ export type CreditOperationsState =
       readonly actualPosition: number;
       readonly problem: AdminProblemContract;
       readonly snapshot: CreditOperationsSnapshot;
+      readonly grantedPermissions: readonly string[];
     }
   | CreditOperationsReadyState;
 
@@ -279,13 +280,14 @@ const COMMON_PROBLEMS = [
   "credits-core/event-publication-failed",
 ] as const;
 
+/** Reports an RFC 7807 validation failure in a tenant credit operations contract. */
 export class CreditOperationsValidationProblem extends Problem {
-  constructor(field: string, reason: string) {
+  constructor(field: string, reason: string, evidence: Readonly<Record<string, unknown>> = {}) {
     super(
       "admin-core/credit-operations-validation-failed",
       ProblemCategory.ValidationError,
       `Credit operation ${field} is invalid: ${reason}.`,
-      { extensions: { field } },
+      { extensions: { field, ...evidence } },
     );
   }
 }
@@ -325,7 +327,10 @@ export async function loadCreditOperations(
       accountId: input.accountId,
       signal: input.signal,
     });
-  } catch {
+  } catch (caught) {
+    if (input.signal?.aborted) {
+      throw input.signal.reason ?? caught;
+    }
     return {
       kind: "problem",
       tenantId: input.tenantId,
@@ -335,6 +340,7 @@ export async function loadCreditOperations(
         title: "Credit ledger unavailable",
         detail: "The credit operations source failed. Inspect server-side provider evidence.",
         retryable: true,
+        metadata: { cause: caught },
       },
     };
   }
@@ -344,17 +350,29 @@ export async function loadCreditOperations(
   }
 
   if (result.kind === "problem") {
-    const partial = result.partial
-      ? createReadyState(
-          assertCreditOperationsSnapshot(result.partial, input),
-          input.grantedPermissions,
-        )
-      : undefined;
-    return { kind: "problem", tenantId: input.tenantId, problem: result.problem, partial };
+    const resolved = resolveValidatedPartial(result, input);
+    return {
+      kind: "problem",
+      tenantId: input.tenantId,
+      problem: resolved.problem,
+      partial: resolved.partial,
+    };
   }
 
   const snapshot = assertCreditOperationsSnapshot(result.snapshot, input);
   if (result.kind === "stale") {
+    if (
+      !Number.isInteger(result.expectedPosition) ||
+      result.expectedPosition < 0 ||
+      !Number.isInteger(result.actualPosition) ||
+      result.actualPosition <= result.expectedPosition ||
+      result.actualPosition !== snapshot.balance.ledgerPosition
+    ) {
+      throw new CreditOperationsValidationProblem(
+        "stalePosition",
+        "expected and actual positions must describe the validated ledger snapshot",
+      );
+    }
     return {
       kind: "stale",
       tenantId: input.tenantId,
@@ -362,6 +380,7 @@ export async function loadCreditOperations(
       actualPosition: result.actualPosition,
       problem: result.problem,
       snapshot,
+      grantedPermissions: input.grantedPermissions,
     };
   }
   return createReadyState(snapshot, input.grantedPermissions);
@@ -481,6 +500,61 @@ export function resolveCreditOperationsReference(
   return undefined;
 }
 
+/** Builds the canonical audited request used by generated credit operation consoles. */
+export function createCreditOperationsActionRequest(
+  action: CreditOperationsAction,
+  evidence: {
+    readonly actorId: string;
+    readonly reason: string;
+    readonly idempotencyKey: string;
+  },
+): CreditOperationsActionRequest {
+  const common = {
+    ...evidence,
+    accountId: action.accountId,
+    action: action.kind,
+    expectedPosition: action.ledgerPosition,
+    reference: {
+      id: new URLSearchParams({
+        actorId: evidence.actorId,
+        idempotencyKey: evidence.idempotencyKey,
+        reason: evidence.reason,
+      }).toString(),
+      type: "admin-credit-operation",
+    },
+    targetId: action.targetId,
+    tenantId: action.tenantId,
+  };
+  switch (action.kind) {
+    case "grant":
+      return { ...common, input: { amount: "5", kind: "grant", source: "operator-grant" } };
+    case "adjustment":
+      return {
+        ...common,
+        input: {
+          amount: "1",
+          direction: "credit",
+          kind: "adjustment",
+          source: "operator-adjustment",
+        },
+      };
+    case "refund":
+      return {
+        ...common,
+        input: {
+          amount: "1",
+          consumptionTransactionId: action.targetId,
+          kind: "refund",
+        },
+      };
+    case "release-reservation":
+      return {
+        ...common,
+        input: { kind: "release-reservation", reservationId: action.targetId },
+      };
+  }
+}
+
 export function assertCreditOperationsActionRequest(
   request: CreditOperationsActionRequest,
   now: Date = new Date(),
@@ -556,6 +630,11 @@ export async function executeCreditOperationsAction(input: {
     throw new CreditOperationsValidationProblem(
       "problem",
       `undeclared Problem code '${result.problem.code}' was returned`,
+      {
+        ledgerCommitted: result.ledgerCommitted ?? false,
+        recovery: result.recovery,
+        returnedProblemCode: result.problem.code,
+      },
     );
   }
   return result;
@@ -716,7 +795,10 @@ function createReadyState(
     kind: "ready",
     snapshot,
     grantedPermissions,
-    actions: createCreditOperationsActions(snapshot, grantedPermissions),
+    actions:
+      snapshot.history.kind === "complete"
+        ? createCreditOperationsActions(snapshot, grantedPermissions)
+        : [],
   };
 }
 
@@ -744,12 +826,44 @@ function createAction(
 }
 
 function assertAmount(amount: string): void {
-  const match = DECIMAL_PATTERN.exec(amount);
-  if (match === null || amount === "0" || (amount.endsWith("0") && amount.includes("."))) {
+  try {
+    assertStoredAmount(amount, "amount", false);
+  } catch {
     throw new CreditOperationsValidationProblem(
       "amount",
       "use a positive canonical base-10 string with at most 18 fractional digits",
     );
+  }
+}
+
+function resolveValidatedPartial(
+  result: Extract<CreditOperationsSourceResult, { readonly kind: "problem" }>,
+  input: LoadCreditOperationsInput,
+): {
+  readonly problem: AdminProblemContract;
+  readonly partial?: CreditOperationsReadyState;
+} {
+  if (result.partial === undefined) {
+    return { problem: result.problem };
+  }
+  try {
+    return {
+      partial: createReadyState(
+        assertCreditOperationsSnapshot(result.partial, input),
+        input.grantedPermissions,
+      ),
+      problem: result.problem,
+    };
+  } catch (caught) {
+    return {
+      problem: {
+        ...result.problem,
+        metadata: {
+          ...result.problem.metadata,
+          partialValidationCause: caught,
+        },
+      },
+    };
   }
 }
 

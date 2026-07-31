@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CreditOperationsValidationProblem,
   executeCreditOperationsAction,
   loadCreditOperations,
   type CreditOperationsAction,
@@ -20,6 +21,7 @@ import {
   createExecutor,
   createFixtureSnapshot,
 } from "../creditOperations";
+import { creditOperationsActionCommandSchema } from "../controllers/adminSchemas";
 
 const now = new Date("2026-07-30T00:00:00.000Z");
 const permissions = ["credits:read", "credits:write", "credits:refund", "credits:release"];
@@ -41,24 +43,92 @@ describe("generated credit operations smoke", () => {
     }
     const grant = requireAction(state, "grant");
 
-    await expect(
-      service.execute(
-        { kind: "grant", targetId: "client-forged-target" },
-        createActionRequest(grant, {
-          actorId: "smoke-operator",
-          idempotencyKey: "forged-action",
-          reason: "Verify server-derived authorization",
-        }),
-      ),
-    ).rejects.toMatchObject({
+    const execution = service.execute(
+      { kind: "grant", targetId: "client-forged-target" },
+      createActionRequest(grant, {
+        actorId: "smoke-operator",
+        idempotencyKey: "forged-action",
+        reason: "Verify server-derived authorization",
+      }),
+    );
+
+    await expect(execution).rejects.toThrow(CreditOperationsValidationProblem);
+    await expect(execution).rejects.toMatchObject({
       code: "admin-core/credit-operations-validation-failed",
     });
   });
 
-  it("executes and renders the append-only ledger journey with hostile recovery cases", async () => {
-    const store = new InMemoryCreditLedgerStore();
-    const service = new CreditLedgerService({ store });
-    const ready = await loadReadyState(service);
+  it("rejects command fields that do not match the discriminated input kind", () => {
+    const common = {
+      accountId: "account-1",
+      actorId: "operator-1",
+      auditReason: "Verify schema discrimination",
+      expectedPosition: 0,
+      idempotencyKey: "schema-discrimination",
+      referenceId: "audit-1",
+      referenceType: "admin-credit-operation",
+      targetId: "account-1",
+      tenantId: "tenant-1",
+    };
+
+    expect(
+      creditOperationsActionCommandSchema.safeParse({
+        ...common,
+        actionKind: "refund",
+        amount: "1",
+        inputKind: "grant",
+      }).success,
+    ).toBe(false);
+    expect(
+      creditOperationsActionCommandSchema.safeParse({
+        ...common,
+        actionKind: "release-reservation",
+        amount: "1",
+        inputKind: "release-reservation",
+        reservationId: "reservation-1",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("masks reference values and reports fully reserved grant lots", async () => {
+    const service = new CreditLedgerService({ store: new InMemoryCreditLedgerStore() });
+    const opened = await service.openAccount({
+      idempotencyKey: "masked-account",
+      reference: { id: "tenant-secret", type: "tenant-credit-account" },
+      tenantId: "masked-tenant",
+      walletKey: "usage",
+    });
+    await service.grantCredits({
+      accountId: opened.account.id,
+      amount: creditAmount("5"),
+      idempotencyKey: "masked-grant",
+      reference: { id: "sensitive-reference", type: "support-case" },
+      source: "sensitive-source",
+    });
+    await service.reserveCredits({
+      accountId: opened.account.id,
+      amount: creditAmount("5"),
+      idempotencyKey: "masked-reservation",
+      reference: { id: "sensitive-request", type: "usage-request" },
+    });
+
+    const snapshot = await createFixtureSnapshot(service, "masked-tenant", now);
+    const grantLot = snapshot.grantLots.find((lot) => lot.transactionId !== "");
+
+    expect(grantLot).toMatchObject({
+      remaining: "0",
+      source: { visibility: "masked" },
+      status: "reserved",
+    });
+    expect(grantLot?.source).not.toHaveProperty("value");
+    expect(JSON.stringify(snapshot)).not.toContain("sensitive-source");
+    expect(
+      snapshot.transactions.every((transaction) => transaction.reference.value === undefined),
+    ).toBe(true);
+  });
+
+  it("appends an audited transaction without rewriting fixture history", async () => {
+    const { executor, grant, ready, request, service } = await createActionFixture("smoke-grant");
     const positions = ready.snapshot.transactions.map((transaction) => transaction.position);
 
     expect(positions).toEqual(positions.map((_, index) => index + 1));
@@ -78,13 +148,6 @@ describe("generated credit operations smoke", () => {
       ready.snapshot.transactions.find((transaction) => transaction.kind === "consume")?.allocations
         .length,
     ).toBeGreaterThan(0);
-    const grant = requireAction(ready, "grant");
-    const request = createActionRequest(grant, {
-      actorId: "smoke-operator",
-      idempotencyKey: "smoke-grant",
-      reason: "Verify generated admin recovery",
-    });
-    const executor = createExecutor(service);
     const appended = await executeCreditOperationsAction({
       action: grant,
       executor,
@@ -108,7 +171,20 @@ describe("generated credit operations smoke", () => {
     const auditReference = new URLSearchParams(appendedTransaction?.reference.id);
     expect(auditReference.get("actorId")).toBe("smoke-operator");
     expect(auditReference.get("reason")).toBe("Verify generated admin recovery");
+  });
 
+  it("replays an identical idempotent append without advancing the ledger", async () => {
+    const { executor, grant, ready, request, service } = await createActionFixture("replay-grant");
+    const appended = await executeCreditOperationsAction({
+      action: grant,
+      executor,
+      grantedPermissions: permissions,
+      now,
+      request,
+    });
+    if (appended.kind !== "succeeded") {
+      throw new Error("Generated grant did not append a transaction");
+    }
     const replayed = await executeCreditOperationsAction({
       action: grant,
       executor,
@@ -118,9 +194,19 @@ describe("generated credit operations smoke", () => {
     });
     expect(replayed).toMatchObject({ kind: "succeeded", replayed: true });
     expect((await service.getHistory(creditAccountId(ready.snapshot.accountId))).position).toBe(
-      afterAppend.position,
+      appended.ledgerPosition,
     );
+  });
 
+  it("returns duplicate-conflict recovery for semantic idempotency reuse", async () => {
+    const { executor, grant, request } = await createActionFixture("conflicting-grant");
+    await executeCreditOperationsAction({
+      action: grant,
+      executor,
+      grantedPermissions: permissions,
+      now,
+      request,
+    });
     if (request.input.kind !== "grant") {
       throw new Error("Generated grant action did not create grant input");
     }
@@ -141,7 +227,10 @@ describe("generated credit operations smoke", () => {
       problem: { code: "credits-core/duplicate-conflict" },
       recovery: "change-input",
     });
+  });
 
+  it("returns stale-ledger recovery after the current position advances", async () => {
+    const { executor, grant, ready, service } = await createActionFixture("stale-fixture");
     const refreshed = await loadReadyState(service);
     const staleGrant = requireAction(refreshed, "grant");
     await service.grantCredits({
@@ -169,7 +258,10 @@ describe("generated credit operations smoke", () => {
       problem: { code: "credits-core/stale-ledger-position" },
       recovery: "refresh-ledger",
     });
+    expect(grant.ledgerPosition).toBe(ready.snapshot.balance.ledgerPosition);
+  });
 
+  it("reports committed event-publication failures with durable ledger evidence", async () => {
     const eventStore = new InMemoryCreditLedgerStore();
     const fixtureService = new CreditLedgerService({ store: eventStore });
     const eventReady = await loadReadyState(fixtureService, "event-tenant");
@@ -206,6 +298,23 @@ describe("generated credit operations smoke", () => {
     ).toBe(eventReady.snapshot.balance.ledgerPosition + 1);
   });
 });
+
+async function createActionFixture(idempotencyKey: string) {
+  const service = new CreditLedgerService({ store: new InMemoryCreditLedgerStore() });
+  const ready = await loadReadyState(service, `tenant-${idempotencyKey}`);
+  const grant = requireAction(ready, "grant");
+  return {
+    executor: createExecutor(service),
+    grant,
+    ready,
+    request: createActionRequest(grant, {
+      actorId: "smoke-operator",
+      idempotencyKey,
+      reason: "Verify generated admin recovery",
+    }),
+    service,
+  };
+}
 
 async function loadReadyState(
   service: CreditLedgerService,

@@ -1,5 +1,6 @@
 export {
   assertCreditOperationsActionRequest,
+  createCreditOperationsActionRequest,
   createCreditOperationsActions,
   createCreditOperationsLoadingState,
   createCreditOperationsTenantExtension,

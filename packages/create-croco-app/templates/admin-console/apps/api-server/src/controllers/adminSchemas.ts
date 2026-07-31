@@ -1,12 +1,65 @@
 import { z } from "zod";
+import { CreditOperationsValidationProblem } from "@croco/admin-core";
+import {
+  CreditDuplicateConflictProblem,
+  CreditEventPublicationProblem,
+  StaleLedgerPositionProblem,
+} from "@croco/credits-core";
 import { ProblemCategory } from "@croco/problems-core";
-import { defineRouteContract, defineRouteProblem, HttpMethod } from "@croco/protocols-rest";
-import { AdminUserNotFoundProblem } from "../problems";
+import {
+  defineRouteContract,
+  defineRouteProblem,
+  HttpMethod,
+  RequestValidationProblem,
+} from "@croco/protocols-rest";
+import {
+  AdminCreditOperationsPermissionDeniedProblem,
+  AdminUserNotFoundProblem,
+} from "../problems";
 
 const adminUserNotFoundProblem = defineRouteProblem(AdminUserNotFoundProblem, {
   code: "admin-console/user-not-found",
   category: ProblemCategory.NotFound,
   description: "The requested admin user does not exist in the selected tenant context.",
+});
+
+const creditOperationsRequestValidationProblem = defineRouteProblem(RequestValidationProblem, {
+  code: "protocols-rest/request-validation-failed",
+  category: ProblemCategory.ValidationError,
+  description: "The credit operation request does not match the declared route schema.",
+});
+
+const creditOperationsValidationProblem = defineRouteProblem(CreditOperationsValidationProblem, {
+  code: "admin-core/credit-operations-validation-failed",
+  category: ProblemCategory.ValidationError,
+  description: "The requested tenant credit operation failed semantic validation.",
+});
+
+const creditOperationsPermissionDeniedProblem = defineRouteProblem(
+  AdminCreditOperationsPermissionDeniedProblem,
+  {
+    code: "admin-core/credit-operations-permission-denied",
+    category: ProblemCategory.Forbidden,
+    description: "The operator lacks a permission required for tenant credit operations.",
+  },
+);
+
+const creditDuplicateConflictProblem = defineRouteProblem(CreditDuplicateConflictProblem, {
+  code: "credits-core/duplicate-conflict",
+  category: ProblemCategory.Conflict,
+  description: "The idempotency key was already used for a different credit command.",
+});
+
+const staleLedgerPositionProblem = defineRouteProblem(StaleLedgerPositionProblem, {
+  code: "credits-core/stale-ledger-position",
+  category: ProblemCategory.Conflict,
+  description: "The credit ledger advanced beyond the operator's expected position.",
+});
+
+const creditEventPublicationProblem = defineRouteProblem(CreditEventPublicationProblem, {
+  code: "credits-core/event-publication-failed",
+  category: ProblemCategory.InternalServerError,
+  description: "The ledger committed but its post-commit event could not be published.",
 });
 
 export const tenantIdSchema = z.string().min(1);
@@ -233,8 +286,7 @@ export const creditOperationsActionResultSchema = z.union([
   }),
 ]);
 
-export const creditOperationsActionCommandSchema = z.object({
-  actionKind: z.enum(["grant", "refund", "release-reservation", "adjustment"]),
+const creditOperationsActionCommandBaseShape = {
   targetId: z.string(),
   accountId: z.string(),
   tenantId: tenantIdSchema,
@@ -244,15 +296,65 @@ export const creditOperationsActionCommandSchema = z.object({
   referenceType: z.string(),
   referenceId: z.string(),
   expectedPosition: z.number().int().nonnegative(),
-  inputKind: z.enum(["grant", "refund", "release-reservation", "adjustment"]),
-  amount: z.string().optional(),
-  expiresAt: z.string().datetime().optional(),
-  source: z.string().optional(),
-  meterKeys: z.array(z.string()).optional(),
-  direction: z.enum(["credit", "debit"]).optional(),
-  consumptionTransactionId: z.string().optional(),
-  reservationId: z.string().optional(),
-});
+};
+
+const creditOperationsActionCommandRouteSchema = z
+  .object({
+    ...creditOperationsActionCommandBaseShape,
+    actionKind: z.enum(["grant", "refund", "release-reservation", "adjustment"]),
+    inputKind: z.enum(["grant", "refund", "release-reservation", "adjustment"]),
+    amount: z.string().optional(),
+    expiresAt: z.string().datetime().optional(),
+    source: z.string().optional(),
+    meterKeys: z.array(z.string()).optional(),
+    consumptionTransactionId: z.string().optional(),
+    reservationId: z.string().optional(),
+    direction: z.enum(["credit", "debit"]).optional(),
+  })
+  .strict();
+
+export const creditOperationsActionCommandSchema = z.discriminatedUnion("inputKind", [
+  z
+    .object({
+      ...creditOperationsActionCommandBaseShape,
+      actionKind: z.literal("grant"),
+      inputKind: z.literal("grant"),
+      amount: z.string(),
+      expiresAt: z.string().datetime().optional(),
+      source: z.string().optional(),
+      meterKeys: z.array(z.string()).optional(),
+    })
+    .strict(),
+  z
+    .object({
+      ...creditOperationsActionCommandBaseShape,
+      actionKind: z.literal("refund"),
+      inputKind: z.literal("refund"),
+      amount: z.string(),
+      consumptionTransactionId: z.string(),
+    })
+    .strict(),
+  z
+    .object({
+      ...creditOperationsActionCommandBaseShape,
+      actionKind: z.literal("release-reservation"),
+      inputKind: z.literal("release-reservation"),
+      reservationId: z.string(),
+    })
+    .strict(),
+  z
+    .object({
+      ...creditOperationsActionCommandBaseShape,
+      actionKind: z.literal("adjustment"),
+      inputKind: z.literal("adjustment"),
+      amount: z.string(),
+      direction: z.enum(["credit", "debit"]),
+      expiresAt: z.string().datetime().optional(),
+      source: z.string().optional(),
+      meterKeys: z.array(z.string()).optional(),
+    })
+    .strict(),
+]);
 
 const tenantQuerySchema = z.object({
   tenantId: tenantIdSchema.optional(),
@@ -316,7 +418,7 @@ export const adminCreditOperationsRoute = defineRouteContract({
   operationId: "getAdminCreditOperations",
   query: z.object({ tenantId: tenantIdSchema }),
   response: creditOperationsSnapshotSchema,
-  problems: [],
+  problems: [creditOperationsValidationProblem, creditOperationsPermissionDeniedProblem],
 });
 
 export const adminExecuteCreditOperationRoute = defineRouteContract({
@@ -324,9 +426,16 @@ export const adminExecuteCreditOperationRoute = defineRouteContract({
   method: HttpMethod.POST,
   path: "/admin/credits/actions",
   operationId: "executeAdminCreditOperation",
-  body: creditOperationsActionCommandSchema,
+  body: creditOperationsActionCommandRouteSchema,
   response: creditOperationsActionResultSchema,
-  problems: [],
+  problems: [
+    creditOperationsRequestValidationProblem,
+    creditOperationsValidationProblem,
+    creditOperationsPermissionDeniedProblem,
+    creditDuplicateConflictProblem,
+    staleLedgerPositionProblem,
+    creditEventPublicationProblem,
+  ],
 });
 
 export type AdminUser = z.infer<typeof adminUserSchema>;

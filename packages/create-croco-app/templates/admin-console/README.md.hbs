@@ -36,7 +36,7 @@ pnpm dev:web
 8. Outbound webhook reliability console에서 endpoint secret version, logical event, delivery, attempt, retry classification을 분리해 확인합니다.
 9. `pnpm admin:smoke`의 fake endpoint transport가 success, timeout, 429 retry, permanent 4xx를 분류하고 실제 in-memory core runtime으로 rotation metadata와 idempotent audited replay를 검증합니다.
 10. 같은 smoke가 credit grant → reserve → partial commit/release → expiry → consume/refund를 실행하고, append-only position, allocation evidence, idempotent replay, duplicate conflict, stale refresh, committed event-publication recovery를 검증합니다.
-10. Operations timeline에서 invite와 Problem event가 남았는지 확인합니다.
+11. Operations timeline에서 invite와 Problem event가 남았는지 확인합니다.
 
 ## Recovery States
 

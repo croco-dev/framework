@@ -1,5 +1,6 @@
 import {
   CreditOperationsValidationProblem,
+  createCreditOperationsActionRequest,
   createCreditOperationsActions,
   executeCreditOperationsAction,
   type CreditOperationsAction,
@@ -13,6 +14,7 @@ import {
   addCreditAmounts,
   compareCreditAmounts,
   CreditLedgerService,
+  creditAccountId,
   creditAmount,
   creditReservationId,
   creditTransactionId,
@@ -29,17 +31,16 @@ import { Problem } from "@croco/problems-core";
 
 import { creditOperationsActionCommandSchema } from "./controllers/adminSchemas";
 import type {
-  CreditOperationsActionCommand,
   CreditOperationsWireActionResult,
   CreditOperationsWireSnapshot,
 } from "./controllers/adminSchemas";
 
-const grantedPermissions = [
+const grantedPermissions: readonly string[] = [
   "credits:read",
   "credits:write",
   "credits:refund",
   "credits:release",
-] as const;
+];
 
 export class CreditOperationsService {
   private readonly ledger = new CreditLedgerService({ store: new InMemoryCreditLedgerStore() });
@@ -66,7 +67,7 @@ export class CreditOperationsService {
       );
     }
     return await executeCreditOperationsAction({
-      action: { ...derivedAction, ledgerPosition: request.expectedPosition },
+      action: derivedAction,
       executor: createExecutor(this.ledger),
       grantedPermissions,
       request,
@@ -131,9 +132,15 @@ export function fromCreditOperationsActionCommand(input: unknown): {
   readonly selector: Pick<CreditOperationsAction, "kind" | "targetId">;
   readonly request: CreditOperationsActionRequest;
 } {
-  const command = creditOperationsActionCommandSchema.parse(input) as Required<
-    Pick<CreditOperationsActionCommand, keyof CreditOperationsActionCommand>
-  >;
+  const parsed = creditOperationsActionCommandSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new CreditOperationsValidationProblem(
+      "command",
+      "action and input fields must match one declared credit operation variant",
+      { issues: parsed.error.issues },
+    );
+  }
+  const command = parsed.data;
   const selector = {
     kind: command.actionKind,
     targetId: command.targetId,
@@ -155,7 +162,7 @@ export function fromCreditOperationsActionCommand(input: unknown): {
       request = {
         ...common,
         input: {
-          amount: requireCommandField(command.amount, "amount"),
+          amount: command.amount,
           expiresAt: command.expiresAt ? new Date(command.expiresAt) : undefined,
           kind: "grant",
           meterKeys: command.meterKeys,
@@ -167,8 +174,8 @@ export function fromCreditOperationsActionCommand(input: unknown): {
       request = {
         ...common,
         input: {
-          amount: requireCommandField(command.amount, "amount"),
-          direction: requireCommandField(command.direction, "direction"),
+          amount: command.amount,
+          direction: command.direction,
           expiresAt: command.expiresAt ? new Date(command.expiresAt) : undefined,
           kind: "adjustment",
           meterKeys: command.meterKeys,
@@ -180,11 +187,8 @@ export function fromCreditOperationsActionCommand(input: unknown): {
       request = {
         ...common,
         input: {
-          amount: requireCommandField(command.amount, "amount"),
-          consumptionTransactionId: requireCommandField(
-            command.consumptionTransactionId,
-            "consumptionTransactionId",
-          ),
+          amount: command.amount,
+          consumptionTransactionId: command.consumptionTransactionId,
           kind: "refund",
         },
       };
@@ -194,7 +198,7 @@ export function fromCreditOperationsActionCommand(input: unknown): {
         ...common,
         input: {
           kind: "release-reservation",
-          reservationId: requireCommandField(command.reservationId, "reservationId"),
+          reservationId: command.reservationId,
         },
       };
       break;
@@ -208,13 +212,6 @@ export function toCreditOperationsWireActionResult(
   return result.kind === "succeeded"
     ? { ...result, transactionIds: [...result.transactionIds] }
     : { ...result, problem: { ...result.problem } };
-}
-
-function requireCommandField<T extends string>(value: T | undefined, field: string): T {
-  if (value === undefined || value.trim() === "") {
-    throw new CreditOperationsValidationProblem(field, "a non-empty value is required");
-  }
-  return value;
 }
 
 export async function createFixtureSnapshot(
@@ -300,6 +297,14 @@ export async function createFixtureSnapshot(
   const history = await service.getHistory(accountId, { limit: 1_000 });
   const balance = await service.getBalance(accountId, history.position);
   const reservations = await loadReservations(service, accountId, history.transactions);
+  const canReadReferences = grantedPermissions.includes("credits:references:read");
+  const activeReservedLotIds = new Set(
+    reservations
+      .filter((reservation) => reservation.status === "active")
+      .flatMap((reservation) =>
+        reservation.allocations.map((allocation) => allocation.grantTransactionId),
+      ),
+  );
   const lotAmounts = projectLotAmounts(history.transactions);
   const grantLots = history.transactions.filter(isGrantLot).map((transaction) => {
     const remaining = lotAmounts.get(transaction.id) ?? ZERO_CREDIT_AMOUNT;
@@ -309,15 +314,14 @@ export async function createFixtureSnapshot(
       meterKeys: transaction.grant?.meterKeys ?? [],
       remaining,
       source: transaction.grant?.source
-        ? {
-            maskedValue: `${transaction.grant.source.slice(0, 12)}***`,
-            requiredPermissions: ["credits:references:read"],
-            type: "grant-source",
-            value: transaction.grant.source,
-            visibility: "masked" as const,
-          }
+        ? createProtectedReference(
+            "grant-source",
+            transaction.grant.source,
+            "grant-source-***",
+            canReadReferences,
+          )
         : undefined,
-      status: lotStatus(transaction, remaining, now),
+      status: lotStatus(transaction, remaining, now, activeReservedLotIds),
       transactionId: transaction.id,
     };
   });
@@ -363,64 +367,12 @@ export async function createFixtureSnapshot(
     })),
     tenantId,
     transactions: history.transactions.map((transaction) =>
-      toOperationsTransaction(transaction, history.transactions),
+      toOperationsTransaction(transaction, history.transactions, canReadReferences),
     ),
   };
 }
 
-export function createActionRequest(
-  action: CreditOperationsAction,
-  evidence: {
-    readonly actorId: string;
-    readonly reason: string;
-    readonly idempotencyKey: string;
-  },
-): CreditOperationsActionRequest {
-  const common = {
-    ...evidence,
-    accountId: action.accountId,
-    action: action.kind,
-    expectedPosition: action.ledgerPosition,
-    reference: {
-      id: new URLSearchParams({
-        actorId: evidence.actorId,
-        idempotencyKey: evidence.idempotencyKey,
-        reason: evidence.reason,
-      }).toString(),
-      type: "admin-credit-operation",
-    },
-    targetId: action.targetId,
-    tenantId: action.tenantId,
-  };
-  switch (action.kind) {
-    case "grant":
-      return { ...common, input: { amount: "5", kind: "grant", source: "operator-grant" } };
-    case "adjustment":
-      return {
-        ...common,
-        input: {
-          amount: "1",
-          direction: "credit",
-          kind: "adjustment",
-          source: "operator-adjustment",
-        },
-      };
-    case "refund":
-      return {
-        ...common,
-        input: {
-          amount: "1",
-          consumptionTransactionId: action.targetId,
-          kind: "refund",
-        },
-      };
-    case "release-reservation":
-      return {
-        ...common,
-        input: { kind: "release-reservation", reservationId: action.targetId },
-      };
-  }
-}
+export const createActionRequest = createCreditOperationsActionRequest;
 
 export function createExecutor(service: CreditLedgerService): CreditOperationsMutationExecutor {
   return {
@@ -558,15 +510,18 @@ function lotStatus(
   transaction: CreditTransaction,
   remaining: CreditAmount,
   now: Date,
+  activeReservedLotIds: ReadonlySet<string>,
 ): "available" | "reserved" | "consumed" | "expired" {
   if (transaction.grant?.expiresAt && transaction.grant.expiresAt <= now) return "expired";
   if (compareCreditAmounts(remaining, ZERO_CREDIT_AMOUNT) > 0) return "available";
+  if (activeReservedLotIds.has(transaction.id)) return "reserved";
   return "consumed";
 }
 
 function toOperationsTransaction(
   transaction: CreditTransaction,
   history: readonly CreditTransaction[],
+  canReadReferences: boolean,
 ): CreditOperationsTransaction {
   const refunded = history
     .filter(
@@ -583,7 +538,7 @@ function toOperationsTransaction(
       : undefined;
   return {
     actorId:
-      transaction.reference.type === "admin-credit-operation"
+      canReadReferences && transaction.reference.type === "admin-credit-operation"
         ? (new URLSearchParams(transaction.reference.id).get("actorId") ?? undefined)
         : undefined,
     adjustmentDirection: transaction.adjustmentDirection,
@@ -595,19 +550,33 @@ function toOperationsTransaction(
     meterKey: transaction.meterKey,
     occurredAt: transaction.occurredAt,
     position: transaction.position,
-    reference: {
-      maskedValue: `${transaction.reference.type}:***`,
-      requiredPermissions: ["credits:references:read"],
-      type: transaction.reference.type,
-      value: transaction.reference.id,
-      visibility: "masked",
-    },
+    reference: createProtectedReference(
+      transaction.reference.type,
+      transaction.reference.id,
+      `${transaction.reference.type}:***`,
+      canReadReferences,
+    ),
     refundableAmount,
     relatedTransactionId: transaction.relatedTransactionId,
     reservationId: transaction.reservationId,
   };
 }
 
+function createProtectedReference(
+  type: string,
+  value: string,
+  maskedValue: string,
+  canReadReferences: boolean,
+): CreditOperationsTransaction["reference"] {
+  return {
+    maskedValue,
+    requiredPermissions: ["credits:references:read"],
+    type,
+    ...(canReadReferences ? { value } : {}),
+    visibility: canReadReferences ? "visible" : "masked",
+  };
+}
+
 function creditAccountIdFrom(value: string): CreditAccountId {
-  return value as CreditAccountId;
+  return creditAccountId(value);
 }

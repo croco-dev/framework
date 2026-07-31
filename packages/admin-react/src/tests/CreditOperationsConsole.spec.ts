@@ -183,6 +183,40 @@ describe("CreditOperationsConsole", () => {
     expect(markup).toContain("request-***");
   });
 
+  it("renders reverse links from consumptions and reservations to their settlement transactions", () => {
+    const linkedSnapshot: CreditOperationsSnapshot = {
+      ...snapshot,
+      transactions: [
+        ...snapshot.transactions,
+        {
+          allocations: [{ amount: "5", grantTransactionId: "grant-1" }],
+          amount: "5",
+          id: "refund-1",
+          kind: "refund",
+          occurredAt: new Date("2026-07-30T00:50:00.000Z"),
+          position: 6,
+          reference: { type: "support-case", visibility: "denied" },
+          relatedTransactionId: "commit-1",
+        },
+      ],
+    };
+    const markup = renderToStaticMarkup(
+      createElement(CreditOperationsConsole, {
+        selectedReservationId: "reservation-committed",
+        selectedTransactionId: "commit-1",
+        state: {
+          actions: [],
+          grantedPermissions: ["credits:read"],
+          kind: "ready",
+          snapshot: linkedSnapshot,
+        },
+      }),
+    );
+
+    expect(markup).toContain("Refund transactions: refund-1");
+    expect(markup).toContain("Settlement transactions: commit-1, release-partial-remainder");
+  });
+
   it("renders complete filter controls and filters timeline and reservations", () => {
     const markup = renderToStaticMarkup(
       createElement(CreditOperationsConsole, {
@@ -270,6 +304,7 @@ describe("CreditOperationsConsole", () => {
       state: {
         actualPosition: 6,
         expectedPosition: 5,
+        grantedPermissions: ["credits:read"],
         kind: "stale" as const,
         problem: { code: "credits-core/stale-ledger-position" },
         snapshot,
@@ -311,6 +346,25 @@ describe("CreditOperationsConsole", () => {
     expect(markup).toContain('data-history="partial"');
     expect(markup).toContain("Partial history from position 3");
     expect(markup).not.toContain("Complete ledger history is shown");
+    expect(markup.match(/role="alert"/g)).toHaveLength(1);
+  });
+
+  it("preserves semantic reference permissions while rendering a stale snapshot", () => {
+    const markup = renderToStaticMarkup(
+      createElement(CreditOperationsConsole, {
+        state: {
+          actualPosition: 6,
+          expectedPosition: 5,
+          grantedPermissions: ["credits:read", "credits:references:read"],
+          kind: "stale",
+          problem: { code: "credits-core/stale-ledger-position" },
+          snapshot,
+          tenantId: "tenant-1",
+        },
+      }),
+    );
+
+    expect(markup).toContain("support-secret-42");
   });
 
   it("omits refund and release controls when the domain snapshot does not permit them", () => {

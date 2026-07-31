@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 551,
+  problemCount: 552,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -122,8 +122,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/admin-console/apps/api-server/src/controllers/adminSchemas.ts",
-          line: 6,
+          line: 20,
           column: 79,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "admin-core/credit-operations-permission-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#admin-core-credit-operations-permission-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/admin-console/apps/api-server/src/controllers/adminSchemas.ts",
+          line: 40,
+          column: 3,
           kind: "problem-metadata",
         },
       ],
@@ -153,7 +184,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/admin-core/src/libs/CreditOperations.ts",
-          line: 284,
+          line: 286,
           column: 5,
           kind: "problem-constructor",
         },

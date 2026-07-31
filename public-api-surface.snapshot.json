@@ -331,6 +331,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createCreditOperationsActionRequest",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "createCreditOperationsActions",
               "exportKind": "named",
               "source": "./libs/CreditOperations",
