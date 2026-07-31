@@ -11,8 +11,7 @@
     "typescript/no-unused-vars": "error",
     "typescript/consistent-type-imports": "error",
     "typescript/no-non-null-assertion": "error",
-    "no-explicit-any": "error",
-    "typescript/no-explicit-any": "off",
+    "typescript/no-explicit-any": "error",
     "typescript/no-wrapper-object-types": "off",
     "no-unsafe-optional-chaining": "off",
     "no-undef": "off",
@@ -30,7 +29,20 @@
     {
       "files": ["packages/create-croco-app/templates/**/*.ts"],
       "rules": {
+        "@croco/oxlint-rules/no-cross-domain-import": "error",
+        "@croco/oxlint-rules/no-datasource-import": "error",
         "@croco/oxlint-rules/rest-generated-contract-schema": "error"
+      }
+    },
+    {
+      "files": [
+        "packages/protocols-graphql/**/*.ts",
+        "packages/transports-graphql/**/*.ts",
+        "packages/create-croco-app/templates/addons/graphql*/**/*.ts",
+        "packages/create-croco-app/templates/addons/lambda/apps/graphql-api/**/*.ts"
+      ],
+      "rules": {
+        "@croco/oxlint-rules/type-graphql-explicit-type": "error"
       }
     },
     {
@@ -42,7 +54,7 @@
         "**/__tests__/**"
       ],
       "rules": {
-        "no-explicit-any": "off",
+        "typescript/no-explicit-any": "off",
         "no-unused-vars": "off",
         "typescript/no-unused-vars": "off",
         "typescript/no-non-null-assertion": "off",
