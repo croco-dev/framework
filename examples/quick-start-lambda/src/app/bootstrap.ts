@@ -1,13 +1,31 @@
 import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
-import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
+import { Container, LOGGER_TOKEN } from "@croco/framework-context";
 import { setMeteringService } from "@croco/metering-core";
-import { createApp } from "@croco/transports-http";
+import {
+  createSlidingWindowPolicy,
+  RateLimiter,
+  RateLimitKeyBuilder,
+  SlidingWindowInMemoryStore,
+} from "@croco/ratelimit-core";
+import {
+  bodyLimitMiddleware,
+  corsMiddleware,
+  createApp,
+  createRuntimeAwareRateLimitClientIdentityPolicy,
+  mb,
+  rateLimitHttpMiddleware,
+  securityHeadersMiddleware,
+} from "@croco/transports-http";
 import { createMeteringService } from "../integrations/inMemoryMetering";
 import { TestAuthProvider } from "../integrations/TestAuthProvider";
 import { HealthController } from "../protocols/HealthController";
 import { UserController } from "../protocols/UserController";
+import type { ILogger } from "@croco/framework-context";
+import type { MiddlewareFunction } from "@croco/transports-http";
 
 type LambdaExampleApp = ReturnType<typeof createApp>;
+
+const RATE_LIMIT_BYPASS_PATHS = new Set(["/api/health"]);
 
 const demoLogger: ILogger = {
   debug: (message, context) => {
@@ -46,7 +64,26 @@ export function createLambdaExampleApp(): LambdaExampleApp {
 
   return createApp({
     controllers: [HealthController, UserController],
-    securityValidation: "off",
+    middlewares: [
+      securityHeadersMiddleware(),
+      corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),
+      bodyLimitMiddleware({ limit: mb(1) }),
+      createApiRateLimitMiddleware(),
+    ],
+  });
+}
+
+function createApiRateLimitMiddleware(): MiddlewareFunction {
+  const rateLimiter = new RateLimiter(
+    new SlidingWindowInMemoryStore(),
+    new RateLimitKeyBuilder(["ip"]),
+  );
+
+  return rateLimitHttpMiddleware({
+    rateLimiter,
+    policy: createSlidingWindowPolicy("api", 100, 60_000),
+    clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy(),
+    skip: (ctx) => RATE_LIMIT_BYPASS_PATHS.has(ctx.req.path),
   });
 }
 

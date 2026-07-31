@@ -24,6 +24,8 @@ after-commit audit entry.
 
 Failure states: invalid checkout input returns `golden-path/checkout-validation`; terminal card decline returns `golden-path/payment-declined` without retrying or persisting an order; missing orders return `golden-path/order-not-found`.
 
+The HTTP bootstrap uses security headers, an explicit CORS origin, a 1 MB body limit, and an in-memory sliding-window rate limiter. These middlewares satisfy Croco's default security validation without external credentials. Disabling security validation is reserved for temporary local migration or test fixtures, not the normal example path.
+
 ## Run Locally
 
 From the repository root:
