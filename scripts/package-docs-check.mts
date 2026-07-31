@@ -32,6 +32,10 @@ type PackageJson = {
   readonly version?: unknown;
 };
 
+type RootPackageJson = {
+  readonly scripts?: unknown;
+};
+
 type PackageInfo = {
   readonly dir: string;
   readonly hasApiDocs: boolean;
@@ -158,6 +162,11 @@ type CoverageSet = {
   readonly missingTests: readonly PackageRecord[];
 };
 
+type DocumentedPnpmCommand = {
+  readonly name: string;
+  readonly requiresRootScript: boolean;
+};
+
 type CatalogState = {
   readonly certification: CertificationCatalogState;
   readonly certificationClaimedPackages: ReadonlySet<string>;
@@ -196,6 +205,60 @@ const extensionMatrixDocsPath = join(
   "extension-matrix.md",
 );
 const readmePath = "README.md";
+const rootCommandDocsPaths = ["AGENTS.md", "CONTRIBUTING.md", readmePath, "RELEASING.md"] as const;
+const pnpmBuiltinCommands = new Set([
+  "add",
+  "approve-builds",
+  "audit",
+  "bin",
+  "c",
+  "cache",
+  "cat-file",
+  "cat-index",
+  "clean",
+  "config",
+  "create",
+  "dedupe",
+  "deploy",
+  "dlx",
+  "env",
+  "exec",
+  "fetch",
+  "find-hash",
+  "i",
+  "ignored-builds",
+  "import",
+  "init",
+  "install",
+  "install-test",
+  "it",
+  "licenses",
+  "link",
+  "list",
+  "ln",
+  "ls",
+  "outdated",
+  "pack",
+  "patch",
+  "patch-commit",
+  "patch-remove",
+  "prune",
+  "publish",
+  "rb",
+  "rebuild",
+  "remove",
+  "rm",
+  "root",
+  "rt",
+  "runtime",
+  "self-update",
+  "stage",
+  "store",
+  "unlink",
+  "up",
+  "update",
+  "why",
+]);
 const maturityOrder = ["production", "beta", "alpha", "deprecated"] as const;
 const runtimeOrder = ["node", "lambda", "cloudflare-workers", "browser"] as const;
 const adapterCategoryOrder = [
@@ -248,6 +311,7 @@ function main(): void {
 
 function run(options: Options): string[] {
   const violations: string[] = [];
+  validateDocumentedRootScripts(options.rootDir, violations);
   const state = loadCatalogState(options.rootDir, violations);
   validateArchitectureDocs(options.rootDir, state, violations);
   const baseline = loadDocsBaseline(options.rootDir, state.packages, violations);
@@ -296,6 +360,175 @@ function run(options: Options): string[] {
   }
 
   return violations;
+}
+
+function validateDocumentedRootScripts(rootDir: string, violations: string[]): void {
+  const packageJson = readJsonFile<RootPackageJson>(join(rootDir, "package.json"));
+  if (!isRecord(packageJson.scripts)) {
+    violations.push("package.json must define a scripts object for documented command validation");
+    return;
+  }
+
+  const rootScripts = new Set(Object.keys(packageJson.scripts));
+  for (const docsPath of rootCommandDocsPaths) {
+    const absolutePath = join(rootDir, docsPath);
+    if (!existsSync(absolutePath)) {
+      continue;
+    }
+
+    const content = readFileSync(absolutePath, "utf-8");
+    for (const command of collectDocumentedRootPnpmCommands(content)) {
+      if (
+        (command.requiresRootScript || !pnpmBuiltinCommands.has(command.name)) &&
+        !rootScripts.has(command.name)
+      ) {
+        violations.push(
+          `${docsPath}: documented command \`pnpm ${command.name}\` is not defined in package.json#scripts`,
+        );
+      }
+    }
+  }
+}
+
+function collectDocumentedRootPnpmCommands(markdown: string): readonly DocumentedPnpmCommand[] {
+  const commands = new Map<string, boolean>();
+  let fencedBlock: { readonly isShell: boolean; readonly lines: string[] } | null = null;
+
+  for (const rawLine of markdown.split("\n")) {
+    const line = stripMarkdownContainerPrefix(rawLine);
+    const fence = line.match(/^```([^\s`]*)/);
+    if (fence) {
+      if (fencedBlock) {
+        if (fencedBlock.isShell) {
+          collectShellPnpmCommands(fencedBlock.lines, commands);
+        }
+        fencedBlock = null;
+      } else {
+        fencedBlock = {
+          isShell: ["", "bash", "console", "sh", "shell", "zsh"].includes(fence[1]),
+          lines: [],
+        };
+      }
+      continue;
+    }
+
+    if (fencedBlock) {
+      fencedBlock.lines.push(line);
+      continue;
+    }
+
+    for (const match of rawLine.matchAll(/(?<!`)`([^`\n]+)`(?!`)/g)) {
+      collectShellPnpmCommands([match[1]], commands);
+    }
+  }
+
+  if (fencedBlock?.isShell) {
+    collectShellPnpmCommands(fencedBlock.lines, commands);
+  }
+
+  return [...commands]
+    .map(([name, requiresRootScript]) => ({ name, requiresRootScript }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function stripMarkdownContainerPrefix(line: string): string {
+  return line.replace(/^\s*(?:>\s*)?(?:[-*+]\s+)?/, "");
+}
+
+function collectShellPnpmCommands(lines: readonly string[], commands: Map<string, boolean>): void {
+  let workingDirectory: string[] | null = [];
+
+  for (const line of lines) {
+    for (const segment of line.split(/&&|\|\||[;|]/)) {
+      const commandLine = segment
+        .trim()
+        .replace(/^\$\s+/, "")
+        .split(/\s+#/, 1)[0];
+      if (!commandLine || commandLine.startsWith("#")) {
+        continue;
+      }
+      const cdTarget = commandLine.match(/^cd\s+(.+?)\s*$/)?.[1];
+      if (cdTarget) {
+        workingDirectory = resolveDocumentedWorkingDirectory(workingDirectory, cdTarget);
+        continue;
+      }
+
+      if (workingDirectory?.length !== 0) {
+        continue;
+      }
+
+      const pnpmInvocation = commandLine.match(/(?:^|\s)pnpm\s+(.+)$/)?.[1];
+      if (!pnpmInvocation) {
+        continue;
+      }
+
+      const command = resolvePnpmCommand(pnpmInvocation.trim());
+      if (command) {
+        commands.set(
+          command.name,
+          command.requiresRootScript || (commands.get(command.name) ?? false),
+        );
+      }
+    }
+  }
+}
+
+function resolveDocumentedWorkingDirectory(
+  currentDirectory: readonly string[] | null,
+  rawTarget: string,
+): string[] | null {
+  const target = rawTarget.replace(/^['"]|['"]$/g, "");
+  if (target.includes("git rev-parse --show-toplevel")) {
+    return [];
+  }
+  if (!currentDirectory || target === "-" || target.startsWith("/") || target.startsWith("$")) {
+    return null;
+  }
+
+  const nextDirectory = [...currentDirectory];
+  for (const part of target.split("/")) {
+    if (!part || part === ".") {
+      continue;
+    }
+    if (part === "..") {
+      nextDirectory.pop();
+      continue;
+    }
+    nextDirectory.push(part);
+  }
+  return nextDirectory;
+}
+
+function resolvePnpmCommand(invocation: string): DocumentedPnpmCommand | null {
+  const tokens = invocation.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? [];
+  let index = 0;
+
+  while (index < tokens.length && tokens[index].startsWith("-")) {
+    const option = tokens[index];
+    if (
+      ["--dir", "--filter", "--prefix", "--recursive", "-C", "-F", "-r"].includes(option) ||
+      /^(?:--dir|--filter|--prefix)=/.test(option)
+    ) {
+      return null;
+    }
+    index++;
+  }
+
+  const command = tokens[index];
+  if (!command || command.startsWith("-")) {
+    return null;
+  }
+  if (command === "run") {
+    const scriptName = tokens[index + 1];
+    return scriptName ? { name: scriptName, requiresRootScript: true } : null;
+  }
+  if (command === "t") {
+    return { name: "test", requiresRootScript: true };
+  }
+  return {
+    name: command,
+    requiresRootScript: !pnpmBuiltinCommands.has(command),
+  };
 }
 
 function parseArgs(args: readonly string[]): Options {
