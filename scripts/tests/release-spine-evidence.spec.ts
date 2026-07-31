@@ -20,6 +20,7 @@ import {
   createReleaseSpineEvidenceManifest,
   defaultCommandRunner,
   failedCheckDiagnostics,
+  interruptActiveCommand,
   markReportInterrupted,
   parseArgs,
   runReleaseSpineEvidence,
@@ -349,9 +350,10 @@ describe("release-spine-evidence.mts", () => {
 
   it("records failed command output with bounded excerpts", async () => {
     const repo = createTempRepo();
+    const outputDir = join(repo, "ci-reports", "release");
     const report = await runReleaseSpineEvidence({
       rootDir: repo,
-      outputDir: join(repo, "ci-reports", "release"),
+      outputDir,
       totalTimeoutMs: 1_000,
       commands: [createCommand("release-metadata")],
       maxOutputExcerptLength: 12,
@@ -371,6 +373,115 @@ describe("release-spine-evidence.mts", () => {
     expect(report.checks[0]?.stdoutExcerpt).toContain("diagnostics");
     expect(report.checks[0]?.stderrExcerpt).toContain("[truncated");
     expect(report.checks[0]?.stderrExcerpt).toContain("failed");
+    expect(
+      readFileSync(join(outputDir, "artifacts", "release-metadata", "stdout.log"), "utf8"),
+    ).toBe("stdout: release metadata diagnostics");
+    expect(
+      readFileSync(join(outputDir, "artifacts", "release-metadata", "stderr.log"), "utf8"),
+    ).toBe("stderr: release metadata failed");
+    expect(report.checks[0]?.artifacts.map(({ copiedPath }) => copiedPath)).toEqual([
+      "ci-reports/release/artifacts/release-metadata/stdout.log",
+      "ci-reports/release/artifacts/release-metadata/stderr.log",
+    ]);
+    expect(readFileSync(join(outputDir, "spine-evidence.md"), "utf8")).toContain(
+      "artifacts/release-metadata/stdout.log",
+    );
+  });
+
+  it("preserves complete real command output beyond the in-memory buffer", async () => {
+    const repo = createTempRepo();
+    const outputDir = join(repo, "ci-reports", "release");
+    const stdout = "full stdout survives the bounded buffer";
+    const stderr = "full stderr survives the bounded buffer";
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir,
+      totalTimeoutMs: 10_000,
+      commands: [
+        createCommand("real-failure", {
+          command: [
+            process.execPath,
+            "-e",
+            `process.stdout.write(${JSON.stringify(stdout)}); process.stderr.write(${JSON.stringify(stderr)}); process.exit(7)`,
+          ],
+          timeoutMs: 5_000,
+        }),
+      ],
+      maxCommandOutputBufferLength: 8,
+    });
+
+    expect(report.status).toBe("failed");
+    expect(report.checks[0]?.stdoutExcerpt).toBe(stdout.slice(-8));
+    expect(report.checks[0]?.stderrExcerpt).toBe(stderr.slice(-8));
+    expect(readFileSync(join(outputDir, "artifacts", "real-failure", "stdout.log"), "utf8")).toBe(
+      stdout,
+    );
+    expect(readFileSync(join(outputDir, "artifacts", "real-failure", "stderr.log"), "utf8")).toBe(
+      stderr,
+    );
+    expect(report.checks[0]?.artifacts.map(({ copiedPath }) => copiedPath)).toEqual([
+      "ci-reports/release/artifacts/real-failure/stdout.log",
+      "ci-reports/release/artifacts/real-failure/stderr.log",
+    ]);
+  });
+
+  it("removes streamed command output after a successful check", async () => {
+    const repo = createTempRepo();
+    const outputDir = join(repo, "ci-reports", "release");
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir,
+      totalTimeoutMs: 10_000,
+      commands: [
+        createCommand("real-success", {
+          command: [process.execPath, "-e", "console.log('success')"],
+          timeoutMs: 5_000,
+        }),
+      ],
+    });
+
+    expect(report.status).toBe("passed");
+    expect(existsSync(join(outputDir, "artifacts", "real-success", "stdout.log"))).toBe(false);
+    expect(existsSync(join(outputDir, "artifacts", "real-success", "stderr.log"))).toBe(false);
+  });
+
+  it("finalizes real command evidence before reporting an interruption", async () => {
+    const repo = createTempRepo();
+    const outputDir = join(repo, "ci-reports", "release");
+    const readyPath = join(repo, "interrupted-command.ready");
+    let interruptSignal: NodeJS.Signals | null = null;
+    const reportPromise = runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir,
+      totalTimeoutMs: 15_000,
+      commands: [
+        createCommand("interrupted-command", {
+          command: [
+            process.execPath,
+            "-e",
+            `process.on("SIGTERM", () => undefined); process.stdout.write("partial output"); require("node:fs").writeFileSync(${JSON.stringify(readyPath)}, "ready"); setInterval(() => undefined, 10_000)`,
+          ],
+          timeoutMs: 10_000,
+        }),
+        createCommand("not-started"),
+      ],
+      getInterruptSignal: () => interruptSignal,
+    });
+    await waitForPath(readyPath);
+    interruptSignal = "SIGTERM";
+    interruptActiveCommand(interruptSignal, 50);
+    const report = await reportPromise;
+
+    expect(report.status).toBe("interrupted");
+    expect(report.checks.map(({ status }) => status)).toEqual(["interrupted", "interrupted"]);
+    expect(report.checks[0]?.signal).toBe("SIGTERM");
+    expect(
+      readFileSync(join(outputDir, "artifacts", "interrupted-command", "stdout.log"), "utf8"),
+    ).toBe("partial output");
+    expect(report.checks[0]?.artifacts.map(({ copiedPath }) => copiedPath)).toEqual([
+      "ci-reports/release/artifacts/interrupted-command/stdout.log",
+      "ci-reports/release/artifacts/interrupted-command/stderr.log",
+    ]);
   });
 
   it("fails spine and publish execution on the same broken shared command ID", async () => {
@@ -511,6 +622,8 @@ describe("release-spine-evidence.mts", () => {
 
   it("runs real commands through the default async runner", async () => {
     const repo = createTempRepo();
+    const stdoutPath = join(repo, "command-output", "stdout.log");
+    const stderrPath = join(repo, "command-output", "stderr.log");
 
     const result = await defaultCommandRunner(
       {
@@ -522,35 +635,49 @@ describe("release-spine-evidence.mts", () => {
       },
       {
         cwd: repo,
+        stderrPath,
+        stdoutPath,
         timeoutMs: 1_000,
       },
     );
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("runner ok");
+    expect(readFileSync(stdoutPath, "utf8")).toBe("runner ok\n");
+    expect(readFileSync(stderrPath, "utf8")).toBe("");
     expect(result.timedOut).toBe(false);
   });
 
   it("times out real commands through the default async runner", async () => {
     const repo = createTempRepo();
+    const stdoutPath = join(repo, "command-output", "stdout.log");
+    const stderrPath = join(repo, "command-output", "stderr.log");
 
     const result = await defaultCommandRunner(
       {
         id: "slow-node",
         label: "Slow Node",
         category: "quality",
-        command: [process.execPath, "-e", "setTimeout(() => undefined, 10_000)"],
-        timeoutMs: 50,
+        command: [
+          process.execPath,
+          "-e",
+          "process.stdout.write('before timeout'); setTimeout(() => undefined, 10_000)",
+        ],
+        timeoutMs: 200,
       },
       {
         cwd: repo,
-        timeoutMs: 50,
+        stderrPath,
+        stdoutPath,
+        timeoutMs: 200,
       },
     );
 
     expect(result.status).toBeNull();
     expect(result.signal).toBe("SIGTERM");
     expect(result.timedOut).toBe(true);
+    expect(readFileSync(stdoutPath, "utf8")).toBe("before timeout");
+    expect(readFileSync(stderrPath, "utf8")).toBe("");
   });
 
   it("parses root, output, and timeout options after the pnpm separator", () => {
@@ -672,6 +799,7 @@ function createCommand(
   id: string,
   options: {
     readonly artifacts?: readonly EvidenceArtifactExpectation[];
+    readonly command?: readonly string[];
     readonly timeoutMs?: number;
   } = {},
 ): EvidenceCommand {
@@ -679,7 +807,7 @@ function createCommand(
     id,
     label: id,
     category: "quality",
-    command: ["fake", id],
+    command: options.command ?? ["fake", id],
     timeoutMs: options.timeoutMs ?? 100,
     artifacts: options.artifacts,
   };
@@ -699,6 +827,16 @@ function okResult(stdout: string): CommandRunResult {
 
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, "utf-8")) as T;
+}
+
+async function waitForPath(path: string, timeoutMs = 10_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!existsSync(path)) {
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out waiting for ${path}`);
+    }
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 10));
+  }
 }
 
 function findCheck(manifest: readonly EvidenceCommand[], id: string): EvidenceCommand {

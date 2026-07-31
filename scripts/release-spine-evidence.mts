@@ -1,7 +1,18 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawn } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
 import { pathToFileURL } from "node:url";
@@ -131,6 +142,9 @@ export type CommandRunner = (
   context: {
     readonly cwd: string;
     readonly env?: NodeJS.ProcessEnv;
+    readonly maxOutputBufferLength?: number;
+    readonly stderrPath?: string;
+    readonly stdoutPath?: string;
     readonly timeoutMs: number;
   },
 ) => CommandRunResult | Promise<CommandRunResult>;
@@ -154,6 +168,8 @@ type RunOptions = Options & {
   readonly changedFiles?: readonly string[];
   readonly clock?: Clock;
   readonly commands?: readonly EvidenceCommand[];
+  readonly getInterruptSignal?: () => NodeJS.Signals | null;
+  readonly maxCommandOutputBufferLength?: number;
   readonly maxOutputExcerptLength?: number;
   readonly onCheckpoint?: (report: ReleaseSpineEvidenceReport) => void;
   readonly runner?: CommandRunner;
@@ -200,6 +216,7 @@ function readChangedFiles(
   }
 }
 let activeCommandProcess: ChildProcess | null = null;
+let activeInterruptKillTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function createReleaseSpineEvidenceManifest(): readonly EvidenceCommand[] {
   return createVerificationManifest("spine");
@@ -382,19 +399,41 @@ function getErrorCode(error: Error | undefined): string | null {
   return typeof code === "string" ? code : null;
 }
 
-function appendBoundedText(current: string, chunk: string): string {
+function appendBoundedText(
+  current: string,
+  chunk: string,
+  maxLength = COMMAND_OUTPUT_MAX_BUFFER,
+): string {
   const next = `${current}${chunk}`;
-  if (next.length <= COMMAND_OUTPUT_MAX_BUFFER) {
+  if (next.length <= maxLength) {
     return next;
   }
 
-  return next.slice(-COMMAND_OUTPUT_MAX_BUFFER);
+  return next.slice(-maxLength);
 }
 
-function killActiveCommand(signal: NodeJS.Signals): void {
-  if (activeCommandProcess) {
-    signalCommandProcessTree(activeCommandProcess, signal);
+export function interruptActiveCommand(
+  signal: NodeJS.Signals,
+  killGraceMs = COMMAND_TIMEOUT_KILL_GRACE_MS,
+): void {
+  const child = activeCommandProcess;
+  if (!child) {
+    return;
   }
+
+  signalCommandProcessTree(child, signal);
+  if (signal === "SIGKILL") {
+    return;
+  }
+  if (activeInterruptKillTimer) {
+    clearTimeout(activeInterruptKillTimer);
+  }
+  activeInterruptKillTimer = setTimeout(() => {
+    if (activeCommandProcess === child) {
+      signalCommandProcessTree(child, "SIGKILL");
+    }
+    activeInterruptKillTimer = null;
+  }, killGraceMs);
 }
 
 function signalCommandProcessTree(child: ChildProcess, signal: NodeJS.Signals): void {
@@ -435,6 +474,8 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
     let stderr = "";
     let stdout = "";
     let timedOut = false;
+    const stdoutDescriptor = openCommandOutput(context.stdoutPath);
+    const stderrDescriptor = openCommandOutput(context.stderrPath);
     const child = spawn(command, args, {
       cwd: context.cwd,
       detached: process.platform !== "win32",
@@ -463,14 +504,32 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
       if (activeCommandProcess === child) {
         activeCommandProcess = null;
       }
+      if (activeInterruptKillTimer) {
+        clearTimeout(activeInterruptKillTimer);
+        activeInterruptKillTimer = null;
+      }
+      if (stdoutDescriptor !== null) {
+        closeSync(stdoutDescriptor);
+      }
+      if (stderrDescriptor !== null) {
+        closeSync(stderrDescriptor);
+      }
       resolveResult(result);
     };
 
     child.stdout?.on("data", (chunk: unknown) => {
-      stdout = appendBoundedText(stdout, toText(chunk));
+      const output = toText(chunk);
+      if (stdoutDescriptor !== null) {
+        writeSync(stdoutDescriptor, output);
+      }
+      stdout = appendBoundedText(stdout, output, context.maxOutputBufferLength);
     });
     child.stderr?.on("data", (chunk: unknown) => {
-      stderr = appendBoundedText(stderr, toText(chunk));
+      const output = toText(chunk);
+      if (stderrDescriptor !== null) {
+        writeSync(stderrDescriptor, output);
+      }
+      stderr = appendBoundedText(stderr, output, context.maxOutputBufferLength);
     });
     child.once("error", (error) => {
       errorCode = getErrorCode(error);
@@ -497,6 +556,15 @@ export const defaultCommandRunner: CommandRunner = (check, context) =>
       });
     });
   });
+
+function openCommandOutput(path: string | undefined): number | null {
+  if (!path) {
+    return null;
+  }
+
+  mkdirSync(dirname(path), { recursive: true });
+  return openSync(path, "w");
+}
 
 function outputExcerpt(value: string, maxLength: number): string {
   if (value.length <= maxLength) {
@@ -595,6 +663,50 @@ function collectArtifactReferences(
   }
 
   return references;
+}
+
+function persistFailedCommandOutput(
+  checkId: string,
+  result: CommandRunResult,
+  rootDir: string,
+  outputDir: string,
+  modifiedAt: string,
+): readonly EvidenceArtifactReference[] {
+  const outputRoot = join(outputDir, RELEASE_ARTIFACT_DIRECTORY, checkId);
+  mkdirSync(outputRoot, { recursive: true });
+
+  return [
+    ["Command stdout", "stdout.log", result.stdout],
+    ["Command stderr", "stderr.log", result.stderr],
+  ].map(([label, fileName, output]) => {
+    const outputPath = join(outputRoot, fileName);
+    if (!existsSync(outputPath)) {
+      writeFileSync(outputPath, output);
+    }
+    const artifactPath = relativeToRoot(rootDir, outputPath);
+
+    return {
+      label,
+      path: artifactPath,
+      required: false,
+      copiedPath: artifactPath,
+      copyError: null,
+      exists: true,
+      fresh: true,
+      modifiedAt,
+      sourcePath: artifactPath,
+    };
+  });
+}
+
+function discardCommandOutput(outputDir: string, checkId: string): void {
+  const outputRoot = join(outputDir, RELEASE_ARTIFACT_DIRECTORY, checkId);
+  for (const fileName of ["stdout.log", "stderr.log"]) {
+    const outputPath = join(outputRoot, fileName);
+    if (existsSync(outputPath)) {
+      unlinkSync(outputPath);
+    }
+  }
 }
 
 function assertCopiedGeneratedSmokeJourneyBundle(bundleRoot: string): void {
@@ -758,6 +870,12 @@ export async function runReleaseSpineEvidence(
   checkpoint();
 
   for (const [index, check] of commands.entries()) {
+    const signalBeforeCheck = options.getInterruptSignal?.() ?? null;
+    if (signalBeforeCheck) {
+      report = markReportInterrupted(report, signalBeforeCheck, clock.nowIso());
+      checkpoint();
+      break;
+    }
     if (check.applicable === false) {
       report = updateCheck(report, index, {
         ...report.checks[index],
@@ -823,14 +941,31 @@ export async function runReleaseSpineEvidence(
               SPINE_PROMOTION_RUN_ID: report.provenance.runId,
             }
           : commandEnv,
+      maxOutputBufferLength: options.maxCommandOutputBufferLength,
+      stderrPath: join(outputDir, RELEASE_ARTIFACT_DIRECTORY, check.id, "stderr.log"),
+      stdoutPath: join(outputDir, RELEASE_ARTIFACT_DIRECTORY, check.id, "stdout.log"),
       timeoutMs: effectiveTimeoutMs,
     });
     const completedAt = clock.nowIso();
     const durationMs = Math.max(0, clock.nowMs() - startedMs);
-    const artifacts = collectArtifactReferences(check, rootDir, outputDir, startedMs);
-    const artifactReason = artifactFailureReason(artifacts);
-    const status =
-      artifactReason && result.status === 0 && !result.timedOut ? "failed" : resultStatus(result);
+    const commandArtifacts = collectArtifactReferences(check, rootDir, outputDir, startedMs);
+    const artifactReason = artifactFailureReason(commandArtifacts);
+    const interruptionSignal = options.getInterruptSignal?.() ?? null;
+    const status = interruptionSignal
+      ? "interrupted"
+      : artifactReason && result.status === 0 && !result.timedOut
+        ? "failed"
+        : resultStatus(result);
+    const artifacts =
+      status === "failed" || status === "timed_out" || status === "interrupted"
+        ? [
+            ...commandArtifacts,
+            ...persistFailedCommandOutput(check.id, result, rootDir, outputDir, completedAt),
+          ]
+        : commandArtifacts;
+    if (status !== "failed" && status !== "timed_out" && status !== "interrupted") {
+      discardCommandOutput(outputDir, check.id);
+    }
 
     report = updateCheck(report, index, {
       ...report.checks[index],
@@ -841,13 +976,20 @@ export async function runReleaseSpineEvidence(
       errorCode: result.errorCode,
       errorMessage: result.errorMessage,
       exitCode: result.status,
-      failureReason: failureReason(result, artifactReason),
-      signal: result.signal,
+      failureReason: interruptionSignal
+        ? `Release spine evidence was interrupted by ${interruptionSignal}.`
+        : failureReason(result, artifactReason),
+      signal: interruptionSignal ?? result.signal,
       status,
       stderrExcerpt: outputExcerpt(result.stderr, maxOutputExcerptLength),
       stdoutExcerpt: outputExcerpt(result.stdout, maxOutputExcerptLength),
     });
     checkpoint();
+    if (interruptionSignal) {
+      report = markReportInterrupted(report, interruptionSignal, completedAt);
+      checkpoint();
+      break;
+    }
   }
 
   report = finishReport(report, clock.nowIso());
@@ -1154,31 +1296,11 @@ async function main(): Promise<void> {
     changedFiles: readChangedFiles(options.rootDir, options.base, options.head),
     head: options.head,
   });
-  let latestReport: ReleaseSpineEvidenceReport | null = createInitialReport({
-    commands,
-    generatedAt: systemClock.nowIso(),
-    outputDir: options.outputDir,
-    profile,
-    provenance: {
-      commitSha: process.env.GITHUB_SHA ?? readCurrentCommitOrUnknown(options.rootDir),
-      runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? "1",
-      runId: process.env.GITHUB_RUN_ID ?? systemClock.nowIso(),
-    },
-    rootDir: options.rootDir,
-    totalTimeoutMs: options.totalTimeoutMs,
-  });
-
-  const checkpoint = (report: ReleaseSpineEvidenceReport) => {
-    latestReport = report;
-  };
+  let interruptSignal: NodeJS.Signals | null = null;
   const interrupt = (signal: string) => {
-    killActiveCommand(signal as NodeJS.Signals);
-    if (latestReport) {
-      const interrupted = markReportInterrupted(latestReport, signal, systemClock.nowIso());
-      writeReleaseSpineEvidenceReport(interrupted, options.outputDir);
-    }
+    interruptSignal = signal as NodeJS.Signals;
+    interruptActiveCommand(interruptSignal);
     console.error(`release-spine-evidence: interrupted by ${signal}`);
-    exit(signal === "SIGINT" ? 130 : 143);
   };
 
   process.once("SIGINT", () => interrupt("SIGINT"));
@@ -1187,7 +1309,7 @@ async function main(): Promise<void> {
   const report = await runReleaseSpineEvidence({
     ...options,
     commands,
-    onCheckpoint: checkpoint,
+    getInterruptSignal: () => interruptSignal,
   });
 
   console.log(
@@ -1201,7 +1323,15 @@ async function main(): Promise<void> {
     console.error(`release-spine-evidence: check failed: ${diagnostic}`);
   }
 
-  exit(report.status === "passed" ? 0 : 1);
+  exit(
+    interruptSignal
+      ? interruptSignal === "SIGINT"
+        ? 130
+        : 143
+      : report.status === "passed"
+        ? 0
+        : 1,
+  );
 }
 
 if (import.meta.url === pathToFileURL(argv[1] ?? "").href) {
