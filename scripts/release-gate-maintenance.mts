@@ -36,6 +36,7 @@ export const RELEASE_GATE_TEST_PATHS = [
   "scripts/tests/static-misuse-check.spec.ts",
   "scripts/tests/strict-contract-typecheck.spec.ts",
   "scripts/tests/tracked-file-mutation-guard.spec.ts",
+  "scripts/tests/turbo-task-contract.spec.ts",
   "scripts/tests/verification-change-classifier.spec.ts",
   "scripts/tests/verification-command.spec.ts",
   "scripts/tests/verification-manifest.spec.ts",

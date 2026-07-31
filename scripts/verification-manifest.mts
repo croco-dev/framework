@@ -146,6 +146,7 @@ const repoOnly = (
       "scripts/tests/ci-workflow.spec.ts",
       "scripts/tests/ci-performance-budget.spec.ts",
       "scripts/tests/release-workflow.spec.ts",
+      "scripts/tests/turbo-task-contract.spec.ts",
       "scripts/tests/verification-policy.spec.ts",
     ],
     timeoutMs: minutes(10),

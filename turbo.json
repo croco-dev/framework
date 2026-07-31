@@ -24,7 +24,11 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.oxlintrc.json",
+        "$TURBO_ROOT$/packages/oxlint-rules/src/**"
+      ]
     },
     "test": {
       "cache": true,
