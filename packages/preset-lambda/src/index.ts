@@ -20,6 +20,12 @@ export function createLambdaPreset(): CrocoPreset {
   });
 }
 
-export type { LambdaContext, LambdaEvent, LambdaHandler, LambdaResponse } from "./handler";
+export type {
+  LambdaContext,
+  LambdaEvent,
+  LambdaHandler,
+  LambdaHandlerOptions,
+  LambdaResponse,
+} from "./handler";
 export { createLambdaHandler } from "./handler";
 export type { CrocoPreset, CrocoPresetConfig };

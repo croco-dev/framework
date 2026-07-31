@@ -1,7 +1,12 @@
 import type { Hono } from "hono";
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { LambdaHandler, createLambdaHandler, createLambdaPreset } from "../index";
+import type {
+  LambdaHandler,
+  LambdaHandlerOptions,
+  createLambdaHandler,
+  createLambdaPreset,
+} from "../index";
 
 type LambdaApp = Hono | { readonly fetch: (req: Request) => Promise<Response> };
 
@@ -10,8 +15,10 @@ describe("public types", () => {
     expectTypeOf<typeof createLambdaPreset>().parameters.toEqualTypeOf<[]>();
   });
 
-  it("does not expose no-op Lambda handler options", () => {
-    expectTypeOf<typeof createLambdaHandler>().parameters.toEqualTypeOf<[LambdaApp]>();
+  it("exposes the transport Lambda handler options", () => {
+    expectTypeOf<typeof createLambdaHandler>().parameters.toEqualTypeOf<
+      [LambdaApp, LambdaHandlerOptions?]
+    >();
     expectTypeOf<typeof createLambdaHandler>().returns.toEqualTypeOf<LambdaHandler>();
   });
 });

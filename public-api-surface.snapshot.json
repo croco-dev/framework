@@ -18113,6 +18113,11 @@
               "source": "./handler"
             },
             {
+              "name": "LambdaHandlerOptions",
+              "exportKind": "named",
+              "source": "./handler"
+            },
+            {
               "name": "LambdaResponse",
               "exportKind": "named",
               "source": "./handler"
@@ -18146,6 +18151,12 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "LambdaHandlerOptions",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
             {
               "name": "LambdaContext",
               "exportKind": "named",
@@ -18195,6 +18206,12 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "LambdaHandlerOptions",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
             {
               "name": "LambdaContext",
               "exportKind": "named",

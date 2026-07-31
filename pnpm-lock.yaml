@@ -130,6 +130,9 @@ importers:
       '@croco/protocols-rest':
         specifier: workspace:*
         version: link:../../packages/protocols-rest
+      '@croco/telemetry-sdk-node':
+        specifier: workspace:*
+        version: link:../../packages/telemetry-sdk-node
       '@croco/transports-http':
         specifier: workspace:*
         version: link:../../packages/transports-http
