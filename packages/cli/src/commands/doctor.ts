@@ -4243,28 +4243,69 @@ function isConfiguredCrocoLambdaHandler(declaration: Morph.VariableDeclaration):
     return false;
   }
 
-  const lambdaHandlerAccess = initializer.getExpression();
-  if (
-    !Node.isPropertyAccessExpression(lambdaHandlerAccess) ||
-    lambdaHandlerAccess.getName() !== "lambdaHandler"
-  ) {
-    return false;
+  const options = getCrocoLambdaHandlerOptions(initializer);
+  return (
+    Node.isObjectLiteralExpression(options) &&
+    flushPropertyCallsForceFlush(options, declaration.getSourceFile())
+  );
+}
+
+function getCrocoLambdaHandlerOptions(initializer: Morph.CallExpression): Morph.Node | undefined {
+  const handlerFactory = initializer.getExpression();
+  if (isPresetLambdaHandlerFactory(handlerFactory, initializer.getSourceFile())) {
+    return initializer.getArguments()[1];
   }
 
-  const createAppCall = lambdaHandlerAccess.getExpression();
+  if (
+    !Node.isPropertyAccessExpression(handlerFactory) ||
+    handlerFactory.getName() !== "lambdaHandler"
+  ) {
+    return undefined;
+  }
+
+  const createAppCall = handlerFactory.getExpression();
   if (
     !Node.isCallExpression(createAppCall) ||
     !Node.isIdentifier(createAppCall.getExpression()) ||
     createAppCall.getExpression().getText() !== "createCrocoApp"
   ) {
-    return false;
+    return undefined;
   }
 
-  const options = initializer.getArguments()[0];
-  return (
-    Node.isObjectLiteralExpression(options) &&
-    flushPropertyCallsForceFlush(options, declaration.getSourceFile())
-  );
+  return initializer.getArguments()[0];
+}
+
+function isPresetLambdaHandlerFactory(
+  factory: Morph.Expression,
+  sourceFile: Morph.SourceFile,
+): boolean {
+  return sourceFile.getImportDeclarations().some((declaration) => {
+    const moduleSpecifier = declaration.getModuleSpecifierValue();
+    if (
+      moduleSpecifier !== "@croco/preset-lambda" &&
+      moduleSpecifier !== "@croco/preset-lambda/entry" &&
+      moduleSpecifier !== "@croco/preset-lambda/handler"
+    ) {
+      return false;
+    }
+
+    if (Node.isIdentifier(factory)) {
+      return declaration.getNamedImports().some((namedImport) => {
+        const localName = namedImport.getAliasNode()?.getText() ?? namedImport.getName();
+        return namedImport.getName() === "createLambdaHandler" && localName === factory.getText();
+      });
+    }
+
+    if (!Node.isPropertyAccessExpression(factory) || factory.getName() !== "createLambdaHandler") {
+      return false;
+    }
+    const namespace = declaration.getNamespaceImport();
+    return (
+      namespace !== undefined &&
+      Node.isIdentifier(factory.getExpression()) &&
+      namespace.getText() === factory.getExpression().getText()
+    );
+  });
 }
 
 function flushPropertyCallsForceFlush(
@@ -4394,6 +4435,9 @@ function exportedHandlerDelegatesTo(
   const handlerInitializer = handlerVariable?.getVariableStatement()?.isExported()
     ? handlerVariable.getInitializer()
     : undefined;
+  if (handlerVariable && handlerInitializer && configuredHandlers.has(handlerVariable)) {
+    return true;
+  }
   if (
     handlerInitializer &&
     Node.isIdentifier(handlerInitializer) &&

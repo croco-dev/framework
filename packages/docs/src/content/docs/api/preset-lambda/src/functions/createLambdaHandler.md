@@ -5,13 +5,17 @@ prev: false
 title: "createLambdaHandler"
 ---
 
-> **createLambdaHandler**(`honoApp`): [`LambdaHandler`](/api/preset-lambda/src/type-aliases/lambdahandler/)
+> **createLambdaHandler**(`honoApp`, `options?`): [`LambdaHandler`](/api/preset-lambda/src/type-aliases/lambdahandler/)
 
 ## Parameters
 
 ### honoApp
 
 `Hono`\<`BlankEnv`, `BlankSchema`, `"/"`\> \| \{ `fetch`: (`req`) => `Promise`\<`Response`\>; \}
+
+### options?
+
+[`LambdaHandlerOptions`](/api/transports-http/src/type-aliases/lambdahandleroptions/) = `{}`
 
 ## Returns
 

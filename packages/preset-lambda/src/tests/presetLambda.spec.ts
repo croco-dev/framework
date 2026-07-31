@@ -1,4 +1,5 @@
 import type { LambdaContext, LambdaEvent } from "@croco/transports-http";
+import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { createLambdaHandler, createLambdaPreset } from "../index";
 
@@ -105,5 +106,44 @@ describe("createLambdaHandler", () => {
       body: "ok",
       isBase64Encoded: false,
     });
+  });
+
+  it.each([
+    {
+      app: new Hono().get("/", (context) => context.text("hono")),
+      branch: "Hono",
+    },
+    {
+      app: { fetch: async () => new Response("fetch") },
+      branch: "fetch object",
+    },
+  ])("flushes before the $branch handler resolves", async ({ app }) => {
+    const lifecycle: string[] = [];
+    const handler = createLambdaHandler(app, {
+      flush: async () => {
+        await Promise.resolve();
+        lifecycle.push("flush");
+      },
+    });
+
+    const response = await handler(createLambdaEvent(), lambdaContext);
+    lifecycle.push("resolved");
+
+    expect(response.statusCode).toBe(200);
+    expect(lifecycle).toEqual(["flush", "resolved"]);
+  });
+
+  it("surfaces flush failures", async () => {
+    const flushFailure = new Error("telemetry export failed");
+    const handler = createLambdaHandler(
+      { fetch: async () => new Response("ok") },
+      {
+        flush: async () => {
+          throw flushFailure;
+        },
+      },
+    );
+
+    await expect(handler(createLambdaEvent(), lambdaContext)).rejects.toBe(flushFailure);
   });
 });
