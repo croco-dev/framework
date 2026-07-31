@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { Component } from "@croco/framework-context";
 import {
   createSlidingWindowPolicy,
   RateLimiter,
@@ -21,6 +22,8 @@ import { readEnv } from "./env";
 
 const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/metrics"]);
 const controllers = [UserController];
+
+Component()(HttpExceptionFilter);
 
 export type CreateCrocoAppOptions = {
   readonly extraControllers?: readonly Constructor[];
@@ -46,7 +49,6 @@ export function createCrocoApp(options: CreateCrocoAppOptions = {}) {
 
   return createApp({
     controllers: appControllers,
-    diValidation: "off",
     globalFilters: [HttpExceptionFilter],
     middlewares: [
       securityHeadersMiddleware(),

@@ -54,7 +54,6 @@ function getApiWorkerHandler(env: ApiWorkerEnv): ApiWorkerHandler {
 
   const app = createApp({
     controllers: [],
-    diValidation: "off",
     middlewares: [
       securityHeadersMiddleware(),
       corsMiddleware({ origins: [webOrigin] }),
