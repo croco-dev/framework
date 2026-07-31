@@ -50,6 +50,7 @@ import {
   type SmokeMatrixCaseDefinition,
 } from "../create-croco-app-generated-smoke-matrix.mts";
 import {
+  assertGeneratedTemplateLintContracts,
   createWorkspacePackageIndex,
   resolveLocalCrocoPackagesForGeneratedProject,
   rewriteExternalCrocoRanges,
@@ -101,6 +102,56 @@ describe("generated verification mutation coverage", () => {
     expect(() =>
       assertGeneratedVerificationValidationsAreReadOnly([{ args: ["profile:check"] }]),
     ).toThrow("profile:check");
+  });
+});
+
+describe("generated template lint contracts", () => {
+  afterEach(() => {
+    for (const root of tempRoots.splice(0)) {
+      rmSync(root, { force: true, recursive: true });
+    }
+  });
+
+  it("accepts uniform lint scripts with configs and exact dependencies", () => {
+    const templatesDir = createTempRoot();
+    writeGeneratedLintTemplate(templatesDir, "blank");
+    writeGeneratedLintTemplate(templatesDir, "saas");
+
+    expect(() => assertGeneratedTemplateLintContracts(templatesDir)).not.toThrow();
+  });
+
+  it("rejects missing lint scripts and configs", () => {
+    const missingScriptTemplates = createTempRoot();
+    writeGeneratedLintTemplate(missingScriptTemplates, "blank", { lintCommand: undefined });
+    expect(() => assertGeneratedTemplateLintContracts(missingScriptTemplates)).toThrow(
+      "missing a lint script",
+    );
+
+    const missingConfigTemplates = createTempRoot();
+    writeGeneratedLintTemplate(missingConfigTemplates, "blank", { writeConfig: false });
+    expect(() => assertGeneratedTemplateLintContracts(missingConfigTemplates)).toThrow(
+      "requires missing config",
+    );
+  });
+
+  it("rejects non-exact linter dependencies", () => {
+    const templatesDir = createTempRoot();
+    writeGeneratedLintTemplate(templatesDir, "blank", { version: "^2.3.12" });
+
+    expect(() => assertGeneratedTemplateLintContracts(templatesDir)).toThrow(
+      "must use an exact version",
+    );
+  });
+
+  it("rejects lint scripts that mask tool failures", () => {
+    const templatesDir = createTempRoot();
+    writeGeneratedLintTemplate(templatesDir, "blank", {
+      lintCommand: "biome lint . || true",
+    });
+
+    expect(() => assertGeneratedTemplateLintContracts(templatesDir)).toThrow(
+      "lint script must be exactly biome lint .",
+    );
   });
 });
 
@@ -1078,6 +1129,34 @@ function createTempRoot(): string {
   mkdirSync(join(root, "packages"), { recursive: true });
 
   return root;
+}
+
+function writeGeneratedLintTemplate(
+  templatesDir: string,
+  template: string,
+  options: {
+    readonly lintCommand?: string;
+    readonly version?: string;
+    readonly writeConfig?: boolean;
+  } = {},
+): void {
+  const templateDir = join(templatesDir, template);
+  const lintCommand = Object.hasOwn(options, "lintCommand") ? options.lintCommand : "biome lint .";
+  mkdirSync(templateDir, { recursive: true });
+  writeFileSync(
+    join(templateDir, "package.json.hbs"),
+    `${JSON.stringify(
+      {
+        scripts: lintCommand === undefined ? {} : { lint: lintCommand },
+        devDependencies: { "@biomejs/biome": options.version ?? "2.3.12" },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  if (options.writeConfig !== false) {
+    writeFileSync(join(templateDir, "biome.json"), "{}\n");
+  }
 }
 
 function writeWorkspacePackage(

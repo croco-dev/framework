@@ -13,6 +13,8 @@ pnpm demo:smoke
 CLI smoke는 서버를 시작하지 않으며, in-memory provider profile만 사용합니다.
 `pnpm profile:check`도 함께 실행되어 생성된 provider profile, tenant model manifest/schema/playbook, 타입 소스가 drift 없이 맞는지 확인합니다.
 
+생성 workspace는 Croco 저장소 전용 Oxlint plugin/config에 의존하지 않고 즉시 lint할 수 있도록 정확히 고정된 Biome toolchain을 사용합니다. `pnpm lint`로 전체 workspace를 검사합니다.
+
 ## Operational Smoke
 
 ```bash

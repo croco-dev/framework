@@ -18,13 +18,15 @@ pnpm dev
 ```bash
 pnpm typecheck
 pnpm test
-pnpm check
+pnpm lint
 ```
 
 The generated workspace starts without application source files, so these commands prove the root tooling, TypeScript config, package manager, and formatter/linter setup are ready.
+
+Generated workspaces use the pinned Biome toolchain so linting works immediately without depending on the Croco repository's workspace-only Oxlint plugins and configuration.
 
 ## Recovery
 
 - Install failure: rerun `pnpm install` from the project root and keep the generated `pnpm-lock.yaml` committed with future package changes.
 - No dev task: add a package with a `dev` script, then rerun `pnpm dev`.
-- Typecheck or check failure after adding code: fix the package that owns the failing file before adding broader framework packages.
+- Typecheck or lint failure after adding code: fix the package that owns the failing file before adding broader framework packages.

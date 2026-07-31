@@ -22,6 +22,8 @@ pnpm ai:smoke
 - verifies deterministic idempotency keys, and
 - proves quota and rate-limit rejection through explicit Problems.
 
+The generated workspace uses a pinned Biome toolchain so `pnpm lint` works without relying on the Croco repository's workspace-only Oxlint plugins and configuration.
+
 ## HTTP API
 
 Start the API server:

@@ -34,10 +34,12 @@
     "failure-drill:smoke": "pnpm --filter {{scope}}/api-server failure-drill:smoke",
     "failure-drill:integration": "pnpm --filter {{scope}}/api-server failure-drill:integration",
     "build": "turbo build",
+    "lint": "biome lint .",
     "test": "turbo test",
     "typecheck": "turbo typecheck"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.3.12",
     "@croco/cli": "workspace:*",
     "@croco/openapi-spec": "workspace:*",
     "@croco/protocols-rest": "workspace:*",

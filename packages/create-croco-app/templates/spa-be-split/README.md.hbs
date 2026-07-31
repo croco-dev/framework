@@ -31,6 +31,8 @@ pnpm dev:web
 - 타입 검사: `pnpm typecheck`
 - lint: `pnpm lint`
 
+생성 workspace는 Croco 저장소 전용 Oxlint plugin/config에 의존하지 않고 즉시 lint할 수 있도록 정확히 고정된 Biome toolchain을 사용합니다.
+
 ## 운영 기본값
 
 - `apps/api-server/src/app.ts`: 보안 헤더, CORS, 본문 크기 제한, rate limit middleware와 `HttpExceptionFilter`를 기본 적용합니다.
