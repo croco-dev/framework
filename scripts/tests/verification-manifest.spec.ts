@@ -269,6 +269,19 @@ describe("verification manifest", () => {
     );
   });
 
+  it("builds every binary package before scoped package binary smoke", () => {
+    const manifest = createVerificationManifest("publish", {
+      base: "origin/trunk",
+      changedFiles: ["packages/cli/src/index.ts"],
+      head: "HEAD",
+    });
+    const buildCommand = manifest.find(({ id }) => id === "build")?.command;
+
+    expect(buildCommand).toContain("--filter=@croco/cli");
+    expect(buildCommand).toContain("--filter=create-croco-app");
+    expect(manifest.find(({ id }) => id === "package-bins-smoke")?.applicable).toBe(true);
+  });
+
   it("keeps the release-gate inventory complete, sorted, and executable from one root alias", () => {
     const command = createVerificationManifest("publish").find(
       ({ id }) => id === "release-gate-tests",
