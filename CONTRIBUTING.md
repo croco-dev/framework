@@ -46,8 +46,7 @@ See `.env.example` for the full list of supported variables with descriptions.
 pnpm build            # Build all packages
 pnpm test             # Run all tests
 pnpm typecheck        # TypeScript type check
-pnpm check            # Biome lint + format check
-pnpm check --write    # Auto-fix lint and format issues
+pnpm check            # Run the read-only repository verification gate
 pnpm format           # Format all files
 ```
 
@@ -65,15 +64,15 @@ Run a specific test file directly:
 
 ```bash
 cd packages/retry-core
-pnpm vitest run src/tests/Retryable.spec.ts
+pnpm exec vitest run src/tests/Retryable.spec.ts
 
 # Or by test name
-pnpm vitest run -t "should retry on failure"
+pnpm exec vitest run -t "should retry on failure"
 ```
 
 ## Code Style
 
-Croco uses [Biome](https://biomejs.dev/) for linting and formatting. Key rules:
+Croco uses Oxlint for linting and Oxfmt for formatting. Key rules:
 
 - 2-space indentation
 - Single quotes
@@ -83,7 +82,8 @@ Croco uses [Biome](https://biomejs.dev/) for linting and formatting. Key rules:
 - No explicit `any`
 - No non-null assertions (`!`)
 
-Run `pnpm check --write` before committing to auto-fix most issues.
+Run `pnpm format` before committing to format the repository. Use `pnpm lint` and `pnpm check` for
+read-only lint and repository verification.
 
 For full naming conventions, decorator patterns, and error handling rules, see [AGENTS.md](./AGENTS.md).
 
@@ -94,7 +94,7 @@ Tests use [Vitest](https://vitest.dev/). Test files live at `src/tests/[ClassNam
 ```bash
 pnpm test                                          # All packages
 pnpm test --filter=@croco/retry-core               # Single package
-cd packages/retry-core && pnpm vitest run          # Direct vitest
+cd packages/retry-core && pnpm exec vitest run     # Direct vitest
 ```
 
 Always reset the DI container in `beforeEach`:
@@ -120,12 +120,13 @@ Before opening a PR, run the full validation suite:
 pnpm build       # Compile all packages
 pnpm typecheck   # TypeScript type check
 pnpm test        # Run all tests
-pnpm check       # Biome lint + format check
+pnpm check       # Repository verification gate
 ```
 
 Or run them all at once with `pnpm setup` (same sequence as initial setup).
 
-The `pre-push` hook runs `pnpm test` and `pnpm typecheck` automatically, but running `pnpm check` manually catches formatting issues before the hook fires.
+The `pre-push` hook runs auto-changeset, `pnpm test`, and a mutation-guarded `pnpm typecheck`. Run
+`pnpm format`, `pnpm lint`, and `pnpm check` manually before pushing.
 
 ## Git Workflow
 
@@ -178,11 +179,11 @@ docs: update telemetry usage examples
 
 Hooks run automatically after `pnpm install`:
 
-| Hook         | Trigger                  | What it does                               |
-| ------------ | ------------------------ | ------------------------------------------ |
-| `pre-commit` | `git commit`             | Runs `biome check --write` on staged files |
-| `pre-push`   | `git push`               | Runs `pnpm test` and `pnpm typecheck`      |
-| `post-merge` | `git merge` / `git pull` | Runs `pnpm install`                        |
+| Hook         | Trigger                  | What it does                                                  |
+| ------------ | ------------------------ | ------------------------------------------------------------- |
+| `pre-commit` | `git commit`             | Runs Oxlint `--fix` and Oxfmt `--write` on staged files       |
+| `pre-push`   | `git push`               | Runs auto-changeset, tests, and mutation-guarded typechecking |
+| `post-merge` | `git merge` / `git pull` | Runs `pnpm install`                                           |
 
 The pre-commit hook auto-fixes formatting, so your commit will include the fixed files automatically.
 

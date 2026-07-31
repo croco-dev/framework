@@ -27,6 +27,70 @@ describe("package-docs-check.mts", () => {
     }
   });
 
+  it.each([
+    ["README.md", ["   ```bash", "   pnpm nonexistent-readme", "   ```"]],
+    ["CONTRIBUTING.md", ["> ```bash", "> pnpm run nonexistent-contributing", "> ```"]],
+    ["AGENTS.md", ["Run `pnpm nonexistent-agents` before pushing."]],
+    [
+      "RELEASING.md",
+      ["- ```bash", "  pnpm docs:catalog:check && pnpm nonexistent-releasing", "  ```"],
+    ],
+  ])("rejects nonexistent pnpm scripts in %s Markdown containers", (docsPath, lines) => {
+    const root = createCommandValidationRoot();
+    const existingContent =
+      docsPath === "README.md"
+        ? readFileSync(join(root, docsPath), "utf-8")
+        : "# Command fixture\n";
+    writeFileSync(join(root, docsPath), [existingContent.trimEnd(), "", ...lines, ""].join("\n"));
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(`${docsPath}: documented command \`pnpm nonexistent-`);
+  });
+
+  it("allows pnpm builtins and package-local scripts outside the repository root", () => {
+    const root = createCommandValidationRoot();
+    writeFileSync(
+      join(root, "CONTRIBUTING.md"),
+      [
+        "# Command fixture",
+        "",
+        "```bash",
+        "pnpm add example",
+        "pnpm audit",
+        "pnpm dlx example",
+        "pnpm update",
+        "pnpm --dir packages/alpha package-only",
+        "pnpm --filter @croco/alpha package-only",
+        "cd packages/alpha",
+        "pnpm package-only",
+        "cd ../..",
+        "pnpm docs:catalog:check",
+        "```",
+        "",
+      ].join("\n"),
+    );
+
+    const writeResult = runScript(root, "--write");
+    expect(writeResult.status, writeResult.stdout).toBe(0);
+  });
+
+  it("requires explicit pnpm run commands even when the script name is a pnpm builtin", () => {
+    const root = createCommandValidationRoot();
+    writeFileSync(
+      join(root, "CONTRIBUTING.md"),
+      ["# Command fixture", "", "```bash", "pnpm run deploy", "```", ""].join("\n"),
+    );
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "CONTRIBUTING.md: documented command `pnpm deploy` is not defined in package.json#scripts",
+    );
+  });
+
   it("writes the README package catalog and documentation report from package manifests", () => {
     const root = createTempRoot();
     writePackage(root, "alpha", { name: "@croco/alpha" });
@@ -854,8 +918,30 @@ function createTempRoot(): string {
       "",
     ].join("\n"),
   );
+  writeJson(join(root, "package.json"), {
+    scripts: {
+      "docs:catalog:check": "fixture",
+      "docs:catalog:write": "fixture",
+      test: "fixture",
+    },
+  });
   writeDefaultPublicDocs(root);
 
+  return root;
+}
+
+function createCommandValidationRoot(): string {
+  const root = createTempRoot();
+  writePackage(root, "alpha", {
+    name: "@croco/alpha",
+    scripts: { "package-only": "fixture" },
+  });
+  writeCatalogMetadata(root, ["alpha"]);
+  writeDocsBaseline(root, {
+    allowedMissingApiDocs: ["alpha"],
+    allowedMissingReadme: [],
+    allowedMissingTests: [],
+  });
   return root;
 }
 
