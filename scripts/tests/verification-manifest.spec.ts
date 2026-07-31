@@ -16,6 +16,7 @@ import {
   RELEASE_GATE_TEST_PATHS,
   RELEASE_GATE_WORKFLOW_PATHS,
 } from "../release-gate-maintenance.mts";
+import { findPackageJsonFiles } from "../package-manifest-contracts.mjs";
 import type { EvidenceCommand } from "../release-spine-evidence.mts";
 
 const ROOT_DIR = resolve(__dirname, "../..");
@@ -269,16 +270,41 @@ describe("verification manifest", () => {
     );
   });
 
-  it("builds every binary package before scoped package binary smoke", () => {
+  it("builds every package binary before a change-scoped binary smoke", () => {
     const manifest = createVerificationManifest("publish", {
       base: "origin/trunk",
       changedFiles: ["packages/cli/src/index.ts"],
       head: "HEAD",
     });
-    const buildCommand = manifest.find(({ id }) => id === "build")?.command;
+    const build = manifest.find(({ id }) => id === "build");
+    const expectedBinFilters = findPackageJsonFiles(resolve(ROOT_DIR, "packages"))
+      .map(
+        (packagePath) =>
+          JSON.parse(readFileSync(packagePath, "utf8")) as {
+            readonly bin?: unknown;
+            readonly name?: string;
+            readonly private?: boolean;
+          },
+      )
+      .filter(
+        (
+          pkg,
+        ): pkg is { readonly bin: unknown; readonly name: string; readonly private?: boolean } =>
+          pkg.private !== true && pkg.bin !== undefined && typeof pkg.name === "string",
+      )
+      .map((pkg) => `--filter=${pkg.name}`)
+      .sort();
+    const packageBuildFilters =
+      build?.command
+        .filter(
+          (argument) =>
+            argument.startsWith("--filter=") &&
+            argument !== "--filter=...[origin/trunk]" &&
+            argument !== "--filter=!@croco/docs",
+        )
+        .sort() ?? [];
 
-    expect(buildCommand).toContain("--filter=@croco/cli");
-    expect(buildCommand).toContain("--filter=create-croco-app");
+    expect(packageBuildFilters).toEqual(expectedBinFilters);
     expect(manifest.find(({ id }) => id === "package-bins-smoke")?.applicable).toBe(true);
   });
 
