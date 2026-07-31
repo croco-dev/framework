@@ -52,6 +52,15 @@ function jobSection(workflow: string, job: string, nextJob: string): string {
   return start === -1 ? "" : workflow.slice(start + 1, end === -1 ? undefined : end + 1);
 }
 
+function turboTasks(command: readonly string[]): readonly string[] {
+  const turboIndex = command.findIndex(
+    (argument, index) => argument === "turbo" && command[index + 1] === "run",
+  );
+  if (turboIndex === -1) return [];
+
+  return command.slice(turboIndex + 2).filter((argument) => !argument.startsWith("-"));
+}
+
 export function pullRequestCiDesignBudgetMinutes(): number {
   return Object.values(PR_CI_DESIGN_BUDGETS).reduce((total, value) => total + value, 0);
 }
@@ -139,10 +148,9 @@ export function findCiPerformanceBudgetViolations(
   }
 
   const build = byId.get("build");
-  for (const task of ["build", "typecheck", "test"]) {
-    if (!build?.command.includes(task)) {
-      violations.push(`affected validation warm-up must include ${task}`);
-    }
+  const buildTasks = turboTasks(build?.command ?? []);
+  if (buildTasks.length !== 1 || buildTasks[0] !== "build") {
+    violations.push("affected validation warm-up must run only build");
   }
   if (!build?.command.includes(affectedFilter)) {
     violations.push("affected validation warm-up must filter from the pull-request base");
@@ -151,12 +159,25 @@ export function findCiPerformanceBudgetViolations(
     violations.push("affected validation must leave full docs compilation to the docs workflow");
   }
   for (const id of ["typecheck", "test"]) {
-    if (!byId.get(id)?.command.includes(affectedFilter)) {
+    const command = byId.get(id);
+    const tasks = turboTasks(command?.command ?? []);
+    if (tasks.length !== 1 || tasks[0] !== id) {
+      violations.push(`${id} evidence must run only ${id}`);
+    }
+    if (!command?.command.includes(affectedFilter)) {
       violations.push(`${id} evidence must reuse the affected package graph`);
     }
-    if (!byId.get(id)?.command.includes(docsExclusion)) {
+    if (!command?.command.includes(docsExclusion)) {
       violations.push(`${id} evidence must leave full docs compilation to the docs workflow`);
     }
+  }
+  const buildIndex = input.ordinaryPullRequestManifest.findIndex(({ id }) => id === "build");
+  const typecheckIndex = input.ordinaryPullRequestManifest.findIndex(
+    ({ id }) => id === "typecheck",
+  );
+  const testIndex = input.ordinaryPullRequestManifest.findIndex(({ id }) => id === "test");
+  if (!(buildIndex < typecheckIndex && typecheckIndex < testIndex)) {
+    violations.push("affected validation must run build, typecheck, and test in order");
   }
   for (const id of HEAVY_ORDINARY_PR_CHECKS) {
     if (byId.get(id)?.applicable !== false) {
