@@ -309,6 +309,20 @@ function checkSpaBeSplitStructure() {
   checkFileContains("spa-be-split", ["README.md.hbs"], /TelemetryRuntime\.forceFlush/);
 }
 
+function checkBlankLintContract() {
+  const rootPackageJson = readJsonTemplate("blank", "package.json.hbs");
+
+  expect(rootPackageJson).toMatchObject({
+    scripts: expect.objectContaining({ lint: "biome lint ." }),
+    devDependencies: expect.objectContaining({ "@biomejs/biome": "2.3.12" }),
+  });
+  expect(rootPackageJson.scripts).not.toHaveProperty("check");
+  expect(rootPackageJson.scripts).not.toHaveProperty("check:write");
+  checkFileExists("blank", "biome.json");
+  checkFileContains("blank", ["README.md.hbs"], /pnpm lint/);
+  checkFileDoesNotContain("blank", ["README.md.hbs"], /pnpm check/);
+}
+
 function checkAdminConsoleStructure() {
   checkFileExists("admin-console", "package.json.hbs");
   checkFileExists("admin-console", "README.md.hbs");
@@ -1134,6 +1148,7 @@ describe("Web Meta Vite fullstack addon templates", () => {
 
 describe("Base preset README templates", () => {
   it("documents the blank preset first-run loop", () => {
+    checkBlankLintContract();
     checkFileExists("blank", "README.md.hbs");
     checkFileContains("blank", ["README.md.hbs"], /pnpm install/);
     checkFileContains("blank", ["README.md.hbs"], /pnpm dev/);

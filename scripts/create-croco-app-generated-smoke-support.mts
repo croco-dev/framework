@@ -18,6 +18,7 @@ const workspacePackageDependencyFields = [
 
 export type PackageJson = {
   readonly name?: unknown;
+  readonly scripts?: unknown;
   readonly version?: unknown;
 } & Partial<Record<DependencyField, unknown>>;
 
@@ -36,6 +37,85 @@ export type ExternalCrocoRangeException = {
 export type ExternalCrocoRangeExceptions = Readonly<Record<string, ExternalCrocoRangeException>>;
 
 const skippedPackageJsonDirectories = new Set([".turbo", "coverage", "dist", "node_modules"]);
+
+const generatedLintToolchains = {
+  biome: {
+    configFile: "biome.json",
+    dependency: "@biomejs/biome",
+  },
+  oxlint: {
+    configFile: ".oxlintrc.json",
+    dependency: "oxlint",
+  },
+} as const;
+
+export function assertGeneratedTemplateLintContracts(templatesDir: string): void {
+  const templates = readdirSync(templatesDir, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isDirectory() && existsSync(join(templatesDir, entry.name, "package.json.hbs")),
+    )
+    .map((entry) => entry.name)
+    .sort();
+  let expectedLinter: keyof typeof generatedLintToolchains | undefined;
+
+  for (const template of templates) {
+    const templateDir = join(templatesDir, template);
+    const manifestPath = join(templateDir, "package.json.hbs");
+    const manifest = readPackageJson(manifestPath);
+    const lintCommand = readStringProperty(manifest.scripts, "lint");
+
+    if (lintCommand === undefined) {
+      throw new Error(`${manifestPath}: generated template is missing a lint script`);
+    }
+
+    const linter = lintCommand.trim().split(/\s+/, 1)[0];
+    if (!isGeneratedLintToolchain(linter)) {
+      throw new Error(
+        `${manifestPath}: lint script uses unsupported linter ${linter ?? "<empty>"}`,
+      );
+    }
+    if (expectedLinter !== undefined && linter !== expectedLinter) {
+      throw new Error(
+        `${manifestPath}: generated template linter ${linter} does not match ${expectedLinter}`,
+      );
+    }
+    expectedLinter = linter;
+
+    const toolchain = generatedLintToolchains[linter];
+    const configPath = join(templateDir, toolchain.configFile);
+    if (!existsSync(configPath)) {
+      throw new Error(`${manifestPath}: lint script requires missing config ${configPath}`);
+    }
+
+    const version = readStringProperty(manifest.devDependencies, toolchain.dependency);
+    if (version === undefined) {
+      throw new Error(
+        `${manifestPath}: lint script requires ${toolchain.dependency} in devDependencies`,
+      );
+    }
+    if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version)) {
+      throw new Error(
+        `${manifestPath}: ${toolchain.dependency} must use an exact version, received ${version}`,
+      );
+    }
+  }
+}
+
+function isGeneratedLintToolchain(
+  value: string | undefined,
+): value is keyof typeof generatedLintToolchains {
+  return value !== undefined && Object.hasOwn(generatedLintToolchains, value);
+}
+
+function readStringProperty(value: unknown, property: string): string | undefined {
+  if (value === null || typeof value !== "object") {
+    return undefined;
+  }
+
+  const propertyValue = Reflect.get(value, property);
+  return typeof propertyValue === "string" ? propertyValue : undefined;
+}
 
 export function createWorkspacePackageIndex(
   rootDir: string,

@@ -52,6 +52,7 @@ import {
   writeCanonicalGeneratedSmokeJourneyBundle,
 } from "./create-croco-app-generated-smoke-journey-report.mts";
 import {
+  assertGeneratedTemplateLintContracts,
   createWorkspacePackageIndex,
   type DependencyField,
   type ExternalCrocoRangeException,
@@ -494,7 +495,7 @@ const runtimeCapabilitySmokeSupport = {
     shutdown: false,
   },
 } as const satisfies Record<RuntimeCapabilitySmokePlatform, Record<string, boolean>>;
-const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
+const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
   {
     name: "blank-basic",
     args: ["--preset", "blank", "--scope", "@smoke", "--no-install", "--no-git"],
@@ -958,7 +959,6 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
     matrixTargets: ["spa-be-split"],
     validations: [
       { label: "dev smoke", args: ["dev:smoke"] },
-      { label: "lint", args: ["lint"] },
       {
         label: "browser testing contract",
         paths: [
@@ -1037,7 +1037,6 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
     matrixTargets: ["admin-console", "spa-be-split"],
     validations: [
       { label: "admin smoke", args: ["admin:smoke"] },
-      { label: "lint", args: ["lint"] },
       {
         label: "browser testing contract",
         paths: [
@@ -1430,6 +1429,16 @@ const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] = [
   },
 ];
 
+const generatedLintValidation = {
+  label: "lint",
+  args: ["lint"],
+} as const satisfies SmokeValidation;
+const smokeCaseDefinitions: readonly Omit<SmokeCase, "tier" | "advisory">[] =
+  smokeCaseDefinitionsWithoutLint.map((smokeCase) => ({
+    ...smokeCase,
+    validations: [generatedLintValidation, ...smokeCase.validations],
+  }));
+
 const restSpaContractSmokeCase = {
   name: REST_SPA_CONTRACT_SMOKE_CASE_NAME,
   tier: "spine-blocking",
@@ -1454,6 +1463,8 @@ if (isMainModule()) {
   const activeSmokeRoot = getSmokeRoot();
 
   try {
+    assertGeneratedTemplateLintContracts(generatedAppTemplatesDir);
+
     const smokeSelection = selectGeneratedSmokeMatrixCases(selectableSmokeCases, {
       args: process.argv.slice(2),
       env: process.env,
