@@ -1,9 +1,11 @@
 import { Polar } from "@polar-sh/sdk";
+import { defineMeter } from "@croco/metering-core";
 import { buildContractGraph, getContractProviderMappingDriftInput } from "@croco/protocols-core";
 import { describe, expect, it } from "vitest";
 import { PolarBillingDiagnosticsProvider } from "../libs/PolarBillingDiagnosticsProvider";
 import { POLAR_BILLING_PROVIDER_PROFILE } from "../libs/PolarBillingProviderProfile";
 import { inspectPolarContractMappingDrift } from "../libs/PolarContractMappingPreflight";
+import { bindPolarUsageMeter, PolarUsageBillingGateway } from "../libs/PolarUsageBillingGateway";
 import type { PolarConfig } from "../types";
 
 const liveEnvironment = process.env.POLAR_ENVIRONMENT === "production" ? "production" : "sandbox";
@@ -112,6 +114,53 @@ describe("Polar live smoke", () => {
       });
 
       expect(drift).toEqual([]);
+    },
+  );
+
+  const missingUsageSmokeEnv = [
+    ["POLAR_ACCESS_TOKEN", liveConfig.accessToken],
+    ["POLAR_WEBHOOK_SECRET", liveConfig.webhookSecret],
+    ["POLAR_USAGE_EXTERNAL_CUSTOMER_ID", process.env.POLAR_USAGE_EXTERNAL_CUSTOMER_ID],
+    ["POLAR_USAGE_EVENT_NAME", process.env.POLAR_USAGE_EVENT_NAME],
+    ["POLAR_USAGE_EVENT_ID", process.env.POLAR_USAGE_EVENT_ID],
+    ["POLAR_USAGE_METER_ID", process.env.POLAR_USAGE_METER_ID],
+  ]
+    .filter(([, value]) => typeof value !== "string" || value.length === 0)
+    .map(([name]) => name);
+
+  it.skipIf(missingUsageSmokeEnv.length > 0)(
+    "certifies a deliberate real usage event with a replay-safe external identity",
+    async () => {
+      const liveMeter = defineMeter({
+        key: "polar.live.certification",
+        aggregation: "COUNT",
+        unit: "event",
+        billing: "required",
+      });
+      const gateway = new PolarUsageBillingGateway(liveConfig, [
+        bindPolarUsageMeter({
+          meter: liveMeter,
+          eventName: process.env.POLAR_USAGE_EVENT_NAME ?? "",
+          providerMeterId: process.env.POLAR_USAGE_METER_ID ?? "",
+        }),
+      ]);
+
+      const receipt = await gateway.ingest([
+        {
+          billingAccountId: process.env.POLAR_USAGE_EXTERNAL_CUSTOMER_ID ?? "",
+          eventId: process.env.POLAR_USAGE_EVENT_ID ?? "",
+          meterId: liveMeter.key,
+          occurredAt: new Date(),
+          value: 1,
+        },
+      ]);
+
+      expect(receipt.receipts).toEqual([
+        expect.objectContaining({
+          eventId: process.env.POLAR_USAGE_EVENT_ID,
+          status: expect.stringMatching(/^(inserted|duplicate)$/),
+        }),
+      ]);
     },
   );
 });

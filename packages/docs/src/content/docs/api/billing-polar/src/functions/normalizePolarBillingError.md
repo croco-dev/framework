@@ -5,7 +5,7 @@ prev: false
 title: "normalizePolarBillingError"
 ---
 
-> **normalizePolarBillingError**(`error`, `operation`): [`Problem`](/api/problems-core/src/classes/problem/)
+> **normalizePolarBillingError**(`error`, `operation`, `billingAccountId?`): [`Problem`](/api/problems-core/src/classes/problem/)
 
 ## Parameters
 
@@ -14,6 +14,10 @@ title: "normalizePolarBillingError"
 `unknown`
 
 ### operation
+
+`string`
+
+### billingAccountId?
 
 `string`
 

@@ -129,6 +129,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`PolarRetryableUpstreamProblem`](/api/billing-polar/src/classes/polarretryableupstreamproblem/)
 - [`PolarSubscriptionNotFoundProblem`](/api/billing-polar/src/classes/polarsubscriptionnotfoundproblem/)
 - [`PolarTerminalUpstreamProblem`](/api/billing-polar/src/classes/polarterminalupstreamproblem/)
+- [`PolarUsageCustomerNotFoundProblem`](/api/billing-polar/src/classes/polarusagecustomernotfoundproblem/)
+- [`PolarUsageMeterMappingProblem`](/api/billing-polar/src/classes/polarusagemetermappingproblem/)
 - [`PolarValidationProblem`](/api/billing-polar/src/classes/polarvalidationproblem/)
 - [`WebhookProcessingProblem`](/api/billing-polar/src/classes/webhookprocessingproblem/)
 - [`WebhookValidationProblem`](/api/billing-polar/src/classes/webhookvalidationproblem/)
