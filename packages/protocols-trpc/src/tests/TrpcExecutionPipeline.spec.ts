@@ -389,7 +389,9 @@ describe("tRPC Croco execution pipeline", () => {
       trpcFilterDiagnostics: { invalidReturn: () => Promise<unknown> };
     };
 
-    await expect(caller.trpcFilterDiagnostics.invalidReturn()).rejects.toMatchObject({
+    const failure = caller.trpcFilterDiagnostics.invalidReturn();
+    await expect(failure).rejects.toThrow();
+    await expect(failure).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
       cause: expect.objectContaining({ code: "protocols-trpc/private-problem" }),
     });
@@ -416,7 +418,9 @@ describe("tRPC Croco execution pipeline", () => {
       trpcFilterDiagnostics: { throwing: () => Promise<unknown> };
     };
 
-    await expect(caller.trpcFilterDiagnostics.throwing()).rejects.toMatchObject({
+    const failure = caller.trpcFilterDiagnostics.throwing();
+    await expect(failure).rejects.toThrow();
+    await expect(failure).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
       cause: expect.objectContaining({ code: "protocols-trpc/private-problem" }),
     });
