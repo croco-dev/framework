@@ -119,6 +119,7 @@ export {
   TestNetwork,
   TestRandomSource,
   TestRuntime,
+  TestRuntimeConfigurationProblem,
   type TestDuration,
   type TestEnvironmentOverrides,
   type TestReplayMetadata,

@@ -14853,6 +14853,36 @@
       ]
     },
     {
+      "code": "testing/test-runtime-configuration",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#testing-test-runtime-configuration",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/testing/src/libs/TestRuntime.ts",
+          "line": 57,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
       "code": "testing/transaction-context-not-active",
       "category": "InternalServerError",
       "status": 500,

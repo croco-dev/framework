@@ -52,6 +52,17 @@ export class TestKernelOutboundCallProblem extends Problem {
   }
 }
 
+export class TestRuntimeConfigurationProblem extends Problem {
+  constructor(field: "clock" | "duration", value: string, expectation: string) {
+    super(
+      "testing/test-runtime-configuration",
+      ProblemCategory.ValidationError,
+      `Test runtime '${field}' must be ${expectation}; received '${value}'.`,
+      { extensions: { expectation, field, value } },
+    );
+  }
+}
+
 export class TestClock {
   private currentTimeMs: number;
   private scheduledSequence = 0;
@@ -60,9 +71,7 @@ export class TestClock {
   constructor(initial: Date | string = "2026-01-01T00:00:00.000Z") {
     const time = new Date(initial).getTime();
     if (Number.isNaN(time)) {
-      throw new RangeError(
-        `TestClock requires a valid initial time; received '${String(initial)}'.`,
-      );
+      throw new TestRuntimeConfigurationProblem("clock", String(initial), "a valid date");
     }
     this.currentTimeMs = time;
   }
@@ -242,8 +251,10 @@ export function seededIds(seed: string): TestIdSource {
 function parseDuration(value: TestDuration): number {
   if (typeof value === "number") {
     if (!Number.isSafeInteger(value) || value < 0) {
-      throw new RangeError(
-        `Test duration must be a non-negative safe integer; received '${value}'.`,
+      throw new TestRuntimeConfigurationProblem(
+        "duration",
+        String(value),
+        "a non-negative safe integer",
       );
     }
     return value;
@@ -251,7 +262,7 @@ function parseDuration(value: TestDuration): number {
 
   const match = /^(\d+)(ms|s|m)$/.exec(value);
   if (!match) {
-    throw new RangeError(`Test duration must use ms, s, or m units; received '${value}'.`);
+    throw new TestRuntimeConfigurationProblem("duration", String(value), "an ms, s, or m duration");
   }
   const amount = Number(match[1]);
   const unit = match[2];

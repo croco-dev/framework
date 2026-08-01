@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { createSlidingWindowPolicy, SlidingWindowInMemoryStore } from "@croco/ratelimit-core";
 import { ExponentialBackoff } from "@croco/retry-core";
-import { fixedClock, seededIds, TestKernelOutboundCallProblem, TestRuntime } from "../index";
+import {
+  fixedClock,
+  seededIds,
+  TestKernelOutboundCallProblem,
+  TestRuntime,
+  TestRuntimeConfigurationProblem,
+} from "../index";
 
 describe("TestRuntime", () => {
   it("advances virtual time and drains only Croco-owned scheduled work in order", async () => {
@@ -61,6 +67,13 @@ describe("TestRuntime", () => {
       seed: "invitation-retry",
       virtualTime: "2026-01-01T00:00:00.000Z",
     });
+  });
+
+  it("reports invalid time controls with a stable Problem code", () => {
+    expect(() => fixedClock("not-a-date")).toThrow(TestRuntimeConfigurationProblem);
+    expect(() => fixedClock("2026-01-01T00:00:00.000Z").schedule(() => undefined, -1)).toThrow(
+      TestRuntimeConfigurationProblem,
+    );
   });
 
   it("rejects outbound calls by default with a provider-facing diagnostic", () => {

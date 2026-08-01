@@ -508,6 +508,7 @@ This cookbook documents 571 public Croco Problem codes. The deterministic JSON r
 | [`testing/test-kernel-resource-not-found`](#testing-test-kernel-resource-not-found)                                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`testing/test-kernel-resource-registration`](#testing-test-kernel-resource-registration)                                             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`testing/test-kernel-validation-policy`](#testing-test-kernel-validation-policy)                                                     | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`testing/test-runtime-configuration`](#testing-test-runtime-configuration)                                                           | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`testing/transaction-context-not-active`](#testing-transaction-context-not-active)                                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`TOKEN_LIMIT_EXCEEDED`](#token-limit-exceeded)                                                                                       | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`TOOL_EXECUTION_ERROR`](#tool-execution-error)                                                                                       | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
@@ -9498,6 +9499,24 @@ Sources:
 Sources:
 
 - `packages/testing/src/libs/TestKernel.ts:171:5` (problem-constructor)
+
+<a id="testing-test-runtime-configuration"></a>
+
+## `testing/test-runtime-configuration`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/testing/src/libs/TestRuntime.ts:57:5` (problem-constructor)
 
 <a id="testing-transaction-context-not-active"></a>
 

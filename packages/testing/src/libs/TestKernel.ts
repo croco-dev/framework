@@ -495,13 +495,14 @@ export class TestKernel implements AsyncDisposable {
 export async function createTestKernel(options: TestKernelOptions): Promise<TestKernel> {
   const scope = Container.createScope();
   const runtime = options.fidelity === "adapter" ? (options.adapter ?? "node") : "node";
-  const controls = new TestRuntime({
-    clock: options.clock,
-    environment: options.environment,
-    ids: options.ids,
-    network: options.network,
-    scenarioId: options.scenarioId,
-  });
+  const runtimeOptions: TestRuntimeOptions = {
+    ...(options.clock === undefined ? {} : { clock: options.clock }),
+    ...(options.environment === undefined ? {} : { environment: options.environment }),
+    ...(options.ids === undefined ? {} : { ids: options.ids }),
+    ...(options.network === undefined ? {} : { network: options.network }),
+    ...(options.scenarioId === undefined ? {} : { scenarioId: options.scenarioId }),
+  };
+  const controls = new TestRuntime(runtimeOptions);
   const registeredCleanups: Array<() => Promise<void> | void> = [];
   const resourceCleanups: Array<() => Promise<void> | void> = [];
   const testId = options.testId ?? controls.ids.next("test");
