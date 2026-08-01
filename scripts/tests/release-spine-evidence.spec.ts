@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createGeneratedSmokeJourneyReport,
@@ -24,6 +24,7 @@ import {
   interruptActiveCommand,
   markReportInterrupted,
   parseArgs,
+  reuseTestEvidence,
   runReleaseSpineEvidence,
 } from "../release-spine-evidence.mts";
 import { createVerificationManifest } from "../verification-manifest.mts";
@@ -889,6 +890,214 @@ describe("release-spine-evidence.mts", () => {
     expect(parseArgs(["--allow-pending-release-metadata"]).allowPendingReleaseMetadata).toBe(true);
   });
 
+  it("reuses exact-head passed evidence without executing the verification command", async () => {
+    const repo = createTempRepo();
+    const evidencePath = join(repo, "bundle.json");
+    writeFileSync(
+      evidencePath,
+      JSON.stringify({
+        schemaVersion: "croco.test-evidence/v1",
+        status: "passed",
+        missingArtifacts: [],
+        summary: { failed: 0, flaky: 0, passed: 1, skipped: 0, total: 1 },
+        records: [
+          {
+            schemaVersion: "croco.test-evidence/v1",
+            id: "verification/repo/public-api",
+            runner: "croco-verification",
+            outcome: "passed",
+            intent: { contractIds: ["public-api"], description: "Public API" },
+            observed: { contractIds: ["public-api"] },
+            fidelity: {
+              boot: "isolated",
+              dependency: "fake",
+              isolation: "fake",
+              runtime: "node",
+              validation: "isolated",
+            },
+            replay: { command: "fake public-api" },
+            diagnostics: [],
+            attempts: [{ attempt: 1, outcome: "passed" }],
+            resources: { leaks: [], status: "not-checked" },
+            attachments: [],
+            metadata: { commitSha: "exact-head", profile: "spine" },
+          },
+        ],
+      }),
+    );
+    const commands = reuseTestEvidence(
+      [createCommand("public-api")],
+      evidencePath,
+      "exact-head",
+      "spine",
+      repo,
+    );
+    const runner = vi.fn(() => okResult("must not run"));
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 100,
+      commands,
+      runner,
+    });
+    expect(runner).not.toHaveBeenCalled();
+    expect(report.checks[0]).toMatchObject({
+      status: "passed",
+      durationMs: 0,
+      exitCode: 0,
+      artifacts: [],
+    });
+  });
+
+  it("parses an optional exact-head evidence bundle input", () => {
+    expect(
+      parseArgs(["--test-evidence", "ci-reports/test-evidence/bundle.json"]).testEvidencePath,
+    ).toBe("ci-reports/test-evidence/bundle.json");
+  });
+
+  it("keeps a non-applicable check non-applicable even when reuse metadata is present", async () => {
+    const repo = createTempRepo();
+    const command = {
+      ...createCommand("not-applicable"),
+      applicable: false,
+      reusedEvidence: { path: "bundle.json", recordId: "verification/spine/not-applicable" },
+    };
+    const runner = vi.fn(() => okResult("must not run"));
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 100,
+      commands: [command],
+      runner,
+    });
+    expect(runner).not.toHaveBeenCalled();
+    expect(report.checks[0]?.status).toBe("not_applicable");
+  });
+
+  it("rejects failed bundles and bundles with missing artifacts for command reuse", () => {
+    const repo = createTempRepo();
+    const evidencePath = join(repo, "bundle.json");
+    writeFileSync(
+      evidencePath,
+      JSON.stringify({
+        ...reusableEvidenceBundle("fake a"),
+        status: "failed",
+        missingArtifacts: [
+          { path: "missing.json", recordId: "verification/spine/artifactful", required: true },
+        ],
+      }),
+    );
+    expect(() => reuseTestEvidence([createCommand("a")], evidencePath, "exact-head")).toThrow(
+      "requires a passed croco.test-evidence/v1 bundle without missing artifacts",
+    );
+  });
+
+  it("reuses an attached required artifact only when it exists and marks it as reused", async () => {
+    const repo = createTempRepo();
+    const evidencePath = join(repo, "bundle.json");
+    writeFileSync(
+      evidencePath,
+      JSON.stringify({
+        schemaVersion: "croco.test-evidence/v1",
+        status: "passed",
+        missingArtifacts: [],
+        summary: { failed: 0, flaky: 0, passed: 1, skipped: 0, total: 1 },
+        records: [
+          {
+            schemaVersion: "croco.test-evidence/v1",
+            id: "verification/spine/artifactful",
+            runner: "croco-verification",
+            outcome: "passed",
+            intent: { contractIds: ["artifactful"], description: "Artifactful" },
+            observed: { contractIds: ["artifactful"] },
+            fidelity: {
+              boot: "isolated",
+              dependency: "fake",
+              isolation: "fake",
+              runtime: "node",
+              validation: "isolated",
+            },
+            replay: { command: "fake artifactful" },
+            diagnostics: [],
+            attempts: [{ attempt: 1, outcome: "passed" }],
+            resources: { leaks: [], status: "not-checked" },
+            attachments: [{ kind: "report", path: "missing.json" }],
+            metadata: { commitSha: "exact-head", profile: "spine" },
+          },
+        ],
+      }),
+    );
+    const command = {
+      ...createCommand("artifactful"),
+      artifacts: [{ label: "required", path: "missing.json", required: true }],
+    };
+    expect(
+      reuseTestEvidence([command], evidencePath, "exact-head", "spine", repo)[0],
+    ).not.toHaveProperty("reusedEvidence");
+    writeFileSync(join(repo, "missing.json"), "{}\n");
+    const commands = reuseTestEvidence([command], evidencePath, "exact-head", "spine", repo);
+    const runner = vi.fn(() => okResult("must not run"));
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 100,
+      commands,
+      runner,
+    });
+    expect(runner).not.toHaveBeenCalled();
+    expect(report.checks[0]?.artifacts[0]).toMatchObject({
+      exists: true,
+      fresh: false,
+      reusedEvidenceRecordId: "verification/spine/artifactful",
+    });
+  });
+
+  it("does not reuse evidence with a mismatched command", () => {
+    const repo = createTempRepo();
+    const evidencePath = join(repo, "bundle.json");
+    writeFileSync(evidencePath, JSON.stringify(reusableEvidenceBundle("pnpm wrong-command")));
+    expect(
+      reuseTestEvidence(
+        [createCommand("artifactful")],
+        evidencePath,
+        "exact-head",
+        "spine",
+        repo,
+      )[0],
+    ).not.toHaveProperty("reusedEvidence");
+  });
+
+  it("clears reuse metadata when missing artifacts force command execution", async () => {
+    const repo = createTempRepo();
+    const runner = vi.fn(() => okResult("executed"));
+    const report = await runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 100,
+      commands: [
+        {
+          ...createCommand("artifactful"),
+          artifacts: [{ label: "required", path: "missing.json", required: true }],
+          reusedEvidence: { path: "bundle.json", recordId: "verification/spine/artifactful" },
+        },
+      ],
+      runner,
+    });
+    expect(runner).toHaveBeenCalledOnce();
+    expect(report.checks[0]).not.toHaveProperty("reusedEvidence");
+  });
+
+  it("wraps unreadable and malformed reuse inputs in a stable verification problem", () => {
+    const repo = createTempRepo();
+    const missingPath = join(repo, "missing.json");
+    expect(() => reuseTestEvidence([], missingPath, "exact-head")).toThrow(
+      "Unable to read a valid croco.test-evidence/v1 bundle",
+    );
+    const malformedPath = join(repo, "malformed.json");
+    writeFileSync(malformedPath, "{not-json");
+    expect(() => reuseTestEvidence([], malformedPath, "exact-head")).toThrow("Cause:");
+  });
+
   it("rejects profile overrides after a profile alias has selected one", () => {
     expect(() => parseArgs(["--profile", "publish", "--", "--profile", "repo"])).toThrow(
       "--profile may be provided only once",
@@ -1032,6 +1241,38 @@ function findCheck(manifest: readonly EvidenceCommand[], id: string): EvidenceCo
     throw new Error(`Missing manifest check ${id}`);
   }
   return check;
+}
+
+function reusableEvidenceBundle(command: string): object {
+  return {
+    schemaVersion: "croco.test-evidence/v1",
+    status: "passed",
+    missingArtifacts: [],
+    summary: { failed: 0, flaky: 0, passed: 1, skipped: 0, total: 1 },
+    records: [
+      {
+        schemaVersion: "croco.test-evidence/v1",
+        id: "verification/spine/artifactful",
+        runner: "croco-verification",
+        outcome: "passed",
+        intent: { contractIds: ["artifactful"], description: "Artifactful" },
+        observed: { contractIds: ["artifactful"] },
+        fidelity: {
+          boot: "isolated",
+          dependency: "fake",
+          isolation: "fake",
+          runtime: "node",
+          validation: "isolated",
+        },
+        replay: { command },
+        diagnostics: [],
+        attempts: [{ attempt: 1, outcome: "passed" }],
+        resources: { leaks: [], status: "not-checked" },
+        attachments: [],
+        metadata: { commitSha: "exact-head", profile: "spine" },
+      },
+    ],
+  };
 }
 
 function createFakeClock(): {

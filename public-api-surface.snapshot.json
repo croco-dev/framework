@@ -25166,6 +25166,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertNoTestEvidenceSecrets",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertOpenAPIRoute",
               "exportKind": "named",
               "source": "./libs/testing",
@@ -25187,6 +25193,30 @@
               "name": "assertProblemResponse",
               "exportKind": "named",
               "source": "./libs/testing",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertTestEvidenceBundle",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertTestEvidenceFidelity",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertTestEvidenceRecord",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "classifyTestEvidenceOutcome",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
               "declarationKind": "function"
             },
             {
@@ -25274,6 +25304,24 @@
               "declarationKind": "function"
             },
             {
+              "name": "createTestEvidenceBundle",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createTestEvidenceFileWriter",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-files",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createTestEvidenceRecord",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
               "name": "createTestingApp",
               "exportKind": "named",
               "source": "./libs/testing",
@@ -25304,6 +25352,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createTestKernelEvidenceRecord",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
               "name": "createUpstashRedisMeteringConformanceSuite",
               "exportKind": "named",
               "source": "./libs/serverless-provider-conformance",
@@ -25322,9 +25376,21 @@
               "declarationKind": "class"
             },
             {
+              "name": "CrocoPlaywrightEvidenceReporter",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters",
+              "declarationKind": "class"
+            },
+            {
               "name": "CrocoTestingApp",
               "exportKind": "named",
               "source": "./libs/testing",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CrocoVitestEvidenceReporter",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters",
               "declarationKind": "class"
             },
             {
@@ -25370,9 +25436,21 @@
               "declarationKind": "function"
             },
             {
+              "name": "redactTestEvidence",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
               "name": "renderOperationalFailureDrillMarkdown",
               "exportKind": "named",
               "source": "./libs/operational-failure-drill",
+              "declarationKind": "function"
+            },
+            {
+              "name": "renderTestEvidenceMarkdown",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
               "declarationKind": "function"
             },
             {
@@ -25415,6 +25493,36 @@
               "name": "serializeOperationalFailureDrillReport",
               "exportKind": "named",
               "source": "./libs/operational-failure-drill",
+              "declarationKind": "function"
+            },
+            {
+              "name": "serializeTestEvidence",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "function"
+            },
+            {
+              "name": "TEST_EVIDENCE_SCHEMA_VERSION",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "const"
+            },
+            {
+              "name": "TestEvidenceContractError",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TestEvidenceFidelityError",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
+              "declarationKind": "class"
+            },
+            {
+              "name": "testEvidenceFidelityFromKernel",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs",
               "declarationKind": "function"
             },
             {
@@ -25855,6 +25963,16 @@
               "source": "./libs/operational-failure-drill"
             },
             {
+              "name": "PlaywrightTestCase",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters"
+            },
+            {
+              "name": "PlaywrightTestResult",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters"
+            },
+            {
               "name": "ProblemResponseExpectation",
               "exportKind": "named",
               "source": "./libs/testing"
@@ -26090,6 +26208,116 @@
               "source": "./libs/provider-conformance"
             },
             {
+              "name": "TestEvidenceArtifactProbe",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceAttachment",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceAttempt",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceAttemptOutcome",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceBundle",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceFidelity",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceFidelityRequirement",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceFileWriterOptions",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-files"
+            },
+            {
+              "name": "TestEvidenceIntent",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceJsonValue",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceMissingArtifact",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceObservation",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceOutcome",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceRecord",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceRecordInput",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceReplay",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceReporterContext",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters"
+            },
+            {
+              "name": "TestEvidenceReporterOptions",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters"
+            },
+            {
+              "name": "TestEvidenceResourceStatus",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceRunner",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
+              "name": "TestEvidenceTiming",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
+            },
+            {
               "name": "TestingAppOptions",
               "exportKind": "named",
               "source": "./libs/testing"
@@ -26138,6 +26366,11 @@
               "name": "TestKernelEvidence",
               "exportKind": "named",
               "source": "./libs/TestKernel"
+            },
+            {
+              "name": "TestKernelEvidenceRecordInput",
+              "exportKind": "named",
+              "source": "./libs/test-evidence.mjs"
             },
             {
               "name": "TestKernelFidelity",
@@ -26268,6 +26501,11 @@
               "name": "UsageBillingTerminalFailureFixture",
               "exportKind": "named",
               "source": "./libs/billing-provider-conformance"
+            },
+            {
+              "name": "VitestTask",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters"
             }
           ]
         },
@@ -26343,6 +26581,108 @@
               "name": "DrizzleProviderTransactionConformance",
               "exportKind": "named",
               "source": "./libs/drizzle-provider-conformance"
+            }
+          ]
+        },
+        {
+          "exportPath": "./playwright-reporter",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/playwright-reporter.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/playwright-reporter.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/playwright-reporter.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/testing/src/playwright-reporter.ts",
+          "runtimeExports": [
+            {
+              "name": "default",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters",
+              "localName": "CrocoPlaywrightEvidenceReporter",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "TestEvidenceReporterContext",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters"
+            },
+            {
+              "name": "TestEvidenceReporterOptions",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters"
+            }
+          ]
+        },
+        {
+          "exportPath": "./schemas/test-evidence-bundle-v1.json",
+          "kind": "asset",
+          "assetKind": "json",
+          "targets": [
+            {
+              "conditions": [],
+              "target": "./dist/schemas/test-evidence-bundle-v1.schema.json"
+            }
+          ]
+        },
+        {
+          "exportPath": "./schemas/test-evidence-v1.json",
+          "kind": "asset",
+          "assetKind": "json",
+          "targets": [
+            {
+              "conditions": [],
+              "target": "./dist/schemas/test-evidence-v1.schema.json"
+            }
+          ]
+        },
+        {
+          "exportPath": "./vitest-reporter",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/vitest-reporter.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/vitest-reporter.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/vitest-reporter.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/testing/src/vitest-reporter.ts",
+          "runtimeExports": [
+            {
+              "name": "default",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters",
+              "localName": "CrocoVitestEvidenceReporter",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "TestEvidenceReporterContext",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters"
+            },
+            {
+              "name": "TestEvidenceReporterOptions",
+              "exportKind": "named",
+              "source": "./libs/test-evidence-reporters"
             }
           ]
         }

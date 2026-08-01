@@ -14,6 +14,7 @@ describe("verification change classifier", () => {
     [["packages/retry-core/README.md.bak"], "spine"],
     [["packages/retry-core/src/index.ts"], "spine"],
     [["scripts/release-spine-evidence.mts"], "publish"],
+    [["scripts/test-evidence-runtime.mts"], "publish"],
     [["scripts/ci-executable-policy.mts"], "publish"],
     [["scripts/tests/ci-executable-policy.spec.ts"], "publish"],
     [[".github/renovate.json"], "publish"],

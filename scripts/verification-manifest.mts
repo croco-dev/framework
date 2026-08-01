@@ -550,6 +550,7 @@ const spineOnly = (context: VerificationContext): readonly EvidenceCommand[] => 
         "run",
         "test",
         ...affectedArguments,
+        "--force",
         "--summarize",
         "--continue=always",
       ],

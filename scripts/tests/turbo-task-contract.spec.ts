@@ -9,6 +9,7 @@ type TurboTask = {
 };
 
 type TurboConfiguration = {
+  readonly globalPassThroughEnv?: readonly string[];
   readonly tasks: Readonly<Record<string, TurboTask>>;
 };
 
@@ -18,6 +19,10 @@ const turbo = JSON.parse(
 ) as TurboConfiguration;
 
 describe("Turbo task contract", () => {
+  it("forwards the explicit executable-evidence destination to test reporters", () => {
+    expect(turbo.globalPassThroughEnv).toContain("CROCO_TEST_EVIDENCE_DIR");
+  });
+
   it("runs lint without package-topology dependencies and hashes shared lint sources", () => {
     expect(turbo.tasks.lint?.dependsOn).toBeUndefined();
     expect(turbo.tasks.lint?.inputs).toEqual([

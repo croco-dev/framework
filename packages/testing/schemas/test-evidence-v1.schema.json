@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.croco.dev/testing/test-evidence-v1.schema.json",
+  "title": "Croco executable test evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "runner",
+    "outcome",
+    "intent",
+    "observed",
+    "fidelity",
+    "replay",
+    "diagnostics",
+    "attempts",
+    "resources",
+    "attachments"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "croco.test-evidence/v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "runner": {
+      "enum": [
+        "vitest",
+        "playwright",
+        "provider-conformance",
+        "failure-drill",
+        "generated-app",
+        "runtime-smoke",
+        "croco-verification",
+        "custom"
+      ]
+    },
+    "outcome": { "enum": ["passed", "failed", "flaky", "skipped"] },
+    "intent": { "$ref": "#/$defs/intent" },
+    "observed": { "$ref": "#/$defs/observation" },
+    "fidelity": { "$ref": "#/$defs/fidelity" },
+    "replay": { "$ref": "#/$defs/replay" },
+    "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } },
+    "attempts": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/attempt" } },
+    "resources": { "$ref": "#/$defs/resources" },
+    "attachments": { "type": "array", "items": { "$ref": "#/$defs/attachment" } },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "durationMs": { "type": "number", "minimum": 0 } }
+    },
+    "metadata": { "type": "object" }
+  },
+  "$defs": {
+    "stringIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractIds", "description"],
+      "properties": {
+        "contractIds": { "$ref": "#/$defs/stringIds" },
+        "description": { "type": "string", "minLength": 1 }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractIds"],
+      "properties": {
+        "contractIds": { "$ref": "#/$defs/stringIds" },
+        "eventIds": { "$ref": "#/$defs/stringIds" },
+        "problemCodes": { "$ref": "#/$defs/stringIds" },
+        "routeIds": { "$ref": "#/$defs/stringIds" }
+      }
+    },
+    "fidelity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["boot", "dependency", "isolation", "runtime", "validation"],
+      "properties": {
+        "boot": { "enum": ["isolated", "application", "adapter"] },
+        "dependency": { "enum": ["fake", "local-real", "remote-real"] },
+        "isolation": { "enum": ["fake", "rollback", "commit", "migration"] },
+        "runtime": { "enum": ["node", "lambda", "cloudflare", "browser"] },
+        "validation": { "enum": ["isolated", "production", "overridden"] }
+      }
+    },
+    "replay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command"],
+      "properties": {
+        "command": { "type": "string", "minLength": 1 },
+        "seed": { "type": "string" },
+        "virtualTime": { "type": "string" }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "recoveryAction"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "recoveryAction": { "type": "string", "minLength": 1 }
+      }
+    },
+    "attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path"],
+      "properties": {
+        "kind": { "enum": ["contract", "coverage", "log", "report", "screenshot", "trace"] },
+        "path": { "type": "string", "minLength": 1 },
+        "schemaVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempt", "outcome"],
+      "properties": {
+        "attempt": { "type": "integer", "minimum": 1 },
+        "outcome": { "enum": ["passed", "failed", "skipped"] },
+        "durationMs": { "type": "number", "minimum": 0 },
+        "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } },
+        "attachments": { "type": "array", "items": { "$ref": "#/$defs/attachment" } }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["leaks", "status"],
+      "properties": {
+        "leaks": { "type": "array", "items": { "type": "string" } },
+        "status": { "enum": ["clean", "leaked", "not-checked"] }
+      }
+    }
+  }
+}

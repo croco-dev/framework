@@ -382,6 +382,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`TelemetryForceFlushUnsupportedProblem`](/api/telemetry-sdk-node/src/classes/telemetryforceflushunsupportedproblem/)
 - [`UnsupportedTelemetrySignalProblem`](/api/telemetry-sdk-node/src/classes/unsupportedtelemetrysignalproblem/)
 - [`TelemetryAutoInstrumentationProblem`](/api/telemetry-sdk-node/src/classes/telemetryautoinstrumentationproblem/)
+- [`TestEvidenceContractError`](/api/testing/src/classes/testevidencecontracterror/)
+- [`TestEvidenceFidelityError`](/api/testing/src/classes/testevidencefidelityerror/)
 - [`TestKernelDisposedProblem`](/api/testing/src/classes/testkerneldisposedproblem/)
 - [`TestKernelDisposalProblem`](/api/testing/src/classes/testkerneldisposalproblem/)
 - [`TestKernelResourceFidelityProblem`](/api/testing/src/classes/testkernelresourcefidelityproblem/)

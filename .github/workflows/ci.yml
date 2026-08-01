@@ -171,6 +171,7 @@ jobs:
         id: verification_profile
         shell: bash
         env:
+          CROCO_TEST_EVIDENCE_DIR: ${{ github.workspace }}/ci-reports/test-evidence/records
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
         run: |
@@ -199,6 +200,48 @@ jobs:
             echo "Verification report was not generated." >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Ensure native Vitest evidence
+        if: always()
+        shell: bash
+        env:
+          CROCO_TEST_EVIDENCE_DIR: ${{ github.workspace }}/ci-reports/test-evidence/records
+        run: |
+          if ! find ci-reports/test-evidence/records -type f -name 'vitest-*.json' -print -quit 2>/dev/null | grep -q .; then
+            pnpm --filter @croco/testing test
+          fi
+
+      - name: Aggregate executable test evidence
+        if: always()
+        shell: bash
+        env:
+          VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
+        run: |
+          report="ci-reports/verification/${VERIFICATION_PROFILE}/spine-evidence.json"
+          if [ "$VERIFICATION_PROFILE" = "spine" ]; then
+            report="ci-reports/release/spine-evidence.json"
+          fi
+          evidence_args=(--input "$report")
+          vitest_record_count=0
+          if [ -d ci-reports/test-evidence/records ]; then
+            while IFS= read -r evidence_record; do
+              evidence_args+=(--input "$evidence_record")
+              if [[ "$evidence_record" == */vitest-*.json ]]; then
+                vitest_record_count=$((vitest_record_count + 1))
+              fi
+            done < <(find ci-reports/test-evidence/records -type f -name '*.json' -print | sort)
+          fi
+          if [ "$vitest_record_count" -eq 0 ]; then
+            evidence_args+=(--input ci-reports/test-evidence/records/required-vitest-record.json)
+          fi
+          evidence_status=0
+          node --experimental-strip-types scripts/test-evidence-bundle.mts "${evidence_args[@]}" || evidence_status=$?
+          if [ -f ci-reports/test-evidence/summary.md ]; then
+            cat ci-reports/test-evidence/summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Test evidence summary was not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$evidence_status"
+
       - name: Upload verification evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -207,6 +250,7 @@ jobs:
           path: |
             ci-reports/verification
             ci-reports/release
+            ci-reports/test-evidence
           include-hidden-files: true
           if-no-files-found: warn
 

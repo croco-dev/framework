@@ -631,6 +631,8 @@ function resolveLocalModule(fromFile: string, moduleSpecifier: string | null): s
     basePath,
     basePath.replace(/\.js$/, ".ts"),
     basePath.replace(/\.js$/, ".tsx"),
+    basePath.replace(/\.mjs$/, ".mts"),
+    basePath.replace(/\.cjs$/, ".cts"),
     `${basePath}.ts`,
     `${basePath}.tsx`,
     `${basePath}.mts`,
