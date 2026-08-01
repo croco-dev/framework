@@ -259,7 +259,7 @@ describe("InMemoryPlanRegistry", () => {
           ],
         }),
       ),
-    ).rejects.toBeInstanceOf(InvalidPlanVersionDefinitionProblem);
+    ).rejects.toThrow(InvalidPlanVersionDefinitionProblem);
   });
 
   it("rejects invalid provider-rated definitions", async () => {
@@ -271,7 +271,7 @@ describe("InMemoryPlanRegistry", () => {
           rating: { mode: "provider", provider: "stripe" },
         }),
       ),
-    ).rejects.toBeInstanceOf(InvalidPlanVersionDefinitionProblem);
+    ).rejects.toThrow(InvalidPlanVersionDefinitionProblem);
   });
 
   it("rejects empty provider binding identifiers", async () => {
@@ -343,6 +343,46 @@ describe("InMemoryPlanRegistry", () => {
         InvalidPlanVersionDefinitionProblem,
       );
     }
+  });
+
+  it("honors finite effective windows and validates release-only fields", async () => {
+    const registry = new InMemoryPlanRegistry();
+    const finite = createVersion({
+      effectiveUntil: "2026-06-01T00:00:00.000Z",
+      seatUnitAmount: 1_000,
+      usageTiers: [{ meterKey: "api.calls", upTo: null, unitAmount: 2 }],
+      entitlements: [{ featureKey: "analytics", type: "boolean" }],
+      trial: { days: 14, requiresPaymentMethod: true },
+    });
+    await registry.publishPlanVersion(finite);
+
+    await expect(
+      registry.getPlanAtDate("pro", new Date("2026-05-31T23:59:59.999Z")),
+    ).resolves.toMatchObject({ ref: finite.ref });
+    await expect(
+      registry.getPlanAtDate("pro", new Date("2026-06-01T00:00:00.000Z")),
+    ).resolves.toBeNull();
+
+    await expect(
+      new InMemoryPlanRegistry().publishPlanVersion(
+        createVersion({
+          usageTiers: [
+            { meterKey: "api.calls", upTo: null, unitAmount: 1 },
+            { meterKey: "api.calls", upTo: null, unitAmount: 2 },
+          ],
+        }),
+      ),
+    ).rejects.toBeInstanceOf(InvalidPlanVersionDefinitionProblem);
+    await expect(
+      new InMemoryPlanRegistry().publishPlanVersion(
+        createVersion({
+          entitlements: [
+            { featureKey: "analytics", type: "boolean" },
+            { featureKey: "analytics", type: "static", value: 1 },
+          ],
+        }),
+      ),
+    ).rejects.toBeInstanceOf(InvalidPlanVersionDefinitionProblem);
   });
 });
 

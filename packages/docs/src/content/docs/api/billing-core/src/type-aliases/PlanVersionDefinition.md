@@ -29,6 +29,18 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 
 ***
 
+### effectiveUntil?
+
+> `readonly` `optional` **effectiveUntil?**: `string`
+
+***
+
+### entitlements?
+
+> `readonly` `optional` **entitlements?**: readonly [`PlanEntitlementDefinition`](/api/billing-core/src/type-aliases/planentitlementdefinition/)[]
+
+***
+
 ### interval
 
 > `readonly` **interval**: [`PlanInterval`](/api/billing-core/src/type-aliases/planinterval/)
@@ -74,6 +86,24 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 ### ref
 
 > `readonly` **ref**: [`PlanVersionRef`](/api/billing-core/src/type-aliases/planversionref/)
+
+***
+
+### seatUnitAmount?
+
+> `readonly` `optional` **seatUnitAmount?**: `number`
+
+***
+
+### trial?
+
+> `readonly` `optional` **trial?**: [`PlanTrialDefinition`](/api/billing-core/src/type-aliases/plantrialdefinition/)
+
+***
+
+### usageTiers?
+
+> `readonly` `optional` **usageTiers?**: readonly [`PlanUsageTier`](/api/billing-core/src/type-aliases/planusagetier/)[]
 
 ***
 

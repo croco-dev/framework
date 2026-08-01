@@ -115,6 +115,13 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`UnknownPlanVersionProblem`](/api/billing-core/src/classes/unknownplanversionproblem/)
 - [`UnknownProviderPlanMappingProblem`](/api/billing-core/src/classes/unknownproviderplanmappingproblem/)
 - [`WebhookAlreadyProcessedProblem`](/api/billing-core/src/classes/webhookalreadyprocessedproblem/)
+- [`InvalidPlanReleaseScheduleProblem`](/api/billing-core/src/classes/invalidplanreleasescheduleproblem/)
+- [`InvalidPlanReleaseTransitionProblem`](/api/billing-core/src/classes/invalidplanreleasetransitionproblem/)
+- [`OverlappingPlanEffectivePeriodProblem`](/api/billing-core/src/classes/overlappingplaneffectiveperiodproblem/)
+- [`PlanReleaseProviderCapabilityProblem`](/api/billing-core/src/classes/planreleaseprovidercapabilityproblem/)
+- [`PlanReleasePublishConflictProblem`](/api/billing-core/src/classes/planreleasepublishconflictproblem/)
+- [`PlanReleaseValidationFailedProblem`](/api/billing-core/src/classes/planreleasevalidationfailedproblem/)
+- [`StalePlanReleaseRevisionProblem`](/api/billing-core/src/classes/staleplanreleaserevisionproblem/)
 - [`BillingStatusMappingProblem`](/api/billing-polar/src/classes/billingstatusmappingproblem/)
 - [`PolarCheckoutIdempotencyConflictProblem`](/api/billing-polar/src/classes/polarcheckoutidempotencyconflictproblem/)
 - [`PolarCustomerNotFoundProblem`](/api/billing-polar/src/classes/polarcustomernotfoundproblem/)
@@ -440,7 +447,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 > `readonly` **category**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)
 
----
+***
 
 ### cause?
 
@@ -450,31 +457,31 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.cause`
 
----
+***
 
 ### code
 
 > `readonly` **code**: `string`
 
----
+***
 
 ### detail?
 
 > `readonly` `optional` **detail?**: `string`
 
----
+***
 
 ### extensions?
 
 > `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
 
----
+***
 
 ### instance?
 
 > `readonly` `optional` **instance?**: `string`
 
----
+***
 
 ### message
 
@@ -484,7 +491,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.message`
 
----
+***
 
 ### name
 
@@ -494,7 +501,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.name`
 
----
+***
 
 ### stack?
 
@@ -504,13 +511,13 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `Error.stack`
 
----
+***
 
 ### type
 
 > `readonly` **type**: `string`
 
----
+***
 
 ### stackTraceLimit
 
@@ -542,7 +549,7 @@ not capture any frames.
 
 `number`
 
----
+***
 
 ### title
 
@@ -564,7 +571,7 @@ not capture any frames.
 
 [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
 
----
+***
 
 ### captureStackTrace()
 
@@ -577,7 +584,7 @@ a string representing the location in the code at which
 ```js
 const myObject = {};
 Error.captureStackTrace(myObject);
-myObject.stack; // Similar to `new Error().stack`
+myObject.stack;  // Similar to `new Error().stack`
 ```
 
 The first line of the trace will be prefixed with
@@ -632,7 +639,7 @@ a();
 
 `Error.captureStackTrace`
 
----
+***
 
 ### prepareStackTrace()
 

@@ -103,6 +103,7 @@ export { InMemoryBillingStore } from "./libs/InMemoryBillingStore";
  * 테스트와 로컬 개발에 사용할 수 있는 불변 플랜 버전 레지스트리입니다.
  */
 export { InMemoryPlanRegistry } from "./libs/InMemoryPlanRegistry";
+export { InMemoryPlanReleaseStore } from "./libs/InMemoryPlanReleaseStore";
 
 /**
  * 인보이스 생성 계약과 입력 타입입니다.
@@ -123,6 +124,47 @@ export { Money } from "./libs/Money";
  * 사용 가능한 플랜 정의 조회 계약입니다.
  */
 export type { PlanRegistry } from "./libs/PlanRegistry";
+export {
+  createPlanVersionSemanticDiff,
+  planReleaseCommandFingerprint,
+  planVersionDefinitionFingerprint,
+} from "./libs/PlanRelease";
+export {
+  DeterministicPlanReleaseImpactAnalyzer,
+  PlanReleaseService,
+} from "./libs/PlanReleaseService";
+export { PlanReleaseTransitionedEvent } from "./libs/events/PlanReleaseTransitionedEvent";
+export type {
+  CreatePlanDraftCommand,
+  PlanRelease,
+  PlanReleaseActor,
+  PlanReleaseEventPublisher,
+  PlanReleaseEventDeliveryResult,
+  PlanReleaseImpactAnalyzer,
+  PlanReleaseImpactEstimate,
+  PlanReleaseImpactFact,
+  PlanReleaseImpactPreview,
+  PlanReleaseLifecycleEvent,
+  PlanReleasePublicationEvidence,
+  PlanReleasePublicationFailure,
+  PlanReleasePublicationIntent,
+  PlanReleaseReviewEvidence,
+  PlanReleaseState,
+  PlanReleaseStore,
+  PlanReleaseStoreSaveOptions,
+  PlanReleaseTransitionCommand,
+  PlanReleaseTransitionRecord,
+  PlanReleaseValidationDiagnostic,
+  PlanReleaseValidationEvidence,
+  PlanReleaseValidator,
+  PlanVersionSemanticDiffField,
+  PlanVersionSemanticDiffRecord,
+  PublishPlanReleaseCommand,
+  SubmitPlanReviewCommand,
+  SupersedePlanReleaseCommand,
+  UpdatePlanDraftCommand,
+} from "./libs/PlanRelease";
+export type { PlanReleaseServiceDependencies } from "./libs/PlanReleaseService";
 
 /**
  * 레거시 구독에 검증된 플랜 버전을 명시적으로 고정합니다.
@@ -221,6 +263,15 @@ export {
   UnknownProviderPlanMappingProblem,
   WebhookAlreadyProcessedProblem,
 } from "./libs/problems/BillingProblems";
+export {
+  InvalidPlanReleaseScheduleProblem,
+  InvalidPlanReleaseTransitionProblem,
+  OverlappingPlanEffectivePeriodProblem,
+  PlanReleaseProviderCapabilityProblem,
+  PlanReleasePublishConflictProblem,
+  PlanReleaseValidationFailedProblem,
+  StalePlanReleaseRevisionProblem,
+} from "./libs/problems/PlanReleaseProblems";
 
 /**
  * billing account, invoice, order, plan, subscription 도메인 타입입니다.
@@ -243,9 +294,12 @@ export type {
   Plan,
   PlanInterval,
   PlanRatingDefinition,
+  PlanEntitlementDefinition,
   SubscriptionQuantityPolicy,
   PlanVersionDefinition,
   PlanVersionRef,
+  PlanTrialDefinition,
+  PlanUsageTier,
   ProcessedWebhook,
   ProviderPlanBinding,
   ProviderMeterBinding,

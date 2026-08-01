@@ -13,7 +13,7 @@ title: "DesktopWireSchemaContext"
 
 > `readonly` **contractMember**: `string`
 
----
+***
 
 ### sourceLocation?
 

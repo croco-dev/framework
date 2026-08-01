@@ -87,11 +87,19 @@ export class InMemoryPlanRegistry implements PlanRegistry {
       throw new InvalidPlanVersionDefinitionProblem("lookup date must be valid");
     }
 
-    const candidates = [...this.versions.values()]
-      .filter(
-        (version) => version.planId === planId && Date.parse(version.effectiveAt) <= timestamp,
-      )
+    const family = [...this.versions.values()]
+      .filter((version) => version.planId === planId)
       .sort(comparePlanVersions);
+    const candidates = family.filter((version, index) => {
+      const explicitEnd = version.effectiveUntil
+        ? Date.parse(version.effectiveUntil)
+        : Number.POSITIVE_INFINITY;
+      const nextStart = family[index + 1]
+        ? Date.parse(family[index + 1].effectiveAt)
+        : Number.POSITIVE_INFINITY;
+      const effectiveEnd = Math.min(explicitEnd, nextStart);
+      return Date.parse(version.effectiveAt) <= timestamp && effectiveEnd > timestamp;
+    });
 
     return candidates.at(-1) ?? null;
   }
@@ -116,6 +124,9 @@ export class InMemoryPlanRegistry implements PlanRegistry {
 
 function validatePlanVersion(planVersion: PlanVersionDefinition): void {
   const effectiveAt = new Date(planVersion.effectiveAt);
+  const effectiveUntil = planVersion.effectiveUntil
+    ? new Date(planVersion.effectiveUntil)
+    : undefined;
   if (
     !isNonEmpty(planVersion.ref) ||
     !isNonEmpty(planVersion.planId) ||
@@ -143,6 +154,48 @@ function validatePlanVersion(planVersion: PlanVersionDefinition): void {
     planVersion.providerBindings.length === 0
   ) {
     throw new InvalidPlanVersionDefinitionProblem("required fields are invalid");
+  }
+
+  if (
+    (effectiveUntil &&
+      (Number.isNaN(effectiveUntil.getTime()) ||
+        effectiveUntil.toISOString() !== planVersion.effectiveUntil ||
+        effectiveUntil.getTime() <= effectiveAt.getTime())) ||
+    (planVersion.seatUnitAmount !== undefined &&
+      (!Number.isSafeInteger(planVersion.seatUnitAmount) || planVersion.seatUnitAmount < 0)) ||
+    planVersion.usageTiers?.some(
+      ({ meterKey, upTo, unitAmount }) =>
+        !isNonEmpty(meterKey) ||
+        (upTo !== null && (!Number.isSafeInteger(upTo) || upTo <= 0)) ||
+        !Number.isSafeInteger(unitAmount) ||
+        unitAmount < 0,
+    ) ||
+    planVersion.entitlements?.some(
+      (entitlement) =>
+        !isNonEmpty(entitlement.featureKey) ||
+        (entitlement.type === "static" && !Number.isFinite(entitlement.value)) ||
+        (entitlement.type === "metered" &&
+          (!isNonEmpty(entitlement.meterKey) ||
+            !Number.isSafeInteger(entitlement.quota) ||
+            entitlement.quota < 0)),
+    ) ||
+    (planVersion.trial !== undefined &&
+      (!Number.isSafeInteger(planVersion.trial.days) || planVersion.trial.days < 0))
+  ) {
+    throw new InvalidPlanVersionDefinitionProblem("release fields are invalid");
+  }
+
+  const usageTierKeys = (planVersion.usageTiers ?? []).map(
+    ({ meterKey, upTo }) => `${meterKey}:${upTo ?? "unbounded"}`,
+  );
+  const entitlementKeys = (planVersion.entitlements ?? []).map(({ featureKey }) => featureKey);
+  if (
+    new Set(usageTierKeys).size !== usageTierKeys.length ||
+    new Set(entitlementKeys).size !== entitlementKeys.length
+  ) {
+    throw new InvalidPlanVersionDefinitionProblem(
+      "usage tiers and entitlement feature keys must be unique",
+    );
   }
 
   if (planVersion.rating.mode === "provider") {
@@ -246,5 +299,29 @@ function freezePlanVersion(planVersion: PlanVersionDefinition): PlanVersionDefin
       ]),
     }),
     providerBindings: Object.freeze(providerBindings),
+    ...(planVersion.usageTiers
+      ? {
+          usageTiers: Object.freeze(
+            [...planVersion.usageTiers]
+              .sort((left, right) =>
+                left.meterKey === right.meterKey
+                  ? (left.upTo ?? Number.POSITIVE_INFINITY) -
+                    (right.upTo ?? Number.POSITIVE_INFINITY)
+                  : left.meterKey.localeCompare(right.meterKey),
+              )
+              .map((tier) => Object.freeze({ ...tier })),
+          ),
+        }
+      : {}),
+    ...(planVersion.entitlements
+      ? {
+          entitlements: Object.freeze(
+            [...planVersion.entitlements]
+              .sort((left, right) => left.featureKey.localeCompare(right.featureKey))
+              .map((entitlement) => Object.freeze({ ...entitlement })),
+          ),
+        }
+      : {}),
+    ...(planVersion.trial ? { trial: Object.freeze({ ...planVersion.trial }) } : {}),
   });
 }

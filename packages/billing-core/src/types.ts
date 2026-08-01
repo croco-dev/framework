@@ -142,6 +142,31 @@ export type SubscriptionQuantityPolicy = {
   readonly billableMembershipRoles: readonly MembershipRole[];
 };
 
+/** Defines one deterministic metered-usage price tier, with `null` meaning no upper bound. */
+export type PlanUsageTier = {
+  readonly meterKey: string;
+  readonly upTo: number | null;
+  readonly unitAmount: number;
+};
+
+/** Defines a boolean, static-value, or metered entitlement granted by a plan version. */
+export type PlanEntitlementDefinition =
+  | { readonly featureKey: string; readonly type: "boolean" }
+  | { readonly featureKey: string; readonly type: "static"; readonly value: number }
+  | {
+      readonly featureKey: string;
+      readonly type: "metered";
+      readonly meterKey: string;
+      readonly quota: number;
+      readonly overagePolicy: "BLOCK" | "WARN" | "ALLOW_WITH_OVERAGE";
+    };
+
+/** Defines the trial duration and whether activation requires a payment method. */
+export type PlanTrialDefinition = {
+  readonly days: number;
+  readonly requiresPaymentMethod: boolean;
+};
+
 export type PlanVersionDefinition = {
   readonly ref: PlanVersionRef;
   readonly planId: string;
@@ -155,6 +180,11 @@ export type PlanVersionDefinition = {
   readonly rating: PlanRatingDefinition;
   readonly quantityPolicy: SubscriptionQuantityPolicy;
   readonly providerBindings: readonly ProviderPlanBinding[];
+  readonly seatUnitAmount?: number;
+  readonly usageTiers?: readonly PlanUsageTier[];
+  readonly entitlements?: readonly PlanEntitlementDefinition[];
+  readonly trial?: PlanTrialDefinition;
+  readonly effectiveUntil?: string;
 };
 
 export type ProviderPlanLookup = {

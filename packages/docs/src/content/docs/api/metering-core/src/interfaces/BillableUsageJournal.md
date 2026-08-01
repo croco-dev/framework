@@ -38,7 +38,7 @@ fencing token.
 
 `Promise`\<[`BillableUsageAppendResult`](/api/metering-core/src/type-aliases/billableusageappendresult/)\>
 
----
+***
 
 ### claimNext()
 
@@ -54,7 +54,7 @@ fencing token.
 
 `Promise`\<[`BillableUsageClaim`](/api/metering-core/src/type-aliases/billableusageclaim/) \| `null`\>
 
----
+***
 
 ### get()
 
@@ -70,7 +70,7 @@ fencing token.
 
 `Promise`\<[`BillableUsageJournalEntry`](/api/metering-core/src/type-aliases/billableusagejournalentry/) \| `null`\>
 
----
+***
 
 ### getDiagnostics()
 
@@ -86,7 +86,7 @@ fencing token.
 
 `Promise`\<[`BillableUsageJournalDiagnostics`](/api/metering-core/src/type-aliases/billableusagejournaldiagnostics/)\>
 
----
+***
 
 ### markAccepted()
 
@@ -106,7 +106,7 @@ fencing token.
 
 `Promise`\<[`BillableUsageJournalEntry`](/api/metering-core/src/type-aliases/billableusagejournalentry/)\>
 
----
+***
 
 ### markDeliverable()
 
@@ -126,7 +126,7 @@ fencing token.
 
 `Promise`\<[`BillableUsageJournalEntry`](/api/metering-core/src/type-aliases/billableusagejournalentry/)\>
 
----
+***
 
 ### markRetryableFailed()
 
@@ -154,7 +154,7 @@ fencing token.
 
 `Promise`\<[`BillableUsageJournalEntry`](/api/metering-core/src/type-aliases/billableusagejournalentry/)\>
 
----
+***
 
 ### markTerminalFailed()
 
@@ -178,7 +178,7 @@ fencing token.
 
 `Promise`\<[`BillableUsageJournalEntry`](/api/metering-core/src/type-aliases/billableusagejournalentry/)\>
 
----
+***
 
 ### markUndeliverable()
 

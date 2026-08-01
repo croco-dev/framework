@@ -13,37 +13,37 @@ title: "BillableUsageEvent"
 
 > `readonly` **aggregation**: [`MeterAggregation`](/api/metering-core/src/type-aliases/meteraggregation/)
 
----
+***
 
 ### dimensions
 
 > `readonly` **dimensions**: `Readonly`\<`Record`\<`string`, `string` \| `number` \| `boolean`\>\>
 
----
+***
 
 ### eventId
 
 > `readonly` **eventId**: `string`
 
----
+***
 
 ### meterId
 
 > `readonly` **meterId**: `string`
 
----
+***
 
 ### tenantId
 
 > `readonly` **tenantId**: `string`
 
----
+***
 
 ### unit
 
 > `readonly` **unit**: `string`
 
----
+***
 
 ### value
 

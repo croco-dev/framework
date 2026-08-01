@@ -4364,6 +4364,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createPlanVersionSemanticDiff",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease",
+              "declarationKind": "function"
+            },
+            {
               "name": "createSubscriptionQuantityReconciliationId",
               "exportKind": "named",
               "source": "./libs/SubscriptionQuantity",
@@ -4382,6 +4388,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "DeterministicPlanReleaseImpactAnalyzer",
+              "exportKind": "named",
+              "source": "./libs/PlanReleaseService",
+              "declarationKind": "class"
+            },
+            {
               "name": "hashCheckoutValue",
               "exportKind": "named",
               "source": "./libs/BillingService",
@@ -4397,6 +4409,12 @@
               "name": "InMemoryPlanRegistry",
               "exportKind": "named",
               "source": "./libs/InMemoryPlanRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryPlanReleaseStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryPlanReleaseStore",
               "declarationKind": "class"
             },
             {
@@ -4421,6 +4439,18 @@
               "name": "InvalidMoneyCurrencyProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidPlanReleaseScheduleProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PlanReleaseProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidPlanReleaseTransitionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PlanReleaseProblems",
               "declarationKind": "class"
             },
             {
@@ -4472,9 +4502,51 @@
               "declarationKind": "class"
             },
             {
+              "name": "OverlappingPlanEffectivePeriodProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PlanReleaseProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "PlanChangedEvent",
               "exportKind": "named",
               "source": "./libs/events/PlanChangedEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "planReleaseCommandFingerprint",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PlanReleaseProviderCapabilityProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PlanReleaseProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PlanReleasePublishConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PlanReleaseProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PlanReleaseService",
+              "exportKind": "named",
+              "source": "./libs/PlanReleaseService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PlanReleaseTransitionedEvent",
+              "exportKind": "named",
+              "source": "./libs/events/PlanReleaseTransitionedEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PlanReleaseValidationFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PlanReleaseProblems",
               "declarationKind": "class"
             },
             {
@@ -4488,6 +4560,12 @@
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "planVersionDefinitionFingerprint",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease",
+              "declarationKind": "function"
             },
             {
               "name": "planVersionRef",
@@ -4506,6 +4584,12 @@
               "exportKind": "named",
               "source": "./libs/BillingService",
               "declarationKind": "function"
+            },
+            {
+              "name": "StalePlanReleaseRevisionProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PlanReleaseProblems",
+              "declarationKind": "class"
             },
             {
               "name": "SubscriptionActivatedEvent",
@@ -4724,6 +4808,11 @@
               "source": "./libs/BillingGateway"
             },
             {
+              "name": "CreatePlanDraftCommand",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
               "name": "CreateSubscriptionQuantityIntent",
               "exportKind": "named",
               "source": "./libs/SubscriptionQuantity"
@@ -4814,6 +4903,11 @@
               "source": "./types"
             },
             {
+              "name": "PlanEntitlementDefinition",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "PlanInterval",
               "exportKind": "named",
               "source": "./types"
@@ -4827,6 +4921,116 @@
               "name": "PlanRegistry",
               "exportKind": "named",
               "source": "./libs/PlanRegistry"
+            },
+            {
+              "name": "PlanRelease",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseActor",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseEventDeliveryResult",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseEventPublisher",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseImpactAnalyzer",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseImpactEstimate",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseImpactFact",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseImpactPreview",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseLifecycleEvent",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleasePublicationEvidence",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleasePublicationFailure",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleasePublicationIntent",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseReviewEvidence",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseServiceDependencies",
+              "exportKind": "named",
+              "source": "./libs/PlanReleaseService"
+            },
+            {
+              "name": "PlanReleaseState",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseStore",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseStoreSaveOptions",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseTransitionCommand",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseTransitionRecord",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseValidationDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseValidationEvidence",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanReleaseValidator",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
             },
             {
               "name": "PlanTransitionParams",
@@ -4844,6 +5048,16 @@
               "source": "./libs/PlanTransitionService"
             },
             {
+              "name": "PlanTrialDefinition",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "PlanUsageTier",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "PlanVersionDefinition",
               "exportKind": "named",
               "source": "./types"
@@ -4852,6 +5066,16 @@
               "name": "PlanVersionRef",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "PlanVersionSemanticDiffField",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "PlanVersionSemanticDiffRecord",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
             },
             {
               "name": "ProcessedWebhook",
@@ -4889,6 +5113,11 @@
               "source": "./types"
             },
             {
+              "name": "PublishPlanReleaseCommand",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
               "name": "ReconcileBillingLifecycleCommandsResult",
               "exportKind": "named",
               "source": "./libs/BillingService"
@@ -4917,6 +5146,11 @@
               "name": "SetLicensedQuantityResult",
               "exportKind": "named",
               "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubmitPlanReviewCommand",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
             },
             {
               "name": "Subscription",
@@ -4987,6 +5221,16 @@
               "name": "SubscriptionStatus",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "SupersedePlanReleaseCommand",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
+            },
+            {
+              "name": "UpdatePlanDraftCommand",
+              "exportKind": "named",
+              "source": "./libs/PlanRelease"
             },
             {
               "name": "UsageBillingBatchReceipt",

@@ -61,7 +61,7 @@ Redis-backed durable billable usage journal with atomic Lua transitions and fenc
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`append`](/api/metering-core/src/interfaces/billableusagejournal/#append)
 
----
+***
 
 ### claimNext()
 
@@ -81,7 +81,7 @@ Redis-backed durable billable usage journal with atomic Lua transitions and fenc
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`claimNext`](/api/metering-core/src/interfaces/billableusagejournal/#claimnext)
 
----
+***
 
 ### get()
 
@@ -101,7 +101,7 @@ Redis-backed durable billable usage journal with atomic Lua transitions and fenc
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`get`](/api/metering-core/src/interfaces/billableusagejournal/#get)
 
----
+***
 
 ### getDiagnostics()
 
@@ -121,7 +121,7 @@ Redis-backed durable billable usage journal with atomic Lua transitions and fenc
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`getDiagnostics`](/api/metering-core/src/interfaces/billableusagejournal/#getdiagnostics)
 
----
+***
 
 ### markAccepted()
 
@@ -145,7 +145,7 @@ Redis-backed durable billable usage journal with atomic Lua transitions and fenc
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`markAccepted`](/api/metering-core/src/interfaces/billableusagejournal/#markaccepted)
 
----
+***
 
 ### markDeliverable()
 
@@ -169,7 +169,7 @@ Redis-backed durable billable usage journal with atomic Lua transitions and fenc
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`markDeliverable`](/api/metering-core/src/interfaces/billableusagejournal/#markdeliverable)
 
----
+***
 
 ### markRetryableFailed()
 
@@ -201,7 +201,7 @@ Redis-backed durable billable usage journal with atomic Lua transitions and fenc
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`markRetryableFailed`](/api/metering-core/src/interfaces/billableusagejournal/#markretryablefailed)
 
----
+***
 
 ### markTerminalFailed()
 
@@ -229,7 +229,7 @@ Redis-backed durable billable usage journal with atomic Lua transitions and fenc
 
 [`BillableUsageJournal`](/api/metering-core/src/interfaces/billableusagejournal/).[`markTerminalFailed`](/api/metering-core/src/interfaces/billableusagejournal/#markterminalfailed)
 
----
+***
 
 ### markUndeliverable()
 

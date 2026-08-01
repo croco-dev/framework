@@ -39,7 +39,7 @@ Usage Metering 핵심 서비스
 
 `Promise`\<[`BillableUsageJournalDiagnostics`](/api/metering-core/src/type-aliases/billableusagejournaldiagnostics/) \| `null`\>
 
----
+***
 
 ### getBillableUsageRequirement()
 
@@ -59,7 +59,7 @@ Usage Metering 핵심 서비스
 
 `"unknown"` \| `"local"` \| `"required"`
 
----
+***
 
 ### getUsage()
 
@@ -77,7 +77,7 @@ Usage Metering 핵심 서비스
 
 `Promise`\<`number`\>
 
----
+***
 
 ### record()
 
@@ -91,7 +91,7 @@ Usage Metering 핵심 서비스
 
 ###### Meter
 
-`Meter` _extends_ [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
+`Meter` *extends* [`MeterRef`](/api/metering-core/src/type-aliases/meterref/)
 
 ##### Parameters
 
@@ -151,7 +151,7 @@ DuplicateRecordProblem 중복 idempotencyKey 시
 
 InvalidMeterProblem meter 없을 시
 
----
+***
 
 ### resolveBillableUsageRequirement()
 
