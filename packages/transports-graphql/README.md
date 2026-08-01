@@ -23,6 +23,13 @@ const schema = await new SchemaCompiler().compile({ resolvers: [HealthResolver] 
 const server = new GraphQLServer({ schema });
 ```
 
+Schemas compiled through `SchemaCompiler` execute the `UseGuards`, `Roles`, and
+`UseInterceptors` declarations recorded by `@croco/protocols-graphql`. Request
+headers are available as `context.headers`, custom server context is preserved, and
+declared policy providers are resolved from Croco `Container`. Guards and roles run
+before a subscription acquires its async iterator; interceptors run for each resolved
+subscription payload.
+
 ## Failure Semantics
 
 Resolver and context failures that are Croco `Problem` instances are converted through

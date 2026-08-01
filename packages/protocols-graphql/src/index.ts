@@ -33,8 +33,11 @@ export {
   ObjectType,
   Query,
   Resolver,
+  Roles,
   Root,
   Subscription,
+  UseGuards,
+  UseInterceptors,
 } from "./libs/decorators";
 export {
   createGraphQLContractSnapshot,

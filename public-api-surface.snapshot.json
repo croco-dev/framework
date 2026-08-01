@@ -20642,6 +20642,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "Roles",
+              "exportKind": "named",
+              "source": "./libs/decorators",
+              "declarationKind": "function"
+            },
+            {
               "name": "Root",
               "exportKind": "named",
               "source": "./libs/decorators"
@@ -20656,6 +20662,18 @@
               "name": "Subscription",
               "exportKind": "named",
               "source": "./libs/decorators"
+            },
+            {
+              "name": "UseGuards",
+              "exportKind": "named",
+              "source": "./libs/decorators",
+              "declarationKind": "function"
+            },
+            {
+              "name": "UseInterceptors",
+              "exportKind": "named",
+              "source": "./libs/decorators",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [

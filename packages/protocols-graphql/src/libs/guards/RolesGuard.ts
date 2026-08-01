@@ -8,9 +8,14 @@ export type UserWithRoles = {
 };
 
 export class GraphQLRolesGuard implements Guard<GraphQLGuardContext> {
+  constructor(
+    private readonly resolverTarget?: object,
+    private readonly resolverMethodName?: string,
+  ) {}
+
   canActivate(context: GraphQLGuardContext): boolean {
-    const resolver = context.root;
-    const methodName = context.info.fieldName;
+    const resolver = this.resolverTarget ?? context.root;
+    const methodName = this.resolverMethodName ?? context.info.fieldName;
 
     const requiredRoles = Reflect.getMetadata(GRAPHQL_ROLES_KEY, resolver, methodName) as
       | string[]

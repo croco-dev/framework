@@ -30,6 +30,28 @@ class HealthResolver {
 }
 ```
 
+## Resolver Policy
+
+`UseGuards`, `Roles`, and `UseInterceptors` declare method policy that is included in
+GraphQL contract snapshots. When the schema is compiled with `SchemaCompiler`, guards
+and roles run before the resolver, and interceptors run in declaration order with
+onion semantics. Declared providers are resolved through Croco `Container`.
+
+```typescript
+import { Roles, UseGuards, UseInterceptors } from "@croco/protocols-graphql";
+
+@GraphQLResolver()
+class AccountResolver {
+  @Query(() => String)
+  @UseGuards(AuthenticatedGuard)
+  @Roles("admin")
+  @UseInterceptors(AuditInterceptor)
+  accountSecret(): string {
+    return "authorized";
+  }
+}
+```
+
 ## AuthGuard Conformance
 
 `GraphQLAuthGuard` reads `context.headers.authorization` as a Bearer token and writes the
