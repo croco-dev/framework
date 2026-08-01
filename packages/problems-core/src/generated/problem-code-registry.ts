@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 552,
+  problemCount: 553,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -11292,7 +11292,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/ContractGraph.ts",
-          line: 142,
+          line: 147,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12400,7 +12400,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/loadRoutes.ts",
-          line: 72,
+          line: 85,
           column: 5,
           kind: "problem-constructor",
         },
@@ -12437,6 +12437,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "rpc-codegen/invalid-contract-monetization-declaration",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#rpc-codegen-invalid-contract-monetization-declaration",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/rpc-codegen/src/libs/loadRoutes.ts",
+          line: 46,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "rpc-codegen/no-rest-controllers-found",
       category: "BadRequest",
       status: 400,
@@ -12461,7 +12492,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/loadRoutes.ts",
-          line: 33,
+          line: 36,
           column: 5,
           kind: "problem-constructor",
         },
