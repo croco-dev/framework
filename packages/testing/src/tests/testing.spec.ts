@@ -2,11 +2,15 @@ import "reflect-metadata";
 import type {
   BillingGateway,
   BillingLifecycleGatewayOptions,
+  CustomerMeterState,
   CheckoutResult,
   CreateCheckoutParams,
   LicensedQuantityGateway,
   SetLicensedQuantityInput,
   SetLicensedQuantityResult,
+  UsageBillingBatchReceipt,
+  UsageBillingEvent,
+  UsageBillingGateway,
 } from "@croco/billing-core";
 import type { EventHandler } from "@croco/events-core";
 import { DomainEvent, EventBusConfig, RegisterEventHandler } from "@croco/events-core";
@@ -171,6 +175,102 @@ class InMemoryBillingGateway implements BillingGateway {
 class FailingBillingGateway extends InMemoryBillingGateway {
   override async createCheckout(_params: CreateCheckoutParams): Promise<CheckoutResult> {
     throw new TestingBillingProblem("provider checkout failed");
+  }
+}
+
+class TestingUsageBillingProblem extends Problem {
+  readonly upstreamResponse: string;
+
+  constructor(
+    retryable: boolean,
+    upstreamResponse: string,
+    context: { readonly status?: number; readonly upstreamCode?: string },
+  ) {
+    super(
+      "testing/usage-billing-upstream-failed",
+      ProblemCategory.InternalServerError,
+      "Usage billing provider rejected the delivery",
+      {
+        extensions: {
+          retryable,
+          ...(context.status === undefined ? {} : { status: context.status }),
+          ...(context.upstreamCode === undefined ? {} : { upstreamCode: context.upstreamCode }),
+        },
+      },
+    );
+    this.upstreamResponse = upstreamResponse;
+  }
+}
+
+class InMemoryUsageBillingGateway implements UsageBillingGateway {
+  private readonly eventIds = new Set<string>();
+  private readonly meterValues = new Map<string, number>();
+
+  async ingest(events: readonly UsageBillingEvent[]): Promise<UsageBillingBatchReceipt> {
+    return {
+      receipts: events.map((event) => {
+        const { eventId } = event;
+        if (this.eventIds.has(eventId)) {
+          return { eventId, status: "duplicate" as const };
+        }
+
+        this.eventIds.add(eventId);
+        const meterKey = `${event.billingAccountId}:${event.meterId}`;
+        this.meterValues.set(meterKey, (this.meterValues.get(meterKey) ?? 0) + event.value);
+        return { eventId, status: "inserted" as const };
+      }),
+    };
+  }
+
+  async getCustomerMeterState(query: {
+    readonly billingAccountId: string;
+    readonly meterId: string;
+  }) {
+    const value = this.meterValues.get(`${query.billingAccountId}:${query.meterId}`);
+    if (value === undefined) {
+      return null;
+    }
+
+    return {
+      billingAccountId: query.billingAccountId,
+      meterId: query.meterId,
+      updatedAt: new Date("2026-01-31T00:00:00.000Z"),
+      value,
+    };
+  }
+}
+
+class FailingUsageBillingGateway extends InMemoryUsageBillingGateway {
+  constructor(
+    private readonly fixture: {
+      readonly kind: string;
+      readonly rawResponse: string;
+      readonly status?: number;
+      readonly upstreamCode?: string;
+    },
+  ) {
+    super();
+  }
+
+  override async ingest(_events: readonly UsageBillingEvent[]): Promise<UsageBillingBatchReceipt> {
+    throw this.createProblem();
+  }
+
+  override async getCustomerMeterState(_query: {
+    readonly billingAccountId: string;
+    readonly meterId: string;
+  }): Promise<CustomerMeterState | null> {
+    throw this.createProblem();
+  }
+
+  private createProblem(): TestingUsageBillingProblem {
+    return new TestingUsageBillingProblem(
+      this.fixture.kind === "http-429" ||
+        this.fixture.kind === "http-5xx" ||
+        this.fixture.kind === "timeout",
+      this.fixture.rawResponse,
+      this.fixture,
+    );
   }
 }
 
@@ -1689,6 +1789,123 @@ describe("@croco/testing", () => {
           initialQuantity: 0,
           firstQuantity: 3,
           newerQuantity: 5,
+        },
+        usage: {
+          createGateway: () => new InMemoryUsageBillingGateway(),
+          fixtures: {
+            emptyCustomerMeterStateQuery: {
+              billingAccountId: "tenant-without-usage",
+              meterId: "api-calls",
+            },
+            events: [
+              {
+                billingAccountId: "tenant-conformance",
+                eventId: "usage-conformance-1",
+                meterId: "api-calls",
+                occurredAt: new Date("2026-01-30T00:00:00.000Z"),
+                value: 3,
+              },
+              {
+                billingAccountId: "tenant-conformance",
+                eventId: "usage-conformance-2",
+                meterId: "api-calls",
+                occurredAt: new Date("2026-01-30T00:01:00.000Z"),
+                value: 5,
+              },
+            ],
+            partialBatch: {
+              events: [
+                {
+                  billingAccountId: "tenant-conformance",
+                  eventId: "usage-conformance-1",
+                  meterId: "api-calls",
+                  occurredAt: new Date("2026-01-30T00:00:00.000Z"),
+                  value: 3,
+                },
+                {
+                  billingAccountId: "tenant-conformance",
+                  eventId: "usage-conformance-3",
+                  meterId: "api-calls",
+                  occurredAt: new Date("2026-01-30T00:02:00.000Z"),
+                  value: 2,
+                },
+              ],
+              expectedReceipts: {
+                "usage-conformance-1": "duplicate",
+                "usage-conformance-3": "inserted",
+              },
+              maxEvents: 2,
+            },
+            customerMeterState: {
+              billingAccountId: "tenant-conformance",
+              meterId: "api-calls",
+              updatedAt: new Date("2026-01-31T00:00:00.000Z"),
+              value: 8,
+            },
+          },
+          failureScenarios: {
+            http429: {
+              createGateway: (fixture) => new FailingUsageBillingGateway(fixture),
+              fixture: {
+                expectedProblemCode: "testing/usage-billing-upstream-failed",
+                kind: "http-429",
+                rawResponse: "provider-response-429-should-not-leak",
+                status: 429,
+              },
+              forbiddenValues: ["provider-response-429-should-not-leak"],
+              run: (gateway) => gateway.ingest([]),
+            },
+            http5xx: {
+              createGateway: (fixture) => new FailingUsageBillingGateway(fixture),
+              fixture: {
+                expectedProblemCode: "testing/usage-billing-upstream-failed",
+                kind: "http-5xx",
+                rawResponse: "provider-response-5xx-should-not-leak",
+                status: 503,
+              },
+              forbiddenValues: ["provider-response-5xx-should-not-leak"],
+              run: (gateway) => gateway.ingest([]),
+            },
+            timeout: {
+              createGateway: (fixture) => new FailingUsageBillingGateway(fixture),
+              fixture: {
+                expectedProblemCode: "testing/usage-billing-upstream-failed",
+                kind: "timeout",
+                rawResponse: "provider-timeout-response-should-not-leak",
+                upstreamCode: "RequestTimeoutError",
+              },
+              forbiddenValues: ["provider-timeout-response-should-not-leak"],
+              run: (gateway) => gateway.ingest([]),
+            },
+            invalidMeter: {
+              createGateway: (fixture) => new FailingUsageBillingGateway(fixture),
+              fixture: {
+                expectedProblemCode: "testing/usage-billing-upstream-failed",
+                kind: "invalid-meter",
+                rawResponse: "provider-invalid-meter-response-should-not-leak",
+              },
+              forbiddenValues: ["provider-invalid-meter-response-should-not-leak"],
+              run: (gateway) =>
+                gateway.getCustomerMeterState({
+                  billingAccountId: "tenant-conformance",
+                  meterId: "invalid-meter",
+                }),
+            },
+            invalidSchema: {
+              createGateway: (fixture) => new FailingUsageBillingGateway(fixture),
+              fixture: {
+                expectedProblemCode: "testing/usage-billing-upstream-failed",
+                kind: "invalid-schema",
+                rawResponse: "provider-invalid-schema-response-should-not-leak",
+              },
+              forbiddenValues: ["provider-invalid-schema-response-should-not-leak"],
+              run: (gateway) =>
+                gateway.getCustomerMeterState({
+                  billingAccountId: "tenant-conformance",
+                  meterId: "invalid-schema",
+                }),
+            },
+          },
         },
         gateway: {
           createGateway: () => new InMemoryBillingGateway(),

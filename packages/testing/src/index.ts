@@ -141,6 +141,8 @@ export {
   type BillingGatewayFailureScenario,
   type BillingProviderCapabilityConformanceOptions,
   type BillingProviderConformanceCase,
+  type BillingProviderConformanceCapabilityEvidence,
+  type BillingProviderConformanceManifest,
   type BillingProviderConformanceOptions,
   type BillingProviderConformanceSuite,
   type BillingWebhookConformanceAssertions,
@@ -149,6 +151,13 @@ export {
   type BillingWebhookHandlerContract,
   type BillingWebhookResult,
   type LicensedQuantityGatewayConformanceOptions,
+  type UnavailableUsageBillingCapabilityConformanceOptions,
+  type UsageBillingConformanceFixtures,
+  type UsageBillingFailureScenario,
+  type UsageBillingGatewayConformanceOptions,
+  type UsageBillingLiveSmokeGate,
+  type UsageBillingRetryableFailureFixture,
+  type UsageBillingTerminalFailureFixture,
 } from "./libs/billing-provider-conformance";
 export {
   assertDrizzleProblem,

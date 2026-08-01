@@ -25208,7 +25208,17 @@
               "source": "./libs/billing-provider-conformance"
             },
             {
+              "name": "BillingProviderConformanceCapabilityEvidence",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
+            },
+            {
               "name": "BillingProviderConformanceCase",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
+            },
+            {
+              "name": "BillingProviderConformanceManifest",
               "exportKind": "named",
               "source": "./libs/billing-provider-conformance"
             },
@@ -25848,6 +25858,11 @@
               "source": "./libs/TestKernel"
             },
             {
+              "name": "UnavailableUsageBillingCapabilityConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
+            },
+            {
               "name": "UpstashRedisMeteringClient",
               "exportKind": "named",
               "source": "./libs/serverless-provider-conformance"
@@ -25871,6 +25886,36 @@
               "name": "UpstashRedisRateLimitConformanceScenario",
               "exportKind": "named",
               "source": "./libs/serverless-provider-conformance"
+            },
+            {
+              "name": "UsageBillingConformanceFixtures",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
+            },
+            {
+              "name": "UsageBillingFailureScenario",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
+            },
+            {
+              "name": "UsageBillingGatewayConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
+            },
+            {
+              "name": "UsageBillingLiveSmokeGate",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
+            },
+            {
+              "name": "UsageBillingRetryableFailureFixture",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
+            },
+            {
+              "name": "UsageBillingTerminalFailureFixture",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
             }
           ]
         },

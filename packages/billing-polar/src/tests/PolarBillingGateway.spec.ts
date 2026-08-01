@@ -198,6 +198,12 @@ describe("PolarBillingGateway", () => {
             }),
           required: ["checkout"],
         },
+        unavailableUsage: {
+          createProvider: () =>
+            defineBillingProvider(POLAR_BILLING_PROVIDER_PROFILE, {
+              checkout: createGateway(),
+            }),
+        },
         gateway: {
           createGateway: () => {
             setupSuccessfulGatewayBackend();

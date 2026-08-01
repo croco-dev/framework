@@ -4,9 +4,13 @@ import {
   type BillingGateway,
   type BillingProvider,
   type BillingProviderCapability,
+  type CustomerMeterState,
+  type CustomerMeterStateQuery,
   type CheckoutResult,
   type CreateCheckoutParams,
   type LicensedQuantityGateway,
+  type UsageBillingEvent,
+  type UsageBillingGateway,
 } from "@croco/billing-core";
 import { Problem } from "@croco/problems-core";
 
@@ -141,6 +145,8 @@ export type BillingProviderConformanceOptions<
   readonly providerName: string;
   readonly gateway?: BillingGatewayConformanceOptions<TGateway>;
   readonly licensedQuantity?: LicensedQuantityGatewayConformanceOptions;
+  readonly unavailableUsage?: UnavailableUsageBillingCapabilityConformanceOptions;
+  readonly usage?: UsageBillingGatewayConformanceOptions;
   readonly webhook?: BillingWebhookConformanceOptions<TResult, THandler>;
 };
 
@@ -157,8 +163,115 @@ export type LicensedQuantityGatewayConformanceOptions = {
   readonly newerQuantity: number;
 };
 
+export type UsageBillingConformanceFixtures = {
+  readonly emptyCustomerMeterStateQuery: CustomerMeterStateQuery;
+  readonly events: readonly UsageBillingEvent[];
+  readonly partialBatch: {
+    readonly events: readonly UsageBillingEvent[];
+    readonly expectedReceipts: Readonly<Record<string, "inserted" | "duplicate">>;
+    readonly maxEvents: number;
+  };
+  readonly customerMeterState: CustomerMeterState;
+};
+
+export type UsageBillingRetryableFailureFixture =
+  | {
+      readonly expectedProblemCode: string;
+      readonly kind: "http-429";
+      readonly rawResponse: string;
+      readonly status: 429;
+    }
+  | {
+      readonly expectedProblemCode: string;
+      readonly kind: "http-5xx";
+      readonly rawResponse: string;
+      readonly status: 500 | 502 | 503 | 504;
+    }
+  | {
+      readonly expectedProblemCode: string;
+      readonly kind: "timeout";
+      readonly rawResponse: string;
+      readonly upstreamCode: "RequestTimeoutError";
+    };
+
+export type UsageBillingTerminalFailureFixture =
+  | {
+      readonly expectedProblemCode: string;
+      readonly kind: "invalid-meter";
+      readonly rawResponse: string;
+    }
+  | {
+      readonly expectedProblemCode: string;
+      readonly kind: "invalid-schema";
+      readonly rawResponse: string;
+    };
+
+export type UsageBillingFailureScenario<
+  TFixture extends UsageBillingRetryableFailureFixture | UsageBillingTerminalFailureFixture,
+  TGateway extends UsageBillingGateway = UsageBillingGateway,
+> = {
+  readonly createGateway: (fixture: TFixture) => TGateway | Promise<TGateway>;
+  readonly fixture: TFixture;
+  readonly forbiddenValues: readonly [string, ...string[]];
+  readonly run: (gateway: TGateway, fixture: TFixture) => Promise<unknown>;
+};
+
+export type UsageBillingLiveSmokeGate = {
+  readonly requiredEnv: readonly string[];
+  readonly isEnabled?: () => boolean;
+  readonly run?: () => Promise<void>;
+};
+
+export type UsageBillingGatewayConformanceOptions<
+  TGateway extends UsageBillingGateway = UsageBillingGateway,
+> = {
+  readonly createGateway: () => TGateway | Promise<TGateway>;
+  readonly failureScenarios: {
+    readonly http429: UsageBillingFailureScenario<
+      Extract<UsageBillingRetryableFailureFixture, { kind: "http-429" }>,
+      TGateway
+    >;
+    readonly http5xx: UsageBillingFailureScenario<
+      Extract<UsageBillingRetryableFailureFixture, { kind: "http-5xx" }>,
+      TGateway
+    >;
+    readonly timeout: UsageBillingFailureScenario<
+      Extract<UsageBillingRetryableFailureFixture, { kind: "timeout" }>,
+      TGateway
+    >;
+    readonly invalidMeter: UsageBillingFailureScenario<
+      Extract<UsageBillingTerminalFailureFixture, { kind: "invalid-meter" }>,
+      TGateway
+    >;
+    readonly invalidSchema: UsageBillingFailureScenario<
+      Extract<UsageBillingTerminalFailureFixture, { kind: "invalid-schema" }>,
+      TGateway
+    >;
+  };
+  readonly fixtures: UsageBillingConformanceFixtures;
+  readonly liveSmoke?: UsageBillingLiveSmokeGate;
+};
+
+export type UnavailableUsageBillingCapabilityConformanceOptions = {
+  readonly createProvider: () => BillingProvider | Promise<BillingProvider>;
+};
+
 export type BillingProviderConformanceSuite = {
   readonly cases: readonly BillingProviderConformanceCase[];
+  readonly manifest: BillingProviderConformanceManifest;
+};
+
+export type BillingProviderConformanceManifest = {
+  readonly capabilityEvidence: readonly BillingProviderConformanceCapabilityEvidence[];
+  readonly caseNames: readonly string[];
+  readonly providerName: string;
+  readonly version: "croco.billing-provider-conformance.v1";
+};
+
+export type BillingProviderConformanceCapabilityEvidence = {
+  readonly capability: "usage";
+  readonly caseNames: readonly string[];
+  readonly status: "supported" | "unavailable";
 };
 
 export function createBillingProviderConformanceSuite<
@@ -168,7 +281,12 @@ export function createBillingProviderConformanceSuite<
 >(
   options: BillingProviderConformanceOptions<TGateway, TResult, THandler>,
 ): BillingProviderConformanceSuite {
+  assert.ok(
+    options.usage === undefined || options.unavailableUsage === undefined,
+    "A billing provider cannot declare usage billing capability as both supported and unavailable.",
+  );
   const cases: BillingProviderConformanceCase[] = [];
+  const capabilityEvidence: BillingProviderConformanceCapabilityEvidence[] = [];
 
   if (options.capabilities) {
     cases.push(
@@ -192,6 +310,31 @@ export function createBillingProviderConformanceSuite<
     );
   }
 
+  if (options.usage) {
+    const start = cases.length;
+    cases.push(...createUsageBillingGatewayConformanceCases(options.providerName, options.usage));
+    capabilityEvidence.push({
+      capability: "usage",
+      caseNames: cases.slice(start).map(({ name }) => name),
+      status: "supported",
+    });
+  }
+
+  if (options.unavailableUsage) {
+    const start = cases.length;
+    cases.push(
+      createUnavailableUsageBillingCapabilityConformanceCase(
+        options.providerName,
+        options.unavailableUsage,
+      ),
+    );
+    capabilityEvidence.push({
+      capability: "usage",
+      caseNames: cases.slice(start).map(({ name }) => name),
+      status: "unavailable",
+    });
+  }
+
   if (options.webhook) {
     cases.push(
       ...createBillingWebhookConformanceCases<TResult, THandler>(
@@ -201,7 +344,19 @@ export function createBillingProviderConformanceSuite<
     );
   }
 
-  return { cases };
+  return {
+    cases,
+    manifest: Object.freeze({
+      capabilityEvidence: Object.freeze(
+        capabilityEvidence.map((evidence) =>
+          Object.freeze({ ...evidence, caseNames: Object.freeze(evidence.caseNames) }),
+        ),
+      ),
+      caseNames: Object.freeze(cases.map(({ name }) => name)),
+      providerName: options.providerName,
+      version: "croco.billing-provider-conformance.v1",
+    }),
+  };
 }
 
 const BILLING_PROVIDER_CAPABILITY_METHODS = {
@@ -331,6 +486,240 @@ function createLicensedQuantityGatewayConformanceCases(
       },
     },
   ];
+}
+
+function createUsageBillingGatewayConformanceCases(
+  providerName: string,
+  options: UsageBillingGatewayConformanceOptions,
+): BillingProviderConformanceCase[] {
+  const createGateway = async (): Promise<UsageBillingGateway> => await options.createGateway();
+  const { events, partialBatch, customerMeterState } = options.fixtures;
+
+  const cases: BillingProviderConformanceCase[] = [
+    {
+      name: "inserts deterministic usage events with one receipt per event",
+      run: async () => {
+        assert.ok(
+          events.length > 0,
+          `${providerName} usage fixture must include at least one event.`,
+        );
+        assert.ok(
+          events.length <= partialBatch.maxEvents,
+          `${providerName} usage fixture exceeds its declared maximum batch size of ${partialBatch.maxEvents}.`,
+        );
+        const gateway = await createGateway();
+        const receipt = await gateway.ingest(events);
+
+        assertUsageReceipts(
+          receipt.receipts,
+          events,
+          Object.fromEntries(events.map(({ eventId }) => [eventId, "inserted"])),
+          `${providerName} must insert each new usage event exactly once`,
+        );
+      },
+    },
+    {
+      name: "acknowledges logical usage event replays without a second billed increment",
+      run: async () => {
+        const gateway = await createGateway();
+        await gateway.ingest(events);
+        const beforeReplay = await gateway.getCustomerMeterState({
+          billingAccountId: customerMeterState.billingAccountId,
+          meterId: customerMeterState.meterId,
+        });
+        const replay = await gateway.ingest(events);
+
+        const afterReplay = await gateway.getCustomerMeterState({
+          billingAccountId: customerMeterState.billingAccountId,
+          meterId: customerMeterState.meterId,
+        });
+
+        assertUsageReceipts(
+          replay.receipts,
+          events,
+          Object.fromEntries(events.map(({ eventId }) => [eventId, "duplicate"])),
+          `${providerName} must acknowledge replayed usage events as duplicates`,
+        );
+        assert.deepEqual(
+          beforeReplay,
+          customerMeterState,
+          `${providerName} must expose meter state after the initial usage delivery`,
+        );
+        assert.deepEqual(
+          afterReplay,
+          beforeReplay,
+          `${providerName} must not increment customer meter state for a replayed logical event`,
+        );
+      },
+    },
+    {
+      name: "maps bounded partial usage batches to individual delivery receipts",
+      run: async () => {
+        assert.ok(
+          partialBatch.events.length > 0,
+          `${providerName} partial usage batch fixture must include at least one event.`,
+        );
+        assert.ok(
+          partialBatch.events.length <= partialBatch.maxEvents,
+          `${providerName} partial usage batch fixture exceeds its declared maximum of ${partialBatch.maxEvents}.`,
+        );
+        assert.ok(
+          Object.values(partialBatch.expectedReceipts).includes("inserted") &&
+            Object.values(partialBatch.expectedReceipts).includes("duplicate"),
+          `${providerName} partial usage batch fixture must cover both inserted and duplicate events.`,
+        );
+        const gateway = await createGateway();
+        await gateway.ingest(events);
+        const receipt = await gateway.ingest(partialBatch.events);
+
+        assertUsageReceipts(
+          receipt.receipts,
+          partialBatch.events,
+          partialBatch.expectedReceipts,
+          `${providerName} must map each partial batch event to its delivery receipt`,
+        );
+      },
+    },
+    {
+      name: "distinguishes empty customer meter state from a populated state",
+      run: async () => {
+        const gateway = await createGateway();
+        const empty = await gateway.getCustomerMeterState(
+          options.fixtures.emptyCustomerMeterStateQuery,
+        );
+        assert.equal(empty, null, `${providerName} must represent an empty meter state as null.`);
+
+        await gateway.ingest(events);
+        const state = await gateway.getCustomerMeterState({
+          billingAccountId: customerMeterState.billingAccountId,
+          meterId: customerMeterState.meterId,
+        });
+        assert.deepEqual(
+          state,
+          customerMeterState,
+          `${providerName} must return the provider-observed customer meter state`,
+        );
+      },
+    },
+  ];
+
+  cases.push(
+    createUsageBillingFailureConformanceCase(
+      providerName,
+      "classifies HTTP 429 usage delivery failures as retryable",
+      true,
+      options.failureScenarios.http429,
+    ),
+    createUsageBillingFailureConformanceCase(
+      providerName,
+      "classifies HTTP 5xx usage delivery failures as retryable",
+      true,
+      options.failureScenarios.http5xx,
+    ),
+    createUsageBillingFailureConformanceCase(
+      providerName,
+      "classifies timeout usage delivery failures as retryable",
+      true,
+      options.failureScenarios.timeout,
+    ),
+    createUsageBillingFailureConformanceCase(
+      providerName,
+      "classifies invalid meter usage failures as terminal",
+      false,
+      options.failureScenarios.invalidMeter,
+    ),
+    createUsageBillingFailureConformanceCase(
+      providerName,
+      "classifies invalid schema usage failures as terminal",
+      false,
+      options.failureScenarios.invalidSchema,
+    ),
+  );
+
+  if (options.liveSmoke) {
+    cases.push(createOptionalUsageBillingLiveSmokeCase(providerName, options.liveSmoke));
+  }
+
+  return cases;
+}
+
+function createUsageBillingFailureConformanceCase<
+  TFixture extends UsageBillingRetryableFailureFixture | UsageBillingTerminalFailureFixture,
+>(
+  providerName: string,
+  label: string,
+  expectedRetryable: boolean,
+  scenario: UsageBillingFailureScenario<TFixture>,
+): BillingProviderConformanceCase {
+  return {
+    name: label,
+    run: async () => {
+      const gateway = await scenario.createGateway(scenario.fixture);
+      const problem = await assertRejectsWithProblem(() => scenario.run(gateway, scenario.fixture));
+      assert.equal(
+        problem.extensions?.retryable,
+        expectedRetryable,
+        `${providerName} usage failure '${label}' must expose retryable=${expectedRetryable}.`,
+      );
+      assert.equal(
+        problem.code,
+        scenario.fixture.expectedProblemCode,
+        `${providerName} usage failure '${label}' must expose its expected public Problem code.`,
+      );
+      assertUsageFailureFixture(problem, scenario.fixture);
+      assertProblemDoesNotExpose(problem, [
+        scenario.fixture.rawResponse,
+        ...scenario.forbiddenValues,
+      ]);
+    },
+  };
+}
+
+function createUnavailableUsageBillingCapabilityConformanceCase(
+  providerName: string,
+  options: UnavailableUsageBillingCapabilityConformanceOptions,
+): BillingProviderConformanceCase {
+  return {
+    name: "rejects unavailable usage billing capability with the public capability Problem",
+    run: async () => {
+      const provider = await options.createProvider();
+      const problem = await assertThrowsProblem(() => provider.requireCapability("usage"));
+
+      assert.equal(
+        problem.code,
+        "billing/provider-capability-unavailable",
+        `${providerName} must not treat unavailable usage billing as empty state or success.`,
+      );
+      assert.equal(problem.extensions?.capability, "usage");
+    },
+  };
+}
+
+function createOptionalUsageBillingLiveSmokeCase(
+  providerName: string,
+  gate: UsageBillingLiveSmokeGate,
+): BillingProviderConformanceCase {
+  return {
+    name: "keeps real usage billing conformance opt-in and credential-gated",
+    run: async () => {
+      assert.ok(
+        gate.requiredEnv.length > 0,
+        `${providerName} real usage billing conformance must declare required environment variables.`,
+      );
+      const enabled = gate.isEnabled
+        ? gate.isEnabled()
+        : gate.requiredEnv.every((name) => process.env[name] !== undefined);
+      if (!enabled) {
+        return;
+      }
+
+      assert.ok(
+        gate.run,
+        `${providerName} real usage billing conformance is enabled but has no run hook.`,
+      );
+      await gate.run();
+    },
+  };
 }
 
 function createBillingGatewayConformanceCases<TGateway extends BillingGateway>(
@@ -610,6 +999,88 @@ async function assertRejectsWithProblem(run: () => Promise<unknown>): Promise<Pr
   }
 
   assert.fail("Expected webhook failure to reject.");
+}
+
+async function assertThrowsProblem(run: () => unknown): Promise<Problem> {
+  try {
+    await run();
+  } catch (error) {
+    assert.ok(
+      error instanceof Problem,
+      "Expected billing capability failure to be a Croco Problem.",
+    );
+    return error;
+  }
+
+  assert.fail("Expected billing capability failure to throw.");
+}
+
+function assertUsageReceipts(
+  receipts: readonly { readonly eventId: string; readonly status: "inserted" | "duplicate" }[],
+  events: readonly UsageBillingEvent[],
+  expected: Readonly<Record<string, "inserted" | "duplicate">>,
+  message: string,
+): void {
+  const eventIds = events.map(({ eventId }) => eventId);
+  assert.equal(
+    new Set(eventIds).size,
+    eventIds.length,
+    `${message}: fixture event ids must be unique.`,
+  );
+  assert.deepEqual(
+    Object.keys(expected).sort(),
+    [...eventIds].sort(),
+    `${message}: expected receipts must map every input event exactly once.`,
+  );
+  assert.equal(receipts.length, Object.keys(expected).length, message);
+  assert.equal(
+    new Set(receipts.map(({ eventId }) => eventId)).size,
+    receipts.length,
+    `${message}: provider receipts must not repeat an event id.`,
+  );
+  assert.deepEqual(
+    Object.fromEntries(receipts.map(({ eventId, status }) => [eventId, status])),
+    expected,
+    message,
+  );
+}
+
+function assertProblemDoesNotExpose(problem: Problem, forbiddenValues: readonly string[]): void {
+  const publicProblem = JSON.stringify({
+    code: problem.code,
+    detail: problem.detail,
+    extensions: problem.extensions,
+    title: problem.title,
+  });
+
+  for (const value of forbiddenValues) {
+    assert.equal(
+      publicProblem.includes(value),
+      false,
+      `Usage billing Problem must not expose provider value '${value}'.`,
+    );
+  }
+}
+
+function assertUsageFailureFixture(
+  problem: Problem,
+  fixture: UsageBillingRetryableFailureFixture | UsageBillingTerminalFailureFixture,
+): void {
+  if (fixture.kind === "http-429" || fixture.kind === "http-5xx") {
+    assert.equal(
+      problem.extensions?.status,
+      fixture.status,
+      `Usage billing Problem must preserve the safe HTTP status for ${fixture.kind} classification.`,
+    );
+  }
+
+  if (fixture.kind === "timeout") {
+    assert.equal(
+      problem.extensions?.upstreamCode,
+      fixture.upstreamCode,
+      "Usage billing Problem must preserve the safe timeout classification.",
+    );
+  }
 }
 
 function assertHttpUrl(value: string, label: string): void {
