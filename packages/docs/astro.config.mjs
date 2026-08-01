@@ -96,6 +96,7 @@ export default defineConfig({
             "../events-tx/src/index.ts",
             "../execution-core/src/index.ts",
             "../execution-drizzle/src/index.ts",
+            "../engagement-core/src/index.ts",
             "../features-core/src/index.ts",
             "../features-posthog/src/index.ts",
             "../framework-config/src/index.ts",
