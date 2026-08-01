@@ -46,41 +46,41 @@ test.expectClean();
 
 ## API
 
-| Helper                                                | Purpose                                                                                                                                    |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `createTestingApp(config)`                            | Creates an isolated `CrocoApp` with seeded test defaults and HTTP request helpers.                                                         |
-| `createTestKernel(config)`                            | Boots the real application bootstrap inside an isolated runtime scope and reports application or adapter fidelity as structured evidence.  |
+| Helper                                                | Purpose                                                                                                                                     |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createTestingApp(config)`                            | Creates an isolated `CrocoApp` with seeded test defaults and HTTP request helpers.                                                          |
+| `createTestKernel(config)`                            | Boots the real application bootstrap inside an isolated runtime scope and reports application or adapter fidelity as structured evidence.   |
 | `fixedClock(initial)` / `seededIds(seed)`             | Creates virtual time and deterministic IDs/random values for TestKernel-controlled retry, timeout, rate-limit, task, and provider fixtures. |
-| `createTestingHarness(app)`                           | Wraps an existing `CrocoApp` with the same request and contract helpers.                                                                   |
-| `createEventTestingHarness(config)`                   | Creates an isolated in-memory event bus and dispatches decorated handlers.                                                                 |
-| `createTestingRequestContext(config)`                 | Builds a deterministic request/runtime context for service tests.                                                                          |
-| `runWithTestingContext(fn, config)`                   | Runs code inside Croco `Context` and clears AsyncLocalStorage state when execution completes.                                              |
-| `createTestingTransactionContext(config)`             | Provides explicit in-transaction and after-commit hook behavior for tests.                                                                 |
-| `resetCrocoTestingContext()`                          | Resets the Croco DI container and seeds test logger/error/health defaults.                                                                 |
-| `installTestingTelemetryCapture()`                    | Captures spans in memory without starting an SDK exporter.                                                                                 |
-| `createFailureDrillCatalog()`                         | Builds deterministic no-credential failure drills for provider timeout, duplicate delivery, outbox, telemetry, tenant, and quota failures. |
-| `runFailureDrills(cases)`                             | Executes failure drills and rejects runs that lack the expected Problem code, recovery action, telemetry evidence, or audit evidence.      |
-| `createOperationalFailureDrillMatrix(cases)`          | Validates the exact ordered operational incident matrix without changing the generic six-scenario catalog.                                 |
-| `runOperationalFailureDrills(cases)`                  | Executes operational fixtures and verifies their Problem or diagnostic outcome, recovery action, and real-boundary provenance.             |
-| `assertProblemResponse(response, expected)`           | Verifies an RFC 7807 Problem Details response without depending on a test runner.                                                          |
-| `assertOpenAPIRoute(controllersOrSpec, expected)`     | Verifies generated OpenAPI route metadata and response contracts.                                                                          |
-| `createRpcTestFetch(app)`                             | Returns a fetch-compatible function that routes generated RPC clients into the in-memory app.                                              |
-| `createAuthProviderConformanceSuite(config)`          | Reusable auth provider cases for token/session auth, webhooks, tenant mapping, readiness, and live-smoke gating.                           |
-| `createStorageProviderConformanceSuite(config)`       | Reusable storage provider contract cases for default no-credential CI.                                                                     |
-| `createProviderConformanceMatrixSuite(config)`        | Validates provider profile manifests for required capabilities, optional unsupported reasons, and method evidence.                         |
-| `createLlmProviderConformanceSuite(config)`           | Reusable LLM provider contract cases for mocked or live provider fixtures.                                                                 |
-| `createBillingProviderConformanceSuite(config)`       | Builds runner-neutral billing gateway and webhook conformance cases for provider packages.                                                 |
-| `createUpstashRedisMeteringConformanceSuite(config)`  | Reusable Upstash Redis metering cases for config, usage storage, idempotency, upstream errors, and live-smoke gating.                      |
-| `createUpstashRedisRateLimitConformanceSuite(config)` | Reusable Upstash Redis rate-limit cases for config, errors, refund idempotency, and live-smoke gating.                                     |
-| `createQStashTaskConformanceSuite(config)`            | Reusable QStash task publish cases for config, validation, idempotency, upstream errors, and live-smoke gating.                            |
-| `createQStashBatchConformanceSuite(config)`           | Reusable QStash batch chunk cases for terminal chunks, continuation envelopes, upstream errors, and live-smoke gating.                     |
-| `createQStashTriggerConformanceSuite(config)`         | Reusable QStash trigger cases for schedule sync, webhook verification, dispatch, upstream diagnostics, and live-smoke gating.              |
-| `createDrizzleProviderConformanceSuite(config)`       | Builds reusable Drizzle provider cases for schema, transaction, tenant, and error contracts.                                               |
-| `assertDrizzleProblem(operation, expected)`           | Verifies Drizzle provider failures surface stable Croco Problem codes, categories, or status.                                              |
-| `createTestEvidenceRecord(input)`                     | Builds validated `croco.test-evidence/v1` records and derives flaky outcomes from retained attempts.                                       |
-| `createTestEvidenceBundle(records, artifactExists)`   | Deterministically aggregates runner-neutral evidence and reports every missing required attachment.                                        |
-| `CrocoVitestEvidenceReporter`                         | Adapts Vitest results and retries into the common evidence model without replacing Vitest.                                                 |
-| `CrocoPlaywrightEvidenceReporter`                     | Adapts Playwright attempts, traces, screenshots, and reports without replacing Playwright.                                                 |
+| `createTestingHarness(app)`                           | Wraps an existing `CrocoApp` with the same request and contract helpers.                                                                    |
+| `createEventTestingHarness(config)`                   | Creates an isolated in-memory event bus and dispatches decorated handlers.                                                                  |
+| `createTestingRequestContext(config)`                 | Builds a deterministic request/runtime context for service tests.                                                                           |
+| `runWithTestingContext(fn, config)`                   | Runs code inside Croco `Context` and clears AsyncLocalStorage state when execution completes.                                               |
+| `createTestingTransactionContext(config)`             | Provides explicit in-transaction and after-commit hook behavior for tests.                                                                  |
+| `resetCrocoTestingContext()`                          | Resets the Croco DI container and seeds test logger/error/health defaults.                                                                  |
+| `installTestingTelemetryCapture()`                    | Captures spans in memory without starting an SDK exporter.                                                                                  |
+| `createFailureDrillCatalog()`                         | Builds deterministic no-credential failure drills for provider timeout, duplicate delivery, outbox, telemetry, tenant, and quota failures.  |
+| `runFailureDrills(cases)`                             | Executes failure drills and rejects runs that lack the expected Problem code, recovery action, telemetry evidence, or audit evidence.       |
+| `createOperationalFailureDrillMatrix(cases)`          | Validates the exact ordered operational incident matrix without changing the generic six-scenario catalog.                                  |
+| `runOperationalFailureDrills(cases)`                  | Executes operational fixtures and verifies their Problem or diagnostic outcome, recovery action, and real-boundary provenance.              |
+| `assertProblemResponse(response, expected)`           | Verifies an RFC 7807 Problem Details response without depending on a test runner.                                                           |
+| `assertOpenAPIRoute(controllersOrSpec, expected)`     | Verifies generated OpenAPI route metadata and response contracts.                                                                           |
+| `createRpcTestFetch(app)`                             | Returns a fetch-compatible function that routes generated RPC clients into the in-memory app.                                               |
+| `createAuthProviderConformanceSuite(config)`          | Reusable auth provider cases for token/session auth, webhooks, tenant mapping, readiness, and live-smoke gating.                            |
+| `createStorageProviderConformanceSuite(config)`       | Reusable storage provider contract cases for default no-credential CI.                                                                      |
+| `createProviderConformanceMatrixSuite(config)`        | Validates provider profile manifests for required capabilities, optional unsupported reasons, and method evidence.                          |
+| `createLlmProviderConformanceSuite(config)`           | Reusable LLM provider contract cases for mocked or live provider fixtures.                                                                  |
+| `createBillingProviderConformanceSuite(config)`       | Builds runner-neutral billing gateway and webhook conformance cases for provider packages.                                                  |
+| `createUpstashRedisMeteringConformanceSuite(config)`  | Reusable Upstash Redis metering cases for config, usage storage, idempotency, upstream errors, and live-smoke gating.                       |
+| `createUpstashRedisRateLimitConformanceSuite(config)` | Reusable Upstash Redis rate-limit cases for config, errors, refund idempotency, and live-smoke gating.                                      |
+| `createQStashTaskConformanceSuite(config)`            | Reusable QStash task publish cases for config, validation, idempotency, upstream errors, and live-smoke gating.                             |
+| `createQStashBatchConformanceSuite(config)`           | Reusable QStash batch chunk cases for terminal chunks, continuation envelopes, upstream errors, and live-smoke gating.                      |
+| `createQStashTriggerConformanceSuite(config)`         | Reusable QStash trigger cases for schedule sync, webhook verification, dispatch, upstream diagnostics, and live-smoke gating.               |
+| `createDrizzleProviderConformanceSuite(config)`       | Builds reusable Drizzle provider cases for schema, transaction, tenant, and error contracts.                                                |
+| `assertDrizzleProblem(operation, expected)`           | Verifies Drizzle provider failures surface stable Croco Problem codes, categories, or status.                                               |
+| `createTestEvidenceRecord(input)`                     | Builds validated `croco.test-evidence/v1` records and derives flaky outcomes from retained attempts.                                        |
+| `createTestEvidenceBundle(records, artifactExists)`   | Deterministically aggregates runner-neutral evidence and reports every missing required attachment.                                         |
+| `CrocoVitestEvidenceReporter`                         | Adapts Vitest results and retries into the common evidence model without replacing Vitest.                                                  |
+| `CrocoPlaywrightEvidenceReporter`                     | Adapts Playwright attempts, traces, screenshots, and reports without replacing Playwright.                                                  |
 
 ## Isolation Contract
 
