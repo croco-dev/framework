@@ -712,9 +712,7 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
   }
 
   if (typeName === "ZodLiteral") {
-    const value = normalizeLiteralValue(
-      definition?.value ?? getFirstArrayValue(definition?.values),
-    );
+    const value = normalizeLiteralValue(getLiteralValue(definition));
 
     return value.supported
       ? { ...supportedDescriptor("literal", typeName), value: value.value }
@@ -868,6 +866,14 @@ function describeUnknownSchema(schema: unknown, seen: Set<unknown>): ContractSch
     typeName,
     `Unsupported Zod schema ${typeName}; use a schema listed in JSON_SAFE_ZOD_SCHEMA_SUPPORT_MATRIX.`,
   );
+}
+
+function getLiteralValue(definition: ZodDefinition | undefined): unknown {
+  if (definition && Object.prototype.hasOwnProperty.call(definition, "value")) {
+    return definition.value;
+  }
+
+  return getFirstArrayValue(definition?.values);
 }
 
 function describeMaybeSchema(value: unknown, seen: Set<unknown>): ContractSchemaDescriptor | null {
@@ -1127,7 +1133,12 @@ function compareSchemaDescriptors(
 }
 
 function comparePrimitiveValues(left: string | number, right: string | number): number {
-  return String(left).localeCompare(String(right));
+  const typeComparison = compareCodeUnits(typeof left, typeof right);
+  return typeComparison || compareCodeUnits(String(left), String(right));
+}
+
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

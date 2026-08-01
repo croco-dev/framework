@@ -34,7 +34,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "@croco/protocols-core": "workspace:*"
   },
   "devDependencies": {
     "vitest": "4.0.16",

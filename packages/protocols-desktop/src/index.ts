@@ -1,6 +1,24 @@
 export { DesktopDefinitionProblem } from "./libs/DesktopDefinitionProblem";
+export {
+  compileDesktopWireSchema,
+  DesktopWireSchemaProblem,
+  formatDesktopWireSchemaDiagnostic,
+  parseDesktopWireValue,
+  stringifyDesktopWireSchemaDescriptor,
+} from "./libs/DesktopWireSchema";
 export { desktop } from "./libs/desktop";
 export type { DesktopDefinitionProblemCode } from "./libs/DesktopDefinitionProblem";
+export type {
+  DesktopWireEnumDescriptor,
+  DesktopWireLiteralDescriptor,
+  DesktopWireObjectDescriptor,
+  DesktopWirePrimitiveDescriptor,
+  DesktopWireSchemaContext,
+  DesktopWireSchemaDescriptor,
+  DesktopWireSchemaDiagnostic,
+  DesktopWireSchemaDiagnosticCode,
+  DesktopWireSourceLocation,
+} from "./libs/DesktopWireSchema";
 export type {
   AnyDesktopCommand,
   AnyDesktopContract,

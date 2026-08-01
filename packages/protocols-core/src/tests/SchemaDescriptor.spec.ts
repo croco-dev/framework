@@ -129,6 +129,14 @@ describe("SchemaDescriptor", () => {
       values: [0, "published"],
       jsonSafe: true,
     });
+
+    const reorderedMixedValues = describeZodSchema(
+      z.nativeEnum({ StringValue: "1", NumericValue: 1 } as const),
+    );
+    expect(reorderedMixedValues).toEqual(
+      describeZodSchema(z.nativeEnum({ NumericValue: 1, StringValue: "1" } as const)),
+    );
+    expect(reorderedMixedValues).toMatchObject({ values: [1, "1"] });
   });
 
   it("should reject non-finite literal and enum number values", () => {
@@ -159,6 +167,14 @@ describe("SchemaDescriptor", () => {
         typeName: "ZodLiteral",
       }),
     ]);
+  });
+
+  it("should preserve null literal values", () => {
+    expect(describeZodSchema(z.literal(null))).toMatchObject({
+      kind: "literal",
+      value: null,
+      jsonSafe: true,
+    });
   });
 
   it("should expose the JSON-safe Zod support matrix", () => {

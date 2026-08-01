@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
-    "lib": ["ES2019"],
+    "lib": ["ES2020"],
     "types": []
   },
   "include": ["src/**/*.ts"],
