@@ -27,3 +27,5 @@ export {
   type GraphQLProblemResponseOptions,
 } from "./decorators/GraphQLProblemResponse";
 export { GraphQLResolver, type GraphQLResolverOptions } from "./decorators/GraphQLResolver";
+export { UseGuards, UseInterceptors } from "./decorators/Lifecycle";
+export { Roles } from "./decorators/Roles";

@@ -1,10 +1,26 @@
 import "reflect-metadata";
 import { Container } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import { Field, ObjectType, Query, Resolver } from "@croco/protocols-graphql";
+import {
+  Field,
+  FieldResolver,
+  ObjectType,
+  Query,
+  Resolver,
+  Roles,
+  Subscription,
+  UseGuards,
+  UseInterceptors,
+} from "@croco/protocols-graphql";
+import type {
+  GraphQLGuard,
+  GraphQLInterceptor,
+  GraphQLInterceptorContext,
+} from "@croco/protocols-graphql";
 import { GraphQLError } from "graphql";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { GraphQLServer } from "../libs/GraphQLServer";
+import { SchemaCompiler } from "../libs/SchemaCompiler";
 import {
   GraphQLResolversNotConfiguredProblem,
   GraphQLSchemaNotConfiguredProblem,
@@ -128,6 +144,130 @@ class ProblemResolver {
       code: "ACCESS_DENIED",
       category: ProblemCategory.Forbidden,
     });
+  }
+}
+
+const policyEvents: string[] = [];
+
+class HeaderGuard implements GraphQLGuard {
+  constructor(private readonly requiredAuthorization: string) {}
+
+  canActivate(context: GraphQLInterceptorContext): boolean {
+    policyEvents.push("guard");
+    const headers = context.context.headers as Record<string, string> | undefined;
+    return headers?.authorization === this.requiredAuthorization;
+  }
+}
+
+class FirstPolicyInterceptor implements GraphQLInterceptor {
+  async intercept(
+    _context: GraphQLInterceptorContext,
+    next: { handle(): Promise<unknown> },
+  ): Promise<unknown> {
+    policyEvents.push("first:before");
+    const result = await next.handle();
+    policyEvents.push("first:after");
+    return result;
+  }
+}
+
+class SecondPolicyInterceptor implements GraphQLInterceptor {
+  async intercept(
+    _context: GraphQLInterceptorContext,
+    next: { handle(): Promise<unknown> },
+  ): Promise<unknown> {
+    policyEvents.push("second:before");
+    const result = await next.handle();
+    policyEvents.push("second:after");
+    return result;
+  }
+}
+
+@Resolver()
+class PolicyResolver {
+  @Query(() => String)
+  @Roles("admin")
+  @UseGuards(HeaderGuard)
+  @UseInterceptors(FirstPolicyInterceptor, SecondPolicyInterceptor)
+  protectedValue(): string {
+    policyEvents.push("resolver");
+    return "authorized";
+  }
+}
+
+@ObjectType()
+class PolicyPerson {
+  @Field(() => String)
+  id!: string;
+}
+
+@ObjectType()
+class PolicyOrganization {
+  @Field(() => String)
+  id!: string;
+}
+
+class AllowFieldGuard implements GraphQLGuard {
+  canActivate(): boolean {
+    return true;
+  }
+}
+
+class DenyFieldGuard implements GraphQLGuard {
+  canActivate(): boolean {
+    return false;
+  }
+}
+
+class AllowSubscriptionGuard implements GraphQLGuard {
+  canActivate(): boolean {
+    return true;
+  }
+}
+
+@Resolver()
+class PolicyFieldQueryResolver {
+  @Query(() => PolicyPerson)
+  person(): PolicyPerson {
+    return { id: "person" };
+  }
+
+  @Query(() => PolicyOrganization, { nullable: true })
+  organization(): PolicyOrganization {
+    return { id: "organization" };
+  }
+}
+
+@Resolver(() => PolicyPerson)
+class PolicyPersonFieldResolver {
+  @FieldResolver(() => String)
+  @UseGuards(AllowFieldGuard)
+  id(): string {
+    return "person";
+  }
+}
+
+@Resolver(() => PolicyOrganization)
+class PolicyOrganizationFieldResolver {
+  @FieldResolver(() => String)
+  @UseGuards(DenyFieldGuard)
+  id(): string {
+    return "organization";
+  }
+}
+
+@Resolver()
+class PolicySubscriptionResolver {
+  @Query(() => String)
+  policyHealth(): string {
+    return "ok";
+  }
+
+  @Subscription(() => String, { topics: "policy-update" })
+  @UseGuards(AllowSubscriptionGuard)
+  @Roles("admin")
+  policyUpdate(): string {
+    return "authorized";
   }
 }
 
@@ -538,13 +678,185 @@ describe("GraphQLServer integration", () => {
       }
     });
   });
+
+  describe("Declared policy execution", () => {
+    beforeEach(() => {
+      Container.reset();
+      policyEvents.length = 0;
+      Container.set(HeaderGuard, new HeaderGuard("Bearer admin"));
+      Container.set(FirstPolicyInterceptor, new FirstPolicyInterceptor());
+      Container.set(SecondPolicyInterceptor, new SecondPolicyInterceptor());
+      Container.set(AllowFieldGuard, new AllowFieldGuard());
+      Container.set(DenyFieldGuard, new DenyFieldGuard());
+      Container.set(AllowSubscriptionGuard, new AllowSubscriptionGuard());
+    });
+
+    afterEach(() => {
+      Container.reset();
+    });
+
+    it("should execute declared guards, roles, and interceptors in order", async () => {
+      const policyServer = new GraphQLServer({
+        schemaOptions: {
+          resolvers: [PolicyResolver],
+          autoDiscover: false,
+        },
+        context: () => ({ user: { roles: ["admin"] } }),
+      });
+
+      await policyServer.initialize();
+
+      try {
+        const { data } = await executeQuery(policyServer, "{ protectedValue }", {
+          authorization: "Bearer admin",
+        });
+
+        expect(data.errors).toBeUndefined();
+        expect(data.data.protectedValue).toBe("authorized");
+        expect(policyEvents).toEqual([
+          "guard",
+          "first:before",
+          "second:before",
+          "resolver",
+          "second:after",
+          "first:after",
+        ]);
+      } finally {
+        await policyServer.stop();
+      }
+    });
+
+    it("should preserve Croco Problem semantics when a declared guard denies access", async () => {
+      const policyServer = new GraphQLServer({
+        schemaOptions: {
+          resolvers: [PolicyResolver],
+          autoDiscover: false,
+        },
+        context: () => ({ user: { roles: ["admin"] } }),
+      });
+
+      await policyServer.initialize();
+
+      try {
+        const { data } = await executeQuery(policyServer, "{ protectedValue }");
+
+        expect(data.data).toBeNull();
+        expect(data.errors[0]).toMatchObject({
+          message: "Access denied by guard",
+          extensions: {
+            code: "protocols-graphql/guard-denied",
+            status: 403,
+          },
+        });
+        expect(policyEvents).toEqual(["guard"]);
+      } finally {
+        await policyServer.stop();
+      }
+    });
+
+    it("should deny access when declared roles do not match the request context", async () => {
+      const policyServer = new GraphQLServer({
+        schemaOptions: {
+          resolvers: [PolicyResolver],
+          autoDiscover: false,
+        },
+        context: () => ({ user: { roles: ["member"] } }),
+      });
+
+      await policyServer.initialize();
+
+      try {
+        const { data } = await executeQuery(policyServer, "{ protectedValue }", {
+          authorization: "Bearer admin",
+        });
+
+        expect(data.data).toBeNull();
+        expect(data.errors[0]).toMatchObject({
+          message: "Access denied by guard",
+          extensions: {
+            code: "protocols-graphql/guard-denied",
+            status: 403,
+          },
+        });
+        expect(policyEvents).toEqual(["guard"]);
+      } finally {
+        await policyServer.stop();
+      }
+    });
+
+    it("should match field-resolver policies to their parent GraphQL type", async () => {
+      const policyServer = new GraphQLServer({
+        schemaOptions: {
+          resolvers: [
+            PolicyFieldQueryResolver,
+            PolicyPersonFieldResolver,
+            PolicyOrganizationFieldResolver,
+          ],
+          autoDiscover: false,
+        },
+      });
+
+      await policyServer.initialize();
+
+      try {
+        const { data } = await executeQuery(policyServer, "{ person { id } organization { id } }");
+
+        expect(data.data).toEqual({ person: { id: "person" }, organization: null });
+        expect(data.errors[0]).toMatchObject({
+          path: ["organization", "id"],
+          extensions: {
+            code: "protocols-graphql/guard-denied",
+            status: 403,
+          },
+        });
+      } finally {
+        await policyServer.stop();
+      }
+    });
+
+    it("should enforce declared policy before a subscription acquires an iterator", async () => {
+      let subscribeCalls = 0;
+      const schema = await SchemaCompiler.compileSchema({
+        resolvers: [PolicySubscriptionResolver],
+        autoDiscover: false,
+        pubSub: {
+          publish: async () => undefined,
+          subscribe: () => {
+            subscribeCalls++;
+            return {
+              [Symbol.asyncIterator](): AsyncIterator<unknown> {
+                return {
+                  next: async () => new Promise<IteratorResult<unknown>>(() => undefined),
+                };
+              },
+            };
+          },
+        },
+      });
+
+      const subscription = schema.getSubscriptionType()?.getFields()["policyUpdate"]?.subscribe;
+      expect(subscription).toBeDefined();
+
+      await expect(
+        subscription?.(undefined, {}, { user: { roles: ["member"] } }, undefined as never),
+      ).rejects.toMatchObject({
+        code: "protocols-graphql/guard-denied",
+        status: 403,
+      });
+      expect(subscribeCalls).toBe(0);
+    });
+  });
 });
 
-async function executeQuery(server: GraphQLServer, query: string) {
+async function executeQuery(
+  server: GraphQLServer,
+  query: string,
+  headers: Record<string, string> = {},
+) {
   const response = await server.getHandler()(
     new Request("http://localhost/graphql", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify({ query }),
     }),
   );

@@ -74,10 +74,12 @@ export class GraphQLServer {
         maskError: maskCrocoProblemError,
       },
       context: async ({ request }) => {
-        if (typeof context === "function") {
-          return await context(request);
-        }
-        return context || {};
+        const userContext =
+          typeof context === "function" ? await context(request) : (context ?? {});
+        return {
+          ...userContext,
+          headers: Object.fromEntries(request.headers),
+        };
       },
     });
 

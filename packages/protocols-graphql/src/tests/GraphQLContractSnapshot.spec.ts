@@ -14,6 +14,9 @@ import {
   Int,
   ObjectType,
   Query,
+  Roles,
+  UseGuards,
+  UseInterceptors,
 } from "../libs/decorators";
 import { resolverRegistry } from "../libs/metadata/ResolverRegistry";
 
@@ -23,9 +26,17 @@ class HealthStatus {
   status!: string;
 }
 
-class AuthGuard {}
+class AuthGuard {
+  canActivate(): boolean {
+    return true;
+  }
+}
 
-class AuditInterceptor {}
+class AuditInterceptor {
+  intercept(): Promise<unknown> {
+    return Promise.resolve(undefined);
+  }
+}
 
 type ContractResolver = abstract new (...args: never[]) => unknown;
 
@@ -41,6 +52,9 @@ describe("GraphQL contract snapshots", () => {
         code: "GRAPHQL_HEALTH_UNAVAILABLE",
         category: ProblemCategory.InternalServerError,
       })
+      @Roles("admin")
+      @UseGuards(AuthGuard)
+      @UseInterceptors(AuditInterceptor)
       @Query(() => HealthStatus)
       health(): HealthStatus {
         return { status: "ok" };
@@ -50,15 +64,6 @@ describe("GraphQL contract snapshots", () => {
         return "ok";
       }
     }
-
-    Reflect.defineMetadata(GRAPHQL_GUARDS_KEY, [AuthGuard], HealthResolver.prototype, "health");
-    Reflect.defineMetadata(
-      GRAPHQL_INTERCEPTORS_KEY,
-      [AuditInterceptor],
-      HealthResolver.prototype,
-      "health",
-    );
-    Reflect.defineMetadata(GRAPHQL_ROLES_KEY, ["admin"], HealthResolver.prototype, "health");
 
     const schema = await buildContractSchema([HealthResolver]);
     const snapshot = createGraphQLContractSnapshot(schema, {

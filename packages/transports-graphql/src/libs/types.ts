@@ -9,6 +9,7 @@ export type SchemaCompileOptions = {
   autoDiscover?: boolean;
   container?: ContainerType;
   emitSchemaFile?: BuildSchemaOptions["emitSchemaFile"];
+  pubSub?: BuildSchemaOptions["pubSub"];
   validate?: BuildSchemaOptions["validate"];
 };
 
