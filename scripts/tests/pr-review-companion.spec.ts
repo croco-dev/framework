@@ -26,6 +26,12 @@ type ScriptResult = {
 };
 
 type CompanionReport = {
+  readonly annotations: readonly {
+    readonly file: string | null;
+    readonly level: string;
+    readonly message: string;
+    readonly title: string;
+  }[];
   readonly changedFiles: readonly string[];
   readonly changedPackages: readonly {
     readonly commands: readonly { readonly command: string; readonly reason: string }[];
@@ -238,6 +244,165 @@ describe("pr-review-companion.mts", () => {
     );
   });
 
+  it("projects a non-breaking ContractGraph diff into Markdown and a separate artifact", () => {
+    const root = createContractDiffFixture({
+      baselineRouteCount: 1,
+      currentRouteCount: 3,
+      changes: [
+        {
+          code: "contract-route-added",
+          message: "Route 'UsersController.createUser' was added to the contract graph.",
+          routeId: "UsersController.createUser",
+          severity: "non-breaking",
+        },
+        {
+          code: "contract-controller-added",
+          message: "Controller 'AdminController' was added to the contract graph.",
+          routeId: "AdminController",
+          severity: "non-breaking",
+        },
+      ],
+    });
+
+    const before = git(root, ["diff", "--no-ext-diff", "HEAD"]);
+    const result = runScript(root, ["--base", "HEAD^", "--head", "HEAD"]);
+    const markdown = readFileSync(
+      join(root, "ci-reports", "pr-review-companion", "report.md"),
+      "utf-8",
+    );
+    const diff = JSON.parse(
+      readFileSync(join(root, "ci-reports", "pr-review-companion", "contract-diff.json"), "utf-8"),
+    ) as Record<string, unknown>;
+
+    expect(result.status).toBe(0);
+    expect(result.report.status).toBe("pass");
+    expect(result.report).not.toHaveProperty("contractDiff");
+    expect(diff).toMatchObject({
+      baselineRouteCount: 1,
+      breakingChangeCount: 0,
+      currentRouteCount: 3,
+      nonBreakingChangeCount: 2,
+    });
+    expect(markdown).toContain("## Contract Changes");
+    expect(markdown).toContain("- Routes: 1 → 3");
+    expect(markdown).toContain(
+      "| non-breaking | contract-route-added | UsersController.createUser | Route 'UsersController.createUser' was added to the contract graph. |",
+    );
+    expect(markdown.indexOf("contract-controller-added")).toBeLessThan(
+      markdown.indexOf("contract-route-added"),
+    );
+    runScript(root, ["--base", "HEAD^", "--head", "HEAD"]);
+    expect(
+      readFileSync(join(root, "ci-reports", "pr-review-companion", "report.md"), "utf-8"),
+    ).toBe(markdown);
+    expect(git(root, ["diff", "--no-ext-diff", "HEAD"])).toBe(before);
+  });
+
+  it("warns about breaking ContractGraph changes without changing the report status", () => {
+    const root = createContractDiffFixture({
+      baselineRouteCount: 1,
+      currentRouteCount: 0,
+      changes: [
+        {
+          code: "contract-route-removed",
+          message: "Route 'UsersController.listUsers' was removed from the contract graph.",
+          routeId: "UsersController.listUsers",
+          severity: "breaking",
+        },
+      ],
+    });
+
+    const result = runScript(root, ["--base", "HEAD^", "--head", "HEAD", "--github-annotations"]);
+
+    expect(result.status).toBe(0);
+    expect(result.report.status).toBe("pass");
+    expect(result.report.annotations).toContainEqual(
+      expect.objectContaining({
+        file: "contract-graph.snapshot.json",
+        level: "warning",
+        title: "Breaking ContractGraph changes",
+      }),
+    );
+    expect(result.stdout).toContain(
+      "::warning file=contract-graph.snapshot.json,title=Breaking ContractGraph changes::",
+    );
+  });
+
+  it("reports missing baseline snapshots as unavailable", () => {
+    const root = createTempRoot();
+    writeRootPackage(root, {});
+    writeFakeContractDiffCli(root);
+    initializeGit(root);
+    commitAll(root, "base");
+    writeContractSnapshot(root, 1, []);
+    commitAll(root, "add snapshot");
+    writeChangedFiles(root, ["contract-graph.snapshot.json"]);
+
+    const result = runScript(root, ["--base", "HEAD^", "--head", "HEAD"]);
+    const markdown = readFileSync(
+      join(root, "ci-reports", "pr-review-companion", "report.md"),
+      "utf-8",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.report.status).toBe("pass");
+    expect(markdown).toContain("- Status: unavailable: baseline snapshot missing");
+    expect(result.report.annotations).toContainEqual(
+      expect.objectContaining({ title: "ContractGraph semantic diff unavailable" }),
+    );
+  });
+
+  it("reports invalid current snapshots without an uncaught exception", () => {
+    const root = createTempRoot();
+    writeRootPackage(root, {});
+    writeFakeContractDiffCli(root);
+    initializeGit(root);
+    writeContractSnapshot(root, 1, []);
+    commitAll(root, "base snapshot");
+    writeFile(root, "contract-graph.snapshot.json", "{ invalid json\n");
+    commitAll(root, "invalid snapshot");
+    writeChangedFiles(root, ["contract-graph.snapshot.json"]);
+
+    const result = runScript(root, ["--base", "HEAD^", "--head", "HEAD"]);
+    const markdown = readFileSync(
+      join(root, "ci-reports", "pr-review-companion", "report.md"),
+      "utf-8",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("pr-review-companion: failed:");
+    expect(markdown).toContain("- Status: unavailable: contract diff command failed:");
+  });
+
+  it("treats an exit code that contradicts the diff as unavailable", () => {
+    const root = createContractDiffFixture({
+      baselineRouteCount: 1,
+      currentRouteCount: 2,
+      exitCode: 1,
+      changes: [
+        {
+          code: "contract-route-added",
+          message: "Route 'UsersController.createUser' was added to the contract graph.",
+          routeId: "UsersController.createUser",
+          severity: "non-breaking",
+        },
+      ],
+    });
+
+    const result = runScript(root, ["--base", "HEAD^", "--head", "HEAD"]);
+    const markdown = readFileSync(
+      join(root, "ci-reports", "pr-review-companion", "report.md"),
+      "utf-8",
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.report.status).toBe("pass");
+    expect(markdown).toContain("returned status 1, expected status 0 for a non-breaking result");
+    expect(result.report.annotations).toContainEqual(
+      expect.objectContaining({ title: "ContractGraph semantic diff unavailable" }),
+    );
+  });
+
   it("is wired into a GitHub Actions smoke workflow with report artifacts", () => {
     const workflow = readFileSync(workflowPath, "utf-8");
     const rootPackageJson = JSON.parse(readFileSync(rootPackageJsonPath, "utf-8")) as {
@@ -250,6 +415,7 @@ describe("pr-review-companion.mts", () => {
     );
     expect(companionJob).toContain("timeout-minutes: 30");
     expect(workflow).toContain("pnpm pr-review-companion --");
+    expect(workflow).toContain("pnpm --filter @croco/cli... build");
     expect(workflow).toContain("--run-required-checks --github-annotations");
     expect(workflow).toContain(
       'cat ci-reports/pr-review-companion/report.md >> "$GITHUB_STEP_SUMMARY"',
@@ -263,6 +429,94 @@ function createTempRoot(): string {
   tempRoots.push(root);
   mkdirSync(join(root, "packages"), { recursive: true });
   return root;
+}
+
+type FixtureContractChange = {
+  readonly code: string;
+  readonly message: string;
+  readonly routeId: string;
+  readonly severity: "breaking" | "non-breaking";
+};
+
+function createContractDiffFixture(input: {
+  readonly baselineRouteCount: number;
+  readonly changes: readonly FixtureContractChange[];
+  readonly currentRouteCount: number;
+  readonly exitCode?: number;
+}): string {
+  const root = createTempRoot();
+  writeRootPackage(root, {});
+  writeFakeContractDiffCli(root);
+  initializeGit(root);
+  writeContractSnapshot(root, input.baselineRouteCount, []);
+  commitAll(root, "base snapshot");
+  writeContractSnapshot(root, input.currentRouteCount, input.changes, input.exitCode);
+  commitAll(root, "current snapshot");
+  writeChangedFiles(root, ["contract-graph.snapshot.json"]);
+  return root;
+}
+
+function initializeGit(root: string): void {
+  git(root, ["init", "--initial-branch=trunk"]);
+  git(root, ["config", "user.name", "Croco Test"]);
+  git(root, ["config", "user.email", "croco-test@example.com"]);
+}
+
+function commitAll(root: string, message: string): void {
+  git(root, ["add", "."]);
+  git(root, ["commit", "--message", message]);
+}
+
+function git(root: string, args: readonly string[]): string {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf-8" });
+  if (result.status !== 0) {
+    throw new Error(result.stderr || `git ${args.join(" ")} failed`);
+  }
+  return result.stdout;
+}
+
+function writeContractSnapshot(
+  root: string,
+  routeCount: number,
+  changes: readonly FixtureContractChange[],
+  exitCode?: number,
+): void {
+  writeJson(join(root, "contract-graph.snapshot.json"), {
+    ...(exitCode === undefined ? {} : { fixtureExitCode: exitCode }),
+    fixtureChanges: changes,
+    routeCount,
+    snapshotVersion: "croco.contract-graph.snapshot.v1",
+  });
+}
+
+function writeFakeContractDiffCli(root: string): void {
+  writeFile(
+    root,
+    "packages/cli/dist/bin/croco.js",
+    [
+      "const fs = require('node:fs');",
+      "const path = require('node:path');",
+      "const args = process.argv.slice(2);",
+      "const value = (flag) => args[args.indexOf(flag) + 1];",
+      "try {",
+      "  const baseline = JSON.parse(fs.readFileSync(value('--baseline'), 'utf8'));",
+      "  const current = JSON.parse(fs.readFileSync(value('--current-snapshot'), 'utf8'));",
+      "  if (baseline.snapshotVersion !== 'croco.contract-graph.snapshot.v1' || current.snapshotVersion !== 'croco.contract-graph.snapshot.v1') throw new Error('invalid snapshot version');",
+      "  const changes = current.fixtureChanges || [];",
+      "  const breakingChanges = changes.filter((change) => change.severity === 'breaking');",
+      "  const nonBreakingChanges = changes.filter((change) => change.severity === 'non-breaking');",
+      "  const diff = { baselineRouteCount: baseline.routeCount, currentRouteCount: current.routeCount, breakingChangeCount: breakingChanges.length, nonBreakingChangeCount: nonBreakingChanges.length, hasBreakingChanges: breakingChanges.length > 0, changes, breakingChanges, nonBreakingChanges };",
+      "  const output = value('--out');",
+      "  fs.mkdirSync(path.dirname(output), { recursive: true });",
+      "  fs.writeFileSync(output, JSON.stringify(diff, null, 2) + '\\n');",
+      "  process.exitCode = current.fixtureExitCode ?? (diff.hasBreakingChanges ? 1 : 0);",
+      "} catch (error) {",
+      "  console.error(error instanceof Error ? error.message : String(error));",
+      "  process.exitCode = 1;",
+      "}",
+      "",
+    ].join("\n"),
+  );
 }
 
 function writeRootPackage(

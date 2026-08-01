@@ -42,7 +42,7 @@
     {
       "package": "@croco/cli",
       "file": "packages/cli/src/commands/contractsDiff.ts",
-      "line": 212,
+      "line": 249,
       "excerpt": "throw new Error(`${path} is not a croco.contract-graph.snapshot.v1 JSON snapshot.`);",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
