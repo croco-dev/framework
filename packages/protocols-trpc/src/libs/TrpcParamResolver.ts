@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ProblemFactory } from "@croco/problems-core";
 import type { ParamIR, RouteIR } from "@croco/protocols-core";
 
 type TrpcRouteInputEnvelope = {
@@ -48,8 +49,11 @@ export function resolveTrpcRouteParams(
     return [];
   }
 
+  const parameterIndexes = route.params.map((param, position) => param.index ?? position);
+  assertUniqueParameterIndexes(route, parameterIndexes);
+
   const envelope = toEnvelope(route, input);
-  const maxIndex = Math.max(...route.params.map((param, position) => param.index ?? position));
+  const maxIndex = Math.max(...parameterIndexes);
   const args: unknown[] = Array.from({ length: maxIndex + 1 }).fill(undefined) as unknown[];
 
   for (const [position, param] of route.params.entries()) {
@@ -57,6 +61,21 @@ export function resolveTrpcRouteParams(
   }
 
   return args;
+}
+
+function assertUniqueParameterIndexes(route: RouteIR, indexes: number[]): void {
+  const seenIndexes = new Set<number>();
+
+  for (const index of indexes) {
+    if (seenIndexes.has(index)) {
+      throw ProblemFactory.internalServerError(
+        "protocols-trpc/duplicate-parameter-index",
+        `Duplicate parameter metadata detected for ${route.methodName} at index ${index}`,
+      );
+    }
+
+    seenIndexes.add(index);
+  }
 }
 
 function hasEnvelopeLocations(route: RouteIR): boolean {

@@ -244,6 +244,51 @@ describe("createTrpcRouter", () => {
     });
   });
 
+  it("should reject duplicate RouteIR parameter indexes before invoking the controller", async () => {
+    const handler = vi.fn();
+    const pathSchema = z.object({ id: z.string() });
+    const querySchema = z.object({ id: z.string() });
+
+    class UserController {
+      read(id: string): void {
+        handler(id);
+      }
+    }
+
+    mocked.extractRouteIR = () => [
+      {
+        controllerName: "UserController",
+        methodName: "read",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [
+          { index: 0, kind: "path", name: "id", schema: pathSchema.shape.id },
+          { index: 0, kind: "query", name: "id", schema: querySchema.shape.id },
+        ],
+        inputSchema: null,
+        inputSchemas: { body: null, path: pathSchema, query: querySchema, headers: null },
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    const router = createTrpcRouter([UserController]);
+    const caller = createCaller(router);
+    const request = caller.user.read({ path: { id: "path-id" }, query: { id: "query-id" } });
+
+    await expect(request).rejects.toThrow();
+
+    const error = await captureRejectedValue(request);
+    const codedError = error as { readonly cause?: unknown };
+
+    expect(codedError.cause).toMatchObject({
+      code: "protocols-trpc/duplicate-parameter-index",
+      status: 500,
+    });
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it("should group controllers by domain namespace", () => {
     @Controller("/users")
     class UserController {
