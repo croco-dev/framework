@@ -64,6 +64,12 @@ const POLAR_PLAN_VERSION = {
   interval: "month",
   intervalCount: 1,
   rating: { mode: "provider", provider: "polar" },
+  quantityPolicy: {
+    minimumQuantity: 1,
+    includedSeats: 0,
+    seatQuota: 100,
+    billableMembershipRoles: ["owner", "admin", "member"],
+  },
   providerBindings: [
     {
       provider: "polar",

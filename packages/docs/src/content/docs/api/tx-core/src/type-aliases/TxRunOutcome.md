@@ -21,13 +21,13 @@ title: "TxRunOutcome"
 
 > **afterCommit**: [`AfterCommitOutcome`](/api/tx-core/src/type-aliases/aftercommitoutcome/)
 
----
+***
 
 ### status
 
 > **status**: `"committed"`
 
----
+***
 
 ### value
 

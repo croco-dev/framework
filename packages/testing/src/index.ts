@@ -148,6 +148,7 @@ export {
   type BillingWebhookFixture,
   type BillingWebhookHandlerContract,
   type BillingWebhookResult,
+  type LicensedQuantityGatewayConformanceOptions,
 } from "./libs/billing-provider-conformance";
 export {
   assertDrizzleProblem,

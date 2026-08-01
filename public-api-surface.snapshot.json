@@ -4176,6 +4176,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "calculateDesiredQuantity",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createSubscriptionQuantityReconciliationId",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity",
+              "declarationKind": "function"
+            },
+            {
               "name": "defineBillingProvider",
               "exportKind": "named",
               "source": "./libs/BillingProvider",
@@ -4206,6 +4218,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InMemorySubscriptionQuantityReconciliationStore",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidBillingLifecycleIdempotencyKeyProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
@@ -4231,6 +4249,12 @@
             },
             {
               "name": "InvalidPlanVersionRefProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidSubscriptionQuantityProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
               "declarationKind": "class"
@@ -4327,6 +4351,66 @@
             },
             {
               "name": "SubscriptionPlanVersionMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionQuantityDriftDetectedEvent",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionQuantityDriftRecoveredEvent",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionQuantityProviderMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionQuantityProviderSourceAheadProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionQuantityReconciler",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionQuantityReconciliationConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionQuantityReconciliationFailedEvent",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionQuantityReconciliationFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BillingProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionQuantityReconciliationSucceededEvent",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SubscriptionQuantitySourceMismatchProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
               "declarationKind": "class"
@@ -4458,6 +4542,11 @@
               "source": "./libs/BillingGateway"
             },
             {
+              "name": "CreateSubscriptionQuantityIntent",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
               "name": "CustomerMeterState",
               "exportKind": "named",
               "source": "./libs/UsageBillingGateway"
@@ -4509,6 +4598,21 @@
             },
             {
               "name": "LegacySubscription",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "LicensedQuantityGateway",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "LicensedQuantityObservation",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "MembershipRole",
               "exportKind": "named",
               "source": "./types"
             },
@@ -4603,14 +4707,94 @@
               "source": "./libs/BillingService"
             },
             {
+              "name": "ReconcileSubscriptionQuantitiesResult",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "ReconcileSubscriptionQuantityInput",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
               "name": "ResumeSubscriptionParams",
               "exportKind": "named",
               "source": "./libs/BillingService"
             },
             {
+              "name": "SetLicensedQuantityInput",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SetLicensedQuantityResult",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
               "name": "Subscription",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "SubscriptionQuantityDiagnostics",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubscriptionQuantityFailureEvidence",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubscriptionQuantityPolicy",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "SubscriptionQuantityReconcilerDependencies",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubscriptionQuantityReconciliationEventPublisher",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubscriptionQuantityReconciliationState",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubscriptionQuantityReconciliationStore",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubscriptionQuantityRepairSource",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubscriptionQuantitySnapshot",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubscriptionQuantitySource",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubscriptionQuantitySourceInput",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
+            },
+            {
+              "name": "SubscriptionQuantitySourceSnapshot",
+              "exportKind": "named",
+              "source": "./libs/SubscriptionQuantity"
             },
             {
               "name": "SubscriptionStatus",
@@ -24734,6 +24918,11 @@
               "name": "IsolatedTestingFidelity",
               "exportKind": "named",
               "source": "./libs/testing"
+            },
+            {
+              "name": "LicensedQuantityGatewayConformanceOptions",
+              "exportKind": "named",
+              "source": "./libs/billing-provider-conformance"
             },
             {
               "name": "LlmProviderConformanceCase",

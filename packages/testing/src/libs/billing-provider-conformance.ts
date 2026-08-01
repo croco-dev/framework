@@ -6,6 +6,7 @@ import {
   type BillingProviderCapability,
   type CheckoutResult,
   type CreateCheckoutParams,
+  type LicensedQuantityGateway,
 } from "@croco/billing-core";
 import { Problem } from "@croco/problems-core";
 
@@ -139,12 +140,21 @@ export type BillingProviderConformanceOptions<
   readonly capabilities?: BillingProviderCapabilityConformanceOptions;
   readonly providerName: string;
   readonly gateway?: BillingGatewayConformanceOptions<TGateway>;
+  readonly licensedQuantity?: LicensedQuantityGatewayConformanceOptions;
   readonly webhook?: BillingWebhookConformanceOptions<TResult, THandler>;
 };
 
 export type BillingProviderCapabilityConformanceOptions = {
   readonly createProvider: () => BillingProvider | Promise<BillingProvider>;
   readonly required: readonly BillingProviderCapability[];
+};
+
+export type LicensedQuantityGatewayConformanceOptions = {
+  readonly createGateway: () => LicensedQuantityGateway | Promise<LicensedQuantityGateway>;
+  readonly externalSubscriptionId: string;
+  readonly initialQuantity: number;
+  readonly firstQuantity: number;
+  readonly newerQuantity: number;
 };
 
 export type BillingProviderConformanceSuite = {
@@ -173,6 +183,15 @@ export function createBillingProviderConformanceSuite<
     cases.push(...createBillingGatewayConformanceCases(options.providerName, options.gateway));
   }
 
+  if (options.licensedQuantity) {
+    cases.push(
+      ...createLicensedQuantityGatewayConformanceCases(
+        options.providerName,
+        options.licensedQuantity,
+      ),
+    );
+  }
+
   if (options.webhook) {
     cases.push(
       ...createBillingWebhookConformanceCases<TResult, THandler>(
@@ -194,6 +213,7 @@ const BILLING_PROVIDER_CAPABILITY_METHODS = {
     "resumeSubscription",
     "getCustomerPortalUrl",
   ],
+  "licensed-quantity": ["getQuantity", "setQuantity"],
   usage: ["ingest", "getCustomerMeterState"],
 } as const satisfies Record<BillingProviderCapability, readonly string[]>;
 
@@ -244,6 +264,72 @@ function createBillingProviderCapabilityConformanceCases(
         },
       }),
     ),
+  ];
+}
+
+function createLicensedQuantityGatewayConformanceCases(
+  providerName: string,
+  options: LicensedQuantityGatewayConformanceOptions,
+): BillingProviderConformanceCase[] {
+  return [
+    {
+      name: "applies licensed quantity idempotently and rejects stale source versions",
+      run: async () => {
+        const gateway = await options.createGateway();
+        const initial = await gateway.getQuantity(options.externalSubscriptionId);
+        assert.equal(
+          initial.quantity,
+          options.initialQuantity,
+          `${providerName} must expose the provider-observed licensed quantity`,
+        );
+
+        const firstInput = {
+          externalSubscriptionId: options.externalSubscriptionId,
+          quantity: options.firstQuantity,
+          reconciliationId: `${providerName}:quantity:first`,
+          operationId: `${providerName}:quantity:first:attempt:1`,
+          sourceVersion: 1,
+        };
+        const first = await gateway.setQuantity(firstInput);
+        assert.equal(
+          first.status,
+          "applied",
+          `${providerName} must apply the first licensed quantity update`,
+        );
+        const duplicate = await gateway.setQuantity(firstInput);
+        assert.equal(
+          duplicate.status,
+          "duplicate",
+          `${providerName} must acknowledge a repeated operation identity without another effect`,
+        );
+
+        const newer = await gateway.setQuantity({
+          externalSubscriptionId: options.externalSubscriptionId,
+          quantity: options.newerQuantity,
+          reconciliationId: `${providerName}:quantity:newer`,
+          operationId: `${providerName}:quantity:newer:attempt:1`,
+          sourceVersion: 2,
+        });
+        assert.equal(newer.status, "applied", `${providerName} must apply a newer source version`);
+        const stale = await gateway.setQuantity({
+          externalSubscriptionId: options.externalSubscriptionId,
+          quantity: options.firstQuantity,
+          reconciliationId: `${providerName}:quantity:stale`,
+          operationId: `${providerName}:quantity:stale:attempt:1`,
+          sourceVersion: 1,
+        });
+        assert.equal(
+          stale.status,
+          "stale",
+          `${providerName} must reject a quantity update older than the accepted source version`,
+        );
+        assert.equal(
+          (await gateway.getQuantity(options.externalSubscriptionId)).quantity,
+          options.newerQuantity,
+          `${providerName} must preserve the newer quantity after stale delivery`,
+        );
+      },
+    },
   ];
 }
 

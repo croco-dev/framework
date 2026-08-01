@@ -13,13 +13,13 @@ title: "MonetizationRecipeCapabilityDiagnostic"
 
 > `readonly` **code**: `"lifecycle-core/monetization-recipe-capability-missing"`
 
----
+***
 
 ### missingCapabilities
 
 > `readonly` **missingCapabilities**: readonly `string`[]
 
----
+***
 
 ### recipeId
 

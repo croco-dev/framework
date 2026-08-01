@@ -152,6 +152,9 @@ importers:
 
   examples/saas-billing-golden-path:
     dependencies:
+      '@croco/billing-core':
+        specifier: workspace:*
+        version: link:../../packages/billing-core
       '@croco/events-core':
         specifier: workspace:*
         version: link:../../packages/events-core
@@ -161,6 +164,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../../packages/framework-context
+      '@croco/membership-core':
+        specifier: workspace:*
+        version: link:../../packages/membership-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../../packages/problems-core

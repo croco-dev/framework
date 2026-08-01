@@ -15,7 +15,7 @@ BillingService 생성에 필요한 의존성과 체크아웃 입력 타입입니
 
 > **checkoutIdempotencyStore**: [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`CheckoutResult`](/api/billing-core/src/type-aliases/checkoutresult/)\>
 
----
+***
 
 ### checkoutReservationTtlMs?
 
@@ -24,7 +24,7 @@ BillingService 생성에 필요한 의존성과 체크아웃 입력 타입입니
 Maximum time one request owns an unfinished checkout reservation.
 Expiration lets a later request retry provider reconciliation or creation after an abandoned owner.
 
----
+***
 
 ### clock?
 
@@ -34,19 +34,19 @@ Expiration lets a later request retry provider reconciliation or creation after 
 
 `Date`
 
----
+***
 
 ### eventPublisher?
 
 > `optional` **eventPublisher?**: [`BillingLifecycleEventPublisher`](/api/billing-core/src/interfaces/billinglifecycleeventpublisher/)
 
----
+***
 
 ### gateway
 
 > **gateway**: [`BillingGateway`](/api/billing-core/src/interfaces/billinggateway/)
 
----
+***
 
 ### store
 

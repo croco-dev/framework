@@ -11,7 +11,7 @@ title: "MonetizationConditionEvaluation"
 
 ### TSignal
 
-`TSignal` _extends_ [`MonetizationLifecycleSignal`](/api/lifecycle-core/src/type-aliases/monetizationlifecyclesignal/)
+`TSignal` *extends* [`MonetizationLifecycleSignal`](/api/lifecycle-core/src/type-aliases/monetizationlifecyclesignal/)
 
 ## Properties
 
@@ -19,13 +19,13 @@ title: "MonetizationConditionEvaluation"
 
 > `readonly` **duplicate**: `boolean`
 
----
+***
 
 ### outOfOrder
 
 > `readonly` **outOfOrder**: `boolean`
 
----
+***
 
 ### signal
 

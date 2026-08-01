@@ -126,6 +126,16 @@ export type PlanRatingDefinition =
       readonly mode: "croco";
     };
 
+export type MembershipRole = "owner" | "admin" | "member" | "viewer";
+
+/** Defines the licensed quantity floor, included seats, quota, and billable membership roles. */
+export type SubscriptionQuantityPolicy = {
+  readonly minimumQuantity: number;
+  readonly includedSeats: number;
+  readonly seatQuota: number;
+  readonly billableMembershipRoles: readonly MembershipRole[];
+};
+
 export type PlanVersionDefinition = {
   readonly ref: PlanVersionRef;
   readonly planId: string;
@@ -137,6 +147,7 @@ export type PlanVersionDefinition = {
   readonly interval: PlanInterval;
   readonly intervalCount: number;
   readonly rating: PlanRatingDefinition;
+  readonly quantityPolicy: SubscriptionQuantityPolicy;
   readonly providerBindings: readonly ProviderPlanBinding[];
 };
 

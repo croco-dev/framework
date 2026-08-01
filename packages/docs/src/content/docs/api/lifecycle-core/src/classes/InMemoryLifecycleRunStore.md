@@ -46,7 +46,7 @@ Implementations must make this operation idempotent.
 
 [`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`abortClaim`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#abortclaim)
 
----
+***
 
 ### claim()
 
@@ -69,7 +69,7 @@ Distributed adapters must enforce both constraints in one shared transaction.
 
 [`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`claim`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#claim)
 
----
+***
 
 ### findByIdempotencyKey()
 
@@ -89,7 +89,7 @@ Distributed adapters must enforce both constraints in one shared transaction.
 
 [`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`findByIdempotencyKey`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#findbyidempotencykey)
 
----
+***
 
 ### findLatestForRule()
 
@@ -117,7 +117,7 @@ Distributed adapters must enforce both constraints in one shared transaction.
 
 [`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`findLatestForRule`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#findlatestforrule)
 
----
+***
 
 ### list()
 
@@ -137,7 +137,7 @@ Distributed adapters must enforce both constraints in one shared transaction.
 
 [`LifecycleRunStore`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/).[`list`](/api/lifecycle-core/src/interfaces/lifecyclerunstore/#list)
 
----
+***
 
 ### save()
 

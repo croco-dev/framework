@@ -10,9 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@croco/billing-core": "workspace:*",
     "@croco/events-core": "workspace:*",
     "@croco/events-inmemory": "workspace:*",
     "@croco/framework-context": "workspace:*",
+    "@croco/membership-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
     "@croco/retry-core": "workspace:*",

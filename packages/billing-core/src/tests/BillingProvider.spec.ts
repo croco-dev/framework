@@ -5,6 +5,7 @@ import {
   type BillingGateway,
   type BillingProviderImplementations,
   type BillingProviderProfile,
+  type LicensedQuantityGateway,
   type UsageBillingGateway,
 } from "../index";
 import { ProviderCapabilityUnavailableProblem } from "../libs/problems/BillingProblems";
@@ -43,6 +44,10 @@ describe("BillingProvider", () => {
       providerName: "checkout-only",
       capabilities: {
         checkout: { supported: true },
+        "licensed-quantity": {
+          supported: false,
+          reason: "Licensed quantity updates are not implemented.",
+        },
         usage: { supported: false, reason: "Usage billing is not implemented." },
       },
     });
@@ -61,6 +66,10 @@ describe("BillingProvider", () => {
         providerName: "checkout-only",
         capabilities: {
           checkout: { supported: true },
+          "licensed-quantity": {
+            supported: false,
+            reason: "Licensed quantity updates are not implemented.",
+          },
           usage: { supported: false, reason: "Usage billing is not implemented." },
         },
       }),
@@ -87,12 +96,14 @@ describe("BillingProvider", () => {
       providerName: "dynamic-provider",
       capabilities: {
         checkout: { supported: true },
+        "licensed-quantity": { supported: true },
         usage: { supported: true },
       },
     };
 
     expectTypeOf<BillingProviderImplementations<typeof profile>>().toEqualTypeOf<{
       readonly checkout: BillingGateway;
+      readonly "licensed-quantity": LicensedQuantityGateway;
       readonly usage: UsageBillingGateway;
     }>();
     expect(() =>
@@ -108,6 +119,55 @@ describe("BillingProvider", () => {
     );
   });
 
+  it("rejects licensed-quantity support without a licensed quantity gateway", () => {
+    const profile = defineBillingProviderProfile({
+      providerName: "licensed-quantity-provider",
+      capabilities: {
+        checkout: { supported: false, reason: "Checkout is not implemented." },
+        "licensed-quantity": { supported: true },
+        usage: { supported: false, reason: "Usage billing is not implemented." },
+      },
+    });
+
+    expect(() =>
+      defineBillingProvider(profile, {} as BillingProviderImplementations<typeof profile>),
+    ).toThrowError(
+      expect.objectContaining({
+        code: "billing/provider-capability-unavailable",
+        extensions: {
+          capability: "licensed-quantity",
+          providerName: "licensed-quantity-provider",
+        },
+      }),
+    );
+  });
+
+  it("fails explicitly and exposes an inspectable profile when licensed quantity is unsupported", () => {
+    const gateway = createCheckoutGateway();
+    const provider = defineBillingProvider(
+      defineBillingProviderProfile({
+        providerName: "checkout-only",
+        capabilities: {
+          checkout: { supported: true },
+          "licensed-quantity": {
+            supported: false,
+            reason: "Licensed quantity updates are not implemented.",
+          },
+          usage: { supported: false, reason: "Usage billing is not implemented." },
+        },
+      }),
+      { checkout: gateway },
+    );
+
+    expect(provider.profile.capabilities["licensed-quantity"]).toEqual({
+      supported: false,
+      reason: "Licensed quantity updates are not implemented.",
+    });
+    expect(() => provider.requireCapability("licensed-quantity")).toThrow(
+      ProviderCapabilityUnavailableProblem,
+    );
+  });
+
   it("retains usage capability inference and duplicate acknowledgements as receipt data", async () => {
     const usage = createUsageGateway();
     const provider = defineBillingProvider(
@@ -115,6 +175,10 @@ describe("BillingProvider", () => {
         providerName: "usage-provider",
         capabilities: {
           checkout: { supported: true },
+          "licensed-quantity": {
+            supported: false,
+            reason: "Licensed quantity updates are not implemented.",
+          },
           usage: { supported: true },
         },
       }),

@@ -741,7 +741,13 @@
           "POLAR_WEBHOOK_SECRET",
           "POLAR_ORGANIZATION_ID optional"
         ],
-        "features": ["checkout", "webhooks", "subscription lifecycle", "customer portal"]
+        "features": [
+          "checkout",
+          "webhooks",
+          "subscription lifecycle",
+          "customer portal",
+          "explicit licensed-quantity unsupported diagnostic"
+        ]
       },
       "credits-drizzle": {
         "domain": "Credits",
@@ -1286,7 +1292,7 @@
           "diagnostics": {
             "status": "present",
             "command": "pnpm --filter @croco/billing-polar test",
-            "description": "PolarBillingDiagnosticsProvider tests cover readiness output and safe configuration reporting."
+            "description": "PolarBillingDiagnosticsProvider tests cover readiness output, safe configuration reporting, and explicit unsupported licensed-quantity capability metadata."
           },
           "redactionTests": {
             "status": "present",
@@ -1294,7 +1300,10 @@
             "description": "Diagnostics and webhook validation Problem tests cover Polar token, webhook secret, and signature-like value redaction before caller/report surfacing."
           }
         },
-        "knownGaps": ["Recorded real Polar liveSmoke evidence is required before certified state."]
+        "knownGaps": [
+          "Recorded real Polar liveSmoke evidence is required before certified state.",
+          "Polar does not expose the @croco/billing-core licensed-quantity capability."
+        ]
       },
       {
         "package": "@croco/search-meilisearch",

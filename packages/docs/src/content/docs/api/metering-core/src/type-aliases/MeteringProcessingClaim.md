@@ -13,13 +13,13 @@ title: "MeteringProcessingClaim"
 
 > `optional` **delivery?**: [`PendingMeteringDelivery`](/api/metering-core/src/type-aliases/pendingmeteringdelivery/)
 
----
+***
 
 ### operationId
 
 > **operationId**: `string`
 
----
+***
 
 ### token
 

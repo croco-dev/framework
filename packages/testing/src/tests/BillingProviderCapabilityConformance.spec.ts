@@ -33,6 +33,10 @@ describe("billing provider capability conformance", () => {
               providerName: "capability-provider",
               capabilities: {
                 checkout: { supported: true },
+                "licensed-quantity": {
+                  supported: false,
+                  reason: "Licensed quantity updates are unavailable.",
+                },
                 usage: { supported: true },
               },
             }),
@@ -61,6 +65,10 @@ describe("billing provider capability conformance", () => {
               providerName: "checkout-provider",
               capabilities: {
                 checkout: { supported: true },
+                "licensed-quantity": {
+                  supported: false,
+                  reason: "Licensed quantity updates are unavailable.",
+                },
                 usage: { supported: false, reason: "Usage delivery is unavailable." },
               },
             }),

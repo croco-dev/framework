@@ -13,19 +13,19 @@ title: "MonetizationThresholdClaimResult"
 
 > `readonly` `optional` **claimId?**: `string`
 
----
+***
 
 ### crossedThresholds
 
 > `readonly` **crossedThresholds**: readonly `number`[]
 
----
+***
 
 ### outOfOrder
 
 > `readonly` **outOfOrder**: `boolean`
 
----
+***
 
 ### suppressedDuplicateCount
 

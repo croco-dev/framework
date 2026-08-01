@@ -1,4 +1,4 @@
-export const BILLING_PROVIDER_CAPABILITIES = ["checkout", "usage"] as const;
+export const BILLING_PROVIDER_CAPABILITIES = ["checkout", "usage", "licensed-quantity"] as const;
 
 export type BillingProviderCapability = (typeof BILLING_PROVIDER_CAPABILITIES)[number];
 
@@ -13,6 +13,7 @@ export type BillingProviderCapabilityAvailability =
 
 export type BillingProviderCapabilityProfile = {
   readonly checkout: BillingProviderCapabilityAvailability;
+  readonly "licensed-quantity": BillingProviderCapabilityAvailability;
   readonly usage: BillingProviderCapabilityAvailability;
 };
 

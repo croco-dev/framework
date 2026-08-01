@@ -18,6 +18,10 @@ title: "DomainEvent"
 - [`SubscriptionCanceledEvent`](/api/billing-core/src/classes/subscriptioncanceledevent/)
 - [`SubscriptionPastDueEvent`](/api/billing-core/src/classes/subscriptionpastdueevent/)
 - [`SubscriptionRevokedEvent`](/api/billing-core/src/classes/subscriptionrevokedevent/)
+- [`SubscriptionQuantityDriftDetectedEvent`](/api/billing-core/src/classes/subscriptionquantitydriftdetectedevent/)
+- [`SubscriptionQuantityDriftRecoveredEvent`](/api/billing-core/src/classes/subscriptionquantitydriftrecoveredevent/)
+- [`SubscriptionQuantityReconciliationFailedEvent`](/api/billing-core/src/classes/subscriptionquantityreconciliationfailedevent/)
+- [`SubscriptionQuantityReconciliationSucceededEvent`](/api/billing-core/src/classes/subscriptionquantityreconciliationsucceededevent/)
 - [`CreditLedgerCommittedEvent`](/api/credits-core/src/classes/creditledgercommittedevent/)
 - [`HealthScoreDroppedEvent`](/api/customer-health-core/src/classes/healthscoredroppedevent/)
 - [`HealthStatusChangedEvent`](/api/customer-health-core/src/classes/healthstatuschangedevent/)
@@ -67,25 +71,25 @@ title: "DomainEvent"
 
 > `readonly` **eventId**: `string`
 
----
+***
 
 ### eventName
 
 > `readonly` **eventName**: `string`
 
----
+***
 
 ### metadata
 
 > **metadata**: [`DomainEventMetadata`](/api/events-core/src/type-aliases/domaineventmetadata/)
 
----
+***
 
 ### timestamp
 
 > `readonly` **timestamp**: `Date`
 
----
+***
 
 ### eventName?
 

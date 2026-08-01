@@ -30,6 +30,12 @@ describe("BillingEventHandler", () => {
     interval: plan.interval,
     intervalCount: plan.intervalCount,
     rating: { mode: "provider", provider: "test" },
+    quantityPolicy: {
+      minimumQuantity: 1,
+      includedSeats: 0,
+      seatQuota: 100,
+      billableMembershipRoles: ["owner", "admin", "member"],
+    },
     providerBindings: [
       {
         provider: "test",

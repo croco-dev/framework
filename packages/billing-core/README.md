@@ -106,7 +106,8 @@ annual.toString();
 - `BillingStore`, billing account, subscription, order 저장 계약입니다.
 - `BillingGateway`, 외부 결제 제공자 연동 계약입니다.
 - `UsageBillingGateway`, 배치 usage 수신과 customer meter state 조회 계약입니다.
-- `BillingProvider`, inspectable capability profile과 런타임 구현을 조합합니다.
+- `BillingProvider`, inspectable capability profile과 런타임 구현을 조합하고 지원 capability를 검사합니다.
+- `SubscriptionQuantityReconciler`, membership 기반 licensed quantity를 비동기로 수렴시킵니다.
 - `InMemoryBillingStore`, 테스트용 인메모리 저장소입니다.
 - `InMemoryPlanRegistry`, 게시 후 변경할 수 없는 플랜 버전을 조회하는 인메모리 레지스트리입니다.
 - `Money`, 통화 안전 계산용 값 객체입니다.
@@ -123,6 +124,7 @@ annual.toString();
 - `BillingAccount`, `Subscription`, `Order`, `Invoice`, `Plan`, `PlanVersionDefinition`
 - `CreateCheckoutParams`, `CheckoutResult`
 - `UsageBillingEvent`, `UsageBillingEventReceipt`, `CustomerMeterState`
+- `SubscriptionQuantitySource`, `LicensedQuantityGateway`, `SubscriptionQuantitySnapshot`
 - `CreateBillingCheckoutParams`, `BillingServiceDependencies`
 - `PlanTransitionParams`, `ProrationCalculationParams`, `GenerateInvoiceParams`
 
@@ -165,6 +167,12 @@ await registry.publishPlanVersion({
   interval: "month",
   intervalCount: 1,
   rating: { mode: "provider", provider: "polar" },
+  quantityPolicy: {
+    minimumQuantity: 1,
+    includedSeats: 2,
+    seatQuota: 100,
+    billableMembershipRoles: ["owner", "admin", "member"],
+  },
   providerBindings: [
     {
       provider: "polar",
@@ -183,3 +191,41 @@ await registry.publishPlanVersion({
 product/price 또는 배포 이력을 사용해 정확한 `PlanVersionRef`를 정하고,
 `migrateSubscriptionPlanVersion(legacySubscription, explicitRef, registry)`로 plan family 일치 여부를
 검증한 뒤 `planVersionRef` 컬럼을 `NOT NULL`로 전환해야 합니다.
+
+## Licensed subscription quantity reconciliation
+
+플랜 버전은 `quantityPolicy`로 최소 provider quantity, 포함 좌석, entitlement 좌석 한도,
+billable membership role을 함께 고정합니다. 애플리케이션 composition root는 membership 상태를 읽는
+`SubscriptionQuantitySource`를 구현하고 provider가 명시적으로 노출한
+`licensed-quantity` capability를 reconciler에 전달합니다.
+
+```ts
+const reconciler = new SubscriptionQuantityReconciler({
+  source: membershipSeatQuantitySource,
+  gateway: billingProvider.require("licensed-quantity"),
+  store: reconciliationStore,
+  planRegistry,
+  eventPublisher,
+  repairSource: subscriptionInventory,
+});
+
+await reconciler.createIntent({
+  tenantId,
+  subscriptionId,
+  externalSubscriptionId,
+  planVersionRef,
+  reason: "membership.changed",
+});
+
+// 별도 worker 또는 scheduler에서 실행
+await reconciler.repair(100);
+```
+
+멤버십 요청 경로에서 provider를 호출하지 않습니다. membership commit 후 이벤트 handler가 intent를
+생성하고, 별도 worker의 `repair(limit)`가 bounded subscription inventory scan으로 최초 intent가
+없는 누락 전달과 retryable failure를 다시 수렴시켜야 합니다. 영속 store adapter는 source
+version과 revision을 원자적으로 비교해야 하며,
+`LicensedQuantityGateway.setQuantity()`는 같은 provider operation identity를 duplicate success로,
+더 오래된 source version을 side effect 없는 `stale` 결과로 처리해야 합니다. 하나의 안정적인
+reconciliation identity 아래에서 응답 유실 재시도는 operation identity를 재사용하고, 이후 새로
+관측한 provider drift 복구는 새 operation identity를 사용합니다.

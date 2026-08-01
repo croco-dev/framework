@@ -55,7 +55,7 @@ title: "InvitationManager"
 
 `Promise`\<[`TxRunOutcome`](/api/tx-core/src/type-aliases/txrunoutcome/)\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>\>
 
----
+***
 
 ### createEmailInvitation()
 
@@ -71,7 +71,7 @@ title: "InvitationManager"
 
 `Promise`\<`string`\>
 
----
+***
 
 ### createLinkInvitation()
 
@@ -87,7 +87,7 @@ title: "InvitationManager"
 
 `Promise`\<`string`\>
 
----
+***
 
 ### declineInvitation()
 
@@ -103,7 +103,7 @@ title: "InvitationManager"
 
 `Promise`\<[`Invitation`](/api/invitation-core/src/type-aliases/invitation/)\>
 
----
+***
 
 ### resendInvitation()
 
@@ -119,7 +119,7 @@ title: "InvitationManager"
 
 `Promise`\<`string`\>
 
----
+***
 
 ### revokeInvitation()
 

@@ -25,7 +25,7 @@ Duplicate events are successful acknowledgements and must be returned with a `du
 
 `Promise`\<[`CustomerMeterState`](/api/billing-core/src/type-aliases/customermeterstate/) \| `null`\>
 
----
+***
 
 ### ingest()
 

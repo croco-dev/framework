@@ -36,6 +36,12 @@ function createVersion(
       },
     ],
     ...overrides,
+    quantityPolicy: overrides.quantityPolicy ?? {
+      minimumQuantity: 1,
+      includedSeats: 0,
+      seatQuota: 100,
+      billableMembershipRoles: ["owner", "admin", "member"],
+    },
   };
 }
 
@@ -241,6 +247,59 @@ describe("InMemoryPlanRegistry", () => {
         }),
       ),
     ).rejects.toBeInstanceOf(InvalidPlanVersionDefinitionProblem);
+  });
+
+  it("requires an internally valid quantity policy on every plan version", async () => {
+    const registry = new InMemoryPlanRegistry();
+
+    for (const quantityPolicy of [
+      {
+        minimumQuantity: -1,
+        includedSeats: 0,
+        seatQuota: 25,
+        billableMembershipRoles: ["member"] as const,
+      },
+      {
+        minimumQuantity: 1,
+        includedSeats: -1,
+        seatQuota: 25,
+        billableMembershipRoles: ["member"] as const,
+      },
+      {
+        minimumQuantity: 1,
+        includedSeats: 0,
+        seatQuota: -1,
+        billableMembershipRoles: ["member"] as const,
+      },
+      {
+        minimumQuantity: 1,
+        includedSeats: 0,
+        seatQuota: 25,
+        billableMembershipRoles: [] as const,
+      },
+      {
+        minimumQuantity: 1,
+        includedSeats: 0,
+        seatQuota: 25,
+        billableMembershipRoles: ["member", "member"] as const,
+      },
+      {
+        minimumQuantity: 1,
+        includedSeats: 26,
+        seatQuota: 25,
+        billableMembershipRoles: ["member"] as const,
+      },
+      {
+        minimumQuantity: 26,
+        includedSeats: 0,
+        seatQuota: 25,
+        billableMembershipRoles: ["member"] as const,
+      },
+    ]) {
+      await expect(registry.publishPlanVersion(createVersion({ quantityPolicy }))).rejects.toThrow(
+        InvalidPlanVersionDefinitionProblem,
+      );
+    }
   });
 });
 

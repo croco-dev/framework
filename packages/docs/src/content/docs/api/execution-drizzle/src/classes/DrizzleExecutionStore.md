@@ -15,7 +15,7 @@ title: "DrizzleExecutionStore"
 
 ### TDb
 
-`TDb` _extends_ `ExecutionDb`
+`TDb` *extends* `ExecutionDb`
 
 ## Implements
 
@@ -70,7 +70,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionContinuationStore`](/api/execution-core/src/interfaces/executioncontinuationstore/).[`acquireContinuation`](/api/execution-core/src/interfaces/executioncontinuationstore/#acquirecontinuation)
 
----
+***
 
 ### appendLog()
 
@@ -96,7 +96,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionLogStore`](/api/execution-core/src/interfaces/executionlogstore/).[`appendLog`](/api/execution-core/src/interfaces/executionlogstore/#appendlog)
 
----
+***
 
 ### create()
 
@@ -118,7 +118,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`create`](/api/execution-core/src/classes/executionstore/#create)
 
----
+***
 
 ### delete()
 
@@ -140,7 +140,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`delete`](/api/execution-core/src/classes/executionstore/#delete)
 
----
+***
 
 ### findById()
 
@@ -162,7 +162,7 @@ Drizzle 클라이언트를 받아 실행 저장소를 초기화합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`findById`](/api/execution-core/src/classes/executionstore/#findbyid)
 
----
+***
 
 ### findByIdempotencyKey()
 
@@ -184,7 +184,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`findByIdempotencyKey`](/api/execution-core/src/classes/executionstore/#findbyidempotencykey)
 
----
+***
 
 ### list()
 
@@ -206,7 +206,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`list`](/api/execution-core/src/classes/executionstore/#list)
 
----
+***
 
 ### listRunning()
 
@@ -228,7 +228,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`listRunning`](/api/execution-core/src/classes/executionstore/#listrunning)
 
----
+***
 
 ### mergeCheckpoint()
 
@@ -258,7 +258,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`mergeCheckpoint`](/api/execution-core/src/classes/executionstore/#mergecheckpoint)
 
----
+***
 
 ### update()
 
@@ -284,7 +284,7 @@ idempotencyKey로 기존 실행을 조회합니다.
 
 [`ExecutionStore`](/api/execution-core/src/classes/executionstore/).[`update`](/api/execution-core/src/classes/executionstore/#update)
 
----
+***
 
 ### updateClaimedContinuation()
 
@@ -310,7 +310,7 @@ fencing token이 현재 claim과 일치할 때만 continuation 상태를 갱신�
 
 [`ExecutionContinuationStore`](/api/execution-core/src/interfaces/executioncontinuationstore/).[`updateClaimedContinuation`](/api/execution-core/src/interfaces/executioncontinuationstore/#updateclaimedcontinuation)
 
----
+***
 
 ### updateIfStatus()
 

@@ -37,7 +37,7 @@ title: "MonetizationThresholdTracker"
 
 `Promise`\<`void`\>
 
----
+***
 
 ### evaluate()
 
@@ -53,7 +53,7 @@ title: "MonetizationThresholdTracker"
 
 `Promise`\<[`MonetizationThresholdEvaluation`](/api/lifecycle-core/src/type-aliases/monetizationthresholdevaluation/)\>
 
----
+***
 
 ### release()
 

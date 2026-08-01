@@ -4,6 +4,8 @@ import { EventAfterCommitRequiresActiveTransactionProblem } from "@croco/events-
 import type { EventPublisher } from "@croco/events-core";
 import { Container } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MembershipCreatedEvent } from "../libs/events/MembershipCreatedEvent";
+import type { MembershipRemovedEvent } from "../libs/events/MembershipRemovedEvent";
 import { MembershipUpdatedEvent } from "../libs/events/MembershipUpdatedEvent";
 import { InMemoryMembershipStore } from "../libs/InMemoryMembershipStore";
 import { MembershipService } from "../libs/MembershipService";
@@ -127,6 +129,21 @@ describe("MembershipService", () => {
       expect(membership.userId).toBe("user-1");
       expect(membership.role).toBe("member");
     });
+
+    it("should defer the membership-created event until commit when a transaction is active", async () => {
+      const afterCommitEvents: MembershipCreatedEvent[] = [];
+      service = new MembershipService(store, {
+        publishAfterCommit: (event: MembershipCreatedEvent) => {
+          afterCommitEvents.push(event);
+        },
+        publishNow,
+      } as unknown as EventPublisher);
+
+      await service.addMember("tenant-1", "user-1", "member");
+
+      expect(afterCommitEvents).toHaveLength(1);
+      expect(publishNow).not.toHaveBeenCalled();
+    });
   });
 
   describe("seat limit", () => {
@@ -144,7 +161,13 @@ describe("MembershipService", () => {
 
       service = new MembershipService(
         store,
-        { publishNow, publishMany: vi.fn() } as unknown as EventPublisher,
+        {
+          publishAfterCommit: vi.fn(() => {
+            throw new EventAfterCommitRequiresActiveTransactionProblem();
+          }),
+          publishNow,
+          publishMany: vi.fn(),
+        } as unknown as EventPublisher,
         seatLimitChecker,
       );
 
@@ -167,7 +190,13 @@ describe("MembershipService", () => {
 
       service = new MembershipService(
         store,
-        { publishNow, publishMany: vi.fn() } as unknown as EventPublisher,
+        {
+          publishAfterCommit: vi.fn(() => {
+            throw new EventAfterCommitRequiresActiveTransactionProblem();
+          }),
+          publishNow,
+          publishMany: vi.fn(),
+        } as unknown as EventPublisher,
         seatLimitChecker,
       );
 
@@ -200,9 +229,28 @@ describe("MembershipService", () => {
       expect(membership).toBeNull();
     });
 
+    it("should defer the membership-removed event until commit when a transaction is active", async () => {
+      const afterCommitEvents: MembershipRemovedEvent[] = [];
+      service = new MembershipService(store, {
+        publishAfterCommit: (event: MembershipRemovedEvent) => {
+          afterCommitEvents.push(event);
+        },
+        publishNow,
+      } as unknown as EventPublisher);
+      await seedMembership({ role: "member" });
+
+      await service.removeMember("tenant-1", "user-1");
+
+      expect(afterCommitEvents).toHaveLength(1);
+      expect(publishNow).not.toHaveBeenCalled();
+    });
+
     it("allows only one concurrent owner removal after both mutations reach the barrier", async () => {
       store = new BarrierMembershipStore();
       service = new MembershipService(store, {
+        publishAfterCommit: vi.fn(() => {
+          throw new EventAfterCommitRequiresActiveTransactionProblem();
+        }),
         publishNow,
         publishMany: vi.fn(),
       } as unknown as EventPublisher);
@@ -262,6 +310,9 @@ describe("MembershipService", () => {
     it("allows only one concurrent owner demotion after both mutations reach the barrier", async () => {
       store = new BarrierMembershipStore();
       service = new MembershipService(store, {
+        publishAfterCommit: vi.fn(() => {
+          throw new EventAfterCommitRequiresActiveTransactionProblem();
+        }),
         publishNow,
         publishMany: vi.fn(),
       } as unknown as EventPublisher);

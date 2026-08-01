@@ -9,9 +9,9 @@ title: "MonetizationSignalMetadataByType"
 
 ## Properties
 
-### billing.credit.balance_low
+### billing.credit.balance\_low
 
-> `readonly` **billing.credit.balance_low**: `object`
+> `readonly` **billing.credit.balance\_low**: `object`
 
 #### conditionId
 
@@ -29,7 +29,7 @@ title: "MonetizationSignalMetadataByType"
 
 > `readonly` **status**: `"low"`
 
----
+***
 
 ### billing.credit.exhausted
 
@@ -51,11 +51,11 @@ title: "MonetizationSignalMetadataByType"
 
 > `readonly` **status**: `"exhausted"`
 
----
+***
 
-### billing.seat.quantity_drifted
+### billing.seat.quantity\_drifted
 
-> `readonly` **billing.seat.quantity_drifted**: `object`
+> `readonly` **billing.seat.quantity\_drifted**: `object`
 
 #### conditionId
 
@@ -73,11 +73,11 @@ title: "MonetizationSignalMetadataByType"
 
 > `readonly` **status**: `"drifted"`
 
----
+***
 
-### billing.subscription.past_due
+### billing.subscription.past\_due
 
-> `readonly` **billing.subscription.past_due**: `object`
+> `readonly` **billing.subscription.past\_due**: `object`
 
 #### conditionId
 
@@ -95,7 +95,7 @@ title: "MonetizationSignalMetadataByType"
 
 > `readonly` **status**: `"past_due"`
 
----
+***
 
 ### billing.subscription.recovered
 
@@ -121,7 +121,7 @@ title: "MonetizationSignalMetadataByType"
 
 > `readonly` **status**: `"recovered"`
 
----
+***
 
 ### billing.trial.ending
 
@@ -139,11 +139,11 @@ title: "MonetizationSignalMetadataByType"
 
 > `readonly` **status**: `"ending"`
 
----
+***
 
-### billing.usage.delivery_lagging
+### billing.usage.delivery\_lagging
 
-> `readonly` **billing.usage.delivery_lagging**: `object`
+> `readonly` **billing.usage.delivery\_lagging**: `object`
 
 #### conditionId
 
@@ -161,11 +161,11 @@ title: "MonetizationSignalMetadataByType"
 
 > `readonly` **status**: `"lagging"`
 
----
+***
 
-### billing.usage.sync_drifted
+### billing.usage.sync\_drifted
 
-> `readonly` **billing.usage.sync_drifted**: `object`
+> `readonly` **billing.usage.sync\_drifted**: `object`
 
 #### conditionId
 
@@ -183,11 +183,11 @@ title: "MonetizationSignalMetadataByType"
 
 > `readonly` **status**: `"drifted"`
 
----
+***
 
-### billing.usage.threshold_crossed
+### billing.usage.threshold\_crossed
 
-> `readonly` **billing.usage.threshold_crossed**: `object`
+> `readonly` **billing.usage.threshold\_crossed**: `object`
 
 #### planVersionRef
 

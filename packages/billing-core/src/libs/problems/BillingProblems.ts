@@ -210,3 +210,80 @@ export class SubscriptionPlanVersionMismatchProblem extends Problem {
     );
   }
 }
+
+/** Reports why a licensed subscription quantity or quantity policy is invalid. */
+export class InvalidSubscriptionQuantityProblem extends Problem {
+  readonly code = "billing/invalid-subscription-quantity";
+  readonly category = ProblemCategory.BadRequest;
+  constructor(reason: string) {
+    super(undefined, undefined, `Subscription quantity is invalid: ${reason}`);
+  }
+}
+
+export class SubscriptionQuantitySourceMismatchProblem extends Problem {
+  readonly code = "billing/subscription-quantity-source-mismatch";
+  readonly category = ProblemCategory.Conflict;
+  constructor(
+    expectedPlanVersionRef: string,
+    actualPlanVersionRef: string,
+    expectedSeatQuota: number,
+    actualSeatQuota: number,
+  ) {
+    super(
+      undefined,
+      undefined,
+      `Quantity source resolved plan '${actualPlanVersionRef}' with seat quota ${actualSeatQuota}; expected plan '${expectedPlanVersionRef}' with seat quota ${expectedSeatQuota}`,
+    );
+  }
+}
+
+export class SubscriptionQuantityReconciliationConflictProblem extends Problem {
+  readonly code = "billing/subscription-quantity-reconciliation-conflict";
+  readonly category = ProblemCategory.Conflict;
+  constructor(externalSubscriptionId: string, sourceVersion: number) {
+    super(undefined, undefined, "Source version resolved to conflicting quantity intents", {
+      extensions: { externalSubscriptionId, sourceVersion },
+    });
+  }
+}
+
+export class SubscriptionQuantityReconciliationFailedProblem extends Problem {
+  readonly code = "billing/subscription-quantity-reconciliation-failed";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor(externalSubscriptionId: string, cause?: Error) {
+    super(undefined, undefined, "Licensed quantity reconciliation failed", {
+      ...(cause ? { cause } : {}),
+      extensions: { externalSubscriptionId },
+    });
+  }
+}
+
+export class SubscriptionQuantityProviderMismatchProblem extends Problem {
+  readonly code = "billing/subscription-quantity-provider-mismatch";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor(externalSubscriptionId: string, expectedQuantity: number, actualQuantity: number) {
+    super(
+      undefined,
+      undefined,
+      `Provider quantity ${actualQuantity} did not match expected quantity ${expectedQuantity}`,
+      { extensions: { externalSubscriptionId } },
+    );
+  }
+}
+
+export class SubscriptionQuantityProviderSourceAheadProblem extends Problem {
+  readonly code = "billing/subscription-quantity-provider-source-ahead";
+  readonly category = ProblemCategory.Conflict;
+  constructor(
+    externalSubscriptionId: string,
+    localSourceVersion: number,
+    providerSourceVersion: number,
+  ) {
+    super(
+      undefined,
+      undefined,
+      "Provider accepted a source version ahead of the local source version",
+      { extensions: { externalSubscriptionId, localSourceVersion, providerSourceVersion } },
+    );
+  }
+}

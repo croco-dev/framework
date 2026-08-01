@@ -10,7 +10,6 @@ Idempotency 관리자
 ## Description
 
 Redis SET NX 기반으로 중복 요청을 방지합니다.
-
 - 사용자 제공 idempotencyKey가 있으면 사용
 - 없으면 ULID 자동 생성
 
@@ -66,7 +65,7 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### abortProcessing()
 
@@ -96,7 +95,7 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 `Promise`\<`void`\>
 
----
+***
 
 ### beginProcessing()
 
@@ -124,7 +123,7 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 새 lease의 ownership claim, 중복 key이면 null
 
----
+***
 
 ### beginProcessingOrThrow()
 
@@ -156,7 +155,7 @@ Redis SET NX 기반으로 중복 요청을 방지합니다.
 
 DuplicateRecordProblem 동일한 idempotency key가 이미 처리 중이거나 완료된 경우
 
----
+***
 
 ### checkAndMark()
 
@@ -184,7 +183,7 @@ DuplicateRecordProblem 동일한 idempotency key가 이미 처리 중이거나 �
 
 true: 새 요청 (처리 가능), false: 중복 (이미 처리됨)
 
----
+***
 
 ### checkAndMarkOrThrow()
 
@@ -214,7 +213,7 @@ true: 새 요청 (처리 가능), false: 중복 (이미 처리됨)
 
 DuplicateRecordProblem 중복 시
 
----
+***
 
 ### claimMeteringProcessingOrThrow()
 
@@ -238,7 +237,7 @@ DuplicateRecordProblem 중복 시
 
 `Promise`\<[`MeteringProcessingClaim`](/api/metering-core/src/type-aliases/meteringprocessingclaim/)\>
 
----
+***
 
 ### completeMeteringProcessing()
 
@@ -266,7 +265,7 @@ DuplicateRecordProblem 중복 시
 
 `Promise`\<`void`\>
 
----
+***
 
 ### completeProcessing()
 
@@ -296,7 +295,7 @@ DuplicateRecordProblem 중복 시
 
 `Promise`\<`void`\>
 
----
+***
 
 ### ensureIdempotencyKey()
 
@@ -314,7 +313,7 @@ Idempotency key 확보 (없으면 생성)
 
 `string`
 
----
+***
 
 ### markMeteringEventsPublishing()
 
@@ -346,7 +345,7 @@ Idempotency key 확보 (없으면 생성)
 
 `Promise`\<`void`\>
 
----
+***
 
 ### releaseMeteringEvents()
 
@@ -374,7 +373,7 @@ Idempotency key 확보 (없으면 생성)
 
 `Promise`\<`void`\>
 
----
+***
 
 ### releaseMeteringProcessing()
 

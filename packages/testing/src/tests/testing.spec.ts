@@ -4,6 +4,9 @@ import type {
   BillingLifecycleGatewayOptions,
   CheckoutResult,
   CreateCheckoutParams,
+  LicensedQuantityGateway,
+  SetLicensedQuantityInput,
+  SetLicensedQuantityResult,
 } from "@croco/billing-core";
 import type { EventHandler } from "@croco/events-core";
 import { DomainEvent, EventBusConfig, RegisterEventHandler } from "@croco/events-core";
@@ -168,6 +171,37 @@ class InMemoryBillingGateway implements BillingGateway {
 class FailingBillingGateway extends InMemoryBillingGateway {
   override async createCheckout(_params: CreateCheckoutParams): Promise<CheckoutResult> {
     throw new TestingBillingProblem("provider checkout failed");
+  }
+}
+
+class InMemoryLicensedQuantityGateway implements LicensedQuantityGateway {
+  private readonly quantities = new Map<string, number>();
+  private readonly acceptedSourceVersions = new Map<string, number>();
+  private readonly reconciliations = new Set<string>();
+
+  async getQuantity(externalSubscriptionId: string): Promise<{ quantity: number }> {
+    return { quantity: this.quantities.get(externalSubscriptionId) ?? 0 };
+  }
+
+  async setQuantity(input: SetLicensedQuantityInput): Promise<SetLicensedQuantityResult> {
+    const quantity = this.quantities.get(input.externalSubscriptionId) ?? 0;
+    const acceptedSourceVersion =
+      this.acceptedSourceVersions.get(input.externalSubscriptionId) ?? -1;
+    const operationKey = `${input.externalSubscriptionId}:${input.operationId}`;
+    if (this.reconciliations.has(operationKey)) {
+      return { status: "duplicate", observation: { quantity } };
+    }
+    if (input.sourceVersion < acceptedSourceVersion) {
+      return {
+        status: "stale",
+        observation: { quantity },
+        acceptedSourceVersion,
+      };
+    }
+    this.reconciliations.add(operationKey);
+    this.acceptedSourceVersions.set(input.externalSubscriptionId, input.sourceVersion);
+    this.quantities.set(input.externalSubscriptionId, input.quantity);
+    return { status: "applied", observation: { quantity: input.quantity } };
   }
 }
 
@@ -1649,6 +1683,13 @@ describe("@croco/testing", () => {
     it.each(
       createBillingProviderConformanceSuite({
         providerName: "in-memory-billing",
+        licensedQuantity: {
+          createGateway: () => new InMemoryLicensedQuantityGateway(),
+          externalSubscriptionId: "sub-conformance",
+          initialQuantity: 0,
+          firstQuantity: 3,
+          newerQuantity: 5,
+        },
         gateway: {
           createGateway: () => new InMemoryBillingGateway(),
           getCheckoutCreateCount: (gateway) => gateway.checkoutCreateCount,

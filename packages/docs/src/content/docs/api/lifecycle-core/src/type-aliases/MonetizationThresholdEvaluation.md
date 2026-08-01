@@ -13,19 +13,19 @@ title: "MonetizationThresholdEvaluation"
 
 > `readonly` `optional` **claimId?**: `string`
 
----
+***
 
 ### outOfOrder
 
 > `readonly` **outOfOrder**: `boolean`
 
----
+***
 
 ### signals
 
 > `readonly` **signals**: readonly [`MonetizationLifecycleSignal`](/api/lifecycle-core/src/type-aliases/monetizationlifecyclesignal/)\<`"billing.usage.threshold_crossed"`\>[]
 
----
+***
 
 ### suppressedDuplicateCount
 
